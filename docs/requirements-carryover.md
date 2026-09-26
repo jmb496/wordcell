@@ -37,10 +37,10 @@ playerIdle → selectDestinationColumn → formWord → selectWordCell
 2. **Select destination column** – any column, including the source column.
 3. **Form word** in a dedicated horizontal word-formation area:
    - Selected cards may be freely reordered (reorder controls / drag).
-   - Destination column cards may be included as a contiguous run from the bottom of
+   - Destination column cards may be included as a stack tail (contiguous slice from the bottom) of
      that column, in their existing order (never rearranged). A plus/minus control
      adjusts how many are included.
-   - A **flip** control moves the destination run from the left end of the word
+   - A **flip** control moves the destination tail from the left end of the word
      (word reads downward: e.g. column ending `STA` → word starts `STA…`) to the right
      end reversed (word reads upward: word ends `…ATS`).
    - At most **one** card per WordCell (its top card) may be added. Using it
@@ -68,7 +68,7 @@ playerIdle → selectDestinationColumn → formWord → selectWordCell
 - Word-formation area separate from the columns for horizontal readability.
 - Mobile-friendly touch targets (44 px minimum was the BGA guideline).
 - **NEW**: primary platform is Android; also playable in a desktop/mobile browser.
-- **NEW**: drag-and-drop of card runs must be fast and glitch-free on touch
+- **NEW**: drag-and-drop of stack tails must be fast and glitch-free on touch
   (the BGA version was button/click driven).
 - **NEW**: Undo button with unlimited depth back to the start of the game, for the whole
   session (should survive app suspend/reload).

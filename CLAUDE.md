@@ -54,7 +54,7 @@ Playwright needs system libraries once: `sudo npx playwright install-deps chromi
 ## Testing expectations
 
 - A rule is done when its R-id appears in a test name and the test passes.
-- Engine tests are exhaustive and fast; UI tests cover flows (pick up run → tray → place → undo)
+- Engine tests are exhaustive and fast; UI tests cover flows (pick up stack tail → tray → place → undo)
   in the android project first.
 - Screenshot tests use `toHaveScreenshot`; generate baselines in WSL2/Linux only.
 

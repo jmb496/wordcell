@@ -50,7 +50,7 @@ to the project for no gain.
 | Undo | Event sourcing: `{seed, moves[], undoIndex}`; state = replay(seed, moves[0..n]) | Unlimited undo and redo for free; a bug reproduces from a 200-byte string; replay of a whole game over 52 cards is microseconds |
 | Persistence | Serialize the same `{version, seed, moves, undoIndex}` to localStorage on every move; IndexedDB later for saved games/stats | Survives reload and app suspend, satisfies "undo through the whole session" |
 | View | Svelte 5 (runes) rendering engine state; during a drag write `transform` directly to the dragged elements and commit to state on drop | Within ~5 % of vanilla in benchmarks; keeps engine framework-free. Vanilla TS is the acceptable alternative |
-| Drag-and-drop | Own code (~150 lines): `pointerdown` → `setPointerCapture` → `pointermove` → `pointerup/pointercancel`; `touch-action: none` on cards, `overscroll-behavior: none` on body; drop target chosen by card overlap, not pointer position | No DnD library models "drag a run of cards between columns" on touch well. dnd-kit is React-only and in a 0.x rewrite; Pragmatic DnD has poor touch reports |
+| Drag-and-drop | Own code (~150 lines): `pointerdown` → `setPointerCapture` → `pointermove` → `pointerup/pointercancel`; `touch-action: none` on cards, `overscroll-behavior: none` on body; drop target chosen by card overlap, not pointer position | No DnD library models "drag a stack tail (bottom slice of a column) between columns" on touch well. dnd-kit is React-only and in a 0.x rewrite; Pragmatic DnD has poor touch reports |
 | Dictionary | ENABLE list (public domain, ~172.8k words, no proper nouns/abbreviations). Your `english.txt` (172,724 lines) is almost certainly ENABLE already. Load as `Set<string>` after first paint | Measured: 454 KB gzip / 370 KB brotli; ~4 MB heap; ~38 ns per lookup. Tries only matter if you add prefix hints |
 | Android | PWA: manifest with `display: standalone`, `orientation: portrait`, Workbox precache via vite-plugin-pwa 1.3; request `navigator.storage.persist()` | Full screen, offline, home-screen icon, no toolchain. Chrome grants persistent storage to installed apps |
 | Play Store (optional, later) | Bubblewrap 1.25 TWA from WSL2 (needs JDK 17 + Android cmdline-tools, no Android Studio), or PWABuilder in the cloud with zero local toolchain | Same URL, no second codebase. Capacitor only if native plugins are ever needed |
@@ -105,10 +105,10 @@ Suggested epics:
 
 1. Project scaffold and CI: Vite, TS, Biome, Vitest, Playwright, GitHub Actions, deploy.
 2. Rules engine: deal from seed, selection legality, word assembly (reorder, destination
-   run, flip, WordCell letters), validation, placement, scoring, end detection,
+   stack tail, flip, WordCell letters), validation, placement, scoring, end detection,
    event-sourced undo/redo, serialization. 100 % unit tested before any UI.
 3. Dictionary: ENABLE load, lookup, filtering, lazy load after first paint.
-4. Board UI: columns, WordCells, drag-and-drop of runs, drop targeting, animations.
+4. Board UI: columns, WordCells, drag-and-drop of stack tails, drop targeting, animations.
 5. Word-formation tray: reorder, plus/minus destination cards, flip, WordCell letters,
    validate, choose WordCell, reorder before placement with top/bottom indicator.
 6. Session: undo/redo controls, persistence, resume, new game, give up, score screen
