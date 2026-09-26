@@ -24,8 +24,9 @@ Node ≥ 22.12 (WSL2 has Node 24). Static hosting; no backend.
 
 1. **`src/engine/` is pure.** No DOM, no Svelte, no I/O, no timers, no `Math.random`. Every rule
    in the spec lives here and has a unit test. Deal is seeded (`deal(seed)`).
-2. **State is event-sourced.** A game is `{seed, moves, undoIndex}`; positions are derived by
-   replay. Undo/redo/persistence never touch the UI layer.
+2. **State is event-sourced.** A game is the `Session` in `docs/game-flow-spec.md` §2: seed,
+   moves (including the draft and redo tail), cursor, plus `gaveUp` and `activeMs`; positions are
+   derived by replay, nothing else is stored. Undo/redo/persistence never touch the UI layer.
 3. **UI is a thin renderer.** Svelte components read engine state and dispatch engine commands.
    During a drag, write `transform` to the dragged elements directly and commit on drop.
 4. **Drag-and-drop is hand-rolled** with Pointer Events + `setPointerCapture`; `touch-action:
