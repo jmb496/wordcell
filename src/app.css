@@ -1,0 +1,16 @@
+:root {
+  color-scheme: dark;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: #1c2331;
+  color: #f7f3e8;
+}
+html,
+body {
+  margin: 0;
+  overflow: hidden; /* the board never scrolls; prevents pull-to-refresh on Android */
+  overscroll-behavior: none;
+  height: 100%;
+}
+#app {
+  height: 100%;
+}
