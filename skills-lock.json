@@ -55,6 +55,12 @@
       "skillPath": "skills/bmad-build/SKILL.md",
       "computedHash": "724553478cc2a5427e88f11b0290b94fd8cacbea2424057545f5d620991d7d63"
     },
+    "bmad-build-auto": {
+      "source": "bmad-code-org/BMAD-METHOD",
+      "sourceType": "github",
+      "skillPath": "skills/bmad-build-auto/SKILL.md",
+      "computedHash": "2acac4e0773e9016943d38e0be589f669f663173432b5e22f9bf17d99c2825f9"
+    },
     "bmad-code-review": {
       "source": "bmad-code-org/BMAD-METHOD",
       "sourceType": "github",

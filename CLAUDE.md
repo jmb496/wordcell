@@ -11,6 +11,8 @@ mobile browsers. Rewrite of a stalled Board Game Arena implementation
   tests and tickets. Do not implement behaviour that contradicts a confirmed answer in §9.
 - `docs/requirements-carryover.md` – requirements inherited from the BGA version.
 - `docs/platform-decision.md` – why this stack, what was rejected, the BMAD workflow.
+- `docs/development-methodology.md` – roles, owner gates, the per-ticket loop, and kickoff prompts.
+  Follow it; do not decide game-design intent yourself.
 - `AGENTS.md` (when present) – rules recorded by `bmad-project-context`.
 
 ## Stack
@@ -56,10 +58,18 @@ Playwright needs system libraries once: `sudo npx playwright install-deps chromi
   in the android project first.
 - Screenshot tests use `toHaveScreenshot`; generate baselines in WSL2/Linux only.
 
-## BMAD
+## BMAD and review loops
+
+`/review-loop <path>` (project skill in `.claude/skills/review-loop`) hardens one document or code
+change with fresh-context reviewer and fixer subagents until no major findings remain (cap 4).
+Decision-needed findings go to Jared, never auto-applied. Use it on tickets before build and on
+plans after build when a second pass is wanted.
+
 
 Skills are installed in `.claude/skills/bmad-*`; runtime in `_bmad/`; artifacts in
 `_bmad-output/` (planning-artifacts, implementation-artifacts, specs). Legacy inputs are in
 `_bmad-output/planning-artifacts/legacy/`. Workflow: product brief → ux → architecture spine →
-project-context → spec per epic → preview-ticketing → one `bmad-build` per ticket in a fresh chat
-→ code-review → retrospective. Skip PRD. Ask `bmad` for help or status.
+project-context → spec per epic → preview-ticketing → one ticket at a time: Jared reads the ticket, then `bmad-build-auto <ticket>` (unattended, has its
+own review/repair loop, needs a clean tree on the epic's branch, commits locally, never pushes) or
+`bmad-build` when a human should approve the plan → Jared reads the plan result → optional
+`bmad-code-review` → mark done → retrospective per epic. Skip PRD. Ask `bmad` for help or status.
