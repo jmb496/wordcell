@@ -68,3 +68,19 @@ Jared accepted every proposed default.
 - D4 rules 1–7 moved above the managed block as hand-maintained "Architecture rules"
 - D5 CLAUDE.md command list deleted (ground 4); non-obvious command facts stay in the block
 - D6 block size accepted; trim after epic 1 retires the TODO and scaffold pitfall
+
+## Pass 4 — 2026-09-27 (owner-requested extra pass, max=1)
+Reviewers: builder's reading, edge-case hunter, adversarial, ref alignment  |  Findings: major 5, minor 17, decision-needed 0 (after merging 26 raw findings)  |  Dropped in triage: 0
+### Applied
+- [major] Single owners `wordcell:history` — contradicted AD-4's store write and Q-39 write-back → "written only as a result of reconcile/reset", both included
+- [major] `SESSION_VERSION` line vs Policy deal line — pre-v1 deal bump disagreed → "once v1 ships, AD-5"
+- [major] Single owners / `history` pitfall — banned tokens `src/architecture.test.ts` must contain → exempted; noted as outside the layer table
+- [major] TODO(epic 1) — one retirement trigger for seven items → per-item retirement
+- [major] Single owners — no `wordcell:session` writer; UI could call storage.ts → game.svelte.ts only; storage.ts called only by shell stores
+- [minor] "CLAUDE.md Commands" citation mapped; managed-block edits via bmad-project-context; `undoIndex` = `cursor.index`; rule 2 storage scope and nav registrants; rule 3 shell state; root config files → Scaffold deltas; exemption covers all history checks; explicit `history:` keys; fixtures import form; menu wording; commands table interim authority; cite-not-restate scope; provenance SHA → 861495e
+### Decision needed
+- none
+### Dropped
+- none
+
+## Result — pass 4 capped at 1 (majors 5, fixed, not re-reviewed)
