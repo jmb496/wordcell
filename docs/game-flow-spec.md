@@ -1,12 +1,17 @@
 # WordCell – Game flow specification
 
-Status: v0.5, 2026-09-26. Jared answered Q-01…Q-33 on 2026-09-26 (Q-26…Q-33 were raised by the
+Status: v0.6, 2026-09-27. Jared answered Q-01…Q-33 on 2026-09-26 (Q-26…Q-33 were raised by the
 review loop, see `game-flow-spec.review-log.md`); the decisions are recorded in §9 and applied to
-the rules below. There are no open questions. Every rule has an id (R-xx) so tests, specs and
-tickets can cite it. A "(UI)" in a rule's id tags the whole rule; a trailing "(UI)" tags only the
-sentence it ends. Tagged rules and sentences are satisfied by a Playwright test naming the R-id;
-every untagged sentence by an engine unit test naming the R-id. This document is the
-authoritative input to the BMAD brief, UX design and architecture spine.
+the rules below. There are no open questions. v0.6 only refines the test-coverage rule in this
+preamble, as the product brief's success criterion 4 requires. Every rule has an id (R-xx) so
+tests, specs and tickets can cite it. A "(UI)" in a rule's id tags the whole rule; a trailing
+"(UI)" tags only the sentence it ends. Tagged rules and sentences are satisfied by a Playwright
+test naming the R-id; every untagged sentence that states engine behaviour by an engine unit test
+naming the R-id; every untagged sentence that states app-shell behaviour (dictionary load, R-38;
+visible-time clock, R-76; storage and version rejection, §2) by a Playwright test naming the R-id
+or the section. Sentences that assign ownership, record provenance or describe versioning process
+need no test; the ticket plan names them. This document is the authoritative input to the BMAD
+brief, UX design and architecture spine.
 
 ## 1. Vocabulary
 
