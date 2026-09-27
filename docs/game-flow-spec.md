@@ -1,9 +1,11 @@
 # WordCell – Game flow specification
 
-Status: v0.6, 2026-09-27. Jared answered Q-01…Q-33 on 2026-09-26 (Q-26…Q-33 were raised by the
+Status: v0.7, 2026-09-27. Jared answered Q-01…Q-33 on 2026-09-26 (Q-26…Q-33 were raised by the
 review loop, see `game-flow-spec.review-log.md`); the decisions are recorded in §9 and applied to
 the rules below. There are no open questions. v0.6 only refines the test-coverage rule in this
-preamble, as the product brief's success criterion 4 requires. Every rule has an id (R-xx) so
+preamble, as the product brief's success criterion 4 requires. v0.7 adds Q-34 (a short drag that never leaves its source column is a cancel,
+R-14) and Q-35 (the record stores the longest word's spelling, R-84), both raised by the UX review
+loop and answered by Jared. Every rule has an id (R-xx) so
 tests, specs and tickets can cite it. A "(UI)" in a rule's id tags the whole rule; a trailing
 "(UI)" tags only the sentence it ends. Tagged rules and sentences are satisfied by a Playwright
 test naming the R-id; every untagged sentence that states engine behaviour by an engine unit test
@@ -143,8 +145,9 @@ with nothing to undo, Redo without redo data) (CLAUDE.md rule 6).
   to the gesture UX confirms); a tap on another card of the source column re-selects from that
   card (R-10); a tap on the selected card itself is a no-op; a tap on a WordCell deselects and
   does not open the view (R-65); taps outside all columns deselect. A drag released over no
-  column returns the tail with no engine command and no move-history change. The selection is
-  not persisted or undoable.
+  column returns the tail with no engine command and no move-history change, and so does a drag
+  whose drop target never left the source column (Q-34); a drag that leaves the source column
+  and returns to it drops on the source column. The selection is not persisted or undoable.
 
 ### Phase B – Choose a destination column
 - **R-20** Any of the 8 columns, including the source column.
@@ -334,8 +337,8 @@ with nothing to undo, Redo without redo data) (CLAUDE.md rule 6).
   appended when status becomes won or gaveUp and removed again when that finish is undone
   (R-70, R-75), so a game contributes at most once; a game abandoned via R-74 is never recorded
   (Q-29). A record is self-contained and never replayed: `version`, `seed`, outcome, final score
-  (after R-81), longest word (letter count, R-36; ties to the earliest committed word; absent
-  when no word was committed) and active duration (R-76). The undoable finish is always the most
+  (after R-81), longest word (the word as spelled and its letter count, R-36; Q-35; ties to the earliest
+  committed word; absent when no word was committed) and active duration (R-76). The undoable finish is always the most
   recent record: starting a new game replaces the Session, so no earlier finish can be undone;
   if the score history is empty or its most recent record is not this game's, Undo removes
   nothing. The score history is persisted locally beside the Session, with its own version (§2,
@@ -413,7 +416,7 @@ currently shows `L` as its top card, add it (R-33) and arrange → **BALKED** (6
 removing S, col1 is `F`; it must be included → **FAKED**, or with `L` → **FLAKED**. Laying
 `DEKA…` under col3 without `B` is not allowed while col3 has cards.
 
-## 9. Decisions (Q-01 … Q-33, answered 2026-09-26)
+## 9. Decisions (Q-01 … Q-35, answered 2026-09-26 and 2026-09-27)
 
 | # | Question | Decision |
 |---|---|---|
@@ -450,3 +453,5 @@ removing S, col1 is `F`; it must be included → **FAKED**, or with `L` → **FL
 | Q-31 | Where does an added free letter land in `arrangement`? | Appended at the right end of M; the command accepts an optional insertion index; removal does not reorder the rest. R-33. |
 | Q-32 | Session extends CLAUDE.md's `{seed, moves, undoIndex}` with `gaveUp`, `activeMs` and stored drafts. Confirm? | Confirmed; give-up stays a flag, positions stay replay-derived. CLAUDE.md rule 2 updated to cite §2. |
 | Q-33 | Statistics scope, and a game finishing while the stored score history is unreadable? | v1 statistics trimmed to games played / won / given up, best score, average score, longest word; the rest of carryover §6 dropped, `validationFailures` removed. Unreadable history: reported with Reset history; a finishing game still finishes, its record is not written. R-84, §2. |
+| Q-34 | A drag released over its own source column after a small movement is a self-drop under R-14 and opens Composing. Should a drag whose target never left the source column cancel instead? | Yes (answered 2026-09-27): a drag whose drop target never left the source column returns the tail with no engine command; a self-drop by drag needs the target to leave and return, or tap-select and the source column's `Here` pad. R-14. |
+| Q-35 | The end screen and statistics show the longest word itself, but R-84's record names only its letter count. Store the spelling? | Yes (answered 2026-09-27): the record holds the longest word's spelling and its letter count. R-84. |
