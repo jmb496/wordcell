@@ -37,6 +37,36 @@
           }
         }
       }
+    },
+    {
+      "includes": ["src/engine/**", "!src/engine/**/*.test.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedGlobals": {
+              "level": "error",
+              "options": {
+                "deniedGlobals": {
+                  "Date": "AD-1: engine sources are pure; no clock, random, I/O or host globals.",
+                  "performance": "AD-1: engine sources are pure; no clock, random, I/O or host globals.",
+                  "crypto": "AD-1: engine sources are pure; no clock, random, I/O or host globals.",
+                  "setTimeout": "AD-1: engine sources are pure; no clock, random, I/O or host globals.",
+                  "setInterval": "AD-1: engine sources are pure; no clock, random, I/O or host globals.",
+                  "requestAnimationFrame": "AD-1: engine sources are pure; no clock, random, I/O or host globals.",
+                  "fetch": "AD-1: engine sources are pure; no clock, random, I/O or host globals.",
+                  "localStorage": "AD-1: engine sources are pure; no clock, random, I/O or host globals.",
+                  "sessionStorage": "AD-1: engine sources are pure; no clock, random, I/O or host globals.",
+                  "globalThis": "AD-1: engine sources are pure; no clock, random, I/O or host globals.",
+                  "window": "AD-1: engine sources are pure; no clock, random, I/O or host globals.",
+                  "document": "AD-1: engine sources are pure; no clock, random, I/O or host globals.",
+                  "process": "AD-1: engine sources are pure; no clock, random, I/O or host globals.",
+                  "console": "AD-1: engine sources are pure; no clock, random, I/O or host globals."
+                }
+              }
+            }
+          }
+        }
+      }
     }
   ]
 }

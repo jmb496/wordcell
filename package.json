@@ -8,7 +8,7 @@
     "build": "npm run build:dictionary && vite build",
     "preview": "vite preview",
     "build:dictionary": "node scripts/build-dictionary.mjs",
-    "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
+    "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json && tsc -p src/engine/tsconfig.json && tsc -p tsconfig.arch.json",
     "lint": "biome check .",
     "format": "biome format --write .",
     "test": "vitest run",
