@@ -21,8 +21,9 @@ spine leaves open and name the traps found in the scaffold. `[ASSUMPTION]` marks
   `moduleResolution: "bundler"`, include `./**/*.ts`, exclude `./**/*.test.ts`.
 - `src/architecture.test.ts` reads files with `node:fs`; the app tsconfig has no Node types, so
   give that file Node types without widening them for the rest of `src/` `[ASSUMPTION]`.
-- Scan scope `[ASSUMPTION]`: `.ts`, `.js`, `.svelte` (script blocks only); skip other
-  extensions. Any code file under `src/` outside `engine/`, `shell/`, `ui/`, `main.ts`,
+- Scan scope (owner, 2026-09-27; ticket 1.1 OQ #1, #5): `.ts`, `.js`, `.svelte` (script
+  blocks; ownership checks also on markup minus `<style>`); `.mjs`, `.cjs`, `.mts`, `.cts`,
+  `.tsx`, `.jsx` anywhere under `src/`, and `.js`/`.svelte` under `src/engine/`, fail. Any code file under `src/` outside `engine/`, `shell/`, `ui/`, `main.ts`,
   `architecture.test.ts`, `*.d.ts` fails, so a new top-level file cannot dodge the layer table.
 - Matcher first, tree second: test the stripper and regexes on inline fixture strings, then scan
   the real tree. The file is excluded from its own scan (AD-1).

@@ -153,8 +153,11 @@ the AD-18 headers, and adding `Date.now()` to an engine source, or a `?url` dict
 
 ## Assumptions
 
-- The AD-1 scan covers `.ts`, `.js` and `.svelte` script blocks; any code file under `src/`
-  outside `engine/`, `shell/`, `ui/`, `main.ts`, `architecture.test.ts` and `*.d.ts` fails it.
+- The AD-1 scan covers `.ts`, `.js` and `.svelte` files (script blocks; the History API,
+  `popstate` and `localStorage` checks also run on markup); any code file under `src/`
+  outside `engine/`, `shell/`, `ui/`, `main.ts`, `architecture.test.ts` and `*.d.ts` fails it,
+  as does any `.mjs`, `.cjs`, `.mts`, `.cts`, `.tsx` or `.jsx` file, and any `.js` or `.svelte`
+  file under `src/engine/` (owner, 2026-09-27; ticket 1.1 OQ #1, #5).
 - Epic 1's test hook installs an empty frozen `window.__wordcell` only when `DEV` or
   `VITE_TEST_HOOKS=1`; accessors arrive in epics 3 and 7.
 - A stub `src/shell/dictionary.svelte.ts` exports the `?url` and `main.ts` imports it so the asset

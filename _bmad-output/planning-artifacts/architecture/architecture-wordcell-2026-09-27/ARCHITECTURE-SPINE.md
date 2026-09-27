@@ -41,7 +41,7 @@ worker) sits in a thin shell around it; Svelte renders what the shell exposes.
 
 | Layer | Directory | Owns | May import |
 | --- | --- | --- | --- |
-| Core | `src/engine/` | Every engine sentence of spec §2–§6, replay, derived view, scoring, bands, score-history semantics, (de)serialisation and version checks, language data | only `src/engine/**` (relative); engine tests also `vitest` and JSON under `fixtures/` |
+| Core | `src/engine/` | Every engine sentence of spec §2–§6, replay, derived view, scoring, bands, score-history semantics, (de)serialisation and version checks, language data | only `src/engine/**` (relative); engine tests also `vitest`, JSON under `fixtures/` and, for AD-8 repro cases, `generated/dictionary/en.txt?raw` |
 | Shell | `src/shell/` | Game store and dispatch, score-history store, stateless storage functions, dictionary load, clock, seed, preferences and motion, History API adapter, service-worker registration, test hook | `src/engine/index.ts`, browser APIs |
 | UI | `src/ui/` | Svelte components, overlay state, layout geometry and band order, gestures and drop targeting, keyboard map, animations | `src/shell/**`, `import type` from `src/engine/index.ts` |
 | Entry | `src/main.ts` | Boot order (AD-16), global error handler (AD-15) | everything |
@@ -76,7 +76,8 @@ flowchart LR
        `\b(Math\.random|Date|performance|crypto|setTimeout|setInterval|requestAnimationFrame|fetch|localStorage|sessionStorage|globalThis|window|document|process|console)\b`,
        and may not use computed member access on `Math` (`Math[`);
      - engine files import only relative paths inside `src/engine/`; engine test files may also
-       import `vitest` and JSON from `fixtures/` (`import … with { type: 'json' }`);
+       import `vitest` and JSON from `fixtures/` (`import … with { type: 'json' }`), and files
+       holding named dictionary repro cases (AD-8) may import `generated/dictionary/en.txt?raw`;
      - shell and UI import the engine only through `src/engine/index.ts`, and UI imports from it
        are `import type` only;
      - only `src/shell/nav.ts` matches
