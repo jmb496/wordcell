@@ -1,11 +1,13 @@
 # WordCell – Game flow specification
 
-Status: v0.7, 2026-09-27. Jared answered Q-01…Q-33 on 2026-09-26 (Q-26…Q-33 were raised by the
+Status: v0.8, 2026-09-27. Jared answered Q-01…Q-33 on 2026-09-26 (Q-26…Q-33 were raised by the
 review loop, see `game-flow-spec.review-log.md`); the decisions are recorded in §9 and applied to
 the rules below. There are no open questions. v0.6 only refines the test-coverage rule in this
 preamble, as the product brief's success criterion 4 requires. v0.7 adds Q-34 (a short drag that never leaves its source column is a cancel,
 R-14) and Q-35 (the record stores the longest word's spelling, R-84), both raised by the UX review
-loop and answered by Jared. Every rule has an id (R-xx) so
+loop and answered by Jared. v0.8 adds Q-36…Q-43, raised by the architecture spine's review and
+answered by Jared on 2026-09-27; Q-41 amends the §2 replay paragraph and Q-43 refines R-84's
+record identity. Every rule has an id (R-xx) so
 tests, specs and tickets can cite it. A "(UI)" in a rule's id tags the whole rule; a trailing
 "(UI)" tags only the sentence it ends. Tagged rules and sentences are satisfied by a Playwright
 test naming the R-id; every untagged sentence that states engine behaviour by an engine unit test
@@ -95,8 +97,9 @@ Move {
 - Columns and WordCells are never stored; they are `replay(seed, moves.slice(0, cursor.index))`
   (R-70). The word string, score and legality are likewise derived. Nothing is stored twice.
 - Replay re-applies the structural rules to every element of `moves` in sequence: each committed
-  move, then the draft or pending draft at its `reached` state, then each redo-tail move as a
-  committed move. A move is validated only against the rules of the phase states up to its
+  move, then the draft or pending draft at its `reached` state, then each redo-tail move at its
+  own `reached` state (every redo-tail move is committed except, possibly, the last element of
+  `moves`: an undone pending draft that a further Undo pushed into the redo tail, Q-41). A move is validated only against the rules of the phase states up to its
   `reached` value: Composing → R-10–R-13, R-20–R-22, R-30–R-35; Place or committed →
   additionally R-36, R-40–R-41 and R-50 (`placementOrder` is a permutation of S ∪ F ∪ D). The
   first violation aborts the load and is surfaced exactly like an unknown `version` (message,
@@ -340,8 +343,8 @@ with nothing to undo, Redo without redo data) (CLAUDE.md rule 6).
   (after R-81), longest word (the word as spelled and its letter count, R-36; Q-35; ties to the earliest
   committed word; absent when no word was committed) and active duration (R-76). The undoable finish is always the most
   recent record: starting a new game replaces the Session, so no earlier finish can be undone;
-  if the score history is empty or its most recent record is not this game's, Undo removes
-  nothing. The score history is persisted locally beside the Session, with its own version (§2,
+  if the score history is empty or its most recent record is not this game's (matched by seed,
+  outcome and active duration, Q-43), Undo removes nothing. The score history is persisted locally beside the Session, with its own version (§2,
   Q-33); the finishing and un-finishing changes write Session and score history synchronously
   in the same task, so no partial state is observable. v1 statistics are only: games played,
   games won, games given up, best score, average score, longest word ever. The remaining
@@ -416,7 +419,7 @@ currently shows `L` as its top card, add it (R-33) and arrange → **BALKED** (6
 removing S, col1 is `F`; it must be included → **FAKED**, or with `L` → **FLAKED**. Laying
 `DEKA…` under col3 without `B` is not allowed while col3 has cards.
 
-## 9. Decisions (Q-01 … Q-35, answered 2026-09-26 and 2026-09-27)
+## 9. Decisions (Q-01 … Q-43, answered 2026-09-26 and 2026-09-27)
 
 | # | Question | Decision |
 |---|---|---|
@@ -455,3 +458,11 @@ removing S, col1 is `F`; it must be included → **FAKED**, or with `L` → **FL
 | Q-33 | Statistics scope, and a game finishing while the stored score history is unreadable? | v1 statistics trimmed to games played / won / given up, best score, average score, longest word; the rest of carryover §6 dropped, `validationFailures` removed. Unreadable history: reported with Reset history; a finishing game still finishes, its record is not written. R-84, §2. |
 | Q-34 | A drag released over its own source column after a small movement is a self-drop under R-14 and opens Composing. Should a drag whose target never left the source column cancel instead? | Yes (answered 2026-09-27): a drag whose drop target never left the source column returns the tail with no engine command; a self-drop by drag needs the target to leave and return, or tap-select and the source column's `Here` pad. R-14. |
 | Q-35 | The end screen and statistics show the longest word itself, but R-84's record names only its letter count. Store the spelling? | Yes (answered 2026-09-27): the record holds the longest word's spelling and its letter count. R-84. |
+| Q-36 | Stored preferences with an unreadable or unknown version? | Defaults are used with no message and the stored preferences are overwritten on the next change; the one accepted exception to CLAUDE.md rule 6 (answered 2026-09-27). §7.10. |
+| Q-37 | What does an unexpected failure show? | One blocking message: `Something went wrong.`, the error text, and **Reload**; stored data untouched (answered 2026-09-27). §2. |
+| Q-38 | Two live instances (installed app plus a tab) writing the same saved data? | The instance that sees another write stops and shows `WordCell is open in another window.` with **Reload** (answered 2026-09-27). R-73, R-84. |
+| Q-39 | A save of a finish or un-finish fails halfway? | Score history is written first, then the Session; if the Session write fails, the previous history is written back and the failure message shows; a crash between the two writes is accepted (answered 2026-09-27). R-84. |
+| Q-40 | The offline install (service worker, precache) fails? | Nothing is shown to the player and the game works online; the failure is reported in dev and test builds only. A new version activates only once every WordCell window has closed (answered 2026-09-27). |
+| Q-41 | §2 replayed every redo-tail move as committed, but Undo past a pending draft leaves it uncommitted in the redo tail. | Each move is validated at its own `reached`; only the last element of `moves` may be below committed (answered 2026-09-27). §2. |
+| Q-42 | The dictionary banner's Reload after a deploy removed the old word-list file? | Any 404 on the word list makes the banner's next Reload tap reload the page (never automatically); under the service worker the banner stays until the next launch (answered 2026-09-27). R-38. |
+| Q-43 | How does Undo of a finish find its record without tying the score history to scoring rules? | By seed, outcome and active duration; the history's version changes only when the record's shape changes (answered 2026-09-27). R-84. |

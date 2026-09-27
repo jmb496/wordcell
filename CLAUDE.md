@@ -32,7 +32,8 @@ Node ≥ 22.12 (WSL2 has Node 24). Static hosting; no backend.
 4. **Drag-and-drop is hand-rolled** with Pointer Events + `setPointerCapture`; `touch-action:
    none` on cards; drop targeting by card overlap. No DnD library.
 5. **Dictionary** is `data/enable1.txt` filtered by `scripts/build-dictionary.mjs` into
-   `public/dictionary/en.txt` (generated, git-ignored) and loaded as a `Set<string>`.
+   `generated/dictionary/en.txt` (generated, git-ignored), imported with Vite `?url` so it ships
+   content-hashed under `dist/assets/`, and loaded as a `Set<string>`.
 6. No fallbacks or defensive code that hides errors. Fail fast, fix the cause.
 7. Ask before deviating from the spec or from an agreed pattern; do not commit unless asked.
 
@@ -43,10 +44,12 @@ npm run dev            # Vite dev server on :5173
 npm test               # Vitest, engine/unit tests (src/**/*.test.ts)
 npm run test:watch
 npm run test:e2e       # Playwright (e2e/), boots the dev server; projects: android (Pixel 7), desktop
+npm run test:e2e:pwa   # build:test (hooks on, dist-test/), then the offline/PWA project on vite preview
+npm run test:screens   # screenshot specs, inside the Playwright 1.63 Docker container
 npm run lint           # Biome check
 npm run format         # Biome format --write
 npm run check          # svelte-check + tsc
-npm run test:all       # lint + check + unit + e2e
+npm run test:all       # lint + check + unit + test:e2e + test:e2e:pwa (screenshots: CI, test:screens)
 npm run build          # regenerates dictionary, then vite build (PWA)
 ```
 
@@ -57,7 +60,10 @@ Playwright needs system libraries once: `sudo npx playwright install-deps chromi
 - A rule is done when its R-id appears in a test name and the test passes.
 - Engine tests are exhaustive and fast; UI tests cover flows (pick up stack tail → tray → place → undo)
   in the android project first.
-- Screenshot tests use `toHaveScreenshot`; generate baselines in WSL2/Linux only.
+- Screenshot tests (`*.screens.spec.ts`) use `toHaveScreenshot`; baselines are generated and
+  compared only inside the `mcr.microsoft.com/playwright:v1.63.0-noble` container (Docker in WSL2).
+- The architecture spine is
+  `_bmad-output/planning-artifacts/architecture/architecture-wordcell-2026-09-27/ARCHITECTURE-SPINE.md`.
 
 ## BMAD and review loops
 
