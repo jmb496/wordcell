@@ -1,0 +1,147 @@
+# Epic 1 — Scaffold hardening, CI and deploy. Table order is the build order (SPEC CAP-1 → CAP-9, owner 2026-09-27).
+# Requirement source: _bmad-output/specs/spec-epic-1-scaffold-ci-deploy/ (SPEC.md, delta-checks.md, build-notes.md).
+# Build precondition for every entry: clean tree on epic-1-scaffold.
+
+[[entry]]
+id = 1
+type = "story"
+title = "Layer layout and AD-1 purity checks"
+description = "Adds src/engine/tsconfig.json to npm run check, src/architecture.test.ts, the Biome engine override and src/engine/index.ts (D1), moves App.svelte and app.css into src/ui/ with main.ts passing deal(1) columns as a prop, and gives the placeholder cards their AD-14 attributes with e2e/smoke.spec.ts renamed and relocated onto them."
+verify = "npm run test:all is green, the AD-1 fixture cases fail and pass as AD-1 says, a scratch document.title in an engine source fails npm run check, and the renamed smoke spec finds 52 card-<CardId> elements rendered from src/ui/App.svelte."
+covers = ["CAP-1"]
+after = []
+hitl = false
+risk = "high"
+unknown = "Whether a regex extraction of .svelte script blocks is enough for the AD-1 scan or a parser is needed."
+references = [
+  "architecture — _bmad-output/planning-artifacts/architecture/architecture-wordcell-2026-09-27/ARCHITECTURE-SPINE.md, AD-1, AD-14, Scaffold deltas",
+  "spec — _bmad-output/specs/spec-epic-1-scaffold-ci-deploy/build-notes.md, Scaffold facts that bite, CAP-1 Purity checks",
+]
+
+[[entry]]
+id = 2
+type = "story"
+title = "Dictionary generation and ?url wiring"
+description = "Rewrites scripts/build-dictionary.mjs to the checksum-verified 3–23-letter filter into generated/dictionary/en.txt, updates data/README.md, adds the staleness-gated predev, pretest, pretest:watch, pretest:e2e and prebuild hooks (build becomes vite build only), ignores generated/ and deletes public/dictionary/, adds the scripts/**/*.test.mjs Vitest include (D3), and emits the list as one hashed asset through a stub src/shell/dictionary.svelte.ts imported by main.ts."
+verify = "AD-8 script tests pass under npm run test, a real run writes 172,713 lines, a one-byte-changed source fails the script, the hooks regenerate only when the output is missing or stale, and npm run build emits exactly one dist/assets/en-<hash>.txt byte-equal to the generated file and no dictionary/en.txt."
+covers = ["CAP-2"]
+after = [1]
+hitl = false
+risk = "medium"
+unknown = "Whether mtime-based staleness is reliable on the /mnt/d drvfs mount the repo lives on."
+references = [
+  "architecture — _bmad-output/planning-artifacts/architecture/architecture-wordcell-2026-09-27/ARCHITECTURE-SPINE.md, AD-8",
+  "spec — _bmad-output/specs/spec-epic-1-scaffold-ci-deploy/build-notes.md, CAP-2 Dictionary, Tests of scripts/*.mjs",
+]
+
+[[entry]]
+id = 3
+type = "story"
+title = "Test harness: Playwright configs, test hook and helpers"
+description = "Adds testIgnore to playwright.config.ts, playwright.pwa.config.ts with PW_PREVIEW (D5), build:test with prebuild:test, test:e2e:pwa, test:e2e:dist and the AD-17 test:all, ignores dist-test/, the gated window.__wordcell hook, the seed, touch and lifecycle helpers with AD-17 self-tests, and the pwa and dist-smoke projects, dist-smoke relying on entry 1's card-<CardId> test ids."
+verify = "npm run test:all (lint, check, unit, test:e2e, test:e2e:pwa) is green, npm run build && npm run test:e2e:dist passes, grep -r __wordcell dist/ is empty, and the pwa precache check finds the dictionary with revision null."
+covers = ["CAP-3"]
+after = [2]
+hitl = false
+risk = "high"
+unknown = "Whether CDP Input.dispatchTouchEvent drives pointer events under the Pixel 7 emulation without extra setup."
+references = [
+  "architecture — _bmad-output/planning-artifacts/architecture/architecture-wordcell-2026-09-27/ARCHITECTURE-SPINE.md, AD-17",
+  "spec — _bmad-output/specs/spec-epic-1-scaffold-ci-deploy/build-notes.md, CAP-3 Harness",
+]
+
+[[entry]]
+id = 4
+type = "story"
+title = "WordCell Serif card-letter font"
+description = "Adds scripts/build-font.py, commits the Fraunces-instance subset src/ui/assets/wordcell-serif.woff2 and OFL.txt, records source URL and SHA-256 in data/README.md, wires @font-face (font-display: block) in src/ui/app.css and the index.html preload, and extends entry 3's pwa precache spec to the font."
+verify = "uv run scripts/build-font.py reproduces the committed woff2 byte-for-byte, the woff2 covers A–Z and u only, the build holds the font once with the preload href equal to the @font-face URL, and the pwa precache check finds the font with revision null."
+covers = ["CAP-4"]
+after = [3]
+hitl = false
+risk = "medium"
+unknown = "[ASSUMPTION] The builder picks the pinned google/fonts commit and records its SHA-256; the run needs network access and uv."
+references = [
+  "architecture — _bmad-output/planning-artifacts/architecture/architecture-wordcell-2026-09-27/ARCHITECTURE-SPINE.md, AD-16, AD-18 Font",
+  "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/DESIGN.md, A-D2",
+  "spec — _bmad-output/specs/spec-epic-1-scaffold-ci-deploy/build-notes.md, CAP-4 Font",
+]
+
+[[entry]]
+id = 5
+type = "story"
+title = "PWA packaging: manifest, service-worker settings, head, icons and palette"
+description = "Sets vite.config.ts to AD-16 (registerType prompt, injectRegister false, A-D5 manifest, globPatterns, 4 MB limit, build.manifest true), the index.html head, scripts/build-icons.mjs with committed SVG sources and PNGs, and the DESIGN.md palette and overflow rules in src/ui/app.css, extending entry 3's pwa spec with the build-output checks."
+verify = "pwa build-output tests deep-equal the manifest to A-D5, find the AD-16 precache list, no registerSW.js and .vite/manifest.json, e2e AD-16 and AD-11 cases read the head metas and body styles, and node scripts/build-icons.mjs regenerates the three committed PNGs."
+covers = ["CAP-5"]
+after = [4]
+hitl = false
+risk = "medium"
+unknown = "Icon art is drawn by the builder from DESIGN.md's App icon description; the owner judges it at gate 4."
+references = [
+  "architecture — _bmad-output/planning-artifacts/architecture/architecture-wordcell-2026-09-27/ARCHITECTURE-SPINE.md, AD-16, AD-11",
+  "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/DESIGN.md, colors, A-D5, App icon",
+  "spec — _bmad-output/specs/spec-epic-1-scaffold-ci-deploy/build-notes.md, CAP-5 Packaging",
+]
+
+[[entry]]
+id = 6
+type = "story"
+title = "Size budget postbuild gate"
+description = "Adds scripts/size-budget.mjs as postbuild: gzip-9 sum of the AD-18 counted set from dist/.vite/manifest.json against 600,000 bytes, failing on a missing font or dictionary, plus a 4,000,000-byte per-file limit on precache-glob files."
+verify = "npm run build prints the per-file table and passes on the tree, a forced over-budget build fails (shown in the plan, reverted), and AD-18 tests in scripts/size-budget.test.mjs cover over-budget, missing font, missing dictionary, the sw.ts chunk exclusion and the 4 MB limit."
+covers = ["CAP-6"]
+after = [5]
+hitl = false
+risk = "low"
+references = [
+  "architecture — _bmad-output/planning-artifacts/architecture/architecture-wordcell-2026-09-27/ARCHITECTURE-SPINE.md, AD-18 Size, AD-16",
+  "spec — _bmad-output/specs/spec-epic-1-scaffold-ci-deploy/build-notes.md, CAP-6 Size budget",
+]
+
+[[entry]]
+id = 7
+type = "story"
+title = "Screenshot pipeline in the Playwright container"
+description = "Adds playwright.screens.config.ts, test:screens (docker run of the pinned image, node_modules in a named volume) and test:screens:run, and one placeholder-board screenshot spec on android and desktop with committed baselines (D4)."
+verify = "npm run test:screens generates the baseline inside mcr.microsoft.com/playwright:v1.63.0-noble, a second run compares green, and npx playwright test --list under the default config shows no screens spec."
+covers = ["CAP-7"]
+after = [6]
+hitl = true
+risk = "medium"
+unknown = "Docker Desktop's WSL integration is off (the CLI cannot reach the server, 2026-09-27); the owner enables it before the build, and the ticket halts if docker version fails."
+references = [
+  "architecture — _bmad-output/planning-artifacts/architecture/architecture-wordcell-2026-09-27/ARCHITECTURE-SPINE.md, AD-17 Projects, Screenshots",
+  "spec — _bmad-output/specs/spec-epic-1-scaffold-ci-deploy/build-notes.md, CAP-7 Screenshots",
+]
+
+[[entry]]
+id = 8
+type = "story"
+title = "CI workflow"
+description = "Adds .github/workflows/ci.yml: on every push and PR, Node 24 and npm ci, lint → check → unit → build (size budget) → dist-smoke → upload dist/ with hidden files as artifact dist for entry 9's deploy.yml → build:test → e2e (android, desktop, pwa) → screenshot job in the container."
+verify = "actionlint reports nothing and each step's npm script passes locally; after the owner pushes, the first CI run is green (gate 4)."
+covers = ["CAP-8"]
+after = [7]
+hitl = true
+risk = "medium"
+references = [
+  "architecture — _bmad-output/planning-artifacts/architecture/architecture-wordcell-2026-09-27/ARCHITECTURE-SPINE.md, AD-18 CI, AD-17 Scripts",
+  "spec — _bmad-output/specs/spec-epic-1-scaffold-ci-deploy/build-notes.md, CAP-8 CI",
+]
+
+[[entry]]
+id = 9
+type = "story"
+title = "Deploy to Cloudflare Workers static assets"
+description = "First confirms origin and the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID secrets and halts only if one is missing, then adds wrangler pinned at exactly 4.141.0, wrangler.jsonc, public/_headers, public/.assetsignore and deploy.yml, which deploys the dist artifact of entry 8's ci.yml run unrebuilt after a green push to main."
+verify = "npx wrangler deploy --dry-run succeeds locally; after the owner merges and pushes to main, the live site returns the AD-18 cache headers and 404s (gate 4)."
+covers = ["CAP-9"]
+after = [8]
+hitl = true
+risk = "medium"
+unknown = "The account's workers.dev subdomain is not known locally; deploy.yml takes the deployed URL from wrangler deploy's output for its header checks."
+references = [
+  "architecture — _bmad-output/planning-artifacts/architecture/architecture-wordcell-2026-09-27/ARCHITECTURE-SPINE.md, AD-18 Deploy, Rollback",
+  "spec — _bmad-output/specs/spec-epic-1-scaffold-ci-deploy/build-notes.md, CAP-9 Deploy",
+]

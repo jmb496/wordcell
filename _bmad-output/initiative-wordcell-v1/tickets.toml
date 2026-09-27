@@ -1,0 +1,7 @@
+# WordCell v1 epics in build order (spine Proposed epics). Epics 2–7 are added as each is specced.
+
+[[epic]]
+id = 1
+slug = "epic-scaffold-ci-deploy"
+title = "Scaffold hardening, CI and deploy"
+covers = []
