@@ -814,7 +814,8 @@ Changes the first epic makes to commit `785c0f6`:
   this spine (AD-8, AD-17; Docker in WSL2 only for screenshot baselines, uv/Python only for
   regenerating the font).
 - `src/engine/types.ts` language constants move into `LangData` (`lang/en.ts`, R-85);
-  `STUCK_PENALTY_PER_CARD` becomes the R-81 per-letter penalty.
+  `STUCK_PENALTY_PER_CARD` becomes the R-81 per-letter penalty. Made by epic 2, after the
+  golden deal test (AD-5), not the first epic (epic 1 spec D2).
 
 ## Capability → Architecture Map
 
@@ -848,11 +849,11 @@ the per-ticket loop of `docs/development-methodology.md`.
 | # | Epic | Contents | Depends on |
 | --- | --- | --- | --- |
 | 1 | Scaffold hardening, CI and deploy | Scaffold deltas; engine tsconfig, `architecture.test.ts`, Biome overrides (AD-1); dictionary generation and `?url` wiring (AD-8 build part); font subset, manifest and icons (AD-16, AD-18); size script (AD-18); test hook module with its gating (`DEV` / `VITE_TEST_HOOKS`), seed/touch/lifecycle helpers, `pwa` project, screenshot container (AD-17); `ci.yml`, `deploy.yml`, `wrangler.jsonc`, `_headers`, `.assetsignore` | — |
-| 2 | Rules engine | Deal freeze and golden test (AD-5); Session types, replay and validation; commands and the command table (AD-2); view (AD-3); scoring and bands; history record, reconcile, `isRecorded`, statistics (AD-6); serialise/parse with rejection reasons (AD-7). Every engine sentence of spec §2–§6 tested | 1 |
+| 2 | Rules engine | Deal freeze and golden test (AD-5); Session types, replay and validation; commands and the command table (AD-2); view (AD-3); scoring and bands; history record, reconcile, `isRecorded`, statistics (AD-6); serialise/parse with rejection reasons (AD-7); `LangData` and the R-81 penalty (Scaffold deltas). Every engine sentence of spec §2–§6 tested | 1 |
 | 3 | App shell services | Game store states, dispatch and feedback (AD-4); history store (AD-6); storage (AD-7); dictionary load and retry (AD-8); clock and lifecycle (AD-9); seed; prefs and motion (AD-10); nav adapter (AD-13); fatal surface (AD-15); boot order minus SW (AD-16); test-hook store accessors (`loaded()`, `current()`, `dictionaryState()`) and restore-boundary Playwright tests (AD-17) on a minimal board | 2 |
 | 4 | Board and gestures | Layout definition, geometry, gate and anchoring (AD-11); cards, columns, WordCells, top bar, action bar; pointer controller and targeting (AD-12); overlays store (AD-13); tap-select and foot pads; WordCell view (peek, sticky, hover); drop → Composing | 3 |
 | 5 | Tray and Place | Tray band, tiles, destination block, D-block controls; free letters (tap and drag); arrange and tap-swap; Validate states and invalid-word line; placement strip; Confirm; FLIP and fly-to-cell (AD-14); tray growth | 4 |
-| 6 | Game surfaces and keyboard | Menu sheet, confirm dialogs, end sheet, Statistics, Preferences, How to play, Session-rejected message, History notice, pending-draft line, keyboard map, screen-reader labels and live region | 5 |
+| 6 | Game surfaces and keyboard | Menu sheet, confirm dialogs, end sheet, Statistics, Preferences, How to play, Session-rejected message, History notice, pending-draft line, keyboard map, screen-reader labels and live region; `__APP_VERSION__` injection and menu footer (Consistency Conventions) | 5 |
 | 7 | PWA and release | SW registration, update policy, offline test (AD-16, AD-17); `requestPersistence()`; test-hook `swState()` and `precacheComplete()` (AD-17); device checks (brief §6.2 force-stop, §6.3 ten qualifying games, relaunch into Game over → Android back collapses the end sheet, A-A11) | 3 (SW), 5 (offline test), 6 (release checks) |
 
 Play Store (Bubblewrap TWA) stays out of v1 (brief §8).
