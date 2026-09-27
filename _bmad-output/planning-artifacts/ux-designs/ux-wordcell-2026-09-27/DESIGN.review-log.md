@@ -91,3 +91,10 @@ Reviewers: builder's reading, edge-case hunter, adversarial, ref alignment  |  F
 
 ## Result — finalized after pass 5
 All pass-5 majors fixed; no open questions. Status set to final.
+
+## Layout revision — 2026-09-27
+Owner decision revised: the WordCell row and tray move below the columns (order: top bar, columns, WordCell row, tray, action bar), so WordCells, tray, Validate, Confirm and Undo share the bottom thumb zone. Fallback: WordCells and tray back above the columns if ergonomics disappoint in testing; band order to live in one layout definition, switchable in dev builds. One cross-document consistency check afterwards: 1 major (peek sticky threshold 60 % vs 80 %) and 1 minor (column-area edge wording), both fixed.
+
+## Layout revision 2 — 2026-09-27
+Owner decisions: band order top bar (menu, score, timer, Undo, Redo), leftover, columns, tray, WordCell row, 8 px gap, action bar with only the full-width primary button. Cards flow one way down the screen; Undo/Redo moved to the top bar (overrides brief §9's Undo-in-thumb-reach goal).
+Clear-context review (one reviewer, both spines, four lenses combined): major 2, minor 7, decision-needed 0, plus one orchestrator error caught by the fixer (collapsed end-sheet bar placed over the WordCells). All applied: layer order puts lifted tails above the bars; growth beyond the leftover keeps the WordCell row fixed via scrollTop (also for the dictionary-failed banner); collapsed bar over the empty tray band; Undo rationale corrected to R-71; band summaries, gap wording, banner stickiness and name, top-bar safe-area padding, Idle tray line.

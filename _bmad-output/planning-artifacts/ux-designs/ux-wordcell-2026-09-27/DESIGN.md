@@ -128,6 +128,7 @@ components:
     background: '{colors.accent-orange}'
     ink: '{colors.ink-on-accent}'
     height: 48px
+    width: 'in the action bar: board width − 8px'
     radius: '{rounded.full}'
   button-secondary:
     background: '{colors.surface-raised}'
@@ -141,10 +142,14 @@ components:
     height: '{spacing.touch-min}'
     radius: '{rounded.full}'
   top-bar:
-    height: 44px
+    height: '44px content + env(safe-area-inset-top)'
+    position: 'sticky; top: 0'
+    paddingTop: 'env(safe-area-inset-top), on the table background'
     background: '{colors.table}'
+    undoRedo: '44 × 44 icon-only {components.button-secondary}, right side after the timer'
   action-bar:
     height: '60px content + env(safe-area-inset-bottom)'
+    content: 'primary button only, board width − 2 × 4px padding, 48px tall, centred vertically'
     position: 'sticky; bottom: 0'
     paddingBottom: 'env(safe-area-inset-bottom), on the surface background'
     background: '{colors.surface}'
@@ -267,22 +272,23 @@ Spacing scale 4 / 8 / 12 / 16 / 24 / 32 px. Every interactive target is at least
 
 ```
 ┌──────────────────────────────────────────┐  top bar 44 px
-│ ☰             Score 124          4:12    │  menu · live score (R-82) · timer if on (R-76)
+│ ☰          Score 124      4:12 [↶] [↷]   │  menu · live score (R-82) · timer if on (R-76) · Undo · Redo
 ├──────────────────────────────────────────┤
 │                                          │  leftover height (height rule)
-│  3    4    5    6    7    8    9    10   │  WordCell row: number above each cell
-│ [ ]  [A]  [ ]  [L]  [ ]  [ ]  [ ]  [ ]   │  one card slot per cell, stack-count badge
-├──────────────────────────────────────────┤  gap 4 px
-│  B A K E D                               │  tray band, height reserved in every phase
-│ [#B][A][K][E][D]                          │  tiles (D block locked, blue; [#] = lock)
-│ [−] 1 [+]   [⇄ Flip]           5 letters │  control row: D-block controls, letter count
 ├──────────────────────────────────────────┤
 │ F    X    L    …                         │  8 column slots, slot = card width + 4
 │ E    O    M                              │  fanned: strip ≥ 44 px, last card full
 │ …                                        │
 │ ░    ░    ░                              │  foot row 44 px (tap-drop pad, EXPERIENCE.md)
+├──────────────────────────────────────────┤  gap 4 px
+│  B A K E D                               │  tray band, height reserved in every phase
+│ [#B][A][K][E][D]                         │  tiles (D block locked, blue; [#] = lock)
+│ [−] 1 [+]   [⇄ Flip]           5 letters │  control row: D-block controls, letter count
 ├──────────────────────────────────────────┤
-│ [↶] [          Validate            ] [↷] │  action bar 60 px, thumb zone
+│  3    4    5    6    7    8    9    10   │  WordCell row: number above each cell
+│ [ ]  [A]  [ ]  [L]  [ ]  [ ]  [ ]  [ ]   │  one card slot per cell, stack-count badge
+├──────────────────────────────────────────┤  gap 8 px, no control
+│ [               Validate               ] │  action bar 60 px: primary button only, thumb zone
 └──────────────────────────────────────────┘
 ```
 
@@ -294,18 +300,38 @@ Spacing scale 4 / 8 / 12 / 16 / 24 / 32 px. Every interactive target is at least
   **column slot** = w + 4; board width = 8 × slot, centred. The top bar, the dictionary-failed
   banner, the tray band and the action bar span the board width, centred, on every form factor. At 412 px: card 46 × 61 px, slot 50 px,
   board 400 px. At the minimum supported width of 360 px: card 40 × 53 px, slot 44 px, board
-  352 px. [ASSUMPTION A-D3: minimum supported viewport 360 × 740 CSS px]
+  352 px. [ASSUMPTION A-D3: minimum supported viewport 360 × 750 CSS px]
 - **Hit rects.** A column card, a WordCell, a tray tile and a placement-strip tile each hit-test
   on its full slot pitch (at least 44 × 44), not on the drawn card. At 360 px a 40 px card sits in
   a 44 px slot.
-- **WordCell row** uses the same eight slots as the columns, so cell *n* sits above column
-  *n − 2* [ASSUMPTION A-D7]. Cell numbers 3–10 sit above the cells, left to right (carryover §1).
-- **Tray band** sits directly under the WordCell row, above the columns (spec §7.8). Owner
-  decision 2026-09-27: the tray sits directly under the WordCell row so free letters are next to
-  it; Validate, Confirm and Undo stay in the bottom action bar. This relaxes brief §9's one-thumb
-  goal for the tray only. The band keeps its reserved height in every phase, so neither the
-  WordCell row nor the columns move when the tray opens. It holds a word line, the
-  tile rows and a control row (which also carries the meta text).
+- **Band order.** Top to bottom: top bar, leftover band, columns with their foot row, 4 px gap
+  (`{spacing.card-gap}`), tray band, WordCell row (cell-number labels above the cells), 8 px
+  gap, action bar. Owner decision 2026-09-27 (replacing the earlier layout decision): cards flow
+  one way down the screen. A tail leaves the bottom of a column into the tray directly beneath
+  it, Confirm sends the word down into the WordCell row, and Undo reverses the path. No move
+  animation passes over the WordCell row except the final fly-to-cell into the target cell. The
+  tray stays adjacent to the WordCells, so a free letter is a short hop up into the tray. The
+  WordCells and the primary button are in the bottom thumb zone. Undo and Redo sit in the top
+  bar, away from the busy bottom area, because they are expected to be rare and an accidental
+  Undo would step the player back a phase, and the next action would then discard the redo data
+  (R-71). This overrides brief §9's "Undo within one-thumb
+  reach"; Undo stays one tap away (spec §7.6, R-70). The order departs from spec §7.8's advisory
+  layout ("WordCells 3–10 in one row above 8 columns", tray above the columns) and from the BGA
+  layout in carryover §1 ("displayed above the columns"). Fallback: if the ergonomics disappoint
+  in testing, the band order can change (for example the WordCells and the tray back above the
+  columns). For the architecture step: the vertical band order lives in a single layout
+  definition, switchable in dev builds, and no code may assume which band sits above which, so
+  the fallback is a one-line change.
+- **WordCell row** sits directly under the tray band and uses the same eight slots as the
+  columns, so cell *n* sits below column *n − 2* [ASSUMPTION A-D7]. Cell numbers 3–10 sit
+  above the cells, left to right (carryover §1).
+- **8 px gap** (`{spacing.2}`) separates the WordCell row from the action bar, so the target
+  cells and Confirm never touch. It is no control and no drop target; a tap on it counts as a tap
+  outside the columns (EXPERIENCE.md phase matrix).
+- **Tray band** sits directly under the columns' foot row, after the 4 px gap, and directly
+  above the WordCell number labels. The band keeps its reserved height in every phase, so neither
+  the WordCell row nor the columns move when the tray opens. It holds a word line, the tile rows
+  and a control row (which also carries the meta text).
   - Tile width = max(card width, 44 px); tile gap 4 px; band inner padding 8 px each side. Tiles
     per row = floor((band inner width + 4) ÷ (tile width + 4)). D tiles keep the same 4 px pitch;
     the destination block is drawn joined over the gaps. The tile glyph is sized from the card
@@ -330,40 +356,45 @@ Spacing scale 4 / 8 / 12 / 16 / 24 / 32 px. Every interactive target is at least
     360 px (board 352, inner width 336, tile 44): 7 tiles per row, 14 in two compact rows.
   - A word longer than two compact rows wraps further. For r compact rows the band gains
     max(0, r × 44 + (r − 1) × 4 − max(H, 92)) px. Phone (H ≤ 92): 3 rows +48, 4 rows +96 (the
-    longest word, 22 cards). Desktop (H = 95): 3 rows +45, 4 rows +93. This is the one exception to the fixed height: the
-    band takes the extra height from the leftover band first. The top bar stays; the WordCell row
-    and the tray shift up by the amount of leftover used, and the columns keep their position as
-    long as leftover remains. Once the leftover is used up the columns shift down and the page
-    scrolls; the sticky action bar does not move. Changes apply only after the edit completes,
-    and hit rects are recomputed before the next gesture. w is not recomputed. [ASSUMPTION A-D4]
-- **Columns**: a column never gains cards (the destination column only loses them, R-60), so it
-  holds at most 7 cards and its height is fixed: 6 strips + 1 card + the foot row. The strip is
+    longest word, 22 cards). Desktop (H = 93): 3 rows +47, 4 rows +95. This is the one exception to the fixed height: the
+    band takes the extra height from the leftover band first. The top bar, the WordCell row, the
+    8 px gap and the action bar stay; the columns and the tray shift up by the amount of leftover
+    used, so the band grows upward. Once the leftover is used up, the WordCell row, the 8 px gap
+    and the action bar still keep their screen position: the document grows at the top and the
+    shell adjusts `scrollTop` by the same amount, so the WordCell row does not move. The columns
+    then scroll partly under the sticky top bar, and the player can scroll the page back up from
+    the `pan-y` regions (Scrolling below). A Playwright test checks that the WordCell row's
+    bounding box is unchanged after the growth. Changes apply only after the edit completes, and hit rects are
+    recomputed before the next gesture. w is not recomputed. [ASSUMPTION A-D4]
+- **Columns** sit under the leftover band, above the tray band. A column never gains cards
+  (the destination column only loses them, R-60), so it holds at most 7 cards and its height is fixed: 6 strips + 1 card + the foot row. The strip is
   `max(44 px, round(0.72 × card height))`, and every card's glyph sits inside its top 72 %, so every
   letter in a fanned column is fully visible.
 - **Action bar** is `position: sticky; bottom: 0` with `padding-bottom:
-  env(safe-area-inset-bottom)` on the surface background, so its controls sit above the Android
-  gesture area and Validate, Confirm and Undo stay on screen whenever the page
-  scrolls. Its content is 60 px tall with 4 px padding and 4 px gaps; its total height is 60 px +
-  `env(safe-area-inset-bottom)`. Undo (`↶`) left and
-  Redo (`↷`) right are 52 × 52 icon-only buttons with accessible names (`Undo`, `Redo`) and
-  tooltips on desktop. The primary action (48 px tall) takes the remaining width between them,
-  about 232 px at 360 px and 280 px at 412 px, so both thumbs reach it. Its label shrinks to
-  `{typography.ui-label}` size before it ellipsizes.
-- **Height rule.** The layout height is `safe-area-inset-top + top bar 44 + cell-number label 16
-  + WordCell H + gap 4 + tray band reserved height + columns (6 × strip + H) + foot row 44 +
-  action bar 60 + safe-area-inset-bottom`, with H = round(4w/3) and strip = max(44,
-  round(0.72 × H)). For H ≤ 92 that is 344 + 2H + 6 × strip plus insets; for H > 92 it is
-  252 + 3H + 6 × strip plus insets. The rule measures `window.innerHeight`, with `viewport-fit=cover`
+  env(safe-area-inset-bottom)` on the surface background, so its button sits above the Android
+  gesture area and Validate, Confirm and New game stay on screen whenever the page scrolls. It
+  holds only the primary button (Validate, Confirm or New game). Its content is 60 px tall with
+  4 px padding each side; its total height is 60 px + `env(safe-area-inset-bottom)`. The button
+  is 48 px tall, centred vertically, and spans the board width minus the padding: 344 px at
+  360 px, 392 px at 412 px, so either thumb reaches it. Its label shrinks to
+  `{typography.ui-label}` size before it ellipsizes. Undo and Redo are in the top bar
+  (Components → Top bar), which is `position: sticky; top: 0`, so they also stay on screen when
+  the page scrolls.
+- **Height rule.** The layout height is `safe-area-inset-top + top bar 44 + columns (6 × strip +
+  H) + foot row 44 + gap 4 + tray band reserved height + cell-number label 16 + WordCell H +
+  gap 8 + action bar 60 + safe-area-inset-bottom`, with H = round(4w/3) and strip = max(44,
+  round(0.72 × H)). For H ≤ 92 that is 352 + 2H + 6 × strip plus insets; for H > 92 it is
+  260 + 3H + 6 × strip plus insets. The rule measures `window.innerHeight`, with `viewport-fit=cover`
   in the viewport meta so the safe-area terms are real. The height-derived
   width is the largest integer w for which that sum fits the viewport height; when it wins, the
   board narrows, centred. When even w = 40 (H = 53) does not fit (short windows,
   phone landscape, small laptops), the board stays at H = 53 and the page scrolls vertically. When
-  the width wins and height is left over, the leftover goes between the top bar and the WordCell
-  row, pushing the play area towards the thumb. Test reference viewports are 412 × 915 (Pixel 7)
-  and 412 × 839 (Playwright's Pixel 7 profile). At both the width wins: w = 46, H = 61, strip 44,
-  sum 730 px plus insets, leaving 185 px and 109 px. The minimum case (w = 40, H = 53, strip 44)
-  sums to 714 px plus insets. Scrolling starts exactly when 714 + actual insets > innerHeight.
-  The 740 in A-D3 is only the supported-device floor; it assumes at most 26 px of insets (a 24 px
+  the width wins and height is left over, the leftover goes between the top bar and the columns,
+  pushing the whole play area down towards the thumb. Test reference viewports are 412 × 915
+  (Pixel 7) and 412 × 839 (Playwright's Pixel 7 profile). At both the width wins: w = 46, H = 61, strip 44,
+  sum 738 px plus insets, leaving 177 px and 101 px. The minimum case (w = 40, H = 53, strip 44)
+  sums to 722 px plus insets. Scrolling starts exactly when 722 + actual insets > innerHeight.
+  The 750 in A-D3 is only the supported-device floor; it assumes at most 28 px of insets (a 24 px
   allowance, rounded up).
   w is recomputed on `resize` and `orientationchange`, deferred until no gesture or animation is
   in progress, so cards and hit rects never move under a finger. Page scrolling counts as a
@@ -372,20 +403,19 @@ Spacing scale 4 / 8 / 12 / 16 / 24 / 32 px. Every interactive target is at least
 - **Scrolling.** Cards, tiles and WordCells keep `touch-action: none`. When the page must scroll
   (below the minimum height, or once band growth or the dictionary-failed banner has used up the
   leftover band), vertical panning starts only on non-card regions, which get `touch-action:
-  pan-y`: the top bar, the leftover band, the WordCell number labels, the foot row when no tail is
-  selected, the empty space below a column's bottom card, the tray band background outside the
-  tiles and the action bar background. Widths below 360 px are unsupported. The switch keys on the
+  pan-y`: the top bar background outside its buttons, the leftover band, the empty space below a
+  column's bottom card, the foot row when no tail is selected, the tray band background outside
+  the tiles, the WordCell number labels, the 8 px gap and the action bar background. Widths below 360 px are unsupported. The switch keys on the
   board width: when the board is wider than the available width, the layout keeps 44 px slots and
   the page pans horizontally from the same regions, which then get `touch-action: pan-x pan-y`
   (horizontal pan needs it); otherwise they keep `pan-y`.
 
 **Desktop browser (spec §7.8 default confirmed: the same layout, widened).** The board is centred
-with `{spacing.gutter-desktop}` gutters and grows until the height rule caps it (71 × 95 px cards,
-600 px board, in a 1080 p window with a 950 px tall viewport: 252 + 3H + 6 × strip is 945 px;
-72 × 96 would need 954). Nothing moves to a side panel; the tray
-band stays between the WordCell row and the columns and the action bar stays under the columns,
-inside the board width. No landscape phone layout:
-the installed app is locked to portrait (manifest), and a phone browser in landscape keeps the
+with `{spacing.gutter-desktop}` gutters and grows until the height rule caps it (70 × 93 px cards,
+592 px board, in a 1080 p window with a 950 px tall viewport: 260 + 3H + 6 × strip is 941 px;
+71 × 95 would need 953). Nothing moves to a side panel; the band order is the
+phone's (Layout & Spacing → Band order), inside the board width. No landscape phone
+layout: the installed app is locked to portrait (manifest), and a phone browser in landscape keeps the
 board at H = 53 and scrolls vertically.
 
 ## Elevation & Depth
@@ -394,14 +424,16 @@ Depth is tonal, not shadowed, with two exceptions that mimic physical cards:
 
 - **A lifted card or tail** (drag, or tap-selected) gets a soft shadow `0 6px 16px #0008` and
   rises 8 px (tap-selected) or follows the finger (drag). The lifted cards draw above their
-  neighbours; a whole-column lift may overlap the tray band by up to 8 px, which is allowed.
+  neighbours; a whole-column lift may overlap the band directly above the columns (the leftover
+  band, or the top bar or dictionary-failed banner when no leftover remains) by up to 8 px, which
+  is allowed; the lifted cards draw over those bars.
 - **Overlays** (WordCell view, sheets, dialogs, end screen) sit above `{colors.scrim}`.
 
-Layer order: table → board surfaces → cards → selection/lift → sticky bars (top bar,
-dictionary-failed banner, action bar, collapsed end-sheet bar) → hover peek → drag layer → scrim →
-overlay. A dragged tail passes over the bars.
-The action bar additionally sits above the end sheet's scrim. It sits below every other scrim and overlay
-(dialogs, panels, the sticky view).
+Layer order: table → board surfaces → cards → sticky bars (top bar, dictionary-failed banner,
+action bar, collapsed end-sheet bar) → selection/lift → hover peek → drag layer → scrim →
+overlay. A lifted or dragged tail passes over the bars.
+The top bar and the action bar additionally sit above the end sheet's scrim. They sit below every
+other scrim and overlay (dialogs, panels, the sticky view).
 
 ## Shapes
 
@@ -409,7 +441,7 @@ The action bar additionally sits above the end sheet's scrim. It sits below ever
 real card at this scale. `{rounded.md}` for the tray band and dialogs, `{rounded.lg}` for the top
 of bottom sheets and all corners of the WordCell view sheet, `{rounded.full}` for buttons. The count badge and the ×2 badge are
 pills (`{rounded.full}`); among badges only the error dot is a circle. The 44 × 44 icon buttons
-(menu, `−`, `+`) and the 52 × 52 Undo and Redo buttons are circles.
+(menu, Undo, Redo, `−`, `+`) are circles.
 
 ## Components
 
@@ -449,13 +481,13 @@ pills (`{rounded.full}`); among badges only the error dot is a circle. The 44 ×
   of the letter band, so it stays clear of the badge. On a D-card `QU` the lock takes the top-left
   corner and the badge the top-right.
 - **Column slot.** Eight equal slots. On touch the column number is not drawn (the position is the
-  identity). Under `(hover: hover) and (pointer: fine)` (desktop) the foot row shows the column number, centred, in
-  ink-secondary ui-label, to support the 1–8 keys; with a tail selected, the foot shows `Here`
+  identity). Under `(hover: hover) and (pointer: fine)` (desktop) the foot row shows the column number, centred in the 44 px pad, in
+  ink-secondary ui-label, to support the 1–8 keys. With a tail selected, the foot shows `Here`
   on the source column and the wash and dashed border on the others, replacing the column
   number. **Placeholder slot** (empty column, spec
   §7.7): card-sized dashed `{colors.outline}` outline at the column's top. **Foot pad**: 44 px row
-  under each column; on touch it stays empty except when a tail is tap-selected, when the source
-  column's whole foot pad (slot width × 44) fills with `{colors.surface-raised}` with `Here` in
+  under each column, between the columns and the tray band; on touch it stays
+  empty except when a tail is tap-selected, when the source column's whole foot pad (slot width × 44) fills with `{colors.surface-raised}` with `Here` in
   ui-label, centred, no horizontal padding (this `Here` pad remains the tap route for a self-drop,
   R-14, Q-34); the other feet show an 8 % teal wash plus a 1 px
   dashed `{colors.outline}` border (a shape cue).
@@ -482,10 +514,10 @@ pills (`{rounded.full}`); among badges only the error dot is a circle. The 44 ×
   card (the top) comes last and is marked `top`. The tap, `Space` and long-press views sit on this
   sheet centred above the board over the scrim, with cell number and card count as the title. Its
   max height is 80 % of the viewport height; beyond that it scrolls vertically inside. The *hover
-  peek* (desktop, under `(hover: hover) and (pointer: fine)` only) is anchored directly below the
-  hovered cell, over the tray band and the columns, with no scrim, above the cards in the layer
-  order, clamped inside the board. It shows cards at card size, 7 per row, at most two rows: the
-  top 14 cards (the most recent), oldest of them first, the top card last and tagged `top`. When
+  peek* (desktop, under `(hover: hover) and (pointer: fine)` only) is anchored directly above the
+  hovered cell, over the tray band and the columns, with no scrim, above the cards in the layer order, clamped
+  inside the board and never covering the cell. It shows cards at card size, 7 per row, at most
+  two rows: the top 14 cards (the most recent), oldest of them first, the top card last and tagged `top`. When
   the cell holds more than 14 cards, a ui-label `+n older cards` line (n = card count − 14) sits
   above the first row. The full view is
   the sticky view.
@@ -494,9 +526,10 @@ pills (`{rounded.full}`); among badges only the error dot is a circle. The 44 ×
   control row. In Composing the control row holds `[−] k [+] [⇄ Flip]` left and the letter count
   (ui-label: `5 letters`, singular `1 letter`) right-aligned. In Place the word line shows the
   validated word in word order; reordering the strip does not change it. The control row holds the
-  meta line, right-aligned like the letter count. In Idle it shows a single
-  ui-label line in ink-secondary (the pending word or nothing, EXPERIENCE.md); it never wraps, and
-  the word part ellipsizes first.
+  meta line, right-aligned like the letter count. In Idle the band shows one ui-label line in
+  ink-secondary in the word-line position, left-aligned (the pending word or nothing,
+  EXPERIENCE.md); it never wraps, and the word part ellipsizes first. The tile rows and the
+  control row are empty.
 - **Tile.** A card in the tray. Movable tiles (S and free letters) are normal cards. A free-letter
   tile carries its WordCell number tag (`6`, `{typography.card-badge}`) in the bottom band, left,
   so the player sees where it came from. *Tap-selected tile*: teal 2 px outline, lifted 4 px. In
@@ -529,27 +562,39 @@ pills (`{rounded.full}`); among badges only the error dot is a circle. The 44 ×
   position of the tray band, replacing the word line until it clears (EXPERIENCE.md message
   catalogue). It shrinks to 14 px to fit, like the word line, then ellipsizes the word part.
 - **Buttons.** Primary (orange pill, 48 px tall, `{typography.button-label}`): Validate, Confirm,
-  New game in the action bar when the game is over, the confirm action of the New game and Replay
+  New game in the action bar when the game is over (in the action bar it spans the board width
+  minus 8 px), the confirm action of the New game and Replay
   this deal dialogs, and New game on the session-rejected message. Secondary (raised pill with a 1 px `{colors.outline}` border so its shape reads, since
   surface-raised on surface is 1.15:1; 44 px; inside a dialog it uses a `{colors.surface}` fill,
   so its outline border keeps 3.4:1 against that fill):
-  D-block controls, Reload, dialog dismissals; Undo and Redo are 52 × 52 icon-only secondary
-  buttons (Layout & Spacing → Action bar). Danger (error fill): Reset history
+  D-block controls, Reload, dialog dismissals, and Undo and Redo as 44 × 44 icon-only secondary
+  buttons in the top bar (Components → Top bar). Danger (error fill): Reset history
   (history notice, end sheet, Statistics) and Delete history (confirm dialog). Disabled:
   ink-disabled on surface-raised, no fill change on hover. In Composing, a disabled Validate always
   says why in its own label (`Need 3+ letters`, `Loading words…`, `Word list unavailable`), in
   ink-secondary (5.6:1 on surface-raised), so no caption is needed. In Idle it reads plain
   `Validate` in ink-disabled unless the dictionary is loading or failed, when it shows that reason
   in ink-secondary.
-- **Top bar.** Menu button (☰, 44 × 44) left; `Score 124` centred in `{typography.score}`; timer
-  `4:12` right in the same style, hidden when Show timer is off (R-76). While the score history is
-  unreadable the ☰ button carries an 8 px `{colors.error}` circle on its top-right.
-- **Dictionary-failed banner.** A 44 px strip directly under the top bar, full board width:
+- **Top bar.** `position: sticky; top: 0` with `padding-top: env(safe-area-inset-top)` on the
+  table background, so its total height is 44 px + `env(safe-area-inset-top)`, mirroring the
+  action bar. Left to right: menu button (☰, 44 × 44); `Score 124`
+  in `{typography.score}`, centred in the space between the menu button and the right-hand group;
+  then the right-hand group, 4 px apart: timer `4:12` in the same style, right-aligned in a fixed
+  64 px box so the score does not shift as it ticks, hidden when Show timer is off (R-76); Undo
+  (`↶`) and Redo (`↷`), 44 × 44 icon-only secondary buttons with accessible names (`Undo`,
+  `Redo`) and tooltips on desktop. Fit at 360 px (board 352) with the timer shown: menu 44 +
+  timer 64 + Undo 44 + Redo 44 + four 4 px gaps is 212 px, which leaves 140 px for the score; the
+  widest score, `Score −530`, is about 92 px. It fits. While the score history is unreadable the ☰
+  button carries an 8 px `{colors.error}` circle on its top-right.
+- **Dictionary-failed banner.** A 44 px strip directly under the top bar, full board width,
+  `position: sticky; top: calc(44px + env(safe-area-inset-top))`, so it stays directly under the
+  sticky top bar:
   `Word list didn't load.` in ui-label `{colors.error}` (single line, ellipsis if needed) and a
   secondary `Reload` button. Score and timer stay in the top bar (R-82, R-76). While shown, the
-  strip takes its 44 px from the leftover band first: while leftover remains, the WordCell row,
-  the tray and the columns do not move; once it is used up they shift down and the page scrolls.
-  w is not recomputed. Showing or hiding the banner is deferred until no gesture is in progress
+  dictionary-failed banner takes its 44 px from the leftover band first: while leftover remains, the columns, the
+  tray and the WordCell row do not move; once it is used up the same anchoring as tray growth applies: the WordCell row, gap and action bar keep
+  their screen position, the shell adjusts scrollTop, and the columns scroll partly under the top bar.
+  w is not recomputed. Showing or hiding the dictionary-failed banner is deferred until no gesture is in progress
   (A-D11), and hit rects are recomputed before the next gesture. This is a rare failure state.
 - **Menu sheet.** Bottom sheet, one 52 px row per item with a leading glyph: New game, Replay
   this deal, Give up, Statistics, Preferences, How to play; footer line with the app version in
@@ -564,11 +609,12 @@ pills (`{rounded.full}`); among badges only the error dot is a circle. The 44 ×
   history is unreadable, the history-unreadable block (ui-body text plus a danger `Reset history`,
   EXPERIENCE.md) sits under the stat lines. Buttons: Replay this deal and Statistics (secondary).
   Expanded, the sheet is at most 80 % of the viewport height and scrolls inside beyond that. The
-  sheet ends above the action bar, which sits above the scrim and stays tappable with Undo and the
-  primary `New game`; the scrim covers the rest of the board. In Game over the tray band is empty
-  at its reserved height. The grab handle, a scrim tap, back or `Esc` collapses the sheet to a
-  56 px bar showing score and band, directly above the action bar, over the bottom of the columns;
-  tapping the bar expands it. While collapsed there is no scrim, and WordCells can be tapped to
+  sheet ends above the action bar and stays below the top bar. Both bars sit above the scrim and
+  stay usable: Undo and Redo in the top bar, the primary `New game` in the action bar; the scrim
+  covers the rest of the board. In Game over the tray band is empty at its reserved height. The
+  grab handle, a scrim tap, back or `Esc` collapses the sheet to a 56 px bar showing score and
+  band, over the tray band (empty in Game over), directly above the WordCell labels; tapping the
+  bar expands it. While collapsed there is no scrim, and the WordCells stay fully tappable to
   view.
 - **Panels** (Statistics, Preferences, How to play). Full-screen on table, back arrow and title in
   a 48 px header, content max 560 px wide centred. Statistics is a 2 × 3 grid of stat tiles
@@ -618,12 +664,12 @@ Jared confirmed every assumption below on 2026-09-27; the `[ASSUMPTION]` tags st
 |---|---|---|
 | A-D1 | One dark theme in v1; no light theme and no `prefers-color-scheme` switch. | Brand & Style |
 | A-D2 | Card letters use a bundled static instance subset of Fraunces (SIL OFL) at wght 600, opsz 48, SOFT 0, WONK 0, precached with the app shell with `font-display: block`, not the system serif; the spine's size ratios are set for that face, so a substitute needs a spine change. | Typography |
-| A-D3 | Minimum supported viewport is 360 × 740 CSS px (714 px at H = 53 plus a 24 px inset allowance is 738 px, rounded up to 740, so it covers up to 26 px of insets). The page scrolls exactly when 714 + actual insets > innerHeight; 740 is only the supported-device floor. Below 740 px tall the page may scroll vertically; the exact trigger is the height-rule inequality 714 + actual insets > innerHeight. When the board is wider than the available width (below 360 px wide) the layout keeps 44 px targets and the page pans horizontally. | Layout & Spacing |
-| A-D4 | Long words switch tiles to 44 px compact height and wrap; r compact rows grow the band by max(0, r × 44 + (r − 1) × 4 − max(H, 92)) px (+48 / +96 for 3 / 4 rows on phones, +45 / +93 at H = 95), taken from the leftover band first (the WordCell row and tray shift up, the columns keep their position); once the leftover is used up the columns shift down and the page scrolls; the sticky action bar does not move. Applied after the edit completes; hit rects are recomputed before the next gesture. | Layout & Spacing |
+| A-D3 | Minimum supported viewport is 360 × 750 CSS px (722 px at H = 53 plus a 24 px inset allowance is 746 px, rounded up to 750, so it covers up to 28 px of insets). The page scrolls exactly when 722 + actual insets > innerHeight; 750 is only the supported-device floor. Below 750 px tall the page may scroll vertically; the exact trigger is the height-rule inequality 722 + actual insets > innerHeight. When the board is wider than the available width (below 360 px wide) the layout keeps 44 px targets and the page pans horizontally. | Layout & Spacing |
+| A-D4 | Long words switch tiles to 44 px compact height and wrap; r compact rows grow the band by max(0, r × 44 + (r − 1) × 4 − max(H, 92)) px (+48 / +96 for 3 / 4 rows on phones, +47 / +95 at H = 93), taken from the leftover band first (the columns and the tray shift up; the top bar, the WordCell row, the 8 px gap and the action bar stay); once the leftover is used up the document grows at the top and the shell adjusts `scrollTop` by the same amount, so the WordCell row, the 8 px gap and the action bar keep their screen position and the columns scroll partly under the sticky top bar; the page scrolls back up from the `pan-y` regions; a Playwright test checks the WordCell row's bounding box is unchanged after the growth. Applied after the edit completes; hit rects are recomputed before the next gesture. | Layout & Spacing |
 | A-D5 | Manifest name, short name, description and colours as listed; icon is a tilted `W` card. | Components |
 | A-D6 | CSS-rendered cards replace the BGA sprite sheet in v1. | Components |
-| A-D7 | Cell *n* sits above column *n − 2* (both rows use the same eight slots). | Layout & Spacing |
-| A-D9 | All text on the Board surface, everything inside the height rule including the banner, foot row, control row, badges and messages, is fixed px so the height rule holds; text in panels, sheets and dialogs is in rem and scales with the browser font size. | Typography |
+| A-D7 | Cell *n* sits below column *n − 2*, with the tray band between them (both rows use the same eight slots). | Layout & Spacing |
+| A-D9 | All text on the Board surface, everything inside the height rule including the dictionary-failed banner, foot row, control row, badges and messages, is fixed px so the height rule holds; text in panels, sheets and dialogs is in rem and scales with the browser font size. | Typography |
 | A-D10 | In Place, a full-height free-letter tile's origin tag moves to the top-left corner so the bottom band holds the `bottom` / `top` tag and the star; a compact tile puts the position mark (`▼` / `★`) top-left, the ×2 badge top-right and the origin tag bottom-left. | Components |
 | A-D11 | The height rule measures `window.innerHeight` with `viewport-fit=cover`; w is recomputed on `resize` and `orientationchange`, deferred until no gesture or animation is in progress; page scrolling counts as a gesture; a resize that changes only innerHeight by less than 80 px does not recompute w. | Layout & Spacing |
 
