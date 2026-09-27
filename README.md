@@ -4,7 +4,7 @@ A solo FreeCell-style word card game for Android (installable PWA) and the brows
 
 - Rules and open design questions: `docs/game-flow-spec.md`
 - Why this stack: `docs/platform-decision.md`
-- Development is BMAD-driven; see `CLAUDE.md` for commands and conventions.
+- Development is BMAD-driven; see `AGENTS.md` for rules and conventions, `CLAUDE.md` for commands.
 
 ```bash
 npm install
