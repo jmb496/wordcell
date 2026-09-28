@@ -52,7 +52,7 @@ the architecture spine is the build contract.
 - Node ≥ 22.12 (WSL2 has Node 24). Keep TypeScript on 6.x (`~6.0`): svelte-check 4.7 peers `^5 || ^6`, so do not take npm-latest 7.
 - Playwright needs system libraries once: `sudo npx playwright install-deps chromium`.
 - Screenshot specs (`*.screens.spec.ts`) use `toHaveScreenshot`; generate and compare baselines only inside `mcr.microsoft.com/playwright:v1.63.0-noble` (`npm run test:screens`, Docker in WSL2); never on the host.
-- `npm run test:all` must pass before a ticket's plan goes to `built`; the rest of done is `docs/development-methodology.md` §Definition of done, and only the owner marks a ticket done. TODO(epic 1): `test:screens` and `playwright.screens.config.ts` do not exist yet. Until `playwright.screens.config.ts` exists, add no `*.screens.spec.ts`; drop each item as epic 1 adds it; remove the line when none remain.
+- `npm run test:all` must pass before a ticket's plan goes to `built`; the rest of done is `docs/development-methodology.md` §Definition of done, and only the owner marks a ticket done. TODO(epic 1): no items remain; the D8 `bmad-project-context` audit removes this line.
 - Keep engine tests exhaustive, the unit suite under 5 s on the dev machine and a watch re-run under 1 s (AD-17): engine tests use small inline `Set` dictionaries; only tests named as dictionary repro cases load the generated file, once per file.
 
 ## Conventions that differ from defaults

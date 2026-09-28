@@ -25,6 +25,7 @@ Verify: actionlint reports nothing and each step's npm script passes locally; af
 
 - `ci.yml`: actionlint clean; every step's npm script passes locally; the first pushed run is green (owner).
 - SPEC CAP-8 success: `.github/workflows/ci.yml` on Node 24 with `npm ci`, triggers `push` (all branches) and `pull_request`: lint → check → unit → `build` (size budget) → `dist-smoke` (`test:e2e:dist`) → upload `dist/` → `build:test` → e2e (`android`, `desktop`, `pwa`) → screenshot job in `container: mcr.microsoft.com/playwright:v1.63.0-noble` calling `npm run test:screens:run`.
+- The screenshot job sets `env: WORDCELL_SCREENS_CONTAINER: '1'`, so `playwright.screens.config.ts` loads (ticket 1.7).
 
 **Build notes fixed here:** the upload uses `actions/upload-artifact` under the fixed name `dist` with `include-hidden-files: true`, so the artifact is the exact `dist/` CI tested, `.vite/` and `.assetsignore` included (entry 9's `.assetsignore` then excludes `.vite` at deploy). After `build:test`, the `pwa` step calls `PW_PREVIEW=dist-test playwright test -c playwright.pwa.config.ts --project pwa` directly, so `dist-test/` is built once. Playwright reports upload on failure. Actionlint runs through Docker `rhysd/actionlint` [ASSUMPTION per build-notes], which needs the Docker access entry 7 set up.
 

@@ -121,6 +121,7 @@ spine leaves open and name the traps found in the scaffold. `[ASSUMPTION]` marks
 - Job order per AD-18; upload `dist/` with `actions/upload-artifact` under a fixed name (`dist`)
   for `deploy.yml`. The screenshot job runs in `container: mcr.microsoft.com/playwright:v1.63.0-noble`
   and calls `npm run test:screens:run`; upload Playwright reports on failure.
+  The screenshot job sets `env: WORDCELL_SCREENS_CONTAINER: '1'` (ticket 1.7: `playwright.screens.config.ts` throws at load otherwise).
 - Local proof (D6): actionlint (Docker `rhysd/actionlint`) `[ASSUMPTION]` plus each step's npm
   script.
 
