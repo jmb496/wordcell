@@ -51,3 +51,14 @@ Code review: 1 pass, converged; no fixes needed
 Tests: all passing locally; first GitHub run (36445959287) green in both jobs, built app saved as "dist"
 Worth knowing: you approved the push; the branch epic-1-scaffold is now on GitHub (public repository). For the retrospective: checks run on every branch push, and an older run on the same branch is cancelled when a newer one starts (a small reading of the architecture doc to record there). Three follow-ups are noted in the plan: keep the Docker image and the test tool version in step, add an automated test for the flaky-test report, and run the workflow linter automatically.
 
+## 1.9 Deploy to Cloudflare Workers static assets — done (you authorised this ticket and publishing, 2026-09-28)
+What it adds: automatic publishing. Whenever main passes all GitHub checks, the exact build that was tested is published to Cloudflare, and the live site's settings are then checked automatically. WordCell is live at https://wordcell.jmb496.workers.dev (currently the placeholder board).
+Ticket review: 7 passes, capped (last fix not re-reviewed); nothing needed your input
+Build: built; commits 5183644
+Code review: 2 passes, converged; 1 fix: a date setting the Cloudflare tool would have rejected at the real deploy (081a3f9)
+Tests: all passing locally; main CI run 36454888375 green; Deploy run 36455152672 green, with every live check passing (the first check attempt hit a 404 for about five seconds while Cloudflare switched over, then passed)
+Worth knowing: to undo a release, revert on main or roll back in Cloudflare. Open follow-ups in the plan: nothing checks the cache settings before they go live, and a future npm version might block two install scripts; both are low risk now. Next per the epic: one AGENTS.md audit, then the epic retrospective.
+
+## Run complete
+All of epic 1 is done (1.1–1.9). Next: the AGENTS.md audit (D8), then /bmad-retrospective for epic 1.
+

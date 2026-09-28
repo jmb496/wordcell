@@ -3,7 +3,7 @@ title: 'Deploy to Cloudflare Workers static assets (deploy.yml)'
 type: 'feature'
 ticket: '9'
 created: '2026-09-28'
-status: 'built'
+status: done
 route: 'full'
 route_source: 'auto'
 baseline_revision: 'eb8e4f9336168f335094dc1a87798cb699dda771'
