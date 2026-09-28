@@ -47,6 +47,18 @@ Each BMAD skill runs in a fresh chat. Point each at the spec, the legacy docs in
 7. After the epic's last ticket: /bmad-retrospective.
 ```
 
+## Autopilot (owner-authorised 2026-09-28)
+
+`/epic-autopilot [epic]` runs the per-ticket loop above for every remaining ticket of an epic
+without stopping between tickets: `/review-loop` on the ticket, `/bmad-build-auto`, `/review-loop`
+in code mode on the build (every ticket), `npm run test:all`, then mark done. Each step runs in a
+fresh headless session. While it runs, gate 3 is covered by the review loop's decision-needed rule
+and gate 4 is delegated to the autopilot for tickets that pass every check. It stops for the owner
+on any decision-needed item, a build that is not `built`, a failing `test:all`, a `hitl` ticket, a
+ticket whose gate-4 owner check is more than reading the result, or the end of the epic. The owner
+reads the plain-language digest in `_bmad-output/implementation-artifacts/autopilot/` instead of
+each plan. Local commits only; never pushes.
+
 Stop conditions for any review loop: zero major findings after triage, or the pass cap (default 4).
 Real majors on a third pass mean the refs are unclear; fix the spec or CLAUDE.md, not the ticket.
 

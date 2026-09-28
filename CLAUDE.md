@@ -14,6 +14,10 @@ functionality, UX or gameplay go to Jared, never auto-applied. Use it on tickets
 plans after build when a second pass is wanted.
 
 
+`/epic-autopilot [epic]` (project skill in `.claude/skills/epic-autopilot`) runs every remaining
+ticket of an epic through review loop → build → code review loop → `test:all` → mark done, stopping
+only when Jared's input is needed (methodology § Autopilot, owner-authorised 2026-09-28).
+
 Skills are installed in `.claude/skills/bmad-*`; runtime in `_bmad/`; artifacts in
 `_bmad-output/` (planning-artifacts, implementation-artifacts, specs). Legacy inputs are in
 `_bmad-output/planning-artifacts/legacy/`. Workflow: product brief → ux → architecture spine →
