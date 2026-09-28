@@ -1,0 +1,187 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: checkout
+        uses: actions/checkout@v7
+
+      - name: setup-node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: npm ci
+        run: npm ci
+
+      - name: playwright install
+        run: npx playwright install --with-deps chromium
+
+      - name: lint
+        run: npm run lint
+
+      - name: check
+        run: npm run check
+
+      - name: unit
+        run: npm test
+
+      - name: build
+        run: npm run build
+
+      - name: dist-smoke
+        id: dist-smoke
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: ${{ runner.temp }}/pw-json/dist-smoke.json
+        run: npm run test:e2e:dist -- --reporter=github,json
+
+      - name: upload dist
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+          overwrite: true
+
+      - name: build:test
+        run: npm run build:test
+
+      - name: e2e
+        id: e2e
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: ${{ runner.temp }}/pw-json/e2e.json
+        run: npm run test:e2e -- --reporter=github,json
+
+      - name: pwa
+        id: pwa
+        env:
+          PW_PREVIEW: dist-test
+          PLAYWRIGHT_JSON_OUTPUT_NAME: ${{ runner.temp }}/pw-json/pwa.json
+        run: npx playwright test -c playwright.pwa.config.ts --project pwa --reporter=github,json
+
+      - name: flaky report
+        if: ${{ !cancelled() }}
+        shell: bash
+        env:
+          OUTCOME_DIST_SMOKE: ${{ steps.dist-smoke.outcome }}
+          OUTCOME_E2E: ${{ steps.e2e.outcome }}
+          OUTCOME_PWA: ${{ steps.pwa.outcome }}
+          PW_JSON_DIR: ${{ runner.temp }}/pw-json
+        run: |
+          # shellcheck disable=SC2016
+          filter='def specs_with_path($p): (.specs[]? | {p: $p, s: .}), (.suites[]? | specs_with_path($p + [.title])); .suites[] | specs_with_path([]) | .s as $s | .p as $p | $s.tests[] | select(.status == "flaky") | [.projectName, $s.file] + $p + [$s.title] | join(" > ") | gsub("[\r\n]"; " ")'
+          summary=('## Flaky tests')
+          flaky=()
+          for id in dist-smoke e2e pwa; do
+            case "$id" in
+              dist-smoke) outcome="${OUTCOME_DIST_SMOKE-}" ;;
+              e2e) outcome="${OUTCOME_E2E-}" ;;
+              pwa) outcome="${OUTCOME_PWA-}" ;;
+            esac
+            file="$PW_JSON_DIR/$id.json"
+            case "$outcome" in
+              skipped)
+                summary+=("- $id: not run")
+                continue
+                ;;
+              failure)
+                if [[ ! -f "$file" ]]; then
+                  summary+=("- $id: failed before reporting")
+                  continue
+                fi
+                ;;
+              success)
+                if [[ ! -f "$file" ]]; then
+                  echo "flaky report: step $id succeeded but $file is missing" >&2
+                  exit 1
+                fi
+                ;;
+              *)
+                echo "flaky report: step $id has unexpected outcome '$outcome'" >&2
+                exit 1
+                ;;
+            esac
+            if ! jq empty "$file"; then
+              echo "flaky report: step $id JSON $file does not parse" >&2
+              exit 1
+            fi
+            if ! jq -e '(type == "object") and (.suites | type == "array")' "$file" > /dev/null; then
+              echo "flaky report: step $id JSON $file has an unexpected shape (no .suites array)" >&2
+              exit 1
+            fi
+            if ! out="$(jq -r "$filter" "$file")"; then
+              echo "flaky report: step $id JSON $file has an unexpected shape" >&2
+              exit 1
+            fi
+            if [[ -n "$out" ]]; then
+              mapfile -t lines <<< "$out"
+              flaky+=("${lines[@]}")
+            fi
+          done
+          if (( ${#flaky[@]} == 0 )); then
+            summary+=('- No flaky tests.')
+          else
+            for text in "${flaky[@]}"; do
+              summary+=("- \`\` $text \`\`")
+            done
+          fi
+          printf '%s\n' "${summary[@]}" >> "$GITHUB_STEP_SUMMARY"
+          for text in "${flaky[@]}"; do
+            printf '::warning::Flaky: %s\n' "${text//%/%25}"
+          done
+
+      - name: upload test-results
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results-test
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+          overwrite: true
+
+  screens:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --init --ipc=host
+    env:
+      WORDCELL_SCREENS_CONTAINER: '1'
+    steps:
+      - name: checkout
+        uses: actions/checkout@v7
+
+      - name: npm ci
+        run: npm ci
+
+      - name: test:screens:run
+        run: npm run test:screens:run
+
+      - name: upload test-results
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results-screens
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+          overwrite: true
