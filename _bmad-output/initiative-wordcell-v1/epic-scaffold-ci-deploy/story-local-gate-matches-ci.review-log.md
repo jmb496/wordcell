@@ -1,6 +1,6 @@
 # Review log — story-local-gate-matches-ci.md (ticket 1.10)
 
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, depth thorough (builder, edge-case, adversarial, ref-alignment), cap 7. Pre-loop: HEAD 40fe05d, copy at story-local-gate-matches-ci.review-log.passes/pass0.md, 217 words (growth budget ~540).
 
@@ -32,3 +32,35 @@ Reviewers: builder, edge-case, adversarial, ref-alignment  |  Findings (after me
 ### Fixer outcome
 All 9 applied. Checked in node_modules: `includeManifestIcons` (vite-plugin-pwa 1.3.0), `globIgnores` (workbox-build 7.4.1); plugin always adds its own manifest entry. `unverified`: that `globIgnores: ['manifest.webmanifest']` removes exactly the duplicate (ticket says "or equivalent").
 Words (docs): 474 (2.18 x pass 0)  |  Snapshot: _bmad-output/initiative-wordcell-v1/epic-scaffold-ci-deploy/story-local-gate-matches-ci.review-log.passes/pass1.md
+
+## Pass 2 — 2026-09-28
+Reviewers: fix-diff, edge-case, adversarial, ref-alignment  |  Findings (after merge): major 5, minor 9, decision-needed 0  |  Dropped in triage: 2 (plus duplicates)
+### Applied
+- [major] Hash bullet — the Fraunces TTF is not committed (git-ignored generated/font/); the unit test cannot hash it
+- [major] Hash bullet — no rule for added/removed files under the hashed globs
+- [major] Hash bullet — hashed text inputs not pinned in .gitattributes; a CRLF checkout fails the test spuriously
+- [major] Playwright pin — "fails if none found" counted across both files; a ci.yml tag in another form passes silently
+- [major] dist/ bullet — dist-smoke scope also stated in spine AD-18 CI, AD-17 Playwright configs, delta-checks row 46; not named for update
+- [minor] dist/ bullet — widened test titles and `distTest()` error still name dist-test/
+- [minor] Precache bullet — `globIgnores` option not marked unverified in the ticket
+- [minor] Test ids — icon hashes are AD-16 (A-A7)
+- [minor] "epic Note" is labelled Decision (epic:54)
+- [minor] A-A7 — the "by hand" wording is in build-notes:94 and build-icons.mjs header, not the spine row
+- [minor] gzip — compute expected sizes at runtime (zlib varies with Node)
+- [minor] Hash — record after editing hashed inputs; failure message says regenerate or re-record
+- [minor] Verify — the scratch over-budget asset must be in the counted set
+- [minor] methodology DoD line 70 describes test:all
+### Default applied (technical)
+- TTF — covered through build-font.py's `TTF_SHA256` (hashed as an input; already tied to data/README.md by build-font.test.mjs)
+- file set — recorded set must equal the glob matches; missing recorded file fails
+- line endings — hashed text files get `-text` in .gitattributes (OFL.txt precedent)
+- Playwright tags — at least one exact `v<semver>-noble` tag in each of package.json and ci.yml; any other `mcr.microsoft.com/playwright` reference fails
+- ids — AD-17 Playwright pin, AD-18 font hash and gzip, AD-16 icon hashes
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- Playwright bump must also update AGENTS.md and spine AD-17 tag by hand — outside A5; growth budget.
+- 1.1 follow-up: plan records the failing pre-fix output — procedure detail for the plan.
+### Fixer outcome
+All 14 applied; doc-update clauses consolidated into one "Doc updates" bullet. `globIgnores` still `unverified` (marked so in the ticket).
+Words (docs): 532 (2.45 x pass 0)  |  Snapshot: _bmad-output/initiative-wordcell-v1/epic-scaffold-ci-deploy/story-local-gate-matches-ci.review-log.passes/pass2.md
