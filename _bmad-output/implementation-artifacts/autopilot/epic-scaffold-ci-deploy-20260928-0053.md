@@ -35,6 +35,11 @@ Code review: 1 pass, converged; no fixes needed
 Tests: all passing
 Worth knowing: about 127 KB of headroom remains for the rest of the game; the dictionary dominates the budget.
 
-## Run stopped before 1.7
-1.7 (screenshot pipeline in Docker), 1.8 (CI workflow) and 1.9 (deploy to Cloudflare) are marked as needing you, so the autopilot stops here.
+## 1.7 Screenshot pipeline in the Playwright container — done (you authorised this ticket 2026-09-28)
+What it adds: picture-comparison tests. They take screenshots of the board on a phone and a desktop inside a fixed Docker environment, so later changes that alter what the screen looks like are caught automatically. The first reference pictures (the placeholder board) are saved; the real board replaces them in epic 4.
+Ticket review: 7 passes, capped (last fix not re-reviewed); nothing needed your input
+Build: built; commits c3aad07
+Code review: 1 pass, converged; no fixes needed
+Tests: all passing, including the screenshot comparison in Docker
+Worth knowing: the build added one line to the CI notes so the screenshot job knows it runs inside the container (appended to ticket 1.8 too). One command in the ticket's own checklist uses a form this machine's git rejects; the build used an equivalent (no effect on the game).
 

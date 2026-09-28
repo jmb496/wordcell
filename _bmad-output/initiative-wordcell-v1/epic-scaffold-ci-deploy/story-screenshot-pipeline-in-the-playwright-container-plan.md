@@ -3,7 +3,7 @@ title: 'Screenshot pipeline in the Playwright container'
 type: 'feature'
 ticket: '7'
 created: '2026-09-28'
-status: 'built'
+status: done
 baseline_revision: '46dd98be64cc8e9bdefdb46869c555f486fb72a6'
 route: 'oneshot'
 route_source: 'auto'
