@@ -97,8 +97,8 @@ how.
     container; the default config never collects `*.screens.spec.ts`.
 
 - **CAP-8** CI (AD-18 CI)
-  - **intent:** Every push and PR runs the AD-18 pipeline in order and publishes the tested
-    `dist/` as an artifact.
+  - **intent:** Every branch push (not tags) and every PR runs the AD-18 pipeline in order and
+    publishes the tested `dist/` as an artifact; a newer run on the same ref cancels the older.
   - **success:** `.github/workflows/ci.yml` on Node 24 with `npm ci`: lint → check → unit →
     `build` (size budget) → `dist-smoke` → upload `dist/` → `build:test` → e2e (`android`,
     `desktop`, `pwa`) → screenshot job in the container; passes actionlint; the first pushed run
@@ -107,11 +107,13 @@ how.
 - **CAP-9** Deploy (AD-18 Deploy and Rollback) — separate ticket
   - **intent:** A green `ci.yml` run on a push to `main` deploys that run's `dist/` artifact,
     unrebuilt, to Cloudflare Workers static assets with the AD-18 cache headers.
-  - **success:** the ticket first confirms `origin` and both secrets exist (verified present on
-    2026-09-27) and halts only if one is missing; `wrangler deploy --dry-run` succeeds locally;
-    after the owner's push the live site returns `immutable` on `/assets/*`, `no-cache` on `/`,
-    `/index.html`, `/sw.js`, `/manifest.webmanifest`, and 404 on `/.vite/manifest.json` and on an
-    unknown `/assets/` path.
+  - **success:** the ticket first confirms `origin` is `github.com/jmb496/wordcell` (ssh or
+    https, with or without `.git`) and both secrets exist (verified present on 2026-09-27), and
+    halts if the remote differs or a secret is missing; `wrangler deploy --dry-run` succeeds
+    locally; after the owner's push the live site returns `immutable` on `/assets/*`, `no-cache`
+    on `/`, `/sw.js`, `/manifest.webmanifest` and on the final response of `/index.html`
+    (default `html_handling` answers 307 to `/`), and 404 on `/.vite/manifest.json`, on an
+    unknown `/assets/` path, `/_headers` and `/.assetsignore`.
 
 ## Constraints
 
@@ -124,7 +126,7 @@ how.
 - `wrangler.jsonc` sets no `not_found_handling`: unknown paths must 404 (Q-42 needs a 404 on the
   old hashed dictionary URL).
 - Deploy uploads the exact `dist/` CI tested; no rebuild in `deploy.yml`, no manual deploy, no
-  preview environment (A-A6).
+  preview environment and no preview URLs (`wrangler.jsonc` `preview_urls: false`, A-A6).
 - Screenshots are generated and compared only in the container; never on the host.
 - Unit suite stays under 5 s, including `scripts/*.test.mjs` (inline fixtures, no full-dictionary
   read outside a named repro case).

@@ -99,7 +99,8 @@ spine leaves open and name the traps found in the scaffold. `[ASSUMPTION]` marks
 - Counted set per AD-18 from `dist/.vite/manifest.json`: `index.html`, the entry's JS and CSS
   and every chunk reachable from it, excluding the dynamic-import chunk of `src/shell/sw.ts` and
   static imports reachable only through it (none exist until epic 7; the fixture test covers
-  it), plus the font and the dictionary. Gzip level 9; 600,000-byte limit; fail if font or
+  it), plus everything reachable from a dynamic import made by the `sw.ts` static-import
+  closure (AD-18 Size), the font and the dictionary. Gzip level 9; 600,000-byte limit; fail if font or
   dictionary absent from the set.
 - Separately fail on any file matching AD-16 `globPatterns` over 4,000,000 bytes.
 - Pure `computeBudget(manifest, sizes)`; `postbuild` only after `build` (not `build:test`).
@@ -116,27 +117,40 @@ spine leaves open and name the traps found in the scaffold. `[ASSUMPTION]` marks
 
 ## CAP-8 CI
 
-- Triggers: `push` (all branches) and `pull_request`. Node 24, npm cache, `npm ci`,
+- Triggers: `push` (all branches, not tags) and `pull_request`; `concurrency` per ref with
+  `cancel-in-progress`, so a newer run cancels the older (a cancelled `main` run never deploys). Node 24, npm cache, `npm ci`,
   `npx playwright install --with-deps chromium` on the runner jobs.
 - Job order per AD-18; upload `dist/` with `actions/upload-artifact` under a fixed name (`dist`)
-  for `deploy.yml`. The screenshot job runs in `container: mcr.microsoft.com/playwright:v1.63.0-noble`
-  and calls `npm run test:screens:run`; upload Playwright reports on failure.
+  for `deploy.yml`, with `include-hidden-files: true` so `.vite/manifest.json` is kept. The screenshot job runs in `container: mcr.microsoft.com/playwright:v1.63.0-noble`
+  and calls `npm run test:screens:run`; each job uploads `test-results/` on failure
+  (`test-results-test`, `test-results-screens`; CI uses the `github` reporter, so no HTML report).
+  `test:e2e:pwa` runs as `build:test` plus a direct `--project pwa` step; a non-gating flaky
+  report (`if: !cancelled()`) lists tests that passed on a retry (`retries: 2` under CI in
+  `playwright.config.ts` and `playwright.pwa.config.ts`) in the job summary.
   The screenshot job sets `env: WORDCELL_SCREENS_CONTAINER: '1'` (ticket 1.7: `playwright.screens.config.ts` throws at load otherwise).
 - Local proof (D6): actionlint (Docker `rhysd/actionlint`) `[ASSUMPTION]` plus each step's npm
   script.
 
 ## CAP-9 Deploy
 
-- First step: `git remote get-url origin` = `github.com/jmb496/wordcell`; `gh secret list` shows
-  `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` (both present 2026-09-27). Halt only if
-  absent.
+- First step: `git remote get-url origin` is `github.com/jmb496/wordcell` (ssh or https, with or
+  without `.git`); `gh secret list` shows `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` (both
+  present 2026-09-27). Halt if the remote differs or a secret is missing.
 - `deploy.yml`: `on: workflow_run` of `ci.yml`, `types: [completed]`; run only when
   `conclusion == 'success'`, `event == 'push'`, `head_branch == 'main'`; `permissions:
-  actions: read, contents: read`; `actions/download-artifact` with `run-id` and `github-token`;
-  `npm ci`; `npx wrangler deploy` with the two secrets as env; `concurrency: deploy` `[ASSUMPTION]`;
-  then `curl -sI` the AD-18 header checks against the deployed URL `[ASSUMPTION]`.
-- `wrangler.jsonc`: `name: "wordcell"`, a pinned `compatibility_date`, `workers_dev: true`,
-  `assets: { directory: "./dist" }`, no `main`, no `not_found_handling`.
+  actions: read, contents: read`; checkout of the CI run's `head_sha`; `npm ci`;
+  `actions/download-artifact` with `run-id` and `github-token`; a `verify dist` step failing when `index.html`,
+  `_headers`, `.assetsignore`, `sw.js`, `manifest.webmanifest`, `.vite/manifest.json` or an
+  `assets/*.js` is missing; `npx --no-install wrangler deploy` with the two secrets as env;
+  `concurrency: deploy` (job-level, not cancelled) `[ASSUMPTION]`; then the AD-18 post-deploy
+  checks against the deployed URL `[ASSUMPTION]`: wait for `/` to equal `dist/index.html`, then
+  immutable on one `/assets/*.js`, `no-cache` on `/`, `/sw.js`, `/manifest.webmanifest` and
+  the final response of `/index.html` (307 to `/`), 404 on `/.vite/manifest.json`,
+  `/assets/does-not-exist.js`, `/_headers` and `/.assetsignore`.
+- `wrangler.jsonc`: exactly `name: "wordcell"`, a pinned `compatibility_date` (no later than the
+  pinned wrangler's `DEFAULT_COMPAT_DATE`; `--dry-run` does not check it), `workers_dev: true`,
+  `preview_urls: false` (A-A6), `assets: { directory: "./dist" }`; no `main`, no
+  `not_found_handling`, no `html_handling` (default: `/index.html` answers 307 to `/`).
 - `public/_headers` per AD-18; `public/.assetsignore` lists `.vite`. Both are copied into `dist/`
   by Vite.
 - Rollback per AD-18: revert on `main` or `wrangler rollback`.

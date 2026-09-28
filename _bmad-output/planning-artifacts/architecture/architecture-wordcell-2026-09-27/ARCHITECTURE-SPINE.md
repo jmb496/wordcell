@@ -7,7 +7,7 @@ paradigm: 'functional core / imperative shell, event-sourced'
 scope: 'WordCell v1: pure rules engine, event-sourced Session, app shell services, Svelte UI, PWA packaging, CI and deploy'
 status: final
 created: '2026-09-27'
-updated: '2026-09-27'
+updated: '2026-09-28'
 binds: ['spec R-01…R-85, §2, Q-01…Q-35', 'brief §6, §7, §9', 'DESIGN.md', 'EXPERIENCE.md']
 sources:
   - _bmad-output/planning-artifacts/briefs/brief-wordcell-2026-09-26/brief.md
@@ -31,6 +31,9 @@ The repository already holds a scaffold (commit `785c0f6`); ADs that ratify it a
 `[ADOPTED]`, and every place where the scaffold must change is listed under Scaffold deltas.
 The ADs and Consistency Conventions below are the rules `bmad-project-context` records in the
 AGENTS.md block.
+
+Amended 2026-09-28 (epic 1 retrospective A1, owner-approved): AD-1, AD-17, AD-18, Scaffold
+deltas and A-A4/A-A6 describe the code as built in epic 1; no decision changed.
 
 ## Design Paradigm
 
@@ -87,7 +90,10 @@ flowchart LR
        (`scoreHistory`, `reconcileHistory`, `wordcell:history`);
      - only `src/shell/storage.ts` matches `\blocalStorage\b`;
      - `*.test.ts` files in shell and UI are exempt from the `localStorage` and History API
-       ownership checks.
+       ownership checks;
+     - under `src/`, a `.mjs`, `.cjs`, `.mts`, `.cts`, `.tsx` or `.jsx` file fails, and so does
+       a `.js` or `.svelte` file under `src/engine/`, and so does a code file outside `engine/`,
+       `shell/`, `ui/` and `main.ts` (epic 1 SPEC Assumptions).
   3. Biome `noRestrictedGlobals` for `src/engine/**` denies the plain identifiers of that list
      for editor feedback (Biome cannot deny `Math.random`); the Vitest scan is the authority.
 
@@ -683,7 +689,10 @@ sequenceDiagram
   - **Scripts.** `test:e2e` runs `playwright.config.ts`; `test:e2e:pwa` runs `build:test` (a
     `VITE_TEST_HOOKS=1` build to `dist-test/`) then `playwright.pwa.config.ts --project pwa`; `test:screens`
     runs `playwright.screens.config.ts` in the container; `test:all` = lint + check + unit + `test:e2e` +
-    `test:e2e:pwa`. CI runs all of them, screenshots included.
+    `test:e2e:pwa`. CI runs the same steps one by one (`test:e2e:pwa` as `build:test` plus a
+    direct `--project pwa` run) and also `build` with the size budget, `test:e2e:dist` and the
+    screenshots, which `test:all` does not (AD-18 CI). Under CI, `playwright.config.ts` and
+    `playwright.pwa.config.ts` retry twice; the screens config never retries.
   - **Screenshots.** Baselines are generated and compared only inside the
     `mcr.microsoft.com/playwright:v1.63.0-noble` container (CI job container; locally
     `npm run test:screens` via Docker in WSL2) `[ASSUMPTION A-A8]`.
@@ -697,27 +706,45 @@ sequenceDiagram
   rebuilt deploy; stale HTML or worker served from cache.
 - **Rule:**
   - Size: `vite.config.ts` sets `build.manifest: true`; `scripts/size-budget.mjs` (the
-    `postbuild` step) sums gzip level 9 sizes of exactly `index.html`, the JS and CSS chunks
-    listed in `dist/.vite/manifest.json` except the chunk for `src/shell/sw.ts`'s dynamic import
-    and its static imports not otherwise reachable from the entry (AD-16), the font and the dictionary. It fails above 600,000 bytes or
+    `postbuild` step) sums gzip level 9 sizes of exactly `index.html`, the JS and CSS of the
+    chunks in `dist/.vite/manifest.json` reachable from the entry over static and dynamic imports
+    without following a dynamic import of `src/shell/sw.ts` (AD-16), plus everything reachable
+    from a dynamic import made by the `sw.ts` static-import closure, the font and the dictionary. It fails above 600,000 bytes or
     when the font or dictionary is missing from the set, and prints a per-file table. The
     dictionary is about 453 KB of it `[ASSUMPTION A-A4]`. Counting lazily loaded chunks is
     intentionally conservative relative to brief §6.8.
   - Font: `scripts/build-font.py` (`uv run`, fontTools with brotli declared in its header)
     instances Fraunces at wght 600, opsz 48, SOFT 0, WONK 0 and subsets A–Z plus `u` to woff2
     (A-D2). Output `src/ui/assets/wordcell-serif.woff2` and `OFL.txt` are committed; source URL
-    and SHA-256 in `data/README.md`. CI does not run it `[ASSUMPTION A-A5]`.
-  - CI (`ci.yml`, every push and PR, Node 24, `npm ci`): lint → check → unit → `build` (with
-    size budget) → a hook-free smoke test against `dist/` (boot, deal, no fatal surface; project
-    `dist-smoke` in `playwright.pwa.config.ts`) → upload `dist/` as an artifact → build `dist-test/` with hooks → e2e
-    (`android`, `desktop`, `pwa`) → screenshot job in the Playwright container.
-  - Deploy (`deploy.yml`, on `ci.yml` success on `main`): download that run's `dist/` artifact
-    and `wrangler deploy` it with no rebuild, to a Workers static-assets project
-    (`wrangler.jsonc`, assets `./dist`, no Worker script) at `wordcell.<account>.workers.dev`.
-    `wrangler` is a pinned devDependency. `public/_headers`: `/assets/*` `Cache-Control: public,
-    max-age=31536000, immutable`; `/`, `/index.html`, `/sw.js`, `/manifest.webmanifest`
-    `no-cache`. `public/.assetsignore` excludes `.vite`. One environment, production; no
-    preview deploys `[ASSUMPTION A-A6]`. Prerequisites (owner, before
+    and SHA-256 in `data/README.md`. CI does not run it `[ASSUMPTION A-A5]`. Vite never inlines
+    it (`build.assetsInlineLimit`, Scaffold deltas), so the built `index.html` preload `href`
+    equals the `@font-face` URL.
+  - CI (`ci.yml`, every branch push (not tags) and every PR; a newer run on the same ref cancels
+    the older, so a cancelled `main` run never deploys; Node 24, `npm ci`): lint → check → unit →
+    `build` (with size budget) → a hook-free smoke test against `dist/` (boot, deal, no fatal
+    surface; project `dist-smoke` in `playwright.pwa.config.ts`) → upload `dist/` with hidden
+    files (keeps `.vite/manifest.json`) as the artifact `dist` → build `dist-test/` with hooks →
+    e2e (`android`, `desktop`, `pwa`) → a non-gating flaky report (tests that passed on a retry,
+    AD-17 Scripts) in the job summary → screenshot job in the Playwright container. Each job
+    uploads `test-results/` on failure.
+  - Deploy (`deploy.yml`, on `ci.yml` success for a push to `main`; runs serialised, none
+    cancelled): check out that run's commit, `npm ci`, download that run's `dist` artifact,
+    verify it holds `index.html`, `_headers`, `.assetsignore`, `sw.js`,
+    `manifest.webmanifest`, `.vite/manifest.json` and a JS file under `assets/`, and `wrangler
+    deploy` it with no rebuild, to a Workers static-assets project at
+    `wordcell.<account>.workers.dev`. `wrangler.jsonc` holds exactly `name`,
+    `compatibility_date` (pinned, no later than the pinned wrangler's `DEFAULT_COMPAT_DATE`; a
+    `--dry-run` does not check it), `workers_dev: true`, `preview_urls: false` and assets
+    `./dist`: no Worker script, no `not_found_handling`, default `html_handling` (so
+    `/index.html` answers 307 to `/`). `wrangler` is a pinned devDependency. `public/_headers`:
+    `/assets/*` `Cache-Control: public, max-age=31536000, immutable`; `/`, `/index.html`,
+    `/sw.js`, `/manifest.webmanifest` `no-cache`. `public/.assetsignore` excludes `.vite`. After
+    deploying, the workflow waits until `/` serves `dist/index.html` byte for byte, then checks
+    the immutable header on one `/assets/*.js`, `no-cache` on `/`, `/sw.js`,
+    `/manifest.webmanifest` and on the final response of `/index.html`, and 404 on
+    `/.vite/manifest.json`, an unknown `/assets/` path, `/_headers` and `/.assetsignore`; each
+    check retries briefly, then fails the job. One environment, production; no preview deploys
+    or preview URLs `[ASSUMPTION A-A6]`. Prerequisites (owner, before
     epic 1's deploy ticket, which halts until they exist): a GitHub remote and the repository
     secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
   - Rollback: revert the commit on `main` (the normal pipeline redeploys) or `wrangler
@@ -799,7 +826,8 @@ Changes the first epic makes to commit `785c0f6`:
 - `.gitignore`: add `generated/` and `dist-test/`; drop `public/dictionary/`.
 - `vite.config.ts`: `registerType: 'autoUpdate'` → `'prompt'`, `injectRegister: false`, manifest
   per A-D5 (no `display_override`, colours `#15171B`, DESIGN description), globPatterns and size
-  limit (AD-16), `build.manifest: true` (AD-18).
+  limit (AD-16), `build.manifest: true` (AD-18), `build.assetsInlineLimit` returning `false` for
+  `.woff2` (the font is never inlined; AD-18 Font).
 - `src/App.svelte` and `src/app.css` move into `src/ui/` (the Board root and global styles);
   in `src/ui/app.css` remove `overflow: hidden` on `html, body`; keep `overscroll-behavior: none`;
   palette to DESIGN.md tokens (AD-11).
@@ -807,8 +835,10 @@ Changes the first epic makes to commit `785c0f6`:
 - `public/icons/` is empty; generate icons (AD-16).
 - `package.json`: `predev`/`pretest`/`pretest:watch`/`pretest:e2e`, dictionary generation
   moved from `build` to a `prebuild` hook, `postbuild`, `build:test` with a `prebuild:test`
-  hook, `test:e2e:pwa`, `test:screens`, `test:all` per AD-17, `check` gains
-  `tsc -p src/engine/tsconfig.json`, `wrangler` (AD-1, AD-8, AD-17, AD-18);
+  hook, `test:e2e:pwa`, `test:e2e:dist`, `test:screens` (and `test:screens:run`), `test:all` per
+  AD-17, `check` gains `tsc -p src/engine/tsconfig.json`, `tsconfig.arch.json`
+  (`src/architecture.test.ts`) and `tsconfig.e2e.json` (`playwright*.config.ts`, `e2e/**`),
+  `wrangler` (AD-1, AD-8, AD-17, AD-18);
   `playwright.config.ts`: `testIgnore` for `*.screens.spec.ts`; new `playwright.pwa.config.ts`
   and `playwright.screens.config.ts` (AD-17).
 - CLAUDE.md: rule 5 path and the Commands and Testing expectations lines already updated with
@@ -901,9 +931,9 @@ traceability.
 | A-A1 | The record's `spelling` is the R-37 lowercase word string; display uppercases it. | AD-6 |
 | A-A2 | An un-finish identifies "this game's" record by `seed`, `outcome` and `activeMs` (Q-43); a collision needs a replayed seed with the same outcome and active time to the millisecond, and is accepted. | AD-6 |
 | A-A3 | `navigator.storage.persist()` is requested once per launch (`requestPersistence()`) after the SW registration attempt settles, to protect the offline cache; its result is not shown and its `localStorage` coverage is not relied on. | AD-7, AD-16 |
-| A-A4 | 600 KB is 600,000 bytes; the counted set is `index.html`, the JS and CSS chunks in `.vite/manifest.json` except the `sw.ts` chunk and its otherwise-unreachable imports, font and dictionary (dictionary ≈ 453 KB gzip, leaving ≈ 147 KB). | AD-18 |
+| A-A4 | 600 KB is 600,000 bytes; the counted set is `index.html`, the JS and CSS chunks AD-18 Size counts by reachability (the `sw.ts` chunk and what only it imports statically excluded), font and dictionary (dictionary ≈ 453 KB gzip, leaving ≈ 147 KB). | AD-18 |
 | A-A5 | The Fraunces subset is generated once by a uv-run Python script and committed; CI does not regenerate it. uv is already a BMAD requirement. | AD-18 |
-| A-A6 | One production environment on `workers.dev`, deploy from the tested `dist/` artifact on green `main`, no preview deploys. | AD-18 |
+| A-A6 | One production environment on `workers.dev`, deploy from the tested `dist/` artifact on green `main`, no preview deploys (`wrangler.jsonc` `preview_urls: false`). | AD-18 |
 | A-A7 | App icons are committed PNGs rendered from committed SVG sources by a Playwright script; no image dependency is added. | AD-16 |
 | A-A8 | Screenshot baselines live in the Playwright 1.63 noble container, so WSL2 and CI render identically; local screenshot runs need Docker in WSL2. | AD-17 |
 | A-A9 | Page scroll counts as ended at `scrollend`, at hide/pagehide, or 150 ms after the last `scroll` event, whichever comes first (the 150 ms rule is a backstop in all browsers). | AD-11 |
