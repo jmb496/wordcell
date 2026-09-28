@@ -70,6 +70,18 @@ test.describe('seedStorage / captureBoot', () => {
     expect(await readBoot(page)).toEqual(expected);
   });
 
+  test('AD-17 seedStorage with captureBoot records live values after reload', async ({ page }) => {
+    await seedStorage(page, { session: 'a' }, { captureBoot: true });
+    await page.goto('/');
+    await writeKey(page, 'session', 'b');
+    await page.reload();
+    expect(await readBoot(page)).toEqual({
+      'wordcell:session': 'b',
+      'wordcell:history': null,
+      'wordcell:prefs': null,
+    });
+  });
+
   test('AD-17 captureBoot records absent keys as null and later writes on reload', async ({
     page,
   }) => {
@@ -158,6 +170,32 @@ test.describe('seedStorage / captureBoot', () => {
     const fresh = await page.context().newPage();
     await expect(seedStorage(fresh, {})).rejects.toThrow(/no keys/);
   });
+
+  test('AD-17 seedStorage that fails validation does not track the page', async ({ page }) => {
+    const fresh = await page.context().newPage();
+    await expect(seedStorage(fresh, {})).rejects.toThrow(/no keys/);
+    await expect(seedStorage(fresh, { session: 'a' })).resolves.toBeUndefined();
+  });
+
+  test('AD-17 seedStorage checks no keys before already called', async ({ page }) => {
+    const fresh = await page.context().newPage();
+    await seedStorage(fresh, { session: 'a' });
+    await expect(seedStorage(fresh, {})).rejects.toThrow(/no keys/);
+  });
+
+  test('AD-17 seedStorage checks already called before about:blank', async ({ page }) => {
+    const fresh = await page.context().newPage();
+    await seedStorage(fresh, { session: 'a' });
+    await fresh.goto('/');
+    await expect(seedStorage(fresh, { session: 'a' })).rejects.toThrow(/already called/);
+  });
+
+  test('AD-17 captureBoot checks already called before about:blank', async ({ page }) => {
+    const fresh = await page.context().newPage();
+    await captureBoot(fresh);
+    await fresh.goto('/');
+    await expect(captureBoot(fresh)).rejects.toThrow(/already called/);
+  });
 });
 
 test.describe('touchDrag / longPress', () => {
@@ -239,9 +277,10 @@ test.describe('touchDrag / longPress', () => {
 
   test('AD-17 longPress holds a touch pointer for at least ms', async ({ page }) => {
     const ms = 600;
+    const at = { x: 200, y: 400 };
     await page.goto('/');
     await installProbe(page);
-    await longPress(page, { x: 200, y: 400 }, ms);
+    await longPress(page, at, ms);
     const events = await probeEvents(page);
     const pointer = events.filter((e) => e.type !== 'contextmenu');
     expect(pointer.filter((e) => e.type === 'pointercancel')).toEqual([]);
@@ -253,6 +292,10 @@ test.describe('touchDrag / longPress', () => {
     expect((up?.timeStamp ?? Number.NaN) - (down?.timeStamp ?? Number.NaN)).toBeGreaterThanOrEqual(
       ms - 1,
     );
+    expect(Math.abs((down?.clientX ?? Number.NaN) - at.x)).toBeLessThanOrEqual(1);
+    expect(Math.abs((down?.clientY ?? Number.NaN) - at.y)).toBeLessThanOrEqual(1);
+    expect(Math.abs((up?.clientX ?? Number.NaN) - at.x)).toBeLessThanOrEqual(1);
+    expect(Math.abs((up?.clientY ?? Number.NaN) - at.y)).toBeLessThanOrEqual(1);
   });
 });
 

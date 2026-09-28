@@ -92,7 +92,7 @@ deferred:
 ## Implementation Notes
 
 **Evidence (2026-09-28, WSL2, ports 5173/4173 confirmed free before each Playwright run):**
-- `npm run test:all`: lint, check (incl. `tsc -p tsconfig.e2e.json`), unit, `test:e2e` (22 passed, 18 skipped = helper self-tests off `android`), `test:e2e:pwa` (2 passed: `AD-8` precache, `AD-17` hook) all green. No Halt condition hit: CDP touch on Pixel 7 gave `touch` pointerdown/moves/up within 1 CSS px, no pointercancel; longPress held ≥ 599 ms.
+- `npm run test:all`: lint, check (incl. `tsc -p tsconfig.e2e.json`), unit, `test:e2e` (27 passed, 23 skipped = helper self-tests off `android`), `test:e2e:pwa` (2 passed: `AD-8` precache, `AD-17` hook) all green. No Halt condition hit: CDP touch on Pixel 7 gave `touch` pointerdown/moves/up within 1 CSS px, no pointercancel; longPress held ≥ 599 ms.
 - `npm run build && npm run test:e2e:dist`: 2 passed (`AD-18` load/52 cards/no errors/no hook; `AD-18` dist scan). No console error from the icons/`registerSW.js`/`sw.js` (third Halt bullet did not trigger).
 - `grep -r __wordcell dist/`: empty. `grep -c __wordcell dist-test/assets/*.js`: 1.
 - `rm -rf generated dist-test && npm run build:test`: regenerates the dictionary (172713 words) and writes `dist-test/` with `sw.js`. `git check-ignore dist-test/x` prints `dist-test/x`.
@@ -105,13 +105,14 @@ deferred:
 **AD-17 sentence → test mapping:**
 - Scripts / Projects (`build:test`, `test:e2e:pwa`, `test:e2e:dist`, `test:all`, `pwa` / `dist-smoke` via `PW_PREVIEW`, D5) → evidence above (config, not a test).
 - Reading state: hook present under dev → `e2e/test-hook.spec.ts` `AD-17 test hook is present under the dev server…` (android + desktop); in the test build → `e2e/pwa/test-hook.spec.ts` `AD-17 …`; absent in production → `e2e/pwa/dist-smoke.spec.ts` `AD-18 production build loads…` + `AD-18 no file in dist/ contains __wordcell`.
-- Seeding (`seedStorage`, `captureBoot`, no re-seed on reload, kill variant's new page not seeded, call rules) → `e2e/helpers.spec.ts` seed cases (a)–(g) (13 `AD-17 …` tests).
+- Seeding (`seedStorage`, `captureBoot`, no re-seed on reload, kill variant's new page not seeded, call rules) → `e2e/helpers.spec.ts` seed cases (a)–(g) plus `AD-17 seedStorage with captureBoot records live values after reload` (18 `AD-17 …` tests); validation before tracking → `AD-17 seedStorage that fails validation does not track the page`; guard check order → `AD-17 seedStorage checks no keys before already called`, `AD-17 seedStorage checks already called before about:blank`, `AD-17 captureBoot checks already called before about:blank`.
 - Touch (CDP touch, `touchDrag`, `longPress`) → `AD-17 touchDrag …`, `AD-17 longPress …`.
 - Time and hide (`hidePage`/`showPage`/`pageHide`/`pageShow`) → `AD-17 hidePage / showPage …`, `AD-17 pageHide / pageShow … while visible|hidden`.
 - AD-8 precache half (`?url` row) → `e2e/pwa/precache.spec.ts` `AD-8 …`.
 - Exempt/deferred (ticket Deferred list, verbatim scope): `hidePage` exactly-one-`wordcell:session`-write / gesture cancel / resume; restore boundaries; `Page.crash` kill variant with a real Session; `loaded()`/`current()`/`dictionaryState()` (epic 3); `swState()`/`precacheComplete()` and offline test (epic 7); valid Session fixtures (epic 2); font precache half (entry 4); `playwright.screens.config.ts` / `test:screens` / Screenshots (entry 7); "CI runs all of them" (entry 8); `page.clock` / R-76 Time (epic 3); "desktop tests use `page.mouse`" (first desktop-only UI ticket); boot-order half of the one-download proof (epics 3, 7); untested guards (complete list): `readPrecacheManifest` throws, `touchDrag` `steps` / `from` equals `to`, `longPress` `ms`, touch viewport-set / finite-and-inside / `maxTouchPoints > 0`; Split and Speed (process, AGENTS.md); AD-18 "no fatal surface" (epic 3; the no-error assertion stands in).
 
 **Implementation choices within the ticket:** lifecycle recorder records both the listener (`window`/`document`) and the event target, so the `visibilitychange` case asserts one document-listener and one window-listener record per call, both with `target: 'document'`. The `pageHide`/`pageShow` "runs twice" is two generated tests (visible, hidden).
+Extra seed test beyond cases (a)–(g): `AD-17 seedStorage with captureBoot records live values after reload` writes `'b'` after the seeded load and expects `'b'` in `__wordcellBoot` after reload, proving the combined script captures live storage on every load rather than echoing the seed and that reload does not re-seed; case (c) stays as the ticket words it.
 
 **Handoff:**
 - Entries 4 and 5 extend `e2e/pwa/precache.spec.ts` via `readPrecacheManifest` (`e2e/helpers/precache.ts`).
@@ -193,6 +194,6 @@ deferred:
 
 **Follow-up review recommended:** false (no patched entries).
 
-**Verification (orchestrator re-run, 2026-09-28):** ports 5173/4173 free; `npm run test:all` exit 0 (pwa: 2 passed); `npm run build && npm run test:e2e:dist` 2 passed; `grep -r __wordcell dist/` empty; `git check-ignore dist-test/x` → `dist-test/x`; default `--list` shows 40 tests in 3 files (helpers, smoke, test-hook). Implementer evidence for the scratch/removal checks is under Implementation Notes.
+**Verification (orchestrator re-run, 2026-09-28):** ports 5173/4173 free; `npm run test:all` exit 0 (pwa: 2 passed); `npm run build && npm run test:e2e:dist` 2 passed; `grep -r __wordcell dist/` empty; `git check-ignore dist-test/x` → `dist-test/x`; default `--list` shows 50 tests in 3 files (helpers, smoke, test-hook). Implementer evidence for the scratch/removal checks is under Implementation Notes.
 
 **Residual risks:** `readPrecacheManifest` depends on vite-plugin-pwa `generateSW` output shape (throws on change); `'**/pwa/**'` testIgnore breaks under a checkout path with a `pwa` segment (entry 8); CI `retries` can mask flaky touch/pwa runs (entry 8); owner to route the `e2e/<flow>.spec.ts` naming drift (gate 4).
