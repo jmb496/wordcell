@@ -3,7 +3,7 @@ title: 'Dictionary generation and ?url wiring'
 type: 'chore'
 ticket: '2'
 created: '2026-09-27'
-status: 'built'
+status: done
 route: 'full'
 route_source: 'auto'
 baseline_revision: '8d5080063720620cf9ba02096bc511ca729a4413'
