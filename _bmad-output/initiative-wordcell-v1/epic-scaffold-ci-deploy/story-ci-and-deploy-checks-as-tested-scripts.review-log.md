@@ -1,6 +1,6 @@
 # Review log — story-ci-and-deploy-checks-as-tested-scripts.md (ticket 1.11)
 
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, depth thorough (builder, edge-case, adversarial, ref-alignment), cap 7. Pre-loop: HEAD 564d2c2, copy at story-ci-and-deploy-checks-as-tested-scripts.review-log.passes/pass0.md, 167 words. Growth budget: the pass-0 ticket is a stub the owner asked the loop to flesh out, so 2.5x pass 0 (~420 words) is not applied; budget taken as ~1500 words (the epic's other tickets run 560–3600).
 
@@ -98,3 +98,23 @@ Fixer: all 13 applied, none skipped; confirmed ci.yml order checkout → setup-n
 - none
 ### Dropped / left for the plan (minor, over budget)
 - fixed User-Agent (stretch); `lint:actions` npm script; recomputed deploy-job worst-case time; cli.js read time; several `DEFAULT_COMPAT_DATE` values / calendar-valid date; Node error text replacing `curl exit $rc`
+
+## Pass 4 — 2026-09-28
+Reviewers: fix-diff, edge-case, adversarial, ref-alignment (late-pass bar)  |  Findings (after merge): major 1, minor 24, decision-needed 0  |  Dropped in triage: 0
+### Applied
+- [major] Immutable targets — "verify dist requires exactly one match per glob" reads onto `dist/assets/*.js` too, contradicting AD-18 Deploy ("a JS file", at least one) and failing the deploy gate at the first second JS chunk (edge-case, adversarial, ref-alignment)
+- [minor] `.assetsignore` "exactly `.vite`" → exactly one non-blank line (a duplicate is extra)
+- [minor] "(as today)" wrongly attached to code-point sort (bash sorts by locale)
+- [minor] unset/empty `PW_JSON_DIR`/`GITHUB_STEP_SUMMARY` check missing from the intended-changes list
+- [minor] summary appends to `GITHUB_STEP_SUMMARY` (as today)
+- [minor] delta-checks "rows 48–49" are line numbers → cite the `ci.yml` and `deploy.yml` rows
+- [minor] spawn tests use async `execFile`/`spawn` (a sync spawn blocks the in-process server)
+- [minor] epic Notes "CAP-9 … last" decision gets an amendment line
+Words: 1602 (9.6x pass 0; 1.07x the ~1500 budget)  |  Snapshot: story-ci-and-deploy-checks-as-tested-scripts.review-log.passes/pass4.md
+Fixer: all 8 applied by rewording (+40 words); checked spine:737, deploy.yml:55/166-170, ci.yml:145, delta-checks lines 48–49 (cited by row name: they are items 11–12 of their table, not "entries 8 and 9"), epic Notes line 48. The sync-spawn rationale was not put in the ticket (the event-loop block is standard Node behaviour).
+### Default applied (technical)
+- verify dist — at least one `*.js` (as today, AD-18); exactly one each of `en-*.txt` and `*.woff2`; AC gains "two `*.js` pass"
+### Decision needed (functionality / UX / gameplay)
+- none
+### Left for the plan (minor, over growth budget)
+- `_headers` indented line without `:` or empty name/value; CRLF/trailing whitespace on path and `.assetsignore` lines; `DEFAULT_COMPAT_DATE` extraction regex and calendar-valid date; per-hop protocol re-pick and non-http schemes; post-deploy/verify argument-count and unreadable log; server teardown with `closeAllConnections()`; trailing slash on `DEPLOY_CHECK_BASE_URL`; test that workflows never set `DEPLOY_CHECK_BASE_URL`; two-level flaky ordering test; verify running the validators on `dist/` copies; actionlint duty in the methodology Definition of done; https server test; `wrangler deploy --dry-run` as a local proof or why not; spawn-test wording per CLI entry
