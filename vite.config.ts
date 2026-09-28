@@ -4,6 +4,11 @@ import { defineConfig } from 'vitest/config';
 
 // https://vite.dev/config/
 export default defineConfig({
+  build: {
+    // AD-18 Font: never inline the font as a data: URL, so the build holds it once and the
+    // index.html preload matches the @font-face URL; other assets keep Vite's default.
+    assetsInlineLimit: (file) => (file.endsWith('.woff2') ? false : undefined),
+  },
   plugins: [
     svelte(),
     VitePWA({

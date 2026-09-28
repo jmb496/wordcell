@@ -1,1 +1,3 @@
 data/enable1.txt -text
+src/ui/assets/OFL.txt -text
+src/ui/assets/*.woff2 binary
