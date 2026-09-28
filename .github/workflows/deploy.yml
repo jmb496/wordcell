@@ -1,0 +1,181 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: deploy
+      cancel-in-progress: false
+    steps:
+      - name: checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+
+      - name: setup-node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: npm ci
+        run: npm ci
+
+      - name: download dist
+        uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      - name: verify dist
+        shell: bash
+        run: |
+          missing=0
+          for f in dist/index.html dist/_headers dist/.assetsignore dist/sw.js dist/manifest.webmanifest dist/.vite/manifest.json; do
+            if [[ ! -f "$f" ]]; then
+              echo "verify dist: $f is missing" >&2
+              missing=1
+            fi
+          done
+          if ! compgen -G 'dist/assets/*.js' > /dev/null; then
+            echo "verify dist: dist/assets/ has no *.js file" >&2
+            missing=1
+          fi
+          if (( missing )); then
+            exit 1
+          fi
+
+      - name: deploy
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --no-install wrangler deploy 2>&1 | tee "$RUNNER_TEMP/wrangler-deploy.log"
+
+      - name: post-deploy check
+        shell: bash
+        run: |
+          log="$RUNNER_TEMP/wrangler-deploy.log"
+          base="$(grep -oE 'https://wordcell\.[^/ ]+\.workers\.dev' "$log" | head -n 1)" || true
+          if [[ -z "$base" ]]; then
+            echo "post-deploy check: no https://wordcell.<subdomain>.workers.dev URL in $log" >&2
+            exit 1
+          fi
+          echo "deployed URL: $base"
+          tmp="$(mktemp)"
+          expected=''
+          got=''
+
+          # probe <url> <curl flags>: sets rc, status, first_status, first_cc, cc_lines (final header block).
+          probe() {
+            local out block first
+            rc=0
+            out="$(curl "$2" --max-time 10 "$1")" || rc=$?
+            out="${out//$'\r'/}"
+            block="$(printf '%s\n' "$out" | awk '/^HTTP\//{b=""} {b = b $0 "\n"} END{printf "%s", b}')"
+            first="$(printf '%s\n' "$out" | awk 'NF == 0 {exit} {print}')"
+            status="$(printf '%s\n' "$block" | awk 'NR == 1 {print $2}')"
+            first_status="$(printf '%s\n' "$first" | awk 'NR == 1 {print $2}')"
+            mapfile -t cc_lines < <(printf '%s\n' "$block" | grep -i '^[[:space:]]*cache-control[[:space:]]*:' | sed -E 's/^[^:]*:[[:space:]]*//; s/[[:space:]]+$//')
+            first_cc="$(printf '%s\n' "$first" | grep -i '^[[:space:]]*cache-control[[:space:]]*:' | sed -E 's/^[[:space:]]+//; s/[[:space:]]+$//' | paste -sd '|' -)" || true
+          }
+
+          describe() {
+            local cc='(none)'
+            if (( ${#cc_lines[@]} > 0 )); then
+              cc="$(printf '%s|' "${cc_lines[@]}")"
+              cc="${cc%|}"
+            fi
+            got="curl exit $rc, status ${status:-(none)}, ${#cc_lines[@]} cache-control line(s): $cc"
+          }
+
+          # check_index <url>: 200 and body byte-identical to dist/index.html.
+          check_index() {
+            local status bytes=0 hash='no body'
+            expected='200 and body byte-identical to dist/index.html'
+            rm -f "$tmp"
+            rc=0
+            status="$(curl -s --max-time 10 -o "$tmp" -w '%{http_code}' "$1")" || rc=$?
+            if (( rc == 0 )) && [[ "$status" == 200 ]] && cmp -s "$tmp" dist/index.html; then
+              return 0
+            fi
+            if [[ -f "$tmp" ]]; then
+              bytes="$(wc -c < "$tmp")"
+              hash="sha256 $(sha256sum "$tmp" | cut -d ' ' -f 1)"
+            fi
+            got="curl exit $rc, status ${status:-(none)}, body $bytes bytes, $hash"
+            return 1
+          }
+
+          # check_cache <url> <curl flags> <value>: 200 and exactly one cache-control line equal to value.
+          check_cache() {
+            expected="200 with exactly one cache-control: $3"
+            probe "$1" "$2"
+            if [[ "$2" == -sIL ]]; then
+              echo "info: $1 first response status ${first_status:-(none)}, ${first_cc:-(none)}"
+            fi
+            describe
+            (( rc == 0 )) && [[ "$status" == 200 ]] && (( ${#cc_lines[@]} == 1 )) && [[ "${cc_lines[0]}" == "$3" ]]
+          }
+
+          # check_status <url> <code>: the single response has that status.
+          check_status() {
+            expected="status $2"
+            probe "$1" -sI
+            describe
+            (( rc == 0 )) && [[ "$status" == "$2" ]]
+          }
+
+          # attempt_loop <max> <fn> <args...>: retry 5 s apart; exit 1 when attempts run out.
+          attempt_loop() {
+            local max=$1 fn=$2 i
+            shift 2
+            for ((i = 1; i <= max; i++)); do
+              if "$fn" "$@"; then
+                echo "ok: $1 ($expected)"
+                return 0
+              fi
+              echo "attempt $i/$max failed: $1 expected $expected; got $got" >&2
+              if (( i < max )); then
+                sleep 5
+              fi
+            done
+            echo "post-deploy check failed after $max attempts: $1" >&2
+            echo "  expected: $expected" >&2
+            echo "  last response: $got" >&2
+            exit 1
+          }
+
+          attempt_loop 24 check_index "$base/"
+
+          for f in dist/assets/*.js; do
+            asset="${f##*/}"
+            break
+          done
+          echo "asset for check 1: $asset"
+          immutable='public, max-age=31536000, immutable'
+          attempt_loop 3 check_cache "$base/assets/$asset" -sI "$immutable"
+          attempt_loop 3 check_cache "$base/" -sI 'no-cache'
+          attempt_loop 3 check_cache "$base/sw.js" -sI 'no-cache'
+          attempt_loop 3 check_cache "$base/manifest.webmanifest" -sI 'no-cache'
+          attempt_loop 3 check_cache "$base/index.html" -sIL 'no-cache'
+          attempt_loop 3 check_status "$base/.vite/manifest.json" 404
+          attempt_loop 3 check_status "$base/assets/does-not-exist.js" 404
+          attempt_loop 3 check_status "$base/_headers" 404
+          attempt_loop 3 check_status "$base/.assetsignore" 404
+          echo "post-deploy check: all checks passed"

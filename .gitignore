@@ -27,3 +27,4 @@ generated/
 test-results/
 playwright-report/
 _bmad-output/**/*.tmp
+.wrangler/
