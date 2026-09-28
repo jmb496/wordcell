@@ -1,6 +1,6 @@
 # Review log — story-local-gate-matches-ci.md (ticket 1.10)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, depth thorough (builder, edge-case, adversarial, ref-alignment), cap 7. Pre-loop: HEAD 40fe05d, copy at story-local-gate-matches-ci.review-log.passes/pass0.md, 217 words (growth budget ~540).
 
@@ -64,3 +64,31 @@ Reviewers: fix-diff, edge-case, adversarial, ref-alignment  |  Findings (after m
 ### Fixer outcome
 All 14 applied; doc-update clauses consolidated into one "Doc updates" bullet. `globIgnores` still `unverified` (marked so in the ticket).
 Words (docs): 532 (2.45 x pass 0)  |  Snapshot: _bmad-output/initiative-wordcell-v1/epic-scaffold-ci-deploy/story-local-gate-matches-ci.review-log.passes/pass2.md
+
+## Pass 3 — 2026-09-28
+Reviewers: fix-diff, edge-case, adversarial, ref-alignment  |  Findings (after merge): major 1, minor 10, decision-needed 0  |  Dropped in triage: 7 (plus duplicates)
+### Applied
+- [major] Hash bullet — only hashed text inputs get `-text`; `public/favicon.svg` is a hashed text output, so a CRLF checkout still fails the hash test
+- [minor] Doc updates — build-notes line 91 must drop "keep includeAssets", not name the hash test (pass-2 consolidation blurred it)
+- [minor] Doc updates — delta-checks row 45 (precache check under `pwa` only) also changes
+- [minor] Doc updates — "(precache check pwa-only)" reads as the new state; reword as now also under dist-smoke
+- [minor] Doc updates — epic:58 Decision (dist-smoke cases `AD-18 …`) also affected; widened specs keep their AD-8/AD-16 ids
+- [minor] Doc updates — AGENTS.md:56 "`test:e2e:dist` runs only the hook-free `dist-smoke`" needs the widened scope too
+- [minor] dist/ bullet — `testMatch` is per file; say the three specs (all hook-free; hook-using tests stay in pwa-only files)
+- [minor] Hash bullet — font output written as a glob (`src/ui/assets/*.woff2`) so set equality has a pattern
+- [minor] 1.1 follow-up — say confirmed gaps are fixed here (Verify already assumes it)
+- [minor] First bullet — "A2 is the owner-accepted source." lost its object after the pass-2 consolidation
+- [minor] Precache bullet — `globIgnores` hedge: reviewer traced workbox-build 7.4.1 generate-sw.js (defaults replaced, swDest and workbox-*.js still added); drop "unverified" only if the fixer confirms in node_modules
+### Default applied (technical)
+- favicon — every hashed text file (inputs and `public/favicon.svg`) gets `-text`
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- Spine/SPEC/methodology edits lack owner approval (adversarial, major) — the owner-authored pass-0 ticket itself mandates test:all running the build and dist-smoke and the dist/ packaging run, and the owner pulled it; the doc updates only reconcile to that (rule 7 ask satisfied by the ticket; gate 3 delegated).
+- Record Chromium/Playwright version with icon inputs (3 reviewers, minor) — A9 keeps regeneration a manual check; plan detail.
+- gzip: export `gzipSize`, assert fixture sizes differ, cover levels 1–8 — plan detail / beyond "dropping" in Verify; growth budget.
+- woff2 recorded once vs twice — plan detail.
+- Who runs the 1.1 review — plan detail.
+### Fixer outcome
+All 11 applied. Fixer confirmed in node_modules: workbox-build 7.4.1 `globIgnores` user value replaces the default and generate-sw.js adds swDest and `workbox-*.js` itself; vite-plugin-pwa 1.3.0 always adds its manifest entry. "unverified" dropped; "the one-entry test decides" kept (no build run). "(owner, 2026-09-27)" and "A2 is the owner-accepted source." trimmed for words.
+Words (docs): 558 (2.57 x pass 0)  |  Snapshot: _bmad-output/initiative-wordcell-v1/epic-scaffold-ci-deploy/story-local-gate-matches-ci.review-log.passes/pass3.md
