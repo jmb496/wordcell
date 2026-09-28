@@ -37,8 +37,8 @@ export default defineConfig({
     }),
   ],
   test: {
-    // Engine and unit tests only. End-to-end tests live in e2e/ and run under Playwright.
-    include: ['src/**/*.test.ts'],
+    // Engine, unit and script tests only. End-to-end tests live in e2e/ and run under Playwright.
+    include: ['src/**/*.test.ts', 'scripts/**/*.test.mjs'],
     environment: 'node',
     coverage: { include: ['src/engine/**'] },
   },

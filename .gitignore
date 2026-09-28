@@ -22,7 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-public/dictionary/
+generated/
 test-results/
 playwright-report/
 _bmad-output/**/*.tmp
