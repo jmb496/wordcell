@@ -401,6 +401,27 @@ describe('AD-16 precache file limit', () => {
   });
 });
 
+/**
+ * A deterministic word list (32-bit LCG, high bits) built from a few syllables: repetitive enough
+ * that gzip level 9 and the default level give different sizes (asserted in the test).
+ */
+function lcgWords() {
+  const syllables = ['qu', 'ab', 'er', 'in', 'on', 'at', 'st', 're', 'ly', 'ing', 'ed', 'es'];
+  let state = 1;
+  const next = () => {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    return state >>> 16;
+  };
+  const words = [];
+  for (let i = 0; i < 5000; i++) {
+    let word = '';
+    const count = 1 + (next() % 4);
+    for (let j = 0; j < count; j++) word += syllables[next() % syllables.length];
+    words.push(word);
+  }
+  return `${words.join('\n')}\n`;
+}
+
 describe('size-budget CLI', () => {
   const script = fileURLToPath(new URL('./size-budget.mjs', import.meta.url));
   /** @type {string} */
@@ -449,6 +470,7 @@ describe('size-budget CLI', () => {
     const noIndex = distFiles(baseManifest());
     delete noIndex['index.html'];
     writeDist(join(root, 'no-index'), noIndex);
+    writeDist(join(root, 'gzip-level'), { ...distFiles(baseManifest()), [DICT]: lcgWords() });
   });
 
   afterAll(() => {
@@ -514,5 +536,15 @@ describe('size-budget CLI', () => {
       expect(bad.stderr).toContain('usage');
       expect(bad.stdout).not.toContain('total');
     }
+  });
+
+  it('AD-18 CLI sizes the counted files at gzip level 9', async () => {
+    const dictionary = lcgWords();
+    const level9 = gzipSync(dictionary, { level: 9 }).length;
+    expect(gzipSync(dictionary).length).not.toBe(level9);
+
+    const result = await run([join(root, 'gzip-level')]);
+    expect(result.code).toBe(0);
+    expect(result.stdout.split('\n')).toContain(`${DICT} ${level9}`);
   });
 });

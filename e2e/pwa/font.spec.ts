@@ -1,8 +1,9 @@
 import { expect, test } from '@playwright/test';
-import { type Attributes, distTest, linkTags, readSite, relOf, walk } from '../helpers/dist-test';
+import { type Attributes, buildRoot, linkTags, readSite, relOf, walk } from '../helpers/dist-test';
 
-// AD-16 / AD-18 Font (SPEC CAP-4) against the dist-test/ build the pwa project serves; the epic
-// Decision lets dist-test/ stand in for dist/ because VITE_TEST_HOOKS changes only JS.
+// AD-16 / AD-18 Font (SPEC CAP-4) against the build under test (helpers/dist-test.ts buildRoot).
+// Runs under both the pwa (dist-test/) and dist-smoke (dist/) projects, so it must stay
+// hook-free: tests that use the VITE_TEST_HOOKS hook belong in pwa-only files.
 
 function fontFaceBlocks(css: string): string[] {
   return [...css.matchAll(/@font-face\s*\{[^}]*\}/g)].map((m) => m[0]);
@@ -47,8 +48,8 @@ test('AD-16 the font preload href equals the @font-face URL of WordCell Serif', 
   expect(block).toMatch(/font-display:\s*block/);
 });
 
-test('AD-18 dist-test/ holds the WordCell Serif font once and never as a data: URL', () => {
-  const files = walk(distTest());
+test('AD-18 the build holds the WordCell Serif font once and never as a data: URL', () => {
+  const files = walk(buildRoot());
   const fonts = files.filter((file) => file.endsWith('.woff2'));
   expect(fonts).toHaveLength(1);
   expect(fonts[0]).toMatch(/^assets\/wordcell-serif-[^/]+\.woff2$/);

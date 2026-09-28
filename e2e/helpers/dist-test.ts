@@ -1,20 +1,28 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
-// Reads the dist-test/ build from disk for the pwa project (epic Decision: dist-test/ stands in
-// for dist/ because VITE_TEST_HOOKS changes only JS).
+// Reads the build under test from disk: `PW_PREVIEW` names it (`dist` for the dist-smoke project,
+// `dist-test` for the pwa project, playwright.pwa.config.ts).
 
-const root = path.resolve(import.meta.dirname, '../../dist-test');
+const BUILD_SCRIPTS = { dist: 'npm run build', 'dist-test': 'npm run build:test' } as const;
 
-export function distTest(): string {
+// `repo` exists for the AD-17 self-test of the missing-build error (e2e/helpers.spec.ts).
+export function buildRoot(repo = path.resolve(import.meta.dirname, '../..')): string {
+  const preview = process.env.PW_PREVIEW;
+  if (preview !== 'dist' && preview !== 'dist-test') {
+    throw new Error(
+      `PW_PREVIEW must be exactly 'dist' or 'dist-test' (got ${JSON.stringify(preview)})`,
+    );
+  }
+  const root = path.join(repo, preview);
   if (!existsSync(path.join(root, 'index.html'))) {
-    throw new Error(`${root}/index.html is missing: run npm run build:test (npm run test:e2e:pwa)`);
+    throw new Error(`${root}/index.html is missing: run ${BUILD_SCRIPTS[preview]}`);
   }
   return root;
 }
 
 export function readSite(sitePath: string): string {
-  return readFileSync(path.join(distTest(), sitePath), 'utf8');
+  return readFileSync(path.join(buildRoot(), sitePath), 'utf8');
 }
 
 export type Attributes = Map<string, string>;

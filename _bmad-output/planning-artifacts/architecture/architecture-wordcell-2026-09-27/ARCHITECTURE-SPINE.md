@@ -683,15 +683,18 @@ sequenceDiagram
     `vite preview --outDir dist-test` of a `VITE_TEST_HOOKS=1` build, for the offline test
     (deal, validate, reload offline after `precacheComplete()`, brief §6.8) and a check that the
     generated precache manifest holds the dictionary and font without a revision, and
-    `dist-smoke` against `vite preview` of `dist/` (AD-18). Under
+    `dist-smoke` against `vite preview` of `dist/` (AD-18), which runs `dist-smoke.spec.ts` plus
+    the hook-free packaging specs (precache, build-output, font), so the precache check also runs
+    under `dist-smoke` (ticket 1.10, 2026-09-28). Under
     preview there are no immutable headers, so "one download" is proven by that manifest check
     plus the boot order, not by counting requests.
   - **Scripts.** `test:e2e` runs `playwright.config.ts`; `test:e2e:pwa` runs `build:test` (a
     `VITE_TEST_HOOKS=1` build to `dist-test/`) then `playwright.pwa.config.ts --project pwa`; `test:screens`
-    runs `playwright.screens.config.ts` in the container; `test:all` = lint + check + unit + `test:e2e` +
-    `test:e2e:pwa`. CI runs the same steps one by one (`test:e2e:pwa` as `build:test` plus a
-    direct `--project pwa` run) and also `build` with the size budget, `test:e2e:dist` and the
-    screenshots, which `test:all` does not (AD-18 CI). Under CI, `playwright.config.ts` and
+    runs `playwright.screens.config.ts` in the container; `test:all` = lint + check + unit +
+    `build` (with the size budget) + `test:e2e:dist` + `test:e2e` + `test:e2e:pwa` (ticket 1.10,
+    2026-09-28). CI runs the same steps one by one (`test:e2e:pwa` as `build:test` plus a direct
+    `--project pwa` run) and also the screenshots, which `test:all` does not (container-only,
+    `npm run test:screens`; AD-18 CI). Under CI, `playwright.config.ts` and
     `playwright.pwa.config.ts` retry twice; the screens config never retries.
   - **Screenshots.** Baselines are generated and compared only inside the
     `mcr.microsoft.com/playwright:v1.63.0-noble` container (CI job container; locally
@@ -722,7 +725,8 @@ sequenceDiagram
   - CI (`ci.yml`, every branch push (not tags) and every PR; a newer run on the same ref cancels
     the older, so a cancelled `main` run never deploys; Node 24, `npm ci`): lint → check → unit →
     `build` (with size budget) → a hook-free smoke test against `dist/` (boot, deal, no fatal
-    surface; project `dist-smoke` in `playwright.pwa.config.ts`) → upload `dist/` with hidden
+    surface; project `dist-smoke` in `playwright.pwa.config.ts`, which also runs the hook-free
+    precache, build-output and font specs against `dist/`, ticket 1.10) → upload `dist/` with hidden
     files (keeps `.vite/manifest.json`) as the artifact `dist` → build `dist-test/` with hooks →
     e2e (`android`, `desktop`, `pwa`) → a non-gating flaky report (tests that passed on a retry,
     AD-17 Scripts) in the job summary → screenshot job in the Playwright container. Each job

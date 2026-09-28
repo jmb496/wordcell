@@ -88,10 +88,13 @@ spine leaves open and name the traps found in the scaffold. `[ASSUMPTION]` marks
 
 ## CAP-5 Packaging
 
-- Manifest exactly A-D5; keep `includeAssets: ['favicon.svg']`.
+- Manifest exactly A-D5; no `includeAssets`, `includeManifestIcons: false` and `workbox.globIgnores:
+  ['manifest.webmanifest']`, so the precache holds one entry per URL (ticket 1.10, 2026-09-28).
 - `scripts/build-icons.mjs`: Playwright Chromium renders committed SVG sources
   (`scripts/icons/*.svg` `[ASSUMPTION]`) at 192 and 512, maskable art inside the central 80 %;
-  run on the host, not in CI (A-A7). Art per DESIGN.md App icon; owner judges it at gate 4.
+  run on the host, not in CI (A-A7); the hash test `scripts/asset-hashes.test.mjs` pins the committed
+  PNGs, favicon and their inputs against `data/README.md`, regeneration stays a manual check
+  (ticket 1.10). Art per DESIGN.md App icon; owner judges it at gate 4.
 - Palette: DESIGN.md `colors` as `--wc-<token>` custom properties `[ASSUMPTION]`.
 
 ## CAP-6 Size budget

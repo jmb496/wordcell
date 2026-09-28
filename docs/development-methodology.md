@@ -67,7 +67,7 @@ CLAUDE.md, not the ticket. Minors left at the stop are listed in the result, not
 ## Definition of done for a ticket
 
 - Every rule id the ticket claims has a passing test naming that id.
-- `npm run test:all` passes (lint, types, unit, e2e).
+- `npm run test:all` passes (lint, types, unit, build with the size budget, `dist-smoke`, e2e, pwa; screenshots run in the container via `npm run test:screens`).
 - No engine-purity, thin-UI, or hand-rolled-DnD rule violated (CLAUDE.md).
 - No Q-xx answered by code that the owner has not answered in the spec.
 - Plan status `built`, owner has read the result and marked `done`.

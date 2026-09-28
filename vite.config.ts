@@ -17,7 +17,8 @@ export default defineConfig({
       // AD-16: no automatic registration; epic 7's src/shell/sw.ts registers the worker.
       registerType: 'prompt',
       injectRegister: false,
-      includeAssets: ['favicon.svg'],
+      // AD-16: one precache entry per URL. The globPatterns already match the manifest icons.
+      includeManifestIcons: false,
       // DESIGN.md A-D5; the plugin adds start_url, scope and lang.
       manifest: {
         name: 'WordCell',
@@ -41,6 +42,9 @@ export default defineConfig({
       workbox: {
         // AD-16: precache everything the build emits, including the dictionary (AD-8).
         globPatterns: ['**/*.{js,css,html,txt,woff2,png,svg,webmanifest}'],
+        // The plugin adds its own manifest.webmanifest entry, so the glob skips that file. This
+        // replaces workbox-build's default ignore list (it still skips sw.js and workbox-*.js).
+        globIgnores: ['manifest.webmanifest'],
         maximumFileSizeToCacheInBytes: 4_000_000,
       },
     }),

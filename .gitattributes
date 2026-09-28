@@ -1,3 +1,8 @@
 data/enable1.txt -text
 src/ui/assets/OFL.txt -text
 src/ui/assets/*.woff2 binary
+scripts/build-font.py -text
+scripts/build-icons.mjs -text
+scripts/icons/*.svg -text
+public/favicon.svg -text
+public/icons/*.png binary

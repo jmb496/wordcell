@@ -22,7 +22,7 @@ it and the check that proves it. A ticket plan names these checks in its sentenc
 | Dictionary generation `build` → `prebuild` | 2 | `build` script is `vite build` only; `npm run build` on a fresh clone succeeds. |
 | `postbuild` | 6 | `npm run build` prints the size table; `AD-18` script tests (see CAP-6). |
 | `build:test` with `prebuild:test` | 3 | `npm run build:test` on a fresh clone writes `dist-test/` with hooks (pwa sees `window.__wordcell`). |
-| `test:e2e:pwa`, `test:all` per AD-17 | 3 | `test:all` = lint + check + unit + `test:e2e` + `test:e2e:pwa`, green. |
+| `test:e2e:pwa`, `test:all` per AD-17 | 3 | `test:all` = lint + check + unit + `build` (size budget) + `test:e2e:dist` + `test:e2e` + `test:e2e:pwa`, green; screenshots stay container-only (`npm run test:screens`) (ticket 1.10, 2026-09-28). |
 | `test:screens` | 7 | Runs the container; generates, then on a second run compares, the baseline. |
 | `check` gains `tsc -p src/engine/tsconfig.json` | 1 | Script text; a scratch `document.title` in an engine source fails `npm run check` (shown in the plan, reverted). |
 | `wrangler` devDependency | 9 | `package.json` pins `wrangler` `4.141.0` exactly. |
@@ -42,8 +42,8 @@ it and the check that proves it. A ticket plan names these checks in its sentenc
 | Font subset | 4 | CAP-4 success. |
 | Test hook module and gating | 3 | pwa: `window.__wordcell` defined; dist-smoke: undefined; `grep -r __wordcell dist/` empty. |
 | seed / touch / lifecycle helpers | 3 | `AD-17` helper self-tests (e2e, `android`). |
-| `pwa` project | 3 | Precache manifest check (dictionary, later font) passes. |
-| `dist-smoke` project | 3 | Load, 52 live cards, no errors, no hook. |
+| `pwa` project | 3 | Precache manifest check (dictionary, later font) passes; since ticket 1.10 the precache check also runs under `dist-smoke`, with exactly one entry per URL. |
+| `dist-smoke` project | 3 | Load, 52 live cards, no errors, no hook; since ticket 1.10 also the hook-free precache, build-output and font specs against `dist/`. |
 | Screenshot container | 7 | CAP-7 success. |
 | `ci.yml` | 8 | actionlint clean; every step's npm script passes locally; first pushed run green (owner). |
 | `deploy.yml`, `wrangler.jsonc`, `_headers`, `.assetsignore` | 9 | CAP-9 success. |

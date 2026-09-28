@@ -1,4 +1,8 @@
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { expect, type Page, test } from '@playwright/test';
+import { buildRoot } from './helpers/dist-test';
 import { hidePage, pageHide, pageShow, showPage } from './helpers/lifecycle';
 import { captureBoot, seedStorage } from './helpers/seed';
 import { longPress, touchDrag } from './helpers/touch';
@@ -403,4 +407,27 @@ test.describe('hidePage / showPage / pageHide / pageShow', () => {
       }
     });
   }
+});
+
+test.describe('buildRoot', () => {
+  test('AD-17 a missing build names the script that builds it; an unset or unknown PW_PREVIEW throws', () => {
+    const repo = mkdtempSync(path.join(tmpdir(), 'build-root-'));
+    const saved = process.env.PW_PREVIEW;
+    try {
+      process.env.PW_PREVIEW = 'dist';
+      expect(() => buildRoot(repo)).toThrow(/dist\/index\.html is missing: run npm run build$/);
+      process.env.PW_PREVIEW = 'dist-test';
+      expect(() => buildRoot(repo)).toThrow(
+        /dist-test\/index\.html is missing: run npm run build:test$/,
+      );
+      process.env.PW_PREVIEW = 'dist-tests';
+      expect(() => buildRoot(repo)).toThrow(/PW_PREVIEW must be exactly/);
+      delete process.env.PW_PREVIEW;
+      expect(() => buildRoot(repo)).toThrow(/PW_PREVIEW must be exactly/);
+    } finally {
+      if (saved === undefined) delete process.env.PW_PREVIEW;
+      else process.env.PW_PREVIEW = saved;
+      rmSync(repo, { recursive: true, force: true });
+    }
+  });
 });

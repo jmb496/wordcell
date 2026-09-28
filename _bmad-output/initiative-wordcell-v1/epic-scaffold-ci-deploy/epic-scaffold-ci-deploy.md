@@ -51,11 +51,11 @@ Tooling, build, packaging, CI and deploy on the placeholder board. Not engine ru
 - Decision: each ticket drops its own AGENTS.md `TODO(epic 1)` items; after the last ticket one `bmad-project-context` audit removes the line and the resolved scaffold pitfalls (D8).
 - Assumption: the chain CAP-1 → CAP-9 has no tracer-bullet slice and no parallel lanes; the owner's order stands in for both.
 - Unknown: Docker is not reachable in the WSL distro (Docker Desktop's WSL integration is off, so the CLI cannot reach the server, 2026-09-27); entries 7 and 8 need it (screenshot container, actionlint).
-- Decision: build-output checks (manifest, precache list, no `registerSW.js`, `.vite/manifest.json` read from disk, font preload) live in `e2e/pwa/` against `dist-test/` so `npm run test:all` runs them; `dist-smoke` keeps only what differs in `dist/` (no hook) (owner, 2026-09-27).
+- Decision: build-output checks (manifest, precache list, no `registerSW.js`, `.vite/manifest.json` read from disk, font preload) live in `e2e/pwa/` against `dist-test/` so `npm run test:all` runs them; `dist-smoke` keeps only what differs in `dist/` (no hook) (owner, 2026-09-27). Amended (ticket 1.10, 2026-09-28, retro A3): the hook-free precache, build-output and font specs also run under `dist-smoke` against `dist/`, and `test:all` runs `build` and `test:e2e:dist` too.
 - Decision: no closing refactor sweep; one ticket per CAP, and the D8 audit plus the retrospective close the epic (owner, 2026-09-27).
 - Decision: no `plan_checkpoint` / `done_checkpoint`; methodology gates 3 and 4 already stop after every ticket (owner, 2026-09-27).
 - Decision: entry 3 stays one ticket, high risk, halting if the CDP touch helper fails under Pixel 7 emulation (owner, 2026-09-27).
-- Decision: entry 3 names the precache check `AD-8 …` and the `dist-smoke` cases `AD-18 …` (owner, 2026-09-27).
+- Decision: entry 3 names the precache check `AD-8 …` and the `dist-smoke` cases `AD-18 …` (owner, 2026-09-27). Amended (ticket 1.10, 2026-09-28): "`dist-smoke` cases" means `dist-smoke.spec.ts`; the packaging specs it also runs keep their AD-8/AD-16/AD-18 ids.
 - Decision: CI runs the Playwright `pwa` project directly after `build:test`, building `dist-test/` once (owner, 2026-09-27).
 - Decision: `deploy.yml` takes the deployed URL from `wrangler deploy`'s output for its header checks (owner, 2026-09-27).
 - Decision: before entry 1 the owner enables Docker Desktop's WSL integration and creates `epic-1-scaffold` (owner, 2026-09-27).

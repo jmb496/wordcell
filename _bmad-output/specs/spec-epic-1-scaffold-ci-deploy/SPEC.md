@@ -54,13 +54,14 @@ how.
 - **CAP-3** Test harness (AD-17)
   - **intent:** The three Playwright configs, the test-build and hook gating, and the shared
     seed, touch and lifecycle helpers exist, so later epics only add specs.
-  - **success:** `npm run test:all` runs lint, check, unit, `test:e2e` (`android`, `desktop`) and
-    `test:e2e:pwa` green; `window.__wordcell` exists under `vite dev` and `dist-test/`, and is
+  - **success:** `npm run test:all` runs lint, check, unit, `build` (with the size budget),
+    `test:e2e:dist`, `test:e2e` (`android`, `desktop`) and `test:e2e:pwa` green, screenshots
+    staying container-only (`npm run test:screens`) (ticket 1.10, 2026-09-28); `window.__wordcell` exists under `vite dev` and `dist-test/`, and is
     absent from `dist/` (no `__wordcell` string in `dist/`); helper self-tests (`AD-17 …`) prove
     `seedStorage` seeds once and survives reload unseeded, `captureBoot` copies raw keys, and
     `hidePage`/`showPage`/`pageHide`/`pageShow`/`touchDrag`/`longPress` dispatch the events AD-17
-    names; `dist-smoke` passes against `vite preview` of `dist/`; the `pwa` project asserts the
-    precache manifest lists the dictionary with `revision: null`.
+    names; `dist-smoke` passes against `vite preview` of `dist/`; the `pwa` and `dist-smoke`
+    projects assert the precache manifest lists the dictionary with `revision: null`.
 
 - **CAP-4** Card-letter font (AD-18 font, DESIGN.md A-D2)
   - **intent:** The app ships the Fraunces static instance subset as `WordCell Serif`,
@@ -165,7 +166,8 @@ the AD-18 headers, and adding `Date.now()` to an engine source, or a `?url` dict
 - A stub `src/shell/dictionary.svelte.ts` exports the `?url` and `main.ts` imports it so the asset
   is emitted; load states are epic 3.
 - `dist-smoke` in epic 1 asserts load, 52 live `card-<id>` elements, no `pageerror` or console
-  error, and no `window.__wordcell`.
+  error, and no `window.__wordcell` (`dist-smoke.spec.ts`), and since ticket 1.10 (2026-09-28)
+  also runs the hook-free precache, build-output and font specs against `dist/`.
 - pwa-config specs live in `e2e/pwa/`; the default config ignores that folder and
   `*.screens.spec.ts`.
 - Fraunces source is the `google/fonts` variable TTF at a pinned commit, downloaded to

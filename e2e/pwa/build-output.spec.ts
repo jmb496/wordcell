@@ -1,10 +1,11 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
-import { distTest, linkTags, readSite, relOf, tags, walk } from '../helpers/dist-test';
+import { buildRoot, linkTags, readSite, relOf, tags, walk } from '../helpers/dist-test';
 
-// AD-16 / AD-18 packaging, read from dist-test/ on disk (epic Decision: dist-test/ stands in for
-// dist/ because VITE_TEST_HOOKS changes only JS).
+// AD-16 / AD-18 packaging, read from the build under test on disk (helpers/dist-test.ts
+// buildRoot). Runs under both the pwa (dist-test/) and dist-smoke (dist/) projects, so it must
+// stay hook-free: tests that use the VITE_TEST_HOOKS hook belong in pwa-only files.
 
 const VIEWPORT = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
 
@@ -37,7 +38,7 @@ test('AD-16 the built web manifest is exactly DESIGN.md A-D5 plus the plugin def
 });
 
 test('AD-16 the build registers no service worker automatically', () => {
-  const root = distTest();
+  const root = buildRoot();
   expect(existsSync(path.join(root, 'registerSW.js'))).toBe(false);
 
   // Epic 7 (AD-16 src/shell/sw.ts dynamic chunk) narrows this scan to the non-sw chunks.
@@ -81,7 +82,7 @@ test('AD-16 the built head carries the title, theme colour, viewport, manifest a
 
 // PNG signature, then the IHDR chunk: type at bytes 12–15, big-endian width at 16, height at 20.
 function pngSize(file: string): { width: number; height: number } {
-  const bytes = readFileSync(path.join(distTest(), file));
+  const bytes = readFileSync(path.join(buildRoot(), file));
   expect(bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])), file).toBe(
     true,
   );
@@ -89,8 +90,8 @@ function pngSize(file: string): { width: number; height: number } {
   return { width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20) };
 }
 
-test('AD-16 dist-test/icons/ holds exactly the three manifest PNGs at their sizes', () => {
-  expect(walk(distTest()).filter((file) => file.startsWith('icons/'))).toEqual([
+test("AD-16 the build's icons/ holds exactly the three manifest PNGs at their sizes", () => {
+  expect(walk(buildRoot()).filter((file) => file.startsWith('icons/'))).toEqual([
     'icons/icon-192.png',
     'icons/icon-512-maskable.png',
     'icons/icon-512.png',
@@ -100,7 +101,7 @@ test('AD-16 dist-test/icons/ holds exactly the three manifest PNGs at their size
   expect(pngSize('icons/icon-512-maskable.png')).toEqual({ width: 512, height: 512 });
 });
 
-test('AD-18 dist-test/.vite/manifest.json has the index.html entry under assets/', () => {
+test("AD-18 the build's .vite/manifest.json has the index.html entry under assets/", () => {
   // Read from disk: vite preview may not serve .vite/ (CAP-6 reads the same file in dist/).
   const manifest = JSON.parse(readSite('.vite/manifest.json')) as Record<
     string,

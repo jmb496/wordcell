@@ -3,11 +3,13 @@
 // classification are path-lexical and never consult the filesystem.
 // Known limitation (story 1.1 OQ #2): aliasing and destructuring (`const { random } = Math`,
 // `const M = Math`, `history['back']()`, `const h = window.history`, `window['localStorage']`)
-// pass the scan; code review covers deliberate aliasing. Svelte markup destructuring with a nested
-// pattern before `history` (`{#each xs as { a: { b }, history }}`) also passes the markup regex.
+// pass the scan; code review covers deliberate aliasing. `.svelte` files are split with
+// svelte/compiler `parse` (scripts, markup text, markup bindings), never by regex (ticket 1.10).
 import { readdirSync, readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import type { AST } from 'svelte/compiler';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
@@ -45,11 +47,6 @@ const MATH_COMPUTED = /(?<![\w$])Math\s*(?:\?\.)?\s*\[/;
 const HISTORY_API =
   /(?<![\w$])(?:window\s*(?:\?\.|\.)\s*)?history\s*(?:\?\.|\.)\s*(?:pushState|replaceState|back|forward|go|state|length)(?![\w$])/;
 const LOCAL_STORAGE = /(?<![\w$])localStorage(?![\w$])/;
-// Svelte markup bindings: {#each xs as history}, {#each xs as { history }}, {@const history = x},
-// {#snippet row(history)}, {:then history}, {:catch history}, destructured {@const}/{:then}/{:catch},
-// let:history.
-const MARKUP_HISTORY_BINDING =
-  /\{#each\b[^}]*?\bas\b[^}]*?(?<![\w$.])history(?![\w$])|\{@const\s+[^=}]*?(?<![\w$.])history(?![\w$])|\{#snippet\s+[\w$]+\s*\([^)]*?(?<![\w$.])history(?![\w$])|\{:(?:then|catch)\s+[^}]*?(?<![\w$.])history(?![\w$])|(?<![\w$])let:history(?![\w$])/;
 const REFERENCE_DIRECTIVE = /^\s*\/\/\/\s*<reference\b/im;
 const TS_DIRECTIVE = /@ts-(?:nocheck|ignore|expect-error)\b/i;
 const IMPORT_EXT = /\.(ts|js|mjs|cjs|mts|cts|tsx|jsx|svelte|json|txt|css|html|svg|png|woff2?)$/;
@@ -363,19 +360,167 @@ function historyBindings(sf: ts.SourceFile): number {
   return count;
 }
 
+// --- .svelte split --------------------------------------------------------------------------
+
+// Loaded through Node's require (the CJS build): a Vitest import would transform the whole
+// compiler (vite-plugin-svelte inlines svelte) and cost ~10 s per run (AD-17 unit-suite budget).
+const { parse: parseSvelte } = createRequire(import.meta.url)(
+  'svelte/compiler',
+) as typeof import('svelte/compiler');
+
+// Every Svelte (not ESTree) node type of svelte/compiler's modern AST (namespace AST).
+const SVELTE_NODES = new Set([
+  'AnimateDirective',
+  'AttachTag',
+  'Attribute',
+  'AwaitBlock',
+  'BindDirective',
+  'ClassDirective',
+  'Comment',
+  'Component',
+  'ConstTag',
+  'DebugTag',
+  'DeclarationTag',
+  'EachBlock',
+  'ExpressionTag',
+  'Fragment',
+  'HtmlTag',
+  'IfBlock',
+  'KeyBlock',
+  'LetDirective',
+  'OnDirective',
+  'RegularElement',
+  'RenderTag',
+  'SlotElement',
+  'SnippetBlock',
+  'SpreadAttribute',
+  'StyleDirective',
+  'SvelteBody',
+  'SvelteBoundary',
+  'SvelteComponent',
+  'SvelteDocument',
+  'SvelteElement',
+  'SvelteFragment',
+  'SvelteHead',
+  'SvelteSelf',
+  'SvelteWindow',
+  'Text',
+  'TitleElement',
+  'TransitionDirective',
+  'UseDirective',
+]);
+// ESTree fields of Svelte nodes that declare bindings (patterns), and that hold declarations;
+// every other ESTree field is an expression. An ESTree node under any key outside ESTREE_KEYS
+// throws, so an unknown Svelte node type fails the scan instead of passing it (rule 6).
+const BINDING_FIELDS = new Set([
+  'EachBlock.context',
+  'AwaitBlock.value',
+  'AwaitBlock.error',
+  'SnippetBlock.expression',
+  'SnippetBlock.parameters',
+  'LetDirective.expression',
+]);
+const DECLARATION_FIELDS = new Set(['ConstTag.declaration', 'DeclarationTag.declaration']);
+const ESTREE_KEYS = new Set([
+  'expression',
+  'context',
+  'value',
+  'error',
+  'key',
+  'test',
+  'parameters',
+  'declaration',
+  'identifiers',
+  'tag',
+]);
+
+interface SvelteParts {
+  /** Instance, module and `<script>` element bodies, each scanned as TypeScript. */
+  readonly scripts: string[];
+  /** The source with scripts, styles and HTML comments blanked to spaces. */
+  readonly markup: string;
+  /** Markup bindings rewritten as TypeScript for `historyBindings`. */
+  readonly bindingSources: string[];
+  /** Markup bindings named `history` with no TypeScript form (each index, `let:history`, `{history}`). */
+  readonly directBindings: number;
+}
+
+type AnyNode = { type: string; start: number; end: number; [key: string]: unknown };
+
+const isNode = (value: unknown): value is AnyNode =>
+  typeof value === 'object' && value !== null && typeof (value as AnyNode).type === 'string';
+
+function svelteParts(source: string): SvelteParts {
+  const ast: AST.Root = parseSvelte(source, { modern: true });
+  const scripts: string[] = [];
+  const blanks: [number, number][] = [];
+  const bindingSources: string[] = [];
+  let directBindings = 0;
+
+  for (const script of [ast.module, ast.instance]) {
+    if (!script) continue;
+    const content = script.content as unknown as AnyNode;
+    scripts.push(source.slice(content.start, content.end));
+    blanks.push([script.start, script.end]);
+  }
+  if (ast.css) blanks.push([ast.css.start, ast.css.end]);
+
+  const estree = (owner: AnyNode, key: string, node: AnyNode): void => {
+    if (!ESTREE_KEYS.has(key))
+      throw new Error(`AD-1: unknown Svelte node ${node.type} in ${owner.type}.${key}`);
+    const text = source.slice(node.start, node.end);
+    const field = `${owner.type}.${key}`;
+    if (BINDING_FIELDS.has(field)) bindingSources.push(`function f(${text}) {}`);
+    else if (DECLARATION_FIELDS.has(field)) bindingSources.push(`${text};`);
+    else bindingSources.push(`(${text});`);
+  };
+
+  const visit = (node: AnyNode): void => {
+    if (node.type === 'Comment') {
+      blanks.push([node.start, node.end]);
+      return;
+    }
+    if (node.type === 'RegularElement' && (node.name === 'script' || node.name === 'style')) {
+      blanks.push([node.start, node.end]);
+      if (node.name === 'script') {
+        const { nodes } = node.fragment as { nodes: AnyNode[] };
+        const [first, last] = [nodes[0], nodes.at(-1)];
+        if (first && last) scripts.push(source.slice(first.start, last.end));
+      }
+      return;
+    }
+    if (node.type === 'EachBlock' && node.index === 'history') directBindings++;
+    if (node.type === 'LetDirective' && node.expression === null && node.name === 'history') {
+      directBindings++;
+    }
+    const value = node.value;
+    if (
+      node.type === 'Attribute' &&
+      isNode(value) &&
+      source[node.start] === '{' &&
+      node.name === 'history'
+    ) {
+      directBindings++;
+    }
+    for (const [key, field] of Object.entries(node)) {
+      for (const child of Array.isArray(field) ? field : [field]) {
+        if (!isNode(child)) continue;
+        if (SVELTE_NODES.has(child.type)) visit(child);
+        else estree(node, key, child);
+      }
+    }
+  };
+  visit(ast.fragment as unknown as AnyNode);
+  for (const attribute of ast.options?.attributes ?? []) visit(attribute as unknown as AnyNode);
+
+  let markup = source;
+  for (const [start, end] of blanks) {
+    markup = markup.slice(0, start) + ' '.repeat(end - start) + markup.slice(end);
+  }
+  return { scripts, markup, bindingSources, directBindings };
+}
+
 // --- check ----------------------------------------------------------------------------------
-
-function svelteScripts(source: string): string[] {
-  return [...source.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)].map((m) => m[1]);
-}
-
-/** The file minus `<script>` blocks (scanned stripped above), `<style>` blocks and HTML comments. */
-function svelteMarkup(source: string): string {
-  return source
-    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, '')
-    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/g, '')
-    .replace(/<!--[\s\S]*?-->/g, '');
-}
 
 function check(path: string, source: string): Violation[] {
   if (!CODE_EXT.test(path)) return [];
@@ -395,7 +540,8 @@ function check(path: string, source: string): Violation[] {
     path !== 'src/shell/storage.ts' && !(isTest && (layer === 'shell' || layer === 'ui'));
   const scriptKind = path.endsWith('.js') ? ts.ScriptKind.JS : ts.ScriptKind.TS;
 
-  for (const script of isSvelte ? svelteScripts(source) : [source]) {
+  const svelte = isSvelte ? svelteParts(source) : undefined;
+  for (const script of svelte ? svelte.scripts : [source]) {
     const sf = ts.createSourceFile(path, script, ts.ScriptTarget.Latest, true, scriptKind);
     const full = strip(sf, false);
     const commentsOnly = strip(sf, true);
@@ -422,11 +568,21 @@ function check(path: string, source: string): Violation[] {
     }
   }
 
-  if (isSvelte) {
-    const markup = svelteMarkup(source);
+  if (svelte) {
+    const { markup } = svelte;
     if (navChecks && HISTORY_API.test(markup)) found.push(['history-api', 'History API in markup']);
     if (navChecks && markup.includes('popstate')) found.push(['popstate', 'popstate in markup']);
-    if (navChecks && MARKUP_HISTORY_BINDING.test(markup)) {
+    const markupBindings =
+      svelte.directBindings +
+      svelte.bindingSources.reduce(
+        (sum, text) =>
+          sum +
+          historyBindings(
+            ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS),
+          ),
+        0,
+      );
+    if (navChecks && markupBindings > 0) {
       found.push(['history-binding', 'binding named history in markup']);
     }
     if (storageCheck && LOCAL_STORAGE.test(markup)) {
@@ -1520,6 +1676,173 @@ describe('AD-1 .svelte extraction', () => {
         "<p>it's the score history</p>",
         '<style>.popstate { color: red; }</style>',
       ].join('\n'),
+    },
+    {
+      name: 'script closed by </script > with whitespace',
+      path: UV,
+      source: '<script>\nconst history = 1;\n</script >\n<p>{history}</p>',
+      fails: 'history-binding',
+    },
+    {
+      name: 'script closed by </script\\n> with a newline',
+      path: UV,
+      source: "<script>\nimport { deal } from '../engine/deal';\n</script\n>",
+      fails: 'deep-engine-import',
+    },
+    {
+      name: 'markup {#snippet history()}',
+      path: UV,
+      source: '{#snippet history()}<p>x</p>{/snippet}',
+      fails: 'history-binding',
+    },
+    {
+      name: 'markup <svelte:options customElement={{ extend: (history) => history }} />',
+      path: UV,
+      source: '<svelte:options customElement={{ extend: (history) => history }} />',
+      fails: 'history-binding',
+    },
+    {
+      name: 'markup {#each xs as x, history} index',
+      path: UV,
+      source: '{#each xs as x, history}<p>x</p>{/each}',
+      fails: 'history-binding',
+    },
+    {
+      name: 'markup {const history = x}',
+      path: UV,
+      source: '{const history = 1}<p>{history}</p>',
+      fails: 'history-binding',
+    },
+    {
+      name: 'markup {let history = x}',
+      path: UV,
+      source: '{let history = $state(0)}<p>{history}</p>',
+      fails: 'history-binding',
+    },
+    {
+      name: 'markup { #each xs as history} with whitespace after {',
+      path: UV,
+      source: '{ #each xs as history}<p>x</p>{/each}',
+      fails: 'history-binding',
+    },
+    {
+      name: 'markup { @const history = x} with whitespace after {',
+      path: UV,
+      source: '{#each xs as x}{ @const history = x}<p>x</p>{/each}',
+      fails: 'history-binding',
+    },
+    {
+      name: 'markup {#await p then history}',
+      path: UV,
+      source: '{#await p then history}<p>y</p>{/await}',
+      fails: 'history-binding',
+    },
+    {
+      name: 'markup {#await p catch history}',
+      path: UV,
+      source: '{#await p catch history}<p>y</p>{/await}',
+      fails: 'history-binding',
+    },
+    {
+      name: 'markup {#each xs as { ...history }}',
+      path: UV,
+      source: '{#each xs as { ...history }}<p>x</p>{/each}',
+      fails: 'history-binding',
+    },
+    {
+      name: 'markup {#snippet row(...history)}',
+      path: UV,
+      source: '{#snippet row(...history)}<p>x</p>{/snippet}',
+      fails: 'history-binding',
+    },
+    {
+      name: 'markup let:item={history}',
+      path: UV,
+      source: '<List let:item={history}><p>x</p></List>',
+      fails: 'history-binding',
+    },
+    {
+      name: 'markup {@const { a = 1, history } = x}',
+      path: UV,
+      source: '{#each xs as x}{@const { a = 1, history } = x}<p>x</p>{/each}',
+      fails: 'history-binding',
+    },
+    {
+      name: 'markup {#snippet row<T>(history: T)}',
+      path: UV,
+      source: '<script lang="ts"></script>\n{#snippet row<T>(history: T)}<p>x</p>{/snippet}',
+      fails: 'history-binding',
+    },
+    {
+      name: 'markup {#snippet row(a = f(), history)}',
+      path: UV,
+      source: '{#snippet row(a = f(), history)}<p>x</p>{/snippet}',
+      fails: 'history-binding',
+    },
+    {
+      name: 'markup {:then { a: { b }, history }}',
+      path: UV,
+      source: '{#await p}<p>x</p>{:then { a: { b }, history }}<p>y</p>{/await}',
+      fails: 'history-binding',
+    },
+    {
+      name: 'markup arrow parameter (history) => …',
+      path: UV,
+      source: '<button onclick={(history) => f(history)}>x</button>',
+      fails: 'history-binding',
+    },
+    {
+      name: 'markup {@attach (history) => …}',
+      path: UV,
+      source: '<div {@attach (history) => f(history)}></div>',
+      fails: 'history-binding',
+    },
+    {
+      name: 'markup shorthand attribute {history}',
+      path: UV,
+      source: '<Comp {history} />',
+      fails: 'history-binding',
+    },
+    {
+      name: 'markup shorthand object {{ history }}',
+      path: UV,
+      source: '<Comp data={{ history }} />',
+      fails: 'history-binding',
+    },
+    {
+      name: '<script> inside an HTML comment',
+      path: UV,
+      source:
+        '<!-- <script> -->\n{#each xs as history}<p>x</p>{/each}\n<script>const a = 1;</script>',
+      fails: 'history-binding',
+    },
+    {
+      name: '<script> inside a markup string',
+      path: UV,
+      source:
+        "<p>{'<script>'}</p>{#each xs as history}<p>x</p>{/each}<script>const a = 1;</script>",
+      fails: 'history-binding',
+    },
+    {
+      name: 'svelte:head script body',
+      path: UV,
+      source: '<svelte:head><script>const history = 1;</script></svelte:head>',
+      fails: 'history-binding',
+    },
+    {
+      name: 'markup {#each xs as x (history)} key is a reference',
+      path: UV,
+      source: '{#each xs as x (history)}<p>x</p>{/each}',
+    },
+    {
+      name: 'markup history={history} attribute is a reference',
+      path: UV,
+      source: '<Comp history={history} />',
+    },
+    {
+      name: 'markup {@render row(history)} argument is a reference',
+      path: UV,
+      source: '{@render row(history)}',
     },
   ]);
 });

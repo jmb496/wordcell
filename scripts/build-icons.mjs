@@ -4,7 +4,9 @@
 // Host-only [ASSUMPTION A-A7]: run `node scripts/build-icons.mjs` by hand; CI never renders icons.
 // Chromium comes from the existing @playwright/test 1.63.0; the script prints the Chromium
 // `browser.version()` it rendered with. Editing an SVG requires a rerun and a commit of the PNGs
-// and public/favicon.svg: no v1 guard checks the committed PNGs against later SVG edits (A-A7).
+// and public/favicon.svg, then re-recording their hashes in data/README.md (Icon sources): the
+// hash test scripts/asset-hashes.test.mjs pins the PNGs, the favicon and their inputs (the SVGs,
+// this script, the woff2); regeneration itself stays a manual check (A-A7, retro A9).
 import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';

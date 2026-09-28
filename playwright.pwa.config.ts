@@ -2,7 +2,8 @@ import { defineConfig, devices, type Project } from '@playwright/test';
 
 /**
  * D5: serves a production-shaped build with `vite preview`. `PW_PREVIEW` picks the build and the
- * only registered project: `dist-test` → `pwa` (test hooks on), `dist` → `dist-smoke` (AD-18).
+ * only registered project: `dist-test` → `pwa` (test hooks on), `dist` → `dist-smoke`, which runs
+ * dist-smoke.spec.ts (AD-18) plus the hook-free packaging specs (precache, build-output, font).
  * Run: npm run test:e2e:pwa, or npm run build && npm run test:e2e:dist
  */
 const preview = process.env.PW_PREVIEW;
@@ -15,7 +16,16 @@ if (preview !== 'dist' && preview !== 'dist-test') {
 const project: Project =
   preview === 'dist-test'
     ? { name: 'pwa', testIgnore: '**/dist-smoke.spec.ts', use: { ...devices['Pixel 7'] } }
-    : { name: 'dist-smoke', testMatch: '**/dist-smoke.spec.ts', use: { ...devices['Pixel 7'] } };
+    : {
+        name: 'dist-smoke',
+        testMatch: [
+          '**/dist-smoke.spec.ts',
+          '**/precache.spec.ts',
+          '**/build-output.spec.ts',
+          '**/font.spec.ts',
+        ],
+        use: { ...devices['Pixel 7'] },
+      };
 
 export default defineConfig({
   testDir: 'e2e/pwa',
