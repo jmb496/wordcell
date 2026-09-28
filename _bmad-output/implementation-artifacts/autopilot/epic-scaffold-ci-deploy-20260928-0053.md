@@ -11,3 +11,11 @@ Code review: 4 passes, converged; 3 fixes applied (extra tests for the seeding h
 Tests: all passing
 Worth knowing: the finger-drag simulation works in the test browser, so the halt you approved never fired. The check that test-only code is absent from the players' version runs only in its own command until the CI ticket (1.8) adds it to the automatic checks. A naming rule in AGENTS.md doesn't fit the new test files; that goes to the end-of-epic AGENTS.md tidy-up (a default, no effect on the game).
 
+## 1.4 WordCell Serif card-letter font — done
+What it adds: the card letters now use the game's own serif font (a trimmed copy of Fraunces containing only the capital letters and the small "u" used on the QU card), downloaded once and stored for offline play. Nothing else on screen uses it.
+Ticket review: 7 passes, converged; nothing needed your input
+Build: built; commits d46bc89
+Code review: 1 pass, converged; no fixes needed
+Tests: all passing
+Worth knowing: the font file is tiny (about 4 KB), just over the size at which the build tool would embed it inside the style file; one build setting keeps it a separate file, and the architecture document should mention that setting (noted for the end-of-epic retrospective). A screenshot of the cards in the new font was taken during the build.
+

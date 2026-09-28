@@ -3,7 +3,7 @@ title: 'WordCell Serif card-letter font'
 type: 'feature'
 ticket: '4'
 created: '2026-09-28'
-status: 'built'
+status: done
 baseline_revision: 'e061d92ea95a2d5635438d9b8da4b064c3684b9a'
 route: 'full'
 route_source: 'auto'
