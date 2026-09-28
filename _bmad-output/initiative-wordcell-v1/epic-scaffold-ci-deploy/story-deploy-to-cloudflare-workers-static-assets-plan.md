@@ -79,7 +79,7 @@ deferred:
 
 **Execution:**
 - [x] `package.json`, `package-lock.json` -- install wrangler 4.141.0 exact -- AD-18 pinned devDependency.
-- [x] `wrangler.jsonc` -- write; `compatibility_date` the build date `2026-09-28` unless 4.141.0 warns, then the latest it accepts without warning; record the choice -- CAP-9.
+- [x] `wrangler.jsonc` -- write; `compatibility_date` the build date `2026-09-28` unless 4.141.0 warns, then the latest it accepts without warning; record the choice (`2026-09-25`, see Implementation Notes) -- CAP-9.
 - [x] `public/_headers` -- AD-18 rules: `/assets/*` → `Cache-Control: public, max-age=31536000, immutable`; `/`, `/index.html`, `/sw.js`, `/manifest.webmanifest` → `Cache-Control: no-cache` -- AD-18.
 - [x] `public/.assetsignore` -- `.vite` -- AD-18.
 - [x] `.gitignore` -- `.wrangler/` -- dry-run output stays untracked.
@@ -107,14 +107,14 @@ Implemented 2026-09-28 on `epic-1-scaffold` from baseline `eb8e4f9`; nothing com
 
 **wrangler devDependency.** `npm install --save-dev --save-exact wrangler@4.141.0`: `package.json` `devDependencies.wrangler` = `"4.141.0"`; `package-lock.json` `node_modules/wrangler` = `4.141.0`. `git diff --stat package-lock.json`: `1 file changed, 1579 insertions(+), 40 deletions(-)`. A jq comparison of every `packages` key/version between `HEAD` and the working lockfile shows 87 entries added and none removed or changed (the `-` lines in the diff are JSON reflow around inserted entries). Top-level devDependencies resolved before/after (unchanged): @biomejs/biome 2.5.14, @playwright/test 1.63.0, @sveltejs/vite-plugin-svelte 7.3.1, @tsconfig/svelte 5.0.8, @types/node 24.19.0, svelte 5.57.1, svelte-check 4.7.6, typescript 6.0.3, vite 8.3.1, vite-plugin-pwa 1.3.0, vitest 5.0.2. `npm ls --depth=0` now also lists `@emnapi/runtime`, `@img/sharp-wasm32`, `tslib` as "extraneous" on the host; they are in the lockfile as `dev: true, optional: true` (wrangler → sharp's optional wasm fallback), so this is an npm-ls display quirk of the host install, not a lockfile change to an existing package.
 
-**compatibility_date.** `2026-09-28` (build date). wrangler 4.141.0's dry-run printed no compatibility-date warning (full non-metrics output below), so the build date stands.
+**compatibility_date.** `2026-09-25`, not the build date `2026-09-28`. The dry-run's silence (full non-metrics output below) is no evidence: `wrangler deploy --dry-run` never runs the compatibility-date check. wrangler 4.141.0's newest supported date is `2026-09-25` (`node_modules/wrangler/wrangler-dist/cli.js:27324` `DEFAULT_COMPAT_DATE = "2026-09-25"`, matching the bundled `workerd@1.20260925.1`; the "The latest compatibility date supported by…" warning at cli.js ~178559 is on the workerd/dev path), so per the ticket the latest date it accepts without warning is used.
 
 **`wrangler.jsonc` (verbatim, exact key set):**
 
 ```jsonc
 {
   "name": "wordcell",
-  "compatibility_date": "2026-09-28",
+  "compatibility_date": "2026-09-25",
   "workers_dev": true,
   "preview_urls": false,
   "assets": {
@@ -200,7 +200,7 @@ The dry-run was repeated inside `mcr.microsoft.com/playwright:v1.63.0-noble` wit
 **Local exercise of the inline scripts (matrix rows 3–5).** Bodies extracted with `docker run --rm -v "$PWD":/w -w /w mikefarah/yq:4.53.6 '.jobs.deploy.steps[] | select(.name == "verify dist" / "post-deploy check") | .run' .github/workflows/deploy.yml`, run with `bash --noprofile --norc -eo pipefail` in a temp dir holding a copy of `dist/`. For the post-deploy proof only the extracted copy's URL regex was rewritten (`https://wordcell\.[^/ ]+\.workers\.dev` → `http://127\.0\.0\.1:8791`; `diff` shows that single line changed); the workflow has no test override. Local server: a tiny node `http` server on 127.0.0.1:8791 serving the temp `dist/` with the AD-18 headers, `/index.html` → 307 `/`, 404 for `.vite/*`, `_headers`, `.assetsignore` and unknown paths, plus fault modes. `$RUNNER_TEMP/wrangler-deploy.log` faked per case. Results:
 
 - `verify dist`, full copy → exit 0; `dist/.vite/manifest.json` removed → `verify dist: dist/.vite/manifest.json is missing`, exit 1; `dist/_headers` removed → `verify dist: dist/_headers is missing`, exit 1; `dist/assets/*.js` removed → `verify dist: dist/assets/ has no *.js file`, exit 1.
-- Log without a matching URL (both the rewritten and the original unmodified script) → `post-deploy check: no https://wordcell.<subdomain>.workers.dev URL in …/wrangler-deploy.log`, exit 1. The original regex extracts `https://wordcell.jmb496.workers.dev` from a wrangler-style sample log (`  https://wordcell.jmb496.workers.dev` line).
+- Log without a matching URL (both the rewritten and the original unmodified script) → `post-deploy check: no https://wordcell.<subdomain>.workers.dev URL in …/wrangler-deploy.log`, exit 1. The original regex extracts `https://wordcell.jmb496.workers.dev` from a wrangler-style sample log (`  https://wordcell.jmb496.workers.dev` line). The sample matches wrangler 4.141.0's real output format: `node_modules/wrangler/wrangler-dist/cli.js:159977-159985` prepends `https://` to workers.dev targets, then `logger.log(`Deployed ${workerName} triggers`, …)` and `logger.log(" ", target)` per target.
 - All-correct server → wait passes at attempt 1, checks 1–9 `ok`, check 5 logs `info: …/index.html first response status 307, (none)`, `post-deploy check: all checks passed`, exit 0.
 - Persistent wrong header (`/sw.js` `public, max-age=0, must-revalidate`) → checks 1–2 ok, check 3 fails 3 attempts (~10.6 s), prints URL, `expected: 200 with exactly one cache-control: no-cache`, `last response: curl exit 0, status 200, 1 cache-control line(s): public, max-age=0, must-revalidate`, exit 1.
 - Duplicate `cache-control` on `/` (`no-cache` + `public, max-age=14400`) → check 2 fails after 3 attempts, `2 cache-control line(s): no-cache|public, max-age=14400`, exit 1.
@@ -214,7 +214,7 @@ Matrix rows 1–2 (job `if:` and job-level `concurrency:`) are proven by the quo
 
 **Errata for the D8 audit / retrospective (ticket-mandated).** (1) The origin check tightens SPEC CAP-9's "halts only if one is missing" (backed by AD-18's "a GitHub remote"). (2) SPEC CAP-9: default `html_handling` never serves `/index.html` with 200 (307 to `/`); `/index.html` stays in `_headers` per AD-18 and check 5 follows the redirect. (3) `preview_urls: false` and `.wrangler/` in `.gitignore` are recorded technical additions.
 
-**Open for gate 4 (owner).** Unverifiable locally: the workers.dev subdomain and the token template; the `[ASSUMPTION]`s that static assets serves `index.html` byte-identical and that `_headers` replaces (not merges with) the platform `cache-control`; job-level `concurrency` behaviour for skipped runs. If the first live deploy fails only on one of those, report rather than loosen the check (ticket). Minor risk: a future npm that blocks unapproved install scripts (the `allowScripts` warning above) could affect `workerd`/`esbuild`; `wrangler deploy` of a static-assets-only project worked in the container under that warning.
+**Open for gate 4 (owner).** Unverifiable locally: the workers.dev subdomain and the token template; the `[ASSUMPTION]`s that static assets serves `index.html` byte-identical and that `_headers` replaces (not merges with) the platform `cache-control`; job-level `concurrency` behaviour for skipped runs. If the first live deploy fails only on one of those, report rather than loosen the check (ticket). Forks with Actions enabled get a failing Deploy run (no secrets) on pushes to their `main`; accepted because the ticket fixes the job `if:` to its three clauses. Minor risk: a future npm that blocks unapproved install scripts (the `allowScripts` warning above) could affect `workerd`/`esbuild`; `wrangler deploy` of a static-assets-only project worked in the container under that warning.
 
 ## Plan Change Log
 
@@ -256,7 +256,7 @@ Errata to record for the D8 audit / retrospective (ticket-mandated): (1) the ori
 
 ## Auto Run Result
 
-- **Summary:** added the AD-18 deploy: `wrangler` 4.141.0 (exact devDependency), `wrangler.jsonc` (5 keys, `compatibility_date` 2026-09-28), `public/_headers` (AD-18 rules), `public/.assetsignore` (`.vite`), `.wrangler/` in `.gitignore`, and `.github/workflows/deploy.yml` (`name: Deploy`; `workflow_run` of `CI` on `main`; job-level `if`/`concurrency`; download that run's `dist` unrebuilt; `verify dist`; `npx --no-install wrangler deploy | tee`; bounded post-deploy wait and checks 1–9).
+- **Summary:** added the AD-18 deploy: `wrangler` 4.141.0 (exact devDependency), `wrangler.jsonc` (5 keys, `compatibility_date` 2026-09-25), `public/_headers` (AD-18 rules), `public/.assetsignore` (`.vite`), `.wrangler/` in `.gitignore`, and `.github/workflows/deploy.yml` (`name: Deploy`; `workflow_run` of `CI` on `main`; job-level `if`/`concurrency`; download that run's `dist` unrebuilt; `verify dist`; `npx --no-install wrangler deploy | tee`; bounded post-deploy wait and checks 1–9).
 - **Files:** `.github/workflows/deploy.yml` (new, deploy workflow); `wrangler.jsonc` (new, static-assets config); `public/_headers` (new, cache headers); `public/.assetsignore` (new, excludes `.vite`); `.gitignore` (+`.wrangler/`); `package.json`, `package-lock.json` (wrangler 4.141.0; lockfile root also picked up the existing `engines` field, no pre-existing package version changed); this plan.
 - **Review:** thorough, 14 findings; patches 0; deferred 3 (no pre-deploy header check, no repeatable test of the inline bash, npm allowScripts future risk); rejected 11 with reasons in the triage log.
 - **Follow-up review recommended:** false (no patches; patched counts high 0, medium 0, low 0).
