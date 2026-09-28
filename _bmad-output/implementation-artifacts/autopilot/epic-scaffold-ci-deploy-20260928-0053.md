@@ -27,3 +27,14 @@ Code review: 1 pass, converged; no fixes needed
 Tests: all passing
 Worth knowing: the colour codes are written in lowercase in the style file because the project's formatter insists; they are the same colours. You approved the icons.
 
+## 1.6 Size budget postbuild gate — done
+What it adds: every production build now measures what a player downloads on first visit and fails if it passes 600 KB (compressed). Today it is 473 KB: the dictionary is 454 KB of that; the game code, styles, font and page are about 19 KB. It also fails if the dictionary or the font goes missing from the build, which closes the gap left open in 1.2.
+Ticket review: 6 passes, converged; nothing needed your input
+Build: built; commits 33936ce
+Code review: 1 pass, converged; no fixes needed
+Tests: all passing
+Worth knowing: about 127 KB of headroom remains for the rest of the game; the dictionary dominates the budget.
+
+## Run stopped before 1.7
+1.7 (screenshot pipeline in Docker), 1.8 (CI workflow) and 1.9 (deploy to Cloudflare) are marked as needing you, so the autopilot stops here.
+
