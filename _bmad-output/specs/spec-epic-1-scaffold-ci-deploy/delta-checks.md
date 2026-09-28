@@ -45,5 +45,5 @@ it and the check that proves it. A ticket plan names these checks in its sentenc
 | `pwa` project | 3 | Precache manifest check (dictionary, later font) passes; since ticket 1.10 the precache check also runs under `dist-smoke`, with exactly one entry per URL. |
 | `dist-smoke` project | 3 | Load, 52 live cards, no errors, no hook; since ticket 1.10 also the hook-free precache, build-output and font specs against `dist/`. |
 | Screenshot container | 7 | CAP-7 success. |
-| `ci.yml` | 8 | actionlint clean; every step's npm script passes locally; first pushed run green (owner). |
-| `deploy.yml`, `wrangler.jsonc`, `_headers`, `.assetsignore` | 9 | CAP-9 success. |
+| `ci.yml` | 8 | actionlint clean; every step's npm script passes locally; first pushed run green (owner). Since ticket 1.11 (2026-09-28): the `actionlint` step runs in CI; `scripts/flaky-report.test.mjs` `AD-18` tests pass and the pushed run shows the flaky-report summary. |
+| `deploy.yml`, `wrangler.jsonc`, `_headers`, `.assetsignore` | 9 | CAP-9 success. Since ticket 1.11 (2026-09-28): `scripts/deploy-check.test.mjs` and `scripts/deploy-config.test.mjs` `AD-18` tests pass; the Deploy run's post-deploy log shows every check `ok:`, including the dictionary and woff2. |

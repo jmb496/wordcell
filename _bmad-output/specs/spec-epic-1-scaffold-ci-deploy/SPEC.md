@@ -103,7 +103,9 @@ how.
   - **success:** `.github/workflows/ci.yml` on Node 24 with `npm ci`: lint → check → unit →
     `build` (size budget) → `dist-smoke` → upload `dist/` → `build:test` → e2e (`android`,
     `desktop`, `pwa`) → screenshot job in the container; passes actionlint; the first pushed run
-    is green (owner, gate 4).
+    is green (owner, gate 4). Since ticket 1.11 (2026-09-28): a gating `actionlint` step (pinned
+    Docker image) runs right after `setup-node`, and the flaky report is one
+    `node scripts/flaky-report.mjs` step whose `AD-18` unit tests pass.
 
 - **CAP-9** Deploy (AD-18 Deploy and Rollback) — separate ticket
   - **intent:** A green `ci.yml` run on a push to `main` deploys that run's `dist/` artifact,
@@ -114,7 +116,13 @@ how.
     locally; after the owner's push the live site returns `immutable` on `/assets/*`, `no-cache`
     on `/`, `/sw.js`, `/manifest.webmanifest` and on the final response of `/index.html`
     (default `html_handling` answers 307 to `/`), and 404 on `/.vite/manifest.json`, on an
-    unknown `/assets/` path, `/_headers` and `/.assetsignore`.
+    unknown `/assets/` path, `/_headers` and `/.assetsignore`. Since ticket 1.11 (2026-09-28):
+    `verify dist` and the post-deploy check are `node scripts/deploy-check.mjs verify` and
+    `… post-deploy <wrangler log>` with `AD-18` unit tests; verify also requires exactly one
+    `assets/en-*.txt` and one `assets/*.woff2` and validates the `dist/` copies of `_headers` and
+    `.assetsignore`; the post-deploy log shows `ok:` for immutable on the first JS asset, the
+    dictionary and the woff2; `scripts/deploy-config.test.mjs` holds `_headers`, `.assetsignore`
+    and `wrangler.jsonc` to their AD-18 values before any deploy.
 
 ## Constraints
 
@@ -176,7 +184,8 @@ the AD-18 headers, and adding `Date.now()` to an engine source, or a `?url` dict
   gate 4.
 - `test:screens` wraps `docker run` of the pinned image; CI's container job calls
   `test:screens:run` directly.
-- `deploy.yml` curls the live headers after deploying and serialises deploys with a concurrency
+- `deploy.yml` checks the live headers after deploying (since ticket 1.11, 2026-09-28, with
+  `node scripts/deploy-check.mjs post-deploy`, not curl) and serialises deploys with a concurrency
   group.
 
 ## Decisions
@@ -190,6 +199,6 @@ Owner accepted every proposed default on 2026-09-27. Rationale in `build-notes.m
 | D3 | Where do `scripts/*.mjs` tests live and which runner collects them? | `scripts/<name>.test.mjs` beside the script; Vitest `include` adds `scripts/**/*.test.mjs` (node environment); names start with AD-n; scripts export pure functions and guard their CLI entry. |
 | D4 | A screens config with no specs fails ("No tests found"). What does CAP-7 screenshot? | One placeholder-board spec (`android`, `desktop`); epic 4 replaces its baseline. |
 | D5 | `playwright.pwa.config.ts` serves two targets (`dist-test/` for `pwa`, `dist/` for `dist-smoke`) but `webServer` is config-global and CI runs `dist-smoke` before `dist-test/` exists. | Env var `PW_PREVIEW=dist\|dist-test` picks the server; the config throws when unset. Scripts: `test:e2e:pwa` sets `dist-test`; new `test:e2e:dist` sets `dist`. |
-| D6 | CI and deploy prove themselves only after a push; build skills never push. | Tickets verify locally (actionlint, `wrangler deploy --dry-run`, each step's npm script) and list post-push checks; the owner pushes and runs them at gate 4. |
+| D6 | CI and deploy prove themselves only after a push; build skills never push. | Tickets verify locally (actionlint, `wrangler deploy --dry-run`, each step's npm script) and list post-push checks; the owner pushes and runs them at gate 4. Since ticket 1.11 (2026-09-28) actionlint also runs in CI as a gating step; tickets touching `.github/workflows/` still run it locally. |
 | D7 | The spine's `__APP_VERSION__` convention has no epic. | Epic 6, with the menu footer that shows it. |
 | D8 | AGENTS.md's `TODO(epic 1)` line sits in the managed block (edits via `bmad-project-context`) yet says "drop each item as epic 1 adds it". | Each ticket drops its own items in its diff; after the last ticket one `bmad-project-context` audit removes the line and the resolved scaffold pitfalls. |

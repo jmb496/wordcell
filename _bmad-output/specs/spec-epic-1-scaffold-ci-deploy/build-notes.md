@@ -133,6 +133,16 @@ spine leaves open and name the traps found in the scaffold. `[ASSUMPTION]` marks
   The screenshot job sets `env: WORDCELL_SCREENS_CONTAINER: '1'` (ticket 1.7: `playwright.screens.config.ts` throws at load otherwise).
 - Local proof (D6): actionlint (Docker `rhysd/actionlint`) `[ASSUMPTION]` plus each step's npm
   script.
+- Ticket 1.11 (2026-09-28): ci.yml gains a gating `actionlint` step after `setup-node`, before
+  `npm ci` (`docker run --rm -v "$PWD":/repo -w /repo rhysd/actionlint:1.7.12`; CI-only, not in
+  `test:all`). The flaky report moves to `scripts/flaky-report.mjs` (only `node:` built-ins),
+  ported 1:1 from the jq/bash step; intended changes: `PW_JSON_DIR`/`GITHUB_STEP_SUMMARY` unset or
+  empty fail naming it, and the stricter report shape (string spec `file`/`title`, suite
+  `title`). Tests: `scripts/flaky-report.test.mjs`, including a trimmed real Playwright 1.63.0
+  `--reporter=json` fixture with a nested-describe flaky test.
+- SPEC D3 naming deviation (ticket 1.11): `scripts/deploy-config.test.mjs` has no
+  `deploy-config.mjs`; it tests the config validators exported by `scripts/deploy-check.mjs`
+  (the ticket names that file).
 
 ## CAP-9 Deploy
 
@@ -157,6 +167,21 @@ spine leaves open and name the traps found in the scaffold. `[ASSUMPTION]` marks
 - `public/_headers` per AD-18; `public/.assetsignore` lists `.vite`. Both are copied into `dist/`
   by Vite.
 - Rollback per AD-18: revert on `main` or `wrangler rollback`.
+- Ticket 1.11 (2026-09-28): `verify dist` and `post-deploy check` are one
+  `node scripts/deploy-check.mjs verify` / `… post-deploy "$RUNNER_TEMP/wrangler-deploy.log"`
+  step each (the `deploy` step is unchanged), ported 1:1 from the bash with `node:http`/`node:https`
+  (HEAD for cache/status checks, GET for the index wait, fixed `User-Agent:
+  wordcell-deploy-check`, no `Accept-Encoding`, the Node error text replacing `curl exit $rc`).
+  Intended changes: verify requires exactly one `assets/en-*.txt` and one `assets/*.woff2` and
+  validates the `dist/` copies of `_headers` and `.assetsignore`; post-deploy checks immutable on
+  the dictionary and woff2 right after the JS check; check 1's JS asset is the first in
+  code-point order (bash used locale glob order); `/index.html` follows at most 5 redirects, and
+  a 6th or a 3xx without `Location` fails the attempt; the test-only env
+  `DEPLOY_CHECK_BASE_URL` (an http(s) origin, never set in a workflow; asserted by a unit test)
+  replaces the URL after it is extracted from the log. Pre-deploy config test
+  `scripts/deploy-config.test.mjs` (retro R3, P3). Worst case of the deploy job: index wait
+  24 × 10 + 23 × 5 s = 355 s ≈ 6 min, 11 checks × (3 × 10 + 2 × 5) s = 440 s ≈ 7.3 min, plus
+  setup, under the 20 min timeout.
 
 ## Decisions (rationale; accepted by the owner 2026-09-27)
 

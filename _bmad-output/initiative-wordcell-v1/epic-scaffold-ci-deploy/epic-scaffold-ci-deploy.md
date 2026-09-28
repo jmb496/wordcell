@@ -45,12 +45,12 @@ Tooling, build, packaging, CI and deploy on the placeholder board. Not engine ru
 
 ## Notes
 
-- Decision: one ticket per capability in the SPEC's order, CAP-1 → CAP-9, each after the previous one; CAP-9 (deploy) is its own ticket and last (owner, 2026-09-27).
+- Decision: one ticket per capability in the SPEC's order, CAP-1 → CAP-9, each after the previous one; CAP-9 (deploy) is its own ticket and last (owner, 2026-09-27). Amended (ticket 1.11, 2026-09-28): CAP-9 is the last capability ticket; the retro tickets 1.10 and 1.11 follow it.
 - Decision: epic branch `epic-1-scaffold`; every ticket's build precondition is a clean tree on it (owner, 2026-09-27).
 - Decision: CI and deploy are verified locally by the build; post-push checks are the owner's at gate 4 (D6).
 - Decision: each ticket drops its own AGENTS.md `TODO(epic 1)` items; after the last ticket one `bmad-project-context` audit removes the line and the resolved scaffold pitfalls (D8).
 - Assumption: the chain CAP-1 → CAP-9 has no tracer-bullet slice and no parallel lanes; the owner's order stands in for both.
-- Unknown: Docker is not reachable in the WSL distro (Docker Desktop's WSL integration is off, so the CLI cannot reach the server, 2026-09-27); entries 7 and 8 need it (screenshot container, actionlint).
+- Unknown: Docker is not reachable in the WSL distro (Docker Desktop's WSL integration is off, so the CLI cannot reach the server, 2026-09-27); entries 7 and 8 need it (screenshot container, actionlint). Superseded (ticket 1.11, 2026-09-28): Docker is reachable from WSL2 and the build runs the pinned actionlint command locally; CI also runs it.
 - Decision: build-output checks (manifest, precache list, no `registerSW.js`, `.vite/manifest.json` read from disk, font preload) live in `e2e/pwa/` against `dist-test/` so `npm run test:all` runs them; `dist-smoke` keeps only what differs in `dist/` (no hook) (owner, 2026-09-27). Amended (ticket 1.10, 2026-09-28, retro A3): the hook-free precache, build-output and font specs also run under `dist-smoke` against `dist/`, and `test:all` runs `build` and `test:e2e:dist` too.
 - Decision: no closing refactor sweep; one ticket per CAP, and the D8 audit plus the retrospective close the epic (owner, 2026-09-27).
 - Decision: no `plan_checkpoint` / `done_checkpoint`; methodology gates 3 and 4 already stop after every ticket (owner, 2026-09-27).

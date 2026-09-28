@@ -694,7 +694,11 @@ sequenceDiagram
     `build` (with the size budget) + `test:e2e:dist` + `test:e2e` + `test:e2e:pwa` (ticket 1.10,
     2026-09-28). CI runs the same steps one by one (`test:e2e:pwa` as `build:test` plus a direct
     `--project pwa` run) and also the screenshots, which `test:all` does not (container-only,
-    `npm run test:screens`; AD-18 CI). Under CI, `playwright.config.ts` and
+    `npm run test:screens`; AD-18 CI). actionlint is the second CI-only step: ci.yml's
+    `actionlint` step (its pinned `rhysd/actionlint` Docker command is the single source of the
+    tag) is not an npm script and `test:all` does not run it; a ticket that touches
+    `.github/workflows/` runs that same command locally before it is built (ticket 1.11,
+    2026-09-28). Under CI, `playwright.config.ts` and
     `playwright.pwa.config.ts` retry twice; the screens config never retries.
   - **Screenshots.** Baselines are generated and compared only inside the
     `mcr.microsoft.com/playwright:v1.63.0-noble` container (CI job container; locally
@@ -703,8 +707,10 @@ sequenceDiagram
 ### AD-18 — Size budget, CI, deploy and rollback
 
 - **Binds:** `scripts/size-budget.mjs`, `scripts/build-font.py`, `.github/workflows/`,
-  `wrangler.jsonc`, `public/_headers`, `public/.assetsignore`, brief §6.7, §6.8, platform
-  decision §5.
+  `wrangler.jsonc`, `public/_headers`, `public/.assetsignore`, `scripts/flaky-report.mjs`,
+  `scripts/deploy-check.mjs` and their tests `scripts/flaky-report.test.mjs`,
+  `scripts/deploy-check.test.mjs`, `scripts/deploy-config.test.mjs` (ticket 1.11, 2026-09-28),
+  brief §6.7, §6.8, platform decision §5.
 - **Prevents:** the budget drifting unmeasured; shipping bytes CI never tested; a manual or
   rebuilt deploy; stale HTML or worker served from cache.
 - **Rule:**
@@ -723,18 +729,25 @@ sequenceDiagram
     it (`build.assetsInlineLimit`, Scaffold deltas), so the built `index.html` preload `href`
     equals the `@font-face` URL.
   - CI (`ci.yml`, every branch push (not tags) and every PR; a newer run on the same ref cancels
-    the older, so a cancelled `main` run never deploys; Node 24, `npm ci`): lint → check → unit →
+    the older, so a cancelled `main` run never deploys; Node 24, `npm ci`): a gating `actionlint`
+    step right after `setup-node`, before `npm ci` (`docker run --rm -v "$PWD":/repo -w /repo
+    rhysd/actionlint:1.7.12`, CI-only, AD-17 Scripts; a ticket touching `.github/workflows/` runs
+    it locally; ticket 1.11, 2026-09-28) → lint → check → unit →
     `build` (with size budget) → a hook-free smoke test against `dist/` (boot, deal, no fatal
     surface; project `dist-smoke` in `playwright.pwa.config.ts`, which also runs the hook-free
     precache, build-output and font specs against `dist/`, ticket 1.10) → upload `dist/` with hidden
     files (keeps `.vite/manifest.json`) as the artifact `dist` → build `dist-test/` with hooks →
     e2e (`android`, `desktop`, `pwa`) → a non-gating flaky report (tests that passed on a retry,
-    AD-17 Scripts) in the job summary → screenshot job in the Playwright container. Each job
+    AD-17 Scripts; one `node scripts/flaky-report.mjs` step, ticket 1.11, 2026-09-28) in the job
+    summary → screenshot job in the Playwright container. Each job
     uploads `test-results/` on failure.
   - Deploy (`deploy.yml`, on `ci.yml` success for a push to `main`; runs serialised, none
     cancelled): check out that run's commit, `npm ci`, download that run's `dist` artifact,
     verify it holds `index.html`, `_headers`, `.assetsignore`, `sw.js`,
-    `manifest.webmanifest`, `.vite/manifest.json` and a JS file under `assets/`, and `wrangler
+    `manifest.webmanifest`, `.vite/manifest.json` and a JS file under `assets/` (plus exactly one
+    `assets/en-*.txt` and one `assets/*.woff2`, and the `dist/` copies of `_headers` and
+    `.assetsignore` pass the config validators; `node scripts/deploy-check.mjs verify`, ticket
+    1.11, 2026-09-28), and `wrangler
     deploy` it with no rebuild, to a Workers static-assets project at
     `wordcell.<account>.workers.dev`. `wrangler.jsonc` holds exactly `name`,
     `compatibility_date` (pinned, no later than the pinned wrangler's `DEFAULT_COMPAT_DATE`; a
@@ -742,10 +755,16 @@ sequenceDiagram
     `./dist`: no Worker script, no `not_found_handling`, default `html_handling` (so
     `/index.html` answers 307 to `/`). `wrangler` is a pinned devDependency. `public/_headers`:
     `/assets/*` `Cache-Control: public, max-age=31536000, immutable`; `/`, `/index.html`,
-    `/sw.js`, `/manifest.webmanifest` `no-cache`. `public/.assetsignore` excludes `.vite`. After
-    deploying, the workflow waits until `/` serves `dist/index.html` byte for byte, then checks
-    the immutable header on one `/assets/*.js`, `no-cache` on `/`, `/sw.js`,
-    `/manifest.webmanifest` and on the final response of `/index.html`, and 404 on
+    `/sw.js`, `/manifest.webmanifest` `no-cache`. `public/.assetsignore` excludes `.vite`. A
+    pre-deploy config test (`scripts/deploy-config.test.mjs`, unit suite) holds `_headers`,
+    `.assetsignore` and `wrangler.jsonc` to exactly these values, `compatibility_date` against
+    the `DEFAULT_COMPAT_DATE` in the pinned wrangler's `cli.js` (ticket 1.11, 2026-09-28). After
+    deploying, the workflow (`node scripts/deploy-check.mjs post-deploy <wrangler log>`, ticket
+    1.11, 2026-09-28) waits until `/` serves `dist/index.html` byte for byte, then checks
+    the immutable header on the first `/assets/*.js` (code-point order), the dictionary
+    `assets/en-*.txt` and the font `assets/*.woff2` (ticket 1.11, 2026-09-28), `no-cache` on `/`, `/sw.js`,
+    `/manifest.webmanifest` and on the final response of `/index.html` (at most 5 redirects
+    followed; ticket 1.11, 2026-09-28), and 404 on
     `/.vite/manifest.json`, an unknown `/assets/` path, `/_headers` and `/.assetsignore`; each
     check retries briefly, then fails the job. One environment, production; no preview deploys
     or preview URLs `[ASSUMPTION A-A6]`. Prerequisites (owner, before
@@ -846,8 +865,8 @@ Changes the first epic makes to commit `785c0f6`:
   `playwright.config.ts`: `testIgnore` for `*.screens.spec.ts`; new `playwright.pwa.config.ts`
   and `playwright.screens.config.ts` (AD-17).
 - CLAUDE.md: rule 5 path and the Commands and Testing expectations lines already updated with
-  this spine (AD-8, AD-17; Docker in WSL2 only for screenshot baselines, uv/Python only for
-  regenerating the font).
+  this spine (AD-8, AD-17; Docker in WSL2 only for screenshot baselines and the actionlint proof
+  (ticket 1.11, 2026-09-28), uv/Python only for regenerating the font).
 - `src/engine/types.ts` language constants move into `LangData` (`lang/en.ts`, R-85);
   `STUCK_PENALTY_PER_CARD` becomes the R-81 per-letter penalty. Made by epic 2, after the
   golden deal test (AD-5), not the first epic (epic 1 spec D2).
