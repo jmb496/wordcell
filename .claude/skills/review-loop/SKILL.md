@@ -1,6 +1,6 @@
 ---
 name: review-loop
-description: Harden one document (story, ticket, spec, design) or one code change by looping fresh-context reviewer subagents and a separate fresh fixer subagent until no major findings remain or a pass cap is hit. Use when the user says "review loop", "harden this story/spec", "/review-loop <path>", or asks to iterate review until clean. Decisions that need human intent are collected, never auto-applied.
+description: Harden one document (story, ticket, spec, design) or one code change by looping fresh-context reviewer subagents and a separate fresh fixer subagent until no major findings remain or a pass cap is hit. Use when the user says "review loop", "harden this story/spec", "/review-loop <path>", or asks to iterate review until clean. Technical choices take the recommended default; only choices that change functionality, UX or gameplay are collected for the user, never auto-applied.
 argument-hint: <path-or-target> [max=4] [depth=quick|thorough] [refs=path,path]
 ---
 
@@ -16,7 +16,7 @@ orchestrator: you never review or fix the artifact yourself.
 - **target** (required): a file path (story, ticket file, spec, DESIGN.md, plan) → *docs* mode;
   or a code target (`diff`, `staged`, a branch name, a commit range, a ticket plan whose diff can
   be derived) → *code* mode. When a ticket plan is given in code mode, the plan is also the intent.
-- **max** (default 4): pass cap. Never exceed it.
+- **max** (default 7): pass cap. Never exceed it.
 - **depth** (default thorough): `quick` = 1 reviewer lens; `thorough` = all lenses for the mode.
 - **refs** (default: see below): documents reviewers judge the target against.
 
@@ -29,8 +29,16 @@ they exist. Do not pass a ref that is the target itself.
 - **major**: a contradiction, an unspecified behaviour a builder would have to guess, a rule that
   cannot be tested as written, a bug, a missing test for a stated rule, a violation of a ref.
 - **minor**: wording, ordering, redundancy, style, an unlikely corner case with obvious handling.
-- **decision-needed**: fixing it requires intent the refs do not supply (e.g. a game-design
-  choice). These are never fixed by the loop; they go to the user.
+- **decision-needed**: fixing it requires intent the refs do not supply **and** the choice
+  changes what the product does or how it plays: functionality scope, UX (what the player sees,
+  hears or can do) or gameplay (rules, scoring, the deal). These are never fixed by the loop; they
+  go to the user, phrased by that practical impact, not by the technical mechanism.
+- **Technical choices are not decision-needed.** When the refs leave open an implementation,
+  tooling, test, build or internal-structure choice with no effect on functionality, UX or
+  gameplay, the reviewer proposes a default, triage classes it major or minor by the rules above,
+  and the fixer applies it. The user cannot judge these; never ask them. Mark each such item
+  `default applied` in the log. When unsure whether a choice has practical impact, ask: would a
+  player or the owner notice any difference in the product? If no, it is technical.
 
 Stop when a pass yields **zero major** findings after triage, or when `max` passes have run.
 Decision-needed findings do not block convergence; they are reported.
@@ -50,7 +58,9 @@ Decision-needed findings do not block convergence; they are reported.
    b. **Triage.** Merge all findings. For each, open the target at the cited location and verify
       it is real; drop disproved ones and duplicates (keep the clearer wording). Reclassify
       severity if a reviewer over- or under-stated it. Anything whose fix needs intent the refs
-      do not give becomes decision-needed.
+      do not give becomes decision-needed only when it changes functionality, UX or gameplay;
+      a purely technical one keeps its major/minor class with the reviewer's default as the fix
+      (`default applied`). Reclassify reviewer-labelled decision-needed items the same way.
    c. **Check the stopping rule.** If zero major remain → go to step 4.
    d. **Fix.** Launch **one** new `general-purpose` subagent with the prompt in
       `references/fixer-prompt.md`: the target path, the accepted major *and* minor findings as
@@ -63,7 +73,8 @@ Decision-needed findings do not block convergence; they are reported.
       the three commands yourself; a failing suite is a major finding for the next pass.
    f. **Log the pass** (see Log).
 4. **Report** to the user: passes run, converged or capped, counts per pass, the decision-needed
-   list with each proposed default, where the log is, and (code mode) the final test/lint status.
+   list (functionality/UX/gameplay only) with each proposed default and its practical effect in
+   plain words, a one-line count of technical defaults applied, where the log is, and (code mode) the final test/lint status.
    If capped without convergence, say which majors persisted; three passes of real majors usually
    mean the refs are unclear, so name the ref to fix.
 
@@ -80,8 +91,10 @@ Docs mode: `<target-dir>/<target-basename>.review-log.md`. Code mode:
 Reviewers: <lenses>  |  Findings: major X, minor Y, decision-needed Z  |  Dropped in triage: W
 ### Applied
 - [major] <location> — <one line> → <what the fixer did>
-### Decision needed
-- <location> — <question> — proposed default: <…>
+### Default applied (technical)
+- <location> — <choice> → <default taken>
+### Decision needed (functionality / UX / gameplay)
+- <location> — <question, in terms of what the player or owner would notice> — proposed default: <…>
 ### Dropped
 - <one line each, with why>
 ```

@@ -16,6 +16,10 @@ Severity definitions:
 - minor: <verbatim>
 - decision-needed: <verbatim>
 
+Technical choices (implementation, tooling, tests, build, internal structure) with no effect on
+functionality, UX or gameplay are never decision-needed: report them as major or minor with a
+concrete recommended default in proposed_fix.
+
 Rules: read-only. Do not edit any file, do not invoke skills, do not spawn subagents. Judge the
 target only against itself and the refs; do not invent requirements. Cite exact locations (rule id,
 heading, or file:line). Prefer fewer real findings over padding, except where your lens demands a

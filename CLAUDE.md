@@ -8,8 +8,9 @@ Commands are the `package.json` scripts. This file keeps the Claude Code BMAD wo
 ## BMAD and review loops
 
 `/review-loop <path>` (project skill in `.claude/skills/review-loop`) hardens one document or code
-change with fresh-context reviewer and fixer subagents until no major findings remain (cap 4).
-Decision-needed findings go to Jared, never auto-applied. Use it on tickets before build and on
+change with fresh-context reviewer and fixer subagents until no major findings remain (cap 7).
+Technical choices take the reviewer's recommended default; only findings that change
+functionality, UX or gameplay go to Jared, never auto-applied. Use it on tickets before build and on
 plans after build when a second pass is wanted.
 
 
