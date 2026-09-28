@@ -63,7 +63,7 @@ Run every headless step with the Bash tool, `run_in_background: true`, from the 
 wait for its completion notification (builds can take a long time; never poll with sleep):
 
 ```bash
-claude -p "<prompt>" --permission-mode bypassPermissions --output-format text > "$W/<ref>-<step>.log" 2>&1
+claude -p "<prompt>" --permission-mode bypassPermissions --output-format text < /dev/null > "$W/<ref>-<step>.log" 2>&1
 ```
 
 Every step prompt ends with the result-file contract: *"When finished, write
@@ -71,6 +71,9 @@ Every step prompt ends with the result-file contract: *"When finished, write
 commit. Do not push. Do not ask questions: record anything that needs the owner in the JSON."*
 If the JSON is missing or unparsable after the process exits, stop (rule 5) and point the owner
 at the `.log`.
+If the log ends with a usage or session limit message, stop (rule 5), tell the owner when it
+resets, and note that re-running `/epic-autopilot` resumes: an `in-progress` plan is resumed by
+`bmad-build-auto`, so leave it in place.
 
 ### Step A — harden the ticket (docs review loop)
 
