@@ -51,5 +51,7 @@ Verify: every proof in the Delta checks > Local bullet below (the single list of
 
 ## Notes
 
+- Errata (retrospective S3, 2026-09-28): "verified accepted by wrangler 4.141.0 without warning" is false as written: `--dry-run` never checks `compatibility_date`, and 4.141.0 caps it at its `DEFAULT_COMPAT_DATE` 2026-09-25, the date the code review set (commit 081a3f9).
+
 - Decision (epic-scaffold-ci-deploy.md: "deploy.yml takes the deployed URL from wrangler deploy's output", owner, 2026-09-27): the account's workers.dev subdomain is not known locally; deploy.yml takes the first URL matching `https://wordcell\.[^/ ]+\.workers\.dev` from the tee'd `wrangler deploy` output for its header checks and fails if none.
 - The root-level `workbox-<hash>.js` that `sw.js` imports gets no `_headers` rule beyond AD-18; it keeps the platform default. No rule is added.

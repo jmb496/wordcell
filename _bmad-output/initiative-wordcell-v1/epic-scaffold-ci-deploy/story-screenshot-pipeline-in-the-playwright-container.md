@@ -77,4 +77,6 @@ Verify: `npm run test:screens -- --update-snapshots` writes both baselines (andr
 
 ## Notes
 
+- Errata (retrospective S9, 2026-09-28): the Capture 1 pathspec `':!_bmad-output'` fails on git 2.43; the build used the `':(exclude)_bmad-output'` form (plan, Surprise (Verify command)). Do not reuse it as written.
+
 - Resolved: Docker Desktop's WSL integration enabled; `docker version` reports server 29.8.0 (2026-09-28).

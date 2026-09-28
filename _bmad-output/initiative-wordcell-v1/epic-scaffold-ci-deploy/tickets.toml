@@ -145,3 +145,35 @@ references = [
   "architecture — _bmad-output/planning-artifacts/architecture/architecture-wordcell-2026-09-27/ARCHITECTURE-SPINE.md, AD-18 Deploy, Rollback",
   "spec — _bmad-output/specs/spec-epic-1-scaffold-ci-deploy/build-notes.md, CAP-9 Deploy",
 ]
+
+# Entries 10–11: epic 1 hardening from the retrospective (epic-scaffold-ci-deploy-retrospective.md, owner approved 2026-09-28).
+
+[[entry]]
+id = 10
+type = "story"
+title = "Local gate matches CI"
+description = "Closes retro A2, A3, A5, A9 and the A7 follow-ups: npm run test:all also builds dist/ (so the postbuild size budget runs) and runs test:e2e:dist; the disk-only packaging checks (precache, build output, font) run against dist/ as well as dist-test/; the precache holds exactly one entry per URL (the includeAssets and manifest-icon duplicates go); @playwright/test is pinned exactly and a unit test keeps the lockfile version equal to the screenshot image tag in package.json and ci.yml; a unit test pins the committed woff2 and icon PNGs to hashes recorded beside their generator inputs; the size-budget tests pin the gzip level; the 1.1 markup history-binding regex gets the follow-up fixture review its plan recommended."
+verify = "npm run test:all is green and now runs the size budget and dist-smoke; a scratch over-budget asset, a duplicated precache URL, a mismatched Playwright version, a one-byte-changed woff2 or icon, and a changed gzip level each fail a named test."
+covers = ["CAP-3", "CAP-4", "CAP-5", "CAP-6", "CAP-7"]
+after = [9]
+hitl = false
+risk = "low"
+references = [
+  "retrospective — _bmad-output/initiative-wordcell-v1/epic-scaffold-ci-deploy/epic-scaffold-ci-deploy-retrospective.md, R1, R2, R4, R5, R7, R11, S7, S8, A2, A3, A5, A7, A9",
+  "architecture — _bmad-output/planning-artifacts/architecture/architecture-wordcell-2026-09-27/ARCHITECTURE-SPINE.md, AD-16, AD-17, AD-18",
+]
+
+[[entry]]
+id = 11
+type = "story"
+title = "CI and deploy checks as tested scripts"
+description = "Closes retro A4 and A6: the CI flaky-report and the post-deploy header checks move out of inline workflow bash into scripts with unit tests; a unit test checks public/_headers and public/.assetsignore against the AD-18 rule set before anything deploys; the post-deploy immutable check covers the dictionary and the woff2, not only the first JS asset; CI runs actionlint from a pinned image."
+verify = "The new script tests and the _headers test pass under npm run test, and a dropped /sw.js no-cache rule fails one; actionlint runs in CI; after the owner pushes, the CI run and the main deploy are green with the extended checks (gate 4)."
+covers = ["CAP-8", "CAP-9"]
+after = [10]
+hitl = true
+risk = "medium"
+references = [
+  "retrospective — _bmad-output/initiative-wordcell-v1/epic-scaffold-ci-deploy/epic-scaffold-ci-deploy-retrospective.md, R3, R6, P3, A4, A6",
+  "architecture — _bmad-output/planning-artifacts/architecture/architecture-wordcell-2026-09-27/ARCHITECTURE-SPINE.md, AD-18 CI, Deploy",
+]
