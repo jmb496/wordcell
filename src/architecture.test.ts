@@ -3,7 +3,8 @@
 // classification are path-lexical and never consult the filesystem.
 // Known limitation (story 1.1 OQ #2): aliasing and destructuring (`const { random } = Math`,
 // `const M = Math`, `history['back']()`, `const h = window.history`, `window['localStorage']`)
-// pass the scan; code review covers deliberate aliasing.
+// pass the scan; code review covers deliberate aliasing. Svelte markup destructuring with a nested
+// pattern before `history` (`{#each xs as { a: { b }, history }}`) also passes the markup regex.
 import { readdirSync, readFileSync } from 'node:fs';
 import { posix } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -45,11 +46,13 @@ const HISTORY_API =
   /(?<![\w$])(?:window\s*(?:\?\.|\.)\s*)?history\s*(?:\?\.|\.)\s*(?:pushState|replaceState|back|forward|go|state|length)(?![\w$])/;
 const LOCAL_STORAGE = /(?<![\w$])localStorage(?![\w$])/;
 // Svelte markup bindings: {#each xs as history}, {#each xs as { history }}, {@const history = x},
-// {#snippet row(history)}, {:then history}, {:catch history}.
+// {#snippet row(history)}, {:then history}, {:catch history}, destructured {@const}/{:then}/{:catch},
+// let:history.
 const MARKUP_HISTORY_BINDING =
-  /\{#each\b[^}]*?\bas\b[^}]*?(?<![\w$.])history(?![\w$])|\{@const\s+history(?![\w$])|\{#snippet\s+[\w$]+\s*\([^)]*?(?<![\w$.])history(?![\w$])|\{:(?:then|catch)\s+history(?![\w$])/;
-const REFERENCE_DIRECTIVE = /^\s*\/\/\/\s*<reference\b/m;
-const TS_DIRECTIVE = /@ts-(?:nocheck|ignore|expect-error)\b/;
+  /\{#each\b[^}]*?\bas\b[^}]*?(?<![\w$.])history(?![\w$])|\{@const\s+[^=}]*?(?<![\w$.])history(?![\w$])|\{#snippet\s+[\w$]+\s*\([^)]*?(?<![\w$.])history(?![\w$])|\{:(?:then|catch)\s+[^}]*?(?<![\w$.])history(?![\w$])|(?<![\w$])let:history(?![\w$])/;
+const REFERENCE_DIRECTIVE = /^\s*\/\/\/\s*<reference\b/im;
+const TS_DIRECTIVE = /@ts-(?:nocheck|ignore|expect-error)\b/i;
+const IMPORT_EXT = /\.(ts|js|mjs|cjs|mts|cts|tsx|jsx|svelte|json|txt|css|html|svg|png|woff2?)$/;
 
 function layerOf(path: string): Layer {
   if (path.startsWith('src/engine/')) return 'engine';
@@ -258,10 +261,10 @@ function checkImport(
     const found: [Rule, string][] = [];
     if (spec.includes('?')) found.push(['engine-import', `${spec} carries a query`]);
     const resolved = resolveSpec(path, splitQuery(spec).bare);
-    if (!resolved.startsWith('src/engine/')) {
+    if (!(resolved === 'src/engine' || resolved.startsWith('src/engine/'))) {
       found.push(['engine-import', `${spec} leaves src/engine/`]);
     }
-    if (posix.basename(resolved).includes('.')) {
+    if (IMPORT_EXT.test(posix.basename(resolved))) {
       found.push(['engine-import', `${spec} carries a file extension`]);
     }
     return found;
@@ -293,6 +296,27 @@ function isHistoryName(node: ts.Node | undefined): boolean {
   return !!node && ts.isIdentifier(node) && node.text === 'history';
 }
 
+/** True when `literal` is (nested in) the left side of an `=` assignment: a destructuring pattern. */
+function inAssignmentPattern(literal: ts.Node): boolean {
+  let child = literal;
+  let parent = literal.parent;
+  while (
+    ts.isObjectLiteralExpression(parent) ||
+    ts.isArrayLiteralExpression(parent) ||
+    ts.isPropertyAssignment(parent) ||
+    ts.isSpreadElement(parent) ||
+    ts.isSpreadAssignment(parent)
+  ) {
+    child = parent;
+    parent = parent.parent;
+  }
+  return (
+    ts.isBinaryExpression(parent) &&
+    parent.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+    parent.left === child
+  );
+}
+
 function historyBindings(sf: ts.SourceFile): number {
   let count = 0;
   const visit = (node: ts.Node): void => {
@@ -318,9 +342,18 @@ function historyBindings(sf: ts.SourceFile): number {
       count++;
     }
     if (
-      ts.isMethodDeclaration(node) &&
+      (ts.isMethodDeclaration(node) ||
+        ts.isGetAccessorDeclaration(node) ||
+        ts.isSetAccessorDeclaration(node)) &&
       ts.isObjectLiteralExpression(node.parent) &&
       isHistoryName(node.name)
+    ) {
+      count++;
+    }
+    if (
+      ts.isPropertyAssignment(node) &&
+      isHistoryName(node.name) &&
+      inAssignmentPattern(node.parent)
     ) {
       count++;
     }
@@ -509,6 +542,9 @@ describe('AD-1 engine tokens', () => {
       fails: 'engine-token',
     },
     { name: 'Math.floor and Math.imul', path: E, source: 'Math.floor(Math.imul(a, b));' },
+    { name: 'Dated and consoleLike', path: E, source: 'const Dated = 1; const consoleLike = 2;' },
+    { name: 'xMath.random()', path: E, source: 'xMath.random();' },
+    { name: 'Math.randomize()', path: E, source: 'Math.randomize();' },
     { name: 'engine test uses Date.now()', path: ET, source: 'Date.now();' },
   ]);
 });
@@ -529,6 +565,11 @@ describe('AD-1 stripper', () => {
       name: 'token in a template literal part',
       path: E,
       source: js('const s = ~Date @{a} window~;'),
+    },
+    {
+      name: 'token in a template middle part',
+      path: E,
+      source: js('const s = ~a@{x}Date@{y}b~;'),
     },
     {
       name: 'division is not a regex',
@@ -594,6 +635,18 @@ describe('AD-1 engine directives', () => {
       name: '// @ts-expect-error',
       path: E,
       source: '// @ts-expect-error\nexport const a: number = 1;',
+      fails: 'engine-directive',
+    },
+    {
+      name: '// @TS-NOCHECK',
+      path: E,
+      source: '// @TS-NOCHECK\nexport {};',
+      fails: 'engine-directive',
+    },
+    {
+      name: '/// <REFERENCE LIB="dom" />',
+      path: E,
+      source: '/// <REFERENCE LIB="dom" />\nexport {};',
       fails: 'engine-directive',
     },
     {
@@ -819,6 +872,18 @@ describe('AD-1 import forms', () => {
       source: "import.meta.glob('./ui/*.svelte');",
       fails: 'import-meta-glob',
     },
+    {
+      name: "shell import '../ui'",
+      path: S,
+      source: "import '../ui';",
+      fails: 'cross-layer-import',
+    },
+    {
+      name: "UI import x = require('../engine')",
+      path: U,
+      source: "import x = require('../engine');",
+      fails: 'ui-value-engine-import',
+    },
     { name: 'import.meta alone', path: S, source: 'export const dev = import.meta.env.DEV;' },
     {
       name: 'main.ts deep engine import',
@@ -897,6 +962,12 @@ describe('AD-1 layer table', () => {
       fails: 'cross-layer-import',
     },
     {
+      name: "shell '../main.js'",
+      path: S,
+      source: "import app from '../main.js';",
+      fails: 'cross-layer-import',
+    },
+    {
       name: "UI '../main'",
       path: U,
       source: "import app from '../main';",
@@ -919,6 +990,12 @@ describe('AD-1 layer table', () => {
     },
     { name: "engine './deal'", path: E, source: "import { deal } from './deal';" },
     { name: "engine './lang/en'", path: E, source: "import { EN } from './lang/en';" },
+    {
+      name: "engine '..' from lang/",
+      path: 'src/engine/lang/en.ts',
+      source: "import { deal } from '..';",
+    },
+    { name: "engine './deal.data'", path: E, source: "import { t } from './deal.data';" },
   ]);
 });
 
@@ -990,6 +1067,24 @@ describe('AD-1 engine tests', () => {
       fails: 'engine-import',
     },
     {
+      name: "engine test fixtures JSON with { type: 'css' }",
+      path: ET,
+      source: "import a from '../../fixtures/a.json' with { type: 'css' };",
+      fails: 'engine-import',
+    },
+    {
+      name: 'engine test other generated ?raw',
+      path: ET,
+      source: "import w from '../../generated/other.txt?raw';",
+      fails: ['engine-import', 'engine-import', 'engine-import'], // query, leaves src/engine/, extension
+    },
+    {
+      name: 'engine test fixtures JSON ?raw with the attribute',
+      path: ET,
+      source: "import a from '../../fixtures/a.json?raw' with { type: 'json' };",
+      fails: ['engine-import', 'engine-import', 'engine-import'], // query, leaves src/engine/, extension
+    },
+    {
       name: 'engine source fixtures JSON with the attribute',
       path: E,
       source: "import a from '../../fixtures/a.json' with { type: 'json' };",
@@ -1041,6 +1136,8 @@ describe('AD-1 History API', () => {
     { name: 'nav.ts history.pushState', path: NAV, source: "history.pushState({}, '');" },
     { name: 'loaded().history.records', path: S, source: 'const r = loaded().history.records;' },
     { name: 'scoreHistory.length', path: S, source: 'const n = scoreHistory.length;' },
+    { name: 'myhistory.back()', path: S, source: 'myhistory.back();' },
+    { name: 'history.goTo()', path: S, source: 'history.goTo();' },
   ]);
 });
 
@@ -1163,6 +1260,43 @@ describe('AD-1 history bindings', () => {
       source: "import { a as history } from './h';",
       fails: 'history-binding',
     },
+    {
+      name: 'function expression history',
+      path: S,
+      source: 'const f = function history() {};',
+      fails: 'history-binding',
+    },
+    {
+      name: 'class expression history',
+      path: S,
+      source: 'const C = class history {};',
+      fails: 'history-binding',
+    },
+    {
+      name: 'destructuring assignment ({ history: h } = x)',
+      path: S,
+      source: '({ history: h } = x);',
+      fails: 'history-binding',
+    },
+    {
+      name: 'nested destructuring assignment ({ a: { history: h } } = x)',
+      path: S,
+      source: '({ a: { history: h } } = x);',
+      fails: 'history-binding',
+    },
+    {
+      name: 'object-literal getter history',
+      path: S,
+      source: 'const o = { get history() { return 1; } };',
+      fails: 'history-binding',
+    },
+    {
+      name: 'object-literal setter history',
+      path: S,
+      source: 'const o = { set history(v) {} };',
+      fails: 'history-binding',
+    },
+    { name: 'class getter history', path: S, source: 'class C { get history() { return 1; } }' },
     { name: 'scoreHistory', path: S, source: 'const scoreHistory = 1;' },
     { name: 'interface member', path: S, source: 'interface L { history: H }' },
     { name: 'type literal member', path: S, source: 'type T = { history?: H };' },
@@ -1212,6 +1346,7 @@ describe('AD-1 localStorage', () => {
       source: "localStorage.getItem('x');",
     },
     { name: 'localStorage in a shell string', path: S, source: "const s = 'localStorage';" },
+    { name: 'localStorageKey', path: S, source: 'const localStorageKey = 1;' },
   ]);
 });
 
@@ -1292,6 +1427,30 @@ describe('AD-1 .svelte extraction', () => {
       name: 'markup {:catch history}',
       path: UV,
       source: '{#await p}<p>x</p>{:catch history}<p>y</p>{/await}',
+      fails: 'history-binding',
+    },
+    {
+      name: 'markup let:history',
+      path: UV,
+      source: '<List let:history><p>x</p></List>',
+      fails: 'history-binding',
+    },
+    {
+      name: 'markup {@const { history } = x}',
+      path: UV,
+      source: '{#each xs as x}{@const { history } = x}<p>x</p>{/each}',
+      fails: 'history-binding',
+    },
+    {
+      name: 'markup {:then { history }}',
+      path: UV,
+      source: '{#await p}<p>x</p>{:then { history }}<p>y</p>{/await}',
+      fails: 'history-binding',
+    },
+    {
+      name: 'markup {:catch { history }}',
+      path: UV,
+      source: '{#await p}<p>x</p>{:catch { history }}<p>y</p>{/await}',
       fails: 'history-binding',
     },
     {
