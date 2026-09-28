@@ -1,6 +1,6 @@
 # Review log — story-local-gate-matches-ci.md (ticket 1.10)
 
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, depth thorough (builder, edge-case, adversarial, ref-alignment), cap 7. Pre-loop: HEAD 40fe05d, copy at story-local-gate-matches-ci.review-log.passes/pass0.md, 217 words (growth budget ~540).
 
@@ -92,3 +92,29 @@ Reviewers: fix-diff, edge-case, adversarial, ref-alignment  |  Findings (after m
 ### Fixer outcome
 All 11 applied. Fixer confirmed in node_modules: workbox-build 7.4.1 `globIgnores` user value replaces the default and generate-sw.js adds swDest and `workbox-*.js` itself; vite-plugin-pwa 1.3.0 always adds its manifest entry. "unverified" dropped; "the one-entry test decides" kept (no build run). "(owner, 2026-09-27)" and "A2 is the owner-accepted source." trimmed for words.
 Words (docs): 558 (2.57 x pass 0)  |  Snapshot: _bmad-output/initiative-wordcell-v1/epic-scaffold-ci-deploy/story-local-gate-matches-ci.review-log.passes/pass3.md
+
+## Pass 4 — 2026-09-28
+Reviewers: fix-diff, edge-case, adversarial, ref-alignment  |  Findings (after merge): major 0, minor 14, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 558 (2.57 x pass 0), unchanged (no fix pass)  |  Snapshot: _bmad-output/initiative-wordcell-v1/epic-scaffold-ci-deploy/story-local-gate-matches-ci.review-log.passes/pass3.md
+### Applied
+- none (converged)
+### Decision needed (functionality / UX / gameplay)
+- none
+
+## Result — converged after 4 passes
+
+Majors per pass: 7, 5, 1, 0. Decision-needed: none. Technical defaults applied: 12.
+
+Unapplied minors (for the build's plan):
+- dist/ bullet — "widened specs keep their AD ids; only dist-smoke.spec.ts cases stay AD-18" reads as self-contradictory: build-output.spec.ts:103 and font.spec.ts:50,66 already carry AD-18 titles. Keep the existing ids (AD-8/AD-16/AD-18); epic:58's "dist-smoke cases are AD-18" then covers only dist-smoke.spec.ts.
+- Verify — "a scratch over-budget asset … (e.g. imported from the entry chunk)": computeBudget never reads `chunk.assets`, so an imported asset is not counted. Use a large string literal in an entry-imported module, or pad generated/dictionary/en.txt as the 1.6 plan did.
+- Hash bullet — `.gitattributes` `-text` entries should use the hash test's globs (e.g. `scripts/icons/*.svg -text`) so a new SVG is pinned too.
+- Hash bullet — build-font.test.mjs `bullet(prefix)` expects exactly one SHA-256 line per bullet: add new hashes as their own bullets or a separate subsection, and leave the Fraunces and OFL.txt bullets unchanged.
+- Hash failure message — say "input changed: regenerate, then re-record" versus "re-record" when only an output differs.
+- Retro A7 errata notes for tickets 1.7 and 1.9 are not owned by this ticket or ticket 11 (check whether commit 6990f6b already added them).
+- 1.1 follow-up — plan 1.1:173 also names "the exact-assertion change touched every failing case" as unverified.
+- dist/ bullet — make the header comments (dist-test.ts, build-output.spec.ts, font.spec.ts) build-neutral as well as the titles; renaming `distTest()` is optional. Add a header note to each widened spec saying it runs under dist-smoke and must stay hook-free.
+- precache.spec.ts — once `globIgnores` is set, record that manifest.webmanifest comes from the plugin, not the glob.
+- Playwright pin — playwright.screens.config.ts:5 and the build-icons.mjs header also hold the version: scan them in the pin test or list them as manual-update points in the plan.
+- AGENTS.md — the unattended build edits the managed-block lines and lists them for the D8 `bmad-project-context` audit instead of running the skill itself; optionally state "except screenshots" there.
+- Carried from pass 3 (dropped as plan detail): record the icons' Chromium/Playwright version; gzip fixture precondition assert or `gzipSize` export; record the woff2 hash once; who runs the 1.1 review.
