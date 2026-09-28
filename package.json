@@ -8,6 +8,7 @@
     "dev": "vite",
     "prebuild": "node scripts/build-dictionary.mjs",
     "build": "vite build",
+    "postbuild": "node scripts/size-budget.mjs",
     "prebuild:test": "node scripts/build-dictionary.mjs",
     "build:test": "VITE_TEST_HOOKS=1 vite build --outDir dist-test",
     "preview": "vite preview",
