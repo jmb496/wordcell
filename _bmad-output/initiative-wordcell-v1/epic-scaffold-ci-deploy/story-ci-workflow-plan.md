@@ -3,7 +3,7 @@ title: 'CI workflow (ci.yml)'
 type: 'feature'
 ticket: '8'
 created: '2026-09-28'
-status: 'built'
+status: done
 route: 'full'
 route_source: 'auto'
 baseline_revision: '21d7b807e7b49cb624e84f79f3fb9b6ed13d4a0b'

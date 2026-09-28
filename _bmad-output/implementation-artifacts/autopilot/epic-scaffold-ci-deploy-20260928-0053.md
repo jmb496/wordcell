@@ -43,3 +43,11 @@ Code review: 1 pass, converged; no fixes needed
 Tests: all passing, including the screenshot comparison in Docker
 Worth knowing: the build added one line to the CI notes so the screenshot job knows it runs inside the container (appended to ticket 1.8 too). One command in the ticket's own checklist uses a form this machine's git rejects; the build used an equivalent (no effect on the game).
 
+## 1.8 CI workflow — done (you authorised this ticket and the push, 2026-09-28)
+What it adds: automatic checks on GitHub. Every push runs lint, type checks, all unit and browser tests, the production build with its size limit, the players'-version smoke test, and the screenshot comparison in Docker, then saves the exact built app for deploying. It also lists any test that only passed on a retry, so flaky tests can't hide.
+Ticket review: 7 passes, capped (last fix not re-reviewed; interrupted once by the usage limit and resumed); nothing needed your input
+Build: built; commits ad44742
+Code review: 1 pass, converged; no fixes needed
+Tests: all passing locally; first GitHub run (36445959287) green in both jobs, built app saved as "dist"
+Worth knowing: you approved the push; the branch epic-1-scaffold is now on GitHub (public repository). For the retrospective: checks run on every branch push, and an older run on the same branch is cancelled when a newer one starts (a small reading of the architecture doc to record there). Three follow-ups are noted in the plan: keep the Docker image and the test tool version in step, add an automated test for the flaky-test report, and run the workflow linter automatically.
+
