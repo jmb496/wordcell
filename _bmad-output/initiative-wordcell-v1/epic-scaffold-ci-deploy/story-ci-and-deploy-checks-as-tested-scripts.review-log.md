@@ -1,6 +1,6 @@
 # Review log — story-ci-and-deploy-checks-as-tested-scripts.md (ticket 1.11)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, depth thorough (builder, edge-case, adversarial, ref-alignment), cap 7. Pre-loop: HEAD 564d2c2, copy at story-ci-and-deploy-checks-as-tested-scripts.review-log.passes/pass0.md, 167 words. Growth budget: the pass-0 ticket is a stub the owner asked the loop to flesh out, so 2.5x pass 0 (~420 words) is not applied; budget taken as ~1500 words (the epic's other tickets run 560–3600).
 
@@ -69,3 +69,32 @@ Fixer: all 14 applied; ran the DEFAULT_COMPAT_DATE grep (2026-09-25, wrangler 4.
 - none
 ### Dropped
 - none
+
+## Pass 3 — 2026-09-28
+Reviewers: fix-diff, edge-case, adversarial, ref-alignment  |  Findings (after merge): major 4, minor 19, decision-needed 0  |  Dropped in triage: 0 (duplicates merged; 5 stretch minors left for the plan)
+### Applied
+- [major] "ported 1:1 … only intended changes" contradicts the stricter flaky shape rule and the 5-hop redirect cap (all four lenses); spec `file`/`title`, suite `title` unhandled
+- [major] Test-only base-URL (and dist) override for the spawned post-deploy CLI has no stated channel; the log regex cannot match a local server
+- [major] Captured Playwright JSON fixture location unstated; root `fixtures/` is reserved for Sessions/histories (AD-17, AGENTS.md), SPEC wants inline fixtures
+- [major] AC lacks failing cases for stated rules: unknown subcommand, 6th redirect, 3xx without `Location`, CR/LF in a title, `_headers` `#`/`!`/header-before-path
+- [minor] flaky report on the runner's default Node when actionlint fails before setup-node (unverified claim) → move actionlint after setup-node
+- [minor] `_headers` grammar: indentation, trimming, map not order; `rawHeaders` names case-insensitive
+- [minor] new immutable checks' position and log lines (gate-4 evidence)
+- [minor] verify dist reports every failure before exiting (as today)
+- [minor] "5 hops" = 5 redirects followed (6 requests)
+- [minor] validators as pure exports of `deploy-check.mjs`, run on the real files and inline mutated copies
+- [minor] unset `PW_JSON_DIR`/`GITHUB_STEP_SUMMARY` exits non-zero naming it
+- [minor] fixture test asserts the full summary text and order
+- [minor] gate 4: owner merges `epic-1-scaffold` to `main` and pushes (as 1.9)
+- [minor] doc updates: SPEC Assumptions `deploy.yml` curl line; Scaffold deltas Docker line; AD-17 note that workflow-touching tickets run actionlint locally
+Words: 1562 (9.4x pass 0; 1.04x the ~1500 budget — further additions are minor)  |  Snapshot: story-ci-and-deploy-checks-as-tested-scripts.review-log.passes/pass3.md
+Fixer: all 13 applied, none skipped; confirmed ci.yml order checkout → setup-node → npm ci, SPEC.md:179 and spine:849 lines, 1.9 gate-4 wording, Playwright 1.63.0, Docker 29.8.0; actionlint text unchanged (step only moved); `DEPLOY_CHECK_BASE_URL` a new name (unverified).
+### Default applied (technical)
+- intended changes list gains the stricter flaky shape (string `file`/`title`, suite `title` too) and the redirect cap, both rule 6
+- override — test-only env `DEPLOY_CHECK_BASE_URL` (never set in workflows) replaces the extracted URL after extraction succeeds; spawn test runs with `cwd` a temp dir holding `dist/`
+- fixture — trimmed and inline in `scripts/flaky-report.test.mjs`, capture command and Playwright version in a comment; never root `fixtures/`
+- actionlint moves to right after `setup-node` (before `npm ci`), so the flaky report always runs on Node 24
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped / left for the plan (minor, over budget)
+- fixed User-Agent (stretch); `lint:actions` npm script; recomputed deploy-job worst-case time; cli.js read time; several `DEFAULT_COMPAT_DATE` values / calendar-valid date; Node error text replacing `curl exit $rc`
