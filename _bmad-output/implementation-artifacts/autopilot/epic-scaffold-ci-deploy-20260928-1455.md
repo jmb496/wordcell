@@ -16,3 +16,6 @@ Code review: quick, 1 pass, converged; 0 fixes applied (log review-loop/1-10-bui
 Tests: all passing (test:all: 342 unit tests, size budget, dist-smoke 13, e2e 34, pwa 12)
 Ref to fix upstream: none
 Worth knowing: the build updated two AGENTS.md managed-block lines by hand (test:all contents, test:e2e:dist scope), which is accurate but belongs to the next bmad-project-context audit; AGENTS.md has no pointer yet to re-recording the font/icon hashes (it is in data/README.md).
+
+## Stopped
+Next ticket 1.11 (CI and deploy checks as tested scripts) is hitl: its last check needs the owner to push so CI and the main deploy run with the new checks. Waiting for the owner to authorise it.
