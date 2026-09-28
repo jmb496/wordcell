@@ -1,0 +1,13 @@
+# Autopilot run 20260928-0053 — epic-scaffold-ci-deploy
+
+Branch: epic-1-scaffold · start commit 36a8658
+Owner authorisation: methodology § Autopilot (Jared, 2026-09-28): gate 3 covered by the review loop's decision-needed rule; gate 4 delegated for tickets that pass every check.
+
+## 1.3 Test harness: Playwright configs, test hook and helpers — done
+What it adds: the testing toolkit later tickets rely on — tests that run against the finished app as players would get it, a hidden test-only window into the app that never ships to players, and helpers that fake finger drags, long presses and the phone putting the app in the background.
+Ticket review: 7 passes, capped (last fix not re-reviewed); nothing needed your input
+Build: built; commits 71741b6
+Code review: 4 passes, converged; 3 fixes applied (extra tests for the seeding helper's error checks, one test restored to the ticket's wording, updated evidence) — 1b31057
+Tests: all passing
+Worth knowing: the finger-drag simulation works in the test browser, so the halt you approved never fired. The check that test-only code is absent from the players' version runs only in its own command until the CI ticket (1.8) adds it to the automatic checks. A naming rule in AGENTS.md doesn't fit the new test files; that goes to the end-of-epic AGENTS.md tidy-up (a default, no effect on the game).
+

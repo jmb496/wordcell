@@ -3,7 +3,7 @@ title: 'Test harness: Playwright configs, test hook and helpers'
 type: 'chore'
 ticket: '3'
 created: '2026-09-28'
-status: 'built'
+status: done
 route: 'full'
 route_source: 'auto'
 baseline_revision: '36a86583999ba4febe55732caaddca3f985c95d8'
