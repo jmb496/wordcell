@@ -7,3 +7,12 @@
 
 ## Paused — usage limit
 1.10 ticket review stopped after pass 2 (both passes checkpointed in 15dfd42, b2f1e63); message: "resets 4:10pm (America/New_York)". Resumed 17:27 EDT from the log state line.
+
+## 1.10 Local gate matches CI — done
+What it adds: the local "ready" check (`npm run test:all`) now also builds the real app, checks its size and smoke-tests it, so it catches what CI catches. The offline cache lists each file once, the packaging checks run on the build that ships, and tests pin the Playwright version, the font and icon files, and the compression level.
+Ticket review: 4 passes (7, 5, 1, 0 majors), converged at 2.57× words; nothing needed your input. Paused once at pass 2 for the usage limit and resumed cleanly from the checkpoint.
+Build: built; commit 1d33960
+Code review: quick, 1 pass, converged; 0 fixes applied (log review-loop/1-10-build.md)
+Tests: all passing (test:all: 342 unit tests, size budget, dist-smoke 13, e2e 34, pwa 12)
+Ref to fix upstream: none
+Worth knowing: the build updated two AGENTS.md managed-block lines by hand (test:all contents, test:e2e:dist scope), which is accurate but belongs to the next bmad-project-context audit; AGENTS.md has no pointer yet to re-recording the font/icon hashes (it is in data/README.md).

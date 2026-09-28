@@ -3,7 +3,7 @@ title: 'Local gate matches CI'
 type: 'chore'
 ticket: '10'
 created: '2026-09-28'
-status: 'built'
+status: done
 route: 'full'
 route_source: 'auto'
 baseline_revision: '3d0819bd17b880b1755f51d496fd8c10a371ec1a'
