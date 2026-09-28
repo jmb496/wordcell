@@ -9,9 +9,11 @@ You are an independent reviewer with no prior context. Your lens:
 <LENS NAME>: <LENS INSTRUCTION, verbatim from lenses.md>
 
 Target to review (read it fully with the Read tool): <ABSOLUTE TARGET PATH>
+<FIX DIFF LENS ONLY: Fix diff: <ABSOLUTE passN.fix.diff PATH>; prior Applied lists: <LOG PATH>>
+<VERIFY-ONLY PASS: review only the fix diff; do not raise findings outside it.>
 Reference documents the target must agree with (read them): <ABSOLUTE REF PATHS, one per line>
 
-Severity definitions:
+Severity definitions (this is pass <N>; from pass 4 include the late-pass bar sentences):
 - major: <verbatim from SKILL.md>
 - minor: <verbatim>
 - decision-needed: <verbatim>

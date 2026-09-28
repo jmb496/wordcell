@@ -59,8 +59,10 @@ ticket whose gate-4 owner check is more than reading the result, or the end of t
 reads the plain-language digest in `_bmad-output/implementation-artifacts/autopilot/` instead of
 each plan. Local commits only; never pushes.
 
-Stop conditions for any review loop: zero major findings after triage, or the pass cap (default 4).
-Real majors on a third pass mean the refs are unclear; fix the spec or CLAUDE.md, not the ticket.
+Stop conditions for any review loop: zero major findings after triage, two consecutive passes
+with at most one major each, majors rising pass-over-pass, or the pass cap (default 7, the last
+pass verify-only). Rising or persisting real majors mean the refs are unclear; fix the spec or
+CLAUDE.md, not the ticket. Minors left at the stop are listed in the result, not applied.
 
 ## Definition of done for a ticket
 

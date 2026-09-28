@@ -28,3 +28,4 @@ test-results/
 playwright-report/
 _bmad-output/**/*.tmp
 .wrangler/
+_bmad-output/**/*.passes/

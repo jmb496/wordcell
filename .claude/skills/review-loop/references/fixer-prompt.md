@@ -11,7 +11,12 @@ References that must stay satisfied: <ABSOLUTE REF PATHS>
 
 Apply each finding below with the smallest edit that resolves it. Preserve identifiers (R-xx,
 Q-xx, headings, test names) and the author's structure and voice. Do not add content beyond what a
-finding asks for. If two findings conflict, resolve the major over the minor and say so.
+finding asks for; detailed verify/evidence procedure belongs in the build's plan, not here. If
+two findings conflict, resolve the major over the minor and say so.
+
+Any literal command, config value or version-dependent tool claim that you add or change: run
+it against the pinned tool in this repo (the version in package.json, the lockfile or the pinned
+image) and report the output; if you cannot run it, mark it `unverified` in your summary.
 
 Findings to apply:
 1. [major] <location> — <problem> — proposed fix: <...>

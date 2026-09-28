@@ -1,12 +1,15 @@
 # Lenses
 
 Each lens is one reviewer subagent. `quick` depth runs only the first lens listed for the mode.
+From pass 2 the fix-diff lens (end of file) replaces the first lens (`thorough`) or joins it
+(`quick`); the verify-only last pass runs it alone.
 
 ## Docs mode (stories, tickets, specs, design docs)
 
 1. **Builder's reading** — You must implement this document exactly as written. List every place
    you would have to guess, every term used before it is defined, every rule that conflicts with
-   another rule or with a ref, and every acceptance criterion that cannot be turned into a test.
+   another rule or with a ref, every acceptance criterion that cannot be turned into a test, and
+   every constraint that would make the code untestable (e.g. inline CI bash, "no script file").
 2. **Edge-case hunter** — Trace the behaviour the document defines. For each rule, construct
    inputs at the boundaries (empty, one, maximum, same-as-source, already-used, longer-than-10,
    the QU card) and report where the document's answer is missing or ambiguous.
@@ -30,3 +33,11 @@ Each lens is one reviewer subagent. `quick` depth runs only the first lens liste
 4. **Intent alignment** — Compare the diff with the ticket/plan and the refs. Report scope the
    diff added or dropped, architecture-rule violations (engine purity, thin UI, hand-rolled DnD,
    no fallbacks), and behaviour that resolves a Q-xx question the user has not answered.
+
+## Both modes, from pass 2
+
+- **Fix diff** — Read only the last fix diff (`<passes>/passN.fix.diff`) and the prior passes'
+  Applied lists in the log, opening the target only for context. Report each Applied finding
+  the diff did not actually resolve, each edit that contradicts or undoes an earlier Applied
+  fix or a ref, each new defect the diff introduced, and each changed command, config value or
+  tool claim that was not run against the pinned tool or marked `unverified`.
