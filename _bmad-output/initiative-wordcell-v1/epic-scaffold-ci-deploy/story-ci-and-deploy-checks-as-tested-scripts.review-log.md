@@ -1,6 +1,6 @@
 # Review log — story-ci-and-deploy-checks-as-tested-scripts.md (ticket 1.11)
 
-State: pass 4: done
+State: pass 5: done (review only; stopping rule met)
 
 Mode: docs, depth thorough (builder, edge-case, adversarial, ref-alignment), cap 7. Pre-loop: HEAD 564d2c2, copy at story-ci-and-deploy-checks-as-tested-scripts.review-log.passes/pass0.md, 167 words. Growth budget: the pass-0 ticket is a stub the owner asked the loop to flesh out, so 2.5x pass 0 (~420 words) is not applied; budget taken as ~1500 words (the epic's other tickets run 560–3600).
 
@@ -118,3 +118,29 @@ Fixer: all 8 applied by rewording (+40 words); checked spine:737, deploy.yml:55/
 - none
 ### Left for the plan (minor, over growth budget)
 - `_headers` indented line without `:` or empty name/value; CRLF/trailing whitespace on path and `.assetsignore` lines; `DEFAULT_COMPAT_DATE` extraction regex and calendar-valid date; per-hop protocol re-pick and non-http schemes; post-deploy/verify argument-count and unreadable log; server teardown with `closeAllConnections()`; trailing slash on `DEPLOY_CHECK_BASE_URL`; test that workflows never set `DEPLOY_CHECK_BASE_URL`; two-level flaky ordering test; verify running the validators on `dist/` copies; actionlint duty in the methodology Definition of done; https server test; `wrangler deploy --dry-run` as a local proof or why not; spawn-test wording per CLI entry
+
+## Pass 5 — 2026-09-28
+Reviewers: fix-diff, edge-case, adversarial, ref-alignment (late-pass bar)  |  Findings (after merge): major 1, minor 18, decision-needed 0  |  Dropped in triage: 0
+Words: 1602 (unchanged, no fix pass)  |  Snapshot: story-ci-and-deploy-checks-as-tested-scripts.review-log.passes/pass4.md
+### Open (not fixed: stopping rule, second consecutive pass with at most one major)
+- [major] Tests bullet / AC — "each script gets one test spawning its CLI": `deploy-check.mjs` has two subcommands, so one spawn test can leave the gating `verify` CLI wiring unexecuted until gate 4 (retro P3). Default for the build: the `deploy-check.mjs` spawn test runs `verify` on a good temp `dist/` (exit 0), `post-deploy` against the local server, and an unknown subcommand (non-zero), in one temp cwd.
+### Decision needed (functionality / UX / gameplay)
+- none
+
+## Result — converged after 5 passes
+Majors per pass: 10, 6, 4, 1, 1. Open major (pass 5): the `deploy-check.mjs` spawn test must also run `verify` (default above). Technical defaults applied: 22. Decision-needed: none. Words 167 → 1602 (budget ~1500, set for a stub ticket).
+
+### Unapplied minors (for the build plan)
+- pass 5: "only intended changes" list omits the code-point sort for the check-1 JS asset (or reword as pinning the runner's C.UTF-8 glob order) and the `DEPLOY_CHECK_BASE_URL` override
+- pass 5: local-actionlint duty also in the AD-18 CI doc update and methodology Definition of done line 70 (a workflow editor reads AD-18, not AD-17); AD-17 text points at the ci.yml step as the single source of the tag
+- pass 5: SPEC D3 naming — `deploy-config.test.mjs` has no `deploy-config.mjs`; fold into `deploy-check.test.mjs` or state the deviation
+- pass 5: flaky-report spawn test uses temp `PW_JSON_DIR`/`GITHUB_STEP_SUMMARY`; the flaky-entry case asserts exit 0
+- pass 5: a test that neither workflow sets `DEPLOY_CHECK_BASE_URL` or puts `${{ }}` in a `run:` body
+- pass 5: `DEPLOY_CHECK_BASE_URL` must be an http(s) origin with no path or trailing slash
+- pass 5: default dist dir resolves against `process.cwd()` (size-budget.mjs uses `import.meta.url`)
+- pass 5: post-deploy with no log argument / unreadable log exits non-zero naming it; it reuses verify's glob counts before any request
+- pass 4–5: `_headers` indented line without `:` or with a non-token name (the real `  ! Name` detach form) fails; path lines and `.assetsignore` lines trimmed of trailing whitespace/CR; the AC `!` case uses the indented form
+- pass 4–5: `DEFAULT_COMPAT_DATE` via `DEFAULT_COMPAT_DATE = "(\d{4}-\d{2}-\d{2})"`, exactly one distinct value, validator takes the cli.js text; `compatibility_date` a real calendar date; AC cases for a comment, a malformed date, no constant; a lowercase `cache-control` with blank lines passes
+- pass 5: the capture spec for the real flaky fixture lives in a temp dir outside `e2e/`, runs with `--retries=1`, is deleted
+- pass 4: per-hop protocol re-pick and non-http(s) schemes fail; server teardown with `closeAllConnections()`; two-level flaky ordering test; verify optionally runs the validators on the `dist/` copies; https server test (or accept gate 4); `wrangler deploy --dry-run` as a local proof or why not
+- pass 3: fixed User-Agent; `lint:actions` npm script; recomputed deploy-job worst case (~18.5 min < 20); cli.js read time; Node error text replacing `curl exit $rc`
