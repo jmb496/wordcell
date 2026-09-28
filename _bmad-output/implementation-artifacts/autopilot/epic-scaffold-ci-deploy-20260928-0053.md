@@ -19,3 +19,11 @@ Code review: 1 pass, converged; no fixes needed
 Tests: all passing
 Worth knowing: the font file is tiny (about 4 KB), just over the size at which the build tool would embed it inside the style file; one build setting keeps it a separate file, and the architecture document should mention that setting (noted for the end-of-epic retrospective). A screenshot of the cards in the new font was taken during the build.
 
+## 1.5 PWA packaging: manifest, service-worker settings, head, icons and palette — built, waiting for you
+What it adds: everything that makes WordCell installable on Android: the app's name and colours when installed, the install icon (a serif W on a tilted dark card with a teal and an orange mark), a matching browser-tab icon (your answer), the page title and phone status-bar colour, the game's colour palette, and offline-storage settings that ask before updating instead of updating silently.
+Ticket review: 7 passes, capped (last fix not re-reviewed); one question for you, answered: the browser-tab icon becomes the W card
+Build: built (first attempt cut off by the usage limit, resumed); commits 89af221
+Code review: 1 pass, converged; no fixes needed
+Tests: all passing
+Worth knowing: the colour codes are written in lowercase in the style file because the project's formatter insists; they are the same colours. Waiting for you to judge the icons before it is marked done.
+
