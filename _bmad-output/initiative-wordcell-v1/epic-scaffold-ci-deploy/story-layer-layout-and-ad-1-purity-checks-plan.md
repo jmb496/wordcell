@@ -3,7 +3,7 @@ title: 'Layer layout and AD-1 purity checks'
 type: 'chore'
 ticket: '1'
 created: '2026-09-27'
-status: 'built'
+status: done
 baseline_revision: '63961000f3b26316f98d91b685c6efd5e46fac94'
 route: 'full'
 route_source: 'auto'
