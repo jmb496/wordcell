@@ -1,5 +1,6 @@
 import { mount } from 'svelte';
 import { deal } from './engine/index';
+import './shell/test-hook';
 // AD-8: side-effect import so Vite emits the hashed en-*.txt (an unused named import is tree-shaken).
 import './shell/dictionary.svelte';
 import App from './ui/App.svelte';
