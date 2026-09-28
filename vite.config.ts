@@ -7,25 +7,29 @@ export default defineConfig({
   build: {
     // AD-18 Font: never inline the font as a data: URL, so the build holds it once and the
     // index.html preload matches the @font-face URL; other assets keep Vite's default.
+    // AD-18 (Scaffold deltas): dist/.vite/manifest.json for the CAP-6 size check.
+    manifest: true,
     assetsInlineLimit: (file) => (file.endsWith('.woff2') ? false : undefined),
   },
   plugins: [
     svelte(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // AD-16: no automatic registration; epic 7's src/shell/sw.ts registers the worker.
+      registerType: 'prompt',
+      injectRegister: false,
       includeAssets: ['favicon.svg'],
+      // DESIGN.md A-D5; the plugin adds start_url, scope and lang.
       manifest: {
         name: 'WordCell',
         short_name: 'WordCell',
-        description: 'A solo FreeCell-style word game.',
+        description: 'A solo word card game in the spirit of FreeCell.',
         display: 'standalone',
-        display_override: ['fullscreen', 'standalone'],
         orientation: 'portrait',
-        background_color: '#1c2331',
-        theme_color: '#1c2331',
+        background_color: '#15171B',
+        theme_color: '#15171B',
         icons: [
-          { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
           {
             src: 'icons/icon-512-maskable.png',
             sizes: '512x512',
@@ -35,9 +39,9 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // Precache everything the build emits, including the dictionary.
-        globPatterns: ['**/*.{js,css,html,svg,png,txt,woff2}'],
-        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+        // AD-16: precache everything the build emits, including the dictionary (AD-8).
+        globPatterns: ['**/*.{js,css,html,txt,woff2,png,svg,webmanifest}'],
+        maximumFileSizeToCacheInBytes: 4_000_000,
       },
     }),
   ],

@@ -1,41 +1,8 @@
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import path from 'node:path';
 import { expect, test } from '@playwright/test';
+import { type Attributes, distTest, linkTags, readSite, relOf, walk } from '../helpers/dist-test';
 
 // AD-16 / AD-18 Font (SPEC CAP-4) against the dist-test/ build the pwa project serves; the epic
 // Decision lets dist-test/ stand in for dist/ because VITE_TEST_HOOKS changes only JS.
-
-const root = path.resolve(import.meta.dirname, '../../dist-test');
-
-function distTest(): string {
-  if (!existsSync(path.join(root, 'index.html'))) {
-    throw new Error(`${root}/index.html is missing: run npm run build:test (npm run test:e2e:pwa)`);
-  }
-  return root;
-}
-
-function readSite(sitePath: string): string {
-  return readFileSync(path.join(distTest(), sitePath), 'utf8');
-}
-
-type Attributes = Map<string, string>;
-
-// Attributes of every <link> tag: names lowercased, values quoted or unquoted, bare booleans ''.
-function linkTags(html: string): Attributes[] {
-  return [...html.matchAll(/<link\b([^>]*)>/gi)].map((tag) => {
-    const attributes: Attributes = new Map();
-    for (const m of (tag[1] ?? '').matchAll(
-      /([^\s"'>/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g,
-    )) {
-      attributes.set((m[1] ?? '').toLowerCase(), m[2] ?? m[3] ?? m[4] ?? '');
-    }
-    return attributes;
-  });
-}
-
-function relOf(link: Attributes): string[] {
-  return (link.get('rel') ?? '').toLowerCase().split(/\s+/).filter(Boolean);
-}
 
 function fontFaceBlocks(css: string): string[] {
   return [...css.matchAll(/@font-face\s*\{[^}]*\}/g)].map((m) => m[0]);
@@ -81,9 +48,7 @@ test('AD-16 the font preload href equals the @font-face URL of WordCell Serif', 
 });
 
 test('AD-18 dist-test/ holds the WordCell Serif font once and never as a data: URL', () => {
-  const files = readdirSync(distTest(), { recursive: true, withFileTypes: true })
-    .filter((entry) => entry.isFile())
-    .map((entry) => path.relative(root, path.join(entry.parentPath, entry.name)));
+  const files = walk(distTest());
   const fonts = files.filter((file) => file.endsWith('.woff2'));
   expect(fonts).toHaveLength(1);
   expect(fonts[0]).toMatch(/^assets\/wordcell-serif-[^/]+\.woff2$/);

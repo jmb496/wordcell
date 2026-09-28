@@ -34,7 +34,7 @@ const cardCount = $derived(columns.flat().length);
   .column { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
   .card {
     aspect-ratio: 3 / 4; display: grid; place-items: center;
-    background: #f7f3e8; color: #1c2331; border-radius: 6px;
+    background: var(--wc-card-face); color: var(--wc-card-ink); border-radius: 6px;
     font-family: "WordCell Serif", serif; font-weight: 600;
     touch-action: none; user-select: none;
   }

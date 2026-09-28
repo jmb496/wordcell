@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <title>WordCell</title>
+  <!-- DESIGN.md App icon, maskable: the icon.svg card scaled 0.8 so its rotated corners stay
+       inside the W3C safe circle (radius 204.8 at 256, 256); source for icon-512-maskable.png. -->
+  <rect x="0" y="0" width="512" height="512" fill="#15171B"/>
+  <g transform="rotate(-8 256 256) translate(256 256) scale(0.8) translate(-256 -256)">
+    <rect x="126" y="81" width="260" height="350" rx="26" ry="26" fill="#23262C" stroke="#6A707C" stroke-width="6"/>
+    <text x="256" y="318" text-anchor="middle" font-family="WordCell Serif" font-weight="600" font-size="220" fill="#F3EEE4">W</text>
+    <line x1="186" y1="378" x2="244" y2="378" fill="none" stroke="#3DBDB5" stroke-width="14" stroke-linecap="round"/>
+    <line x1="268" y1="378" x2="326" y2="378" fill="none" stroke="#EF7A3D" stroke-width="14" stroke-linecap="round"/>
+  </g>
+</svg>

@@ -9,15 +9,33 @@
 :root {
   color-scheme: dark;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  background: #1c2331;
-  color: #f7f3e8;
+  /* DESIGN.md colors, in order. */
+  --wc-table: #15171b;
+  --wc-surface: #1e2127;
+  --wc-surface-raised: #282c34;
+  --wc-hairline: #363b45;
+  --wc-outline: #6e7480;
+  --wc-card-face: #23262c;
+  --wc-card-edge: #6a707c;
+  --wc-card-ink: #f3eee4;
+  --wc-ink-primary: #f3eee4;
+  --wc-ink-secondary: #a9a398;
+  --wc-ink-disabled: #6b675f;
+  --wc-ink-on-accent: #15171b;
+  --wc-accent-teal: #3dbdb5;
+  --wc-accent-orange: #ef7a3d;
+  --wc-destination: #7fa2d6;
+  --wc-destination-fill: #2e3a52;
+  --wc-error: #f08a84;
+  --wc-scrim: #000000b3;
+  color: var(--wc-ink-primary);
 }
 html,
 body {
   margin: 0;
-  overflow: hidden; /* the board never scrolls; prevents pull-to-refresh on Android */
   overscroll-behavior: none;
   height: 100%;
+  background: var(--wc-table);
 }
 #app {
   height: 100%;
