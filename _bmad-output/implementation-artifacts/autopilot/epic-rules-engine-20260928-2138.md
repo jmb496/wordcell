@@ -79,3 +79,15 @@ Tests: all passing
 Ref to fix upstream: none
 Paused: usage limit during the code review (reset 9:50am America/New_York), resumed 14:24 EDT
 Worth knowing: the build deferred one doc item: AGENTS.md still calls STUCK_PENALTY_PER_CARD scaffold, which is now stale (it needs a bmad-project-context refresh). There are also two small scoring-test minors; both are carried to the 2.12 sweep.
+
+## Skill notes (first run of the updated review-loop and epic-autopilot skills)
+- Usage-limit detection works for session limits (three pauses caught and resumed cleanly: 2.2 Step A, 2.4 Step B, 2.7 Step C). It misses the weekly limit: the log line reads `You've hit your weekly limit · resets Sep 30, 4pm (America/New_York)`, and the skill's pattern `hit your (session|usage) limit` does not match it, so the step looked like "no JSON written" (rule 5) until the log was read. Proposed: `grep -iE "hit your [a-z]+ limit"`.
+- Resume of partial review logs (Steps A and C) and of an `in-review` build (Step B) worked as written; the build resumed from its saved plan without redoing work.
+- Step A's prompt names `delta-checks.md`, an epic-1-only companion. Epic 2's spec has `rule-coverage.md` instead; the run substituted it. Proposed: "the epic spec's companions (every file listed in SPEC.md `companions:` under the spec folder)".
+- An epic file's frontmatter `after: [<previous epic>]` makes `tickets.py next` gate every ticket until the previous epic's container has `status: done`, which nothing sets after a retrospective. Proposed: the retrospective (or the autopilot's setup) marks the finished epic container done, or ticketing pins cross-epic needs on entries only.
+- The Step C depth rule ("no high or medium finding left unresolved … and risk not medium or higher") worked; low-risk tickets 2.1 and 2.7 ran quick, the rest thorough.
+- Code loops stopping with an open major under the "two passes with ≤ 1 major" rule (2.3, 2.4, 2.6) reported it as `late_majors` though the result was `converged`; the skill's rule reads late_majors only "when not converged". Treated as open items carried to the sweep; the skill could say so explicitly.
+- Review-loop passes ran within the growth budget; no loop diverged.
+
+## Stopped — usage limit
+Ticket 2.8 (GameView), Step A (ticket review loop), pass 1 done and committed (a389245). Limit message: "You've hit your weekly limit · resets Sep 30, 4pm (America/New_York)". Tree clean. Resume: run `/epic-autopilot epic-rules-engine` after the reset; Step A resumes the partial 2.8 review log.
