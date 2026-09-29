@@ -1245,6 +1245,16 @@ describe('Place', () => {
     expect(position.cells[0]).toStrictEqual(COLS[4].slice(0, COLS[4].length - 1));
     expect(position.cells[1]).toStrictEqual([...COLS[5], M2, I, W, Z]);
   });
+
+  it('R-60 confirm without a redo tail sets reached to committed and moves the cursor to the next Idle', () => {
+    expect(run(PLACE, CONFIRM)).toStrictEqual({
+      session: {
+        ...PLACE,
+        moves: [...PREFIX, { ...PLACE_DRAFT, reached: 'committed' }],
+        cursor: { index: 3, phase: 'idle' },
+      },
+    });
+  });
 });
 
 describe('§8 worked example', () => {
@@ -1326,5 +1336,12 @@ describe('§8 worked example', () => {
     const draft = draftOf(result.session);
     expect(draft.arrangement.at(-1)).toBe(D);
     expect(draft.arrangement).not.toContain(L);
+    const order = [K, L, A, E, D, B];
+    const { result: custom } = seam(
+      START,
+      [...BALKED, VALIDATE, setOrder(order), CONFIRM, drop(2, 1, 3), ADD_L],
+      WORDS,
+    );
+    expect(draftOf(custom.session).arrangement.at(-1)).toBe(B);
   });
 });
