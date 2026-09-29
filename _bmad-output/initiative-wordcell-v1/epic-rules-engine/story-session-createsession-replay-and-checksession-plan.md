@@ -3,7 +3,7 @@ title: 'Session, createSession, replay and checkSession'
 type: 'feature'
 ticket: '3'
 created: '2026-09-28'
-status: 'built'
+status: done
 baseline_revision: '0e58096253760f7570a52a6882c5515d2b07f66e'
 route: 'full'
 route_source: 'auto'

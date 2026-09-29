@@ -29,3 +29,12 @@ Tests: all passing
 Ref to fix upstream: none
 Paused: usage limit at Step A (ticket review), reset 10:20pm (America/New_York), resumed 22:21 EDT
 Worth knowing: two small test gaps noted by the code review (type exports not pinned by a test; the plan's result text is out of date) were left for the closing sweep.
+
+## 2.3 Session, createSession, replay and checkSession — done
+What it adds: a game is now stored as its seed plus the list of moves; the engine rebuilds the board from them and rejects a saved game that breaks any rule, with a precise reason for each kind of break.
+Ticket review: 7 passes, converged (majors 12, 6, 5, 2, 1, 2, 0); nothing needed your input
+Build: built; commits 81b828e
+Code review: thorough, 3 passes, converged with one open item; 2 fix commits (809bb54, 276d928)
+Tests: all passing
+Ref to fix upstream: none (the open item is a missing test, not unclear docs)
+Worth knowing: the code review left one test gap open: undone moves after the first one are not yet covered by a test that makes them fail (proposed cases are in review-loop/2-3-build.md Pass 3). Carried to the 2.12 refactor sweep, with seven small test-precision minors from the same log.
