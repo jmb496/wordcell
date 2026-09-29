@@ -1,5 +1,5 @@
 # Review log — story-score-history-semantics.md (ticket 2.9)
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 9edbe7f, copy `story-score-history-semantics.review-log.passes/pass0.md`, 110 words.
 Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), epic-rules-engine.md, ARCHITECTURE-SPINE.md, AGENTS.md; done-ticket plans: story-golden-deal-test-and-r-id-test-names-plan.md, story-langdata-en-and-lettercount-plan.md, story-session-createsession-replay-and-checksession-plan.md, story-composing-commands-and-the-command-table-plan.md, story-validate-and-place-commands-with-the-8-worked-example-plan.md, story-undo-redo-give-up-and-accrue-plan.md, story-scoring-penalty-and-bands-plan.md, story-gameview-plan.md.
@@ -25,6 +25,26 @@ Fixer: all 16 items applied; no commands touched.
 - index.ts exports gameRecord, reconcileHistory, isRecorded, statistics, HISTORY_VERSION + GameRecord/Statistics types; index.test.ts list updated
 - gameRecord built from the same replayWords/scoring.finalScore/longestWord as view
 - test names: R-84 (A-E3 / Q-43 in the text), R-74, R-76
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Pass 2 — 2026-09-29
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 4, minor 13, decision-needed 0  |  Dropped in triage: 0 (duplicates merged: key order ×3, won activeMs ×4, names ×3, R-74 ×2)
+Words (docs): 1009 (9.2x pass 0; stated budget 1500)  |  Snapshot: story-score-history-semantics.review-log.passes/pass2.md
+Fixer: all 15 items applied; undo/accrue/redo won path checked against commands.ts; no commands touched.
+### Applied
+- [major] AC gameRecord — "keys in AD-6 order, checked with toStrictEqual": toStrictEqual ignores key order → assert Object.keys(record) → fixer item 1
+- [major] AC reconcileHistory — no removal test for an undone give-up (R-75 un-finish shape differs from undoing a win) → fixer item 2
+- [major] AC statistics — counts only checked on empty; no strictly-longer later word; no all-six assertion on a mixed history; negative best → fixer item 3
+- [major] AC Construction / R-76 — won Session with non-zero activeMs not constructible as stated (winSeed finishes internally, accrue no-op after) → fixer item 4
+- [minor] items 5–17 (R-74 records distinguishable; all other tests named R-84; Notes hand-off for entry 11 HISTORY_VERSION; Statistics types and count definitions; Touches reuse list; local deepFreeze copy; never-replayed uses toEqual; discriminating redo-tail test; seed choice for qu/tie tests; −0 average normalised; reconcile assumes after derives from before (AD-4))
+### Default applied (technical)
+- key order → `expect(Object.keys(record)).toEqual([...])`
+- won non-zero activeMs → winSeed → undo → accrue → redo
+- averageScore −0 → normalised to 0, case 1 and −2 → 0
+- deepFreeze → local copy in history.test.ts
 ### Decision needed (functionality / UX / gameplay)
 - none
 ### Dropped
