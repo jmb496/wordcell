@@ -23,9 +23,7 @@ function withEntry(letter: string, change: { count?: number; value?: number }) {
 
 describe('LangData', () => {
   it('R-85 letterCount is 2 for QU, 1 otherwise', () => {
-    expect(letterCount(QU, EN)).toBe(2);
-    expect(letterCount(0, EN)).toBe(1);
-    expect(letterCount(51, EN)).toBe(1);
+    for (let card = 0; card < 52; card++) expect(letterCount(card, EN)).toBe(card === QU ? 2 : 1);
   });
 
   it('R-85 letterCount throws outside CardId 0–51', () => {
@@ -57,6 +55,7 @@ describe('LangData', () => {
 
   it('R-85 letterValue throws for a letter not in the language', () => {
     expectEngineError(() => EN.letterValue('Ä'), 'lang-unknown-letter');
+    expectEngineError(() => EN.letterValue('qu'), 'lang-unknown-letter');
   });
 
   it('R-85 EN, its letters, distribution and entries are frozen', () => {
