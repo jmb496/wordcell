@@ -60,3 +60,12 @@ Code review: thorough, 2 passes, converged; 1 fix commit (55df7eb)
 Tests: all passing
 Ref to fix upstream: none
 Worth knowing: two small test-precision minors (the R-42 default order asserted only under other test names; reorder not checked to keep a non-default target) carried to the 2.12 sweep.
+
+## 2.6 Undo, redo, give up and accrue — done
+What it adds: undo and redo through every step of a move (including a word you validated but did not place), giving up and taking it back, and the play-time clock, which only counts while a game is being played. The table of refused actions is now complete, and a shared test helper wins a real seed for later tests.
+Ticket review: 5 passes, converged (majors 6, 4, 4, 2, 0); nothing needed your input
+Build: built; commits 683add5
+Code review: thorough, 2 passes, converged with one open item; 1 fix commit (fc32abb)
+Tests: all passing
+Ref to fix upstream: none
+Worth knowing: open item: a safety check added by the review (undo on a corrupted phase value) has no row in the command table yet; carried to 2.10/2.12. The build deferred one item to 2.10: saved-game checking must reject a fractional or unknown cursor, which 2.10's parser stage owns.
