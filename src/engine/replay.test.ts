@@ -301,6 +301,11 @@ describe('checkSession (AD-7 pre-replay)', () => {
       expectEngineError(() => replay(sessionOf([], undefined, { seed }), LANG), 'seed-uint32');
   });
 
+  it('§2 pre-replay checks run in AD-7 order: seed before activeMs', () => {
+    const session = sessionOf([BASE], undefined, { seed: -1, activeMs: -1 });
+    expectEngineError(() => checkSession(session), 'seed-uint32');
+  });
+
   it('§2 accepts a -0 seed and a -0 activeMs', () => {
     const session = deepFreeze({ ...createSession(-0), activeMs: -0 });
     expect(() => checkSession(session)).not.toThrow();
@@ -317,6 +322,12 @@ describe('replay per-move checks (§2)', () => {
     [
       'a self-drop with k = the column size before S is removed (R-31, R-21)',
       { ...BASE, destinationColumn: 1, destinationCount: 5 },
+      'r31-destination-count',
+    ],
+    ['k = n + 1 (R-31)', { ...BASE, destinationCount: 5 }, 'r31-destination-count'],
+    [
+      'a self-drop with k = 0 on a non-empty remainder (R-31, R-21, Q-12)',
+      { ...BASE, destinationColumn: 1, destinationCount: 0 },
       'r31-destination-count',
     ],
     [
@@ -343,6 +354,11 @@ describe('replay per-move checks (§2)', () => {
     [
       'freeLetters tops unequal to the non-S arrangement cards',
       { ...BASE, freeLetters: [4] },
+      's2-free-letters-set',
+    ],
+    [
+      'an extra free-letter cell whose top is not in the arrangement',
+      { ...BASE, freeLetters: [3, 4] },
       's2-free-letters-set',
     ],
     [
@@ -373,6 +389,14 @@ describe('replay per-move checks (§2)', () => {
     it(`§2 rejects ${name}`, () => {
       expectEngineError(() => run(S0, sessionOf([move])), code);
     });
+
+  it('§2 checks run move-major: move 0 breaking R-40 throws before move 1 breaking R-13', () => {
+    const session = sessionOf([
+      { ...BASE, targetCell: 5 },
+      { ...BASE, sourceCount: 0 },
+    ]);
+    expectEngineError(() => run(S0, session), 'r40-target-cell');
+  });
 
   it('§2 the base pair replays', () => {
     expect(run(S0, VALID)).toStrictEqual({
@@ -520,6 +544,11 @@ describe('replay per-move checks (§2)', () => {
     ).not.toThrow();
   });
 
+  it('§2 a Composing cursor over a Composing-reached draft replays to the committed prefix', () => {
+    const session = sessionOf([BASE, TWO_LETTERS], { index: 1, phase: 'composing' });
+    expect(run(S0, session)).toStrictEqual(run(S0, VALID));
+  });
+
   it('§2 checks follow reached, not cursor.phase: a Place-reached 2-letter draft throws', () => {
     const draft: Move = { ...TWO_LETTERS, reached: 'place', targetCell: 3, placementOrder: [C, Z] };
     expectEngineError(
@@ -605,6 +634,22 @@ describe('commit through replay', () => {
     // The old top M left (it travels with the word, R-41); the placement order sits on L.
     expect(cell3).toStrictEqual([L, ...(TARGET_FREE_CELL.placementOrder ?? [])]);
     expect(cell3[cell3.length - 1]).toBe(T);
+    // The next word takes T as a free letter from cell 3 (Y Z T + D = 4 letters, target 4).
+    const next: Move = {
+      sourceColumn: 1,
+      sourceCount: 2,
+      destinationColumn: 2,
+      destinationCount: 1,
+      destinationSide: 'left',
+      freeLetters: [3],
+      arrangement: [Y, Z, T],
+      reached: 'committed',
+      targetCell: 4,
+      placementOrder: [D, Y, Z, T],
+    };
+    const after = run(S0, sessionOf([TARGET_FREE_CELL, next]));
+    expect(after.cells[0]).toStrictEqual([L, C, A, M, B, N]);
+    expect(after.cells[1]).toStrictEqual([D, Y, Z, T]);
   });
 
   it('R-60 the commit removes S, D and used free letters and pushes the placement order', () => {

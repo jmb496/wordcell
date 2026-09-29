@@ -1,5 +1,5 @@
 # Review loop — ticket 2.3 build (code mode)
-State: pass 1: done
+State: pass 2: done
 
 Target: `0e58096..HEAD` (commit 81b828e), diff at `2-3-build.passes/pass0.diff` (git-ignored)
 Intent: `_bmad-output/initiative-wordcell-v1/epic-rules-engine/story-session-createsession-replay-and-checksession-plan.md`
@@ -24,3 +24,20 @@ Snapshot: tree 3f4ab818c613493d20485c46073287808413b678  |  Fix: Idle pending-dr
 - none
 ### Dropped
 - duplicate of the `deal.test.ts:130` R-02 naming finding (raised by three lenses; kept the intent-alignment wording)
+
+## Pass 2 — 2026-09-28 23:30
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 1, minor 6, decision-needed 0  |  Dropped in triage: 0
+Snapshot: tree 3becaf559df05f1229729c3f482943288ac4990d  |  Fix: R-31 k = n + 1 and k = 0 self-drop cases, Composing-cursor accepting case, second free-letters-set case, move-major and pre-replay order cases, R-52 test extended with a later word using the new top  |  Checks: `npm test` 503/503, lint pass, check 0 errors
+### Applied
+- [major] `src/engine/replay.test.ts` R-31 cases / `rules.ts` `checkDestinationCount` — no rejecting case at k = n + 1 (only n + 2), so an off-by-one upper bound stays green → fixer item 1
+- [minor] `replay.test.ts` — no accepting case for a Composing cursor over a Composing-reached draft (the `reachedAtLeast` equality case) → fixer item 2
+- [minor] `replay.test.ts` per-move cases — no k = 0 self-drop on a non-empty remainder (R-31, R-21, Q-12) → fixer item 3
+- [minor] `replay.test.ts` `s2-free-letters-set` — the one case fails both set directions; add an extra-cell case → fixer item 4
+- [minor] `replay.test.ts` — the fixed check order (move-major; pre-replay order) is mostly unpinned; add two-violation cases → fixer item 5
+- [minor] `replay.test.ts` 'R-52 …' — does not show the new top is used as a free letter by a later word → fixer item 6
+### Default applied (technical)
+- R-31 upper boundary case → `{ ...BASE, destinationCount: 5 }` on the 4-card column 2 (or the self-drop k = 4 over n = 3)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
