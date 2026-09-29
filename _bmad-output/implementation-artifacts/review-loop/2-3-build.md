@@ -1,5 +1,5 @@
 # Review loop — ticket 2.3 build (code mode)
-State: pass 2: done
+State: pass 3: done
 
 Target: `0e58096..HEAD` (commit 81b828e), diff at `2-3-build.passes/pass0.diff` (git-ignored)
 Intent: `_bmad-output/initiative-wordcell-v1/epic-rules-engine/story-session-createsession-replay-and-checksession-plan.md`
@@ -41,3 +41,28 @@ Snapshot: tree 3becaf559df05f1229729c3f482943288ac4990d  |  Fix: R-31 k = n + 1 
 - none
 ### Dropped
 - none
+
+## Pass 3 — 2026-09-29 00:05
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 1, minor 7, decision-needed 0  |  Dropped in triage: 1 (merged duplicate major)
+Snapshot: tree 3becaf559df05f1229729c3f482943288ac4990d (unchanged; no fix pass)
+### Applied
+- none (stopping rule: passes 2 and 3 each at most one major)
+### Open major (recorded, not fixed)
+- [major] `src/engine/replay.test.ts` redo-tail cases / `replay.ts` `replayFrom` tail loop — every tail rejection breaks REDO_T1, the first tail move; nothing proves later tail moves are checked on the scratch left by earlier tail commits, or that a below-committed last tail element is checked at all. Mutations that check every tail move against the draft-committed scratch only, or check only committed tail moves, stay green. Proposed fix: add `§2` rejecting cases `{ ...REDO_T2, sourceCount: 2 }` in REDO_TAIL (legal after REDO_DRAFT, illegal after REDO_T1) → `r13-source-count`, and REDO_TAIL with REDO_T2 `sourceCount: 0` → `r13-source-count`.
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- the edge-case lens's "second tail move on accumulated scratch" and the verification lens's "below-committed last tail element skipped" are one gap (the tail loop past REDO_T1, same fixture, same fix); merged into the open major above
+
+## Result — converged after 3 passes (open major: redo-tail moves past the first are not pinned by a rejecting test; see Pass 3)
+
+Unapplied minors (for the next build or loop):
+- `replay.test.ts:304` pre-replay order test pins only seed before activeMs of the 13-code AD-7 order; extend to an adjacent-pair table or rename to claim only that pair
+- `replay.test.ts` self-drop upper bound tested only at k = n + 2; add `{ ...BASE, destinationColumn: 1, destinationCount: 4 }` → `r31-destination-count`
+- `replay.test.ts` no lone-QU-card (2 letters) R-36 rejecting case
+- `replay.test.ts` with a redo tail present, the draft at `cursor.index` is never broken (e.g. REDO_DRAFT `targetCell: 4` → `r40-target-cell`)
+- `replay.test.ts:245-249, 265` two pre-replay cases break a second check (default cursor breaks `s2-committed-prefix`; `composingBase` keeps Place fields); use cursor `{ index: 0, phase: 'idle' }` and omit the Place fields
+- `index.test.ts` the type exports (Session, Move, Cursor, Phase, Reached, DestinationSide, WordCellNumber) are unpinned; add an `import type` and one `expectTypeOf` check
+- `replay.test.ts:498` the 11-letter R-40 case (added in pass 1) is beyond the ticket's list; note it in the plan's Implementation Notes
