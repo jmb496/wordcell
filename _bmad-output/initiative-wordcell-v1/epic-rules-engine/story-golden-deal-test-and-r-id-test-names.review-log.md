@@ -1,5 +1,5 @@
 # Review log — story-golden-deal-test-and-r-id-test-names.md (ticket 2.1)
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 26a56b1, copy `story-golden-deal-test-and-r-id-test-names.review-log.passes/pass0.md`, 141 words.
 Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), epic-rules-engine.md, ARCHITECTURE-SPINE.md, AGENTS.md; done-ticket plans: none.
@@ -54,3 +54,27 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 ### Fix outcome
 Fixer applied items 1–9; ran item 1's range diff with B = HEAD~1 and HEAD~3 (exit 0, empty, docs-only history) and `npx biome format src/engine/deal.test.ts` (Biome 2.5.14, exit 0, read-only check).
 Words (docs): 647 (4.6 x pass 0; budget 1500)  |  Snapshot: story-golden-deal-test-and-r-id-test-names.review-log.passes/pass2.md
+
+## Pass 3 — 2026-09-28
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 11, decision-needed 0  |  Dropped in triage: 1 (+ duplicates merged)
+### Applied
+- [major] Description ¶2 — the renamed R-01 test is circular (compares buildDeck with the table it is built from), so no R-01-named test ties the deck to carryover §1 / QU-one-card (AGENTS Conventions) → fixer item 1
+- [minor] Acceptance — plan maps each R-01–R-03 sentence to its test, R-02's versioning sentence exempt (AGENTS Conventions, rule-coverage preamble) → fixer item 2
+- [minor] Acceptance 5 — diff-shape claim unverified against Vitest 5.0.2; record the failing line and differing keys, not full arrays → fixer item 3
+- [minor] Description — "a repoint edits only call lines": CAP-2 also edits an import line → fixer item 4
+- [minor] Description ¶2 — cite deal.ts's orientation (index 0 = top, last = bottom) for the R-03 case → fixer item 5
+- [minor] Description ¶1 — cross-check counts and order; plan records it → fixer item 6
+- [minor] Description ¶1 — golden consts carry no type annotation / `as const` (CAP-2 removes `Letter`) → fixer item 7
+- [minor] Description ¶1 — "stop" under bmad-build-auto: commit no code, record in plan, end blocked → fixer item 8
+- [minor] Description ¶2 — round-robin case over both golden seeds → fixer item 9
+- [minor] Acceptance — renamed tests change only titles (except item 1's R-01 addition) → fixer item 10
+- [minor] Description ¶1 — `biome check --write` instead of `format --write` (lint is `biome check .`) → fixer item 11
+### Default applied (technical)
+- R-01 → the renamed R-01 test also checks per-letter counts against counts derived from `GOLDEN_LETTERS` (read, not copied), `QU` one card
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- Golden title to add "deck letters": the exact name is fixed by build-notes § CAP-1
+### Fix outcome
+Fixer applied items 1–11; ran `npx biome check src/engine/deal.test.ts` (exit 0, read-only); the `--write` form is `unverified` (same subcommand, not run to keep src/ clean); dropped the Vitest diff-shape claim (item 3).
+Words (docs): 801 (5.7 x pass 0; budget 1500)  |  Snapshot: story-golden-deal-test-and-r-id-test-names.review-log.passes/pass3.md
