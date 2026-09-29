@@ -1,5 +1,5 @@
 # Review log — story-undo-redo-give-up-and-accrue.md (ticket 2.6)
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD d4fb67e, copy `story-undo-redo-give-up-and-accrue.review-log.passes/pass0.md`, 197 words.
 Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), epic-rules-engine.md, ARCHITECTURE-SPINE.md, AGENTS.md; done-ticket plans: story-golden-deal-test-and-r-id-test-names-plan.md, story-langdata-en-and-lettercount-plan.md, story-session-createsession-replay-and-checksession-plan.md, story-composing-commands-and-the-command-table-plan.md, story-validate-and-place-commands-with-the-8-worked-example-plan.md.
@@ -55,5 +55,32 @@ Fixer: all 15 items applied; no commands touched.
 - undo own-check order → replay, then gaveUp → clear flag; Idle index 0 → `r70-nothing-to-undo`; otherwise the phase step
 - same-letter swap → D2 edge test via `applyFrom`
 - winSeed → `EN`, `apply`/`EN` from `./index`, columns 1 → 8
+### Decision needed (functionality / UX / gameplay)
+- none
+
+## Pass 3 — 2026-09-29
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 4, minor 10, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+Words (docs): 1341 (6.8 x pass 0)  |  Snapshot: story-undo-redo-give-up-and-accrue.review-log.passes/pass3.md
+Fixer: all 14 items applied; no commands touched.
+### Applied
+- [major] AC R-71 — "discard cases already covered by entries 4 and 5's R-71 tests" is false for drop (`§2 a drop in Idle …`, commands.test.ts:941) and Confirm (`R-60 confirm discards the redo tail …`, :1233); rename both to carry R-71 (three lenses) → fixer item 1
+- [major] AC R-39 / Notes — pass 2 item 12 left R-39 "returns S, D and the free letters" with no failing observation and handed it to entry 8, whose scope lacks it (rule-coverage R-39 and tickets.toml assign it here) → fixer item 2
+- [major] AC R-71 same-letter swap — pass 2 item 13 routed it through the seam; SPEC D2 / build-notes CAP-3 put redo semantics on public `apply` → fixer item 3
+- [major] AC R-70 Place → Composing, Composing → Idle — not required on tail fixtures, so an undo that drops the tail or lowers `reached` passes (R-72) → fixer item 4
+- [minor] AC R-75 redo while gaveUp — name the check code `command-status` → fixer item 5
+- [minor] AC R-75 — giveUp on a fresh `createSession` Session (index 0); the index-0 undo test builds on it → fixer item 6
+- [minor] Description — `AD-2 index exports …` test name and list both gain `accrue` → fixer item 7
+- [minor] Description — `SAMPLE` (typed by `Command['type']`) gains undo, redo, giveUp; status generator iterates the explicit list → fixer item 8
+- [minor] AC — status observed via internal `status(s, replay(s, EN))` → fixer item 9
+- [minor] AC rows — giveUp wrong-phase rows id `R-75`, redo status rows `R-71 R-75` → fixer item 10
+- [minor] AC whole-Session sentence — scope to the undo/redo/giveUp step's own input and output → fixer item 11
+- [minor] Description winSeed — spelling source: `deal(seed)` letters lowercased (`QU` → "qu") → fixer item 12
+- [minor] Description — redo order (replay → status → `r71-no-redo-data`, no phase check), giveUp (replay → status → phase Idle) → fixer item 13
+- [minor] AC R-70 — use the Place-reached PENDING fixture as a never-committed variant too → fixer item 14
+### Default applied (technical)
+- R-39 observation → after undo from Composing, the same drop and the same addFreeLetter re-applied through public `apply` succeed (S and the free letter are back), plus cursor and kept-draft asserts; the entry 8 hand-off note is removed
+- same-letter swap → public `apply` on a hand-built Session (`sessionOf` pattern, seed chosen by the plan); the seam only as a D2 exception the plan names if no dealt seed offers two same-letter cards
+- winSeed spelling → from `deal(seed)`
+- row ids → giveUp wrong phase `R-75`; redo status `R-71 R-75`
 ### Decision needed (functionality / UX / gameplay)
 - none
