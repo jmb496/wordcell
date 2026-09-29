@@ -1,5 +1,5 @@
 # Review log — story-session-createsession-replay-and-checksession.md (ticket 2.3)
-State: pass 5: done
+State: pass 6: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 187bd73, copy `story-session-createsession-replay-and-checksession.review-log.passes/pass0.md`, 235 words.
 Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), epic-rules-engine.md, ARCHITECTURE-SPINE.md, AGENTS.md; done-ticket plans: story-golden-deal-test-and-r-id-test-names-plan.md, story-langdata-en-and-lettercount-plan.md.
@@ -104,10 +104,26 @@ Words (docs): 1498 (6.3 x pass 0; budget 1500)  |  Snapshot: story-session-creat
 Fixer: major applied; minors applied except item 7 (R-33 two fixtures note) and item 9 (R-31 lower-bound case), skipped for budget and left for the plan; no commands.
 ### Applied
 - [major] Accepting cases / R-60 — no asserted position after a committed self-drop with k ≥ 1 (R-21 inside the R-60 commit; S removed twice would pass) → fixer item 1
-- [minor] items 2–13: R-61 twin plus a `§2` R-33 duplicate case, R-60 scope reuses the redo-tail Session, hand-off wording ("covers it via replay; entry 6 adds the Redo path"), AD-2 parenthetical, R-33 two codes flagged for entry 10, Idle pending draft in the committed-prefix list, R-31 lower-bound case, R-74-named fresh-Session test, duplicate id anywhere in the Start, cut "(or R-35)", opening "AD-7 pre-/post-replay", one won test named `R-62` → fixer items 2–13
+- [minor] items 2–13: R-61 twin plus a `§2` R-33 duplicate case, R-60 scope reuses the redo-tail Session, hand-off wording ("covers it via replay; entry 6 adds the Redo path"), AD-2 parenthetical, Idle pending draft in the committed-prefix list, R-74-named fresh-Session test, duplicate id anywhere in the Start, cut "(or R-35)", opening "AD-7 pre-/post-replay", one won test named `R-62` → fixer items 2–13 (items 7 R-33 entry-10 note and 9 R-31 lower-bound case skipped for budget; left for the plan)
 ### Default applied (technical)
 - none new
 ### Decision needed (functionality / UX / gameplay)
 - none
 ### Dropped
 - none (left for the plan: accepting cases are committed moves; seed tests use number casts only; seam baseline is a valid (Start, Session) pair; pre-edit golden run recorded in the plan; non-word evidence named in the plan)
+
+## Pass 6 — 2026-09-28
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 2, minor 16, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+Words (docs): 1495 (6.3 x pass 0; budget 1500)  |  Snapshot: story-session-createsession-replay-and-checksession.review-log.passes/pass6.md
+Fixer: all 13 items applied (none skipped); cut the Notes hand-off's repeat of the R-60 scope bullet; no commands.
+Triage note: both majors are regressions of pass 5's budget rewording (not unclear refs), so the rise 1 → 2 is not treated as diverging; the reviewer-labelled majors on range lower bounds (sourceCount 0 / Q-11, k = 0 on non-empty / Q-12) and presence in both directions are test-precision items, minor under the pass-4 bar, and still go to the fixer.
+### Applied
+- [major] Committed-prefix bullet — reads as one impossible Session (Place-reached draft + Idle pending draft + redo tail); make it three Sessions → fixer item 1
+- [major] Won test — "One won test, `R-62 …`" leaves the §2 status won branch with no `§2`-named test (AGENTS.md) and folds the `§2` post-replay gaveUp rejection into an R-62 test → fixer item 2
+- [minor] items 3–13: restore "existing" CardId guard, R-31 k = 0 on non-empty and `sourceCount` 0 cases + R-20 k = n, presence both directions, post-replay gaveUp check ignores the flag, two-move redo tail explicit, `activeMs` 1.5, n after R-21, cut "(the next free letter)", Verify line adds R-02 and AD-2, cut vacuous dictionary parenthetical → fixer items 3–13
+### Default applied (technical)
+- none new
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none (left for publish/plan: tickets.toml entry 10 drops `SESSION_VERSION = 1` (now entry 3's); `replay` runs the seed guard before `dealIds`; R-60 test names the redo-tail rejecting case)
