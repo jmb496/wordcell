@@ -91,3 +91,13 @@ Worth knowing: the build deferred one doc item: AGENTS.md still calls STUCK_PENA
 
 ## Stopped — usage limit
 Ticket 2.8 (GameView), Step A (ticket review loop), pass 1 done and committed (a389245). Limit message: "You've hit your weekly limit · resets Sep 30, 4pm (America/New_York)". Tree clean. Resume: run `/epic-autopilot epic-rules-engine` after the reset; Step A resumes the partial 2.8 review log.
+
+## 2.8 GameView — done
+What it adds: one read-only summary of the game the screen will draw from: the cards, columns and WordCells, which actions are allowed right now, the word being built, legal targets, the score change a placement would bring, the live and final scores, and the longest word. The screen never works any of this out itself.
+Ticket review: 5 passes, converged (majors 9, 4, 4, 2, 0); nothing needed your input
+Build: built; commits 71adf5e
+Code review: thorough, 2 passes, converged; 1 fix commit (3a582fd)
+Tests: all passing
+Ref to fix upstream: none
+Paused: weekly usage limit at Step A (message said resets Sep 30, 4pm America/New_York); resumed at the owner's request 14:55 EDT Sep 29, and the limit had already cleared
+Worth knowing: seven test-precision minors in view.test.ts (e.g. two assertions compare the view with itself) carried to the 2.12 sweep.

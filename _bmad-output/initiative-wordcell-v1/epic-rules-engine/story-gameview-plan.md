@@ -3,7 +3,7 @@ title: 'GameView'
 type: 'feature'
 ticket: '8'
 created: '2026-09-29'
-status: 'built'
+status: done
 baseline_revision: 'db8edabd659a1163d65a8e277e5ee417b7f433dd'
 route: 'full'
 route_source: 'auto'
