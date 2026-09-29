@@ -1,5 +1,5 @@
 # Review log — story-gameview.md (ticket 2.8)
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 56a870c, copy `story-gameview.review-log.passes/pass0.md`, 194 words.
 Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), epic-rules-engine.md, ARCHITECTURE-SPINE.md, AGENTS.md; done-ticket plans: story-golden-deal-test-and-r-id-test-names-plan.md, story-langdata-en-and-lettercount-plan.md, story-session-createsession-replay-and-checksession-plan.md, story-composing-commands-and-the-command-table-plan.md, story-validate-and-place-commands-with-the-8-worked-example-plan.md, story-undo-redo-give-up-and-accrue-plan.md, story-scoring-penalty-and-bands-plan.md.
@@ -45,6 +45,25 @@ Fixer: all 17 items applied, no conflicts.
 - draft fields → `sourceColumn`/`destinationColumn` 1–8 plus `source`/`destination` CardId lists top→bottom, `freeLetters` WordCellNumber[] in Move order
 - test organisation → one test per flag, looping the listed states
 - score test names → R-80 liveScore, R-81 displayScore/end values
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Pass 3 — 2026-09-29
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 4, minor 8, decision-needed 0  |  Dropped in triage: 0 (duplicates merged; faces-glyph finding downgraded to minor, build-notes CAP-2 already binds it)
+Words (docs): 1424 (7.3x pass 0; stated budget 1500)  |  Snapshot: story-gameview.review-log.passes/pass3.md
+Fixer: all 12 items applied, no conflicts; `dealtStart(seed)` confirmed in src/engine/replay.ts:164.
+### Applied
+- [major] Description, Longest word — pass 2 fix still contradicts itself: `longestWord(start, session, lang)` replays, yet view "uses it, no second replay" → one internal replay-with-words function view calls once, pure `longestWord(words)` reused by CAP-8 → fixer item 1
+- [major] AC, End values — penalty, lettersLeft and band values unpinned; band's input (final vs live score) untested → fixer item 2
+- [major] AC, Verify naming — which id each can* agreement test carries is unstated; risk of false R-id coverage → agreement tests named AD-3, rule-coverage R-12/R-31/R-33 assertions separate tests with those ids → fixer item 3
+- [major] AC, AD-3 — "plain data" in Shape has no test → structuredClone(view(s)) toStrictEqual view(s) → fixer item 4
+- [minor] items 5–12 (faces letter uppercase glyph + QU entry test; pendingDraftWord absent in Idle with no pending draft; Q-41 uncommitted redo-tail move; n = 1 via self-drop, not seam; place field types; pendingDraftWord wording; undo/redo/give-up predicates in commands.ts; check order unchanged)
+### Default applied (technical)
+- replay structure → internal `replayWords(start, session, lang)` → `{ position, words }`, pure `longestWord(words)`
+- flag agreement test names → AD-3
+- predicates → move-rule predicates in rules.ts, availability predicates in commands.ts
 ### Decision needed (functionality / UX / gameplay)
 - none
 ### Dropped
