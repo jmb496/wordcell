@@ -3,7 +3,7 @@ title: 'Scoring, penalty and bands'
 type: 'feature'
 ticket: '7'
 created: '2026-09-29'
-status: 'built'
+status: done
 baseline_revision: '0d3c9de5d38390b7153b7e6f88061e0e48d7c383'
 route: 'full'
 route_source: 'auto'

@@ -69,3 +69,13 @@ Code review: thorough, 2 passes, converged with one open item; 1 fix commit (fc3
 Tests: all passing
 Ref to fix upstream: none
 Worth knowing: open item: a safety check added by the review (undo on a corrupted phase value) has no row in the command table yet; carried to 2.10/2.12. The build deferred one item to 2.10: saved-game checking must reject a fractional or unknown cursor, which 2.10's parser stage owns.
+
+## 2.7 Scoring, penalty and bands — done
+What it adds: the score (each card's letters times the WordCell number it sits on), the give-up penalty of 10 per letter left in the columns (QU counts 2), final scores that can go negative, and the six rating bands, set relative to the maximum score rather than fixed numbers.
+Ticket review: 3 passes, converged (majors 6, 1, 1) with one open item handed to the build (a test that a negative give-up score lands in the lowest band); nothing needed your input
+Build: built; commits efbf06f
+Code review: quick, 1 pass, converged; 0 fixes applied
+Tests: all passing
+Ref to fix upstream: none
+Paused: usage limit during the code review (reset 9:50am America/New_York), resumed 14:24 EDT
+Worth knowing: the build deferred one doc item: AGENTS.md still calls STUCK_PENALTY_PER_CARD scaffold, which is now stale (it needs a bmad-project-context refresh). There are also two small scoring-test minors; both are carried to the 2.12 sweep.
