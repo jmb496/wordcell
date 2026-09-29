@@ -1,5 +1,5 @@
 # Review log — story-undo-redo-give-up-and-accrue.md (ticket 2.6)
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD d4fb67e, copy `story-undo-redo-give-up-and-accrue.review-log.passes/pass0.md`, 197 words.
 Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), epic-rules-engine.md, ARCHITECTURE-SPINE.md, AGENTS.md; done-ticket plans: story-golden-deal-test-and-r-id-test-names-plan.md, story-langdata-en-and-lettercount-plan.md, story-session-createsession-replay-and-checksession-plan.md, story-composing-commands-and-the-command-table-plan.md, story-validate-and-place-commands-with-the-8-worked-example-plan.md.
@@ -28,5 +28,32 @@ Fixer: all 13 items applied; only command touched is the existing `npm run test:
 - accrue → `src/engine/commands.ts`, exported from index.ts, `AD-2 index exports …` test gains `accrue`
 - won helper → `src/engine/win-seed.ts` exporting `winSeed(seed: number): Session`, pure, relative engine imports only, no vitest, not exported from index.ts, own `win-seed.test.ts` (seeds 1 and 4294967295 reach won at {8, idle})
 - R-39 observation → internal `replay` position deep-equals the pre-drop position, draft kept at moves[index]
+### Decision needed (functionality / UX / gameplay)
+- none
+
+## Pass 2 — 2026-09-29
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 4, minor 11, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+Words (docs): 1147 (5.8 x pass 0)  |  Snapshot: story-undo-redo-give-up-and-accrue.review-log.passes/pass2.md
+Fixer: all 15 items applied; no commands touched.
+### Applied
+- [major] AC accrue — no success case: while playing (Idle and Composing) a positive safe ms returns a new Session with activeMs + ms, all else equal; boundary MAX_SAFE_INTEGER − 5 + 5 succeeds, + 6 throws (all four lenses) → fixer item 1
+- [major] AC "R-72 cases." — names no case → fixer item 2
+- [major] AC R-71 — Redo success transitions (R-71 first sentence; §2 "Redo from Idle enters its Composing") not named → fixer item 3
+- [major] AC R-70 — Idle → previous Place named only for one pending-draft shape; plain, never-committed (Q-41) and committed-with-tail variants → fixer item 4
+- [minor] AC R-71 failed Validate — already covered by commands.test.ts `R-37 R-38 a failed Validate …` on WITH_TAIL; rename with R-71 instead of a duplicate → fixer item 5
+- [minor] AC R-75 "redo does not set gaveUp" — setup undefined (no redo data throws) → fixer item 6
+- [minor] AC R-75 undo while gaveUp — assert status derives back to playing → fixer item 7
+- [minor] AC undo/redo/giveUp tests — assert whole Session toStrictEqual (only cursor/flag changes; moves, reached, activeMs untouched) → fixer item 8
+- [minor] AC R-71 Redo into Place ignoring the dictionary — observation (ctx without dictionary and with `new Set()`) → fixer item 9
+- [minor] AC accrue invalid ms — list values (−1, 1.5, NaN, Infinity, 2**53) per status → fixer item 10
+- [minor] Description check order — state replay first for undo/redo/giveUp (as the prelude), undo's own order → fixer item 11
+- [minor] AC R-39 — position assert cannot fail (replay returns the committed prefix); keep cursor/draft asserts, hand the view check to entry 8 → fixer item 12
+- [minor] AC R-71 same-letter swap — name it a D2 edge test (crafted tail via `applyFrom`) per SPEC D2 → fixer item 13
+- [minor] Description winSeed — lang (EN), imports from `./index`, columns 1 → 8 → fixer item 14
+- [minor] AC — undo from won/gaveUp required twice; command-table sub-bullet points to R-70/R-75 → fixer item 15
+### Default applied (technical)
+- undo own-check order → replay, then gaveUp → clear flag; Idle index 0 → `r70-nothing-to-undo`; otherwise the phase step
+- same-letter swap → D2 edge test via `applyFrom`
+- winSeed → `EN`, `apply`/`EN` from `./index`, columns 1 → 8
 ### Decision needed (functionality / UX / gameplay)
 - none
