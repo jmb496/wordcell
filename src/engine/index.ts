@@ -1,6 +1,14 @@
 export type { ApplyContext, ApplyResult, Command } from './commands';
 export { accrue, apply } from './commands';
 export { deal } from './deal';
+export type { GameRecord, Statistics } from './history';
+export {
+  gameRecord,
+  HISTORY_VERSION,
+  isRecorded,
+  reconcileHistory,
+  statistics,
+} from './history';
 export { EN } from './lang/en';
 export type { LangData } from './lang/lang-data';
 export { letterCount } from './lang/lang-data';

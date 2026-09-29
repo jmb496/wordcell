@@ -134,7 +134,7 @@ references = ["spec — _bmad-output/specs/spec-epic-2-rules-engine/build-notes.
 id = 11
 type = "story"
 title = "History serialise and parse, and the epic's scripted game"
-description = "Adds serializeHistory, parseHistory with its stage order, container and checkRecord checks, HISTORY_VERSION = 1, the history round trip built from gameRecord outputs, one history-invalid-<check>.json per record check, and the SPEC Success signal test: a scripted seed-1 game round-tripped to an equal view after every step, undo to the start and redo to the end; won records use entry 6's helper."
+description = "Adds serializeHistory, parseHistory with its stage order, container and checkRecord checks, the history round trip built from gameRecord outputs, one history-invalid-<check>.json per record check, and the SPEC Success signal test: a scripted seed-1 game round-tripped to an equal view after every step, undo to the start and redo to the end; won records use entry 6's helper."
 verify = "npm run test:all is green with the history round trip, every history fixture asserting its reason and checkRecord code, the scripted-game test, and an AD-2 test that index.ts's runtime export names equal AD-2's list plus deal passing."
 covers = ["CAP-9"]
 after = [10]
