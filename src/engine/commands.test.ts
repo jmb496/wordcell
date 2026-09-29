@@ -63,6 +63,10 @@ function startOf(
 
 const CTX: ApplyContext = deepFreeze({ lang: EN });
 
+/** A frozen ctx with an inline dictionary (build-notes CAP-4). */
+const DICT = (...words: string[]): ApplyContext =>
+  deepFreeze({ lang: EN, dictionary: new Set(words) });
+
 function sessionOf(moves: readonly Move[], cursor: Session['cursor'], gaveUp = false): Session {
   return deepFreeze({ version: SESSION_VERSION, seed: 1, moves, cursor, gaveUp, activeMs: 0 });
 }
@@ -72,6 +76,25 @@ function run(session: Session, command: Command): ApplyResult {
   const result = apply(deepFreeze(session), deepFreeze(command), CTX);
   replay(result.session, EN);
   return result;
+}
+
+/**
+ * The D2 seam: `applyFrom` over `start` from a fresh seed-1 Session, every input deep-frozen and
+ * every result replayed (§2). `before` is the Session the last command received.
+ */
+function seam(
+  start: Start,
+  commands: readonly Command[],
+  ctx: ApplyContext = CTX,
+): { before: Session; result: ApplyResult } {
+  let before = sessionOf([], { index: 0, phase: 'idle' });
+  let result: ApplyResult = { session: before };
+  for (const [i, command] of commands.entries()) {
+    if (i > 0) before = deepFreeze(result.session);
+    result = applyFrom(start, before, deepFreeze(command), ctx);
+    replayFrom(start, result.session, EN);
+  }
+  return { before, result };
 }
 
 /** The draft of a Composing Session. */
@@ -140,6 +163,29 @@ const WITH_TAIL = sessionOf([...PREFIX, COMMITTED_DRAFT, TAIL], { index: 2, phas
 /** Idle over a committed pending draft and a redo tail. */
 const PENDING_TAIL = sessionOf([...PREFIX, COMMITTED_DRAFT, TAIL], { index: 2, phase: 'idle' });
 const GAVE_UP = sessionOf(PREFIX, { index: 2, phase: 'idle' }, true);
+/** Place over a committed draft and a redo tail (redo data (a) and (b)). */
+const PLACE_TAIL = sessionOf([...PREFIX, COMMITTED_DRAFT, TAIL], { index: 2, phase: 'place' });
+
+/** W onto column 2, k = 1: the 2-letter word M W (fails R-36). */
+const SHORT = sessionOf(
+  [
+    ...PREFIX,
+    {
+      sourceColumn: 1,
+      sourceCount: 1,
+      destinationColumn: 2,
+      destinationCount: 1,
+      destinationSide: 'left',
+      freeLetters: [],
+      arrangement: [W],
+      reached: 'composing',
+    },
+  ],
+  { index: 2, phase: 'composing' },
+);
+
+/** The R-37 spelling of DRAFT_DATA's word M I W Z. */
+const DRAFT_WORD = 'miwz';
 
 /** Partial self-drop: I W onto column 1, remainder L D X O M (n = 5), k = 1. */
 const SELF = sessionOf(
@@ -194,7 +240,15 @@ type Row = {
   readonly build: () => readonly [Session, Command, ApplyContext];
 } & ({ readonly outcome: 'noop' } | { readonly outcome: 'throw'; readonly check: string });
 
-const on = (session: Session, command: Command) => () => [session, command, CTX] as const;
+const on =
+  (session: Session, command: Command, ctx: ApplyContext = CTX) =>
+  () =>
+    [session, command, ctx] as const;
+
+const VALIDATE: Command = { type: 'validate' };
+const CONFIRM: Command = { type: 'confirm' };
+const setTarget = (cell: number): Command => asCommand({ type: 'setTarget', cell });
+const setOrder = (order: unknown): Command => asCommand({ type: 'setPlacementOrder', order });
 
 const drop = (sourceColumn: number, sourceCount: number, destinationColumn: number): Command => ({
   type: 'drop',
@@ -202,6 +256,8 @@ const drop = (sourceColumn: number, sourceCount: number, destinationColumn: numb
   sourceCount,
   destinationColumn,
 });
+
+const asCommand = (value: object): Command => value as unknown as Command;
 
 /** One valid-shaped command per type, for the phase and status rows. */
 const SAMPLE: Readonly<Record<Command['type'], Command>> = {
@@ -212,7 +268,14 @@ const SAMPLE: Readonly<Record<Command['type'], Command>> = {
   addFreeLetter: { type: 'addFreeLetter', cell: 4 },
   removeFreeLetter: { type: 'removeFreeLetter', cell: 3 },
   arrange: { type: 'arrange', arrangement: [W, I, Z] },
+  validate: { type: 'validate' },
+  setTarget: { type: 'setTarget', cell: 3 },
+  setPlacementOrder: { type: 'setPlacementOrder', order: [M2, I, W, Z] },
+  confirm: { type: 'confirm' },
 };
+/** validate's rows other than the check-order ones carry a dictionary (build-notes CAP-4). */
+const ctxFor = (type: Command['type']): ApplyContext =>
+  type === 'validate' ? DICT(DRAFT_WORD) : CTX;
 const COMPOSING_TYPES = [
   'tapDestinationCard',
   'setDestinationCount',
@@ -221,8 +284,6 @@ const COMPOSING_TYPES = [
   'removeFreeLetter',
   'arrange',
 ] as const;
-
-const asCommand = (value: object): Command => value as unknown as Command;
 
 const TABLE: readonly Row[] = [
   // drop
@@ -442,6 +503,28 @@ const TABLE: readonly Row[] = [
       }),
     ),
   ),
+  ...(['idle', 'place'] as const).map(
+    (phase): Row => ({
+      id: '§4',
+      command: 'validate',
+      precondition: `a command in the wrong phase (${phase})`,
+      outcome: 'throw',
+      check: 'command-phase',
+      build: on(phase === 'idle' ? PENDING_TAIL : PLACE, VALIDATE, DICT(DRAFT_WORD)),
+    }),
+  ),
+  ...(['setTarget', 'setPlacementOrder', 'confirm'] as const).flatMap((type) =>
+    (['idle', 'composing'] as const).map(
+      (phase): Row => ({
+        id: '§4',
+        command: type,
+        precondition: `a command in the wrong phase (${phase})`,
+        outcome: 'throw',
+        check: 'command-phase',
+        build: on(phase === 'idle' ? PENDING_TAIL : COMPOSING, SAMPLE[type]),
+      }),
+    ),
+  ),
   // status ≠ playing (won rows are entry 6's)
   ...(Object.keys(SAMPLE) as Command['type'][]).map(
     (type): Row => ({
@@ -450,7 +533,7 @@ const TABLE: readonly Row[] = [
       precondition: 'a command while status ≠ playing (gaveUp)',
       outcome: 'throw',
       check: 'command-status',
-      build: on(GAVE_UP, SAMPLE[type]),
+      build: on(GAVE_UP, SAMPLE[type], ctxFor(type)),
     }),
   ),
   {
@@ -477,6 +560,103 @@ const TABLE: readonly Row[] = [
     outcome: 'throw',
     check: 'command-phase',
     build: on(PENDING, asCommand({ type: 'setDestinationCount', k: 1.5 })),
+  },
+  // validate: ctx.dictionary after status and phase, before R-36 (build-notes CAP-4)
+  {
+    id: 'AD-2',
+    command: 'validate',
+    precondition: 'with no ctx.dictionary',
+    outcome: 'throw',
+    check: 'command-dictionary',
+    build: on(COMPOSING, VALIDATE),
+  },
+  {
+    id: 'AD-2',
+    command: 'validate',
+    precondition: 'with no ctx.dictionary on a draft too short for R-36',
+    outcome: 'throw',
+    check: 'command-dictionary',
+    build: on(SHORT, VALIDATE),
+  },
+  {
+    id: 'R-75',
+    command: 'validate',
+    precondition: 'a command while status ≠ playing, with no ctx.dictionary (gaveUp)',
+    outcome: 'throw',
+    check: 'command-status',
+    build: on(GAVE_UP, VALIDATE),
+  },
+  {
+    id: '§4',
+    command: 'validate',
+    precondition: 'a command in the wrong phase, with no ctx.dictionary (idle)',
+    outcome: 'throw',
+    check: 'command-phase',
+    build: on(PENDING_TAIL, VALIDATE),
+  },
+  {
+    id: 'R-36',
+    command: 'validate',
+    precondition: 'a word with letter count below 3 (its spelling in the dictionary)',
+    outcome: 'throw',
+    check: 'r36-letter-count',
+    build: on(SHORT, VALIDATE, DICT('mw')),
+  },
+  {
+    id: 'R-36',
+    command: 'validate',
+    precondition: 'a word with letter count below 3 (its spelling not in the dictionary)',
+    outcome: 'throw',
+    check: 'r36-letter-count',
+    build: on(SHORT, VALIDATE, DICT(DRAFT_WORD)),
+  },
+  // setTarget
+  {
+    id: 'R-71',
+    command: 'setTarget',
+    precondition: 'equal to targetCell (with redo data)',
+    outcome: 'noop',
+    build: on(PLACE_TAIL, setTarget(4)),
+  },
+  {
+    id: 'R-40',
+    command: 'setTarget',
+    precondition: 'a cell above the letter count L',
+    outcome: 'throw',
+    check: 'r40-target-cell',
+    build: on(PLACE, setTarget(5)),
+  },
+  // setPlacementOrder
+  {
+    id: 'R-71',
+    command: 'setPlacementOrder',
+    precondition: 'equal in value (with redo data)',
+    outcome: 'noop',
+    build: on(PLACE_TAIL, setOrder([M2, I, W, Z])),
+  },
+  {
+    id: 'R-50',
+    command: 'setPlacementOrder',
+    precondition: 'not a permutation of S ∪ F ∪ D (a missing card)',
+    outcome: 'throw',
+    check: 'r50-placement-order',
+    build: on(PLACE, setOrder([M2, I, W])),
+  },
+  {
+    id: 'R-50',
+    command: 'setPlacementOrder',
+    precondition: 'not a permutation of S ∪ F ∪ D (a duplicated card)',
+    outcome: 'throw',
+    check: 'r50-placement-order',
+    build: on(PLACE, setOrder([M2, I, I, Z])),
+  },
+  {
+    id: 'R-50',
+    command: 'setPlacementOrder',
+    precondition: 'not a permutation of S ∪ F ∪ D (a foreign card)',
+    outcome: 'throw',
+    check: 'r50-placement-order',
+    build: on(PLACE, setOrder([M2, I, W, COL1[0]])),
   },
   // domain
   {
@@ -623,6 +803,34 @@ const TABLE: readonly Row[] = [
     check: 'command-domain',
     build: on(COMPOSING, asCommand({ type: 'arrange', arrangement: 'IWZ' })),
   },
+  ...[2, 11, 3.5].map(
+    (cell): Row => ({
+      id: 'AD-2',
+      command: 'setTarget',
+      precondition: `cell ${cell} outside its documented domain`,
+      outcome: 'throw',
+      check: 'command-domain',
+      build: on(PLACE, setTarget(cell)),
+    }),
+  ),
+  {
+    id: 'AD-2',
+    command: 'setPlacementOrder',
+    precondition: 'a non-array order outside its documented domain',
+    outcome: 'throw',
+    check: 'command-domain',
+    build: on(PLACE, setOrder('MIWZ')),
+  },
+  ...[52, 1.5].map(
+    (card): Row => ({
+      id: 'AD-2',
+      command: 'setPlacementOrder',
+      precondition: `an order element ${card} outside its documented domain`,
+      outcome: 'throw',
+      check: 'card-id-domain',
+      build: on(PLACE, setOrder([M2, I, W, card])),
+    }),
+  ),
 ];
 
 describe('AD-2 command table', () => {
@@ -842,35 +1050,281 @@ describe('composing edits', () => {
 });
 
 describe('R-30 word helper', () => {
-  const fresh = sessionOf([], { index: 0, phase: 'idle' });
-  const seam = (start: Start, commands: readonly Command[]) => {
-    let session = fresh;
-    for (const command of commands)
-      session = applyFrom(start, deepFreeze(session), deepFreeze(command), CTX).session;
-    return word(replayFrom(start, session, EN), draftOf(session), EN);
+  const spell = (start: Start, commands: readonly Command[]) => {
+    const { result } = seam(start, commands);
+    return word(replayFrom(start, result.session, EN), draftOf(result.session), EN);
   };
 
   it('R-30 with k = 0 the word is M alone', () => {
     const start = startOf(['ESTA', 'BD']);
-    expect(seam(start, [drop(2, 2, 3)]).spelling).toBe('bd');
+    expect(spell(start, [drop(2, 2, 3)]).spelling).toBe('bd');
   });
 
   it('R-30 k = 3 under S T A gives STA… on the left and …ATS on the right', () => {
     const start = startOf(['ESTA', 'BD']);
     const k3 = [drop(2, 2, 1), { type: 'setDestinationCount', k: 3 } as const];
-    expect(seam(start, k3).spelling).toBe('stabd');
-    expect(seam(start, [...k3, { type: 'flip' }]).spelling).toBe('bdats');
+    expect(spell(start, k3).spelling).toBe('stabd');
+    expect(spell(start, [...k3, { type: 'flip' }]).spelling).toBe('bdats');
   });
 
   it('R-30 on the right D is reversed by card, so QU still spells qu', () => {
     const start = startOf(['EQ', 'NI']);
     const [e, qu] = start.columns[0];
     const [n, i] = start.columns[1];
-    const result = seam(start, [
+    const result = spell(start, [
       drop(2, 2, 1),
       { type: 'setDestinationCount', k: 2 },
       { type: 'flip' },
     ]);
     expect(result).toStrictEqual({ cards: [n, i, qu, e], spelling: 'nique' });
+  });
+});
+
+// --- validate and Place (R-36–R-38, R-40–R-42, R-50–R-52, R-60, §8) ---------------------------
+
+/** A self-contained 1-column start dropped whole onto empty column 2 (k = 0). */
+const wholeColumn = (letters: string) => [startOf([letters]), drop(1, letters.length, 2)] as const;
+
+/**
+ * R-40, R-42: validate's default target is `expected`; setTarget accepts every cell 3…expected
+ * and, below 10, throws `r40-target-cell` on the next cell.
+ */
+function expectLegalTargets(
+  start: Start,
+  commands: readonly Command[],
+  ctx: ApplyContext,
+  expected: number,
+): Session {
+  const { result } = seam(start, [...commands, VALIDATE], ctx);
+  expect(Object.hasOwn(result, 'rejectedWord')).toBe(false);
+  const validated = deepFreeze(result.session);
+  expect(validated.cursor.phase).toBe('place');
+  expect(draftOf(validated).targetCell).toBe(expected);
+  for (let cell = 3; cell <= expected; cell++) {
+    const edited = applyFrom(start, validated, setTarget(cell), CTX).session;
+    replayFrom(start, edited, EN);
+    if (cell === expected) expect(edited).toBe(validated);
+    expect(draftOf(edited).targetCell).toBe(cell);
+  }
+  if (expected < 10)
+    expectEngineError(
+      () => applyFrom(start, validated, setTarget(expected + 1), CTX),
+      'r40-target-cell',
+    );
+  return validated;
+}
+
+describe('validate', () => {
+  it('R-37 R-38 a failed Validate returns the input reference and the R-37 spelling', () => {
+    const result = apply(COMPOSING, VALIDATE, DICT('other'));
+    expect(result.session).toBe(COMPOSING);
+    expect(result).toStrictEqual({ session: COMPOSING, rejectedWord: DRAFT_WORD });
+    const tail = apply(WITH_TAIL, VALIDATE, DICT('other'));
+    expect(tail.session).toBe(WITH_TAIL);
+    expect(tail.rejectedWord).toBe(DRAFT_WORD);
+  });
+
+  it('R-37 R-38 a failed Validate spells QU as qu', () => {
+    const [start, dropped] = wholeColumn('QIT');
+    const { before, result } = seam(start, [dropped, VALIDATE], DICT('qit'));
+    expect(result.session).toBe(before);
+    expect(result.rejectedWord).toBe('quit');
+  });
+
+  it('R-38 R-71 a successful Validate advances to Place with the R-42 / R-51 defaults and drops the redo data', () => {
+    const stored = sessionOf(
+      [...PREFIX, { ...COMMITTED_DRAFT, targetCell: 3, placementOrder: [Z, W, I, M2] }, TAIL],
+      { index: 2, phase: 'composing' },
+    );
+    replay(stored, EN);
+    const result = apply(stored, VALIDATE, DICT(DRAFT_WORD));
+    expect(result).toStrictEqual({
+      session: {
+        ...stored,
+        moves: [...PREFIX, PLACE_DRAFT],
+        cursor: { index: 2, phase: 'place' },
+      },
+    });
+    replay(result.session, EN);
+  });
+
+  it('R-38 only validate reads the dictionary: drop, arrange and setTarget run without one', () => {
+    const results = [
+      run(IDLE, drop(1, 2, 2)),
+      run(COMPOSING, { type: 'arrange', arrangement: [W, I, Z] }),
+      run(PLACE, setTarget(3)),
+    ];
+    for (const result of results) expect(Object.hasOwn(result, 'rejectedWord')).toBe(false);
+  });
+
+  it('R-36 QU boundary: a 2-card word with QU (letter count 3) validates, a 2-card plain word throws', () => {
+    const [qu, quDrop] = wholeColumn('QA');
+    const { result } = seam(qu, [quDrop, VALIDATE], DICT('qua'));
+    expect(result.session.cursor.phase).toBe('place');
+    expect(draftOf(result.session).targetCell).toBe(3);
+    const [plain, plainDrop] = wholeColumn('AT');
+    expectEngineError(() => seam(plain, [plainDrop, VALIDATE], DICT('at')), 'r36-letter-count');
+  });
+});
+
+describe('R-40 R-42 legal targets', () => {
+  it('R-40 R-42 a 4-card word with QU has L = 5: default 5, 3–5 accepted, 6 throws', () => {
+    const [start, dropped] = wholeColumn('QITE');
+    expectLegalTargets(start, [dropped], DICT('quite'), 5);
+  });
+
+  it('R-40 R-42 a word of exactly 10 letters defaults to 10 and accepts 3–10', () => {
+    const [start, dropped] = wholeColumn('ABCDEFGHIJ');
+    expectLegalTargets(start, [dropped], DICT('abcdefghij'), 10);
+  });
+
+  it('R-40 R-42 a word of 11 cards defaults to 10 and accepts 3–10', () => {
+    const [start, dropped] = wholeColumn('ABCDEFGHIJK');
+    expectLegalTargets(start, [dropped], DICT('abcdefghijk'), 10);
+  });
+
+  it('R-40 R-42 a 10-card word with QU (L = 11) defaults to 10 and accepts 3–10', () => {
+    const [start, dropped] = wholeColumn('QBCDEFGHIJ');
+    expectLegalTargets(start, [dropped], DICT('qubcdefghij'), 10);
+  });
+
+  it('R-40 R-42 L = 3: default 3, setTarget 4 throws', () => {
+    const [start, dropped] = wholeColumn('CAT');
+    expectLegalTargets(start, [dropped], DICT('cat'), 3);
+  });
+});
+
+describe('Place', () => {
+  it('R-51 on the right side with k ≥ 2 the default order is the word order; setTarget keeps a custom order', () => {
+    const start = startOf(['ESTA', 'BD']);
+    const [, s, t, a] = start.columns[0];
+    const [b, d] = start.columns[1];
+    const { result } = seam(
+      start,
+      [drop(2, 2, 1), { type: 'setDestinationCount', k: 3 }, { type: 'flip' }, VALIDATE],
+      DICT('bdats'),
+    );
+    expect(draftOf(result.session).placementOrder).toStrictEqual([b, d, a, t, s]);
+    expect(draftOf(result.session).targetCell).toBe(5);
+    const custom = [s, t, a, d, b];
+    const reordered = applyFrom(start, deepFreeze(result.session), setOrder(custom), CTX);
+    replayFrom(start, reordered.session, EN);
+    const retargeted = applyFrom(start, deepFreeze(reordered.session), setTarget(4), CTX);
+    replayFrom(start, retargeted.session, EN);
+    expect(draftOf(retargeted.session).targetCell).toBe(4);
+    expect(draftOf(retargeted.session).placementOrder).toStrictEqual(custom);
+  });
+
+  it('R-71 setTarget on a Place draft with a redo tail edits at Place and drops the later moves', () => {
+    expect(run(PLACE_TAIL, setTarget(3))).toStrictEqual({
+      session: { ...PLACE_TAIL, moves: [...PREFIX, { ...PLACE_DRAFT, targetCell: 3 }] },
+    });
+  });
+
+  it('R-71 setPlacementOrder on a Place draft with a redo tail edits at Place and drops the later moves', () => {
+    expect(run(PLACE_TAIL, setOrder([Z, W, I, M2]))).toStrictEqual({
+      session: {
+        ...PLACE_TAIL,
+        moves: [...PREFIX, { ...PLACE_DRAFT, placementOrder: [Z, W, I, M2] }],
+      },
+    });
+  });
+
+  it('R-60 confirm discards the redo tail, commits the draft and moves the cursor to the next Idle', () => {
+    const result = run(PLACE_TAIL, CONFIRM);
+    expect(result).toStrictEqual({
+      session: {
+        ...PLACE_TAIL,
+        moves: [...PREFIX, COMMITTED_DRAFT],
+        cursor: { index: 3, phase: 'idle' },
+      },
+    });
+    const position = replay(result.session, EN);
+    expect(position.columns[0]).toStrictEqual(COL1.slice(0, COL1.length - 2));
+    expect(position.columns[1]).toStrictEqual(COL2.slice(0, COL2.length - 1));
+    expect(position.cells[0]).toStrictEqual(COLS[4].slice(0, COLS[4].length - 1));
+    expect(position.cells[1]).toStrictEqual([...COLS[5], M2, I, W, Z]);
+  });
+});
+
+describe('§8 worked example', () => {
+  const START = startOf(['FEDKA', 'XORIN', 'LMFB'], { 6: 'L' });
+  const [F1, E, D, K, A] = START.columns[0];
+  const [, , , B] = START.columns[2];
+  const [L] = START.cells[3];
+  const WORDS = DICT('baked', 'balked', 'faked', 'flaked');
+  const ONTO_COL3 = drop(1, 4, 3);
+  const ADD_L: Command = { type: 'addFreeLetter', cell: 6 };
+  const arrange = (...arrangement: CardId[]): Command => ({ type: 'arrange', arrangement });
+  const BALKED = [ONTO_COL3, ADD_L, arrange(A, L, K, E, D)];
+
+  it('§8 worked example BAKED validates with default target 5; 3–5 accepted, 6 throws', () => {
+    const baked = expectLegalTargets(START, [ONTO_COL3, arrange(A, K, E, D)], WORDS, 5);
+    expect(draftOf(baked).placementOrder).toStrictEqual([B, A, K, E, D]);
+  });
+
+  it('R-41 §8 worked example BALKED with cell 6’s L: default 6, 3–6 accepted, confirm onto 6 keeps the L once', () => {
+    expectLegalTargets(START, BALKED, WORDS, 6);
+    const { result: five } = seam(START, [...BALKED, VALIDATE, setTarget(5)], WORDS);
+    expect(draftOf(five.session).targetCell).toBe(5);
+    const { result } = seam(
+      START,
+      [...BALKED, VALIDATE, setTarget(5), setTarget(6), CONFIRM],
+      WORDS,
+    );
+    const order = [B, A, L, K, E, D];
+    const position = replayFrom(START, result.session, EN);
+    expect(position.cells[3]).toStrictEqual(order);
+    expect(
+      [...position.columns.flat(), ...position.cells.flat()].filter((c) => c === L),
+    ).toHaveLength(1);
+  });
+
+  it('R-41 §8 worked example BALKED confirmed onto cell 5 leaves cell 6 empty (the L travels)', () => {
+    const { result } = seam(START, [...BALKED, VALIDATE, setTarget(5), CONFIRM], WORDS);
+    const position = replayFrom(START, result.session, EN);
+    expect(position.cells[3]).toStrictEqual([]);
+    expect(position.cells[2]).toStrictEqual([B, A, L, K, E, D]);
+  });
+
+  it('R-50 §8 worked example a custom BALKED order interleaving S, F and D with B on top is pushed as is', () => {
+    const order = [K, L, A, E, D, B];
+    const { result } = seam(START, [...BALKED, VALIDATE, setOrder(order), CONFIRM], WORDS);
+    expect(result.session.moves[0].placementOrder).toStrictEqual(order);
+    expect(replayFrom(START, result.session, EN).cells[3]).toStrictEqual(order);
+  });
+
+  it('§8 worked example FAKED and FLAKED: the col1 self-drop joins col1’s F at k = 1', () => {
+    const self = drop(1, 4, 1);
+    const cases = [
+      [[self, arrange(A, K, E, D)], [F1, A, K, E, D], 5],
+      [[self, ADD_L, arrange(L, A, K, E, D)], [F1, L, A, K, E, D], 6],
+    ] as const;
+    for (const [commands, cards, target] of cases) {
+      const { result } = seam(START, [...commands, VALIDATE], WORDS);
+      expect(Object.hasOwn(result, 'rejectedWord')).toBe(false);
+      expect(draftOf(result.session).destinationCount).toBe(1);
+      expect(draftOf(result.session).placementOrder).toStrictEqual(cards);
+      expect(draftOf(result.session).targetCell).toBe(target);
+    }
+  });
+
+  it('§8 worked example after the col3 drop a tap on B at k = 1 is the same reference', () => {
+    const { before, result } = seam(START, [ONTO_COL3, { type: 'tapDestinationCard', card: B }]);
+    expect(result.session).toBe(before);
+  });
+
+  it('§8 worked example DEKA… without B is impossible: setDestinationCount 0 on col3 throws', () => {
+    expectEngineError(
+      () => seam(START, [ONTO_COL3, { type: 'setDestinationCount', k: 0 }]),
+      'r31-destination-count',
+    );
+  });
+
+  it('R-52 after BALKED is confirmed onto cell 6, its free letter is the committed order’s top (col1’s D)', () => {
+    const { result } = seam(START, [...BALKED, VALIDATE, CONFIRM, drop(2, 1, 3), ADD_L], WORDS);
+    const draft = draftOf(result.session);
+    expect(draft.arrangement.at(-1)).toBe(D);
+    expect(draft.arrangement).not.toContain(L);
   });
 });

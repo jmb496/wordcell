@@ -151,7 +151,7 @@ export function checkArrangement(
 }
 
 /** R-36: the word's letter count is at least `MIN_WORD_LENGTH`; returns it (L of R-40). */
-function checkLetterCount(word: readonly CardId[], lang: LangData, index: number): number {
+export function checkLetterCount(word: readonly CardId[], lang: LangData, index: number): number {
   const count = word.reduce((sum, card) => sum + letterCount(card, lang), 0);
   if (count < MIN_WORD_LENGTH)
     fail('r36-letter-count', index, 'R-36', `letter count ${count} below ${MIN_WORD_LENGTH}`);
@@ -159,7 +159,7 @@ function checkLetterCount(word: readonly CardId[], lang: LangData, index: number
 }
 
 /** R-40 (R-41): `targetCell` ≤ the word's letter count. */
-function checkTargetCell(move: PlacedMove, count: number, index: number): void {
+export function checkTargetCell(move: PlacedMove, count: number, index: number): void {
   if (move.targetCell > count)
     fail(
       'r40-target-cell',
@@ -170,7 +170,11 @@ function checkTargetCell(move: PlacedMove, count: number, index: number): void {
 }
 
 /** R-50: `placementOrder` is a permutation of S ∪ F ∪ D. */
-function checkPlacementOrder(move: PlacedMove, word: readonly CardId[], index: number): void {
+export function checkPlacementOrder(
+  move: PlacedMove,
+  word: readonly CardId[],
+  index: number,
+): void {
   if (!isPermutation(move.placementOrder, word))
     fail('r50-placement-order', index, 'R-50', 'placementOrder is not a permutation of S ∪ F ∪ D');
 }
