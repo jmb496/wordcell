@@ -1,5 +1,5 @@
 # Review log — story-session-createsession-replay-and-checksession.md (ticket 2.3)
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 187bd73, copy `story-session-createsession-replay-and-checksession.review-log.passes/pass0.md`, 235 words.
 Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), epic-rules-engine.md, ARCHITECTURE-SPINE.md, AGENTS.md; done-ticket plans: story-golden-deal-test-and-r-id-test-names-plan.md, story-langdata-en-and-lettercount-plan.md.
@@ -82,3 +82,18 @@ Fixer: all 18 items applied; tightened existing wording to stay within budget; n
 - none
 ### Dropped
 - none
+
+## Pass 4 — 2026-09-28
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 2, minor 20, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+Words (docs): 1500 (6.3 x pass 0; budget 1500)  |  Snapshot: story-session-createsession-replay-and-checksession.review-log.passes/pass4.md
+Fixer: all 12 items applied; cut repeats (opening Composing clause, Verify tail, standalone post-replay sentence, Notes export clause) to stay at budget; no commands.
+### Applied
+- [major] Redo-tail bullet — the rejecting example (R-40) fails from any start, so the gating test cannot prove tail moves are checked from their scratch position; reword to a position-dependent example → fixer item 1
+- [major] R-52/R-60 shared Session — R-60 "remove each used free letter from its WordCell" has no R-60-named assertion on a non-target cell → fixer item 2
+- [minor] items 3–12: Q-41 Place cursor, Idle-pending 2-letter draft, `card-id-domain` one guard, AD-2 prefix anchored, R-61 duplicate case named `R-61`, target-cell contents wording, pronouns and n, opening overclaim, index test name, Notes hand-off extended to "never touches later moves" → fixer items 3–12
+### Default applied (technical)
+- Seam out-of-range id through the existing CardId domain guard (one guard, one code)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none (left for the plan: `-0` seed/activeMs accepted; R-33 duplicate before empty; replay tests pass EN only; R-52 new top used by a later move; a non-word accepting case named for the dictionary row; tickets.toml entry 3 sync at publish)
