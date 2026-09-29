@@ -1,5 +1,5 @@
 # Review log — story-score-history-semantics.md (ticket 2.9)
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 9edbe7f, copy `story-score-history-semantics.review-log.passes/pass0.md`, 110 words.
 Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), epic-rules-engine.md, ARCHITECTURE-SPINE.md, AGENTS.md; done-ticket plans: story-golden-deal-test-and-r-id-test-names-plan.md, story-langdata-en-and-lettercount-plan.md, story-session-createsession-replay-and-checksession-plan.md, story-composing-commands-and-the-command-table-plan.md, story-validate-and-place-commands-with-the-8-worked-example-plan.md, story-undo-redo-give-up-and-accrue-plan.md, story-scoring-penalty-and-bands-plan.md, story-gameview-plan.md.
@@ -65,3 +65,29 @@ Fixer: all 15 items applied; pending-draft path checked against commands.ts/repl
 - none
 ### Dropped
 - none
+
+## Pass 4 — 2026-09-29
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 0, minor 12, decision-needed 0  |  Dropped in triage: 1 (isRecorded Q-43 half: reviewer itself says no change needed; the Q-43 bullet already requires both)
+Words (docs): 1175 (10.7x pass 0; stated budget 1500)  |  Snapshot: story-score-history-semantics.review-log.passes/pass3.md (no fix pass)
+### Applied
+- none (converged; minors listed under Result)
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- AC isRecorded — Q-43 isRecorded half "easy to drop": already required by the Q-43 bullet; plan maps it to two tests
+
+## Result — converged after 4 passes
+Majors per pass: 10, 4, 1, 0. Decision needed: none. Words 110 → 1175.
+Unapplied minors (for the build plan):
+- AC Verify names — no-mutation/new-array tests are AD-2 (not AD-6); key-order test AD-6; the append-on-finish test stays R-84
+- Touches — add tickets.toml entry 11 description (the Notes hand-off edit)
+- AC reconcileHistory — finished→finished = the same finished Session passed as before and after (no apply produces it)
+- AC R-74 — make the two same-seed records share outcome and activeMs (e.g. two gaveUp finishes differing only in finalScore) so "the first stays" discriminates
+- Description gameRecord — reads as its own replayWords pass over dealtStart(seed) with view's helpers, not a call to view()
+- AC statistics — empty-history result asserted with toStrictEqual (catches `key: undefined`); the 1 and −2 → 0 case asserted with toBe(0) (Object.is)
+- Notes hand-off — shell calls reconcileHistory exactly once per applied command; the engine does not deduplicate
+- AC Construction — hard-code the qu/tie seeds and assert their QU column with dealIds() in the test
+- AC gameRecord — require one gaveUp record with a negative finalScore (R-81 no clamp)
+- AC gameRecord pending-draft — "undo three times back to Idle"
