@@ -1,5 +1,5 @@
 # Review log — story-composing-commands-and-the-command-table.md (ticket 2.4)
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 9159a33, copy `story-composing-commands-and-the-command-table.review-log.passes/pass0.md`, 191 words.
 Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), epic-rules-engine.md, ARCHITECTURE-SPINE.md, AGENTS.md; done-ticket plans: story-golden-deal-test-and-r-id-test-names-plan.md, story-langdata-en-and-lettercount-plan.md, story-session-createsession-replay-and-checksession-plan.md.
@@ -54,3 +54,22 @@ Fixer: all 19 items applied; no commands added.
 - [minor] arrange throw cases: missing S card, a D card (R-32), duplicate → fixer item 17
 - [minor] R-12 `@ts-expect-error` on an annotated `Command` literal → fixer item 18
 - [minor] No-op by value compares AD-2 fields excluding `reached` and the redo tail → fixer item 19
+
+## Pass 3 — 2026-09-29
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 3, minor 7, decision-needed 0  |  Dropped in triage: 0 (duplicates merged; 3 stretch minors left for the plan)
+Words (docs): 1450 (7.6 x pass 0; budget 1500)  |  Snapshot: story-composing-commands-and-the-command-table.review-log.passes/pass3.md
+Fixer: all 9 items applied; no commands added.
+### Applied
+- [major] AC row naming — ids that miss coverage: status rows → R-75 (rule-coverage R-75 "every command except undo throws while not playing"), `setDestinationCount` equal-to-k no-op → R-71 (not R-31), D-card arrange row → R-32, `drop` `sourceColumn` 0/9 rows → R-12 → fixer item 1
+- [major] AC fixed cases — range bounds collapse to one row: k = 0 and k = n + 1 rows, index −1 and |M| + 1 rows; the empty-destination row uses k = 0 (the ordering the Description calls out) → fixer item 2
+- [major] AC R-23 — test asserts only k; rule-coverage R-23 also requires side left, no free letters, `arrangement` = S top-to-bottom → fixer item 3
+- [minor] Check codes — rule-scheme prefixes on examples (`r31-tap-not-in-destination`, `r33-free-letter-absent`); `card`/`arrangement` elements reuse `assertCardId`'s `card-id-domain`; one `command-status`, `command-phase`, `command-domain` code → fixer item 4 (default applied)
+- [minor] R-12 — the annotated literal is `const _c: Command` (Biome `noUnusedVariables` warns on `c`, checked by the reviewer against Biome 2.5.14) → fixer item 5
+- [minor] Inputs — committed moves are part of the hand-written literal; only the command under test goes through `apply` → fixer item 6
+- [minor] Wrong-phase rows — valid phases: `drop` Idle, the six others Composing → fixer item 7
+- [minor] "including …" parentheticals (whole-column self-drop flip, S-card tap) are separate rows → fixer item 8
+- [minor] Equal-value no-op rows exist only for `arrange`, `setDestinationCount` and the R-31 flip/tap cases; `drop` never (cursor changes) → fixer item 9
+### Left for the plan (stretch minors, not applied)
+- Named success-path tests for R-31 tap mapping, flip, R-21 draw order (covered by the CAP-4 sentence line and the plan's mapping).
+- R-71 edit tests assert the whole `ApplyResult` via `toStrictEqual` (no `rejectedWord`).
+- No runtime unknown-key check; non-array `arrangement` is a domain throw; each row has exactly one violation.
