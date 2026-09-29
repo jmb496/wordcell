@@ -21,7 +21,7 @@ Worth knowing: the build updated two AGENTS.md managed-block lines by hand (test
 Next ticket 1.11 (CI and deploy checks as tested scripts) is hitl: its last check needs the owner to push so CI and the main deploy run with the new checks. Waiting for the owner to authorise it.
 Owner authorised 1.11 on 2026-09-28 (build, review, test:all, leave built; owner does the push and the gate-4 check). Resumed; ticket pulled from tickets.toml entry 11 (564d2c2).
 
-## 1.11 CI and deploy checks as tested scripts — built, waiting for you
+## 1.11 CI and deploy checks as tested scripts — done
 What it adds: the checks CI and the deploy run (the flaky-test report and the "is the live site serving the right cache headers" check) are now real scripts with their own tests instead of shell code inside the workflow files. A test checks the hosting rules file (`_headers`, `.assetsignore`, `wrangler.jsonc`) before anything deploys; the live check now also covers the dictionary and the card font; CI lints its own workflow files with a pinned actionlint.
 Ticket review: 5 passes (10, 6, 4, 1, 1 majors), converged; nothing needed your input. The stub ticket grew 167 → 1602 words; one open major (the deploy-check spawn test must also run `verify`) and the unapplied minors were handed to the build, which built them.
 Build: built; commit 4fa949e. Local proofs: actionlint 1.7.12 exit 0, `deploy-check.mjs verify` on the real dist/ passes, `wrangler deploy --dry-run` succeeds.
@@ -44,3 +44,9 @@ Worth knowing: the real https path, the real wrangler log format and Cloudflare'
 
 ## Stopped
 1.11 is built and verified locally (plan status built, not done). Gate 4 is yours: push `epic-1-scaffold` and check CI is green including actionlint and the flaky-report summary; then merge to `main` and push (as in 1.9) and check the Deploy run's post-deploy log shows every `ok:` line, including the dictionary and the woff2. After that, mark 1.11 done (`uv run _bmad/method/scripts/tickets.py mark 1.11 done`) and run `/bmad-retrospective` if wanted: no tickets remain in the epic.
+
+## Gate 4 — 1.11 (owner asked the orchestrator to push and mark done, 2026-09-28)
+Pushed `epic-1-scaffold` (79b7497): CI run 36501094701 green, including actionlint and the flaky report. Owner approved fast-forwarding `main` to 79b7497 and pushing: CI run 36501483908 green, Deploy run 36501684700 green; the post-deploy log shows every `ok:` line, including the dictionary (`en-n6QSuDF0.txt`) and the woff2 (`wordcell-serif-C6H6CwWY.woff2`) as immutable. 1.11 marked done.
+
+## Run complete
+Tickets 1.10 and 1.11 done. No tickets remain in the epic: next is `/bmad-retrospective` if wanted.

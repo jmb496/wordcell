@@ -3,7 +3,7 @@ title: 'CI and deploy checks as tested scripts'
 type: 'chore'
 ticket: '11'
 created: '2026-09-28'
-status: 'built'
+status: done
 route: 'full'
 route_source: 'auto'
 baseline_revision: 'db27f588514a446f83218956d5f31e511938a0c5'
