@@ -1,5 +1,5 @@
 # Review log — story-session-createsession-replay-and-checksession.md (ticket 2.3)
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 187bd73, copy `story-session-createsession-replay-and-checksession.review-log.passes/pass0.md`, 235 words.
 Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), epic-rules-engine.md, ARCHITECTURE-SPINE.md, AGENTS.md; done-ticket plans: story-golden-deal-test-and-r-id-test-names-plan.md, story-langdata-en-and-lettercount-plan.md.
@@ -62,3 +62,23 @@ Fixer: all 20 items applied; added `DestinationSide` to the type list (reference
 - none
 ### Dropped
 - `-0` seed (again) — no ref basis, builder's call
+
+## Pass 3 — 2026-09-28
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 5, minor 17, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+Words (docs): 1499 (6.3 x pass 0; budget 1500)  |  Snapshot: story-session-createsession-replay-and-checksession.review-log.passes/pass3.md
+Fixer: all 18 items applied; tightened existing wording to stay within budget; no commands.
+### Applied
+- [major] R-60 scope — "never touches later moves" and "Redo performs the commit without discarding" handed to entry 6, which does not own R-60 (rule-coverage R-60 row: CAP 3, 4; tickets.toml entry 6 verify) → cover "never touches later moves" here via replay with a redo tail; Notes hand-off for the Redo sentence to entry 6 → fixer item 1
+- [major] R-04 — "eight WordCells start empty" and "status playing" asserted only by a `§2` test → R-04 test asserts empty cells and playing → fixer item 2
+- [major] R-60 — no concrete case; default placementOrder cannot tell placementOrder from word order; D leaving a non-source destination unasserted → fixer item 3
+- [major] QU case — letter count could skip D cards; reword to QU as the D card (k = 1) → fixer item 4
+- [major] D8 — no test that `freeLetters` order is free; extend the R-34 case → fixer item 5
+- [minor] items 6–20 (code counts, R-31 self-drop case, dealIds guard-free, seam uniqueness/card-id-domain, committed-prefix cursor, R-32 wording, seam test prefix AD-2, Inputs reword, R-61 fixture shape, cursor-phase code, QU committed, cut messages sentence, trim opening paragraph, move-major order, status Idle clause) → fixer items 6–20
+### Default applied (technical)
+- Seam throw tests named `AD-2 …`; out-of-range id reuses `card-id-domain`
+- `dealIds` guard-free (D1 unchanged); `replayFrom` validates the Start, then `checkSession`
+- Per-move validation move-major; cursor-phase/reached one code; `sourceCount` range one code
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
