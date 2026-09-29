@@ -1,5 +1,5 @@
 # Review log — story-session-createsession-replay-and-checksession.md (ticket 2.3)
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 187bd73, copy `story-session-createsession-replay-and-checksession.review-log.passes/pass0.md`, 235 words.
 Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), epic-rules-engine.md, ARCHITECTURE-SPINE.md, AGENTS.md; done-ticket plans: story-golden-deal-test-and-r-id-test-names-plan.md, story-langdata-en-and-lettercount-plan.md.
@@ -38,3 +38,27 @@ Fixer: all 19 items applied; no commands added.
 - none
 ### Dropped
 - `-0` seed normalisation (edge-case) — unlikely corner case, no ref basis; builder's call
+
+## Pass 2 — 2026-09-28
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 6, minor 14, decision-needed 0  |  Dropped in triage: 1 (plus duplicates merged)
+Words (docs): 1437 (6.1 x pass 0; budget 1500)  |  Snapshot: story-session-createsession-replay-and-checksession.review-log.passes/pass2.md
+Fixer: all 20 items applied; added `DestinationSide` to the type list (referenced by Move); no commands.
+### Applied
+- [major] Inputs bullet vs Violable checks — "no test feeds out-of-domain/wrongly typed fields" contradicts AD-7 typed checks (seed, activeMs, gaveUp, cursor.index, unknown fields) owned by checkSession → fixer item 1
+- [major] AC — no redo-tail violation case and no Q-41 below-committed last-element accepting case (SPEC CAP-3) → fixer item 2
+- [major] R-60 scope — `cursor = {index + 1, idle}` and "never touches later moves" left unowned → fixer item 3
+- [major] Accepting cases — no scenarios for R-12, R-30, R-32, R-34; R-12/R-32 not expressible as a Move → fixer item 4
+- [major] R-61 — no exposure test; "not usable in the same word" handed to entry 4, which does not list R-61 (rule-coverage: R-61 CAP-3 only) → fixer item 5
+- [major] AC — no test that a draft/redo tail leaves the returned position equal to the committed prefix (§4 preamble, §2 committed-prefix row) → fixer item 6
+- [minor] items 7–20: code-literal mapping, test-id prefixes (R-02 kept, seam throws `§2`), R-52/R-41 shared Session, exact type list, message wording, §2 invariant two codes, QU upper R-40 boundary, `Object.hasOwn`, Start tuple types, deep-freeze scope, Infinity seed, checkSession signature, seed shared code, won-test wording, R-31/presence code counts → fixer items 7–20
+### Default applied (technical)
+- AD-7 typed checks tested with cast-built Sessions; schema stage owns only fields AD-7 does not type
+- Cursor advance and "never touches later moves" → entries 5 (`confirm`) and 6 (`redo`)
+- R-12, R-32 covered by construction (no Move field expresses them), named in the plan
+- `checkSession(session)` = AD-7 pre-replay checks only; `replayFrom` runs the post-replay gaveUp check
+- §2 invariant two codes; R-31 one range code; presence one code; one shared `seed-uint32` code
+- `Start` columns/cells as fixed-length 8-tuples (compile-time), no runtime shape check
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- `-0` seed (again) — no ref basis, builder's call
