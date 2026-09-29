@@ -3,7 +3,7 @@ title: 'Golden deal test and R-id test names'
 type: 'chore'
 ticket: '1'
 created: '2026-09-28'
-status: 'built'
+status: done
 baseline_revision: '82d85532a161ffeb3960dd4e2bcfb382c99d0495'
 route: 'oneshot'
 route_source: 'auto'
