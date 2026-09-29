@@ -1,7 +1,16 @@
 /**
  * The one engine error class. `check` is a kebab-case code unique per check, so tests assert
- * exactly which check threw. Codes in use: `card-id-domain`, `lang-deck-size`,
- * `lang-unknown-letter`.
+ * exactly which check threw. Codes in use:
+ * - LangData: `card-id-domain`, `lang-deck-size`, `lang-unknown-letter`.
+ * - Start seam (D2): `start-duplicate-card`, `start-no-column-card` (plus `card-id-domain`).
+ * - AD-7 pre-replay (`checkSession`, in this order): `seed-uint32`, `ad7-active-ms`,
+ *   `ad7-gave-up-type`, `ad7-cursor-index`, `ad7-cursor-phase`, `ad7-gave-up-idle`,
+ *   `ad7-place-fields`, `ad7-k0-side`, `s2-committed-prefix`, `s2-last-only`,
+ *   `ad7-unknown-session-field`, `ad7-unknown-cursor-field`, `ad7-unknown-move-field`.
+ * - Per move (§2 replay, in this order): `r13-source-count`, `r31-destination-count`,
+ *   `r33-free-letter-duplicate`, `r33-free-letter-empty`, `s2-free-letters-set`,
+ *   `r35-arrangement`, `r36-letter-count`, `r40-target-cell`, `r50-placement-order`.
+ * - AD-7 post-replay: `ad7-gave-up-won`.
  */
 export class EngineError extends Error {
   readonly check: string;

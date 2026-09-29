@@ -1,0 +1,194 @@
+import { EngineError } from './errors';
+import { type LangData, letterCount } from './lang/lang-data';
+import type { Move, Reached } from './session';
+import { type CardId, MIN_WORD_LENGTH, WORD_CELL_NUMBERS, type WordCellNumber } from './types';
+
+/**
+ * A tableau position (build-notes CAP-3). `columns[0]` is column 1, each top → bottom;
+ * `cells[0]` is WordCell 3 … `cells[7]` WordCell 10, each bottom → top.
+ */
+export interface Position {
+  readonly columns: readonly (readonly CardId[])[];
+  readonly cells: readonly (readonly CardId[])[];
+}
+
+/** A move whose Place fields are present (`reached` ≥ place, guaranteed by `checkSession`). */
+export type PlacedMove = Move & {
+  readonly targetCell: WordCellNumber;
+  readonly placementOrder: readonly CardId[];
+};
+
+const RANK: Readonly<Record<Reached, number>> = { composing: 1, place: 2, committed: 3 };
+
+/** True when `reached` is at least `phase` in the order composing < place < committed. */
+export function reachedAtLeast(reached: Reached, phase: Reached): boolean {
+  return RANK[reached] >= RANK[phase];
+}
+
+/** Narrows a move `checkSession` has shown to carry its Place fields. */
+export function placed(move: Move): PlacedMove {
+  return move as PlacedMove;
+}
+
+const cellIndex = (cell: WordCellNumber): number => cell - WORD_CELL_NUMBERS[0];
+
+function fail(check: string, index: number, rule: string, detail: string): never {
+  throw new EngineError(check, `move ${index}: ${rule} ${detail}`);
+}
+
+function isPermutation(a: readonly CardId[], b: readonly CardId[]): boolean {
+  if (a.length !== b.length) return false;
+  const x = [...a].sort((p, q) => p - q);
+  const y = [...b].sort((p, q) => p - q);
+  return x.every((card, i) => card === y[i]);
+}
+
+/** R-10, R-13: S is the bottom 1…column-size cards of the source column. */
+function checkSourceCount(position: Position, move: Move, index: number): readonly CardId[] {
+  const column = position.columns[move.sourceColumn - 1];
+  if (!(move.sourceCount >= 1 && move.sourceCount <= column.length))
+    fail(
+      'r13-source-count',
+      index,
+      'R-13',
+      `sourceCount ${move.sourceCount} outside 1…${column.length}`,
+    );
+  return column.slice(column.length - move.sourceCount);
+}
+
+/** The destination column after R-21 (S removed when it is the source column). */
+function destinationRemainder(position: Position, move: Move): readonly CardId[] {
+  const column = position.columns[move.destinationColumn - 1];
+  return move.destinationColumn === move.sourceColumn
+    ? column.slice(0, column.length - move.sourceCount)
+    : column;
+}
+
+/** R-31 (R-21, R-22): k = 0 iff the destination is empty after R-21, else 1…n. */
+function checkDestinationCount(position: Position, move: Move, index: number): readonly CardId[] {
+  const remainder = destinationRemainder(position, move);
+  const n = remainder.length;
+  const k = move.destinationCount;
+  const ok = n === 0 ? k === 0 : k >= 1 && k <= n;
+  if (!ok)
+    fail(
+      'r31-destination-count',
+      index,
+      'R-31',
+      `destinationCount ${k} outside ${n === 0 ? '0…0' : `1…${n}`}`,
+    );
+  return remainder.slice(n - k);
+}
+
+/** R-33: no WordCell listed twice. */
+function checkFreeLetterDuplicate(move: Move, index: number): void {
+  if (new Set(move.freeLetters).size !== move.freeLetters.length)
+    fail(
+      'r33-free-letter-duplicate',
+      index,
+      'R-33',
+      `freeLetters ${move.freeLetters} repeat a cell`,
+    );
+}
+
+/** R-33: every listed WordCell has a top card. */
+function checkFreeLetterEmpty(position: Position, move: Move, index: number): void {
+  for (const cell of move.freeLetters)
+    if (position.cells[cellIndex(cell)].length === 0)
+      fail('r33-free-letter-empty', index, 'R-33', `free-letter WordCell ${cell} is empty`);
+}
+
+/** §2: the listed cells' top cards equal, as a set, the `arrangement` cards not in S. */
+function checkFreeLettersSet(
+  position: Position,
+  move: Move,
+  source: readonly CardId[],
+  index: number,
+): readonly CardId[] {
+  const free = move.freeLetters.map((cell) => {
+    const stack = position.cells[cellIndex(cell)];
+    return stack[stack.length - 1];
+  });
+  const freeSet = new Set(free);
+  const others = new Set(move.arrangement.filter((card) => !source.includes(card)));
+  if (others.size !== freeSet.size || [...others].some((card) => !freeSet.has(card)))
+    fail(
+      's2-free-letters-set',
+      index,
+      '§2',
+      'freeLetters tops differ from the arrangement cards not in S',
+    );
+  return free;
+}
+
+/** R-35 (R-34): `arrangement` is a permutation of S ∪ F. */
+function checkArrangement(
+  move: Move,
+  source: readonly CardId[],
+  free: readonly CardId[],
+  index: number,
+): void {
+  if (!isPermutation(move.arrangement, [...source, ...free]))
+    fail('r35-arrangement', index, 'R-35', 'arrangement is not a permutation of S ∪ F');
+}
+
+/** R-36: the word's letter count is at least `MIN_WORD_LENGTH`; returns it (L of R-40). */
+function checkLetterCount(word: readonly CardId[], lang: LangData, index: number): number {
+  const count = word.reduce((sum, card) => sum + letterCount(card, lang), 0);
+  if (count < MIN_WORD_LENGTH)
+    fail('r36-letter-count', index, 'R-36', `letter count ${count} below ${MIN_WORD_LENGTH}`);
+  return count;
+}
+
+/** R-40 (R-41): `targetCell` ≤ the word's letter count. */
+function checkTargetCell(move: PlacedMove, count: number, index: number): void {
+  if (move.targetCell > count)
+    fail(
+      'r40-target-cell',
+      index,
+      'R-40',
+      `targetCell ${move.targetCell} above letter count ${count}`,
+    );
+}
+
+/** R-50: `placementOrder` is a permutation of S ∪ F ∪ D. */
+function checkPlacementOrder(move: PlacedMove, word: readonly CardId[], index: number): void {
+  if (!isPermutation(move.placementOrder, word))
+    fail('r50-placement-order', index, 'R-50', 'placementOrder is not a permutation of S ∪ F ∪ D');
+}
+
+/**
+ * Checks `move` (at `moves[index]`) from `position` against the rules of its `reached` state
+ * (§2), in build-notes CAP-3 order; the first violation throws. Inputs are schema-valid
+ * (engine-produced, or passed by `parseSession`'s schema stage, entry 10); replay adds no type
+ * or domain check.
+ */
+export function checkMove(position: Position, move: Move, index: number, lang: LangData): void {
+  const source = checkSourceCount(position, move, index);
+  const destination = checkDestinationCount(position, move, index);
+  checkFreeLetterDuplicate(move, index);
+  checkFreeLetterEmpty(position, move, index);
+  const free = checkFreeLettersSet(position, move, source, index);
+  checkArrangement(move, source, free, index);
+  if (!reachedAtLeast(move.reached, 'place')) return;
+  const word = [...source, ...free, ...destination];
+  const count = checkLetterCount(word, lang, index);
+  checkTargetCell(placed(move), count, index);
+  checkPlacementOrder(placed(move), word, index);
+}
+
+/**
+ * The commit's position effect (R-60, R-61, R-52): remove S, then D from the remainder, then
+ * each used free letter's top, then push `placementOrder` onto the target. Returns new arrays.
+ */
+export function commitMove(position: Position, move: PlacedMove): Position {
+  const columns = position.columns.map((column) => [...column]);
+  const cells = position.cells.map((cell) => [...cell]);
+  const source = columns[move.sourceColumn - 1];
+  source.splice(source.length - move.sourceCount);
+  const destination = columns[move.destinationColumn - 1];
+  destination.splice(destination.length - move.destinationCount);
+  for (const cell of move.freeLetters) cells[cellIndex(cell)].pop();
+  cells[cellIndex(move.targetCell)].push(...move.placementOrder);
+  return { columns, cells };
+}

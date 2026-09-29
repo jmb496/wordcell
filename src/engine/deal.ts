@@ -1,5 +1,5 @@
 import { EN } from './lang/en';
-import { type Card, COLUMN_COUNT, DECK_SIZE } from './types';
+import { type Card, type CardId, COLUMN_COUNT, DECK_SIZE } from './types';
 
 /**
  * Deterministic 32-bit PRNG (mulberry32). Same seed → same deal on every device, which is
@@ -22,9 +22,9 @@ export function buildDeck(): Card[] {
 }
 
 /** Fisher–Yates shuffle driven by the seeded PRNG. */
-export function shuffle(cards: readonly Card[], seed: number): Card[] {
+export function shuffle<T>(items: readonly T[], seed: number): T[] {
   const rng = mulberry32(seed);
-  const out = [...cards];
+  const out = [...items];
   for (let i = out.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
     [out[i], out[j]] = [out[j], out[i]];
@@ -33,13 +33,21 @@ export function shuffle(cards: readonly Card[], seed: number): Card[] {
 }
 
 /**
- * Deal the shuffled deck round-robin into 8 columns, FreeCell style.
+ * Deal the shuffled CardIds 0–51 round-robin into 8 columns, FreeCell style (R-03).
  * Columns 1–4 receive 7 cards, columns 5–8 receive 6. Index 0 of each column is the top
- * (covered) card; the last index is the exposed bottom card.
+ * (covered) card; the last index is the exposed bottom card. Internal (D2, CAP-3).
  */
-export function deal(seed: number): Card[][] {
-  const deck = shuffle(buildDeck(), seed);
-  const columns: Card[][] = Array.from({ length: COLUMN_COUNT }, () => []);
-  for (const [i, card] of deck.entries()) columns[i % COLUMN_COUNT].push(card);
+export function dealIds(seed: number): CardId[][] {
+  const deck = shuffle(
+    Array.from({ length: DECK_SIZE }, (_, id) => id),
+    seed,
+  );
+  const columns: CardId[][] = Array.from({ length: COLUMN_COUNT }, () => []);
+  for (const [i, id] of deck.entries()) columns[i % COLUMN_COUNT].push(id);
   return columns;
+}
+
+/** D1: `dealIds` with each card's `EN` letter. */
+export function deal(seed: number): Card[][] {
+  return dealIds(seed).map((col) => col.map((id) => ({ id, letter: EN.letters[id] })));
 }

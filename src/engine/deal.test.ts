@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildDeck, deal, shuffle } from './deal';
+import { buildDeck, deal, dealIds, shuffle } from './deal';
 import { EN } from './lang/en';
 import { DECK_SIZE } from './types';
 
@@ -117,14 +117,21 @@ describe('deal', () => {
   });
 
   it('R-02 golden deal: seeds 1 and 4294967295', () => {
-    const seed1 = deal(1).map((col) => col.map((c) => c.id));
-    const seedMax = deal(4294967295).map((col) => col.map((c) => c.id));
+    const seed1 = dealIds(1);
+    const seedMax = dealIds(4294967295);
     const letters = EN.letters;
     expect({ seed1, seedMax, letters }).toEqual({
       seed1: GOLDEN_COLUMNS_SEED_1,
       seedMax: GOLDEN_COLUMNS_SEED_MAX,
       letters: GOLDEN_LETTERS,
     });
+  });
+
+  it("R-02 deal(seed) is dealIds(seed) with each card's EN letter", () => {
+    for (const seed of [1, 4294967295])
+      expect(deal(seed)).toStrictEqual(
+        dealIds(seed).map((col) => col.map((id) => ({ id, letter: EN.letters[id] }))),
+      );
   });
 
   it('R-03 deals round-robin, first dealt is the column top', () => {

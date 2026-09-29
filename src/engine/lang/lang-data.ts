@@ -44,7 +44,8 @@ export function makeLangData(id: string, entries: readonly LangEntry[]): LangDat
   return Object.freeze({ id, letters, distribution, letterValue, maxScore });
 }
 
-function assertCardId(card: CardId): void {
+/** AD-2 CardId domain 0–51; throws `card-id-domain`. */
+export function assertCardId(card: CardId): void {
   if (!(Number.isInteger(card) && card >= 0 && card <= DECK_SIZE - 1))
     throw new EngineError('card-id-domain', `card ${card} is not a CardId 0–${DECK_SIZE - 1}`);
 }
