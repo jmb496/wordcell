@@ -1,5 +1,5 @@
 # Review log — story-langdata-en-and-lettercount.md (ticket 2.2)
-State: pass 1: done
+State: pass 2: done (converged)
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 4b2107a, copy `story-langdata-en-and-lettercount.review-log.passes/pass0.md`, 204 words.
 Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), epic-rules-engine.md, ARCHITECTURE-SPINE.md, AGENTS.md; done-ticket plans: story-golden-deal-test-and-r-id-test-names-plan.md.
@@ -40,3 +40,35 @@ Fixer: applied items 1–19; no commands touched.
 - constructor rejecting duplicate letters / non-positive counts (not in refs; would invent requirements)
 - R-01 test asserting `QU` once (already pinned by the golden letter literal)
 - separate test that `buildDeck` letters equal `EN.letters` (build-notes: no second test; covered by item 2's single derivation)
+
+## Pass 2 — 2026-09-28 22:50
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 0, minor 16 (after merge), decision-needed 0  |  Dropped in triage: 2
+Words (docs): 758 (3.7 x pass 0; budget 1500)  |  Snapshot: story-langdata-en-and-lettercount.review-log.passes/pass1.md (no fix pass)
+### Applied
+- none (converged; no fix pass)
+### Default applied (technical)
+- none this pass
+### Decision needed (functionality / UX / gameplay)
+- none
+### Reclassified
+- edge-case "constructor validates only the sum (duplicate letter, non-positive/non-integer count or value)" major → minor: refs require only the sum check (SPEC CAP-2, build-notes CAP-2) and every input is engine-authored (`EN`, the CAP-6 test language); pass 1 already dropped the same point as inventing requirements.
+### Dropped
+- (none from the fix-diff lens: it found items 1–19 landed and raised only the distribution-shape minor, merged below)
+- "golden before-edit run needs recorded evidence" — process evidence belongs in the build plan (minor at most; plan detail).
+
+## Result — converged after 2 passes
+
+Majors per pass: 8, 0. Decision-needed: none. Technical defaults applied: 5 (pass 1).
+
+Unapplied minors (for the build plan or a later loop):
+- LangData output shape unstated: whether `EN.distribution` entries keep `value`, whether build-notes' `id: 'en'` stays, `letterValue` function vs map (default: build-notes shape; `distribution` = the constructor's input entries as given, deep-frozen; `id` passed to the constructor).
+- Home module of `letterCount` and `spelling` unnamed (default: `src/engine/lang/lang-data.ts`, index re-exports only `letterCount`).
+- `letterCount` derivation not restated (default: `lang.letterValue(lang.letters[card])` after the domain check, build-notes CAP-2).
+- Constructor accepts duplicate letters or non-positive/non-integer counts/values (default: state only the sum check is in scope, or add one code per check).
+- maxScore factor 10 unnamed; must be the highest WordCell number (`Math.max(...WORD_CELL_NUMBERS)`), never `PENALTY_PER_LETTER`.
+- Synthetic-language case is only "e.g."; make it assert `maxScore` 540 and frozen, encoded as EN with one more count-1 letter at value 2.
+- spelling throw list lacks NaN; use one shared CardId-domain guard (and code) for `letterCount` and `spelling`.
+- Test names: frozen test → `AD-2 …`, constructor sum test → `R-01 …` rather than R-85; note CAP-4 still owns R-37's word-string coverage.
+- `buildDeck` reads `EN.letters` refines build-notes' "reads `EN.distribution`"; say so. Optionally one `expect(buildDeck().map(c => c.letter)).toEqual(EN.letters)` inside the existing R-01 test (no new test, no literal).
+- Say only `Letter` and `ENGLISH_DISTRIBUTION` leave `types.ts`; the rule constants stay (build-notes Scaffold facts).
+- The AGENTS.md pitfall refresh needs a named trigger (build hand-off or the epic's closing sweep).
