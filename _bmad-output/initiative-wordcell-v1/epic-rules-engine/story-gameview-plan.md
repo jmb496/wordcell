@@ -142,7 +142,7 @@ deferred: []
 
 - Flags from predicates, not from calling `apply`: view replays once; the agreement tests prove the predicates match `apply` (build-notes CAP-7).
 - `canDropOn` is true for every column in Idle while playing (a non-empty column always exists then; any non-empty source works, including c itself); still computed from the predicate over candidates, not hard-coded.
-- The whole-view `toStrictEqual` + `structuredClone` round trip catches `undefined`-valued keys and functions; hence "omitted keys".
+- Omitted keys, not `undefined`-valued ones: the per-key `Object.hasOwn` tests and the plain-data test's no-`undefined`-value check prove it (`structuredClone` keeps `undefined`-valued keys); the whole-view `toStrictEqual` + `structuredClone` round trip proves there are no functions or other non-cloneable values.
 
 ## Verification
 

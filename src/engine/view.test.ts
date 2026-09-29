@@ -337,6 +337,13 @@ describe('GameView fields', () => {
 /** WON undone to Idle at index 7 (column 8 back), then given up. */
 const GAVE_UP_LATE = play(WON, [UNDO, UNDO, UNDO, GIVE_UP]);
 
+/** Column 3's E J A T A onto its own QU (k = 1), QU placed last so it tops cell 7. */
+const QU_TOP = play(
+  FRESH,
+  [drop(3, 5, 3), VALIDATE, { type: 'setPlacementOrder', order: [8, 21, 2, 42, 0, 35] }, CONFIRM],
+  ['quejata'],
+);
+
 describe('GameView scores', () => {
   it('R-80 liveScore is scoring.liveScore over the committed WordCells', () => {
     expect(v(FRESH).liveScore).toBe(0);
@@ -433,6 +440,11 @@ describe('GameView scores', () => {
     });
   });
 
+  it('AD-3 a committed word spells R-37 tray order, not its placementOrder', () => {
+    expect(draftOf(play(QU_TOP, [UNDO])).placementOrder).toStrictEqual([8, 21, 2, 42, 0, 35]);
+    expect(v(QU_TOP).longestWord).toStrictEqual({ spelling: 'quejata', letterCount: 7 });
+  });
+
   it('AD-3 longestWord ties to the earliest (internal longestWord)', () => {
     expect(longestWord([])).toBeUndefined();
     expect(
@@ -506,22 +518,24 @@ describe('GameView Place data', () => {
     expect(ten.draft?.letterCount).toBe(10);
     expect(ten.place?.legalTargets).toStrictEqual(WORD_CELL_NUMBERS);
     expect(ten.cells.map((c) => c.isLegalTarget)).toStrictEqual(WORD_CELL_NUMBERS.map(() => true));
+    // L = 11: ten cards with QU; the validate default target is 10 (R-42), scoreDelta per D6.
+    const elevenStart = startOf(['QABCDEFGH', 'I']);
+    const eleven = viewFrom(
+      elevenStart,
+      seam(elevenStart, [drop(2, 1, 1), setK(9), VALIDATE], ['quabcdefghi']),
+      LANG,
+    );
+    expect(eleven.draft).toMatchObject({ word: 'quabcdefghi', letterCount: 11 });
+    expect(eleven.place).toMatchObject({
+      legalTargets: WORD_CELL_NUMBERS,
+      target: 10,
+      scoreDelta: 11 * 10,
+    });
   });
 
   it('AD-3 D6 scoreDelta equals the live-score change of the commit (QU free letter, R-41, ≤ 0)', () => {
-    // Column 3's E J A T A onto its own QU (k = 1), QU placed last so it tops cell 7.
-    const quTop = play(
-      FRESH,
-      [
-        drop(3, 5, 3),
-        VALIDATE,
-        { type: 'setPlacementOrder', order: [8, 21, 2, 42, 0, 35] },
-        CONFIRM,
-      ],
-      ['quejata'],
-    );
-    expect(cellOf(v(quTop), 7).cards.at(-1)).toBe(35);
-    const quFree = play(quTop, [drop(1, 1, 2), addFree(7), VALIDATE], ['mwqu']);
+    expect(cellOf(v(QU_TOP), 7).cards.at(-1)).toBe(35);
+    const quFree = play(QU_TOP, [drop(1, 1, 2), addFree(7), VALIDATE], ['mwqu']);
     expect(v(quFree).draft?.word).toBe('mwqu');
     const lowTarget = play(quFree, [setTarget(3)]);
     const cases: readonly (readonly [Session, number])[] = [
@@ -600,6 +614,8 @@ const TAP_STATES: readonly Session[] = [
   N1_RIGHT,
   PARTIAL_SELF,
   PARTIAL_SELF_RIGHT,
+  FREE,
+  play(FREE, [FLIP]),
 ];
 
 describe('GameView R-31 and R-33', () => {
@@ -770,19 +786,23 @@ describe('GameView flags agree with apply', () => {
   });
 
   it('AD-3 in each canValidate false state validate throws the expected check', () => {
-    const cases: readonly (readonly [Session, string])[] = [
-      [FRESH, 'command-phase'],
-      [PENDING0, 'command-phase'],
-      [PLACE_R41, 'command-phase'],
-      [WON, 'command-status'],
-      [GAVE_UP0, 'command-status'],
-      [SHORT, 'r36-letter-count'],
-      [K1, 'r36-letter-count'],
-    ];
-    for (const [session, check] of cases) {
-      expect(v(session).canValidate).toBe(false);
-      expectEngineError(() => apply(session, VALIDATE, DICT('mw', 'aw')), check);
+    const checkOf = (session: Session): string => {
+      const gameView = v(session);
+      if (gameView.status !== 'playing') return 'command-status';
+      if (gameView.phase !== 'composing') return 'command-phase';
+      return 'r36-letter-count';
+    };
+    for (const [, session] of STATES) {
+      if (v(session).canValidate) continue;
+      const words =
+        session.cursor.phase === 'idle'
+          ? []
+          : [word(replay(session, LANG), draftOf(session), LANG).spelling];
+      expectEngineError(() => apply(session, VALIDATE, DICT(...words)), checkOf(session));
     }
+    expect(STATES.filter(([, s]) => !v(s).canValidate).map(([, s]) => checkOf(s))).toEqual(
+      expect.arrayContaining(['command-status', 'command-phase', 'r36-letter-count']),
+    );
   });
 });
 
@@ -794,6 +814,8 @@ describe('GameView contract', () => {
       const gameView = v(session);
       expect(v(structuredClone(session))).toStrictEqual(gameView);
       expect(structuredClone(gameView)).toStrictEqual(gameView);
+      for (const part of [gameView, gameView.draft ?? {}, gameView.place ?? {}])
+        expect(Object.values(part)).not.toContain(undefined);
       expect(Object.isFrozen(session) && Object.isFrozen(LANG)).toBe(true);
     }
   });
