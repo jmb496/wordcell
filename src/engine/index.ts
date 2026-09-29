@@ -4,6 +4,18 @@ export { deal } from './deal';
 export { EN } from './lang/en';
 export type { LangData } from './lang/lang-data';
 export { letterCount } from './lang/lang-data';
+export type { Status } from './replay';
 export type { Cursor, DestinationSide, Move, Phase, Reached, Session } from './session';
 export { createSession, SESSION_VERSION } from './session';
 export type { Card, CardId, WordCellNumber } from './types';
+export type {
+  CellView,
+  ColumnView,
+  DraftView,
+  Face,
+  GameView,
+  LongestWord,
+  PlaceView,
+  StructuralCheck,
+} from './view';
+export { view } from './view';

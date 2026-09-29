@@ -1,6 +1,6 @@
 import { EngineError } from './errors';
 import { assertCardId, type LangData } from './lang/lang-data';
-import { dealtStart, replayFrom, type Start, status } from './replay';
+import { dealtStart, replayFrom, type Start, type Status, status } from './replay';
 import {
   checkArrangement,
   checkDestinationCount,
@@ -11,6 +11,7 @@ import {
   checkSourceCount,
   checkTargetCell,
   destinationRemainder,
+  flippedSide,
   freeCards,
   freeLetterIndexInRange,
   hasFreeLetter,
@@ -20,6 +21,7 @@ import {
   reachedAtLeast,
   sameDraftData,
   sourceCards,
+  tapDestinationCount,
   word,
 } from './rules';
 import type { Move, Phase, Session } from './session';
@@ -206,10 +208,12 @@ function tapDestinationCard(
       'r31-tap-not-in-destination',
       `move ${context.index}: R-31 card ${card} is not in the destination column after R-21`,
     );
-  const remainder = destinationRemainder(position, draft);
-  const tapped = remainder.length - remainder.indexOf(card);
-  const k = draft.destinationCount;
-  return edit(context, { ...draft, destinationCount: tapped === k ? Math.max(1, k - 1) : tapped });
+  const destinationCount = tapDestinationCount(
+    destinationRemainder(position, draft),
+    card,
+    draft.destinationCount,
+  );
+  return edit(context, { ...draft, destinationCount });
 }
 
 /** R-31 plus/minus: k in 1…n on a non-empty destination; never on an empty one. */
@@ -233,8 +237,7 @@ function setDestinationCount(
 /** R-30, R-31: toggle the side; at k = 0 it stays left (a no-op). */
 function flip(context: DraftContext): ApplyResult {
   const { draft } = context;
-  const side = draft.destinationCount === 0 || draft.destinationSide === 'right' ? 'left' : 'right';
-  return edit(context, { ...draft, destinationSide: side });
+  return edit(context, { ...draft, destinationSide: flippedSide(draft) });
 }
 
 /** R-33, Q-31, D8: append `cell`; insert its top card into M at `index` (default |M|). */
@@ -368,6 +371,38 @@ function confirm({ session, draft, index }: DraftContext): ApplyResult {
 
 // --- undo, redo, give up (R-70, R-71, R-75; build-notes CAP-5) --------------------------------
 
+/** R-70, R-75 availability (any status): gaveUp, or not Idle at index 0. Internal (view.ts). */
+export function undoAvailable(session: Session): boolean {
+  const { index, phase } = session.cursor;
+  return session.gaveUp || !(phase === 'idle' && index === 0);
+}
+
+/**
+ * R-71 redo data (the status check is the caller's): Idle with a pending draft, Composing with
+ * `reached` ≥ place, Place with `reached` = committed. Internal (view.ts).
+ */
+export function redoAvailable(session: Session): boolean {
+  const { index, phase } = session.cursor;
+  const draft = session.moves[index];
+  switch (phase) {
+    case 'idle':
+      return draft !== undefined;
+    case 'composing':
+      return reachedAtLeast(draft.reached, 'place');
+    case 'place':
+      return draft.reached === 'committed';
+    default: {
+      const unknown: never = phase;
+      return reject('command-domain', `AD-2 redo in unknown phase ${String(unknown)}`);
+    }
+  }
+}
+
+/** R-75 availability: status playing and phase Idle (the `giveUp` prelude). Internal (view.ts). */
+export function giveUpAvailable(session: Session, current: Status): boolean {
+  return current === 'playing' && session.cursor.phase === 'idle';
+}
+
 /**
  * R-70, R-75: replay only (no status or phase check). gaveUp → clear the flag; otherwise one
  * phase state back. `moves` is never touched: an Idle pending draft stays at `moves[index]` and
@@ -375,11 +410,11 @@ function confirm({ session, draft, index }: DraftContext): ApplyResult {
  */
 function undo(start: Start, session: Session, ctx: ApplyContext): ApplyResult {
   replayFrom(start, session, ctx.lang);
+  if (!undoAvailable(session)) reject('r70-nothing-to-undo', 'R-70 undo in Idle at index 0');
   if (session.gaveUp) return { session: { ...session, gaveUp: false } };
   const { index, phase } = session.cursor;
   switch (phase) {
     case 'idle':
-      if (index === 0) reject('r70-nothing-to-undo', 'R-70 undo in Idle at index 0');
       return { session: { ...session, cursor: { index: index - 1, phase: 'place' } } };
     case 'place':
       return { session: { ...session, cursor: { index, phase: 'composing' } } };
@@ -400,14 +435,20 @@ function undo(start: Start, session: Session, ctx: ApplyContext): ApplyResult {
 function redo(start: Start, session: Session, ctx: ApplyContext): ApplyResult {
   playing(start, session, ctx, 'redo');
   const { index, phase } = session.cursor;
-  const draft = session.moves[index];
-  if (phase === 'idle' && draft !== undefined)
-    return { session: { ...session, cursor: { index, phase: 'composing' } } };
-  if (phase === 'composing' && reachedAtLeast(draft.reached, 'place'))
-    return { session: { ...session, cursor: { index, phase: 'place' } } };
-  if (phase === 'place' && draft.reached === 'committed')
-    return { session: { ...session, cursor: { index: index + 1, phase: 'idle' } } };
-  return reject('r71-no-redo-data', `R-71 redo in ${phase} at index ${index} has no redo data`);
+  if (!redoAvailable(session))
+    reject('r71-no-redo-data', `R-71 redo in ${phase} at index ${index} has no redo data`);
+  switch (phase) {
+    case 'idle':
+      return { session: { ...session, cursor: { index, phase: 'composing' } } };
+    case 'composing':
+      return { session: { ...session, cursor: { index, phase: 'place' } } };
+    case 'place':
+      return { session: { ...session, cursor: { index: index + 1, phase: 'idle' } } };
+    default: {
+      const unknown: never = phase;
+      return reject('command-domain', `AD-2 redo in unknown phase ${String(unknown)}`);
+    }
+  }
 }
 
 /** R-75: Idle while playing; sets the flag only (moves and cursor untouched). */

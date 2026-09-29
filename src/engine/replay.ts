@@ -1,7 +1,15 @@
 import { dealIds } from './deal';
 import { EngineError } from './errors';
 import { assertCardId, type LangData } from './lang/lang-data';
-import { checkMove, commitMove, type Position, placed, reachedAtLeast } from './rules';
+import {
+  checkMove,
+  commitMove,
+  type Position,
+  placed,
+  reachedAtLeast,
+  word,
+  wordLetterCount,
+} from './rules';
 import { assertSeed, type Session } from './session';
 import type { CardId } from './types';
 
@@ -125,13 +133,24 @@ export function checkSession(session: Session): void {
   }
 }
 
+/** A committed word (AD-6 shape): its R-37 lowercase spelling and letter count (R-85). */
+export interface CommittedWord {
+  readonly spelling: string;
+  readonly letterCount: number;
+}
+
 /**
  * Replays `session` from `start` (§2): every committed move, then the draft or pending draft at
  * its `reached`, then each redo-tail move at its own `reached` on a scratch position. Returns the
- * committed-prefix position. Inputs are schema-valid (engine-produced, or passed by `parseSession`'s
- * schema stage, entry 10); replay adds no type or domain check.
+ * committed-prefix position and one word per committed-prefix move (index < `cursor.index`, R-30
+ * from the position before it). Inputs are schema-valid (engine-produced, or passed by
+ * `parseSession`'s schema stage, entry 10); replay adds no type or domain check. Internal.
  */
-export function replayFrom(start: Start, session: Session, lang: LangData): Position {
+export function replayWords(
+  start: Start,
+  session: Session,
+  lang: LangData,
+): { readonly position: Position; readonly words: readonly CommittedWord[] } {
   checkStart(start);
   checkSession(session);
   const { moves, cursor } = session;
@@ -139,8 +158,11 @@ export function replayFrom(start: Start, session: Session, lang: LangData): Posi
     columns: start.columns.map((column) => [...column]),
     cells: start.cells.map((cell) => [...cell]),
   };
+  const words: CommittedWord[] = [];
   for (let i = 0; i < cursor.index; i++) {
     checkMove(position, moves[i], i, lang);
+    const { cards, spelling } = word(position, moves[i], lang);
+    words.push({ spelling, letterCount: wordLetterCount(cards, lang) });
     position = commitMove(position, placed(moves[i]));
   }
   const draft = moves[cursor.index];
@@ -157,7 +179,12 @@ export function replayFrom(start: Start, session: Session, lang: LangData): Posi
   }
   if (session.gaveUp && position.columns.every((column) => column.length === 0))
     throw new EngineError('ad7-gave-up-won', 'AD-7 gaveUp needs a non-won position');
-  return position;
+  return { position, words };
+}
+
+/** `replayWords` without the words: the committed-prefix position. */
+export function replayFrom(start: Start, session: Session, lang: LangData): Position {
+  return replayWords(start, session, lang).position;
 }
 
 /** The dealt start (D2): `dealIds(seed)` and eight empty WordCells; throws `seed-uint32`. */

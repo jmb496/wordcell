@@ -1,6 +1,6 @@
 import { EngineError } from './errors';
 import { type LangData, letterCount, spelling } from './lang/lang-data';
-import type { Move, Reached } from './session';
+import type { DestinationSide, Move, Reached } from './session';
 import { type CardId, MIN_WORD_LENGTH, WORD_CELL_NUMBERS, type WordCellNumber } from './types';
 
 /**
@@ -49,10 +49,19 @@ export function sourceCards(position: Position, move: Move): readonly CardId[] {
   return column.slice(column.length - move.sourceCount);
 }
 
+/** R-10, R-13 predicate: `sourceCount` lies in 1…the source column's size. */
+export function sourceCountAllowed(
+  position: Position,
+  move: Pick<Move, 'sourceColumn' | 'sourceCount'>,
+): boolean {
+  const column = position.columns[move.sourceColumn - 1];
+  return move.sourceCount >= 1 && move.sourceCount <= column.length;
+}
+
 /** R-10, R-13: S is the bottom 1…column-size cards of the source column. */
 export function checkSourceCount(position: Position, move: Move, index: number): readonly CardId[] {
   const column = position.columns[move.sourceColumn - 1];
-  if (!(move.sourceCount >= 1 && move.sourceCount <= column.length))
+  if (!sourceCountAllowed(position, move))
     fail(
       'r13-source-count',
       index,
@@ -70,6 +79,25 @@ export function destinationRemainder(position: Position, move: Move): readonly C
     : column;
 }
 
+/** R-31 predicate over the remainder size n: k = 0 iff n = 0, else k in 1…n. */
+export function destinationCountAllowed(n: number, k: number): boolean {
+  return n === 0 ? k === 0 : k >= 1 && k <= n;
+}
+
+/**
+ * R-31 tap mapping: tapping `card` of the destination remainder (top → bottom) makes it the
+ * top of D; tapping the current top gives k − 1, min 1. `card` must be in `remainder`.
+ */
+export function tapDestinationCount(remainder: readonly CardId[], card: CardId, k: number): number {
+  const tapped = remainder.length - remainder.indexOf(card);
+  return tapped === k ? Math.max(1, k - 1) : tapped;
+}
+
+/** R-30, R-31 flip: the side toggles; at k = 0 it stays left (the flip no-op). */
+export function flippedSide(move: Move): DestinationSide {
+  return move.destinationCount === 0 || move.destinationSide === 'right' ? 'left' : 'right';
+}
+
 /** R-31 (R-21, R-22): k = 0 iff the destination is empty after R-21, else 1…n. */
 export function checkDestinationCount(
   position: Position,
@@ -79,8 +107,7 @@ export function checkDestinationCount(
   const remainder = destinationRemainder(position, move);
   const n = remainder.length;
   const k = move.destinationCount;
-  const ok = n === 0 ? k === 0 : k >= 1 && k <= n;
-  if (!ok)
+  if (!destinationCountAllowed(n, k))
     fail(
       'r31-destination-count',
       index,
@@ -101,10 +128,15 @@ export function checkFreeLetterDuplicate(move: Move, index: number): void {
     );
 }
 
+/** R-33 predicate: WordCell `cell` has a top card. */
+export function cellHasTop(position: Position, cell: WordCellNumber): boolean {
+  return position.cells[cellIndex(cell)].length > 0;
+}
+
 /** R-33: every listed WordCell has a top card. */
 export function checkFreeLetterEmpty(position: Position, move: Move, index: number): void {
   for (const cell of move.freeLetters)
-    if (position.cells[cellIndex(cell)].length === 0)
+    if (!cellHasTop(position, cell))
       fail('r33-free-letter-empty', index, 'R-33', `free-letter WordCell ${cell} is empty`);
 }
 
@@ -150,17 +182,32 @@ export function checkArrangement(
     fail('r35-arrangement', index, 'R-35', 'arrangement is not a permutation of S ∪ F');
 }
 
+/** R-85: the letter count of `cards` (`QU` 2); L of R-40 for a word's cards. */
+export function wordLetterCount(cards: readonly CardId[], lang: LangData): number {
+  return cards.reduce((sum, card) => sum + letterCount(card, lang), 0);
+}
+
+/** R-36 predicate: a letter count of at least `MIN_WORD_LENGTH`. */
+export function letterCountAllowed(count: number): boolean {
+  return count >= MIN_WORD_LENGTH;
+}
+
 /** R-36: the word's letter count is at least `MIN_WORD_LENGTH`; returns it (L of R-40). */
 export function checkLetterCount(word: readonly CardId[], lang: LangData, index: number): number {
-  const count = word.reduce((sum, card) => sum + letterCount(card, lang), 0);
-  if (count < MIN_WORD_LENGTH)
+  const count = wordLetterCount(word, lang);
+  if (!letterCountAllowed(count))
     fail('r36-letter-count', index, 'R-36', `letter count ${count} below ${MIN_WORD_LENGTH}`);
   return count;
 }
 
+/** R-40 (R-41) predicate: `cell` ≤ the word's letter count L. */
+export function targetCellAllowed(cell: WordCellNumber, count: number): boolean {
+  return cell <= count;
+}
+
 /** R-40 (R-41): `targetCell` ≤ the word's letter count. */
 export function checkTargetCell(move: PlacedMove, count: number, index: number): void {
-  if (move.targetCell > count)
+  if (!targetCellAllowed(move.targetCell, count))
     fail(
       'r40-target-cell',
       index,
