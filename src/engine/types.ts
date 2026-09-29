@@ -21,3 +21,7 @@ export const DECK_SIZE = 52;
 export const MIN_WORD_LENGTH = 3;
 /** R-81 penalty per letter left in the columns. */
 export const PENALTY_PER_LETTER = 10;
+/** R-83 band thresholds as fractions of `BAND_DENOMINATOR`, ascending. */
+export const BAND_THRESHOLDS = [156, 260, 370, 460, 520] as const;
+/** R-83 denominator of `BAND_THRESHOLDS`. */
+export const BAND_DENOMINATOR = 520;
