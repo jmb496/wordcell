@@ -1,5 +1,5 @@
 export type { ApplyContext, ApplyResult, Command } from './commands';
-export { apply } from './commands';
+export { accrue, apply } from './commands';
 export { deal } from './deal';
 export { EN } from './lang/en';
 export type { LangData } from './lang/lang-data';

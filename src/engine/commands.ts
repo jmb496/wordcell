@@ -17,6 +17,7 @@ import {
   inDestination,
   type Position,
   placed,
+  reachedAtLeast,
   sameDraftData,
   sourceCards,
   word,
@@ -24,7 +25,7 @@ import {
 import type { Move, Phase, Session } from './session';
 import { type CardId, COLUMN_COUNT, WORD_CELL_NUMBERS, type WordCellNumber } from './types';
 
-/** AD-2 commands (the Composing and Place families; entry 6 widens the union). */
+/** AD-2 commands. */
 export type Command =
   | {
       readonly type: 'drop';
@@ -41,7 +42,10 @@ export type Command =
   | { readonly type: 'validate' }
   | { readonly type: 'setTarget'; readonly cell: WordCellNumber }
   | { readonly type: 'setPlacementOrder'; readonly order: readonly CardId[] }
-  | { readonly type: 'confirm' };
+  | { readonly type: 'confirm' }
+  | { readonly type: 'undo' }
+  | { readonly type: 'redo' }
+  | { readonly type: 'giveUp' };
 
 /** AD-2 `ctx`: language data, and the dictionary for `validate`. */
 export interface ApplyContext {
@@ -75,11 +79,17 @@ function reject(check: string, message: string): never {
 
 // --- prelude: replay → status → phase (build-notes CAP-4) ------------------------------------
 
-function prelude(start: Start, session: Session, ctx: ApplyContext, type: string, phase: Phase) {
+/** Replay → status (every command except `undo`, R-70, R-75). */
+function playing(start: Start, session: Session, ctx: ApplyContext, type: string): Position {
   const position = replayFrom(start, session, ctx.lang);
   const current = status(session, position);
   if (current !== 'playing')
     reject('command-status', `R-75 ${type} while status is ${current}, not playing`);
+  return position;
+}
+
+function prelude(start: Start, session: Session, ctx: ApplyContext, type: string, phase: Phase) {
+  const position = playing(start, session, ctx, type);
   if (session.cursor.phase !== phase)
     reject('command-phase', `§4 ${type} in phase ${session.cursor.phase}, needs ${phase}`);
   return { session, position, index: session.cursor.index };
@@ -356,6 +366,52 @@ function confirm({ session, draft, index }: DraftContext): ApplyResult {
   };
 }
 
+// --- undo, redo, give up (R-70, R-71, R-75; build-notes CAP-5) --------------------------------
+
+/**
+ * R-70, R-75: replay only (no status or phase check). gaveUp → clear the flag; otherwise one
+ * phase state back. `moves` is never touched: an Idle pending draft stays at `moves[index]` and
+ * joins the redo tail (Q-41).
+ */
+function undo(start: Start, session: Session, ctx: ApplyContext): ApplyResult {
+  replayFrom(start, session, ctx.lang);
+  if (session.gaveUp) return { session: { ...session, gaveUp: false } };
+  const { index, phase } = session.cursor;
+  switch (phase) {
+    case 'idle':
+      if (index === 0) reject('r70-nothing-to-undo', 'R-70 undo in Idle at index 0');
+      return { session: { ...session, cursor: { index: index - 1, phase: 'place' } } };
+    case 'place':
+      return { session: { ...session, cursor: { index, phase: 'composing' } } };
+    case 'composing':
+      return { session: { ...session, cursor: { index, phase: 'idle' } } };
+  }
+}
+
+/**
+ * R-71: replay → status, then one phase state forward over the stored data. Into Place trusts
+ * the stored validation (no dictionary); from Place commits only at reached = committed, without
+ * discarding later moves (R-60).
+ */
+function redo(start: Start, session: Session, ctx: ApplyContext): ApplyResult {
+  playing(start, session, ctx, 'redo');
+  const { index, phase } = session.cursor;
+  const draft = session.moves[index];
+  if (phase === 'idle' && draft !== undefined)
+    return { session: { ...session, cursor: { index, phase: 'composing' } } };
+  if (phase === 'composing' && reachedAtLeast(draft.reached, 'place'))
+    return { session: { ...session, cursor: { index, phase: 'place' } } };
+  if (phase === 'place' && draft.reached === 'committed')
+    return { session: { ...session, cursor: { index: index + 1, phase: 'idle' } } };
+  return reject('r71-no-redo-data', `R-71 redo in ${phase} at index ${index} has no redo data`);
+}
+
+/** R-75: Idle while playing; sets the flag only (moves and cursor untouched). */
+function giveUp(start: Start, session: Session, ctx: ApplyContext): ApplyResult {
+  prelude(start, session, ctx, 'giveUp', 'idle');
+  return { session: { ...session, gaveUp: true } };
+}
+
 // --- dispatch ---------------------------------------------------------------------------------
 
 /**
@@ -392,6 +448,12 @@ export function applyFrom(
       return setPlacementOrder(place(start, session, ctx, command.type), command);
     case 'confirm':
       return confirm(place(start, session, ctx, command.type));
+    case 'undo':
+      return undo(start, session, ctx);
+    case 'redo':
+      return redo(start, session, ctx);
+    case 'giveUp':
+      return giveUp(start, session, ctx);
     default: {
       const unknown: never = command;
       return reject(
@@ -408,4 +470,24 @@ export function applyFrom(
  */
 export function apply(session: Session, command: Command, ctx: ApplyContext): ApplyResult {
   return applyFrom(dealtStart(session.seed), session, command, ctx);
+}
+
+/**
+ * AD-2, R-76: adds `elapsedMs` of active time while status = playing. Validates `elapsedMs`
+ * first (`r76-elapsed-ms` in every status), returns the input for 0 before any replay and while
+ * not playing; throws `r76-active-ms-overflow` when the sum is not a safe integer.
+ */
+export function accrue(session: Session, elapsedMs: number, lang: LangData): Session {
+  if (!(Number.isSafeInteger(elapsedMs) && elapsedMs >= 0))
+    reject('r76-elapsed-ms', `R-76 elapsedMs ${elapsedMs} is not a non-negative safe integer`);
+  if (elapsedMs === 0) return session;
+  const position = replayFrom(dealtStart(session.seed), session, lang);
+  if (status(session, position) !== 'playing') return session;
+  const activeMs = session.activeMs + elapsedMs;
+  if (!Number.isSafeInteger(activeMs))
+    reject(
+      'r76-active-ms-overflow',
+      `R-76 activeMs ${session.activeMs} + ${elapsedMs} is not a safe integer`,
+    );
+  return { ...session, activeMs };
 }

@@ -1,12 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { type ApplyContext, type ApplyResult, apply, applyFrom, type Command } from './commands';
+import {
+  type ApplyContext,
+  type ApplyResult,
+  accrue,
+  apply,
+  applyFrom,
+  type Command,
+} from './commands';
 import { dealIds } from './deal';
 import { EngineError } from './errors';
 import { EN } from './lang/en';
-import { replay, replayFrom, type Start } from './replay';
+import { replay, replayFrom, type Start, status } from './replay';
 import { word } from './rules';
-import { type Move, SESSION_VERSION, type Session } from './session';
+import { createSession, type Move, SESSION_VERSION, type Session } from './session';
 import type { CardId, WordCellNumber } from './types';
+import { winSeed } from './win-seed';
 
 // --- helpers --------------------------------------------------------------------------------
 
@@ -166,6 +174,38 @@ const GAVE_UP = sessionOf(PREFIX, { index: 2, phase: 'idle' }, true);
 /** Place over a committed draft and a redo tail (redo data (a) and (b)). */
 const PLACE_TAIL = sessionOf([...PREFIX, COMMITTED_DRAFT, TAIL], { index: 2, phase: 'place' });
 
+/** The internal §2 status of `session` (R-62, R-75). */
+const st = (session: Session) => status(session, replay(session, EN));
+
+/** Seed 1 won through public `apply` (build-notes CAP-5), at cursor {8, idle}. */
+const WON = deepFreeze(winSeed(1));
+
+/** Idle at index 0 with a pending (never-committed, Place-reached) draft. */
+const PENDING0 = sessionOf([{ ...selfDrop(5, 3), reached: 'place' }], { index: 0, phase: 'idle' });
+
+/** Seed 1 column 3 is L QU E J A T A: its bottom three are A2 T A0. */
+const [, , , , A2, T42, A0] = COLS[2];
+/** Committed drop of A T A onto empty column 5 (k = 0), then TAIL, at Composing. */
+const SAME_LETTER = sessionOf(
+  [
+    ...PREFIX,
+    {
+      sourceColumn: 3,
+      sourceCount: 3,
+      destinationColumn: 5,
+      destinationCount: 0,
+      destinationSide: 'left',
+      freeLetters: [],
+      arrangement: [A2, T42, A0],
+      reached: 'committed',
+      targetCell: 3,
+      placementOrder: [A2, T42, A0],
+    },
+    TAIL,
+  ],
+  { index: 2, phase: 'composing' },
+);
+
 /** W onto column 2, k = 1: the 2-letter word M W (fails R-36). */
 const SHORT = sessionOf(
   [
@@ -272,7 +312,17 @@ const SAMPLE: Readonly<Record<Command['type'], Command>> = {
   setTarget: { type: 'setTarget', cell: 3 },
   setPlacementOrder: { type: 'setPlacementOrder', order: [M2, I, W, Z] },
   confirm: { type: 'confirm' },
+  undo: { type: 'undo' },
+  redo: { type: 'redo' },
+  giveUp: { type: 'giveUp' },
 };
+const UNDO: Command = { type: 'undo' };
+const REDO: Command = { type: 'redo' };
+const GIVE_UP: Command = { type: 'giveUp' };
+/** Every type with a status check (R-70, R-75: undo has none). */
+const STATUS_TYPES = (Object.keys(SAMPLE) as Command['type'][]).filter((t) => t !== 'undo');
+/** Status-row id per type (R-75; redo also R-71). */
+const statusId = (type: Command['type']): string => (type === 'redo' ? 'R-71 R-75' : 'R-75');
 /** validate's rows other than the check-order ones carry a dictionary (build-notes CAP-4). */
 const ctxFor = (type: Command['type']): ApplyContext =>
   type === 'validate' ? DICT(DRAFT_WORD) : CTX;
@@ -353,7 +403,7 @@ const TABLE: readonly Row[] = [
   },
   // tapDestinationCard
   {
-    id: 'R-31',
+    id: 'R-31 R-71',
     command: 'tapDestinationCard',
     precondition: 'on the top of D at k = 1',
     outcome: 'noop',
@@ -377,14 +427,14 @@ const TABLE: readonly Row[] = [
   },
   // flip
   {
-    id: 'R-31',
+    id: 'R-31 R-71',
     command: 'flip',
     precondition: 'with k = 0 (drop onto another, empty column)',
     outcome: 'noop',
     build: on(EMPTY_DEST, { type: 'flip' }),
   },
   {
-    id: 'R-31',
+    id: 'R-31 R-71',
     command: 'flip',
     precondition: 'with k = 0 (whole-column self-drop)',
     outcome: 'noop',
@@ -525,17 +575,88 @@ const TABLE: readonly Row[] = [
       }),
     ),
   ),
-  // status ≠ playing (won rows are entry 6's)
-  ...(Object.keys(SAMPLE) as Command['type'][]).map(
-    (type): Row => ({
+  ...(['composing', 'place'] as const).map(
+    (phase): Row => ({
       id: 'R-75',
-      command: type,
-      precondition: 'a command while status ≠ playing (gaveUp)',
+      command: 'giveUp',
+      precondition: `a command in the wrong phase (${phase})`,
       outcome: 'throw',
-      check: 'command-status',
-      build: on(GAVE_UP, SAMPLE[type], ctxFor(type)),
+      check: 'command-phase',
+      build: on(phase === 'composing' ? COMPOSING : PLACE, GIVE_UP),
     }),
   ),
+  // status ≠ playing: every command except undo (R-70, R-75)
+  ...(['gaveUp', 'won'] as const).flatMap((over) =>
+    STATUS_TYPES.map(
+      (type): Row => ({
+        id: statusId(type),
+        command: type,
+        precondition: `a command while status ≠ playing (${over})`,
+        outcome: 'throw',
+        check: 'command-status',
+        build: on(over === 'gaveUp' ? GAVE_UP : WON, SAMPLE[type], ctxFor(type)),
+      }),
+    ),
+  ),
+  // undo
+  {
+    id: 'R-70',
+    command: 'undo',
+    precondition: 'nothing to undo (Idle, index 0, playing)',
+    outcome: 'throw',
+    check: 'r70-nothing-to-undo',
+    build: on(createSession(1), UNDO),
+  },
+  {
+    id: 'R-70',
+    command: 'undo',
+    precondition: 'nothing to undo (Idle, index 0, playing) with a pending draft',
+    outcome: 'throw',
+    check: 'r70-nothing-to-undo',
+    build: on(PENDING0, UNDO),
+  },
+  // undo replays before its own checks (R-70, R-75)
+  {
+    id: 'AD-7',
+    command: 'undo',
+    precondition: 'cursor.index 9 beyond moves (playing)',
+    outcome: 'throw',
+    check: 'ad7-cursor-index',
+    build: on(sessionOf(PREFIX, { index: 9, phase: 'idle' }), UNDO),
+  },
+  {
+    id: 'AD-7',
+    command: 'undo',
+    precondition: 'cursor.index 9 beyond moves (gaveUp)',
+    outcome: 'throw',
+    check: 'ad7-cursor-index',
+    build: on(sessionOf(PREFIX, { index: 9, phase: 'idle' }, true), UNDO),
+  },
+  // redo
+  {
+    id: 'R-71',
+    command: 'redo',
+    precondition: 'no redo data (Idle, moves.length = index)',
+    outcome: 'throw',
+    check: 'r71-no-redo-data',
+    build: on(IDLE, REDO),
+  },
+  {
+    id: 'R-71',
+    command: 'redo',
+    precondition: 'no redo data (Composing, reached = composing)',
+    outcome: 'throw',
+    check: 'r71-no-redo-data',
+    build: on(SELF, REDO),
+  },
+  {
+    id: 'R-71',
+    command: 'redo',
+    precondition: 'no redo data (Place, reached = place)',
+    outcome: 'throw',
+    check: 'r71-no-redo-data',
+    build: on(PLACE, REDO),
+  },
   {
     id: 'AD-2',
     command: 'x',
@@ -938,7 +1059,7 @@ describe('drop', () => {
     }
   });
 
-  it('§2 a drop in Idle writes the new draft at moves[cursor.index] and truncates the tail', () => {
+  it('R-71 §2 a drop in Idle writes the new draft at moves[cursor.index] and truncates the tail', () => {
     expect(run(PENDING_TAIL, drop(1, 1, 3))).toStrictEqual({
       session: {
         ...PENDING_TAIL,
@@ -1115,7 +1236,7 @@ function expectLegalTargets(
 }
 
 describe('validate', () => {
-  it('R-37 R-38 a failed Validate returns the input reference and the R-37 spelling', () => {
+  it('R-37 R-38 R-71 a failed Validate returns the input reference and the R-37 spelling', () => {
     const result = apply(COMPOSING, VALIDATE, DICT('other'));
     expect(result.session).toBe(COMPOSING);
     expect(result).toStrictEqual({ session: COMPOSING, rejectedWord: DRAFT_WORD });
@@ -1230,7 +1351,7 @@ describe('Place', () => {
     });
   });
 
-  it('R-60 confirm discards the redo tail, commits the draft and moves the cursor to the next Idle', () => {
+  it('R-60 R-71 confirm discards the redo tail, commits the draft and moves the cursor to the next Idle', () => {
     const result = run(PLACE_TAIL, CONFIRM);
     expect(result).toStrictEqual({
       session: {
@@ -1343,5 +1464,267 @@ describe('§8 worked example', () => {
       WORDS,
     );
     expect(draftOf(custom.session).arrangement.at(-1)).toBe(B);
+  });
+});
+
+// --- undo, redo, give up (R-39, R-60, R-62, R-70–R-72, R-75) ---------------------------------
+
+/** Public `apply` of undo / redo / giveUp on frozen inputs; the result must replay (§2). */
+const step = (session: Session, command: Command): Session => {
+  const result = run(session, command);
+  expect(Object.hasOwn(result, 'rejectedWord')).toBe(false);
+  return deepFreeze(result.session);
+};
+
+/** DRAFT_DATA never committed (reached composing), pending in Idle. */
+const NEVER = sessionOf([...PREFIX, lowered({})], { index: 2, phase: 'idle' });
+
+describe('undo', () => {
+  it('R-70 undo from Idle goes to the previous Place, pushing any pending draft into the redo tail; redo returns the input', () => {
+    for (const input of [IDLE, PENDING, NEVER, PENDING_TAIL]) {
+      const undone = step(input, UNDO);
+      expect(undone).toStrictEqual({ ...input, cursor: { index: 1, phase: 'place' } });
+      expect(undone.moves).toBe(input.moves);
+      expect(st(undone)).toBe('playing');
+      expect(step(undone, REDO)).toStrictEqual(input);
+    }
+  });
+
+  it('R-70 undo from Place goes to Composing keeping targetCell and placementOrder', () => {
+    expect(step(PLACE, UNDO)).toStrictEqual({ ...PLACE, cursor: { index: 2, phase: 'composing' } });
+    expect(step(PLACE, UNDO)).toStrictEqual(COMPOSING);
+    expect(step(PLACE_TAIL, UNDO)).toStrictEqual(WITH_TAIL);
+  });
+
+  it('R-70 R-72 undo from Composing goes to Idle keeping the draft and the redo tail', () => {
+    expect(step(COMPOSING, UNDO)).toStrictEqual({
+      ...COMPOSING,
+      cursor: { index: 2, phase: 'idle' },
+    });
+    expect(step(COMPOSING, UNDO)).toStrictEqual(PENDING);
+    expect(step(WITH_TAIL, UNDO)).toStrictEqual(PENDING_TAIL);
+  });
+
+  it('R-70 undo from a won game goes to the last move’s Place and status derives back to playing', () => {
+    expect(st(WON)).toBe('won');
+    const undone = step(WON, UNDO);
+    expect(undone).toStrictEqual({ ...WON, cursor: { index: 7, phase: 'place' } });
+    expect(st(undone)).toBe('playing');
+  });
+
+  it('R-70 undo twice from a pending draft steps back one phase state each; redo twice returns it', () => {
+    const place = step(PENDING, UNDO);
+    expect(place).toStrictEqual({ ...PENDING, cursor: { index: 1, phase: 'place' } });
+    expect(st(place)).toBe('playing');
+    const composing = step(place, UNDO);
+    expect(composing).toStrictEqual({ ...PENDING, cursor: { index: 1, phase: 'composing' } });
+    expect(st(composing)).toBe('playing');
+    expect(step(step(composing, REDO), REDO)).toStrictEqual(PENDING);
+  });
+
+  it('R-39 undo from Composing returns S, D and the free letters: the same commands rebuild the same draft', () => {
+    const commands: readonly Command[] = [
+      drop(1, 2, 2),
+      { type: 'setDestinationCount', k: 2 },
+      { type: 'addFreeLetter', cell: 4 },
+      { type: 'arrange', arrangement: [W, N, I] },
+    ];
+    const build = (from: Session) => {
+      let session = from;
+      const drafts: Move[] = [];
+      for (const command of commands) {
+        session = step(session, command);
+        drafts.push(draftOf(session));
+      }
+      return { session, drafts };
+    };
+    const { session: composed, drafts: original } = build(IDLE);
+    const kept = draftOf(composed);
+    const undone = step(composed, UNDO);
+    expect(undone).toStrictEqual({ ...composed, cursor: { index: 2, phase: 'idle' } });
+    expect(undone.moves[2]).toStrictEqual(kept);
+    const { session: rebuilt, drafts } = build(undone);
+    expect(drafts).toStrictEqual(original);
+    expect(drafts[0].destinationCount).toBe(1);
+    expect(draftOf(rebuilt)).toStrictEqual(kept);
+  });
+
+  it('R-72 in-phase actions are not undo steps: one undo leaves Composing or Place; redo restores the pre-undo Session', () => {
+    let composing = COMPOSING;
+    for (const command of [
+      { type: 'arrange', arrangement: [W, I, Z] },
+      { type: 'setDestinationCount', k: 3 },
+      { type: 'flip' },
+      { type: 'addFreeLetter', cell: 4 },
+    ] as const)
+      composing = step(composing, command);
+    const idle = step(composing, UNDO);
+    expect(idle).toStrictEqual({ ...composing, cursor: { index: 2, phase: 'idle' } });
+    expect(idle.moves[2]).toStrictEqual(draftOf(composing));
+    expect(step(idle, REDO)).toStrictEqual(composing);
+
+    const place = step(step(PLACE, setTarget(3)), setOrder([Z, W, I, M2]));
+    const back = step(place, UNDO);
+    expect(back).toStrictEqual({ ...place, cursor: { index: 2, phase: 'composing' } });
+    expect(back.moves[2].targetCell).toBe(3);
+    expect(back.moves[2].placementOrder).toStrictEqual([Z, W, I, M2]);
+    expect(step(back, REDO)).toStrictEqual(place);
+  });
+});
+
+describe('redo', () => {
+  it('R-60 R-71 redo from Place at reached committed commits without discarding the later moves', () => {
+    const redone = step(PLACE_TAIL, REDO);
+    expect(redone).toStrictEqual({ ...PLACE_TAIL, cursor: { index: 3, phase: 'idle' } });
+    expect(redone.moves).toBe(PLACE_TAIL.moves);
+  });
+
+  it('R-71 redo from Idle enters the pending draft’s Composing', () => {
+    expect(step(NEVER, REDO)).toStrictEqual({ ...NEVER, cursor: { index: 2, phase: 'composing' } });
+    expect(step(PENDING_TAIL, REDO)).toStrictEqual({
+      ...PENDING_TAIL,
+      cursor: { index: 2, phase: 'composing' },
+    });
+    expect(step(PENDING_TAIL, REDO)).toStrictEqual(WITH_TAIL);
+  });
+
+  it('R-71 redo from Composing enters Place keeping the stored targetCell and placementOrder', () => {
+    expect(step(COMPOSING, REDO)).toStrictEqual({
+      ...COMPOSING,
+      cursor: { index: 2, phase: 'place' },
+    });
+    expect(step(COMPOSING, REDO)).toStrictEqual(PLACE);
+    expect(step(WITH_TAIL, REDO)).toStrictEqual(PLACE_TAIL);
+  });
+
+  it('R-71 redo into Place does not consult the dictionary', () => {
+    expect(apply(COMPOSING, REDO, CTX)).toStrictEqual({ session: PLACE });
+    expect(apply(COMPOSING, REDO, DICT())).toStrictEqual({ session: PLACE });
+  });
+
+  it('R-71 an arrange swapping two same-letter cards is an edit: reached composing, Place fields and later moves dropped', () => {
+    replay(SAME_LETTER, EN);
+    expect(run(SAME_LETTER, { type: 'arrange', arrangement: [A0, T42, A2] })).toStrictEqual({
+      session: {
+        ...SAME_LETTER,
+        moves: [
+          ...PREFIX,
+          {
+            sourceColumn: 3,
+            sourceCount: 3,
+            destinationColumn: 5,
+            destinationCount: 0,
+            destinationSide: 'left',
+            freeLetters: [],
+            arrangement: [A0, T42, A2],
+            reached: 'composing',
+          },
+        ],
+      },
+    });
+  });
+
+  it('R-62 undo then redo on a won game returns the won Session', () => {
+    const redone = step(step(WON, UNDO), REDO);
+    expect(redone).toStrictEqual(WON);
+    expect(st(redone)).toBe('won');
+  });
+});
+
+describe('give up', () => {
+  it('R-75 R-70 R-71 undo, redo and giveUp keep a non-zero activeMs', () => {
+    const timed = deepFreeze({ ...PENDING_TAIL, activeMs: 1234 });
+    const over = step(timed, GIVE_UP);
+    expect(over).toStrictEqual({ ...timed, gaveUp: true });
+    const back = step(over, UNDO);
+    expect(back).toStrictEqual(timed);
+    expect(step(back, UNDO)).toStrictEqual({ ...timed, cursor: { index: 1, phase: 'place' } });
+    expect(step(back, REDO)).toStrictEqual({ ...timed, cursor: { index: 2, phase: 'composing' } });
+  });
+
+  it('R-75 R-70 give up on a fresh Session sets only gaveUp; undo at index 0 clears it', () => {
+    const fresh = deepFreeze(createSession(1));
+    const over = step(fresh, GIVE_UP);
+    expect(over).toStrictEqual({ ...fresh, gaveUp: true });
+    expect(over.moves).toBe(fresh.moves);
+    expect(st(over)).toBe('gaveUp');
+    const back = step(over, UNDO);
+    expect(back).toStrictEqual(fresh);
+    expect(st(back)).toBe('playing');
+  });
+
+  it('R-75 R-70 give up keeps moves and cursor; undo at index > 0 clears only the flag', () => {
+    const over = step(PENDING_TAIL, GIVE_UP);
+    expect(over).toStrictEqual({ ...PENDING_TAIL, gaveUp: true });
+    expect(over.moves).toBe(PENDING_TAIL.moves);
+    const back = step(over, UNDO);
+    expect(back).toStrictEqual(PENDING_TAIL);
+    expect(back.moves).toBe(PENDING_TAIL.moves);
+    expect(st(back)).toBe('playing');
+  });
+
+  it('R-75 R-70 give up is not redoable: redo while gaveUp throws; after undo, redo enters the pending draft', () => {
+    const over = step(PENDING_TAIL, GIVE_UP);
+    expectEngineError(() => apply(over, REDO, CTX), 'command-status');
+    const redone = step(step(over, UNDO), REDO);
+    expect(redone).toStrictEqual({ ...PENDING_TAIL, cursor: { index: 2, phase: 'composing' } });
+    expect(redone.gaveUp).toBe(false);
+  });
+});
+
+// --- accrue (R-76, AD-2; build-notes CAP-5) --------------------------------------------------
+
+describe('accrue', () => {
+  const STATUSES = [
+    ['playing', IDLE],
+    ['won', WON],
+    ['gaveUp', GAVE_UP],
+  ] as const;
+  const MAX = Number.MAX_SAFE_INTEGER;
+  const withActive = (session: Session, activeMs: number) => deepFreeze({ ...session, activeMs });
+
+  it('AD-2 accrue throws r76-elapsed-ms for an elapsedMs that is not a non-negative safe integer, in every status', () => {
+    for (const [name, session] of STATUSES) {
+      expect(st(session)).toBe(name);
+      for (const ms of [-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, 2 ** 53])
+        expectEngineError(() => accrue(session, ms, EN), 'r76-elapsed-ms');
+    }
+  });
+
+  it('AD-2 accrue validates elapsedMs and returns the input for 0 before any replay', () => {
+    const broken = sessionOf(PREFIX, { index: 9, phase: 'idle' });
+    expectEngineError(() => accrue(broken, 1, EN), 'ad7-cursor-index');
+    expectEngineError(() => accrue(broken, -1, EN), 'r76-elapsed-ms');
+    expect(accrue(broken, 0, EN)).toBe(broken);
+  });
+
+  it('R-76 accrue of 0 or −0 returns the input reference in every status', () => {
+    for (const [, session] of STATUSES) {
+      expect(accrue(session, 0, EN)).toBe(session);
+      expect(accrue(session, -0, EN)).toBe(session);
+    }
+  });
+
+  it('R-76 accrue adds elapsedMs while playing, in Idle, Composing and Place', () => {
+    for (const session of [IDLE, COMPOSING, PLACE]) {
+      const input = withActive(session, 100);
+      const result = accrue(input, 1234, EN);
+      expect(result).not.toBe(input);
+      expect(result).toStrictEqual({ ...input, activeMs: 1334 });
+      expect(input.activeMs).toBe(100);
+    }
+  });
+
+  it('R-76 accrue throws r76-active-ms-overflow when the sum is not a safe integer', () => {
+    const input = withActive(IDLE, MAX - 5);
+    expect(accrue(input, 5, EN)).toStrictEqual({ ...input, activeMs: MAX });
+    expectEngineError(() => accrue(input, 6, EN), 'r76-active-ms-overflow');
+  });
+
+  it('R-76 accrue returns the input while won or gaveUp, even at MAX_SAFE_INTEGER', () => {
+    for (const session of [WON, GAVE_UP]) {
+      const input = withActive(session, MAX);
+      expect(accrue(input, 1, EN)).toBe(input);
+    }
   });
 });

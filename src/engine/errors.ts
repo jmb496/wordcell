@@ -13,10 +13,12 @@
  * - AD-7 post-replay: `ad7-gave-up-won`.
  * - Commands (`apply`, in build-notes CAP-4 order): `command-type`, `command-status`,
  *   `command-phase`, `command-dictionary`, `command-domain`, `r31-tap-not-in-destination`,
- *   `r31-set-count-empty-destination`, `r33-free-letter-absent`, `r33-free-letter-index`
- *   (reused: `card-id-domain`, `r13-source-count`, `r31-destination-count`,
- *   `r33-free-letter-duplicate`, `r33-free-letter-empty`, `r35-arrangement`,
- *   `r36-letter-count`, `r40-target-cell`, `r50-placement-order`).
+ *   `r31-set-count-empty-destination`, `r33-free-letter-absent`, `r33-free-letter-index`,
+ *   `r70-nothing-to-undo`, `r71-no-redo-data` (reused: `card-id-domain`, `r13-source-count`,
+ *   `r31-destination-count`, `r33-free-letter-duplicate`, `r33-free-letter-empty`,
+ *   `r35-arrangement`, `r36-letter-count`, `r40-target-cell`, `r50-placement-order`); undo
+ *   skips status and phase.
+ * - accrue: `r76-elapsed-ms`, `r76-active-ms-overflow`.
  */
 export class EngineError extends Error {
   readonly check: string;
