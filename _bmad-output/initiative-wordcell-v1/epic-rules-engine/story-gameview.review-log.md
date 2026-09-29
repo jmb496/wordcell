@@ -1,5 +1,5 @@
 # Review log — story-gameview.md (ticket 2.8)
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 56a870c, copy `story-gameview.review-log.passes/pass0.md`, 194 words.
 Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), epic-rules-engine.md, ARCHITECTURE-SPINE.md, AGENTS.md; done-ticket plans: story-golden-deal-test-and-r-id-test-names-plan.md, story-langdata-en-and-lettercount-plan.md, story-session-createsession-replay-and-checksession-plan.md, story-composing-commands-and-the-command-table-plan.md, story-validate-and-place-commands-with-the-8-worked-example-plan.md, story-undo-redo-give-up-and-accrue-plan.md, story-scoring-penalty-and-bands-plan.md.
@@ -25,6 +25,26 @@ Fixer: all 18 items applied; example check code r31-destination-count checked in
 - longest word → internal `longestWord(session, lang)`
 - legal targets → ascending cell number
 - kIfTapped → on the destination column's entry only, empty map when the remainder is empty
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Pass 2 — 2026-09-29
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 4, minor 13, decision-needed 0  |  Dropped in triage: 0 (duplicates merged across lenses)
+Words (docs): 1282 (6.6x pass 0; stated budget 1500)  |  Snapshot: story-gameview.review-log.passes/pass2.md
+Fixer: all 17 items applied, no conflicts.
+### Applied
+- [major] Description, Longest word — `longestWord(session, lang)` cannot spell committed words without the pre-move positions, contradicts "view replays once" and ignores the D2 start → take a start position, collect committed words in the one replay pass; D2-seam test → fixer item 1
+- [major] Description, Shape `draft?` — source/destination/freeLetters untyped (column numbers vs S/D card lists) → pin types → fixer item 2
+- [major] AC, Flag agreement states — missing states leave predicate branches untested in one direction: canRedo true in Composing (reached ≥ place) and Place (reached = committed), n = 1 destination, Idle with an empty column (canPickUp false), canAddFreeLetter true on a non-empty unused cell, partial self-drop → fixer item 3
+- [major] AC, Rule coverage R-12 — what the R-12 view test asserts is unstated → fixer item 4
+- [minor] items 5–17 (every can* flag + applyFrom for seam states; k = 0 both cases; score tests named R-80/R-81; faces shape and card order; deep-freeze inputs; gaveUp at index 0 and > 0; Place with used free letter; both kinds of pending draft; spelling = R-37 word not placementOrder; R-30 right side with QU; tests per flag looping states; finalScore observable outcome; index test name; "AD-3 names" wording)
+### Default applied (technical)
+- longestWord → `longestWord(start, session, lang)`, committed words collected during the single replay
+- draft fields → `sourceColumn`/`destinationColumn` 1–8 plus `source`/`destination` CardId lists top→bottom, `freeLetters` WordCellNumber[] in Move order
+- test organisation → one test per flag, looping the listed states
+- score test names → R-80 liveScore, R-81 displayScore/end values
 ### Decision needed (functionality / UX / gameplay)
 - none
 ### Dropped
