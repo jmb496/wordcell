@@ -1,5 +1,5 @@
 # Review log — story-scoring-penalty-and-bands.md (ticket 2.7)
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 63f8b84, copy `story-scoring-penalty-and-bands.review-log.passes/pass0.md`, 138 words.
 Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), epic-rules-engine.md, ARCHITECTURE-SPINE.md, AGENTS.md; done-ticket plans: story-golden-deal-test-and-r-id-test-names-plan.md, story-langdata-en-and-lettercount-plan.md, story-session-createsession-replay-and-checksession-plan.md, story-composing-commands-and-the-command-table-plan.md, story-validate-and-place-commands-with-the-8-worked-example-plan.md, story-undo-redo-give-up-and-accrue-plan.md.
@@ -33,3 +33,24 @@ Fixer: all 14 items applied; only command named is the existing `npm run test:al
 - none
 ### Dropped
 - none
+
+## Pass 2 — 2026-09-29
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 8, decision-needed 0  |  Dropped in triage: 1
+Words (docs): 681 (4.9 x pass 0)  |  Snapshot: story-scoring-penalty-and-bands.review-log.passes/pass2.md
+Fixer: all 9 items applied; no commands touched.
+### Applied
+- [major] AC R-81 — no test discriminates the `gaveUp` flag (the only not-gaveUp case has empty columns, penalty 0); add same-Position gaveUp false/true pair with letters left and a non-empty cell → fixer item 1
+- [minor] Signatures — `Position` comes from rules.ts (ticket 2.3, already on HEAD), so "`after: [2]` only" reasoning is inaccurate; import `type Position` from `./rules` → fixer item 2
+- [minor] AC synthetic — `withEntry` is private to lang-data.test.ts; build inline from `EN.distribution` with Z value 2 → fixer item 3
+- [minor] AC synthetic — "catch percentage rounding" parenthetical overstated → fixer item 4
+- [minor] band parameter named `finalScore` shadows the function → `band(score, lang)` → fixer item 5
+- [minor] AC — −530 band 0 duplicated under R-81 and R-83; keep band under R-83 → fixer item 6
+- [minor] AC R-81 give-up at the deal — Position hand-built (CardIds 0–51 in columns, 8 empty cells), not from `deal` → fixer item 7
+- [minor] AC R-80 — max sentence already covered by lang-data.test.ts `R-80 EN.maxScore is 530` → fixer item 8
+- [minor] Constants — `BAND_THRESHOLDS` ascending readonly (`as const`); count-met equals R-83 "highest matching band wins" → fixer item 9
+### Default applied (technical)
+- Position type imported from `./rules`; synthetic language built inline in scoring.test.ts; band parameter `score`
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- integer-letter-value assumption for `maxScore` (future language) — out of scope, R-85 data concern, adds words for no build effect
