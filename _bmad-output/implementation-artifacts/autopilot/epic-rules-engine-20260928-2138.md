@@ -41,3 +41,13 @@ Worth knowing: the code review left one test gap open: undone moves after the fi
 
 ## Stopped — usage limit
 Ticket 2.4 (Composing commands and the command table), Step B (build), plan status `in-review`. Limit message: "You've hit your session limit · resets 3:20am (America/New_York)". The build's own files (src/engine/commands.ts, commands.test.ts, edits to errors.ts, index.ts, index.test.ts, replay.ts, rules.ts, and the plan) are left uncommitted for bmad-build-auto's resume. Resume: run `/epic-autopilot epic-rules-engine` after the reset; Step B resumes the in-progress build.
+
+## 2.4 Composing commands and the command table — done
+What it adds: the first player actions: picking up a stack and dropping it, choosing how many destination cards join the word, flipping sides, adding and removing free letters, and reordering letters. There is also a single table listing, for every action, when it is refused or does nothing.
+Ticket review: 5 passes, converged (majors 8, 8, 3, 1, 0); nothing needed your input
+Build: built; commits 0da8542
+Code review: thorough, 2 passes, converged with one open item; 1 fix commit (1af45be)
+Tests: all passing
+Ref to fix upstream: none
+Paused: usage limit during the build (reset 3:20am America/New_York), resumed 04:58 EDT; the build resumed from its saved plan
+Worth knowing: open test gap: no R-13 test asserts the word formed when a whole column is dropped back onto itself (Q-30), and one D8 removal case sits at the edge rather than the middle. Both are carried to the 2.12 sweep.
