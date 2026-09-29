@@ -3,7 +3,7 @@ type: epic
 title: "Rules engine"
 parent: initiative-wordcell-v1
 covers: []
-after: [epic-scaffold-ci-deploy]
+after: []
 assignee: ""
 risk: medium
 ---
