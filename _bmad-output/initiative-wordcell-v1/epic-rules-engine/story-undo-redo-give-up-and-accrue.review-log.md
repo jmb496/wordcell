@@ -1,5 +1,5 @@
 # Review log — story-undo-redo-give-up-and-accrue.md (ticket 2.6)
-State: pass 4: done
+State: pass 5: done (converged)
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD d4fb67e, copy `story-undo-redo-give-up-and-accrue.review-log.passes/pass0.md`, 197 words.
 Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), epic-rules-engine.md, ARCHITECTURE-SPINE.md, AGENTS.md; done-ticket plans: story-golden-deal-test-and-r-id-test-names-plan.md, story-langdata-en-and-lettercount-plan.md, story-session-createsession-replay-and-checksession-plan.md, story-composing-commands-and-the-command-table-plan.md, story-validate-and-place-commands-with-the-8-worked-example-plan.md.
@@ -112,3 +112,26 @@ Fixer: all 16 items applied; no commands touched.
 - accrue positive ms → status via `replay`
 ### Decision needed (functionality / UX / gameplay)
 - none
+
+## Pass 5 — 2026-09-29
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 0, minor 12, decision-needed 0  |  Dropped in triage: 0 (the `0`-case id raised by three lenses merged)
+Words (docs): 1432 (7.3 x pass 0; stated budget 1500)  |  Snapshot: story-undo-redo-give-up-and-accrue.review-log.passes/pass4.md (no fix pass)
+### Decision needed (functionality / UX / gameplay)
+- none
+
+## Result — converged after 5 passes
+Majors per pass: 6, 4, 4, 2, 0. No decision-needed items; technical defaults applied are listed per pass.
+
+Unapplied minors (for the build's plan):
+- AC R-60 — name the Redo-from-Place commit test `R-60 R-71 …` so both halves of R-71's "Redo from Place commits only if reached = committed" carry the id.
+- AC accrue — the `0` same-reference cases have no id; name them `R-76` (or `AD-2`, per AD-2's accrue line).
+- AC accrue — no test shows ms is validated / 0 returned before replay; add one Session that fails replay (ms −1 throws `r76-elapsed-ms`, ms 0 returns the input).
+- AC accrue — include Place in the positive-ms add case (R-76: the clock runs whenever status = playing); optionally −0 in the 0 case.
+- AC R-39 — the re-applied drop/default `destinationCount` observation is weak; rebuild the undone draft through public `apply` (drop, same k, same addFreeLetter, arrange) and assert it `toStrictEqual` the kept draft (reached aside).
+- AC won status rows — precondition text `a command while status ≠ playing (won)` on a deep-frozen `winSeed(1)`, so it.each names do not duplicate the gaveUp rows.
+- AC R-71 rename — `R-71 §2 a drop in Idle …` (R-id first per AGENTS.md), not `§2 R-71 …`.
+- AC R-71 same-letter swap — the plan names the concrete seed-1 pair; if none is reachable, the D2 seam as a named exception.
+- AC R-70 — optional chain test undoing twice past a never-committed pending draft (Q-41), replaying, then redoing back.
+- Description errors.ts — place `r70-nothing-to-undo` and `r71-no-redo-data` after the existing rule codes, noting undo skips status and phase.
+- Notes — the won fixture (entry 10) is generated from an engine-side test or script, since `winSeed` is not exported from `index.ts`.
+- Description — the three reducers live in `commands.ts` and are dispatched in `applyFrom` (its `never` exhaustiveness check forces it).
