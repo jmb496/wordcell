@@ -160,11 +160,11 @@ export function replayFrom(start: Start, session: Session, lang: LangData): Posi
   return position;
 }
 
-/** `replayFrom` over the dealt start: `dealIds(seed)` and eight empty WordCells. */
-export function replay(session: Session, lang: LangData): Position {
-  assertSeed(session.seed);
-  const columns = dealIds(session.seed);
-  const start: Start = {
+/** The dealt start (D2): `dealIds(seed)` and eight empty WordCells; throws `seed-uint32`. */
+export function dealtStart(seed: number): Start {
+  assertSeed(seed);
+  const columns = dealIds(seed);
+  return {
     columns: [
       columns[0],
       columns[1],
@@ -177,7 +177,11 @@ export function replay(session: Session, lang: LangData): Position {
     ],
     cells: [[], [], [], [], [], [], [], []],
   };
-  return replayFrom(start, session, lang);
+}
+
+/** `replayFrom` over the dealt start. */
+export function replay(session: Session, lang: LangData): Position {
+  return replayFrom(dealtStart(session.seed), session, lang);
 }
 
 /** §2 status: gaveUp if the flag, else won when Idle and every column empty, else playing. */

@@ -11,6 +11,11 @@
  *   `r33-free-letter-duplicate`, `r33-free-letter-empty`, `s2-free-letters-set`,
  *   `r35-arrangement`, `r36-letter-count`, `r40-target-cell`, `r50-placement-order`.
  * - AD-7 post-replay: `ad7-gave-up-won`.
+ * - Commands (`apply`, in build-notes CAP-4 order): `command-type`, `command-status`,
+ *   `command-phase`, `command-domain`, `r31-tap-not-in-destination`,
+ *   `r31-set-count-empty-destination`, `r33-free-letter-absent`, `r33-free-letter-index`
+ *   (reused: `card-id-domain`, `r13-source-count`, `r31-destination-count`,
+ *   `r33-free-letter-duplicate`, `r33-free-letter-empty`, `r35-arrangement`).
  */
 export class EngineError extends Error {
   readonly check: string;
