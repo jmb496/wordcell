@@ -1,5 +1,5 @@
 # Review log — story-validate-and-place-commands-with-the-8-worked-example.md (ticket 2.5)
-State: pass 3: done
+State: pass 4: done (converged)
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 38243a1, copy `story-validate-and-place-commands-with-the-8-worked-example.review-log.passes/pass0.md`, 151 words.
 Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), epic-rules-engine.md, ARCHITECTURE-SPINE.md, AGENTS.md; done-ticket plans: story-golden-deal-test-and-r-id-test-names-plan.md, story-langdata-en-and-lettercount-plan.md, story-session-createsession-replay-and-checksession-plan.md, story-composing-commands-and-the-command-table-plan.md.
@@ -81,3 +81,33 @@ Fixer: all 12 items applied; no commands touched.
 - none
 ### Dropped
 - successful-Validate fixture recipe and R-52 drop recipe (adversarial) — build-plan procedure detail, not ticket contract; the ticket is near budget
+
+## Pass 4 — 2026-09-29
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 0, minor 11, decision-needed 0  |  Dropped in triage: 3 (one major reclassed minor; duplicates merged)
+Words (docs): 1333 (8.8 x pass 0; budget 1500)  |  Snapshot: unchanged since pass 3 (no fix pass)
+### Applied
+- none (converged; minors listed under Result)
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- adversarial "existing `seam` helper cannot run these tests" as major → reclassed minor (late-pass bar: test-procedure precision; the obvious widening is the default, listed below)
+- adversarial "R-30–R-35 skipped in validate's order" — behaviour unambiguous (replay enforces them at Composing); no change
+- adversarial "guards need L and word cards" — reviewer itself proposes no ticket change (build-plan detail)
+
+## Result — converged after 4 passes
+Majors per pass: 10, 5, 3, 0. Words 151 → 1333 (budget 1500). No decision-needed items.
+
+Unapplied minors (for the build plan or a later loop):
+- Description R-71 split — `seam` in commands.test.ts is scoped inside `describe('R-30 word helper')`, passes a dictionary-less ctx and returns only `word(...)`: hoist it to file scope, take a ctx, return the last `ApplyResult` (plus the prior Session for same-reference checks); R-30 tests keep calling `word(...)` on it.
+- AC table rows — "every validate row except the missing-dictionary one is built with a dictionary" conflicts with the added gaveUp/Idle dictionary-less check-order rows; say "except the check-order rows", and validate's generic gaveUp row keeps a dictionary (the dictionary-less gaveUp row is separate).
+- AC Wrong phase — `PENDING_TAIL` applies to the new Idle rows only (validate, setTarget, setPlacementOrder, confirm), not ticket 2.4's existing rows.
+- AC R-38 bullet — setTarget cannot run on a draft "whose word is in no set" (Place needs a successful validate); run setTarget without ctx.dictionary on a Place draft reached by validate with a set holding the word (or a built Session); "in no set" applies to drop and arrange.
+- AC successful-Validate bullet — name that test with R-38 too (`R-38 R-71 …`) so "no auto-confirm" has an R-38-named test.
+- AC §8 naming — lead-in says `§8 worked example …` but BALKED is `R-41 §8 BALKED …`; use `R-41 §8 worked example BALKED …`.
+- AC R-41/BALKED — "leaves the L once" is ambiguous (col3 also holds an L); assert by CardId: cell 6's L CardId appears once, inside cell 6's pushed placementOrder.
+- AC R-52 — state which order the BALKED confirm uses (default: new top is the D card) and assert the new top by CardId.
+- Out of scope — add R-60 "The commit … never touches later moves" (entry 6) beside "Redo commits without discarding".
+- R-41 "travels" — optionally confirm BALKED onto cell 5 and assert cell 6 loses the L (build plan).
+- setPlacementOrder / setTarget guards — derive word cards and L as `checkMove` does (`[...source, ...free, ...destination]` then `checkLetterCount`) (build plan).
