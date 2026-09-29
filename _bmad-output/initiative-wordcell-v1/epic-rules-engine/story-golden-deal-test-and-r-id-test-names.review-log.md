@@ -1,5 +1,5 @@
 # Review log — story-golden-deal-test-and-r-id-test-names.md (ticket 2.1)
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 26a56b1, copy `story-golden-deal-test-and-r-id-test-names.review-log.passes/pass0.md`, 141 words.
 Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), epic-rules-engine.md, ARCHITECTURE-SPINE.md, AGENTS.md; done-ticket plans: none.
@@ -78,3 +78,22 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 ### Fix outcome
 Fixer applied items 1–11; ran `npx biome check src/engine/deal.test.ts` (exit 0, read-only); the `--write` form is `unverified` (same subcommand, not run to keep src/ clean); dropped the Vitest diff-shape claim (item 3).
 Words (docs): 801 (5.7 x pass 0; budget 1500)  |  Snapshot: story-golden-deal-test-and-r-id-test-names.review-log.passes/pass3.md
+
+## Pass 4 — 2026-09-28
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 0, minor 14, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+Words (docs): 801 (5.7 x pass 0; budget 1500)  |  Snapshot: pass3.md (no fix this pass)
+### Applied
+- none (converged)
+### Decision needed (functionality / UX / gameplay)
+- none
+
+## Result — converged after 4 passes
+Majors per pass: 4, 3, 1, 0. Technical defaults applied: 6. Words 141 → 801.
+Unapplied minors (for the build's plan):
+- Description ¶2 — "an R-01 test ties the deck to carryover §1" overstates: GOLDEN_LETTERS comes from buildDeck; the tie is the plan-recorded §1 cross-check; Acceptance 7's R-01 row cites that record.
+- Acceptance 1 — on a non-zero exit, stop for the owner like the carryover-mismatch branch; also require the working tree clean for deal.ts/types.ts at generation time.
+- Blocked path — Acceptances 2–7 do not apply; the plan's mismatch record is the only output.
+- Acceptance 5 — if Vitest truncates the combined diff, confirm differing keys with a temporary per-key `toEqual` while the mutation is applied; 5(a) holds because ids are positional (`cards.push({ id: cards.length, … })`).
+- Acceptance 7 — note "different seeds differ" is an extra check, not an R-02 sentence; name the golden literal (AD-5) as the coverage of R-02 "on every device".
+- Notes — build-notes "CAP-1 only renames tests" is about imports; the R-01 count check and R-03 round-robin case come from rule-coverage R-01/R-03; the R-03 tests may be repointed with `deal` later, only the GOLDEN_* consts are frozen.
+- `biome check --write` also applies safe lint fixes: re-run the golden test after it; `grep -n console src/engine/deal.test.ts` is empty before commit.
