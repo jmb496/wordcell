@@ -1,5 +1,5 @@
 # Review log — story-scoring-penalty-and-bands.md (ticket 2.7)
-State: pass 2: done
+State: pass 3: done (converged)
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 63f8b84, copy `story-scoring-penalty-and-bands.review-log.passes/pass0.md`, 138 words.
 Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), epic-rules-engine.md, ARCHITECTURE-SPINE.md, AGENTS.md; done-ticket plans: story-golden-deal-test-and-r-id-test-names-plan.md, story-langdata-en-and-lettercount-plan.md, story-session-createsession-replay-and-checksession-plan.md, story-composing-commands-and-the-command-table-plan.md, story-validate-and-place-commands-with-the-8-worked-example-plan.md, story-undo-redo-give-up-and-accrue-plan.md.
@@ -54,3 +54,28 @@ Fixer: all 9 items applied; no commands touched.
 - none
 ### Dropped
 - integer-letter-value assumption for `maxScore` (future language) — out of scope, R-85 data concern, adds words for no build effect
+
+## Pass 3 — 2026-09-29
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 11, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+Words (docs): 681 (4.9 x pass 0)  |  Snapshot: story-scoring-penalty-and-bands.review-log.passes/pass2.md (no fix pass)
+### Open (not fixed; stopping rule)
+- [major] AC R-81 give up at the deal — R-81's sentence "a negative final score … falls in the lowest band (Q-28)" has no R-81-named test since pass 2 item 6 moved the band assertion under R-83 only; fix: the R-81 give-up-at-the-deal test also asserts `band(finalScore(p, true, EN), EN) === 0` (e.g. 'R-81 give up at the deal: −530, unclamped, lowest band'); "recorded as is" belongs to history (CAP-8)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Result — converged after 3 passes
+open major: AC R-81 — the "falls in the lowest band" sentence of R-81 needs an R-81-named assertion `band(finalScore(p, true, EN), EN) === 0` in the give-up-at-the-deal test (the plan should add it).
+
+Unapplied minors (for the build's plan):
+- AC R-81 — "a QU left in a column counts 2 → penalty 20" holds only when QU is the only column card; say "columns holding only the QU card → lettersLeft 2, penalty 20".
+- AC R-80 — one hand-built cell should hold two stacked words (all cards in a cell count, R-80), included in the literal total.
+- Front matter `after: [2]` vs `Position` from rules.ts (ticket 2.3, on HEAD) — make it `after: [2, 3]` or note it; epic Notes say "needs only entry 2".
+- AC R-80/R-81 — find the QU CardId with `EN.letters.indexOf('QU')`, not a hard-coded id.
+- AC R-81 give up at the deal — "8 columns holding CardIds 0–51 between them, 8 empty cells".
+- finalScore — callers (CAP-7) call it only when status ≠ playing, passing `status === 'gaveUp'` (AD-3).
+- AC R-81 won case — empty columns, any cards in the cells; expected final = the liveScore literal.
+- AC synthetic — assert `synthetic.maxScore === 540` before the boundary checks.
+- Constants — `as const` vs `readonly number[]` style in types.ts; either works.
+- Imports — scoring.test.ts imports EN from `./lang/en` and makeLangData from `./lang/lang-data`.
