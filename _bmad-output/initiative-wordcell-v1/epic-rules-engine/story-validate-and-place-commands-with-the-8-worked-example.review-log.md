@@ -1,5 +1,5 @@
 # Review log — story-validate-and-place-commands-with-the-8-worked-example.md (ticket 2.5)
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 38243a1, copy `story-validate-and-place-commands-with-the-8-worked-example.review-log.passes/pass0.md`, 151 words.
 Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), epic-rules-engine.md, ARCHITECTURE-SPINE.md, AGENTS.md; done-ticket plans: story-golden-deal-test-and-r-id-test-names-plan.md, story-langdata-en-and-lettercount-plan.md, story-session-createsession-replay-and-checksession-plan.md, story-composing-commands-and-the-command-table-plan.md.
@@ -57,3 +57,27 @@ Fixer: all 13 items applied; no commands touched.
 - none
 ### Dropped
 - none
+
+## Pass 3 — 2026-09-29
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 3, minor 9, decision-needed 0  |  Dropped in triage: 2 (duplicates merged)
+Words (docs): 1333 (8.8 x pass 0; budget 1500)  |  Snapshot: story-validate-and-place-commands-with-the-8-worked-example.review-log.passes/pass3.md
+Fixer: all 12 items applied; no commands touched.
+### Applied
+- [major] AC Legal targets — pass-2 fix made the 11+ case optional, so the min(L, 10) clamp is untested (regression of pass-1 item 7) → fixer item 1
+- [major] AC Legal targets lead-in — "next cell throws `r40-target-cell`" is untestable at L = 10 (cell 11 fails the domain check first) → fixer item 2
+- [major] AC — R-38 "validation only when the player taps Validate" and "no auto-confirm" neither tested nor exempt → fixer item 3
+- [minor] Description R-71 split — "once the membership check passes" wrongly applied to confirm → fixer item 4
+- [minor] §8 lead-in — tap/throw variants stop after the col3 drop; tap follows the col3 drop, not the self-drop → fixer item 5
+- [minor] R-41 bullet duplicates §8 BALKED bullet → merge → fixer item 6
+- [minor] table rows — check order status/phase before dictionary not pinned → fixer item 7
+- [minor] QU failed-Validate case → D2 seam; plain case public apply → fixer item 8
+- [minor] R-71 edit test also asserts the commanded targetCell/placementOrder → fixer item 9
+- [minor] errors.ts — `command-dictionary` between `command-phase` and `command-domain` → fixer item 10
+- [minor] setPlacementOrder non-integer element (1.5) row → fixer item 11
+- [minor] §8 / D2 cases use the existing `seam` helper in commands.test.ts → fixer item 12
+### Default applied (technical)
+- R-38 "only on Validate" → an R-38 test that drop, arrange and setTarget with no `ctx.dictionary` and an out-of-set word never throw or return `rejectedWord`; "no auto-confirm" → R-38 test that a successful validate leaves the cursor at place
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- successful-Validate fixture recipe and R-52 drop recipe (adversarial) — build-plan procedure detail, not ticket contract; the ticket is near budget
