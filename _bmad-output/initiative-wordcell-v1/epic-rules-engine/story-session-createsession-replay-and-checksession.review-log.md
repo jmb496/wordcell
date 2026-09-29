@@ -1,5 +1,5 @@
 # Review log — story-session-createsession-replay-and-checksession.md (ticket 2.3)
-State: pass 6: done
+State: pass 7: done (converged)
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 187bd73, copy `story-session-createsession-replay-and-checksession.review-log.passes/pass0.md`, 235 words.
 Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), epic-rules-engine.md, ARCHITECTURE-SPINE.md, AGENTS.md; done-ticket plans: story-golden-deal-test-and-r-id-test-names-plan.md, story-langdata-en-and-lettercount-plan.md.
@@ -127,3 +127,21 @@ Triage note: both majors are regressions of pass 5's budget rewording (not uncle
 - none
 ### Dropped
 - none (left for publish/plan: tickets.toml entry 10 drops `SESSION_VERSION = 1` (now entry 3's); `replay` runs the seed guard before `dealIds`; R-60 test names the redo-tail rejecting case)
+
+## Pass 7 — 2026-09-28 (verify-only)
+Reviewers: fix diff  |  Findings: major 0, minor 4, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1495 (6.4 x pass 0; budget 1500)  |  Snapshot: story-session-createsession-replay-and-checksession.review-log.passes/pass6.md (no fix)
+### Applied
+- none (verify-only)
+### Decision needed (functionality / UX / gameplay)
+- none
+
+## Result — converged after 7 passes
+Majors per pass: 12, 6, 5, 2, 1, 2, 0. No decision-needed items. Words 235 → 1495 (budget 1500).
+Unapplied minors (for the build's plan):
+- R-20 accepting case: "k = n" should read "k = n ≥ 1", or the plan adds a 1 ≤ k < n self-drop whose remaining column the R-60 test asserts.
+- Test ids: read "all other rejecting and accepting replay cases … are `§2 …`" so the `AD-2 …` seam throws and R-id tests are carve-outs.
+- D2 seam: "duplicate id anywhere" means anywhere in the Start.
+- Dictionary row: the plan names a committed non-word accepting case (e.g. the R-62 self-drops) as evidence for "replay never consults the dictionary".
+- Earlier passes, left for the plan: R-33 two codes mean two fixtures in entry 10; `replay` runs the seed guard before `dealIds`; accepting cases are committed moves; seam baseline is a valid (Start, Session) pair; `-0` seed/activeMs accepted; R-33 duplicate before empty; replay tests pass EN only; pre-edit golden run recorded in the plan.
+- For publish (tickets.toml): entry 3's description/verify sync (R-52, resolved won-test wording); entry 10 drops `SESSION_VERSION = 1` (now entry 3's); entry 6's verify gains R-60 "Redo performs the commit without discarding" and the Redo path of "never touches later moves" (rule-coverage R-60 row lacks CAP-5).
