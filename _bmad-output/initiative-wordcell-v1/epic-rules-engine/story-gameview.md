@@ -14,15 +14,39 @@ risk: medium
 
 Adds view(session, lang) building every AD-3 field from one replay: faces, columns, WordCells, per-column and per-cell flags from the guards apply uses, kIfTapped, draft and Place data with the D6 score delta, live and display score, end values, word count and the internal longest-word function (reused by entry 9), pending-draft word and inProgress, the view counterpart of the D2 seam, and the R-12, R-31 and R-33 flag and kIfTapped tests entry 4 leaves (canPickUp, canIncK/canDecK at bounds, canAddFreeLetter on used or empty cells, S cards of a self-drop absent).
 
+- Flags: view replays once and computes every flag from boolean predicates extracted into rules.ts (e.g. tap mapping, set-count allowed, legal targets, undo/redo availability). The rules.ts check* functions and the commands.ts reducers become `if (!pred) reject(...)` wrappers over them; check codes and messages unchanged. view never calls apply/applyFrom and never catches EngineError; only tests call apply. The commands.test.ts command table stays green unchanged.
+- Shape: GameView is plain data (no functions or closures; kIfTapped a ReadonlyMap per AD-3), with AD-3 names verbatim: status, phase, faces, liveScore, displayScore, finalScore, penalty, lettersLeft, band, longestWord, wordCount, pendingDraftWord, inProgress, canUndo, canRedo, canGiveUp, canValidate, canConfirm, canFlip, canDecK, canIncK. Nested shapes (field names AD-3 does not give are the default):
+  - `columns: readonly { column: 1–8; cards; canPickUp; canDropOn; canTapForK; kIfTapped? }[]`
+  - `cells: readonly { cell: 3–10; cards; used; canAddFreeLetter; canSetTarget; isLegalTarget }[]`
+  - `draft?: { source; destination; k; side; arrangement; freeLetters; word; letterCount; structural: { ok: true } | { ok: false; reason: 'too-short' } }` (D7)
+  - `place?: { legalTargets; target; placementOrder; scoreDelta }`, legalTargets in ascending cell number (default).
+- Longest word: internal `longestWord(session, lang)` reading `moves.slice(0, cursor.index)`, shaped `{ spelling, letterCount }` per AD-6 (default signature).
+- Exports: src/engine/index.ts exports `view` and `type GameView` (plus the nested types it needs); index.test.ts adds 'view' to the AD-2 export test. The D2 counterpart (e.g. `viewFrom(start, session, lang)`) and `longestWord` stay internal.
+- Touches: new view.ts and view.test.ts; rules.ts, commands.ts, index.ts, index.test.ts.
+
 ## Acceptance Criteria
 
-Verify: npm run test:all is green with one test per AD-3 field (named with its R-id, else AD-3), every can* flag agreeing with its mapped command in the build-notes table in both directions, and the D6 delta equal to the live-score change of the commit, QU free letter included.
+- Verify: npm run test:all is green with one test per AD-3 field (named with its R-id, else §/Q-id, else AD-3 per AGENTS.md; flags behind R-39 inertness and live/display score are named AD-3, never R-39 or R-82, per rule-coverage), every can* flag agreeing with its mapped command in the build-notes CAP-7 list (outcomes per the commands.test.ts table) in both directions, and the D6 delta equal to the live-score change of the commit, QU free letter included.
+- Rule coverage: the plan's sentence → test mapping covers R-12, R-30 (draft word string via view, QU → "qu"), R-31, R-33, R-36 (reason too-short; QU case: 2 cards with letter count 3 passes, 2 letters fails), R-83 (longest word absent with no word) and §2 (status, inProgress).
+- Flag agreement states: fresh Idle; Idle with a pending draft; Composing on a non-empty destination (k = 1, middle, n); Composing with k = 0 (whole-column self-drop or drop onto an empty column); Composing with a used free letter and an empty cell; Place; won; gaveUp. In each, every flag for every column 1–8 and cell 3–10 (and every source/destination candidate for existential flags) equals "apply neither throws nor returns the input reference", per build-notes CAP-7 (canValidate per its structural rule there). States are built through public apply where possible, else the D2 seam.
+- R-31 kIfTapped: for every card of the destination column at k = 1, a middle k and n, both sides, kIfTapped.get(card) equals the destinationCount apply(tapDestinationCard) produces, or null exactly when apply returns the input reference; cards absent from the map (incl. S cards of a self-drop) make tapDestinationCard throw. kIfTapped exists only on the destination column's entry in Composing, absent on every other column and in every other phase.
+- R-31 empty destination (k = 0): canDecK, canIncK, canFlip and canTapForK false; kIfTapped an empty map.
+- CAP-3: view throws EngineError with the same check code as replay for at least one replay-invalid Session (e.g. an R-31 k-range violation, `r31-destination-count`).
+- AD-3: view(s) toStrictEqual view(structuredClone(s)).
+- Columns and WordCells are replay's committed-prefix position in every phase (S stays in its source column during Composing); one test.
+- End values: every won case uses `winSeed` (src/engine/win-seed.ts, CAP-5). finalScore, penalty, lettersLeft and band are absent while playing (including after undo from won) and present for won and gaveUp; displayScore = liveScore while playing, the final score otherwise. view calls scoring's `finalScore` only when status ≠ playing, passing `status === 'gaveUp'` (hand-off, story-scoring-penalty-and-bands-plan.md).
+- inProgress: fresh false; undo to index 0 leaving a pending draft true; won and gaveUp false.
+- D6: the delta tests include a QU free letter, a target equal to a free letter's source cell (R-41; EXPERIENCE A-E14 BALKED on cell 6 previews +30) and a delta ≤ 0; each equals the liveScore change after confirm.
+- Place legal targets: L = 3 gives only cell 3; L ≥ 10 gives all of 3–10.
+- Build-notes CAP-7 boundary cases: committed redo tail excluded from word count and longest word; longest-word ties to the earliest (incl. a QU word vs a plain word of equal letterCount); isLegalTarget and used tested in all three phases; draft present iff phase ≠ Idle and Place data iff phase = Place; every word string lowercase with QU → "qu"; in each canValidate false state validate throws the expected check code; pending-draft word present only while playing and Idle (absent after give up with a pending draft).
 
 ## References
 
 - parent — _bmad-output/initiative-wordcell-v1/epic-rules-engine/epic-rules-engine.md
+- spec — _bmad-output/specs/spec-epic-2-rules-engine/SPEC.md, CAP-7, D6, D7
 - spec — _bmad-output/specs/spec-epic-2-rules-engine/build-notes.md, CAP-7 GameView
+- coverage — _bmad-output/specs/spec-epic-2-rules-engine/rule-coverage.md, rows with CAP 7
 
 ## Notes
 
-- Open question: Whether computing every flag through apply's shared guards keeps view within the unit-suite time budget.
+- Open question: None.
