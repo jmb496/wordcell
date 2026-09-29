@@ -1,4 +1,5 @@
-import { type Card, COLUMN_COUNT, DECK_SIZE, ENGLISH_DISTRIBUTION, type Letter } from './types';
+import { EN } from './lang/en';
+import { type Card, COLUMN_COUNT, DECK_SIZE } from './types';
 
 /**
  * Deterministic 32-bit PRNG (mulberry32). Same seed → same deal on every device, which is
@@ -17,13 +18,7 @@ export function mulberry32(seed: number): () => number {
 
 /** The unshuffled deck in a fixed canonical order (ids 0..51). */
 export function buildDeck(): Card[] {
-  const cards: Card[] = [];
-  for (const [letter, count] of Object.entries(ENGLISH_DISTRIBUTION) as [Letter, number][]) {
-    for (let i = 0; i < count; i++) cards.push({ id: cards.length, letter });
-  }
-  if (cards.length !== DECK_SIZE)
-    throw new Error(`deck has ${cards.length} cards, expected ${DECK_SIZE}`);
-  return cards;
+  return Array.from({ length: DECK_SIZE }, (_, id) => ({ id, letter: EN.letters[id] }));
 }
 
 /** Fisher–Yates shuffle driven by the seeded PRNG. */

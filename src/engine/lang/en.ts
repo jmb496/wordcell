@@ -1,0 +1,31 @@
+import { makeLangData } from './lang-data';
+
+/** English (R-85): alphabetical, `QU` in the Q slot; entry order is deck order (AD-5). */
+export const EN = makeLangData('en', [
+  { letter: 'A', count: 3, value: 1 },
+  { letter: 'B', count: 1, value: 1 },
+  { letter: 'C', count: 2, value: 1 },
+  { letter: 'D', count: 2, value: 1 },
+  { letter: 'E', count: 4, value: 1 },
+  { letter: 'F', count: 2, value: 1 },
+  { letter: 'G', count: 1, value: 1 },
+  { letter: 'H', count: 3, value: 1 },
+  { letter: 'I', count: 3, value: 1 },
+  { letter: 'J', count: 1, value: 1 },
+  { letter: 'K', count: 1, value: 1 },
+  { letter: 'L', count: 2, value: 1 },
+  { letter: 'M', count: 2, value: 1 },
+  { letter: 'N', count: 3, value: 1 },
+  { letter: 'O', count: 3, value: 1 },
+  { letter: 'P', count: 2, value: 1 },
+  { letter: 'QU', count: 1, value: 2 },
+  { letter: 'R', count: 3, value: 1 },
+  { letter: 'S', count: 3, value: 1 },
+  { letter: 'T', count: 3, value: 1 },
+  { letter: 'U', count: 2, value: 1 },
+  { letter: 'V', count: 1, value: 1 },
+  { letter: 'W', count: 1, value: 1 },
+  { letter: 'X', count: 1, value: 1 },
+  { letter: 'Y', count: 1, value: 1 },
+  { letter: 'Z', count: 1, value: 1 },
+]);

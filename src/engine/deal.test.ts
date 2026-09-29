@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildDeck, deal, shuffle } from './deal';
-import { DECK_SIZE, ENGLISH_DISTRIBUTION } from './types';
+import { EN } from './lang/en';
+import { DECK_SIZE } from './types';
 
 // AD-5 golden literals, generated once from HEAD's deal.ts; never edit, only repoint the calls.
 const GOLDEN_COLUMNS_SEED_1 = [
@@ -84,8 +85,8 @@ describe('deck', () => {
     expect(deck).toHaveLength(DECK_SIZE);
     const counts = new Map<string, number>();
     for (const c of deck) counts.set(c.letter, (counts.get(c.letter) ?? 0) + 1);
-    for (const [letter, n] of Object.entries(ENGLISH_DISTRIBUTION))
-      expect(counts.get(letter)).toBe(n);
+    for (const { letter, count } of EN.distribution) expect(counts.get(letter)).toBe(count);
+    expect(buildDeck().map((c) => c.letter)).toEqual(EN.letters);
     const goldenCounts = new Map<string, number>();
     for (const letter of GOLDEN_LETTERS)
       goldenCounts.set(letter, (goldenCounts.get(letter) ?? 0) + 1);
@@ -118,7 +119,7 @@ describe('deal', () => {
   it('R-02 golden deal: seeds 1 and 4294967295', () => {
     const seed1 = deal(1).map((col) => col.map((c) => c.id));
     const seedMax = deal(4294967295).map((col) => col.map((c) => c.id));
-    const letters = buildDeck().map((c) => c.letter);
+    const letters = EN.letters;
     expect({ seed1, seedMax, letters }).toEqual({
       seed1: GOLDEN_COLUMNS_SEED_1,
       seedMax: GOLDEN_COLUMNS_SEED_MAX,
