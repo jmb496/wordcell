@@ -39,7 +39,7 @@ export function shuffle<T>(items: readonly T[], seed: number): T[] {
  */
 export function dealIds(seed: number): CardId[][] {
   const deck = shuffle(
-    Array.from({ length: DECK_SIZE }, (_, id) => id),
+    buildDeck().map((card) => card.id),
     seed,
   );
   const columns: CardId[][] = Array.from({ length: COLUMN_COUNT }, () => []);

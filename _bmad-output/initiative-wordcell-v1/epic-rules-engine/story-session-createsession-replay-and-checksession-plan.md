@@ -100,7 +100,7 @@ deferred: []
 - findings:
   - `[false]` `[reject]` blind: fractional `cursor.index` passes `ad7-cursor-index` — the ticket's Inputs bullet gives integer types to entry 10's schema stage ("replay adds no such check"); apply/view take engine-produced Sessions (build-notes CAP-3).
   - `[low]` `[patch]` blind: out-of-domain Move fields crash with TypeError; the schema-valid precondition is undocumented — the domain guards themselves are entry 10's (ticket Inputs); a JSDoc sentence on `replayFrom` and `checkMove` now states the precondition.
-  - `[medium]` `[patch]` blind: `deal()` letters no longer covered once the golden test calls `dealIds` — new test `R-02 deal(seed) is dealIds(seed) with each card's EN letter` (seeds 1, 4294967295); golden test and literals untouched.
+  - `[medium]` `[patch]` blind: `deal()` letters no longer covered once the golden test calls `dealIds` — new test `AD-2 deal(seed) is dealIds(seed) with each card's EN letter` (seeds 1, 4294967295); golden test and literals untouched.
   - `[low]` `[reject]` blind: plan Verification says only two call lines change in `deal.test.ts`, but the import changed too — the fix edits this build's plan; the import line is the needed repoint and the literals are byte-identical (checked by grep).
   - `[low]` `[reject]` blind: `createSession(-0)` keeps `-0`, no R-74 case — review-log only requires acceptance, which the `§2 -0` case asserts; `-0 >>> 0` deals as seed 0, no harm.
   - `[low]` `[patch]` blind: R-04 test froze the Session shallowly — now deep-freezes the Session and `EN`.
@@ -142,7 +142,7 @@ deferred: []
 
 **Commands:**
 - `npx vitest run src/engine/deal.test.ts -t "R-02 golden deal"` -- expected: 1 passed before and after
-- `git diff 0e58096253760f7570a52a6882c5515d2b07f66e -- src/engine/deal.test.ts` -- expected: only the two call lines change
+- `git diff 0e58096253760f7570a52a6882c5515d2b07f66e -- src/engine/deal.test.ts` -- expected: only the import line, the two golden call lines and the added `AD-2 deal(seed) is dealIds(seed) with each card's EN letter` test change
 - `npm run test:all` -- expected: exit 0
 
 ## Auto Run Result

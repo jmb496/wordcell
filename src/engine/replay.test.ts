@@ -296,7 +296,7 @@ describe('checkSession (AD-7 pre-replay)', () => {
       expectEngineError(() => run(S0, session), code);
     });
 
-  it('§2 the dealt replay checks the seed before dealing', () => {
+  it('§2 the dealt replay rejects a non-uint32 seed', () => {
     for (const seed of [-1, 4294967296, 1.5, Number.NaN, Infinity])
       expectEngineError(() => replay(sessionOf([], undefined, { seed }), LANG), 'seed-uint32');
   });
@@ -317,6 +317,11 @@ describe('replay per-move checks (§2)', () => {
     [
       'a self-drop with k = the column size before S is removed (R-31, R-21)',
       { ...BASE, destinationColumn: 1, destinationCount: 5 },
+      'r31-destination-count',
+    ],
+    [
+      'k = 1 on an empty destination (R-31, R-22)',
+      { ...BASE, destinationColumn: 3, destinationCount: 1 },
       'r31-destination-count',
     ],
     [
@@ -464,6 +469,49 @@ describe('replay per-move checks (§2)', () => {
     expect(run(withQu, sessionOf([nineCards(withQu)])).cells[7]).toStrictEqual(withQu.columns[0]);
     const plain = startOf(['IABCDEFGH']);
     expectEngineError(() => run(plain, sessionOf([nineCards(plain)])), 'r40-target-cell');
+  });
+
+  it('§2 an 11-letter word without QU reaches WordCell 10 (R-40)', () => {
+    const start = startOf(['IABCDEFGHJK']);
+    const move: Move = {
+      sourceColumn: 1,
+      sourceCount: 11,
+      destinationColumn: 1,
+      destinationCount: 0,
+      destinationSide: 'left',
+      freeLetters: [],
+      arrangement: start.columns[0],
+      reached: 'committed',
+      targetCell: 10,
+      placementOrder: start.columns[0],
+    };
+    expect(run(start, sessionOf([move])).cells[7]).toStrictEqual(start.columns[0]);
+  });
+
+  it('§2 rejects an Idle pending draft that breaks a rule of its reached', () => {
+    const session = sessionOf([BASE, { ...PLACE_DRAFT, sourceCount: 4 }], {
+      index: 1,
+      phase: 'idle',
+    });
+    expectEngineError(() => run(S0, session), 'r13-source-count');
+  });
+
+  it('§2 rejects a broken redo-tail move behind an Idle cursor (Q-41)', () => {
+    const t1 = { ...REDO_T1, sourceCount: 3 };
+    const session = sessionOf([BASE, REDO_DRAFT, t1, REDO_T2], { index: 1, phase: 'idle' });
+    expectEngineError(() => run(S0, session), 'r13-source-count');
+  });
+
+  it('§2 checks a Composing-reached draft against the Composing rules', () => {
+    const cursor = { index: 1, phase: 'composing' } as const;
+    expectEngineError(
+      () => run(S0, sessionOf([BASE, { ...TWO_LETTERS, arrangement: [Z, L] }], cursor)),
+      's2-free-letters-set',
+    );
+    expectEngineError(
+      () => run(S0, sessionOf([BASE, { ...TWO_LETTERS, sourceCount: 0 }], cursor)),
+      'r13-source-count',
+    );
   });
 
   it('§2 an Idle pending Composing-reached 2-letter draft replays (R-36 unchecked)', () => {

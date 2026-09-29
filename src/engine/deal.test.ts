@@ -127,7 +127,7 @@ describe('deal', () => {
     });
   });
 
-  it("R-02 deal(seed) is dealIds(seed) with each card's EN letter", () => {
+  it("AD-2 deal(seed) is dealIds(seed) with each card's EN letter", () => {
     for (const seed of [1, 4294967295])
       expect(deal(seed)).toStrictEqual(
         dealIds(seed).map((col) => col.map((id) => ({ id, letter: EN.letters[id] }))),
