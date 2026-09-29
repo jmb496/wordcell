@@ -16,3 +16,6 @@ Code review: quick, 1 pass, converged; 0 fixes applied
 Tests: all passing
 Ref to fix upstream: none
 Worth knowing: nothing
+
+## Stopped — usage limit
+Ticket 2.2 (LangData, EN and letterCount), Step A (ticket review loop), staged at pass 0 (partial log committed). Limit message: "You've hit your session limit · resets 10:20pm (America/New_York)". Resume: run `/epic-autopilot epic-rules-engine` after the reset; it reuses this run id and resumes the partial 2.2 review log.
