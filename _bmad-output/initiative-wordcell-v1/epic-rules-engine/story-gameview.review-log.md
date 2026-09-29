@@ -1,5 +1,5 @@
 # Review log — story-gameview.md (ticket 2.8)
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 56a870c, copy `story-gameview.review-log.passes/pass0.md`, 194 words.
 Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), epic-rules-engine.md, ARCHITECTURE-SPINE.md, AGENTS.md; done-ticket plans: story-golden-deal-test-and-r-id-test-names-plan.md, story-langdata-en-and-lettercount-plan.md, story-session-createsession-replay-and-checksession-plan.md, story-composing-commands-and-the-command-table-plan.md, story-validate-and-place-commands-with-the-8-worked-example-plan.md, story-undo-redo-give-up-and-accrue-plan.md, story-scoring-penalty-and-bands-plan.md.
@@ -68,3 +68,20 @@ Fixer: all 12 items applied, no conflicts; `dealtStart(seed)` confirmed in src/e
 - none
 ### Dropped
 - none
+
+## Pass 4 — 2026-09-29
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 2, minor 11, decision-needed 0  |  Dropped in triage: 2
+Words (docs): 1483 (7.6x pass 0; stated budget 1500)  |  Snapshot: story-gameview.review-log.passes/pass4.md
+Fixer: all 12 items applied, no conflicts.
+### Applied
+- [major] Description, Longest word / AC CAP-3 — `replayWords` described as a prefix-only replay; view would skip replay's checkSession, draft, redo-tail and ad7-gave-up-won checks (SPEC CAP-3: apply, replay, view reject the same Sessions) → replayWords runs all replayFrom checks, collects words from the prefix only, lives in replay.ts with replayFrom returning its position; CAP-3 examples in the draft and a redo-tail move → fixer item 1
+- [major] AC, R-31 kIfTapped — key set not pinned to exactly the destination column's cards after R-21 (SPEC CAP-7) → fixer item 2
+- [minor] items 3–13 (Exports comma; penalty/lettersLeft from scoring's own exports; canValidate true direction; gaveUp at index 0 with redo data; absence loop over every CardId; QU legal-target case; lang.letters not EN.letters; D6/legal-target/position tests named AD-3; "at least one test per field"; tapped-card candidates; inProgress after undo from gaveUp)
+### Default applied (technical)
+- replayWords → in replay.ts, replayFrom = replayWords(...).position (one loop)
+- D6, legal-target and position tests → named AD-3
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- displayScore R-80/R-81 split naming (stretch; current naming acceptable)
+- AD-14 mirror citation (reviewer: no change needed)
