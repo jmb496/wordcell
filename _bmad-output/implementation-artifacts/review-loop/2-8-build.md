@@ -1,5 +1,5 @@
 # Review loop — ticket 2.8 build (code mode)
-State: pass 1: done
+State: pass 2: done
 
 Target: `db8edab..HEAD` (commit 71adf5e), diff at `2-8-build.passes/pass0.diff` (git-ignored)
 Intent: `_bmad-output/initiative-wordcell-v1/epic-rules-engine/story-gameview-plan.md`
@@ -24,3 +24,27 @@ Fixer: all 5 applied; item 1 letterCount corrected to 7 (QU+EJATA = 6 cards, 7 l
 ### Dropped
 - intent: `redoAvailable` default calls `reject` — unreachable compile-time exhaustiveness guard that fails fast (rule 6); already triaged and rejected in the build's review (plan Review Triage Log); no behaviour at stake
 - verification (minor half of item 2's source): duplicate of the edge-case finding
+
+## Pass 2 — 2026-09-29
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 0, minor 7, decision-needed 0  |  Dropped in triage: 1 (duplicate)
+Snapshot: tree db548c3532efe1592a6730d9ec49caf16262510c (no fix pass; HEAD 3a582fd)
+### Applied
+- none (zero majors; stopping rule met before fix)
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- verification: canValidate expected code derived from view — duplicate of the fix-diff finding (kept below)
+
+## Result — converged after 2 passes
+Final state (pass 1 fix, unchanged since): `npm test` pass (1052 tests), `npm run lint` pass, `npm run check` pass (0 errors).
+
+Unapplied minors:
+- `src/engine/view.test.ts` 'AD-3 in each canValidate false state…' — expected code is derived from `v(session).status/phase` (circular); derive from `session.cursor.phase` and a per-fixture status set instead.
+- `src/engine/view.test.ts` 'AD-3 isLegalTarget and used in all three phases' (Place branch) — compares `isLegalTarget` with the view's own `legalTargets`; assert literal cells or agree with `apply(setTarget)`.
+- `src/engine/view.test.ts` flag agreement — `it.each` gives one test per flag × state rather than one per flag; coverage identical, keep it and note in the plan that it meets the AC.
+- `src/engine/commands.ts` `giveUpAvailable` — restates `prelude`'s gates instead of the reducer calling it; pinned only by the canGiveUp agreement test (plan already lists as residual risk).
+- `src/engine/view.test.ts` STATES — no assertion that labelled states have their named property (e.g. COMPOSING_FROM_PLACE reached = place, canRedo true); add those, plus "each flag true in ≥1 and false in ≥1 state".
+- `src/engine/view.test.ts` TAP_STATES — add K0_SELF and K0_EMPTY so every CardId's r31-tap-not-in-destination code is checked at k = 0.
+- `src/engine/view.test.ts` STATES — add an Idle state with a committed pending draft and redo tail (`play(COMMITTED, [UNDO, UNDO, UNDO])`).
