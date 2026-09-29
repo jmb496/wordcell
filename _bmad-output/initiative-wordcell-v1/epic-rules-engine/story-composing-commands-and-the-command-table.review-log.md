@@ -1,5 +1,5 @@
 # Review log — story-composing-commands-and-the-command-table.md (ticket 2.4)
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 9159a33, copy `story-composing-commands-and-the-command-table.review-log.passes/pass0.md`, 191 words.
 Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), epic-rules-engine.md, ARCHITECTURE-SPINE.md, AGENTS.md; done-ticket plans: story-golden-deal-test-and-r-id-test-names-plan.md, story-langdata-en-and-lettercount-plan.md, story-session-createsession-replay-and-checksession-plan.md.
@@ -73,3 +73,26 @@ Fixer: all 9 items applied; no commands added.
 - Named success-path tests for R-31 tap mapping, flip, R-21 draw order (covered by the CAP-4 sentence line and the plan's mapping).
 - R-71 edit tests assert the whole `ApplyResult` via `toStrictEqual` (no `rejectedWord`).
 - No runtime unknown-key check; non-array `arrangement` is a domain throw; each row has exactly one violation.
+
+## Pass 4 — 2026-09-29
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 1, minor 9, decision-needed 0  |  Dropped in triage: 0 (7 stretch minors left for the plan)
+Words (docs): 1498 (7.8 x pass 0; budget 1500)  |  Snapshot: story-composing-commands-and-the-command-table.review-log.passes/pass4.md
+Fixer: all 9 items applied; trimmed two duplicated phrases (entry 5/8 ownership already stated) to stay in budget; no commands added.
+### Applied
+- [major] AC arrange throw rows — no row for a missing chosen free letter; R-33 "removed only by removeFreeLetter" untested (and a full `checkMove` would throw `s2-free-letters-set` first) → fixer item 1
+- [minor] AC Domain — "the domain code" vs `command-domain`/`card-id-domain` split → fixer item 2
+- [minor] AC row names — R-75 example uses AD-2 wording "while status ≠ playing" → fixer item 3
+- [minor] Check codes — `command-type` missing from the new-codes list → fixer item 4
+- [minor] Notes — row shape needs an `id` field for the row name → fixer item 5
+- [minor] Check codes — "k outside 1…n on a non-empty destination" so the empty-destination check runs first → fixer item 6
+- [minor] AC fixed cases — k = n + 1 row on a partial self-drop (n after R-21); first k = 0 flip row drops onto another empty column → fixer item 7
+- [minor] Check codes — `arrange` builds F from the `freeLetters` cells' top cards and calls only `checkArrangement` → fixer item 8
+- [minor] AC R-30 — add a k = 0 draft (word = M) → fixer item 9
+### Left for the plan (stretch minors, not applied)
+- Ids for tap/empty-source/destinationColumn domain rows (default R-31, R-13, AD-2).
+- R-71/D8/R-23 results also pass `replay(result.session, EN)`.
+- R-13 destination-only word via empty column: an `R-13 …` success test.
+- addFreeLetter guards: build the candidate move, then rules.ts order, then the index check.
+- Place-reached/committed no-op inputs need a ≥ 3-letter word and a legal target (R-36/R-40).
+- Same-letter swap edit stays in entry 6 (SPEC CAP-5); optional extra assertion.
+- Entry 6's tickets.toml text should narrow to won status rows when pulled (outside this ticket).
