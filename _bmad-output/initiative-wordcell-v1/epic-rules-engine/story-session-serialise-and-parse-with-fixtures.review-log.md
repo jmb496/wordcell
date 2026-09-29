@@ -1,5 +1,5 @@
 # Review log — story-session-serialise-and-parse-with-fixtures.md (ticket 2.10)
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 7a2eea3, copy `story-session-serialise-and-parse-with-fixtures.review-log.passes/pass0.md`, 186 words.
 Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), epic-rules-engine.md, ARCHITECTURE-SPINE.md, AGENTS.md; done-ticket plans: story-composing-commands-and-the-command-table-plan.md story-gameview-plan.md story-golden-deal-test-and-r-id-test-names-plan.md story-langdata-en-and-lettercount-plan.md story-score-history-semantics-plan.md story-scoring-penalty-and-bands-plan.md story-session-createsession-replay-and-checksession-plan.md story-undo-redo-give-up-and-accrue-plan.md story-validate-and-place-commands-with-the-8-worked-example-plan.md 
@@ -60,7 +60,7 @@ Fixer: all 16 items applied; tool claims run: Vitest 5.0.2 ships vi.mock; Node 2
 ## Pass 3 — 2026-09-29
 Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 2, minor 11, decision-needed 0  |  Dropped in triage: 0 (duplicates merged; fixture-provenance rebuild test reclassified minor: build-notes CAP-9 prescribes a throwaway generator)
 Words (docs): 1229 (6.6x pass 0; stated budget 1500)  |  Snapshot: story-session-serialise-and-parse-with-fixtures.review-log.passes/pass3.md
-Fixer: all 13 items applied; 23 replay-stage codes counted in errors.ts (13 + 9 + 1); partial vi.mock with importOriginal marked unverified (not run against Vitest 5).
+Fixer: all 13 items applied; 23 replay-stage codes counted in errors.ts (13 + 9 + 1); partial vi.mock with importOriginal not run by the fixer; verified on Vitest 5.0.2 by the pass 4 fix-diff reviewer.
 ### Applied
 - [major] AC — replay-stage code set compared against a literal list in serialize.test.ts citing errors.ts (engine tests cannot read the doc comment); every listed code violable after the schema stage → fixer item 1
 - [major] Description — schema code granularity: required/object per object kind, type/enum per field (kebab-case), domain per domain; file slug rule → fixer item 2
@@ -72,3 +72,20 @@ Fixer: all 13 items applied; 23 replay-stage codes counted in errors.ts (13 + 9 
 - none
 ### Dropped
 - none (fixture-provenance rebuild test reclassified minor and answered by the build-notes throwaway generator)
+
+## Pass 4 — 2026-09-29
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 2, minor 13, decision-needed 0  |  Dropped in triage: 2 (propagation from the schema stage: optional, same try/catch; vi.mock log wording: corrected in the pass 3 log line)
+Words (docs): 1477 (7.9x pass 0; stated budget 1500)  |  Snapshot: story-session-serialise-and-parse-with-fixtures.review-log.passes/pass4.md
+Fixer: all 15 items applied; tsx run via npx cache (v4.23.15, Node 24.1.0; not a devDependency) importing src/engine; view.ts checked (no CardId word order exposed); replay.test.ts has named accepting cases for R-11, R-20, R-22, R-30, R-34, R-41 only (R-12, R-32 noted as schema-domain / unviolable).
+### Applied
+- [major] Description — schema.object-session removed (root object and version are the version stage's); schema.required-session scoped → fixer item 1
+- [major] Description / AC — redo-tail free letter and non-default placementOrder on the Place draft moves[cursor.index] (AD-17 restore boundary) → fixer item 2
+- [minor] items 3–15 (one domain-count fixture; hard-coded R-51 word order; winSeed(1); array type/domain code coverage; cursor-prefixed codes; schema check order; compact JSON; table stage values and static imports; result type as type definition; JSON cast note; generator outside src/ via tsx; EN frozen once; permit-only accepting cases already exist)
+### Default applied (technical)
+- schema check order: session, cursor, moves in index order; within an object: object → required → type → enum → domain (fixer swapped required/object: object-ness must precede field presence)
+- generator: uncommitted script outside src/, run with npx tsx
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- propagation from the schema stage (optional; same try/catch)
+- vi.mock log wording (corrected in the pass 3 log line)
