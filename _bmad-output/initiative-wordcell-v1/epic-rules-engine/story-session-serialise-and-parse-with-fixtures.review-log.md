@@ -1,5 +1,5 @@
 # Review log — story-session-serialise-and-parse-with-fixtures.md (ticket 2.10)
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 7a2eea3, copy `story-session-serialise-and-parse-with-fixtures.review-log.passes/pass0.md`, 186 words.
 Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), epic-rules-engine.md, ARCHITECTURE-SPINE.md, AGENTS.md; done-ticket plans: story-composing-commands-and-the-command-table-plan.md story-gameview-plan.md story-golden-deal-test-and-r-id-test-names-plan.md story-langdata-en-and-lettercount-plan.md story-score-history-semantics-plan.md story-scoring-penalty-and-bands-plan.md story-session-createsession-replay-and-checksession-plan.md story-undo-redo-give-up-and-accrue-plan.md story-validate-and-place-commands-with-the-8-worked-example-plan.md 
@@ -56,3 +56,19 @@ Fixer: all 16 items applied; tool claims run: Vitest 5.0.2 ships vi.mock; Node 2
 ### Dropped
 - fixture staleness/regeneration guard (over-specification; plan-level)
 - log wording on the tsc claim (corrected in the pass 1 log line)
+
+## Pass 3 — 2026-09-29
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 2, minor 11, decision-needed 0  |  Dropped in triage: 0 (duplicates merged; fixture-provenance rebuild test reclassified minor: build-notes CAP-9 prescribes a throwaway generator)
+Words (docs): 1229 (6.6x pass 0; stated budget 1500)  |  Snapshot: story-session-serialise-and-parse-with-fixtures.review-log.passes/pass3.md
+Fixer: all 13 items applied; 23 replay-stage codes counted in errors.ts (13 + 9 + 1); partial vi.mock with importOriginal marked unverified (not run against Vitest 5).
+### Applied
+- [major] AC — replay-stage code set compared against a literal list in serialize.test.ts citing errors.ts (engine tests cannot read the doc comment); every listed code violable after the schema stage → fixer item 1
+- [major] Description — schema code granularity: required/object per object kind, type/enum per field (kebab-case), domain per domain; file slug rule → fixer item 2
+- [minor] items 3–13 (throwaway generator writes via serializeSession; Object.hasOwn presence; redo-tail vs below-committed distinguishing asserts; composing phases and letter counts; ParseSessionResult; partial mock; serializeSession precondition; accrue before giveUp; fewest-change rule hand-reviewed; deep-freeze inputs)
+### Default applied (technical)
+- literal expected code list in serialize.test.ts (no new runtime export in errors.ts)
+- ParseSessionResult type name; partial vi.mock of './replay'
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none (fixture-provenance rebuild test reclassified minor and answered by the build-notes throwaway generator)
