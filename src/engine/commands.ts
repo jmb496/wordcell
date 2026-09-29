@@ -385,6 +385,10 @@ function undo(start: Start, session: Session, ctx: ApplyContext): ApplyResult {
       return { session: { ...session, cursor: { index, phase: 'composing' } } };
     case 'composing':
       return { session: { ...session, cursor: { index, phase: 'idle' } } };
+    default: {
+      const unknown: never = phase;
+      return reject('command-domain', `AD-2 undo in unknown phase ${String(unknown)}`);
+    }
   }
 }
 

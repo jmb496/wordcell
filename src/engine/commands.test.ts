@@ -1705,7 +1705,7 @@ describe('accrue', () => {
     }
   });
 
-  it('R-76 accrue adds elapsedMs while playing, in Idle, Composing and Place', () => {
+  it('R-76 accrue adds elapsedMs while playing, on a fresh deal and in Idle, Composing and Place', () => {
     for (const session of [IDLE, COMPOSING, PLACE]) {
       const input = withActive(session, 100);
       const result = accrue(input, 1234, EN);
@@ -1713,6 +1713,10 @@ describe('accrue', () => {
       expect(result).toStrictEqual({ ...input, activeMs: 1334 });
       expect(input.activeMs).toBe(100);
     }
+    const fresh = deepFreeze(createSession(1));
+    const result = accrue(fresh, 1234, EN);
+    expect(result).not.toBe(fresh);
+    expect(result).toStrictEqual({ ...fresh, activeMs: 1234 });
   });
 
   it('R-76 accrue throws r76-active-ms-overflow when the sum is not a safe integer', () => {
