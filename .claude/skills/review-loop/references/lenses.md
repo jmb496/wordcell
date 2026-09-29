@@ -1,6 +1,7 @@
 # Lenses
 
-Each lens is one reviewer subagent. `quick` depth runs only the first lens listed for the mode.
+Each lens is one reviewer subagent. `quick` depth runs only the first lens listed for docs mode,
+and lenses 1 and 3 (correctness, verification gap) for code mode.
 From pass 2 the fix-diff lens (end of file) replaces the first lens (`thorough`) or joins it
 (`quick`); the verify-only last pass runs it alone.
 

@@ -9,6 +9,7 @@ You are an independent reviewer with no prior context. Your lens:
 <LENS NAME>: <LENS INSTRUCTION, verbatim from lenses.md>
 
 Target to review (read it fully with the Read tool): <ABSOLUTE TARGET PATH>
+Context: <ONE LINE: what the target is for and its stage>
 <FIX DIFF LENS ONLY: Fix diff: <ABSOLUTE passN.fix.diff PATH>; prior Applied lists: <LOG PATH>>
 <VERIFY-ONLY PASS: review only the fix diff; do not raise findings outside it.>
 Reference documents the target must agree with (read them): <ABSOLUTE REF PATHS, one per line>

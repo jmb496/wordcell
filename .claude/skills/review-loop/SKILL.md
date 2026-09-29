@@ -17,8 +17,11 @@ orchestrator: you never review or fix the artifact yourself.
   or a code target (`diff`, `staged`, a branch name, a commit range, a ticket plan whose diff can
   be derived) → *code* mode. When a ticket plan is given in code mode, the plan is also the intent.
 - **max** (default 7): pass cap, including the verify-only pass (step 3). Never exceed it.
-- **depth** (default thorough): `quick` = 1 reviewer lens; `thorough` = all lenses for the mode.
+- **depth** (default thorough): `quick` = 1 reviewer lens in docs mode, 2 in code mode;
+  `thorough` = all lenses for the mode.
 - **refs** (default: see below): documents reviewers judge the target against.
+- **budget** (optional, docs mode): a stated growth budget in words, for a stub being fleshed
+  out (e.g. a ticket entry of under ~300 words); replaces the 2.5x default below.
 
 Default refs for this repo: `docs/game-flow-spec.md`, `docs/requirements-carryover.md`,
 `CLAUDE.md`, plus `AGENTS.md`, the active `ARCHITECTURE-SPINE.md`, and the target's epic file when
@@ -33,8 +36,9 @@ they exist. Do not pass a ref that is the target itself.
   (ticket's) contract stay major.
 - **minor**: wording, ordering, redundancy, style, an unlikely corner case with obvious handling;
   from pass 4 also precision in verify/evidence procedures and non-gating steps; and any
-  addition once the document exceeds its growth budget (about 2.5x its pass-0 word count; docs
-  mode), where procedure detail belongs in the build's plan instead.
+  addition once the document exceeds its growth budget (about 2.5x its pass-0 word count, or the
+  stated `budget`; docs mode), where procedure detail belongs in the build's plan instead. Over
+  budget, a minor still goes to the fixer only when its fix adds no words (reword, reorder, cut).
 - **decision-needed**: fixing it requires intent the refs do not supply **and** the choice
   changes what the product does or how it plays: functionality scope, UX (what the player sees,
   hears or can do) or gameplay (rules, scoring, the deal). These are never fixed by the loop; they
@@ -47,7 +51,8 @@ they exist. Do not pass a ref that is the target itself.
   player or the owner notice any difference in the product? If no, it is technical.
 
 Stop (**converged**) when a pass yields **zero major** findings after triage, or when two
-consecutive passes each yield **at most one** (that last major is recorded as open, not fixed). Stop (**diverging**) when majors rise
+consecutive passes each yield **at most one** (that last major is recorded as open, not fixed,
+and named in the result and the report). Stop (**diverging**) when majors rise
 pass-over-pass (e.g. 2 then 4): the refs are unclear, so name the ref or area to fix upstream
 (spec, spine, CLAUDE.md) instead of fixing the document again. Otherwise stop at the cap: pass
 `max` is always **verify-only** (quick depth, only the fix-diff lens, no new scope), so no fix goes
@@ -71,7 +76,9 @@ not applied: list them in the result for the next build or loop.
 3. **Pass N (N = 1..max; pass `max` verify-only):**
    a. **Review.** Launch one `general-purpose` subagent per lens **in parallel, in a single
       message**. Build each prompt from `references/reviewer-prompt.md`: lens instruction, the
-      target path, the ref paths, the severity definitions for pass N, and the output contract.
+      target path, the ref paths, a one-line target context (what the target is for and its
+      stage, e.g. "stub ticket being fleshed out before build"), the severity definitions for
+      pass N, and the output contract.
       Subagents read files themselves; never paste the artifact into the prompt.
    b. **Triage.** Merge all findings. For each, open the target at the cited location and verify
       it is real; drop disproved ones and duplicates (keep the clearer wording). Reclassify
@@ -84,11 +91,12 @@ not applied: list them in the result for the next build or loop.
       `references/fixer-prompt.md`: the target path, the accepted major *and* minor findings as
       a numbered list, the refs, and the rules (minimal edits; preserve ids such as R-xx/Q-xx;
       never resolve decision-needed items; in docs mode append each decision-needed item to the
-      document's open-questions table marked `PROPOSED BY REVIEW` with a proposed default; in code
+      document's open-questions table marked `PROPOSED BY REVIEW` with a proposed default, or,
+      when the document has no such table (e.g. a ticket), leave it only in the log; in code
       mode run `npm test` and `npm run lint` and `npm run check` before returning and report their
       output; in both modes run any literal command, config value or version-dependent tool
-      claim a fix touches against the pinned tool, or mark it `unverified`). It returns a change
-      summary.
+      claim a fix touches against the pinned tool, or mark it `unverified`; a design statement
+      that is not a runnable command needs neither). It returns a change summary.
    e. **Verify the fix landed.** Save the new pass copy (`<passes>/passN.md`; code mode a tree
       snapshot, `GIT_INDEX_FILE=<passes>/index sh -c 'git read-tree HEAD && git add -A && git
       write-tree'`, id in the log, and the restaged full diff `<passes>/passN.diff` as the next
@@ -102,12 +110,15 @@ not applied: list them in the result for the next build or loop.
       (`done`).
 4. **Report** to the user: passes run, converged or capped, counts per pass, the decision-needed
    list (functionality/UX/gameplay only) with each proposed default and its practical effect in
-   plain words, a one-line count of technical defaults applied, the unapplied minors, word count
-   start → end (docs), where the log is, and (code mode) the final test/lint status. If capped or
+   plain words, a one-line count of technical defaults applied, any open major, the unapplied
+   minors, word count start → end (docs), where the log is, and (code mode) the final
+   test/lint/check status: run the three commands at the final state yourself if no fix pass
+   ran them. If capped or
    diverging, say which majors persisted or rose and name the ref or area to fix upstream.
 
 Never edit the target yourself, never skip triage, never apply a decision-needed item, and never
-run more than `max` passes. Do not commit.
+run more than `max` passes. Do not commit, except the per-pass checkpoint commits a caller asks
+for; a run that converges with no fix pass leaves the log uncommitted for the caller.
 
 ## Log
 
@@ -120,7 +131,7 @@ checkpoint `State: pass N: review|fix|done`, rewritten after each step. Append p
 Reviewers: <lenses>  |  Findings: major X, minor Y, decision-needed Z  |  Dropped in triage: W
 Words (docs): <after fix> (<ratio> x pass 0)  |  Snapshot: <passes>/passN.md or tree <id>
 ### Applied
-- [major] <location> — <one line> → <what the fixer did>
+- [major] <location> — <one line> → fixer item <n>
 ### Default applied (technical)
 - <location> — <choice> → <default taken>
 ### Decision needed (functionality / UX / gameplay)
@@ -129,5 +140,5 @@ Words (docs): <after fix> (<ratio> x pass 0)  |  Snapshot: <passes>/passN.md or 
 - <one line each, with why>
 ```
 
-Finish with `## Result — converged after N passes`, `## Result — diverging at pass N (fix <ref>)`
+Finish with `## Result — converged after N passes` (plus `open major: …` when one is), `## Result — diverging at pass N (fix <ref>)`
 or `## Result — capped at N passes (open majors: …)`, then the unapplied minors.

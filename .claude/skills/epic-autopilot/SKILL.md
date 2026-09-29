@@ -33,7 +33,9 @@ when any of these holds:
 3. `npm run test:all` fails after the build or after the code-review fixes.
 4. The next ticket is `hitl = true`, or the built ticket's **Owner checks at gate 4** line names a
    check other than reading the result (e.g. judging icon art). For the latter, build and verify
-   it, leave it `built` (not `done`), and stop so the owner can check.
+   it, leave it `built` (not `done`), and stop so the owner can check. The same path applies to a
+   `hitl` ticket the owner authorised for this run whose only hitl part is that final check: run
+   Steps A–C and D.1–2, leave it `built`, and stop.
 5. The working tree is dirty or not on the epic's branch when a ticket starts, a headless step
    hit a usage or session limit (see Usage limits), a headless step exits without writing its
    result file, or any command here fails unexpectedly.
@@ -63,11 +65,14 @@ items — is recorded in the digest and the run continues.
 
 ## Per ticket
 
-Take the first `ready_to_start` ticket of this epic from `tickets.py next`. Let `T` be its ticket
+Take the first `ready_to_start` ticket of this epic from `tickets.py next`. If its entry has no
+file yet, run `uv run _bmad/method/scripts/tickets.py pull <epic folder> <id>` and commit the new
+file (`docs(tickets): pull ticket <ref> (<title>)`) before Step A. Let `T` be its ticket
 file (absolute), `ref` its ref (e.g. `1.4`), `P` its plan file path
 (`<ticket basename>-plan.md` beside it, once the build creates it), and `L` its code review log
-`_bmad-output/implementation-artifacts/review-loop/<ref>-build.md`. If it is `hitl`, stop
-(rule 4) before doing anything.
+`_bmad-output/implementation-artifacts/review-loop/<ref with dots as dashes>-build.md` (ref `1.11`
+→ `1-11-build.md`). If it is `hitl`, stop (rule 4) before doing anything, unless the owner
+authorised it for this run and its only hitl part is the final check (rule 4).
 
 A ticket an earlier run left part-way starts at the first unfinished step, judged from the files
 alone: a ticket review log without a `## Result` line → Step A (resume); no `P`, or `P` status
@@ -115,7 +120,8 @@ Skip if the ticket already has a `<ticket>.review-log.md` with a `## Result` lin
 exists without one, this is a **resume**: add to the prompt *"The review log is partial: resume it
 with the review-loop skill's resume rule; do not restart."*
 
-Prompt: *"Run the review-loop skill on `T` (docs mode, thorough, max 7). Refs: the epic's
+Prompt: *"Run the review-loop skill on `T` (docs mode, thorough, max 7<, budget=1500 when `T` is a
+stub under ~300 words>). Refs: the epic's
 SPEC.md, build-notes.md and delta-checks.md (under `_bmad-output/specs/<epic spec>/`), the epic
 file, ARCHITECTURE-SPINE.md, AGENTS.md, and the plans of this epic's done tickets for continuity.
 Checkpoint: after each pass's fixes are written (and its state line updated), commit only `T` and its
@@ -124,7 +130,8 @@ review log (the loop's `.passes/` copies are git-ignored), as `docs(tickets): WI
 "converged"|"capped"|"diverging", "passes": n, "majors_per_pass": [..], "decision_needed":
 [{"location": "...", "question": "...", "proposed_default": "...", "practical_effect": "..."}],
 "late_majors": [{"area": "...", "ref_to_fix": "<doc and section>", "spec_or_spine_intent":
-true|false}]}` (`late_majors`: the majors of the last passes when not converged, else `[]`)."*
+true|false}], "open_major": "..."|null}` (`late_majors`: the majors of the last passes when not
+converged, else `[]`; `open_major`: the major a converged run recorded as open, else `null`)."*
 
 Then: if `decision_needed` is non-empty → stop (rule 1) and present each item by its practical
 effect with the proposed default. If the result is not `converged`, record each `late_majors`
@@ -136,7 +143,9 @@ Else commit the ticket and its review log (the WIP commits stay as they are, no 
 ### Step B — build
 
 Check the tree is clean. Prompt: *"Run the bmad-build-auto skill on ticket `<ref>`
-(`T`). Result JSON: `{"plan": "<plan path>", "status": "<plan frontmatter status>",
+(`T`). <If the ticket review log records an open major or unapplied minors: The ticket's review
+log `<log path>` leaves these for the build; resolve each in the plan or record why not: <open
+major and minors, one per line>.> Result JSON: `{"plan": "<plan path>", "status": "<plan frontmatter status>",
 "blocking_condition": "..."|null, "commits": ["<sha> <subject>", ...]}`."*
 
 Then read `P`'s frontmatter `status` yourself (the plan is the proof, not the JSON). Not `built`
@@ -150,7 +159,8 @@ the build's commits are listed in the Step B JSON and `P`.
 Depth by risk: read `P`'s internal review (its Review Triage Log / Code Review section and
 frontmatter `deferred`), e.g. with `grep -nE 'high|medium' "$P"`, not the whole plan. If no high
 or medium finding was left unresolved (every one patched, or triaged false or rejected; none
-deferred or open), run at **quick** depth; otherwise **thorough**. Record the depth in the digest.
+deferred or open) and the ticket's `tickets.toml` `risk` is not `"medium"` or higher, run at **quick** depth;
+otherwise **thorough**. Record the depth in the digest.
 
 If `L` exists without `## Result`, this is a resume: add *"The review log is partial: resume it
 with the review-loop skill's resume rule; do not restart."* Prompt: *"Run the review-loop skill in

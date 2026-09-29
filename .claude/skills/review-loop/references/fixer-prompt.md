@@ -16,14 +16,16 @@ two findings conflict, resolve the major over the minor and say so.
 
 Any literal command, config value or version-dependent tool claim that you add or change: run
 it against the pinned tool in this repo (the version in package.json, the lockfile or the pinned
-image) and report the output; if you cannot run it, mark it `unverified` in your summary.
+image) and report the output; if you cannot run it, mark it `unverified` in your summary. A
+design statement that is not a runnable command needs neither.
 
 Findings to apply:
 1. [major] <location> — <problem> — proposed fix: <...>
 2. [minor] ...
 
-Do NOT act on these decision-needed items; <DOCS MODE: append each to the open-questions table as a
-new row marked "PROPOSED BY REVIEW" with the proposed default> <CODE MODE: leave them untouched>:
+Do NOT act on these decision-needed items; <DOCS MODE WITH AN OPEN-QUESTIONS TABLE: append each to
+it as a new row marked "PROPOSED BY REVIEW" with the proposed default> <OTHERWISE: leave them
+untouched>:
 - <location> — <question> — proposed default: <...>
 
 <CODE MODE ONLY: After editing, run `npm test`, `npm run lint`, and `npm run check` from the repo
