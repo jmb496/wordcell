@@ -51,3 +51,12 @@ Tests: all passing
 Ref to fix upstream: none
 Paused: usage limit during the build (reset 3:20am America/New_York), resumed 04:58 EDT; the build resumed from its saved plan
 Worth knowing: open test gap: no R-13 test asserts the word formed when a whole column is dropped back onto itself (Q-30), and one D8 removal case sits at the edge rather than the middle. Both are carried to the 2.12 sweep.
+
+## 2.5 Validate and Place commands with the §8 worked example — done
+What it adds: checking a word against the dictionary, choosing which WordCell it goes to and in what order the cards land, and confirming the move. The rulebook's worked example (BAKED, BALKED, FAKED, FLAKED) now runs as a test.
+Ticket review: 4 passes, converged (majors 10, 5, 3, 0); nothing needed your input
+Build: built; commits a489441
+Code review: thorough, 2 passes, converged; 1 fix commit (55df7eb)
+Tests: all passing
+Ref to fix upstream: none
+Worth knowing: two small test-precision minors (the R-42 default order asserted only under other test names; reorder not checked to keep a non-default target) carried to the 2.12 sweep.
