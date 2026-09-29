@@ -19,3 +19,13 @@ Worth knowing: nothing
 
 ## Stopped — usage limit
 Ticket 2.2 (LangData, EN and letterCount), Step A (ticket review loop), staged at pass 0 (partial log committed). Limit message: "You've hit your session limit · resets 10:20pm (America/New_York)". Resume: run `/epic-autopilot epic-rules-engine` after the reset; it reuses this run id and resumes the partial 2.2 review log.
+
+## 2.2 LangData, EN and letterCount — done
+What it adds: the English letter set (which letter each card carries, QU counting as two letters) now lives in one place that the deck, scoring and word checks all read; the maximum score (530) is worked out from it rather than typed in. The deal is unchanged (the 2.1 lock test still passes untouched).
+Ticket review: 2 passes, converged; nothing needed your input
+Build: built; commits 94d329c
+Code review: thorough, 2 passes, converged; 1 fix applied (bca5f0f)
+Tests: all passing
+Ref to fix upstream: none
+Paused: usage limit at Step A (ticket review), reset 10:20pm (America/New_York), resumed 22:21 EDT
+Worth knowing: two small test gaps noted by the code review (type exports not pinned by a test; the plan's result text is out of date) were left for the closing sweep.

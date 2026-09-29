@@ -3,7 +3,7 @@ title: 'LangData, EN and letterCount'
 type: 'feature'
 ticket: '2'
 created: '2026-09-28'
-status: 'built'
+status: done
 baseline_revision: '6f8101fc1f4d4e12db6697cd7c24f82ef8a94089'
 route: 'full'
 route_source: 'auto'
