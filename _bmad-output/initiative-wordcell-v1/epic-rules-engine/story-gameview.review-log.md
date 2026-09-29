@@ -1,5 +1,5 @@
 # Review log — story-gameview.md (ticket 2.8)
-State: pass 4: done
+State: pass 5: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 56a870c, copy `story-gameview.review-log.passes/pass0.md`, 194 words.
 Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), epic-rules-engine.md, ARCHITECTURE-SPINE.md, AGENTS.md; done-ticket plans: story-golden-deal-test-and-r-id-test-names-plan.md, story-langdata-en-and-lettercount-plan.md, story-session-createsession-replay-and-checksession-plan.md, story-composing-commands-and-the-command-table-plan.md, story-validate-and-place-commands-with-the-8-worked-example-plan.md, story-undo-redo-give-up-and-accrue-plan.md, story-scoring-penalty-and-bands-plan.md.
@@ -85,3 +85,26 @@ Fixer: all 12 items applied, no conflicts.
 ### Dropped
 - displayScore R-80/R-81 split naming (stretch; current naming acceptable)
 - AD-14 mirror citation (reviewer: no change needed)
+
+## Pass 5 — 2026-09-29
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 0, minor 13 (after merging duplicates), decision-needed 0  |  Dropped in triage: 1 (post-confirm pendingDraftWord: reviewer says no text change needed)
+Words (docs): 1483 (7.6x pass 0; stated budget 1500)  |  Snapshot: story-gameview.review-log.passes/pass4.md (no fix pass)
+### Decision needed (functionality / UX / gameplay)
+- none
+
+## Result — converged after 5 passes
+Majors per pass: 9, 4, 4, 2, 0. No open major. Words 194 → 1483 (budget 1500).
+Unapplied minors (for the build plan):
+- inProgress "undo after give up true" holds only with moves; make it "undo after give up at index > 0 true" (fresh give up → undo → false)
+- inProgress: add the common true case (first-drop Composing)
+- R-31 kIfTapped loop: "every card of the destination column after R-21" (the committed-prefix column still holds S in a self-drop)
+- Pin the R-41 Place agreement state to L < 10 so the cell > L false direction of canSetTarget/isLegalTarget is exercised
+- Place legal targets: "L = 10" rather than "L ≥ 10" (cell-10 boundary)
+- Test ids: legal-target tests may be R-40 and the position test §2 per SPEC CAP-7 ("R-id it derives, else AD-3"), or keep AD-3 and note they are not R-40/§2 coverage; name the longest-word, tie, wordCount and faces tests AD-3 (R-85 is cited, not the name)
+- Top-level types for the plan: phase = Session Phase, status = replay Status, band 0–5 (D3), longestWord? { spelling, letterCount }, pendingDraftWord? lowercase string
+- canValidate agreement in states without a draft word: empty set (the status/phase checks come first)
+- Existential candidates: sourceColumn × sourceCount 1…length × destinationColumn for canDropOn; sourceCount 1 for canPickUp (build-notes)
+- The D6 delta clause is duplicated in Verify and the D6 bullet: cut it from Verify
+- Split the Verify sentence into "Test names: …" and "Green means: …"
+- Exports: type-only exports for the column/cell/draft/place entry types; the runtime list gains only 'view'
+- Hard-to-reach states: public apply with a validate set holding the chosen word, else the D2 seam
