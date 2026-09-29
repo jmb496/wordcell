@@ -1,5 +1,5 @@
 # Review log — story-session-serialise-and-parse-with-fixtures.md (ticket 2.10)
-State: pass 4: done
+State: pass 5: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 7a2eea3, copy `story-session-serialise-and-parse-with-fixtures.review-log.passes/pass0.md`, 186 words.
 Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), epic-rules-engine.md, ARCHITECTURE-SPINE.md, AGENTS.md; done-ticket plans: story-composing-commands-and-the-command-table-plan.md story-gameview-plan.md story-golden-deal-test-and-r-id-test-names-plan.md story-langdata-en-and-lettercount-plan.md story-score-history-semantics-plan.md story-scoring-penalty-and-bands-plan.md story-session-createsession-replay-and-checksession-plan.md story-undo-redo-give-up-and-accrue-plan.md story-validate-and-place-commands-with-the-8-worked-example-plan.md 
@@ -89,3 +89,33 @@ Fixer: all 15 items applied; tsx run via npx cache (v4.23.15, Node 24.1.0; not a
 ### Dropped
 - propagation from the schema stage (optional; same try/catch)
 - vi.mock log wording (corrected in the pass 3 log line)
+
+## Pass 5 — 2026-09-29
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 0, minor 14, decision-needed 0  |  Dropped in triage: 1 (apply giveUp equivalence: stretch; undo and prelude both replay first)
+Words (docs): 1477 (7.9x pass 0; stated budget 1500)  |  Snapshot: story-session-serialise-and-parse-with-fixtures.review-log.passes/pass4.md (no fix pass)
+Triage note: adversarial's major "full schema.* code list not enumerated or asserted" reclassified minor under the pass-4 bar: any self-consistent code set meets SPEC CAP-9 and the gating tests (distinct codes, one fixture per code, build-notes minimum); edge-case and ref-alignment lenses independently rated the same gap (enum-field type errors, cursor/Move required fields) minor.
+### Applied
+- none (converged)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- apply(s, giveUp) equivalence (stretch)
+
+## Result — converged after 5 passes
+Majors per pass: 11, 8, 2, 2, 0. Decision-needed: none. Words 186 → 1477 (budget 1500). Technical defaults applied: 16 (see per-pass lists).
+
+Unapplied minors (for the build's plan):
+1. Rejecting fixtures table: the replay stage value should also name the post-replay ad7-gave-up-won check thrown by replay (replay.ts:181), not only checkSession plus per-move checks.
+2. Enum fields (cursor.phase, reached, destinationSide) get no schema.type-* code; any value outside the enum, whatever its JSON type, is schema.enum-<field>.
+3. Required fields: cursor = index, phase; Move = every non-optional §2 Move field (targetCell/placementOrder presence stays ad7-place-fields).
+4. Within an object, each check kind runs over all its fields in §2 key order before the next kind.
+5. Optionally list the full schema.* code set in the errors.ts doc comment and assert the table's schema codes equal a literal list, as for the 23 replay codes.
+6. Result type: optionally add expectTypeOf<ParseSessionResult>().toEqualTypeOf<…>() so npm run check enforces the AD-7 shape.
+7. Assert every parse result with toStrictEqual (version-unreadable carries no version key).
+8. serializeSession copies session.version (no substitution of SESSION_VERSION).
+9. Optional orphan-fixture guard in src/architecture.test.ts (fs allowed there); otherwise hand review as stated.
+10. Copy the local deepFreeze from commands.test.ts into serialize.test.ts (per-file pattern).
+11. Record the generator invocation as npx tsx@4.23.15 <script> with the command sequences.
+12. Redo-tail fixture: build the inline dictionary from the chosen cards' R-37 spellings (winSeed approach); any seed if seed 1 needs many moves; record seed and words in the plan.
+13. idle-pending-draft defining property adds moves.length === cursor.index + 1.
+14. build-notes' §2.freeLetters-set is the shipped code s2-free-letters-set (entry 3); fixture session-invalid-s2-free-letters-set.json; do not rename.
