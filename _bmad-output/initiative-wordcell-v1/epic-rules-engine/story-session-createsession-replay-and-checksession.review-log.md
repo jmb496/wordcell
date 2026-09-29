@@ -1,5 +1,5 @@
 # Review log — story-session-createsession-replay-and-checksession.md (ticket 2.3)
-State: pass 4: done
+State: pass 5: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 187bd73, copy `story-session-createsession-replay-and-checksession.review-log.passes/pass0.md`, 235 words.
 Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), epic-rules-engine.md, ARCHITECTURE-SPINE.md, AGENTS.md; done-ticket plans: story-golden-deal-test-and-r-id-test-names-plan.md, story-langdata-en-and-lettercount-plan.md.
@@ -97,3 +97,17 @@ Fixer: all 12 items applied; cut repeats (opening Composing clause, Verify tail,
 - none
 ### Dropped
 - none (left for the plan: `-0` seed/activeMs accepted; R-33 duplicate before empty; replay tests pass EN only; R-52 new top used by a later move; a non-word accepting case named for the dictionary row; tickets.toml entry 3 sync at publish)
+
+## Pass 5 — 2026-09-28
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 22, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+Words (docs): 1498 (6.3 x pass 0; budget 1500)  |  Snapshot: story-session-createsession-replay-and-checksession.review-log.passes/pass5.md
+Fixer: major applied; minors applied except item 7 (R-33 two fixtures note) and item 9 (R-31 lower-bound case), skipped for budget and left for the plan; no commands.
+### Applied
+- [major] Accepting cases / R-60 — no asserted position after a committed self-drop with k ≥ 1 (R-21 inside the R-60 commit; S removed twice would pass) → fixer item 1
+- [minor] items 2–13: R-61 twin plus a `§2` R-33 duplicate case, R-60 scope reuses the redo-tail Session, hand-off wording ("covers it via replay; entry 6 adds the Redo path"), AD-2 parenthetical, R-33 two codes flagged for entry 10, Idle pending draft in the committed-prefix list, R-31 lower-bound case, R-74-named fresh-Session test, duplicate id anywhere in the Start, cut "(or R-35)", opening "AD-7 pre-/post-replay", one won test named `R-62` → fixer items 2–13
+### Default applied (technical)
+- none new
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none (left for the plan: accepting cases are committed moves; seed tests use number casts only; seam baseline is a valid (Start, Session) pair; pre-edit golden run recorded in the plan; non-word evidence named in the plan)
