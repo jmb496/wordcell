@@ -3,7 +3,7 @@ title: 'Score history semantics'
 type: 'feature'
 ticket: '9'
 created: '2026-09-29'
-status: 'built'
+status: done
 baseline_revision: '6f03e959d536b8834071c5aa6f9413896311b780'
 route: 'full'
 route_source: 'auto'

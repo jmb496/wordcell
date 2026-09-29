@@ -101,3 +101,12 @@ Tests: all passing
 Ref to fix upstream: none
 Paused: weekly usage limit at Step A (message said resets Sep 30, 4pm America/New_York); resumed at the owner's request 14:55 EDT Sep 29, and the limit had already cleared
 Worth knowing: seven test-precision minors in view.test.ts (e.g. two assertions compare the view with itself) carried to the 2.12 sweep.
+
+## 2.9 Score history semantics — done
+What it adds: the record of each finished game (seed, won or given up, score, time played, longest word), adding a record when a game ends and removing it if that finish is undone, telling whether this game was recorded, and the six statistics (played, won, given up, best, average, longest word ever).
+Ticket review: 4 passes, converged (majors 10, 4, 1, 0); nothing needed your input
+Build: built; commits 567524c
+Code review: thorough, 1 pass, converged; 0 fixes applied
+Tests: all passing
+Ref to fix upstream: none
+Worth knowing: best and average include given-up games (negative scores), as the spec reads; five small test-naming and coverage minors carried to the 2.12 sweep.
