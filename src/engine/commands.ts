@@ -14,6 +14,7 @@ import {
   inDestination,
   type Position,
   sameDraftData,
+  sourceCards,
 } from './rules';
 import type { Move, Phase, Session } from './session';
 import { type CardId, COLUMN_COUNT, WORD_CELL_NUMBERS, type WordCellNumber } from './types';
@@ -241,8 +242,12 @@ function arrange(context: DraftContext, command: CommandOf<'arrange'>): ApplyRes
     reject('command-domain', `AD-2 arrangement ${String(arrangement)} is not an array`);
   for (const card of arrangement) assertCardId(card);
   const candidate: Move = { ...draft, arrangement: [...arrangement] };
-  const source = checkSourceCount(position, draft, index);
-  checkArrangement(candidate, source, freeCards(position, draft.freeLetters), index);
+  checkArrangement(
+    candidate,
+    sourceCards(position, draft),
+    freeCards(position, draft.freeLetters),
+    index,
+  );
   return edit(context, candidate);
 }
 
@@ -283,7 +288,10 @@ export function applyFrom(
   }
 }
 
-/** AD-2: applies `command` to `session` over the dealt start. */
+/**
+ * AD-2: applies `command` to `session` over the dealt start. The seed is resolved (and
+ * `seed-uint32` thrown) before the `type` dispatch.
+ */
 export function apply(session: Session, command: Command, ctx: ApplyContext): ApplyResult {
   return applyFrom(dealtStart(session.seed), session, command, ctx);
 }

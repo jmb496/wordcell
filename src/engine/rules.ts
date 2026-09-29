@@ -43,6 +43,12 @@ function isPermutation(a: readonly CardId[], b: readonly CardId[]): boolean {
   return x.every((card, i) => card === y[i]);
 }
 
+/** R-10: S, the bottom `sourceCount` cards of the source column, unchecked (R-13). */
+export function sourceCards(position: Position, move: Move): readonly CardId[] {
+  const column = position.columns[move.sourceColumn - 1];
+  return column.slice(column.length - move.sourceCount);
+}
+
 /** R-10, R-13: S is the bottom 1…column-size cards of the source column. */
 export function checkSourceCount(position: Position, move: Move, index: number): readonly CardId[] {
   const column = position.columns[move.sourceColumn - 1];
@@ -53,7 +59,7 @@ export function checkSourceCount(position: Position, move: Move, index: number):
       'R-13',
       `sourceCount ${move.sourceCount} outside 1…${column.length}`,
     );
-  return column.slice(column.length - move.sourceCount);
+  return sourceCards(position, move);
 }
 
 /** The destination column after R-21 (S removed when it is the source column). */

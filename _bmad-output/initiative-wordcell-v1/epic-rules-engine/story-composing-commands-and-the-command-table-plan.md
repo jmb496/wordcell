@@ -89,8 +89,8 @@ deferred: []
 
 - `apply` resolves `dealtStart(session.seed)` before dispatch, so a Session with a bad seed throws `seed-uint32` before `command-type`; every engine-produced Session has a valid seed.
 - `sameDraftData` also compares `targetCell`/`placementOrder` (presence and elements); the candidate keeps them from the input, so they never decide the comparison.
-- The six R-71 Place-reached edits are one `it.each` (`R-71 %o …`); the command table has 63 rows (87 tests in `commands.test.ts`).
-- Verified: `npx vitest run src/engine` 180 passed; `npm run test:all` exit 0; the forbidden-path diff is empty.
+- The six R-71 Place-reached edits are one `it.each` (`R-71 %s …`); the command table has 66 rows (91 tests in `commands.test.ts`).
+- Verified: `npx vitest run src/engine` 184 passed; `npm run test:all` exit 0; the forbidden-path diff is empty.
 
 ## Plan Change Log
 

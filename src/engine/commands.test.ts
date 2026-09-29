@@ -793,6 +793,10 @@ describe('composing edits', () => {
     expect(draftOf(removed.session)).toStrictEqual(
       lowered({ freeLetters: [4], arrangement: [N, I, W] }),
     );
+    const removedFirst = run(two.session, { type: 'removeFreeLetter', cell: 4 });
+    expect(draftOf(removedFirst.session)).toStrictEqual(
+      lowered({ freeLetters: [3], arrangement: [I, W, Z] }),
+    );
   });
 
   it('R-34 free letters may interleave with S in M', () => {
