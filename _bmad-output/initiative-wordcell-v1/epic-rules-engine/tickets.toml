@@ -1,0 +1,155 @@
+# Epic 2 — Rules engine. Table order is the build order (SPEC CAP-1 → CAP-9; CAP-4 and CAP-9 each split in two).
+# Requirement source: _bmad-output/specs/spec-epic-2-rules-engine/ (SPEC.md, rule-coverage.md, build-notes.md).
+# Build precondition for every entry: clean tree on epic-2-engine.
+# The autopilot runs entries in table order. Entries 2–6 and 8–11 share src/engine/index.ts and the engine modules each extends, so they chain; entry 7 needs only entry 2.
+
+[[entry]]
+id = 1
+type = "story"
+title = "Golden deal test and R-id test names"
+description = "Test-only first code commit of the epic: adds it('R-02 golden deal …') to src/engine/deal.test.ts pinning, as literal arrays generated once from HEAD's deal.ts, the CardId columns for seeds 1 and 4294967295 and the 52-entry buildDeck() letter sequence, and renames the four scaffold deal tests with R-01/R-02/R-03 ids; no src/engine source changes."
+verify = "npm run test:all is green, git diff for the commit touches only src/engine/deal.test.ts, and temporarily swapping two entries of ENGLISH_DISTRIBUTION or changing the PRNG constant turns the R-02 golden deal test red."
+covers = ["CAP-1"]
+after = ["1.10"]
+hitl = false
+risk = "low"
+unknown = "None expected; deal.ts and types.ts are byte-identical to 785c0f6 (verified 2026-09-28)."
+
+[[entry]]
+id = 2
+type = "story"
+title = "LangData, EN and letterCount"
+description = "Adds src/engine/errors.ts EngineError carrying a unique check code (owned here, used by every later entry) and src/engine/lang/en.ts with EN built by one internal LangData constructor (distribution summing to 52, letter values, uppercase letters per CardId, derived maxScore), letterCount and spelling, makes buildDeck read EN, removes the Letter union and language constants from types.ts, turns STUCK_PENALTY_PER_CARD into PENALTY_PER_LETTER = 10, makes Card.letter a string (D1, main.ts and App.svelte type only), and repoints the golden test's letter half to EN.letters with its literal unchanged."
+verify = "npm run test:all is green with the golden literals byte-identical, R-85 tests show letterCount 2 for QU, 1 otherwise and EngineError for -1, 52 and 1.5, Σ letterCount over the deck is 53, EN.maxScore is 530, and the e2e smoke spec still finds 52 card-<CardId> elements for seed 1."
+covers = ["CAP-2"]
+after = [1]
+hitl = false
+risk = "medium"
+unknown = "Whether a readonly array field on LangData, rather than object key order, reproduces the scaffold deck order without touching the golden literals."
+references = ["spec — _bmad-output/specs/spec-epic-2-rules-engine/build-notes.md, Scaffold facts that bite, CAP-1, CAP-2"]
+
+[[entry]]
+id = 3
+type = "story"
+title = "Session, createSession, replay and checkSession"
+description = "Adds the §2 Session types, createSession (R-74 engine part: throws on a non-uint32 seed, holds the seed given), the internal CardId deal (the golden test's CardId half repointed to it), the D2 seam's Start type with its validation throws and replayFrom (entry 4 adds applyFrom, entry 8 the view counterpart), replay taking no dictionary with per-reached validation in the build-notes order, checkSession for the AD-7 checks, R-60 commit, R-61 exposure and status derivation (R-62), so a Session breaking any §2 invariant or rule at its reached throws while a Composing-reached 2-letter draft replays; its R-62 won test builds the position through the seam or hand-built committed moves [ASSUMPTION], public won cases waiting for entry 6's helper."
+verify = "npm run test:all is green with R-04, R-74, R-60–R-62 and §2 replay tests passing (a committed word absent from any set still replays), including one rejecting case per violable check asserting its unique code, the accepting cases for permit-only rules, and deep-frozen inputs."
+covers = ["CAP-3"]
+after = [2]
+hitl = false
+risk = "medium"
+unknown = "How much of the per-move rule checking can be shared with the command reducers of entries 4 and 5 without the seam leaking into index.ts."
+references = ["spec — _bmad-output/specs/spec-epic-2-rules-engine/build-notes.md, CAP-3 Session and replay"]
+
+[[entry]]
+id = 4
+type = "story"
+title = "Composing commands and the command table"
+description = "Creates src/engine/commands.test.ts opening with the executable AD-2 command table and implements apply with the status/phase/domain/rule check order for drop, tapDestinationCard, setDestinationCount, flip, addFreeLetter, removeFreeLetter and arrange: R-71 edit and advance semantics, no-op by value, D8 freeLetters order, applyFrom on the D2 seam, and their table rows with check codes, every row deep-freezing its input Session and LangData; validate and the Place commands are entry 5; the R-12, R-31 and R-33 flag and kIfTapped tests are entry 8's."
+verify = "npm run test:all is green with every row for these seven commands passing (no-op → same reference, throw → EngineError with the named check code) the R-31 bound and self-drop throw and no-op rows included, and R-10–R-13, R-20–R-23, R-30–R-35 tests and the R-39 @ts-expect-error no-Cancel test passing."
+covers = ["CAP-4"]
+after = [3]
+hitl = false
+risk = "medium"
+unknown = "Whether the table's typed row shape stays readable once entries 5 and 6 add their rows."
+references = ["spec — _bmad-output/specs/spec-epic-2-rules-engine/build-notes.md, CAP-4 Commands"]
+
+[[entry]]
+id = 5
+type = "story"
+title = "Validate and Place commands with the §8 worked example"
+description = "Adds validate (structural R-36, then ctx.dictionary membership, rejectedWord as the R-37 lowercase string), setTarget, setPlacementOrder and confirm with R-40–R-42, R-50–R-52 and the R-60 commit through apply, their command-table rows, and the §8 worked example (BAKED, BALKED, FAKED, FLAKED; DEKA… impossible) on a hand-built start through the D2 seam."
+verify = "npm run test:all is green with the new table rows, the R-36–R-38, R-40–R-42 and R-50–R-52 tests (including a QU word whose legal targets reach cell 5) and the §8 test passing, and validate without ctx.dictionary throws its check code."
+covers = ["CAP-4"]
+after = [4]
+hitl = false
+risk = "medium"
+unknown = "None beyond entry 4's table shape."
+references = ["rules — docs/game-flow-spec.md, §8 worked example"]
+
+[[entry]]
+id = 6
+type = "story"
+title = "Undo, redo, give up and accrue"
+description = "Adds undo, redo and giveUp per R-70, R-71 and R-75 (pending draft into the redo tail, Redo from Place committing only at reached = committed, won → playing), accrue with safe-integer checks, the shared test helper that wins a real seed through public apply, and the command table's undo, redo, giveUp and status rows, completing the table; entries 9, 10 and 11 use the won helper for every won case."
+verify = "npm run test:all is green with every R-70 transition, R-39 undo from Composing returning S, D and the free letters, the R-71 enablement and discard cases (Redo into Place ignoring the dictionary included), R-72, R-75 and the R-76 accrue cases passing in all three statuses, and the command table complete and green."
+covers = ["CAP-5"]
+after = [5]
+hitl = false
+risk = "medium"
+unknown = "Whether whole-column self-drops win every seed the helper is used on without hitting a word the inline set must list."
+references = ["spec — _bmad-output/specs/spec-epic-2-rules-engine/build-notes.md, CAP-5 Undo, redo, give up, accrue"]
+
+[[entry]]
+id = 7
+type = "story"
+title = "Scoring, penalty and bands"
+description = "Adds src/engine/scoring.ts: liveScore over WordCells, lettersLeft and the R-81 penalty (PENALTY_PER_LETTER × lettersLeft), the unclamped final score, and band as the 0–5 index relative to LangData's derived max (D3), with a synthetic LangData from the entry-2 constructor proving the thresholds are relative."
+verify = "npm run test:all is green with R-80 (including a word containing QU scored by letter count), R-81 (a QU left counts 2, negative finals kept) and R-83 boundary tests 158/159, 264/265, 377/378, 468/469, 529/530 and a negative score in band 0 passing, plus the synthetic LangData (Σ letterCount 54, derived max 540) band test."
+covers = ["CAP-6"]
+after = [2]
+hitl = false
+risk = "low"
+unknown = "None."
+
+[[entry]]
+id = 8
+type = "story"
+title = "GameView"
+description = "Adds view(session, lang) building every AD-3 field from one replay: faces, columns, WordCells, per-column and per-cell flags from the guards apply uses, kIfTapped, draft and Place data with the D6 score delta, live and display score, end values, word count and the internal longest-word function (reused by entry 9), pending-draft word and inProgress, the view counterpart of the D2 seam, and the R-12, R-31 and R-33 flag and kIfTapped tests entry 4 leaves (canPickUp, canIncK/canDecK at bounds, canAddFreeLetter on used or empty cells, S cards of a self-drop absent)."
+verify = "npm run test:all is green with one test per AD-3 field (named with its R-id, else AD-3), every can* flag agreeing with its mapped command in the build-notes table in both directions, and the D6 delta equal to the live-score change of the commit, QU free letter included."
+covers = ["CAP-7"]
+after = [6, 7]
+hitl = false
+risk = "medium"
+unknown = "Whether computing every flag through apply's shared guards keeps view within the unit-suite time budget."
+references = ["spec — _bmad-output/specs/spec-epic-2-rules-engine/build-notes.md, CAP-7 GameView"]
+
+[[entry]]
+id = 9
+type = "story"
+title = "Score history semantics"
+description = "Adds src/engine/history.ts: gameRecord (reusing entry 8's longest-word function), reconcileHistory, isRecorded and the six v1 statistics per AD-6, R-76's record part and R-84, including the empty-history, mismatch and A-E3 rounding cases; won cases use entry 6's helper."
+verify = "npm run test:all is green with the R-84, R-74 and R-76 record tests passing: append on finish, remove only on a seed/outcome/activeMs match, isRecorded true and false cases, and statistics with −7.5 → −7."
+covers = ["CAP-8"]
+after = [8]
+hitl = false
+risk = "medium"
+unknown = "None."
+
+[[entry]]
+id = 10
+type = "story"
+title = "Session serialise and parse with fixtures"
+description = "Adds serializeSession and parseSession (JSON parse, version checks, the §2 schema stage, then replay with checkSession), SESSION_VERSION = 1, the valid round-trip fixtures in root fixtures/ generated once through public apply, and one rejecting session-invalid-<check>.json per schema case, AD-7 check and violable replay check; null/[] fixture tests assert only version-unreadable (review-log minor); the won fixture comes from entry 6's helper."
+verify = "npm run test:all is green with every round-trip fixture deep-equal after parse, every rejecting fixture giving replay-failed with its version plus the unique check code from the stage run directly, version-unknown and the inline unparseable and primitive-root cases giving their reasons, and a schema-valid replay-invalid Session making apply and view throw while parseSession returns replay-failed."
+covers = ["CAP-9"]
+after = [9]
+hitl = false
+risk = "medium"
+unknown = "Whether the architecture test's fixtures/<name>.json rule and the engine tsconfig accept the JSON imports without a config change."
+references = ["spec — _bmad-output/specs/spec-epic-2-rules-engine/build-notes.md, CAP-9 Serialise and parse"]
+
+[[entry]]
+id = 11
+type = "story"
+title = "History serialise and parse, and the epic's scripted game"
+description = "Adds serializeHistory, parseHistory with its stage order, container and checkRecord checks, HISTORY_VERSION = 1, the history round trip built from gameRecord outputs, one history-invalid-<check>.json per record check, and the SPEC Success signal test: a scripted seed-1 game round-tripped to an equal view after every step, undo to the start and redo to the end; won records use entry 6's helper."
+verify = "npm run test:all is green with the history round trip, every history fixture asserting its reason and checkRecord code, the scripted-game test, and an AD-2 test that index.ts's runtime export names equal AD-2's list plus deal passing."
+covers = ["CAP-9"]
+after = [10]
+hitl = false
+risk = "medium"
+unknown = "None."
+
+[[entry]]
+id = 12
+type = "story"
+title = "Refactor sweep"
+description = "Cleanup only across src/engine/, scoped when it starts from the epic's build records and the review findings deferred during entries 1–11; scope pushed out of another story is a new story."
+verify = "npm run test:all is green, the R-02 golden deal literals are unchanged, and every change maps to a deferred finding named in the plan."
+covers = ["CAP-1", "CAP-2", "CAP-3", "CAP-4", "CAP-5", "CAP-6", "CAP-7", "CAP-8", "CAP-9"]
+after = [11]
+hitl = false
+risk = "low"
+unknown = "Scope is unknown until the earlier builds finish."

@@ -5,3 +5,10 @@ id = 1
 slug = "epic-scaffold-ci-deploy"
 title = "Scaffold hardening, CI and deploy"
 covers = []
+
+[[epic]]
+id = 2
+slug = "epic-rules-engine"
+title = "Rules engine"
+covers = []
+after = [{ epic = 1, needs = "the AD-1 layer checks, test:all gate and D1 placeholder feed" }]
