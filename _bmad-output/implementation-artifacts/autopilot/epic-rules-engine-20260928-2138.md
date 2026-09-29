@@ -38,3 +38,6 @@ Code review: thorough, 3 passes, converged with one open item; 2 fix commits (80
 Tests: all passing
 Ref to fix upstream: none (the open item is a missing test, not unclear docs)
 Worth knowing: the code review left one test gap open: undone moves after the first one are not yet covered by a test that makes them fail (proposed cases are in review-loop/2-3-build.md Pass 3). Carried to the 2.12 refactor sweep, with seven small test-precision minors from the same log.
+
+## Stopped — usage limit
+Ticket 2.4 (Composing commands and the command table), Step B (build), plan status `in-review`. Limit message: "You've hit your session limit · resets 3:20am (America/New_York)". The build's own files (src/engine/commands.ts, commands.test.ts, edits to errors.ts, index.ts, index.test.ts, replay.ts, rules.ts, and the plan) are left uncommitted for bmad-build-auto's resume. Resume: run `/epic-autopilot epic-rules-engine` after the reset; Step B resumes the in-progress build.
