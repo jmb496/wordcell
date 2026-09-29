@@ -1,5 +1,5 @@
 # Review log — story-composing-commands-and-the-command-table.md (ticket 2.4)
-State: pass 4: done
+State: pass 5: done (converged)
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 9159a33, copy `story-composing-commands-and-the-command-table.review-log.passes/pass0.md`, 191 words.
 Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), epic-rules-engine.md, ARCHITECTURE-SPINE.md, AGENTS.md; done-ticket plans: story-golden-deal-test-and-r-id-test-names-plan.md, story-langdata-en-and-lettercount-plan.md, story-session-createsession-replay-and-checksession-plan.md.
@@ -96,3 +96,32 @@ Fixer: all 9 items applied; trimmed two duplicated phrases (entry 5/8 ownership 
 - Place-reached/committed no-op inputs need a ≥ 3-letter word and a legal target (R-36/R-40).
 - Same-letter swap edit stays in entry 6 (SPEC CAP-5); optional extra assertion.
 - Entry 6's tickets.toml text should narrow to won status rows when pulled (outside this ticket).
+
+## Pass 5 — 2026-09-29
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 0, minor 17, decision-needed 0  |  Dropped in triage: 0 (2 reviewer majors reclassified minor)
+Words (docs): 1498 (7.8 x pass 0; budget 1500)  |  Snapshot: pass4.md (no fix this pass)
+### Reclassified
+- Edge-case "major" (empty-destination check order for k ≠ 0) → minor: pass 4 already scopes `r31-destination-count` to "a non-empty destination", so the order is stated; only an extra k = 1 row remains (test precision).
+- Adversarial "major" (new command-only checks and the no-op comparison as shared internal predicates for entry 8's can* flags, build-notes CAP-7) → minor: internal structure across tickets, not this ticket's contract; entry 8 must honour CAP-7 either way.
+
+## Result — converged after 5 passes
+Majors per pass: 8, 8, 3, 1, 0. Decision-needed: none. Technical defaults applied: union of the seven commands with a throwing `never` default; Session-literal inputs; gaveUp status rows early; R-30 word helper in rules.ts; new check codes and their names; row-naming ids; domain vs rule split. Words 191 → 1498.
+
+Unapplied minors (for the build's plan):
+- Notes: build the `it.each` name "per the AC row-name format" (outcome and phase/status suffix included), not just id/command/precondition.
+- Add a k = 1 on an empty destination row (`r31-set-count-empty-destination`, R-31).
+- Put each new command-only check (`r31-tap-not-in-destination`, `r31-set-count-empty-destination`, `r33-free-letter-absent`, `r33-free-letter-index`) and the no-op-by-value comparison in rules.ts as internal predicates the reducer turns into throws, so entry 8's can* flags reuse them (build-notes CAP-7).
+- Name the module: apply and reducers in `commands.ts` (build-notes CAP-4).
+- addFreeLetter check order: duplicate, empty, then index; each row has one violation.
+- Non-array `arrangement` → `command-domain`; |M| = `arrangement.length` (card count, QU counts 1).
+- `sourceColumn` 0/9 rows: ref-alignment suggests AD-2 instead of R-12 (R-12 carried by the @ts-expect-error test alone); owner-neutral, plan's choice.
+- Negative counts: apply's rule code vs parse's schema domain (build-notes CAP-9) — keep the split, note it for entry 10.
+- R-23 and §2 tests assert the whole Session with `toStrictEqual` (cursor and `reached` included).
+- Domain rows: per command × id field, one above-max and one non-integer row (`sourceColumn` also 0); `arrangement` one row with a single bad element.
+- Add a foreign-card `arrange` row (R-35).
+- Edit/advance tests deep-freeze their inputs too (SPEC "no argument is mutated").
+- Unknown-type row uses the gaveUp Session (dispatch precedes status).
+- @ts-expect-error literals: all required fields present, offending property on its own line; `cancel` literal on one line.
+- Row ids from the check-code prefix (`r13-…` → R-13, `r31-…` → R-31) where rule-coverage is ambiguous.
+- tickets.toml: entry 4's text says "Session and LangData" deep-frozen, entry 6's claims all status rows — update both when publishing/pulling (outside this ticket).
+- Carried from passes 3–4 "Left for the plan" lists above.
