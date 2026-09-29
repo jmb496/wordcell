@@ -1,5 +1,5 @@
 # Review log — story-session-serialise-and-parse-with-fixtures.md (ticket 2.10)
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 7a2eea3, copy `story-session-serialise-and-parse-with-fixtures.review-log.passes/pass0.md`, 186 words.
 Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), epic-rules-engine.md, ARCHITECTURE-SPINE.md, AGENTS.md; done-ticket plans: story-composing-commands-and-the-command-table-plan.md story-gameview-plan.md story-golden-deal-test-and-r-id-test-names-plan.md story-langdata-en-and-lettercount-plan.md story-score-history-semantics-plan.md story-scoring-penalty-and-bands-plan.md story-session-createsession-replay-and-checksession-plan.md story-undo-redo-give-up-and-accrue-plan.md story-validate-and-place-commands-with-the-8-worked-example-plan.md 
@@ -7,7 +7,7 @@ Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), epic
 ## Pass 1 — 2026-09-29
 Reviewers: builder's reading, edge-case hunter, adversarial, ref alignment  |  Findings: major 11, minor 6, decision-needed 0  |  Dropped in triage: 3 (duplicates merged across lenses)
 Words (docs): 738 (4.0x pass 0; stated budget 1500)  |  Snapshot: story-session-serialise-and-parse-with-fixtures.review-log.passes/pass1.md
-Fixer: all 17 items applied; no runnable commands added; the tsc JSON-import claim in Notes is marked unverified (reviewers verified it on TS 6.0.3 in scratch projects; arch-test permission read at src/architecture.test.ts:251).
+Fixer: all 17 items applied; no runnable commands added; the tsc JSON-import claim in Notes was not run by the fixer but was verified by pass 1 and pass 2 reviewers on TS 6.0.3 (tsc with @tsconfig/svelte, rc 0); arch-test permission at src/architecture.test.ts:251.
 ### Applied
 - [major] AC — replay-failed limited to schema, AD-7 and replay-check fixtures; null/[] fixtures give version-unreadable only → fixer item 1
 - [major] Description — scope: Session half only; history half, history-* fixtures, parseHistory inline cases, Success-signal game are entry 11 → fixer item 2
@@ -32,3 +32,27 @@ Fixer: all 17 items applied; no runnable commands added; the tsc JSON-import cla
 - adversarial: assert each rejecting fixture differs minimally from its base (stretch; SPEC's "fewest field changes" is a construction rule, not gated)
 - adversarial: -0 seed/activeMs round trip (engine-produced fixtures never carry -0)
 - duplicates across lenses merged
+
+## Pass 2 — 2026-09-29
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 8, minor 8, decision-needed 0  |  Dropped in triage: 2 (fixture staleness/regeneration guard: over-specification for a plan; tsc log wording: corrected in the log directly)
+Words (docs): 1082 (5.8x pass 0; stated budget 1500)  |  Snapshot: story-session-serialise-and-parse-with-fixtures.review-log.passes/pass2.md
+Fixer: all 16 items applied; tool claims run: Vitest 5.0.2 ships vi.mock; Node 24 Number.isSafeInteger(2**53) false, JSON.parse keeps 9007199254740992.
+### Applied
+- [major] AC — §2 key order proven on reversed-insertion input; Object.keys on parsed output, cursor and Moves → fixer item 1
+- [major] Description — session-below-committed-last is the Q-41 undone-draft-in-redo-tail case, with its defining facts → fixer item 2
+- [major] Description / AC — 2-letter draft fixture uses two non-QU cards, letter count 2 → fixer item 3
+- [major] AC — table replay-stage codes equal the errors.ts violable code set; schema codes include the build-notes minimum → fixer item 4
+- [major] Description / AC — no check in both stages: schema stage types only fields AD-7 leaves untyped; schema stage does not throw on AD-7/replay fixtures → fixer item 5
+- [major] Description / AC — fewest field changes from a valid base; table gains base-fixture column → fixer item 6
+- [major] AC — propagation via vi.mock stub in a separate file, "AD-15 …" → fixer item 7
+- [major] AC — version 2**53 → version-unreadable → fixer item 8
+- [minor] items 9–16 (build-notes fixture names win; catch wording; result type named; defining property per fixture; test names for all tests; errors.ts code list; non-zero activeMs in gave-up fixture; table excludes null/[])
+### Default applied (technical)
+- parse result type { ok: true; session } | { ok: false; reason: 'version-unreadable' } | { ok: false; reason: 'version-unknown' | 'replay-failed'; version }
+- propagation test file src/engine/serialize.propagation.test.ts with vi.mock of replay
+- schema.* codes appended to the errors.ts doc-comment list
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- fixture staleness/regeneration guard (over-specification; plan-level)
+- log wording on the tsc claim (corrected in the pass 1 log line)
