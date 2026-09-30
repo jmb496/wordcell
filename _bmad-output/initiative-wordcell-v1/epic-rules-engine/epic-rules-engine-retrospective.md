@@ -69,8 +69,8 @@ Each finding is marked **fix now**, **defer** or **accept**. Findings from subag
   - `parseHistory`'s ok-payload `{ ok: true, history }` (`serialize.ts:21`) is not in the spine.
 
   **Disposition:** fix now in Task 3a (the approved Spine notes plus the D-STATS authorisation).
-- **S5. Epic 1 A1 has mostly landed** (e962c4b; see Previous-retro follow-through). One leftover: the spine does not mention the CI `concurrency` groups (`ci.yml:11-13` `cancel-in-progress: true`; `deploy.yml:18-20` `false`), which the e962c4b message claims to cover.
-  - **Disposition:** fix now in Task 3a.
+- **S5. Epic 1 A1 has landed** (e962c4b; see Previous-retro follow-through). The CI `concurrency` groups (`ci.yml:11-13`, `deploy.yml:18-20`) are in AD-18 in words, not by the key name: "a newer run on the same ref cancels the older" and "runs serialised, none cancelled". A first keyword grep missed them; this was corrected during close-out.
+  - **Disposition:** accept.
 - **S6. The epic file's `after` was changed** from `[epic-scaffold-ci-deploy]` (906264e) to `[]` (72b4163). The reason: an epic container gets no `done` status, so the old value gated every ticket (digest 2138:8). The cross-epic need stays on the initiative entry (`initiative tickets.toml:15`) and on entry 2.1.
   - **Disposition:** accept for epic 2.
   - **Lesson:** mark each finished epic container done after its retro (Task 3d), and have the autopilot stop instead of editing `after` (Skill note 4).
@@ -199,7 +199,7 @@ From `epic-scaffold-ci-deploy-retrospective.md:281-297`:
 
 | Item | Owner | Landed? |
 |---|---|---|
-| A1 spine and SPEC reconciled to the as-built | Architect; owner approves | Yes, mostly: e962c4b (spine +76/−43, epic 1 SPEC and build-notes), then 1d33960 and 4fa949e. The CI concurrency groups are not in the spine (S5). |
+| A1 spine and SPEC reconciled to the as-built | Architect; owner approves | Yes: e962c4b (spine +76/−43, epic 1 SPEC and build-notes), then 1d33960 and 4fa949e. The CI concurrency is in AD-18 (S5). |
 | A2 `test:all` covers what CI gates | Dev | Yes: 1d33960, `package.json:30` |
 | A3 packaging tests against `dist/`; precache dedupe | Dev | Yes: 1d33960 (`e2e/helpers/dist-test.ts`, `e2e/pwa/precache.spec.ts`) |
 | A4 `_headers`/`.assetsignore` test; immutable check extended | Dev | Yes: 4fa949e (`scripts/deploy-config.test.mjs`, `deploy-check.mjs`) |
@@ -216,7 +216,7 @@ From `epic-scaffold-ci-deploy-retrospective.md:281-297`:
 | # | Action | Kind | Owner | From |
 |---|---|---|---|---|
 | B1 | Add the (UI) tags to R-50 and R-83 in `docs/game-flow-spec.md` and update `rule-coverage.md` through bmad-spec. Also update §9's heading "Q-01 … Q-43" to include Q-44. | Spec reconciliation (owner-approved) | Close-out Task 3a | S2 |
-| B2 | Spine: AD-17 fixtures also hold the rejecting files; AD-7 and AD-2 safe-integer domain, and the `accrue` overflow; AD-6 Q-44; mark the Scaffold-deltas LangData/penalty item done; `parseHistory` ok-payload; CI concurrency groups (epic 1 A1 leftover). Epic 1 SPEC: check A1's leftovers. | Spec reconciliation (owner-approved) | bmad-architecture / bmad-spec, Task 3a | S4, S5 |
+| B2 | Spine: AD-17 fixtures also hold the rejecting files; AD-7 and AD-2 safe-integer domain, and the `accrue` overflow; AD-6 Q-44; mark the Scaffold-deltas LangData/penalty item done; `parseHistory` ok-payload. Epic 1 A1 needs nothing more (S5). | Spec reconciliation (owner-approved) | bmad-architecture / bmad-spec, Task 3a | S4, S5 |
 | B3 | AGENTS.md: drop the two stale line-80 sentences and the stale line-64 parenthetical. Add pitfalls: EngineError codes live in `errors.ts` and tests assert codes; the D2 seam is never exported from `index.ts`; `fixtures/` holds rejecting `*-invalid-*` files; `expectEngineError` stays per test file because `test-helpers.ts` is an engine source; `parseHistory` returns `.history` (the `history` naming pitfall). | Docs | bmad-project-context, Task 3b | A7, A3, A4 |
 | B4 | Apply Skill notes 1, 3, 4 and 6 to epic-autopilot and review-loop, plus committing the digest at Setup. No change to bmad-preview-ticketing. | Process change (owner-approved) | Task 3c | P4 |
 | B5 | Mark `epic-scaffold-ci-deploy` and `epic-rules-engine` done with bmad-preview-ticketing. | Board | Task 3d | S6 |
