@@ -129,3 +129,15 @@ Code review: thorough, 2 passes, converged with one open item; 1 fix commit (ba2
 Tests: all passing
 Ref to fix upstream: none
 Worth knowing: open test gap: the order of the history record checks is pinned only for its first pair. There are also two small minors (JSON -0 version, a version-2 history round trip). All are carried to the 2.12 sweep.
+
+## 2.12 Refactor sweep — done
+What it adds: no new behaviour. It closes the test gaps and small clean-ups the earlier reviews left (37 scoped items, including the open items from 2.3, 2.4, 2.6 and 2.11) and two small engine tidy-ups. No new test uncovered an engine bug.
+Ticket review: 5 passes, converged (majors 13, 6, 2, 1, 1); the one open item (what to do if a new test found a real bug) was settled by the build's default: record and stop for the owner. It did not fire.
+Build: built; commits dee02da
+Code review: thorough, 1 pass, converged; 0 fixes applied
+Tests: all passing
+Ref to fix upstream: none
+Worth knowing: six test-precision and plan-text minors remain in review-loop/2-12-build.md. The AGENTS.md "Known pitfalls" refresh (two stale sentences) is recorded as a retrospective action item, to run through bmad-project-context.
+
+## Run complete
+All 12 tickets of epic 2 are done. Next: `/bmad-retrospective` on epic-rules-engine.
