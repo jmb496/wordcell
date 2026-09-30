@@ -1,0 +1,33 @@
+# Review log — story-engine-carry-ins-and-d1-export-removal.md (ticket 3.1)
+
+State: pass 1: done
+
+Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 224 words (copy at story-engine-carry-ins-and-d1-export-removal.passes/pass0.md).
+Note: the pulled ticket lacked tickets.toml entry 1's interface, tests and owns fields; they are passed as intent and added to the Description in pass 1.
+
+## Pass 1 — 2026-09-30
+Reviewers: builder's reading, edge-case, adversarial, ref alignment  |  Findings: major 7, minor 6, decision-needed 0  |  Dropped in triage: 0 (duplicates merged: 36 raw → 13)
+Words (docs): 714 (3.19 x pass 0; budget 1500)  |  Snapshot: story-engine-carry-ins-and-d1-export-removal.passes/pass1.md
+Fixer: all 12 applied; unverified (not run): npm run test:screens (needs Docker), scratch `export type { Start } from './replay'` mutation.
+### Applied
+- [major] Description B6 — delete the TABLE throw row for present `index: undefined` (commands.test.ts ~851), `index === undefined` takes the append path, test deep-equals the absent-index result on a non-empty arrangement, supersedes SPEC/build-notes "table row" wording (SPEC.review-log.md Pass 3 open major 2), name `R-33 … (Q-31)` per AGENTS.md test-name rule → fixer 1
+- [major] Description accrue finish/un-finish — AD-4 order, accrue returns same reference while finished, reconcileHistory removes the record (SPEC CAP-1) → fixer 2
+- [major] Description fixture regeneration — read-only check, JSON.parse(serializeSession(built)) toEqual imported fixture, fixtures never edited, mismatch reported, nine names → fixer 3
+- [major] Description D1 removal — index.test.ts drops deal/Card; deal.ts/types.ts unchanged (default applied) → fixer 4
+- [major] Verify — App.svelte keeps DOM/text identical; npm run test:screens green against the unchanged baseline (CAP-3 owns regeneration, SPEC E7) → fixer 5
+- [major] Interface — store shape (Svelte .svelte.ts cannot export reassigned $state/$derived): `game` object with `state` and `view` getters, view(session, EN), main.ts mounts App without props → fixer 6
+- [major] Description — add Interface/Tests/Owns lines from tickets.toml entry 1 (caller instruction) → fixer 7
+- [minor] Verify scratch line `export type { Start } from './replay'` → fixer 8
+- [minor] Notes timing: record unit-suite time before/after; fallback over engine files only → fixer 9
+- [minor] Notes: AGENTS.md "type exports are unchecked" pitfall is a bmad-project-context follow-up, not hand-edited → fixer 10
+- [minor] R-38 case as a TABLE throw row (default) → fixer 11
+- [minor] view.test.ts DICT swap keeps the frozen context → fixer 12
+- [minor] "review-log open major 2" → cite SPEC.review-log.md Pass 3 (merged into fixer 1) → fixer 1
+### Default applied (technical)
+- D1 — leave deal.ts `deal()` and the Card type engine-internal (only index.ts and index.test.ts change); rename the `AD-2 deal(seed)` test to AD-5
+- Store — `export const game` with getters `state`, `view` (`GameView | undefined`, undefined while booting)
+- R-38 — TABLE row id R-38, validate, SHORT dictionary word, throw `r36-letter-count`
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
