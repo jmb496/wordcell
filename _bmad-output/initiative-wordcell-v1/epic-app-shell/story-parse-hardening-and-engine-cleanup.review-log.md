@@ -1,6 +1,6 @@
 # Review log — story-parse-hardening-and-engine-cleanup.md (ticket 3.2)
 
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 237 words (copy at story-parse-hardening-and-engine-cleanup.passes/pass0.md). Pre-loop HEAD 4496b3f.
 Note: the pulled ticket lacked tickets.toml entry 2's interface, tests and owns fields; they are passed as intent and added to the Description in pass 1.
@@ -85,3 +85,29 @@ Fixer: all 10 applied; no command changed.
 - none
 ### Dropped
 - adversarial stretch: extend citation grep to E ids — would also catch legitimate non-citation tokens; the Citations bullet already bars E ids (left to code review)
+
+## Pass 4 — 2026-09-30
+Reviewers: fix diff, edge-case, adversarial, ref alignment (late-pass bar)  |  Findings: major 1, minor 14, decision-needed 0  |  Dropped in triage: 1
+Words (docs): 981 (4.14 x pass 0; budget 1500)  |  Snapshot: story-parse-hardening-and-engine-cleanup.passes/pass3.md (no fix pass)
+### Open (not fixed; stopping rule)
+- [major] Description E4 / Verify accept boundaries — SPEC E4 "History records keep the safe-integer domain" has no test; a builder reusing the 2^52 bound in checkRecord would pass every listed check → add a §2 parseHistory accept row with record activeMs 4503599627370497 (2^52 + 1) (optionally MAX_SAFE_INTEGER)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- adversarial: widened test-edit exceptions need a SPEC/build-notes note — SPEC's "unchanged" wording is satisfied by the ticket's explicit list; no contract defect
+
+## Result — converged after 4 passes
+open major: history activeMs above 2^52 accept test (SPEC E4 "History records keep the safe-integer domain") — add a §2 parseHistory accept row with activeMs 4503599627370497.
+Majors per pass: 7, 4, 1, 1. Words 237 → 981 (budget 1500). Technical defaults applied: 12.
+
+### Unapplied minors (for the build's plan)
+- Verify 2^52 bullet: bind names (`parsed = parseSession(...).session`, `accrued = accrue(parsed, 86_400_000, EN)`) instead of `result`.
+- Verify one-definition bullet: add a mechanical grep (`SESSION_REQUIRED|CURSOR_REQUIRED|MOVE_REQUIRED|requireFields|unknownField|hasFieldSet|const letters =` returns nothing in engine sources); "field lists" means the membership lists named in Fold — serializer key orders (`orderedMove`, `serializeSession`, `orderedRecord`) and `MOVE_TYPES`/`MOVE_DOMAINS` stay.
+- Citations: new engine comments cite AD-7, §2, R-36/R-85 only, never E4–E6 (grep does not catch E ids); D-ids and A-E ids stay (only `entry N` and `CAP-n` are removed).
+- errors.ts: list the headroom code in its own "parseSession only, after replay returns" line, not under "AD-7 post-replay" (which view/apply can throw).
+- Optional case: a Session failing a replay check and the headroom bound reports the replay code (replay-failed).
+- Order pair `history.active-ms` before `history.won-final-score` on a record without longestWord.
+- Note that the accrued 2^52 + 86 400 000 Session is expected to fail parseSession on next load (E4 headroom, sanctioned).
+- `fieldSetViolation` parameter typed `object: object` (Session interface has no index signature).
+- History field-set messages stay unchanged (they carry no field name today).
+- New history fixture names omit the `longest-word-` prefix of their codes; keep the tickets.toml names and map them in the rows.
