@@ -1,5 +1,5 @@
 # Review log — story-primary-action-new-game-replay-and-feedback (ticket 3.4)
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 204 words, snapshot `story-primary-action-new-game-replay-and-feedback.passes/pass0.md`, HEAD a003cc7.
 Note: the pull from tickets.toml entry 4 dropped `interface`, `tests`, `owns`; they are passed to reviewers and fixer as intent, and the pass 1 fixer adds them to the Description as `Interface:`, `Tests:`, `Owns:` lines.
@@ -41,3 +41,32 @@ Words (docs): 810 (3.97 x pass 0)  |  Snapshot: story-primary-action-new-game-re
 - Event Timing PerformanceObserver measure (edge) — superseded by the simpler in-page synchronous measure (fixer 7)
 - Idle label `Loading words…` before entry 9 (edge) — would never clear on this build; interim plain label taken
 - Duplicate findings across lenses merged
+
+## Pass 2 — 2026-09-30
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 2, minor 17, decision-needed 0  |  Dropped in triage: 2
+Words (docs): 1081 (5.3 x pass 0)  |  Snapshot: story-primary-action-new-game-replay-and-feedback.passes/pass2.md  |  Fixer: all 13 applied; verified tsc -p tsconfig.node.json exit 0 with a dynamic-import probe (static import control: TS2304 'window', exit 2; probes deleted), port 4174 unused, build:test and session-idle-pending-draft.json exist; unverified: Node ≥ 22.18 claim (only v24.1.0 on host)
+### Applied
+- [major] E8 script — static import of e2e/helpers/seed.ts (and DOM code in page callbacks) fails `npm run check` (tsconfig.node.json lib ES2023, checkJs; probe: seed.ts(30,5) TS2304 'window'); 2 lenses → fixer 1
+- [major] newGame()/replay() order — pass 1's write-then-assign contradicts AD-4 / build-notes CAP-4 / entry 4 ("createSession, enter active, then write") without an agreed deviation (rule 7) → fixer 2
+- [minor] discarded take — clock carry keeps the sub-ms fraction; test uses integer advances (reclassed from major) → fixer 3
+- [minor] summarise empty/even count/threshold unpinned (reclassed from major) → fixer 4
+- [minor] E8 loops uncapped; Undo/Redo samples pooled or not → fixer 5
+- [minor] main-module guard; `@playwright/test` dynamic import → fixer 6
+- [minor] port placeholder (4173 taken by playwright.pwa.config.ts); stale dist-test; Node ≥ 22.18 → fixer 7
+- [minor] rAF figure misses render → double rAF → fixer 8
+- [minor] feedback AC: accrue-only setup → fixer 9
+- [minor] one `primary-action` button; New game enabled; idle-pending-draft label; label test id prefix → fixer 10
+- [minor] Confirm "before the next action" wording; R-74/R-73 test naming → fixer 11
+- [minor] screenshot baselines are android and desktop → fixer 12
+- [minor] CAP-5/CAP-6 sentences covered early by the shell Vitest → fixer 13
+### Default applied (technical)
+- E8 script — build-icons.mjs precedent: in-page code as strings, non-literal dynamic import of seed.ts, `await import('@playwright/test')`, direct-execution guard; `npm run check` stays green
+- Order — follow AD-4 as written (take and discard, createSession, enter active clearing feedback, then write); a throwing write rethrows to AD-15 (entry 5 halts)
+- summarise — throws on [] (rule 6), even-count median is the mean of the middle two, flag strictly > 16
+- E8 — each loop capped at 200 steps, Undo and Redo counts equal, samples pooled per figure; port 4174; plan runs build:test right before and records the commit
+- Label test prefix AD-3
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- Interim Composing ≥3 letters plain `Validate` breaks "a disabled Validate always says why" (adversarial, stretch) — accepted in pass 1 as transitional until entry 9; no change
+- Duplicates merged (tsc check ×2, Node version ×3, feedback clear placement ×2, port ×2, stale dist-test ×2)
