@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import historyThreeRecords from '../../fixtures/history-three-records.json' with { type: 'json' };
 import { accrue, type Command } from './commands';
 import { dealIds } from './deal';
 import { EngineError } from './errors';
@@ -8,6 +9,7 @@ import {
   HISTORY_VERSION,
   isRecorded,
   reconcileHistory,
+  type ScoreHistory,
   statistics,
 } from './history';
 import { EN } from './lang/en';
@@ -252,6 +254,22 @@ describe('reconcileHistory', () => {
     expect(undone.gaveUp).toBe(false);
     expect(undone.cursor).toStrictEqual(GAVE_UP1.cursor);
     expect(reconcile(records, GAVE_UP1, undone)).toStrictEqual(EARLIER);
+  });
+
+  it('R-76 R-84 accrue between a finish and its un-finish keeps the reference and the un-finish still removes the record (AD-4 order)', () => {
+    const start = deepFreeze((historyThreeRecords as unknown as ScoreHistory).records);
+    for (const [before, after] of [
+      [WON1_BEFORE, WON1],
+      [COL5_DONE, GAVE_UP1],
+    ] as const) {
+      const finished = reconcile(start, before, after);
+      expect(finished).toStrictEqual([...start, recordOf(after)]);
+      const accrued = accrue(after, 500, LANG);
+      expect(accrued).toBe(after);
+      const undone = play(accrued, [UNDO]);
+      expect(view(undone, LANG).status).toBe('playing');
+      expect(reconcile(finished, accrued, undone)).toStrictEqual(start);
+    }
   });
 
   it('R-84 a give-up at index 0 un-finished by undo (R-75, R-70) removes the last record', () => {

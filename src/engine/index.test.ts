@@ -4,7 +4,6 @@ import type * as scoreHistory from './history';
 import type {
   ApplyContext,
   ApplyResult,
-  Card,
   CardId,
   CellView,
   ColumnView,
@@ -39,7 +38,7 @@ import type * as types from './types';
 import type * as view from './view';
 
 describe('engine surface', () => {
-  it('AD-2 index exports accrue, apply, createSession, deal, EN, gameRecord, HISTORY_VERSION, isRecorded, letterCount, parseHistory, parseSession, reconcileHistory, serializeHistory, serializeSession, SESSION_VERSION, statistics and view only at runtime', () => {
+  it('AD-2 index exports accrue, apply, createSession, EN, gameRecord, HISTORY_VERSION, isRecorded, letterCount, parseHistory, parseSession, reconcileHistory, serializeHistory, serializeSession, SESSION_VERSION, statistics and view only at runtime', () => {
     expect(Object.keys(engine).sort()).toEqual([
       'EN',
       'HISTORY_VERSION',
@@ -47,7 +46,6 @@ describe('engine surface', () => {
       'accrue',
       'apply',
       'createSession',
-      'deal',
       'gameRecord',
       'isRecorded',
       'letterCount',
@@ -78,7 +76,6 @@ describe('engine surface', () => {
     expectTypeOf<Phase>().toEqualTypeOf<session.Phase>();
     expectTypeOf<Reached>().toEqualTypeOf<session.Reached>();
     expectTypeOf<Session>().toEqualTypeOf<session.Session>();
-    expectTypeOf<Card>().toEqualTypeOf<types.Card>();
     expectTypeOf<CardId>().toEqualTypeOf<types.CardId>();
     expectTypeOf<WordCellNumber>().toEqualTypeOf<types.WordCellNumber>();
     expectTypeOf<CellView>().toEqualTypeOf<view.CellView>();

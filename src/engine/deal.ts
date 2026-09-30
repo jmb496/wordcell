@@ -47,7 +47,7 @@ export function dealIds(seed: number): CardId[][] {
   return columns;
 }
 
-/** D1: `dealIds` with each card's `EN` letter. */
+/** Test helper: `dealIds` with EN letters (R-03 tests). */
 export function deal(seed: number): Card[][] {
   return dealIds(seed).map((col) => col.map((id) => ({ id, letter: EN.letters[id] })));
 }

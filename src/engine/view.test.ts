@@ -6,7 +6,7 @@ import { replay, type Start } from './replay';
 import { destinationRemainder, word } from './rules';
 import { band, finalScore, lettersLeft, liveScore, penalty } from './scoring';
 import { createSession, type Session } from './session';
-import { deepFreeze, draftOf, drop, play, startOf } from './test-helpers';
+import { DICT, deepFreeze, draftOf, drop, play, startOf } from './test-helpers';
 import { type CardId, WORD_CELL_NUMBERS, type WordCellNumber } from './types';
 import { type GameView, longestWord, view, viewFrom } from './view';
 import { winSeed } from './win-seed';
@@ -26,8 +26,6 @@ function expectEngineError(fn: () => unknown, check: string): void {
 
 const LANG = deepFreeze(EN);
 const CTX: ApplyContext = deepFreeze({ lang: LANG });
-const DICT = (...words: string[]): ApplyContext =>
-  deepFreeze({ lang: LANG, dictionary: new Set(words) });
 
 /** The D2 seam: `applyFrom` over `start` from a fresh seed-1 Session, inputs deep-frozen. */
 function seam(start: Start, commands: readonly Command[], words: string[] = []): Session {
@@ -787,6 +785,7 @@ const LABELLED: Readonly<Record<string, (session: Session, gameView: GameView) =
   'Idle with a pending draft': (s) => {
     expect(s.cursor.phase).toBe('idle');
     expect(draftOf(s)).toBeDefined();
+    expect(draftOf(s).reached).toBe('composing');
   },
   'Idle with an empty column after a committed move': (s) => {
     expect(s.cursor).toStrictEqual({ index: 1, phase: 'idle' });
@@ -799,6 +798,7 @@ const LABELLED: Readonly<Record<string, (session: Session, gameView: GameView) =
   'Composing k = 1': (s) => {
     expect(s.cursor.phase).toBe('composing');
     expect(draftOf(s).destinationCount).toBe(1);
+    expect(remainderOf(s).length).toBeGreaterThan(1);
   },
   'Composing middle k': (s) => {
     expect(s.cursor.phase).toBe('composing');
@@ -820,6 +820,7 @@ const LABELLED: Readonly<Record<string, (session: Session, gameView: GameView) =
   'Composing k = n − 1': (s) => {
     expect(s.cursor.phase).toBe('composing');
     expect(draftOf(s).destinationCount).toBe(remainderOf(s).length - 1);
+    expect(draftOf(s).destinationCount).toBeGreaterThan(0);
   },
   'Composing n = 1': (s) => {
     expect(s.cursor.phase).toBe('composing');

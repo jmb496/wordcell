@@ -245,12 +245,12 @@ function addFreeLetter(context: DraftContext, command: CommandOf<'addFreeLetter'
   const { position, draft, index } = context;
   const { cell } = command;
   assertCell(cell);
-  const hasIndex = Object.hasOwn(command, 'index');
+  const hasIndex = command.index !== undefined;
   if (hasIndex) assertInteger(command.index, 'index');
   const withCell: Move = { ...draft, freeLetters: [...draft.freeLetters, cell] };
   checkFreeLetterDuplicate(withCell, index);
   checkFreeLetterEmpty(position, withCell, index);
-  const at = hasIndex ? (command.index as number) : draft.arrangement.length;
+  const at = hasIndex ? command.index : draft.arrangement.length;
   if (!freeLetterIndexInRange(draft, at))
     reject(
       'r33-free-letter-index',

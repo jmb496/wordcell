@@ -1419,6 +1419,80 @@ describe('history version stage (§2, AD-7)', () => {
   );
 });
 
+// --- fixture regeneration (AD-17) -----------------------------------------------------------
+// The epic 2 generator record (plan Code Map): seed 1, dictionary {tan, one, man}; built with
+// engine createSession / accrue / apply via test-helpers `play`, plus `winSeed(1)`. A fixture no
+// script reproduces is a bug to report.
+
+const FIXTURE_WORDS = ['tan', 'one', 'man'];
+const FIXTURE_TAN: readonly Command[] = [drop(3, 2, 6), FLIP];
+const FIXTURE_TAN_PLACE: readonly Command[] = [...FIXTURE_TAN, VALIDATE];
+const FIXTURE_TAN_DONE: readonly Command[] = [...FIXTURE_TAN_PLACE, CONFIRM];
+const FIXTURE_ONE: readonly Command[] = [
+  drop(4, 1, 6),
+  { type: 'addFreeLetter', cell: 3 },
+  FLIP,
+  VALIDATE,
+];
+const FIXTURE_ONE_DONE: readonly Command[] = [
+  ...FIXTURE_ONE,
+  { type: 'setPlacementOrder', order: [9, 32, 28] },
+  CONFIRM,
+];
+const FIXTURE_MAN: readonly Command[] = [
+  drop(2, 1, 6),
+  { type: 'setDestinationCount', k: 2 },
+  FLIP,
+  VALIDATE,
+  CONFIRM,
+];
+const fromSeed1 = (commands: readonly Command[]): Session =>
+  play(createSession(1), commands, FIXTURE_WORDS);
+
+const REBUILDS: readonly (readonly [string, unknown, () => Session])[] = [
+  ['session-idle-fresh', validIdleFresh, () => deepFreeze(createSession(1))],
+  ['session-composing', validComposing, () => fromSeed1(FIXTURE_TAN)],
+  [
+    'session-composing-draft-2-letters',
+    validComposingDraft2Letters,
+    () => fromSeed1([drop(3, 1, 6), FLIP]),
+  ],
+  ['session-place', validPlace, () => fromSeed1(FIXTURE_TAN_PLACE)],
+  [
+    'session-idle-pending-draft',
+    validIdlePendingDraft,
+    () => fromSeed1([...FIXTURE_TAN_PLACE, UNDO, UNDO]),
+  ],
+  [
+    'session-place-free-letter-redo-tail',
+    validPlaceFreeLetterRedoTail,
+    () =>
+      fromSeed1([...FIXTURE_TAN_DONE, ...FIXTURE_ONE_DONE, ...FIXTURE_MAN, UNDO, UNDO, UNDO, UNDO]),
+  ],
+  [
+    'session-below-committed-last',
+    validBelowCommittedLast,
+    () => fromSeed1([...FIXTURE_TAN_DONE, ...FIXTURE_ONE, UNDO, UNDO, UNDO]),
+  ],
+  ['session-won', validWon, () => deepFreeze(winSeed(1))],
+  [
+    'session-gave-up',
+    validGaveUp,
+    () => play(accrue(deepFreeze(createSession(1)), 1000, EN), [GIVE_UP]),
+  ],
+];
+
+describe('AD-17 fixture regeneration', () => {
+  it.each(REBUILDS)(
+    'AD-17 %s.json equals its scripted accrue/apply rebuild',
+    (_name, fixture, build) => {
+      const built = build();
+      expect(JSON.parse(serializeSession(built))).toStrictEqual(fixture);
+      expect(JSON.stringify(fixture)).toBe(serializeSession(built));
+    },
+  );
+});
+
 describe('scripted game (§2, SPEC Success signal)', () => {
   function expectRoundTrip(session: Session): void {
     const result = parseSession(serializeSession(session), EN);

@@ -685,7 +685,7 @@ const TABLE: readonly Row[] = [
     build: on(PENDING_TAIL, VALIDATE),
   },
   {
-    id: 'R-36',
+    id: 'R-38 R-36',
     command: 'validate',
     precondition: 'a word with letter count below 3 (its spelling in the dictionary)',
     outcome: 'throw',
@@ -848,10 +848,10 @@ const TABLE: readonly Row[] = [
   {
     id: 'AD-2',
     command: 'addFreeLetter',
-    precondition: 'index undefined (present key) outside its documented domain',
+    precondition: 'index null outside its documented domain',
     outcome: 'throw',
     check: 'command-domain',
-    build: on(COMPOSING, asCommand({ type: 'addFreeLetter', cell: 4, index: undefined })),
+    build: on(COMPOSING, asCommand({ type: 'addFreeLetter', cell: 4, index: null })),
   },
   {
     id: 'AD-2',
@@ -1084,6 +1084,13 @@ describe('composing edits', () => {
     );
   });
 
+  it('R-33 addFreeLetter with index: undefined appends like an absent index (Q-31)', () => {
+    const undefinedIndex = run(COMPOSING, { type: 'addFreeLetter', cell: 4, index: undefined });
+    expect(undefinedIndex).toStrictEqual(run(COMPOSING, { type: 'addFreeLetter', cell: 4 }));
+    expect(undefinedIndex.session).not.toBe(COMPOSING);
+    expect(draftOf(undefinedIndex.session).arrangement.at(-1)).toBe(N);
+  });
+
   it('R-33 freeLetters keep add order, index places the card in M, removal keeps the rest in order (D8)', () => {
     const bare = sessionOf(
       [...PREFIX, { ...DRAFT_DATA, freeLetters: [], arrangement: [I, W], reached: 'composing' }],
@@ -1297,6 +1304,25 @@ describe('R-40 R-42 legal targets', () => {
   it('R-40 R-42 L = 3: default 3, setTarget 4 throws', () => {
     const [start, dropped] = wholeColumn('CAT');
     expectLegalTargets(start, [dropped], DICT('cat'), 3);
+  });
+
+  it('R-42 left side, k = 2, free letter inside M: placementOrder is D top → bottom then M in order', () => {
+    const start = startOf(['ST', 'BAD'], { 3: 'E' });
+    const [s, t] = start.columns[0];
+    const [, a, d] = start.columns[1];
+    const [e] = start.cells[0];
+    const validated = expectLegalTargets(
+      start,
+      [
+        drop(1, 2, 2),
+        { type: 'setDestinationCount', k: 2 },
+        { type: 'addFreeLetter', cell: 3, index: 1 },
+      ],
+      DICT('adset'),
+      5,
+    );
+    expect(draftOf(validated).destinationSide).toBe('left');
+    expect(draftOf(validated).placementOrder).toStrictEqual([a, d, s, e, t]);
   });
 });
 

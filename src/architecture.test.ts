@@ -1921,3 +1921,108 @@ describe('AD-1 engine tsconfig', () => {
     }
   });
 });
+
+// --- AD-17 valid fixtures -------------------------------------------------------------------
+
+describe('AD-17 valid session fixtures', () => {
+  it('AD-17 the valid fixtures/session-*.json files are exactly the nine rebuilt ones', () => {
+    // Own copy of serialize.test.ts's rebuild list (tests never import each other): a new valid
+    // fixture fails here until its rebuild case is added there.
+    const names = readdirSync(posix.join(ROOT, 'fixtures'))
+      .filter((name) => /^session-.*\.json$/.test(name) && !name.startsWith('session-invalid-'))
+      .sort();
+    expect(names).toEqual([
+      'session-below-committed-last.json',
+      'session-composing-draft-2-letters.json',
+      'session-composing.json',
+      'session-gave-up.json',
+      'session-idle-fresh.json',
+      'session-idle-pending-draft.json',
+      'session-place-free-letter-redo-tail.json',
+      'session-place.json',
+      'session-won.json',
+    ]);
+  });
+});
+
+// --- AD-2 engine surface --------------------------------------------------------------------
+
+describe('AD-2 engine index exports', () => {
+  it('AD-2 src/engine/index.ts exports exactly the AD-2 names, types and values', () => {
+    const parsed = ts.getParsedCommandLineOfConfigFile(
+      posix.join(ROOT, 'src/engine/tsconfig.json'),
+      {},
+      {
+        ...ts.sys,
+        onUnRecoverableConfigFileDiagnostic: (d) => {
+          throw new Error(ts.flattenDiagnosticMessageText(d.messageText, '\n'));
+        },
+      },
+    );
+    if (!parsed) throw new Error('src/engine/tsconfig.json did not parse');
+    expect(parsed.errors).toEqual([]);
+    const index = posix.join(ROOT, 'src/engine/index.ts');
+    const program = ts.createProgram({ rootNames: [index], options: parsed.options });
+    const sf = program.getSourceFile(index);
+    if (!sf) throw new Error('src/engine/index.ts missing from the program');
+    const diagnostics = ts
+      .getPreEmitDiagnostics(program, sf)
+      .map((d) => ts.flattenDiagnosticMessageText(d.messageText, '\n'));
+    expect(diagnostics).toEqual([]);
+    const checker = program.getTypeChecker();
+    const moduleSymbol = checker.getSymbolAtLocation(sf);
+    if (!moduleSymbol) throw new Error('src/engine/index.ts has no module symbol');
+    const names = checker
+      .getExportsOfModule(moduleSymbol)
+      .map((symbol) => symbol.name)
+      .sort();
+    expect(names).toEqual(
+      [
+        // values
+        'accrue',
+        'apply',
+        'createSession',
+        'EN',
+        'gameRecord',
+        'HISTORY_VERSION',
+        'isRecorded',
+        'letterCount',
+        'parseHistory',
+        'parseSession',
+        'reconcileHistory',
+        'SESSION_VERSION',
+        'serializeHistory',
+        'serializeSession',
+        'statistics',
+        'view',
+        // types
+        'ApplyContext',
+        'ApplyResult',
+        'CardId',
+        'CellView',
+        'ColumnView',
+        'Command',
+        'Cursor',
+        'DestinationSide',
+        'DraftView',
+        'Face',
+        'GameRecord',
+        'GameView',
+        'LangData',
+        'LongestWord',
+        'Move',
+        'ParseHistoryResult',
+        'ParseSessionResult',
+        'Phase',
+        'PlaceView',
+        'Reached',
+        'ScoreHistory',
+        'Session',
+        'Statistics',
+        'Status',
+        'StructuralCheck',
+        'WordCellNumber',
+      ].sort(),
+    );
+  });
+});
