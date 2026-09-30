@@ -7,11 +7,11 @@ paradigm: 'functional core / imperative shell, event-sourced'
 scope: 'WordCell v1: pure rules engine, event-sourced Session, app shell services, Svelte UI, PWA packaging, CI and deploy'
 status: final
 created: '2026-09-27'
-updated: '2026-09-28'
-binds: ['spec R-01…R-85, §2, Q-01…Q-35', 'brief §6, §7, §9', 'DESIGN.md', 'EXPERIENCE.md']
+updated: '2026-09-30'
+binds: ['spec R-01…R-85, §2, Q-01…Q-44', 'brief §6, §7, §9', 'DESIGN.md', 'EXPERIENCE.md']
 sources:
   - _bmad-output/planning-artifacts/briefs/brief-wordcell-2026-09-26/brief.md
-  - docs/game-flow-spec.md (v0.7)
+  - docs/game-flow-spec.md (v0.9)
   - _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/DESIGN.md
   - _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/EXPERIENCE.md
   - docs/platform-decision.md
@@ -23,7 +23,7 @@ companions: ['.memlog.md', 'reviews/']
 
 # Architecture Spine — WordCell
 
-Rule ids (R-xx), decisions (Q-xx) and §-references are `docs/game-flow-spec.md` v0.7. UX
+Rule ids (R-xx), decisions (Q-xx) and §-references are `docs/game-flow-spec.md` v0.9. UX
 assumption ids (A-Dn, A-En) are DESIGN.md and EXPERIENCE.md. This spine does not restate or
 reopen any of them; where a rule and this spine seem to disagree, the rule wins and this spine
 has a bug. The stack is decided in `docs/platform-decision.md` §3 and is cited, not re-argued.
@@ -34,6 +34,8 @@ AGENTS.md block.
 
 Amended 2026-09-28 (epic 1 retrospective A1, owner-approved): AD-1, AD-17, AD-18, Scaffold
 deltas and A-A4/A-A6 describe the code as built in epic 1; no decision changed.
+Amended 2026-09-30 (epic 2 retrospective B2, owner-approved): AD-2, AD-6 (Q-44), AD-7, AD-17
+and Scaffold deltas describe the engine as built in epic 2; no decision changed.
 
 ## Design Paradigm
 
@@ -139,7 +141,7 @@ flowchart LR
     on a used cell, a press at a bound) are realised by the UI **not dispatching**, gated by
     `GameView` flags (AD-3); a throw always means a bug.
   - `accrue(session, elapsedMs, lang): Session` (status derivation needs the deck) adds to `activeMs` only while status = playing
-    (R-76); while status ≠ playing, and for `0`, it returns the input reference; a non-integer or negative `elapsedMs` throws.
+    (R-76); while status ≠ playing, and for `0`, it returns the input reference; an `elapsedMs` that is not a non-negative safe integer throws, and so does a sum that leaves the safe-integer range.
   - `view(session, lang): GameView` (AD-3); `letterCount(card, lang)` (R-85); the history
     functions of AD-6; `serializeSession`, `parseSession(text, lang)`, `serializeHistory`,
     `parseHistory(text)` (AD-7); `SESSION_VERSION`, `HISTORY_VERSION`; `EN: LangData` (distribution, letter values,
@@ -242,7 +244,7 @@ sequenceDiagram
 
 ### AD-6 — Score history: semantics in the engine, one shell owner
 
-- **Binds:** `src/engine/history.ts`, `src/shell/history.svelte.ts`, R-83, R-84, Q-33, Q-35.
+- **Binds:** `src/engine/history.ts`, `src/shell/history.svelte.ts`, R-83, R-84, Q-33, Q-35, Q-44.
 - **Prevents:** record logic in UI code; a finish recorded twice; an un-finish removing another
   game's record; two in-memory copies of the history; the end sheet guessing whether this game
   was recorded.
@@ -258,7 +260,9 @@ sequenceDiagram
     `gameRecord(before)` (inputs independent of scoring, Q-43); otherwise returns `records` (same
     reference) `[ASSUMPTION A-A2]`. `isRecorded(records, session, lang)` = the last record
     matches `gameRecord(session)` by the same three fields. `statistics(records)`
-    = the six R-84 values (average per A-E3, longest-word ties to the earliest record).
+    = the six R-84 values (average per A-E3, longest-word ties to the earliest record); best and
+    average cover won records and gaveUp records scoring 0 or more, and are absent when none
+    qualifies (Q-44).
   - Shell: `history.svelte.ts` is the single owner, exported as `scoreHistory`, `$state` of
     `{ status: 'ok'; records } | { status: 'unreadable'; reason }`, and exposes `reconcile`, `reset`, and derived
     `statistics` and `recorded` (false while unreadable). The end sheet derives its history
@@ -283,17 +287,20 @@ sequenceDiagram
     `false` (R-76). All start at version `1`.
   - `parseSession(text, lang)` returns `{ ok: true, session } | { ok: false, reason }`, `reason` one of
     `version-unreadable`, `version-unknown { version }`, `replay-failed { version }` (schema or
-    any replay violation). `parseHistory` returns `version-unreadable`, `version-unknown {
+    any replay violation). `parseHistory` returns `{ ok: true, history: ScoreHistory }` (`ScoreHistory` =
+    `{ version, records }`; read as `result.history`, never destructured, AGENTS.md Known
+    pitfalls) or `{ ok: false, reason }`,
+    `reason` one of `version-unreadable`, `version-unknown {
     version }` or `contents-unreadable { version }` (including a record whose own `version`
     differs from the container's, and a `longestWord` of `null`). Each record is checked, each
     failure → `contents-unreadable`: exact field set; `seed` a uint32; `outcome` ∈ { won, gaveUp };
-    `finalScore` and `activeMs` integers, `activeMs` ≥ 0; `longestWord` absent or `{ spelling,
-    letterCount }` with a lowercase `a–z` spelling and a positive integer `letterCount`; a fixture
+    `finalScore` and `activeMs` safe integers, `activeMs` ≥ 0; `longestWord` absent or `{ spelling,
+    letterCount }` with a lowercase `a–z` spelling and a positive safe integer `letterCount`; a fixture
     per check. In both parsers, text that is
     not a JSON object, or a `version` that is not a non-negative safe integer, is
     `version-unreadable`; fixtures cover `null` and `[]`. They map one-to-one onto the EXPERIENCE.md message variants.
   - Before replay, `parseSession` checks, each failure → `replay-failed`: `seed` a uint32;
-    `activeMs` a non-negative integer; `gaveUp` boolean; `cursor.index` in 0…`moves.length`;
+    `activeMs` a non-negative safe integer; `gaveUp` boolean; `cursor.index` in 0…`moves.length`;
     `cursor.phase ≠ idle` requires `moves[cursor.index]` with `reached` ≥ the phase; `gaveUp`
     requires `cursor.phase = idle`; `targetCell` / `placementOrder` present iff `reached ≥
     place`; k = 0 requires `destinationSide = 'left'` (R-31); the §2 invariant (moves before
@@ -637,8 +644,11 @@ sequenceDiagram
   - **Speed.** The unit suite stays under 5 s and a watch re-run under 1 s on the dev machine
     (brief §6.7); unit tests never load the full dictionary except the named dictionary repro
     cases (AD-8), which load it once per file.
-  - **Seeding.** `fixtures/*.json` (repo root) are valid serialised Sessions and histories,
-    shared by Vitest repro cases and Playwright. `e2e/helpers/seed.ts` `seedStorage(page,
+  - **Seeding.** `fixtures/*.json` (repo root) are serialised Sessions and histories shared
+    by Vitest repro cases and Playwright: valid ones, plus the rejecting `session-invalid-*` and
+    `history-invalid-*` files, one per parser check (the check codes in `src/engine/errors.ts`),
+    which Playwright may seed for the §2 rejection flows; a rejection reason with no such file
+    (e.g. `version-unknown`) gets one named `<key>-invalid-<reason>.json`. `e2e/helpers/seed.ts` `seedStorage(page,
     { session, history, prefs })` writes them through `page.addInitScript` (page-scoped) guarded
     by a `sessionStorage` flag, so a reload never re-seeds; the kill variant's new page is not
     seeded; every seeding test uses it. Playwright's order of multiple init scripts is undefined,
@@ -869,7 +879,8 @@ Changes the first epic makes to commit `785c0f6`:
   (ticket 1.11, 2026-09-28), uv/Python only for regenerating the font).
 - `src/engine/types.ts` language constants move into `LangData` (`lang/en.ts`, R-85);
   `STUCK_PENALTY_PER_CARD` becomes the R-81 per-letter penalty. Made by epic 2, after the
-  golden deal test (AD-5), not the first epic (epic 1 spec D2).
+  golden deal test (AD-5), not the first epic (epic 1 spec D2). Done in epic 2 (tickets 2.2,
+  2.7): `PENALTY_PER_LETTER` in `types.ts`, the language data in `lang/en.ts`.
 
 ## Capability → Architecture Map
 

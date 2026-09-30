@@ -79,7 +79,7 @@ the architecture spine is the build contract.
 - Mirrors carry `data-mirror-of`, never `data-card-id` or `data-testid`, and never animate; a duplicate breaks FLIP and test locators.
 - Engine throws are `EngineError` with a kebab-case `check` code unique per check; every code is listed in `src/engine/errors.ts`. A new check adds its code there, and tests assert the code (`expectEngineError`), never the message.
 - The D2 start-position seam (`Start`, `checkStart`, `replayFrom`, `replayWords`, `dealtStart`, `applyFrom`, `viewFrom`) is engine-internal for tests: never export it, `EngineError` or any new name from `src/engine/index.ts` beyond AD-2's list (`index.test.ts` pins the runtime keys only; type exports are unchecked).
-- `fixtures/` holds valid Sessions and histories and, beside them, one rejecting `session-invalid-*` / `history-invalid-*` file per AD-7 check (Vitest only); never seed Playwright from a `*-invalid-*` file unless the test is about rejection.
+- `fixtures/` holds valid Sessions and histories and, beside them, one rejecting `session-invalid-*` / `history-invalid-*` file per parser check (AD-17 Seeding); seed Playwright from a `*-invalid-*` file only in a §2 rejection test, and name a new one `<key>-invalid-<reason>.json`.
 - `src/engine/test-helpers.ts` is an engine source, not a test file, so it cannot import `vitest`: helpers that call `expect` (e.g. `expectEngineError`) stay local to each `*.test.ts`.
 - `parseHistory` returns `{ ok: true, history }`: read it as `result.history`, never destructure it (the `history` pitfall above).
 
