@@ -87,5 +87,5 @@ untagged UI sentences, P4–6.
 | R-81 | 6 | V | `PENALTY_PER_LETTER × lettersLeft` (Σ letterCount over column cards), tested with a `QU` left; unclamped. |
 | R-82 (UI) | — | P4–6 | `liveScore`/`displayScore` values are CAP-7 (V). |
 | R-83 | 6, 7 | V + P4–6 | Band thresholds and integer comparison, longest word absent with no word (V); names and messages (UI) P4–6; "Longest word shows "—"…" is an untagged UI sentence, P4–6 (spec tagging gap); "names delivered by UX" exempt. |
-| R-84 | 8 | V + P3 | Record fields, append/remove, at most once, never replayed, ties, statistics set (V); persistence, same-task writes, Q-39 order are shell, epic 3; "one game in progress at a time" is P3 (the store holds one Session, AD-4). |
+| R-84 | 8 | V + P3 | Record fields, append/remove, at most once, never replayed, ties, statistics set, Q-44 exclusion of negative gaveUp records from best and average (V); persistence, same-task writes, Q-39 order are shell, epic 3; "one game in progress at a time" is P3 (the store holds one Session, AD-4). |
 | R-85 | 2 | V | `LangData`, one `letterCount` (throws for -1, 52 and 1.5); "never counts cards where letters are meant": the `QU` cases of R-36, R-40, R-80, R-81; "English only" exempt. |

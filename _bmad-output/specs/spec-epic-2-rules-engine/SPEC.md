@@ -139,8 +139,10 @@ sentences to later epics). `build-notes.md` holds the how.
     Q-43), `isRecorded` (true when
     the last record matches; false while playing, on an empty history, and when only `seed`,
     `outcome` or `activeMs` differs), and `statistics` (played, won, given up, always present, 0
-    on an empty history; best and average over all records, negative included, average rounded
-    per A-E3 (x.5 and −x.5 cases: −7.5 → −7), absent on an empty history; longest word ever with ties to the earliest record,
+    on an empty history; best and average over the qualifying records (won, and gaveUp with a final score of 0 or
+    more; D4), average rounded per A-E3 (x.5 and −x.5 cases: −7.5 → −7), absent when no record
+    qualifies (an empty history, or only negative gaveUp records); a negative gaveUp record still
+    counts in played, given up and longest word; longest word ever with ties to the earliest record,
     absent when no record has one).
 
 - **CAP-9** Serialise and parse (AD-7, §2) — the Session half may follow CAP-5, the history half
@@ -230,7 +232,7 @@ functionality, UX or gameplay. Rationale in `build-notes.md`.
 | D1 | `main.ts` feeds the placeholder with `deal(1)`, but AGENTS.md lets only the store call `createSession`, and the store is epic 3. | Keep `deal(seed)` and `Card { id, letter }` exported from `index.ts` (epic 1 D1, outside AD-2's list) with letters from `EN`; epic 3 removes them when the store feeds the board. |
 | D2 | How to test rules on positions no seed deals (the §8 example, full columns, `QU` edges)? | Replay, the reducers and `view` take an internal start position `{ columns, cells }` (8 columns, cells 3–10, each `CardId` at most once, missing cards allowed; a duplicate or out-of-range id, or no column card, throws); the public functions wrap it with the dealt start. Edge tests use the seam; the command table, no-op/redo semantics and one test per command family use public `apply`. |
 | D3 | Band representation. | Index 0–5 (0 = below 156/520) on `GameView`; names and messages stay UI text. |
-| D4 | Where A-E3's average rounding lives. | In `statistics` (`Math.round`); games played = record count; best and average cover all records, won and gaveUp (R-84 single source, six values; Q-28 recorded as is). |
+| D4 | Where A-E3's average rounding lives. | In `statistics` (`Math.round`); games played = record count; best and average cover won records and gaveUp records scoring 0 or more; excluded negative gaveUp records still count in played, given up and longest word; absent when none qualifies (R-84 single source, six values; Q-44, owner 2026-09-30; Q-28 recorded as is). |
 | D5 | Starting versions. | `SESSION_VERSION = 1`, `HISTORY_VERSION = 1` (AD-7). |
 | D6 | Place score delta formula (AD-3 "per EXPERIENCE.md Word line"). | A-E14: word letter count × target − Σ over free letters of (that card's letterCount × its source cell); tested, with a `QU` free letter, equal to the commit's live-score change. |
 | D7 | Structural check reasons. | `too-short` (R-36) is the only runtime failure; R-30–R-35 hold by construction or throw. |

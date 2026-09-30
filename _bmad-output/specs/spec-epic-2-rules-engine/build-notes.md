@@ -205,8 +205,11 @@ AD-7's `activeMs` and AD-2's `elapsedMs` (`Number.isSafeInteger`), a stricter te
 - Statistics: `gamesPlayed`, `gamesWon`, `gamesGivenUp` (always present, 0 on empty),
   `bestScore?`, `averageScore?`
   (`Math.round(sum / n)`; tests include an x.5 and a −x.5 average, e.g. −5 and −10 → −7), `longestWord?` (earliest on ties; absent when no record has one, tested on
-  such a history). Best and average cover all records, won and gaveUp, negative scores
-  included (D4: R-84, Q-28).
+  such a history). Best and average cover won records and gaveUp
+  records with `finalScore >= 0` (D4: R-84, Q-44); a negative gaveUp record still counts in
+  `gamesPlayed`, `gamesGivenUp` and `longestWord`. Tests: a negative gaveUp record excluded from
+  best and average but counted in played, given up and longest word; a 0-score gaveUp record
+  counted; a history of only negative gaveUp records gives best and average absent.
 - `isRecorded`: true when the last record matches; false while playing, on an empty history,
   and when only `seed`, only `outcome` or only `activeMs` differs (one test each).
 
