@@ -3,7 +3,7 @@ title: 'Parse hardening and engine cleanup'
 type: 'refactor'
 ticket: '2'
 created: '2026-09-30'
-status: 'built'
+status: done
 route: 'full'
 route_source: 'auto'
 review: 'thorough'
