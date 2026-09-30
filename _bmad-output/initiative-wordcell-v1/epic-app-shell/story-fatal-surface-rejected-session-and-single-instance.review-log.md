@@ -1,5 +1,5 @@
 # Review log — story-fatal-surface-rejected-session-and-single-instance (ticket 3.5)
-State: pass 4: done
+State: pass 5: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 244 words, snapshot `story-fatal-surface-rejected-session-and-single-instance.passes/pass0.md`, HEAD e7384ee.
 Note: the pull from tickets.toml entry 5 dropped `interface`, `tests`, `owns`; they are passed to reviewers and fixer as intent, and the pass 1 fixer adds them to the Description as `Interface:`, `Tests:`, `Owns:` lines.
@@ -109,3 +109,29 @@ Words (docs): 1557 (6.38 x pass 0)  |  Snapshot: story-fatal-surface-rejected-se
 - `R-84 Q-38` "page 2 boots →" (disproved: the shared key exists, so page 2's boot writes nothing; session-place has Undo available)
 - rule-coverage R-84 same-task row spy wording (entry 7's plan)
 - Timer-race guard note, title role, "written at once" technique, static-import residual, App render-time gate, multiple held font routes (plan detail)
+
+## Pass 5 — 2026-09-30
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 0, minor 13 (after merging), decision-needed 0  |  Dropped in triage: 3
+Words (docs): 1557 (6.38 x pass 0; no fix pass)  |  Snapshot: story-fatal-surface-rejected-session-and-single-instance.passes/pass4.md (unchanged)
+### Applied
+- none (converged)
+### Dropped
+- Unhandled-dispatch-after-halt window (theoretical: Svelte flush precedes the next input task)
+- Half-mounted App on a mount() throw (accepted for a fatal; plan)
+- Synthetic StorageEvent construction in node (plan detail)
+
+## Result — converged after 5 passes
+Majors per pass: 14, 5, 4, 3, 0. Decision-needed: none. Technical defaults applied: 21 (see each pass). Words 244 → 1557 (budget 1500; pass 3 onward slightly over by net-zero minors and major fixes).
+
+Unapplied minors (for the build's plan):
+- Boot order: "A font or load failure thus reaches `unhandledrejection` before load" — a load failure is during load; read as "before mount, writing nothing" (3 lenses).
+- `Q-38 …` halted-boot later-fatal check: "exactly one Reload button" cannot catch a second standalone mount (the mount clears #app); tag the surface node before the throw and assert it stays attached.
+- Shell Vitest AD-4: the sessionStorage negative case should use a `wordcell:` key as well as key null.
+- Font timer clear is unobservable if the timer rejects the raced promise; either the timeout callback throws directly (then "healthy boot active past 30 s" guards it) or treat the clear as hygiene (2 lenses).
+- In-App surface transitions (rejected root → another-window/fatal) are covered only by store Vitest; optionally a §2 test writes `wordcell:prefs` from a same-context page before New game (2 lenses).
+- Entries 6 and 9's "halted boot registers no listeners / requests no dictionary" are not in their tickets.toml tests fields; the plan adds them beside the AD-15 hide-flush case.
+- Description first bullet duplicates later bullets; cut to one summary line when next edited.
+- Strings: name the shared rejected title plus three variant bodies.
+- main.ts handler: console.error once, no preventDefault (AD-15, build-notes CAP-4).
+- Shell Vitest AD-15 "load writes nothing" duplicates the AD-4 halt-before-load cases.
+- Pass 3/4 carry-overs: title role (alertdialog + h2 heading), "written at once" read in the same evaluate or via the spy, continue every held font route on release, App's halted branch gates before any view-derived read, static-import residual accepted, rule-coverage R-84 same-task row spy wording (entry 7).
