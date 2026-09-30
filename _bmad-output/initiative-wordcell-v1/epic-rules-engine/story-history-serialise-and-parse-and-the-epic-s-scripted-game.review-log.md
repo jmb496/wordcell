@@ -1,5 +1,5 @@
 # Review log — story-history-serialise-and-parse-and-the-epic-s-scripted-game.md (ticket 2.11)
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 714c76e, copy `story-history-serialise-and-parse-and-the-epic-s-scripted-game.review-log.passes/pass0.md`, 146 words.
 Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), epic-rules-engine.md, ARCHITECTURE-SPINE.md, AGENTS.md; done-ticket plans: story-composing-commands-and-the-command-table-plan.md story-gameview-plan.md story-golden-deal-test-and-r-id-test-names-plan.md story-langdata-en-and-lettercount-plan.md story-score-history-semantics-plan.md story-scoring-penalty-and-bands-plan.md story-session-createsession-replay-and-checksession-plan.md story-session-serialise-and-parse-with-fixtures-plan.md story-undo-redo-give-up-and-accrue-plan.md story-validate-and-place-commands-with-the-8-worked-example-plan.md 
@@ -50,3 +50,21 @@ Fixer: all 13 items applied; design statements only, no runnable commands; tan P
 - none
 ### Dropped
 - duplicates across lenses; test-name list for AD-7 version test (already named in its own bullet)
+
+## Pass 3 — 2026-09-29
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 3, minor 10, decision-needed 0  |  Dropped in triage: 3 (duplicates)
+Words (docs): 1382 (9.5x pass 0; stated budget 1500)  |  Snapshot: story-history-serialise-and-parse-and-the-epic-s-scripted-game.review-log.passes/pass3.md
+Fixer: all 13 items applied; design statements only; undo/redo counts 3 and 3 verified against commands.ts.
+### Applied
+- [major] AC Rejecting fixtures — "codes are distinct" contradicts the two spelling fixtures sharing one code; test pins a HISTORY_CODES literal of 12 codes, fixture set covers it, only the spelling pair shares → fixer item 1
+- [major] Description/AC Result type — ParseHistoryResult unspecified member types/readonly; "enforced by npm run check" has no assertion; expectTypeOf test mirroring the Session one → fixer item 2
+- [major] AC Round trip — no test that serializeHistory writes version first and AD-6 record key order whatever the input order (Session analogue exists) → fixer item 3
+- [minor] items 4–13 (spy once + restore; longestWord optional in field set; SyntaxError only; ScoreHistory definite; gaveUp seeds seed 1; accrue one record for non-zero activeMs; longestWord missing-key inline; record-field-set fixture drops a field, extra field inline; undo/redo counts pinned; AD-7 version test in history.test.ts)
+### Default applied (technical)
+- HISTORY_CODES literal with toHaveLength(12)
+- ScoreHistory type in history.ts, exported type-only
+- gaveUp records on seed 1 (tan then giveUp; fresh then giveUp), one accrued
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- duplicates of the distinct-codes and JSON.parse-spy findings across lenses
