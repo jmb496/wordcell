@@ -1,5 +1,5 @@
 # Review log — story-statistics-exclude-negative-given-up-scores.md (ticket 2.13)
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 3f15022, copy `story-statistics-exclude-negative-given-up-scores.review-log.passes/pass0.md`, 170 words.
 Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), docs/game-flow-spec.md (R-84, §9 Q-28/Q-44), epic-rules-engine.md, ARCHITECTURE-SPINE.md, AGENTS.md, src/engine/history.ts, src/engine/history.test.ts, story-score-history-semantics-plan.md (done ticket 2.5 plan). D-STATS / Q-44 itself is the owner's approved decision and out of review scope.
@@ -27,3 +27,26 @@ Fixer: all 8 items applied; no commands touched.
 - −0 bestScore normalisation — unreachable from `gameRecord`, and qualifying won scores are the only possible −0 source; no behaviour change
 - tickets.toml id 13 duplicates description/verify — board sync is preview-ticketing's job, outside this ticket file; left for the caller
 - Duplicates of the above across lenses
+
+## Pass 2 — 2026-09-30
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 0, minor 9, decision-needed 0  |  Dropped in triage: 1 (duplicate)
+Words (docs): 365 (2.1 x pass 0), unchanged (no fix pass)  |  Snapshot: story-statistics-exclude-negative-given-up-scores.review-log.passes/pass1.md
+### Applied
+- none (converged)
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- Adversarial "major": no test shows best excluding a negative gaveUp record while another record qualifies. Reclassified minor: the only-negative test already shows best exclusion (−20 → absent), a wrong implementation would have to be contrived, and every reachable qualifying score is ≥ 0. Listed below. The edge-case lens reported the same finding as minor (duplicate).
+
+## Result — converged after 2 passes
+Majors per pass: 2, 0. No decision-needed items. Words 170 → 365.
+Unapplied minors (for the build plan):
+- AC new tests: optionally add [won −100 (synthetic), gaveUp −50] → bestScore −100, averageScore −100, named for "a negative won record still counts (Q-44)"; it pins best exclusion with a qualifying record present and the outcome-aware filter.
+- AC only-negative test: reuse the replaced test's inputs (gaveUp −100, −20, −60, no words) → exactly `{ gamesPlayed: 3, gamesWon: 0, gamesGivenUp: 3 }`.
+- AC first new test: assert the full object with `toStrictEqual` (gamesWon 1, bestScore 100).
+- AC A-E3 bullet: note that negative won records are unreachable from `gameRecord` (R-80) and only exercise rounding.
+- Description: `Statistics` interface comment "absent on a history without a value for them" is loose after Q-44; allow "absent when no record qualifies (Q-44)" or leave it to the `statistics` comment.
+- AC: existing modified tests keep their names; all other `statistics` tests stay unchanged.
+- Description: replace only the "over all records … negative scores included (Q-28)" clause; keep the A-E3 and tie wording.
