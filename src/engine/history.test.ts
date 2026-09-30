@@ -90,6 +90,12 @@ const WON1 = deepFreeze(winSeed(1));
 const WON1_BEFORE = play(WON1, [UNDO]);
 const WON2 = deepFreeze(winSeed(2));
 
+describe('HISTORY_VERSION', () => {
+  it('AD-7 HISTORY_VERSION is 1', () => {
+    expect(HISTORY_VERSION).toBe(1);
+  });
+});
+
 describe('gameRecord', () => {
   it('R-84 gameRecord is null while playing', () => {
     for (const session of [FRESH, COL5_DONE, WON1_BEFORE, play(GAVE_UP1, [UNDO])])

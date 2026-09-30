@@ -1,4 +1,46 @@
 import { describe, expect, expectTypeOf, it } from 'vitest';
+import historyInvalidActiveMs from '../../fixtures/history-invalid-active-ms.json' with {
+  type: 'json',
+};
+import historyInvalidArray from '../../fixtures/history-invalid-array.json' with { type: 'json' };
+import historyInvalidContainerFieldSet from '../../fixtures/history-invalid-container-field-set.json' with {
+  type: 'json',
+};
+import historyInvalidFinalScore from '../../fixtures/history-invalid-final-score.json' with {
+  type: 'json',
+};
+import historyInvalidLongestWordLetterCount from '../../fixtures/history-invalid-longest-word-letter-count.json' with {
+  type: 'json',
+};
+import historyInvalidLongestWordNotObject from '../../fixtures/history-invalid-longest-word-not-object.json' with {
+  type: 'json',
+};
+import historyInvalidLongestWordSpellingCase from '../../fixtures/history-invalid-longest-word-spelling-case.json' with {
+  type: 'json',
+};
+import historyInvalidLongestWordSpellingEmpty from '../../fixtures/history-invalid-longest-word-spelling-empty.json' with {
+  type: 'json',
+};
+import historyInvalidNull from '../../fixtures/history-invalid-null.json' with { type: 'json' };
+import historyInvalidOutcome from '../../fixtures/history-invalid-outcome.json' with {
+  type: 'json',
+};
+import historyInvalidRecordFieldSet from '../../fixtures/history-invalid-record-field-set.json' with {
+  type: 'json',
+};
+import historyInvalidRecordNotObject from '../../fixtures/history-invalid-record-not-object.json' with {
+  type: 'json',
+};
+import historyInvalidRecordVersion from '../../fixtures/history-invalid-record-version.json' with {
+  type: 'json',
+};
+import historyInvalidRecordsNotArray from '../../fixtures/history-invalid-records-not-array.json' with {
+  type: 'json',
+};
+import historyInvalidSeedUint32 from '../../fixtures/history-invalid-seed-uint32.json' with {
+  type: 'json',
+};
+import historyThreeRecords from '../../fixtures/history-three-records.json' with { type: 'json' };
 import validBelowCommittedLast from '../../fixtures/session-below-committed-last.json' with {
   type: 'json',
 };
@@ -153,16 +195,28 @@ import validPlaceFreeLetterRedoTail from '../../fixtures/session-place-free-lett
 import validWon from '../../fixtures/session-won.json' with { type: 'json' };
 import { EngineError } from './errors';
 import {
+  type ApplyContext,
+  accrue,
   apply,
+  type Command,
+  createSession,
   EN,
+  type GameRecord,
+  HISTORY_VERSION,
+  type ParseHistoryResult,
   type ParseSessionResult,
+  parseHistory,
   parseSession,
+  reconcileHistory,
+  type ScoreHistory,
   type Session,
+  serializeHistory,
   serializeSession,
   view,
 } from './index';
 import { replay } from './replay';
-import { checkSchema } from './serialize';
+import { checkContainer, checkRecord, checkSchema } from './serialize';
+import { winSeed } from './win-seed';
 
 // --- helpers --------------------------------------------------------------------------------
 
@@ -880,4 +934,456 @@ describe('version stage (§2, AD-7)', () => {
       });
     },
   );
+});
+
+// --- score history (CAP-9) -------------------------------------------------------------------
+// Helpers copied from history.test.ts (tests never import another test file).
+
+const DICT = (...words: string[]): ApplyContext =>
+  deepFreeze({ lang: EN, dictionary: new Set(words) });
+
+/** Public `apply` of each command in turn, every input and result deep-frozen. */
+function play(session: Session, commands: readonly Command[], words: string[] = []): Session {
+  const ctx = DICT(...words);
+  let current = deepFreeze(session);
+  for (const command of commands)
+    current = deepFreeze(apply(current, deepFreeze(command), ctx).session);
+  return current;
+}
+
+const reconcile = (records: readonly GameRecord[], before: Session, after: Session) =>
+  reconcileHistory(deepFreeze(records), before, after, EN);
+
+const drop = (sourceColumn: number, sourceCount: number, destinationColumn: number): Command => ({
+  type: 'drop',
+  sourceColumn,
+  sourceCount,
+  destinationColumn,
+});
+const FLIP: Command = { type: 'flip' };
+const VALIDATE: Command = { type: 'validate' };
+const CONFIRM: Command = { type: 'confirm' };
+const UNDO: Command = { type: 'undo' };
+const REDO: Command = { type: 'redo' };
+const GIVE_UP: Command = { type: 'giveUp' };
+
+/** The seed-1 tan sequence (plan Code Map): T42 A0 N28 placed as N A T, then committed. */
+const TAN_SCRIPT: readonly Command[] = [
+  drop(3, 2, 6),
+  FLIP,
+  VALIDATE,
+  { type: 'setPlacementOrder', order: [28, 0, 42] },
+  CONFIRM,
+];
+
+const WON1 = deepFreeze(winSeed(1));
+const WON1_BEFORE = play(WON1, [UNDO]);
+const TAN_DONE = play(createSession(1), TAN_SCRIPT, ['tan']);
+const TAN_GAVE_UP = play(TAN_DONE, [GIVE_UP]);
+const ACCRUED = deepFreeze(accrue(deepFreeze(createSession(1)), 1000, EN));
+const ACCRUED_GAVE_UP = play(ACCRUED, [GIVE_UP]);
+
+const EMPTY_HISTORY: ScoreHistory = deepFreeze({ version: HISTORY_VERSION, records: [] });
+const RECONCILED: ScoreHistory = deepFreeze({
+  version: HISTORY_VERSION,
+  records: reconcile(
+    reconcile(reconcile([], WON1_BEFORE, WON1), TAN_DONE, TAN_GAVE_UP),
+    ACCRUED,
+    ACCRUED_GAVE_UP,
+  ),
+});
+
+const RECORD_KEYS = ['version', 'seed', 'outcome', 'finalScore', 'longestWord', 'activeMs'];
+
+/** Direct run of the parseHistory checks: the first thrown code, or undefined when none throws. */
+function firstHistoryCode(value: unknown): string | undefined {
+  try {
+    checkContainer(value as object);
+    const { records, version } = value as { records: unknown[]; version: number };
+    for (const record of records) checkRecord(record, version);
+  } catch (error) {
+    if (error instanceof EngineError) return error.check;
+    throw error;
+  }
+  return undefined;
+}
+
+describe('ParseHistoryResult (AD-7)', () => {
+  it('§2 ParseHistoryResult has the AD-7 shape (checked by npm run check)', () => {
+    expectTypeOf<ParseHistoryResult>().toEqualTypeOf<
+      | { readonly ok: true; readonly history: ScoreHistory }
+      | { readonly ok: false; readonly reason: 'version-unreadable' }
+      | {
+          readonly ok: false;
+          readonly reason: 'version-unknown' | 'contents-unreadable';
+          readonly version: number;
+        }
+    >();
+  });
+});
+
+describe('history round trip (§2, CAP-9)', () => {
+  it.each([
+    ['empty history', EMPTY_HISTORY],
+    ['reconciled history', RECONCILED],
+    ['history-three-records.json', historyThreeRecords as unknown as ScoreHistory],
+  ] as const)('§2 %s parses to itself and re-serialises byte-equal', (_, h) => {
+    const text = serializeHistory(deepFreeze(h));
+    const result = parseHistory(text);
+    expect(result).toStrictEqual({ ok: true, history: h });
+    if (!result.ok) return;
+    expect(serializeHistory(deepFreeze(result.history))).toBe(text);
+    for (const record of JSON.parse(text).records)
+      expect(Object.keys(record)).toStrictEqual(
+        RECORD_KEYS.filter((k) => k !== 'longestWord' || Object.hasOwn(record, k)),
+      );
+  });
+
+  it('§2 the reconciled records are won with a word, gaveUp negative with a word, gaveUp without one', () => {
+    const [won, gaveUpWord, gaveUpNone] = RECONCILED.records;
+    expect(RECONCILED.records).toHaveLength(3);
+    expect(won.outcome).toBe('won');
+    expect(Object.hasOwn(won, 'longestWord')).toBe(true);
+    expect(gaveUpWord.outcome).toBe('gaveUp');
+    expect(gaveUpWord.finalScore).toBeLessThan(0);
+    expect(gaveUpWord.longestWord).toStrictEqual({ spelling: 'tan', letterCount: 3 });
+    expect(gaveUpNone.outcome).toBe('gaveUp');
+    expect(Object.hasOwn(gaveUpNone, 'longestWord')).toBe(false);
+    expect(gaveUpNone.activeMs).toBe(1000);
+  });
+
+  it('§2 history-three-records.json equals the reconciled history and its serialisation', () => {
+    // Equality with live reconcileHistory output is intended drift detection: a scoring or
+    // record change fails here, and the fixture is then regenerated (not hand-edited).
+    expect(historyThreeRecords).toStrictEqual(RECONCILED);
+    expect(JSON.stringify(historyThreeRecords)).toBe(serializeHistory(RECONCILED));
+  });
+
+  it('§2 serializeHistory writes AD-6 key order whatever the insertion order', () => {
+    const reverse = <T extends object>(o: T): T =>
+      Object.fromEntries(Object.entries(o).reverse()) as T;
+    const reversed = deepFreeze(
+      reverse({
+        ...RECONCILED,
+        records: RECONCILED.records.map((r) =>
+          reverse(r.longestWord === undefined ? r : { ...r, longestWord: reverse(r.longestWord) }),
+        ),
+      }),
+    );
+    expect(Object.keys(reversed)[0]).toBe('records');
+    expect(Object.keys(reversed.records[0])[0]).toBe('activeMs');
+    expect(Object.keys(reversed.records[0].longestWord ?? {})[0]).toBe('letterCount');
+    expect(serializeHistory(reversed)).toBe(serializeHistory(RECONCILED));
+  });
+});
+
+interface HistoryRow {
+  readonly file: string;
+  readonly value: unknown;
+  readonly reason: 'version-unreadable' | 'contents-unreadable';
+  readonly code?: string;
+}
+
+const historyRow = (
+  file: string,
+  value: unknown,
+  reason: HistoryRow['reason'],
+  code?: string,
+): HistoryRow => ({ file, value, reason, ...(code === undefined ? {} : { code }) });
+
+/** One rejecting fixture per container and record check (CAP-9), plus null and array roots. */
+const HISTORY_REJECTIONS: readonly HistoryRow[] = [
+  historyRow('history-invalid-null.json', historyInvalidNull, 'version-unreadable'),
+  historyRow('history-invalid-array.json', historyInvalidArray, 'version-unreadable'),
+  historyRow(
+    'history-invalid-container-field-set.json',
+    historyInvalidContainerFieldSet,
+    'contents-unreadable',
+    'history.container-field-set',
+  ),
+  historyRow(
+    'history-invalid-records-not-array.json',
+    historyInvalidRecordsNotArray,
+    'contents-unreadable',
+    'history.records-not-array',
+  ),
+  historyRow(
+    'history-invalid-record-not-object.json',
+    historyInvalidRecordNotObject,
+    'contents-unreadable',
+    'history.record-not-object',
+  ),
+  historyRow(
+    'history-invalid-record-field-set.json',
+    historyInvalidRecordFieldSet,
+    'contents-unreadable',
+    'history.record-field-set',
+  ),
+  historyRow(
+    'history-invalid-record-version.json',
+    historyInvalidRecordVersion,
+    'contents-unreadable',
+    'history.record-version',
+  ),
+  historyRow(
+    'history-invalid-seed-uint32.json',
+    historyInvalidSeedUint32,
+    'contents-unreadable',
+    'history.seed-uint32',
+  ),
+  historyRow(
+    'history-invalid-outcome.json',
+    historyInvalidOutcome,
+    'contents-unreadable',
+    'history.outcome',
+  ),
+  historyRow(
+    'history-invalid-final-score.json',
+    historyInvalidFinalScore,
+    'contents-unreadable',
+    'history.final-score',
+  ),
+  historyRow(
+    'history-invalid-active-ms.json',
+    historyInvalidActiveMs,
+    'contents-unreadable',
+    'history.active-ms',
+  ),
+  historyRow(
+    'history-invalid-longest-word-not-object.json',
+    historyInvalidLongestWordNotObject,
+    'contents-unreadable',
+    'history.longest-word-not-object',
+  ),
+  historyRow(
+    'history-invalid-longest-word-spelling-empty.json',
+    historyInvalidLongestWordSpellingEmpty,
+    'contents-unreadable',
+    'history.longest-word-spelling',
+  ),
+  historyRow(
+    'history-invalid-longest-word-spelling-case.json',
+    historyInvalidLongestWordSpellingCase,
+    'contents-unreadable',
+    'history.longest-word-spelling',
+  ),
+  historyRow(
+    'history-invalid-longest-word-letter-count.json',
+    historyInvalidLongestWordLetterCount,
+    'contents-unreadable',
+    'history.longest-word-letter-count',
+  ),
+];
+
+/** The container and record codes (src/engine/errors.ts doc comment). */
+const HISTORY_CODES = [
+  'history.container-field-set',
+  'history.records-not-array',
+  'history.record-not-object',
+  'history.record-field-set',
+  'history.record-version',
+  'history.seed-uint32',
+  'history.outcome',
+  'history.final-score',
+  'history.active-ms',
+  'history.longest-word-not-object',
+  'history.longest-word-spelling',
+  'history.longest-word-letter-count',
+];
+
+describe('history rejecting fixtures (§2, CAP-9)', () => {
+  it('§2 history fixture codes cover HISTORY_CODES, unique except the two spelling fixtures', () => {
+    expect(HISTORY_CODES).toHaveLength(12);
+    const coded = HISTORY_REJECTIONS.filter((r) => r.code !== undefined);
+    expect(new Set(coded.map((r) => r.code))).toStrictEqual(new Set(HISTORY_CODES));
+    const shared = HISTORY_CODES.filter((code) => coded.filter((r) => r.code === code).length > 1);
+    expect(shared).toStrictEqual(['history.longest-word-spelling']);
+    expect(
+      coded.filter((r) => r.code === 'history.longest-word-spelling').map((r) => r.file),
+    ).toStrictEqual([
+      'history-invalid-longest-word-spelling-empty.json',
+      'history-invalid-longest-word-spelling-case.json',
+    ]);
+    expect(coded).toHaveLength(13);
+  });
+
+  it.each(HISTORY_REJECTIONS.map((r) => [r.file, r] as const))(
+    '§2 %s gives its parseHistory reason and the checks throw its code first',
+    (_, { value, reason, code }) => {
+      const result = parseHistory(JSON.stringify(value));
+      if (reason === 'version-unreadable') {
+        expect(result).toStrictEqual({ ok: false, reason: 'version-unreadable' });
+        return;
+      }
+      const { version } = value as { version: number };
+      expect(result).toStrictEqual({ ok: false, reason: 'contents-unreadable', version });
+      expect(firstHistoryCode(deepFreeze(value))).toBe(code);
+    },
+  );
+});
+
+describe('history inline boundaries (§2, CAP-9)', () => {
+  const base = (historyThreeRecords as unknown as ScoreHistory).records[0];
+  const word = base.longestWord as { spelling: string; letterCount: number };
+  const container = (records: readonly unknown[]) => ({ version: HISTORY_VERSION, records });
+
+  it.each([
+    ['seed -1', { ...base, seed: -1 }, 'history.seed-uint32'],
+    ['seed 4294967296', { ...base, seed: 4294967296 }, 'history.seed-uint32'],
+    ['activeMs -1', { ...base, activeMs: -1 }, 'history.active-ms'],
+    ['finalScore 1.5', { ...base, finalScore: 1.5 }, 'history.final-score'],
+    [
+      'letterCount 0',
+      { ...base, longestWord: { ...word, letterCount: 0 } },
+      'history.longest-word-letter-count',
+    ],
+    ['an extra record key', { ...base, extra: 0 }, 'history.record-field-set'],
+    [
+      'a longestWord extra key',
+      { ...base, longestWord: { ...word, extra: 0 } },
+      'history.longest-word-not-object',
+    ],
+    [
+      'a longestWord missing key',
+      { ...base, longestWord: { spelling: word.spelling } },
+      'history.longest-word-not-object',
+    ],
+    ['a longestWord array', { ...base, longestWord: [] }, 'history.longest-word-not-object'],
+    ['seed 1.5', { ...base, seed: 1.5 }, 'history.seed-uint32'],
+    ['seed "1"', { ...base, seed: '1' }, 'history.seed-uint32'],
+    ['activeMs 1.5', { ...base, activeMs: 1.5 }, 'history.active-ms'],
+    ['finalScore "355"', { ...base, finalScore: '355' }, 'history.final-score'],
+    [
+      'letterCount 1.5',
+      { ...base, longestWord: { ...word, letterCount: 1.5 } },
+      'history.longest-word-letter-count',
+    ],
+    [
+      'spelling 5',
+      { ...base, longestWord: { ...word, spelling: 5 } },
+      'history.longest-word-spelling',
+    ],
+    ['outcome 5', { ...base, outcome: 5 }, 'history.outcome'],
+    ['record version "1"', { ...base, version: '1' }, 'history.record-version'],
+  ] as const)('§2 checkRecord rejects %s with its code', (_, record, code) => {
+    const frozen = deepFreeze(record);
+    expectEngineError(() => checkRecord(frozen, HISTORY_VERSION), code);
+    expect(parseHistory(JSON.stringify(container([frozen])))).toStrictEqual({
+      ok: false,
+      reason: 'contents-unreadable',
+      version: HISTORY_VERSION,
+    });
+  });
+
+  it('§2 parseHistory checks every record: a bad record 1 after a valid record 0 is rejected', () => {
+    const h = deepFreeze(container([base, { ...base, seed: -1 }]));
+    expect(parseHistory(JSON.stringify(h))).toStrictEqual({
+      ok: false,
+      reason: 'contents-unreadable',
+      version: HISTORY_VERSION,
+    });
+    expect(firstHistoryCode(h)).toBe('history.seed-uint32');
+  });
+
+  it('§2 checkContainer rejects a container with records dropped', () => {
+    const dropped = deepFreeze({ version: HISTORY_VERSION });
+    expectEngineError(() => checkContainer(dropped), 'history.container-field-set');
+    expect(parseHistory(JSON.stringify(dropped))).toStrictEqual({
+      ok: false,
+      reason: 'contents-unreadable',
+      version: HISTORY_VERSION,
+    });
+  });
+
+  it.each([
+    ['seed 0', { ...base, seed: 0 }],
+    ['seed 4294967295', { ...base, seed: 4294967295 }],
+    ['a negative finalScore', { ...base, finalScore: -5 }],
+    [
+      'longestWord quiz (QU counts 2)',
+      { ...base, longestWord: { spelling: 'quiz', letterCount: 4 } },
+    ],
+  ] as const)('§2 parseHistory accepts %s', (_, record) => {
+    const h = deepFreeze(container([record]));
+    expect(parseHistory(JSON.stringify(h))).toStrictEqual({ ok: true, history: h });
+  });
+});
+
+describe('history version stage (§2, AD-7)', () => {
+  const withVersion = (version: unknown): string =>
+    JSON.stringify({ ...(historyThreeRecords as object), version });
+  const { version: _omitted, ...noVersion } = historyThreeRecords;
+
+  it.each([
+    ['no version', JSON.stringify(noVersion)],
+    ['version "1"', withVersion('1')],
+    ['version -1', withVersion(-1)],
+    ['version 1.5', withVersion(1.5)],
+    ['version 2**53', withVersion(2 ** 53)],
+    ['version null', withVersion(null)],
+    ['unparseable text', '{"version":1,'],
+    ['empty text', ''],
+    ['root 42', '42'],
+    ['root "x"', '"x"'],
+    ['root true', 'true'],
+  ])('§2 history %s is version-unreadable', (_, text) => {
+    expect(parseHistory(text)).toStrictEqual({ ok: false, reason: 'version-unreadable' });
+  });
+
+  it.each([0, 2, Number.MAX_SAFE_INTEGER])(
+    '§2 history version %i is version-unknown with the version',
+    (version) => {
+      expect(parseHistory(withVersion(version))).toStrictEqual({
+        ok: false,
+        reason: 'version-unknown',
+        version,
+      });
+    },
+  );
+});
+
+describe('scripted game (§2, SPEC Success signal)', () => {
+  function expectRoundTrip(session: Session): void {
+    const result = parseSession(serializeSession(session), EN);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.session).toStrictEqual(session);
+    expect(view(result.session, EN)).toStrictEqual(view(session, EN));
+  }
+
+  it('§2 a scripted seed-1 game round-trips to an equal view after every step, undo to the start and redo to the end', () => {
+    const ctx = DICT('tan');
+    const step = (session: Session, command: Command): Session => {
+      const next = deepFreeze(apply(session, deepFreeze(command), ctx).session);
+      expect(next).not.toBe(session);
+      expectRoundTrip(next);
+      return next;
+    };
+    const start = deepFreeze(createSession(1));
+    expectRoundTrip(start);
+    let session = start;
+    for (const command of TAN_SCRIPT) session = step(session, command);
+    expect(session.cursor).toStrictEqual({ index: 1, phase: 'idle' });
+    const end = view(session, EN);
+
+    for (let i = 0; i < 3; i++) {
+      expect(view(session, EN).canUndo).toBe(true);
+      session = step(session, UNDO);
+    }
+    const undone = view(session, EN);
+    const fresh = view(start, EN);
+    expect(session.cursor).toStrictEqual({ index: 0, phase: 'idle' });
+    expect(undone.canUndo).toBe(false);
+    expect(undone.canRedo).toBe(true);
+    expect(undone.columns).toStrictEqual(fresh.columns);
+    expect(undone.cells).toStrictEqual(fresh.cells);
+
+    for (let i = 0; i < 3; i++) {
+      expect(view(session, EN).canRedo).toBe(true);
+      session = step(session, REDO);
+    }
+    const redone = view(session, EN);
+    expect(redone.canRedo).toBe(false);
+    expect(redone).toStrictEqual(end);
+  });
 });

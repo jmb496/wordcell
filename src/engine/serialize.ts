@@ -1,8 +1,10 @@
 import { EngineError } from './errors';
+import { type GameRecord, HISTORY_VERSION, type ScoreHistory } from './history';
 import type { LangData } from './lang/lang-data';
 import { replay } from './replay';
 import { type Move, SESSION_VERSION, type Session } from './session';
 import { COLUMN_COUNT, DECK_SIZE, WORD_CELL_NUMBERS } from './types';
+import type { LongestWord } from './view';
 
 /** AD-7 `parseSession` result; each failure maps onto an EXPERIENCE.md message variant. */
 export type ParseSessionResult =
@@ -11,6 +13,16 @@ export type ParseSessionResult =
   | {
       readonly ok: false;
       readonly reason: 'version-unknown' | 'replay-failed';
+      readonly version: number;
+    };
+
+/** AD-7 `parseHistory` result (mirrors `ParseSessionResult`, build-notes CAP-9). */
+export type ParseHistoryResult =
+  | { readonly ok: true; readonly history: ScoreHistory }
+  | { readonly ok: false; readonly reason: 'version-unreadable' }
+  | {
+      readonly ok: false;
+      readonly reason: 'version-unknown' | 'contents-unreadable';
       readonly version: number;
     };
 
@@ -187,4 +199,143 @@ export function parseSession(text: string, lang: LangData): ParseSessionResult {
     throw error;
   }
   return { ok: true, session: value };
+}
+
+// --- score history (AD-6, AD-7, CAP-9) --------------------------------------------------------
+
+/** AD-6 record keys in order, `longestWord` as `{ spelling, letterCount }` or absent. */
+function orderedRecord(record: GameRecord): GameRecord {
+  return {
+    version: record.version,
+    seed: record.seed,
+    outcome: record.outcome,
+    finalScore: record.finalScore,
+    ...(Object.hasOwn(record, 'longestWord')
+      ? {
+          longestWord: {
+            spelling: (record.longestWord as LongestWord).spelling,
+            letterCount: (record.longestWord as LongestWord).letterCount,
+          },
+        }
+      : {}),
+    activeMs: record.activeMs,
+  };
+}
+
+/**
+ * AD-6, AD-7, §2, CAP-9: compact JSON `{ version, records }` (`version` copied as is), each
+ * record's keys in AD-6 order, `longestWord` omitted when absent. Precondition: `scoreHistory`
+ * is engine-produced; nothing is validated (AD-2, CLAUDE.md rule 6).
+ */
+export function serializeHistory(scoreHistory: ScoreHistory): string {
+  const ordered: ScoreHistory = {
+    version: scoreHistory.version,
+    records: scoreHistory.records.map(orderedRecord),
+  };
+  return JSON.stringify(ordered);
+}
+
+function failHistory(code: string, detail: string): never {
+  throw new EngineError(`history.${code}`, `AD-7 history: ${detail}`);
+}
+
+/** True iff `object`'s own keys are exactly `required` plus any of `optional`. */
+function hasFieldSet(
+  object: Fields,
+  required: readonly string[],
+  optional: readonly string[] = [],
+): boolean {
+  const keys = Object.keys(object);
+  return (
+    required.every((key) => Object.hasOwn(object, key)) &&
+    keys.every((key) => required.includes(key) || optional.includes(key))
+  );
+}
+
+const CONTAINER_FIELDS = ['version', 'records'] as const;
+const RECORD_REQUIRED = ['version', 'seed', 'outcome', 'finalScore', 'activeMs'] as const;
+const RECORD_OPTIONAL = ['longestWord'] as const;
+const LONGEST_WORD_FIELDS = ['spelling', 'letterCount'] as const;
+const OUTCOMES: readonly unknown[] = ['won', 'gaveUp'];
+const MAX_UINT32 = 0xffff_ffff;
+
+const isSafeInteger = (value: unknown): value is number => Number.isSafeInteger(value);
+
+/**
+ * AD-7 container check of `parseHistory` (build-notes CAP-9), after the version stage: field set
+ * exactly `{ version, records }` (`history.container-field-set`), then `records` an array
+ * (`history.records-not-array`). Internal.
+ */
+export function checkContainer(value: object): asserts value is { records: unknown[] } {
+  const container = value as Fields;
+  if (!hasFieldSet(container, CONTAINER_FIELDS))
+    failHistory('container-field-set', 'the container is not exactly { version, records }');
+  if (!Array.isArray(container.records))
+    failHistory('records-not-array', 'records is not an array');
+}
+
+/**
+ * AD-6/AD-7 record check of `parseHistory` (build-notes CAP-9), first violation wins: plain
+ * object → field set → `version` equal to the container's → `seed` uint32 → `outcome` →
+ * `finalScore` safe integer → `activeMs` non-negative safe integer → `longestWord` (when present)
+ * exactly `{ spelling, letterCount }` → spelling `^[a-z]+$` → letterCount a positive safe
+ * integer. letterCount is not cross-checked against the spelling (no lang). Codes in errors.ts.
+ * Internal.
+ */
+export function checkRecord(record: unknown, version: number): asserts record is GameRecord {
+  if (!isPlainObject(record)) failHistory('record-not-object', 'a record is not an object');
+  if (!hasFieldSet(record, RECORD_REQUIRED, RECORD_OPTIONAL))
+    failHistory('record-field-set', 'a record lacks a field or has an unknown one');
+  if (record.version !== version)
+    failHistory('record-version', "a record's version differs from the container's");
+  const { seed } = record;
+  if (!(isSafeInteger(seed) && seed >= 0 && seed <= MAX_UINT32))
+    failHistory('seed-uint32', 'a record seed is not a uint32');
+  if (!OUTCOMES.includes(record.outcome))
+    failHistory('outcome', 'a record outcome is not won or gaveUp');
+  if (!isSafeInteger(record.finalScore))
+    failHistory('final-score', 'a record finalScore is not a safe integer');
+  const { activeMs } = record;
+  if (!(isSafeInteger(activeMs) && activeMs >= 0))
+    failHistory('active-ms', 'a record activeMs is not a non-negative safe integer');
+  if (!Object.hasOwn(record, 'longestWord')) return;
+  const word = record.longestWord;
+  if (!(isPlainObject(word) && hasFieldSet(word, LONGEST_WORD_FIELDS)))
+    failHistory('longest-word-not-object', 'longestWord is not { spelling, letterCount }');
+  if (!(typeof word.spelling === 'string' && /^[a-z]+$/.test(word.spelling)))
+    failHistory('longest-word-spelling', 'longestWord.spelling is not a lowercase word');
+  const { letterCount } = word;
+  if (!(isSafeInteger(letterCount) && letterCount > 0))
+    failHistory('longest-word-letter-count', 'longestWord.letterCount is not a positive integer');
+}
+
+/**
+ * AD-7, §2, CAP-9: JSON parse → version stage → container check → each record in order. A JSON
+ * parse failure, a non-object root or an unreadable version is `version-unreadable` (AD-15
+ * specified outcome); a version other than `HISTORY_VERSION` is `version-unknown`; an
+ * `EngineError` from the container or record checks is `contents-unreadable`; anything else
+ * propagates (CLAUDE.md rule 6).
+ */
+export function parseHistory(text: string): ParseHistoryResult {
+  let value: unknown;
+  try {
+    value = JSON.parse(text);
+  } catch (error) {
+    if (error instanceof SyntaxError) return { ok: false, reason: 'version-unreadable' };
+    throw error;
+  }
+  if (!isPlainObject(value) || !Object.hasOwn(value, 'version'))
+    return { ok: false, reason: 'version-unreadable' };
+  const { version } = value;
+  if (!(typeof version === 'number' && Number.isSafeInteger(version) && version >= 0))
+    return { ok: false, reason: 'version-unreadable' };
+  if (version !== HISTORY_VERSION) return { ok: false, reason: 'version-unknown', version };
+  try {
+    checkContainer(value);
+    for (const record of value.records) checkRecord(record, version);
+  } catch (error) {
+    if (error instanceof EngineError) return { ok: false, reason: 'contents-unreadable', version };
+    throw error;
+  }
+  return { ok: true, history: value as unknown as ScoreHistory };
 }

@@ -17,6 +17,9 @@ export interface GameRecord {
   readonly activeMs: number;
 }
 
+/** AD-6/AD-7 `wordcell:history` value: the container `parseHistory` returns (CAP-9). */
+export type ScoreHistory = { readonly version: number; readonly records: readonly GameRecord[] };
+
 /** R-84 statistics; the optional keys are absent on a history without a value for them. */
 export interface Statistics {
   readonly gamesPlayed: number;

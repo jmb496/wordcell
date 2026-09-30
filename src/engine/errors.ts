@@ -10,6 +10,12 @@
  *   `type-destination-count`, `type-free-letters`, `type-arrangement`, `type-target-cell`,
  *   `type-placement-order`, `enum-destination-side`, `enum-reached`, `domain-column`,
  *   `domain-count`, `domain-cell`, `domain-card`.
+ * - History (`checkContainer` then `checkRecord` in serialize.ts, `parseHistory` only, in this
+ *   order; each code carries the `history.` prefix, e.g. `history.record-version`):
+ *   `container-field-set`, `records-not-array`, `record-not-object`, `record-field-set`,
+ *   `record-version`, `seed-uint32`, `outcome`, `final-score`, `active-ms`,
+ *   `longest-word-not-object` (null, an array, a non-object, or an object whose key set is not
+ *   exactly `{ spelling, letterCount }`), `longest-word-spelling`, `longest-word-letter-count`.
  * - AD-7 pre-replay (`checkSession`, in this order): `seed-uint32`, `ad7-active-ms`,
  *   `ad7-gave-up-type`, `ad7-cursor-index`, `ad7-cursor-phase`, `ad7-gave-up-idle`,
  *   `ad7-place-fields`, `ad7-k0-side`, `s2-committed-prefix`, `s2-last-only`,

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import validIdleFresh from '../../fixtures/session-idle-fresh.json' with { type: 'json' };
 import { EN } from './lang/en';
-import { parseSession } from './serialize';
+import { parseHistory, parseSession } from './serialize';
 
 // serialize.ts calls `replay` from './replay'; only that export is overridden.
 vi.mock('./replay', async (importOriginal) => ({
@@ -16,5 +16,26 @@ describe('parseSession propagation', () => {
     const parse = () => parseSession(JSON.stringify(validIdleFresh), EN);
     expect(parse).toThrow(TypeError);
     expect(parse).toThrow('not an EngineError');
+  });
+});
+
+describe('parseHistory propagation', () => {
+  it('AD-15 parseHistory rethrows a non-EngineError from the container or record stage (CLAUDE.md rule 6)', () => {
+    const spy = vi.spyOn(JSON, 'parse').mockReturnValueOnce({
+      version: 1,
+      get records() {
+        throw new TypeError('x');
+      },
+    });
+    let thrown: unknown;
+    try {
+      parseHistory('{}');
+    } catch (error) {
+      thrown = error;
+    } finally {
+      spy.mockRestore();
+    }
+    expect(thrown).toBeInstanceOf(TypeError);
+    expect((thrown as TypeError).message).toBe('x');
   });
 });

@@ -1,7 +1,7 @@
 export type { ApplyContext, ApplyResult, Command } from './commands';
 export { accrue, apply } from './commands';
 export { deal } from './deal';
-export type { GameRecord, Statistics } from './history';
+export type { GameRecord, ScoreHistory, Statistics } from './history';
 export {
   gameRecord,
   HISTORY_VERSION,
@@ -13,8 +13,8 @@ export { EN } from './lang/en';
 export type { LangData } from './lang/lang-data';
 export { letterCount } from './lang/lang-data';
 export type { Status } from './replay';
-export type { ParseSessionResult } from './serialize';
-export { parseSession, serializeSession } from './serialize';
+export type { ParseHistoryResult, ParseSessionResult } from './serialize';
+export { parseHistory, parseSession, serializeHistory, serializeSession } from './serialize';
 export type { Cursor, DestinationSide, Move, Phase, Reached, Session } from './session';
 export { createSession, SESSION_VERSION } from './session';
 export type { Card, CardId, WordCellNumber } from './types';
