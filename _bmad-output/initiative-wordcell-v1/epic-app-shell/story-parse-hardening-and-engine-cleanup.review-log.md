@@ -1,6 +1,6 @@
 # Review log — story-parse-hardening-and-engine-cleanup.md (ticket 3.2)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 237 words (copy at story-parse-hardening-and-engine-cleanup.passes/pass0.md). Pre-loop HEAD 4496b3f.
 Note: the pulled ticket lacked tickets.toml entry 2's interface, tests and owns fields; they are passed as intent and added to the Description in pass 1.
@@ -63,3 +63,25 @@ Fixer: all 12 applied; both greps run (6 call-site hits and 23 citation hits tod
 - none
 ### Dropped
 - none
+
+## Pass 3 — 2026-09-30
+Reviewers: fix diff, edge-case, adversarial, ref alignment  |  Findings: major 1, minor 10, decision-needed 0  |  Dropped in triage: 1 (duplicates merged: 23 raw → 11)
+Words (docs): 981 (4.14 x pass 0; budget 1500)  |  Snapshot: story-parse-hardening-and-engine-cleanup.passes/pass3.md
+Fixer: all 10 applied; no command changed.
+### Applied
+- [major] Fold checker contract — "first missing or unknown key" merges schema's missing-only requireFields and replay's unknown-only unknownField; schema would throw schema.required-* on the ad7-unknown-* fixtures (harness asserts checkSchema passes them) → one checker with a mode ('missing' | 'unknown' | 'exact') → fixer 1
+- [minor] Verify counts are today's values → HISTORY_CODES 12→15, coded 13→16, REPLAY_CODES 23, PARSE_CODES 1 → fixer 2
+- [minor] Verify headroom bullet — name apply giveUp (undo throws r70 on idle-fresh); reclassified from major (obvious from the bullet above) → fixer 3
+- [minor] fields.ts is fixed (not "default") and holds lists, checker and predicates, matching the grep exclusion → fixer 4
+- [minor] history lists (CONTAINER/RECORD/LONGEST_WORD) stay in serialize.ts in the same marked-entry form → fixer 5
+- [minor] short check uses MIN_WORD_LENGTH (R-36) not a literal 3 → fixer 6
+- [minor] predicates typed (value: unknown) => value is number → fixer 7
+- [minor] "on the result" → on the accrued Session → fixer 8
+- [minor] SESSION_FIELDS marks version optional (required list unchanged, still a known key) → fixer 9
+- [minor] serialize.ts local isSafeInteger type guard may stay (not a domain check) → fixer 10
+### Default applied (technical)
+- Checker `fieldSetViolation(object, fields, mode)` in src/engine/fields.ts; schema 'missing', checkSession 'unknown', history 'exact'
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- adversarial stretch: extend citation grep to E ids — would also catch legitimate non-citation tokens; the Citations bullet already bars E ids (left to code review)
