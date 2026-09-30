@@ -3,7 +3,7 @@ title: 'Primary action, New game, Replay and feedback'
 type: 'feature'
 ticket: '4'
 created: '2026-09-30'
-status: 'built'
+status: done
 route: 'full'
 route_source: 'auto'
 review: 'thorough'
