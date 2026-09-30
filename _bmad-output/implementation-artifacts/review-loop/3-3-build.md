@@ -1,5 +1,5 @@
 # Review loop — ticket 3.3 build (code, 162af5a..d6a0f11)
-State: pass 1: done
+State: pass 2: done
 
 Target: code diff 162af5a..d6a0f11 (excluding `_bmad-output/`), staged at `3-3-build.passes/pass0.diff`.
 Intent: `_bmad-output/initiative-wordcell-v1/epic-app-shell/story-game-store-load-dispatch-and-storage-plan.md` (ticket `story-game-store-load-dispatch-and-storage.md`).
@@ -23,3 +23,24 @@ Fixer: items 1–3 applied (new test 'AD-4 dispatch order: accrue runs before ap
 - clock-take loss raised by edge-case lens — duplicate of the correctness minor
 ### Unapplied minor
 - ticket Board (E1) still says text-labelled Undo/Redo (correctness, intent) — kept as unapplied minor: a ticket-text fix, outside the code target; plan Residual risks already records it
+
+## Pass 2 — 2026-09-30
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 0, minor 2, decision-needed 0  |  Dropped in triage: 0
+Snapshot: tree e2a571f10c66fa5fadfc0f1a754783395862628d (no fix pass; HEAD 02d8d8b)
+### Applied
+- none (converged; no fix pass)
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Result — converged after 2 passes
+
+Final state (HEAD 02d8d8b): `npm test` pass (1466 tests, 26 files, 4.51 s), `npm run lint` pass, `npm run check` pass (0 errors, 0 warnings).
+
+Unapplied minors (for the next build or loop):
+1. Ticket `story-game-store-load-dispatch-and-storage.md` Description, Board (E1) — still says text-labelled Undo/Redo "not DESIGN.md's 44×44 icon-only buttons"; the build follows SPEC E1 (DESIGN.md `top-bar.undoRedo`), as the plan's Residual risks record. Proposed: reword the ticket sentence to name DESIGN.md undoRedo with accessible names Undo/Redo.
+2. `e2e/smoke.spec.ts` 'AD-17 WordCell cards render bottom → top as live cell cards' — asserts DOM order only; the visual bottom→top comes from `.stack { flex-direction: column-reverse }`, which the test does not pin. Proposed: compare bounding-box y of `card-42` > `card-0` > `card-28`.
+3. `src/shell/game.svelte.test.ts` 'AD-4 dispatch throws while booting/rejected …' and the `load()`-twice tests — bare `toThrow()` would pass without the guards (a TypeError on `state.session`). Proposed: `toThrow('AD-4 dispatch while booting')` / `'… rejected'` and `toThrow(/AD-4 load\(\) while/)`.
