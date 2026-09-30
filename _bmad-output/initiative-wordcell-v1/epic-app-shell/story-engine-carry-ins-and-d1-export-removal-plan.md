@@ -3,7 +3,7 @@ title: 'Engine carry-ins and D1 export removal'
 type: 'feature'
 ticket: '1'
 created: '2026-09-30'
-status: 'built'
+status: done
 route: 'full'
 route_source: 'auto'
 review: 'thorough'
