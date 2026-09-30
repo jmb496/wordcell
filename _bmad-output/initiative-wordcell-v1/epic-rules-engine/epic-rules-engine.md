@@ -4,6 +4,7 @@ title: "Rules engine"
 parent: initiative-wordcell-v1
 covers: []
 after: []
+status: done
 assignee: ""
 risk: medium
 ---

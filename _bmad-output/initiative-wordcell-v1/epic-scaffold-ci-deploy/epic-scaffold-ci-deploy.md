@@ -4,6 +4,7 @@ title: "Scaffold hardening, CI and deploy"
 parent: initiative-wordcell-v1
 covers: []
 after: []
+status: done
 assignee: ""
 risk: high
 ---
