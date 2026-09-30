@@ -40,7 +40,8 @@ when any of these holds:
    hit a usage or session limit (see Usage limits), a headless step exits without writing its
    result file, or any command here fails unexpectedly.
 6. `stop-after=<ref>` was given and that ticket is done, or no tickets remain (then recommend
-   `/bmad-retrospective`).
+   `/bmad-retrospective`, and marking the epic container done with `bmad-preview-ticketing` once
+   its verdict is accepted, so a later epic whose `after` names it is not gated, Setup 5).
 
 Everything else — technical defaults, a review loop capped at 7 passes or stopped on its trend
 after applying its fixes (its late-major area recorded as a ref to fix upstream), deferred
@@ -61,7 +62,13 @@ items — is recorded in the digest and the run continues.
    with a heading, the epic, branch, start commit and the owner authorisation line. It is written
    only between steps (never while a build runs) and committed with each "mark done" commit, and
    with the stop commit when a run stops before a ticket is done (`docs(autopilot): stopped at
-   ticket <ref> step <step> (<reason>)`), so a rerun starts from a clean tree.
+   ticket <ref> step <step> (<reason>)`), so a rerun starts from a clean tree. Commit the new
+   digest at once (`docs(autopilot): start run <R> (<epic>)`), since Step B needs a clean tree.
+5. Gating: when `tickets.py next` offers this epic nothing although tickets remain, check the
+   epic file's frontmatter `after`: an epic container carries no done status until
+   `bmad-preview-ticketing` marks it done after its retrospective, so an `after` naming an epic
+   not yet marked done holds every ticket. Stop (rule 5) and tell the owner which epic must be
+   closed first; never edit `after` or a container's status yourself.
 
 ## Per ticket
 
@@ -95,8 +102,9 @@ JSON: missing or unparsable → stop (rule 5) and point the owner at the `.log`.
 
 ### Usage limits
 
-A step hit a limit when its log matches `grep -iE 'hit your (session|usage) limit'` (the message
-reads e.g. `You've hit your session limit · resets 5:30am (America/New_York)`). This check runs
+A step hit a limit when its log matches `grep -iE 'hit your [a-z]+ limit'` (the message
+reads e.g. `You've hit your session limit · resets 5:30am (America/New_York)` or `You've hit
+your weekly limit · resets Sep 30, 4pm (America/New_York)`). This check runs
 before the missing-JSON rule, since a limited step never writes its JSON. Then:
 
 1. Keep the step's log as `$W/<ref>-<step>-attempt<k>.log` and leave everything the step wrote in
@@ -122,8 +130,8 @@ with the review-loop skill's resume rule; do not restart."*
 
 Prompt: *"Run the review-loop skill on `T` (docs mode, thorough, max 7<, budget=1500 when `T` is a
 stub under ~300 words>). Refs: the epic's
-SPEC.md, build-notes.md and delta-checks.md (under `_bmad-output/specs/<epic spec>/`), the epic
-file, ARCHITECTURE-SPINE.md, AGENTS.md, and the plans of this epic's done tickets for continuity.
+SPEC.md and every companion its `companions:` frontmatter lists inside the spec folder
+(`_bmad-output/specs/<epic spec>/`, e.g. build-notes.md, rule-coverage.md), the epic file, ARCHITECTURE-SPINE.md, AGENTS.md, and the plans of this epic's done tickets for continuity.
 Checkpoint: after each pass's fixes are written (and its state line updated), commit only `T` and its
 review log (the loop's `.passes/` copies are git-ignored), as `docs(tickets): WIP review pass <n> ticket
 <ref>`; this is the one commit you may make. Result JSON: `{"result":
@@ -170,11 +178,15 @@ fixes are written, commit them with `L` (not its git-ignored `.passes/`) as `fix
 review pass <n> (ticket <ref>)`; this is the one commit you may make. Result JSON: `{"result":
 "converged"|"capped"|"diverging", "passes": n, "majors_per_pass": [..], "decision_needed":
 [...as in Step A], "late_majors": [...as in Step A], "files_changed": ["..."], "test":
-"pass"|"fail", "lint": "pass"|"fail", "check": "pass"|"fail"}`."*
+"pass"|"fail", "lint": "pass"|"fail", "check": "pass"|"fail", "open_major": "..."|null}`."*
 
 Then: decision-needed → stop (rule 1); decision-needed items are never applied, and the
-technical fixes so far sit in the WIP commits, say so. `late_majors` as in Step A. Otherwise
-continue to Step D; any remaining fixes and the final log are committed there.
+technical fixes so far sit in the WIP commits, say so. `late_majors` as in Step A. A `converged`
+result with `open_major` set (the review-loop's "two passes with at most one major" stop) is
+not a failure: record the open major in the digest's Worth knowing as an open item carried to
+the epic's refactor sweep or a follow-up ticket, and continue; stop (rule 1) only when it is
+spec or spine intent. Otherwise continue to Step D; any remaining fixes and the final log are
+committed there.
 
 ### Step D — verify and mark done
 

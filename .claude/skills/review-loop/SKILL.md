@@ -52,7 +52,8 @@ they exist. Do not pass a ref that is the target itself.
 
 Stop (**converged**) when a pass yields **zero major** findings after triage, or when two
 consecutive passes each yield **at most one** (that last major is recorded as open, not fixed,
-and named in the result and the report). Stop (**diverging**) when majors rise
+and named in the result and the report; a caller's result JSON reports it as `open_major` with
+`result` `converged`, never as `late_majors`, which belong to capped or diverging runs). Stop (**diverging**) when majors rise
 pass-over-pass (e.g. 2 then 4): the refs are unclear, so name the ref or area to fix upstream
 (spec, spine, CLAUDE.md) instead of fixing the document again. Otherwise stop at the cap: pass
 `max` is always **verify-only** (quick depth, only the fix-diff lens, no new scope), so no fix goes
