@@ -98,6 +98,12 @@ test('R-73 Undo, Redo and Confirm on session-place.json are each stored before t
     before = after;
     if (step === 'undo') await expect(redo).toBeEnabled();
     if (step === 'redo') await expect(redo).toBeDisabled();
+    if (step === 'confirm') {
+      // R-42: Confirm commits the one move and returns to Idle.
+      expect(after).toMatchObject({ cursor: { index: 1, phase: 'idle' } });
+      expect((after as { moves: unknown[] }).moves).toHaveLength(1);
+      await expect(primary).toHaveText('Validate');
+    }
   }
 });
 
@@ -133,6 +139,18 @@ test('R-74 R-73 game-over New game on session-gave-up.json stores a fresh Sessio
   await expect(primary).toBeDisabled();
 });
 
+// Resolves a colour token to its computed rgb form through a probe element.
+function tokenColor(page: Page, token: string): Promise<string> {
+  return page.evaluate((name) => {
+    const probe = document.createElement('span');
+    probe.style.color = `var(${name})`;
+    document.body.append(probe);
+    const color = getComputedStyle(probe).color;
+    probe.remove();
+    return color;
+  }, token);
+}
+
 // Interim labels (entry 9 adds loading/failed and Validate enablement).
 const LABELS: [fixture: string, label: string, enabled: boolean][] = [
   ['session-idle-fresh.json', 'Validate', false],
@@ -155,6 +173,8 @@ for (const [name, label, enabled] of LABELS) {
     if (enabled) await expect(primary).toBeEnabled();
     else await expect(primary).toBeDisabled();
     if (name === 'session-composing-draft-2-letters.json') {
+      // Ticket 3.4 Look: the disabled reason reads in ink-secondary, plain Validate in ink-disabled.
+      await expect(primary).toHaveCSS('color', await tokenColor(page, '--wc-ink-secondary'));
       // Undo leaves Idle with a 2-letter pending draft: plain Validate.
       await page.getByRole('button', { name: 'Undo', exact: true }).click();
       await expect
@@ -164,6 +184,7 @@ for (const [name, label, enabled] of LABELS) {
         });
       await expect(primary).toHaveText('Validate');
       await expect(primary).toBeDisabled();
+      await expect(primary).toHaveCSS('color', await tokenColor(page, '--wc-ink-disabled'));
     }
   });
 }
