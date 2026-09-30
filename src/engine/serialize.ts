@@ -314,7 +314,8 @@ export function checkRecord(record: unknown, version: number): asserts record is
  * parse failure, a non-object root or an unreadable version is `version-unreadable` (AD-15
  * specified outcome); a version other than `HISTORY_VERSION` is `version-unknown`; an
  * `EngineError` from the container or record checks is `contents-unreadable`; anything else
- * propagates (CLAUDE.md rule 6).
+ * propagates (CLAUDE.md rule 6). An accepted history is returned as parsed, so its records keep
+ * the stored key order; only `serializeHistory` writes AD-6 order.
  */
 export function parseHistory(text: string): ParseHistoryResult {
   let value: unknown;

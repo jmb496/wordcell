@@ -38,4 +38,20 @@ describe('parseHistory propagation', () => {
     expect(thrown).toBeInstanceOf(TypeError);
     expect((thrown as TypeError).message).toBe('x');
   });
+
+  it('AD-15 parseHistory rethrows a non-SyntaxError from JSON.parse (CLAUDE.md rule 6)', () => {
+    const spy = vi.spyOn(JSON, 'parse').mockImplementationOnce(() => {
+      throw new TypeError('not a SyntaxError');
+    });
+    let thrown: unknown;
+    try {
+      parseHistory('{}');
+    } catch (error) {
+      thrown = error;
+    } finally {
+      spy.mockRestore();
+    }
+    expect(thrown).toBeInstanceOf(TypeError);
+    expect((thrown as TypeError).message).toBe('not a SyntaxError');
+  });
 });

@@ -1263,6 +1263,17 @@ describe('history inline boundaries (§2, CAP-9)', () => {
       { ...base, longestWord: { ...word, spelling: 5 } },
       'history.longest-word-spelling',
     ],
+    [
+      'spelling lqueJata',
+      { ...base, longestWord: { ...word, spelling: 'lqueJata' } },
+      'history.longest-word-spelling',
+    ],
+    [
+      'spelling tan1',
+      { ...base, longestWord: { ...word, spelling: 'tan1' } },
+      'history.longest-word-spelling',
+    ],
+    ['a record array', [], 'history.record-not-object'],
     ['outcome 5', { ...base, outcome: 5 }, 'history.outcome'],
     ['record version "1"', { ...base, version: '1' }, 'history.record-version'],
   ] as const)('§2 checkRecord rejects %s with its code', (_, record, code) => {
