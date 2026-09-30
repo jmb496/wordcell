@@ -13,7 +13,7 @@ Hand-maintained, outside the managed block so refreshes keep them. Rules 1–7 a
 7. Ask before deviating from the spec, the spine or an agreed pattern; do not commit unless asked (invoking `bmad-build-auto` or `bmad-build` is the ask for their local commits).
 
 <!-- bmad:context -->
-<!-- Verified 2026-09-28 against 447fefc. Managed by bmad-project-context; edits inside this block are replaced on refresh. Keep anything you want preserved outside the markers. -->
+<!-- Verified 2026-09-30 against 9a97c95. Managed by bmad-project-context; edits inside this block are replaced on refresh. Keep anything you want preserved outside the markers. -->
 
 ## WordCell
 
@@ -27,7 +27,7 @@ the architecture spine is the build contract.
 
 - Never implement behaviour that contradicts a confirmed answer in spec §9 or reopen an AD; stop and ask instead. If the spec and the spine disagree, the spec wins; stop and report the spine bug. Game-design intent is the owner's, never the agent's (`docs/development-methodology.md`).
 - Never modify `D:\CodeProjects\bga-wordcell` (`/mnt/d/CodeProjects/bga-wordcell`, the old BGA version); read it for reference only.
-- Never change the dealt layout for any seed (PRNG, deck order, shuffle, deal; AD-5) without the owner. Any change touching `deal.ts`, `buildDeck` or the distribution data first adds the AD-5 `R-02 golden deal` test (seeds 1 and 4294967295) from the `785c0f6` output and keeps it green; once v1 ships, a layout change bumps `SESSION_VERSION`.
+- Never change the dealt layout for any seed (PRNG, deck order, shuffle, deal; AD-5) without the owner. Any change touching `deal.ts`, `buildDeck` or the distribution data keeps the AD-5 `R-02 golden deal` test in `src/engine/deal.test.ts` (seeds 1 and 4294967295) green with its literals unchanged; once v1 ships, a layout change bumps `SESSION_VERSION`.
 - In tests, tickets, specs and code comments, cite rules by id (R-xx, Q-xx, §n, AD-n) instead of restating them.
 
 ## Where things are
@@ -61,7 +61,7 @@ the architecture spine is the build contract.
 
 - Test names start with the id: `it('R-31 …')`, `test('R-14 …')`; a §/Q-id where no R-id exists; AD-n where no R-, §- or Q-id applies, and always for shell and UI Vitest tests even when an R-id relates (never R-id coverage). A rule is done when each of its sentences is covered, by the test kind the split below assigns, by a passing test whose name carries the id.
 - Test split (AD-17): untagged engine sentences → Vitest. `(UI)`-tagged sentences (every sentence of a rule whose id carries (UI)) and app-shell sentences (R-38 load, R-73, R-74 seed, R-76 clock, §2 storage and version rejection) → Playwright, `android` project first (flows: pick up stack tail → tray → place → undo), `desktop` too for desktop-only behaviour. Shell Vitest tests never count as R-id coverage. The ticket plan lists the sentence → test mapping and exempt sentences (spec preamble: ownership, provenance, versioning process).
-- `src/engine/index.ts` is the only engine surface (AD-2). The table opening `src/engine/commands.test.ts` (until epic 2 creates it, AD-2's list is the authority) is the single source of truth for every command × precondition → no-op (same reference) or throw (`EngineError`); specs and tickets link to it, never copy it.
+- `src/engine/index.ts` is the only engine surface (AD-2). The `TABLE` in `src/engine/commands.test.ts` (its first `describe`, "AD-2 command table") is the single source of truth for every command × precondition → no-op (same reference) or throw (`EngineError`); specs and tickets link to it, never copy it.
 - A UI-level no-op is the UI not dispatching, gated by a `GameView` flag; an engine throw always means a bug, never a flow to catch.
 - `GameView` from `view()` is the only derived game state (AD-3): no component re-derives columns, legality, enablement, score or k, or holds a letter table, rule constant or phase → legality map. Combine a `GameView` flag only with non-engine state (dictionary state, selection, overlays).
 - One writer (AD-4): outside `src/engine/` and tests, only `src/shell/game.svelte.ts` calls `apply`, `accrue` or `createSession`, and `dispatch(command)` is the only way a player action reaches the engine; New game and Replay go through the store per AD-4, not `dispatch`. No second store or component-held game state.
@@ -77,6 +77,10 @@ the architecture spine is the build contract.
 
 - In `src/**` (shell/UI `*.test.ts` and `src/architecture.test.ts`, excluded from its own scan, exempt, AD-1), never declare a variable or import binding named `history` outside `src/shell/nav.ts`; object keys such as `loaded().history` are fine (write such keys explicitly (`history: value`), never shorthand or destructure them), but never followed by a History API member in AD-1's regex (`pushState`, `replaceState`, `back`, `forward`, `go`, `state`, `length`), and no `popstate` literal outside `src/shell/nav.ts`. The score history is `scoreHistory`, `reconcileHistory`, `wordcell:history` (the AD-1 scan fails otherwise).
 - Mirrors carry `data-mirror-of`, never `data-card-id` or `data-testid`, and never animate; a duplicate breaks FLIP and test locators.
-- `STUCK_PENALTY_PER_CARD` in `src/engine/types.ts` is scaffold, not target: epic 2 replaces it with the R-81 per-letter penalty after the AD-5 golden deal test (spine Scaffold deltas); do not build on it. The scaffold tests in `src/engine/deal.test.ts` are not id-named; rename them with R-ids when a ticket touches them.
+- Engine throws are `EngineError` with a kebab-case `check` code unique per check; every code is listed in `src/engine/errors.ts`. A new check adds its code there, and tests assert the code (`expectEngineError`), never the message.
+- The D2 start-position seam (`Start`, `checkStart`, `replayFrom`, `replayWords`, `dealtStart`, `applyFrom`, `viewFrom`) is engine-internal for tests: never export it, `EngineError` or any new name from `src/engine/index.ts` beyond AD-2's list (`index.test.ts` pins the runtime keys only; type exports are unchecked).
+- `fixtures/` holds valid Sessions and histories and, beside them, one rejecting `session-invalid-*` / `history-invalid-*` file per AD-7 check (Vitest only); never seed Playwright from a `*-invalid-*` file unless the test is about rejection.
+- `src/engine/test-helpers.ts` is an engine source, not a test file, so it cannot import `vitest`: helpers that call `expect` (e.g. `expectEngineError`) stay local to each `*.test.ts`.
+- `parseHistory` returns `{ ok: true, history }`: read it as `result.history`, never destructure it (the `history` pitfall above).
 
 <!-- /bmad:context -->
