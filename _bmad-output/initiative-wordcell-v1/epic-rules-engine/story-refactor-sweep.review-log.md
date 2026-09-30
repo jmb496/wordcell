@@ -1,5 +1,5 @@
 # Review log — story-refactor-sweep.md (ticket 2.12)
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 36d5bcb, copy `story-refactor-sweep.review-log.passes/pass0.md`, 108 words.
 Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), epic-rules-engine.md, ARCHITECTURE-SPINE.md, AGENTS.md; build records: review-loop/2-1-build.md … 2-11-build.md, autopilot/epic-rules-engine-20260928-2138.md; done-ticket plans: all eleven `*-plan.md` in the epic folder.
@@ -73,6 +73,21 @@ Fixer: all 11 items applied at net zero words (trims to Description, S2/S4/S8/S3
 ### Default applied (technical)
 - S35 dropped (kept by design); S33 byte-identical helpers only, seam/setTarget/sessionOf stay local
 - test rows land before the refactor rows S32, S34, whose commits touch no test file
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- duplicates across lenses
+
+## Pass 4 — 2026-09-29
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 15, decision-needed 0  |  Dropped in triage: 5 (duplicates; S19 constant-flag and S5 per-move placement left to the plan)
+Words (docs): 1482 (13.7x pass 0; stated budget 1500)  |  Snapshot: story-refactor-sweep.review-log.passes/pass4.md
+Fixer: all 14 items applied; S3 cite commands.ts:394; S1 case `{ ...REDO_T2, sourceCount: 2, arrangement: [X, Y] }` checked against replay.test.ts; no runnable commands added.
+### Applied
+- [major] S21 — fixture `play(COMMITTED, [UNDO, UNDO, UNDO])` has a committed pending draft but no redo tail (spec §2; COMMITTED has one move), so S19's labelled-property assertion would fail → drop "and redo tail" → fixer item 1
+- [minor] items 2–13 (S3 cite commands.ts:394-396 and cut the unreachable fallback; S1 parenthetical; S4 "broken together"; S5 replaces the seed→activeMs test; S16 Z/z definitions; S32 = drop redo's unreachable default; "diffs" not "commits"; S26/S31 as errata; S33 cut win-seed precedent; "### Dropped" heading; S25 AD-15 not AD-6; residuals add table-vs-files completeness; S37 as a retrospective action item)
+### Default applied (technical)
+- S25 rename target AD-15 (fail fast), not AD-6 (2-9 log's "AD-6 id (rule 6)" pointed at the fail-fast rule)
+- S32: redo's switch stays type-exhaustive; only its unreachable `never` default goes
 ### Decision needed (functionality / UX / gameplay)
 - none
 ### Dropped
