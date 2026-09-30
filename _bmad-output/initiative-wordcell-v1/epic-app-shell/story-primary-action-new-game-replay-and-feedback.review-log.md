@@ -1,5 +1,5 @@
 # Review log — story-primary-action-new-game-replay-and-feedback (ticket 3.4)
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 204 words, snapshot `story-primary-action-new-game-replay-and-feedback.passes/pass0.md`, HEAD a003cc7.
 Note: the pull from tickets.toml entry 4 dropped `interface`, `tests`, `owns`; they are passed to reviewers and fixer as intent, and the pass 1 fixer adds them to the Description as `Interface:`, `Tests:`, `Owns:` lines.
@@ -97,3 +97,28 @@ Words (docs): 1188 (5.82 x pass 0)  |  Snapshot: story-primary-action-new-game-r
 - none
 ### Dropped
 - Duplicates merged (TABLE example ×3, test naming ×2, throw state ×3, overlays ×2)
+
+## Pass 4 — 2026-09-30
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 2, minor 16, decision-needed 0  |  Dropped in triage: 1
+Words (docs): 1306 (6.4 x pass 0)  |  Snapshot: story-primary-action-new-game-replay-and-feedback.passes/pass4.md  |  Fixer: all 10 applied; verified setup() seed option stubs crypto.getRandomValues, loaded() rejected shape (game.svelte.ts:84); Undo on session-composing-draft-2-letters → Idle 2-letter pending draft rests on engine tests R-70 / §2 (not run directly)
+### Applied
+- [major] Description, Look — pass 3 made the sticky DESIGN.md action bar part of the contract, contradicting SPEC Non-goals (action bar design is epic 4) and build-notes CAP-3 markup; 2 lenses (ref alignment rated minor) → fixer 1
+- [major] AC, R-74 fresh seed — no test proves newGame() draws a new seed; a newGame() behaving like replay() passes every listed test (all fixtures seed 1) → fixer 2
+- [minor] E8 — the printed/recorded flag is the synchronous figure's; double-rAF reported as max and median only → fixer 3
+- [minor] Label AC — Idle with a 2-letter pending draft (Undo on session-composing-draft-2-letters) reads `Validate`, not `Need 3+ letters` → fixer 4
+- [minor] Discarded take also for newGame() from rejected → fixer 5
+- [minor] Confirm → New game double tap: no guard on the minimal board (EXPERIENCE.md as written) → fixer 6
+- [minor] vi.doUnmock after the feedback tests → fixer 7
+- [minor] newGame() from rejected leaves loaded() at the launch result → fixer 8
+- [minor] feedback is `$state` (AD-4) → fixer 9
+- [minor] Name the throwing states: newGame() while booting; replay() while booting and rejected → fixer 10
+### Default applied (technical)
+- Look — DESIGN.md primary button (Buttons, disabled inks) on the minimal board, no action-bar layout (epic 4, SPEC Non-goals)
+- Fresh seed — setup's crypto stub gives a seed ≠ 1; assert the stored seed equals it, from active and rejected
+- Flag on the synchronous figure (pass 1 default kept); the rAF figure informs the epic 7 check
+### Decision needed (functionality / UX / gameplay)
+- none
+### Left for the plan (minor, not applied: procedure detail)
+- E8 readiness (wait for active and enabled undo, then throttle), try/finally + SIGINT teardown of the preview child, `words` declared as a plain `export let` live binding, e2e "current version" taken from a valid fixture
+### Dropped
+- Flag on t2 or max(t1, t2) (adversarial) — conflicts with the pass 1 default and edge lens; t1 kept as the flagged figure
