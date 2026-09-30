@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
+import { fixture, seedStorage } from '../helpers/seed';
 
 test('AD-18 production build loads with 52 live cards, no errors and no test hook', async ({
   page,
@@ -10,6 +11,7 @@ test('AD-18 production build loads with 52 live cards, no errors and no test hoo
   page.on('console', (msg) => {
     if (msg.type() === 'error') errors.push(`console: ${msg.text()} @ ${msg.location().url}`);
   });
+  await seedStorage(page, { session: fixture('session-idle-fresh.json') });
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'WordCell' })).toBeVisible();
   await expect(page.getByTestId(/^card-\d+$/)).toHaveCount(52);

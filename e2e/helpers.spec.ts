@@ -1,10 +1,10 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { expect, type Page, test } from '@playwright/test';
 import { buildRoot } from './helpers/dist-test';
 import { hidePage, pageHide, pageShow, showPage } from './helpers/lifecycle';
-import { captureBoot, seedStorage } from './helpers/seed';
+import { captureBoot, fixture, seedStorage } from './helpers/seed';
 import { longPress, touchDrag } from './helpers/touch';
 
 // AD-17 helper self-tests. The direct `page.evaluate` writes to `wordcell:*` below stand in for the
@@ -41,6 +41,18 @@ const writeKey = (page: Page, key: string, value: string) =>
 const readBoot = (page: Page) => page.evaluate(() => window.__wordcellBoot);
 
 test.describe('seedStorage / captureBoot', () => {
+  test('AD-17 fixture returns a root fixture file verbatim and throws for a missing one', () => {
+    const text = fixture('session-idle-fresh.json');
+    expect(text).toBe(
+      readFileSync(
+        path.resolve(import.meta.dirname, '../fixtures/session-idle-fresh.json'),
+        'utf8',
+      ),
+    );
+    expect(JSON.parse(text)).toMatchObject({ version: 1, seed: 1 });
+    expect(() => fixture('session-no-such-fixture.json')).toThrow(/ENOENT/);
+  });
+
   test('AD-17 seedStorage seeds once; a reload does not re-seed', async ({ page }) => {
     await seedStorage(page, { session: 'a' });
     await page.goto('/');

@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import type { Page } from '@playwright/test';
 
 // AD-17 Seeding. Each page gets at most one of seedStorage / captureBoot, before its first goto.
@@ -52,4 +54,9 @@ export async function seedStorage(
 export async function captureBoot(page: Page): Promise<void> {
   track(page, 'captureBoot');
   await page.addInitScript(initScript, { values: null, captureBoot: true });
+}
+
+// The verbatim text of root `fixtures/<name>`, for seeding; throws when the file is missing.
+export function fixture(name: string): string {
+  return readFileSync(path.resolve(import.meta.dirname, '../../fixtures', name), 'utf8');
 }

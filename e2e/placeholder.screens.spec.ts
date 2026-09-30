@@ -1,8 +1,11 @@
 import { expect, test } from '@playwright/test';
+import { fixture, seedStorage } from './helpers/seed';
 
-// AD-17 Screenshots (SPEC D4): the first baseline, of the placeholder board; epic 4 replaces it.
+// AD-17 Screenshots (SPEC D4): the minimal board (epic 3 E1), seeded with session-idle-fresh.json
+// (seed 1); epic 4 replaces it.
 
 test('AD-17 placeholder board screenshot', async ({ page }) => {
+  await seedStorage(page, { session: fixture('session-idle-fresh.json') });
   await page.goto('/');
   for (let id = 0; id < 52; id++) {
     await expect(page.getByTestId(`card-${id}`)).toBeVisible();

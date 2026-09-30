@@ -96,7 +96,7 @@ test('AD-18 the placeholder card letters render in WordCell Serif and nothing el
 
   for (const other of [
     page.getByRole('heading', { name: 'WordCell' }),
-    page.getByText(/placeholder board/),
+    page.getByText(/^Seed \d+/),
   ]) {
     const { family } = await other.evaluate(style);
     expect(family.replace(/['"]/g, '').startsWith('WordCell Serif')).toBe(false);
