@@ -1,5 +1,5 @@
 # Review log — story-fatal-surface-rejected-session-and-single-instance (ticket 3.5)
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 244 words, snapshot `story-fatal-surface-rejected-session-and-single-instance.passes/pass0.md`, HEAD e7384ee.
 Note: the pull from tickets.toml entry 5 dropped `interface`, `tests`, `owns`; they are passed to reviewers and fixer as intent, and the pass 1 fixer adds them to the Description as `Interface:`, `Tests:`, `Owns:` lines.
@@ -35,3 +35,32 @@ Words (docs): 1283 (5.26 x pass 0)  |  Snapshot: story-fatal-surface-rejected-se
 - Storage area check via a storage.ts helper (e.g. isLocalArea) so game.svelte.ts never names localStorage
 - Storage spy — armStorageSpy(page, { throwOn?: key }) waits for current().kind !== 'booting', patches Storage.prototype.setItem for localStorage only, records { key, value }; storageWrites(page)
 - One Blocking message component for all three surfaces
+
+## Pass 2 — 2026-09-30
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 5, minor 12, decision-needed 0  |  Dropped in triage: 2
+Words (docs): 1498 (6.14 x pass 0; budget 1500 reached)  |  Snapshot: story-fatal-surface-rejected-session-and-single-instance.passes/pass2.md  |  Fixer: all 15 applied; unverified: Playwright waitUntil 'domcontentloaded' and init-script stub of document.fonts.load (design statements)
+### Applied
+- [major] AC §2 / R-74 — pass 1 dropped the per-variant New game fresh-write that rule-coverage §2 requires; R-74 test names no fixture and seeds a *-invalid-* file outside a §2 test (AGENTS.md pitfall) (4 lenses) → fixer 1
+- [major] AC fatal tests — Q-37 after-mount half and AD-15 before-mount half not under their ids (2 lenses) → fixer 2
+- [major] Description, halted boot — "check after each step" vs "load still parses": does main.ts call load() when halted after the font check (2 lenses) → fixer 3
+- [major] Interface — "game.svelte.ts rejected state rendering" puts rendering in the store; App.svelte and text.ts missing → fixer 4
+- [major] AC — main.ts halted-boot path (standalone only, no App, no write) untested → fixer 5
+- [minor] Storage spy — throwing call recorded, throws without writing; citation of open major 4 moved (3 lenses) → fixer 6
+- [minor] halt valid while halted; haltText getter named; Vitest: haltCause undefined unless halted, second fatal replaces text → fixer 7
+- [minor] New fixture = session-place.json with version 3 → fixer 8
+- [minor] Font tests: goto waitUntil domcontentloaded, clock installed before goto (preload blocks load) (2 lenses) → fixer 9
+- [minor] Font empty-list branch untested → fixer 10
+- [minor] AD-15 P3 honesty: Playwright no-write checks cannot fail until entry 6's hide flush; Vitest is S (2 lenses) → fixer 11
+- [minor] Shared fresh-import setup helper stubs window for every store test (2 lenses) → fixer 12
+- [minor] rule-coverage §2 rows to be updated per open major 6 (plan's job) → fixer 13
+- [minor] Reload calls location.reload() → fixer 14
+- [minor] Boot as an async function so font failures exercise unhandledrejection, dispatch exercises error → fixer 15
+### Default applied (technical)
+- R-74 folded into a `§2 R-74 Q-29 …` test on session-invalid-version-unknown.json with history-three-records.json as sentinel
+- Halted after the font check → load() still runs, then the standalone Blocking message, no later step
+- Halted-boot Playwright: page 1 unseeded with the font held, page 2 writes a wordcell: key, release → another-window message, no Board, no Session
+- Spy thrower: records the attempt, throws `Error('storage-spy: <key>')` without calling the original
+- haltText getter, undefined unless cause is 'fatal'
+### Dropped
+- Empty Error message → omit body (edge; no ref, adds words over a trivial case)
+- Import-time throw residual clause (already covered by "no storage reads at import")
