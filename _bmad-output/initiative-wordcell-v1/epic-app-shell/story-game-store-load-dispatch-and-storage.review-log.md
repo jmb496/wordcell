@@ -1,5 +1,5 @@
 # Review log — story-game-store-load-dispatch-and-storage.md (ticket 3.3)
-State: pass 3: review (reviewers running)
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 219 words, copy at story-game-store-load-dispatch-and-storage.passes/pass0.md (HEAD 676e286).
 Carried intent from tickets.toml entry 3 (not copied by the pull): interface, tests, owns — added to Description in pass 1.
@@ -71,3 +71,32 @@ Fixer: all 18 applied; no commands touched.
 - none
 ### Dropped
 - globals.d.ts engine import may trip tsconfig.e2e.json noUnused* — build-plan detail (npm run check catches it; fix engine, not config)
+
+## Pass 3 — 2026-09-30
+Reviewers: fix diff, edge-case, adversarial, ref alignment  |  Findings: major 1, minor 12, decision-needed 0  |  Dropped in triage: 0 (duplicates merged: 17 raw → 13)
+Words (docs): 1198 (5.47 x pass 0; budget 1500)  |  Snapshot: story-game-store-load-dispatch-and-storage.passes/pass3.md
+Fixer: all 13 applied; no commands touched.
+### Applied
+- [major] Load vs Tests — stated load behaviours untested: throwing first-launch write (stays booting, rethrows, loaded() still throws), second load() throws, parse-ok load writes nothing, import does no top-level storage read → fixer 1
+- [minor] loaded() shape in entry 3 unstated — carries only session until entries 7/10 (build-notes CAP-3: never null before) → fixer 2
+- [minor] rejected case without version (version-unreadable); variant read as reason.reason → fixer 3
+- [minor] accrue-only no-op case named: setDestinationCount k = 1 on session-composing.json (TABLE R-71 no-op) → fixer 4
+- [minor] gaveUp branch of finished/unfinished untested → fixer 5
+- [minor] clock starts paused; take() before any resume returns 0 → fixer 6
+- [minor] status compared only on a changing dispatch → fixer 7
+- [minor] WordCells as wordcell-<n> stacks of live cards (data-place cell) per E1 / build-notes CAP-3 → fixer 8
+- [minor] Undo/Redo text-labelled secondary buttons on the disposable board (DESIGN icon-only deferred) → fixer 9
+- [minor] font.spec locator targets the Seed line only → fixer 10
+- [minor] "while booting" unrenderable → "while rejected" → fixer 11
+- [minor] kill variant compares stored Session (JSON.parse), not text → fixer 12
+- [minor] storage.ts read/write/remove direct Vitest case → fixer 13
+### Default applied (technical)
+- loaded() — `{ session }` only until entries 7/10
+- no-op case — setDestinationCount k = 1 on fixtures/session-composing.json
+- status comparison — only when result.session !== accrued
+- Undo/Redo — text-labelled secondary buttons named Undo and Redo on the minimal board
+- font.spec — Seed line locator
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
