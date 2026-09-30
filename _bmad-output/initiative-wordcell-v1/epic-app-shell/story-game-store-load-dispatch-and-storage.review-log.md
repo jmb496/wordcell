@@ -1,5 +1,5 @@
 # Review log — story-game-store-load-dispatch-and-storage.md (ticket 3.3)
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 219 words, copy at story-game-store-load-dispatch-and-storage.passes/pass0.md (HEAD 676e286).
 Carried intent from tickets.toml entry 3 (not copied by the pull): interface, tests, owns — added to Description in pass 1.
@@ -37,3 +37,37 @@ Fixer: all 17 applied; no commands touched.
 - none
 ### Dropped
 - none
+
+## Pass 2 — 2026-09-30
+Reviewers: fix diff, edge-case, adversarial, ref alignment  |  Findings: major 5, minor 14, decision-needed 0  |  Dropped in triage: 1 (duplicates merged: 26 raw → 19)
+Words (docs): 1090 (4.98 x pass 0; budget 1500)  |  Snapshot: story-game-store-load-dispatch-and-storage.passes/pass2.md
+Fixer: all 18 applied; no commands touched.
+### Applied
+- [major] Load — "load() throws unless booting" contradicts SPEC CAP-4 / entry 5 halt-before-load (load still parses, stays halted, no write) → fixer 1
+- [major] Verify — Undo/Redo and kill-variant checks pass when nothing is written (circular); require the stored/current Session to differ from before the action and from the seeded fixture → fixer 2
+- [major] Dispatch — a rejectedWord shell Vitest case cannot run in entry 3 (no dictionary until entry 9; validate without dictionary throws command-dictionary) → fixer 3
+- [major] Load/States — rejected reason must keep the parse failure's version (serialize.ts VersionFailure / replay-failed carry `version`); entry 5 shows it → fixer 4
+- [major] Tests — loaded() shapes null (fresh launch) and { rejected } and unchanged-after-dispatch untested (rule-coverage AD-17 loaded() row carries 3) → fixer 5
+- [minor] session-won example order (Undo off the win, then Redo) → fixer 6
+- [minor] coverage citation narrowed to this ticket's parts (Confirm/New game/feedback entry 4, halt entry 5, restore suite entry 11) → fixer 7
+- [minor] current() is the AD-17 union; active carries session only until entries 7/10 → fixer 8
+- [minor] writes use serializeSession, reads parseSession (AD-7) → fixer 9
+- [minor] request check: fixture, action and project → fixer 10
+- [minor] status compared once per dispatch; entry 7 reconcile reuses it → fixer 11
+- [minor] accrue-only case names a TABLE no-op row → fixer 12
+- [minor] tests import clock.ts from the same fresh module graph → fixer 13
+- [minor] Undo/Redo native disabled; WordCell stack label → fixer 14
+- [minor] first-launch write before entering active → fixer 15
+- [minor] helpers.spec raw seeds reach rejected harmlessly (wording) → fixer 16
+- [minor] throwing-write Vitest case → fixer 17
+- [minor] clock resume(0) and seed 0 / 4294967295 boundary cases → fixer 18
+### Default applied (technical)
+- load guard — throws once load has run (active or rejected); entry 5 adds the halted path
+- rejected reason — `{ reason, version? }` (the parse failure minus `ok`), in state, current() and loaded().session; globals.d.ts imports ParseSessionResult type
+- rejectedWord — store passes `dictionary: undefined` until entry 9; the pass-through test moves to entry 9's Validate
+- request check — session-place.json, Undo, reload, page.on('request') on android dev-server
+- disabled — native `disabled`; stack labelled by its cell number
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- globals.d.ts engine import may trip tsconfig.e2e.json noUnused* — build-plan detail (npm run check catches it; fix engine, not config)
