@@ -120,3 +120,12 @@ Tests: all passing
 Ref to fix upstream: none
 Paused: usage limit during the build (reset 7:30pm America/New_York), resumed 20:20 EDT from the saved plan
 Worth knowing: four small test minors (a few per-field domain rows, a version-2 round trip, non-string enum values, JSON -0) carried to the 2.12 sweep.
+
+## 2.11 History serialise and parse, and the epic's scripted game — done
+What it adds: saving and loading the score history, with damaged history turned away with a reason, never a crash. It also adds the epic's end-to-end check: a scripted game on seed 1 is played, undone to the start and redone to the end, and after every step the game survives save-and-load unchanged. The engine's public surface is pinned to exactly the architecture's list.
+Ticket review: 4 passes, converged (majors 11, 5, 3, 0); nothing needed your input
+Build: built; commits 9ce1533
+Code review: thorough, 2 passes, converged with one open item; 1 fix commit (ba24baa)
+Tests: all passing
+Ref to fix upstream: none
+Worth knowing: open test gap: the order of the history record checks is pinned only for its first pair. There are also two small minors (JSON -0 version, a version-2 history round trip). All are carried to the 2.12 sweep.

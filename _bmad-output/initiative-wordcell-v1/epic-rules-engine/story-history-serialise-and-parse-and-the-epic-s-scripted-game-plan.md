@@ -3,7 +3,7 @@ title: 'History serialise and parse, and the epic''s scripted game'
 type: 'feature'
 ticket: '11'
 created: '2026-09-29'
-status: 'built'
+status: done
 baseline_revision: '23f2111b23781c096c9edc4858f3cacc96c3af1d'
 route: 'full'
 route_source: 'auto'
