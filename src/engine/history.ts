@@ -91,8 +91,9 @@ export function isRecorded(
 }
 
 /**
- * R-84 statistics over all records, won and gaveUp, negative scores included (Q-28): counts
- * always; best, average (A-E3) and longest word (ties to the earliest record) only when defined.
+ * R-84 statistics: counts and longest word over all records; best and average over qualifying
+ * records, every won record and gaveUp records scoring 0 or more (Q-44, D4): counts always;
+ * best, average (A-E3) and longest word (ties to the earliest record) only when defined.
  */
 export function statistics(records: readonly GameRecord[]): Statistics {
   const result: { -readonly [K in keyof Statistics]: Statistics[K] } = {
@@ -100,10 +101,11 @@ export function statistics(records: readonly GameRecord[]): Statistics {
     gamesWon: records.filter((r) => r.outcome === 'won').length,
     gamesGivenUp: records.filter((r) => r.outcome === 'gaveUp').length,
   };
-  if (records.length > 0) {
-    result.bestScore = records.reduce((best, r) => Math.max(best, r.finalScore), -Infinity);
-    const sum = records.reduce((total, r) => total + r.finalScore, 0);
-    result.averageScore = Math.round(sum / records.length) + 0;
+  const scored = records.filter((r) => r.outcome === 'won' || r.finalScore >= 0);
+  if (scored.length > 0) {
+    result.bestScore = scored.reduce((best, r) => Math.max(best, r.finalScore), -Infinity);
+    const sum = scored.reduce((total, r) => total + r.finalScore, 0);
+    result.averageScore = Math.round(sum / scored.length) + 0;
   }
   let longest: LongestWord | undefined;
   for (const r of records)

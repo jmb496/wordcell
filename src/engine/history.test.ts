@@ -436,7 +436,7 @@ describe('statistics', () => {
       gamesWon: 2,
       gamesGivenUp: 1,
       bestScore: 400,
-      averageScore: 183,
+      averageScore: 300,
       longestWord: { spelling: 'lquejata', letterCount: 8 },
     });
   });
@@ -445,27 +445,64 @@ describe('statistics', () => {
     expect(stats([rec('won', 100), rec('gaveUp', 150), rec('won', 90)]).bestScore).toBe(150);
   });
 
-  it('R-84 all-negative history: negative best and negative average (A-E3)', () => {
-    expect(stats([rec('gaveUp', -100), rec('gaveUp', -20), rec('gaveUp', -60)])).toMatchObject({
-      bestScore: -20,
-      averageScore: -60,
+  it('R-84 a negative gaveUp record is excluded from best and average, counted elsewhere (Q-44)', () => {
+    expect(
+      stats([
+        rec('won', 100, { spelling: 'jataw', letterCount: 5 }),
+        rec('gaveUp', -50, { spelling: 'lquejata', letterCount: 8 }),
+      ]),
+    ).toStrictEqual({
+      gamesPlayed: 2,
+      gamesWon: 1,
+      gamesGivenUp: 1,
+      bestScore: 100,
+      averageScore: 100,
+      longestWord: { spelling: 'lquejata', letterCount: 8 },
     });
   });
 
+  it('R-84 a gaveUp record scoring 0 counts in best and average (Q-44)', () => {
+    expect(stats([rec('won', 10), rec('gaveUp', 0)]).averageScore).toBe(5);
+    expect(stats([rec('gaveUp', 0)])).toStrictEqual({
+      gamesPlayed: 1,
+      gamesWon: 0,
+      gamesGivenUp: 1,
+      bestScore: 0,
+      averageScore: 0,
+    });
+  });
+
+  it('R-84 only negative gaveUp records: best and average absent (Q-44)', () => {
+    expect(stats([rec('gaveUp', -100), rec('gaveUp', -20), rec('gaveUp', -60)])).toStrictEqual({
+      gamesPlayed: 3,
+      gamesWon: 0,
+      gamesGivenUp: 3,
+    });
+  });
+
+  it('R-84 a negative won record still counts (Q-44)', () => {
+    expect(stats([rec('won', -100), rec('gaveUp', -50)])).toMatchObject({
+      bestScore: -100,
+      averageScore: -100,
+    });
+  });
+
+  // Negative `won` records below are synthetic (unreachable from `gameRecord`, R-80); they only
+  // exercise A-E3 rounding, since negative gaveUp records no longer reach the average (Q-44).
   it('R-84 A-E3 average rounds half toward +∞: 5, 10 → 8', () => {
     expect(stats([rec('won', 5), rec('won', 10)]).averageScore).toBe(8);
   });
 
   it('R-84 A-E3 average rounds half toward +∞: −5, −10 → −7', () => {
-    expect(stats([rec('gaveUp', -5), rec('gaveUp', -10)]).averageScore).toBe(-7);
+    expect(stats([rec('won', -5), rec('won', -10)]).averageScore).toBe(-7);
   });
 
   it('R-84 A-E3 average rounds to nearest, not up: −7, −8, −8 → −8', () => {
-    expect(stats([rec('gaveUp', -7), rec('gaveUp', -8), rec('gaveUp', -8)]).averageScore).toBe(-8);
+    expect(stats([rec('won', -7), rec('won', -8), rec('won', -8)]).averageScore).toBe(-8);
   });
 
   it('R-84 A-E3 average of 1 and −2 is 0, not −0', () => {
-    expect(stats([rec('won', 1), rec('gaveUp', -2)]).averageScore).toBe(0);
+    expect(stats([rec('won', 1), rec('won', -2)]).averageScore).toBe(0);
   });
 
   it('R-84 a later record with a strictly longer word replaces an earlier shorter one (A-E3)', () => {
@@ -495,7 +532,7 @@ describe('statistics', () => {
       gamesWon: 1,
       gamesGivenUp: 1,
       bestScore: 10,
-      averageScore: 0,
+      averageScore: 10,
     });
   });
 });
