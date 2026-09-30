@@ -28,6 +28,7 @@ test('AD-17 minimal board renders 52 live card elements with AD-14 attributes', 
   await expect(page.getByTestId('column-8').getByTestId(/^card-\d+$/)).toHaveCount(6);
   for (let cell = 3; cell <= 10; cell++) {
     await expect(page.getByTestId(`wordcell-${cell}`)).toBeVisible();
+    await expect(page.getByTestId(`wordcell-${cell}`)).toHaveAccessibleName(`WordCell ${cell}`);
   }
   await expect(page.getByTestId('app')).toHaveCount(0);
   await expect(page.getByText('Seed 1', { exact: true })).toBeVisible();

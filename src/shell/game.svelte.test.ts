@@ -236,7 +236,7 @@ describe('game store', () => {
     expect(game.current()).toEqual({ kind: 'active', session: expected });
   });
 
-  it('AD-4 dispatch order: take, accrue, then apply; the written Session is Undo of the accrued one', async () => {
+  it('AD-4 dispatch takes and accrues the clock ms; the written Session is Undo of the accrued one', async () => {
     const text = JSON.stringify(place);
     const { game, storage, clock, time } = await active(text);
     clock.resume(time.now);
@@ -246,6 +246,16 @@ describe('game store', () => {
     expect(expected.activeMs).toBe(place.activeMs + 1000);
     expect(storage.writes).toEqual([[KEY, serializeSession(expected)]]);
     expect(game.current()).toEqual({ kind: 'active', session: expected });
+  });
+
+  it('AD-4 dispatch order: accrue runs before apply, so a Redo onto a win keeps the accrued ms', async () => {
+    const { game, storage, clock, time } = await active(JSON.stringify(won));
+    game.dispatch(UNDO);
+    clock.resume(time.now);
+    time.now += 1000;
+    expect(game.dispatch(REDO)).toEqual({ changed: true, finished: 'won' });
+    const [, text] = storage.writes.at(-1) ?? [];
+    expect(parsed(text ?? '').activeMs).toBe(won.activeMs + 1000);
   });
 
   it('AD-4 Undo off a win reports unfinished; Redo onto it reports finished won', async () => {

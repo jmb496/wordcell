@@ -88,6 +88,7 @@ function load(): void {
 function dispatch(command: Command): DispatchResult {
   if (state.kind !== 'active') throw new Error(`AD-4 dispatch while ${state.kind}`);
   const before = state.session;
+  // The taken ms are dropped if a later step throws; entry 5 (AD-15 halt) makes that fatal.
   const accrued = accrue(before, clock.take(performance.now()), EN);
   const result = apply(accrued, command, { lang: EN });
   const changed = result.session !== accrued;
