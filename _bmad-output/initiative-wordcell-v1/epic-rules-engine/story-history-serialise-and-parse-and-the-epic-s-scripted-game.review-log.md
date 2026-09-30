@@ -1,5 +1,5 @@
 # Review log — story-history-serialise-and-parse-and-the-epic-s-scripted-game.md (ticket 2.11)
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 714c76e, copy `story-history-serialise-and-parse-and-the-epic-s-scripted-game.review-log.passes/pass0.md`, 146 words.
 Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), epic-rules-engine.md, ARCHITECTURE-SPINE.md, AGENTS.md; done-ticket plans: story-composing-commands-and-the-command-table-plan.md story-gameview-plan.md story-golden-deal-test-and-r-id-test-names-plan.md story-langdata-en-and-lettercount-plan.md story-score-history-semantics-plan.md story-scoring-penalty-and-bands-plan.md story-session-createsession-replay-and-checksession-plan.md story-session-serialise-and-parse-with-fixtures-plan.md story-undo-redo-give-up-and-accrue-plan.md story-validate-and-place-commands-with-the-8-worked-example-plan.md 
@@ -68,3 +68,27 @@ Fixer: all 13 items applied; design statements only; undo/redo counts 3 and 3 ve
 - none
 ### Dropped
 - duplicates of the distinct-codes and JSON.parse-spy findings across lenses
+
+## Pass 4 — 2026-09-29
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 0, minor 13, decision-needed 0  |  Dropped in triage: 2 (duplicates)
+Words (docs): 1382 (9.5x pass 0; stated budget 1500)  |  Snapshot: story-history-serialise-and-parse-and-the-epic-s-scripted-game.review-log.passes/pass3.md (no fix pass)
+### Applied
+- none (converged)
+### Decision needed (functionality / UX / gameplay)
+- none
+
+## Result — converged after 4 passes
+Majors per pass: 11, 5, 3, 0. No open major. No decision-needed items.
+Unapplied minors (for the build plan):
+- Round trip: "reusing history.test.ts helpers" means copying them locally; never import a *.test.ts file.
+- "tan sequence" in the Round trip and Scripted game bullets means the full sequence through confirm (the 2.10 plan calls it tanDone); giveUp needs Idle.
+- serializeHistory writes longestWord as { spelling, letterCount }; the reversed-keys inline case also reverses longestWord's keys.
+- Rejecting boundaries: add inline rejecting partners (seed -1 and 4294967296, activeMs -1, finalScore 1.5, letterCount 0), each asserting its code.
+- Accepting boundaries: a negative finalScore is already in the fixture; the quiz case is not a regex boundary; each accepting case asserts ok and toStrictEqual.
+- Rejecting fixtures AC: "the fixture's version" is the container version (record-version fixture).
+- Propagation: the case exercises the container stage only; one try wraps both stages.
+- Valid fixture is the base of every container and record fixture (not null/array).
+- Fixture rows keyed { fixture, code } so each fixture asserts its own code, not only the set.
+- errors.ts doc line: longest-word-not-object covers any non-exact { spelling, letterCount } object.
+- history-three-records.json equality with live reconcileHistory output is intended drift detection; a scoring change regenerates it (comment in the test).
+- container-field-set fixture adds an extra key; an inline checkContainer case drops records.
