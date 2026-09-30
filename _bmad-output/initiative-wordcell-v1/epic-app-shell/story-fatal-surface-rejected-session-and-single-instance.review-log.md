@@ -1,5 +1,5 @@
 # Review log — story-fatal-surface-rejected-session-and-single-instance (ticket 3.5)
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 244 words, snapshot `story-fatal-surface-rejected-session-and-single-instance.passes/pass0.md`, HEAD e7384ee.
 Note: the pull from tickets.toml entry 5 dropped `interface`, `tests`, `owns`; they are passed to reviewers and fixer as intent, and the pass 1 fixer adds them to the Description as `Interface:`, `Tests:`, `Owns:` lines.
@@ -64,3 +64,27 @@ Words (docs): 1498 (6.14 x pass 0; budget 1500 reached)  |  Snapshot: story-fata
 ### Dropped
 - Empty Error message → omit body (edge; no ref, adds words over a trivial case)
 - Import-time throw residual clause (already covered by "no storage reads at import")
+
+## Pass 3 — 2026-09-30
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 4, minor 6, decision-needed 0  |  Dropped in triage: 4
+Words (docs): 1549 (6.35 x pass 0; ~budget)  |  Snapshot: story-fatal-surface-rejected-session-and-single-instance.passes/pass3.md  |  Fixer: all 9 applied; no runnable commands changed
+### Applied
+- [major] AC `Q-38 …` halted boot — page 2 unspecified: opening '/' boots and writes a Session ("still absent" fails), about:blank cannot reach the origin; no sync on page 1's listener; page 1 goto blocks on the held font (4 lenses) → fixer 1
+- [major] Description, surface mount — mounted flag tracks only App, so fatal-then-halted-boot or two fatals before mount mount the standalone twice; standalone must be reactive (3 lenses) → fixer 2
+- [major] AC, AD-15 P3 — handed to entry 6, whose tickets.toml tests do not list it; no owner → fixer 3
+- [major] AC — Reload (location.reload()) never tapped; a dead Reload passes every test → fixer 4
+- [minor] halt overloads: halt('fatal', text) / halt('another-window') (2 lenses) → fixer 5
+- [minor] Storage filter wording: area check applies to wordcell: keys too → fixer 6
+- [minor] boot() called without awaiting (else font failure reaches error, not unhandledrejection) → fixer 7
+- [minor] Fatal tests also assert current().kind 'halted' → fixer 8
+- [minor] Spy also records removeItem as { key, value: null } (entry 7's Q-39 write-back uses storage.remove) (2 lenses) → fixer 9
+### Default applied (technical)
+- Halted-boot test: page 1 goto '/' waitUntil 'domcontentloaded', font route on page 1 only, wait for current().kind 'booting'; page 2 opens /favicon.svg and sets wordcell:prefs
+- One main.ts surface flag set by whichever mount runs first; standalone reactive to haltCause/haltText
+- Plan adds the AD-15 halted hide-flush Playwright case to tickets.toml entry 6 tests and the rule-coverage AD-15 CAP column
+- Reload tapped at the end of `R-84 Q-38 …`: page 1 comes back active with page 2's Session
+### Dropped
+- Render-time fatal leaving App unable to update (stretch; plan)
+- Reload primary vs DESIGN.md Buttons "Secondary" (story follows AD-15 and the DESIGN.md Blocking message entry; doc nit for the plan)
+- `R-84 Q-38` page 2 stays active after entry 6's hide flush (entry 6's concern)
+- Duplicate mount-flag minors merged into the major
