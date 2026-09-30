@@ -1,5 +1,5 @@
 # Review log — story-refactor-sweep.md (ticket 2.12)
-State: pass 4: done
+State: pass 5: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 36d5bcb, copy `story-refactor-sweep.review-log.passes/pass0.md`, 108 words.
 Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), epic-rules-engine.md, ARCHITECTURE-SPINE.md, AGENTS.md; build records: review-loop/2-1-build.md … 2-11-build.md, autopilot/epic-rules-engine-20260928-2138.md; done-ticket plans: all eleven `*-plan.md` in the epic folder.
@@ -92,3 +92,29 @@ Fixer: all 14 items applied; S3 cite commands.ts:394; S1 case `{ ...REDO_T2, sou
 - none
 ### Dropped
 - duplicates across lenses
+
+## Pass 5 — 2026-09-29
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 10, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1482 (unchanged, no fix pass)  |  Snapshot: story-refactor-sweep.review-log.passes/pass4.md
+Stopping rule: passes 4 and 5 each yielded at most one major → converged; the pass-5 major is recorded open, not fixed.
+### Open (not applied)
+- [major] Acceptance Criteria — no rule for a new gap-closing test that fails on current code (a found engine bug) while AC2 forbids behaviour change; proposed: "a new test red on current code is a found bug: leave the engine unchanged, record test and failure in the plan, and stop for the owner (fix is a new story)" (AGENTS.md rule 7)
+### Decision needed (functionality / UX / gameplay)
+- none
+
+## Result — converged after 5 passes
+open major: AC has no rule for a gap-closing test that fails on current code (found engine bug) — proposed default: leave the engine unchanged, record the test and failure in the plan, stop for the owner; the fix is a new story (AGENTS.md rule 7).
+
+Majors per pass: 13, 6, 2, 1, 1. Words: 108 → 1482 (budget 1500). Technical defaults applied: 20 (see the Default applied lists). Decision-needed: none.
+
+Unapplied minors (for the build's plan):
+- AC2 "(none deleted or weakened)" vs S5 (replaces a test), S15 (moves assertions), S33 (deletes helper copies): read as "none weakened; a replaced or moved case stays covered".
+- Line citations (S3, S5, S10, S11, S15) are pre-sweep anchors (as of 635a8e9); they drift as rows insert cases.
+- S24 `EARLIER` is not defined in history.test.ts: any non-empty prefix of other records.
+- S32 departs from gameview plan:115's "merging" on purpose (drop redo's unreachable default instead); say so in the plan.
+- S19: flags constant across STATES get a new state, listed in the plan; S21's state counts.
+- S33: add an empty test-helpers.ts and run the AD-1 scan and `npm run check` first; move the row to Excluded if either rejects it.
+- AC4: "shows the test failing on that mutation (then reverted)".
+- Description vs tickets.toml entry 12: the Excluded items are accepted residuals or rejected findings, not scope pushed out of another story.
+- AC3: measure the 5 s unit budget with `npm run test` on the dev machine and record it in the plan.
+- S21: to also cover a redo tail after the pending draft (2-8 log), use `play(WON, [UNDO ×6])` (Idle at 6, pending moves[6], tail moves[7]); verify in view.test.ts.
