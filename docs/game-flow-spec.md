@@ -1,13 +1,14 @@
 # WordCell – Game flow specification
 
-Status: v0.8, 2026-09-27. Jared answered Q-01…Q-33 on 2026-09-26 (Q-26…Q-33 were raised by the
+Status: v0.9, 2026-09-30. Jared answered Q-01…Q-33 on 2026-09-26 (Q-26…Q-33 were raised by the
 review loop, see `game-flow-spec.review-log.md`); the decisions are recorded in §9 and applied to
 the rules below. There are no open questions. v0.6 only refines the test-coverage rule in this
 preamble, as the product brief's success criterion 4 requires. v0.7 adds Q-34 (a short drag that never leaves its source column is a cancel,
 R-14) and Q-35 (the record stores the longest word's spelling, R-84), both raised by the UX review
 loop and answered by Jared. v0.8 adds Q-36…Q-43, raised by the architecture spine's review and
 answered by Jared on 2026-09-27; Q-41 amends the §2 replay paragraph and Q-43 refines R-84's
-record identity. Every rule has an id (R-xx) so
+record identity. v0.9 adds Q-44 (best and average score exclude negative given-up games, R-84),
+answered by Jared on 2026-09-30. Every rule has an id (R-xx) so
 tests, specs and tickets can cite it. A "(UI)" in a rule's id tags the whole rule; a trailing
 "(UI)" tags only the sentence it ends. Tagged rules and sentences are satisfied by a Playwright
 test naming the R-id; every untagged sentence that states engine behaviour by an engine unit test
@@ -347,7 +348,11 @@ with nothing to undo, Redo without redo data) (CLAUDE.md rule 6).
   outcome and active duration, Q-43), Undo removes nothing. The score history is persisted locally beside the Session, with its own version (§2,
   Q-33); the finishing and un-finishing changes write Session and score history synchronously
   in the same task, so no partial state is observable. v1 statistics are only: games played,
-  games won, games given up, best score, average score, longest word ever. The remaining
+  games won, games given up, best score, average score, longest word ever. Best score and
+  average score exclude given-up records whose final score is negative; a given-up record scoring
+  0 or more and every won record count, and excluded records still count in games played, games
+  given up and longest word ever; when no record qualifies, best and average are absent (Q-44).
+  The remaining
   statistics in `requirements-carryover.md` §6 are dropped from v1 (Q-33). One game is in
   progress at a time.
 - **R-85** Letter distribution, letter values (which cards count as more than one letter) and the
@@ -466,3 +471,4 @@ removing S, col1 is `F`; it must be included → **FAKED**, or with `L` → **FL
 | Q-41 | §2 replayed every redo-tail move as committed, but Undo past a pending draft leaves it uncommitted in the redo tail. | Each move is validated at its own `reached`; only the last element of `moves` may be below committed (answered 2026-09-27). §2. |
 | Q-42 | The dictionary banner's Reload after a deploy removed the old word-list file? | Any 404 on the word list makes the banner's next Reload tap reload the page (never automatically); under the service worker the banner stays until the next launch (answered 2026-09-27). R-38. |
 | Q-43 | How does Undo of a finish find its record without tying the score history to scoring rules? | By seed, outcome and active duration; the history's version changes only when the record's shape changes (answered 2026-09-27). R-84. |
+| Q-44 | Should a given-up game with a negative score pull down best and average score? | No (answered 2026-09-30): best score and average score exclude given-up records whose final score is negative; a given-up record scoring 0 or more and every won record count. Excluded records still count in games played, games given up and longest word ever. When no record qualifies, best and average are absent (shown as —). R-84. |
