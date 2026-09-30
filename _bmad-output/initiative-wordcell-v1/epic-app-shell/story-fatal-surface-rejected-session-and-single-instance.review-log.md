@@ -1,5 +1,5 @@
 # Review log — story-fatal-surface-rejected-session-and-single-instance (ticket 3.5)
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 244 words, snapshot `story-fatal-surface-rejected-session-and-single-instance.passes/pass0.md`, HEAD e7384ee.
 Note: the pull from tickets.toml entry 5 dropped `interface`, `tests`, `owns`; they are passed to reviewers and fixer as intent, and the pass 1 fixer adds them to the Description as `Interface:`, `Tests:`, `Owns:` lines.
@@ -88,3 +88,24 @@ Words (docs): 1549 (6.35 x pass 0; ~budget)  |  Snapshot: story-fatal-surface-re
 - Reload primary vs DESIGN.md Buttons "Secondary" (story follows AD-15 and the DESIGN.md Blocking message entry; doc nit for the plan)
 - `R-84 Q-38` page 2 stays active after entry 6's hide flush (entry 6's concern)
 - Duplicate mount-flag minors merged into the major
+
+## Pass 4 — 2026-09-30
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 3, minor 6, decision-needed 0  |  Dropped in triage: 9
+Words (docs): 1557 (6.38 x pass 0)  |  Snapshot: story-fatal-surface-rejected-session-and-single-instance.passes/pass4.md  |  Fixer: all 9 applied; no commands changed
+### Applied
+- [major] AC Shell Vitest AD-4 — the halting localStorage key-null (clear) case, in the ticket's own Tests field, has no test → fixer 1
+- [major] AC `Q-38 …` halted boot — font released right after page 2's write races page 1's storage event; the gating "wordcell:session absent" flakes → fixer 2
+- [major] AC — a later fatal re-rendering the standalone surface (not a second mount) is untested (2 lenses) → fixer 3
+- [minor] Interface — restore "Playwright only, no engine test edit" for the new fixture (dropped in pass 3) (2 lenses) → fixer 4
+- [minor] AC fatal dispatch — reuse the shared fatal asserts (adds current().kind 'halted') → fixer 5
+- [minor] AC — history-three-records byte check cannot fail until entry 7; fold into the existing "cannot fail" sentence → fixer 6
+- [minor] Fatal text — `error.message || error.name` so the body is never blank → fixer 7
+- [minor] Boot order — "a font or load failure" reaches unhandledrejection (closes ticket 3.3's deferred blank-page item) → fixer 8
+- [minor] Halt — cut the redundant "and newGame() then throws" → fixer 9
+### Default applied (technical)
+- Halted-boot sync: after page 2's write, wait until page 1's current().kind is 'halted', then release the font
+- Later-fatal check: in the halted-boot test, after the another-window message, a page.evaluate setTimeout throw → fatal title and text, exactly one Reload button
+### Dropped
+- `R-84 Q-38` "page 2 boots →" (disproved: the shared key exists, so page 2's boot writes nothing; session-place has Undo available)
+- rule-coverage R-84 same-task row spy wording (entry 7's plan)
+- Timer-race guard note, title role, "written at once" technique, static-import residual, App render-time gate, multiple held font routes (plan detail)
