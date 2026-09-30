@@ -3,7 +3,7 @@ title: 'Statistics exclude negative given-up scores'
 type: 'feature'
 ticket: '13'
 created: '2026-09-30'
-status: 'built'
+status: done
 baseline_revision: '1f6b83d4fbc898b90ff3c6c35232eb35c9b4c0fa'
 route: 'oneshot'
 route_source: 'auto'
