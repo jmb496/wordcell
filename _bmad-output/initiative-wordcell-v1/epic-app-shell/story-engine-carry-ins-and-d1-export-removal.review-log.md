@@ -1,6 +1,6 @@
 # Review log — story-engine-carry-ins-and-d1-export-removal.md (ticket 3.1)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 224 words (copy at story-engine-carry-ins-and-d1-export-removal.passes/pass0.md).
 Note: the pulled ticket lacked tickets.toml entry 1's interface, tests and owns fields; they are passed as intent and added to the Description in pass 1.
@@ -56,6 +56,33 @@ Fixer: all 14 applied; unverified (not run): `npm run check` claim in Verify.
 - `index: null` — new AD-2 TABLE throw row `command-domain`
 - R-38 — relabel existing row `R-36 R-38`
 - Test files — regeneration in serialize.test.ts, accrue test in history.test.ts
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Pass 3 — 2026-09-30
+Reviewers: fix diff, edge-case, adversarial, ref alignment  |  Findings: major 1, minor 12, decision-needed 0  |  Dropped in triage: 0 (duplicates merged: 21 raw → 13; export-resolution finding reclassified major → minor: default resolution already resolves relative re-exports, the default below makes it explicit)
+Words (docs): 1120 (5.0 x pass 0; budget 1500)  |  Snapshot: story-engine-carry-ins-and-d1-export-removal.passes/pass3.md
+Fixer: all 14 applied; unverified (not run): `ts.parseJsonConfigFileContent` pre-emit-diagnostics design, test:screens.
+### Applied
+- [major] Interface — "main.ts … does not import the store" (pass 2 fixer 11) contradicts SPEC CAP-1 "main.ts and App.svelte read view" without a recorded supersession → record the supersession (App is the only reader; main.ts only mounts) and add the SPEC rewording to the spec-owner Notes follow-up → fixer 1
+- [minor] Verify `npm run check` claim inaccurate → "(in test:all) proves main.ts and App no longer import deal/Card from the engine index" → fixer 2
+- [minor] R-38 relabel satisfies SPEC CAP-1 "a test named R-38 …" / rule-coverage "adds" via the row id → fixer 3
+- [minor] `accrue(finished, ms > 0, EN)` → fixer 4
+- [minor] App guard `{#if game.state.kind === 'active' && game.view}` wraps the whole `<main>`; unreachable until CAP-3 → fixer 5
+- [minor] Nine-name completeness: AD-17 case in src/architecture.test.ts asserts non-invalid fixtures/session-*.json equal the nine names → fixer 6
+- [minor] Accrue test starts from history-three-records and asserts the final history equals it → fixer 7
+- [minor] Regeneration also asserts `JSON.stringify(fixture) === serializeSession(built)` (history precedent) → fixer 8
+- [minor] Seed-line card count sums view.columns (placeholder, CAP-3 replaces) → fixer 9
+- [minor] B6 test uses the `COMPOSING` Session with cell 4 (as the R-33 index |M| test) → fixer 10
+- [minor] Owns: index.test.ts runtime-key list mirrors the literal values → fixer 11
+- [minor] Export exactness: program built from src/engine/tsconfig.json options, no pre-emit diagnostics for index.ts before comparing → fixer 12
+- [minor] test:screens: if Docker is unavailable the build stops and reports (rule 6), no skip → fixer 13
+- [minor] deal() doc comment may drop the D1 wording (comment-only, golden literals unchanged) → fixer 14
+### Default applied (technical)
+- main.ts store-free, App the only store reader (supersedes SPEC CAP-1 wording)
+- Export test compiler options from src/engine/tsconfig.json; fixture-list completeness in architecture.test.ts
 ### Decision needed (functionality / UX / gameplay)
 - none
 ### Dropped
