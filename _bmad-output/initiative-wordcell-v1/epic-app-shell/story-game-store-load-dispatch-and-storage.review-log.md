@@ -1,5 +1,5 @@
 # Review log — story-game-store-load-dispatch-and-storage.md (ticket 3.3)
-State: pass 2: done
+State: pass 3: review (reviewers running)
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 219 words, copy at story-game-store-load-dispatch-and-storage.passes/pass0.md (HEAD 676e286).
 Carried intent from tickets.toml entry 3 (not copied by the pull): interface, tests, owns — added to Description in pass 1.
