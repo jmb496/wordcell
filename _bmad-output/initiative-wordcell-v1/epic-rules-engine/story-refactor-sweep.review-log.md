@@ -1,5 +1,5 @@
 # Review log — story-refactor-sweep.md (ticket 2.12)
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 36d5bcb, copy `story-refactor-sweep.review-log.passes/pass0.md`, 108 words.
 Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), epic-rules-engine.md, ARCHITECTURE-SPINE.md, AGENTS.md; build records: review-loop/2-1-build.md … 2-11-build.md, autopilot/epic-rules-engine-20260928-2138.md; done-ticket plans: all eleven `*-plan.md` in the epic folder.
@@ -37,3 +37,27 @@ Fixer: all 17 items applied as Scope rows S1–S37 plus Dropped/Excluded lists; 
 ### Dropped
 - frontmatter covers CAP-1…9 (minor, harmless; left)
 - duplicates across the four lenses
+
+## Pass 2 — 2026-09-29
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 6, minor 13, decision-needed 0  |  Dropped in triage: 12 (duplicates across lenses)
+Words (docs): 1494 (13.8x pass 0; stated budget 1500)  |  Snapshot: story-refactor-sweep.review-log.passes/pass2.md
+Fixer: all items applied; S36 deleted (ids stable); seed-uint32 residual cited to composing plan:90 and commands.ts `apply` doc (not 2-4 pass 1); S31 wording from 2-2 log; no runnable commands added. At budget: further minors only if they add no words.
+### Applied
+- [major] S35 — reversed: giveUp calling boolean giveUpAvailable loses command-status/command-phase codes → fixer item 1
+- [major] S3/S32 — redo never-default has no table row, so S32's neutrality guard is empty → fixer item 2
+- [major] AC bullet 2 — "only renames and fixture fixes" contradicts rows editing existing tests (S2, S12, S14, S15, S17–S21, S33) → fixer item 3
+- [major] S36 — sameDraftData residual already resolved (composing plan:123, validate plan:129) → Dropped → fixer item 4
+- [major] S10 — one parenthetical applied to both cases removes each case's own violation; split per case → fixer item 5
+- [major] S33 — which helpers move unspecified; expectEngineError uses vitest `expect` → fixer item 6
+- [minor] items 7–19 (S37 file/trigger; plan residuals seed-order and canSetTarget/canConfirm; S29 "round trips"; S31 state at bca5f0f; AC mutant source; Description "new story"; References; S4/S5 unbuildable pairs; S8 case shape; S30 accepted −0 note; S19 top-level flags; "engine exports" meaning; done-plan edits as dated corrections)
+### Default applied (technical)
+- S35: giveUp keeps prelude; giveUpAvailable becomes the non-throwing form of the same status→phase gates (shared predicate); else Excluded
+- S3: add the matching redo row, landed before S32
+- S33: only expect-free helpers move (win-seed.ts precedent); expectEngineError stays per file
+- S4/S5: pairs where check n+1 cannot be broken alone are left out and named in the plan
+- S19: top-level GameView boolean flags only
+- S37: trigger moves from entry 12 to the retrospective (sweep does not run the skill); File(s) = 2.12 plan
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- duplicates across lenses
