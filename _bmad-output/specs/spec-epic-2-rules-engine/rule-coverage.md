@@ -8,9 +8,8 @@ record provenance or describe versioning process (spec preamble) and need no tes
 Test kinds: **V** = engine Vitest in this epic, named with the id; **P3** / **P4–6** = Playwright
 in epic 3 / epics 4–6; **—** = none.
 
-Spec tagging gap (report to the spec owner): R-50 "The UI shows which card lands on the bottom…"
-and R-83 "Longest word shows "—"…" are UI sentences without a `(UI)` tag; they are mapped here as
-untagged UI sentences, P4–6.
+R-50 "The UI shows which card lands on the bottom…" and R-83 "Longest word shows "—"…" carry a
+trailing `(UI)` tag since spec v0.9 (owner-approved 2026-09-30); both are Playwright, P4–6.
 
 ## §2 Game state
 
@@ -60,7 +59,7 @@ untagged UI sentences, P4–6.
 | R-39 | 4, 5 | V + P4–6 | V only for "there is no Cancel" (a compile-time `@ts-expect-error` test named R-39: `{ type: 'cancel' }` is not a `Command`) and "Undo from Composing returns S, D and the free letters". The inertness sentences are (UI), P4–6; the flags behind them are tested under AD-3 (CAP-7), not as R-39 coverage. |
 | R-40, R-41 | 4 | V | Legal targets ≤ L; a `QU` case (4-card word with `QU`, L = 5, legal targets reach cell 5); 10+ any cell; used free letter's cell stays legal and the letter travels. |
 | R-42 | 4 | V | Validate stores highest legal target and word order; pre-selection (UI) P4–6. |
-| R-50, R-51 | 4 | V | Any permutation of S ∪ F ∪ D; default bottom→top = word order; target change keeps order. "The UI shows which card lands on the bottom…" is an untagged UI sentence, P4–6 (spec tagging gap). |
+| R-50, R-51 | 4 | V | Any permutation of S ∪ F ∪ D; default bottom→top = word order; target change keeps order. "The UI shows which card lands on the bottom…" (UI) P4–6. |
 | R-52 | 3, 4 | V | New top card is the next free letter. |
 | R-60 | 3, 4 | V | Atomic commit; `confirm` discards redo then commits; Redo commits without discarding. |
 | R-61 | 3 | V | Next card exposed; the target case under R-52; not usable in the same word. |
@@ -86,6 +85,6 @@ untagged UI sentences, P4–6.
 | R-80 | 6 | V | Score formula; max = Σ letterCount × 10 = 530. |
 | R-81 | 6 | V | `PENALTY_PER_LETTER × lettersLeft` (Σ letterCount over column cards), tested with a `QU` left; unclamped. |
 | R-82 (UI) | — | P4–6 | `liveScore`/`displayScore` values are CAP-7 (V). |
-| R-83 | 6, 7 | V + P4–6 | Band thresholds and integer comparison, longest word absent with no word (V); names and messages (UI) P4–6; "Longest word shows "—"…" is an untagged UI sentence, P4–6 (spec tagging gap); "names delivered by UX" exempt. |
+| R-83 | 6, 7 | V + P4–6 | Band thresholds and integer comparison, longest word absent with no word (V); names and messages (UI) P4–6; "Longest word shows "—"…" (UI) P4–6; "names delivered by UX" exempt. |
 | R-84 | 8 | V + P3 | Record fields, append/remove, at most once, never replayed, ties, statistics set, Q-44 exclusion of negative gaveUp records from best and average (V); persistence, same-task writes, Q-39 order are shell, epic 3; "one game in progress at a time" is P3 (the store holds one Session, AD-4). |
 | R-85 | 2 | V | `LangData`, one `letterCount` (throws for -1, 52 and 1.5); "never counts cards where letters are meant": the `QU` cases of R-36, R-40, R-80, R-81; "English only" exempt. |

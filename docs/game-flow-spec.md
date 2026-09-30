@@ -8,7 +8,8 @@ R-14) and Q-35 (the record stores the longest word's spelling, R-84), both raise
 loop and answered by Jared. v0.8 adds Q-36…Q-43, raised by the architecture spine's review and
 answered by Jared on 2026-09-27; Q-41 amends the §2 replay paragraph and Q-43 refines R-84's
 record identity. v0.9 adds Q-44 (best and average score exclude negative given-up games, R-84),
-answered by Jared on 2026-09-30. Every rule has an id (R-xx) so
+answered by Jared on 2026-09-30, and tags the R-50 and R-83 UI sentences (UI) (owner-approved
+the same day). Every rule has an id (R-xx) so
 tests, specs and tickets can cite it. A "(UI)" in a rule's id tags the whole rule; a trailing
 "(UI)" tags only the sentence it ends. Tagged rules and sentences are satisfied by a Playwright
 test naming the R-id; every untagged sentence that states engine behaviour by an engine unit test
@@ -229,7 +230,7 @@ with nothing to undo, Redo without redo data) (CLAUDE.md rule 6).
 
 ### Phase E – Order the cards for placement (same Place screen as Phase D)
 - **R-50** All word cards (S ∪ F ∪ D) are placed on the target WordCell in any order the player
-  chooses. The UI shows which card lands on the bottom and which becomes the new top.
+  chooses. The UI shows which card lands on the bottom and which becomes the new top. (UI)
 - **R-51** Default order is the word order: the word read left-to-right taken as bottom→top, so
   the word's first letter is at the bottom and its last letter becomes the new top card / free
   letter (R-52). The player may reorder before confirming. Changing the target does not reset
@@ -336,7 +337,7 @@ with nothing to undo, Redo without redo data) (CLAUDE.md rule 6).
   R-81, max from R-80, thresholds 156, 260, 370, 460, 520), so no whole-percent rounding shifts
   a boundary; the highest matching band wins. For English (max 530) this gives ≥ 159, ≥ 265,
   ≥ 378, ≥ 469 and = 530; the BGA absolutes are not hard-coded. The UX step rewrites the names
-  and messages in a light-hearted tone (Q-15). Longest word shows "—" when no word was committed.
+  and messages in a light-hearted tone (Q-15). Longest word shows "—" when no word was committed. (UI)
 - **R-84** The score history (Q-16) is the single source for statistics: a game record is
   appended when status becomes won or gaveUp and removed again when that finish is undone
   (R-70, R-75), so a game contributes at most once; a game abandoned via R-74 is never recorded
@@ -424,7 +425,7 @@ currently shows `L` as its top card, add it (R-33) and arrange → **BALKED** (6
 removing S, col1 is `F`; it must be included → **FAKED**, or with `L` → **FLAKED**. Laying
 `DEKA…` under col3 without `B` is not allowed while col3 has cards.
 
-## 9. Decisions (Q-01 … Q-43, answered 2026-09-26 and 2026-09-27)
+## 9. Decisions (Q-01 … Q-44, answered 2026-09-26, 2026-09-27 and 2026-09-30)
 
 | # | Question | Decision |
 |---|---|---|
