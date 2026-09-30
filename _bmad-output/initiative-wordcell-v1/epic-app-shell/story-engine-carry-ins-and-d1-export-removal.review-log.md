@@ -1,6 +1,6 @@
 # Review log — story-engine-carry-ins-and-d1-export-removal.md (ticket 3.1)
 
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 224 words (copy at story-engine-carry-ins-and-d1-export-removal.passes/pass0.md).
 Note: the pulled ticket lacked tickets.toml entry 1's interface, tests and owns fields; they are passed as intent and added to the Description in pass 1.
@@ -87,3 +87,29 @@ Fixer: all 14 applied; unverified (not run): `ts.parseJsonConfigFileContent` pre
 - none
 ### Dropped
 - none
+
+## Pass 4 — 2026-09-30
+Reviewers: fix diff, edge-case, adversarial, ref alignment  |  Findings: major 1, minor 13, decision-needed 0  |  Dropped in triage: 0 (duplicates merged: 19 raw → 14)
+Words (docs): 1120 (no fix pass)  |  Snapshot: story-engine-carry-ins-and-d1-export-removal.passes/pass3.md
+### Open major (not fixed; stopping rule: passes 3 and 4 each ≤ 1 major)
+- Notes open question vs Description export exactness — the `noLib` fallback contradicts the gating "index.ts has no pre-emit diagnostics" assertion (noLib yields global missing-lib diagnostics) → recommended default: fallback is `skipLibCheck: true` with `rootNames` [src/engine/index.ts] only, no `noLib` (supersedes build-notes CAP-1's noLib wording).
+### Decision needed (functionality / UX / gameplay)
+- none
+
+## Result — converged after 4 passes
+Majors per pass 7 → 2 → 1 → 1; no decision-needed items; technical defaults applied: 10. Words 224 → 1120 (budget 1500).
+open major: the `noLib` export-test fallback contradicts the no-pre-emit-diagnostics assertion (default: `skipLibCheck` + index.ts root only, drop `noLib`).
+
+### Unapplied minors (for the build's plan)
+- R-38 row id should be `R-38 R-36` (not `R-36 R-38`) so the generated TABLE name leads with R-38 (SPEC CAP-1 "a test named R-38 …"; commands.test.ts:929 builds `${row.id} …`).
+- AD-17 fixture-name case: architecture.test.ts keeps its own literal copy of the nine names (tests never import each other); optionally cross-check the case names in serialize.test.ts by fs read.
+- Owns: restore "a later valid session-*.json adds its case (enforced by the AD-17 name-list check)".
+- main.ts supersession of SPEC CAP-1: label it a technical default (no functionality/UX change).
+- `index: null` row: `on(COMPOSING, asCommand({ type: 'addFreeLetter', cell: 4, index: null }))`, like the 0.5 row.
+- B6 named test sits beside the existing `R-33 addFreeLetter with index |M|` test (commands.test.ts ~1081), not inside the "AD-2 command table" describe.
+- Accrue test: pairs `WON1_BEFORE → WON1` and `COL5_DONE → GAVE_UP1` (history.test.ts); records typed `(historyThreeRecords as unknown as ScoreHistory).records` as in serialize.test.ts.
+- Fixture scripts: start from the epic 2 CAP-9 plan's generator record (serialize.test.ts:270), else the moves.
+- App `&& game.view` conjunct is type narrowing only; seed read and card count are E1 placeholder (CAP-3 replaces), not AD-3 re-derivation.
+- "same DOM" → "the same elements, attributes and text" (the `{#if}` adds an anchor node).
+- Tests line: add AD-17 valid-fixture name list, AD-5 deal rename, AD-2 runtime keys minus deal.
+- B6 supersession parenthetical could be cut to "(SPEC.review-log.md Pass 3 major 2; R-33 holds Q-31)".
