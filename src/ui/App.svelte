@@ -1,8 +1,10 @@
 <script lang="ts">
 import { game } from '../shell/game.svelte';
+import { text } from './text';
 
-// Minimal board (epic 3 SPEC E1): columns, WordCells, Undo/Redo and the Seed line. Replaced by the
-// board UI epic. Script-side uses of `game` keep Biome from flagging the import (it misses markup).
+// Minimal board (epic 3 SPEC E1): columns, WordCells, Undo/Redo, the Seed line and the primary
+// action (Validate stays disabled until entry 9). Replaced by the board UI epic. Script-side uses
+// of `game` keep Biome from flagging the import (it misses markup).
 const board = $derived(game.view);
 
 function undo(): void {
@@ -12,6 +14,39 @@ function undo(): void {
 function redo(): void {
   game.dispatch({ type: 'redo' });
 }
+
+function confirm(): void {
+  game.dispatch({ type: 'confirm' });
+}
+
+function newGame(): void {
+  game.newGame();
+}
+
+// Label precedence: status ≠ playing → New game whatever the phase; otherwise by phase. Validate
+// stays disabled until entry 9; an undefined handler disables the button.
+const primary = $derived.by(
+  (): { label: string; reason: boolean; onclick: (() => void) | undefined } => {
+    if (board === undefined) throw new Error('AD-3 primary action without a view');
+    if (board.status !== 'playing') return { label: text.newGame, reason: false, onclick: newGame };
+    if (board.phase === 'place') {
+      return {
+        label: text.confirm,
+        reason: false,
+        onclick: board.canConfirm ? confirm : undefined,
+      };
+    }
+    const structural = board.draft?.structural;
+    if (
+      board.phase === 'composing' &&
+      structural?.ok === false &&
+      structural.reason === 'too-short'
+    ) {
+      return { label: text.needLetters, reason: true, onclick: undefined };
+    }
+    return { label: text.validate, reason: false, onclick: undefined };
+  },
+);
 </script>
 
 {#if game.state.kind === 'active' && board}
@@ -22,7 +57,7 @@ function redo(): void {
         <button
           type="button"
           class="icon"
-          aria-label="Undo"
+          aria-label={text.undo}
           data-testid="undo"
           disabled={!board.canUndo}
           onclick={undo}
@@ -35,7 +70,7 @@ function redo(): void {
         <button
           type="button"
           class="icon"
-          aria-label="Redo"
+          aria-label={text.redo}
           data-testid="redo"
           disabled={!board.canRedo}
           onclick={redo}
@@ -79,6 +114,14 @@ function redo(): void {
         </div>
       {/each}
     </section>
+    <button
+      type="button"
+      class="primary"
+      class:reason={primary.reason}
+      data-testid="primary-action"
+      disabled={primary.onclick === undefined}
+      onclick={primary.onclick}
+    >{primary.label}</button>
   </main>
 {:else}
   <main>
@@ -110,6 +153,14 @@ function redo(): void {
     text-align: center;
   }
   .stack.empty { aspect-ratio: 3 / 4; border: 2px solid var(--wc-outline); border-radius: 6px; box-sizing: border-box; }
+  .primary {
+    display: block; width: 100%; height: 48px; margin-top: 16px; padding: 0 16px;
+    border: none; border-radius: 9999px;
+    background: var(--wc-accent-orange); color: var(--wc-ink-on-accent);
+    font: 600 16px/24px system-ui, "Roboto", sans-serif;
+  }
+  .primary:disabled { background: var(--wc-surface-raised); color: var(--wc-ink-disabled); }
+  .primary.reason:disabled { color: var(--wc-ink-secondary); }
   .card {
     aspect-ratio: 3 / 4; display: grid; place-items: center;
     background: var(--wc-card-face); color: var(--wc-card-ink); border-radius: 6px;

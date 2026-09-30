@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import composing from '../../fixtures/session-composing.json' with { type: 'json' };
 import gaveUp from '../../fixtures/session-gave-up.json' with { type: 'json' };
 import idleFresh from '../../fixtures/session-idle-fresh.json' with { type: 'json' };
@@ -12,6 +12,7 @@ import {
   accrue,
   apply,
   type Command,
+  createSession,
   EN,
   parseSession,
   type Session,
@@ -23,6 +24,19 @@ const UNDO: Command = { type: 'undo' };
 const REDO: Command = { type: 'redo' };
 // The AD-2 TABLE's R-71 no-op on session-composing.json.
 const NO_OP: Command = { type: 'setDestinationCount', k: 1 };
+const VALIDATE: Command = { type: 'validate' };
+
+// R-74 fresh shape (AD-4 newGame()/replay()).
+function freshShape(seed: number) {
+  return {
+    version: idleFresh.version,
+    seed,
+    moves: [],
+    cursor: { index: 0, phase: 'idle' },
+    gaveUp: false,
+    activeMs: 0,
+  };
+}
 
 function parsed(text: string): Session {
   const result = parseSession(text, EN);
@@ -280,5 +294,196 @@ describe('game store', () => {
     game.dispatch(UNDO);
     expect(game.loaded()).toEqual({ session: JSON.parse(text) });
     expect(game.current()).not.toEqual({ kind: 'active', session: JSON.parse(text) });
+  });
+});
+
+describe('game store newGame() and replay()', () => {
+  const REJECTED = JSON.stringify(invalidNull);
+  const REJECT_LAUNCH = { session: { rejected: { reason: 'version-unreadable' } } };
+
+  async function rejected(seed: number) {
+    const env = await setup({ stored: REJECTED, seed });
+    env.game.load();
+    return env;
+  }
+
+  // Sentinel texts for the other keys, set before the call, so a write or remove of them shows.
+  const OTHER_KEYS: [string, string][] = [
+    ['wordcell:history', 'history sentinel'],
+    ['wordcell:prefs', 'prefs sentinel'],
+  ];
+
+  function setSentinels(env: Awaited<ReturnType<typeof setup>>): void {
+    for (const [key, value] of OTHER_KEYS) env.storage.map.set(key, value);
+  }
+
+  // Asserts the stored bytes are replaced by the fresh Session, written only to wordcell:session.
+  function expectFreshStored(
+    env: Awaited<ReturnType<typeof setup>>,
+    seed: number,
+    previous: string,
+  ): void {
+    const text = env.storage.map.get(KEY) ?? '';
+    expect(text).not.toBe(previous);
+    expect(text).toBe(serializeSession(createSession(seed)));
+    expect(JSON.parse(text)).toEqual(freshShape(seed));
+    expect(env.storage.writes).toEqual([[KEY, text]]);
+    expect([...env.storage.map.keys()].sort()).toEqual(
+      [KEY, ...OTHER_KEYS.map(([key]) => key)].sort(),
+    );
+    for (const [key, value] of OTHER_KEYS) expect(env.storage.map.get(key)).toBe(value);
+    expect(env.game.current()).toEqual({ kind: 'active', session: JSON.parse(text) });
+  }
+
+  it('AD-4 newGame() from active stores createSession(newSeed()) before it returns', async () => {
+    const text = JSON.stringify(place);
+    const env = await setup({ stored: text, seed: 7 });
+    env.game.load();
+    setSentinels(env);
+    env.game.newGame();
+    expectFreshStored(env, 7, text);
+  });
+
+  it('AD-4 newGame() from rejected stores a fresh Session and loaded() keeps the launch result', async () => {
+    const env = await rejected(7);
+    setSentinels(env);
+    env.game.newGame();
+    expectFreshStored(env, 7, REJECTED);
+    expect(env.game.loaded()).toEqual(REJECT_LAUNCH);
+  });
+
+  it('AD-4 replay() stores the fresh shape with the old seed', async () => {
+    const text = JSON.stringify(place);
+    const env = await setup({ stored: text, seed: 7 });
+    env.game.load();
+    setSentinels(env);
+    env.game.replay();
+    expectFreshStored(env, place.seed, text);
+  });
+
+  it('AD-4 newGame() while booting throws and writes nothing', async () => {
+    const { game, storage } = await setup({ stored: JSON.stringify(place), seed: 7 });
+    expect(() => game.newGame()).toThrow('AD-4 newGame() while booting');
+    expect(storage.writes).toEqual([]);
+  });
+
+  it('AD-4 replay() while booting throws and writes nothing', async () => {
+    const { game, storage } = await setup({ stored: JSON.stringify(place) });
+    expect(() => game.replay()).toThrow('AD-4 replay() while booting');
+    expect(storage.writes).toEqual([]);
+  });
+
+  it('AD-4 replay() while rejected throws and writes nothing', async () => {
+    const { game, storage } = await rejected(7);
+    expect(() => game.replay()).toThrow('AD-4 replay() while rejected');
+    expect(storage.writes).toEqual([]);
+    expect(storage.map.get(KEY)).toBe(REJECTED);
+  });
+
+  // The in-memory state after a throwing write is entry 5's halt, so only the bytes are asserted.
+  it('AD-4 a throwing write in newGame() from active rethrows and leaves the stored bytes unchanged', async () => {
+    const text = JSON.stringify(place);
+    const { game, storage } = await setup({ stored: text, seed: 7 });
+    game.load();
+    storage.control.failWrites = true;
+    expect(() => game.newGame()).toThrow('setItem failed');
+    expect(storage.map.get(KEY)).toBe(text);
+  });
+
+  it('AD-4 a throwing write in newGame() from rejected rethrows and leaves the stored bytes unchanged', async () => {
+    const { game, storage } = await rejected(7);
+    storage.control.failWrites = true;
+    expect(() => game.newGame()).toThrow('setItem failed');
+    expect(storage.map.get(KEY)).toBe(REJECTED);
+  });
+
+  it('AD-4 a throwing write in replay() rethrows and leaves the stored bytes unchanged', async () => {
+    const text = JSON.stringify(place);
+    const { game, storage } = await active(text);
+    storage.control.failWrites = true;
+    expect(() => game.replay()).toThrow('setItem failed');
+    expect(storage.map.get(KEY)).toBe(text);
+  });
+
+  const discarded: [
+    string,
+    () => Promise<Awaited<ReturnType<typeof setup>>>,
+    'newGame' | 'replay',
+  ][] = [
+    ['newGame() from active', () => active(JSON.stringify(place)), 'newGame'],
+    ['newGame() from rejected', () => rejected(7), 'newGame'],
+    ['replay()', () => active(JSON.stringify(place)), 'replay'],
+  ];
+  for (const [name, start, call] of discarded) {
+    it(`AD-4 ${name} discards the taken clock ms: activeMs counts only time after it`, async () => {
+      const { game, storage, clock, time } = await start();
+      clock.resume(time.now);
+      time.now += 700;
+      game[call]();
+      time.now += 300;
+      expect(game.dispatch({ type: 'giveUp' })).toEqual({ changed: true, finished: 'gaveUp' });
+      expect(parsed(storage.map.get(KEY) ?? '').activeMs).toBe(300);
+    });
+  }
+});
+
+describe('game store feedback', () => {
+  // session-composing.json spells TAN; the dictionary lacks it, so Validate is rejected (R-38).
+  beforeAll(() => {
+    vi.doMock('./dictionary.svelte', () => ({ dictionaryUrl: '', words: new Set(['cat']) }));
+  });
+  afterAll(() => {
+    vi.doUnmock('./dictionary.svelte');
+  });
+
+  async function rejectedValidate() {
+    const env = await active(JSON.stringify(composing));
+    expect(env.game.feedback).toEqual({});
+    expect(env.game.dispatch(VALIDATE)).toEqual({ changed: false, rejectedWord: 'tan' });
+    return env;
+  }
+
+  function expectCleared(feedback: object): void {
+    expect(feedback).toEqual({});
+    expect('rejectedWord' in feedback).toBe(false);
+  }
+
+  it('AD-4 a failed Validate sets feedback.rejectedWord to the engine spelling', async () => {
+    const { game } = await rejectedValidate();
+    expect(game.feedback).toEqual({ rejectedWord: 'tan' });
+  });
+
+  it('AD-4 feedback.rejectedWord is kept on a no-op with the clock paused', async () => {
+    const { game, storage } = await rejectedValidate();
+    expect(game.dispatch(NO_OP)).toEqual({ changed: false });
+    expect(storage.writes).toEqual([]);
+    expect(game.feedback).toEqual({ rejectedWord: 'tan' });
+  });
+
+  it('AD-4 feedback.rejectedWord is kept on an accrue-only dispatch', async () => {
+    const { game, storage, clock, time } = await rejectedValidate();
+    clock.resume(time.now);
+    time.now += 1000;
+    expect(game.dispatch(NO_OP)).toEqual({ changed: false });
+    expect(storage.writes).toHaveLength(1);
+    expect(game.feedback).toEqual({ rejectedWord: 'tan' });
+  });
+
+  it('AD-4 feedback.rejectedWord is cleared on a changed dispatch (Undo)', async () => {
+    const { game } = await rejectedValidate();
+    expect(game.dispatch(UNDO).changed).toBe(true);
+    expectCleared(game.feedback);
+  });
+
+  it('AD-4 feedback.rejectedWord is cleared on newGame()', async () => {
+    const { game } = await rejectedValidate();
+    game.newGame();
+    expectCleared(game.feedback);
+  });
+
+  it('AD-4 feedback.rejectedWord is cleared on replay()', async () => {
+    const { game } = await rejectedValidate();
+    game.replay();
+    expectCleared(game.feedback);
   });
 });

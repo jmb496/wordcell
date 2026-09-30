@@ -73,26 +73,100 @@ test('R-74 two fresh contexts get different seeds', async ({ page, browser }) =>
   }
 });
 
-test('R-73 Undo and Redo on session-place.json are each stored before the next action', async ({
+test('R-73 Undo, Redo and Confirm on session-place.json are each stored before the next action', async ({
   page,
 }) => {
   await seedStorage(page, { session: fixture('session-place.json') });
   await open(page);
   const undo = page.getByRole('button', { name: 'Undo', exact: true });
   const redo = page.getByRole('button', { name: 'Redo', exact: true });
+  const primary = page.getByTestId('primary-action');
   await expect(redo).toBeDisabled();
   let before = sessionOf(await snapshot(page));
   expect(before).toEqual(JSON.parse(fixture('session-place.json')));
-  for (const button of [undo, redo]) {
-    await button.click();
+  for (const step of ['undo', 'redo', 'confirm'] as const) {
+    if (step === 'confirm') {
+      // Confirm is the primary action, enabled in Place (R-42).
+      await expect(primary).toHaveText('Confirm');
+      await expect(primary).toBeEnabled();
+    }
+    await { undo, redo, confirm: primary }[step].click();
     const snap = await snapshot(page);
     const after = sessionOf(snap);
     expect(snap.stored).toEqual(after);
     expect(after).not.toEqual(before);
     before = after;
-    if (button === undo) await expect(redo).toBeEnabled();
+    if (step === 'undo') await expect(redo).toBeEnabled();
+    if (step === 'redo') await expect(redo).toBeDisabled();
   }
 });
+
+// Interim: entry 9 rewrites the primary-action label assertions (dictionary loading/failed).
+test('R-74 R-73 game-over New game on session-gave-up.json stores a fresh Session at once', async ({
+  page,
+}) => {
+  const historyText = fixture('history-three-records.json');
+  await seedStorage(page, { session: fixture('session-gave-up.json'), history: historyText });
+  await open(page);
+  const primary = page.getByTestId('primary-action');
+  await expect(primary).toHaveText('New game');
+  await expect(primary).toBeEnabled();
+  await primary.click();
+  const snap = await snapshot(page);
+  expect(snap.stored).toEqual(sessionOf(snap));
+  const { version } = JSON.parse(fixture('session-idle-fresh.json')) as { version: number };
+  expect(snap.stored).toEqual({
+    version,
+    seed: expect.any(Number),
+    moves: [],
+    cursor: { index: 0, phase: 'idle' },
+    gaveUp: false,
+    activeMs: 0,
+  });
+  const { seed } = snap.stored as { seed: number };
+  expect(Number.isInteger(seed)).toBe(true);
+  expect(seed).toBeGreaterThanOrEqual(0);
+  expect(seed).toBeLessThanOrEqual(4294967295);
+  // Q-29: New game leaves the score history untouched.
+  expect(await page.evaluate(() => localStorage.getItem('wordcell:history'))).toBe(historyText);
+  await expect(primary).toHaveText('Validate');
+  await expect(primary).toBeDisabled();
+});
+
+// Interim labels (entry 9 adds loading/failed and Validate enablement).
+const LABELS: [fixture: string, label: string, enabled: boolean][] = [
+  ['session-idle-fresh.json', 'Validate', false],
+  ['session-idle-pending-draft.json', 'Validate', false],
+  ['session-composing-draft-2-letters.json', 'Need 3+ letters', false],
+  ['session-composing.json', 'Validate', false],
+  ['session-place.json', 'Confirm', true],
+  ['session-gave-up.json', 'New game', true],
+  ['session-won.json', 'New game', true],
+];
+
+for (const [name, label, enabled] of LABELS) {
+  test(`AD-3 primary-action on ${name} reads ${label}, ${enabled ? 'enabled' : 'disabled'}`, async ({
+    page,
+  }) => {
+    await seedStorage(page, { session: fixture(name) });
+    await open(page);
+    const primary = page.getByTestId('primary-action');
+    await expect(primary).toHaveText(label);
+    if (enabled) await expect(primary).toBeEnabled();
+    else await expect(primary).toBeDisabled();
+    if (name === 'session-composing-draft-2-letters.json') {
+      // Undo leaves Idle with a 2-letter pending draft: plain Validate.
+      await page.getByRole('button', { name: 'Undo', exact: true }).click();
+      await expect
+        .poll(async () => sessionOf(await snapshot(page)))
+        .toMatchObject({
+          cursor: { phase: 'idle' },
+        });
+      await expect(primary).toHaveText('Validate');
+      await expect(primary).toBeDisabled();
+    }
+  });
+}
 
 test('R-73 kill variant: an Undo on session-place-free-letter-redo-tail.json survives a renderer crash', async ({
   page,

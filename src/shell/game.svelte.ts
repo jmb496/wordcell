@@ -1,6 +1,7 @@
 // AD-4 game store: the one writer. `load()` (called by `main.ts` before mount) enters `active` or
-// `rejected`; `dispatch` is the only way a player action reaches the engine. `halted` (AD-15,
-// Q-38) is not reachable yet.
+// `rejected`; `dispatch` is the only way a player action reaches the engine; `newGame()` and
+// `replay()` start a fresh Session (R-74). `feedback.rejectedWord` is the last failed Validate's
+// spelling (R-38). `halted` (AD-15, Q-38) is not reachable yet.
 import {
   accrue,
   apply,
@@ -15,6 +16,7 @@ import {
   view,
 } from '../engine/index';
 import * as clock from './clock';
+import { words } from './dictionary.svelte';
 import { newSeed } from './seed';
 import { read, SESSION_KEY, write } from './storage';
 
@@ -50,8 +52,14 @@ export type Current =
   | { readonly kind: 'rejected'; readonly reason: RejectReason }
   | { readonly kind: 'halted' };
 
+/** AD-4 `feedback`: `rejectedWord` is absent when cleared. */
+export interface Feedback {
+  readonly rejectedWord?: string;
+}
+
 let state = $state.raw<GameState>({ kind: 'booting' });
 let launch: Loaded | undefined;
+let feedback = $state.raw<Feedback>({});
 
 const currentView: GameView | undefined = $derived(
   state.kind === 'active' ? view(state.session, EN) : undefined,
@@ -90,7 +98,7 @@ function dispatch(command: Command): DispatchResult {
   const before = state.session;
   // The taken ms are dropped if a later step throws; entry 5 (AD-15 halt) makes that fatal.
   const accrued = accrue(before, clock.take(performance.now()), EN);
-  const result = apply(accrued, command, { lang: EN });
+  const result = apply(accrued, command, { lang: EN, dictionary: words });
   const changed = result.session !== accrued;
   let finished: 'won' | 'gaveUp' | undefined;
   let unfinished: true | undefined;
@@ -105,12 +113,38 @@ function dispatch(command: Command): DispatchResult {
     write(SESSION_KEY, serializeSession(result.session));
     state = { kind: 'active', session: result.session };
   }
+  if (result.rejectedWord !== undefined) feedback = { rejectedWord: result.rejectedWord };
+  else if (changed) feedback = {};
   return {
     changed,
     ...(result.rejectedWord !== undefined && { rejectedWord: result.rejectedWord }),
     ...(finished !== undefined && { finished }),
     ...(unfinished !== undefined && { unfinished }),
   };
+}
+
+// AD-4 order: take and discard the clock ms, enter active with feedback cleared, then write; a
+// throwing write rethrows to the AD-15 surface (entry 5 halts).
+function fresh(seed: number): void {
+  clock.take(performance.now());
+  const session = createSession(seed);
+  state = { kind: 'active', session };
+  feedback = {};
+  write(SESSION_KEY, serializeSession(session));
+}
+
+/** R-74: a fresh random deal, from `active` or `rejected`. */
+function newGame(): void {
+  if (state.kind !== 'active' && state.kind !== 'rejected') {
+    throw new Error(`AD-4 newGame() while ${state.kind}`);
+  }
+  fresh(newSeed());
+}
+
+/** R-74: the same seed dealt fresh, from `active` only. */
+function replay(): void {
+  if (state.kind !== 'active') throw new Error(`AD-4 replay() while ${state.kind}`);
+  fresh(state.session.seed);
 }
 
 function loaded(): Loaded {
@@ -129,8 +163,13 @@ export const game = {
   get view(): GameView | undefined {
     return currentView;
   },
+  get feedback(): Feedback {
+    return feedback;
+  },
   load,
   dispatch,
+  newGame,
+  replay,
   loaded,
   current,
 };
