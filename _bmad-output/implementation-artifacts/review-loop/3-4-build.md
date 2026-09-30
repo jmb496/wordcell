@@ -1,6 +1,6 @@
 # Review loop — ticket 3.4 build (code, d7df29c..c581c0d)
 
-State: pass 1: done
+State: pass 2: done
 
 Target: `_bmad-output/implementation-artifacts/review-loop/3-4-build.passes/pass0.diff` (d7df29c..c581c0d)
 Intent: `_bmad-output/initiative-wordcell-v1/epic-app-shell/story-primary-action-new-game-replay-and-feedback-plan.md`
@@ -18,3 +18,25 @@ Snapshot: tree c1e409bfe056b846795b80141c1028d32e0ca01f  |  Fix diff: 3-4-build.
 - none
 ### Dropped
 - none
+
+## Pass 2 — 2026-09-30
+Reviewers: fix diff, correctness, verification gap  |  Findings: major 0, minor 4, decision-needed 0  |  Dropped in triage: 0
+Snapshot: tree c1e409bfe056b846795b80141c1028d32e0ca01f (no fix pass)
+### Applied
+- none (converged)
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Result — converged after 2 passes
+
+Final state (tree c1e409b, commit a4fddaf): npm test 1490 passed (4.58 s), lint clean, check 0 errors.
+
+Unapplied minors:
+- Plan Tests mapping, R-74 row — still says `wordcell:history` stays `null`; the test seeds history-three-records.json and asserts its bytes unchanged (Q-29).
+- Plan Tasks / Design Notes — describe pre-patch code: `$state` feedback (code: `$state.raw`), `Need 3+ letters` on `ok === false` alone (code also checks `reason === 'too-short'`), sync figure incl. replay in `view` (script header: render `$derived` falls in frame).
+- scripts/measure-dispatch.test.mjs — flag tests use single samples (max = median); add e.g. `summarise([1, 2, 16.01])` → flagged true, median 2.
+- e2e `R-74 R-73 game-over New game …` — range-checks the seed only, so it would pass if New game reused the old seed; the fresh-vs-old distinction rests on the AD-4 Vitest seed-stub test (not R-id coverage). Record that reliance in the plan, or assert `seed !== 1` if the ticket AC is relaxed.
