@@ -1,5 +1,5 @@
 # Review log — story-refactor-sweep.md (ticket 2.12)
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 36d5bcb, copy `story-refactor-sweep.review-log.passes/pass0.md`, 108 words.
 Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), epic-rules-engine.md, ARCHITECTURE-SPINE.md, AGENTS.md; build records: review-loop/2-1-build.md … 2-11-build.md, autopilot/epic-rules-engine-20260928-2138.md; done-ticket plans: all eleven `*-plan.md` in the epic folder.
@@ -57,6 +57,22 @@ Fixer: all items applied; S36 deleted (ids stable); seed-uint32 residual cited t
 - S4/S5: pairs where check n+1 cannot be broken alone are left out and named in the plan
 - S19: top-level GameView boolean flags only
 - S37: trigger moves from entry 12 to the retrospective (sweep does not run the skill); File(s) = 2.12 plan
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- duplicates across lenses
+
+## Pass 3 — 2026-09-29
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 2, minor 14, decision-needed 0  |  Dropped in triage: 4 (duplicates)
+Words (docs): 1494 (13.8x pass 0; stated budget 1500)  |  Snapshot: story-refactor-sweep.review-log.passes/pass3.md
+Fixer: all 11 items applied at net zero words (trims to Description, S2/S4/S8/S37, Dropped/Excluded bullets, AC1/AC2 redundancies); sessionOf differs between commands/replay tests, so it stays local; no runnable commands added.
+### Applied
+- [major] S35 — rewritten row describes current code (giveUpAvailable already the non-throwing form; giveUp keeps prelude by design, gameview plan:99) → Dropped → fixer item 1
+- [major] S33 — helper list wrong (seam/setTarget differ; sessionOf commands-only; play/drop/DICT/deepFreeze also in history/serialize/replay) → byte-identical copies only, all defining files → fixer item 2
+- [minor] items 3–12 (plan residuals accounted for in one line; S3 redo row hits redoAvailable's default, "if replay rejects it first"; S32 leaves one never-default; S14 R-51 test default 5; S6 every `export type` of index.ts; behaviour-neutral guard ordering; S31 errata covers S37 trigger move; follow-up reviews done by 2-4..2-6 loops; AC mutant recorded as reverted mutation; S33 no own test file)
+### Default applied (technical)
+- S35 dropped (kept by design); S33 byte-identical helpers only, seam/setTarget/sessionOf stay local
+- test rows land before the refactor rows S32, S34, whose commits touch no test file
 ### Decision needed (functionality / UX / gameplay)
 - none
 ### Dropped
