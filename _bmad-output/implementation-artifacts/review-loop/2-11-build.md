@@ -1,5 +1,5 @@
 # Review loop — ticket 2.11 build (code mode)
-State: pass 1: done
+State: pass 2: done
 
 Target: `23f2111..HEAD` (commit 9ce1533), diff at `2-11-build.passes/pass0.diff` (git-ignored)
 Intent: `_bmad-output/initiative-wordcell-v1/epic-rules-engine/story-history-serialise-and-parse-and-the-epic-s-scripted-game-plan.md`
@@ -21,3 +21,24 @@ Snapshot: tree f6daf32632b9f1a68abc6d02d9a71919d5d12978 (fix diff `2-11-build.pa
 - none
 ### Dropped
 - none (the `-0` version minor is kept unapplied, not dropped: same as the 2.10 loop's unapplied parseSession minor)
+
+## Pass 2 — 2026-09-29
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 1, minor 1, decision-needed 0  |  Dropped in triage: 0
+Snapshot: tree f6daf32632b9f1a68abc6d02d9a71919d5d12978 (no fix pass; HEAD ba24baa). `npm test` 1285 passed, lint pass, check 0 errors.
+### Applied
+- none (stopping rule: passes 1 and 2 each yielded at most one major; the pass-2 major is recorded as open, not fixed)
+### Open (not fixed)
+- [major] `src/engine/serialize.test.ts` history fixture/inline blocks — the checkRecord order ("checks run in exactly the ticket's order, first violation wins", plan Always) is pinned only for record-not-object → record-field-set; mutants swapping seed-uint32/outcome, moving record-version, or swapping the two longest-word checks stay green (184/184). Fix: a checkRecord it.each with one row per adjacent check pair, each breaking checks n and n+1 and asserting check n's code.
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Result — converged after 2 passes
+open major: checkRecord check order untested beyond the first pair (see Pass 2 Open).
+
+Unapplied minors:
+- `serialize.ts` parseHistory version stage — a container version `-0` gives `version-unknown` with `version: -0` (same as parseSession, 2.10 loop minor); pin with one inline case or normalise.
+- `serialize.test.ts` — nothing proves serializeHistory copies the container and record `version` rather than writing `HISTORY_VERSION` (mutants stay green); add a version-2 frozen history case asserting both versions in the text are 2.
