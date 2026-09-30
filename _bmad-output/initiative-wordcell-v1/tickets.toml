@@ -12,3 +12,10 @@ slug = "epic-rules-engine"
 title = "Rules engine"
 covers = []
 after = [{ epic = 1, needs = "the AD-1 layer checks, test:all gate and D1 placeholder feed" }]
+
+[[epic]]
+id = 3
+slug = "epic-app-shell"
+title = "App shell services"
+covers = []
+after = [{ epic = 2, needs = "the AD-2 engine surface (createSession, apply, accrue, view, parse/serialize, history functions), the command table, the valid and rejecting fixtures, and the R-02 golden deal test" }]

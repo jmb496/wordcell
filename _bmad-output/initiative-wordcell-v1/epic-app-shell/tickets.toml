@@ -1,0 +1,191 @@
+# Epic 3 — App shell services. Table order is the build order (SPEC CAP-1 → CAP-11; CAP-3 split in two).
+# Requirement source: _bmad-output/specs/spec-epic-3-app-shell/ (SPEC.md, rule-coverage.md, build-notes.md, SPEC.review-log.md Pass 3).
+# Build precondition for every entry: clean tree on epic-3-shell.
+# Entries 3–11 share src/shell/game.svelte.ts, src/main.ts or src/ui/App.svelte and chain; entry 2 (engine only) needs only entry 1.
+# Extra keys (B10): interface = export and signature delta; tests = sentence → test ids; owns = rules or shared setup this entry owns for the epic.
+
+[[entry]]
+id = 1
+type = "story"
+title = "Engine carry-ins and D1 export removal"
+description = "Tracer bullet: fixes B6 (addFreeLetter with index: undefined appends like an absent index, proved by a named test right after the AD-2 TABLE since the TABLE holds only no-op and throw rows; review-log open major 2), lands the B7 test gaps (an R-38-named structural-throw case, the four review-loop/2-12-build.md test minors, accrue between a finish and its un-finish, a regeneration test rebuilding the nine valid session fixtures from scripted accrue/apply, and a compiler-API AD-2 export-exactness test in src/architecture.test.ts), removes deal and Card from src/engine/index.ts, and feeds main.ts and App.svelte from a first game.svelte.ts cut that boots active with createSession(1) (E7, transitional, keeps the Seed line) and derives view."
+verify = "npm run test:all is green, the R-02 golden deal literals are byte-identical, the export-exactness test fails when a scratch `export type { Start }` is added to index.ts, and the smoke spec still finds 52 live cards on the seed-1 board rendered from view."
+covers = ["CAP-1"]
+after = ["2.13"]
+hitl = false
+risk = "medium"
+unknown = "Whether ts.createProgram over src/engine/index.ts keeps the unit suite under 5 s (reviewer estimate ~0.75 s, unverified); fallback noLib/skipLibCheck."
+interface = "index.ts loses deal and Card (types and values); new src/shell/game.svelte.ts exporting a store with state { kind: 'booting' } | { kind: 'active'; session } and a derived view (first cut); App.svelte props change from { seed, columns } to reading the store."
+tests = "Q-31 addFreeLetter with index: undefined appends like an absent index; R-38 validate throws its structural code while R-36 fails; R-42 literal-order case; view.test.ts minors; R-76/R-84 accrue between finish and un-finish; AD-17 fixture regeneration (nine valid session fixtures); AD-2 index export exactness."
+owns = "The AD-2 export literal list and the nine-valid-fixture regeneration test."
+references = ["spec — _bmad-output/specs/spec-epic-3-app-shell/build-notes.md, CAP-1", "review — _bmad-output/implementation-artifacts/review-loop/2-12-build.md, Result"]
+
+[[entry]]
+id = 2
+type = "story"
+title = "Parse hardening and engine cleanup"
+description = "Applies B8 and B9: parseSession rejects activeMs above 2^52 as replay-failed under a new code ad7-active-ms-headroom after ad7-active-ms (E4), checkRecord rejects a won record with negative finalScore and a longestWord whose letterCount is below 3 or differs from spelling.length, checked after the existing longest-word checks (E5), statistics returns a copy of longestWord (E6), each new check with its own fixture and errors.ts code, the one existing accept case of a won record at finalScore −5 (serialize.test.ts ~1372) turned into a gaveUp case (review-log open major 3), and folds the duplicated Session/Move field lists, field-set checker, uint32 and safe-integer domain checks and letter-count sum, replacing the entry-N and cross-epic CAP-n comment citations."
+verify = "npm run test:all is green with a §2 test per new check asserting its code and reason, a Session at exactly 2^52 parsing and surviving one accrue of 86 400 000 ms, a statistics non-identity test, every other existing parse test and fixture result unchanged, and a grep finding no 'entry [0-9]' or cross-epic 'CAP-[0-9]' citation in src/engine sources."
+covers = ["CAP-2"]
+after = [1]
+hitl = false
+risk = "medium"
+unknown = "Whether the fold changes any check order the rejecting fixtures rely on; the full fixture suite is the guard."
+interface = "No index.ts change; internal engine modules only; new codes in errors.ts; new fixtures session-invalid-ad7-active-ms-headroom.json, history-invalid-won-negative.json, history-invalid-letter-count-short.json, history-invalid-letter-count-mismatch.json."
+tests = "§2 parseSession/parseHistory per new check; R-84 statistics longestWord copy; existing §2 fixture suite unchanged."
+owns = "E4, E5, E6 and the B9 fold."
+references = ["spec — _bmad-output/specs/spec-epic-3-app-shell/build-notes.md, CAP-2"]
+
+[[entry]]
+id = 3
+type = "story"
+title = "Game store load, dispatch and storage"
+description = "Builds storage.ts (stateless read/write/remove, the only localStorage user, calling localStorage at call time), seed.ts, the passive clock.ts, and the game store's AD-4 load (absent key → createSession(newSeed()) written at once; parse not ok → rejected, nothing written) and dispatch in AD-4 order with writes on every new reference and DispatchResult, the test hook's loaded() (throws while booting) and current() for the Session only, the minimal board (E1: columns, WordCells, Undo and Redo with test ids, Seed line), and moves the smoke, dist-smoke and screenshot specs onto fixtures/session-idle-fresh.json with the baseline regenerated in the container."
+verify = "npm run test:all and npm run test:screens are green, and Playwright on android shows a fresh context storing a uint32-seeded Session before any input, Undo and Redo on session-place.json each stored before the next action, and a CDP Page.crash then new page restoring session-place-free-letter-redo-tail.json after an Undo exactly as last written."
+covers = ["CAP-3"]
+after = [1]
+hitl = false
+risk = "medium"
+unknown = "Whether rune modules test in node Vitest (the first shell test is the reactivity probe; fallback a client-transform Vitest project, SPEC Assumptions)."
+interface = "New src/shell/storage.ts (read, write, remove, key constants), seed.ts (newSeed), clock.ts (resume, pause, take, peek); game.svelte.ts gains load(), dispatch(command): DispatchResult and the rejected state (entry 5 adds halt and haltCause); test-hook.ts and e2e/globals.d.ts gain loaded() and current() (session only)."
+tests = "R-73 Undo/Redo saved; R-73 kill variant; R-74 first-launch deal and uint32 seed; R-73 no off-origin or non-GET request; AD-4 and AD-9 shell Vitest (states, dispatch order, changed vs accrued, clock fractional carry)."
+owns = "storage.ts, seed.ts, clock.ts, the store API every later entry extends, the test-hook accessors, and the seeded smoke/screenshot baseline."
+references = ["spec — _bmad-output/specs/spec-epic-3-app-shell/build-notes.md, As-built facts, CAP-3"]
+
+[[entry]]
+id = 4
+type = "story"
+title = "Primary action, New game, Replay and feedback"
+description = "Adds the minimal board's primary-action (Validate disabled with its DESIGN.md label until entry 9, Confirm in Place, New game when status ≠ playing), the store's newGame() and replay() per AD-4 (clock.take discarded, createSession, active, written at once, history untouched), feedback.rejectedWord, src/ui/text.ts for the strings it shows, and the standalone dispatch-cost script under scripts/ on Playwright's library API (E8: session-won.json against vite preview of dist-test with CDP Emulation.setCPUThrottlingRate rate 4, Undo ×8 then Redo ×8, each click timed with performance.now() in the page) with max and median recorded in the plan and a dispatch over 16 ms recorded as a flag for the epic 7 device check, not optimised."
+verify = "npm run test:all is green, and Playwright on android shows Confirm on session-place.json stored before the next action and game-over New game on session-gave-up.json storing a fresh uint32 Session with moves [] and activeMs 0 at once; the plan records max and median dispatch time."
+covers = ["CAP-3"]
+after = [3]
+hitl = false
+risk = "low"
+unknown = "None beyond entry 3."
+interface = "game.svelte.ts gains newGame(), replay(), feedback; new src/ui/text.ts; new scripts/measure-dispatch.mjs (not in test:all)."
+tests = "R-73 Confirm and New game saved; R-74 New game fresh seed; AD-4 shell Vitest for replay() (same seed, activeMs 0, discarded take), feedback cleared on changed dispatch, New game and Replay."
+owns = "src/ui/text.ts (every later entry adds its catalogue strings there) and the primary-action control."
+
+[[entry]]
+id = 5
+type = "story"
+title = "Fatal surface, rejected Session and single instance"
+description = "Adds main.ts's error/unhandledrejection handlers (store halt('fatal'), then the DESIGN.md Blocking message with the error text and Reload, standalone before mount and rendered reactively from haltCause), the boot font check with its 30 s timeout, the Session-rejected root with its three catalogue variants and New game (the UI handler resets overlays from entry 8 on), the storage-event halt registered at store creation (key null on localStorage counts; halt while booting stops boot: load still parses, no write, no listeners, no mount, no dictionary), haltCause with fatal always winning, and the e2e storage-spy helper armed by page.evaluate after boot (review-log open major 4)."
+verify = "npm run test:all is green, and Playwright on android shows a 404 font giving the fatal surface with localStorage empty, a spied setItem throwing on a dispatch giving the fatal surface and no later write, session-invalid-version-unknown.json, session-invalid-null.json, session-invalid-s2-last-only.json and a replay-rule fixture such as session-invalid-r50-placement-order.json each showing their catalogue text with bytes unchanged across a reload and New game replacing them, and a second unseeded page's Undo halting a first page seeded with session-place.json with the another-window message."
+covers = ["CAP-4"]
+after = [4]
+hitl = false
+risk = "medium"
+unknown = "None."
+interface = "main.ts handlers and font check; game.svelte.ts rejected state rendering, haltCause getter, storage listener; new Blocking message component in src/ui/; new e2e/helpers/storage-spy.ts with its test in e2e/helpers.spec.ts; new fixture session-invalid-version-unknown.json, exercised only by Playwright (no engine test edit)."
+tests = "R-84 one game in progress (the two-page case); §2 rejection per variant (unknown, unreadable, pre-replay AD-7, replay rule; review-log open major 6); Q-37 fatal before and after mount; Q-38 two pages; AD-4 shell Vitest (halt before load, both halt orders, storage key null); AD-15 halted blocks Session writes."
+owns = "The Blocking message component, the storage-spy helper, and the §2 Session rejection sentences."
+references = ["design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/EXPERIENCE.md, Message catalogue (Session rejected rows), State Patterns (Open in another window, Unexpected failure)"]
+
+[[entry]]
+id = 6
+type = "story"
+title = "Lifecycle and visible-time clock"
+description = "Registers the store's visibilitychange, pagehide and pageshow listeners after the load with clock.resume iff visible, the hide flush (before-hide callbacks, take, pause, accrue, unconditional wordcell:session write while active), registerBeforeHide, whenVisible() resolved by the store's own listener, the persisted-pageshow staleness halt through each key owner's isStale() (session here; history and prefs owners join in entries 7 and 10), and a startHidden helper in e2e/helpers/lifecycle.ts with its helpers.spec.ts test; registerLifecycle() is not called while halted (entry 5's boot rule, shell Vitest), and write counts use entry 5's storage-spy helper armed after boot."
+verify = "npm run test:all is green, and Playwright on android with page.clock shows hidePage alone producing exactly one wordcell:session write, pageHide alone writing the accrued activeMs, time growing only while visible and playing, a startHidden page not growing activeMs until showPage, a pageShow({ persisted: false }) while hidden not resuming, and a same-page key change followed by pageShow({ persisted: true }) halting with the another-window message while an unchanged one stays active."
+covers = ["CAP-5"]
+after = [5]
+hitl = false
+risk = "medium"
+unknown = "None."
+interface = "game.svelte.ts gains registerLifecycle(), registerBeforeHide(fn), whenVisible(), isStale(); lifecycle.ts gains startHidden(page)."
+tests = "R-73 saved when hidden (hidePage, pageHide); R-73 activeMs flushed not on ticks; R-76 clock sentences; AD-17 hidePage single write and resume only when visible; Q-38 bfcache halt and mirror; AD-9 shell Vitest (registerBeforeHide order)."
+owns = "whenVisible (entry 9 uses it) and the isStale protocol (entries 7 and 10 implement it)."
+
+[[entry]]
+id = 7
+type = "story"
+title = "Score-history store and finish writes"
+description = "Builds history.svelte.ts (scoreHistory ok | unreadable, reconcile returning whether it wrote and a rollback that exists only when it wrote (review-log open major 7), reset throwing while halted, derived statistics and recorded, lastText and isStale), wires reconcile into dispatch with history written before the Session and the Q-39 rollback then rethrow, and extends loaded()/current() and globals.d.ts with history, proving an absent history stays absent after load, Undo/Redo/Confirm on session-place.json and New game on session-gave-up.json (review-log open major 5)."
+verify = "npm run test:all is green, and Playwright on android shows session-won.json with no history: Undo then Redo appending a record with activeMs equal to the Session's, written before the Session (storage spy), Undo removing it; a spied Session write that throws on the finish restoring the previous history bytes and showing the fatal surface; with history-invalid-version-unknown.json seeded, a finish, an Undo, a game-over New game and a reload each leaving the history bytes unchanged; and New game from game over (session-gave-up.json) and from the rejected root (session-invalid-null.json), each with history-three-records.json, leaving the history bytes unchanged (Q-29)."
+covers = ["CAP-6"]
+after = [6]
+hitl = false
+risk = "medium"
+unknown = "None."
+interface = "New src/shell/history.svelte.ts exporting scoreHistory { state, reconcile, reset, statistics, recorded, isStale }; game.svelte.ts dispatch calls reconcile and rollback; loaded().history and current().history added; new fixture history-invalid-version-unknown.json (valid history at version 2), exercised only by Playwright (no engine test edit)."
+tests = "R-84 append/remove, persisted beside the Session, same task; R-76 record carries activeMs; §2 unreadable history never overwritten and finishing game unrecorded; Q-39 write-back; AD-7 absent history not written; AD-4 shell Vitest (non-finishing throwing write touches no history key, own finish then persisted pageshow does not halt); AD-4 own reset() then persisted pageshow does not halt; AD-15 reset throws and history writes are blocked while halted; R-74 Q-29 New game leaves the history untouched."
+owns = "wordcell:history writes (reconcile, reset, rollback) and history-invalid-version-unknown.json."
+
+[[entry]]
+id = 8
+type = "story"
+title = "Nav adapter, overlays core, History notice and Reset confirm"
+description = "Builds nav.ts (the only History API and popstate user: launch rewind with its 250 ms timeout, launch id, queued push and pop, pending-pop counting, stale-launch and Forward rules), the overlays.svelte.ts core (E3), the History notice with its three catalogue variants pushed once per launch at boot or after New game from the rejected root, wires overlays.resetForNewSession() into both New game handlers (rejected root and game over), and the Reset confirm (Keep it returns to the notice, Delete history resets and closes both top-down); History-notice flows count as §2 rejection flows and may seed history-invalid-* fixtures."
+verify = "npm run test:all is green, and Playwright on android with history-invalid-version-unknown.json seeded shows Not now and back closing the notice, back on the confirm closing only the confirm, Delete history writing { version: 1, records: [] }, a reload with the notice (or notice and confirm) open re-pushing only the notice at { wc: 1, launch: <new> } with the first back closing it and the next leaving the app, the rejected root pushing no entry, and win → New game → back leaving the app."
+covers = ["CAP-7"]
+after = [7]
+hitl = false
+risk = "high"
+unknown = "Whether Playwright's goBack reproduces Chrome's handling of entries pushed without user activation (A-A11 stays an epic 7 device check)."
+interface = "New src/shell/nav.ts (launch, push, pop, register); new src/ui/overlays.svelte.ts (open, close, closedByBack, depth, top, isOpen, resetForNewSession); History notice and Dialog components; main.ts awaits nav.launch() first."
+tests = "§2 history unreadable reported with Reset (three variants); AD-13 back, reload, stale launch, Forward (P3 + S incl. 250 ms rewind timeout); AD-13 win → New game → back as a smoke case (discriminating case epic 6)."
+owns = "nav.ts, overlays.svelte.ts core, the Dialog component, the History notice, and recording in its plan the epic 7 device check 'Android back closes a launch-pushed History notice' (A-A11)."
+references = ["design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/EXPERIENCE.md, Information Architecture, Message catalogue (History unreadable, Reset history confirm), Flow 7"]
+
+[[entry]]
+id = 9
+type = "story"
+title = "Dictionary load, retry and Validate"
+description = "Extends dictionary.svelte.ts with state loading | ready | failed and the Set, started by main.ts after the first paint of whatever root is mounted and whenVisible (not while halted), a 30 s AbortController timeout covering fetch plus response.text() (review-log open major 8), retry() in place, the 404 → next Reload calls location.reload() rule (not under a controlling service worker), the dictionary-failed banner, Validate enabled iff view.canValidate && ready with the catalogue labels, the invalid-word line, dictionaryState() on the test hook, and the Validate step of the R-73 save test."
+verify = "npm run test:all is green, and Playwright on android (route **/en*.txt) shows TAN from session-composing.json validating to Place only after dictionaryState() is ready, a word list without tan showing the invalid-word line that the next changing dispatch clears, a failed load showing the banner with Undo and Redo into Place still working and a reload of session-place.json restoring to Place, retry success and repeat failure, the timeout 30 000 ms after the request with page.clock, and a 404 making the next Reload reload the page."
+covers = ["CAP-8"]
+after = [8]
+hitl = false
+risk = "medium"
+unknown = "None."
+interface = "dictionary.svelte.ts exports state, words, load(), retry(); test hook gains dictionaryState(); primary-action gains the Validate path; banner component."
+tests = "R-38 shell load and Validate enablement; R-73 Validate saved; §2 replay never consults the dictionary (restore to Place with the route failing); Q-42 404 → reload; AD-8 shell Vitest (never-closing body → failed after 30 s fake time)."
+owns = "The dictionary state, the banner and the Validate label rules."
+references = ["spec — _bmad-output/specs/spec-epic-3-app-shell/build-notes.md, CAP-8"]
+
+[[entry]]
+id = 10
+type = "story"
+title = "Preferences and motion"
+description = "Builds prefs.svelte.ts (parsePrefs with a JSON.parse catch per Q-36, defaults normal and false, absent not written, unreadable defaults with no message and overwritten on the next change, setters writing at once, a write while halted throwing, lastText and isStale), motion { baseMs, reduced } mirrored to --wc-base-ms (<n>ms) and --wc-reduced (1 or 0), src/ui/motion.ts as the only duration source, and loaded()/current() prefs; prefs fixtures are exempt from the *-invalid-* rule."
+verify = "npm run test:all is green, and Playwright on android shows prefs-non-default.json with session-gave-up.json setting --wc-base-ms to 320ms and surviving New game and reload, prefs-unreadable.json giving 180ms with the key byte-identical, a first launch reporting loaded().prefs null and current().prefs.showTimer false, and emulateMedia reducedMotion reduce giving --wc-reduced 1."
+covers = ["CAP-9"]
+after = [9]
+hitl = false
+risk = "low"
+unknown = "None."
+interface = "New src/shell/prefs.svelte.ts (prefs, motion, setAnimationSpeed, setShowTimer, isStale); new src/ui/motion.ts (duration functions); loaded().prefs and current().prefs added; fixtures prefs-non-default.json and prefs-unreadable.json."
+tests = "§7.10 prefs format { version, animationSpeed, showTimer }; §7.10 stored separately and survive Undo, Redo (session-place.json) and New game; Q-36; R-76 Show timer default off; AD-10 shell Vitest (parsePrefs per reason, setter throws while halted, own prefs change then persisted pageshow does not halt)."
+owns = "wordcell:prefs and the motion variables."
+
+[[entry]]
+id = 11
+type = "story"
+title = "Boot order and restore boundaries"
+description = "Pins AD-16's boot order minus the service worker in main.ts (nav launch → font check → prefs → Session and history → lifecycle and resume → boot surfaces → mount → dictionary after first paint and visibility) and adds the AD-17 restore suite: session-place-free-letter-redo-tail.json, session-gave-up.json, session-gave-up.json with history-three-records.json undone, prefs-non-default.json and session-below-committed-last.json (Q-41), each hidden-then-reloaded and plain-reloaded, asserting all three loaded() fields deep-equal JSON.parse of __wordcellBoot (null when absent), the Session equal to the pre-reload snapshot except activeMs not smaller, and history and prefs equal to the snapshot only when present before the reload (review-log open major 1), plus a CDP Page.crash mode for session-place-free-letter-redo-tail.json (Done when 2); a plain reload still fires pagehide, so the crash mode is the no-flush proof."
+verify = "npm run test:all is green with the restore suite passing on android, a held **/en*.txt route seeing the request only once card-0 and primary-action are in the DOM, a startHidden page making no dictionary request until showPage, nothing written before the font check, and the rejected root shown before the History notice."
+covers = ["CAP-10"]
+after = [10]
+hitl = false
+risk = "medium"
+unknown = "None."
+interface = "main.ts boot sequence only; build-notes Spine notes gain the AD-17 snapshot amendment (loaded() fields vs __wordcellBoot; snapshot equality only for keys present before reload)."
+tests = "AD-16 order cases; AD-17 restore suite; R-73 restored on launch and exact phase; Q-41 below-committed-last restore."
+owns = "The boot order and the restore-boundary suite."
+
+[[entry]]
+id = 12
+type = "story"
+title = "Refactor sweep and shared Playwright config"
+description = "Closing cleanup of epic 3 from the build records and deferred review findings, plus playwright.base.ts holding the settings the three Playwright configs share (B11, E9), each config importing it and tsconfig.e2e.json covering it."
+verify = "npm run test:all and npm run test:screens are green, the three configs import playwright.base.ts, and every change maps to a deferred finding named in the plan."
+covers = ["CAP-11"]
+after = [2, 11]
+hitl = false
+risk = "low"
+unknown = "Scope is unknown until the earlier builds finish."
+interface = "New playwright.base.ts; no src/ export change."
+tests = "Existing suites; no new rule coverage."
+owns = "B11, the epic's deferred minors, and recording in its plan the AGENTS.md pitfall update (type exports now checked, entry 1) for a bmad-project-context refresh."
