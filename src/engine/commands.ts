@@ -444,10 +444,6 @@ function redo(start: Start, session: Session, ctx: ApplyContext): ApplyResult {
       return { session: { ...session, cursor: { index, phase: 'place' } } };
     case 'place':
       return { session: { ...session, cursor: { index: index + 1, phase: 'idle' } } };
-    default: {
-      const unknown: never = phase;
-      return reject('command-domain', `AD-2 redo in unknown phase ${String(unknown)}`);
-    }
   }
 }
 

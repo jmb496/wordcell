@@ -171,13 +171,21 @@ export function checkSchema(value: object): asserts value is Session {
 
 // --- parse (AD-7) -----------------------------------------------------------------------------
 
+/** The early results of the AD-7 version stage, shared by both parse results. */
+type VersionFailure =
+  | { readonly ok: false; readonly reason: 'version-unreadable' }
+  | { readonly ok: false; readonly reason: 'version-unknown'; readonly version: number };
+
 /**
- * AD-7, §2, CAP-9: JSON parse → version stage → §2 schema stage → `replay` (AD-7 `checkSession`,
- * per-move checks, post-replay `ad7-gave-up-won`). A JSON parse failure is `version-unreadable`
- * (AD-15 specified outcome); an `EngineError` from the schema or replay stage is
- * `replay-failed`; anything else propagates (CLAUDE.md rule 6).
+ * AD-7 version stage of `parseSession` and `parseHistory`: JSON parse → plain-object root with an
+ * own `version` → a safe integer ≥ 0 → equal to `current`. A JSON parse failure, a non-object
+ * root or an unreadable version is `version-unreadable`; another version is `version-unknown`; a
+ * non-`SyntaxError` from `JSON.parse` propagates (CLAUDE.md rule 6). Internal.
  */
-export function parseSession(text: string, lang: LangData): ParseSessionResult {
+function versionStage(
+  text: string,
+  current: number,
+): VersionFailure | { readonly ok: true; readonly value: Fields; readonly version: number } {
   let value: unknown;
   try {
     value = JSON.parse(text);
@@ -190,7 +198,20 @@ export function parseSession(text: string, lang: LangData): ParseSessionResult {
   const { version } = value;
   if (!(typeof version === 'number' && Number.isSafeInteger(version) && version >= 0))
     return { ok: false, reason: 'version-unreadable' };
-  if (version !== SESSION_VERSION) return { ok: false, reason: 'version-unknown', version };
+  if (version !== current) return { ok: false, reason: 'version-unknown', version };
+  return { ok: true, value, version };
+}
+
+/**
+ * AD-7, §2, CAP-9: JSON parse → version stage → §2 schema stage → `replay` (AD-7 `checkSession`,
+ * per-move checks, post-replay `ad7-gave-up-won`). A JSON parse failure is `version-unreadable`
+ * (AD-15 specified outcome); an `EngineError` from the schema or replay stage is
+ * `replay-failed`; anything else propagates (CLAUDE.md rule 6).
+ */
+export function parseSession(text: string, lang: LangData): ParseSessionResult {
+  const stage = versionStage(text, SESSION_VERSION);
+  if (!stage.ok) return stage;
+  const { value, version } = stage;
   try {
     checkSchema(value);
     replay(value, lang);
@@ -318,19 +339,9 @@ export function checkRecord(record: unknown, version: number): asserts record is
  * the stored key order; only `serializeHistory` writes AD-6 order.
  */
 export function parseHistory(text: string): ParseHistoryResult {
-  let value: unknown;
-  try {
-    value = JSON.parse(text);
-  } catch (error) {
-    if (error instanceof SyntaxError) return { ok: false, reason: 'version-unreadable' };
-    throw error;
-  }
-  if (!isPlainObject(value) || !Object.hasOwn(value, 'version'))
-    return { ok: false, reason: 'version-unreadable' };
-  const { version } = value;
-  if (!(typeof version === 'number' && Number.isSafeInteger(version) && version >= 0))
-    return { ok: false, reason: 'version-unreadable' };
-  if (version !== HISTORY_VERSION) return { ok: false, reason: 'version-unknown', version };
+  const stage = versionStage(text, HISTORY_VERSION);
+  if (!stage.ok) return stage;
+  const { value, version } = stage;
   try {
     checkContainer(value);
     for (const record of value.records) checkRecord(record, version);

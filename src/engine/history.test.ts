@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { type ApplyContext, accrue, apply, type Command } from './commands';
+import { accrue, type Command } from './commands';
 import { dealIds } from './deal';
 import { EngineError } from './errors';
 import {
@@ -13,35 +13,13 @@ import {
 import { EN } from './lang/en';
 import { letterCount, spelling } from './lang/lang-data';
 import { createSession, type Session } from './session';
+import { deepFreeze, drop, play } from './test-helpers';
 import { view } from './view';
 import { winSeed } from './win-seed';
 
-// --- helpers (patterns copied from view.test.ts; tests never import another test file) ---------
-
-function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
-  if ((typeof value === 'object' && value !== null) || typeof value === 'function') {
-    const object = value as object;
-    if (seen.has(object)) return value;
-    seen.add(object);
-    for (const key of Reflect.ownKeys(object))
-      deepFreeze((object as Record<PropertyKey, unknown>)[key], seen);
-    Object.freeze(object);
-  }
-  return value;
-}
+// --- helpers (shared ones in test-helpers.ts; tests never import another test file) ------------
 
 const LANG = deepFreeze(EN);
-const DICT = (...words: string[]): ApplyContext =>
-  deepFreeze({ lang: LANG, dictionary: new Set(words) });
-
-/** Public `apply` of each command in turn, every input and result deep-frozen. */
-function play(session: Session, commands: readonly Command[], words: string[] = []): Session {
-  const ctx = DICT(...words);
-  let current = deepFreeze(session);
-  for (const command of commands)
-    current = deepFreeze(apply(current, deepFreeze(command), ctx).session);
-  return current;
-}
 
 const frozenAccrue = (session: Session, ms: number): Session =>
   deepFreeze(accrue(session, ms, LANG));
@@ -58,12 +36,6 @@ const reconcile = (records: readonly GameRecord[], before: Session, after: Sessi
 const recorded = (records: readonly GameRecord[], session: Session) =>
   isRecorded(deepFreeze(records), session, LANG);
 
-const drop = (sourceColumn: number, sourceCount: number, destinationColumn: number): Command => ({
-  type: 'drop',
-  sourceColumn,
-  sourceCount,
-  destinationColumn,
-});
 const VALIDATE: Command = { type: 'validate' };
 const CONFIRM: Command = { type: 'confirm' };
 const UNDO: Command = { type: 'undo' };
@@ -197,7 +169,7 @@ describe('gameRecord', () => {
     expect(record.longestWord).not.toStrictEqual(straight.longestWord);
   });
 
-  it('R-84 a replay-invalid Session throws replay’s EngineError', () => {
+  it('AD-15 a replay-invalid Session throws replay’s EngineError', () => {
     const invalid = deepFreeze({ ...FRESH, cursor: { index: 1, phase: 'idle' as const } });
     let thrown: unknown;
     try {
@@ -282,6 +254,13 @@ describe('reconcileHistory', () => {
     expect(reconcile(records, GAVE_UP1, undone)).toStrictEqual(EARLIER);
   });
 
+  it('R-84 a give-up at index 0 un-finished by undo (R-75, R-70) removes the last record', () => {
+    const records = deepFreeze([...EARLIER, recordOf(GAVE_UP0)]);
+    const undone = play(GAVE_UP0, [UNDO]);
+    expect(undone.cursor).toStrictEqual({ index: 0, phase: 'idle' });
+    expect(reconcile(records, GAVE_UP0, undone)).toStrictEqual(EARLIER);
+  });
+
   it('R-84 playing → playing returns the same reference', () => {
     expect(reconcile(EARLIER, FRESH, COL5_DONE)).toBe(EARLIER);
     expect(reconcile(EARLIER, WON1_BEFORE, play(WON1_BEFORE, [UNDO]))).toBe(EARLIER);
@@ -364,6 +343,16 @@ describe('reconcileHistory', () => {
     expect(back).toHaveLength(1);
     expect(back[0]).toStrictEqual(one[0]);
   });
+
+  it('R-74 a gaveUp then a won finish of the same seed both append; un-finishing the win removes only it', () => {
+    const first = recordOf(GAVE_UP0);
+    const second = recordOf(WON1);
+    expect(second.seed).toBe(first.seed);
+    const one = reconcile([], FRESH, GAVE_UP0);
+    const two = reconcile(one, WON1_BEFORE, WON1);
+    expect(two).toStrictEqual([first, second]);
+    expect(reconcile(two, WON1, WON1_BEFORE)).toStrictEqual([first]);
+  });
 });
 
 // --- isRecorded ---------------------------------------------------------------------------------
@@ -418,7 +407,7 @@ const rec = (
 const stats = (records: readonly GameRecord[]) => statistics(deepFreeze(records));
 
 describe('statistics', () => {
-  it('R-84 statistics take only records and return stored values unchanged', () => {
+  it('R-84 statistics take only records and return stored values unchanged (A-E3)', () => {
     const word = { spelling: 'quiz', letterCount: 4 };
     expect(statistics.length).toBe(1);
     expect(stats([rec('won', 123, word)])).toEqual({
@@ -431,7 +420,7 @@ describe('statistics', () => {
     });
   });
 
-  it('R-84 empty history: counts 0, best, average and longest word absent', () => {
+  it('R-84 empty history: counts 0, best, average and longest word absent (A-E3)', () => {
     expect(stats([])).toStrictEqual({ gamesPlayed: 0, gamesWon: 0, gamesGivenUp: 0 });
   });
 
@@ -452,7 +441,7 @@ describe('statistics', () => {
     });
   });
 
-  it('R-84 best score may come from a gaveUp record', () => {
+  it('R-84 best score may come from a gaveUp record (A-E3)', () => {
     expect(stats([rec('won', 100), rec('gaveUp', 150), rec('won', 90)]).bestScore).toBe(150);
   });
 

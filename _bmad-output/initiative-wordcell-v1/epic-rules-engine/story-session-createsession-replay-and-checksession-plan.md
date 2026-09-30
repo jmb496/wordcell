@@ -90,6 +90,7 @@ deferred: []
 - `commitMove` takes a `PlacedMove`; `placed(move)` is a type-only narrowing justified by `checkSession`'s `ad7-place-fields` (no runtime fallback, rule 6).
 - `ad7-cursor-index` checks only the 0…`moves.length` range; integer type stays with entry 10's schema stage.
 - `npm run test:all` exit 0 (unit 489 passed, 1.99 s).
+- Erratum 2026-09-29: replay.test.ts also carries `§2 an 11-letter word without QU reaches WordCell 10 (R-40)`, added in the 2-3 review loop's pass 1 and beyond the ticket's list; it pins the R-40 cap at WordCell 10 for a letter count above 10 (2-3 review-loop Result; ticket 2.12 S11).
 
 ## Plan Change Log
 

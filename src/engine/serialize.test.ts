@@ -195,7 +195,6 @@ import validPlaceFreeLetterRedoTail from '../../fixtures/session-place-free-lett
 import validWon from '../../fixtures/session-won.json' with { type: 'json' };
 import { EngineError } from './errors';
 import {
-  type ApplyContext,
   accrue,
   apply,
   type Command,
@@ -216,21 +215,10 @@ import {
 } from './index';
 import { replay } from './replay';
 import { checkContainer, checkRecord, checkSchema } from './serialize';
+import { DICT, deepFreeze, drop, play } from './test-helpers';
 import { winSeed } from './win-seed';
 
 // --- helpers --------------------------------------------------------------------------------
-
-function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
-  if ((typeof value === 'object' && value !== null) || typeof value === 'function') {
-    const object = value as object;
-    if (seen.has(object)) return value;
-    seen.add(object);
-    for (const key of Reflect.ownKeys(object))
-      deepFreeze((object as Record<PropertyKey, unknown>)[key], seen);
-    Object.freeze(object);
-  }
-  return value;
-}
 
 deepFreeze(EN);
 
@@ -734,6 +722,11 @@ describe('round trip (§2, CAP-9)', () => {
     expect(moves.some((m) => m.reached === 'composing')).toBe(true);
   });
 
+  it('§2 serializeSession copies session.version: a version-2 copy writes version 2', () => {
+    const version2 = deepFreeze({ ...parsed(validPlaceFreeLetterRedoTail), version: 2 });
+    expect(serializeSession(version2)).toMatch(/^\{"version":2,/);
+  });
+
   it('§2 serializeSession writes §2 key order whatever the insertion order', () => {
     const reverse = <T extends object>(o: T): T =>
       Object.fromEntries(Object.entries(o).reverse()) as T;
@@ -888,6 +881,16 @@ describe('rejecting fixtures (§2, CAP-9)', () => {
     ['freeLetters [3.5]', withDraft({ freeLetters: [3.5] }), 'schema.type-free-letters'],
     ['arrangement {}', withDraft({ arrangement: {} }), 'schema.type-arrangement'],
     ['placementOrder 9', withDraft({ placementOrder: 9 }), 'schema.type-placement-order'],
+    ['placementOrder [9,32,52]', withDraft({ placementOrder: [9, 32, 52] }), 'schema.domain-card'],
+    ['arrangement [32,-1]', withDraft({ arrangement: [32, -1] }), 'schema.domain-card'],
+    ['destinationCount -1', withDraft({ destinationCount: -1 }), 'schema.domain-count'],
+    ['targetCell 2', withDraft({ targetCell: 2 }), 'schema.domain-cell'],
+    [
+      'cursor.phase null',
+      { ...redoTail, cursor: { ...redoTail.cursor, phase: null } },
+      'schema.enum-cursor-phase',
+    ],
+    ['destinationSide 1', withDraft({ destinationSide: 1 }), 'schema.enum-destination-side'],
   ] as const)(
     '§2 schema stage rejects %s and parseSession gives replay-failed',
     (_, value, code) => {
@@ -924,6 +927,12 @@ describe('version stage (§2, AD-7)', () => {
     expect(parseSession(text, EN)).toStrictEqual({ ok: false, reason: 'version-unreadable' });
   });
 
+  it('§2 version -0 is version-unknown with version -0 (current behaviour, pinned)', () => {
+    const result = parseSession('{"version":-0}', EN);
+    expect(result).toStrictEqual({ ok: false, reason: 'version-unknown', version: -0 });
+    expect(Object.is((result as { version: number }).version, -0)).toBe(true);
+  });
+
   it.each([0, 2, Number.MAX_SAFE_INTEGER])(
     '§2 version %i is version-unknown with the version',
     (version) => {
@@ -937,29 +946,11 @@ describe('version stage (§2, AD-7)', () => {
 });
 
 // --- score history (CAP-9) -------------------------------------------------------------------
-// Helpers copied from history.test.ts (tests never import another test file).
-
-const DICT = (...words: string[]): ApplyContext =>
-  deepFreeze({ lang: EN, dictionary: new Set(words) });
-
-/** Public `apply` of each command in turn, every input and result deep-frozen. */
-function play(session: Session, commands: readonly Command[], words: string[] = []): Session {
-  const ctx = DICT(...words);
-  let current = deepFreeze(session);
-  for (const command of commands)
-    current = deepFreeze(apply(current, deepFreeze(command), ctx).session);
-  return current;
-}
+// Helpers as in history.test.ts; shared ones in test-helpers.ts (tests never import a test file).
 
 const reconcile = (records: readonly GameRecord[], before: Session, after: Session) =>
   reconcileHistory(deepFreeze(records), before, after, EN);
 
-const drop = (sourceColumn: number, sourceCount: number, destinationColumn: number): Command => ({
-  type: 'drop',
-  sourceColumn,
-  sourceCount,
-  destinationColumn,
-});
 const FLIP: Command = { type: 'flip' };
 const VALIDATE: Command = { type: 'validate' };
 const CONFIRM: Command = { type: 'confirm' };
@@ -1057,6 +1048,16 @@ describe('history round trip (§2, CAP-9)', () => {
     // record change fails here, and the fixture is then regenerated (not hand-edited).
     expect(historyThreeRecords).toStrictEqual(RECONCILED);
     expect(JSON.stringify(historyThreeRecords)).toBe(serializeHistory(RECONCILED));
+  });
+
+  it('§2 serializeHistory copies the container and record versions: a version-2 copy writes 2', () => {
+    const version2: ScoreHistory = deepFreeze({
+      version: 2,
+      records: RECONCILED.records.map((r) => ({ ...r, version: 2 })),
+    });
+    const json = JSON.parse(serializeHistory(version2));
+    expect(json.version).toBe(2);
+    expect(json.records.map((r: GameRecord) => r.version)).toStrictEqual([2, 2, 2]);
   });
 
   it('§2 serializeHistory writes AD-6 key order whatever the insertion order', () => {
@@ -1286,6 +1287,65 @@ describe('history inline boundaries (§2, CAP-9)', () => {
     });
   });
 
+  /**
+   * Adjacent pairs of the checkRecord order: the first record breaks both checks and the first
+   * wins; the repaired record fixes the first check and still breaks the second.
+   */
+  it.each([
+    ['history.record-not-object', 'history.record-field-set', [], {}],
+    [
+      'history.record-field-set',
+      'history.record-version',
+      { ...base, extra: 0, version: '1' },
+      { ...base, version: '1' },
+    ],
+    [
+      'history.record-version',
+      'history.seed-uint32',
+      { ...base, version: '1', seed: -1 },
+      { ...base, seed: -1 },
+    ],
+    [
+      'history.seed-uint32',
+      'history.outcome',
+      { ...base, seed: -1, outcome: 5 },
+      { ...base, outcome: 5 },
+    ],
+    [
+      'history.outcome',
+      'history.final-score',
+      { ...base, outcome: 5, finalScore: 1.5 },
+      { ...base, finalScore: 1.5 },
+    ],
+    [
+      'history.final-score',
+      'history.active-ms',
+      { ...base, finalScore: 1.5, activeMs: -1 },
+      { ...base, activeMs: -1 },
+    ],
+    [
+      'history.active-ms',
+      'history.longest-word-not-object',
+      { ...base, activeMs: -1, longestWord: [] },
+      { ...base, longestWord: [] },
+    ],
+    [
+      'history.longest-word-not-object',
+      'history.longest-word-spelling',
+      { ...base, longestWord: { spelling: 5 } },
+      { ...base, longestWord: { spelling: 5, letterCount: 1 } },
+    ],
+    [
+      'history.longest-word-spelling',
+      'history.longest-word-letter-count',
+      { ...base, longestWord: { spelling: 'Tan', letterCount: 0 } },
+      { ...base, longestWord: { spelling: 'tan', letterCount: 0 } },
+    ],
+  ] as const)('§2 checkRecord runs in order: %s before %s', (first, second, record, repaired) => {
+    expectEngineError(() => checkRecord(deepFreeze(record), HISTORY_VERSION), first);
+    expectEngineError(() => checkRecord(deepFreeze(repaired), HISTORY_VERSION), second);
+  });
+
   it('§2 parseHistory checks every record: a bad record 1 after a valid record 0 is rejected', () => {
     const h = deepFreeze(container([base, { ...base, seed: -1 }]));
     expect(parseHistory(JSON.stringify(h))).toStrictEqual({
@@ -1339,6 +1399,12 @@ describe('history version stage (§2, AD-7)', () => {
     ['root true', 'true'],
   ])('§2 history %s is version-unreadable', (_, text) => {
     expect(parseHistory(text)).toStrictEqual({ ok: false, reason: 'version-unreadable' });
+  });
+
+  it('§2 history version -0 is version-unknown with version -0 (current behaviour, pinned)', () => {
+    const result = parseHistory('{"version":-0}');
+    expect(result).toStrictEqual({ ok: false, reason: 'version-unknown', version: -0 });
+    expect(Object.is((result as { version: number }).version, -0)).toBe(true);
   });
 
   it.each([0, 2, Number.MAX_SAFE_INTEGER])(

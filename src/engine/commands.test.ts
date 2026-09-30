@@ -13,22 +13,11 @@ import { EN } from './lang/en';
 import { replay, replayFrom, type Start, status } from './replay';
 import { word } from './rules';
 import { createSession, type Move, SESSION_VERSION, type Session } from './session';
+import { DICT, deepFreeze, draftOf, drop, startOf } from './test-helpers';
 import type { CardId, WordCellNumber } from './types';
 import { winSeed } from './win-seed';
 
 // --- helpers --------------------------------------------------------------------------------
-
-function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
-  if ((typeof value === 'object' && value !== null) || typeof value === 'function') {
-    const object = value as object;
-    if (seen.has(object)) return value;
-    seen.add(object);
-    for (const key of Reflect.ownKeys(object))
-      deepFreeze((object as Record<PropertyKey, unknown>)[key], seen);
-    Object.freeze(object);
-  }
-  return value;
-}
 
 function expectEngineError(fn: () => unknown, check: string): void {
   let thrown: unknown;
@@ -41,39 +30,7 @@ function expectEngineError(fn: () => unknown, check: string): void {
   expect((thrown as EngineError).check).toBe(check);
 }
 
-type Eight<T> = [T, T, T, T, T, T, T, T];
-
-/**
- * A D2 Start from letter strings: columns top → bottom (column 1 first), cells bottom → top.
- * Each letter takes the lowest free CardId for it; `'Q'` is the QU card.
- */
-function startOf(
-  columns: readonly string[],
-  cells: Partial<Record<WordCellNumber, string>> = {},
-): Start {
-  const used = new Set<CardId>();
-  const take = (ch: string): CardId => {
-    const letter = ch === 'Q' ? 'QU' : ch;
-    const id = EN.letters.findIndex((l, i) => l === letter && !used.has(i));
-    if (id < 0) throw new Error(`no free card for ${letter}`);
-    used.add(id);
-    return id;
-  };
-  const cols = Array.from({ length: 8 }, (_, i) => [...(columns[i] ?? '')].map(take));
-  const cellStacks = Array.from({ length: 8 }, (_, i) =>
-    [...(cells[(i + 3) as WordCellNumber] ?? '')].map(take),
-  );
-  return deepFreeze({
-    columns: cols as Eight<CardId[]>,
-    cells: cellStacks as Eight<CardId[]>,
-  });
-}
-
 const CTX: ApplyContext = deepFreeze({ lang: EN });
-
-/** A frozen ctx with an inline dictionary (build-notes CAP-4). */
-const DICT = (...words: string[]): ApplyContext =>
-  deepFreeze({ lang: EN, dictionary: new Set(words) });
 
 function sessionOf(moves: readonly Move[], cursor: Session['cursor'], gaveUp = false): Session {
   return deepFreeze({ version: SESSION_VERSION, seed: 1, moves, cursor, gaveUp, activeMs: 0 });
@@ -104,9 +61,6 @@ function seam(
   }
   return { before, result };
 }
-
-/** The draft of a Composing Session. */
-const draftOf = (session: Session): Move => session.moves[session.cursor.index];
 
 // --- seed-1 literals ------------------------------------------------------------------------
 
@@ -265,6 +219,12 @@ const EMPTY_DEST = sessionOf(
   { index: 2, phase: 'composing' },
 );
 
+/** A cursor phase outside `Phase` that replay accepts (reached committed ≥ it). */
+const OUT_OF_PHASE = sessionOf([...PREFIX, COMMITTED_DRAFT], {
+  index: PREFIX.length,
+  phase: 'committed' as never,
+});
+
 /** Place-reached whole-column self-drop of column 1 (k = 0). */
 const WHOLE_SELF = sessionOf([...PREFIX, { ...selfDrop(1, 3), reached: 'place' }], {
   index: 2,
@@ -289,13 +249,6 @@ const VALIDATE: Command = { type: 'validate' };
 const CONFIRM: Command = { type: 'confirm' };
 const setTarget = (cell: number): Command => asCommand({ type: 'setTarget', cell });
 const setOrder = (order: unknown): Command => asCommand({ type: 'setPlacementOrder', order });
-
-const drop = (sourceColumn: number, sourceCount: number, destinationColumn: number): Command => ({
-  type: 'drop',
-  sourceColumn,
-  sourceCount,
-  destinationColumn,
-});
 
 const asCommand = (value: object): Command => value as unknown as Command;
 
@@ -615,6 +568,14 @@ const TABLE: readonly Row[] = [
     check: 'r70-nothing-to-undo',
     build: on(PENDING0, UNDO),
   },
+  {
+    id: 'AD-2',
+    command: 'undo',
+    precondition: 'a cursor phase outside Phase (committed)',
+    outcome: 'throw',
+    check: 'command-domain',
+    build: on(OUT_OF_PHASE, UNDO),
+  },
   // undo replays before its own checks (R-70, R-75)
   {
     id: 'AD-7',
@@ -656,6 +617,14 @@ const TABLE: readonly Row[] = [
     outcome: 'throw',
     check: 'r71-no-redo-data',
     build: on(PLACE, REDO),
+  },
+  {
+    id: 'AD-2',
+    command: 'redo',
+    precondition: 'a cursor phase outside Phase (committed)',
+    outcome: 'throw',
+    check: 'command-domain',
+    build: on(OUT_OF_PHASE, REDO),
   },
   {
     id: 'AD-2',
@@ -1015,6 +984,13 @@ describe('drop', () => {
     expect(word(replay(result.session, EN), draft, EN).cards).toStrictEqual([...COL2.slice(4), Z]);
   });
 
+  it('R-13 a whole column may drop onto its own column (Q-30): k = 0 and the word is the column', () => {
+    const result = run(IDLE, drop(2, COL2.length, 2));
+    const draft = draftOf(result.session);
+    expect(draft.destinationCount).toBe(0);
+    expect(word(replay(result.session, EN), draft, EN).cards).toStrictEqual(COL2);
+  });
+
   it('R-20 R-21 a self-drop draws D from the cards left after S is removed', () => {
     const result = run(IDLE, drop(1, 2, 1));
     const draft = draftOf(result.session);
@@ -1126,6 +1102,11 @@ describe('composing edits', () => {
     expect(draftOf(removedFirst.session)).toStrictEqual(
       lowered({ freeLetters: [3], arrangement: [I, W, Z] }),
     );
+    const inner = run(two.session, { type: 'arrange', arrangement: [I, N, W, Z] });
+    const removedInner = run(inner.session, { type: 'removeFreeLetter', cell: 4 });
+    expect(draftOf(removedInner.session)).toStrictEqual(
+      lowered({ freeLetters: [3], arrangement: [I, W, Z] }),
+    );
   });
 
   it('R-34 free letters may interleave with S in M', () => {
@@ -1221,6 +1202,10 @@ function expectLegalTargets(
   const validated = deepFreeze(result.session);
   expect(validated.cursor.phase).toBe('place');
   expect(draftOf(validated).targetCell).toBe(expected);
+  // R-42
+  expect(draftOf(validated).placementOrder).toStrictEqual(
+    word(replayFrom(start, validated, EN), draftOf(validated), EN).cards,
+  );
   for (let cell = 3; cell <= expected; cell++) {
     const edited = applyFrom(start, validated, setTarget(cell), CTX).session;
     replayFrom(start, edited, EN);
@@ -1334,6 +1319,12 @@ describe('Place', () => {
     replayFrom(start, retargeted.session, EN);
     expect(draftOf(retargeted.session).targetCell).toBe(4);
     expect(draftOf(retargeted.session).placementOrder).toStrictEqual(custom);
+    const targetFirst = applyFrom(start, deepFreeze(result.session), setTarget(4), CTX);
+    replayFrom(start, targetFirst.session, EN);
+    const thenOrdered = applyFrom(start, deepFreeze(targetFirst.session), setOrder(custom), CTX);
+    replayFrom(start, thenOrdered.session, EN);
+    expect(draftOf(thenOrdered.session).targetCell).toBe(4);
+    expect(draftOf(thenOrdered.session).placementOrder).toStrictEqual(custom);
   });
 
   it('R-71 setTarget on a Place draft with a redo tail edits at Place and drops the later moves', () => {

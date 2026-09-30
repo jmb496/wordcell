@@ -101,6 +101,7 @@ deferred: []
 - `canIncK` k+2 and `canDropOn` = `idle` mutations are equivalent on the listed states (Design Notes), so they do not fail; the tap-mapping and undo-availability mutations do.
 
 - Review patches (applied in the main session; the resumed implementer could not be awaited unattended and was stopped before any edit): `flippedSide(move)` in rules.ts shared by `flip` and `canFlip`; comment on the Composing/Place gating (AD-7); STATES gain `Composing k = n − 1` and `Place with L = 10` (the `canIncK` k + 2 and `canSetTarget` always-false mutations now fail); D6 A-E14 BALKED +30 test via the D2 seam.
+- Erratum 2026-09-29: each flag's agreement test is one `it.each` over STATES, so Vitest reports one test per flag × state; each flag still has one test definition with identical coverage, which meets the "one per flag (AD-3)" Execution item (2-8 review-loop Result; ticket 2.12 S22).
 
 ## Plan Change Log
 

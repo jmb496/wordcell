@@ -82,6 +82,7 @@ deferred: []
 - Given finished→finished, then the same finished Session is passed as `before` and `after`.
 - Given R-74, then the two same-seed records are two gaveUp finishes of seed 1 with activeMs 0 differing only in `finalScore` (give up at start; give up after one committed word); un-finishing the second (undo) removes only the last record and the remaining record `toStrictEqual`s the first.
 - Given the empty history, then `statistics([])` is asserted with `toStrictEqual`; the 1 and −2 case with `toBe(0)`.
+- Erratum 2026-09-29: in "Given R-74" above, "differing only in `finalScore`" is inexact: the second record (give up after the column-5 word) also carries a `longestWord`, so the two records differ in `finalScore` and `longestWord` (Implementation Notes; 2-9 review-loop Result; ticket 2.12 S26).
 
 ## Implementation Notes
 

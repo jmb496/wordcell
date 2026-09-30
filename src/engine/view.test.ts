@@ -5,24 +5,13 @@ import { EN } from './lang/en';
 import { replay, type Start } from './replay';
 import { destinationRemainder, word } from './rules';
 import { band, finalScore, lettersLeft, liveScore, penalty } from './scoring';
-import { createSession, type Move, type Session } from './session';
+import { createSession, type Session } from './session';
+import { deepFreeze, draftOf, drop, play, startOf } from './test-helpers';
 import { type CardId, WORD_CELL_NUMBERS, type WordCellNumber } from './types';
 import { type GameView, longestWord, view, viewFrom } from './view';
 import { winSeed } from './win-seed';
 
-// --- helpers (copied from commands.test.ts; tests never import another test file) -------------
-
-function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
-  if ((typeof value === 'object' && value !== null) || typeof value === 'function') {
-    const object = value as object;
-    if (seen.has(object)) return value;
-    seen.add(object);
-    for (const key of Reflect.ownKeys(object))
-      deepFreeze((object as Record<PropertyKey, unknown>)[key], seen);
-    Object.freeze(object);
-  }
-  return value;
-}
+// --- helpers (shared ones in test-helpers.ts; tests never import another test file) ------------
 
 function expectEngineError(fn: () => unknown, check: string): void {
   let thrown: unknown;
@@ -35,47 +24,10 @@ function expectEngineError(fn: () => unknown, check: string): void {
   expect((thrown as EngineError).check).toBe(check);
 }
 
-type Eight<T> = [T, T, T, T, T, T, T, T];
-
-/**
- * A D2 Start from letter strings: columns top → bottom (column 1 first), cells bottom → top.
- * Each letter takes the lowest free CardId for it; `'Q'` is the QU card.
- */
-function startOf(
-  columns: readonly string[],
-  cells: Partial<Record<WordCellNumber, string>> = {},
-): Start {
-  const used = new Set<CardId>();
-  const take = (ch: string): CardId => {
-    const letter = ch === 'Q' ? 'QU' : ch;
-    const id = EN.letters.findIndex((l, i) => l === letter && !used.has(i));
-    if (id < 0) throw new Error(`no free card for ${letter}`);
-    used.add(id);
-    return id;
-  };
-  const cols = Array.from({ length: 8 }, (_, i) => [...(columns[i] ?? '')].map(take));
-  const cellStacks = Array.from({ length: 8 }, (_, i) =>
-    [...(cells[(i + 3) as WordCellNumber] ?? '')].map(take),
-  );
-  return deepFreeze({
-    columns: cols as Eight<CardId[]>,
-    cells: cellStacks as Eight<CardId[]>,
-  });
-}
-
 const LANG = deepFreeze(EN);
 const CTX: ApplyContext = deepFreeze({ lang: LANG });
 const DICT = (...words: string[]): ApplyContext =>
   deepFreeze({ lang: LANG, dictionary: new Set(words) });
-
-/** Public `apply` of each command in turn, every input and result deep-frozen. */
-function play(session: Session, commands: readonly Command[], words: string[] = []): Session {
-  const ctx = DICT(...words);
-  let current = deepFreeze(session);
-  for (const command of commands)
-    current = deepFreeze(apply(current, deepFreeze(command), ctx).session);
-  return current;
-}
 
 /** The D2 seam: `applyFrom` over `start` from a fresh seed-1 Session, inputs deep-frozen. */
 function seam(start: Start, commands: readonly Command[], words: string[] = []): Session {
@@ -97,16 +49,9 @@ function changes(session: Session, command: Command, ctx: ApplyContext = CTX): b
 }
 
 const v = (session: Session): GameView => view(session, LANG);
-const draftOf = (session: Session): Move => session.moves[session.cursor.index];
 const columnOf = (gameView: GameView, column: number) => gameView.columns[column - 1];
 const cellOf = (gameView: GameView, cell: WordCellNumber) => gameView.cells[cell - 3];
 
-const drop = (sourceColumn: number, sourceCount: number, destinationColumn: number): Command => ({
-  type: 'drop',
-  sourceColumn,
-  sourceCount,
-  destinationColumn,
-});
 const setK = (k: number): Command => ({ type: 'setDestinationCount', k });
 const tap = (card: CardId): Command => ({ type: 'tapDestinationCard', card });
 const addFree = (cell: WordCellNumber): Command => ({ type: 'addFreeLetter', cell });
@@ -162,6 +107,10 @@ const PLACE_L10 = play(FRESH, [drop(1, 7, 2), setK(3), VALIDATE], ['vimldxomiw']
 const WON = deepFreeze(winSeed(1));
 const GAVE_UP0 = play(PENDING0, [GIVE_UP]);
 const GAVE_UP1 = play(COL5_DONE, [GIVE_UP]);
+/** WON undone six times: Idle at index 6, committed pending moves[6], redo tail moves[7]. */
+const PENDING_TAIL = play(WON, [UNDO, UNDO, UNDO, UNDO, UNDO, UNDO]);
+/** COMMITTED undone three times: Idle at index 2, committed pending moves[2], no redo tail. */
+const PENDING_COMMITTED = play(COMMITTED, [UNDO, UNDO, UNDO]);
 
 /** The ticket's flag agreement states. */
 const STATES: readonly (readonly [string, Session])[] = [
@@ -186,10 +135,19 @@ const STATES: readonly (readonly [string, Session])[] = [
   ['Place reached by undo from Idle', PLACE_FROM_IDLE],
   ['Place with L = 10', PLACE_L10],
   ['Idle straight after confirm', COMMITTED],
+  ['Idle with a committed pending draft and a redo tail', PENDING_TAIL],
+  ['Idle with a committed pending draft, no redo tail', PENDING_COMMITTED],
   ['won', WON],
   ['gaveUp at index 0 with a pending draft', GAVE_UP0],
   ['gaveUp at index > 0', GAVE_UP1],
 ];
+
+/** Per-fixture status of the STATES that are not playing (§2), independent of the view. */
+const OVER: ReadonlyMap<Session, 'won' | 'gaveUp'> = new Map([
+  [WON, 'won'],
+  [GAVE_UP0, 'gaveUp'],
+  [GAVE_UP1, 'gaveUp'],
+]);
 
 const COLUMNS = [1, 2, 3, 4, 5, 6, 7, 8];
 const ALL_CARDS = Array.from({ length: 52 }, (_, card) => card);
@@ -583,8 +541,19 @@ describe('GameView Place data', () => {
     const place = v(PLACE_R41);
     for (const cell of place.cells) {
       expect(cell.used).toBe(cell.cell === 3);
-      expect(cell.isLegalTarget).toBe(place.place?.legalTargets.includes(cell.cell));
+      expect(cell.isLegalTarget).toBe(cell.cell === 3);
     }
+    for (const session of [PLACE_R41, PLACE_FROM_IDLE, PLACE_L10])
+      for (const cell of v(session).cells) {
+        let legal = true;
+        try {
+          apply(session, setTarget(cell.cell), CTX);
+        } catch (e) {
+          if (!(e instanceof EngineError && e.check === 'r40-target-cell')) throw e;
+          legal = false;
+        }
+        expect(cell.isLegalTarget).toBe(legal);
+      }
   });
 
   it('AD-3 R-41 Place: target on the free letter cell; cells above L are not legal', () => {
@@ -616,6 +585,8 @@ const TAP_STATES: readonly Session[] = [
   PARTIAL_SELF_RIGHT,
   FREE,
   play(FREE, [FLIP]),
+  K0_SELF,
+  K0_EMPTY,
 ];
 
 describe('GameView R-31 and R-33', () => {
@@ -787,9 +758,8 @@ describe('GameView flags agree with apply', () => {
 
   it('AD-3 in each canValidate false state validate throws the expected check', () => {
     const checkOf = (session: Session): string => {
-      const gameView = v(session);
-      if (gameView.status !== 'playing') return 'command-status';
-      if (gameView.phase !== 'composing') return 'command-phase';
+      if (OVER.has(session)) return 'command-status';
+      if (session.cursor.phase !== 'composing') return 'command-phase';
       return 'r36-letter-count';
     };
     for (const [, session] of STATES) {
@@ -803,6 +773,183 @@ describe('GameView flags agree with apply', () => {
     expect(STATES.filter(([, s]) => !v(s).canValidate).map(([, s]) => checkOf(s))).toEqual(
       expect.arrayContaining(['command-status', 'command-phase', 'r36-letter-count']),
     );
+  });
+});
+
+// --- STATES labels (build-notes CAP-7) ----------------------------------------------------------
+
+/** Each STATES label's named property, read from the Session, replay and the view. */
+const LABELLED: Readonly<Record<string, (session: Session, gameView: GameView) => void>> = {
+  'fresh Idle': (s) => {
+    expect(s.moves).toStrictEqual([]);
+    expect(s.cursor).toStrictEqual({ index: 0, phase: 'idle' });
+  },
+  'Idle with a pending draft': (s) => {
+    expect(s.cursor.phase).toBe('idle');
+    expect(draftOf(s)).toBeDefined();
+  },
+  'Idle with an empty column after a committed move': (s) => {
+    expect(s.cursor).toStrictEqual({ index: 1, phase: 'idle' });
+    expect(replay(s, LANG).columns.some((column) => column.length === 0)).toBe(true);
+  },
+  'Idle with two used WordCells': (s) => {
+    expect(s.cursor.phase).toBe('idle');
+    expect(replay(s, LANG).cells.filter((cell) => cell.length > 0)).toHaveLength(2);
+  },
+  'Composing k = 1': (s) => {
+    expect(s.cursor.phase).toBe('composing');
+    expect(draftOf(s).destinationCount).toBe(1);
+  },
+  'Composing middle k': (s) => {
+    expect(s.cursor.phase).toBe('composing');
+    const k = draftOf(s).destinationCount;
+    expect(k > 1 && k < remainderOf(s).length).toBe(true);
+    expect(draftOf(s).destinationSide).toBe('left');
+  },
+  'Composing middle k, right side': (s) => {
+    expect(s.cursor.phase).toBe('composing');
+    const k = draftOf(s).destinationCount;
+    expect(k > 1 && k < remainderOf(s).length).toBe(true);
+    expect(draftOf(s).destinationSide).toBe('right');
+  },
+  'Composing k = n': (s) => {
+    expect(s.cursor.phase).toBe('composing');
+    expect(draftOf(s).destinationCount).toBe(remainderOf(s).length);
+    expect(remainderOf(s).length).toBeGreaterThan(1);
+  },
+  'Composing k = n − 1': (s) => {
+    expect(s.cursor.phase).toBe('composing');
+    expect(draftOf(s).destinationCount).toBe(remainderOf(s).length - 1);
+  },
+  'Composing n = 1': (s) => {
+    expect(s.cursor.phase).toBe('composing');
+    expect(remainderOf(s)).toHaveLength(1);
+    expect(draftOf(s).destinationSide).toBe('left');
+  },
+  'Composing n = 1, right side': (s) => {
+    expect(s.cursor.phase).toBe('composing');
+    expect(remainderOf(s)).toHaveLength(1);
+    expect(draftOf(s).destinationSide).toBe('right');
+  },
+  'Composing k = 0, whole-column self-drop': (s) => {
+    expect(s.cursor.phase).toBe('composing');
+    const draft = draftOf(s);
+    expect(draft.destinationCount).toBe(0);
+    expect(draft.destinationColumn).toBe(draft.sourceColumn);
+    expect(draft.sourceCount).toBe(replay(s, LANG).columns[draft.sourceColumn - 1].length);
+  },
+  'Composing k = 0, empty destination': (s) => {
+    expect(s.cursor.phase).toBe('composing');
+    const draft = draftOf(s);
+    expect(draft.destinationCount).toBe(0);
+    expect(draft.destinationColumn).not.toBe(draft.sourceColumn);
+    expect(replay(s, LANG).columns[draft.destinationColumn - 1]).toStrictEqual([]);
+  },
+  'Composing partial self-drop': (s) => {
+    expect(s.cursor.phase).toBe('composing');
+    expect(draftOf(s).destinationColumn).toBe(draftOf(s).sourceColumn);
+    expect(draftOf(s).sourceCount).toBeLessThan(
+      replay(s, LANG).columns[draftOf(s).sourceColumn - 1].length,
+    );
+    expect(remainderOf(s).length).toBeGreaterThan(0);
+  },
+  'Composing too short': (s, gv) => {
+    expect(s.cursor.phase).toBe('composing');
+    expect(gv.draft?.letterCount).toBeLessThan(3);
+  },
+  'Composing with a used free letter': (s) => {
+    expect(s.cursor.phase).toBe('composing');
+    expect(draftOf(s).freeLetters.length).toBeGreaterThan(0);
+  },
+  'Composing reached by undo from Place': (s, gv) => {
+    expect(s.cursor.phase).toBe('composing');
+    expect(draftOf(s).reached).toBe('place');
+    expect(gv.canRedo).toBe(true);
+  },
+  'Place with a used free letter (R-41)': (s) => {
+    const draft = draftOf(s);
+    expect(s.cursor.phase).toBe('place');
+    expect(draft.freeLetters).toContain(draft.targetCell);
+  },
+  'Place reached by undo from Idle': (s, gv) => {
+    expect(s.cursor.phase).toBe('place');
+    expect(draftOf(s).reached).toBe('committed');
+    expect(gv.canRedo).toBe(true);
+  },
+  'Place with L = 10': (s, gv) => {
+    expect(s.cursor.phase).toBe('place');
+    expect(gv.draft?.letterCount).toBe(10);
+  },
+  'Idle straight after confirm': (s) => {
+    expect(s.cursor.phase).toBe('idle');
+    expect(s.moves).toHaveLength(s.cursor.index);
+    expect(s.moves.at(-1)?.reached).toBe('committed');
+  },
+  'Idle with a committed pending draft and a redo tail': (s, gv) => {
+    expect(s.cursor.phase).toBe('idle');
+    expect(draftOf(s).reached).toBe('committed');
+    expect(s.moves.length).toBeGreaterThan(s.cursor.index + 1);
+    expect(gv.canRedo).toBe(true);
+  },
+  'Idle with a committed pending draft, no redo tail': (s, gv) => {
+    expect(s.cursor.phase).toBe('idle');
+    expect(draftOf(s).reached).toBe('committed');
+    expect(s.moves).toHaveLength(s.cursor.index + 1);
+    expect(gv.canRedo).toBe(true);
+  },
+  won: (s) => {
+    expect(OVER.get(s)).toBe('won');
+    expect(s.gaveUp).toBe(false);
+    expect(replay(s, LANG).columns.every((column) => column.length === 0)).toBe(true);
+  },
+  'gaveUp at index 0 with a pending draft': (s) => {
+    expect(OVER.get(s)).toBe('gaveUp');
+    expect(s.gaveUp).toBe(true);
+    expect(s.cursor.index).toBe(0);
+    expect(draftOf(s)).toBeDefined();
+  },
+  'gaveUp at index > 0': (s) => {
+    expect(OVER.get(s)).toBe('gaveUp');
+    expect(s.gaveUp).toBe(true);
+    expect(s.cursor.index).toBeGreaterThan(0);
+  },
+};
+
+/** GameView's top-level boolean flags. */
+const FLAGS = [
+  'inProgress',
+  'canUndo',
+  'canRedo',
+  'canGiveUp',
+  'canValidate',
+  'canConfirm',
+  'canFlip',
+  'canDecK',
+  'canIncK',
+] as const satisfies readonly (keyof GameView)[];
+
+describe('GameView STATES', () => {
+  it('AD-3 every STATES label has a labelled property and OVER lists every non-playing state', () => {
+    expect(STATES.map(([label]) => label)).toStrictEqual(Object.keys(LABELLED));
+    for (const [, session] of STATES)
+      expect(v(session).status).toBe(OVER.get(session) ?? 'playing');
+  });
+
+  it.each(STATES)('AD-3 STATES %s has its labelled property', (label, session) => {
+    LABELLED[label](session, v(session));
+  });
+
+  it('AD-3 FLAGS are exactly the top-level boolean GameView keys', () => {
+    const booleans = Object.entries(v(FRESH))
+      .filter(([, value]) => typeof value === 'boolean')
+      .map(([key]) => key);
+    expect(booleans.sort()).toStrictEqual([...FLAGS].sort());
+  });
+
+  it.each(FLAGS)('AD-3 %s is true in at least one STATES entry and false in another', (flag) => {
+    const values = STATES.map(([, session]) => v(session)[flag]);
+    expect(values).toContain(true);
+    expect(values).toContain(false);
   });
 });
 

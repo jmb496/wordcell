@@ -4,21 +4,10 @@ import { EngineError } from './errors';
 import { EN } from './lang/en';
 import { checkSession, replay, replayFrom, type Start, status } from './replay';
 import { createSession, type Move, SESSION_VERSION, type Session } from './session';
-import type { CardId, WordCellNumber } from './types';
+import { deepFreeze, type Eight, startOf } from './test-helpers';
+import type { CardId } from './types';
 
 // --- helpers --------------------------------------------------------------------------------
-
-function deepFreeze<T>(value: T, seen = new WeakSet<object>()): T {
-  if ((typeof value === 'object' && value !== null) || typeof value === 'function') {
-    const object = value as object;
-    if (seen.has(object)) return value;
-    seen.add(object);
-    for (const key of Reflect.ownKeys(object))
-      deepFreeze((object as Record<PropertyKey, unknown>)[key], seen);
-    Object.freeze(object);
-  }
-  return value;
-}
 
 function expectEngineError(fn: () => unknown, check: string): void {
   let thrown: unknown;
@@ -29,34 +18,6 @@ function expectEngineError(fn: () => unknown, check: string): void {
   }
   expect(thrown).toBeInstanceOf(EngineError);
   expect((thrown as EngineError).check).toBe(check);
-}
-
-type Eight<T> = [T, T, T, T, T, T, T, T];
-
-/**
- * A D2 Start from letter strings: columns top → bottom (column 1 first), cells bottom → top.
- * Each letter takes the lowest free CardId for it; `'Q'` is the QU card.
- */
-function startOf(
-  columns: readonly string[],
-  cells: Partial<Record<WordCellNumber, string>> = {},
-): Start {
-  const used = new Set<CardId>();
-  const take = (ch: string): CardId => {
-    const letter = ch === 'Q' ? 'QU' : ch;
-    const id = EN.letters.findIndex((l, i) => l === letter && !used.has(i));
-    if (id < 0) throw new Error(`no free card for ${letter}`);
-    used.add(id);
-    return id;
-  };
-  const cols = Array.from({ length: 8 }, (_, i) => [...(columns[i] ?? '')].map(take));
-  const cellStacks = Array.from({ length: 8 }, (_, i) =>
-    [...(cells[(i + 3) as WordCellNumber] ?? '')].map(take),
-  );
-  return deepFreeze({
-    columns: cols as Eight<CardId[]>,
-    cells: cellStacks as Eight<CardId[]>,
-  });
 }
 
 function sessionOf(
@@ -221,6 +182,7 @@ function eight(fill: Partial<Record<number, CardId[]>>): Eight<CardId[]> {
 
 describe('checkSession (AD-7 pre-replay)', () => {
   const composingBase = { ...BASE, reached: 'composing' } as Move;
+  const composingNoPlaceFields = omit(omit(composingBase, 'targetCell'), 'placementOrder');
   const cases: [string, Session, string][] = [
     ['seed -1', sessionOf([BASE], undefined, { seed: -1 }), 'seed-uint32'],
     ['seed 4294967296', sessionOf([BASE], undefined, { seed: 4294967296 }), 'seed-uint32'],
@@ -244,7 +206,7 @@ describe('checkSession (AD-7 pre-replay)', () => {
     ],
     [
       'phase place above the draft reached',
-      sessionOf([composingBase], { index: 0, phase: 'place' }),
+      sessionOf([composingNoPlaceFields], { index: 0, phase: 'place' }),
       'ad7-cursor-phase',
     ],
     [
@@ -262,7 +224,11 @@ describe('checkSession (AD-7 pre-replay)', () => {
       sessionOf([omit(BASE, 'targetCell')]),
       'ad7-place-fields',
     ],
-    ['composing move with Place fields', sessionOf([composingBase]), 'ad7-place-fields'],
+    [
+      'composing move with Place fields',
+      sessionOf([composingBase], { index: 0, phase: 'idle' }),
+      'ad7-place-fields',
+    ],
     [
       'k = 0 with side right',
       sessionOf([{ ...BASE, destinationCount: 0, destinationSide: 'right' }]),
@@ -301,10 +267,96 @@ describe('checkSession (AD-7 pre-replay)', () => {
       expectEngineError(() => replay(sessionOf([], undefined, { seed }), LANG), 'seed-uint32');
   });
 
-  it('§2 pre-replay checks run in AD-7 order: seed before activeMs', () => {
-    const session = sessionOf([BASE], undefined, { seed: -1, activeMs: -1 });
-    expectEngineError(() => checkSession(session), 'seed-uint32');
-  });
+  const placeBase = { ...BASE, reached: 'place' } as Move;
+  /**
+   * Adjacent pairs of the AD-7 order: the first session breaks both checks and the first wins;
+   * the repaired session fixes the first check and still breaks the second.
+   */
+  const orderPairs: [string, string, Session, Session][] = [
+    [
+      'seed-uint32',
+      'ad7-active-ms',
+      sessionOf([BASE], undefined, { seed: -1, activeMs: -1 }),
+      sessionOf([BASE], undefined, { activeMs: -1 }),
+    ],
+    [
+      'ad7-active-ms',
+      'ad7-gave-up-type',
+      sessionOf([BASE], undefined, { activeMs: -1, gaveUp: 'no' }),
+      sessionOf([BASE], undefined, { gaveUp: 'no' }),
+    ],
+    [
+      'ad7-gave-up-type',
+      'ad7-cursor-index',
+      sessionOf([BASE], { index: 2, phase: 'idle' }, { gaveUp: 'no' }),
+      sessionOf([BASE], { index: 2, phase: 'idle' }),
+    ],
+    [
+      'ad7-cursor-index',
+      'ad7-cursor-phase',
+      sessionOf([BASE], { index: 2, phase: 'composing' }),
+      sessionOf([BASE], { index: 1, phase: 'composing' }),
+    ],
+    [
+      'ad7-cursor-phase',
+      'ad7-gave-up-idle',
+      sessionOf([BASE], { index: 1, phase: 'composing' }, { gaveUp: true }),
+      sessionOf([BASE], { index: 0, phase: 'place' }, { gaveUp: true }),
+    ],
+    [
+      'ad7-gave-up-idle',
+      'ad7-place-fields',
+      sessionOf([omit(BASE, 'placementOrder')], { index: 0, phase: 'place' }, { gaveUp: true }),
+      sessionOf([omit(BASE, 'placementOrder')]),
+    ],
+    [
+      'ad7-place-fields',
+      'ad7-k0-side',
+      sessionOf([{ ...omit(BASE, 'targetCell'), destinationCount: 0, destinationSide: 'right' }]),
+      sessionOf([{ ...BASE, destinationCount: 0, destinationSide: 'right' }]),
+    ],
+    [
+      'ad7-k0-side',
+      's2-committed-prefix',
+      sessionOf([{ ...placeBase, destinationCount: 0, destinationSide: 'right' }]),
+      sessionOf([placeBase]),
+    ],
+    [
+      's2-committed-prefix',
+      's2-last-only',
+      sessionOf([placeBase, BASE]),
+      sessionOf([placeBase, BASE], { index: 0, phase: 'place' }),
+    ],
+    [
+      's2-last-only',
+      'ad7-unknown-session-field',
+      sessionOf([placeBase, BASE], { index: 0, phase: 'place' }, { extra: 1 }),
+      sessionOf([BASE], undefined, { extra: 1 }),
+    ],
+    [
+      'ad7-unknown-session-field',
+      'ad7-unknown-cursor-field',
+      sessionOf([BASE], { index: 1, phase: 'idle', extra: 1 } as Session['cursor'], { extra: 1 }),
+      sessionOf([BASE], { index: 1, phase: 'idle', extra: 1 } as Session['cursor']),
+    ],
+    [
+      'ad7-unknown-cursor-field',
+      'ad7-unknown-move-field',
+      sessionOf([{ ...BASE, extra: 1 } as Move], {
+        index: 1,
+        phase: 'idle',
+        extra: 1,
+      } as Session['cursor']),
+      sessionOf([{ ...BASE, extra: 1 } as Move]),
+    ],
+  ];
+  it.each(orderPairs)(
+    '§2 pre-replay checks run in AD-7 order: %s before %s',
+    (first, second, session, repaired) => {
+      expectEngineError(() => checkSession(session), first);
+      expectEngineError(() => checkSession(repaired), second);
+    },
+  );
 
   it('§2 accepts a -0 seed and a -0 activeMs', () => {
     const session = deepFreeze({ ...createSession(-0), activeMs: -0 });
@@ -325,6 +377,11 @@ describe('replay per-move checks (§2)', () => {
       'r31-destination-count',
     ],
     ['k = n + 1 (R-31)', { ...BASE, destinationCount: 5 }, 'r31-destination-count'],
+    [
+      'a self-drop with k = n + 1 after S is removed (R-31, R-21)',
+      { ...BASE, destinationColumn: 1, destinationCount: 4 },
+      'r31-destination-count',
+    ],
     [
       'a self-drop with k = 0 on a non-empty remainder (R-31, R-21, Q-12)',
       { ...BASE, destinationColumn: 1, destinationCount: 0 },
@@ -495,6 +552,24 @@ describe('replay per-move checks (§2)', () => {
     expectEngineError(() => run(plain, sessionOf([nineCards(plain)])), 'r40-target-cell');
   });
 
+  it('§2 rejects a lone QU card as a committed word: 2 letters (R-36)', () => {
+    const start = startOf(['Q']);
+    const [qu] = start.columns[0];
+    const move: Move = {
+      sourceColumn: 1,
+      sourceCount: 1,
+      destinationColumn: 1,
+      destinationCount: 0,
+      destinationSide: 'left',
+      freeLetters: [],
+      arrangement: [qu],
+      reached: 'committed',
+      targetCell: 3,
+      placementOrder: [qu],
+    };
+    expectEngineError(() => run(start, sessionOf([move])), 'r36-letter-count');
+  });
+
   it('§2 an 11-letter word without QU reaches WordCell 10 (R-40)', () => {
     const start = startOf(['IABCDEFGHJK']);
     const move: Move = {
@@ -559,6 +634,27 @@ describe('replay per-move checks (§2)', () => {
 
   it('§2 accepts a Place cursor with a committed draft and a redo tail (Q-41)', () => {
     expect(run(S0, REDO_TAIL)).toStrictEqual(run(S0, VALID));
+  });
+
+  it('§2 rejects a committed draft breaking R-40 in front of a redo tail (Q-41)', () => {
+    const session = sessionOf([BASE, { ...REDO_DRAFT, targetCell: 4 }, REDO_T1, REDO_T2], {
+      index: 1,
+      phase: 'place',
+    });
+    expectEngineError(() => run(S0, session), 'r40-target-cell');
+  });
+
+  it('§2 checks a later redo-tail move on the scratch after the earlier tail commits (Q-41)', () => {
+    // Legal after REDO_DRAFT (column 1 X Y), illegal after REDO_T1 (column 1 X).
+    const t2 = { ...REDO_T2, sourceCount: 2, arrangement: [X, Y] };
+    const session = sessionOf([BASE, REDO_DRAFT, REDO_T1, t2], { index: 1, phase: 'place' });
+    expectEngineError(() => run(S0, session), 'r13-source-count');
+  });
+
+  it('§2 checks a below-committed last redo-tail move (Q-41)', () => {
+    const t2 = { ...REDO_T2, sourceCount: 0 };
+    const session = sessionOf([BASE, REDO_DRAFT, REDO_T1, t2], { index: 1, phase: 'place' });
+    expectEngineError(() => run(S0, session), 'r13-source-count');
   });
 
   it('§2 rejects a redo-tail sourceCount legal on the prefix but not after the draft commits', () => {

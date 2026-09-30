@@ -5,6 +5,7 @@ import type { Position } from './rules';
 import { band, finalScore, lettersLeft, liveScore, penalty } from './scoring';
 
 const QU = EN.letters.indexOf('QU');
+const Z = EN.letters.indexOf('Z');
 const EMPTY: readonly (readonly number[])[] = [[], [], [], [], [], [], [], []];
 
 /** Eight WordCells (index 0 = WordCell 3) with the given cards at the given cell numbers. */
@@ -29,6 +30,11 @@ describe('scoring', () => {
     expect(liveScore(cells, EN)).toBe(82);
   });
 
+  it('R-80 live score reads the language letter counts (synthetic LangData)', () => {
+    expect(liveScore(cellsWith({ 10: [Z] }), EN)).toBe(10);
+    expect(liveScore(cellsWith({ 10: [Z] }), synthetic)).toBe(20);
+  });
+
   it('R-80 live score with every WordCell empty is 0', () => {
     expect(liveScore(EMPTY, EN)).toBe(0);
   });
@@ -42,6 +48,13 @@ describe('scoring', () => {
   it('R-81 empty columns leave 0 letters and no penalty', () => {
     expect(lettersLeft(EMPTY, EN)).toBe(0);
     expect(penalty(EMPTY, EN)).toBe(0);
+  });
+
+  it('R-81 letters left and the penalty read the language letter counts (synthetic LangData)', () => {
+    const z = columnsWith([Z]);
+    expect(lettersLeft(z, EN)).toBe(1);
+    expect(lettersLeft(z, synthetic)).toBe(2);
+    expect(penalty(z, synthetic)).toBe(20);
   });
 
   it('R-81 won (empty columns): final equals live', () => {
@@ -92,9 +105,6 @@ describe('scoring', () => {
 
   it('R-83 bands are relative to the language maxScore (synthetic LangData)', () => {
     expect(synthetic.maxScore).toBe(540);
-    const z = columnsWith([EN.letters.indexOf('Z')]);
-    expect(lettersLeft(z, EN)).toBe(1);
-    expect(lettersLeft(z, synthetic)).toBe(2);
     const cases: [number, number][] = [
       [161, 0],
       [162, 1],
