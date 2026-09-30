@@ -1,5 +1,5 @@
 # Review log — story-primary-action-new-game-replay-and-feedback (ticket 3.4)
-State: pass 4: done
+State: pass 5: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 204 words, snapshot `story-primary-action-new-game-replay-and-feedback.passes/pass0.md`, HEAD a003cc7.
 Note: the pull from tickets.toml entry 4 dropped `interface`, `tests`, `owns`; they are passed to reviewers and fixer as intent, and the pass 1 fixer adds them to the Description as `Interface:`, `Tests:`, `Owns:` lines.
@@ -122,3 +122,25 @@ Words (docs): 1306 (6.4 x pass 0)  |  Snapshot: story-primary-action-new-game-re
 - E8 readiness (wait for active and enabled undo, then throttle), try/finally + SIGINT teardown of the preview child, `words` declared as a plain `export let` live binding, e2e "current version" taken from a valid fixture
 ### Dropped
 - Flag on t2 or max(t1, t2) (adversarial) — conflicts with the pass 1 default and edge lens; t1 kept as the flagged figure
+
+## Pass 5 — 2026-09-30
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 0, minor 12, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1306 (6.4 x pass 0; under the 1500 budget)  |  Snapshot: story-primary-action-new-game-replay-and-feedback.passes/pass4.md (no fix pass)
+Fix diff and ref alignment: no findings.
+
+## Result — converged after 5 passes
+Majors per pass: 10, 2, 2, 2, 0. Decision-needed: none. Technical defaults applied: 21 (see each pass).
+
+Unapplied minors (for the build plan):
+- Throwing-write case: cover newGame() from rejected and replay(), with setup()'s `storage` option giving a throwing `setItem`.
+- Throw cases (newGame() while booting, replay() while booting/rejected): assert no write as well as the throw.
+- Primary label precedence: status ≠ playing → `New game` whatever the phase (gave-up/won fixtures rest in Idle); otherwise by phase.
+- feedback.rejectedWord holds the engine's `result.rejectedWord` verbatim (lowercase, e.g. `tan`); uppercasing is text.ts's at render (entry 9); assert the exact value.
+- `feedback` is a getter on the exported `game` object (`game.feedback`).
+- summarise tests: unsorted even-count input and an odd count above 1 (e.g. [5, 1, 3] → 3).
+- E8 walk: after Redo, the stored Session deep-equals session-won.json apart from activeMs.
+- Label and R-74 R-73 assertions are interim until entry 9 rewrites them.
+- E8 figure predates entry 7's history reconcile: record it as a lower bound.
+- Confirm is always enabled in Place (canConfirm, R-42); no disabled Confirm label.
+- `Need 3+ letters` ink-secondary state has no visual check (disposable minimal board).
+- From pass 4: E8 readiness (wait for active and enabled undo, then throttle); try/finally + SIGINT teardown of the preview child; `words` as a plain `export let` live binding; e2e "current version" taken from a valid fixture.
