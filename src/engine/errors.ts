@@ -3,6 +3,13 @@
  * exactly which check threw. Codes in use:
  * - LangData: `card-id-domain`, `lang-deck-size`, `lang-unknown-letter`.
  * - Start seam (D2): `start-duplicate-card`, `start-no-column-card` (plus `card-id-domain`).
+ * - §2 schema stage (`checkSchema` in serialize.ts, `parseSession` only; each code carries the
+ *   `schema.` prefix, e.g. `schema.required-session`): `required-session`, `required-cursor`,
+ *   `required-move`, `object-cursor`, `object-move`, `type-moves`, `type-cursor-index`,
+ *   `enum-cursor-phase`, `type-source-column`, `type-source-count`, `type-destination-column`,
+ *   `type-destination-count`, `type-free-letters`, `type-arrangement`, `type-target-cell`,
+ *   `type-placement-order`, `enum-destination-side`, `enum-reached`, `domain-column`,
+ *   `domain-count`, `domain-cell`, `domain-card`.
  * - AD-7 pre-replay (`checkSession`, in this order): `seed-uint32`, `ad7-active-ms`,
  *   `ad7-gave-up-type`, `ad7-cursor-index`, `ad7-cursor-phase`, `ad7-gave-up-idle`,
  *   `ad7-place-fields`, `ad7-k0-side`, `s2-committed-prefix`, `s2-last-only`,
