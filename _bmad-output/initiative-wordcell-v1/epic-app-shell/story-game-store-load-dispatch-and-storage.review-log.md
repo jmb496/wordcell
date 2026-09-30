@@ -1,5 +1,5 @@
 # Review log — story-game-store-load-dispatch-and-storage.md (ticket 3.3)
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 219 words, copy at story-game-store-load-dispatch-and-storage.passes/pass0.md (HEAD 676e286).
 Carried intent from tickets.toml entry 3 (not copied by the pull): interface, tests, owns — added to Description in pass 1.
@@ -100,3 +100,32 @@ Fixer: all 13 applied; no commands touched.
 - none
 ### Dropped
 - none
+
+## Pass 4 — 2026-09-30
+Reviewers: fix diff, edge-case, adversarial, ref alignment  |  Findings: major 1, minor 17, decision-needed 0  |  Dropped in triage: 0 (duplicates merged: 18 raw → 17)
+Words (docs): 1198 (5.47 x pass 0; budget 1500)  |  Snapshot: story-game-store-load-dispatch-and-storage.passes/pass3.md (no fix pass)
+### Open (not fixed — stopping rule: passes 3 and 4 each ≤ 1 major)
+- [major] Board (E1) — pass 3 fixer 9 made Undo/Redo text-labelled buttons "not DESIGN.md's 44×44 icon-only buttons"; SPEC E1 puts the minimal board "in the DESIGN.md components and tokens" and DESIGN.md undoRedo is 44 × 44 icon-only button-secondary (↶/↷, accessible names Undo/Redo). Fix: use the DESIGN.md undoRedo component with accessible names Undo and Redo (role/name locators unchanged); same word count.
+### Minors (not applied; for the build plan or the next loop)
+- Tests — "a second load() throws" reads as part of the throwing-first-launch case (store still booting); split with semicolons: "load() after an active or rejected load throws"
+- Tests clock — add pause-gap case: resume(0), pause(10), take(100) → 10; resume(200), take(205) → 5
+- Tests dispatch — negative case: TABLE no-op with the clock paused returns changed false and writes nothing
+- Tests — "dispatch order" has no observable outcome; make it concrete (resume, advance performance.now, Undo, written Session = post-Undo with activeMs added)
+- Description — "writes on every new reference" → writes when result.session !== the pre-accrue session (AD-4, build-notes CAP-3)
+- Dispatch — cut "(entry 7's reconcile reuses that comparison)"; AD-6 reconcileHistory derives status itself
+- Spec moves — font.spec: `/placeholder board/` becomes the Seed line (`/^Seed \d+/`); the spec stays unseeded
+- Board — "The `Seed <n>` line replaces the meta line"
+- Tests — assert Undo/Redo disabled state (Redo disabled on session-place.json before Undo, enabled after)
+- Tests storage — add "remove deletes the key"
+- Tests request check — attach page.on('request') before the first goto
+- Plan — name the store accessor test-hook.ts reads (e.g. game.launch)
+- Plan — vi.unstubAllGlobals() in afterEach
+- Tests — reactivity probe first ($state change updates game.view; SPEC Assumptions)
+- Tests — tag the seed cases AD-5, not AD-4/AD-9
+- Smoke — pick up ticket 1 plan's deferred gap (letters and order in one column of session-idle-fresh.json) or note it stays with epic 4
+### Decision needed (functionality / UX / gameplay)
+- none
+
+## Result — converged after 4 passes
+open major: Board (E1) Undo/Redo — ticket says text-labelled buttons, contradicting SPEC E1 / DESIGN.md undoRedo (44 × 44 icon-only button-secondary with accessible names Undo/Redo); the build should use the DESIGN.md component.
+Majors per pass: 6, 5, 1, 1. Words 219 → 1198. Unapplied minors: the 16 listed under Pass 4.
