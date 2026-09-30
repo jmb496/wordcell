@@ -110,3 +110,13 @@ Code review: thorough, 1 pass, converged; 0 fixes applied
 Tests: all passing
 Ref to fix upstream: none
 Worth knowing: best and average include given-up games (negative scores), as the spec reads; five small test-naming and coverage minors carried to the 2.12 sweep.
+
+## 2.10 Session serialise and parse with fixtures — done
+What it adds: saving a game as text and loading it back. A damaged or out-of-date save is turned away with the reason the player will be shown (unreadable, unknown version, or broken moves), never a crash; about 50 sample saves cover every reason. A fractional or unknown cursor in a save (deferred from 2.6) is now rejected here.
+Ticket review: 5 passes, converged (majors 11, 8, 2, 2, 0); nothing needed your input
+Build: built; commits 42b3178
+Code review: thorough, 1 pass, converged; 0 fixes applied
+Tests: all passing
+Ref to fix upstream: none
+Paused: usage limit during the build (reset 7:30pm America/New_York), resumed 20:20 EDT from the saved plan
+Worth knowing: four small test minors (a few per-field domain rows, a version-2 round trip, non-string enum values, JSON -0) carried to the 2.12 sweep.

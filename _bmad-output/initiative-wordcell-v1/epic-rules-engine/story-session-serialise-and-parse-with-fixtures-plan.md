@@ -3,7 +3,7 @@ title: 'Session serialise and parse with fixtures'
 type: 'feature'
 ticket: '10'
 created: '2026-09-29'
-status: 'built'
+status: done
 baseline_revision: 'b2f734d9e3cc930a8ce6c1bf7107413499e7cf2d'
 route: 'full'
 route_source: 'auto'
