@@ -1,5 +1,5 @@
 # Review log — story-history-serialise-and-parse-and-the-epic-s-scripted-game.md (ticket 2.11)
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 714c76e, copy `story-history-serialise-and-parse-and-the-epic-s-scripted-game.review-log.passes/pass0.md`, 146 words.
 Refs: SPEC.md, build-notes.md, rule-coverage.md (spec-epic-2-rules-engine), epic-rules-engine.md, ARCHITECTURE-SPINE.md, AGENTS.md; done-ticket plans: story-composing-commands-and-the-command-table-plan.md story-gameview-plan.md story-golden-deal-test-and-r-id-test-names-plan.md story-langdata-en-and-lettercount-plan.md story-score-history-semantics-plan.md story-scoring-penalty-and-bands-plan.md story-session-createsession-replay-and-checksession-plan.md story-session-serialise-and-parse-with-fixtures-plan.md story-undo-redo-give-up-and-accrue-plan.md story-validate-and-place-commands-with-the-8-worked-example-plan.md 
@@ -30,3 +30,23 @@ Fixer: all 17 items applied; design statements only, no runnable commands; codes
 - none
 ### Dropped
 - 23 duplicates of the above across the four lenses
+
+## Pass 2 — 2026-09-29
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 5, minor 8, decision-needed 0  |  Dropped in triage: 7 (duplicates; test-names list needs no change)
+Words (docs): 1263 (8.7x pass 0; stated budget 1500)  |  Snapshot: story-history-serialise-and-parse-and-the-epic-s-scripted-game.review-log.passes/pass2.md
+Fixer: all 13 items applied; design statements only, no runnable commands; tan Place step is setPlacementOrder { order: [28, 0, 42] }.
+### Applied
+- [major] serializeHistory bullet — parameter named `history` fails the AD-1 history-binding scan (AGENTS.md Known pitfalls); rename, explicit `history:` key, no destructuring, no `.history.length` → fixer item 1
+- [major] AC Scripted game — view at {0, idle} cannot equal a fresh view (pending draft in redo tail, canRedo true) → fixer item 2
+- [major] Accepting boundaries — 'quiz' letterCount is 4 (QU = 2), not 3 → fixer item 3
+- [major] Scripted game — tan example has no Place step; setTarget is a no-op for L = 3; Place command must change the Session → fixer item 4
+- [major] AC Propagation — checks in serialize.ts cannot be vi.mocked; mechanism fixed → fixer item 5
+- [minor] items 6–13 (full spelling fixture names; longest-word-not-object uses null; drop "(default applied)" leak; ScoreHistory not History; direct check call over records in order; codes distinct and cover every history.* code; accepting boundaries inline only; inline cases add empty text and MAX_SAFE_INTEGER)
+### Default applied (technical)
+- propagation: vi.spyOn(JSON, 'parse') returns { version: 1, get records() { throw new TypeError() } }; assert parseHistory rethrows TypeError
+- Place step for tan: setPlacementOrder with a non-identity permutation
+- container type name ScoreHistory
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- duplicates across lenses; test-name list for AD-7 version test (already named in its own bullet)
