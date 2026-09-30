@@ -1,24 +1,18 @@
-import { type LangData, letterCount } from './lang/lang-data';
-import type { Position } from './rules';
-import {
-  BAND_DENOMINATOR,
-  BAND_THRESHOLDS,
-  type CardId,
-  PENALTY_PER_LETTER,
-  WORD_CELL_NUMBERS,
-} from './types';
-
-const letters = (cards: readonly CardId[], lang: LangData): number =>
-  cards.reduce((sum, card) => sum + letterCount(card, lang), 0);
+import type { LangData } from './lang/lang-data';
+import { type Position, wordLetterCount } from './rules';
+import { BAND_DENOMINATOR, BAND_THRESHOLDS, PENALTY_PER_LETTER, WORD_CELL_NUMBERS } from './types';
 
 /** R-80 live score: Σ over WordCells of letter count × the cell's number (committed cells, AD-3). */
 export function liveScore(cells: Position['cells'], lang: LangData): number {
-  return cells.reduce((sum, cell, i) => sum + letters(cell, lang) * WORD_CELL_NUMBERS[i], 0);
+  return cells.reduce(
+    (sum, cell, i) => sum + wordLetterCount(cell, lang) * WORD_CELL_NUMBERS[i],
+    0,
+  );
 }
 
 /** R-81 letters left in the columns (`QU` 2). */
 export function lettersLeft(columns: Position['columns'], lang: LangData): number {
-  return columns.reduce((sum, column) => sum + letters(column, lang), 0);
+  return columns.reduce((sum, column) => sum + wordLetterCount(column, lang), 0);
 }
 
 /** R-81 give-up penalty: `PENALTY_PER_LETTER` × letters left. */

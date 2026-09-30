@@ -17,7 +17,7 @@ export interface GameRecord {
   readonly activeMs: number;
 }
 
-/** AD-6/AD-7 `wordcell:history` value: the container `parseHistory` returns (CAP-9). */
+/** AD-6/AD-7 `wordcell:history` value: the container `parseHistory` returns. */
 export type ScoreHistory = { readonly version: number; readonly records: readonly GameRecord[] };
 
 /** R-84 statistics; the optional keys are absent on a history without a value for them. */
@@ -114,6 +114,7 @@ export function statistics(records: readonly GameRecord[]): Statistics {
       (longest === undefined || r.longestWord.letterCount > longest.letterCount)
     )
       longest = r.longestWord;
-  if (longest !== undefined) result.longestWord = longest;
+  if (longest !== undefined)
+    result.longestWord = { spelling: longest.spelling, letterCount: longest.letterCount };
   return result;
 }

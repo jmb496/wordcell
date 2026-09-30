@@ -9,6 +9,12 @@ import historyInvalidContainerFieldSet from '../../fixtures/history-invalid-cont
 import historyInvalidFinalScore from '../../fixtures/history-invalid-final-score.json' with {
   type: 'json',
 };
+import historyInvalidLetterCountMismatch from '../../fixtures/history-invalid-letter-count-mismatch.json' with {
+  type: 'json',
+};
+import historyInvalidLetterCountShort from '../../fixtures/history-invalid-letter-count-short.json' with {
+  type: 'json',
+};
 import historyInvalidLongestWordLetterCount from '../../fixtures/history-invalid-longest-word-letter-count.json' with {
   type: 'json',
 };
@@ -40,6 +46,9 @@ import historyInvalidRecordsNotArray from '../../fixtures/history-invalid-record
 import historyInvalidSeedUint32 from '../../fixtures/history-invalid-seed-uint32.json' with {
   type: 'json',
 };
+import historyInvalidWonNegative from '../../fixtures/history-invalid-won-negative.json' with {
+  type: 'json',
+};
 import historyThreeRecords from '../../fixtures/history-three-records.json' with { type: 'json' };
 import validBelowCommittedLast from '../../fixtures/session-below-committed-last.json' with {
   type: 'json',
@@ -54,6 +63,9 @@ import validIdlePendingDraft from '../../fixtures/session-idle-pending-draft.jso
   type: 'json',
 };
 import invalidAd7ActiveMs from '../../fixtures/session-invalid-ad7-active-ms.json' with {
+  type: 'json',
+};
+import invalidAd7ActiveMsHeadroom from '../../fixtures/session-invalid-ad7-active-ms-headroom.json' with {
   type: 'json',
 };
 import invalidAd7CursorIndex from '../../fixtures/session-invalid-ad7-cursor-index.json' with {
@@ -214,7 +226,7 @@ import {
   view,
 } from './index';
 import { replay } from './replay';
-import { checkContainer, checkRecord, checkSchema } from './serialize';
+import { checkActiveMsHeadroom, checkContainer, checkRecord, checkSchema } from './serialize';
 import { DICT, deepFreeze, drop, play } from './test-helpers';
 import { winSeed } from './win-seed';
 
@@ -286,7 +298,7 @@ interface Row {
   readonly file: string;
   readonly value: unknown;
   readonly base: ValidName;
-  readonly stage: 'schema' | 'replay';
+  readonly stage: 'schema' | 'replay' | 'parse';
   readonly code: string;
 }
 
@@ -603,6 +615,13 @@ const REJECTIONS: readonly Row[] = [
     'replay',
     'ad7-gave-up-won',
   ),
+  row(
+    'session-invalid-ad7-active-ms-headroom.json',
+    invalidAd7ActiveMsHeadroom,
+    'idle-fresh',
+    'parse',
+    'ad7-active-ms-headroom',
+  ),
 ];
 
 /** The schema-stage codes (src/engine/errors.ts doc comment). */
@@ -675,8 +694,12 @@ const REPLAY_CODES = [
   'ad7-gave-up-won',
 ];
 
+/** parseSession-only codes, thrown after `replay` returns (src/engine/errors.ts doc comment). */
+const PARSE_CODES = ['ad7-active-ms-headroom'];
+
 const SCHEMA_ROWS = REJECTIONS.filter((r) => r.stage === 'schema');
 const REPLAY_ROWS = REJECTIONS.filter((r) => r.stage === 'replay');
+const PARSE_ROWS = REJECTIONS.filter((r) => r.stage === 'parse');
 
 // --- tests ----------------------------------------------------------------------------------
 
@@ -805,6 +828,8 @@ describe('rejecting fixtures (§2, CAP-9)', () => {
     expect(new Set(REPLAY_ROWS.map((r) => r.code))).toStrictEqual(new Set(REPLAY_CODES));
     expect(SCHEMA_CODES).toHaveLength(22);
     expect(REPLAY_CODES).toHaveLength(23);
+    expect(new Set(PARSE_ROWS.map((r) => r.code))).toStrictEqual(new Set(PARSE_CODES));
+    expect(PARSE_CODES).toHaveLength(1);
     for (const code of SCHEMA_MINIMUM) expect(codes).toContain(code);
   });
 
@@ -819,6 +844,10 @@ describe('rejecting fixtures (§2, CAP-9)', () => {
       });
       if (stage === 'schema') {
         expectEngineError(() => checkSchema(value as object), code);
+      } else if (stage === 'parse') {
+        expect(() => checkSchema(value as object)).not.toThrow();
+        expect(() => replay(value as unknown as Session, EN)).not.toThrow();
+        expectEngineError(() => checkActiveMsHeadroom(value as unknown as Session), code);
       } else {
         expect(() => checkSchema(value as object)).not.toThrow();
         expectEngineError(() => replay(value as unknown as Session, EN), code);
@@ -1078,6 +1107,44 @@ describe('history round trip (§2, CAP-9)', () => {
   });
 });
 
+describe('activeMs headroom (§2, AD-7)', () => {
+  it('§2 idle-fresh with activeMs 2^52 parses; accrue, view and giveUp work on the result', () => {
+    const result = parseSession(JSON.stringify({ ...validIdleFresh, activeMs: 2 ** 52 }), EN);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const parsed = deepFreeze(result.session);
+    const accrued = deepFreeze(accrue(parsed, 86_400_000, EN));
+    expect(accrued.activeMs).toBe(2 ** 52 + 86_400_000);
+    expect(() => view(accrued, EN)).not.toThrow();
+    const gaveUp = apply(accrued, { type: 'giveUp' }, { lang: EN });
+    expect(Object.keys(gaveUp)).toStrictEqual(['session']);
+    // The accrued Session is above the headroom, so the next parse rejects it: the bound is
+    // parse-only (AD-7) and accrue keeps the safe-integer domain.
+    expect(parseSession(serializeSession(accrued), EN)).toStrictEqual({
+      ok: false,
+      reason: 'replay-failed',
+      version: accrued.version,
+    });
+  });
+
+  it('§2 the headroom bound is parse-only: view and giveUp accept the rejected fixture', () => {
+    const frozen = deepFreeze(invalidAd7ActiveMsHeadroom) as unknown as Session;
+    expect(() => view(frozen, EN)).not.toThrow();
+    const gaveUp = apply(frozen, { type: 'giveUp' }, { lang: EN });
+    expect(Object.keys(gaveUp)).toStrictEqual(['session']);
+  });
+
+  it('§2 a replay code wins over the headroom: seed -1 with activeMs 2^52 + 1', () => {
+    const value = deepFreeze({ ...validIdleFresh, seed: -1, activeMs: 2 ** 52 + 1 });
+    expect(parseSession(JSON.stringify(value), EN)).toStrictEqual({
+      ok: false,
+      reason: 'replay-failed',
+      version: value.version,
+    });
+    expectEngineError(() => replay(value as unknown as Session, EN), 'seed-uint32');
+  });
+});
+
 interface HistoryRow {
   readonly file: string;
   readonly value: unknown;
@@ -1174,6 +1241,24 @@ const HISTORY_REJECTIONS: readonly HistoryRow[] = [
     'contents-unreadable',
     'history.longest-word-letter-count',
   ),
+  historyRow(
+    'history-invalid-letter-count-short.json',
+    historyInvalidLetterCountShort,
+    'contents-unreadable',
+    'history.longest-word-letter-count-short',
+  ),
+  historyRow(
+    'history-invalid-letter-count-mismatch.json',
+    historyInvalidLetterCountMismatch,
+    'contents-unreadable',
+    'history.longest-word-letter-count-mismatch',
+  ),
+  historyRow(
+    'history-invalid-won-negative.json',
+    historyInvalidWonNegative,
+    'contents-unreadable',
+    'history.won-final-score',
+  ),
 ];
 
 /** The container and record codes (src/engine/errors.ts doc comment). */
@@ -1190,11 +1275,14 @@ const HISTORY_CODES = [
   'history.longest-word-not-object',
   'history.longest-word-spelling',
   'history.longest-word-letter-count',
+  'history.longest-word-letter-count-short',
+  'history.longest-word-letter-count-mismatch',
+  'history.won-final-score',
 ];
 
 describe('history rejecting fixtures (§2, CAP-9)', () => {
   it('§2 history fixture codes cover HISTORY_CODES, unique except the two spelling fixtures', () => {
-    expect(HISTORY_CODES).toHaveLength(12);
+    expect(HISTORY_CODES).toHaveLength(15);
     const coded = HISTORY_REJECTIONS.filter((r) => r.code !== undefined);
     expect(new Set(coded.map((r) => r.code))).toStrictEqual(new Set(HISTORY_CODES));
     const shared = HISTORY_CODES.filter((code) => coded.filter((r) => r.code === code).length > 1);
@@ -1205,7 +1293,7 @@ describe('history rejecting fixtures (§2, CAP-9)', () => {
       'history-invalid-longest-word-spelling-empty.json',
       'history-invalid-longest-word-spelling-case.json',
     ]);
-    expect(coded).toHaveLength(13);
+    expect(coded).toHaveLength(16);
   });
 
   it.each(HISTORY_REJECTIONS.map((r) => [r.file, r] as const))(
@@ -1227,6 +1315,12 @@ describe('history inline boundaries (§2, CAP-9)', () => {
   const base = (historyThreeRecords as unknown as ScoreHistory).records[0];
   const word = base.longestWord as { spelling: string; letterCount: number };
   const container = (records: readonly unknown[]) => ({ version: HISTORY_VERSION, records });
+  const noLongestWord = <T extends { longestWord?: unknown }>(
+    record: T,
+  ): Omit<T, 'longestWord'> => {
+    const { longestWord: _omitted, ...rest } = record;
+    return rest;
+  };
 
   it.each([
     ['seed -1', { ...base, seed: -1 }, 'history.seed-uint32'],
@@ -1277,6 +1371,22 @@ describe('history inline boundaries (§2, CAP-9)', () => {
     ['a record array', [], 'history.record-not-object'],
     ['outcome 5', { ...base, outcome: 5 }, 'history.outcome'],
     ['record version "1"', { ...base, version: '1' }, 'history.record-version'],
+    [
+      "longestWord 'ab' 2",
+      { ...base, longestWord: { spelling: 'ab', letterCount: 2 } },
+      'history.longest-word-letter-count-short',
+    ],
+    [
+      "longestWord 'tan' 4",
+      { ...base, longestWord: { spelling: 'tan', letterCount: 4 } },
+      'history.longest-word-letter-count-mismatch',
+    ],
+    ['a won record at finalScore -1', { ...base, finalScore: -1 }, 'history.won-final-score'],
+    [
+      'a won record at finalScore -1 without longestWord',
+      noLongestWord({ ...base, finalScore: -1 }),
+      'history.won-final-score',
+    ],
   ] as const)('§2 checkRecord rejects %s with its code', (_, record, code) => {
     const frozen = deepFreeze(record);
     expectEngineError(() => checkRecord(frozen, HISTORY_VERSION), code);
@@ -1341,6 +1451,30 @@ describe('history inline boundaries (§2, CAP-9)', () => {
       { ...base, longestWord: { spelling: 'Tan', letterCount: 0 } },
       { ...base, longestWord: { spelling: 'tan', letterCount: 0 } },
     ],
+    [
+      'history.longest-word-letter-count',
+      'history.longest-word-letter-count-short',
+      { ...base, longestWord: { spelling: 'ab', letterCount: 0 } },
+      { ...base, longestWord: { spelling: 'ab', letterCount: 2 } },
+    ],
+    [
+      'history.longest-word-letter-count-short',
+      'history.longest-word-letter-count-mismatch',
+      { ...base, longestWord: { spelling: 'tan', letterCount: 2 } },
+      { ...base, longestWord: { spelling: 'tan', letterCount: 4 } },
+    ],
+    [
+      'history.longest-word-letter-count-mismatch',
+      'history.won-final-score',
+      { ...base, finalScore: -1, longestWord: { spelling: 'tan', letterCount: 4 } },
+      { ...base, finalScore: -1, longestWord: { spelling: 'tan', letterCount: 3 } },
+    ],
+    [
+      'history.active-ms',
+      'history.won-final-score',
+      noLongestWord({ ...base, finalScore: -1, activeMs: -1 }),
+      noLongestWord({ ...base, finalScore: -1 }),
+    ],
   ] as const)('§2 checkRecord runs in order: %s before %s', (first, second, record, repaired) => {
     expectEngineError(() => checkRecord(deepFreeze(record), HISTORY_VERSION), first);
     expectEngineError(() => checkRecord(deepFreeze(repaired), HISTORY_VERSION), second);
@@ -1369,7 +1503,23 @@ describe('history inline boundaries (§2, CAP-9)', () => {
   it.each([
     ['seed 0', { ...base, seed: 0 }],
     ['seed 4294967295', { ...base, seed: 4294967295 }],
-    ['a negative finalScore', { ...base, finalScore: -5 }],
+    ['a negative finalScore', { ...base, outcome: 'gaveUp', finalScore: -5 }],
+    ['a won record at finalScore 0', { ...base, finalScore: 0 }],
+    [
+      'a gaveUp record at a negative finalScore with a longestWord',
+      {
+        ...base,
+        outcome: 'gaveUp',
+        finalScore: -1,
+        longestWord: { spelling: 'tan', letterCount: 3 },
+      },
+    ],
+    [
+      "longestWord 'tan' 3 (letterCount exactly 3)",
+      { ...base, longestWord: { spelling: 'tan', letterCount: 3 } },
+    ],
+    ['record activeMs 2^52 + 1', { ...base, activeMs: 4503599627370497 }],
+    ['record activeMs Number.MAX_SAFE_INTEGER', { ...base, activeMs: Number.MAX_SAFE_INTEGER }],
     [
       'longestWord quiz (QU counts 2)',
       { ...base, longestWord: { spelling: 'quiz', letterCount: 4 } },

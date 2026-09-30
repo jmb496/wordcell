@@ -48,7 +48,7 @@ export function startOf(
   });
 }
 
-/** A frozen ctx with an inline dictionary (build-notes CAP-4). */
+/** A frozen ctx with an inline dictionary (AD-17). */
 export const DICT = (...words: string[]): ApplyContext =>
   deepFreeze({ lang: EN, dictionary: new Set(words) });
 

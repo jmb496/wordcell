@@ -4,7 +4,7 @@ import type { DestinationSide, Move, Reached } from './session';
 import { type CardId, MIN_WORD_LENGTH, WORD_CELL_NUMBERS, type WordCellNumber } from './types';
 
 /**
- * A tableau position (build-notes CAP-3). `columns[0]` is column 1, each top → bottom;
+ * A tableau position (§2). `columns[0]` is column 1, each top → bottom;
  * `cells[0]` is WordCell 3 … `cells[7]` WordCell 10, each bottom → top.
  */
 export interface Position {
@@ -282,9 +282,9 @@ export function word(
 
 /**
  * Checks `move` (at `moves[index]`) from `position` against the rules of its `reached` state
- * (§2), in build-notes CAP-3 order; the first violation throws. Inputs are schema-valid
- * (engine-produced, or passed by `parseSession`'s schema stage, entry 10); replay adds no type
- * or domain check.
+ * (§2), in the errors.ts per-move order; the first violation throws. Inputs are schema-valid
+ * (engine-produced, or passed by `parseSession`'s §2 schema stage); replay adds no type or
+ * domain check.
  */
 export function checkMove(position: Position, move: Move, index: number, lang: LangData): void {
   const source = checkSourceCount(position, move, index);

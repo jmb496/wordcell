@@ -1,4 +1,5 @@
 import { EngineError } from './errors';
+import { isUint32 } from './fields';
 import type { CardId, WordCellNumber } from './types';
 
 /** §2 `cursor.phase`: the player-visible phase of the draft. */
@@ -49,12 +50,9 @@ export interface Session {
 /** D5; bumps per AD-7. */
 export const SESSION_VERSION = 1;
 
-const MAX_SEED = 4294967295;
-
 /** AD-2 / AD-7 seed domain: a uint32; throws `seed-uint32`. */
 export function assertSeed(seed: number): void {
-  if (!(Number.isInteger(seed) && seed >= 0 && seed <= MAX_SEED))
-    throw new EngineError('seed-uint32', `AD-7 seed ${seed} is not a uint32`);
+  if (!isUint32(seed)) throw new EngineError('seed-uint32', `AD-7 seed ${seed} is not a uint32`);
 }
 
 /** R-04, R-74: a fresh Session for `seed`. */

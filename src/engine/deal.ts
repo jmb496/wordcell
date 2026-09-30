@@ -35,7 +35,7 @@ export function shuffle<T>(items: readonly T[], seed: number): T[] {
 /**
  * Deal the shuffled CardIds 0–51 round-robin into 8 columns, FreeCell style (R-03).
  * Columns 1–4 receive 7 cards, columns 5–8 receive 6. Index 0 of each column is the top
- * (covered) card; the last index is the exposed bottom card. Internal (D2, CAP-3).
+ * (covered) card; the last index is the exposed bottom card. Internal (D2).
  */
 export function dealIds(seed: number): CardId[][] {
   const deck = shuffle(

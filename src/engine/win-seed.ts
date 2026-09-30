@@ -3,7 +3,7 @@ import { apply, createSession, EN, type Session } from './index';
 import { spelling } from './lang/lang-data';
 
 /**
- * Shared test helper (build-notes CAP-5): wins `seed` through public `apply`. For each column
+ * Shared test helper: wins `seed` through public `apply`. For each column
  * 1 → 8, self-drops the whole column (k = 0, R-11, R-22), validates it against an inline set
  * holding the column's R-37 string (`QU` → "qu") and confirms at the default target (R-42).
  * Not exported from `index.ts`.

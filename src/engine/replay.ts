@@ -1,5 +1,12 @@
 import { dealIds } from './deal';
 import { EngineError } from './errors';
+import {
+  CURSOR_FIELDS,
+  fieldSetViolation,
+  isSafeNonNegative,
+  MOVE_FIELDS,
+  SESSION_FIELDS,
+} from './fields';
 import { assertCardId, type LangData } from './lang/lang-data';
 import {
   checkMove,
@@ -27,21 +34,6 @@ export interface Start {
 /** §2 derived status (R-62, R-75). */
 export type Status = 'playing' | 'won' | 'gaveUp';
 
-const SESSION_FIELDS = new Set(['version', 'seed', 'moves', 'cursor', 'gaveUp', 'activeMs']);
-const CURSOR_FIELDS = new Set(['index', 'phase']);
-const MOVE_FIELDS = new Set([
-  'sourceColumn',
-  'sourceCount',
-  'destinationColumn',
-  'destinationCount',
-  'destinationSide',
-  'freeLetters',
-  'arrangement',
-  'reached',
-  'targetCell',
-  'placementOrder',
-]);
-
 /** D2: throws `card-id-domain`, `start-duplicate-card` or `start-no-column-card`. */
 export function checkStart(start: Start): void {
   const seen = new Set<CardId>();
@@ -55,15 +47,11 @@ export function checkStart(start: Start): void {
     throw new EngineError('start-no-column-card', 'D2 start has no column card');
 }
 
-function unknownField(object: object, known: ReadonlySet<string>): string | undefined {
-  return Object.keys(object).find((key) => !known.has(key));
-}
-
 /** AD-7 pre-replay checks, in AD-7 order; the first violation throws. */
 export function checkSession(session: Session): void {
   const { moves, cursor } = session;
   assertSeed(session.seed);
-  if (!(Number.isSafeInteger(session.activeMs) && session.activeMs >= 0))
+  if (!isSafeNonNegative(session.activeMs))
     throw new EngineError(
       'ad7-active-ms',
       `AD-7 activeMs ${session.activeMs} is not a non-negative safe integer`,
@@ -114,17 +102,17 @@ export function checkSession(session: Session): void {
         's2-last-only',
         `move ${i}: §2 only the last move may be below committed`,
       );
-  const sessionField = unknownField(session, SESSION_FIELDS);
+  const sessionField = fieldSetViolation(session, SESSION_FIELDS, 'unknown');
   if (sessionField !== undefined)
     throw new EngineError(
       'ad7-unknown-session-field',
       `AD-7 unknown Session field ${sessionField}`,
     );
-  const cursorField = unknownField(cursor, CURSOR_FIELDS);
+  const cursorField = fieldSetViolation(cursor, CURSOR_FIELDS, 'unknown');
   if (cursorField !== undefined)
     throw new EngineError('ad7-unknown-cursor-field', `AD-7 unknown cursor field ${cursorField}`);
   for (const [i, move] of moves.entries()) {
-    const moveField = unknownField(move, MOVE_FIELDS);
+    const moveField = fieldSetViolation(move, MOVE_FIELDS, 'unknown');
     if (moveField !== undefined)
       throw new EngineError(
         'ad7-unknown-move-field',
@@ -144,7 +132,7 @@ export interface CommittedWord {
  * its `reached`, then each redo-tail move at its own `reached` on a scratch position. Returns the
  * committed-prefix position and one word per committed-prefix move (index < `cursor.index`, R-30
  * from the position before it). Inputs are schema-valid (engine-produced, or passed by
- * `parseSession`'s schema stage, entry 10); replay adds no type or domain check. Internal.
+ * `parseSession`'s §2 schema stage); replay adds no type or domain check. Internal.
  */
 export function replayWords(
   start: Start,

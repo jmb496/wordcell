@@ -15,7 +15,8 @@
  *   `container-field-set`, `records-not-array`, `record-not-object`, `record-field-set`,
  *   `record-version`, `seed-uint32`, `outcome`, `final-score`, `active-ms`,
  *   `longest-word-not-object` (null, an array, a non-object, or an object whose key set is not
- *   exactly `{ spelling, letterCount }`), `longest-word-spelling`, `longest-word-letter-count`.
+ *   exactly `{ spelling, letterCount }`), `longest-word-spelling`, `longest-word-letter-count`,
+ *   `longest-word-letter-count-short`, `longest-word-letter-count-mismatch`, `won-final-score`.
  * - AD-7 pre-replay (`checkSession`, in this order): `seed-uint32`, `ad7-active-ms`,
  *   `ad7-gave-up-type`, `ad7-cursor-index`, `ad7-cursor-phase`, `ad7-gave-up-idle`,
  *   `ad7-place-fields`, `ad7-k0-side`, `s2-committed-prefix`, `s2-last-only`,
@@ -24,7 +25,9 @@
  *   `r33-free-letter-duplicate`, `r33-free-letter-empty`, `s2-free-letters-set`,
  *   `r35-arrangement`, `r36-letter-count`, `r40-target-cell`, `r50-placement-order`.
  * - AD-7 post-replay: `ad7-gave-up-won`.
- * - Commands (`apply`, in build-notes CAP-4 order): `command-type`, `command-status`,
+ * - AD-7 headroom (`checkActiveMsHeadroom`, parseSession only, after replay returns):
+ *   `ad7-active-ms-headroom`.
+ * - Commands (`apply`, in AD-2 command TABLE order): `command-type`, `command-status`,
  *   `command-phase`, `command-dictionary`, `command-domain`, `r31-tap-not-in-destination`,
  *   `r31-set-count-empty-destination`, `r33-free-letter-absent`, `r33-free-letter-index`,
  *   `r70-nothing-to-undo`, `r71-no-redo-data` (reused: `card-id-domain`, `r13-source-count`,

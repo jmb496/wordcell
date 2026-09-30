@@ -438,6 +438,13 @@ describe('statistics', () => {
     });
   });
 
+  it('R-84 statistics returns a copy of the longest word, not the record’s own object', () => {
+    const record = rec('won', 123, { spelling: 'quiz', letterCount: 4 });
+    const { longestWord } = stats([record]);
+    expect(longestWord).not.toBe(record.longestWord);
+    expect(longestWord).toStrictEqual(record.longestWord);
+  });
+
   it('R-84 empty history: counts 0, best, average and longest word absent (A-E3)', () => {
     expect(stats([])).toStrictEqual({ gamesPlayed: 0, gamesWon: 0, gamesGivenUp: 0 });
   });

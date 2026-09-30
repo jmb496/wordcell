@@ -1,4 +1,5 @@
 import { EngineError } from './errors';
+import { isSafeNonNegative } from './fields';
 import { assertCardId, type LangData } from './lang/lang-data';
 import { dealtStart, replayFrom, type Start, type Status, status } from './replay';
 import {
@@ -79,7 +80,7 @@ function reject(check: string, message: string): never {
   throw new EngineError(check, message);
 }
 
-// --- prelude: replay → status → phase (build-notes CAP-4) ------------------------------------
+// --- prelude: replay → status → phase (AD-2 command TABLE order) ----------------------------
 
 /** Replay → status (every command except `undo`, R-70, R-75). */
 function playing(start: Start, session: Session, ctx: ApplyContext, type: string): Position {
@@ -369,7 +370,7 @@ function confirm({ session, draft, index }: DraftContext): ApplyResult {
   };
 }
 
-// --- undo, redo, give up (R-70, R-71, R-75; build-notes CAP-5) --------------------------------
+// --- undo, redo, give up (R-70, R-71, R-75) --------------------------------------------------
 
 /** R-70, R-75 availability (any status): gaveUp, or not Idle at index 0. Internal (view.ts). */
 export function undoAvailable(session: Session): boolean {
@@ -457,8 +458,8 @@ function giveUp(start: Start, session: Session, ctx: ApplyContext): ApplyResult 
 
 /**
  * `apply` over a D2 start (internal seam). Dispatches on `type` first (`command-type`), then
- * checks status, phase, `ctx.dictionary` (`validate` only), domain and the rule (build-notes
- * CAP-4); no-op by value last (AD-2).
+ * checks status, phase, `ctx.dictionary` (`validate` only), domain and the rule (AD-2 command
+ * TABLE order); no-op by value last (AD-2).
  */
 export function applyFrom(
   start: Start,
@@ -519,7 +520,7 @@ export function apply(session: Session, command: Command, ctx: ApplyContext): Ap
  * not playing; throws `r76-active-ms-overflow` when the sum is not a safe integer.
  */
 export function accrue(session: Session, elapsedMs: number, lang: LangData): Session {
-  if (!(Number.isSafeInteger(elapsedMs) && elapsedMs >= 0))
+  if (!isSafeNonNegative(elapsedMs))
     reject('r76-elapsed-ms', `R-76 elapsedMs ${elapsedMs} is not a non-negative safe integer`);
   if (elapsedMs === 0) return session;
   const position = replayFrom(dealtStart(session.seed), session, lang);
