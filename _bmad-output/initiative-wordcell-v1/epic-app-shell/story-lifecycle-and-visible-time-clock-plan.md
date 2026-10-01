@@ -3,7 +3,7 @@ title: 'Lifecycle and visible-time clock'
 type: 'feature'
 ticket: '6'
 created: '2026-09-30'
-status: 'built'
+status: done
 route: 'full'
 route_source: 'auto'
 review: 'thorough'
