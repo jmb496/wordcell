@@ -3,8 +3,11 @@ import './shell/test-hook';
 // AD-8: side-effect import so Vite emits the hashed en-*.txt (an unused named import is tree-shaken).
 import './shell/dictionary.svelte';
 import { game } from './shell/game.svelte';
+import { nav } from './shell/nav';
 import App from './ui/App.svelte';
 import Halted from './ui/Halted.svelte';
+import { openHistoryNotice } from './ui/history-notice.svelte';
+import { overlays } from './ui/overlays.svelte';
 // Imported before boot so the `@font-face` the font check loads is registered.
 import './ui/app.css';
 
@@ -75,8 +78,15 @@ async function fontCheck(): Promise<void> {
   if (faces.length === 0) throw new Error('AD-15 font check: WordCell Serif did not load');
 }
 
-// AD-16: font check, load, lifecycle, mount. Not awaited: a failure is an unhandledrejection that writes nothing.
+// AD-16: nav launch, font check, load, lifecycle, boot surfaces, mount. Not awaited: a failure is
+// an unhandledrejection that writes nothing.
 async function boot(): Promise<void> {
+  // AD-13: rewind and stamp the base entry, then register the overlays before any push.
+  await nav.launch();
+  nav.register({
+    closedByBack: (depth) => overlays.closedByBack(depth),
+    depth: () => overlays.depth,
+  });
   await fontCheck();
   game.load();
   if (game.state.kind === 'halted') {
@@ -85,6 +95,8 @@ async function boot(): Promise<void> {
   }
   // AD-16 order: lifecycle listeners (and the visible-time clock) right after the load, before mount.
   game.registerLifecycle();
+  // AD-16 boot surfaces: the History notice (active store, unreadable history; once per launch).
+  openHistoryNotice();
   mount(App, { target });
   surface = true;
 }

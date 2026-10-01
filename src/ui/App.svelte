@@ -4,6 +4,10 @@ import { game, type RejectReason } from '../shell/game.svelte';
 import BlockingMessage from './BlockingMessage.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Halted from './Halted.svelte';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import HistoryNotice from './HistoryNotice.svelte';
+import { openHistoryNotice } from './history-notice.svelte';
+import { overlays } from './overlays.svelte';
 import { text } from './text';
 
 // Minimal board (epic 3 SPEC E1): columns, WordCells, Undo/Redo, the Seed line and the primary
@@ -23,8 +27,13 @@ function confirm(): void {
   game.dispatch({ type: 'confirm' });
 }
 
+// AD-4/AD-13: New game from either root closes every entry; after New game from the rejected
+// root the deferred History notice is pushed (AD-16).
 function newGame(): void {
+  const wasRejected = game.state.kind === 'rejected';
   game.newGame();
+  overlays.resetForNewSession();
+  if (wasRejected) openHistoryNotice();
 }
 
 // §2 Session rejected: the catalogue body for the parse reason (EXPERIENCE.md message catalogue).
@@ -75,7 +84,8 @@ const primary = $derived.by(
     onaction={newGame}
   />
 {:else if game.state.kind === 'active' && board}
-  <main>
+  <!-- AD-13: dialogs render beside the board; while the notice is rendered the board is inert. -->
+  <main inert={overlays.isOpen('historyNotice')}>
     <div class="top">
       <h1>WordCell</h1>
       <div class="undo-redo">
@@ -148,6 +158,9 @@ const primary = $derived.by(
       onclick={primary.onclick}
     >{primary.label}</button>
   </main>
+  {#if overlays.isOpen('historyNotice')}
+    <HistoryNotice />
+  {/if}
 {:else}
   <main>
     <h1>WordCell</h1>

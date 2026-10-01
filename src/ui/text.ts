@@ -19,4 +19,21 @@ export const text = Object.freeze({
   fatalTitle: 'Something went wrong.',
   anotherWindow: 'WordCell is open in another window.',
   reload: 'Reload',
+  // §2/Q-33 History notice (catalogue row 102): title, then the variant sentence plus the hint.
+  // The variant sentences interpolate the stored version (the catalogue's 2 is a sample); the end
+  // sheet (row 103) reuses them.
+  historyTitle: "Your score history can't be read.",
+  historyVersionUnknown: (version: number) =>
+    `It uses format version ${version}, which this version can't read.`,
+  historyVersionUnreadable: "Its format version can't be read.",
+  historyContentsUnreadable: (version: number) =>
+    `It uses format version ${version} but its contents can't be read.`,
+  historyResetHint: 'Statistics are off until you reset it. Resetting deletes the old history.',
+  notNow: 'Not now',
+  resetHistory: 'Reset history',
+  // Reset history confirm (catalogue row 104).
+  resetConfirmTitle: 'Delete the score history?',
+  resetConfirmBody: "This can't be undone.",
+  keepIt: 'Keep it',
+  deleteHistory: 'Delete history',
 } as const);

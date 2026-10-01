@@ -225,6 +225,11 @@ test('§2 an unreadable history (history-invalid-version-unknown.json) is never 
   await seedStorage(page, { session: fixture('session-won.json'), history: historyText });
   await open(page);
   const primary = page.getByTestId('primary-action');
+  // The History notice opens at boot (§2); dismiss it before touching the board.
+  await page.getByRole('button', { name: 'Not now', exact: true }).click();
+  await expect
+    .poll(() => page.evaluate(() => (history.state as { wc: number } | null)?.wc))
+    .toBe(0);
   await page.getByTestId('undo').click();
   await expect(page.getByTestId('redo')).toBeEnabled();
   expect(await stored(page, HISTORY)).toBe(historyText);
@@ -249,4 +254,23 @@ test('§2 an unreadable history (history-invalid-version-unknown.json) is never 
   expect(await stored(page, HISTORY)).toBe(historyText);
   expect((await page.evaluate(() => window.__wordcell?.loaded()))?.history).toEqual(rejected);
   expect((await current(page)).history).toEqual(rejected);
+});
+
+test('AD-15 a throwing Delete history halts over the History notice and Reset confirm: Reload focused, no dialog, wc 2, history bytes unchanged', async ({
+  page,
+}) => {
+  const historyText = fixture('history-invalid-version-unknown.json');
+  await seedStorage(page, { history: historyText });
+  await open(page);
+  await page.getByRole('button', { name: 'Reset history', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Delete the score history?' })).toBeVisible();
+  const wc = () => page.evaluate(() => (history.state as { wc: number } | null)?.wc);
+  await expect.poll(wc).toBe(2);
+  await armStorageSpy(page, { throwOn: HISTORY });
+  await page.getByRole('button', { name: 'Delete history', exact: true }).click();
+  await expectFatal(page, `storage-spy: ${HISTORY}`);
+  await expect(page.getByRole('button', { name: 'Reload', exact: true })).toBeFocused();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  expect(await wc()).toBe(2);
+  expect(await stored(page, HISTORY)).toBe(historyText);
 });
