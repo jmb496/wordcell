@@ -264,6 +264,16 @@ describe('AD-13 push, pop and back', () => {
     t.listener()({ state: null });
     expect(t.callbacks.closed).toEqual([]);
     expect(t.fake.calls).toEqual([]);
+    t.nav.push();
+    expect(t.fake.calls).toEqual([['push', { wc: 2, launch: t.launchId() }]]);
+  });
+
+  it('AD-13 a push after a player back to { wc: 1 } at depth 2 sends { wc: 2, launch }', async () => {
+    const t = await ready(2);
+    t.traverse(-1);
+    expect(t.callbacks.closed).toEqual([1]);
+    t.nav.push();
+    expect(t.fake.calls).toEqual([['push', { wc: 2, launch: t.launchId() }]]);
   });
 
   it('AD-13 Forward (wc beyond depth) does go(−(d − depth)), closes nothing, and its popstate closes nothing', async () => {

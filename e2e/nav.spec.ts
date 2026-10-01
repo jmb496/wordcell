@@ -176,6 +176,18 @@ test('§2 AD-13 a double tap on New game on the rejected root opens the notice a
   await boardReady(page);
   await expect(notice(page)).toBeVisible();
   await expect(confirmDialog(page)).toHaveCount(0);
+  // The second tap lands on the notice's Reset history (a layout change must fail here).
+  const hit = await page.evaluate(
+    ([px, py]) => {
+      const el = document.elementFromPoint(px, py);
+      return {
+        name: el?.closest('button')?.textContent?.trim() ?? null,
+        dialog: el?.closest('.layer')?.querySelector('[role="dialog"] h2')?.textContent ?? null,
+      };
+    },
+    [x, y],
+  );
+  expect(hit).toEqual({ name: 'Reset history', dialog: TITLE });
   await expect.poll(() => wc(page).then((state) => state?.wc)).toBe(1);
   await expect(notice(page)).toBeVisible();
 });

@@ -1,6 +1,6 @@
 # Review loop — ticket 3.8 build (code, a9c25cf..813e935)
 
-State: pass 2: done
+State: pass 3: done
 
 Target: `_bmad-output/implementation-artifacts/review-loop/3-8-build.passes/pass0.diff` (a9c25cf..813e935)
 Intent: `_bmad-output/initiative-wordcell-v1/epic-app-shell/story-nav-adapter-overlays-core-history-notice-and-reset-confirm-plan.md`
@@ -35,6 +35,23 @@ Note: majors rose 1 → 2, but not because the refs are unclear. Item 1 is the p
 ### Default applied (technical)
 - item 1: both Dialog buttons ignore `event.detail > 1` like the scrim (keyboard activation has detail 0)
 - item 2: add a closedByBack(0)-from-depth-2 case; drop the "order observable" plan claim (no per-entry side effect in epic 3)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Pass 3 — 2026-10-01
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 2, minor 3, decision-needed 0  |  Dropped in triage: 0
+Snapshot: tree 30b1099fc986dd02130004198d5a6dfdf1b6f4c1  |  Fix diff: 3-8-build.passes/pass3.fix.diff  |  Verify: npm test 1590 passed (31 files), lint clean, check 0 errors; fixer ran history-notice + nav specs android 27 passed; items 1–2 fail with their guard/line reverted; no production code changed
+Fixer: all 5 applied (test-only)
+### Applied
+- [major] e2e/history-notice.spec.ts — the pass-2 fix removed the only test whose second click lands on a scrim with an action; reverting `first(onscrim)` passes every test → fixer item 1
+- [major] src/shell/nav.ts:74 `count = wc` on a player back — no test pushes after a back (plan I/O matrix "Back | count := d"); deleting the line passes every S and P3 case → fixer item 2
+- [minor] e2e top-edge / New game double-tap tests — depend on layout overlap without asserting what is under the second tap → fixer item 3
+- [minor] src/shell/nav.test.ts stale-launch test — "count unchanged" not checked for a player-started stale popstate → fixer item 4
+- [minor] Dialog `first()` guard — no test activates a dialog button from the keyboard (detail 0) → fixer item 5
+### Default applied (technical)
+- items 1–5: the reviewers' proposed test additions taken as the default
 ### Decision needed (functionality / UX / gameplay)
 - none
 ### Dropped

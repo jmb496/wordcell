@@ -64,6 +64,25 @@ async function doubleTap(page: Page, x: number, y: number): Promise<void> {
   await page.touchscreen.tap(x, y);
 }
 
+// What sits at (x, y): a dialog's scrim or a button (by its text), with the title of the dialog
+// layer it belongs to (null outside any dialog).
+type Hit = { kind: 'scrim' | 'button' | 'other'; name: string | null; dialog: string | null };
+function hitAt(page: Page, x: number, y: number): Promise<Hit> {
+  return page.evaluate(
+    ([px, py]) => {
+      const el = document.elementFromPoint(px, py);
+      if (el === null) throw new Error('nothing at the point');
+      const dialog = el.closest('.layer')?.querySelector('[role="dialog"] h2')?.textContent ?? null;
+      if (el.classList.contains('scrim')) return { kind: 'scrim' as const, name: null, dialog };
+      const b = el.closest('button');
+      if (b !== null)
+        return { kind: 'button' as const, name: b.textContent?.trim() ?? null, dialog };
+      return { kind: 'other' as const, name: el.tagName, dialog };
+    },
+    [x, y],
+  );
+}
+
 // Back from the base entry leaves the app.
 async function expectLeaves(page: Page): Promise<void> {
   await page.goBack();
@@ -123,6 +142,14 @@ test.describe('§2 History notice flows (history-invalid-version-unknown.json)',
     await expectLeaves(page);
   });
 
+  test('§2 Enter on the focused Not now closes the notice to wc 0', async ({ page }) => {
+    await start(page, VERSION_UNKNOWN);
+    await expectNotice(page, SENTENCE);
+    await page.keyboard.press('Enter');
+    await expect(notice(page)).toHaveCount(0);
+    await expect.poll(() => wc(page).then((state) => state?.wc)).toBe(0);
+  });
+
   test('AD-13 back closes the notice to wc 0; the next back leaves the app', async ({ page }) => {
     await start(page, VERSION_UNKNOWN);
     await expectNotice(page, SENTENCE);
@@ -174,6 +201,18 @@ test.describe('§2 History notice flows (history-invalid-version-unknown.json)',
     await expect.poll(() => wc(page).then((state) => state?.wc)).toBe(1);
   });
 
+  test('§2 Space on the focused Keep it closes the confirm, the notice stays, wc 1', async ({
+    page,
+  }) => {
+    await start(page, VERSION_UNKNOWN);
+    await expectNotice(page, SENTENCE);
+    await openConfirm(page);
+    await page.keyboard.press('Space');
+    await expect(confirmDialog(page)).toHaveCount(0);
+    await expect(notice(page)).toBeVisible();
+    await expect.poll(() => wc(page).then((state) => state?.wc)).toBe(1);
+  });
+
   test('AD-13 back on the confirm closes only the confirm, wc 1', async ({ page }) => {
     await start(page, VERSION_UNKNOWN);
     await expectNotice(page, SENTENCE);
@@ -195,6 +234,22 @@ test.describe('§2 History notice flows (history-invalid-version-unknown.json)',
     await expect(notice(page)).toBeVisible();
     await expect(button(page, 'Reset history')).toBeFocused();
     await expect.poll(() => wc(page).then((state) => state?.wc)).toBe(1);
+  });
+
+  test("§2 a double tap on the centre of Reset history lands its second tap on the Reset confirm's scrim and leaves the confirm open at wc 2", async ({
+    page,
+  }) => {
+    await start(page, VERSION_UNKNOWN);
+    await expectNotice(page, SENTENCE);
+    const box = await button(page, 'Reset history').boundingBox();
+    if (box === null) throw new Error('no Reset history box');
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+    await doubleTap(page, x, y);
+    await expect(confirmDialog(page)).toBeVisible();
+    expect(await hitAt(page, x, y)).toEqual({ kind: 'scrim', name: null, dialog: CONFIRM });
+    await expect.poll(() => wc(page).then((state) => state?.wc)).toBe(2);
+    await expect(confirmDialog(page)).toBeVisible();
   });
 
   test("§2 a tap on the Reset confirm's card body leaves the confirm open at wc 2", async ({
@@ -290,8 +345,15 @@ test('§2 a double tap near the top edge of Reset history (history-invalid-null.
   await expectNotice(page, "Its format version can't be read.");
   const box = await button(page, 'Reset history').boundingBox();
   if (box === null) throw new Error('no Reset history box');
-  await doubleTap(page, box.x + box.width / 2, box.y + 2);
+  const x = box.x + box.width / 2;
+  const y = box.y + 2;
+  await doubleTap(page, x, y);
   await expect(confirmDialog(page)).toBeVisible();
+  expect(await hitAt(page, x, y)).toEqual({
+    kind: 'button',
+    name: 'Delete history',
+    dialog: CONFIRM,
+  });
   await expect.poll(() => wc(page).then((state) => state?.wc)).toBe(2);
   await expect(confirmDialog(page)).toBeVisible();
   expect(await stored(page, HISTORY)).toBe(fixture(file));
