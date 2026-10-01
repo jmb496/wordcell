@@ -80,6 +80,21 @@ deferred: []
 - [x] `e2e/helpers.spec.ts` -- new `describe('restore helpers')` and an `animationFrames` case per Design Notes 6.
 - [x] `_bmad-output/specs/spec-epic-3-app-shell/build-notes.md` -- Spine notes bullet: "AD-17: the restore suite compares all three `loaded()` fields with `JSON.parse(__wordcellBoot[key])` (`null` when absent); `current().history`/`.prefs` before the reload equal `loaded()`'s only for keys present in localStorage at snapshot time (absent keys report in-memory defaults) (CAP-10)."
 
+**Tests mapping (sentence → test):**
+- R-73 restored on launch, every element of `moves` validated by replay → `e2e/restore.spec.ts` `R-73 AD-17 session-place-free-letter-redo-tail.json restores after hidden then reloaded` / `… restores after a reload without a hide`; `R-73 AD-17 session-gave-up.json restores after hidden then reloaded` / `… after a reload without a hide` (the rejection side is §2, ticket 3.4).
+- R-73 (UI) exact phase on restore → the same restore titles (primary-action label equals the pre-reload label).
+- R-73 exact phase after Android kills the app → `e2e/game-store.spec.ts` `R-73 kill variant: an Undo on session-place-free-letter-redo-tail.json survives a renderer crash` (extended: all three `loaded()` fields vs page2's `__wordcellBoot`, the Session as written by the Undo exactly, the label).
+- Q-41 each move validated at its own `reached` → `R-73 Q-41 AD-17 session-below-committed-last.json restores after hidden then reloaded` / `… after a reload without a hide`.
+- R-84 the finish-undone record stays removed (persistence half, AD-17) → `R-84 AD-17 session-gave-up.json+history-three-records.json undone restores after hidden then reloaded` / `… after a reload without a hide`.
+- §7.10 preferences stored separately and restored → `§7.10 AD-17 prefs-non-default.json restores after hidden then reloaded` / `… after a reload without a hide`.
+- AD-16 dictionary after first paint (`card-0` and `primary-action` in the DOM) → `e2e/dictionary.spec.ts` `AD-16 the word-list request arrives with card-0 and primary-action in the DOM` (existing).
+- AD-16 a `startHidden` page requests the word list only after `showPage` → `e2e/dictionary.spec.ts` `AD-16 a startHidden page requests the word list only after showPage, exactly once`.
+- AD-16 nothing written before the font check → `e2e/blocking.spec.ts` `AD-16 a healthy fresh launch writes nothing before the font check passes`.
+- AD-16 rejected root before the History notice → `e2e/nav.spec.ts` `§2 AD-13 AD-16 deferred push: a rejected Session plus an unreadable history pushes nothing; New game opens the notice at { wc: 1, launch } of the boot launch` (renamed).
+- AD-17 restore-boundary suite (Session vs the snapshot, history/prefs vs `__wordcellBoot`) → every `e2e/restore.spec.ts` title above; helpers → `e2e/helpers.spec.ts` `AD-17 snapshot reports present keys in fixed order and open() waits past booting`, `AD-17 booted, sessionOf and dictionaryReady read the active store and the ready word list`, `AD-17 animationFrames resolves after the given number of animation frames`.
+- S only (rule-coverage AD-16 row): the double rAF and `whenVisible` themselves.
+- Exempt: none beyond those the rule-coverage rows assign to other entries.
+
 **Acceptance Criteria:**
 - Given the ticket's five restore cases, when `e2e/restore.spec.ts` runs on android, then all ten tests pass under the titles of Design Notes 2.
 - Given the ticket's Acceptance Criteria bullets, when the named AD-16 tests and the extended kill variant run on android, then each passes.
@@ -92,6 +107,8 @@ deferred: []
 - Unapplied minors: (1) `present` in fixed order → DN 1; (2) crash-mode label compare → DN 3 (both labels read after `dictionaryReady`, so no assumption about the phase after Undo); (3) Q-41 title `R-73 Q-41 …` → DN 2; (4) restore flow uses `open()` and `booted()` → DN 2; (5) font predicate folds `__wordcell !== undefined` → DN 5; (6) `animationFrames` helper test named → DN 6; (7) "first sentence" wording is the ticket's own text: no build change, recorded only; (8) hidden-mode exact `activeMs` cites AD-9 in a test comment → DN 2; (9) null `loaded()` history/prefs → assert in-memory defaults → DN 2 step 6; (10) every restore title carries AD-17 → DN 2.
 
 ## Plan Change Log
+
+- 2026-10-01 code-review loop: Review Triage Log Blind row 1's hidden-mode `expect(before.stored).toEqual(session)` could not detect a missing hide flush (the store writes before it assigns state, so stored always equals current) and is removed; the hide flush and paused clock rest on the exact `after.loaded.session` equality. Also: first-launch seed checks in the restore flow, a kind check before the post-reload snapshot, the `animationFrames` self-test now counts exact rAF calls (DN 6's "at least 3" superseded), a `booted`/`sessionOf`/`dictionaryReady` helper case, and the Tests mapping block.
 
 ## Review Triage Log
 

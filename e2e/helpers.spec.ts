@@ -11,7 +11,14 @@ import {
   showPage,
   startHidden,
 } from './helpers/lifecycle';
-import { open, snapshot } from './helpers/restore';
+import {
+  booted,
+  dictionaryReady,
+  open,
+  type Snapshot,
+  sessionOf,
+  snapshot,
+} from './helpers/restore';
 import { captureBoot, fixture, seedStorage } from './helpers/seed';
 import { armStorageSpy, storageWrites } from './helpers/storage-spy';
 import { longPress, touchDrag } from './helpers/touch';
@@ -261,6 +268,32 @@ test.describe('restore helpers', () => {
     } finally {
       await other.close();
     }
+  });
+
+  test('AD-17 booted, sessionOf and dictionaryReady read the active store and the ready word list', async ({
+    page,
+  }) => {
+    await seedStorage(page, { session: fixture('session-place.json') });
+    await open(page);
+    const current = await page.evaluate(() => window.__wordcell?.current());
+    if (current?.kind !== 'active') throw new Error(`store is ${current?.kind}`);
+    expect(sessionOf(await snapshot(page))).toEqual({
+      ...current.session,
+      activeMs: expect.any(Number),
+    });
+    const halted: Snapshot = {
+      stored: null,
+      current: { kind: 'halted' },
+      loaded: { session: null, history: null, prefs: null },
+      present: [],
+    };
+    expect(() => sessionOf(halted)).toThrow('store is halted');
+
+    await page.reload();
+    await booted(page);
+    expect(await page.evaluate(() => window.__wordcell?.current().kind)).not.toBe('booting');
+    await dictionaryReady(page);
+    expect(await page.evaluate(() => window.__wordcell?.dictionaryState())).toBe('ready');
   });
 });
 
@@ -522,21 +555,26 @@ test.describe('hidePage / showPage / pageHide / pageShow', () => {
   test('AD-17 animationFrames resolves after the given number of animation frames', async ({
     page,
   }) => {
-    await page.goto('/');
+    // A blank document: no app code requests frames, so every call counted is the helper's.
+    await page.setContent('<p>frames</p>');
     await page.evaluate(() => {
-      const w = window as unknown as { __frames: number };
-      w.__frames = 0;
-      const tick = () => {
-        w.__frames += 1;
-        requestAnimationFrame(tick);
+      const w = window as unknown as { __raf: { calls: number; fired: number } };
+      w.__raf = { calls: 0, fired: 0 };
+      const raf = window.requestAnimationFrame.bind(window);
+      window.requestAnimationFrame = (callback) => {
+        w.__raf.calls += 1;
+        return raf((time) => {
+          w.__raf.fired += 1;
+          callback(time);
+        });
       };
-      requestAnimationFrame(tick);
     });
-    const frames = () => page.evaluate(() => (window as unknown as { __frames: number }).__frames);
-    const start = await frames();
     await animationFrames(page, 3);
-    const end = await frames();
-    expect(end - start).toBeGreaterThanOrEqual(3);
+    // Exactly three frames requested, each callback fired before the helper resolved.
+    expect(await page.evaluate(() => (window as unknown as { __raf: unknown }).__raf)).toEqual({
+      calls: 3,
+      fired: 3,
+    });
   });
 
   for (const state of ['visible', 'hidden'] as const) {

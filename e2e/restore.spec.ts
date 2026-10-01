@@ -80,6 +80,18 @@ for (const c of CASES) {
       await open(page);
       // The label depends on the word list (Validate precedence), so read it once ready.
       await dictionaryReady(page);
+      const first = await snapshot(page);
+      if (first.current.kind !== 'active') throw new Error(`store is ${first.current.kind}`);
+      // The first launch restored the seed unchanged (no redo tail dropped, no draft committed).
+      if (c.seed.session !== undefined) {
+        const seeded = JSON.parse(c.seed.session);
+        expect(first.loaded.session).toEqual(seeded);
+        expect(sessionOf(first)).toEqual({ ...seeded, activeMs: expect.any(Number) });
+      } else {
+        const seeded = JSON.parse(fixture('prefs-non-default.json'));
+        expect(first.loaded.prefs).toEqual(seeded);
+        expect(first.current.prefs).toEqual(seeded);
+      }
       const primary = page.getByTestId('primary-action');
       if (c.undo) {
         const pre = sessionOf(await snapshot(page));
@@ -93,8 +105,9 @@ for (const c of CASES) {
       const before = await snapshot(page);
       await page.reload();
       await booted(page);
+      // Before snapshot(): loaded() throws while halted, which would hide this clearer failure.
+      expect(await page.evaluate(() => window.__wordcell?.current().kind)).toBe('active');
       const after = await snapshot(page);
-      expect(after.current.kind).toBe('active');
       await dictionaryReady(page);
       const boot = await page.evaluate(() => window.__wordcellBoot);
       if (boot === undefined) throw new Error('window.__wordcellBoot is missing');
@@ -105,9 +118,7 @@ for (const c of CASES) {
       }
       const session = sessionOf(before) as Record<string, unknown>;
       if (mode === 'hidden') {
-        // AD-9: the hide wrote the Session.
-        expect(before.stored).toEqual(session);
-        // AD-9: the clock is paused after hidePage, so the reload's flush adds no time.
+        // AD-9: the hide flushed the Session and paused the clock, so the reload adds no activeMs.
         expect(after.loaded.session).toEqual(session);
       } else {
         expect(after.loaded.session).toEqual({ ...session, activeMs: expect.any(Number) });
@@ -123,7 +134,7 @@ for (const c of CASES) {
 
       // R-73 (UI): the exact phase.
       await expect(primary).toHaveText(label);
-      if (after.current.kind !== 'active') return;
+      if (after.current.kind !== 'active') throw new Error(`store is ${after.current.kind}`);
       expect(after.current.session).toEqual({
         ...(after.loaded.session as Record<string, unknown>),
         activeMs: expect.any(Number),
