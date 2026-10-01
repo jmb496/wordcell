@@ -238,6 +238,8 @@ test.describe('§2 Session rejected', () => {
         await expect(page.getByText(`Seed ${seed}`, { exact: true })).toBeVisible();
         await expect(page.getByTestId('card-0')).toBeVisible();
         expect(await stored(page, 'wordcell:history')).toBe(historyText);
+      } else {
+        expect(await stored(page, 'wordcell:history')).toBeNull();
       }
     });
   }

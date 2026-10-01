@@ -15,7 +15,14 @@ context:
   - '{project-root}/_bmad-output/initiative-wordcell-v1/epic-app-shell/story-score-history-store-and-finish-writes.md'
   - '{project-root}/_bmad-output/specs/spec-epic-3-app-shell/build-notes.md'
 warnings: [oversized]
-deferred: []
+deferred:
+  - summary: >-
+      Q-29 Replay this deal leaves wordcell:history unchanged: Playwright in epic 6 (SPEC CAP-6).
+    evidence: |-
+      Only the shell Vitest `AD-4 replay() and newGame() leave the wordcell:history bytes and the history state unchanged` covers Replay here; shell Vitest is never R-id coverage, and SPEC CAP-6 assigns the Playwright proof to epic 6.
+    location: >-
+      e2e/ (epic 6)
+    severity: low
 baseline_revision: '6da8e6fef7113bc396d93dc98d93ab808519e258'
 ---
 
@@ -71,7 +78,17 @@ baseline_revision: '6da8e6fef7113bc396d93dc98d93ab808519e258'
 - [x] `e2e/history.spec.ts` (new, android only) -- R-84, Q-39 (a)(b), AD-7, §2 unreadable cases; `e2e/lifecycle.spec.ts` -- R-76 and Q-38 history cases; `e2e/game-store.spec.ts`, `e2e/blocking.spec.ts` -- Design Notes 6.
 - [x] Verification section; record outputs in Implementation Notes.
 
-**Tests mapping (sentence → test):** each Playwright AC bullet of the ticket → one test named with its ids (`R-84 …`, `R-76 …`, `Q-39 …` (a) and (b), `AD-7 …` (fresh launch; session-place Undo/Redo/Confirm; gave-up New game; won Undo/Redo/Undo), `§2 …` unreadable, `Q-38 …` history bfcache); each Shell Vitest item of the ticket → one `AD-4`/`AD-6`/`AD-15`/`AD-17` case, plus Design Notes 7.
+**Tests mapping (sentence → test):**
+- R-84 record appended when status becomes won or gaveUp, removed when that finish is undone → `R-84 a Redo onto a win on session-won.json appends its record before the Session in the same task; Undo removes it`, `R-84 an Undo on session-gave-up.json removes its last record from history-three-records.json before the Session` (e2e/history.spec.ts); record content and the Q-43 match are V (`src/engine/history.test.ts`, e.g. `R-84 a won finish un-finished by undo (R-70) removes the last record`, `R-84 finish → un-finish → finish records a won game once`).
+- R-84 persisted beside the Session with its own version; finish and un-finish write both keys synchronously in the same task → the same two R-84 tests (`{ version: 1, records }`, both keys read in one `page.evaluate`, history entry first).
+- R-84 abandoned via R-74 never recorded (Q-29) → `R-74 R-73 Q-29 game-over New game on session-gave-up.json stores a fresh Session at once` (e2e/game-store.spec.ts), `§2 R-74 Q-29 version-unknown …` and `§2 R-74 Q-29 version-unreadable …` (e2e/blocking.spec.ts); Replay this deal: deferred to epic 6 (front matter).
+- R-76 "always recorded for statistics (R-84)" → `R-76 R-84 a finish records the visible-time activeMs of the Session` (e2e/lifecycle.spec.ts).
+- Q-38 history written by another writer, then a persisted pageshow → `Q-38 a persisted pageshow after a same-page wordcell:history write (absent → present) halts` (e2e/lifecycle.spec.ts).
+- Q-39 history first, Session second, written back on a failed Session write → `Q-39 (a) a throwing Session write after a finish removes the history it added`, `Q-39 (b) a throwing Session write after an un-finish writes the seeded history back` (e2e/history.spec.ts); "a crash between the two writes is accepted": exempt (accepted risk, no behaviour).
+- AD-7 no history, not written until its first change → `AD-7 a fresh launch leaves wordcell:history absent`, `AD-7 Undo, Redo and Confirm on session-place.json leave wordcell:history absent`, `AD-7 New game on session-gave-up.json leaves wordcell:history absent`, `AD-7 an un-finish of session-won.json with nothing to remove writes only the Session; Redo, Undo leave the empty history` (e2e/history.spec.ts); the history-less §2 variants in e2e/blocking.spec.ts also assert the key absent after New game.
+- §2 history paragraph: "never overwritten silently" and "a game that finishes meanwhile still finishes; its record is not written" → `§2 an unreadable history (history-invalid-version-unknown.json) is never overwritten and the finishing game is unrecorded` (e2e/history.spec.ts). Deferred: "reported with a message naming its version and a Reset history action" → ticket 8 (CAP-7 History notice); "statistics are unavailable until the player resets it" and "the end screen repeats the message with the Reset action" → P4–6, epic 6 (rule-coverage.md §2; the store's `statistics` undefined while unreadable is S here).
+- Exempt (rule-coverage.md Exempt): R-84 "never replayed", "v1 statistics are only …"; `HISTORY_VERSION` bump rules (versioning process).
+- Shell Vitest: each Shell Vitest item of the ticket → one `AD-4`/`AD-6`/`AD-15`/`AD-17` case, plus Design Notes 7; supplementary, never R-id coverage.
 
 **Acceptance Criteria:**
 - Given the finished change, when `npm run test:all` runs, then it exits 0 and the unit suite stays under 5 s.

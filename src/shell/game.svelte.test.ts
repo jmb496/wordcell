@@ -1090,6 +1090,17 @@ describe('score history store', () => {
     expect(sessionOf(env.game)).not.toBe(before);
   });
 
+  it('AD-4 a give-up finish appends its gaveUp record before the Session write', async () => {
+    const env = await active(JSON.stringify(gaveUp), THREE);
+    env.game.dispatch(UNDO);
+    env.storage.writes.length = 0;
+    expect(env.game.dispatch({ type: 'giveUp' })).toEqual({ changed: true, finished: 'gaveUp' });
+    expect(env.storage.writes.map(([key]) => key)).toEqual([HISTORY, KEY]);
+    const records = recordsOf(env.storage.map.get(HISTORY));
+    expect(records).toHaveLength(threeRecords.records.length);
+    expect(records.at(-1)).toMatchObject({ outcome: 'gaveUp', seed: gaveUp.seed });
+  });
+
   it('AD-4 a non-finishing dispatch with a throwing Session write touches no history key', async () => {
     const env = await active(JSON.stringify(place), THREE);
     env.storage.control.fail = (op, key) =>
@@ -1140,6 +1151,11 @@ describe('score history store', () => {
       const [first, second] = env.storage.writes;
       expect(first?.[0]).toBe(HISTORY);
       if (written !== undefined) expect(first?.[1]).toBe(written);
+      else {
+        const records = recordsOf(first?.[1] ?? undefined);
+        expect(records).toHaveLength(1);
+        expect(records[0]).toMatchObject({ outcome: 'won', seed: won.seed });
+      }
       expect(second).toEqual([HISTORY, stored ?? null]);
       expect(env.storage.writes).toHaveLength(2);
       expect(env.storage.map.get(HISTORY)).toBe(stored);
@@ -1167,6 +1183,31 @@ describe('score history store', () => {
     const state = env.scoreHistory.state;
     if (state.status !== 'ok') throw new Error('history is unreadable');
     expect(state.records).toHaveLength(1);
+    expect(env.storage.map.get(HISTORY)).toBe(
+      serializeHistory({ version: 1, records: state.records }),
+    );
+    expect(env.scoreHistory.isStale()).toBe(false);
+    expect(env.storage.map.get(KEY)).toBe(session);
+    expect(env.game.state).toBe(gameState);
+  });
+
+  it('AD-4 Q-39 a throwing write-back rollback after a throwing Session write propagates its own error', async () => {
+    const env = await active(JSON.stringify(gaveUp), THREE);
+    const errorA = new Error('A');
+    const errorB = new Error('B');
+    let historySets = 0;
+    env.storage.control.fail = (op, key) => {
+      if (op === 'set' && key === KEY) return errorA;
+      if (op === 'set' && key === HISTORY && ++historySets === 2) return errorB;
+      return undefined;
+    };
+    const session = env.storage.map.get(KEY);
+    const gameState = env.game.state;
+    expect(() => env.game.dispatch(UNDO)).toThrow(errorB);
+    // The rollback restores bytes first: its write-back threw, so the shortened records stay in memory.
+    const state = env.scoreHistory.state;
+    if (state.status !== 'ok') throw new Error('history is unreadable');
+    expect(state.records).toEqual(threeRecords.records.slice(0, -1));
     expect(env.storage.map.get(HISTORY)).toBe(
       serializeHistory({ version: 1, records: state.records }),
     );
