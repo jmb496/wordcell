@@ -1,5 +1,5 @@
 # Review log — story-dictionary-load-retry-and-validate (ticket 3.9)
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 223 words, snapshot `story-dictionary-load-retry-and-validate.passes/pass0.md`, HEAD 2d4e499.
 Note: the pull from tickets.toml entry 9 dropped `interface`, `tests`, `owns`; they are passed to reviewers and fixer as intent, and the pass 1 fixer adds them to the Description as `Interface:`, `Tests:`, `Owns:` lines.
@@ -88,3 +88,26 @@ Words (docs): 1464 (6.57 x pass 0; budget 1500)  |  Snapshot: story-dictionary-l
 - Description › Load (Q-42 controlled-SW branch) — On the installed app (service worker in control), after the word list 404s, what does tapping the banner's Reload do? Q-42 says "the banner stays until the next launch" but not whether Reload still retries (which by EXPERIENCE.md hides the banner while it runs and may recover the word list) or does nothing — proposed default: Reload retries in place but the banner stays visible throughout (never reloads the page); recovered words make Validate work again and the banner then hides. Practical effect: the player can still recover without relaunching if the file is back; otherwise nothing visible changes. Epic 7 P7 proves it.
 ### Dropped
 - rejected-root banner case untested (adversarial) — the sentence follows from "rendered straight from state"; no separate test needed (fixer may cut the clause)
+
+## Pass 4 — 2026-10-01
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (empty)  |  Findings: major 2, minor 12, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1484 (6.65 x pass 0; budget 1500)  |  Snapshot: story-dictionary-load-retry-and-validate.passes/pass4.md  |  Fixer: all 4 applied; no runnable command added
+### Applied
+- [major] Interface/Load — retry() on the 404 reload branch: state and promise settlement undefined, so the Promise<void> contract and the stubbed-reload Vitest hang or assert nothing (3 lenses) → fixer 1
+- [major] Load/Interface — `response.text()` rejecting on its own (body error mid-download) not mapped; "any other rejection reaches AD-15" would make it fatal → fixer 2
+- [minor] fontCheck citation inaccurate (no AbortController there) — zero-word reword (2 lenses) → fixer 3
+- [minor] invalid-word route must serve a non-empty list without tan (an empty body is `failed`) → fixer 4
+### Default applied (technical)
+- Reload branch — retry() leaves state 'failed', calls location.reload(), makes no fetch, resolves at once; Vitest asserts state stays 'failed'
+- text() rejection without abort → `failed`; Vitest row: body that errors before abort → failed, no unhandled rejection
+### Unapplied (over budget; for the build plan)
+- Timeout Playwright: running page.clock.install() before goto, not pauseAt
+- R-38 held route released with route.continue() (real list)
+- Invalid-word line directly above primary-action in App.svelte
+- Invalid-word clearing by edit/Redo/successful Validate and no-op covered by the game.svelte.test.ts feedback Vitest
+- AD-16 request counting via page.on('request') registered before goto; in-load case is structurally trivial
+- Stalled body after abort: rely on controller.abort() erroring the body stream
+- Spine AD-15 "like the dictionary fetch (AD-8)" reads as fatal timeout; AD-8 says `failed` — spine wording bug to report (the ticket follows AD-8)
+- game-store.spec.ts New game test's final `toHaveText('Validate')` waits for 'ready'
+### Dropped
+- none
