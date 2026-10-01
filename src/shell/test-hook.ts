@@ -1,5 +1,6 @@
 // AD-17 test hook: installed only under `vite dev` and the `build:test` build; read-only accessors
-// delegate to the stores (update `e2e/globals.d.ts` in the same change).
+// delegate to the stores (update `e2e/globals.d.ts` in the same change); `history` comes from
+// the score-history store through the game store (AD-6).
 import { type Current, game, type Loaded } from './game.svelte';
 
 declare global {

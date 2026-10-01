@@ -1,4 +1,8 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import historyVersionUnknown from '../../fixtures/history-invalid-version-unknown.json' with {
+  type: 'json',
+};
+import threeRecords from '../../fixtures/history-three-records.json' with { type: 'json' };
 import composing from '../../fixtures/session-composing.json' with { type: 'json' };
 import gaveUp from '../../fixtures/session-gave-up.json' with { type: 'json' };
 import idleFresh from '../../fixtures/session-idle-fresh.json' with { type: 'json' };
@@ -14,12 +18,21 @@ import {
   type Command,
   createSession,
   EN,
+  parseHistory,
   parseSession,
   type Session,
+  serializeHistory,
   serializeSession,
+  statistics,
 } from '../engine/index';
 
 const KEY = 'wordcell:session';
+const HISTORY = 'wordcell:history';
+// AD-17 `current().history` for a never-written history.
+const EMPTY = { version: 1, records: [] };
+// Q-39 harness: a fake storage `control.fail` that throws on every setItem.
+const FAIL_SETS = (op: 'set' | 'remove') =>
+  op === 'set' ? new Error('setItem failed') : undefined;
 const UNDO: Command = { type: 'undo' };
 const REDO: Command = { type: 'redo' };
 // The AD-2 TABLE's R-71 no-op on session-composing.json.
@@ -44,24 +57,38 @@ function parsed(text: string): Session {
   return result.session;
 }
 
-type Options = { stored?: string; storage?: Partial<FakeStorage>; seed?: number };
+type Options = {
+  stored?: string;
+  history?: string;
+  storage?: Partial<FakeStorage>;
+  seed?: number;
+};
 type FakeStorage = ReturnType<typeof fakeStorage>;
 
-function fakeStorage(stored: string | undefined) {
+// `writes` logs setItem and removeItem (as `[key, null]`) in order; `control.fail` returns the
+// error a call throws before it changes anything (undefined: the call succeeds).
+function fakeStorage(stored: string | undefined, historyText?: string) {
   const map = new Map<string, string>(stored === undefined ? [] : [[KEY, stored]]);
-  const writes: [string, string][] = [];
-  const control = { failWrites: false };
+  if (historyText !== undefined) map.set(HISTORY, historyText);
+  const writes: [string, string | null][] = [];
+  const control: { fail: (op: 'set' | 'remove', key: string) => Error | undefined } = {
+    fail: () => undefined,
+  };
   return {
     map,
     writes,
     control,
     getItem: (key: string) => map.get(key) ?? null,
     setItem: (key: string, value: string) => {
-      if (control.failWrites) throw new Error('setItem failed');
+      const error = control.fail('set', key);
+      if (error !== undefined) throw error;
       writes.push([key, value]);
       map.set(key, value);
     },
     removeItem: (key: string) => {
+      const error = control.fail('remove', key);
+      if (error !== undefined) throw error;
+      writes.push([key, null]);
       map.delete(key);
     },
   };
@@ -79,7 +106,7 @@ async function setup(options: Options = {}) {
   });
   vi.stubGlobal('document', doc);
   vi.resetModules();
-  const storage = { ...fakeStorage(options.stored), ...options.storage };
+  const storage = { ...fakeStorage(options.stored, options.history), ...options.storage };
   vi.stubGlobal('localStorage', storage);
   const time = { now: 0 };
   vi.stubGlobal('performance', { now: () => time.now });
@@ -93,6 +120,7 @@ async function setup(options: Options = {}) {
     });
   }
   const { game } = await import('./game.svelte');
+  const { scoreHistory } = await import('./history.svelte');
   const clock = await import('./clock');
   // A synthetic `storage` event (another window's write) dispatched on the stubbed window.
   const storageEvent = (key: string | null, area: object, newValue: string | null = 'x') => {
@@ -111,13 +139,20 @@ async function setup(options: Options = {}) {
     if (listeners.length !== 1) throw new Error(`${listeners.length} ${type} listeners`);
     listeners[0]?.(event);
   };
-  return { game, clock, storage, time, storageEvent, doc, added, fire };
+  return { game, scoreHistory, clock, storage, time, storageEvent, doc, added, fire };
 }
 
-async function active(stored: string) {
-  const env = await setup({ stored });
+async function active(stored: string, historyText?: string) {
+  const env = await setup({ stored, history: historyText });
   env.game.load();
   return env;
+}
+
+// The active Session reported by `current()`; throws unless active.
+function sessionOf(game: Awaited<ReturnType<typeof setup>>['game']): Session {
+  const now = game.current();
+  if (now.kind !== 'active') throw new Error(`not active: ${now.kind}`);
+  return now.session;
 }
 
 afterEach(() => {
@@ -154,9 +189,9 @@ describe('game store', () => {
     const session = parsed(text ?? '');
     expect(session.seed).toBe(7);
     expect(session.activeMs).toBe(0);
-    expect(game.current()).toEqual({ kind: 'active', session });
+    expect(game.current()).toEqual({ kind: 'active', session, history: EMPTY });
     expect(JSON.parse(text ?? '')).toEqual(session);
-    expect(game.loaded()).toEqual({ session: null });
+    expect(game.loaded()).toEqual({ session: null, history: null });
   });
 
   for (const seed of [0, 4294967295]) {
@@ -166,13 +201,13 @@ describe('game store', () => {
       const text = storage.map.get(KEY) ?? '';
       expect(parseSession(text, EN).ok).toBe(true);
       expect(parsed(text).seed).toBe(seed);
-      expect(game.current()).toEqual({ kind: 'active', session: parsed(text) });
+      expect(game.current()).toEqual({ kind: 'active', session: parsed(text), history: EMPTY });
     });
   }
 
   it('AD-4 a throwing first-launch write rethrows, stays booting and loaded() still throws', async () => {
     const { game, storage } = await setup();
-    storage.control.failWrites = true;
+    storage.control.fail = FAIL_SETS;
     expect(() => game.load()).toThrow('setItem failed');
     expect(game.state).toEqual({ kind: 'booting' });
     expect(() => game.loaded()).toThrow();
@@ -183,8 +218,8 @@ describe('game store', () => {
     const text = JSON.stringify(place);
     const { game, storage } = await active(text);
     expect(storage.writes).toEqual([]);
-    expect(game.current()).toEqual({ kind: 'active', session: JSON.parse(text) });
-    expect(game.loaded()).toEqual({ session: JSON.parse(text) });
+    expect(game.current()).toEqual({ kind: 'active', session: JSON.parse(text), history: EMPTY });
+    expect(game.loaded()).toEqual({ session: JSON.parse(text), history: null });
   });
 
   it('AD-4 a version-unknown load is rejected with its version and writes nothing', async () => {
@@ -193,7 +228,7 @@ describe('game store', () => {
     const reason = { reason: 'version-unknown', version: 99 };
     expect(game.state).toEqual({ kind: 'rejected', reason });
     expect(game.current()).toEqual({ kind: 'rejected', reason });
-    expect(game.loaded()).toEqual({ session: { rejected: reason } });
+    expect(game.loaded()).toEqual({ session: { rejected: reason }, history: null });
     expect(game.view).toBeUndefined();
     expect(storage.writes).toEqual([]);
     expect(storage.map.get(KEY)).toBe(text);
@@ -203,7 +238,7 @@ describe('game store', () => {
     const { game, storage } = await active(JSON.stringify(invalidNull));
     const reason = { reason: 'version-unreadable' };
     expect(game.current()).toEqual({ kind: 'rejected', reason });
-    expect(game.loaded()).toEqual({ session: { rejected: reason } });
+    expect(game.loaded()).toEqual({ session: { rejected: reason }, history: null });
     expect(storage.writes).toEqual([]);
   });
 
@@ -211,7 +246,7 @@ describe('game store', () => {
     const { game, storage } = await active(JSON.stringify(invalidLastOnly));
     const reason = { reason: 'replay-failed', version: 1 };
     expect(game.current()).toEqual({ kind: 'rejected', reason });
-    expect(game.loaded()).toEqual({ session: { rejected: reason } });
+    expect(game.loaded()).toEqual({ session: { rejected: reason }, history: null });
     expect(storage.writes).toEqual([]);
   });
 
@@ -244,14 +279,14 @@ describe('game store', () => {
     const expected = apply(parsed(text), UNDO, { lang: EN }).session;
     expect(game.dispatch(UNDO)).toEqual({ changed: true });
     expect(storage.writes).toEqual([[KEY, serializeSession(expected)]]);
-    expect(game.current()).toEqual({ kind: 'active', session: expected });
+    expect(game.current()).toEqual({ kind: 'active', session: expected, history: EMPTY });
   });
 
   it('AD-4 a throwing session write rethrows and leaves game.state the same reference', async () => {
     const text = JSON.stringify(place);
     const { game, storage } = await active(text);
     const before = game.state;
-    storage.control.failWrites = true;
+    storage.control.fail = FAIL_SETS;
     expect(() => game.dispatch(UNDO)).toThrow('setItem failed');
     expect(game.state).toBe(before);
     expect(storage.map.get(KEY)).toBe(text);
@@ -273,7 +308,7 @@ describe('game store', () => {
     expect(game.dispatch(NO_OP)).toEqual({ changed: false });
     const expected = { ...parsed(text), activeMs: composing.activeMs + 1000 };
     expect(storage.writes).toEqual([[KEY, serializeSession(expected)]]);
-    expect(game.current()).toEqual({ kind: 'active', session: expected });
+    expect(game.current()).toEqual({ kind: 'active', session: expected, history: EMPTY });
   });
 
   it('AD-4 dispatch takes and accrues the clock ms; the written Session is Undo of the accrued one', async () => {
@@ -285,7 +320,7 @@ describe('game store', () => {
     const expected = apply(accrue(parsed(text), 1000, EN), UNDO, { lang: EN }).session;
     expect(expected.activeMs).toBe(place.activeMs + 1000);
     expect(storage.writes).toEqual([[KEY, serializeSession(expected)]]);
-    expect(game.current()).toEqual({ kind: 'active', session: expected });
+    expect(game.current()).toEqual({ kind: 'active', session: expected, history: EMPTY });
   });
 
   it('AD-4 dispatch order: accrue runs before apply, so a Redo onto a win keeps the accrued ms', async () => {
@@ -318,14 +353,14 @@ describe('game store', () => {
     const text = JSON.stringify(place);
     const { game } = await active(text);
     game.dispatch(UNDO);
-    expect(game.loaded()).toEqual({ session: JSON.parse(text) });
-    expect(game.current()).not.toEqual({ kind: 'active', session: JSON.parse(text) });
+    expect(game.loaded()).toEqual({ session: JSON.parse(text), history: null });
+    expect(sessionOf(game)).not.toEqual(JSON.parse(text));
   });
 });
 
 describe('game store newGame() and replay()', () => {
   const REJECTED = JSON.stringify(invalidNull);
-  const REJECT_LAUNCH = { session: { rejected: { reason: 'version-unreadable' } } };
+  const REJECT_LAUNCH = { session: { rejected: { reason: 'version-unreadable' } }, history: null };
 
   async function rejected(seed: number) {
     const env = await setup({ stored: REJECTED, seed });
@@ -358,7 +393,11 @@ describe('game store newGame() and replay()', () => {
       [KEY, ...OTHER_KEYS.map(([key]) => key)].sort(),
     );
     for (const [key, value] of OTHER_KEYS) expect(env.storage.map.get(key)).toBe(value);
-    expect(env.game.current()).toEqual({ kind: 'active', session: JSON.parse(text) });
+    expect(env.game.current()).toEqual({
+      kind: 'active',
+      session: JSON.parse(text),
+      history: EMPTY,
+    });
   }
 
   it('AD-4 newGame() from active stores createSession(newSeed()) before it returns', async () => {
@@ -411,14 +450,14 @@ describe('game store newGame() and replay()', () => {
     const text = JSON.stringify(place);
     const { game, storage } = await setup({ stored: text, seed: 7 });
     game.load();
-    storage.control.failWrites = true;
+    storage.control.fail = FAIL_SETS;
     expect(() => game.newGame()).toThrow('setItem failed');
     expect(storage.map.get(KEY)).toBe(text);
   });
 
   it('AD-4 a throwing write in newGame() from rejected rethrows and leaves the stored bytes unchanged', async () => {
     const { game, storage } = await rejected(7);
-    storage.control.failWrites = true;
+    storage.control.fail = FAIL_SETS;
     expect(() => game.newGame()).toThrow('setItem failed');
     expect(storage.map.get(KEY)).toBe(REJECTED);
   });
@@ -426,7 +465,7 @@ describe('game store newGame() and replay()', () => {
   it('AD-4 a throwing write in replay() rethrows and leaves the stored bytes unchanged', async () => {
     const text = JSON.stringify(place);
     const { game, storage } = await active(text);
-    storage.control.failWrites = true;
+    storage.control.fail = FAIL_SETS;
     expect(() => game.replay()).toThrow('setItem failed');
     expect(storage.map.get(KEY)).toBe(text);
   });
@@ -519,12 +558,12 @@ describe('game store halt', () => {
   const HALTED = { kind: 'halted' };
 
   const beforeLoad: [string, string | undefined, object][] = [
-    ['the key absent', undefined, { session: null }],
-    ['a valid Session', JSON.stringify(place), { session: place }],
+    ['the key absent', undefined, { session: null, history: null }],
+    ['a valid Session', JSON.stringify(place), { session: place, history: null }],
     [
       'a rejected Session',
       JSON.stringify(invalidNull),
-      { session: { rejected: { reason: 'version-unreadable' } } },
+      { session: { rejected: { reason: 'version-unreadable' } }, history: null },
     ],
   ];
   for (const [name, stored, launch] of beforeLoad) {
@@ -742,6 +781,7 @@ describe('game store lifecycle', () => {
       expect(env.game.current()).toEqual({
         kind: 'active',
         session: parsed(env.storage.map.get(KEY) ?? ''),
+        history: EMPTY,
       });
       expectNotStale(env, 'active');
     });
@@ -881,11 +921,11 @@ describe('game store lifecycle', () => {
       throw error;
     });
     env.game.registerLifecycle();
-    const before = env.game.current();
+    const before = env.game.state;
     env.time.now += 100;
     expect(() => env.fire('pagehide')).toThrow(error);
     expect(env.storage.writes).toEqual([]);
-    expect(env.game.current()).toBe(before);
+    expect(env.game.state).toBe(before);
     // Neither taken nor paused: the clock still holds the 100 ms and keeps running.
     expect(env.clock.peek(env.time.now)).toBe(100);
     env.time.now += 50;
@@ -919,14 +959,14 @@ describe('game store lifecycle', () => {
     const text = JSON.stringify(place);
     const env = await active(text);
     env.game.registerLifecycle();
-    const before = env.game.current();
+    const before = env.game.state;
     env.time.now += 100;
-    env.storage.control.failWrites = true;
+    env.storage.control.fail = FAIL_SETS;
     env.doc.visibilityState = 'hidden';
     expect(() => env.fire('visibilitychange')).toThrow('setItem failed');
     expect(env.storage.map.get(KEY)).toBe(text);
-    expect(env.game.current()).toBe(before);
-    expect(env.game.current()).toEqual({ kind: 'active', session: place });
+    expect(env.game.state).toBe(before);
+    expect(env.game.current()).toEqual({ kind: 'active', session: place, history: EMPTY });
   });
 
   it('AD-9 the hide flush while rejected writes nothing', async () => {
@@ -938,5 +978,332 @@ describe('game store lifecycle', () => {
     env.fire('visibilitychange');
     expect(env.storage.writes).toEqual([]);
     expect(env.game.current().kind).toBe('rejected');
+  });
+});
+
+describe('score history store', () => {
+  const THREE = JSON.stringify(threeRecords);
+  const UNKNOWN = JSON.stringify(historyVersionUnknown);
+  const UNKNOWN_REASON = { reason: 'version-unknown', version: 2 };
+  const EMPTY_TEXT = '{"version":1,"records":[]}';
+  const PERSISTED = { persisted: true };
+  type Env = Awaited<ReturnType<typeof setup>>;
+
+  const historyWrites = (env: Env) => env.storage.writes.filter(([key]) => key === HISTORY);
+  const recordsOf = (text: string | undefined) => JSON.parse(text ?? '').records;
+
+  // session-won.json with no history, after the Undo (un-finish, nothing to remove).
+  async function unfinishedWon(): Promise<Env> {
+    const env = await active(JSON.stringify(won));
+    env.game.dispatch(UNDO);
+    expect(historyWrites(env)).toEqual([]);
+    return env;
+  }
+
+  const loads: [string, () => Promise<Env>, object, object | null, object][] = [
+    [
+      'absent',
+      () => active(JSON.stringify(place)),
+      { status: 'ok', records: [] },
+      null,
+      { kind: 'active', session: place, history: EMPTY },
+    ],
+    [
+      'ok (history-three-records.json)',
+      () => active(JSON.stringify(place), THREE),
+      { status: 'ok', records: threeRecords.records },
+      threeRecords,
+      { kind: 'active', session: place, history: threeRecords },
+    ],
+    [
+      'unreadable (history-invalid-version-unknown.json)',
+      () => active(JSON.stringify(place), UNKNOWN),
+      { status: 'unreadable', reason: UNKNOWN_REASON },
+      { rejected: UNKNOWN_REASON },
+      { kind: 'active', session: place, history: { rejected: UNKNOWN_REASON } },
+    ],
+    [
+      'beside a rejected Session',
+      () => active(JSON.stringify(invalidNull), THREE),
+      { status: 'ok', records: threeRecords.records },
+      threeRecords,
+      { kind: 'rejected', reason: { reason: 'version-unreadable' } },
+    ],
+    [
+      'halted during boot',
+      async () => {
+        const env = await setup({ stored: JSON.stringify(place), history: THREE });
+        env.storageEvent(KEY, env.storage);
+        env.game.load();
+        return env;
+      },
+      { status: 'ok', records: threeRecords.records },
+      threeRecords,
+      { kind: 'halted' },
+    ],
+  ];
+  for (const [name, start, state, launch, now] of loads) {
+    it(`AD-17 load with the history ${name} sets the state, writes no history and isStale() turns true on another write`, async () => {
+      const env = await start();
+      expect(env.scoreHistory.state).toEqual(state);
+      expect(env.game.loaded().history).toEqual(launch);
+      expect(env.game.current()).toEqual(now);
+      expect(historyWrites(env)).toEqual([]);
+      expect(() => env.scoreHistory.load()).toThrow('AD-6 load() called twice');
+      expect(env.scoreHistory.isStale()).toBe(false);
+      env.storage.map.set(HISTORY, 'another writer');
+      expect(env.scoreHistory.isStale()).toBe(true);
+    });
+  }
+
+  it('AD-4 a first launch loads the absent history and writes only wordcell:session', async () => {
+    const env = await setup({ seed: 7 });
+    env.game.load();
+    expect(env.storage.writes.map(([key]) => key)).toEqual([KEY]);
+    expect(env.scoreHistory.state).toEqual({ status: 'ok', records: [] });
+    expect(env.game.loaded()).toEqual({ session: null, history: null });
+  });
+
+  it('AD-4 a finish writes the history before the Session; an un-finish of the recorded game removes it', async () => {
+    const env = await unfinishedWon();
+    const before = sessionOf(env.game);
+    env.storage.writes.length = 0;
+    expect(env.game.dispatch(REDO)).toEqual({ changed: true, finished: 'won' });
+    const [first, second] = env.storage.writes;
+    expect(env.storage.writes).toHaveLength(2);
+    expect(first?.[0]).toBe(HISTORY);
+    expect(second?.[0]).toBe(KEY);
+    const record = recordsOf(first?.[1] ?? '')[0];
+    const { activeMs: _ms, ...rest } = record;
+    const { activeMs: _fixtureMs, ...fixtureRest } = threeRecords.records[0] ?? {};
+    expect(rest).toEqual(fixtureRest);
+    expect(record.activeMs).toBe(sessionOf(env.game).activeMs);
+    expect(env.scoreHistory.state).toEqual({ status: 'ok', records: [record] });
+    expect(env.game.current()).toEqual({
+      kind: 'active',
+      session: sessionOf(env.game),
+      history: { version: 1, records: [record] },
+    });
+    env.game.dispatch(UNDO);
+    expect(env.storage.map.get(HISTORY)).toBe(EMPTY_TEXT);
+    expect(env.scoreHistory.state).toEqual({ status: 'ok', records: [] });
+    expect(sessionOf(env.game)).not.toBe(before);
+  });
+
+  it('AD-4 a non-finishing dispatch with a throwing Session write touches no history key', async () => {
+    const env = await active(JSON.stringify(place), THREE);
+    env.storage.control.fail = (op, key) =>
+      op === 'set' && key === KEY ? new Error('session failed') : undefined;
+    expect(() => env.game.dispatch(UNDO)).toThrow('session failed');
+    expect(historyWrites(env)).toEqual([]);
+    expect(env.storage.map.get(HISTORY)).toBe(THREE);
+  });
+
+  it('AD-4 a throwing history write on a finish propagates before the Session write; both keys and states unchanged', async () => {
+    const env = await unfinishedWon();
+    const session = env.storage.map.get(KEY);
+    const gameState = env.game.state;
+    const historyState = env.scoreHistory.state;
+    env.storage.writes.length = 0;
+    env.storage.control.fail = (op, key) =>
+      op === 'set' && key === HISTORY ? new Error('history failed') : undefined;
+    expect(() => env.game.dispatch(REDO)).toThrow('history failed');
+    expect(env.storage.writes).toEqual([]);
+    expect(env.storage.map.get(KEY)).toBe(session);
+    expect(env.storage.map.has(HISTORY)).toBe(false);
+    expect(env.game.state).toBe(gameState);
+    expect(env.scoreHistory.state).toBe(historyState);
+    expect(env.game.isStale()).toBe(false);
+    expect(env.scoreHistory.isStale()).toBe(false);
+  });
+
+  const rollbacks: [string, () => Promise<Env>, Command, string | undefined][] = [
+    ['absent history (remove)', unfinishedWon, REDO, undefined],
+    [
+      'seeded history (write-back)',
+      () => active(JSON.stringify(gaveUp), THREE),
+      UNDO,
+      JSON.stringify({ ...threeRecords, records: threeRecords.records.slice(0, -1) }),
+    ],
+  ];
+  for (const [name, start, command, written] of rollbacks) {
+    it(`AD-4 Q-39 a throwing Session write after the history write rolls the ${name} back and rethrows`, async () => {
+      const env = await start();
+      const stored = env.storage.map.get(HISTORY);
+      const session = env.storage.map.get(KEY);
+      const gameState = env.game.state;
+      const historyState = env.scoreHistory.state;
+      env.storage.writes.length = 0;
+      env.storage.control.fail = (op, key) =>
+        op === 'set' && key === KEY ? new Error('session failed') : undefined;
+      expect(() => env.game.dispatch(command)).toThrow('session failed');
+      const [first, second] = env.storage.writes;
+      expect(first?.[0]).toBe(HISTORY);
+      if (written !== undefined) expect(first?.[1]).toBe(written);
+      expect(second).toEqual([HISTORY, stored ?? null]);
+      expect(env.storage.writes).toHaveLength(2);
+      expect(env.storage.map.get(HISTORY)).toBe(stored);
+      expect(env.storage.map.get(KEY)).toBe(session);
+      expect(env.game.state).toBe(gameState);
+      expect(env.scoreHistory.state).toBe(historyState);
+      expect(env.game.isStale()).toBe(false);
+      expect(env.scoreHistory.isStale()).toBe(false);
+    });
+  }
+
+  it('AD-4 Q-39 a throwing rollback after a throwing Session write propagates its own error', async () => {
+    const env = await unfinishedWon();
+    const errorA = new Error('A');
+    const errorB = new Error('B');
+    env.storage.control.fail = (op, key) => {
+      if (op === 'set' && key === KEY) return errorA;
+      if (op === 'remove' && key === HISTORY) return errorB;
+      return undefined;
+    };
+    const session = env.storage.map.get(KEY);
+    const gameState = env.game.state;
+    expect(() => env.game.dispatch(REDO)).toThrow(errorB);
+    // The rollback restores bytes first: its remove threw, so the appended record stays in memory.
+    const state = env.scoreHistory.state;
+    if (state.status !== 'ok') throw new Error('history is unreadable');
+    expect(state.records).toHaveLength(1);
+    expect(env.storage.map.get(HISTORY)).toBe(
+      serializeHistory({ version: 1, records: state.records }),
+    );
+    expect(env.scoreHistory.isStale()).toBe(false);
+    expect(env.storage.map.get(KEY)).toBe(session);
+    expect(env.game.state).toBe(gameState);
+  });
+
+  const own: [string, (env: Env) => void][] = [
+    [
+      'finish',
+      (env) => {
+        env.game.dispatch(UNDO);
+        env.game.dispatch(REDO);
+        expect(env.storage.map.has(HISTORY)).toBe(true);
+      },
+    ],
+    [
+      'reset()',
+      (env) => {
+        env.scoreHistory.reset();
+        expect(env.storage.map.get(HISTORY)).toBe(EMPTY_TEXT);
+      },
+    ],
+  ];
+  for (const [name, act] of own) {
+    it(`AD-4 an own ${name}, then a persisted pageshow does not halt`, async () => {
+      const env = await active(JSON.stringify(won));
+      env.game.registerLifecycle();
+      act(env);
+      expect(env.scoreHistory.isStale()).toBe(false);
+      env.fire('pageshow', PERSISTED);
+      expect(env.game.current().kind).toBe('active');
+      expect(env.game.haltCause).toBeUndefined();
+    });
+  }
+
+  const others: [string, string | undefined, (env: Env) => void][] = [
+    ['absent → present', undefined, (env) => env.storage.map.set(HISTORY, THREE)],
+    ['changed', THREE, (env) => env.storage.map.set(HISTORY, EMPTY_TEXT)],
+    ['removed', THREE, (env) => env.storage.map.delete(HISTORY)],
+  ];
+  for (const [name, historyText, change] of others) {
+    it(`AD-4 wordcell:history ${name} by another writer, then a persisted pageshow halts with another-window`, async () => {
+      const env = await active(JSON.stringify(place), historyText);
+      env.game.registerLifecycle();
+      change(env);
+      expect(env.game.isStale()).toBe(false);
+      expect(env.scoreHistory.isStale()).toBe(true);
+      env.fire('pageshow', PERSISTED);
+      expect(env.game.current()).toEqual({ kind: 'halted' });
+      expect(env.game.haltCause).toBe('another-window');
+    });
+  }
+
+  it('AD-4 replay() and newGame() leave the wordcell:history bytes and the history state unchanged', async () => {
+    const env = await active(JSON.stringify(gaveUp), THREE);
+    const state = env.scoreHistory.state;
+    env.game.replay();
+    env.game.newGame();
+    expect(historyWrites(env)).toEqual([]);
+    expect(env.storage.map.get(HISTORY)).toBe(THREE);
+    expect(env.scoreHistory.state).toBe(state);
+  });
+
+  it('AD-6 recorded: a loaded finished game with no record is false; Redo onto it true; Undo false', async () => {
+    const env = await active(JSON.stringify(won));
+    expect(env.game.view?.status).toBe('won');
+    expect(env.scoreHistory.recorded).toBe(false);
+    env.game.dispatch(UNDO);
+    expect(env.scoreHistory.recorded).toBe(false);
+    env.game.dispatch(REDO);
+    expect(env.scoreHistory.recorded).toBe(true);
+    env.game.dispatch(UNDO);
+    expect(env.scoreHistory.recorded).toBe(false);
+  });
+
+  it('AD-6 recorded is true for session-gave-up.json beside its record and false after the Undo removes it', async () => {
+    const env = await active(JSON.stringify(gaveUp), THREE);
+    expect(env.scoreHistory.recorded).toBe(true);
+    env.game.dispatch(UNDO);
+    expect(env.scoreHistory.recorded).toBe(false);
+    expect(recordsOf(env.storage.map.get(HISTORY))).toEqual(threeRecords.records.slice(0, -1));
+  });
+
+  it('AD-6 statistics equals the engine statistics(records) for history-three-records.json', async () => {
+    const env = await active(JSON.stringify(place), THREE);
+    const result = parseHistory(THREE);
+    if (!result.ok) throw new Error(`fixture does not parse: ${result.reason}`);
+    expect(env.scoreHistory.statistics).toEqual(statistics(result.history.records));
+  });
+
+  it('AD-6 while unreadable: recorded false, statistics undefined and a finish writes no history', async () => {
+    const env = await active(JSON.stringify(won), UNKNOWN);
+    expect(env.scoreHistory.recorded).toBe(false);
+    expect(env.scoreHistory.statistics).toBeUndefined();
+    env.game.dispatch(UNDO);
+    expect(env.game.dispatch(REDO)).toEqual({ changed: true, finished: 'won' });
+    expect(historyWrites(env)).toEqual([]);
+    expect(env.storage.map.get(HISTORY)).toBe(UNKNOWN);
+    expect(env.scoreHistory.recorded).toBe(false);
+  });
+
+  it('AD-6 an unreadable load, then reset(): the empty history is written and a following finish is recorded', async () => {
+    const env = await active(JSON.stringify(won), UNKNOWN);
+    env.scoreHistory.reset();
+    expect(env.storage.map.get(HISTORY)).toBe(EMPTY_TEXT);
+    expect(EMPTY_TEXT).toBe(serializeHistory({ version: 1, records: [] }));
+    expect(env.scoreHistory.state).toEqual({ status: 'ok', records: [] });
+    expect(env.scoreHistory.statistics).toEqual(statistics([]));
+    expect(env.game.loaded().history).toEqual({ rejected: UNKNOWN_REASON });
+    env.game.dispatch(UNDO);
+    env.game.dispatch(REDO);
+    expect(env.scoreHistory.recorded).toBe(true);
+    expect(recordsOf(env.storage.map.get(HISTORY))).toHaveLength(1);
+  });
+
+  it('AD-6 reset() while rejected writes the empty history and sets the state ok', async () => {
+    const env = await active(JSON.stringify(invalidNull), THREE);
+    env.scoreHistory.reset();
+    expect(env.storage.writes).toEqual([[HISTORY, EMPTY_TEXT]]);
+    expect(env.scoreHistory.state).toEqual({ status: 'ok', records: [] });
+    expect(env.game.current().kind).toBe('rejected');
+  });
+
+  it('AD-15 reset() throws while booting and writes nothing', async () => {
+    const env = await setup({ stored: JSON.stringify(place) });
+    expect(() => env.scoreHistory.reset()).toThrow('AD-15 reset() while booting');
+    expect(env.storage.writes).toEqual([]);
+  });
+
+  it('AD-15 while halted, reset() and dispatch throw and no wordcell:history write happens', async () => {
+    const env = await unfinishedWon();
+    env.game.halt('fatal', 'boom');
+    expect(() => env.scoreHistory.reset()).toThrow('AD-15 reset() while halted');
+    expect(() => env.game.dispatch(REDO)).toThrow('while halted');
+    expect(historyWrites(env)).toEqual([]);
+    expect(env.storage.map.has(HISTORY)).toBe(false);
   });
 });

@@ -156,9 +156,10 @@ test.describe('§2 Session rejected', () => {
       history: 'history-three-records.json',
     },
     {
-      name: '§2 version-unreadable: the rejected root names no version; New game stores a fresh Session',
+      name: '§2 R-74 Q-29 version-unreadable: the rejected root names no version; New game stores a fresh Session and leaves the history',
       session: 'session-invalid-null.json',
       body: "It was saved in a format this version of WordCell can't read. It stays saved until you start a new game.",
+      history: 'history-three-records.json',
     },
     {
       name: '§2 pre-replay AD-7 check (version 1): the rejected root shows the replay-failed text; New game stores a fresh Session',
@@ -223,7 +224,11 @@ test.describe('§2 Session rejected', () => {
       expect(Number.isInteger(seed)).toBe(true);
       expect(seed).toBeGreaterThanOrEqual(0);
       expect(seed).toBeLessThanOrEqual(4294967295);
-      expect(after.current).toEqual({ kind: 'active', session: after.stored });
+      expect(after.current).toEqual({
+        kind: 'active',
+        session: after.stored,
+        history: historyText !== undefined ? JSON.parse(historyText) : { version: 1, records: [] },
+      });
       await expect(page.getByTestId('card-0')).toBeVisible();
       await expect(page.getByRole('alertdialog')).toHaveCount(0);
 
@@ -270,6 +275,7 @@ test.describe('Q-38 single instance', () => {
     expect(await page1.evaluate(() => window.__wordcell?.current())).toEqual({
       kind: 'active',
       session: session2,
+      history: { version: 1, records: [] },
     });
   });
 
@@ -296,7 +302,10 @@ test.describe('Q-38 single instance', () => {
     await expectAnotherWindow(page1);
     await expectNoBoard(page1);
     expect(await stored(page1)).toBeNull();
-    expect(await page1.evaluate(() => window.__wordcell?.loaded())).toEqual({ session: null });
+    expect(await page1.evaluate(() => window.__wordcell?.loaded())).toEqual({
+      session: null,
+      history: null,
+    });
 
     const dialog = await page1.getByRole('alertdialog').elementHandle();
     if (dialog === null) throw new Error('no alertdialog');

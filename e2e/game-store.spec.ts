@@ -54,7 +54,7 @@ test('R-74 a fresh context stores a uint32-seeded Session before any input, equa
     gaveUp: false,
     cursor: { index: 0, phase: 'idle' },
   });
-  expect(snap.loaded).toEqual({ session: null });
+  expect(snap.loaded).toEqual({ session: null, history: null });
 });
 
 test('R-74 two fresh contexts get different seeds', async ({ page, browser }) => {
@@ -108,7 +108,7 @@ test('R-73 Undo, Redo and Confirm on session-place.json are each stored before t
 });
 
 // Interim: entry 9 rewrites the primary-action label assertions (dictionary loading/failed).
-test('R-74 R-73 game-over New game on session-gave-up.json stores a fresh Session at once', async ({
+test('R-74 R-73 Q-29 game-over New game on session-gave-up.json stores a fresh Session at once', async ({
   page,
 }) => {
   const historyText = fixture('history-three-records.json');
@@ -210,7 +210,7 @@ test('R-73 kill variant: an Undo on session-place-free-letter-redo-tail.json sur
   const page2 = await page.context().newPage();
   await open(page2);
   const restored = await snapshot(page2);
-  expect(restored.loaded).toEqual({ session: written });
+  expect(restored.loaded).toEqual({ session: written, history: null });
   expect(sessionOf(restored)).toEqual(written);
 });
 

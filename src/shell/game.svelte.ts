@@ -7,7 +7,10 @@
 // `main.ts` after `load()`, AD-16) adds the AD-9 visibilitychange/pagehide/pageshow listeners that
 // run the visible-time clock and the hide flush (`registerBeforeHide` callbacks run first);
 // `whenVisible()` and `isStale()` (Q-38 bfcache) are owned here, and `staleOwners()` is the OR
-// list of key-owner checks that entries 7 and 10 extend.
+// list of key-owner checks that entry 10 extends. Score history (AD-6): `load()` calls
+// `scoreHistory.load()` right after the Session read in every branch, `dispatch` calls
+// `scoreHistory.reconcile()` before the Session write and its rollback if that write throws
+// (Q-39), and `loaded()`/`current()` report `history`; scoreHistory is used only inside functions.
 import {
   accrue,
   apply,
@@ -23,6 +26,7 @@ import {
 } from '../engine/index';
 import * as clock from './clock';
 import { words } from './dictionary.svelte';
+import { type CurrentHistory, type LoadedHistory, scoreHistory } from './history.svelte';
 import { newSeed } from './seed';
 import { isLocalArea, read, SESSION_KEY, write } from './storage';
 
@@ -46,15 +50,16 @@ export interface DispatchResult {
   readonly unfinished?: true;
 }
 
-/** AD-17 `loaded()`: the launch parse result in stored shape (entries 7 and 10 add history, prefs). */
+/** AD-17 `loaded()`: the launch parse results in stored shape (entry 10 adds prefs). */
 export interface Loaded {
   readonly session: Session | null | { readonly rejected: RejectReason };
+  readonly history: LoadedHistory;
 }
 
-/** AD-17 `current()` (entries 7 and 10 add history and prefs to the active variant). */
+/** AD-17 `current()` (entry 10 adds prefs to the active variant). */
 export type Current =
   | { readonly kind: 'booting' }
-  | { readonly kind: 'active'; readonly session: Session }
+  | { readonly kind: 'active'; readonly session: Session; readonly history: CurrentHistory }
   | { readonly kind: 'rejected'; readonly reason: RejectReason }
   | { readonly kind: 'halted' };
 
@@ -70,7 +75,7 @@ let state = $state.raw<GameState>({ kind: 'booting' });
 let halted = $state.raw<{ cause: 'fatal'; text: string } | { cause: 'another-window' } | undefined>(
   undefined,
 );
-let launch: Loaded | undefined;
+let launch: Pick<Loaded, 'session'> | undefined;
 let feedback = $state.raw<Feedback>({});
 // Q-38: the last `wordcell:session` text this store read or successfully wrote (`null` when absent).
 let sessionText: string | null = null;
@@ -93,6 +98,7 @@ function load(): void {
     // Q-38: halted during boot; record the launch result (AD-17 `loaded()`) and write nothing.
     if (launch !== undefined) throw new Error('AD-4 load() called twice');
     const stored = read(SESSION_KEY);
+    scoreHistory.load();
     sessionText = stored;
     if (stored === null) {
       launch = { session: null };
@@ -104,6 +110,7 @@ function load(): void {
   }
   if (state.kind !== 'booting') throw new Error(`AD-4 load() while ${state.kind}`);
   const text = read(SESSION_KEY);
+  scoreHistory.load();
   if (text === null) {
     // R-74: a first launch deals and stores at once; write first, then enter active.
     const session = createSession(newSeed());
@@ -142,9 +149,17 @@ function dispatch(command: Command): DispatchResult {
     else if (from !== 'playing' && to === 'playing') unfinished = true;
   }
   if (result.session !== before) {
-    // R-73: write first, then assign, so a throwing write leaves memory equal to storage.
+    // R-73: write first, then assign, so a throwing write leaves memory equal to storage. R-84:
+    // the history is written first; a throwing history write propagates before the Session write.
     const text = serializeSession(result.session);
-    write(SESSION_KEY, text);
+    const rollback = scoreHistory.reconcile(accrued, result.session);
+    try {
+      write(SESSION_KEY, text);
+    } catch (error) {
+      // Q-39: restore the history bytes and memory, then rethrow; a throwing rollback propagates.
+      rollback?.();
+      throw error;
+    }
     sessionText = text;
     state = { kind: 'active', session: result.session };
   }
@@ -203,9 +218,9 @@ function isStale(): boolean {
   return read(SESSION_KEY) !== sessionText;
 }
 
-// Q-38 bfcache: every key owner's check, ORed; entries 7 and 10 append theirs.
+// Q-38 bfcache: every key owner's check, ORed; entry 10 appends prefs.
 function staleOwners(): boolean {
-  return isStale();
+  return isStale() || scoreHistory.isStale();
 }
 
 /** AD-9: a callback run first on every hide flush, in registration order; accepted in any state. */
@@ -268,11 +283,13 @@ function whenVisible(): Promise<void> {
 
 function loaded(): Loaded {
   if (launch === undefined) throw new Error(`AD-17 loaded() while ${state.kind}`);
-  return launch;
+  return { session: launch.session, history: scoreHistory.loaded() };
 }
 
 function current(): Current {
-  return state;
+  return state.kind === 'active'
+    ? { kind: 'active', session: state.session, history: scoreHistory.current() }
+    : state;
 }
 
 export const game = {

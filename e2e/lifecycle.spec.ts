@@ -12,6 +12,7 @@ test.beforeEach(() => {
 });
 
 const SESSION = 'wordcell:session';
+const HISTORY = 'wordcell:history';
 const ANOTHER_WINDOW = 'WordCell is open in another window.';
 
 const kind = (page: Page) => page.evaluate(() => window.__wordcell?.current().kind);
@@ -153,6 +154,25 @@ test.describe('R-76 visible-time clock', () => {
     expect(await sessionEntries(page)).toEqual([seeded + 800, seeded + 800]);
   });
 
+  test('R-76 R-84 a finish records the visible-time activeMs of the Session', async ({ page }) => {
+    await open(page, 'session-won.json');
+    expect(seededMs('session-won.json')).toBe(0);
+    await page.getByTestId('undo').click();
+    await expect(page.getByTestId('redo')).toBeEnabled();
+    await page.clock.runFor(2500);
+    await page.getByTestId('redo').click();
+    await expect(page.getByTestId('redo')).toBeDisabled();
+    const { history, session } = await page.evaluate((k) => {
+      const current = window.__wordcell?.current();
+      if (current?.kind !== 'active') throw new Error(`store is ${current?.kind}`);
+      return { history: localStorage.getItem(k), session: current.session };
+    }, HISTORY);
+    const records = (JSON.parse(history ?? 'null') as { records: { activeMs: number }[] }).records;
+    expect(records).toHaveLength(1);
+    expect(records[0]?.activeMs).toBe(2500);
+    expect(records[0]?.activeMs).toBe(session.activeMs);
+  });
+
   test('R-76 New game starts at activeMs 0 with the discarded take', async ({ page }) => {
     await open(page, 'session-gave-up.json');
     await page.clock.runFor(900);
@@ -172,6 +192,20 @@ test.describe('Q-38 back/forward cache', () => {
     await page.evaluate(([k, v]) => localStorage.setItem(k, v), [
       SESSION,
       fixture('session-won.json'),
+    ] as const);
+    expect(await kind(page)).toBe('active');
+    await pageShow(page, { persisted: true });
+    await expectAnotherWindow(page);
+  });
+
+  test('Q-38 a persisted pageshow after a same-page wordcell:history write (absent → present) halts', async ({
+    page,
+  }) => {
+    await open(page, 'session-place.json');
+    expect(await page.evaluate((k) => localStorage.getItem(k), HISTORY)).toBeNull();
+    await page.evaluate(([k, v]) => localStorage.setItem(k, v), [
+      HISTORY,
+      fixture('history-three-records.json'),
     ] as const);
     expect(await kind(page)).toBe('active');
     await pageShow(page, { persisted: true });
