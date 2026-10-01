@@ -1,5 +1,5 @@
 # Review log — story-nav-adapter-overlays-core-history-notice-and-reset-confirm (ticket 3.8)
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 266 words, snapshot `story-nav-adapter-overlays-core-history-notice-and-reset-confirm.passes/pass0.md`, HEAD 2a6822b.
 Note: the pull from tickets.toml entry 8 dropped `interface`, `tests`, `owns`; they are passed to reviewers and fixer as intent, and the pass 1 fixer adds them to the Description as `Interface:`, `Tests:`, `Owns:` lines.
@@ -93,3 +93,31 @@ Words (docs): 1497 (5.6 x pass 0; budget 1500 reached — further additions are 
 - while halted, each back silently closes one hidden overlay entry (accept; plan line)
 - launch id from crypto.getRandomValues (e.g. seed.ts newSeed()), not randomUUID
 - P3 "Keep it then Reset history with no wait" is a smoke check; the S queue case is the proof
+
+## Pass 4 — 2026-10-01
+Reviewers: fix diff, edge-case, adversarial, ref alignment  |  Findings: major 2, minor 4 applied + 9 plan-level unapplied, decision-needed 0  |  Dropped in triage: 3 (duplicates: board-inert/owner question ×2, once-per-launch label ×1)
+### Applied
+- [major] P3 Keep it "Board inert" — the click lands on the notice's scrim and asserts "notice still open", settling the pending owner question; assert inert instead (undo not focusable with the notice open; a click at undo's centre with the confirm open acts as Keep it, Session unchanged) → fixer 1
+- [major] P3 Delete history — "back leaves the app, a reload shows no notice" reloads about:blank (vacuous); reorder: reload shows no notice, then back leaves → fixer 2
+- [minor] S nav: "a non-stale popstate with a wc before register() throws" → "any other popstate …" (rewind popstate only resolves launch()) → fixer 3
+- [minor] Registration: main.ts calls nav.register({ closedByBack: overlays.closedByBack, depth: () => overlays.depth }) after launch → fixer 4
+- [minor] Boot: restore "the rejected-root New game handler" (pass 3 tightening lost it) → fixer 5
+- [minor] win smoke label "(once per launch)" → "(store not rejected)" → fixer 6
+Fixer: all 6 items applied; Boot dropped the redundant 'overlays registers after launch' and 'store was rejected before newGame()' to pay for the words.
+Words (docs): 1497 (5.6 x pass 0)  |  Snapshot: story-nav-adapter-overlays-core-history-notice-and-reset-confirm.passes/pass4.md
+### Default applied (technical)
+- board inert evidenced by focusability plus the specified confirm-scrim outcome, not the notice scrim
+### Decision needed (functionality / UX / gameplay)
+- none new
+### Dropped
+- 3 duplicates
+### Unapplied minors (plan-level; ticket at budget)
+- the History notice renders through Dialog (role dialog, named by its title)
+- order in the New game handler: resetForNewSession() then the deferred push (build-notes CAP-4)
+- focus on close: confirm closes → notice's Reset history; notice closes → board
+- Tab check bounded: Tab and Shift+Tab ×3 from Keep it stay inside the confirm
+- every app surface except the top dialog is inert (entry 9's dictionary banner inherits)
+- deferred push also requires the store active after newGame()
+- after launch() rejects, nav ignores later popstates (no second fatal overwriting the timeout text)
+- P3 Forward at depth 1: after Keep it, goForward() leaves the notice open, confirm closed (wc 1)
+- once-per-launch flag is structurally redundant in epic 3 (rejection only at boot)
