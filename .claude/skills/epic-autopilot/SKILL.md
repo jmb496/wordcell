@@ -1,7 +1,7 @@
 ---
 name: epic-autopilot
 description: Work through the remaining tickets of one epic unattended — harden each ticket with /review-loop, build it with bmad-build-auto, code-review it with /review-loop, verify, mark it done and continue — stopping only when the owner's input is needed. Use when the user says "autopilot", "run the epic", "work through the epic", or "/epic-autopilot".
-argument-hint: "[epic folder name] [stop-after=<ref>]"
+argument-hint: "[epic folder name] [stop-after=<ref>] [one-ticket]"
 ---
 
 # Epic autopilot
@@ -17,6 +17,73 @@ You are the **orchestrator**. Each step runs in a **fresh headless Claude sessio
 methodology's "fresh chat"); you never review, fix or build yourself. You sequence steps, read
 their result files, run the verification gates, commit, mark done, and write the digest. Keep
 your own context small: read result files and `git`/`tickets.py` output, not the step logs.
+
+## One ticket per session (fresh context, preferred)
+
+An orchestrator that runs many tickets carries every earlier ticket in its context, and each turn
+re-reads it (epic 3: about 420k tokens per turn, 9M wasted). So the preferred way to run an epic
+is one fresh orchestrator session per ticket, started by the driver:
+
+```bash
+.claude/skills/epic-autopilot/scripts/loop.sh <epic> [max-tickets]
+```
+
+The driver runs `claude -p "Run the epic-autopilot skill with arguments: <epic> one-ticket"` once
+per ticket and continues while each session's handoff says `outcome: done`. It exits 0 when the
+epic is complete (or max-tickets is reached), 2 when a session stopped (read the handoff), 3 on a
+usage limit (rerun after the reset), 4 when a session made no progress (read its log). Before
+each ticket it runs `scripts/limits.py`, which reads the plan's 5-hour and weekly utilization
+from the local cache of the owner's "Claude Code Usage" VS Code extension (no network call), and
+exits 5, asking the owner to rerun it by hand, when either is at or over its threshold
+(`MAX_FIVE_HOUR`, `MAX_SEVEN_DAY`, default 80); 6 if the cache is missing or more than 30 minutes
+old, i.e. VS Code is closed (`LIMIT_CHECK=off` skips the check). The owner
+can run it in a terminal, or an interactive session can run it with `run_in_background: true`
+and report the handoff when it exits. After answering an owner question in an interactive
+session, record the decision (ticket Notes, epic Notes, spec memlog), commit, and rerun the
+driver: the next session resumes the ticket from its files.
+
+With the argument `one-ticket` (always headless):
+
+- Setup runs as below, except Setup 3 reuses the newest digest of this epic whenever it has no
+  `## Run complete` (whatever its last section), so all sessions of one run share `R`, `W` and
+  the digest. Record the session start time `S` (`date -u +%Y-%m-%dT%H:%M:%S`).
+- Process exactly one ticket: the first `ready_to_start` one, or the one an earlier session left
+  part-way (Per ticket, resume rule). After Step D.4 (or at any stop), write the handoff and end.
+- A headless session does not wait for its own background jobs, so never use
+  `run_in_background` here. Start every headless step and `npm run test:all` detached, then wait
+  in the foreground (Bash `timeout: 600000`), repeating the wait while it prints `not yet`; on
+  `died` (the step's process is gone without an exit code) stop as for a missing result file
+  (rule 5):
+
+  ```bash
+  .claude/skills/epic-autopilot/scripts/detach.sh "$W/<ref>-<step>.done" "$W/<ref>-<step>.log" -- claude -p "<prompt>" --permission-mode bypassPermissions --output-format text
+  .claude/skills/epic-autopilot/scripts/wait-for.sh "$W/<ref>-<step>.done" 540
+  ```
+
+  (`detach.sh` closes stdin and keeps `<done-file>.pid` while the step runs; for `test:all` the
+  command is `npm run test:all` and the done file holds its exit code.) Before Setup 2, if any
+  `$W/*.pid` names a live process (a step an earlier session left running), stop (rule 5) and
+  name it; never start a second copy.
+- Handoff (committed, overwritten each session):
+  `_bmad-output/implementation-artifacts/autopilot/<epic>-handoff.md`, starting with these lines,
+  then the plain-language report for the owner (Final report) and how to resume:
+
+  ```
+  outcome: done | stopped | complete
+  ticket: <ref>
+  reason: <stop rule number and short reason, or "done">
+  next: <next ready ref, or none>
+  updated: <date -u +%Y-%m-%dT%H:%M:%SZ>
+  summary: <one plain sentence>
+  ```
+
+  `complete` when no tickets remain after this one (Stop rule 6); then also append
+  `## Run complete` to the digest. Commit both with the ticket's "mark done" commit, or with the
+  stop commit. A stop for a usage limit puts `usage limit` in `reason:` (with the reset time) so
+  the driver reports it as one.
+- The digest entry gets a `Tokens:` line from
+  `python3 .claude/skills/epic-autopilot/scripts/usage-report.py --since <S>` (this session and
+  its steps).
 
 ## Stop rule
 
@@ -53,7 +120,12 @@ items — is recorded in the digest and the run continues.
    `uv run _bmad/method/scripts/tickets.py next`. Read the epic file's branch decision
    (e.g. "epic branch `epic-1-scaffold`").
 2. Check: `git status --short` empty and `git branch --show-current` is the epic branch.
-   Otherwise stop (rule 5).
+   Otherwise stop (rule 5). One exception: when the digest's last section is
+   `## Stopped — usage limit` at Step B and the uncommitted files are that build's own (its plan
+   `P` is `in-progress`), continue and resume Step B, adding to its prompt: *"This is a resume: a
+   previous build of this ticket stopped at a usage limit with its plan `in-progress` and its
+   uncommitted work in the tree (those files are this build's own); resume it per
+   bmad-build-auto's resume rule."*
 3. Run id `R` = `YYYYMMDD-HHMM`. Working dir for step results and logs, **outside the repo** so
    the tree stays clean for the build: `W=/tmp/wordcell-autopilot/<R>`. Create it.
    Resuming: if this epic's newest digest has no `## Run complete` and ends in a `## Stopped`
@@ -88,7 +160,8 @@ alone: a ticket review log without a `## Result` line → Step A (resume); no `P
 delete it, restart it or skip it.
 
 Run every headless step with the Bash tool, `run_in_background: true`, from the repo root, and
-wait for its completion notification (builds can take a long time; never poll with sleep):
+wait for its completion notification (builds can take a long time; never poll with sleep). In
+`one-ticket` mode use `detach.sh` and `wait-for.sh` instead (One ticket per session):
 
 ```bash
 claude -p "<prompt>" --permission-mode bypassPermissions --output-format text < /dev/null > "$W/<ref>-<step>.log" 2>&1
@@ -117,6 +190,8 @@ before the missing-JSON rule, since a limited step never writes its JSON. Then:
    the message shows it, and the resume instruction; commit it (the stop commit, Setup 4).
 4. Tell the owner in plain words: the run paused at the limit, when it resets, and that running
    `/epic-autopilot <epic>` after that picks up where it stopped.
+   In `one-ticket` mode, tell the owner to rerun `.claude/skills/epic-autopilot/scripts/loop.sh
+   <epic>` instead, and skip item 5 (never schedule).
 5. Optional, only when this orchestrator session offers a scheduling tool (e.g. `ScheduleWakeup`
    or `CronCreate`): schedule a one-off `/epic-autopilot <epic>` for about 5 minutes after the
    reset time instead of leaving the run idle, and tell the owner it is scheduled and for when.
@@ -213,6 +288,7 @@ Code review: <quick|thorough>, <n> passes, <converged|capped|diverging>; <k> fix
 Tests: all passing | <what failed>
 Ref to fix upstream: <for a capped or diverging loop: area → doc and section; or "none">
 Paused: <usage limit at <step>, reset <time as shown>, resumed at <time>; or omit the line>
+Tokens: <usage-report.py line, one-ticket mode; or omit the line>
 Worth knowing: <deferred items, halts that nearly fired, anything capped — plain words, or "nothing">
 ```
 
