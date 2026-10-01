@@ -1,6 +1,6 @@
 # Review loop — ticket 3.5 build (code, 53f3e13..cf4c0b6)
 
-State: pass 1: done
+State: pass 2: done
 
 Target: `_bmad-output/implementation-artifacts/review-loop/3-5-build.passes/pass0.diff` (53f3e13..cf4c0b6)
 Intent: `_bmad-output/initiative-wordcell-v1/epic-app-shell/story-fatal-surface-rejected-session-and-single-instance-plan.md`
@@ -30,3 +30,28 @@ Snapshot: tree 261d6bbaf113581477901981a81ed39d802ed414  |  Fix diff: 3-5-build.
 ### Dropped
 - src/main.ts half-mounted App on a throwing `mount(App)` — Svelte returns no instance from a throwing `mount`, so the proposed unmount is not possible; `replaceChildren` already removes its DOM; improbable path
 - (duplicate) intent-alignment unit-suite finding merged into the verification-gap one
+
+## Pass 2 — 2026-09-30
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 0, minor 7, decision-needed 0  |  Dropped in triage: 1 (duplicate)
+Snapshot: tree 261d6bbaf113581477901981a81ed39d802ed414 (no fix pass)  |  Final: npm test 1504 passed, lint clean, check 0 errors
+### Applied
+- none (converged)
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none new
+### Dropped
+- duplicate: verification-gap "timedOut guard untested" merged into the fix-diff one
+
+## Result — converged after 2 passes
+
+Majors per pass: 3, 0. Decision needed: Blocking message keyboard focus (pass 1).
+
+Unapplied minors (for the next build or loop):
+- plan Design Notes 3 — still describes a throwing timer; code uses `reportError` (rewrite the snippet)
+- e2e/blocking.spec.ts font-timeout test — `timedOut` guard untested: release held routes with 404 after the fatal and assert the text stays the timeout text
+- e2e/blocking.spec.ts — ErrorEvent with null `error` (body = `event.message`) untested: dispatch `new ErrorEvent('error', { message })`
+- plan Tests mapping — halted-boot "no App mount" is proven only through entries 6 and 9; say so rather than claim the Q-38 halted-boot test covers it
+- src/main.ts `fatal` — `console.error` runs before `game.halt`; AD-15 says halt first (swap the order)
+- rule-coverage.md rows R-74 New game / R-74 Q-29 — CAP column should read `3, 4` for the rejected-root half now proven in CAP 4
+- unit-suite duration — fixer measured 4.61–4.76 s standalone; orchestrator rerun 5.35 s: the 5 s AD-17 budget is marginal on /mnt/d (69 % transform); consider `fsModuleCache` upstream
