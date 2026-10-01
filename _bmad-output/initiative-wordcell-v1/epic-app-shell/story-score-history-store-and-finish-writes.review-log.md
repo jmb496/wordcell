@@ -1,5 +1,5 @@
 # Review log — story-score-history-store-and-finish-writes (ticket 3.7)
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 218 words, snapshot `story-score-history-store-and-finish-writes.passes/pass0.md`, HEAD e897707.
 Note: the pull from tickets.toml entry 7 dropped `interface`, `tests`, `owns`; they are passed to reviewers and fixer as intent, and the pass 1 fixer adds them to the Description as `Interface:`, `Tests:`, `Owns:` lines.
@@ -85,3 +85,28 @@ Words (docs): 1449 (6.65 x pass 0; budget 1500)  |  Snapshot: story-score-histor
 ### Dropped
 - history-invalid-version-unknown.json owner vs build-notes CAP-7 — tickets.toml entry 7 is the authority; no ticket change
 - ticket-8 notice sentence — harmless cross-ticket note; no change
+
+## Pass 4 — 2026-09-30
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 14, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1454 (6.67 x pass 0; budget 1500)  |  Snapshot: story-score-history-store-and-finish-writes.passes/pass4.md  |  Fixer: all 9 applied; no runnable command added
+### Applied
+- [major] Shell Vitest — reset() from unreadable to `{ status: 'ok', records: [] }` (state, statistics, later finish recorded) untested in any gate → fixer 1
+- [minor] reset writes `{ version: HISTORY_VERSION, records: [] }` (AD-6) → fixer 2
+- [minor] reset allowed while active or rejected (AD-4 "nothing written while rejected" is dispatch's) → fixer 3
+- [minor] game.svelte.ts uses scoreHistory inside current() too → fixer 4
+- [minor] current().history version = HISTORY_VERSION → fixer 5
+- [minor] reconcile after serializeSession, immediately before the Session write → fixer 6
+- [minor] Q-38 bfcache case: still active before pageShow → fixer 7
+- [minor] storage-spy restatement shortened (cuts words) → fixer 8
+- [minor] redundant R-84 "AD-7 check stays a separate test" sentence removed (cuts words) → fixer 9
+### Default applied (technical)
+- reset() allowed while rejected (no UI path calls it there; AD-4's rejected rule binds dispatch writes)
+### Unapplied minors (for the build plan, no ticket words)
+- rollback restores bytes first, then assigns state and lastText
+- history-setItem-throws case asserts game.state and both isStale() like its sibling
+- R-76 test lives in e2e/lifecycle.spec.ts reusing its paused-clock open()
+- widening `writes` to `string | null` needs narrowing at existing destructures (game.svelte.test.ts)
+- setup() Options gain an optional `history` text seeding HISTORY_KEY
+- scoreHistory.load() keeps its own launch snapshot for loaded().history; never derived from lastText
+### Dropped
+- none
