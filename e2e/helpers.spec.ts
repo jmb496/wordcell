@@ -3,7 +3,15 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { expect, type Page, test } from '@playwright/test';
 import { buildRoot } from './helpers/dist-test';
-import { hidePage, pageHide, pageShow, showPage, startHidden } from './helpers/lifecycle';
+import {
+  animationFrames,
+  hidePage,
+  pageHide,
+  pageShow,
+  showPage,
+  startHidden,
+} from './helpers/lifecycle';
+import { open, snapshot } from './helpers/restore';
 import { captureBoot, fixture, seedStorage } from './helpers/seed';
 import { armStorageSpy, storageWrites } from './helpers/storage-spy';
 import { longPress, touchDrag } from './helpers/touch';
@@ -223,6 +231,36 @@ test.describe('seedStorage / captureBoot', () => {
     await captureBoot(fresh);
     await fresh.goto('/');
     await expect(captureBoot(fresh)).rejects.toThrow(/already called/);
+  });
+});
+
+test.describe('restore helpers', () => {
+  test('AD-17 snapshot reports present keys in fixed order and open() waits past booting', async ({
+    page,
+    browser,
+  }) => {
+    await seedStorage(page, { session: fixture('session-place.json') });
+    await open(page);
+    expect(await page.evaluate(() => window.__wordcell?.current().kind)).toBe('active');
+    expect((await snapshot(page)).present).toEqual(['wordcell:session']);
+
+    const other = await browser.newContext();
+    try {
+      const page2 = await other.newPage();
+      await seedStorage(page2, {
+        session: fixture('session-place.json'),
+        history: fixture('history-three-records.json'),
+        prefs: fixture('prefs-non-default.json'),
+      });
+      await open(page2, page.url());
+      expect((await snapshot(page2)).present).toEqual([
+        'wordcell:session',
+        'wordcell:history',
+        'wordcell:prefs',
+      ]);
+    } finally {
+      await other.close();
+    }
   });
 });
 
@@ -479,6 +517,26 @@ test.describe('hidePage / showPage / pageHide / pageShow', () => {
     await installRecorder(page);
     await expect(hidePage(page)).rejects.toThrow(/already 'hidden'/);
     await expectVisibilityChange(page, () => showPage(page), false);
+  });
+
+  test('AD-17 animationFrames resolves after the given number of animation frames', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await page.evaluate(() => {
+      const w = window as unknown as { __frames: number };
+      w.__frames = 0;
+      const tick = () => {
+        w.__frames += 1;
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
+    const frames = () => page.evaluate(() => (window as unknown as { __frames: number }).__frames);
+    const start = await frames();
+    await animationFrames(page, 3);
+    const end = await frames();
+    expect(end - start).toBeGreaterThanOrEqual(3);
   });
 
   for (const state of ['visible', 'hidden'] as const) {

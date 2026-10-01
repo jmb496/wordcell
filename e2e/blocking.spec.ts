@@ -1,4 +1,5 @@
 import { expect, type Page, type Route, test } from '@playwright/test';
+import { animationFrames } from './helpers/lifecycle';
 import { fixture, seedStorage } from './helpers/seed';
 import { armStorageSpy, storageWrites } from './helpers/storage-spy';
 
@@ -140,6 +141,46 @@ test.describe('Q-37 AD-15 fatal', () => {
     ]);
     expect(await stored(page)).toBe(text);
   });
+});
+
+test('AD-16 a healthy fresh launch writes nothing before the font check passes', async ({
+  page,
+}) => {
+  const held: Route[] = [];
+  let released = false;
+  await page.route('**/*.woff2', async (route) => {
+    if (released) await route.continue();
+    else held.push(route);
+  });
+  // The font preload blocks load, as in the Q-37 held-font test.
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await expect.poll(() => held.length).toBeGreaterThan(0);
+  // The nav launch has stamped the base entry; the font check is still pending.
+  await page.waitForFunction(
+    () =>
+      window.__wordcell !== undefined &&
+      history.state?.wc === 0 &&
+      typeof history.state?.launch === 'number' &&
+      window.__wordcell.current().kind === 'booting',
+  );
+  await animationFrames(page, 2);
+  expect(
+    await page.evaluate(() =>
+      Object.keys(localStorage).filter((key) => key.startsWith('wordcell:')),
+    ),
+  ).toEqual([]);
+
+  released = true;
+  for (const route of held) await route.continue();
+  await page.waitForFunction(() => window.__wordcell?.current().kind === 'active');
+  const { text, session } = await page.evaluate(() => {
+    const current = window.__wordcell?.current();
+    if (current?.kind !== 'active') throw new Error(`store is ${current?.kind}`);
+    return { text: localStorage.getItem('wordcell:session'), session: current.session };
+  });
+  expect(JSON.parse(text ?? 'null')).toEqual(session);
+  expect(await stored(page, 'wordcell:history')).toBeNull();
+  expect(await stored(page, 'wordcell:prefs')).toBeNull();
 });
 
 test.describe('§2 Session rejected', () => {

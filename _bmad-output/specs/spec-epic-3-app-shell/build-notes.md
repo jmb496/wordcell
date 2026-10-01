@@ -20,6 +20,7 @@ contract; these notes fix what they leave open. `[ASSUMPTION]` marks inferences.
   stays `{ kind: 'halted' }` (AD-17).
 - AD-16/AD-9: the dictionary load awaits the store's `whenVisible()` after the double rAF.
 - AD-15/DESIGN.md: AD-15 makes the Blocking message's Reload the primary button, while DESIGN.md Buttons lists `Reload` as secondary (read as the dictionary banner's Reload); reconcile at the retrospective (CAP-4).
+- AD-17: the restore suite compares all three `loaded()` fields with `JSON.parse(__wordcellBoot[key])` (`null` when absent); post-reload `loaded().history`/`.prefs` equal the pre-reload snapshot's `current()` values only for keys present in localStorage at snapshot time; when post-reload `loaded()` is null, `current()` reports the in-memory defaults (CAP-10).
 
 ## As-built facts that bite (8e5462f)
 

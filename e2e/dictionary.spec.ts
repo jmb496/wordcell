@@ -1,5 +1,5 @@
 import { expect, type Page, type Request, type Route, test } from '@playwright/test';
-import { showPage, startHidden } from './helpers/lifecycle';
+import { animationFrames, showPage, startHidden } from './helpers/lifecycle';
 import { fixture, seedStorage } from './helpers/seed';
 
 // Dictionary load, retry and Validate (R-38, AD-8, AD-16, Q-42) on android. The route pattern
@@ -71,14 +71,6 @@ async function activeSession(page: Page): Promise<{ stored: unknown; current: un
     const text = localStorage.getItem('wordcell:session');
     return { stored: text === null ? null : JSON.parse(text), current: current.session };
   });
-}
-
-async function animationFrames(page: Page, count: number): Promise<void> {
-  for (let i = 0; i < count; i++) {
-    await page.evaluate(
-      () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
-    );
-  }
 }
 
 test('R-38 a held word list shows a disabled Loading words… on session-composing.json, then Validate places TAN once ready', async ({
@@ -327,6 +319,22 @@ test.describe('AD-16 dictionary start', () => {
     await showPage(page);
     await animationFrames(page, 2);
     expect(requests).toEqual([]);
+  });
+
+  test('AD-16 a startHidden page requests the word list only after showPage, exactly once', async ({
+    page,
+  }) => {
+    const requests = countRequests(page);
+    await startHidden(page);
+    await page.goto('/');
+    await expect(page.getByTestId('card-0')).toBeAttached();
+    // As 'a halt after mount while hidden': past the double rAF, main.ts waits in whenVisible().
+    await animationFrames(page, 2);
+    expect(requests).toEqual([]);
+    await showPage(page);
+    await waitForDictionary(page, 'ready');
+    await animationFrames(page, 2);
+    expect(requests).toHaveLength(1);
   });
 });
 

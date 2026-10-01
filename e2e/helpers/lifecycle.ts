@@ -43,3 +43,12 @@ export async function startHidden(page: Page): Promise<void> {
     Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
   });
 }
+
+// Resolves after `count` animation frames of the page, one page task per frame.
+export async function animationFrames(page: Page, count: number): Promise<void> {
+  for (let i = 0; i < count; i++) {
+    await page.evaluate(
+      () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
+    );
+  }
+}

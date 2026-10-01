@@ -1,46 +1,12 @@
 import { expect, type Page, test } from '@playwright/test';
-import { fixture, seedStorage } from './helpers/seed';
+import { dictionaryReady, open, sessionOf, snapshot } from './helpers/restore';
+import { captureBoot, fixture, seedStorage } from './helpers/seed';
 
 // Game store load, dispatch and storage (R-73, R-74) through the AD-17 hook, on android.
 
 test.beforeEach(() => {
   test.skip(test.info().project.name !== 'android', 'R-73/R-74 store flows run on android');
 });
-
-type Snapshot = {
-  stored: unknown;
-  current: ReturnType<NonNullable<Window['__wordcell']>['current']>;
-  loaded: ReturnType<NonNullable<Window['__wordcell']>['loaded']>;
-};
-
-// Reads the stored Session (JSON.parse of wordcell:session) and the hook's views in one task.
-function snapshot(page: Page): Promise<Snapshot> {
-  return page.evaluate(() => {
-    const hook = window.__wordcell;
-    if (hook === undefined) throw new Error('window.__wordcell is missing');
-    const text = localStorage.getItem('wordcell:session');
-    return {
-      stored: text === null ? null : JSON.parse(text),
-      current: hook.current(),
-      loaded: hook.loaded(),
-    };
-  });
-}
-
-function sessionOf(snap: Snapshot): unknown {
-  if (snap.current.kind !== 'active') throw new Error(`store is ${snap.current.kind}`);
-  return snap.current.session;
-}
-
-async function open(page: Page, url = '/'): Promise<void> {
-  await page.goto(url);
-  await expect(page.getByRole('heading', { name: 'WordCell' })).toBeVisible();
-}
-
-// AD-8: the word list has loaded (plain Validate labels need it).
-async function dictionaryReady(page: Page): Promise<void> {
-  await page.waitForFunction(() => window.__wordcell?.dictionaryState() === 'ready');
-}
 
 test('R-74 a fresh context stores a uint32-seeded Session before any input, equal to current().session, loaded().session null', async ({
   page,
@@ -256,6 +222,9 @@ test('R-73 kill variant: an Undo on session-place-free-letter-redo-tail.json sur
   const written = snap.stored;
   expect(written).toEqual(sessionOf(snap));
   expect(written).not.toEqual(seeded);
+  await dictionaryReady(page);
+  const label = await page.getByTestId('primary-action').textContent();
+  if (label === null) throw new Error('primary-action has no text');
 
   // CDP Page.crash fires no unload events; the call itself never resolves normally.
   const cdp = await page.context().newCDPSession(page);
@@ -264,10 +233,23 @@ test('R-73 kill variant: an Undo on session-place-free-letter-redo-tail.json sur
   await crashed;
 
   const page2 = await page.context().newPage();
+  await captureBoot(page2);
   await open(page2);
   const restored = await snapshot(page2);
+  const boot = await page2.evaluate(() => window.__wordcellBoot);
+  if (boot === undefined) throw new Error('window.__wordcellBoot is missing');
+  const parsed = (text: string | null) => (text === null ? null : JSON.parse(text));
+  expect(restored.loaded).toEqual({
+    session: parsed(boot['wordcell:session']),
+    history: parsed(boot['wordcell:history']),
+    prefs: parsed(boot['wordcell:prefs']),
+  });
+  // Exactly the Undo's write, activeMs included: no flush ran.
   expect(restored.loaded).toEqual({ session: written, history: null, prefs: null });
   expect(sessionOf(restored)).toEqual(written);
+  // R-73 (UI): the exact phase after a kill.
+  await dictionaryReady(page2);
+  await expect(page2.getByTestId('primary-action')).toHaveText(label);
 });
 
 test('R-73 a dispatch-and-reload session makes no off-origin and no non-GET request', async ({

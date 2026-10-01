@@ -143,7 +143,7 @@ test('AD-13 a stale launch entry reached by Forward is ignored: nothing opens an
   await expectLeaves(page);
 });
 
-test('§2 AD-13 deferred push: a rejected Session plus an unreadable history pushes nothing; New game opens the notice at { wc: 1, launch } of the boot launch', async ({
+test('§2 AD-13 AD-16 deferred push: a rejected Session plus an unreadable history pushes nothing; New game opens the notice at { wc: 1, launch } of the boot launch', async ({
   page,
 }) => {
   await start(page, { history: VERSION_UNKNOWN, session: 'session-invalid-version-unknown.json' });
