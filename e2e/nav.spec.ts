@@ -161,6 +161,25 @@ test('§2 AD-13 deferred push: a rejected Session plus an unreadable history pus
   await expectLeaves(page);
 });
 
+test('§2 AD-13 a double tap on New game on the rejected root opens the notice at wc 1 and no Reset confirm', async ({
+  page,
+}) => {
+  await start(page, { history: VERSION_UNKNOWN, session: 'session-invalid-version-unknown.json' });
+  await expect(page.getByRole('alertdialog', { name: REJECTED })).toBeVisible();
+  const box = await button(page, 'New game').boundingBox();
+  if (box === null) throw new Error('no New game box');
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  await page.touchscreen.tap(x, y);
+  await page.waitForTimeout(80);
+  await page.touchscreen.tap(x, y);
+  await boardReady(page);
+  await expect(notice(page)).toBeVisible();
+  await expect(confirmDialog(page)).toHaveCount(0);
+  await expect.poll(() => wc(page).then((state) => state?.wc)).toBe(1);
+  await expect(notice(page)).toBeVisible();
+});
+
 test('AD-13 win → New game → back leaves the app; no notice (already shown this launch; store not rejected)', async ({
   page,
 }) => {

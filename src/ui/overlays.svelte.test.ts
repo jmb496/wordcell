@@ -76,6 +76,17 @@ describe('AD-13 overlays', () => {
     expect(calls).toEqual([]);
   });
 
+  it('AD-13 one closedByBack(0) with two entries open closes both and never calls nav', async () => {
+    const overlays = await load();
+    overlays.open('historyNotice');
+    overlays.open('resetConfirm');
+    calls.length = 0;
+    overlays.closedByBack(0);
+    expect(overlays.depth).toBe(0);
+    expect(overlays.top).toBeUndefined();
+    expect(calls).toEqual([]);
+  });
+
   it('AD-13 resetForNewSession() with two entries open closes the top one first (nav.pop twice), leaving depth 0', async () => {
     const overlays = await load();
     overlays.open('historyNotice');

@@ -122,7 +122,7 @@ deferred:
 - [x] `src/shell/nav.ts` -- new: `launch(): Promise<void>`, `register({ closedByBack, depth })`, `push()`, `pop()`, one `popstate` listener added in `launch()`; handler order per Design Notes 1 -- AD-13 adapter.
 - [x] `src/shell/nav.test.ts` -- S cases on a stubbed `window`/`history` (records calls; test fires `popstate` by hand) and fake timers: every ticket S line plus: after a Forward correction `push()` sends `{ wc: depth + 1 }`; pop from wc 2 then two queued pushes send wc 2 then 3; stale popstate before `register()` ignored, current-launch one throws; popstates after a rejected launch ignored -- AD-13 coverage.
 - [x] `src/ui/overlays.svelte.ts` -- new store per Design Notes 2 -- E3 single owner.
-- [x] `src/ui/overlays.svelte.test.ts` -- U with `vi.mock('../shell/nav')`: ticket U lines; close on empty stack throws; `closedByBack` order observable (top removed first) and no nav calls -- AD-13.
+- [x] `src/ui/overlays.svelte.test.ts` -- U with `vi.mock('../shell/nav')`: ticket U lines; close on empty stack throws; one `closedByBack(d)` closes every entry deeper than d (topmost-first has no per-entry observable effect in epic 3) and no nav calls -- AD-13.
 - [x] `src/ui/history-notice.svelte.ts` -- new: `openHistoryNotice()` + captured `noticeReason` (Design Notes 3).
 - [x] `src/ui/text.ts` (+ `src/ui/text.test.ts`) -- strings per Design Notes 4; U: `historyVersionUnknown(7)` and `historyContentsUnreadable(7)` contain 7 -- catalogue.
 - [x] `src/ui/Dialog.svelte` -- new non-native dialog (Design Notes 5).

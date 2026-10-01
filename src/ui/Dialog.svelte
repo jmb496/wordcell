@@ -46,17 +46,20 @@ function focusOnReturn(button: HTMLButtonElement): void {
   }
 }
 
-// Only the first click of a multi-click acts: a double tap on the button that opened this dialog
-// lands its second click on this freshly mounted scrim.
-function scrim(event: MouseEvent): void {
-  if (event.detail > 1) return;
-  onscrim?.();
+// No part of the dialog (scrim or buttons) acts on the second or later click of a multi-click: a
+// double tap on the button that opened this dialog lands its second click on this freshly mounted
+// dialog. Keyboard activation has detail 0.
+function first(handler: (() => void) | undefined): (event: MouseEvent) => void {
+  return (event) => {
+    if (event.detail > 1) return;
+    handler?.();
+  };
 }
 </script>
 
 <div class="layer" {inert}>
   <!-- The scrim is pointer-only: keyboard and screen-reader users dismiss with the buttons. -->
-  <div class="scrim" aria-hidden="true" onclick={scrim}></div>
+  <div class="scrim" aria-hidden="true" onclick={first(onscrim)}></div>
   <div
     class="card"
     role="dialog"
@@ -67,10 +70,10 @@ function scrim(event: MouseEvent): void {
     <h2 id="{id}-title">{title}</h2>
     <p id="{id}-body">{body}</p>
     <div class="buttons">
-      <button type="button" class="secondary" onclick={ondismiss} {@attach focusOnMount}
+      <button type="button" class="secondary" onclick={first(ondismiss)} {@attach focusOnMount}
         >{dismiss}</button
       >
-      <button type="button" class="danger" onclick={onaction} {@attach focusOnReturn}
+      <button type="button" class="danger" onclick={first(onaction)} {@attach focusOnReturn}
         >{action}</button
       >
     </div>

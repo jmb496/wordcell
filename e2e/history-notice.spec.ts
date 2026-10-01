@@ -57,6 +57,13 @@ async function openConfirm(page: Page): Promise<void> {
   await expect.poll(() => wc(page).then((state) => state?.wc)).toBe(2);
 }
 
+// A touch double tap: two taps ~80 ms apart (the second click has detail 2).
+async function doubleTap(page: Page, x: number, y: number): Promise<void> {
+  await page.touchscreen.tap(x, y);
+  await page.waitForTimeout(80);
+  await page.touchscreen.tap(x, y);
+}
+
 // Back from the base entry leaves the app.
 async function expectLeaves(page: Page): Promise<void> {
   await page.goBack();
@@ -190,17 +197,6 @@ test.describe('§2 History notice flows (history-invalid-version-unknown.json)',
     await expect.poll(() => wc(page).then((state) => state?.wc)).toBe(1);
   });
 
-  test('§2 a double click on Reset history leaves the Reset confirm open at wc 2', async ({
-    page,
-  }) => {
-    await start(page, VERSION_UNKNOWN);
-    await expectNotice(page, SENTENCE);
-    await button(page, 'Reset history').dblclick();
-    await expect(confirmDialog(page)).toBeVisible();
-    await expect.poll(() => wc(page).then((state) => state?.wc)).toBe(2);
-    await expect(confirmDialog(page)).toBeVisible();
-  });
-
   test("§2 a tap on the Reset confirm's card body leaves the confirm open at wc 2", async ({
     page,
   }) => {
@@ -283,4 +279,20 @@ test.describe('§2 History notice flows (history-invalid-version-unknown.json)',
     await expect(notice(page)).toBeVisible();
     expect(await stored(page, HISTORY)).toBe(text);
   });
+});
+
+// The shortest notice body puts the confirm's Delete history over Reset history's top edge.
+test('§2 a double tap near the top edge of Reset history (history-invalid-null.json) leaves the Reset confirm open at wc 2 and wordcell:history unchanged', async ({
+  page,
+}) => {
+  const file = 'history-invalid-null.json';
+  await start(page, file);
+  await expectNotice(page, "Its format version can't be read.");
+  const box = await button(page, 'Reset history').boundingBox();
+  if (box === null) throw new Error('no Reset history box');
+  await doubleTap(page, box.x + box.width / 2, box.y + 2);
+  await expect(confirmDialog(page)).toBeVisible();
+  await expect.poll(() => wc(page).then((state) => state?.wc)).toBe(2);
+  await expect(confirmDialog(page)).toBeVisible();
+  expect(await stored(page, HISTORY)).toBe(fixture(file));
 });
