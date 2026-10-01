@@ -75,7 +75,7 @@ async function fontCheck(): Promise<void> {
   if (faces.length === 0) throw new Error('AD-15 font check: WordCell Serif did not load');
 }
 
-// AD-16: font check, load, mount. Not awaited: a failure is an unhandledrejection that writes nothing.
+// AD-16: font check, load, lifecycle, mount. Not awaited: a failure is an unhandledrejection that writes nothing.
 async function boot(): Promise<void> {
   await fontCheck();
   game.load();
@@ -83,6 +83,8 @@ async function boot(): Promise<void> {
     showStandalone();
     return;
   }
+  // AD-16 order: lifecycle listeners (and the visible-time clock) right after the load, before mount.
+  game.registerLifecycle();
   mount(App, { target });
   surface = true;
 }

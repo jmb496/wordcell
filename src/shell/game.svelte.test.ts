@@ -68,10 +68,16 @@ function fakeStorage(stored: string | undefined) {
 }
 
 // Fresh store and clock modules per test, over stubbed window (an EventTarget: the store adds its
-// Q-38 `storage` listener at import), localStorage, performance and crypto.
+// Q-38 `storage` listener at import), document (an EventTarget with a settable visibilityState),
+// localStorage, performance and crypto. `added(type)` lists the listeners the store added after
+// import (Node's dispatchEvent swallows a listener's throw, so tests call them directly).
 async function setup(options: Options = {}) {
   const win = new EventTarget();
   vi.stubGlobal('window', win);
+  const doc = Object.assign(new EventTarget(), {
+    visibilityState: 'visible' as DocumentVisibilityState,
+  });
+  vi.stubGlobal('document', doc);
   vi.resetModules();
   const storage = { ...fakeStorage(options.stored), ...options.storage };
   vi.stubGlobal('localStorage', storage);
@@ -92,7 +98,20 @@ async function setup(options: Options = {}) {
   const storageEvent = (key: string | null, area: object, newValue: string | null = 'x') => {
     win.dispatchEvent(Object.assign(new Event('storage'), { key, newValue, storageArea: area }));
   };
-  return { game, clock, storage, time, storageEvent };
+  const spies = [vi.spyOn(doc, 'addEventListener'), vi.spyOn(win, 'addEventListener')];
+  const added = (type: string) =>
+    spies.flatMap((spy) =>
+      spy.mock.calls
+        .filter(([t]) => t === type)
+        .map(([, listener]) => listener as unknown as (event: object) => void),
+    );
+  // Calls the one listener the store added for `type`.
+  const fire = (type: string, event: object = {}) => {
+    const listeners = added(type);
+    if (listeners.length !== 1) throw new Error(`${listeners.length} ${type} listeners`);
+    listeners[0]?.(event);
+  };
+  return { game, clock, storage, time, storageEvent, doc, added, fire };
 }
 
 async function active(stored: string) {
@@ -622,5 +641,302 @@ describe('game store halt', () => {
       expect(storage.map.get(KEY), name).toBe(text);
       expect(game.current(), name).toEqual(HALTED);
     }
+  });
+});
+
+describe('game store lifecycle', () => {
+  const LIFECYCLE = ['visibilitychange', 'pagehide', 'pageshow'];
+  const PERSISTED = { persisted: true };
+
+  type Env = Awaited<ReturnType<typeof setup>>;
+
+  function expectNoLifecycleListener(env: Env): void {
+    for (const type of LIFECYCLE) expect(env.added(type), type).toEqual([]);
+  }
+
+  // A persisted pageshow after this store's own last write or read does not halt.
+  function expectNotStale(env: Env, kind: 'active' | 'rejected'): void {
+    expect(env.game.isStale()).toBe(false);
+    env.fire('pageshow', PERSISTED);
+    expect(env.game.current().kind).toBe(kind);
+    expect(env.game.haltCause).toBeUndefined();
+  }
+
+  const ownWrites: [string, () => Promise<Env>][] = [
+    [
+      'first-launch load',
+      async () => {
+        const env = await setup({ seed: 7 });
+        env.game.load();
+        env.game.registerLifecycle();
+        expect(env.storage.writes).toHaveLength(1);
+        return env;
+      },
+    ],
+    [
+      'dispatch',
+      async () => {
+        const env = await active(JSON.stringify(place));
+        env.game.registerLifecycle();
+        env.game.dispatch(UNDO);
+        expect(env.storage.writes).toHaveLength(1);
+        return env;
+      },
+    ],
+    [
+      'hide flush (hidden)',
+      async () => {
+        const env = await active(JSON.stringify(place));
+        env.game.registerLifecycle();
+        env.time.now += 250;
+        env.doc.visibilityState = 'hidden';
+        env.fire('visibilitychange');
+        expect(parsed(env.storage.map.get(KEY) ?? '').activeMs).toBe(place.activeMs + 250);
+        env.doc.visibilityState = 'visible';
+        return env;
+      },
+    ],
+    [
+      'hide flush (pagehide)',
+      async () => {
+        const env = await active(JSON.stringify(place));
+        env.game.registerLifecycle();
+        env.time.now += 250;
+        env.fire('pagehide');
+        expect(parsed(env.storage.map.get(KEY) ?? '').activeMs).toBe(place.activeMs + 250);
+        return env;
+      },
+    ],
+    [
+      'newGame() from active',
+      async () => {
+        const env = await active(JSON.stringify(place));
+        env.game.registerLifecycle();
+        env.game.newGame();
+        return env;
+      },
+    ],
+    [
+      'newGame() from rejected',
+      async () => {
+        const env = await active(JSON.stringify(invalidNull));
+        env.game.registerLifecycle();
+        env.game.newGame();
+        return env;
+      },
+    ],
+    [
+      'replay()',
+      async () => {
+        const env = await active(JSON.stringify(place));
+        env.game.registerLifecycle();
+        env.game.replay();
+        return env;
+      },
+    ],
+  ];
+  for (const [name, start] of ownWrites) {
+    it(`AD-4 ${name}: the own write leaves isStale() false and a persisted pageshow does not halt`, async () => {
+      const env = await start();
+      expect(env.storage.writes.length).toBeGreaterThan(0);
+      expect(env.game.current()).toEqual({
+        kind: 'active',
+        session: parsed(env.storage.map.get(KEY) ?? ''),
+      });
+      expectNotStale(env, 'active');
+    });
+  }
+
+  it('AD-4 a rejected load, then a persisted pageshow: stays rejected', async () => {
+    const env = await active(JSON.stringify(invalidNull));
+    env.game.registerLifecycle();
+    expectNotStale(env, 'rejected');
+    expect(env.storage.writes).toEqual([]);
+  });
+
+  it('AD-4 a valid stored Session loaded (no write), then a persisted pageshow: stays active', async () => {
+    const env = await active(JSON.stringify(place));
+    env.game.registerLifecycle();
+    expectNotStale(env, 'active');
+    expect(env.storage.writes).toEqual([]);
+  });
+
+  it('AD-4 while halted, a persisted pageshow reads no storage and keeps the fatal', async () => {
+    const env = await active(JSON.stringify(place));
+    env.game.registerLifecycle();
+    env.game.halt('fatal', 'AD-4 earlier fatal');
+    env.storage.map.set(KEY, JSON.stringify(won));
+    const getItem = vi.spyOn(env.storage, 'getItem');
+    env.fire('pageshow', PERSISTED);
+    expect(getItem).not.toHaveBeenCalled();
+    expect(env.game.haltCause).toBe('fatal');
+    expect(env.game.haltText).toBe('AD-4 earlier fatal');
+  });
+
+  it('AD-4 a rejected load, stored text changed, then a persisted pageshow halts with another-window', async () => {
+    const env = await active(JSON.stringify(invalidNull));
+    env.game.registerLifecycle();
+    env.storage.map.set(KEY, JSON.stringify(won));
+    expect(env.game.isStale()).toBe(true);
+    env.fire('pageshow', PERSISTED);
+    expect(env.game.current()).toEqual({ kind: 'halted' });
+    expect(env.game.haltCause).toBe('another-window');
+  });
+
+  it('AD-4 an active load, stored text changed, then a non-persisted pageshow does not halt', async () => {
+    const env = await active(JSON.stringify(place));
+    env.game.registerLifecycle();
+    env.storage.map.set(KEY, JSON.stringify(won));
+    env.fire('pageshow', { persisted: false });
+    expect(env.game.current().kind).toBe('active');
+  });
+
+  it('AD-16 halted before load: load, then registerLifecycle() throws and adds no listener', async () => {
+    const env = await setup({ stored: JSON.stringify(place) });
+    env.storageEvent(KEY, env.storage);
+    env.game.load();
+    expect(() => env.game.registerLifecycle()).toThrow('AD-16 registerLifecycle() while halted');
+    expectNoLifecycleListener(env);
+  });
+
+  it('AD-16 registerLifecycle() before load() throws and adds no listener', async () => {
+    const env = await setup({ stored: JSON.stringify(place) });
+    expect(() => env.game.registerLifecycle()).toThrow('AD-16 registerLifecycle() while booting');
+    expectNoLifecycleListener(env);
+  });
+
+  it('AD-16 a second registerLifecycle() after a successful one throws and adds no listener', async () => {
+    const env = await active(JSON.stringify(place));
+    env.game.registerLifecycle();
+    const counts = LIFECYCLE.map((type) => env.added(type).length);
+    expect(counts).toEqual([1, 1, 1]);
+    expect(() => env.game.registerLifecycle()).toThrow('AD-16 registerLifecycle() called twice');
+    expect(LIFECYCLE.map((type) => env.added(type).length)).toEqual(counts);
+  });
+
+  it('AD-16 registerLifecycle() resumes the clock only when visible', async () => {
+    const visible = await active(JSON.stringify(place));
+    visible.game.registerLifecycle();
+    visible.time.now += 100;
+    expect(visible.clock.peek(visible.time.now)).toBe(100);
+    const hidden = await active(JSON.stringify(place));
+    hidden.doc.visibilityState = 'hidden';
+    hidden.game.registerLifecycle();
+    hidden.time.now += 100;
+    expect(hidden.clock.peek(hidden.time.now)).toBe(0);
+  });
+
+  it('AD-16 whenVisible() throws before registerLifecycle(), resolves at once when visible, else on visibilitychange to visible only', async () => {
+    const env = await active(JSON.stringify(place));
+    expect(() => env.game.whenVisible()).toThrow('AD-16 whenVisible() before registerLifecycle()');
+    env.game.registerLifecycle();
+    // Visible: settled after one microtask, with no listener fired.
+    let atOnce = false;
+    void env.game.whenVisible().then(() => {
+      atOnce = true;
+    });
+    await Promise.resolve();
+    expect(atOnce).toBe(true);
+    env.doc.visibilityState = 'hidden';
+    env.fire('visibilitychange');
+    const order: string[] = [];
+    void env.game.whenVisible().then(() => order.push('first'));
+    void env.game.whenVisible().then(() => order.push('second'));
+    const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+    await settle();
+    env.fire('pageshow', PERSISTED);
+    env.fire('pageshow', { persisted: false });
+    // A visibilitychange that leaves the page hidden (another hide) resolves nothing.
+    env.fire('visibilitychange');
+    await settle();
+    expect(order).toEqual([]);
+    env.doc.visibilityState = 'visible';
+    env.fire('visibilitychange');
+    await settle();
+    expect(order).toEqual(['first', 'second']);
+  });
+
+  it('AD-9 registerBeforeHide callbacks run in registration order before the take', async () => {
+    const env = await active(JSON.stringify(place));
+    const calls: string[] = [];
+    env.game.registerBeforeHide(() => {
+      calls.push('before');
+      env.time.now += 40;
+    });
+    env.game.registerLifecycle();
+    env.game.registerBeforeHide(() => {
+      calls.push('after');
+      env.time.now += 2;
+    });
+    env.time.now += 100;
+    env.fire('pagehide');
+    expect(calls).toEqual(['before', 'after']);
+    expect(parsed(env.storage.map.get(KEY) ?? '').activeMs).toBe(place.activeMs + 142);
+  });
+
+  it('AD-9 a throwing before-hide callback propagates and the flush writes nothing', async () => {
+    const env = await active(JSON.stringify(place));
+    const error = new Error('stub callback');
+    env.game.registerBeforeHide(() => {
+      throw error;
+    });
+    env.game.registerLifecycle();
+    const before = env.game.current();
+    env.time.now += 100;
+    expect(() => env.fire('pagehide')).toThrow(error);
+    expect(env.storage.writes).toEqual([]);
+    expect(env.game.current()).toBe(before);
+    // Neither taken nor paused: the clock still holds the 100 ms and keeps running.
+    expect(env.clock.peek(env.time.now)).toBe(100);
+    env.time.now += 50;
+    expect(env.clock.peek(env.time.now)).toBe(150);
+  });
+
+  for (const persisted of [true, false]) {
+    it(`AD-9 a pageshow while visible resumes the clock after a pagehide flush (persisted ${persisted})`, async () => {
+      const env = await active(JSON.stringify(place));
+      env.game.registerLifecycle();
+      env.time.now += 30;
+      env.fire('pagehide');
+      env.time.now += 500;
+      env.fire('pageshow', { persisted });
+      env.time.now += 100;
+      expect(env.clock.peek(env.time.now)).toBe(100);
+    });
+  }
+
+  it('AD-4 an active store whose wordcell:session was removed: isStale() is true and a persisted pageshow halts with another-window', async () => {
+    const env = await active(JSON.stringify(place));
+    env.game.registerLifecycle();
+    env.storage.map.delete(KEY);
+    expect(env.game.isStale()).toBe(true);
+    env.fire('pageshow', PERSISTED);
+    expect(env.game.current()).toEqual({ kind: 'halted' });
+    expect(env.game.haltCause).toBe('another-window');
+  });
+
+  it('AD-9 a throwing hide-flush write propagates, leaves the bytes and the Session unchanged', async () => {
+    const text = JSON.stringify(place);
+    const env = await active(text);
+    env.game.registerLifecycle();
+    const before = env.game.current();
+    env.time.now += 100;
+    env.storage.control.failWrites = true;
+    env.doc.visibilityState = 'hidden';
+    expect(() => env.fire('visibilitychange')).toThrow('setItem failed');
+    expect(env.storage.map.get(KEY)).toBe(text);
+    expect(env.game.current()).toBe(before);
+    expect(env.game.current()).toEqual({ kind: 'active', session: place });
+  });
+
+  it('AD-9 the hide flush while rejected writes nothing', async () => {
+    const env = await active(JSON.stringify(invalidNull));
+    env.game.registerLifecycle();
+    env.time.now += 100;
+    env.fire('pagehide');
+    env.doc.visibilityState = 'hidden';
+    env.fire('visibilitychange');
+    expect(env.storage.writes).toEqual([]);
+    expect(env.game.current().kind).toBe('rejected');
   });
 });

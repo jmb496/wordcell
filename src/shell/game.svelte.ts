@@ -3,7 +3,11 @@
 // `replay()` start a fresh Session (R-74). `feedback.rejectedWord` is the last failed Validate's
 // spelling (R-38). `halt()` enters `halted` from any state (AD-15 fatal from the `main.ts`
 // handlers, Q-38 another-window from the `storage` listener registered at import); while halted
-// nothing writes and `load()` only records the launch result.
+// nothing writes and `load()` only records the launch result. `registerLifecycle()` (called by
+// `main.ts` after `load()`, AD-16) adds the AD-9 visibilitychange/pagehide/pageshow listeners that
+// run the visible-time clock and the hide flush (`registerBeforeHide` callbacks run first);
+// `whenVisible()` and `isStale()` (Q-38 bfcache) are owned here, and `staleOwners()` is the OR
+// list of key-owner checks that entries 7 and 10 extend.
 import {
   accrue,
   apply,
@@ -68,6 +72,11 @@ let halted = $state.raw<{ cause: 'fatal'; text: string } | { cause: 'another-win
 );
 let launch: Loaded | undefined;
 let feedback = $state.raw<Feedback>({});
+// Q-38: the last `wordcell:session` text this store read or successfully wrote (`null` when absent).
+let sessionText: string | null = null;
+let registered = false;
+const beforeHide: (() => void)[] = [];
+let visibleResolvers: (() => void)[] = [];
 
 const currentView: GameView | undefined = $derived(
   state.kind === 'active' ? view(state.session, EN) : undefined,
@@ -84,6 +93,7 @@ function load(): void {
     // Q-38: halted during boot; record the launch result (AD-17 `loaded()`) and write nothing.
     if (launch !== undefined) throw new Error('AD-4 load() called twice');
     const stored = read(SESSION_KEY);
+    sessionText = stored;
     if (stored === null) {
       launch = { session: null };
       return;
@@ -97,11 +107,14 @@ function load(): void {
   if (text === null) {
     // R-74: a first launch deals and stores at once; write first, then enter active.
     const session = createSession(newSeed());
-    write(SESSION_KEY, serializeSession(session));
+    const written = serializeSession(session);
+    write(SESSION_KEY, written);
+    sessionText = written;
     launch = { session: null };
     state = { kind: 'active', session };
     return;
   }
+  sessionText = text;
   const parsed = parseSession(text, EN);
   if (parsed.ok) {
     launch = { session: parsed.session };
@@ -130,7 +143,9 @@ function dispatch(command: Command): DispatchResult {
   }
   if (result.session !== before) {
     // R-73: write first, then assign, so a throwing write leaves memory equal to storage.
-    write(SESSION_KEY, serializeSession(result.session));
+    const text = serializeSession(result.session);
+    write(SESSION_KEY, text);
+    sessionText = text;
     state = { kind: 'active', session: result.session };
   }
   if (result.rejectedWord !== undefined) feedback = { rejectedWord: result.rejectedWord };
@@ -150,7 +165,9 @@ function fresh(seed: number): void {
   const session = createSession(seed);
   state = { kind: 'active', session };
   feedback = {};
-  write(SESSION_KEY, serializeSession(session));
+  const text = serializeSession(session);
+  write(SESSION_KEY, text);
+  sessionText = text;
 }
 
 /** R-74: a fresh random deal, from `active` or `rejected`. */
@@ -179,6 +196,74 @@ function halt(cause: HaltCause, text?: string): void {
     halted = { cause };
   }
   if (state.kind !== 'halted') state = { kind: 'halted' };
+}
+
+/** Q-38: whether `wordcell:session` differs from the text this store last read or wrote. */
+function isStale(): boolean {
+  return read(SESSION_KEY) !== sessionText;
+}
+
+// Q-38 bfcache: every key owner's check, ORed; entries 7 and 10 append theirs.
+function staleOwners(): boolean {
+  return isStale();
+}
+
+/** AD-9: a callback run first on every hide flush, in registration order; accepted in any state. */
+function registerBeforeHide(fn: () => void): void {
+  beforeHide.push(fn);
+}
+
+// AD-9 hide flush (hidden, pagehide): callbacks, take and pause in every state; accrue, write and
+// assign only while active (write first, then assign). No try/catch: a throw reaches AD-15.
+function flush(): void {
+  for (const fn of beforeHide) fn();
+  const now = performance.now();
+  const ms = clock.take(now);
+  clock.pause(now);
+  if (state.kind !== 'active') return;
+  const accrued = accrue(state.session, ms, EN);
+  const text = serializeSession(accrued);
+  write(SESSION_KEY, text);
+  sessionText = text;
+  state = { kind: 'active', session: accrued };
+}
+
+function resumeIfVisible(): void {
+  if (document.visibilityState === 'visible') clock.resume(performance.now());
+}
+
+/** AD-16: adds the AD-9 lifecycle listeners once, after `load()`, then resumes the clock iff visible. */
+function registerLifecycle(): void {
+  if (registered) throw new Error('AD-16 registerLifecycle() called twice');
+  if (state.kind === 'booting' || state.kind === 'halted') {
+    throw new Error(`AD-16 registerLifecycle() while ${state.kind}`);
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      flush();
+    } else if (document.visibilityState === 'visible') {
+      clock.resume(performance.now());
+      const resolvers = visibleResolvers;
+      visibleResolvers = [];
+      for (const resolve of resolvers) resolve();
+    }
+  });
+  window.addEventListener('pagehide', flush);
+  window.addEventListener('pageshow', (event) => {
+    if (event.persisted && state.kind !== 'halted' && staleOwners()) halt('another-window');
+    resumeIfVisible();
+  });
+  registered = true;
+  resumeIfVisible();
+}
+
+/** AD-16: resolves once the page is visible (at once if it already is). */
+function whenVisible(): Promise<void> {
+  if (!registered) throw new Error('AD-16 whenVisible() before registerLifecycle()');
+  if (document.visibilityState === 'visible') return Promise.resolve();
+  return new Promise((resolve) => {
+    visibleResolvers.push(resolve);
+  });
 }
 
 function loaded(): Loaded {
@@ -215,6 +300,10 @@ export const game = {
   replay,
   loaded,
   current,
+  registerLifecycle,
+  registerBeforeHide,
+  whenVisible,
+  isStale,
 };
 
 // Q-38: another window wrote (or cleared) a `wordcell:` key in this origin's localStorage.

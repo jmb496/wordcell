@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { expect, type Page, test } from '@playwright/test';
 import { buildRoot } from './helpers/dist-test';
-import { hidePage, pageHide, pageShow, showPage } from './helpers/lifecycle';
+import { hidePage, pageHide, pageShow, showPage, startHidden } from './helpers/lifecycle';
 import { captureBoot, fixture, seedStorage } from './helpers/seed';
 import { armStorageSpy, storageWrites } from './helpers/storage-spy';
 import { longPress, touchDrag } from './helpers/touch';
@@ -102,6 +102,9 @@ test.describe('seedStorage / captureBoot', () => {
   test('AD-17 captureBoot records absent keys as null and later writes on reload', async ({
     page,
   }) => {
+    // Paused, so the reload's pagehide flush (R-73) writes the in-memory Session unchanged.
+    await page.clock.install({ time: 0 });
+    await page.clock.pauseAt(1000);
     await captureBoot(page);
     await page.goto('/');
     expect(await readBoot(page)).toEqual({
@@ -109,12 +112,20 @@ test.describe('seedStorage / captureBoot', () => {
       'wordcell:history': null,
       'wordcell:prefs': null,
     });
-    await writeKey(page, 'session', 's');
+    // The app's first-launch write, then its hide flush on reload, are the later writes.
+    const session = await page.evaluate(() => {
+      const current = window.__wordcell?.current();
+      if (current?.kind !== 'active') throw new Error(`store is ${current?.kind}`);
+      return current.session;
+    });
+    await writeKey(page, 'prefs', 's');
     await page.reload();
-    expect(await readBoot(page)).toEqual({
-      'wordcell:session': 's',
+    const boot = await readBoot(page);
+    expect(JSON.parse(boot?.['wordcell:session'] ?? 'null')).toEqual(session);
+    expect(boot).toEqual({
+      'wordcell:session': expect.any(String),
       'wordcell:history': null,
-      'wordcell:prefs': null,
+      'wordcell:prefs': 's',
     });
   });
 
@@ -454,6 +465,20 @@ test.describe('hidePage / showPage / pageHide / pageShow', () => {
     await expectVisibilityChange(page, () => hidePage(page), true);
     await expect(hidePage(page)).rejects.toThrow(/already 'hidden'/);
     expect(await lifecycleEvents(page)).toHaveLength(6);
+  });
+
+  test('AD-17 startHidden loads the page hidden; showPage then makes it visible with one visibilitychange', async ({
+    page,
+  }) => {
+    await startHidden(page);
+    await page.goto('/');
+    expect(await page.evaluate(() => [document.visibilityState, document.hidden])).toEqual([
+      'hidden',
+      true,
+    ]);
+    await installRecorder(page);
+    await expect(hidePage(page)).rejects.toThrow(/already 'hidden'/);
+    await expectVisibilityChange(page, () => showPage(page), false);
   });
 
   for (const state of ['visible', 'hidden'] as const) {

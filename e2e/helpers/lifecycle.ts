@@ -34,3 +34,12 @@ export async function pageShow(page: Page, { persisted }: { persisted: boolean }
     window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: p }));
   }, persisted);
 }
+
+// AD-17: every later navigation of this page loads hidden (visibilityState 'hidden', hidden true)
+// until showPage overrides it in that document. Call before goto; the getters are configurable.
+export async function startHidden(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+  });
+}
