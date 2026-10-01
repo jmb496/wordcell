@@ -1,5 +1,5 @@
 # Review log — story-lifecycle-and-visible-time-clock (ticket 3.6)
-State: pass 4: done
+State: pass 5: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 203 words, snapshot `story-lifecycle-and-visible-time-clock.passes/pass0.md`, HEAD d02367e.
 Note: the pull from tickets.toml entry 6 dropped `interface`, `tests`, `owns`; they are passed to reviewers and fixer as intent, and the pass 1 fixer adds them to the Description as `Interface:`, `Tests:`, `Owns:` lines.
@@ -104,3 +104,26 @@ Words (docs): 1340 (6.60 x pass 0; budget 1500)  |  Snapshot: story-lifecycle-an
 - Flush assignment re-renders the view (stretch) — no change needed
 - whenVisible on a visible pageshow (stretch) — dropped in pass 2 as already explicit
 - Not-on-ticks binding proof in epic 6 (stretch) — conflicts with fixer 3's cut
+
+## Pass 5 — 2026-09-30
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 10, decision-needed 0  |  Dropped in triage: 4
+Words (docs): 1340 (6.60 x pass 0; budget 1500), no fix pass  |  Snapshot: story-lifecycle-and-visible-time-clock.passes/pass4.md
+### Open (not fixed; stopping rule: passes 4 and 5 each at most one major)
+- [major] Acceptance Criteria, R-73 bullet — "pageHide alone writes the accrued activeMs" gives no visible advance before the pageHide, and every other pageHide case expects no growth, so a pagehide handler that skips take/accrue passes Playwright (shell Vitest never counts as R-id coverage) — fix: "seed session-place.json, advance N, pageHide → one wordcell:session entry with activeMs = seeded + N" (2 lenses)
+### Dropped
+- Initial non-persisted pageshow after registerLifecycle (stretch) — harmless, resume is idempotent
+- Resume vs whenVisible resolve order (stretch) — microtasks; plan detail
+- Throwing callback skips take/pause (stretch) — rule 6 outcome, the halt blocks later writes
+- Not-on-ticks cannot fail yet (stretch) — the coverage rule-coverage prescribes for this epic
+
+## Result — converged after 5 passes
+open major: Acceptance Criteria R-73 "pageHide alone writes the accrued activeMs" has no visible advance before the pageHide; the build should assert seed session-place.json, advance N, pageHide → one wordcell:session entry with activeMs = seeded + N.
+
+Unapplied minors (for the build plan):
+- R-74 New game case label → R-76 New game (matches the Tests line; rule-coverage maps R-74 to entry 3)
+- registerLifecycle: "called twice" means any call after a successful one (2 lenses)
+- Interface: the four store functions are members of the exported `game` object (`game.isStale()`), mirroring `scoreHistory.isStale`
+- Hide flush: take(now) and pause(now) share one performance.now() (AD-9)
+- R-76 New game: advance A > 0 so the discarded take is discriminating
+- startHidden before goto in the R-76 startHidden case
+- Flush leaves feedback unchanged has no test (pass 4 drop; a shell Vitest rejected Validate needs a dictionary)
