@@ -57,7 +57,7 @@ headless: true
 
 | Row | Item | Disposition | Route |
 |---|---|---|---|
-| C-OWN1 | Reject impossible records: a win with no word, a q without a u, more than 23 letters. | Owner decision needed. It changes which stored histories are rejected. | decision_needed (see Open questions) |
+| C-OWN1 | Reject impossible records: a win with no word, a q without a u, more than 23 letters. | Owner decision (2026-10-01): no change in v1; keep accepting them as built; revisit when `LangData` arrives. No code change. | none (decision recorded in the epic Notes and `.memlog.md`) |
 | C-OWN2 | Q-42 retry-in-place wording | Fix now = item 1 | closeout-docs |
 | C-SP1 | AD-13 stale-launch edges | Fix now = item 2 | closeout-docs |
 | C-SP2 | SPEC/build-notes CAP-1 and CAP-4 wording | Fix now = item 3 | closeout-docs |
@@ -79,7 +79,7 @@ headless: true
 
 | # | Finding | Source | Disposition | Route |
 |---|---|---|---|---|
-| S1 | AD-15 calls the Blocking message's Reload the primary button. DESIGN.md Buttons lists `Reload` as secondary, which reads as the banner's Reload. As built, the Blocking button is `.primary`. | `build-notes.md:22`; `src/ui/BlockingMessage.svelte:34`; DESIGN.md:570, :593 | Accept as built. The DESIGN.md wording needs the owner (it is a look rule). | decision_needed |
+| S1 | AD-15 calls the Blocking message's Reload the primary button. DESIGN.md Buttons lists `Reload` as secondary, which reads as the banner's Reload. As built, the Blocking button is `.primary`. | `build-notes.md:22`; `src/ui/BlockingMessage.svelte:34`; DESIGN.md:570, :593 | Accept as built (owner, 2026-10-01). Fix now (docs): DESIGN.md Buttons and Blocking message make the Blocking message's single button primary and the secondary `Reload` the banner's; the build-notes note is folded into AD-15. Applied at close-out. | closeout-docs (applied) |
 | S2 | AD-9/AD-17: the gesture-cancel half of the hide assertion lands with the pointer controller. The literal plain-overlay wording and the win → New game → back case are re-proven in epics 4/6. | `build-notes.md:14-17` | Defer | epic-4, epic-6 |
 | S3 | The 3.12 Seam P finding: under Vitest, `.svelte.ts` stores compile for the server, so `$derived` re-derives on every read and `game.view` identity can't be observed. | 3.12 Implementation Notes ("Seam P deviation") | Fix now (pitfall) | agents-md |
 
@@ -101,7 +101,7 @@ headless: true
   - The real hotspot is `src/shell/game.svelte.test.ts`, at 1593 lines. It also holds the 26 `history.svelte.ts` cases, because that store has no test file of its own: a departure from "unit tests beside the file" (R7).
 - **Duplication map:** R4, R5 and R6 below. The 3.12 sweep already folded the e2e helper copies (I-35, I-51 to I-53, I-62).
 - **Pattern divergence:** R2 (cancel()-first is not yet wired) and R7 (no test file beside its module).
-- **Spec-to-implementation reconciliation:** items 1–3, O1, O2, O4, S1 and C-SP3 to C-SP5. Every divergence found is a doc lagging the as-built or an owner decision. None is a code defect.
+- **Spec-to-implementation reconciliation:** items 1–3, O1, O2, O4, S1 and C-SP3 to C-SP5. Every divergence found is a doc lagging the as-built or an owner decision. None is a code defect. All were reconciled at close-out (521b5dc; S1 on 2026-10-01 after the owner's answer).
 
 ### Diff-scope review (cross-ticket boundaries)
 
@@ -168,7 +168,7 @@ Source: `_bmad-output/initiative-wordcell-v1/epic-rules-engine/epic-rules-engine
 
 ## Action items
 
-All are proposals awaiting application by the named step; none was applied by this run. Owner approval is noted where it exists.
+This run applied none of them. Close-out status (2026-10-01): C1–C10 were applied in commit 521b5dc and G1–G5 in commit 1e57edb (AGENTS.md refresh through `bmad-project-context`); the owner's answers to the Open questions were applied afterwards (S1: DESIGN.md and the AD-15 fold; C-OWN1: decision recorded, no code change). The later-epic items stay routed. Owner approval is noted where it exists.
 
 ### Close-out docs (owner-approved, or a technical default where marked)
 
@@ -223,12 +223,12 @@ All are proposals awaiting application by the named step; none was applied by th
 5. Exact exports are checked by `src/architecture.test.ts:1980`. The R-02 golden literals are unchanged (`git diff 8e5462f HEAD -- src/engine/deal*`: comments and one title only). **Met.**
 6. The live-site check runs only after the owner merges and deploys. **Open:** not yet possible, so not met. It is the epic's open item, with no blocking findings.
 
-All 12 tickets are done. No blocking finding is open. Open items: Done when 6, close-out docs C1–C10, AGENTS.md G1–G5 (due before epic 4) and the routed later-epic work.
+All 12 tickets are done. No blocking finding is open. Open items: Done when 6 and the routed later-epic work. Close-out docs C1–C10 (521b5dc), AGENTS.md G1–G5 (1e57edb) and the two owner questions (2026-10-01) are applied.
 
 ## Open questions
 
-- **C-OWN1:** should the history parser reject impossible records (a won record with no word, a q without a u, more than 23 letters)? This changes which stored histories are treated as unreadable. Proposed default: no change in v1. Keep accepting them as built, and revisit with `LangData`.
-- **S1:** DESIGN.md Buttons lists `Reload` as a secondary button, while AD-15 and the build make the Blocking message's Reload primary. Proposed default: keep as built. DESIGN.md clarifies that the secondary `Reload` is the dictionary banner's, and that the Blocking message's single button is primary.
+- **C-OWN1:** should the history parser reject impossible records (a won record with no word, a q without a u, more than 23 letters)? This changes which stored histories are treated as unreadable. Proposed default: no change in v1. Keep accepting them as built, and revisit with `LangData`. **Answered (owner, 2026-10-01): the proposed default.** No code change; recorded in the epic Notes and the spec `.memlog.md`.
+- **S1:** DESIGN.md Buttons lists `Reload` as a secondary button, while AD-15 and the build make the Blocking message's Reload primary. Proposed default: keep as built. DESIGN.md clarifies that the secondary `Reload` is the dictionary banner's, and that the Blocking message's single button is primary. **Answered (owner, 2026-10-01): the proposed default.** Applied: DESIGN.md Buttons and Blocking message; the `build-notes.md` AD-15/DESIGN.md spine note folded into AD-15 and marked folded; recorded in the epic Notes and the spec `.memlog.md`.
 
 ## Assumptions
 
@@ -237,5 +237,6 @@ All 12 tickets are done. No blocking finding is open. Open items: Done when 6, c
 - The machine verdict is **accepted-with-open-items**, rendered with no human decision. Done when 6 is open only because the merge and deploy are the owner's later step.
 - The diff-scope review ran through one general-purpose subagent instead of `bmad-review` (narrowing recorded above). Its findings were re-checked in the code before routing. Per-ticket diff ranges were not split; one combined range was used.
 - Item 7: the technical default (C9, G4) keeps the budget as the warm median and makes no CI or pool change. Reason: `fsModuleCache` met the budget as the ticket defined it; cold and CI time are not a budgeted constraint; and the remaining levers (`isolate: false`, pool change, splitting `architecture.test.ts`) cost scan or isolation guarantees for no current need.
-- Technical defaults applied without the owner: C4, C8, C9, G3–G5, R1–R7 routing, P1 and P3. Owner input is needed only for C-OWN1 and S1 (Open questions).
+- Technical defaults applied without the owner: C4, C8, C9, G3–G5, R1–R7 routing, P1 and P3. Owner input was needed only for C-OWN1 and S1 (Open questions); the owner accepted both proposed defaults on 2026-10-01.
 - This run wrote only this document and the orchestrator's result JSON. No status was changed and no tree file was edited.
+- Close-out (2026-10-01, after this run): the owner accepted every proposed default; C1–C10 landed in commit 521b5dc, G1–G5 in commit 1e57edb, and the S1 and C-OWN1 answers in the DESIGN.md, spine AD-15, `build-notes.md`, `.memlog.md` and epic Notes edits that followed.

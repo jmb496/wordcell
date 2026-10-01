@@ -629,7 +629,9 @@ sequenceDiagram
   30 s timeout that throws to this handler `[ASSUMPTION A-A10]` (fatal by this rule; AD-8's fetch
   timeout is `failed`). A later fatal replaces an earlier fatal's surface text (AD-4
   `haltCause`); a fatal during boot does not stop `boot()`: its later steps still run but write
-  nothing, because the store is halted. Service-worker registration or precache failures have no player-visible surface (the game works
+  nothing, because the store is halted. The Blocking message's one button is primary for every
+  cause (fatal, another window, Session rejected); the secondary `Reload` in DESIGN.md Buttons is
+  the dictionary-failed banner's (owner, 2026-10-01). Service-worker registration or precache failures have no player-visible surface (the game works
   online): they set `swState()` to `failed` and reach this handler only in dev and test builds;
   the `pwa` project catches regressions (Q-40). `console.error` is
   allowed only in that handler.

@@ -564,10 +564,11 @@ pills (`{rounded.full}`); among badges only the error dot is a circle. The 44 ×
 - **Buttons.** Primary (orange pill, 48 px tall, `{typography.button-label}`): Validate, Confirm,
   New game in the action bar when the game is over (in the action bar it spans the board width
   minus 8 px), the confirm action of the New game and Replay
-  this deal dialogs, and New game on the session-rejected message. Secondary (raised pill with a 1 px `{colors.outline}` border so its shape reads, since
+  this deal dialogs, and the Blocking message's single button (`Reload`, or `New game` on the
+  session-rejected message; AD-15). Secondary (raised pill with a 1 px `{colors.outline}` border so its shape reads, since
   surface-raised on surface is 1.15:1; 44 px; inside a dialog it uses a `{colors.surface}` fill,
   so its outline border keeps 3.4:1 against that fill):
-  D-block controls, Reload, dialog dismissals, and Undo and Redo as 44 × 44 icon-only secondary
+  D-block controls, the dictionary-failed banner's `Reload`, dialog dismissals, and Undo and Redo as 44 × 44 icon-only secondary
   buttons in the top bar (Components → Top bar). Danger (error fill): Reset history
   (history notice, end sheet, Statistics) and Delete history (confirm dialog). Disabled:
   ink-disabled on surface-raised, no fill change on hover. In Composing, a disabled Validate always
@@ -622,8 +623,9 @@ pills (`{rounded.full}`); among badges only the error dot is a circle. The 44 ×
   shrinks to 14 px first, then wraps with `overflow-wrap: anywhere`. Preferences uses a three-way segmented control
   (Fast / Normal / Slow) and a switch (Show timer). The selected segment and the switch's on state
   use a `{colors.accent-teal}` fill with `{colors.ink-on-accent}` text and thumb.
-- **Blocking message** (session rejected, spec §2). Replaces the board: a dialog-styled card
-  centred on the table, no scrim, one primary button.
+- **Blocking message** (session rejected, spec §2; unexpected failure, Q-37; open in another
+  window, Q-38). Replaces the board: a dialog-styled card centred on the table, no scrim, one
+  primary button (`Reload`, or `New game` on the session-rejected message; AD-15).
 - **App icon and manifest.** Icon: a single card at a slight tilt, ivory serif `W` on card-face,
   a flourish of two flat strokes, one teal and one orange, at the bottom (the one decorative use
   of the accents; no gradient), on a
