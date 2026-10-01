@@ -231,15 +231,24 @@ test.describe('§2 History notice flows (history-invalid-version-unknown.json)',
     await expect.poll(() => wc(page).then((state) => state?.wc)).toBe(1);
   });
 
-  test("§2 a double tap on the centre of Reset history lands its second tap on the Reset confirm's scrim and leaves the confirm open at wc 2", async ({
+  test("§2 a double tap on Reset history below the Reset confirm's card lands its second tap on the confirm's scrim and leaves the confirm open at wc 2", async ({
     page,
   }) => {
     await start(page, VERSION_UNKNOWN);
     await expectNotice(page, SENTENCE);
+    // The tap point is the part of Reset history below the confirm's card, measured by opening the
+    // confirm once: how far the card reaches depends on how the titles wrap in the system font.
+    await openConfirm(page);
+    const card = await confirmDialog(page).boundingBox();
+    await button(page, 'Keep it').click();
+    await expect(confirmDialog(page)).toHaveCount(0);
+    await expect.poll(() => wc(page).then((state) => state?.wc)).toBe(1);
     const box = await button(page, 'Reset history').boundingBox();
-    if (box === null) throw new Error('no Reset history box');
+    if (card === null || box === null) throw new Error('no confirm card or Reset history box');
+    const top = Math.max(box.y, card.y + card.height);
+    if (top >= box.y + box.height - 2) throw new Error('the confirm card covers Reset history');
     const x = box.x + box.width / 2;
-    const y = box.y + box.height / 2;
+    const y = (top + box.y + box.height) / 2;
     await doubleTap(page, x, y);
     await expect(confirmDialog(page)).toBeVisible();
     expect(await hitAt(page, x, y)).toEqual({ kind: 'scrim', name: null, dialog: CONFIRM });
