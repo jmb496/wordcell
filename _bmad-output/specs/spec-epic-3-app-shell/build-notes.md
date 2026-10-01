@@ -5,22 +5,31 @@ contract; these notes fix what they leave open. `[ASSUMPTION]` marks inferences.
 
 ## Spine notes (for the spine owner to fold in at the retrospective)
 
-- AD-7: `parseSession`'s `activeMs` domain is 0…2^52 (E4), not the whole safe-integer range.
+- AD-7: `parseSession`'s `activeMs` domain is 0…2^52 (E4), not the whole safe-integer range. Folded into the spine 2026-10-01 (epic 3 retrospective C6).
 - AD-7: `checkRecord` adds `won` → `finalScore ≥ 0` and `longestWord.letterCount ≥ 3` and
   `= spelling.length` (E5); the `= spelling.length` check is v1-English-only and moves behind
-  `LangData` when a second language arrives.
+  `LangData` when a second language arrives. Folded into the spine 2026-10-01 (epic 3 retrospective C6).
 - Proposed epics: the Session-rejected message, the History notice with its Reset confirm and
-  the overlays core move from rows 6 and 4 to row 3 (E2, E3).
+  the overlays core move from rows 6 and 4 to row 3 (E2, E3). Folded into the spine 2026-10-01 (epic 3 retrospective C6).
 - AD-9/AD-17: the gesture-cancel half of the hide assertion lands with the pointer controller
-  in epic 4 (E10).
+  in epic 4 (E10). Not folded: lands with epic 4's pointer controller (retrospective S2).
 - AD-13: the reload cases are restated for epic 3 (CAP-7); the literal plain-overlay wording and
-  the discriminating win → New game → back case (end sheet expanded) are re-proven in epics 4/6.
-- AD-9/Q-38: a persisted `pageshow` halts when any key owner's `isStale()` is true (CAP-4).
+  the discriminating win → New game → back case (end sheet expanded) are re-proven in epics 4/6. Folded into the spine 2026-10-01 (epic 3 retrospective C6).
+- AD-9/Q-38: a persisted `pageshow` halts when any key owner's `isStale()` is true (CAP-4). Folded into the spine 2026-10-01 (epic 3 retrospective C6).
 - AD-4: the store exposes `haltCause: 'fatal' | 'another-window'` beside the state; `current()`
-  stays `{ kind: 'halted' }` (AD-17).
-- AD-16/AD-9: the dictionary load awaits the store's `whenVisible()` after the double rAF.
-- AD-15/DESIGN.md: AD-15 makes the Blocking message's Reload the primary button, while DESIGN.md Buttons lists `Reload` as secondary (read as the dictionary banner's Reload); reconcile at the retrospective (CAP-4).
-- AD-17: the restore suite compares all three `loaded()` fields with `JSON.parse(__wordcellBoot[key])` (`null` when absent); post-reload `loaded().history`/`.prefs` equal the pre-reload snapshot's `current()` values only for keys present in localStorage at snapshot time; when post-reload `loaded()` is null, `current()` reports the in-memory defaults (CAP-10).
+  stays `{ kind: 'halted' }` (AD-17). Folded into the spine 2026-10-01 (epic 3 retrospective C6).
+- AD-16/AD-9: the dictionary load awaits the store's `whenVisible()` after the double rAF. Folded into the spine 2026-10-01 (epic 3 retrospective C6).
+- AD-15/DESIGN.md: AD-15 makes the Blocking message's Reload the primary button, while DESIGN.md Buttons lists `Reload` as secondary (read as the dictionary banner's Reload); reconcile at the retrospective (CAP-4). Not folded: the DESIGN.md wording is an open owner question (retrospective S1).
+- AD-17: the restore suite compares all three `loaded()` fields with `JSON.parse(__wordcellBoot[key])` (`null` when absent); post-reload `loaded().history`/`.prefs` equal the pre-reload snapshot's `current()` values only for keys present in localStorage at snapshot time; when post-reload `loaded()` is null, `current()` reports the in-memory defaults (CAP-10). Folded into the spine 2026-10-01 (epic 3 retrospective C6).
+- AD-13 (added at the retrospective, C-SP1, ticket 3.8): the push depth after a Forward correction, a
+  stale-entry push, a stored `wc` above the real history and a back between Delete history's two
+  pops. Folded into the spine 2026-10-01 (epic 3 retrospective C6).
+- AD-15/AD-8 (C-SP4): the font timeout is fatal by AD-15's own rule, not "like AD-8" (AD-8's
+  timeout is `failed`); a later fatal replaces an earlier fatal's text and `boot()` continues,
+  writing nothing, once halted (retrospective R3). Folded into the spine 2026-10-01 (epic 3 retrospective C6).
+- AD-17 (retrospective item 7, C-AD17W): the unit budget is the warm-cache median; the watch gate
+  applies to the slowest engine file. Folded into the spine 2026-10-01 (epic 3 retrospective C6).
+- Scaffold deltas (C-SP5): `tsconfig.e2e.json` includes `playwright.base.ts`. Folded into the spine 2026-10-01 (epic 3 retrospective C6).
 
 ## As-built facts that bite (8e5462f)
 
@@ -64,8 +73,9 @@ contract; these notes fix what they leave open. `[ASSUMPTION]` marks inferences.
 ## CAP-1 Engine carry-ins and D1 export removal
 
 - B6: in `commands.ts` `addFreeLetter`, `index === undefined` takes the append path whether or
-  not the key is present; add the table row "`addFreeLetter` with `index: undefined` → same
-  result as absent" (not a no-op: it appends).
+  not the key is present; it is proven by the named test `R-33 addFreeLetter with index:
+  undefined appends like an absent index (Q-31)` beside the `R-33 … index |M|` test, not by a
+  command-table row (the TABLE holds only no-op and throw rows; this case appends).
 - B7 test minors (`review-loop/2-12-build.md` Result): a literal-order R-42 case (left side,
   k ≥ 1, interleaved free letter); `expect(draftOf(s).reached).toBe('composing')` in
   `LABELLED['Idle with a pending draft']`; `destinationCount > 0` and
@@ -90,12 +100,14 @@ contract; these notes fix what they leave open. `[ASSUMPTION]` marks inferences.
   `ParseSessionResult`, `Phase`, `PlaceView`, `Reached`, `ScoreHistory`, `Session`,
   `Statistics`, `Status`, `StructuralCheck`, `WordCellNumber`. The existing runtime-key test in
   `src/engine/index.test.ts` stays. The check took ~0.75 s in review; the plan records the unit
-  suite time before and after, and if over the 5 s budget builds the program with `noLib` and
-  `skipLibCheck` over engine files only. After this lands, the AGENTS.md pitfall "type exports are unchecked" is updated through
+  suite time before and after. The program's only root is `src/engine/index.ts` with the engine
+  tsconfig options and never uses `noLib`; if the unit suite exceeds 5 s, only `skipLibCheck: true`
+  is added (not needed as built, ticket 3.1). After this lands, the AGENTS.md pitfall "type exports are unchecked" is updated through
   `bmad-project-context`.
 - D1 export: delete `deal` and `Card` from `index.ts`; keep the internal CardId deal the golden
   test uses; engine-internal uses may keep the `Card` type. `App.svelte` renders `view.columns`
-  and `view.faces` (import type only); the first store cut (E7) is `game.svelte.ts` with `{ kind: 'booting' } | { kind:
+  and `view.faces` (import type only) and is the store's only `view` reader (`main.ts` mounts it
+  without props and does not read `view`); the first store cut (E7) is `game.svelte.ts` with `{ kind: 'booting' } | { kind:
   'active'; session }`, `createSession(1)` at module load into `active`, and `view` `$derived`;
   no storage, no dispatch yet. The smoke spec keeps passing unchanged.
 
@@ -240,7 +252,8 @@ contract; these notes fix what they leave open. `[ASSUMPTION]` marks inferences.
   loaded hidden starts it only once visible (Playwright's `startHidden` fakes only
   `visibilityState`; rAF keeps firing). `retry()` sets `loading`;
   a 404 at any fetch sets a `reloadOnNextRetry` flag; `retry()` then calls `location.reload()`
-  unless `navigator.serviceWorker?.controller` is set.
+  unless `navigator.serviceWorker?.controller` is set, in which case it refetches in place with
+  the banner kept shown and hides it on success (Q-42, owner 2026-10-01).
 - The store passes `dictionary.state === 'ready' ? words : undefined` in `ctx`.
 - The 30 s timeout test waits until the route sees the request, then advances `page.clock`
   30 000 ms from there.
@@ -270,3 +283,6 @@ contract; these notes fix what they leave open. `[ASSUMPTION]` marks inferences.
 
 - `playwright.base.ts` exports the shared `use`, `retries`, `reporter`, `forbidOnly`,
   `fullyParallel`, and the `android`/`desktop` device map; add it to `tsconfig.e2e.json`.
+- Departure as built (ticket 3.12): the shared `use` is narrowed to `trace`
+  (`retain-on-failure`; each config adds its own `baseURL`), and `playwright.screens.config.ts`
+  keeps its own `retries: 0` instead of the shared value (AD-17).

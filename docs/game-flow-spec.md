@@ -9,7 +9,8 @@ loop and answered by Jared. v0.8 adds Q-36…Q-43, raised by the architecture sp
 answered by Jared on 2026-09-27; Q-41 amends the §2 replay paragraph and Q-43 refines R-84's
 record identity. v0.9 adds Q-44 (best and average score exclude negative given-up games, R-84),
 answered by Jared on 2026-09-30, and tags the R-50 and R-83 UI sentences (UI) (owner-approved
-the same day). Every rule has an id (R-xx) so
+the same day); on 2026-10-01 Jared amended Q-42's service-worker branch (epic 3
+retrospective). Every rule has an id (R-xx) so
 tests, specs and tickets can cite it. A "(UI)" in a rule's id tags the whole rule; a trailing
 "(UI)" tags only the sentence it ends. Tagged rules and sentences are satisfied by a Playwright
 test naming the R-id; every untagged sentence that states engine behaviour by an engine unit test
@@ -470,6 +471,6 @@ removing S, col1 is `F`; it must be included → **FAKED**, or with `L` → **FL
 | Q-39 | A save of a finish or un-finish fails halfway? | Score history is written first, then the Session; if the Session write fails, the previous history is written back and the failure message shows; a crash between the two writes is accepted (answered 2026-09-27). R-84. |
 | Q-40 | The offline install (service worker, precache) fails? | Nothing is shown to the player and the game works online; the failure is reported in dev and test builds only. A new version activates only once every WordCell window has closed (answered 2026-09-27). |
 | Q-41 | §2 replayed every redo-tail move as committed, but Undo past a pending draft leaves it uncommitted in the redo tail. | Each move is validated at its own `reached`; only the last element of `moves` may be below committed (answered 2026-09-27). §2. |
-| Q-42 | The dictionary banner's Reload after a deploy removed the old word-list file? | Any 404 on the word list makes the banner's next Reload tap reload the page (never automatically); under the service worker the banner stays until the next launch (answered 2026-09-27). R-38. |
+| Q-42 | The dictionary banner's Reload after a deploy removed the old word-list file? | Any 404 on the word list makes the banner's next Reload tap reload the page (never automatically); under a controlling service worker, Reload retries the download in place with the banner kept visible during the retry, never reloads the page, and the banner hides when the retry succeeds (owner, 2026-10-01) (answered 2026-09-27). R-38. |
 | Q-43 | How does Undo of a finish find its record without tying the score history to scoring rules? | By seed, outcome and active duration; the history's version changes only when the record's shape changes (answered 2026-09-27). R-84. |
 | Q-44 | Should a given-up game with a negative score pull down best and average score? | No (answered 2026-09-30): best score and average score exclude given-up records whose final score is negative; a given-up record scoring 0 or more and every won record count. Excluded records still count in games played, games given up and longest word ever. When no record qualifies, best and average are absent (shown as —). R-84. |

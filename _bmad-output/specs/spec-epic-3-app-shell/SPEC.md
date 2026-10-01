@@ -42,7 +42,9 @@ the AGENTS.md test split; shell Vitest tests are AD-named and never count as R-i
   - **intent:** The engine gaps the epic 2 retrospective left open are closed, and the board is
     fed by the game store instead of the transitional `deal`/`Card` export.
   - **success:** `apply` with `addFreeLetter { cell, index: undefined }` appends exactly like an
-    absent `index`, with a command-table row; a test named `R-38 …` asserts `validate` throws its
+    absent `index`, proven by the named test `R-33 addFreeLetter with index: undefined appends like
+    an absent index (Q-31)` (not a command-table row: the TABLE holds only no-op and throw rows); a
+    test named `R-38 …` asserts `validate` throws its
     structural check code while R-36 fails; the four open test minors of
     `review-loop/2-12-build.md` land (`build-notes.md` CAP-1); an `R-76`/`R-84` test accrues time
     between a finish and its un-finish in AD-4 order (accrue, apply, reconcile) and the record is
@@ -51,8 +53,9 @@ the AGENTS.md test split; shell Vitest tests are AD-named and never count as R-i
     longer exports `deal` or `Card`, and an `AD-2` Vitest test (TypeScript compiler API, in
     `src/architecture.test.ts`; the existing runtime-key test in `src/engine/index.test.ts`
     stays) fails if `index.ts` exports any name, type or value, beyond one literal list
-    (`build-notes.md` CAP-1); `main.ts` and `src/ui/App.svelte` read `view` from `src/shell/game.svelte.ts` (first cut, E7); the `R-02 golden deal` literals stay
-    byte-identical.
+    (`build-notes.md` CAP-1; the program never uses `noLib`); `src/ui/App.svelte` reads `view` from
+    `src/shell/game.svelte.ts` (first cut, E7) and is the store's only `view` reader (`main.ts`
+    mounts it without reading `view`); the `R-02 golden deal` literals stay byte-identical.
 
 - **CAP-2** Parse hardening and engine cleanup (B8, B9) — may run in parallel with CAP-3
   - **intent:** Stored data outside the engine's headroom (E4) or that no play could produce (E5)
@@ -89,7 +92,7 @@ the AGENTS.md test split; shell Vitest tests are AD-named and never count as R-i
 - **CAP-4** Fatal surface, rejected Session and single instance (AD-15, AD-4, Q-37, Q-38)
   - **intent:** Every failure the shell cannot recover from stops all writes and shows one
     blocking message, a stored Session the build cannot read is shown as rejected and kept
-    until New game, and a second live window stops saving.
+    until New game, and a window that sees another live window write stops saving.
   - **success:** `main.ts`'s `error`/`unhandledrejection` handlers set the store `halted`
     (`haltCause` `'fatal'`) and show the Blocking message `Something went wrong.` with the error text and `Reload`, mounting a
     standalone component when the UI is not mounted; the boot font check (30 s timeout) routes

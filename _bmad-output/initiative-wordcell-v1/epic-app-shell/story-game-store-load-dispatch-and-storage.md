@@ -46,3 +46,4 @@ Verify: npm run test:all and npm run test:screens are green, and Playwright on a
 - Open question: Whether rune modules test in node Vitest (the first shell test is the reactivity probe; fallback a client-transform Vitest project, SPEC Assumptions).
 - The epic Notes CAP-3 split line gives the kill variant to entry 4, but tickets.toml entry 3 owns it; this ticket keeps it (epic note stale, for the epic owner).
 - Any later entry changing the minimal board regenerates the screenshot baseline in the container in its own Verify (keep file names).
+- As built (recorded at the epic 3 retrospective, 2026-10-01): Undo and Redo were built as DESIGN.md's 44×44 icon-only buttons with accessible names `Undo` and `Redo` per SPEC E1 ("in the DESIGN.md components and tokens"), not as the text-labelled secondary buttons the Description names (plan Residual risks).

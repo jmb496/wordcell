@@ -7,7 +7,7 @@ paradigm: 'functional core / imperative shell, event-sourced'
 scope: 'WordCell v1: pure rules engine, event-sourced Session, app shell services, Svelte UI, PWA packaging, CI and deploy'
 status: final
 created: '2026-09-27'
-updated: '2026-09-30'
+updated: '2026-10-01'
 binds: ['spec R-01…R-85, §2, Q-01…Q-44', 'brief §6, §7, §9', 'DESIGN.md', 'EXPERIENCE.md']
 sources:
   - _bmad-output/planning-artifacts/briefs/brief-wordcell-2026-09-26/brief.md
@@ -36,6 +36,9 @@ Amended 2026-09-28 (epic 1 retrospective A1, owner-approved): AD-1, AD-17, AD-18
 deltas and A-A4/A-A6 describe the code as built in epic 1; no decision changed.
 Amended 2026-09-30 (epic 2 retrospective B2, owner-approved): AD-2, AD-6 (Q-44), AD-7, AD-17
 and Scaffold deltas describe the engine as built in epic 2; no decision changed.
+Amended 2026-10-01 (epic 3 retrospective C1–C10, owner-approved): AD-4, AD-7, AD-8 (Q-42), AD-9,
+AD-13, AD-15, AD-16, AD-17, Scaffold deltas and Proposed epics describe the app shell as built in
+epic 3 and fold the epic 3 `build-notes.md` spine notes; no AD reopened.
 
 ## Design Paradigm
 
@@ -183,7 +186,10 @@ flowchart LR
     session } | { kind: 'halted' }` in a `$state.raw` rune, initially `booting` (dispatch throws,
     nothing written); the load enters `active` or `rejected`, an error `halted` (AD-15). `view`
     is `$derived` while `active`. It is the only
-    module that calls `apply`, `accrue` or `createSession`.
+    module that calls `apply`, `accrue` or `createSession`. Beside the state it exposes
+    `haltCause: 'fatal' | 'another-window'`, which picks the Blocking message; the state and the
+    test hook's `current()` stay `{ kind: 'halted' }` (AD-17). `halt('fatal')` always sets
+    `'fatal'`; `halt('another-window')` never replaces an earlier `'fatal'`.
   - `dispatch(command): DispatchResult = { changed: boolean; rejectedWord?: string; finished?:
     'won' | 'gaveUp'; unfinished?: true }` is the only
     way a player action reaches the engine; outside `active` it throws. Key handling is off
@@ -226,7 +232,11 @@ sequenceDiagram
     throws to the AD-15 surface; a crash between the two writes is an accepted residual (Q-39).
   - Single live instance (Q-38): the store listens to the `storage` event; when another instance
     writes a `wordcell:` key, this instance goes `halted` and shows the blocking message
-    `WordCell is open in another window.` with `Reload`. Playwright test with two pages.
+    `WordCell is open in another window.` with `Reload`. Playwright test with two pages. A page
+    restored from the back/forward cache never receives the `storage` events fired while it was
+    cached, so each key's owner (the game store, `history.svelte.ts`, `prefs.svelte.ts`) keeps
+    the text it last read or wrote and exposes `isStale()`; a `pageshow` with `persisted` (AD-9
+    listener) halts the same way when any owner's `isStale()` is true.
 
 ### AD-5 — Seeded deal, frozen `[ADOPTED]`
 
@@ -295,12 +305,15 @@ sequenceDiagram
     differs from the container's, and a `longestWord` of `null`). Each record is checked, each
     failure → `contents-unreadable`: exact field set; `seed` a uint32; `outcome` ∈ { won, gaveUp };
     `finalScore` and `activeMs` safe integers, `activeMs` ≥ 0; `longestWord` absent or `{ spelling,
-    letterCount }` with a lowercase `a–z` spelling and a positive safe integer `letterCount`; a fixture
-    per check. In both parsers, text that is
+    letterCount }` with a lowercase `a–z` spelling and a positive safe integer `letterCount`; a `won`
+    record has `finalScore` ≥ 0; `longestWord.letterCount` is ≥ 3 and equals `spelling.length`
+    (v1 English only, where `qu` is two characters and two letters, R-85; this check moves behind
+    `LangData` when a second language arrives); a fixture per check. In both parsers, text that is
     not a JSON object, or a `version` that is not a non-negative safe integer, is
     `version-unreadable`; fixtures cover `null` and `[]`. They map one-to-one onto the EXPERIENCE.md message variants.
   - Before replay, `parseSession` checks, each failure → `replay-failed`: `seed` a uint32;
-    `activeMs` a non-negative safe integer; `gaveUp` boolean; `cursor.index` in 0…`moves.length`;
+    `activeMs` an integer in 0…2^52 (headroom so `accrue` cannot overflow; history records keep
+    the safe-integer domain); `gaveUp` boolean; `cursor.index` in 0…`moves.length`;
     `cursor.phase ≠ idle` requires `moves[cursor.index]` with `reached` ≥ the phase; `gaveUp`
     requires `cursor.phase = idle`; `targetCell` / `placementOrder` present iff `reached ≥
     place`; k = 0 requires `destinationSide = 'left'` (R-31); the §2 invariant (moves before
@@ -359,8 +372,9 @@ sequenceDiagram
     refetches in place (the banner's Reload), setting `loading` first; any 404 on the dictionary URL
     (first fetch or retry; the old hashed URL after a deploy, page not under SW control) makes
     the banner's next Reload tap perform `location.reload()`, never automatically; on a
-    service-worker-controlled page the banner stays until the next launch (Q-42, EXPERIENCE.md
-    Dictionary failed). Validate is enabled iff
+    service-worker-controlled page, `retry()` after a 404 refetches in place with the banner kept
+    shown, never calls `location.reload()`, and hides the banner on success (Q-42, owner
+    2026-10-01; EXPERIENCE.md Dictionary failed). Validate is enabled iff
     `view.canValidate && state === 'ready'`.
   - Tests: engine rule tests use small inline `Set` fixtures; only tests named as dictionary
     repro cases read the generated file. Playwright intercepts the dictionary with the route
@@ -381,7 +395,9 @@ sequenceDiagram
   `document.visibilityState === 'visible'` (AD-16). `game.svelte.ts` exposes
   `registerBeforeHide(fn)` (the shell cannot import the UI controller); it accepts several
   callbacks, called in registration order, which dispatch no command and cannot change what is
-  written: the one sanctioned shell→UI hook under CLAUDE.md rule 2. `gate.ts` registers its
+  written: the one sanctioned shell→UI hook under CLAUDE.md rule 2. It also exposes
+  `whenVisible(): Promise<void>`, resolved by its own `visibilitychange` listener (at once when
+  already visible), which boot awaits before the dictionary fetch (AD-16). `gate.ts` registers its
   scroll-busy reset there (AD-11). `main.ts` creates the
   pointer controller before the lifecycle listeners, independent of the Board (so it exists on
   the rejected root too), and it registers its `cancel` with both the store and `nav`. On hidden
@@ -528,7 +544,30 @@ sequenceDiagram
     Pushes and pops are queued so a pop's `popstate` completes before the next push. No close
     handler dispatches `undo`. Playwright: open an overlay, reload, back → the app is left;
     reload with two overlays open → the Board stays and `history.state` is `{ wc: 0, launch:
-    <new> }`, then back leaves the app.
+    <new> }`, then back leaves the app. In epic 3 the only overlays (the History notice and its
+    Reset confirm) exist only while the history is unreadable, so boot re-pushes the notice after
+    any reload: the epic 3 reload cases assert `{ wc: 1, launch: <new> }`, back → Board at
+    `wc: 0`, back → the app is left, and no old-launch entry is reached; the literal plain-overlay
+    outcomes above are re-proven with the epic 4/6 overlays.
+  - Push depth and stale-launch edges (as built in epic 3, ticket 3.8; refinements, no decision
+    changed). `nav` keeps the current entry's `wc` as it knows it: set from `state.wc` on every
+    current-launch `popstate` with a numeric `wc` (own pop settled, Forward, back), +1 per push
+    sent; each push sends `{ wc: count + 1, launch }`, so a push after a Forward correction sends
+    `depth + 1`. Known edges, accepted as residuals:
+    - **Stale-entry push.** A push made while the current entry is an ignored stale-launch entry
+      (reached only by Forward; Android has no Forward) stacks above it, so `wc` no longer equals
+      the distance from the base: the next back lands on the stale entry and is swallowed once,
+      and a later reload rewinds onto the stale entry and stamps it as base, leaving an
+      older-launch entry behind it (back from the bare Board is ignored once). An own pop that
+      settles on a stale entry leaves the count unchanged, so the next push is one `wc` high
+      until the next current-launch back corrects it.
+    - **Stored `wc` above the real history.** If a restored entry's `wc` exceeds the real back
+      history (e.g. tab duplication or session restore without the earlier entries),
+      `history.go(-d)` is a no-op, the 250 ms rewind throws to AD-15 and every reload is fatal.
+      Unverified whether Chrome can produce it; the epic 7 device check settles it.
+    - **Back between Delete history's two pops.** Delete history queues two pops and the second
+      `history.back()` goes out only after the first pop's `popstate`; a system back arriving in
+      that gap is absorbed as `nav`'s own pop, and the second `back()` can then leave the app.
   - The end sheet opens on a `DispatchResult` with `finished` (AD-4). On one with `unfinished`:
     if the sheet is expanded, `overlays.close(endSheet)` (it is the top entry, since sticky views
     and modals close or consume input first), then `hidden`; if collapsed, it is set `hidden` with
@@ -587,8 +626,10 @@ sequenceDiagram
   (Q-37); when the failure comes before the UI is mounted, the handler mounts a standalone
   fatal component into the root. At boot, `document.fonts.load('600 1em "WordCell Serif"', 'W')`
   resolving to an empty list or rejecting is such a failure; the check blocks mount and has a
-  30 s timeout that throws to this handler, like the dictionary fetch (AD-8) `[ASSUMPTION
-  A-A10]`. Service-worker registration or precache failures have no player-visible surface (the game works
+  30 s timeout that throws to this handler `[ASSUMPTION A-A10]` (fatal by this rule; AD-8's fetch
+  timeout is `failed`). A later fatal replaces an earlier fatal's surface text (AD-4
+  `haltCause`); a fatal during boot does not stop `boot()`: its later steps still run but write
+  nothing, because the store is halted. Service-worker registration or precache failures have no player-visible surface (the game works
   online): they set `swState()` to `failed` and reach this handler only in dev and test builds;
   the `pwa` project catches regressions (Q-40). `console.error` is
   allowed only in that handler.
@@ -609,8 +650,9 @@ sequenceDiagram
     back honours them `[ASSUMPTION A-A11]`) in this order: Session-rejected message (a root, no entry) else end sheet expanded if status
     ≠ playing, then the History notice if history is unreadable (once per launch; after a
     rejected Session it waits until New game) → mount UI → after first paint (a double
-    `requestAnimationFrame` after mount; a page loaded hidden therefore starts it when it becomes
-    visible) start the dictionary fetch → when it settles (ready, failed or timed out, AD-8), load `src/shell/sw.ts`
+    `requestAnimationFrame` after mount, then `await` the store's `whenVisible()` (AD-9), so a page
+    loaded hidden starts it only once visible; rAF is not relied on to stop while hidden) start
+    the dictionary fetch → when it settles (ready, failed or timed out, AD-8), load `src/shell/sw.ts`
     by dynamic `import()` (so `workbox-window` stays in its own chunk) and register the service
     worker → when that attempt settles, `requestPersistence()` (AD-7).
   - vite-plugin-pwa `generateSW`, `injectRegister: false`, `registerType: 'prompt'` with no
@@ -643,7 +685,12 @@ sequenceDiagram
     Flows (pick up → tray → place → undo) are tested in `android` first.
   - **Speed.** The unit suite stays under 5 s and a watch re-run under 1 s on the dev machine
     (brief §6.7); unit tests never load the full dictionary except the named dictionary repro
-    cases (AD-8), which load it once per file.
+    cases (AD-8), which load it once per file. The 5 s figure is the median of three `npm test`
+    runs after a discarded warm-up, on the dev machine, with Vitest's `fsModuleCache` warm; a cold
+    first run (7.2–7.8 s at epic 3) and CI are outside the budget. The 1 s watch gate applies to
+    the slowest engine test file; `src/architecture.test.ts` (1.5 s at epic 3) is informational.
+    Both are re-measured at each epic's refactor sweep; if the warm median exceeds 5 s, the next
+    lever is splitting `src/architecture.test.ts` together with its exemption.
   - **Seeding.** `fixtures/*.json` (repo root) are serialised Sessions and histories shared
     by Vitest repro cases and Playwright: valid ones, plus the rejecting `session-invalid-*` and
     `history-invalid-*` files, one per parser check (the check codes in `src/engine/errors.ts`),
@@ -667,9 +714,12 @@ sequenceDiagram
     | 'installing' | 'waiting' | 'active' | 'failed'` and `precacheComplete(): boolean` (the
     registration's active worker is `activated` and every precache manifest URL is in the Workbox
     precache cache). Restore tests capture the raw `wordcell:*` values at document start into
-    `window.__wordcellBoot` (see Seeding) and assert `loaded()` deep-equals `JSON.parse`
-    of them and, for absent keys, `null`; they also assert every field
-    except `activeMs` equals the pre-reload snapshot and `activeMs` is not smaller.
+    `window.__wordcellBoot` (see Seeding) and assert all three `loaded()` fields deep-equal
+    `JSON.parse` of them and, for absent keys, `null`. `loaded().session` equals the pre-reload
+    snapshot's session in every field except `activeMs`, which is not smaller;
+    `loaded().history` and `.prefs` equal the snapshot's `current()` values only for keys present
+    in `localStorage` at snapshot time; when a post-reload `loaded()` field is `null`, `current()`
+    reports the in-memory defaults.
   - **Time and hide.** Playwright `page.clock` controls `performance.now` for R-76 tests.
     `e2e/helpers/lifecycle.ts` `hidePage(page)` / `showPage(page)` override
     `document.visibilityState` and dispatch `visibilitychange`, exercising the store's real
@@ -870,7 +920,7 @@ Changes the first epic makes to commit `785c0f6`:
   moved from `build` to a `prebuild` hook, `postbuild`, `build:test` with a `prebuild:test`
   hook, `test:e2e:pwa`, `test:e2e:dist`, `test:screens` (and `test:screens:run`), `test:all` per
   AD-17, `check` gains `tsc -p src/engine/tsconfig.json`, `tsconfig.arch.json`
-  (`src/architecture.test.ts`) and `tsconfig.e2e.json` (`playwright*.config.ts`, `e2e/**`),
+  (`src/architecture.test.ts`) and `tsconfig.e2e.json` (`playwright*.config.ts`, `playwright.base.ts`, `e2e/**`),
   `wrangler` (AD-1, AD-8, AD-17, AD-18);
   `playwright.config.ts`: `testIgnore` for `*.screens.spec.ts`; new `playwright.pwa.config.ts`
   and `playwright.screens.config.ts` (AD-17).
@@ -915,10 +965,10 @@ the per-ticket loop of `docs/development-methodology.md`.
 | --- | --- | --- | --- |
 | 1 | Scaffold hardening, CI and deploy | Scaffold deltas; engine tsconfig, `architecture.test.ts`, Biome overrides (AD-1); dictionary generation and `?url` wiring (AD-8 build part); font subset, manifest and icons (AD-16, AD-18); size script (AD-18); test hook module with its gating (`DEV` / `VITE_TEST_HOOKS`), seed/touch/lifecycle helpers, `pwa` project, screenshot container (AD-17); `ci.yml`, `deploy.yml`, `wrangler.jsonc`, `_headers`, `.assetsignore` | — |
 | 2 | Rules engine | Deal freeze and golden test (AD-5); Session types, replay and validation; commands and the command table (AD-2); view (AD-3); scoring and bands; history record, reconcile, `isRecorded`, statistics (AD-6); serialise/parse with rejection reasons (AD-7); `LangData` and the R-81 penalty (Scaffold deltas). Every engine sentence of spec §2–§6 tested | 1 |
-| 3 | App shell services | Game store states, dispatch and feedback (AD-4); history store (AD-6); storage (AD-7); dictionary load and retry (AD-8); clock and lifecycle (AD-9); seed; prefs and motion (AD-10); nav adapter (AD-13); fatal surface (AD-15); boot order minus SW (AD-16); test-hook store accessors (`loaded()`, `current()`, `dictionaryState()`) and restore-boundary Playwright tests (AD-17) on a minimal board | 2 |
-| 4 | Board and gestures | Layout definition, geometry, gate and anchoring (AD-11); cards, columns, WordCells, top bar, action bar; pointer controller and targeting (AD-12); overlays store (AD-13); tap-select and foot pads; WordCell view (peek, sticky, hover); drop → Composing | 3 |
+| 3 | App shell services | Game store states, dispatch and feedback (AD-4); history store (AD-6); storage (AD-7); dictionary load and retry (AD-8); clock and lifecycle (AD-9); seed; prefs and motion (AD-10); nav adapter and the overlays core (AD-13); fatal surface (AD-15); Session-rejected message, History notice and its Reset confirm (moved from rows 6 and 4, epic 3 spec E2, E3); boot order minus SW (AD-16); test-hook store accessors (`loaded()`, `current()`, `dictionaryState()`) and restore-boundary Playwright tests (AD-17) on a minimal board | 2 |
+| 4 | Board and gestures | Layout definition, geometry, gate and anchoring (AD-11); cards, columns, WordCells, top bar, action bar; pointer controller and targeting (AD-12); overlays store: tail selection and end-sheet states on the epic 3 core (AD-13); tap-select and foot pads; WordCell view (peek, sticky, hover); drop → Composing | 3 |
 | 5 | Tray and Place | Tray band, tiles, destination block, D-block controls; free letters (tap and drag); arrange and tap-swap; Validate states and invalid-word line; placement strip; Confirm; FLIP and fly-to-cell (AD-14); tray growth | 4 |
-| 6 | Game surfaces and keyboard | Menu sheet, confirm dialogs, end sheet, Statistics, Preferences, How to play, Session-rejected message, History notice, pending-draft line, keyboard map, screen-reader labels and live region; `__APP_VERSION__` injection and menu footer (Consistency Conventions) | 5 |
+| 6 | Game surfaces and keyboard | Menu sheet, confirm dialogs, end sheet, Statistics, Preferences, How to play, the history-unreadable end-sheet block, Statistics message and menu dot, pending-draft line, keyboard map, screen-reader labels and live region; `__APP_VERSION__` injection and menu footer (Consistency Conventions) | 5 |
 | 7 | PWA and release | SW registration, update policy, offline test (AD-16, AD-17); `requestPersistence()`; test-hook `swState()` and `precacheComplete()` (AD-17); device checks (brief §6.2 force-stop, §6.3 ten qualifying games, relaunch into Game over → Android back collapses the end sheet, A-A11) | 3 (SW), 5 (offline test), 6 (release checks) |
 
 Play Store (Bubblewrap TWA) stays out of v1 (brief §8).

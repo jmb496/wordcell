@@ -63,7 +63,7 @@ with no R-id sentence; `AD-n …` for spine behaviour with no rule id (AGENTS.md
 | --- | --- | --- | --- |
 | Record appended when status becomes won or gaveUp, removed when that finish is undone | 6 | P3 + V | Redo onto the winning commit appends; Undo removes; the given-up fixture's Undo removes. |
 | Persisted locally beside the Session, with its own version | 6 | P3 | `wordcell:history` holds `{ version: 1, records }`. |
-| Finish and un-finish write Session and history synchronously in the same task | 6 | P3 | Both keys changed when the dispatch's click resolves, history first (a `setItem` spy in an init script records key order). |
+| Finish and un-finish write Session and history synchronously in the same task | 6 | P3 | Both keys changed when the dispatch's click resolves, history first (a `setItem` spy armed by `armStorageSpy` after boot records key order). |
 | One game in progress at a time | 3, 4 | P3 | The store holds one Session; a second window halts (Q-38). |
 | Statistics set, exclusions, ties | — | V + P4–6 | Epic 2; the panel is epic 6. |
 
@@ -85,7 +85,7 @@ with no R-id sentence; `AD-n …` for spine behaviour with no rule id (AGENTS.md
 | Q-39 history first, Session second, history written back on a failed Session write | 6 | P3 | Init script makes the `wordcell:session` write throw once on a finishing dispatch. |
 | Q-40 SW and precache failures | — | P7 | |
 | Q-41 each move validated at its own `reached` | 10 | P3 + V | Restore of the below-committed-last fixture. |
-| Q-42 after a 404 the banner's next Reload reloads the page; under SW the banner stays | 8 | P3 + P7 | SW-controlled branch is P7. |
+| Q-42 after a 404 the banner's next Reload reloads the page; under SW it retries in place with the banner kept, hidden on success | 8 | P3 + P7 | SW-controlled branch is P7. |
 | Q-43 un-finish match | — | V | Epic 2; D3 accepted as is. |
 
 ## Spine behaviour without a rule id (named `AD-n`)
