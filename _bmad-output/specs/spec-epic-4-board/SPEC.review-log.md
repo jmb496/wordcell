@@ -1,6 +1,6 @@
 # Review log — spec-epic-4-board (SPEC.md + rule-coverage.md + build-notes.md)
 
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7. Pre-loop: HEAD 1c93404; copies at SPEC.review-log.passes/pass0/; words 8184 (SPEC 3515, rule-coverage 2298, build-notes 2371).
 Caller rule: stop as diverging if majors rise pass-over-pass.
@@ -47,3 +47,28 @@ Reviewers: builder's reading, edge-case hunter, adversarial, ref alignment  |  F
 ### Fixer outcome
 All 30 items applied (fixer summary): new Decisions F21 (innerHeight-only re-layout), F22 (BAND_ORDER units), F23 (press resolution by data-place), F24 (cancel({ byBack })), F25 (deselect on completed tap); new scripted fixtures planned `session-idle-empty-column`, `session-gave-up-after-commit`; numbers checked against DESIGN.md arithmetic; `Locator.dispatchEvent` checked in Playwright 1.63. Unverified: band unit id names ([ASSUMPTION]), Chromium pointer events on disabled buttons (as before).
 Words: 10011 (1.22 x pass 0)  |  Snapshot: SPEC.review-log.passes/pass1/ ; fix diff pass1.fix.diff
+
+## Pass 2 — 2026-10-01
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 11, minor 18, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+### Applied (sent to fixer)
+- [major] CAP-4/F9 — Halted.svelte mounts both standalone and inside App; exemption of its Reload ambiguous → 1
+- [major] F21 — innerHeight-only change deviates from AD-11 "anchor rule applied" and its 412 × 780 → 710 example contradicts itself → 2
+- [major] F25/CAP-6 — outside-tap predicate also matches a WordCell long-press release and the sticky-view scrim tap; tap + click double trigger; `deselect()` with nothing selected undefined → 3
+- [major] CAP-6/CAP-9/F25 — long-press on an empty WordCell with a tail selected must deselect (EXPERIENCE.md: treated as a tap) → 4
+- [major] F24/CAP-4/rule-coverage — `cancel()` deselect scope contradicts build-notes/AD-12 (only a drag that replaced a selection); hide flush would pop or throw → 5
+- [major] CAP-4 — a dead (cancelled) pointerId must not block new pointers → 6
+- [major] CAP-3 scroll test — 412 × 700 scroll range 22 px; one-way loop stops firing scroll → 7
+- [major] Constraints/F20 — spec waives AGENTS.md "stop and report the spine bug"; report must reach the owner at the spec gate → 8
+- [major] CAP-4 — a press crossing 8 px from a column's non-card part or a WordCell is unspecified (EXPERIENCE: inert) → 9
+- [major] F2/build-notes CAP-2 — static tray rendering of more than 8 tiles undefined (overflows into labels/WordCells) → 10
+- [major] F13/act() — a button press during fly-back must complete it first (EXPERIENCE.md, AD-14) → 11
+- [minor] 12–29: second-pointer native click untested; view-sheet mirror pan-y exception clause; long-press then movement; enabled controls clear then act (banner Reload); own scrollTop write marks scroll-busy; height-derived w when nothing fits; `?bands=` empty/repeat/sticky; hover peek order, `top` tag, 14/15 boundary, `grab` cursor; new fixtures' moves truncated; R-82 fixture sets; cancel-first fixture with Undo enabled; setPointerCapture on the re-resolved element; Session-rejected New game in the act list; scrim touch-action; success-signal tail size; sheet animation non-goal (C-E56); R-33 no-op sentence untagged (V + P5 supp.)
+### Default applied (technical)
+- all majors take the reviewers' recommended defaults; F21 re-stated as AD-11's anchor-offset delta clamped to the scroll range
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+### Fixer outcome
+All 28 items applied. Open Questions gains the AD-11 `bannerShown` vs Q-42 spine-bug report (default: latch `dictionary.showBanner`, fold into AD-11 at close-out). F21 now AD-11's clamped anchor delta with exact values (412 × 839 → 779: leftover 101 → 41, delta −60 clamped 0; 412 × 780 → 710: leftover 42 → 0, scroll range 0 → 28). Scroll test 412 × 600 (range 122 px). No commands or tool claims added.
+Words: 10844 (1.33 x pass 0)  |  Snapshot: SPEC.review-log.passes/pass2/ ; fix diff pass2.fix.diff

@@ -32,8 +32,8 @@ asserts the outcome by `current()` and the stored `wordcell:session`, not by pix
 | R-14 (UI) a drop on the source column (the gesture UX confirms: `Here` pad or empty space) | 6 | P4 | Partial tail → k = 1 from the remainder; whole column → k = 0 (Q-30). |
 | R-14 (UI) a tap on another card of the source column re-selects from that card | 6 | P4 | No new history entry (`history.state.wc` unchanged). |
 | R-14 (UI) a tap on the selected card itself is a no-op | 6 | P4 | Selection and entry kept. |
-| R-14 (UI) a tap on a WordCell deselects and does not open the view | 6, 9 | P4 | Empty and non-empty cells. |
-| R-14 (UI) taps outside all columns deselect | 6 | P4 | Completed taps on the top bar background, tray band, labels, gap, action bar background, leftover band, banner background, `desktop` side margins, a disabled control; a long-press on a WordCell and a pan from a `pan-y` region at a scrolling viewport keep the selection (F25). |
+| R-14 (UI) a tap on a WordCell deselects and does not open the view | 6, 9 | P4 | Empty and non-empty cells; a long-press on an empty WordCell deselects on release (entry popped, no view). |
+| R-14 (UI) taps outside all columns deselect | 6 | P4 | Taps on the top bar background, tray band, labels, gap, action bar background, leftover band, banner background, `desktop` side margins, a disabled control; the banner `Reload` clears it, then acts; a long-press on a non-empty WordCell and a pan from a `pan-y` region at a scrolling viewport keep the selection (F25). |
 | R-14 (UI) a drag released over no column returns the tail with no command and no move-history change | 7 | P4 | Released over the WordCell row; stored Session byte-identical. |
 | R-14 (UI) a drag whose drop target never left the source column returns the tail (Q-34) | 7 | P4 | 20 px drag staying over its own column (EXPERIENCE.md Flow 1 variant); also a sub-25 % drag over the source only. |
 | R-14 (UI) a drag that leaves the source column and returns drops on the source column | 7 | P4 | Highlight appears on the source only after leaving. |
@@ -52,7 +52,7 @@ asserts the outcome by `current()` and the stored `wordcell:session`, not by pix
 | R-31 tapping a destination card sets k so it is the top of D; tapping the top of D sets k − 1 (no-op at k = 1) | 8 | V + P4 supp. | The UI dispatches `tapDestinationCard` iff `kIfTapped` maps the card to a number. |
 | R-32 (UI) destination cards shown as a fixed block with a cannot-rearrange indication | 2 | P5 | The static tray draws the D mirrors in destination style (S here); the interactive block is epic 5. |
 | R-33 (UI) chosen WordCell shown as used (visual deactivation) | 2 | P4 + P5 | P4: `session-place-free-letter-redo-tail` (and Undo into its Composing) shows the cell's top as a mirror with the used state; the tap that chooses it is P5. |
-| R-33 (UI) a tap on a used or empty WordCell in Composing is a no-op | — | P5 | Epic 5 adds the Composing WordCell tap; in epic 4 every Composing WordCell tap or drag dispatches nothing (CAP-9, P4: Session reference unchanged). |
+| R-33 a tap on a used or empty WordCell in Composing is a no-op | — | V + P5 supp. | Epic 5 adds the Composing WordCell tap; in epic 4 every Composing WordCell tap or drag dispatches nothing (CAP-9, P4: Session reference unchanged). |
 | R-39 (UI) in Composing, cards in columns other than the destination column are inert (no drag, no selection) | 8 | P4 | S ghosts included; viewing unaffected (CAP-9). |
 | R-39 (UI) a drag started on a destination-column card is treated as a tap on that card (R-31) | 8 | P4 | The card does not move; one `tapDestinationCard` at `pointerup`. |
 | R-39 (UI) to change source or destination, Undo | 8 | P4 | Undo from Composing returns the tail; a new drag then works. |
@@ -74,7 +74,7 @@ asserts the outcome by `current()` and the stored `wordcell:session`, not by pix
 
 | Sentence | CAP | Kind | Notes |
 | --- | --- | --- | --- |
-| R-82 (UI) score shown live during play | 3 | P4 | `Score <n>` from `displayScore`: committed score on `session-place`'s position, final score (U+2212 when negative) on `session-gave-up`; a Redo across a commit updates it. |
+| R-82 (UI) score shown live during play | 3 | P4 | `Score <n>` from `displayScore` on Idle, `session-place`, `session-won` and `session-gave-up` (negative, U+2212); a Redo across a commit updates it. |
 | R-82 (UI) and on the end screen | — | P6 | |
 | R-83 (UI), R-84 surfaces | — | P6 | |
 
@@ -97,16 +97,16 @@ asserts the outcome by `current()` and the stored `wordcell:session`, not by pix
 | AD-11 WordCell row bounding box unchanged after tray growth | — | P5 |
 | AD-11 `touch-action` none on cards and WordCells, `pan-y` on non-card regions (`pan-x pan-y` when the board is wider than the available width) | 3 | P4 (computed style) |
 | AD-11 gate: pending work runs in the next idle frame; scroll busy until `scrollend`, hide or 150 ms | 3, 4 | S (`createGate` with injected `raf`/timers) + P4 (DOM wiring) |
-| AD-12 tap / drag / long-press classification, one pointer, `button !== 0` ignored, `pointercancel`/`lostpointercapture`/`cancel()` end any press with no command and the rest of that `pointerId` is ignored, gate increment before completing an animation | 4 | S (pure `classify`) + P4 (DOM wiring) |
-| AD-12 press resolved by `data-place`; tapping and dragging a static tray tile changes nothing | 4 | P4 |
+| AD-12 tap / drag / long-press classification (no drag after a long-press fires), one pointer (a second never `preventDefault`ed or `stopPropagation`ed), `button !== 0` ignored, `pointercancel`/`lostpointercapture`/`cancel()` end any press with no command and the rest of that `pointerId` is ignored while a new pointer starts a gesture, gate increment before completing an animation | 4 | S (pure `classify`) + P4 (DOM wiring) |
+| AD-12 press resolved by `data-place`; tapping and dragging a static tray tile changes nothing; a drag from a column's non-card part or a WordCell is inert (Idle, tail selected: 20 px from another column's foot pad, released over it → Session and selection unchanged) | 4 | P4 |
 | AD-12 a drag from the source column of a tap-selected tail replaces it; only one tail lifted mid-drag | 7 | P4 |
-| AD-12 a press during fly-back acts on the settled layout (`elementFromPoint` after `finish()`) | 7 | P4 |
+| AD-12 a press or Undo during fly-back acts on the settled layout (`finish()` first; a press resolves by `elementFromPoint`) | 4, 7 | S (`act()` finishes it before its handler) + P4 |
 | AD-12 `pickTarget` raw/highlighted, 25 %, tie-break, `hasLeftSource` from `raw` including `null`, sub-25 % on the source only | 7 | S |
 | AD-12 transform written directly, no Svelte state until release; at most one command per gesture | 7 | S + P4 (dispatch count via `current()` reference changes) |
-| AD-12 `cancel()` first in Undo, Redo and every dialog, notice, banner and Blocking-message action mounted after the controller (standalone Halted Reload exempt, F9) | 4 | S (spy on the helper) + P4 (during a held `touchHold` drag, Undo triggered by `locator.dispatchEvent('click')`, on `desktop` the same while a `page.mouse` drag is held: tail returned, then Undo acted) |
+| AD-12 `cancel()` first in Undo, Redo and every App-owned dialog, notice, banner and Session-rejected New game action (Halted Reload exempt in both mounts, F9) | 4 | S (spy on the helper) + P4 (from `session-idle-empty-column`, Undo enabled in Idle: during a held `touchHold` drag, Undo triggered by `locator.dispatchEvent('click')`, on `desktop` the same while a `page.mouse` drag is held: tail returned, then `current().session.cursor.index` decreased) |
 | AD-9 / AD-17 `hidePage` alone: one `wordcell:session` write, the gesture cancel, resume only when visible; `hidePage` mid-`touchDrag` returns the tail and dispatches nothing, and a move after `hidePage` then `end()` changes nothing; a held destination-card press in Composing + `hidePage` → no `tapDestinationCard` | 4 | P4 |
 | AD-13 before-back hook: registered separately, runs before the Forward check and close callback, not on own pops or stale launches, throws on a second registration | 4 | S |
-| AD-13 `cancel({ byBack: true })` skips `overlays.deselect()`; the hide and Undo `cancel` deselect | 4 | S (one case per path) |
+| AD-13 `cancel()` deselects only when ending a drag that replaced a selection, never with `byBack`; hide with only a tap-selection keeps it (no `nav` call); hide with a sticky view over a selection does not throw (F24) | 4 | S (one case per path) |
 | AD-13 one entry per tail selection; re-select pushes none; popped on drop, deselect, Undo, Redo; back clears it (`wc: 0`, app open) | 5, 6 | S + P4 |
 | AD-13 select, start a drag from another column, back → nothing selected, app open, `history.state.wc = 0` | 7 | P4 |
 | AD-13 open an overlay (tail selection; sticky view), reload, back → the app is left | 6, 9 | P4 (the two-overlay case is P6, F16) |
