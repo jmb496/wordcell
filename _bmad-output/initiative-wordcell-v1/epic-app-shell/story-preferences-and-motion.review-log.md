@@ -1,6 +1,6 @@
 # Review log — story-preferences-and-motion.md (ticket 3.10)
 
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 249db05, copy story-preferences-and-motion.passes/pass0.md, 156 words.
 Intent carried from tickets.toml entry 10 (not copied by the pull): interface, tests, owns; pass-1 fixer adds them to Description as 'Interface:', 'Tests:', 'Owns:'.
@@ -89,3 +89,31 @@ Fixer: applied 1–13; no runnable commands added
 ### Dropped
 - CSS consumers combining --wc-reduced for the 120 ms fade — epic 5/6 scope
 - version-unknown Playwright variant — covered by S cases; optional
+
+## Pass 4 — 2026-10-01
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 0, minor 15, decision-needed 0  |  Dropped in triage: 1 (matchMedia global vs window duplicate)
+Words (docs): 1148 (7.4 x pass 0; budget 1500)  |  Snapshot: story-preferences-and-motion.passes/pass3.md (no fix pass)
+### Applied
+- none (converged; minors listed under Result)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- matchMedia stub form raised twice (fix diff, adversarial) — merged
+
+## Result — converged after 4 passes
+Majors per pass: 10, 6, 4, 0. Technical defaults applied: 12 (see Default applied lists). Decision-needed: none. Words 156 → 1148.
+
+Unapplied minors (for the build plan):
+- Test hook bullet — drop "(as for history rejects)": e2e/globals.d.ts derives history rejects from engine types; prefs rejects are declared inline mirroring prefs.svelte.ts.
+- Import safety — pin whether prefs.svelte.ts calls bare `matchMedia` or `window.matchMedia`, and stub it on the same object (game.svelte.test.ts stubs `window` as a bare EventTarget).
+- Import safety — game.svelte.test.ts setup() never calls game.load(); calling prefs.load() unconditionally there breaks 'AD-4 the store starts booting and importing it reads no storage' (getItem throws): make it an option, off for that case, or call it in active()/before each game.load().
+- Verify R-76 bullet — animationSpeed 'normal' / 180ms belong under a §7.10 (or AD-10) test name, not R-76 (rule-coverage R-76 row covers Show timer only).
+- AD-4 removal case — seed wordcell:prefs before load() (absent → absent is not stale), then remove it outside the setters.
+- Boot bullet — "always" means once fontCheck() settles without throwing (also when halted during the font check or later rejected); the font-fatal path runs neither load.
+- Setters — say AD-4's "nothing written while rejected" binds the game store's Session/history writes; prefs follow AD-10 (throw while halted, plus booting as scoreHistory.reset); the rejected-state test asserts storage and prefs.value, not current().
+- Description first paragraph — "a write while halted throwing" → "halted or booting".
+- Verify — "byte-identical" means to the seeded fixture text.
+- Verify live emulateMedia toggle — poll the computed style (expect.poll); plan detail.
+- Verify last bullet — the getComputedStyle line is a reading method, not a test; fold into the lead-in.
+- CSS mirror is unset before prefs.load(); nothing before mount may rely on it (no app.css default).
+- Setter whose storage write throws propagates (rule 6) leaving lastText, prefs and the mirror unchanged.
