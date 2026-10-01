@@ -1,6 +1,6 @@
 # Review log — story-preferences-and-motion.md (ticket 3.10)
 
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 249db05, copy story-preferences-and-motion.passes/pass0.md, 156 words.
 Intent carried from tickets.toml entry 10 (not copied by the pull): interface, tests, owns; pass-1 fixer adds them to Description as 'Interface:', 'Tests:', 'Owns:'.
@@ -34,3 +34,31 @@ Fixer: applied 1–13; item 6/9 mirror serialize.ts real reason shapes ({ reason
 - none
 ### Dropped
 - none (duplicates merged)
+
+## Pass 2 — 2026-10-01
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 6, minor 8, decision-needed 0  |  Dropped in triage: 2
+Words (docs): 961 (6.2 x pass 0)  |  Snapshot: story-preferences-and-motion.passes/pass2.md
+Fixer: applied 1–12; Biome claim verified (fixtures/ ignored); parsePrefs inputs checked against serialize.ts versionStage
+### Applied
+- [major] Verify bullet 4 — New game unreachable on a true first launch (status playing; App.svelte:65) → fixer item 1
+- [major] Description Boot/Q-38/Test hook — prefs behaviour before prefs.load() (isStale, loaded) and the game.svelte.test.ts harness unstated → fixer item 2
+- [major] Tests motion durations — harness unclear (setters throw while booting; game.svelte.ts touches window at import) → fixer item 3
+- [major] Description Boot — "the root" ambiguous (main.ts `root` is #app; tokens on :root) → fixer item 4
+- [major] Verify/Tests — initial reduced-motion value at load untested → fixer item 5
+- [major] Tests — setter throw while booting and write while rejected untested → fixer item 6
+- [minor] Interface — "since Biome lints *.json" false (biome ignores fixtures/) → fixer item 7
+- [minor] Setters — check order (state first) and side-effect/serialization order → fixer item 8
+- [minor] Tests — parsePrefs inline inputs named → fixer item 9
+- [minor] Tests — same-value setter on unreadable prefs leaves key untouched → fixer item 10
+- [minor] Verify bullet 3 — "no dialog or banner" locator → fixer item 11
+- [minor] Interface — `prefs` export shape → fixer item 12
+### Default applied (technical)
+- motion.test.ts mocks ../shell/prefs.svelte with a mutable motion object
+- prefs lastText starts null, isStale() never throws; load() throws if called twice; prefs loaded result throws before load; game.svelte.test.ts setup calls prefs.load() before game.load()
+- variables written on document.documentElement.style
+- setter: state check first, then same-value no-op, then JSON.stringify { version, animationSpeed, showTimer }, write, lastText, memory, mirror
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- motion.ts fade keyframes / shake kind — epic 5 scope, no defect in this ticket
+- reduced default unpinned in Playwright — folded into fixer item 5
