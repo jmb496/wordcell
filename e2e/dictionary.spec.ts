@@ -120,6 +120,10 @@ test("R-38 a word not in the list shows TAN isn't in the word list., stays Compo
   const message = page.getByText("TAN isn't in the word list.", { exact: true });
   await expect(message).toBeVisible();
   await expect(message).toHaveCSS('color', await tokenColor(page, '--wc-error'));
+  await expect(message.locator('xpath=preceding-sibling::*[1]')).toHaveAttribute(
+    'aria-hidden',
+    'true',
+  );
   await expect(primary).toHaveText('Validate');
   const { stored, current } = await activeSession(page);
   expect(stored).toEqual(current);
@@ -129,7 +133,7 @@ test("R-38 a word not in the list shows TAN isn't in the word list., stays Compo
   await expect(message).toHaveCount(0);
 });
 
-test('§2 replay never consults the dictionary: with the word list failing session-place.json restores to Place', async ({
+test('§2 AD-8 replay never consults the dictionary: with the word list failing session-place.json restores to Place', async ({
   page,
 }) => {
   await page.route(LIST, (route) => route.fulfill({ status: 500, body: '' }));
@@ -200,7 +204,7 @@ test.describe('AD-8 Retry', () => {
   });
 });
 
-test('Q-42 Reload after a 404 reloads the page', async ({ page }) => {
+test('Q-42 AD-8 Reload after a 404 reloads the page', async ({ page }) => {
   await page.route(LIST, (route) => route.fulfill({ status: 404, body: '' }));
   await seedStorage(page, { session: fixture('session-composing.json') });
   await open(page);
@@ -212,7 +216,7 @@ test('Q-42 Reload after a 404 reloads the page', async ({ page }) => {
 });
 
 // The real-service-worker proof of this branch stays P7 (epic 7); here the controller is stubbed.
-test('AD-8 Q-42 under a stubbed service-worker controller, Reload after a 404 retries in place with the banner shown and Reload disabled', async ({
+test('AD-8 under a stubbed service-worker controller, Reload after a 404 retries in place with the banner shown and Reload disabled', async ({
   page,
 }) => {
   await page.addInitScript(() => {
@@ -326,7 +330,7 @@ test.describe('AD-16 dictionary start', () => {
   });
 });
 
-test('§2 a Session-rejected root still loads the word list', async ({ page }) => {
+test('§2 AD-16 a Session-rejected root still loads the word list', async ({ page }) => {
   const requests = countRequests(page);
   await seedStorage(page, { session: fixture('session-invalid-version-unknown.json') });
   await page.goto('/');
@@ -335,4 +339,17 @@ test('§2 a Session-rejected root still loads the word list', async ({ page }) =
   ).toBeVisible();
   await waitForDictionary(page, 'ready');
   expect(requests).toHaveLength(1);
+});
+
+test('§2 AD-8 a Session-rejected root shows no word-list banner when the list fails', async ({
+  page,
+}) => {
+  await page.route(LIST, (route) => route.fulfill({ status: 500, body: '' }));
+  await seedStorage(page, { session: fixture('session-invalid-version-unknown.json') });
+  await page.goto('/');
+  await expect(
+    page.getByRole('heading', { name: "This saved game can't be opened.", exact: true }),
+  ).toBeVisible();
+  await waitForDictionary(page, 'failed');
+  await expect(page.getByText(BANNER, { exact: true })).toHaveCount(0);
 });
