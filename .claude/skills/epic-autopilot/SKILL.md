@@ -62,8 +62,8 @@ With the argument `one-ticket` (always headless):
 
   (`detach.sh` closes stdin and keeps `<done-file>.pid` while the step runs; for `test:all` the
   command is `npm run test:all` and the done file holds its exit code.) Before Setup 2, if any
-  `$W/*.pid` names a live process (a step an earlier session left running), stop (rule 5) and
-  name it; never start a second copy.
+  `.autopilot/*/*.pid` names a live process (a step an earlier session left running), stop
+  (rule 5) and name it; never start a second copy.
 - Handoff (committed, overwritten each session):
   `_bmad-output/implementation-artifacts/autopilot/<epic>-handoff.md`, starting with these lines,
   then the plain-language report for the owner (Final report) and how to resume:
@@ -77,8 +77,11 @@ With the argument `one-ticket` (always headless):
   summary: <one plain sentence>
   ```
 
+  The report includes the run's **Close-out docs** (Step D.4); when the outcome is `complete`,
+  list them all, since the retrospective applies them.
   `complete` when no tickets remain after this one (Stop rule 6); then also append
-  `## Run complete` to the digest. Commit both with the ticket's "mark done" commit, or with the
+  `## Run complete` to the digest, with a `Close-out docs:` section gathering every ticket's
+  entries. Commit both with the ticket's "mark done" commit, or with the
   stop commit. A stop for a usage limit puts `usage limit` in `reason:` (with the reset time) so
   the driver reports it as one.
 - The digest entry gets a `Tokens:` line from
@@ -134,9 +137,11 @@ when any of these holds:
 5. The working tree is dirty or not on the epic's branch when a ticket starts, a headless step
    hit a usage or session limit (see Usage limits), a headless step exits without writing its
    result file, or any command here fails unexpectedly.
-6. `stop-after=<ref>` was given and that ticket is done, or no tickets remain (then recommend
-   `/bmad-retrospective`, and marking the epic container done with `bmad-preview-ticketing` once
-   its verdict is accepted, so a later epic whose `after` names it is not gated, Setup 5).
+6. `stop-after=<ref>` was given and that ticket is done, or no tickets remain. Then the
+   recommended next step is: run `/bmad-retrospective`, apply its owner-approved doc fixes
+   (including the run's Close-out docs), and mark the epic container done with
+   `bmad-preview-ticketing` once its verdict is accepted, so a later epic whose `after` names it
+   is not gated (Setup 5).
 
 Everything else — technical defaults, a review loop capped at 7 passes or stopped on its trend
 after applying its fixes (its late-major area recorded as a ref to fix upstream), deferred
@@ -154,8 +159,10 @@ items — is recorded in the digest and the run continues.
    previous build of this ticket stopped at a usage limit with its plan `in-progress` and its
    uncommitted work in the tree (those files are this build's own); resume it per
    bmad-build-auto's resume rule."*
-3. Run id `R` = `YYYYMMDD-HHMM`. Working dir for step results and logs, **outside the repo** so
-   the tree stays clean for the build: `W=/tmp/wordcell-autopilot/<R>`. Create it.
+3. Run id `R` = `YYYYMMDD-HHMM`. Working dir for step results, logs, done and pid files, in the
+   git-ignored repo folder `.autopilot/` (it survives a reboot for the retro, and `git status
+   --short` ignores it, so the tree stays clean for the build): `W=<repo root>/.autopilot/<R>`
+   (absolute). Create it. The driver's lock and loop logs live in `.autopilot/` too.
    Resuming: if this epic's newest digest has no `## Run complete` and ends in a `## Stopped`
    section, reuse its `R`, `W` and digest (recreate `W` if it is gone) instead.
 4. Digest (committed): `_bmad-output/implementation-artifacts/autopilot/<epic>-<R>.md`. Create it
@@ -305,7 +312,13 @@ committed there.
    WIP commits already hold everything, commit nothing here.
 3. Owner check other than reading the result → stop now (rule 4), ticket stays `built`.
 4. `uv run _bmad/method/scripts/tickets.py mark <ref> done`, append the ticket's digest entry,
-   and commit both: `docs(tickets): mark ticket <ref> done (autopilot)`.
+   and commit both: `docs(tickets): mark ticket <ref> done (autopilot)`. **Close-out docs:** for
+   every owner decision made for this ticket during the run (an answered decision-needed item,
+   a question answered between sessions, a decision recorded in the ticket, epic Notes or spec
+   memlog), list each owner doc whose text it changes or contradicts: `docs/game-flow-spec.md`,
+   ARCHITECTURE-SPINE.md, DESIGN.md, EXPERIENCE.md, the epic's SPEC.md (or a companion). One
+   line per doc and section, with the decision and its date, in the digest entry and the
+   handoff. Do not edit those docs: they are the owner's and are applied at the retro.
 5. If `stop-after` names this ref → stop (rule 6). Else next ticket.
 
 ## Digest entry (per ticket, plain language)
@@ -321,10 +334,13 @@ Ref to fix upstream: <for a capped or diverging loop: area → doc and section; 
 Paused: <usage limit at <step>, reset <time as shown>, resumed at <time>; or omit the line>
 Tokens: <usage-report.py line, one-ticket mode; or omit the line>
 Worth knowing: <deferred items, halts that nearly fired, anything capped — plain words, or "nothing">
+Close-out docs: <doc § section ← decision (owner, date), one per line; or "none">
 ```
 
 ## Final report
 
 Tell the owner in plain language: tickets done this run, where it stopped and why, what (if
-anything) they must decide or check — each choice with its practical effect — and the digest
-path. Never report a ticket as done unless `tickets.py` shows it done and `test:all` passed.
+anything) they must decide or check — each choice with its practical effect — the Close-out docs
+gathered so far (Step D.4), and the digest path. When the epic is complete, the recommended next
+step is the retrospective, then applying its owner-approved doc fixes, then marking the epic done
+(Stop rule 6). Never report a ticket as done unless `tickets.py` shows it done and `test:all` passed.

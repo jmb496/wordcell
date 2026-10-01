@@ -19,13 +19,16 @@ if [ $# -lt 1 ]; then echo "usage: $0 <epic-slug> [max-tickets]"; exit 4; fi
 EPIC=$1; MAX=${2:-99}
 HERE=$(cd "$(dirname "$0")" && pwd)
 cd "$(git rev-parse --show-toplevel)" || exit 4
-mkdir -p /tmp/wordcell-autopilot
-exec 9> "/tmp/wordcell-autopilot/$EPIC.lock"
+# Run state lives in the git-ignored repo folder .autopilot/ (survives a reboot; git status
+# --short ignores it, so the tree stays clean for the build).
+AP=$PWD/.autopilot
+mkdir -p "$AP" || exit 4
+exec 9> "$AP/$EPIC.lock"
 flock -n 9 || { echo "Another loop.sh for $EPIC is already running."; exit 4; }
 H=_bmad-output/implementation-artifacts/autopilot/$EPIC-handoff.md
 
 # Progress lines for the console while a session runs, read only from what the session leaves
-# on disk (detached step logs and done files under /tmp/wordcell-autopilot/<run>/, and new
+# on disk (detached step logs and done files under .autopilot/<run>/, and new
 # commits), so the orchestrator's context is unchanged. Polls every PROGRESS_SECS (default 15).
 step_label() {
   case "$1" in
@@ -52,8 +55,8 @@ watch_progress() { # <start-marker> <base-commit>
   local marker=$1 base=$2 f name ref step label summary line
   declare -A seen
   poll() {
-    for f in $(find /tmp/wordcell-autopilot/2*/ -maxdepth 1 -name '*.log' -newer "$marker" 2>/dev/null | sort) \
-        $(find /tmp/wordcell-autopilot/2*/ -maxdepth 1 -name '*.done' -newer "$marker" 2>/dev/null | sort); do
+    for f in $(find "$AP"/2*/ -maxdepth 1 -name '*.log' -newer "$marker" 2>/dev/null | sort) \
+        $(find "$AP"/2*/ -maxdepth 1 -name '*.done' -newer "$marker" 2>/dev/null | sort); do
       [ -n "${seen[$f]:-}" ] && continue
       seen[$f]=1
       name=$(basename "$f"); name=${name%.*}
@@ -74,11 +77,11 @@ watch_progress() { # <start-marker> <base-commit>
   trap 'poll; exit 0' TERM
   while :; do poll; sleep "${PROGRESS_SECS:-15}" & wait $!; done
 }
-LOGS=/tmp/wordcell-autopilot/loop-$EPIC-$(date +%Y%m%d-%H%M)
+LOGS=$AP/loop-$EPIC-$(date +%Y%m%d-%H%M)
 mkdir -p "$LOGS"
 echo "loop logs: $LOGS"
 for i in $(seq 1 "$MAX"); do
-  for pidf in /tmp/wordcell-autopilot/*/*.pid; do
+  for pidf in "$AP"/*/*.pid; do
     [ -e "$pidf" ] || continue
     if kill -0 "$(cat "$pidf" 2>/dev/null)" 2>/dev/null; then
       echo "A step from an earlier session is still running ($pidf). Wait for it to finish (or kill it), then rerun."

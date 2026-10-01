@@ -4,7 +4,7 @@
 # does not wait for its own background jobs), with stdin closed. Writes its pid to
 # <done-file>.pid while it runs; when it exits, writes its exit code to <done-file> and removes
 # the pid file. Pair with wait-for.sh. loop.sh refuses to start while any pid file under
-# /tmp/wordcell-autopilot/ names a live process.
+# .autopilot/<run>/ names a live process.
 set -u
 done_file=$1; log_file=$2; shift 2
 [ "${1:-}" = "--" ] && shift
