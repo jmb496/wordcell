@@ -3,7 +3,7 @@ title: 'Score-history store and finish writes'
 type: 'feature'
 ticket: '7'
 created: '2026-09-30'
-status: 'built'
+status: done
 route: 'full'
 route_source: 'auto'
 review: 'thorough'
