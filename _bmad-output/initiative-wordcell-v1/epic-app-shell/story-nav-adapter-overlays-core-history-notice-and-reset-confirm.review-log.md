@@ -1,5 +1,5 @@
 # Review log — story-nav-adapter-overlays-core-history-notice-and-reset-confirm (ticket 3.8)
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 266 words, snapshot `story-nav-adapter-overlays-core-history-notice-and-reset-confirm.passes/pass0.md`, HEAD 2a6822b.
 Note: the pull from tickets.toml entry 8 dropped `interface`, `tests`, `owns`; they are passed to reviewers and fixer as intent, and the pass 1 fixer adds them to the Description as `Interface:`, `Tests:`, `Owns:` lines.
@@ -62,3 +62,34 @@ Words (docs): 1382 (5.2 x pass 0)  |  Snapshot: story-nav-adapter-overlays-core-
 - none new (pass 1's History-notice scrim/focus question stays open)
 ### Dropped
 - 9 duplicates (see header)
+
+## Pass 3 — 2026-10-01
+Reviewers: fix diff, edge-case, adversarial, ref alignment  |  Findings: major 5, minor 13, decision-needed 0  |  Dropped in triage: 7 (duplicates: board-inert test ×3, naming ×2, S rejects wording ×2)
+### Applied
+- [major] P3 Keep it board-inert check — fresh deal has Undo disabled and Playwright won't click through the scrim; seed session-place.json + history fixture, tap undo's box centre through the scrim → fixer 1
+- [major] Tests naming — S/U Vitest names must start AD-13 (AGENTS.md), P3 §2/AD-13, halt case AD-15 → fixer 2
+- [major] Dialog — the notice under the confirm stays focusable (keyboard Reset history → open() on open id; Not now → non-top close; both throw); every surface below the top dialog is inert → fixer 3
+- [major] Dialog — inert follows the rendered dialog (not halted), never stack depth alone; halt test asserts Reload focused → fixer 4
+- [major] P3 Forward / Stale launch — wait (expect.poll) for wc 0 before goForward()/reload(), else the case proves nothing or flakes → fixer 5
+- [minor] S bullet: "throws to AD-15" → "rejects launch()" → fixer 6
+- [minor] halt test uses armStorageSpy({ throwOn: 'wordcell:history' }) + expectFatal → fixer 7
+- [minor] Android native-dialog claim marked unverified (epic 7 A-A11) → fixer 8
+- [minor] Escape assertion labelled interim, inverted by epic 6 keyboard map → fixer 9
+- [minor] scrim tap = click at a viewport point outside the dialog box, no new testid → fixer 10
+- [minor] register depth is a getter → fixer 11
+- [minor] once-per-launch flag set when the notice is pushed; New game pushes only when the store was rejected, flag unset, history unreadable → fixer 12
+- [minor] U contents-function clause dropped → fixer 13
+- [minor] S: rewind popstate exempt from stale check; back { wc: 0 } at depth 1 calls closedByBack(0); a second pop() waits for the first's popstate → fixer 14
+Fixer: all 14 items applied; wording tightened elsewhere to fit; halt test placed in e2e/history.spec.ts with its local expectFatal.
+Words (docs): 1497 (5.6 x pass 0; budget 1500 reached — further additions are minor)  |  Snapshot: story-nav-adapter-overlays-core-history-notice-and-reset-confirm.passes/pass3.md
+### Default applied (technical)
+- inert — board and every dialog below the top one; tied to the rendered dialog
+- register depth — `depth: () => overlays.depth`
+### Decision needed (functionality / UX / gameplay)
+- none new
+### Dropped
+- 7 duplicates (see header)
+### Unapplied minors (plan-level, no ticket words)
+- while halted, each back silently closes one hidden overlay entry (accept; plan line)
+- launch id from crypto.getRandomValues (e.g. seed.ts newSeed()), not randomUUID
+- P3 "Keep it then Reset history with no wait" is a smoke check; the S queue case is the proof
