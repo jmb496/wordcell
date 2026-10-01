@@ -1,5 +1,5 @@
 # Review log — story-nav-adapter-overlays-core-history-notice-and-reset-confirm (ticket 3.8)
-State: pass 5: done
+State: pass 6: done (converged)
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 266 words, snapshot `story-nav-adapter-overlays-core-history-notice-and-reset-confirm.passes/pass0.md`, HEAD 2a6822b.
 Note: the pull from tickets.toml entry 8 dropped `interface`, `tests`, `owns`; they are passed to reviewers and fixer as intent, and the pass 1 fixer adds them to the Description as `Interface:`, `Tests:`, `Owns:` lines.
@@ -148,3 +148,29 @@ Words (docs): 1511 (5.7 x pass 0)  |  Snapshot: story-nav-adapter-overlays-core-
 - "nav launch awaited before the font check" as an entry 10 ordering case
 - notice renders from the reason captured when opened (reset() flips state to ok before the closes)
 - while halted, back closes hidden entries (plan line)
+
+## Pass 6 — 2026-10-01
+Reviewers: fix diff, edge-case, adversarial, ref alignment  |  Findings: major 1 (open), minor 13, decision-needed 0  |  Dropped in triage: 3 (duplicates: push counter ×1, Esc wording ×1, stale-before-register ×1)
+Words (docs): 1511 (5.7 x pass 0)  |  Snapshot: story-nav-adapter-overlays-core-history-notice-and-reset-confirm.passes/pass5.md (no fix this pass)
+### Open major (not fixed; stopping rule)
+- Decisions, Registration — pass 5's push counter ("entries it pushed and has not seen popped", wc = count + 1) is undefined for a Forward correction (count can go to −1) and for a back jumping several entries (count drops by one, not to d); later pushes get the wrong wc. Fix: count := state.wc of every settled current-launch popstate (own pop, Forward correction or back), +1 per push sent; S: after a Forward correction push() sends { wc: depth + 1 }, and a pop from wc 2 then two queued pushes send wc 2 then 3.
+### Triage notes
+- Stale-before-register ordering (edge-case lens: major; adversarial: minor) classed minor: register() in the same continuation as `await nav.launch()` leaves no reachable window; the S line should read "any other current-launch popstate … (stale ones are ignored even then)".
+### Dropped
+- 3 duplicates
+
+## Result — converged after 6 passes
+Majors per pass: 8 → 6 → 5 → 2 → 1 → 1. open major: nav push counter definition (Decisions, Registration; see Pass 6). Decision needed (owner): whether a scrim tap on the History notice acts as Not now and focus starts on Not now (proposed default: yes, same as the confirm dialog). Technical defaults applied: 13. Words 266 → 1511 (budget 1500).
+### Unapplied minors (for the build plan)
+- S nav: "any other current-launch popstate with a wc before register() throws (stale ones ignored even then)"; register() immediately after `await nav.launch()`
+- Dialog Esc wording: "Esc does nothing on either dialog until epic 6's keyboard map, which closes them via overlays.close"
+- P3 deferred push label `§2` (seeds session-invalid-*; AGENTS.md pitfall); assert its launch equals the boot launch id
+- win smoke label "(already shown this launch)" instead of "(store not rejected)"
+- push while on an ignored stale entry stacks above it (back swallowed once): spine note for AD-13 before epics 4/6
+- Replay (epic 6) must call resetForNewSession() first
+- register a wrapper `(d) => overlays.closedByBack(d)` or a free function, not a detached `this`-method
+- spec files: e2e/history-notice.spec.ts (§2 and dialog flows), e2e/nav.spec.ts (Forward, stale, reload, deferred push, win smoke)
+- contents-unreadable sentence is effectively constant until HISTORY_VERSION bumps
+- one openHistoryNotice() in the flag-owning src/ui module for both boot and New game paths
+- from pass 4: notice renders through Dialog; resetForNewSession() then deferred push; focus on close (confirm → Reset history, notice → board); bounded Tab check (Tab/Shift+Tab ×3); every app surface except the top dialog inert; deferred push requires the store active after newGame(); nav ignores popstates after launch() rejects; Forward at depth 1 P3; once-per-launch flag redundancy
+- from pass 5: close(id) throws unless top (empty stack too); exact title/body assertion; wait for card-0 before absence checks; undo centre outside the confirm box; Forward decided before the before-back hook; nav launch awaited as an entry 10 ordering case; notice renders from the captured reason; back while halted closes hidden entries
