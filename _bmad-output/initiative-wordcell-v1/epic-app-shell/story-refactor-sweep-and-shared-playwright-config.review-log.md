@@ -1,6 +1,6 @@
 # Review log — story-refactor-sweep-and-shared-playwright-config.md (ticket 3.12)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD d74ceb0, copy story-refactor-sweep-and-shared-playwright-config.passes/pass0.md, 188 words.
 Intent carried from tickets.toml entry 12 (not copied by the pull): interface, tests, owns; pass-1 fixer adds them to Description as 'Interface:', 'Tests:', 'Owns:'.
@@ -59,6 +59,38 @@ Fixer: applied 1–14; ran `--list --reporter=json` (config has webServer and pe
 - budget miss: other items land; plan not marked built; stop and report with medians and levers tried
 - AD-n shell/UI/helper tests allowed with no rule-coverage row; any new R/Q/§-named test maps to an existing row
 - carry-forward lives only in this plan's table (item / target / reason); no other epic's files edited
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none (duplicates merged)
+
+## Pass 3 — 2026-10-01
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 4, minor 12, decision-needed 0  |  Dropped in triage: 0 (about 6 duplicates merged)
+Words (docs): 1325 (7.0 x pass 0)  |  Snapshot: story-refactor-sweep-and-shared-playwright-config.passes/pass3.md
+Fixer: applied 1–16; 3-2 #4 moved from carry-forward examples to 'no change' (item 2); ran node import + deep diff of playwright.config.ts CI unset vs CI=1 (forbidOnly/retries/reporter differ, observable), pwa dist import ok; unverified: CI=1 --list, in-container screens diff, watch timing method, --sequence.seed recording
+### Applied
+- [major] AC bullet 1 — effective-config gate misses use/trace/reporter/fullyParallel and the CI branch (all CI-conditional) → fixer item 1
+- [major] Inventory dispositions — no class for 'no change, as specified' items (3-6 minors 6–7, 3-2 #4) or read-only done-ticket wording → fixer item 2
+- [major] Inventory (c) — no equivalence rule for folding helper copies; open()/stored() variants wait and assert differently → fixer item 3
+- [major] Interface vs Levers / coverage definition — noLib lever edits the AD-2 type-export program and would make the AD-1 globals check vacuous; coverage defined by names only → fixer item 4
+- [minor] Watch re-run file unnamed (gameable) → fixer item 5
+- [minor] playwright.base.ts — 'at least two configs' contradicts keep-own list (dev/screens share baseURL, expect, webServer) → 'exactly these values' → fixer item 6
+- [minor] Tests — correction line 'to each done plan' → 'each done plan that names the old title' → fixer item 7
+- [minor] rule-coverage.md edit mode inconsistent (rename in place vs CAP fix as dated line) → fixer item 8
+- [minor] Budget miss → carry-forward row to the owner (AD-17 is spine) → fixer item 9
+- [minor] '4.7 s at 3.4' does not match recorded 4.53–4.58 s → fixer item 10
+- [minor] Digest 3.9 banner hide-on-successful-retry behaviour missing from owner carry-forward example → fixer item 11
+- [minor] isolate:false shuffle seeds unrecorded → fixer item 12
+- [minor] Tests — shell/UI Vitest names AD-n only (AGENTS.md Conventions) → fixer item 13
+- [minor] Owns B11 — epic 1 retro A8 also deferred directory-walker consolidation and an architecture.test.ts split review → fixer item 14
+- [minor] Measurement conditions (idle machine) and computed-style comparison scope → fixer item 15
+- [minor] Watch re-run method and in-container screens JSON comparison not run → mark unverified in the plan record, not the ticket (fixer item 16)
+### Default applied (technical)
+- config gate: deep-diff each config's resolved default export (incl. projects[].use) with CI unset and CI=1, per comparison set; empty diff recorded
+- fourth disposition 'no change, with reason' (cite AD/rule/§9 or read-only ticket)
+- helper fold: identical bodies only, or parameterised preserving each caller's waits; the plan maps old→new waits per call site
+- coverage: no assertion removed or loosened, checks keep their compiler inputs; default type-check lever a shared cached ts program; noLib only if a deliberate break shows both tests still fail
+- watch file: slowest engine test file from the before run, same file before/after
 ### Decision needed (functionality / UX / gameplay)
 - none
 ### Dropped
