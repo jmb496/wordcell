@@ -63,13 +63,16 @@ test.describe('Q-37 AD-15 fatal', () => {
   }) => {
     await page.route('**/*.woff2', (route) => route.fulfill({ status: 404 }));
     await page.goto('/', { waitUntil: 'domcontentloaded' });
-    await expectFontFatal(page);
+    // Chromium rejects the load with a NetworkError DOMException.
+    await expectFontFatal(page, 'A network error occurred.');
   });
 
   test('Q-37 AD-15 a font load held past 30 s gives the fatal surface and writes nothing', async ({
     page,
   }) => {
-    await page.clock.install();
+    // Paused before the page loads, so the timer is bounded from below too.
+    await page.clock.install({ time: 0 });
+    await page.clock.pauseAt(1000);
     const held: Route[] = [];
     await page.route('**/*.woff2', (route) => {
       held.push(route);
@@ -77,7 +80,10 @@ test.describe('Q-37 AD-15 fatal', () => {
     await page.goto('/', { waitUntil: 'domcontentloaded' });
     await hookReady(page);
     expect(await kind(page)).toBe('booting');
-    await page.clock.runFor(30_000);
+    await page.clock.runFor(29_999);
+    expect(await kind(page)).toBe('booting');
+    await expect(page.getByRole('alertdialog')).toHaveCount(0);
+    await page.clock.runFor(1);
     await expectFontFatal(page, 'AD-15 font check timed out after 30000 ms');
   });
 
@@ -99,6 +105,21 @@ test.describe('Q-37 AD-15 fatal', () => {
     expect(await kind(page)).toBe('active');
     await expect(page.getByRole('alertdialog')).toHaveCount(0);
     await expect(page.getByTestId('card-0')).toBeVisible();
+  });
+
+  test('Q-37 AD-15 an unhandled rejection with a string or blank reason gives a non-blank fatal body', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await expect(page.getByTestId('card-0')).toBeVisible();
+    await page.evaluate(() => {
+      setTimeout(() => Promise.reject('Q-37 string reason'));
+    });
+    await expectFatal(page, 'Q-37 string reason');
+    await page.evaluate(() => {
+      setTimeout(() => Promise.reject(''));
+    });
+    await expectFatal(page, '[object String]');
   });
 
   test('Q-37 AD-15 a throwing Session write on Undo gives the fatal surface and stops writing', async ({

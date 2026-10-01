@@ -19,6 +19,7 @@ contract; these notes fix what they leave open. `[ASSUMPTION]` marks inferences.
 - AD-4: the store exposes `haltCause: 'fatal' | 'another-window'` beside the state; `current()`
   stays `{ kind: 'halted' }` (AD-17).
 - AD-16/AD-9: the dictionary load awaits the store's `whenVisible()` after the double rAF.
+- AD-15/DESIGN.md: AD-15 makes the Blocking message's Reload the primary button, while DESIGN.md Buttons lists `Reload` as secondary (read as the dictionary banner's Reload); reconcile at the retrospective (CAP-4).
 
 ## As-built facts that bite (8e5462f)
 

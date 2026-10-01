@@ -35,17 +35,17 @@ const id = $props.id();
   }
   .card {
     box-sizing: border-box; width: 100%; max-width: 320px; padding: 24px;
-    background: var(--wc-surface); border-radius: 12px;
+    background: var(--wc-surface-raised); border-radius: 12px;
   }
-  h2 { margin: 0; font: 600 20px/28px system-ui, "Roboto", sans-serif; color: var(--wc-ink-primary); }
+  h2 { margin: 0; font: 600 1.25rem/1.75rem system-ui, "Roboto", sans-serif; color: var(--wc-ink-primary); }
   p {
-    margin: 8px 0 0; font: 400 16px/24px system-ui, "Roboto", sans-serif;
+    margin: 8px 0 0; font: 400 1rem/1.5rem system-ui, "Roboto", sans-serif;
     color: var(--wc-ink-secondary); overflow-wrap: anywhere;
   }
   .primary {
     display: block; width: 100%; height: 48px; margin-top: 24px; padding: 0 16px;
     border: none; border-radius: 9999px;
     background: var(--wc-accent-orange); color: var(--wc-ink-on-accent);
-    font: 600 16px/24px system-ui, "Roboto", sans-serif;
+    font: 600 1rem/1.5rem system-ui, "Roboto", sans-serif;
   }
 </style>

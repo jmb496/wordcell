@@ -509,7 +509,7 @@ describe('game store halt', () => {
     ],
   ];
   for (const [name, stored, launch] of beforeLoad) {
-    it(`AD-4 a storage event before load with ${name}: load writes nothing and stays halted`, async () => {
+    it(`AD-4 AD-15 a storage event before load with ${name}: load writes nothing and stays halted`, async () => {
       const { game, storage, storageEvent } = await setup({ stored, seed: 7 });
       storageEvent(KEY, storage);
       expect(game.current()).toEqual(HALTED);
@@ -532,7 +532,7 @@ describe('game store halt', () => {
     expect(game.haltText).toBe('boom');
   });
 
-  it('AD-4 a storage event then fatal: the cause becomes fatal with its text', async () => {
+  it('AD-4 a storage event then fatal: the cause becomes fatal with its text; a second fatal replaces the text', async () => {
     const { game, storage, storageEvent } = await active(JSON.stringify(place));
     storageEvent(KEY, storage);
     expect(game.haltCause).toBe('another-window');
@@ -541,11 +541,6 @@ describe('game store halt', () => {
     expect(game.current()).toEqual(HALTED);
     expect(game.haltCause).toBe('fatal');
     expect(game.haltText).toBe('boom');
-  });
-
-  it('AD-4 a second fatal replaces the text', async () => {
-    const { game } = await active(JSON.stringify(place));
-    game.halt('fatal', 'first');
     game.halt('fatal', 'second');
     expect(game.haltCause).toBe('fatal');
     expect(game.haltText).toBe('second');
@@ -572,14 +567,15 @@ describe('game store halt', () => {
     ['a sessionStorage wordcell:session', KEY, 'session'],
     ['a sessionStorage clear (key null)', null, 'session'],
   ];
-  for (const [name, key, area] of ignored) {
-    it(`AD-4 ${name} does not halt`, async () => {
-      const { game, storage, storageEvent } = await active(JSON.stringify(place));
+  // Ignored events leave the store active, so one store serves every case.
+  it(`AD-4 ${ignored.map(([name]) => name).join(', ')}: none halts`, async () => {
+    const { game, storage, storageEvent } = await active(JSON.stringify(place));
+    for (const [name, key, area] of ignored) {
       storageEvent(key, area === 'local' ? storage : SESSION_STORAGE);
-      expect(game.current().kind).toBe('active');
-      expect(game.haltCause).toBeUndefined();
-    });
-  }
+      expect(game.current().kind, name).toBe('active');
+      expect(game.haltCause, name).toBeUndefined();
+    }
+  });
 
   const halting: [string, string | null, string | null][] = [
     ['wordcell:session removed (newValue null)', KEY, null],
@@ -614,16 +610,17 @@ describe('game store halt', () => {
     ['newGame', (game) => game.newGame()],
     ['replay', (game) => game.replay()],
   ];
-  for (const [name, call] of commands) {
-    it(`AD-15 while halted (from active) ${name} throws and writes nothing`, async () => {
-      const text = JSON.stringify(place);
-      const { game, storage } = await setup({ stored: text, seed: 7 });
-      game.load();
-      game.halt('fatal', 'boom');
-      expect(() => call(game)).toThrow('while halted');
-      expect(storage.writes).toEqual([]);
-      expect(storage.map.get(KEY)).toBe(text);
-      expect(game.current()).toEqual(HALTED);
-    });
-  }
+  // A throw while halted changes nothing, so one halted store serves every command.
+  it(`AD-15 while halted (from active) ${commands.map(([name]) => name).join(', ')} each throw and write nothing`, async () => {
+    const text = JSON.stringify(place);
+    const { game, storage } = await setup({ stored: text, seed: 7 });
+    game.load();
+    game.halt('fatal', 'boom');
+    for (const [name, call] of commands) {
+      expect(() => call(game), name).toThrow('while halted');
+      expect(storage.writes, name).toEqual([]);
+      expect(storage.map.get(KEY), name).toBe(text);
+      expect(game.current(), name).toEqual(HALTED);
+    }
+  });
 });

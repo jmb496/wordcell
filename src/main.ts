@@ -19,20 +19,28 @@ let surface = false;
 // them) and before boot's first await; no preventDefault, so the browser still reports the error
 // too. A missing #app throws before them, uncaught.
 window.addEventListener('error', (event) => {
-  fatal(event.error ?? event.message);
+  fatal(event.error ?? event.message, event.message);
 });
 window.addEventListener('unhandledrejection', (event) => {
   fatal(event.reason);
 });
 
-function textOf(reason: unknown): string {
-  if (reason instanceof Error) return reason.message || reason.name;
-  return String(reason);
+// Total and never blank: a blank or unstringifiable reason falls back to `message` (the
+// ErrorEvent's), then to its `[object …]` tag.
+function textOf(reason: unknown, message = ''): string {
+  let text: string;
+  try {
+    text = reason instanceof Error ? reason.message || reason.name : String(reason);
+  } catch {
+    text = '';
+  }
+  if (/\S/.test(text)) return text;
+  return /\S/.test(message) ? message : Object.prototype.toString.call(reason);
 }
 
-function fatal(reason: unknown): void {
+function fatal(reason: unknown, message?: string): void {
   console.error(reason);
-  game.halt('fatal', textOf(reason));
+  game.halt('fatal', textOf(reason, message));
   showStandalone();
 }
 
@@ -47,17 +55,23 @@ function showStandalone(): void {
 // AD-15: the card face must load; an empty list, a rejection or 30 s without settling is fatal.
 // The timer reports straight to the `error` handler (`reportError`, as an uncaught throw would,
 // but also under Playwright's fake clock, which catches throwing timers), so it must be cleared
-// once the load settles.
+// once the load settles; a load settling after it fired reports nothing more.
 async function fontCheck(): Promise<void> {
+  let timedOut = false;
   const timer = setTimeout(() => {
+    timedOut = true;
     reportError(new Error('AD-15 font check timed out after 30000 ms'));
   }, 30_000);
   let faces: FontFace[];
   try {
     faces = await document.fonts.load('600 1em "WordCell Serif"', 'W');
+  } catch (error) {
+    if (timedOut) return;
+    throw error;
   } finally {
     clearTimeout(timer);
   }
+  if (timedOut) return;
   if (faces.length === 0) throw new Error('AD-15 font check: WordCell Serif did not load');
 }
 

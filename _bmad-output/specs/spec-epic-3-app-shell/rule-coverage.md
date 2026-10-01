@@ -97,7 +97,7 @@ with no R-id sentence; `AD-n …` for spine behaviour with no rule id (AGENTS.md
 | AD-9 clock fractional carry, `peek`, resume/pause idempotence, `registerBeforeHide` order | 3, 5 | S |
 | AD-13 launch rewind, stale launch ignored, Forward correction, queued pop before push, reload cases as restated for epic 3 (notice re-pushed at boot, `{ wc: 1, launch: <new> }`, back closes it, next back leaves; literal plain-overlay wording re-proven in epics 4/6), win → New game → back leaves the app (smoke; the end-sheet-expanded discriminating case is P4–6) | 7 | P3 + S + P4–6 |
 | AD-13 launch rewind with no `popstate` within 250 ms → AD-15 | 7 | S (`nav.ts` Vitest, stubbed history that never fires `popstate`) |
-| AD-15 fatal before and after mount; Session and history writes blocked while halted | 4, 5 | P3 |
+| AD-15 fatal before and after mount; Session and history writes blocked while halted | 4, 5 | P3 + S (CAP-4's failable no-write proof is the shell Vitest `AD-15 while halted …` case, supplementary) |
 | AD-15 a prefs setter throwing while halted | 9 | S (AD-10); P4–6 with the Preferences panel |
 | AD-15 `scoreHistory.reset()` throwing while halted | 6 | S |
 | AD-16 boot order (nothing written before the font check, rejected root before the History notice, dictionary after first paint: `card-0` and `primary-action` in the DOM when the held `**/en*.txt` request arrives; a `startHidden` page requests it only after `showPage`, via the store's `whenVisible()`) | 8, 10 | P3 (the double rAF and `whenVisible` themselves S) |
