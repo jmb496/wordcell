@@ -1,6 +1,6 @@
 # Review log — spec-epic-4-board (SPEC.md + rule-coverage.md + build-notes.md)
 
-State: pass 4: done
+State: pass 5: done
 
 Mode: docs, thorough, max 7. Pre-loop: HEAD 1c93404; copies at SPEC.review-log.passes/pass0/; words 8184 (SPEC 3515, rule-coverage 2298, build-notes 2371).
 Caller rule: stop as diverging if majors rise pass-over-pass.
@@ -116,3 +116,20 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar
 ### Fixer outcome
 All 18 items applied. New F26 (slot wrappers carry the live-card attributes; lift and drag transform move the inner face; overlap uses the face rect; mid-drag ghosts drawn on the untransformed wrappers). Checked: Playwright 1.63 Chromium does not support `-webkit-touch-callout`, so the computed-style check asserts `user-select` only. `unverified`: CDP touch pan scrolls the document; no `scrollend` before release; on-device native long-press (epic 7). Back-cancel flies back; `act()`/hide settle at once (AD-12 close-out note).
 Words: 12645 (1.55 x pass 0)  |  Snapshot: SPEC.review-log.passes/pass4/ ; fix diff pass4.fix.diff
+
+## Pass 5 — 2026-10-01
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 3, minor 21, decision-needed 1 (extends the pass 3 item)  |  Dropped in triage: 0; reclassified: snap-back on act()/hide (adversarial major → minor: EXPERIENCE.md "cancel as for pointercancel, then acts" plus "a button press completes any running animation at once" together give the settled snap), desktop tooltips content (major → minor: obvious handling, name now and key with epic 6)
+### Applied (sent to fixer)
+- [major] F26 — lifted face (no `pointer-events: none`) overlaps the card above, so the hit area moves → 1
+- [major] CAP-9 — one-shot trailing-`click` swallower has no expiry and can eat the next real click → 2
+- [major] F24/CAP-4/CAP-7 — selection-replacing drag ended by a real `pointercancel`/`lostpointercapture`: store keeps a selection the DOM no longer shows → 3
+- [minor] 4–25: fly-back P4 asserts transform/animations on the faces; tray capacity 14 at both widths (Open Questions); AD-11 `clientWidth` close-out note and predicate on the same width (or `scrollbar-gutter: stable`); `byBack` gate-idle wording; bottom-8 px case needs a ≥ 2-card tail; F26 row order; `pointercancel` closes a peek; tap on non-card column parts with nothing selected is a no-op; WordCellView renders inside the Board root; hover timer mouse-only; CAP-6 pan region names the tray band; controller created after the halted check; scroll test fallback (wheel/synthesizeScrollGesture); banner Reload always deselects (retry branch is private); hover peek closes on `pointerdown` only for a drag or modal; tooltips show the accessible name, key with epic 6; AD-17 1 s watch gate; deploy question adds "a win shows no end sheet until epic 6"; F13 cites both EXPERIENCE.md sentences for the settled snap
+### Default applied (technical)
+- all majors take reviewers' defaults
+### Decision needed (functionality / UX / gameplay)
+- CAP-9 hover peek `+n older cards` at n = 1 — singular copy missing from the catalogue — proposed default: `+1 older card`; folded into the pass 3 view-title Open Questions item
+### Dropped
+- none
+### Fixer outcome
+All 21 items applied; decision-needed singular appended to the PROPOSED BY REVIEW Open Questions item. Checked on Playwright 1.63 Chromium: with `scrollbar-gutter: stable` the desktop `clientWidth` stays 1265 whether or not the page overflows. `unverified`: scroll-test fallback (wheel / `Input.synthesizeScrollGesture`).
+Words: 13124 (1.6 x pass 0)  |  Snapshot: SPEC.review-log.passes/pass5/ ; fix diff pass5.fix.diff
