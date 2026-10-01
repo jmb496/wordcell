@@ -1,6 +1,6 @@
 # Review log — spec-epic-4-board (SPEC.md + rule-coverage.md + build-notes.md)
 
-State: pass 6: done
+State: pass 7: done
 
 Mode: docs, thorough, max 7. Pre-loop: HEAD 1c93404; copies at SPEC.review-log.passes/pass0/; words 8184 (SPEC 3515, rule-coverage 2298, build-notes 2371).
 Caller rule: stop as diverging if majors rise pass-over-pass.
@@ -150,3 +150,19 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar
 ### Fixer outcome
 All 18 items applied. `unverified`: Android delivers `pointercancel` before back (epic 7); touch `pointerup` → `click` order (gated by the android scrim-over-Undo P4); both scroll-test fallbacks. AD-12 close-out notes added for F13 pointercancel and F26 slot pitch. `BAND_ORDER` now seven units.
 Words: 13654 (1.67 x pass 0)  |  Snapshot: SPEC.review-log.passes/pass6/ ; fix diff pass6.fix.diff
+
+## Pass 7 — 2026-10-01 (verify-only)
+Reviewers: fix diff only (pass6.fix.diff)  |  Findings: major 0, minor 1, decision-needed 1  |  Dropped in triage: 0
+### Applied
+- none (verify-only pass)
+### Decision needed (functionality / UX / gameplay)
+- SPEC CAP-6/CAP-7, F24 (pass 6 item 1) — when a system gesture (e.g. Android edge swipe) interrupts a drag that replaced a tap-selection, should the old selection come back or should nothing stay selected? EXPERIENCE.md step 6 and AD-12 say nothing stays selected ("`pointercancel` = release over nothing"); pass 6 changed it to keep the old selection so that a back arriving right after the cancel clears the selection instead of leaving the app. Not yet in the spec's Open Questions — proposed default: keep the old selection (current spec text), amending EXPERIENCE.md step 6, its Pointer thresholds line and AD-12 at close-out.
+### Dropped
+- none
+
+## Result — converged after 7 passes
+Majors per pass: 19, 11, 9, 7, 3, 3, 0. Words 8,184 → 13,654 (1.67 x).
+Decision needed: WordCell view title wording incl. one-card form and `+1 older card` (in Open Questions, PROPOSED BY REVIEW); `pointercancel` after a selection-replacing drag keeps vs clears the old selection (pass 7, log only — not yet in Open Questions).
+Owner reports already in Open Questions: deploying epic 4 alone (pre-existing, extended); AD-11 `bannerShown` vs Q-42 spine bug (pass 2).
+### Unapplied minors
+- SPEC CAP-3 — "recomputes w only per CAP-1's predicate on … or a `hoverFine` media-query change" reads as if the predicate gates the media-query trigger; reword to "always (through the gate) on a `hoverFine` change" and add a UI Vitest or P4 case.
