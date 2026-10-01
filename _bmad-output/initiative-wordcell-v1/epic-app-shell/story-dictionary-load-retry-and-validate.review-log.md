@@ -1,5 +1,5 @@
 # Review log — story-dictionary-load-retry-and-validate (ticket 3.9)
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 223 words, snapshot `story-dictionary-load-retry-and-validate.passes/pass0.md`, HEAD 2d4e499.
 Note: the pull from tickets.toml entry 9 dropped `interface`, `tests`, `owns`; they are passed to reviewers and fixer as intent, and the pass 1 fixer adds them to the Description as `Interface:`, `Tests:`, `Owns:` lines.
@@ -59,3 +59,32 @@ Words (docs): 1238 (5.55 x pass 0; budget 1500)  |  Snapshot: story-dictionary-l
 - ✕ in its own aria-hidden element; assertion targets the message element
 ### Dropped
 - none
+
+## Pass 3 — 2026-10-01
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 5, minor 11, decision-needed 1  |  Dropped in triage: 1
+Words (docs): 1464 (6.57 x pass 0; budget 1500)  |  Snapshot: story-dictionary-load-retry-and-validate.passes/pass3.md  |  Fixer: all 15 applied plus the optional cut; Q-42 question recorded in the ticket's Notes; no runnable command added
+### Applied
+- [major] Load — pass 2's controlled-SW wording (banner hidden while loading, may recover) contradicts confirmed Q-42 / AD-8 / EXPERIENCE "banner stays until the next launch" (3 lenses) → fixer 1 (state only what the refs say; the rest is decision-needed)
+- [major] Load — the losing `response.text()` promise rejects after abort → unhandled rejection → AD-15 fatal instead of `failed` → fixer 2
+- [major] Verify › AD-16 after-mount — no sync point guarantees the halt lands while main.ts waits in whenVisible() → fixer 3
+- [major] Verify › AD-16 in-load — the blocking.spec pattern halts before game.load(), and no wait precedes the zero-requests check (3 lenses) → fixer 4
+- [major] Load — "404 at any fetch" untested (only first-fetch 404) → fixer 5
+- [minor] timeout must be setTimeout + controller.abort(), never AbortSignal.timeout (3 lenses) → fixer 6
+- [minor] per-attempt controller and timer (load and each retry); retry stall test (2 lenses) → fixer 7
+- [minor] paused-clock specs: runFor *and* expect.poll → fixer 8
+- [minor] reload flag observed through behaviour, not exported → fixer 9
+- [minor] load()/retry() return contract (Promise<void>, never rejects for AD-8 outcomes) → fixer 10
+- [minor] invalidWord uppercases itself; text.test.ts case → fixer 11
+- [minor] test-name ids for Retry/Timeout/banner cases (AD-8) → fixer 12
+- [minor] Continuity: blocking.spec.ts healthy-boot runFor(31_000) now trips the dictionary timeout → fixer 13
+- [minor] banner sticky offset needs the epic-4 top bar → fixer 14
+- [minor] invalid-word live-region announcement deferral → fixer 15
+### Default applied (technical)
+- Timer — `setTimeout` → `controller.abort()`, cleared on settle, one controller per attempt
+- text() race — losing promise gets a no-op catch; Vitest case where the stub body errors on abort → `failed`, no unhandled rejection
+- AD-16 after-mount — wait for card-0 plus two in-page rAF round-trips before the other window's write, then showPage
+- load()/retry(): Promise<void>, resolve when state leaves 'loading'
+### Decision needed (functionality / UX / gameplay)
+- Description › Load (Q-42 controlled-SW branch) — On the installed app (service worker in control), after the word list 404s, what does tapping the banner's Reload do? Q-42 says "the banner stays until the next launch" but not whether Reload still retries (which by EXPERIENCE.md hides the banner while it runs and may recover the word list) or does nothing — proposed default: Reload retries in place but the banner stays visible throughout (never reloads the page); recovered words make Validate work again and the banner then hides. Practical effect: the player can still recover without relaunching if the file is back; otherwise nothing visible changes. Epic 7 P7 proves it.
+### Dropped
+- rejected-root banner case untested (adversarial) — the sentence follows from "rendered straight from state"; no separate test needed (fixer may cut the clause)
