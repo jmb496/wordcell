@@ -1,6 +1,6 @@
 # Review log — story-preferences-and-motion.md (ticket 3.10)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 249db05, copy story-preferences-and-motion.passes/pass0.md, 156 words.
 Intent carried from tickets.toml entry 10 (not copied by the pull): interface, tests, owns; pass-1 fixer adds them to Description as 'Interface:', 'Tests:', 'Owns:'.
@@ -62,3 +62,30 @@ Fixer: applied 1–12; Biome claim verified (fixtures/ ignored); parsePrefs inpu
 ### Dropped
 - motion.ts fade keyframes / shake kind — epic 5 scope, no defect in this ticket
 - reduced default unpinned in Playwright — folded into fixer item 5
+
+## Pass 3 — 2026-10-01
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 4, minor 9, decision-needed 0  |  Dropped in triage: 2
+Words (docs): 1148 (7.4 x pass 0)  |  Snapshot: story-preferences-and-motion.passes/pass3.md
+Fixer: applied 1–13; no runnable commands added
+### Applied
+- [major] Q-38 bullet — "an absent key is not stale" contradicts the removal-halts AD-4 test and build-notes Q-38 (read !== lastText) → fixer item 1
+- [major] Interface — `prefs` defined as a Prefs getter yet called as prefs.load()/prefs.isStale(); launch-result accessor unnamed → fixer item 2
+- [major] Tests — live prefers-reduced-motion change updating motion.reduced (JS side) untested (AD-10 Prevents) → fixer item 3
+- [major] Tests/Verify — baseMs/--wc-base-ms unchanged under reduced motion untested → fixer item 4
+- [minor] Import safety — harness stubs lack documentElement.style and matchMedia; where prefs tests live → fixer item 5
+- [minor] Test hook — existing loaded()/current() toEqual assertions gain prefs (blocking.spec.ts another-window cases expect { rejected: { reason: 'version-unreadable' } } from their '{}' write) → fixer item 6
+- [minor] Tests — setShowTimer not named → fixer item 7
+- [minor] Boot — only loaded() throws before load; value, motion, isStale defined before load → fixer item 8
+- [minor] Motion — `$derived` per AD-10, defaults before load → fixer item 9
+- [minor] Verify bullet 3 — unreadable key untouched after hidePage and reload (SPEC CAP-9) → fixer item 10
+- [minor] Verify bullet 4 — first launch --wc-base-ms 180ms, animationSpeed 'normal' → fixer item 11
+- [minor] Verify — test-name ids per bullet → fixer item 12
+- [minor] Interface — e2e/globals.d.ts declares Prefs and reject shape inline → fixer item 13
+### Default applied (technical)
+- export const prefs = { value, motion, load, loaded, current, setAnimationSpeed, setShowTimer, isStale } mirroring scoreHistory; motion.test.ts mocks prefs.motion
+- prefs.svelte.test.ts beside the module with a copied setup; stubs gain documentElement.style and global matchMedia (vi.stubGlobal)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- CSS consumers combining --wc-reduced for the 120 ms fade — epic 5/6 scope
+- version-unknown Playwright variant — covered by S cases; optional
