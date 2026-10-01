@@ -1,5 +1,5 @@
 # Review log — story-score-history-store-and-finish-writes (ticket 3.7)
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 218 words, snapshot `story-score-history-store-and-finish-writes.passes/pass0.md`, HEAD e897707.
 Note: the pull from tickets.toml entry 7 dropped `interface`, `tests`, `owns`; they are passed to reviewers and fixer as intent, and the pass 1 fixer adds them to the Description as `Interface:`, `Tests:`, `Owns:` lines.
@@ -63,3 +63,25 @@ Words (docs): 1313 (6.02 x pass 0; budget 1500)  |  Snapshot: story-score-histor
 - Fake storage — `control.failKey` throws for that key only; removeItem recorded
 ### Dropped
 - dispatch-time cost of calling reconcile every dispatch (stretch; AD-4 prescribes the order, no measured breach)
+
+## Pass 3 — 2026-09-30
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 2, minor 8, decision-needed 0  |  Dropped in triage: 2
+Words (docs): 1449 (6.65 x pass 0; budget 1500)  |  Snapshot: story-score-history-store-and-finish-writes.passes/pass3.md  |  Fixer: all 10 applied; no runnable command added; record 0 of history-three-records.json confirmed as gameRecord of session-won.json (serialize.test.ts)
+### Applied
+- [major] Shell Vitest — `control.failKey` cannot set up the Session-write-and-rollback-both-throw case (4 lenses) → fixer 1
+- [major] Description/Verify — unreadable `reason` shape (string vs parse failure with version) unspecified; ticket 8's notice needs the version (2 lenses) → fixer 2
+- [minor] reset: write first, then assign → fixer 3
+- [minor] reset() while booting → fixer 4
+- [minor] lastText is private: assert via isStale() → fixer 5
+- [minor] fake `writes` records removals as `[key, null]` → fixer 6
+- [minor] R-84 record vs history-three-records.json record 0 minus activeMs → fixer 7
+- [minor] R-76 exact activeMs = runFor amount → fixer 8
+- [minor] game-store.spec.ts game-over test name lacks Q-29 → fixer 9
+- [minor] Interface wording (loaded() has no variants); setup() imports history.svelte after resetModules → fixer 10
+### Default applied (technical)
+- Fake storage — `control.fail: (op: 'set' | 'remove', key: string) => Error | undefined`, checked by setItem and removeItem; per-call errors distinguish which propagated
+- Unreadable reason — parseHistory failure minus `ok` (`{ reason, version? }`, like the store's RejectReason) in state, loaded() and current()
+- reset() throws while booting as well as halted
+### Dropped
+- history-invalid-version-unknown.json owner vs build-notes CAP-7 — tickets.toml entry 7 is the authority; no ticket change
+- ticket-8 notice sentence — harmless cross-ticket note; no change
