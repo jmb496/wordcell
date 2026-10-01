@@ -1,5 +1,5 @@
 # Review log — story-dictionary-load-retry-and-validate (ticket 3.9)
-State: pass 4: done
+State: pass 5: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 223 words, snapshot `story-dictionary-load-retry-and-validate.passes/pass0.md`, HEAD 2d4e499.
 Note: the pull from tickets.toml entry 9 dropped `interface`, `tests`, `owns`; they are passed to reviewers and fixer as intent, and the pass 1 fixer adds them to the Description as `Interface:`, `Tests:`, `Owns:` lines.
@@ -111,3 +111,29 @@ Words (docs): 1484 (6.65 x pass 0; budget 1500)  |  Snapshot: story-dictionary-l
 - game-store.spec.ts New game test's final `toHaveText('Validate')` waits for 'ready'
 ### Dropped
 - none
+
+## Pass 5 — 2026-10-01
+Reviewers: fix diff, edge-case hunter (empty), adversarial, ref alignment  |  Findings: major 0, minor 14, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1484 (6.65 x pass 0; budget 1500)  |  Snapshot: story-dictionary-load-retry-and-validate.passes/pass4.md (no fix pass)
+### Applied
+- none (converged)
+
+## Result — converged after 5 passes
+Majors per pass: 10, 5, 5, 2, 0. Words 223 → 1484 (budget 1500). Technical defaults applied: 21 (see each pass).
+Decision needed (owner): Q-42 under a controlling service worker — after a 404, does Reload still retry in place (banner kept visible) or do nothing? Proposed default: retry in place with the banner kept visible; never reload the page. Recorded in the ticket's Notes.
+
+### Unapplied minors (for the build plan)
+- Interface says load()/retry() resolve "once state leaves 'loading'"; Load's reload branch resolves at once with state 'failed' — read Interface as "once the attempt settles"
+- Retry case runs from session-composing.json or session-idle-fresh.json (not session-place.json, where the label is Confirm)
+- Precondition throws (second load(), retry() outside 'failed') are synchronous, before any await; Vitest uses toThrow
+- Shell Vitest: vi.resetModules() + dynamic import per case; vi.stubGlobal for fetch, location, navigator.serviceWorker (environment 'node')
+- Invalid-word line located with getByText(..., { exact: true }); ✕ drawn as an aria-hidden inline SVG (DESIGN.md Iconography)
+- §2 "reload" is page.reload() after the Redo (seedStorage seeds once per tab), asserting Place with the route failing
+- R-73 loop: the Validate step asserts Place, Confirm and a disabled Redo (Validate discards redo data)
+- Double rAF covered by the P3 held-request case; record it as exempt from S
+- Banner colour (--wc-error) optionally asserted via tokenColor
+- Status ≠ playing (`New game`) still wins over the dictionary labels; prove with gave-up/won LABELS rows under held/failing routes
+- One-tap Validate rule satisfied by synchronous dispatch; exempt at P3
+- main.ts side-effect `import './shell/dictionary.svelte'` and its tree-shaking comment reworded or dropped once game.svelte.ts imports `dictionary`
+- Rejected root also starts the load: one case seeding a session-invalid-* fixture asserts the `**/en*.txt` request and 'ready'
+- From pass 4: running page.clock.install() for the Playwright timeout; route.continue() for the R-38 held route; invalid-word line directly above primary-action; clearing by edit/Redo/Validate covered by the feedback Vitest; request counting via page.on('request') before goto; spine AD-15 "like the dictionary fetch (AD-8)" wording bug (timeout is `failed`, not fatal); game-store.spec.ts New game test waits for 'ready'
