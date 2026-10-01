@@ -3,7 +3,7 @@ title: 'Refactor sweep and shared Playwright config'
 type: 'refactor'
 ticket: '12'
 created: '2026-10-01'
-status: 'built'
+status: done
 baseline_revision: 'f496ae43346052eb8fe6b575a20bd33b088de6d0'
 route: 'full'
 route_source: 'auto'
