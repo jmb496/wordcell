@@ -13,7 +13,7 @@ Hand-maintained, outside the managed block so refreshes keep them. Rules 1–7 a
 7. Ask before deviating from the spec, the spine or an agreed pattern; do not commit unless asked (invoking `bmad-build-auto` or `bmad-build` is the ask for their local commits).
 
 <!-- bmad:context -->
-<!-- Verified 2026-09-30 against 9a97c95. Managed by bmad-project-context; edits inside this block are replaced on refresh. Keep anything you want preserved outside the markers. -->
+<!-- Verified 2026-10-01 against 0bbe299. Managed by bmad-project-context; edits inside this block are replaced on refresh. Keep anything you want preserved outside the markers. -->
 
 ## WordCell
 
@@ -46,6 +46,7 @@ the architecture spine is the build contract.
 
 - The column restricts cross-layer imports only; outside `src/engine/`, own-layer modules, npm packages and assets are allowed; shell never imports `src/ui/`.
 - `src/architecture.test.ts` is a root-level Vitest file outside the layer table.
+- Shell modules (`src/shell/`): `game.svelte.ts` the game store (`dispatch`, `newGame`/`replay`, lifecycle listeners, hide flush, `halt`/`haltCause`, `isStale`, AD-4, AD-9, AD-15); `history.svelte.ts` the score-history store (`reconcile`/`reset`, the Q-39 rollback, AD-6); `prefs.svelte.ts` prefs (AD-10, Q-36); `dictionary.svelte.ts` the dictionary (`load`/`retry`/`showBanner`, AD-8); `nav.ts` the History API (AD-13); `storage.ts` `localStorage` (AD-7); `seed.ts` seeds (R-74, AD-5); `clock.ts` the visible-time clock (AD-9); `test-hook.ts` the AD-17 test hook, whose type `e2e/globals.d.ts` also declares: change both together. Overlay state: `src/ui/overlays.svelte.ts`.
 
 ## Running and verifying
 
@@ -56,6 +57,8 @@ the architecture spine is the build contract.
 - `npm run test:e2e` covers only the dev-server specs (`e2e/` minus `e2e/pwa/` and `*.screens.spec.ts`). `npm run test:e2e:pwa` builds `dist-test/` with test hooks (`build:test`) and runs `e2e/pwa/` against `vite preview`; `npm run test:e2e:dist` runs only the hook-free `dist-smoke` project (`dist-smoke.spec.ts` plus the hook-free precache, build-output and font specs) against `dist/` and does not build, so run `npm run build` first. `test:screens:run` works only inside the screenshot container (CI calls it there); on the host use `npm run test:screens`.
 - The card font is built with `uv run scripts/build-font.py`, not by any npm script, test or CI.
 - Keep engine tests exhaustive, the unit suite under 5 s on the dev machine and a watch re-run under 1 s (AD-17): engine tests use small inline `Set` dictionaries; only tests named as dictionary repro cases load the generated file, once per file.
+- The 5 s unit budget is the warm-cache median (`fsModuleCache`, cached in `node_modules/.vitest-cache`); a cold first run takes about 7.5 s and is not budgeted.
+- On the `/mnt/d` drvfs checkout `npm run test:watch` gets no file events and polling starves the suite: re-run `npm test`, or use a checkout on the Linux filesystem for watch.
 
 ## Conventions that differ from defaults
 
@@ -78,9 +81,10 @@ the architecture spine is the build contract.
 - In `src/**` (shell/UI `*.test.ts` and `src/architecture.test.ts`, excluded from its own scan, exempt, AD-1), never declare a variable or import binding named `history` outside `src/shell/nav.ts`; object keys such as `loaded().history` are fine (write such keys explicitly (`history: value`), never shorthand or destructure them), but never followed by a History API member in AD-1's regex (`pushState`, `replaceState`, `back`, `forward`, `go`, `state`, `length`), and no `popstate` literal outside `src/shell/nav.ts`. The score history is `scoreHistory`, `reconcileHistory`, `wordcell:history` (the AD-1 scan fails otherwise).
 - Mirrors carry `data-mirror-of`, never `data-card-id` or `data-testid`, and never animate; a duplicate breaks FLIP and test locators.
 - Engine throws are `EngineError` with a kebab-case `check` code unique per check; every code is listed in `src/engine/errors.ts`. A new check adds its code there, and tests assert the code (`expectEngineError`), never the message.
-- The D2 start-position seam (`Start`, `checkStart`, `replayFrom`, `replayWords`, `dealtStart`, `applyFrom`, `viewFrom`) is engine-internal for tests: never export it, `EngineError` or any new name from `src/engine/index.ts` beyond AD-2's list (`index.test.ts` pins the runtime keys only; type exports are unchecked).
-- `fixtures/` holds valid Sessions and histories and, beside them, one rejecting `session-invalid-*` / `history-invalid-*` file per parser check (AD-17 Seeding); seed Playwright from a `*-invalid-*` file only in a §2 rejection test, and name a new one `<key>-invalid-<reason>.json`.
+- The D2 start-position seam (`Start`, `checkStart`, `replayFrom`, `replayWords`, `dealtStart`, `applyFrom`, `viewFrom`) is engine-internal for tests: never export it, `EngineError` or any new name from `src/engine/index.ts` beyond AD-2's list (`index.test.ts` pins the runtime keys; `src/architecture.test.ts` checks every export, types included, against AD-2's list with the TypeScript compiler API).
+- `fixtures/` holds valid Sessions and histories and, beside them, one rejecting `session-invalid-*` / `history-invalid-*` file per parser check (AD-17 Seeding); seed Playwright from a `*-invalid-*` file only in a §2 rejection test or, for `history-invalid-*`, a History-notice flow (a notice test that needs an unreadable history), and name a new one `<key>-invalid-<reason>.json`.
 - `src/engine/test-helpers.ts` is an engine source, not a test file, so it cannot import `vitest`: helpers that call `expect` (e.g. `expectEngineError`) stay local to each `*.test.ts`.
 - `parseHistory` returns `{ ok: true, history }`: read it as `result.history`, never destructure it (the `history` pitfall above).
+- Under Vitest, `*.svelte.ts` stores compile for the server, so `$derived` re-derives on every read: assert the reference of the underlying `$state`, never the identity of a derived getter such as `game.view`.
 
 <!-- /bmad:context -->
