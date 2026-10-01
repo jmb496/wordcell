@@ -1,5 +1,5 @@
 # Review log — story-lifecycle-and-visible-time-clock (ticket 3.6)
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 203 words, snapshot `story-lifecycle-and-visible-time-clock.passes/pass0.md`, HEAD d02367e.
 Note: the pull from tickets.toml entry 6 dropped `interface`, `tests`, `owns`; they are passed to reviewers and fixer as intent, and the pass 1 fixer adds them to the Description as `Interface:`, `Tests:`, `Owns:` lines.
@@ -83,3 +83,24 @@ Words (docs): 1314 (6.47 x pass 0; budget 1500)  |  Snapshot: story-lifecycle-an
 - whenVisible before registration — throws synchronously `AD-16 whenVisible() before registerLifecycle()`
 ### Dropped
 - gaveUp → Undo un-finish boundary (adversarial stretch) — accrue ignoring non-playing time is engine R-76 coverage, not this ticket's
+
+## Pass 4 — 2026-09-30
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 15, decision-needed 0  |  Dropped in triage: 4
+Words (docs): 1340 (6.60 x pass 0; budget 1500)  |  Snapshot: story-lifecycle-and-visible-time-clock.passes/pass4.md  |  Fixer: all 11 applied; no runnable command added; fixtures verified
+### Applied
+- [major] Verify, isStale own-write cases — no hide-flush case advances time first, so the flush rewrites identical bytes and a flush that never records its text passes (real bfcache restores would halt) → fixer 1
+- [minor] Throwing-callback case: "no further wordcell:session write" → fixer 2
+- [minor] R-73 not-on-ticks: cut the epic 6 rerun clause (no ref assigns it) → fixer 3
+- [minor] registerBeforeHide order case: playing fixture loaded → fixer 4
+- [minor] Test ids for Hide flush assigns (R-73), New game (R-74), startHidden (AD-17); AD-17 cited inside the R-73 single-write and R-76 pageshow cases → fixer 5
+- [minor] Q-38 halting case: seed session-place.json, replace with session-won.json's text → fixer 6
+- [minor] registerLifecycle: the called-twice check runs first (2 lenses) → fixer 7
+- [minor] isStale no-halt list: newGame from active and from rejected → fixer 8
+- [minor] persisted:false while hidden: the pageHide writes one entry equal to the hide's value (spy) → fixer 9
+- [minor] R-76 seeded growth: name session-place.json and the hidden-interval steps → fixer 10
+- [minor] Import-cycle note as a requirement on entries 7 and 10 → fixer 11
+### Dropped
+- Flush leaves feedback untested (adversarial) — a shell Vitest rejected Validate needs a dictionary; left as a stated contract, listed for the build plan
+- Flush assignment re-renders the view (stretch) — no change needed
+- whenVisible on a visible pageshow (stretch) — dropped in pass 2 as already explicit
+- Not-on-ticks binding proof in epic 6 (stretch) — conflicts with fixer 3's cut
