@@ -3,7 +3,7 @@ title: 'Boot order and restore boundaries'
 type: 'feature'
 ticket: '11'
 created: '2026-10-01'
-status: 'built'
+status: done
 baseline_revision: 'cc326d7f106e456bef60e3343416e5c24e91f46d'
 route: 'full'
 route_source: 'auto'
