@@ -1,6 +1,6 @@
 # Review log — story-refactor-sweep-and-shared-playwright-config.md (ticket 3.12)
 
-State: pass 5: done
+State: pass 6: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD d74ceb0, copy story-refactor-sweep-and-shared-playwright-config.passes/pass0.md, 188 words.
 Intent carried from tickets.toml entry 12 (not copied by the pull): interface, tests, owns; pass-1 fixer adds them to Description as 'Interface:', 'Tests:', 'Owns:'.
@@ -152,3 +152,29 @@ Fixer: applied 1–9; offset words by tightening 'are allowed and add no row' �
 - exact docker run -e CI=1 command for the screens comparison
 ### Dropped
 - none
+
+## Pass 6 — 2026-10-01
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 2, minor 14, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1499 (8.0 x pass 0)  |  Snapshot: story-refactor-sweep-and-shared-playwright-config.passes/pass6.md
+Fixer: applied 1–7; offset words by tightening (Tests rule-coverage clause removed as duplicate of the Carry-forward sentence, AC 2 repeat, Interface, miss-rule row); no commands changed
+### Applied
+- [major] Tests src-fix gate (pass-5 item 6) contradicts Carry-forward-only for player-visible fixes (e.g. Q-42 banner) → fixer item 1
+- [major] Watch gate on 'slowest unit test file' unreachable: architecture.test.ts alone ~1.9 s at HEAD (reviewer's json reporter run) → slowest engine test file gates; slowest unit file recorded for information → fixer item 2
+- [minor] Tests — no-row exemption only for shell/UI/helper tests; AD-n Playwright tests (3-10 MutationObserver, 3-5 ErrorEvent, 3-8 aria-modal) → 'AD-n-named tests (any kind)' (saves words) → fixer item 3
+- [minor] Coverage — 'no assertion removed or loosened' forbids stronger replacements (3-6, 3-11, 3-3 minors) → fixer item 4
+- [minor] Verify — add the reverse direction: every inventory item has a plan disposition (SPEC CAP-11 success) → fixer item 5
+- [minor] Carry-forward — stale rule-coverage.md wording (Q-42 row) fits no disposition → add 'rule-coverage.md wording' to the spec-owner list → fixer item 6
+- [minor] Tests — 'ids an existing test already carries' counts shell-test ids → 'an existing engine Vitest or Playwright test' → fixer item 7
+### Default applied (technical)
+- watch gate: slowest engine test file, same before/after; slowest unit file informational
+### Decision needed (functionality / UX / gameplay)
+- none
+### Not applied (over budget / plan-level)
+- Interface: whether a fold may add a new internal src/ module (strict reading: carry forward; plan records)
+- flush() re-derive fix and main.ts halt order: what counts as a behaviour change / observing seam (plan)
+- computed-style gate as one-off script vs committed test (plan)
+- budget-miss commit state for the landed items (plan)
+- pwa reusing the base android `use` (plan)
+- base 'constants' wording vs process.env.CI reads
+- idle precondition: record load average (plan)
+- AGENTS.md carry-forward deadline before epic 4 (plan)
