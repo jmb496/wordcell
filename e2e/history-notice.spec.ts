@@ -190,6 +190,17 @@ test.describe('§2 History notice flows (history-invalid-version-unknown.json)',
     await expect.poll(() => wc(page).then((state) => state?.wc)).toBe(1);
   });
 
+  test('§2 a double click on Reset history leaves the Reset confirm open at wc 2', async ({
+    page,
+  }) => {
+    await start(page, VERSION_UNKNOWN);
+    await expectNotice(page, SENTENCE);
+    await button(page, 'Reset history').dblclick();
+    await expect(confirmDialog(page)).toBeVisible();
+    await expect.poll(() => wc(page).then((state) => state?.wc)).toBe(2);
+    await expect(confirmDialog(page)).toBeVisible();
+  });
+
   test("§2 a tap on the Reset confirm's card body leaves the confirm open at wc 2", async ({
     page,
   }) => {

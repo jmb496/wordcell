@@ -46,7 +46,10 @@ function focusOnReturn(button: HTMLButtonElement): void {
   }
 }
 
-function scrim(): void {
+// Only the first click of a multi-click acts: a double tap on the button that opened this dialog
+// lands its second click on this freshly mounted scrim.
+function scrim(event: MouseEvent): void {
+  if (event.detail > 1) return;
   onscrim?.();
 }
 </script>

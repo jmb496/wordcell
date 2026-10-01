@@ -42,7 +42,7 @@ deferred:
     location: src/ui/overlays.svelte.ts, src/shell/nav.ts (epics 4, 6)
     severity: low
   - summary: >-
-      Entry 10: add "nav.launch() awaited before the font check" as an AD-16 boot-order case.
+      Entry 10: add "nav.launch() awaited before the font check" and "openHistoryNotice() after game.registerLifecycle() and before mount (AD-16)" as AD-16 boot-order cases.
     evidence: |-
       Review log pass 5 unapplied minor; rule-coverage row 103 belongs to entries 8 and 10.
     location: entry 10 (boot and restore suite)
@@ -220,4 +220,4 @@ deferred:
 
 **Verification:** `npm run test:all` exit 0 after the review patches; `git diff --stat src/engine fixtures` empty; I/O matrix rows each covered by named `AD-13` S cases in `src/shell/nav.test.ts`, all run and passed.
 
-**Residual risks:** Playwright `goBack()` is not Android back (A-A11, epic 7); the win smoke does not discriminate `resetForNewSession()` until epic 6; unit suite wall time borderline over 5 s on the `/mnt/d` filesystem.
+**Residual risks:** Playwright `goBack()` is not Android back (A-A11, epic 7); Delete history queues two pops and `drain()` sends the second `history.back()` only after the first pop's `popstate`, so a system back arriving in that gap is absorbed as nav's own pop and the second `back()` can leave the app; AD-13 edge for the spine owner: an overlay pushed while the current entry is a stale-launch entry reached by Forward leaves wc no longer equal to the distance from the base, so a later reload rewinds onto the stale entry and stamps it base, leaving an older-launch entry behind it (back from the bare Board is ignored once); the win smoke does not discriminate `resetForNewSession()` until epic 6; unit suite wall time borderline over 5 s on the `/mnt/d` filesystem.
