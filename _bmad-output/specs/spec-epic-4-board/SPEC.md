@@ -67,7 +67,8 @@ holds the how, the component tree and the spine close-out edits.
     neighbour band); columns are fanned (strip `max(44, round(0.72 H))`, glyph in the top 72 %,
     the flourish, the `QU` ×2 badge), an empty column shows the placeholder slot, each column has
     its 44 px foot pad (`foot-<n>`; on `desktop` it shows the column number while nothing is
-    selected) and a whole-slot hit rect (`column-<n>`); the WordCell row
+    selected) and a whole-slot hit rect (`column-<n>`); every live card and WordCell element spans
+    its full slot pitch (F26); the WordCell row
     shows labels 3–10 above, the top card or the empty outline, the count badge at 2+ cards, and
     the used, legal, selected-target (check chip) and not-legal states; Composing shows S ghosts
     and D cards in destination style, Place shows S and D ghosts; the static tray (F2) holds the
@@ -98,15 +99,20 @@ holds the how, the component tree and the spine close-out edits.
     WordCells have `touch-action: none` and the DESIGN.md non-card regions `pan-y` (`pan-x pan-y`
     when the board is wider than the available width; the foot row only while no tail is
     selected, `none` while one is); the WordCell view sheet and its mirror
-    cards (`data-mirror-of`, never draggable) are a non-card region, `pan-y` (CAP-9); `?bands=<list>` reorders bands in dev and
+    cards (`data-mirror-of`, never draggable) are a non-card region, `pan-y` (CAP-9); cards, tiles,
+    WordCells (labels and badge included), foot pads and the view sheet carry `user-select: none`
+    and `-webkit-touch-callout: none`, so native long-press handling never cancels the 400 ms peek
+    (CAP-4 `contextmenu`); `?bands=<list>` reorders bands in dev and
     is ignored in the production build (`dist/`, checked by `dist-smoke`); Playwright measures (F11): card and slot sizes at the
     Pixel 7 profile, the banner taking leftover first, the WordCell row's bounding box unchanged
     when the banner shows at a viewport with leftover under 44 px, a banner shown during a scroll
     applied only after it ends (412 × 600: w 40, sum 722, scroll range 122 px; one held
     `touchHold` pan from a `pan-y` region (a foot pad with nothing selected; leftover is 0 there),
-    `moveTo` steps with the finger down, the dictionary route failed meanwhile, no banner while
-    the finger is down, the banner after `end()` and `scrollend` or the 150 ms backstop; that a
-    held CDP touch pan fires no `scrollend` before release is `unverified`, the ticket checks it), and the top-bar score on Idle,
+    small `moveTo` steps about every 50 ms with the finger down through the route failure and the
+    check, no banner while `scroll` events keep arriving under 150 ms apart, then the banner within
+    a frame after `scrollend` or 150 ms quiet (AD-11 backstop); that a CDP touch pan from a
+    `pan-y` foot pad scrolls the document (the ticket checks `scrollY` changes between steps) and
+    fires no `scrollend` before release is `unverified`), and the top-bar score on Idle,
     `session-place`, `session-won` and `session-gave-up` (negative, U+2212) and after a Redo
     across a commit.
 
@@ -122,13 +128,14 @@ holds the how, the component tree and the spine close-out edits.
     calls `preventDefault` or `stopPropagation` on it, so native buttons still work), ignores `pointerdown` with
     `button !== 0`, increments the gate at `pointerdown` before completing a running animation
     (a primary `pointerdown` with no active press `finish()`es a running fly-back, F13),
-    and exposes `cancel({ byBack? })`;
+    `preventDefault()`s `contextmenu` for a press it captured, and exposes `cancel({ byBack? })`;
     `pointercancel`, `lostpointercapture` and `cancel()` end any press in progress with no command (tap candidate, below-threshold press, Composing
-    destination-card press, long-press timer, drag); a drag ended by `pointercancel`/`lostpointercapture` flies back, one ended by `cancel()` returns to its slot at once with no fly-back and a running fly-back finished, gate idle before `cancel()` returns (F13); `cancel()` releases capture and
+    destination-card press, long-press timer, drag); a drag ended by `pointercancel`/`lostpointercapture` or `cancel({ byBack: true })` flies back, one ended by any other `cancel()` (`act()`, before-hide) returns to its slot at once with no fly-back and a running fly-back finished, gate idle before `cancel()` returns (F13); `cancel()` releases capture and
     ends the press at once, so another pointer's `pointerdown` starts a new gesture, and only the
     cancelled `pointerId`'s own remaining events are ignored until its
-    `pointerup`/`pointercancel`; it listens on the App root spanning the viewport and captures only
-    presses resolved to a column, a WordCell or a tile, never on enabled buttons (F25); it resolves a press by `data-place` (F23): `column` → column
+    `pointerup`/`pointercancel`; it attaches through a Svelte action on App's active-branch (Board)
+    root, which spans the viewport, each time that root mounts and detaches on its unmount (halt,
+    rejected) after a `cancel()` (a halt mid-drag), and captures only presses resolved to a column, a WordCell or a tile, never on enabled buttons (F25); it resolves a press by `data-place` (F23): `column` → column
     press, `cell` → its WordCell press, `tray`/`strip` → inert in epic 4 (no dispatch, no
     selection change); a press on a non-card part of a column (empty space, placeholder, foot
     pad) or on a WordCell that crosses the threshold is inert in every phase: lifts nothing,
@@ -144,7 +151,8 @@ holds the how, the component tree and the spine close-out edits.
     every gesture and the Board unmounts on halt, so `act()` never runs without a controller;
     shell Vitest `AD-13` covers the before-back hook (order before the
     close callback, not on own pops or stale launches, throws on a second registration); UI
-    Vitest `AD-12` covers `classify` (long-press then move; a second pointer untouched; move
+    Vitest `AD-12` covers `classify` (long-press then move; on an empty WordCell a fired long-press then a
+    move still releases as a tap (deselect); a second pointer untouched; move
     10 px, back to 2 px, release → drag), the cancel paths above, a new pointer after `cancel()`,
     `act()` finishing a fly-back first (after its `cancel()` no fly-back runs, gate count 0), a
     second-pointer fake event whose `preventDefault`/`stopPropagation` are never called, and
@@ -157,7 +165,9 @@ holds the how, the component tree and the spine close-out edits.
     drag from another column (after `showPage`: nothing selected, `history.state.wc` 0, Session
     unchanged) and a held destination-card press in Composing +
     `hidePage` → no `tapDestinationCard`, with the held-touch helper (F10); tapping and dragging
-    a static tray tile changes nothing.
+    a static tray tile changes nothing; in the existing §2 rejection flow (`blocking.spec.ts`),
+    after New game from a `session-invalid-*` fixture a tap selects a tail and `history.state.wc`
+    becomes 1.
 
 - **CAP-5** Overlays: tail selection and end-sheet states (AD-13, F5, F6)
   - **intent:** The overlays store owns the tail selection and the end sheet's state alongside the
@@ -181,7 +191,7 @@ holds the how, the component tree and the spine close-out edits.
   - **intent:** A player can select a tail by tap and drop it with a second tap, including on its
     own column, with back, Undo and Redo clearing the selection.
   - **success:** Playwright `android`: a tap selects the tapped card and every card below it
-    (lifted 8 px, teal outline), the source foot shows `Here` and the other feet the wash; a tap
+    (faces lifted 8 px, F26, teal outline), the source foot shows `Here` and the other feet the wash; a tap
     on any card, empty space, placeholder or foot of another column, or on `Here` or the empty
     space of the source column, dispatches `drop` with `sourceCount` = the selected tail
     (selection entry popped first); a tap on another source-column card re-selects from it with
@@ -197,7 +207,9 @@ holds the how, the component tree and the spine close-out edits.
     literal one-overlay case (select, reload, back → the app is left); `desktop`: the hover
     outline of the tail that would lift (cursor `grab`), the drop-target highlight on another column hovered
     anywhere and on the source column only over its empty space, placeholder or `Here`, the
-    re-select outline, nothing on the selected top card.
+    re-select outline, nothing on the selected top card. F26 at 360 × 750: a tap 1 px inside a
+    card's slot margin hits that card; a tap on the bottom 8 px of a lifted tail's bottom card
+    re-selects from that card (no drop).
 
 - **CAP-7** Drag, overlap targeting and drop → Composing (R-14 drag half, Q-34, AD-12)
   - **intent:** A player can drag a stack tail onto any column by card overlap and land in
@@ -209,7 +221,8 @@ holds the how, the component tree and the spine close-out edits.
     `hasLeftSource` set from `raw` (including `null`), and a sub-25 % drag over the source only;
     during a drag the controller writes `transform` on the tail and the highlight on the target
     (bottom card, placeholder (a whole-column self-drop included), or the lowest non-tail card on a partial self-drop) with no Svelte
-    state change (F12) and the tail's old slots show ghosts; release dispatches at most one
+    state change (F12) and the tail's old slots show ghosts (a controller-added class on the
+    dragged slot wrappers draws each as a pseudo-element; no mirror element mid-drag); release dispatches at most one
     `drop` on `highlighted` and otherwise flies the tail back (F13); Playwright `android` with
     `touchDrag`: drop on another column → Composing with k = 1 (k = 0 on another empty column, from
     `session-idle-empty-column`), side
@@ -226,8 +239,9 @@ holds the how, the component tree and the spine close-out edits.
     mid-drag; a press during fly-back first `finish()`es it, then re-resolves its target with
     `document.elementFromPoint` at the press point on the settled layout (F13), and Undo pressed
     during a fly-back acts on the settled layout (P4: from `session-idle-empty-column`, release a
-    drag over nothing and `getByTestId('undo').dispatchEvent('click')` in the same `page.evaluate`;
-    the tail has no leftover `transform`, `current().session.cursor.index` decreased); AD-13's
+    drag over nothing with `touchHold` `end()`, then one `page.evaluate` asserts
+    `document.getAnimations().length > 0` and calls
+    `document.querySelector('[data-testid="undo"]').click()`; the tail has no leftover `transform`, `current().session.cursor.index` decreased); AD-13's
     case: select, start a drag from another column, back → nothing selected, app open,
     `history.state.wc = 0`; `desktop` repeats the drop and the cancel with `page.mouse`.
 
@@ -254,15 +268,19 @@ holds the how, the component tree and the spine close-out edits.
     (`scrollHeight > clientHeight`, F14), when it stays as the sticky view and pushes one entry
     then (`peekToSticky`, above a kept tail-selection entry); a tap in Idle with
     nothing selected or in Game over opens the sticky view (one entry) with the view title (Open Questions), bottom card first,
-    `top` on the last; a view lists `CellView.cards` in full, so a used cell's top (live in the
-    tray or strip) is a mirror in the used (hatched) style, still tagged `top`, the count is
-    `cards.length` and "empty" means `cards.length === 0` (P4: the used cell's peek on
-    `session-place-free-letter-redo-tail`); a swipe inside the sheet scrolls it and
-    keeps it open (sheet and mirrors `pan-y`); a completed tap (< 8 px) closes it and is
-    consumed; the scrim is `touch-action: none` and a drag on it does nothing and keeps the view;
+    `top` on the last; a view lists `CellView.cards` in full, so in view, peek and hover peek a
+    used cell's top (live in the tray or strip) is a normal-card mirror (AD-14), still tagged
+    `top`, the count is `cards.length` and "empty" means `cards.length === 0` (P4: the used cell's
+    peek on `session-place-free-letter-redo-tail`, its top unhatched); a swipe inside the sheet scrolls it and
+    keeps it open (sheet and mirrors `pan-y`); the controller classifies sheet and scrim presses
+    (AD-12): a `tap` closes the view and suppresses that gesture's trailing `click` once
+    (capture phase), a drag does nothing (the scrim is `touch-action: none`; on the sheet it
+    scrolls) (P4: a 20 px drag on the scrim keeps the view; a scrim tap over the enabled Undo
+    closes it without undoing);
     back closes it; in Composing and Place a WordCell tap or drag dispatches nothing and
     opens no view in epic 4 (their phase-matrix actions are epic 5; the Session reference is
-    unchanged), while the long-press peek works; an empty WordCell opens nothing (a long-press on it acts as a tap on release); a
+    unchanged), while the long-press peek works; an empty WordCell opens nothing (a long-press on it acts as a tap on release, whatever movement
+    follows); a
     long-press on a non-empty WordCell with a tail selected keeps the selection (on an empty one it
     deselects on release, CAP-6); a WordCell drag never lifts a tail
     (R-12); `desktop`: hovering 400 ms opens the hover peek above the cell (F19), the top 14
@@ -286,7 +304,9 @@ holds the how, the component tree and the spine close-out edits.
     prefs stores live in one shell helper (F18) with no behaviour or message change (every
     existing test passes unedited except imports); the warm-cache median of three `npm test` runs
     after a discarded warm-up is recorded in the plan, and if it exceeds 5 s,
-    `src/architecture.test.ts` is split with its exemption before anything else; `npm run
+    `src/architecture.test.ts` is split with its exemption before anything else, and if the
+    median still exceeds 5 s the plan records per-file timings and stops for the owner before
+    `built`; `npm run
     test:all` and `npm run test:screens` pass; the sweep's other findings are applied or recorded
     with a reason.
 
@@ -323,7 +343,7 @@ holds the how, the component tree and the spine close-out edits.
 
 ## Non-goals
 
-- Tray interaction, tiles beyond the static tray, the word line, D-block controls, free letters
+- Tray interaction, tiles beyond the static tray, the word line's word display (F2), D-block controls, free letters
   (tap and drag) and `insertionIndex`, arrange and tap-swap, the placement strip's tags and
   reordering, target selection, Validate's tray states, FLIP, fly-to-cell, the winning-animation
   input guard, tray growth wiring (epic 5).
@@ -363,7 +383,9 @@ every P4 row of `rule-coverage.md` covered.
 
 - Deploying epic 4 on its own: with the static tray (F2) the live site would let a player drop a
   tail, set k from the column, Validate the dropped order and Confirm on the default cell, but not
-  arrange tiles, add free letters or choose a cell until epic 5; epic 4 also takes F1/F2/F17
+  arrange tiles, add free letters or choose a cell until epic 5, and a draft of more than 14
+  tray tiles at 360 px (16 at 412 px; long S) is clipped by the static tray, hiding live word
+  cards; epic 4 also takes F1/F2/F17
   from spine Proposed-epics row 5. Proposed default: merge and deploy as for epics 1–3, and
   accept the row 5 move, folded into Proposed epics at close-out. (Owner.)
 - Spine bug report (AGENTS.md Policy): AD-11 makes `bannerShown` a latched copy of
@@ -383,18 +405,18 @@ Rationale in `build-notes.md`.
 | # | Question | Decision |
 | --- | --- | --- |
 | F1 | Which epic renders the WordCell and column states that epic 5 commands produce? | Epic 4 renders every `GameView` state; epic 5 adds the tray interactions, free-letter and target commands, and FLIP. |
-| F2 | Where are S and free letters live in Composing before the tray exists? | A static tray: live tray tiles in `arrangement` order with D-block mirrors (Composing), live strip tiles in `placementOrder` (Place); no gestures; the invalid-word line moves to its word-line slot; tiles at card height in one row while they fit (DESIGN.md tiles per row), else compact 44 px in up to two rows within the reserved max(H, 92) tile area, clipped beyond (`overflow: hidden`), never over the labels or WordCells, every element kept in the DOM (AD-14). Epic 5 replaces it. |
+| F2 | Where are S and free letters live in Composing before the tray exists? | A static tray: live tray tiles in `arrangement` order with D-block mirrors (Composing), live strip tiles in `placementOrder` (Place); no gestures; the word-line slot is reserved and shows only the epic 3 invalid-word line (the word display is epic 5); tiles at card height in one row while they fit (DESIGN.md tiles per row), else compact 44 px in up to two rows within the reserved max(H, 92) tile area, clipped beyond (`overflow: hidden`), never over the labels or WordCells, every element kept in the DOM (AD-14). Epic 5 replaces it. |
 | F3 | Top bar without the menu and timer. | Score and Undo/Redo; a reserved empty 44 px menu slot; the timer box is epic 6 (absent while Show timer is off). |
 | F4 | Minimal-board heading and Seed line. | Removed; a visually hidden `h1` `WordCell` stays; specs read the seed from `current()`. |
 | F5 | End-sheet states without an end sheet. | Built in `overlays.svelte.ts` per AD-13 with UI Vitest only; `DispatchResult` `finished`/`unfinished` not wired (sheet stays `hidden`, no push); UI, wiring and Playwright in epic 6. |
 | F6 | Overlay ids and selection data. | `tailSelection`, `wordcellView`, `endSheet`; `{ column, count }` held in the overlays store. |
 | F7 | R1 before-back hook. | `nav.registerBeforeBack(fn)`, separate from `register()`, run before the Forward check and close callback for current-launch backs only. Spine close-out edit. |
-| F8 | Controller creation. | `main.ts`, after `game.load()`, before `registerLifecycle()`, rejected root included; registers `cancel` with the store and `nav`. |
+| F8 | Controller creation. | `main.ts`, after `game.load()`, before `registerLifecycle()`, rejected root included; registers `cancel` with the store and `nav`. It attaches (Svelte action) to App's active-branch root on every mount, so a rejected → Board switch by New game needs no reload, and detaches after `cancel()` on unmount. |
 | F9 | R2 cancel-first reach. | Every App-owned button handler (Board, dialogs, notices, banner, the Session-rejected root's New game) through one UI helper `act()`; epic 6's menu and keys inherit it. Halted's Reload is exempt in both mounts (standalone and inside App): a reload ends every gesture and the Board unmounts on halt, so `act()` never runs without a controller. |
 | F10 | Mid-drag hide and back in Playwright. | A stepwise held-touch API in `e2e/helpers/touch.ts`, tested in `helpers.spec.ts`. |
 | F11 | CI's wider system-ui. | Geometry assertions measure; no text-dependent px literals. |
 | F12 | Drag feedback without reactive churn. | Transform and highlight written to the DOM; Svelte state at release. |
-| F13 | Epic 4 animation. | Fly-back only, WAAPI via `duration('flyBack')`, gate-counted, run only for a drag released over nothing or ended by a real `pointercancel`/`lostpointercapture`; a programmatic `cancel()` (`act()`, before-hide, before-back) returns the tail to its slot at once and `finish()`es a running fly-back, gate idle before it returns; a primary `pointerdown` with no active press `finish()`es a running fly-back (gate `leave()` included) without calling `cancel()`, then resolves from `document.elementFromPoint` at the press point, ignores `event.target` and captures on the resolved element; a second `pointerId` during an active press never touches controller state. |
+| F13 | Epic 4 animation. | Fly-back only, WAAPI via `duration('flyBack')`, gate-counted, run only for a drag released over nothing or ended by a real `pointercancel`/`lostpointercapture` or by the before-back `cancel({ byBack: true })` (EXPERIENCE.md "as for `pointercancel`"; no handler acts after it); `cancel()` from `act()` or before-hide (a press acts on the settled state) returns the tail to its slot at once and `finish()`es a running fly-back, gate idle before it returns; a primary `pointerdown` with no active press `finish()`es a running fly-back (gate `leave()` included) without calling `cancel()`, then resolves from `document.elementFromPoint` at the press point, ignores `event.target` and captures on the resolved element; a second `pointerId` during an active press never touches controller state. |
 | F14 | Proving peek → sticky overflow. | Decided at release from the rendered sheet (`scrollHeight > clientHeight`); Playwright on `session-won`'s deepest cell at a short viewport. |
 | F15 | Keyboard on cards and WordCells. | Epic 6. |
 | F16 | AD-13 two-overlay reload case. | Epic 6 (menu + confirm). |
@@ -406,4 +428,5 @@ Rationale in `build-notes.md`.
 | F22 | `BAND_ORDER` shape. | Ordered units of AD-11 band ids; `?bands=` names units (absent or empty: the default order; repeated: the first value); a non-permutation throws (AD-15); stickiness follows the top bar, banner and action-bar units wherever they sit (dev only). |
 | F23 | Press resolution. | By `data-place`: `column`, `cell`; `tray`/`strip` inert in epic 4. |
 | F24 | One `cancel` for hide, Undo and back. | `cancel({ byBack })` deselects only when the gesture it ends is a drag that replaced a selection, and `byBack` skips even that (`closedByBack` clears it); so hide during such a drag returns the tail and leaves nothing selected, its entry popped through nav's queue (`wc` 0 after `showPage`), while hide keeps a plain tap-selection; Undo, Redo, the banner `Reload` and the outside tap deselect in their own handlers. |
-| F25 | Outside-tap deselect. | The controller listens on the App root spanning the viewport (side margins, bars and banner included); presses on enabled buttons are never classified or captured (their `act()` handlers run), disabled controls fall through to this path. On the controller's `tap` classification for pointer input (`click` only for non-pointer activation, never both for one gesture), never on `pointerdown`; excludes `[data-wordcell]` (the controller handles WordCells), the open view sheet and scrim, and long-presses; `deselect()` with nothing selected is a no-op with no `nav` call. |
+| F26 | Hit rects (DESIGN.md Hit rects) vs the drawn card. | Each live card and WordCell element is a slot wrapper spanning its full slot pitch (w + 4 wide; strip or H tall) with the drawn face inside; the wrapper carries `data-card-id`, `data-testid` and `data-place` (AD-14's one live element), the face none. The 8 px selection lift moves only the face, so hit areas never move under a finger; a drag's `transform` moves the faces (the wrappers stay to draw the ghosts, CAP-7), and overlap uses the grabbed face's rect. |
+| F25 | Outside-tap deselect. | The controller listens on App's active-branch root spanning the viewport (F8) (side margins, bars and banner included); presses on enabled buttons are never classified or captured (their `act()` handlers run), disabled controls fall through to this path. On the controller's `tap` classification for pointer input (`click` only for non-pointer activation, never both for one gesture), never on `pointerdown`; excludes `[data-wordcell]` (the controller handles WordCells), the open view sheet and scrim (classified per CAP-9), and long-presses; `deselect()` with nothing selected is a no-op with no `nav` call. |

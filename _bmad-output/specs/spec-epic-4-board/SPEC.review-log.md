@@ -1,6 +1,6 @@
 # Review log — spec-epic-4-board (SPEC.md + rule-coverage.md + build-notes.md)
 
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7. Pre-loop: HEAD 1c93404; copies at SPEC.review-log.passes/pass0/; words 8184 (SPEC 3515, rule-coverage 2298, build-notes 2371).
 Caller rule: stop as diverging if majors rise pass-over-pass.
@@ -95,3 +95,24 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 ### Fixer outcome
 All 25 items applied; decision-needed view title appended to Open Questions as PROPOSED BY REVIEW. Marked `unverified`: a held CDP touch pan fires no `scrollend` before release (scroll test, ticket checks). Cancel-from-code returns the tail at once; classify latches drag at ≥ 8 px; controller on the App root; end sheet not wired in epic 4; `stored-key.ts` never imports storage.
 Words: 11824 (1.44 x pass 0)  |  Snapshot: SPEC.review-log.passes/pass3/ ; fix diff pass3.fix.diff
+
+## Pass 4 — 2026-10-01
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 7, minor 14, decision-needed 0  |  Dropped in triage: 0
+### Applied (sent to fixer)
+- [major] CAP-7/rule-coverage — Undo-during-fly-back P4 calls a Node Locator inside `page.evaluate`; observable passes after the animation ends (gating check unrunnable) → 1
+- [major] CAP-4/F8 — controller attach/detach when App switches from the rejected root to the Board after New game (no reload) unspecified → 2
+- [major] CAP-3/CAP-4/CAP-9 — native long-press (contextmenu, callout, text selection) at ~500 ms can `pointercancel` the peek on Android → 3
+- [major] CAP-9 — used top drawn hatched in the view contradicts AD-14 (view/peek copies are normal cards) → 4
+- [major] CAP-3 scroll test — "no banner while the finger is down" contradicts the 150 ms backstop; unverified Chromium claims incomplete → 5
+- [major] CAP-4/CAP-6 — presses resolved on the drawn card, not the full slot pitch (DESIGN.md Hit rects); 8 px lift moves the hit area → 6
+- [major] CAP-9/F25 — no owner for sheet/scrim tap vs drag; trailing `click` after closing not consumed (AD-12 single controller) → 7
+- [minor] 8–21: build-notes "(or `document`)" listener host; long-press on empty cell then move still deselects; available width from `clientWidth`; back-cancel flies back per EXPERIENCE while `act()`/hide settle at once (AD-12 close-out note); mid-drag ghosts as CSS on slot wrappers; word-line slot reserved, only the invalid-word line in it; static-tray clipping named in the deploy question; R-14 Undo row fixture `session-idle-empty-column`; re-measure still > 5 s → stop for owner; sheet `overscroll-behavior: contain`; halt mid-drag → cancel on Board unmount; drag lift gated on `canPickUp`
+### Default applied (technical)
+- all majors take reviewers' defaults (AD-14 normal-card look for item 4)
+### Decision needed (functionality / UX / gameplay)
+- none new
+### Dropped
+- none
+### Fixer outcome
+All 18 items applied. New F26 (slot wrappers carry the live-card attributes; lift and drag transform move the inner face; overlap uses the face rect; mid-drag ghosts drawn on the untransformed wrappers). Checked: Playwright 1.63 Chromium does not support `-webkit-touch-callout`, so the computed-style check asserts `user-select` only. `unverified`: CDP touch pan scrolls the document; no `scrollend` before release; on-device native long-press (epic 7). Back-cancel flies back; `act()`/hide settle at once (AD-12 close-out note).
+Words: 12645 (1.55 x pass 0)  |  Snapshot: SPEC.review-log.passes/pass4/ ; fix diff pass4.fix.diff
