@@ -1,5 +1,5 @@
 # Review loop — ticket 3.11 build (code mode, cc326d7..5519b7a)
-State: pass 1: done
+State: pass 2: done
 
 Target: `_bmad-output/implementation-artifacts/review-loop/3-11-build.passes/pass0.diff` (git diff cc326d7..5519b7a)
 Intent: `_bmad-output/initiative-wordcell-v1/epic-app-shell/story-boot-order-and-restore-boundaries-plan.md`
@@ -26,3 +26,27 @@ Fixer: all 7 applied; restore.spec.ts + helpers.spec.ts android 42 passed; `npm 
 ### Dropped
 - Q-41 title order `R-73 Q-41 …` vs ticket literal — already recorded in plan Implementation Notes (AGENTS.md R-id first); no change
 - duplicates: hide-flush assertion (correctness + edge), animationFrames (correctness + edge), `return` guard (intent + verification gap)
+
+## Pass 2 — 2026-10-01
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 0, minor 6, decision-needed 0  |  Dropped in triage: 0
+Snapshot: tree fd9b1dae08321324c182b0ad06fdf626144827b9 (no fix pass)
+### Applied
+- none (zero majors; converged)
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Result — converged after 2 passes
+
+Final state (tree fd9b1da, commit fbc92ce): `npm test` 34 files / 1654 passed (7.69 s), `npm run lint` clean, `npm run check` 0 errors 0 warnings; fixer ran `playwright test e2e/restore.spec.ts e2e/helpers.spec.ts --project=android`: 42 passed.
+
+Unapplied minors:
+- e2e/helpers.spec.ts 'AD-17 booted, sessionOf and dictionaryReady …': after `booted`, `.not.toBe('booting')` passes when `window.__wordcell` is undefined; assert `.toBe('active')` instead.
+- e2e/restore.spec.ts hidden-branch comment + plan Plan Change Log: the exact `after.loaded.session` equality pins the paused clock, not the hide write (a reload's pagehide flush would write the same Session); reword to cite e2e/lifecycle.spec.ts `hidePage` single-write test for the write, or arm `armStorageSpy` around `hidePage`.
+- Plan Auto Run Result 'Review' bullet and Design Notes 6 still describe pass-0 behaviour (hide-flush assert, animationFrames delta ≥ 3); point to the Plan Change Log / say "exactly 3 requested and fired".
+- Plan Residual risks bullet 1: plain-mode `activeMs` not-smaller check cannot detect a missing pagehide flush; reword to say plain mode pins the restored Session modulo `activeMs` only.
+- e2e/restore.spec.ts first-launch `else` branch hard-codes `prefs-non-default.json` instead of the case's `c.seed`; compare every seeded key from `c.seed` with `first.loaded[field]`.
+- e2e/restore.spec.ts R-84 case: first launch never compares `first.loaded.history` / `first.current.history` with `c.seed.history`, so a boot that dropped the last record would let 'record stays removed' pass with a no-op Undo; add that check before the Undo.
