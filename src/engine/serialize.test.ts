@@ -1134,7 +1134,7 @@ describe('activeMs headroom (§2, AD-7)', () => {
     expect(Object.keys(gaveUp)).toStrictEqual(['session']);
   });
 
-  it('§2 a replay code wins over the headroom: seed -1 with activeMs 2^52 + 1', () => {
+  it('§2 seed -1 with activeMs 2^52 + 1 is replay-failed', () => {
     const value = deepFreeze({ ...validIdleFresh, seed: -1, activeMs: 2 ** 52 + 1 });
     expect(parseSession(JSON.stringify(value), EN)).toStrictEqual({
       ok: false,
@@ -1379,6 +1379,11 @@ describe('history inline boundaries (§2, CAP-9)', () => {
     [
       "longestWord 'tan' 4",
       { ...base, longestWord: { spelling: 'tan', letterCount: 4 } },
+      'history.longest-word-letter-count-mismatch',
+    ],
+    [
+      "longestWord 'tans' 3",
+      { ...base, longestWord: { spelling: 'tans', letterCount: 3 } },
       'history.longest-word-letter-count-mismatch',
     ],
     ['a won record at finalScore -1', { ...base, finalScore: -1 }, 'history.won-final-score'],
@@ -1633,6 +1638,13 @@ const REBUILDS: readonly (readonly [string, unknown, () => Session])[] = [
 ];
 
 describe('AD-17 fixture regeneration', () => {
+  it('AD-17 REBUILDS covers exactly the VALID fixtures, in order, as session-<name>', () => {
+    expect(REBUILDS.map(([name]) => name)).toEqual(VALID.map(([name]) => `session-${name}`));
+    REBUILDS.forEach(([, fixture], i) => {
+      expect(fixture).toBe(VALID[i]?.[1]);
+    });
+  });
+
   it.each(REBUILDS)(
     'AD-17 %s.json equals its scripted accrue/apply rebuild',
     (_name, fixture, build) => {

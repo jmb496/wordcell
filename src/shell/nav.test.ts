@@ -258,7 +258,7 @@ describe('AD-13 push, pop and back', () => {
     expect(t.fake.calls).toEqual([]);
   });
 
-  it('AD-13 a stale-launch popstate closes nothing and calls no back', async () => {
+  it('AD-13 a stale-launch popstate closes nothing, calls no back and keeps the count', async () => {
     const t = await ready(1);
     t.listener()({ state: { wc: 0, launch: -1 } });
     t.listener()({ state: null });

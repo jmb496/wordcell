@@ -152,7 +152,7 @@ function draftData(position: Position, draft: Move, lang: LangData) {
 
 /**
  * `view` over a D2 start (internal seam): one `replayWords` pass, every flag from the predicates
- * `apply` shares (AD-3). Throws replay's `EngineError` for a replay-invalid Session.
+ * `apply` shares (AD-2). Throws replay's `EngineError` for a replay-invalid Session.
  */
 export function viewFrom(start: Start, session: Session, lang: LangData): GameView {
   const { position, words } = replayWords(start, session, lang);

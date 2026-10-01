@@ -1,6 +1,7 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
+import { walk } from '../helpers/dist-test';
 import { fixture, seedStorage } from '../helpers/seed';
 
 test('AD-18 production build loads with 52 live cards, no errors and no test hook', async ({
@@ -23,9 +24,7 @@ test('AD-18 production build loads with 52 live cards, no errors and no test hoo
 
 test('AD-18 no file in dist/ contains __wordcell', () => {
   const root = path.resolve(import.meta.dirname, '../../dist');
-  const files = readdirSync(root, { recursive: true, withFileTypes: true })
-    .filter((entry) => entry.isFile())
-    .map((entry) => path.relative(root, path.join(entry.parentPath, entry.name)));
+  const files = walk(root);
   expect(files).toContain('index.html');
   expect(files.some((file) => /^assets\/[^/]+\.js$/.test(file))).toBe(true);
   const hits = files.filter((file) =>

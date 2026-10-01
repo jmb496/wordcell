@@ -1,4 +1,14 @@
 import { expect, type Page, test } from '@playwright/test';
+import {
+  button,
+  confirmDialog,
+  expectLeaves,
+  hitAt,
+  notice,
+  NOTICE_TITLE as TITLE,
+  wc,
+} from './helpers/dialogs';
+import { waitForDictionary } from './helpers/restore';
 import { fixture, seedStorage } from './helpers/seed';
 
 // AD-13 nav adapter: reload, Forward, stale launch, the deferred History-notice push and the
@@ -10,17 +20,8 @@ test.beforeEach(() => {
   test.skip(test.info().project.name !== 'android', 'nav flows run on android');
 });
 
-const TITLE = "Your score history can't be read.";
-const CONFIRM = 'Delete the score history?';
 const REJECTED = "This saved game can't be opened.";
 const VERSION_UNKNOWN = 'history-invalid-version-unknown.json';
-
-type NavState = { wc: number; launch: number } | null;
-
-const wc = (page: Page) => page.evaluate(() => history.state as NavState);
-const notice = (page: Page) => page.getByRole('dialog', { name: TITLE });
-const confirmDialog = (page: Page) => page.getByRole('dialog', { name: CONFIRM });
-const button = (page: Page, name: string) => page.getByRole('button', { name, exact: true });
 
 async function start(page: Page, seed: { history: string; session?: string }): Promise<void> {
   await seedStorage(page, {
@@ -43,12 +44,8 @@ async function launchOf(page: Page): Promise<number> {
 async function openConfirm(page: Page): Promise<void> {
   await button(page, 'Reset history').click();
   await expect(confirmDialog(page)).toBeVisible();
+  await expect(confirmDialog(page)).toHaveAttribute('aria-modal', 'true');
   await expect.poll(() => wc(page).then((state) => state?.wc)).toBe(2);
-}
-
-async function expectLeaves(page: Page): Promise<void> {
-  await page.goBack();
-  await expect(page).toHaveURL('about:blank');
 }
 
 // After a reload with entries open: only the notice, at { wc: 1, launch: <new> }; the first back
@@ -177,17 +174,11 @@ test('§2 AD-13 a double tap on New game on the rejected root opens the notice a
   await expect(notice(page)).toBeVisible();
   await expect(confirmDialog(page)).toHaveCount(0);
   // The second tap lands on the notice's Reset history (a layout change must fail here).
-  const hit = await page.evaluate(
-    ([px, py]) => {
-      const el = document.elementFromPoint(px, py);
-      return {
-        name: el?.closest('button')?.textContent?.trim() ?? null,
-        dialog: el?.closest('.layer')?.querySelector('[role="dialog"] h2')?.textContent ?? null,
-      };
-    },
-    [x, y],
-  );
-  expect(hit).toEqual({ name: 'Reset history', dialog: TITLE });
+  expect(await hitAt(page, x, y)).toEqual({
+    kind: 'button',
+    name: 'Reset history',
+    dialog: TITLE,
+  });
   await expect.poll(() => wc(page).then((state) => state?.wc)).toBe(1);
   await expect(notice(page)).toBeVisible();
 });
@@ -207,7 +198,7 @@ test('AD-13 win → New game → back leaves the app; no notice (already shown t
   await expect(primary).toHaveText('New game');
   await primary.click();
   // AD-8: a plain Validate label needs the word list loaded.
-  await page.waitForFunction(() => window.__wordcell?.dictionaryState() === 'ready');
+  await waitForDictionary(page, 'ready');
   await expect(primary).toHaveText('Validate');
   await expect(notice(page)).toHaveCount(0);
   expect((await wc(page))?.wc).toBe(0);

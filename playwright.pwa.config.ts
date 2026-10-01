@@ -1,4 +1,5 @@
 import { defineConfig, devices, type Project } from '@playwright/test';
+import { forbidOnly, fullyParallel, reporter, retries, use } from './playwright.base';
 
 /**
  * D5: serves a production-shaped build with `vite preview`. `PW_PREVIEW` picks the build and the
@@ -29,14 +30,11 @@ const project: Project =
 
 export default defineConfig({
   testDir: 'e2e/pwa',
-  fullyParallel: true,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  reporter: process.env.CI ? 'github' : 'list',
-  use: {
-    baseURL: 'http://localhost:4173',
-    trace: 'retain-on-failure',
-  },
+  fullyParallel,
+  forbidOnly,
+  retries,
+  reporter,
+  use: { ...use, baseURL: 'http://localhost:4173' },
   projects: [project],
   webServer: {
     command: `npx vite preview --outDir ${preview} --port 4173 --strictPort`,

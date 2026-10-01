@@ -1,6 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
-import { dictionaryReady, open, sessionOf, snapshot } from './helpers/restore';
+import { dictionaryReady, open, sessionOf, snapshot, waitForDictionary } from './helpers/restore';
 import { captureBoot, fixture, seedStorage } from './helpers/seed';
+import { tokenColor } from './helpers/style';
 
 // Game store load, dispatch and storage (R-73, R-74) through the AD-17 hook, on android.
 
@@ -122,18 +123,6 @@ test('R-74 R-73 Q-29 game-over New game on session-gave-up.json stores a fresh S
   await expect(primary).toBeDisabled();
 });
 
-// Resolves a colour token to its computed rgb form through a probe element.
-function tokenColor(page: Page, token: string): Promise<string> {
-  return page.evaluate((name) => {
-    const probe = document.createElement('span');
-    probe.style.color = `var(${name})`;
-    document.body.append(probe);
-    const color = getComputedStyle(probe).color;
-    probe.remove();
-    return color;
-  }, token);
-}
-
 type Dictionary = 'held' | 'failing' | 'ready';
 
 // AD-8: hold the word list (never answered), fail it (500) or let the real list through.
@@ -182,11 +171,8 @@ for (const [name, dictionary, label, enabled, reason] of LABELS) {
     await routeDictionary(page, dictionary);
     await seedStorage(page, { session: fixture(name) });
     await open(page);
-    const state = { held: 'loading', failing: 'failed', ready: 'ready' }[dictionary];
-    await page.waitForFunction(
-      (expected) => window.__wordcell?.dictionaryState() === expected,
-      state,
-    );
+    const state = ({ held: 'loading', failing: 'failed', ready: 'ready' } as const)[dictionary];
+    await waitForDictionary(page, state);
     const primary = page.getByTestId('primary-action');
     await expect(primary).toHaveText(label);
     if (enabled) await expect(primary).toBeEnabled();

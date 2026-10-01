@@ -865,12 +865,12 @@ describe('AD-1 scan scope', () => {
     {
       name: 'root .d.ts importing the engine index',
       path: 'src/x.d.ts',
-      source: "import type { Card } from './engine';",
+      source: "import type { CardId } from './engine';",
     },
     {
       name: 'main.ts',
       path: 'src/main.ts',
-      source: "import { deal } from './engine/index';\ndeal(1);",
+      source: "import { createSession } from './engine/index';\ncreateSession(1);",
     },
     {
       name: 'non-code file under engine',
@@ -915,41 +915,45 @@ describe('AD-1 import forms', () => {
     {
       name: "UI import type from '../engine'",
       path: U,
-      source: "import type { Card } from '../engine';",
+      source: "import type { CardId } from '../engine';",
     },
     {
       name: "UI import type from '../engine/'",
       path: U,
-      source: "import type { Card } from '../engine/';",
+      source: "import type { CardId } from '../engine/';",
     },
     {
       name: "UI import type from '../engine/index'",
       path: U,
-      source: "import type { Card } from '../engine/index';",
+      source: "import type { CardId } from '../engine/index';",
     },
     {
       name: 'UI export type from the engine',
       path: U,
-      source: "export type { Card } from '../engine';",
+      source: "export type { CardId } from '../engine';",
     },
     {
       name: "UI '../engine/index.js'",
       path: U,
-      source: "import type { Card } from '../engine/index.js';",
+      source: "import type { CardId } from '../engine/index.js';",
       fails: 'deep-engine-import',
     },
     {
       name: "UI '../engine/index.ts'",
       path: U,
-      source: "import type { Card } from '../engine/index.ts';",
+      source: "import type { CardId } from '../engine/index.ts';",
       fails: 'deep-engine-import',
     },
     {
       name: 'shell value import of the engine index',
       path: S,
-      source: "import { deal } from '../engine';",
+      source: "import { createSession } from '../engine';",
     },
-    { name: "shell '../engine/index'", path: S, source: "import { deal } from '../engine/index';" },
+    {
+      name: "shell '../engine/index'",
+      path: S,
+      source: "import { createSession } from '../engine/index';",
+    },
     {
       name: 'no-substitution template specifier',
       path: S,
@@ -957,21 +961,21 @@ describe('AD-1 import forms', () => {
       fails: 'deep-engine-import',
     },
     {
-      name: 'UI inline import { type Card }',
+      name: 'UI inline import { type CardId }',
       path: U,
-      source: "import { type Card } from '../engine';",
+      source: "import { type CardId } from '../engine';",
       fails: 'ui-value-engine-import',
     },
     {
       name: 'UI import-type expression',
       path: U,
-      source: "type C = import('../engine').Card;",
+      source: "type C = import('../engine').CardId;",
       fails: 'ui-value-engine-import',
     },
     {
       name: 'UI value re-export',
       path: U,
-      source: "export { deal } from '../engine';",
+      source: "export { createSession } from '../engine';",
       fails: 'ui-value-engine-import',
     },
     {
@@ -1541,7 +1545,7 @@ describe('AD-1 test-file exemptions', () => {
     {
       name: 'UI test value-importing the engine',
       path: UT,
-      source: "import { deal } from '../engine';",
+      source: "import { createSession } from '../engine';",
       fails: 'ui-value-engine-import',
     },
   ]);
@@ -1669,7 +1673,7 @@ describe('AD-1 .svelte extraction', () => {
       path: UV,
       source: [
         '<script lang="ts">',
-        "  import type { Card } from '../engine';",
+        "  import type { CardId } from '../engine';",
         "  import { x } from '../shell/x';",
         '</script>',
         '<!-- history.back() and popstate live in nav.ts -->',
@@ -1926,8 +1930,8 @@ describe('AD-1 engine tsconfig', () => {
 
 describe('AD-17 valid session fixtures', () => {
   it('AD-17 the valid fixtures/session-*.json files are exactly the nine rebuilt ones', () => {
-    // Own copy of serialize.test.ts's rebuild list (tests never import each other): a new valid
-    // fixture fails here until its rebuild case is added there.
+    // Own copy of serialize.test.ts's VALID names (tests never import each other); serialize.test.ts
+    // ties REBUILDS to VALID, so a new valid fixture fails here until both lists there name it.
     const names = readdirSync(posix.join(ROOT, 'fixtures'))
       .filter((name) => /^session-.*\.json$/.test(name) && !name.startsWith('session-invalid-'))
       .sort();

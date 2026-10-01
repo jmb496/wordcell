@@ -1,4 +1,5 @@
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig } from '@playwright/test';
+import { deviceProjects, forbidOnly, fullyParallel, reporter, use } from './playwright.base';
 
 /**
  * Screenshot specs (AD-17 Screenshots): baselines are generated and compared only inside
@@ -14,22 +15,16 @@ if (process.env.WORDCELL_SCREENS_CONTAINER !== '1') {
 export default defineConfig({
   testDir: './e2e',
   testMatch: '**/*.screens.spec.ts',
-  fullyParallel: true,
-  forbidOnly: !!process.env.CI,
+  fullyParallel,
+  forbidOnly,
   retries: 0,
-  reporter: process.env.CI ? 'github' : 'list',
+  reporter,
   updateSnapshots: process.env.CI ? 'none' : 'missing',
-  use: {
-    baseURL: 'http://localhost:5173',
-    trace: 'retain-on-failure',
-  },
+  use: { ...use, baseURL: 'http://localhost:5173' },
   expect: {
     toHaveScreenshot: { maxDiffPixelRatio: 0.01 },
   },
-  projects: [
-    { name: 'android', use: { ...devices['Pixel 7'] } },
-    { name: 'desktop', use: { ...devices['Desktop Chrome'] } },
-  ],
+  projects: deviceProjects,
   webServer: {
     command: 'npm run dev -- --port 5173 --strictPort',
     url: 'http://localhost:5173',

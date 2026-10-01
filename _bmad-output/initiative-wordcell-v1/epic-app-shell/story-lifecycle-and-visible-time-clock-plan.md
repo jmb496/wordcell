@@ -99,6 +99,7 @@ baseline_revision: '81a61e91cafe2ff52825d7c1da0a0ca21ffd8257'
 - E2e: `startHidden(page)` in `e2e/helpers/lifecycle.ts` and its `AD-17 startHidden …` test in `e2e/helpers.spec.ts`; new `e2e/lifecycle.spec.ts` (android only, 14 tests, as the Tests mapping lists).
 - Existing spec fixed: `e2e/helpers.spec.ts` `AD-17 captureBoot records absent keys as null and later writes on reload`. Its stand-in `'s'` write was overwritten by the active store's pagehide flush on reload (R-73). The test now installs a paused `page.clock` and asserts that the boot value equals the pre-reload `current().session`. No other spec broke: the other seedStorage/captureBoot tests seed unparseable text (`'a'`), which gives a rejected store, so the flush writes nothing.
 - Verification: `npm run test:all` exit 0 (lint, check, unit, build, e2e:dist 13 passed, e2e 84 passed / 74 skipped, e2e:pwa 12 passed); `git diff --stat src/engine fixtures` empty.
+- Correction 2026-10-01 (3.12): the Playwright test 'R-76 New game starts at activeMs 0 with the discarded take' is renamed 'R-74 R-76 New game starts at activeMs 0 with the discarded take' (the ticket AC labels the fresh `activeMs = 0` R-74).
 
 ## Plan Change Log
 

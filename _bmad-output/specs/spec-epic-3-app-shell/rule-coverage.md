@@ -46,10 +46,10 @@ with no R-id sentence; `AD-n …` for spine behaviour with no rule id (AGENTS.md
 | R-73 `activeMs` flushed on those events and when hidden, not on timer ticks | 5 | P3 | `page.clock` advance with no dispatch writes nothing; a dispatch or hide writes the accrued value. |
 | R-73 exact phase after Android kills the app | 3, 10 | P3 | Kill variant (CDP `Page.crash`, new page in the same context). |
 | R-73 "No account, no server" | 3 | P3 | A dispatch-and-reload session makes no request off-origin and no non-GET request. |
-| R-74 New game starts a fresh seed | 3 | P3 | Game-over New game (minimal board) and New game from the rejected root: a uint32 seed, `moves = []`, `activeMs = 0`, written at once. |
+| R-74 New game starts a fresh seed | 3, 4 | P3 | Game-over New game (minimal board) and New game from the rejected root: a uint32 seed, `moves = []`, `activeMs = 0`, written at once. |
 | R-74 Replay this deal restarts the same seed | — | P4–6 (S) | Menu is epic 6; the store's `replay()` is S here. |
 | R-74 both ask for confirmation if a game is in progress (UI) | — | P4–6 | Confirm dialogs, epic 6. |
-| R-74 abandoned game not recorded (Q-29) | 3 | P3 + P4–6 | P3: New game never touches `wordcell:history` (from game over and from the rejected root); abandoning an in-progress game needs the epic 6 confirm. |
+| R-74 abandoned game not recorded (Q-29) | 3, 4 | P3 + P4–6 | P3: New game never touches `wordcell:history` (from game over and from the rejected root); abandoning an in-progress game needs the epic 6 confirm. |
 | R-74 shell generates the uint32 seed and passes it; the engine never generates seeds (UI) | 3 | P3 | First launch: `current().session.seed` is a uint32 and two fresh contexts get different seeds (probabilistic, 2^-32); AD-1 scan keeps `crypto` out of the engine. |
 | R-74 on launch with no stored Session the shell deals a fresh seed immediately (UI) | 3 | P3 | Fresh context: `wordcell:session` exists before any input and deep-equals `current().session`. |
 | R-76 clock runs whenever playing and visible (including a fresh deal), pauses when hidden or over | 5 | P3 | `page.clock` cases: visible playing grows, hidden does not, won and gaveUp do not, a fresh deal grows. |

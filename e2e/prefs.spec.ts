@@ -1,5 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { hidePage } from './helpers/lifecycle';
+import { openBoard } from './helpers/restore';
 import { fixture, seedStorage } from './helpers/seed';
 
 // Preferences and the motion variables (§7.10, Q-36, R-76, AD-10) through the AD-17 hook, on
@@ -43,11 +44,6 @@ async function prefsOf(page: Page): Promise<unknown> {
   return now.prefs;
 }
 
-async function open(page: Page): Promise<void> {
-  await page.goto('/');
-  await expect(page.getByTestId('card-0')).toBeVisible();
-}
-
 async function reload(page: Page): Promise<void> {
   await page.reload();
   await expect(page.getByTestId('card-0')).toBeVisible();
@@ -56,7 +52,7 @@ async function reload(page: Page): Promise<void> {
 test('§7.10 non-default prefs set 320ms and survive New game and reload', async ({ page }) => {
   const text = fixture('prefs-non-default.json');
   await seedStorage(page, { session: fixture('session-gave-up.json'), prefs: text });
-  await open(page);
+  await openBoard(page);
   expect(await cssVar(page, '--wc-base-ms')).toBe('320ms');
   expect(await prefsOf(page)).toEqual(JSON.parse(text));
   const primary = page.getByTestId('primary-action');
@@ -75,7 +71,7 @@ test('§7.10 non-default prefs set 320ms and survive New game and reload', async
 test('§7.10 non-default prefs survive Undo and Redo', async ({ page }) => {
   const text = fixture('prefs-non-default.json');
   await seedStorage(page, { session: fixture('session-place.json'), prefs: text });
-  await open(page);
+  await openBoard(page);
   await expect(page.getByTestId('redo')).toBeDisabled();
   await page.getByTestId('undo').click();
   await expect(page.getByTestId('redo')).toBeEnabled();
@@ -91,7 +87,7 @@ test('§7.10 non-default prefs survive Undo and Redo', async ({ page }) => {
 test('Q-36 unreadable prefs give the defaults silently and stay untouched', async ({ page }) => {
   const text = fixture('prefs-unreadable.json');
   await seedStorage(page, { session: fixture('session-place.json'), prefs: text });
-  await open(page);
+  await openBoard(page);
   expect(await cssVar(page, '--wc-base-ms')).toBe('180ms');
   expect(await storedPrefs(page)).toBe(text);
   expect((await loaded(page)).prefs).toEqual({
@@ -113,13 +109,13 @@ test('Q-36 unreadable prefs give the defaults silently and stay untouched', asyn
 });
 
 test('R-76 a first launch has Show timer off', async ({ page }) => {
-  await open(page);
+  await openBoard(page);
   expect((await loaded(page)).prefs).toBeNull();
   expect(await prefsOf(page)).toMatchObject({ showTimer: false });
 });
 
 test('§7.10 a first launch uses Normal speed and writes no prefs', async ({ page }) => {
-  await open(page);
+  await openBoard(page);
   expect(await prefsOf(page)).toMatchObject({ animationSpeed: 'normal' });
   expect(await cssVar(page, '--wc-base-ms')).toBe('180ms');
   await hidePage(page);
@@ -128,7 +124,7 @@ test('§7.10 a first launch uses Normal speed and writes no prefs', async ({ pag
 
 test('§7.10 New game without stored prefs writes none', async ({ page }) => {
   await seedStorage(page, { session: fixture('session-gave-up.json') });
-  await open(page);
+  await openBoard(page);
   const primary = page.getByTestId('primary-action');
   await expect(primary).toHaveText('New game');
   await primary.click();
@@ -138,7 +134,7 @@ test('§7.10 New game without stored prefs writes none', async ({ page }) => {
 
 test('AD-10 reduced motion follows the media query live', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await open(page);
+  await openBoard(page);
   expect(await cssVar(page, '--wc-reduced')).toBe('0');
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect.poll(() => cssVar(page, '--wc-reduced')).toBe('1');
@@ -149,7 +145,31 @@ test('AD-10 reduced motion follows the media query live', async ({ page }) => {
 
 test('AD-10 reduced motion at launch sets --wc-reduced 1', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await open(page);
+  await openBoard(page);
   expect(await cssVar(page, '--wc-reduced')).toBe('1');
   expect(await cssVar(page, '--wc-base-ms')).toBe('180ms');
+});
+
+test('AD-16 AD-10 the motion variable is set before App mounts', async ({ page }) => {
+  // Records the root's --wc-base-ms at the first append into #app (Svelte's mount appends its
+  // anchor), synchronously, so it orders prefs.load() against mount(App) within the boot task.
+  await page.addInitScript(() => {
+    const seen: string[] = [];
+    Object.assign(window, { __baseMsAtMount: seen });
+    const appendChild = Node.prototype.appendChild;
+    Node.prototype.appendChild = function <T extends Node>(this: Node, node: T): T {
+      if (seen.length === 0 && this instanceof HTMLElement && this.id === 'app') {
+        seen.push(document.documentElement.style.getPropertyValue('--wc-base-ms'));
+      }
+      return appendChild.call(this, node) as T;
+    };
+  });
+  await seedStorage(page, {
+    session: fixture('session-place.json'),
+    prefs: fixture('prefs-non-default.json'),
+  });
+  await openBoard(page);
+  expect(
+    await page.evaluate(() => (window as unknown as { __baseMsAtMount: string[] }).__baseMsAtMount),
+  ).toEqual(['320ms']);
 });

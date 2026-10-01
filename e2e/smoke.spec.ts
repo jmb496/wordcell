@@ -54,6 +54,15 @@ test('AD-17 WordCell cards render bottom → top as live cell cards', async ({ p
   expect(
     await cell3.evaluateAll((els) => els.map((el) => el.getAttribute('data-card-id'))),
   ).toEqual(['42', '0', '28']);
+  // Visually bottom → top too: card 42 sits lowest on screen.
+  const y = async (id: number) => {
+    const box = await page.getByTestId(`card-${id}`).boundingBox();
+    if (box === null) throw new Error(`card-${id} has no box`);
+    return box.y;
+  };
+  const [y42, y0, y28] = [await y(42), await y(0), await y(28)];
+  expect(y42).toBeGreaterThan(y0);
+  expect(y0).toBeGreaterThan(y28);
   for (const card of await cell3.all()) {
     await expect(card).toHaveAttribute('data-place', 'cell');
   }

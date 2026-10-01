@@ -1,6 +1,8 @@
 import { expect, type Page, type Request, type Route, test } from '@playwright/test';
 import { animationFrames, showPage, startHidden } from './helpers/lifecycle';
+import { openBoard, waitForDictionary } from './helpers/restore';
 import { fixture, seedStorage } from './helpers/seed';
+import { tokenColor } from './helpers/style';
 
 // Dictionary load, retry and Validate (R-38, AD-8, AD-16, Q-42) on android. The route pattern
 // `**/en*.txt` matches the dev and build word-list URLs (AD-8).
@@ -14,13 +16,7 @@ const BANNER = "Word list didn't load.";
 // The word-list fetch itself (as `LIST` matches it), not the dev server's `en.txt?url` module.
 const isList = (request: Request) => /\/en[^/?]*\.txt$/.test(request.url());
 
-type DictionaryState = 'loading' | 'ready' | 'failed';
-
 const dictionaryState = (page: Page) => page.evaluate(() => window.__wordcell?.dictionaryState());
-
-async function waitForDictionary(page: Page, state: DictionaryState): Promise<void> {
-  await page.waitForFunction((s) => window.__wordcell?.dictionaryState() === s, state);
-}
 
 // Every word-list request of the page, counted from before its first goto.
 function countRequests(page: Page): Request[] {
@@ -47,23 +43,6 @@ async function answer(page: Page, answers: Answer[]): Promise<Route[]> {
   return held;
 }
 
-async function open(page: Page): Promise<void> {
-  await page.goto('/');
-  await expect(page.getByTestId('card-0')).toBeVisible();
-}
-
-// Resolves a colour token to its computed rgb form through a probe element.
-function tokenColor(page: Page, token: string): Promise<string> {
-  return page.evaluate((name) => {
-    const probe = document.createElement('span');
-    probe.style.color = `var(${name})`;
-    document.body.append(probe);
-    const color = getComputedStyle(probe).color;
-    probe.remove();
-    return color;
-  }, token);
-}
-
 async function activeSession(page: Page): Promise<{ stored: unknown; current: unknown }> {
   return page.evaluate(() => {
     const current = window.__wordcell?.current();
@@ -78,7 +57,7 @@ test('R-38 a held word list shows a disabled Loading words… on session-composi
 }) => {
   const held = await answer(page, ['hold']);
   await seedStorage(page, { session: fixture('session-composing.json') });
-  await open(page);
+  await openBoard(page);
   await expect.poll(() => held.length).toBe(1);
   const primary = page.getByTestId('primary-action');
   await expect(primary).toHaveText('Loading words…');
@@ -103,7 +82,7 @@ test("R-38 a word not in the list shows TAN isn't in the word list., stays Compo
   await answer(page, [{ status: 200, body: 'cat\ndog\n' }]);
   const seeded = JSON.parse(fixture('session-composing.json'));
   await seedStorage(page, { session: fixture('session-composing.json') });
-  await open(page);
+  await openBoard(page);
   await waitForDictionary(page, 'ready');
   const primary = page.getByTestId('primary-action');
   await expect(primary).toBeEnabled();
@@ -130,7 +109,7 @@ test('§2 AD-8 replay never consults the dictionary: with the word list failing 
 }) => {
   await page.route(LIST, (route) => route.fulfill({ status: 500, body: '' }));
   await seedStorage(page, { session: fixture('session-place.json') });
-  await open(page);
+  await openBoard(page);
   await waitForDictionary(page, 'failed');
   const banner = page.getByText(BANNER, { exact: true });
   await expect(banner).toBeVisible();
@@ -159,7 +138,7 @@ test.describe('AD-8 Retry', () => {
     const requests = countRequests(page);
     const held = await answer(page, [{ status: 500 }, 'hold']);
     await seedStorage(page, { session: fixture('session-composing.json') });
-    await open(page);
+    await openBoard(page);
     await waitForDictionary(page, 'failed');
     const loads: unknown[] = [];
     page.on('load', (event) => loads.push(event));
@@ -186,7 +165,7 @@ test.describe('AD-8 Retry', () => {
     const requests = countRequests(page);
     await answer(page, [{ status: 500 }, { status: 500 }]);
     await seedStorage(page, { session: fixture('session-composing.json') });
-    await open(page);
+    await openBoard(page);
     await waitForDictionary(page, 'failed');
     await page.getByRole('button', { name: 'Reload', exact: true }).click();
     await expect.poll(() => requests.length).toBe(2);
@@ -199,7 +178,7 @@ test.describe('AD-8 Retry', () => {
 test('Q-42 AD-8 Reload after a 404 reloads the page', async ({ page }) => {
   await page.route(LIST, (route) => route.fulfill({ status: 404, body: '' }));
   await seedStorage(page, { session: fixture('session-composing.json') });
-  await open(page);
+  await openBoard(page);
   await waitForDictionary(page, 'failed');
   const loaded = page.waitForEvent('load');
   await page.getByRole('button', { name: 'Reload', exact: true }).click();
@@ -219,7 +198,7 @@ test('AD-8 under a stubbed service-worker controller, Reload after a 404 retries
   });
   const held = await answer(page, [{ status: 404 }, 'hold']);
   await seedStorage(page, { session: fixture('session-composing.json') });
-  await open(page);
+  await openBoard(page);
   await waitForDictionary(page, 'failed');
   const loads: unknown[] = [];
   page.on('load', (event) => loads.push(event));
@@ -246,13 +225,14 @@ test('AD-8 Timeout: a word list that never answers is loading 29 000 ms after th
 }) => {
   await page.clock.install();
   const held = await answer(page, ['hold']);
-  await open(page);
+  await openBoard(page);
   await expect.poll(() => held.length).toBe(1);
   await page.clock.runFor(29_000);
   expect(await dictionaryState(page)).toBe('loading');
   await expect(page.getByText(BANNER, { exact: true })).toHaveCount(0);
   await page.clock.runFor(1_000);
-  await expect(page.getByText(BANNER, { exact: true })).toBeVisible();
+  // Bounded well below the 5 s default, so the banner must come from the 30 000 ms timeout.
+  await expect(page.getByText(BANNER, { exact: true })).toBeVisible({ timeout: 500 });
   expect(await dictionaryState(page)).toBe('failed');
 });
 

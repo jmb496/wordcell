@@ -1,4 +1,12 @@
-import { defineConfig, devices } from '@playwright/test';
+import { defineConfig } from '@playwright/test';
+import {
+  deviceProjects,
+  forbidOnly,
+  fullyParallel,
+  reporter,
+  retries,
+  use,
+} from './playwright.base';
 
 /**
  * End-to-end tests. The default project emulates a phone because Android is the primary
@@ -8,21 +16,15 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './e2e',
   testIgnore: ['**/*.screens.spec.ts', '**/pwa/**'],
-  fullyParallel: true,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  reporter: process.env.CI ? 'github' : 'list',
-  use: {
-    baseURL: 'http://localhost:5173',
-    trace: 'retain-on-failure',
-  },
+  fullyParallel,
+  forbidOnly,
+  retries,
+  reporter,
+  use: { ...use, baseURL: 'http://localhost:5173' },
   expect: {
     toHaveScreenshot: { maxDiffPixelRatio: 0.01 },
   },
-  projects: [
-    { name: 'android', use: { ...devices['Pixel 7'] } },
-    { name: 'desktop', use: { ...devices['Desktop Chrome'] } },
-  ],
+  projects: deviceProjects,
   webServer: {
     command: 'npm run dev -- --port 5173 --strictPort',
     url: 'http://localhost:5173',

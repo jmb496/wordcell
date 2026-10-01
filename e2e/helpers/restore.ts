@@ -46,13 +46,27 @@ export async function booted(page: Page): Promise<void> {
   );
 }
 
+// Opens the app and waits for the board's card 0 (the board-ready wait of the history, dictionary,
+// history-notice and prefs specs).
+export async function openBoard(page: Page): Promise<void> {
+  await page.goto('/');
+  await expect(page.getByTestId('card-0')).toBeVisible();
+}
+
 export async function open(page: Page, url = '/'): Promise<void> {
   await page.goto(url);
   await expect(page.getByRole('heading', { name: 'WordCell' })).toBeVisible();
   await booted(page);
 }
 
+export type DictionaryState = 'loading' | 'ready' | 'failed';
+
+// AD-8: the hook reports the word list in `state`.
+export async function waitForDictionary(page: Page, state: DictionaryState): Promise<void> {
+  await page.waitForFunction((s) => window.__wordcell?.dictionaryState() === s, state);
+}
+
 // AD-8: the word list has loaded (plain Validate labels need it).
 export async function dictionaryReady(page: Page): Promise<void> {
-  await page.waitForFunction(() => window.__wordcell?.dictionaryState() === 'ready');
+  await waitForDictionary(page, 'ready');
 }

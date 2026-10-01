@@ -234,8 +234,8 @@ describe('AD-8 dictionary retry', () => {
   });
 });
 
-describe('AD-8 dictionary retry (Q-42) under a controlling service worker', () => {
-  it('AD-8 (Q-42) after a 404, retry() never reloads and refetches with the banner kept shown, then ready hides it', async () => {
+describe('AD-8 dictionary retry under a controlling service worker', () => {
+  it('AD-8 after a 404, retry() never reloads and refetches with the banner kept shown, then ready hides it', async () => {
     const { dictionary, fetchSpy, reload } = await setup([status(404), ok('cat\n')], {
       controller: true,
     });
@@ -251,7 +251,7 @@ describe('AD-8 dictionary retry (Q-42) under a controlling service worker', () =
     await settled();
   });
 
-  it('AD-8 (Q-42) after a 404, a failing in-place retry is failed with the banner shown and no reload', async () => {
+  it('AD-8 after a 404, a failing in-place retry is failed with the banner shown and no reload', async () => {
     const { dictionary, fetchSpy, reload } = await setup([status(404), status(404)], {
       controller: true,
     });

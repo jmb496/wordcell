@@ -19,6 +19,7 @@ describe('AD-13 history notice text', () => {
 describe('AD-8 dictionary text', () => {
   it('AD-8 invalidWord uppercases the engine spelling', () => {
     expect(text.invalidWord('tan')).toBe("TAN isn't in the word list.");
+    expect(text.invalidWord('quit')).toBe("QUIT isn't in the word list.");
   });
 
   it('AD-8 the loading label ends in U+2026', () => {

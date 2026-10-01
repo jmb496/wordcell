@@ -26,4 +26,8 @@ describe('measure-dispatch summarise', () => {
   it('AD-17 a max of 16.01 ms is flagged', () => {
     expect(summarise([16.01]).flagged).toBe(true);
   });
+
+  it('AD-17 the flag follows the max, not the median', () => {
+    expect(summarise([1, 2, 16.01])).toEqual({ count: 3, max: 16.01, median: 2, flagged: true });
+  });
 });

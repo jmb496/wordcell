@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { expectAnotherWindow, kind, stored } from './helpers/blocking';
 import { hidePage, pageHide, pageShow, showPage, startHidden } from './helpers/lifecycle';
 import { fixture, seedStorage } from './helpers/seed';
 import { armStorageSpy, storageWrites } from './helpers/storage-spy';
@@ -13,13 +14,9 @@ test.beforeEach(() => {
 
 const SESSION = 'wordcell:session';
 const HISTORY = 'wordcell:history';
-const ANOTHER_WINDOW = 'WordCell is open in another window.';
-
-const kind = (page: Page) => page.evaluate(() => window.__wordcell?.current().kind);
-const stored = (page: Page) => page.evaluate((k) => localStorage.getItem(k), SESSION);
 
 async function storedActiveMs(page: Page): Promise<number> {
-  const text = await stored(page);
+  const text = await stored(page, SESSION);
   if (text === null) throw new Error('wordcell:session is absent');
   return (JSON.parse(text) as { activeMs: number }).activeMs;
 }
@@ -48,18 +45,6 @@ async function sessionEntries(page: Page): Promise<number[]> {
   const writes = await storageWrites(page);
   for (const write of writes) expect(write.key).toBe(SESSION);
   return writes.map(({ value }) => (JSON.parse(value ?? 'null') as { activeMs: number }).activeMs);
-}
-
-// Copied from e2e/blocking.spec.ts (specs do not import each other).
-async function expectAnotherWindow(page: Page): Promise<void> {
-  const dialog = page.getByRole('alertdialog');
-  await expect(dialog).toHaveCount(1);
-  await expect(dialog.getByRole('heading', { name: ANOTHER_WINDOW, exact: true })).toBeVisible();
-  await expect(dialog).toHaveAccessibleName(ANOTHER_WINDOW);
-  await expect(dialog).toHaveAccessibleDescription('');
-  await expect(page.getByRole('button')).toHaveCount(1);
-  await expect(page.getByRole('button', { name: 'Reload', exact: true })).toBeVisible();
-  expect(await kind(page)).toBe('halted');
 }
 
 test.describe('R-73 saved when hidden', () => {
@@ -132,13 +117,16 @@ test.describe('R-76 visible-time clock', () => {
   test('R-76 AD-17 a page loaded hidden does not grow until showPage', async ({ page }) => {
     await startHidden(page);
     await open(page, 'session-place.json');
+    await armStorageSpy(page);
     await page.clock.runFor(4000);
     await pageHide(page);
     const seeded = seededMs('session-place.json');
+    expect(await sessionEntries(page)).toEqual([seeded]);
     expect(await storedActiveMs(page)).toBe(seeded);
     await showPage(page);
     await page.clock.runFor(600);
     await hidePage(page);
+    expect(await sessionEntries(page)).toEqual([seeded, seeded + 600]);
     expect(await storedActiveMs(page)).toBe(seeded + 600);
   });
 
@@ -173,7 +161,7 @@ test.describe('R-76 visible-time clock', () => {
     expect(records[0]?.activeMs).toBe(session.activeMs);
   });
 
-  test('R-76 New game starts at activeMs 0 with the discarded take', async ({ page }) => {
+  test('R-74 R-76 New game starts at activeMs 0 with the discarded take', async ({ page }) => {
     await open(page, 'session-gave-up.json');
     await page.clock.runFor(900);
     const primary = page.getByTestId('primary-action');
@@ -227,6 +215,33 @@ test.describe('Q-38 back/forward cache', () => {
     expect(await kind(page)).toBe('active');
     await expect(page.getByRole('alertdialog')).toHaveCount(0);
   });
+
+  test('Q-38 a persisted pageshow right after an own dispatch (no pageHide) stays active', async ({
+    page,
+  }) => {
+    await open(page, 'session-place.json');
+    await page.getByTestId('undo').click();
+    await expect(page.getByTestId('redo')).toBeEnabled();
+    await pageShow(page, { persisted: true });
+    expect(await kind(page)).toBe('active');
+    await expect(page.getByRole('alertdialog')).toHaveCount(0);
+  });
+
+  test('Q-38 a persisted pageshow after an own finish (wordcell:history written) stays active', async ({
+    page,
+  }) => {
+    await open(page, 'session-won.json');
+    await page.getByTestId('undo').click();
+    await expect(page.getByTestId('redo')).toBeEnabled();
+    expect(await stored(page, HISTORY)).toBeNull();
+    await page.getByTestId('redo').click();
+    await expect(page.getByTestId('redo')).toBeDisabled();
+    expect(await stored(page, HISTORY)).not.toBeNull();
+    await pageHide(page);
+    await pageShow(page, { persisted: true });
+    expect(await kind(page)).toBe('active');
+    await expect(page.getByRole('alertdialog')).toHaveCount(0);
+  });
 });
 
 test('AD-15 halted: the hide flush writes nothing', async ({ page }) => {
@@ -253,5 +268,5 @@ test('§2 rejected: the hide flush writes nothing', async ({ page }) => {
   await hidePage(page);
   await pageHide(page);
   expect(await storageWrites(page)).toEqual([]);
-  expect(await stored(page)).toBe(text);
+  expect(await stored(page, SESSION)).toBe(text);
 });

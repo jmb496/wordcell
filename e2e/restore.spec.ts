@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import { hidePage } from './helpers/lifecycle';
 import { booted, dictionaryReady, type Key, open, sessionOf, snapshot } from './helpers/restore';
 import { fixture, seedStorage } from './helpers/seed';
+import { armStorageSpy, storageWrites } from './helpers/storage-spy';
 
 // AD-17 restore boundaries (CAP-10): each case × hidden then reloaded / reloaded without a hide,
 // on android. `current()` snapshots before the reload, `loaded()` and `__wordcellBoot` after it.
@@ -82,15 +83,21 @@ for (const c of CASES) {
       await dictionaryReady(page);
       const first = await snapshot(page);
       if (first.current.kind !== 'active') throw new Error(`store is ${first.current.kind}`);
-      // The first launch restored the seed unchanged (no redo tail dropped, no draft committed).
+      // The first launch restored every seeded key unchanged (no redo tail dropped, no draft
+      // committed, no record dropped), before any Undo.
+      for (const [field] of FIELDS) {
+        const text = c.seed[field];
+        if (text !== undefined) expect(first.loaded[field]).toEqual(JSON.parse(text));
+      }
       if (c.seed.session !== undefined) {
         const seeded = JSON.parse(c.seed.session);
-        expect(first.loaded.session).toEqual(seeded);
         expect(sessionOf(first)).toEqual({ ...seeded, activeMs: expect.any(Number) });
-      } else {
-        const seeded = JSON.parse(fixture('prefs-non-default.json'));
-        expect(first.loaded.prefs).toEqual(seeded);
-        expect(first.current.prefs).toEqual(seeded);
+      }
+      if (c.seed.history !== undefined) {
+        expect(first.current.history).toEqual(JSON.parse(c.seed.history));
+      }
+      if (c.seed.prefs !== undefined) {
+        expect(first.current.prefs).toEqual(JSON.parse(c.seed.prefs));
       }
       const primary = page.getByTestId('primary-action');
       if (c.undo) {
@@ -100,9 +107,18 @@ for (const c of CASES) {
       }
       const label = await primary.textContent();
       if (label === null) throw new Error('primary-action has no text');
-      if (mode === 'hidden') await hidePage(page);
+      if (mode === 'hidden') {
+        await armStorageSpy(page);
+        await hidePage(page);
+      }
 
       const before = await snapshot(page);
+      if (mode === 'hidden') {
+        // AD-9: the hide wrote the Session exactly once, as current() reports it.
+        const writes = await storageWrites(page);
+        expect(writes).toEqual([{ key: 'wordcell:session', value: expect.any(String) }]);
+        expect(JSON.parse(writes[0]?.value ?? 'null')).toEqual(sessionOf(before));
+      }
       await page.reload();
       await booted(page);
       // Before snapshot(): loaded() throws while halted, which would hide this clearer failure.
@@ -118,7 +134,8 @@ for (const c of CASES) {
       }
       const session = sessionOf(before) as Record<string, unknown>;
       if (mode === 'hidden') {
-        // AD-9: the hide flushed the Session and paused the clock, so the reload adds no activeMs.
+        // AD-9: the hide paused the clock, so the reload's own pagehide flush adds no activeMs;
+        // the spy above pins the hide's single write.
         expect(after.loaded.session).toEqual(session);
       } else {
         expect(after.loaded.session).toEqual({ ...session, activeMs: expect.any(Number) });

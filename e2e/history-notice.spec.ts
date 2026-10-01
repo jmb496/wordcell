@@ -1,4 +1,16 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
+import { stored } from './helpers/blocking';
+import {
+  button,
+  CONFIRM_TITLE as CONFIRM,
+  confirmDialog,
+  expectLeaves,
+  hitAt,
+  notice,
+  NOTICE_TITLE as TITLE,
+  wc,
+} from './helpers/dialogs';
+import { openBoard } from './helpers/restore';
 import { fixture, seedStorage } from './helpers/seed';
 
 // §2/Q-33 History notice and its Reset confirm over the AD-13 nav adapter, on android. History-
@@ -13,18 +25,8 @@ test.beforeEach(() => {
 const SESSION = 'wordcell:session';
 const HISTORY = 'wordcell:history';
 const EMPTY_TEXT = '{"version":1,"records":[]}';
-const TITLE = "Your score history can't be read.";
 const HINT = 'Statistics are off until you reset it. Resetting deletes the old history.';
-const CONFIRM = 'Delete the score history?';
 const VERSION_UNKNOWN = 'history-invalid-version-unknown.json';
-
-type NavState = { wc: number; launch: number } | null;
-
-const stored = (page: Page, key: string) => page.evaluate((k) => localStorage.getItem(k), key);
-const wc = (page: Page) => page.evaluate(() => history.state as NavState);
-const notice = (page: Page) => page.getByRole('dialog', { name: TITLE });
-const confirmDialog = (page: Page) => page.getByRole('dialog', { name: CONFIRM });
-const button = (page: Page, name: string) => page.getByRole('button', { name, exact: true });
 
 // Seeds `history` (and optionally `session`), then opens the app from about:blank.
 async function start(page: Page, history: string, session?: string): Promise<void> {
@@ -32,18 +34,14 @@ async function start(page: Page, history: string, session?: string): Promise<voi
     history: fixture(history),
     ...(session !== undefined && { session: fixture(session) }),
   });
-  await open(page);
-}
-
-async function open(page: Page): Promise<void> {
-  await page.goto('/');
-  await expect(page.getByTestId('card-0')).toBeVisible();
+  await openBoard(page);
 }
 
 async function expectNotice(page: Page, sentence: string): Promise<void> {
   const dialog = notice(page);
   await expect(dialog).toBeVisible();
   await expect(dialog).toHaveAccessibleName(TITLE);
+  await expect(dialog).toHaveAttribute('aria-modal', 'true');
   await expect(dialog).toHaveAccessibleDescription(`${sentence} ${HINT}`);
   await expect(dialog.getByRole('button', { name: 'Reset history', exact: true })).toBeVisible();
   await expect(dialog.getByRole('button', { name: 'Not now', exact: true })).toBeFocused();
@@ -52,6 +50,7 @@ async function expectNotice(page: Page, sentence: string): Promise<void> {
 async function openConfirm(page: Page): Promise<void> {
   await button(page, 'Reset history').click();
   await expect(confirmDialog(page)).toBeVisible();
+  await expect(confirmDialog(page)).toHaveAttribute('aria-modal', 'true');
   await expect(confirmDialog(page)).toHaveAccessibleDescription("This can't be undone.");
   await expect(button(page, 'Keep it')).toBeFocused();
   await expect.poll(() => wc(page).then((state) => state?.wc)).toBe(2);
@@ -62,31 +61,6 @@ async function doubleTap(page: Page, x: number, y: number): Promise<void> {
   await page.touchscreen.tap(x, y);
   await page.waitForTimeout(80);
   await page.touchscreen.tap(x, y);
-}
-
-// What sits at (x, y): a dialog's scrim or a button (by its text), with the title of the dialog
-// layer it belongs to (null outside any dialog).
-type Hit = { kind: 'scrim' | 'button' | 'other'; name: string | null; dialog: string | null };
-function hitAt(page: Page, x: number, y: number): Promise<Hit> {
-  return page.evaluate(
-    ([px, py]) => {
-      const el = document.elementFromPoint(px, py);
-      if (el === null) throw new Error('nothing at the point');
-      const dialog = el.closest('.layer')?.querySelector('[role="dialog"] h2')?.textContent ?? null;
-      if (el.classList.contains('scrim')) return { kind: 'scrim' as const, name: null, dialog };
-      const b = el.closest('button');
-      if (b !== null)
-        return { kind: 'button' as const, name: b.textContent?.trim() ?? null, dialog };
-      return { kind: 'other' as const, name: el.tagName, dialog };
-    },
-    [x, y],
-  );
-}
-
-// Back from the base entry leaves the app.
-async function expectLeaves(page: Page): Promise<void> {
-  await page.goBack();
-  await expect(page).toHaveURL('about:blank');
 }
 
 // The undo button's centre, asserted outside `box` (a scrim tap point; no new test id).
@@ -103,6 +77,27 @@ async function scrimPoint(page: Page, dialog: Locator): Promise<{ x: number; y: 
   expect(inside).toBe(false);
   return point;
 }
+
+test('AD-16 the History notice entry is pushed before App mounts', async ({ page }) => {
+  // Records history.state.wc at the first append into #app (Svelte's mount appends its anchor),
+  // synchronously, so it orders openHistoryNotice() against mount(App) within the boot task.
+  await page.addInitScript(() => {
+    const seen: unknown[] = [];
+    Object.assign(window, { __wcAtMount: seen });
+    const appendChild = Node.prototype.appendChild;
+    Node.prototype.appendChild = function <T extends Node>(this: Node, node: T): T {
+      if (seen.length === 0 && this instanceof HTMLElement && this.id === 'app') {
+        seen.push((history.state as { wc?: unknown } | null)?.wc);
+      }
+      return appendChild.call(this, node) as T;
+    };
+  });
+  await start(page, VERSION_UNKNOWN);
+  await expect(notice(page)).toBeVisible();
+  expect(
+    await page.evaluate(() => (window as unknown as { __wcAtMount: unknown[] }).__wcAtMount),
+  ).toEqual([1]);
+});
 
 test.describe('§2 History notice variants', () => {
   const variants = [

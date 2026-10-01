@@ -1,4 +1,8 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import historyNull from '../../fixtures/history-invalid-null.json' with { type: 'json' };
+import historyRecordsNotArray from '../../fixtures/history-invalid-records-not-array.json' with {
+  type: 'json',
+};
 import historyVersionUnknown from '../../fixtures/history-invalid-version-unknown.json' with {
   type: 'json',
 };
@@ -318,24 +322,24 @@ describe('game store', () => {
 
   it('AD-4 load() after an active load throws', async () => {
     const { game } = await active(JSON.stringify(place));
-    expect(() => game.load()).toThrow();
+    expect(() => game.load()).toThrow('AD-4 load() while active');
   });
 
   it('AD-4 load() after a rejected load throws', async () => {
     const { game, storage } = await active(JSON.stringify(invalidNull));
-    expect(() => game.load()).toThrow();
+    expect(() => game.load()).toThrow('AD-4 load() while rejected');
     expect(storage.writes).toEqual([]);
   });
 
   it('AD-4 dispatch throws while booting and writes nothing', async () => {
     const { game, storage } = await setup({ stored: JSON.stringify(place) });
-    expect(() => game.dispatch(UNDO)).toThrow();
+    expect(() => game.dispatch(UNDO)).toThrow('AD-4 dispatch while booting');
     expect(storage.writes).toEqual([]);
   });
 
   it('AD-4 dispatch throws while rejected and writes nothing', async () => {
     const { game, storage } = await active(JSON.stringify(invalidNull));
-    expect(() => game.dispatch(UNDO)).toThrow();
+    expect(() => game.dispatch(UNDO)).toThrow('AD-4 dispatch while rejected');
     expect(storage.writes).toEqual([]);
   });
 
@@ -1023,6 +1027,53 @@ describe('game store lifecycle', () => {
     expect(order).toEqual(['first', 'second']);
   });
 
+  const whenVisibleStores: [string, 'rejected' | 'halted', () => Promise<Env>][] = [
+    [
+      'rejected',
+      'rejected',
+      async () => {
+        const env = await active(JSON.stringify(invalidNull));
+        env.game.registerLifecycle();
+        return env;
+      },
+    ],
+    [
+      'halted after registerLifecycle()',
+      'halted',
+      async () => {
+        const env = await active(JSON.stringify(place));
+        env.game.registerLifecycle();
+        env.game.halt('fatal', 'AD-16 halted');
+        return env;
+      },
+    ],
+  ];
+  for (const [name, kind, start] of whenVisibleStores) {
+    it(`AD-16 whenVisible() does not depend on the store state: ${name}`, async () => {
+      const env = await start();
+      expect(env.game.current().kind).toBe(kind);
+      let atOnce = false;
+      void env.game.whenVisible().then(() => {
+        atOnce = true;
+      });
+      await Promise.resolve();
+      expect(atOnce).toBe(true);
+      env.doc.visibilityState = 'hidden';
+      env.fire('visibilitychange');
+      let later = false;
+      void env.game.whenVisible().then(() => {
+        later = true;
+      });
+      const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+      await settle();
+      expect(later).toBe(false);
+      env.doc.visibilityState = 'visible';
+      env.fire('visibilitychange');
+      await settle();
+      expect(later).toBe(true);
+    });
+  }
+
   it('AD-9 registerBeforeHide callbacks run in registration order before the take', async () => {
     const env = await active(JSON.stringify(place));
     const calls: string[] = [];
@@ -1101,6 +1152,36 @@ describe('game store lifecycle', () => {
     });
   });
 
+  for (const [name, text, ms] of [
+    ['a won Session with 250 ms taken', JSON.stringify(won), 250],
+    ['a playing Session with 0 ms taken', JSON.stringify(place), 0],
+  ] as const) {
+    it(`AD-9 a flush that accrues nothing keeps the game.state reference (${name})`, async () => {
+      const env = await active(text);
+      env.game.registerLifecycle();
+      // `game.view` derives from `state` alone; under Vitest the store compiles for the server,
+      // where `$derived` re-derives on every read, so the reference to assert is `state`'s.
+      const state = env.game.state;
+      expect(env.game.view).toBeDefined();
+      env.time.now += ms;
+      env.fire('pagehide');
+      expect(env.storage.writes).toEqual([[KEY, text]]);
+      expect(env.game.state).toBe(state);
+    });
+  }
+
+  it('AD-9 a flush that accrues time assigns a new game.state with the written Session', async () => {
+    const env = await active(JSON.stringify(place));
+    env.game.registerLifecycle();
+    const state = env.game.state;
+    env.time.now += 250;
+    env.fire('pagehide');
+    expect(env.game.state).not.toBe(state);
+    const written = parsed(env.storage.map.get(KEY) ?? '');
+    expect(written.activeMs).toBe(place.activeMs + 250);
+    expect(sessionOf(env.game).activeMs).toBe(written.activeMs);
+  });
+
   it('AD-9 the hide flush while rejected writes nothing', async () => {
     const env = await active(JSON.stringify(invalidNull));
     env.game.registerLifecycle();
@@ -1156,6 +1237,30 @@ describe('score history store', () => {
         kind: 'active',
         session: place,
         history: { rejected: UNKNOWN_REASON },
+        prefs: DEFAULT_PREFS,
+      },
+    ],
+    [
+      'unreadable (history-invalid-null.json)',
+      () => active(JSON.stringify(place), JSON.stringify(historyNull)),
+      { status: 'unreadable', reason: { reason: 'version-unreadable' } },
+      { rejected: { reason: 'version-unreadable' } },
+      {
+        kind: 'active',
+        session: place,
+        history: { rejected: { reason: 'version-unreadable' } },
+        prefs: DEFAULT_PREFS,
+      },
+    ],
+    [
+      'unreadable (history-invalid-records-not-array.json)',
+      () => active(JSON.stringify(place), JSON.stringify(historyRecordsNotArray)),
+      { status: 'unreadable', reason: { reason: 'contents-unreadable', version: 1 } },
+      { rejected: { reason: 'contents-unreadable', version: 1 } },
+      {
+        kind: 'active',
+        session: place,
+        history: { rejected: { reason: 'contents-unreadable', version: 1 } },
         prefs: DEFAULT_PREFS,
       },
     ],

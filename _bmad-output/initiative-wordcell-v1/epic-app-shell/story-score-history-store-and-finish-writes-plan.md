@@ -107,6 +107,7 @@ baseline_revision: '6da8e6fef7113bc396d93dc98d93ab808519e258'
 
 - Like-for-like timing (orchestrator, worktree on ext4 `/tmp`, same machine): baseline 6da8e6f 4.03–4.20 s, this change 4.18 s (1554 tests). The 5.0–6.0 s figures above are the `/mnt/d` (9p) filesystem's transform cost, present before the change too; the change adds no measurable time.
 - Review patches: double-throw case pins state/bytes/isStale; `EMPTY` constant in `history.svelte.ts`; §2 unreadable test asserts `current().history`/`loaded().history` after New game and reload; blocking.spec `session-invalid-null.json` variant now seeds `history-three-records.json` (`§2 R-74 Q-29 version-unreadable …`, tickets.toml entry 7 Verify; supersedes Design Notes 6's stand-in, no new variant); R-84 Redo test pins `activeMs` = `current().session.activeMs`.
+- Correction 2026-10-01 (3.12): after review pass 1 the counts are 1556 tests and 28 cases in `describe('score history store')` (not 1554 and 26); the Shell Vitest list also omits 'AD-4 a give-up finish appends its gaveUp record before the Session write' and 'AD-4 Q-39 a throwing write-back rollback after a throwing Session write propagates its own error'.
 
 ## Plan Change Log
 

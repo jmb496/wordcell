@@ -91,6 +91,7 @@ deferred: []
 
 - Baseline unit suite (HEAD 77844fc6e8f3dcb6e68d3b040bbf711ef324cc3b, `npx vitest run` twice): 5.78 s, 5.81 s; 32 files, 1612 tests.
 - Review-log disposition (Result: converged, no open major). Unapplied minors: (1) globals.d.ts prefs rejects declared inline → Code Map; (2) bare `matchMedia` pinned, stubbed via `vi.stubGlobal` → Boundaries; (3) `loadPrefs` setup option → Tasks; (4) R-76 vs §7.10 names split → Design Notes 3; (5) removal case seeds prefs first → Tasks; (6) boot "always" defined → Boundaries; (7) setters vs AD-4 rejected → Boundaries; (8) "halted or booting" → Boundaries (ticket file not edited: the build never writes ticket files); (9) byte-identical = the seeded fixture text → Design Notes 3; (10) `expect.poll` for the live toggle → Design Notes 3; (11) getComputedStyle is the reading helper, not a test → Design Notes 3; (12) no app.css default → Never; (13) throwing setter write → prefs.svelte.test.ts case.
+- Correction 2026-10-01 (3.12): Tasks, `game.svelte.test.ts` row: the built `matchMedia` stub always returns `matches: false` with no override and no fireable `change`; the reduced-motion cases live in prefs.svelte.test.ts.
 
 ## Plan Change Log
 

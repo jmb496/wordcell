@@ -1,4 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
+import { stored } from './helpers/blocking';
+import { openBoard, waitForDictionary } from './helpers/restore';
 import { fixture, seedStorage } from './helpers/seed';
 import { armStorageSpy, storageWrites } from './helpers/storage-spy';
 
@@ -16,8 +18,6 @@ const FATAL = 'Something went wrong.';
 
 type StoredRecord = { seed: number; outcome: string; activeMs: number; [key: string]: unknown };
 type Stored = { session: string | null; history: string | null };
-
-const stored = (page: Page, key: string) => page.evaluate((k) => localStorage.getItem(k), key);
 
 async function readBoth(page: Page): Promise<Stored> {
   return { session: await stored(page, SESSION), history: await stored(page, HISTORY) };
@@ -40,11 +40,6 @@ async function current(page: Page) {
   const now = await page.evaluate(() => window.__wordcell?.current());
   if (now?.kind !== 'active') throw new Error(`store is ${now?.kind}`);
   return now;
-}
-
-async function open(page: Page): Promise<void> {
-  await page.goto('/');
-  await expect(page.getByTestId('card-0')).toBeVisible();
 }
 
 // The index of the first spy-log entry for `key`; throws when there is none.
@@ -73,7 +68,7 @@ test.describe('R-84 finish writes', () => {
     page,
   }) => {
     await seedStorage(page, { session: fixture('session-won.json') });
-    await open(page);
+    await openBoard(page);
     await page.getByTestId('undo').click();
     await expect(page.getByTestId('redo')).toBeEnabled();
     const before = await readBoth(page);
@@ -103,7 +98,7 @@ test.describe('R-84 finish writes', () => {
   }) => {
     const historyText = fixture('history-three-records.json');
     await seedStorage(page, { session: fixture('session-gave-up.json'), history: historyText });
-    await open(page);
+    await openBoard(page);
     const before = await readBoth(page);
     await armStorageSpy(page);
     const after = await clickAndRead(page, 'undo');
@@ -124,18 +119,28 @@ test.describe('Q-39 history write-back', () => {
     page,
   }) => {
     await seedStorage(page, { session: fixture('session-won.json') });
-    await open(page);
+    await openBoard(page);
     await page.getByTestId('undo').click();
     await expect(page.getByTestId('redo')).toBeEnabled();
     const sessionBefore = await stored(page, SESSION);
     await armStorageSpy(page, { throwOn: SESSION });
     await page.getByTestId('redo').click();
     await expectFatal(page, `storage-spy: ${SESSION}`);
-    expect(await storageWrites(page)).toEqual([
+    const writes = await storageWrites(page);
+    expect(writes).toEqual([
       { key: HISTORY, value: expect.any(String) },
       { key: SESSION, value: expect.any(String) },
       { key: HISTORY, value: null },
     ]);
+    // The added history held exactly one won record of the session-won.json game.
+    const added = JSON.parse(writes[0]?.value ?? 'null') as {
+      version: number;
+      records: StoredRecord[];
+    };
+    expect(added.version).toBe(1);
+    expect(added.records).toHaveLength(1);
+    expect(added.records[0]?.outcome).toBe('won');
+    expect(added.records[0]?.seed).toBe(JSON.parse(fixture('session-won.json')).seed);
     expect(await stored(page, HISTORY)).toBeNull();
     expect(await stored(page, SESSION)).toBe(sessionBefore);
   });
@@ -145,7 +150,7 @@ test.describe('Q-39 history write-back', () => {
   }) => {
     const historyText = fixture('history-three-records.json');
     await seedStorage(page, { session: fixture('session-gave-up.json'), history: historyText });
-    await open(page);
+    await openBoard(page);
     const sessionBefore = await stored(page, SESSION);
     await armStorageSpy(page, { throwOn: SESSION });
     await page.getByTestId('undo').click();
@@ -165,7 +170,7 @@ test.describe('Q-39 history write-back', () => {
 
 test.describe('AD-7 absent history', () => {
   test('AD-7 a fresh launch leaves wordcell:history absent', async ({ page }) => {
-    await open(page);
+    await openBoard(page);
     expect(await stored(page, SESSION)).not.toBeNull();
     expect(await stored(page, HISTORY)).toBeNull();
   });
@@ -174,7 +179,7 @@ test.describe('AD-7 absent history', () => {
     page,
   }) => {
     await seedStorage(page, { session: fixture('session-place.json') });
-    await open(page);
+    await openBoard(page);
     const undo = page.getByTestId('undo');
     const redo = page.getByTestId('redo');
     const primary = page.getByTestId('primary-action');
@@ -187,19 +192,19 @@ test.describe('AD-7 absent history', () => {
     await expect(primary).toHaveText('Confirm');
     await primary.click();
     // AD-8: a plain Validate label needs the word list loaded.
-    await page.waitForFunction(() => window.__wordcell?.dictionaryState() === 'ready');
+    await waitForDictionary(page, 'ready');
     await expect(primary).toHaveText('Validate');
     expect(await stored(page, HISTORY)).toBeNull();
   });
 
   test('AD-7 New game on session-gave-up.json leaves wordcell:history absent', async ({ page }) => {
     await seedStorage(page, { session: fixture('session-gave-up.json') });
-    await open(page);
+    await openBoard(page);
     const primary = page.getByTestId('primary-action');
     await expect(primary).toHaveText('New game');
     await primary.click();
     // AD-8: a plain Validate label needs the word list loaded.
-    await page.waitForFunction(() => window.__wordcell?.dictionaryState() === 'ready');
+    await waitForDictionary(page, 'ready');
     await expect(primary).toHaveText('Validate');
     expect(await stored(page, HISTORY)).toBeNull();
   });
@@ -208,7 +213,7 @@ test.describe('AD-7 absent history', () => {
     page,
   }) => {
     await seedStorage(page, { session: fixture('session-won.json') });
-    await open(page);
+    await openBoard(page);
     await armStorageSpy(page);
     await page.getByTestId('undo').click();
     await expect(page.getByTestId('redo')).toBeEnabled();
@@ -227,7 +232,7 @@ test('§2 an unreadable history (history-invalid-version-unknown.json) is never 
 }) => {
   const historyText = fixture('history-invalid-version-unknown.json');
   await seedStorage(page, { session: fixture('session-won.json'), history: historyText });
-  await open(page);
+  await openBoard(page);
   const primary = page.getByTestId('primary-action');
   // The History notice opens at boot (§2); dismiss it before touching the board.
   await page.getByRole('button', { name: 'Not now', exact: true }).click();
@@ -251,7 +256,7 @@ test('§2 an unreadable history (history-invalid-version-unknown.json) is never 
   const rejected = { rejected: { reason: 'version-unknown', version: 2 } };
   await primary.click();
   // AD-8: a plain Validate label needs the word list loaded.
-  await page.waitForFunction(() => window.__wordcell?.dictionaryState() === 'ready');
+  await waitForDictionary(page, 'ready');
   await expect(primary).toHaveText('Validate');
   expect(await stored(page, HISTORY)).toBe(historyText);
   expect((await current(page)).history).toEqual(rejected);
@@ -267,7 +272,7 @@ test('AD-15 a throwing Delete history halts over the History notice and Reset co
 }) => {
   const historyText = fixture('history-invalid-version-unknown.json');
   await seedStorage(page, { history: historyText });
-  await open(page);
+  await openBoard(page);
   await page.getByRole('button', { name: 'Reset history', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'Delete the score history?' })).toBeVisible();
   const wc = () => page.evaluate(() => (history.state as { wc: number } | null)?.wc);

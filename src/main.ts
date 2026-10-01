@@ -41,9 +41,10 @@ function textOf(reason: unknown, message = ''): string {
   return /\S/.test(message) ? message : Object.prototype.toString.call(reason);
 }
 
+// AD-15: halt first, so nothing runs against a live store after the report.
 function fatal(reason: unknown, message?: string): void {
-  console.error(reason);
   game.halt('fatal', textOf(reason, message));
+  console.error(reason);
   showStandalone();
 }
 

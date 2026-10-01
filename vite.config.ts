@@ -54,5 +54,7 @@ export default defineConfig({
     include: ['src/**/*.test.ts', 'scripts/**/*.test.mjs'],
     environment: 'node',
     coverage: { include: ['src/engine/**'] },
+    // AD-17 Speed: reuse transformed modules across runs (cache in node_modules/.vitest-cache).
+    fsModuleCache: true,
   },
 });

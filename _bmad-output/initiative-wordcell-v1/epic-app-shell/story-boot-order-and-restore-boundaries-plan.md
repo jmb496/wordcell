@@ -105,6 +105,9 @@ deferred: []
 - Baseline unit suite (HEAD cc326d7f106e456bef60e3343416e5c24e91f46d, `npx vitest run` twice): 6.08 s, 6.03 s; 34 files, 1654 tests.
 - Review-log open major (primary-action label races the dictionary) → Design Notes 2 step 3 and 5: the label is read only after `dictionaryReady()`, before `hidePage`, and again after the reload.
 - Unapplied minors: (1) `present` in fixed order → DN 1; (2) crash-mode label compare → DN 3 (both labels read after `dictionaryReady`, so no assumption about the phase after Undo); (3) Q-41 title `R-73 Q-41 …` → DN 2; (4) restore flow uses `open()` and `booted()` → DN 2; (5) font predicate folds `__wordcell !== undefined` → DN 5; (6) `animationFrames` helper test named → DN 6; (7) "first sentence" wording is the ticket's own text: no build change, recorded only; (8) hidden-mode exact `activeMs` cites AD-9 in a test comment → DN 2; (9) null `loaded()` history/prefs → assert in-memory defaults → DN 2 step 6; (10) every restore title carries AD-17 → DN 2.
+- Correction 2026-10-01 (3.12): Auto Run Result 'Review' bullet ("hide-flush assert", "animationFrames delta") and Design Notes 6 describe pass-0 behaviour: the hide-flush assert was removed and the `animationFrames` self-test asserts exactly 3 frames requested and fired (Plan Change Log 2026-10-01).
+- Correction 2026-10-01 (3.12): Residual risks bullet 1: plain mode pins the restored Session modulo `activeMs` only; its `activeMs` not-smaller check cannot detect a missing pagehide flush.
+- Correction 2026-10-01 (3.12): the Plan Change Log's "the hide flush and paused clock rest on the exact `after.loaded.session` equality": that equality pins the paused clock only; restore.spec.ts now arms `armStorageSpy` around `hidePage` and asserts the hide's single `wordcell:session` write.
 
 ## Plan Change Log
 

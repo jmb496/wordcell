@@ -240,8 +240,9 @@ function registerBeforeHide(fn: () => void): void {
   beforeHide.push(fn);
 }
 
-// AD-9 hide flush (hidden, pagehide): callbacks, take and pause in every state; accrue, write and
-// assign only while active (write first, then assign). No try/catch: a throw reaches AD-15.
+// AD-9 hide flush (hidden, pagehide): callbacks, take and pause in every state; accrue and write
+// only while active (write first, then assign, and only a changed Session, so `game.view` keeps
+// its reference when nothing accrued). No try/catch: a throw reaches AD-15.
 function flush(): void {
   for (const fn of beforeHide) fn();
   const now = performance.now();
@@ -252,7 +253,7 @@ function flush(): void {
   const text = serializeSession(accrued);
   write(SESSION_KEY, text);
   sessionText = text;
-  state = { kind: 'active', session: accrued };
+  if (accrued !== state.session) state = { kind: 'active', session: accrued };
 }
 
 function resumeIfVisible(): void {

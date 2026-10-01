@@ -119,6 +119,7 @@ Review-log resolutions (technical defaults):
 - Citations: CAP-n/entry references replaced by §2, AD-2 command TABLE order, AD-3, AD-17, the errors.ts per-move order, or dropped (deal.ts, win-seed.ts, commands.ts undo section, serialize.ts headers).
 - Tests: 21 new (headroom row + 3 §2 headroom tests, 3 history fixture rows, 4 inline rejects, 4 order pairs, 5 accepts, R-84 copy test); `-5` accept turned gaveUp.
 - Verification: the three greps return nothing; `git status --short fixtures/` shows only the four new untracked files; `npm run test:all` green (unit 1429, dist-smoke 13, e2e 34, pwa 12).
+- Correction 2026-10-01 (3.12): the serialize.test.ts title '§2 a replay code wins over the headroom: seed -1 with activeMs 2^52 + 1' (the matrix row "replay code wins" and the Tasks list) is now '§2 seed -1 with activeMs 2^52 + 1 is replay-failed': its assertions cannot observe the replay-before-headroom order (both stages map to `replay-failed`); that order is proven by the 'parse' harness branch.
 
 ## Plan Change Log
 

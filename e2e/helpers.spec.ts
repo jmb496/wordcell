@@ -2,6 +2,8 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { expect, type Page, test } from '@playwright/test';
+import { expectAnotherWindow, expectOnlyButton, kind, stored } from './helpers/blocking';
+import { button, expectLeaves, hitAt, wc } from './helpers/dialogs';
 import { buildRoot } from './helpers/dist-test';
 import {
   animationFrames,
@@ -15,12 +17,15 @@ import {
   booted,
   dictionaryReady,
   open,
+  openBoard,
   type Snapshot,
   sessionOf,
   snapshot,
+  waitForDictionary,
 } from './helpers/restore';
 import { captureBoot, fixture, seedStorage } from './helpers/seed';
 import { armStorageSpy, storageWrites } from './helpers/storage-spy';
+import { tokenColor } from './helpers/style';
 import { longPress, touchDrag } from './helpers/touch';
 
 // AD-17 helper self-tests. The direct `page.evaluate` writes to `wordcell:*` below stand in for the
@@ -291,9 +296,78 @@ test.describe('restore helpers', () => {
 
     await page.reload();
     await booted(page);
-    expect(await page.evaluate(() => window.__wordcell?.current().kind)).not.toBe('booting');
+    expect(await page.evaluate(() => window.__wordcell?.current().kind)).toBe('active');
     await dictionaryReady(page);
     expect(await page.evaluate(() => window.__wordcell?.dictionaryState())).toBe('ready');
+  });
+});
+
+test.describe('board, dictionary and style helpers', () => {
+  test('AD-17 openBoard waits for card 0; waitForDictionary waits for the given word-list state', async ({
+    page,
+  }) => {
+    await page.route('**/en*.txt', (route) => route.fulfill({ status: 500, body: '' }));
+    await seedStorage(page, { session: fixture('session-place.json') });
+    await openBoard(page);
+    await expect(page.getByTestId('card-0')).toBeVisible();
+    await waitForDictionary(page, 'failed');
+    expect(await page.evaluate(() => window.__wordcell?.dictionaryState())).toBe('failed');
+    await page.unroute('**/en*.txt');
+    await page.reload();
+    await waitForDictionary(page, 'ready');
+    expect(await page.evaluate(() => window.__wordcell?.dictionaryState())).toBe('ready');
+  });
+
+  test('AD-17 tokenColor resolves a colour token to its computed rgb form and leaves no probe', async ({
+    page,
+  }) => {
+    await openBoard(page);
+    await page.evaluate(() => document.documentElement.style.setProperty('--probe', '#ff8000'));
+    const children = () => page.evaluate(() => document.body.childElementCount);
+    const before = await children();
+    expect(await tokenColor(page, '--probe')).toBe('rgb(255, 128, 0)');
+    expect(await children()).toBe(before);
+  });
+});
+
+test.describe('blocking helpers', () => {
+  test('AD-17 kind and stored read the hook and localStorage; expectOnlyButton and expectAnotherWindow pass on the another-window message', async ({
+    page,
+  }) => {
+    const text = fixture('session-place.json');
+    await seedStorage(page, { session: text });
+    await openBoard(page);
+    expect(await kind(page)).toBe('active');
+    expect(await stored(page, 'wordcell:session')).toBe(text);
+    expect(await stored(page, 'wordcell:history')).toBeNull();
+    // Another page's write halts this one (Q-38).
+    const page2 = await page.context().newPage();
+    await page2.goto('/favicon.svg');
+    await writeKey(page2, 'prefs', '{}');
+    await expectAnotherWindow(page);
+    await expectOnlyButton(page, 'Reload');
+    expect(await kind(page)).toBe('halted');
+  });
+});
+
+test.describe('dialog helpers', () => {
+  test('AD-17 wc, button and hitAt read a healthy board; expectLeaves goes back from the base entry to about:blank', async ({
+    page,
+  }) => {
+    await openBoard(page);
+    expect(await wc(page)).toEqual({ wc: 0, launch: expect.any(Number) });
+    const undo = await button(page, 'Undo').boundingBox();
+    if (undo === null) throw new Error('no Undo box');
+    expect(await hitAt(page, undo.x + undo.width / 2, undo.y + undo.height / 2)).toMatchObject({
+      kind: 'button',
+      dialog: null,
+    });
+    const card = await page.getByTestId('card-0').boundingBox();
+    if (card === null) throw new Error('no card-0 box');
+    const hit = await hitAt(page, card.x + card.width / 2, card.y + card.height / 2);
+    expect(hit.dialog).toBeNull();
+    expect(hit.kind).not.toBe('scrim');
+    await expectLeaves(page);
   });
 });
 

@@ -117,6 +117,9 @@ baseline_revision: '0008939b386288b64b0b048c5bd7d16f1c575772'
   - `git diff --stat src/engine fixtures`: empty; `git status fixtures`: only `?? fixtures/session-invalid-version-unknown.json`.
   - Acceptance "dev server shows the version-3 rejected root": covered by `§2 R-74 Q-29 version-unknown …` (exact title, body with 3, only New game).
 - Decision: owner 2026-09-30 — when the Blocking message replaces the board (AD-15 fatal, Q-38 another window, §2 rejected save), keyboard focus moves to its one button (Reload / New game) when it appears (standalone `Halted` mount and the in-App switch) and again when its cause changes. Implemented as a `{@attach}` on the button in `src/ui/BlockingMessage.svelte` that reads `title`; tests in `e2e/blocking.spec.ts` `Blocking message focus`.
+- Correction 2026-10-01 (3.12): Design Notes 3 still shows a throwing font-check timer; the built timer calls `reportError(new Error('AD-15 font check timed out after 30000 ms'))` (the Deviation line above).
+- Correction 2026-10-01 (3.12): Tests mapping, halted boot: "no App mount" is proven only through entries 6 and 9 (halted boot registers no lifecycle listeners; halted boot requests no dictionary), not by the Q-38 halted-boot Playwright test itself.
+- Correction 2026-10-01 (3.12): `fatal()` now calls `game.halt` before `console.error` (AD-15 halt first; Design Notes 1 lists the old order), proven by 'AD-15 a fatal halts the store before console.error reports it'.
 
 ## Plan Change Log
 

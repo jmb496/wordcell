@@ -1,5 +1,7 @@
 import { expect, type Page, type Route, test } from '@playwright/test';
+import { expectAnotherWindow, expectOnlyButton, kind, stored } from './helpers/blocking';
 import { animationFrames } from './helpers/lifecycle';
+import { waitForDictionary } from './helpers/restore';
 import { fixture, seedStorage } from './helpers/seed';
 import { armStorageSpy, storageWrites } from './helpers/storage-spy';
 
@@ -10,18 +12,8 @@ test.beforeEach(() => {
 });
 
 const FATAL = 'Something went wrong.';
-const ANOTHER_WINDOW = 'WordCell is open in another window.';
 const REJECTED = "This saved game can't be opened.";
-
-const kind = (page: Page) => page.evaluate(() => window.__wordcell?.current().kind);
-const stored = (page: Page, key = 'wordcell:session') =>
-  page.evaluate((k) => localStorage.getItem(k), key);
-
-// The one button on the page is `name`.
-async function expectOnlyButton(page: Page, name: string): Promise<void> {
-  await expect(page.getByRole('button')).toHaveCount(1);
-  await expect(page.getByRole('button', { name, exact: true })).toBeVisible();
-}
+const SESSION = 'wordcell:session';
 
 async function expectFatal(page: Page, body?: string): Promise<void> {
   const dialog = page.getByRole('alertdialog');
@@ -29,16 +21,6 @@ async function expectFatal(page: Page, body?: string): Promise<void> {
   await expect(dialog.getByRole('heading', { name: FATAL, exact: true })).toBeVisible();
   await expect(dialog).toHaveAccessibleName(FATAL);
   await expect(dialog).toHaveAccessibleDescription(body ?? /\S/);
-  await expectOnlyButton(page, 'Reload');
-  expect(await kind(page)).toBe('halted');
-}
-
-async function expectAnotherWindow(page: Page): Promise<void> {
-  const dialog = page.getByRole('alertdialog');
-  await expect(dialog).toHaveCount(1);
-  await expect(dialog.getByRole('heading', { name: ANOTHER_WINDOW, exact: true })).toBeVisible();
-  await expect(dialog).toHaveAccessibleName(ANOTHER_WINDOW);
-  await expect(dialog).toHaveAccessibleDescription('');
   await expectOnlyButton(page, 'Reload');
   expect(await kind(page)).toBe('halted');
 }
@@ -103,7 +85,7 @@ test.describe('Q-37 AD-15 fatal', () => {
     await page.goto('/', { waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('card-0')).toBeVisible();
     // AD-8: the word list loads first, so the runFor below does not also fire its 30 s timeout.
-    await page.waitForFunction(() => window.__wordcell?.dictionaryState() === 'ready');
+    await waitForDictionary(page, 'ready');
     await page.clock.runFor(31_000);
     expect(await kind(page)).toBe('active');
     await expect(page.getByRole('alertdialog')).toHaveCount(0);
@@ -139,7 +121,71 @@ test.describe('Q-37 AD-15 fatal', () => {
     expect(await storageWrites(page)).toEqual([
       { key: 'wordcell:session', value: expect.any(String) },
     ]);
-    expect(await stored(page)).toBe(text);
+    expect(await stored(page, SESSION)).toBe(text);
+  });
+});
+
+test.describe('AD-15 fatal handler', () => {
+  test('AD-15 a font load settling after the 30 s timeout reports nothing more', async ({
+    page,
+  }) => {
+    await page.clock.install({ time: 0 });
+    await page.clock.pauseAt(1000);
+    const held: Route[] = [];
+    await page.route('**/*.woff2', (route) => {
+      held.push(route);
+    });
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await hookReady(page);
+    await page.clock.runFor(30_000);
+    await expectFontFatal(page, 'AD-15 font check timed out after 30000 ms');
+    // A 404 rejects the held load with a NetworkError; the timedOut guard swallows it.
+    expect(held.length).toBeGreaterThan(0);
+    for (const route of held) await route.fulfill({ status: 404 });
+    // The load has settled once fonts.ready resolves; a later task sees any rejection's report.
+    await page.evaluate(async () => {
+      await document.fonts.ready;
+    });
+    await page.clock.runFor(1000);
+    await page.evaluate(() => undefined);
+    await expectFontFatal(page, 'AD-15 font check timed out after 30000 ms');
+  });
+
+  test('AD-15 an error event without an error object gives its message as the fatal body', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await expect(page.getByTestId('card-0')).toBeVisible();
+    await page.evaluate(() => {
+      window.dispatchEvent(new ErrorEvent('error', { message: 'AD-15 message only' }));
+    });
+    await expectFatal(page, 'AD-15 message only');
+  });
+
+  test('AD-15 a fatal halts the store before console.error reports it', async ({ page }) => {
+    await page.addInitScript(() => {
+      const kinds: (string | undefined)[] = [];
+      Object.assign(window, { __consoleKinds: kinds });
+      const original = console.error;
+      console.error = (...args: unknown[]) => {
+        const [first] = args;
+        if (first instanceof Error && first.message === 'AD-15 halt order') {
+          kinds.push(window.__wordcell?.current().kind);
+        }
+        original.apply(console, args);
+      };
+    });
+    await page.goto('/');
+    await expect(page.getByTestId('card-0')).toBeVisible();
+    const kinds = () =>
+      page.evaluate(() => (window as unknown as { __consoleKinds: unknown[] }).__consoleKinds);
+    await page.evaluate(() => {
+      setTimeout(() => {
+        throw new Error('AD-15 halt order');
+      });
+    });
+    await expectFatal(page, 'AD-15 halt order');
+    expect(await kinds()).toEqual(['halted']);
   });
 });
 
@@ -225,7 +271,7 @@ test.describe('§2 Session rejected', () => {
     await expectOnlyButton(page, 'New game');
     await expectNoBoard(page);
     expect(await kind(page)).toBe('rejected');
-    expect(await stored(page)).toBe(text);
+    expect(await stored(page, SESSION)).toBe(text);
   }
 
   for (const variant of variants) {
@@ -348,7 +394,7 @@ test.describe('Q-38 single instance', () => {
 
     await expectAnotherWindow(page1);
     await expectNoBoard(page1);
-    expect(await stored(page1)).toBeNull();
+    expect(await stored(page1, SESSION)).toBeNull();
     expect(await page1.evaluate(() => window.__wordcell?.loaded())).toEqual({
       session: null,
       history: null,
@@ -365,7 +411,7 @@ test.describe('Q-38 single instance', () => {
     await expectFatal(page1, 'Q-38 later fatal');
     expect(await dialog.evaluate((node) => node.isConnected)).toBe(true);
     await expectNoBoard(page1);
-    expect(await stored(page1)).toBeNull();
+    expect(await stored(page1, SESSION)).toBeNull();
   });
 
   test("Q-38 a rejected root halts on another page's write", async ({ page }) => {
@@ -381,7 +427,7 @@ test.describe('Q-38 single instance', () => {
 
     await expectAnotherWindow(page1);
     await expectNoBoard(page1);
-    expect(await stored(page1)).toBe(text);
+    expect(await stored(page1, SESSION)).toBe(text);
   });
 });
 
