@@ -3,7 +3,7 @@ title: 'Nav adapter, overlays core, History notice and Reset confirm'
 type: 'feature'
 ticket: '8'
 created: '2026-10-01'
-status: 'built'
+status: done
 baseline_revision: 'a9c25cf337cdb515237e0d6ac774ef0165c36a24'
 route: 'full'
 route_source: 'auto'
