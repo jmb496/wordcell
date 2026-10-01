@@ -1,6 +1,6 @@
 # Review log — spec-epic-4-board (SPEC.md + rule-coverage.md + build-notes.md)
 
-State: pass 5: done
+State: pass 6: done
 
 Mode: docs, thorough, max 7. Pre-loop: HEAD 1c93404; copies at SPEC.review-log.passes/pass0/; words 8184 (SPEC 3515, rule-coverage 2298, build-notes 2371).
 Caller rule: stop as diverging if majors rise pass-over-pass.
@@ -133,3 +133,20 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar
 ### Fixer outcome
 All 21 items applied; decision-needed singular appended to the PROPOSED BY REVIEW Open Questions item. Checked on Playwright 1.63 Chromium: with `scrollbar-gutter: stable` the desktop `clientWidth` stays 1265 whether or not the page overflows. `unverified`: scroll-test fallback (wheel / `Input.synthesizeScrollGesture`).
 Words: 13124 (1.6 x pass 0)  |  Snapshot: SPEC.review-log.passes/pass5/ ; fix diff pass5.fix.diff
+
+## Pass 6 — 2026-10-01
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 3, minor 16, decision-needed 0  |  Dropped in triage: 0
+### Applied (sent to fixer)
+- [major] F24/CAP-7 — pass 5 item 3 regression: a real `pointercancel` deselecting (own `nav.pop()`) followed by an Android edge-swipe back leaves the app; resolve the other way (restore the old selection's visuals, keep selection and entry) → 1
+- [major] CAP-9 — trailing-click swallower disarmed by `setTimeout(0)` may run before Chromium's touch gesture-tap `click`; untested timing → 2
+- [major] CAP-9/CAP-5 — desktop hover peek and long-press peek both open on the same cell → 3
+- [minor] 4–19: AD-12 close-out for F26 slot-pitch hit rects; R-33 row CAP 9 with P4 supp.; R-32 "(S here)" wording; `footRow` grouped with `columns` as one unit; labels outside `[data-wordcell]`, `pan-y`; placeholder always rendered, revealed by class on whole-column self-drop; candidate rects unclipped by the sticky bars (stated); `openView(cell)` in CAP-5; scroll-test travel within the 122 px range, route failed after the pan starts; reduced-motion fade shape; empty-destination line is epic 5; one shared gate created in main.ts; CAP-8 "no hover outline on other column cards"; new fixtures' version/seed/activeMs; w recompute on `hoverFine` change; wheel fallback `unverified` and project named
+### Default applied (technical)
+- all majors take reviewers' defaults
+### Decision needed (functionality / UX / gameplay)
+- none new
+### Dropped
+- none
+### Fixer outcome
+All 18 items applied. `unverified`: Android delivers `pointercancel` before back (epic 7); touch `pointerup` → `click` order (gated by the android scrim-over-Undo P4); both scroll-test fallbacks. AD-12 close-out notes added for F13 pointercancel and F26 slot pitch. `BAND_ORDER` now seven units.
+Words: 13654 (1.67 x pass 0)  |  Snapshot: SPEC.review-log.passes/pass6/ ; fix diff pass6.fix.diff

@@ -39,8 +39,8 @@ holds the how, the component tree and the spine close-out edits.
   - **intent:** One ordered band list and two pure functions decide card width, band heights and
     the anchored WordCell-row offset for any viewport and band order.
   - **success:** `src/ui/layout/bands.ts` exports `BAND_ORDER`, an ordered list of units, each an
-    ordered list of AD-11's eleven band ids (`topBar`; `banner`; `leftover`; `columns`;
-    `footRow`; `trayGap`+`tray`; `labels`+`wordcells`; `actionGap`+`actionBar`; F22),
+    ordered list of AD-11's eleven band ids in seven units (`topBar`; `banner`; `leftover`;
+    `columns`+`footRow`; `trayGap`+`tray`; `labels`+`wordcells`; `actionGap`+`actionBar`; F22),
     `ANCHOR_BAND = 'wordcells'` and `SLACK_BAND = 'leftover'`; `?bands=` names units, and a list
     that is not a permutation of the unit ids throws to AD-15 (rule 6; UI Vitest case);
     `src/ui/layout/geometry.ts` exports `cardWidth(innerWidth,
@@ -91,16 +91,16 @@ holds the how, the component tree and the spine close-out edits.
     (`desktop` tooltips show only the accessible name; epic 6 appends the key with the keyboard map, EXPERIENCE.md); the
     banner is sticky under it; the sticky action bar holds `primary-action` (epic 3's labels and
     enablement); `src/ui/layout/` reads insets from an `env(safe-area-inset-*)` probe, recomputes w
-    only per CAP-1's predicate on `resize`/`orientationchange`, re-lays bands on banner show/hide
+    only per CAP-1's predicate on `resize`/`orientationchange` or a `hoverFine` media-query change, re-lays bands on banner show/hide
     and innerHeight-only changes under 80 px and after a w recompute, and applies the anchor
     `scrollTop` delta in the same frame (clamped to the scroll range, F21); `src/ui/gestures/gate.ts` defers both until no gesture, animation or page scroll is
     active (scroll busy from the first `scroll` until `scrollend`, hide/pagehide, or 150 ms
     without `scroll`), then runs them in the next idle `requestAnimationFrame`; cards, tiles and
-    WordCells have `touch-action: none` and the DESIGN.md non-card regions `pan-y` (`pan-x pan-y`
+    WordCells have `touch-action: none` and the DESIGN.md non-card regions `pan-y`, the labels band included (`pan-x pan-y`
     when the board is wider than the available width; the foot row only while no tail is
     selected, `none` while one is); the WordCell view sheet and its mirror
     cards (`data-mirror-of`, never draggable) are a non-card region, `pan-y` (CAP-9); cards, tiles,
-    WordCells (labels and badge included), foot pads and the view sheet carry `user-select: none`
+    WordCells (badge included), the cell-number labels, foot pads and the view sheet carry `user-select: none`
     and `-webkit-touch-callout: none`, so native long-press handling never cancels the 400 ms peek
     (CAP-4 `contextmenu`); `?bands=<list>` reorders bands in dev and
     is ignored in the production build (`dist/`, checked by `dist-smoke`); Playwright measures (F11): card and slot sizes at the
@@ -157,7 +157,7 @@ holds the how, the component tree and the spine close-out edits.
     `act()` finishing a fly-back first (after its `cancel()` no fly-back runs, gate count 0), a
     second-pointer fake event whose `preventDefault`/`stopPropagation` are never called, and
     F24 (hide keeps a tap-selection with no `nav` call and does not throw under a sticky view;
-    hide during a drag that replaced a tap-selection deselects with one queued `nav.pop()`; such a drag then `pointercancel` → selection null, one `nav.pop()`);
+    hide during a drag that replaced a tap-selection deselects with one queued `nav.pop()`; such a drag then `pointercancel` → old selection kept, its classes restored, no `nav` call);
     Playwright proves an inert foot-pad drag with a tail selected (rule-coverage AD-12), AD-17's hide case (`hidePage` alone writes `wordcell:session` exactly once,
     cancels the gesture and resumes only when visible), AD-9's `hidePage` mid-`touchDrag`
     (the tail returns, `current().session` and the stored Session unchanged, and a move after
@@ -179,9 +179,12 @@ holds the how, the component tree and the spine close-out edits.
     (expanded → close then `hidden`; collapsed → `hidden`, no pop), the deferred-open token that
     `resetForNewSession` cancels, and `resetForNewSession` clearing the selection and setting the
     sheet `hidden`; the peek and hover-peek open state: `openPeek(cell)`, `closePeek()`,
-    `peekToSticky()` (pushes the `wordcellView` entry) and the hover-peek state, none pushing an
-    entry except `peekToSticky`; the controller and `HoverPeek` call only these; UI Vitest
-    `AD-13 …` covers each transition (entry counts included) with a stubbed `nav`; the existing
+    `peekToSticky()` (pushes the `wordcellView` entry), `openView(cell)` (pushes `wordcellView`, stores
+    the cell; `close`/`closedByBack` clear it) and the hover-peek state, none pushing an entry
+    except `peekToSticky` and `openView`; `openPeek`, `peekToSticky` and `openView` close an open
+    hover peek, and no hover peek opens while a peek or the view is open; the controller and `HoverPeek` call only these; UI Vitest
+    `AD-13 …` covers each transition (entry counts included; hover peek open, then `openPeek` → hover
+    peek closed) with a stubbed `nav`; the existing
     History notice and Reset confirm tests pass unchanged. Epic 4 does not connect the store's
     `DispatchResult` `finished`/`unfinished` to `endSheet`: it stays `hidden` and nothing is
     pushed on finish (epic 6 wires it with the sheet UI and boot push); Playwright: Undo then Redo
@@ -235,8 +238,11 @@ holds the how, the component tree and the spine close-out edits.
     card or a card above or below it), replaces the selection: at threshold crossing the
     controller removes the old selection's lift/outline and foot states by DOM class only (F12),
     the new drag gets Q-34 source suppression, and the overlays store deselects at release (or
-    `closedByBack` on back); released over nothing or ended by a real `pointercancel`/`lostpointercapture` it leaves nothing selected with its entry
-    popped (`overlays.deselect()`), and a drag from the source column of a tap-selected tail shows only one tail lifted
+    `closedByBack` on back); released over nothing it leaves nothing selected with its entry
+    popped (`overlays.deselect()`); ended by a real `pointercancel`/`lostpointercapture` it flies back
+    and restores the old selection's lift, outline and foot classes, selection and entry kept (as
+    with `byBack`; a following back clears them via `closedByBack`; that Android delivers
+    `pointercancel` before back is `unverified`, on-device, epic 7); and a drag from the source column of a tap-selected tail shows only one tail lifted
     mid-drag; a press during fly-back first `finish()`es it, then re-resolves its target with
     `document.elementFromPoint` at the press point on the settled layout (F13), and Undo pressed
     during a fly-back acts on the settled layout (P4: from `session-idle-empty-column`, release a
@@ -257,7 +263,7 @@ holds the how, the component tree and the spine close-out edits.
     nothing; Playwright asserts
     each by `current().session` and the stored Session (reference unchanged for inert cases, the
     k change saved before the next action, R-73); `desktop` shows the 1 px outline of the D a
-    click would set (top of D: k − 1; k = 1 on the top of D: none) and no hover elsewhere; in
+    click would set (top of D: k − 1; k = 1 on the top of D: none) and no hover outline on other column cards; in
     Place (`session-place`) and Game over (`session-won`) no column card shows a hover outline or
     the `grab` cursor.
 
@@ -275,7 +281,7 @@ holds the how, the component tree and the spine close-out edits.
     peek on `session-place-free-letter-redo-tail`, its top unhatched); a swipe inside the sheet scrolls it and
     keeps it open (sheet and mirrors `pan-y`); the controller classifies sheet and scrim presses
     (AD-12): a `tap` closes the view and suppresses that gesture's trailing `click` once
-    (capture phase; disarmed by the next `pointerdown` or a `setTimeout(0)` after `pointerup`, whichever first; UI Vitest `AD-12`: a scrim tap with no trailing click, then a later click reaches its handler), a drag does nothing (the scrim is `touch-action: none`; on the sheet it
+    (capture phase; disarmed by the swallowed `click`, the next `pointerdown` or a 300 ms expiry armed at `pointerup`, whichever first; the touch `pointerup` → `click` order is `unverified`, gated by the `android` P4 scrim tap over Undo below; UI Vitest `AD-12`: a scrim tap whose trailing click is swallowed, then a later click reaches its handler; with no trailing click, the next `pointerdown` or the expiry disarms it), a drag does nothing (the scrim is `touch-action: none`; on the sheet it
     scrolls) (P4: a 20 px drag on the scrim keeps the view; a scrim tap over the enabled Undo
     closes it without undoing);
     back closes it; in Composing and Place a WordCell tap or drag dispatches nothing and
@@ -286,13 +292,14 @@ holds the how, the component tree and the spine close-out edits.
     deselects on release, CAP-6); a WordCell drag never lifts a tail
     (R-12); `desktop`: hovering 400 ms opens the hover peek above the cell (F19), the top 14
     cards, oldest of them first, top card last and tagged `top`, a `+n older cards` line above
-    them only above 14 cards, no scrim, takes no clicks, closes on leave, never opens during a drag;
+    them only above 14 cards, no scrim, takes no clicks, closes on leave, never opens during a drag or with a peek or view open (P4 `desktop`: hover 400 ms, then press
+    and hold 400 ms → only the peek sheet visible);
     Playwright asserts that viewing never changes `current().session` or storage, and AD-13's
     one-overlay reload case with the sticky view. Sources: Idle peeks and the Idle sticky view on
     `session-idle-empty-column`; Composing and Place peeks on `session-place-free-letter-redo-tail`
     (Place, and one Undo → Composing); the Game-over sticky view and overflow on `session-won`;
     a gave-up view on `session-gave-up-after-commit`. The two new valid fixtures are scripted
-    under the epic 3 regeneration rule: `moves: [session-won.moves[0]]` (no redo tail; column 1's
+    under the epic 3 regeneration rule: `version` 1, `seed` 1 (`session-won`'s), `activeMs` 0, `moves: [session-won.moves[0]]` (no redo tail; column 1's
     whole 7-card tail self-dropped and committed to cell 7, leaving column 1 empty), cursor
     `{ index: 1, phase: 'idle' }`, `gaveUp` false / true.
 
@@ -406,7 +413,7 @@ Rationale in `build-notes.md`.
 | # | Question | Decision |
 | --- | --- | --- |
 | F1 | Which epic renders the WordCell and column states that epic 5 commands produce? | Epic 4 renders every `GameView` state; epic 5 adds the tray interactions, free-letter and target commands, and FLIP. |
-| F2 | Where are S and free letters live in Composing before the tray exists? | A static tray: live tray tiles in `arrangement` order with D-block mirrors (Composing), live strip tiles in `placementOrder` (Place); no gestures; the word-line slot is reserved and shows only the epic 3 invalid-word line (the word display is epic 5); tiles at card height in one row while they fit (DESIGN.md tiles per row), else compact 44 px in up to two rows within the reserved max(H, 92) tile area, clipped beyond (`overflow: hidden`), never over the labels or WordCells, every element kept in the DOM (AD-14). Epic 5 replaces it. |
+| F2 | Where are S and free letters live in Composing before the tray exists? | A static tray: live tray tiles in `arrangement` order with D-block mirrors (Composing), live strip tiles in `placementOrder` (Place); no gestures; the word-line slot is reserved and shows only the epic 3 invalid-word line (the word display is epic 5); the control row is empty (the D-block controls and the empty-destination line, EXPERIENCE.md catalogue, are epic 5); tiles at card height in one row while they fit (DESIGN.md tiles per row), else compact 44 px in up to two rows within the reserved max(H, 92) tile area, clipped beyond (`overflow: hidden`), never over the labels or WordCells, every element kept in the DOM (AD-14). Epic 5 replaces it. |
 | F3 | Top bar without the menu and timer. | Score and Undo/Redo; a reserved empty 44 px menu slot; the timer box is epic 6 (absent while Show timer is off). |
 | F4 | Minimal-board heading and Seed line. | Removed; a visually hidden `h1` `WordCell` stays; specs read the seed from `current()`. |
 | F5 | End-sheet states without an end sheet. | Built in `overlays.svelte.ts` per AD-13 with UI Vitest only; `DispatchResult` `finished`/`unfinished` not wired (sheet stays `hidden`, no push); UI, wiring and Playwright in epic 6. |
@@ -428,6 +435,6 @@ Rationale in `build-notes.md`.
 | F21 | innerHeight-only change under 80 px (w fixed). | AD-11's rule: leftover = max(0, innerHeight − height-rule sum − banner) absorbs it; the layout module applies the absolute anchor offset's delta clamped to the document's scroll range, so at `scrollTop` 0 a leftover shrink applies none, and past exhaustion the document becomes scrollable by the shortfall with `scrollTop` unchanged; a w recompute applies the same clamped anchor-offset delta. |
 | F22 | `BAND_ORDER` shape. | Ordered units of AD-11 band ids; `?bands=` names units (absent or empty: the default order; repeated: the first value); a non-permutation throws (AD-15); stickiness follows the top bar, banner and action-bar units wherever they sit (dev only). |
 | F23 | Press resolution. | By `data-place`: `column`, `cell`; `tray`/`strip` inert in epic 4. |
-| F24 | One `cancel` for hide, Undo and back. | `cancel({ byBack })` deselects only when the gesture it ends is a drag that replaced a selection, and `byBack` skips even that (`closedByBack` clears it); a real `pointercancel`/`lostpointercapture` ending such a drag deselects (`overlays.deselect()`, entry popped), as a release over nothing does; so hide during such a drag returns the tail and leaves nothing selected, its entry popped through nav's queue (`wc` 0 after `showPage`), while hide keeps a plain tap-selection; Undo, Redo, the banner `Reload` and the outside tap deselect in their own handlers. |
-| F25 | Outside-tap deselect. | The controller listens on App's active-branch root spanning the viewport (F8) (side margins, bars and banner included); presses on enabled buttons are never classified or captured (their `act()` handlers run), disabled controls fall through to this path. On the controller's `tap` classification for pointer input (`click` only for non-pointer activation, never both for one gesture), never on `pointerdown`; excludes `[data-wordcell]` (the controller handles WordCells), the open view sheet and scrim (classified per CAP-9), and long-presses; `deselect()` with nothing selected is a no-op with no `nav` call. |
+| F24 | One `cancel` for hide, Undo and back. | `cancel({ byBack })` deselects only when the gesture it ends is a drag that replaced a selection, and `byBack` skips even that (`closedByBack` clears it); a release over nothing ending such a drag deselects (`overlays.deselect()`, entry popped), while a real `pointercancel`/`lostpointercapture` flies it back and restores the old selection's classes, selection and entry kept as with `byBack` (an Android edge-swipe may send `pointercancel` then back; `unverified`, epic 7); so hide during such a drag returns the tail and leaves nothing selected, its entry popped through nav's queue (`wc` 0 after `showPage`), while hide keeps a plain tap-selection; Undo, Redo, the banner `Reload` and the outside tap deselect in their own handlers. |
+| F25 | Outside-tap deselect. | The controller listens on App's active-branch root spanning the viewport (F8) (side margins, bars and banner included); presses on enabled buttons are never classified or captured (their `act()` handlers run), disabled controls fall through to this path. On the controller's `tap` classification for pointer input (`click` only for non-pointer activation, never both for one gesture), never on `pointerdown`; excludes `[data-wordcell]` (the controller handles WordCells; the cell-number labels sit outside it and take this path), the open view sheet and scrim (classified per CAP-9), and long-presses; `deselect()` with nothing selected is a no-op with no `nav` call. |
 | F26 | Hit rects (DESIGN.md Hit rects) vs the drawn card. | Each live card and WordCell element is a slot wrapper spanning its full slot pitch (w + 4 wide; strip or H tall) with the drawn face inside; the wrapper carries `data-card-id`, `data-testid` and `data-place` (AD-14's one live element), the face none and is `pointer-events: none`, so hit-testing and `elementFromPoint` see only wrappers. The 8 px selection lift moves only the face, so hit areas never move under a finger; a drag's `transform` moves the faces (the wrappers stay to draw the ghosts, CAP-7), and overlap uses the grabbed face's rect. |
