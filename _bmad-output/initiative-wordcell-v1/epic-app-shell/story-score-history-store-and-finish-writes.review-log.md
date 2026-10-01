@@ -1,5 +1,5 @@
 # Review log — story-score-history-store-and-finish-writes (ticket 3.7)
-State: pass 4: done
+State: pass 5: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 218 words, snapshot `story-score-history-store-and-finish-writes.passes/pass0.md`, HEAD e897707.
 Note: the pull from tickets.toml entry 7 dropped `interface`, `tests`, `owns`; they are passed to reviewers and fixer as intent, and the pass 1 fixer adds them to the Description as `Interface:`, `Tests:`, `Owns:` lines.
@@ -110,3 +110,29 @@ Words (docs): 1454 (6.67 x pass 0; budget 1500)  |  Snapshot: story-score-histor
 - scoreHistory.load() keeps its own launch snapshot for loaded().history; never derived from lastText
 ### Dropped
 - none
+
+## Pass 5 — 2026-09-30
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 13, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+Words (docs): 1454 (6.67 x pass 0; budget 1500)  |  No fix pass (stopping rule: passes 4 and 5 each ≤ 1 major)
+### Open major (not fixed)
+- Shell Vitest AD-6 — the `recorded` cases (true after a finish, false after the un-finish) cannot tell `isRecorded(records, session, EN)` from a "status ok && game finished" shortcut; add `recorded` false for session-won.json loaded with no history (finished, not recorded), optionally session-won.json + history-three-records.json (last record gaveUp)
+
+## Result — converged after 5 passes
+open major: Shell Vitest AD-6 `recorded` cases do not discriminate isRecorded from a finished-only shortcut (add session-won.json with no history → recorded false).
+
+Majors per pass: 13, 5, 2, 1, 1. Words 218 → 1454. Decision-needed: none. Technical defaults applied: 16 (see Default applied per pass).
+
+### Unapplied minors (for the build plan)
+- Dispatch wiring: "always calls reconcile, after serializeSession" vs the existing `if (result.session !== before)` write branch — call it inside that branch between serializeSession and write (same behaviour) (3 lenses)
+- Test hook: never-written default literal `{ version: 1, records: [] }` beside `HISTORY_VERSION`
+- `state`, `statistics`, `recorded` are getters (as game.state/game.view); the rest methods
+- Q-39 (b): "arm" means `throwOn: 'wordcell:session'` as in (a)
+- R-84 given-up Undo: also assert current().history equals the stored bytes
+- AD-7 session-place.json absence check: a separate AD-7 test reusing the R-73 steps
+- migrate the six existing `control.failWrites = true` sites to `control.fail = () => new Error('setItem failed')` (set only)
+- reset() while rejected: one Vitest case
+- Q-29 rename: insert Q-29 after R-73, rest of the title unchanged
+- §2 unreadable: spy armed before the Redo logs no wordcell:history entry
+- blocking.spec.ts `after.current` expected history per variant (seeded fixture vs `{ version: 1, records: [] }`)
+- tickets.toml entry 7's session-invalid-null.json + history Q-29 case is stood in for by the existing version-unknown variant (or add `history` to the null variant)
+- From pass 4: rollback restores bytes first, then assigns; history-setItem-throws case asserts game.state and both isStale(); R-76 test in e2e/lifecycle.spec.ts reusing its paused-clock open(); narrow `writes` destructures after widening to `string | null`; setup() Options gain `history` seeding HISTORY_KEY; scoreHistory.load() keeps its own launch snapshot for loaded().history
