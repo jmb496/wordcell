@@ -1,0 +1,213 @@
+# Epic 4 — Board and gestures. Table order is the build order (SPEC CAP-1 → CAP-10; CAP-2 and CAP-9 split, CAP-4's drag-dependent Playwright cases in entry 9).
+# Requirement source: _bmad-output/specs/spec-epic-4-board/ (SPEC.md, rule-coverage.md, build-notes.md).
+# Build precondition for every entry: clean tree on epic-4-board.
+# Entries 2–4 and 6–12 share src/ui/Board.svelte, src/ui/gestures/ or src/main.ts and chain; entry 5 (overlays store only) may run beside entries 2–4.
+# Extra keys (B10): interface = export and signature delta; tests = sentence → test ids; owns = rules or shared setup this entry owns for the epic.
+
+[[entry]]
+id = 1
+type = "story"
+title = "Layout definition and geometry"
+description = "Builds the pure AD-11 layout core: src/ui/layout/bands.ts with BAND_ORDER as seven ordered units of the eleven band ids (F22), ANCHOR_BAND = 'wordcells', SLACK_BAND = 'leftover' and the ?bands= unit-list parser (absent or empty → default, repeated → first value, a non-permutation throws to AD-15), and src/ui/layout/geometry.ts with cardWidth(innerWidth, innerHeight, insets, hoverFine) (fed clientWidth per build-notes CAP-1), bands(w, bandOrder, trayRows, bannerShown, innerHeight, insets) returning band heights, leftover and the absolute anchor offset, the A-D4 tray growth term and the pure w-recompute predicate, with every SPEC CAP-1 reference case as UI Vitest."
+verify = "npm run test:all is green with UI Vitest AD-11 cases pinning every SPEC CAP-1 number (412 × 915, 412 × 839, 360 × 750, 1080p/950, 24/24 insets, 1280 × 720 with banner show and hide, the 40 px floor, H > 92, tray growth in the default and one fallback order, the 80 px and two-60 px predicate cases, both F21 innerHeight-only cases) and a non-permutation ?bands= list throwing."
+covers = ["CAP-1"]
+after = ["3.12"]
+hitl = false
+risk = "medium"
+unknown = "Whether the height-derived w search stays exact at every reference viewport with insets; the SPEC numbers are the oracle."
+interface = "New src/ui/layout/bands.ts (BAND_ORDER, ANCHOR_BAND, SLACK_BAND, parseBandsParam) and src/ui/layout/geometry.ts (cardWidth, bands, trayGrowth, shouldRecomputeWidth); no shell or engine change."
+tests = "AD-11 BAND_ORDER units, anchor and slack; AD-11 ?bands= non-permutation throws; AD-11 cardWidth and bands reference numbers, insets, floor, H > 92, height rule above innerHeight (leftover 0); AD-11 banner and tray growth (default and fallback order); AD-11 w-recompute predicate; AD-11 F21 innerHeight-only change."
+owns = "The band ids, unit ids and every geometry formula; later entries call these functions and never re-derive a band height or w."
+references = ["spec — _bmad-output/specs/spec-epic-4-board/build-notes.md, CAP-1", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/DESIGN.md, Layout (height rule)"]
+
+[[entry]]
+id = 2
+type = "story"
+title = "Board render in Idle and Game over with bars"
+description = "Tracer bullet: replaces the epic 3 minimal board with Board.svelte iterating BAND_ORDER (no component names a neighbour band) at the w and band heights from entry 1 computed once at mount, Column.svelte (fanned cards, strip max(44, round(0.72 H)), the always-rendered placeholder slot, foot pad foot-<n> with the desktop column number, whole-slot column-<n> hit rect), Card.svelte as a full-slot-pitch wrapper carrying data-card-id, data-testid and data-place with a pointer-events: none face (glyph in the top 72 %, flourish, QU ×2 badge; F26), WordCellRow.svelte (labels 3–10, top card or empty outline, count badge at 2+, used/legal/target/not-legal states from CellView), the sticky TopBar (empty 44 px menu slot, Score <n> from displayScore via text.ts score(n) with U+2212, Undo/Redo icon buttons with desktop tooltips of the accessible name; F3), the dictionary banner in its band and the sticky ActionBar holding primary-action with epic 3's labels, enablement and New game sequence, a visually hidden h1 with every Seed <n> spec read moved to current().session.seed (F4), smoke.spec.ts's R-03 extended to every column of session-idle-fresh (C-E4a), and e2e/placeholder.screens.spec.ts with its two baselines deleted (the minimal board is gone; entry 3 creates board.screens.spec.ts)."
+verify = "npm run test:all is green, and Playwright on android shows session-idle-fresh rendering 52 data-card-id elements with each column's letters top→bottom equal to literal lists (QU as QU), card faces 46 × 61 at the Pixel 7 profile with slot = w + 4 and board = 8 slots measured from rendered rects (F11), and Score on Idle, session-place, session-won and session-gave-up (negative with U+2212) and after a Redo across a commit."
+covers = ["CAP-2", "CAP-3"]
+after = [1]
+hitl = false
+risk = "high"
+unknown = "How much of the minimal board's spec locators (h1, Seed line, ol WordCells) break across epic 3's e2e files; each is moved, never deleted, and the R-02 golden deal literals stay byte-identical."
+interface = "New src/ui/Board.svelte, Column.svelte, Card.svelte, WordCellRow.svelte, TopBar.svelte, ActionBar.svelte; App.svelte's active branch renders Board; text.ts gains score(n); e2e/placeholder.screens.spec.ts and its baselines removed; WordCell elements carry data-wordcell, column hit rects data-column, foot pads data-foot (build-notes CAP-4 attribute names)."
+tests = "R-03 dealt layout rendered top→bottom per column (C-E4a, P4 supp.); R-82 score shown live during play; R-70/R-71 Undo and Redo enablement (P4 supp.; the Redo-into-Composing used-state half is entry 3); AD-14 one live element per card in Idle and Game over; AD-11 Board.svelte iterates BAND_ORDER (Playwright order check)."
+owns = "Board.svelte and the band components (the ActionBar's New game keeps calling overlays.resetForNewSession, which entry 5 widens), the slot-wrapper/face card structure (F26) every gesture entry hit-tests, the data-column/data-wordcell/data-foot attributes, and the F4 locator moves."
+references = ["spec — _bmad-output/specs/spec-epic-4-board/build-notes.md, As-built facts, Component tree, CAP-2, CAP-3", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/DESIGN.md, Components (Card, Column, WordCell, Top bar, Action bar)"]
+
+[[entry]]
+id = 3
+type = "story"
+title = "Composing, Place and static tray rendering"
+description = "Renders every remaining GameView board state (F1): Composing with D cards live in destination style, S slots as ghost mirrors, and the static tray (F2) holding live S and free-letter tiles (data-place tray) in draft.arrangement order with the D-block mirrors at the draft.side end, the word-line slot showing only the epic 3 invalid-word line and an empty control row; Place with live strip tiles (data-place strip) in placementOrder, S and D ghosts and the selected-target ring and check chip; used WordCell faces as mirrors; the placeholder under S ghosts when the emptied source is the destination; tiles at card height in one row while they fit, else compact 44 px in up to two clipped rows inside max(H, 92); adds the scripted valid fixture session-idle-empty-column.json (version 1, seed 1, activeMs 0, moves [session-won.moves[0]], cursor { index 1, phase idle }, gaveUp false) to the epic 3 regeneration test in src/engine/serialize.test.ts (VALID and REBUILDS) and to src/architecture.test.ts's valid session-fixture list (count nine → ten); and creates e2e/board.screens.spec.ts for Idle, Composing, Place and Game over on android and desktop, baselines generated in the container."
+verify = "npm run test:all and npm run test:screens are green, and Playwright on android shows exactly 52 data-card-id elements, each id once, data-place per AD-14 and mirrors carrying data-mirror-of with no data-card-id or data-testid on session-idle-fresh, session-composing, session-place-free-letter-redo-tail, session-won and session-gave-up, plus a reload of session-composing and session-place-free-letter-redo-tail re-rendering the same ghosts, destination style, used cell, static tray order and target, and a Redo into Composing with a free letter re-rendering the used state."
+covers = ["CAP-2"]
+after = [2]
+hitl = false
+risk = "medium"
+unknown = "Whether a draft of more than 14 tiles fits the clipped two-row static tray at 360 px without overlapping the labels band; F2 says clipped, never over the labels."
+interface = "New src/ui/Tray.svelte (static, epic 5 replaces it) and the ghost/mirror rendering in Column.svelte and WordCellRow.svelte; new fixtures/session-idle-empty-column.json; new e2e/board.screens.spec.ts and its baselines (entry 2 deleted the placeholder spec)."
+tests = "AD-14 exactly one live element per card in Idle, Composing, Place and Game over; R-33 (UI) used WordCell state on session-place-free-letter-redo-tail and after Undo into its Composing (P4 part); R-42 (UI) selected-target state on session-place (P4 part); R-73 (UI) exact phase re-rendered after reload (P4 part); R-22 empty column placeholder rendered on session-idle-empty-column; R-70/R-71 Redo into Composing with a free letter re-renders the used state (P4 supp.)."
+owns = "The static tray, the ghost and mirror rendering, session-idle-empty-column.json, and the board screenshot baselines."
+references = ["spec — _bmad-output/specs/spec-epic-4-board/build-notes.md, CAP-2 (Live vs mirror, static tray)"]
+
+[[entry]]
+id = 4
+type = "story"
+title = "Live layout, gate and touch-action regions"
+description = "Builds src/ui/gestures/gate.ts (createGate({ raf, setTimer, clearTimer }): enter/leave counter, scroll busy from the first scroll until scrollend, a 150 ms quiet timer or the before-hide reset, whenIdle(fn) in the next idle requestAnimationFrame), src/ui/layout/layout.svelte.ts ($state w, band heights and anchor offset; resize/orientationchange and the hoverFine media query recomputing w through the gate per entry 1's predicate, always on a hoverFine change (review-log Pass 7 minor), band re-layout on banner show/hide and innerHeight-only changes under 80 px, the clamped anchor scrollTop delta in the same frame with its own scroll event ignored), the env(safe-area-inset-*) probe, the banner latch from dictionary.showBanner (F20), html scrollbar-gutter: stable, touch-action none on cards, tiles and WordCells and pan-y (pan-x pan-y when wider) on non-card regions (the foot row's none while a tail is selected is entry 7), user-select: none and -webkit-touch-callout: none on cards, tiles, WordCells, labels and foot pads (the view sheet's is entry 11), ?bands= in dev only, main.ts creating the one gate and registering its scroll reset with game.registerBeforeHide, and the stepwise held-touch helper touchHold(page, from) → { moveTo, end } in e2e/helpers/touch.ts with its helpers.spec.ts case (F10)."
+verify = "npm run test:all and npm run test:screens are green (baselines regenerated in the container only where the four fixture renders change) with UI Vitest AD-11 gate cases on injected raf/timers, and Playwright shows the banner taking leftover first, the WordCell row's bounding box unchanged when the banner shows at 412 × 780, a banner held off during a touchHold pan from a foot pad at 412 × 600 while scroll events arrive under 150 ms apart and shown within a frame of scrollend or 150 ms quiet, computed touch-action and user-select per region, ?bands= reordering bands in dev, and dist-smoke showing ?bands= ignored in dist/."
+covers = ["CAP-3"]
+after = [3]
+hitl = false
+risk = "high"
+unknown = "Whether a CDP touch pan from a pan-y foot pad scrolls the document and fires no scrollend before release (unverified; build-notes CAP-3 fallbacks: desktop page.mouse.wheel steps or Input.synthesizeScrollGesture)."
+interface = "New src/ui/gestures/gate.ts (createGate → { enter, leave, busy, whenIdle, scrollReset }) and src/ui/layout/layout.svelte.ts; main.ts creates the gate after game.load() and registers its scroll reset with registerBeforeHide; e2e/helpers/touch.ts gains touchHold."
+tests = "AD-11 gate pending work in the next idle frame, scroll busy until scrollend, hide or 150 ms (S); AD-11 banner takes leftover first; AD-11 WordCell row box unchanged when the banner shows with leftover under 44 px; AD-11 banner during a scroll applied after it ends; AD-11 touch-action and user-select regions (computed style); AD-11 ?bands= reorders in dev and is ignored in dist/ (dist-smoke); AD-11 w recompute on a hoverFine change."
+owns = "gate.ts (the controller, fly-back and layout all count through it), layout.svelte.ts, the touch-action/user-select CSS regions, and the touchHold helper every later drag test uses."
+references = ["spec — _bmad-output/specs/spec-epic-4-board/build-notes.md, CAP-3", "spec — _bmad-output/specs/spec-epic-4-board/SPEC.review-log.md, Result (Unapplied minors)"]
+
+[[entry]]
+id = 5
+type = "story"
+title = "Overlays store: tail selection, end-sheet and view states"
+description = "Extends src/ui/overlays.svelte.ts on the epic 3 core (F5, F6): ids tailSelection, wordcellView and endSheet; select(column, count) pushing one entry on the first selection and none on re-select, deselect() closing it top-down (no nav call with nothing selected), the read-only selection; endSheet hidden | collapsed | expanded with expandEndSheet (push), collapseEndSheet (pop), closedByBack collapsing it, onUnfinished, the deferred-open token that resetForNewSession cancels, resetForNewSession clearing the selection and hiding the sheet; openPeek(cell), closePeek(), peekToSticky() (pushes wordcellView above a kept selection), openView(cell) and the hover-peek state, with openPeek, peekToSticky and openView closing a hover peek and no hover peek opening while a peek or view is open; DispatchResult finished/unfinished stays unwired (sheet hidden, nothing pushed); entry 2's ActionBar keeps calling resetForNewSession, whose widened reset stays compatible; its Playwright case lives in e2e/nav.spec.ts with getByTestId('undo'|'redo') locators so it never collides with entry 2's F4 locator moves."
+verify = "npm run test:all is green with UI Vitest AD-13 cases for every transition and entry count on a stubbed nav, the existing History notice and Reset confirm tests passing unchanged, and Playwright on android showing Undo then Redo into won on session-won leaving history.state.wc at 0."
+covers = ["CAP-5"]
+after = ["3.8"]
+hitl = false
+risk = "medium"
+unknown = "None; the API names in build-notes CAP-5 are assumptions the builder may adjust, recording any change in the plan."
+interface = "overlays.svelte.ts gains select, deselect, selection, endSheet, expandEndSheet, collapseEndSheet, onUnfinished, deferEndSheetOpen/openDeferred, openPeek, closePeek, peekToSticky, openView, the view cell, and hover-peek open/close state; OverlayId gains tailSelection, wordcellView, endSheet."
+tests = "AD-13 one entry per tail selection, re-select pushes none (S); AD-13 peek pushes none, sticky view one, peek turned sticky one above a kept selection, hover peek closed by openPeek/peekToSticky/openView (S); AD-13 end-sheet hidden/collapsed/expanded, closedByBack collapses, unfinished transitions, deferred-open cancel, resetForNewSession (S); AD-13 epic 4 leaves DispatchResult finished unwired (P4)."
+owns = "Every overlay open state of the epic: selection, end sheet, peek, sticky view and hover peek; the controller and HoverPeek call only these."
+references = ["spec — _bmad-output/specs/spec-epic-4-board/build-notes.md, CAP-5"]
+
+[[entry]]
+id = 6
+type = "story"
+title = "Pointer controller core and cancel wiring"
+description = "Builds src/ui/gestures/controller.ts with createController(gate) → { cancel, attach } and the pure classify(...) (drag latched at the first pointermove ≥ 8 px Euclidean, tap, 400 ms long-press on WordCells only after which no drag), attached by a Svelte action on App's active-branch root on every mount and detached after cancel() (F8), capturing only presses resolved by data-place (column, cell; tray/strip inert, F23) and never enabled buttons (F25), ignoring button !== 0 and any second pointerId without preventDefault or stopPropagation, preventDefault on contextmenu for a captured press, gate enter at pointerdown, cancel({ byBack? }) ending any press with no command and closing a peek, pointercancel/lostpointercapture handling, and the press-only F24 paths against the entry 5 store (hide keeps a tap-selection with no nav call; hide under a sticky view opened through overlays.openView does not throw; the drag-replacing-selection and fly-back paths land in entries 8 and 9); a foot-pad press with nothing selected is not captured, so entry 4's pan-y banner-during-scroll test stays green; nav.registerBeforeBack(fn) (R1, F7: separate from register(), throws before launch or on a second call, runs before the Forward check and close callback, not on own pops or stale launches); main.ts creating the controller after game.load()'s halted return and before registerLifecycle() (rejected root included) and registering cancel with registerBeforeHide and cancel({ byBack: true }) with registerBeforeBack; and src/ui/act.ts wrapping every App-owned button handler (Board, History notice, Reset confirm, banner, the rejected root's New game; Halted Reload exempt in both mounts) so cancel() runs first (R2, F9)."
+verify = "npm run test:all is green with shell Vitest AD-13 before-back cases, UI Vitest AD-12 classify, cancel-path, second-pointer fake-event and act()-order cases and the press-only F24 cases, entry 4's banner-during-scroll test still green, and Playwright on android showing a tap and a drag on a static tray tile changing nothing, a captured press's contextmenu defaultPrevented, hidePage alone writing wordcell:session exactly once with the clock resuming only after showPage, and hidePage on the rejected root writing nothing and throwing nothing."
+covers = ["CAP-4"]
+after = [4, 5]
+hitl = false
+risk = "high"
+unknown = "Whether a Svelte action on the active-branch root sees pointer events from sticky bars and the banner with one listener set (F25 assumes it spans the viewport)."
+interface = "New src/ui/gestures/controller.ts (createController(gate) → { cancel(opts?: { byBack?: boolean }), attach(root) }), src/ui/gestures/classify.ts (classify), src/ui/act.ts (act(handler)); src/shell/nav.ts gains registerBeforeBack(fn); main.ts creates the controller and registers both hooks."
+tests = "AD-12 tap/drag/long-press classification incl. 10 px then 2 px → drag and no drag after a long-press (S); AD-12 one pointer, button !== 0 ignored, second pointer never preventDefaulted (S); AD-12 cancel()/pointercancel end any press, new pointer after cancel() (S); AD-12 cancel() first in every App-owned action, Halted exempt (S spy); AD-13 before-back hook (shell S); AD-13 F24 press-only cancel paths (S; drag paths in entries 8 and 9); AD-12 press resolved by data-place, tray tile inert (P4); AD-11 contextmenu suppressed for a captured press (P4); AD-9/AD-17 hidePage alone one write and resume only when visible (P4); AD-16 controller exists before lifecycle, rejected root hidePage (P4)."
+owns = "controller.ts, classify, act.ts, nav.registerBeforeBack and the main.ts controller step; entries 7–12 add press handling inside the controller only."
+references = ["spec — _bmad-output/specs/spec-epic-4-board/build-notes.md, CAP-4", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/EXPERIENCE.md, Pointer thresholds"]
+
+[[entry]]
+id = 7
+type = "story"
+title = "Tap-select, foot pads and tap-drop"
+description = "Adds the tap half of R-14 and Q-18 to the controller: a tap on a column card with column.canPickUp selects it and every card below (faces lifted 8 px, teal outline, source foot Here, other feet the wash) through overlays.select; a tap on any card, empty space, placeholder or foot of another column, or on Here or the source column's empty space, deselects then dispatches drop with sourceCount = the selected tail when canDropOn; re-select inside the source column grows or shrinks the tail with no new entry; a tap on the selected top is a no-op; a WordCell tap or an empty-WordCell long-press deselects with no view; the F25 outside-tap deselect on the controller's tap classification (top bar, tray band, labels, gaps, action bar, leftover band, banner background, desktop side margins, disabled controls), never on pointerdown; Undo, Redo and the banner Reload deselect then act; desktop hover outlines (grab cursor, drop-target highlight, re-select outline) as CSS classes; the foot row touch-action none while a tail is selected (pan-y otherwise, entry 4); and the blocking.spec.ts case where New game from a session-invalid-* fixture then a tap selects with history.state.wc 1."
+verify = "npm run test:all and npm run test:screens are green (baselines regenerated in the container only where the four fixture renders change), and Playwright on android shows a tap-select dispatching nothing with the Session reference and storage unchanged, tap-drops on another column's card, placeholder, empty space and foot and on Here giving drop with the selected sourceCount (self-drop k = 1, whole column k = 0), re-select keeping history.state.wc, back clearing the selection with the app open at wc 0, reload showing nothing selected, select-reload-back leaving the app, the F26 360 × 750 slot-margin and lifted-tail taps, desktop hover outlines, and the foot row's computed touch-action none with a tail selected and pan-y without."
+covers = ["CAP-6"]
+after = [6]
+hitl = false
+risk = "medium"
+unknown = "Whether Chromium fires pointer events on a disabled <button> (unverified); if not, the ticket wraps disabled controls' hit area [ASSUMPTION, build-notes CAP-6]."
+interface = "Controller tap handling for column, foot and outside presses; Column.svelte selection, Here and wash classes; no new exports beyond entry 6."
+tests = "R-14 (UI) every tap row of rule-coverage §3 (tap-select transient, tap on another column is a drop, source-column drop via Here or empty space, re-select, selected card no-op, WordCell tap deselects, outside taps deselect incl. banner Reload, selection not persisted or undoable); Q-18 under the R-14 rows; R-10, R-11, R-20, R-22 (P4 supp.); AD-13 one entry per selection popped on drop, deselect, Undo, Redo, back clears it (P4); AD-13 tail-selection reload then back leaves the app (P4); AD-12 hit rects on the full slot pitch, lift on the face only (F26, P4)."
+owns = "The tail-selection visuals, the foot row's selected-state touch-action (AD-11 row, rest in entry 4) and the outside-tap deselect path (F25)."
+references = ["spec — _bmad-output/specs/spec-epic-4-board/build-notes.md, CAP-6"]
+
+[[entry]]
+id = 8
+type = "story"
+title = "Drag, overlap targeting and drop into Composing"
+description = "Adds src/ui/gestures/targeting.ts with the pure pickTarget(dragged, candidates, sourceId, hasLeftSource) → { raw, highlighted } (25 % minimum inclusive, largest ratio, horizontally nearest centre then lower column tie-break, source suppressed until hasLeftSource, hasLeftSource set from raw including null), and the drag path in the controller: on threshold crossing from a canPickUp card it writes transform on the tail's faces and the highlight on the target (bottom card, placeholder or the lowest non-tail card on a partial self-drop) by DOM only (F12), draws the old slots as ghosts by a class on the slot wrappers, measures the grabbed face's rect against live unclipped column hit rects each pointermove, dispatches at most one drop on highlighted at release, and otherwise flies the tail back with WAAPI over motion.ts duration('flyBack') (reduced motion: a fade, gate-counted, F13), the drag layer drawing above the sticky bars; desktop repeats with page.mouse."
+verify = "npm run test:all and npm run test:screens are green (baselines regenerated in the container only where the four fixture renders change) with UI Vitest AD-12 pickTarget cases and an AD-10 fly-back duration case, and Playwright on android with touchHold shows the SPEC Success-signal drag (column 1's bottom card held over column 3 lights it, release lands in Composing with column 3's bottom card as the locked D mirror on the left of the static tray and the S tile after it), a drop on another column landing in Composing with k = 1 (k = 0 on column 1 of session-idle-empty-column), side left and S in column order saved before the next action, drops at the top and the bottom of a column giving the same draft, a whole-column drag from a column's top card, a drag over the WordCell row and a 20 px drag down from column 4's bottom card of session-idle-fresh flying back with no highlight and the Session byte-identical, a sub-25 % drag over the source only cancelling, a leave-and-return giving a self-drop, a whole-column self-drop giving k = 0, and the same drop and cancel on desktop with page.mouse."
+covers = ["CAP-7"]
+after = [7]
+hitl = false
+risk = "high"
+unknown = "Whether WAAPI on the faces composes with the per-move transform writes without a jump at release; the P4 Success-signal drag is the guard."
+interface = "New src/ui/gestures/targeting.ts (pickTarget); controller drag and fly-back paths; Column.svelte ghost and highlight classes."
+tests = "AD-12 pickTarget raw/highlighted, 25 %, tie-break, hasLeftSource from raw incl. null, sub-25 % over the source only (S); AD-12 transform written directly, at most one command per gesture (S + P4 via current() reference changes); AD-10 fly-back duration from motion.ts, reduced motion fade (S); R-14 (UI) drag released over no column returns the tail; R-14 (UI) drag never leaving the source cancels (Q-34); R-14 (UI) leave and return drops on the source; Q-34 incl. the sub-25 % source-only drag; R-10, R-11, R-20 drag half, R-21, R-22, R-23 incl. top and bottom drops (P4 supp.); R-73 (UI) the drop saved before the next action."
+owns = "targeting.ts, the fly-back animation and the drag layer; the SPEC Success-signal drag."
+references = ["spec — _bmad-output/specs/spec-epic-4-board/build-notes.md, CAP-7", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/EXPERIENCE.md, Drop targeting by overlap"]
+
+[[entry]]
+id = 9
+type = "story"
+title = "Drag interruptions: selection replacement, hide, back and cancel-first"
+description = "Completes AD-12/AD-9/AD-13 for drags in progress: a drag from any column while a tail is selected (the selected source column included) removes the old selection's classes by DOM only at threshold crossing, gets Q-34 source suppression and deselects at release (also when released over nothing), while a real pointercancel/lostpointercapture or cancel({ byBack: true }) flies it back and restores the old selection, its classes and entry (F24, F28); a primary pointerdown during a fly-back finish()es it and re-resolves by document.elementFromPoint, and act() finishes it before its handler (F13); the CAP-4 Playwright drag cases: hidePage mid-touchDrag, select then touchHold a drag from another column then hidePage/showPage, select then drag then back, Undo during a held drag (dispatchEvent click), Undo during a fly-back via one page.evaluate, and an inert foot-pad drag with a tail selected."
+verify = "npm run test:all is green, and Playwright on android shows hidePage mid-touchHold drag writing wordcell:session exactly once with the tail back, the Session unchanged and a later moveTo then end() changing nothing; select, drag from another column, hidePage, showPage leaving nothing selected at wc 0; select, drag, back leaving the app open at wc 0; one lifted tail mid-drag from the source column of a selection; Undo during a held drag returning the tail then decreasing cursor.index (also desktop with page.mouse); Undo during a fly-back acting on the settled faces; and a 20 px foot-pad drag with a tail selected leaving Session and selection unchanged."
+covers = ["CAP-4", "CAP-7"]
+after = [8]
+hitl = false
+risk = "high"
+unknown = "That Android delivers pointercancel before back on an edge swipe is unverified (epic 7 device check); the restore path is proven here with a synthetic pointercancel."
+interface = "Controller selection-replacement, restore and fly-back-finish paths; no new exports."
+tests = "AD-12 a drag from the source column of a tap-selected tail replaces it, one tail lifted (P4); AD-12 a press or Undo during fly-back acts on the settled layout, cancel() from act() or before-hide returns a drag with no fly-back, before-back flies it back (S + P4); AD-12 cancel() first in Undo during a held drag (P4, android and desktop); AD-9/AD-17 hidePage mid-drag and select-drag-hide cases (P4); AD-13 select, drag from another column, back → nothing selected, app open, wc 0 (P4); AD-13 F24/F28 hide during a drag that replaced a tap-selection deselects with one queued nav.pop(), a real pointercancel restores the old selection with its classes and no nav call (S + P4 synthetic); AD-12 inert foot-pad drag with a tail selected (P4)."
+owns = "The F24/F28 selection-replacement behaviour and the AD-17 gesture-cancel hide assertion (C-E4b)."
+references = ["spec — _bmad-output/specs/spec-epic-4-board/build-notes.md, CAP-4 (AD-17 hide case, Cancel-first P4), CAP-7"]
+
+[[entry]]
+id = 10
+type = "story"
+title = "Composing, Place and Game-over column behaviour"
+description = "In Composing a tap on a destination-column card dispatches tapDestinationCard iff column.kIfTapped maps it to a number, and a drag started on one does not move it and dispatches the same once at pointerup for the press card (a cancelled press dispatches nothing); taps and drags on every other column, S ghosts and ghost mirrors included, and on non-card parts of any column do nothing; in Place and Game over every column tap and drag does nothing; desktop shows the 1 px outline of the D a click would set (top of D: k − 1; none at k = 1) and no hover outline or grab cursor on inert cards; plus the held destination-card press in Composing with hidePage giving no tapDestinationCard."
+verify = "npm run test:all and npm run test:screens are green (baselines regenerated in the container only where the four fixture renders change), and Playwright on android shows a destination-card tap and a destination-card drag each setting k saved before the next action, the top of D giving k − 1 and a no-op at k = 1, every other column and ghost tap or drag leaving the Session reference unchanged on session-composing, every column tap and drag inert on session-place, session-gave-up and session-won, Undo from Composing returning the tail and a new drag then working, a held destination-card press plus hidePage dispatching nothing, and on desktop the k hover preview and no hover outline in Place and Game over."
+covers = ["CAP-8"]
+after = [9]
+hitl = false
+risk = "medium"
+unknown = "None."
+interface = "Controller phase gating for column presses from GameView flags (kIfTapped, canPickUp, canDropOn); Column.svelte desktop k-preview class."
+tests = "R-31 tap sets k via kIfTapped (P4 supp.); R-39 (UI) other columns inert in Composing; R-39 (UI) a drag on a destination card is a tap; R-39 (UI) Undo to change source or destination; R-39 (UI) columns inert in Place; R-75 no select or drop while status ≠ playing (P4 supp.); R-73 (UI) a k change from the column saved before the next action; AD-9/AD-17 held destination-card press plus hidePage → no tapDestinationCard."
+owns = "The column side of Composing (F17) and phase inertness of columns."
+references = ["spec — _bmad-output/specs/spec-epic-4-board/build-notes.md, CAP-8"]
+
+[[entry]]
+id = 11
+type = "story"
+title = "WordCell peek and sticky view"
+description = "Adds WordCellView.svelte and its controller paths (R-65, Q-21, F14): a long-press ≥ 400 ms on a non-empty WordCell opens the peek through overlays.openPeek (no entry), closing on release unless the rendered sheet's scroll area overflows (scrollHeight > clientHeight), when peekToSticky pushes one entry above any kept selection; a tap in Idle with nothing selected or in Game over opens the sticky view via openView (one entry) titled WordCell n · m cards / WordCell n · 1 card from text.ts (F27), listing CellView.cards bottom first with top on the last as mirrors (a used cell's top a normal-card mirror); the sheet and its mirrors pan-y, user-select: none and -webkit-touch-callout: none with overscroll-behavior contain, a touch-action none scrim, the controller classifying sheet and scrim presses (tap closes and swallows that gesture's trailing click until it, the next pointerdown or a 300 ms expiry; drag does nothing), back closing it; Composing and Place WordCell taps and drags dispatch nothing and open no view while the peek works; an empty WordCell opens nothing; a WordCell drag never lifts a tail (R-12); and the scripted valid fixture session-gave-up-after-commit.json (as session-idle-empty-column with gaveUp true) added to src/engine/serialize.test.ts (VALID and REBUILDS) and src/architecture.test.ts's valid session-fixture list (count ten → eleven)."
+verify = "npm run test:all and npm run test:screens are green (baselines regenerated in the container only where the four fixture renders change) with UI Vitest AD-12 trailing-click cases, and Playwright on android shows the long-press peek on session-idle-empty-column (also with a tail selected, selection kept), on session-place-free-letter-redo-tail and after one Undo into Composing, and on session-won; peek turned sticky on session-won's deepest cell at a short viewport; tap → sticky view in Idle and on session-won and session-gave-up-after-commit with the F27 title; a swipe in an overflowing view scrolling it open; a 20 px scrim drag keeping it; a scrim tap over the enabled Undo closing it without undoing; sticky-view reload then back leaving the app; and every view leaving current().session and storage unchanged."
+covers = ["CAP-9"]
+after = [10]
+hitl = false
+risk = "high"
+unknown = "The touch pointerup → click order on Chromium (unverified, gated by the scrim-over-Undo case); whether session-won's deepest cell overflows at a usable short viewport (else the ticket scripts one more valid fixture, SPEC Assumptions)."
+interface = "New src/ui/WordCellView.svelte; text.ts gains the view title strings (F27); controller long-press, sheet and scrim paths; new fixtures/session-gave-up-after-commit.json."
+tests = "R-65 (UI) every card of any WordCell viewable at any time (peek, sticky, overflow, scrim cases); R-65 (UI) viewing changes nothing; R-65 (UI) the view does not enter the move history; Q-21 long-press under R-65; R-12 a WordCell drag never lifts a tail (P4 supp.); R-33 a Composing WordCell tap is a no-op in epic 4 (P4 supp.); R-39 (UI) Place WordCells inert except viewing (P4 part); R-75 viewing available in Game over (P4 supp.); AD-13 sticky-view reload then back leaves the app; AD-13 peek/sticky entry counts (P4); AD-12 trailing click swallowed then a later click reaches its handler, disarm by pointerdown or expiry (S)."
+owns = "WordCellView.svelte, the view title strings, session-gave-up-after-commit.json and the scrim click swallower."
+references = ["spec — _bmad-output/specs/spec-epic-4-board/build-notes.md, CAP-9"]
+
+[[entry]]
+id = 12
+type = "story"
+title = "Desktop hover peek"
+description = "Adds HoverPeek.svelte (F19) for (hover: hover) and (pointer: fine) with pointerType mouse: hovering a non-empty WordCell 400 ms opens it through the overlays hover-peek state above the cell, clamped inside the board, below it when there is no room (dev fallback orders), never covering the cell; it shows the top 14 cards, oldest of them first, top card last and tagged top, as mirrors, a +1 older card / +n older cards line from text.ts above them only above 14 cards (F27), no scrim, takes no clicks, closes on leave, never opens during a drag or with a peek or view open, and any pointerdown cancels the timer and closes an open hover peek only when the press starts a drag, a peek or the sticky view."
+verify = "npm run test:all is green, and Playwright on desktop shows a 400 ms hover opening the hover peek with the top 14 cards and the older-cards line on session-won's cell 6 (24 cards, +10 older cards) and its absence on cell 8 (7 cards), closing on leave, not opening during a page.mouse drag, hover then a 400 ms press-and-hold leaving only the peek sheet visible, and current().session and storage unchanged."
+covers = ["CAP-9"]
+after = [11]
+hitl = false
+risk = "low"
+unknown = "None on fixtures: session-won's cell 6 (24 cards) shows the older-cards line and cell 8 (7 cards) its absence; no new fixture."
+interface = "New src/ui/HoverPeek.svelte; text.ts gains olderCards(n) (F27); controller pointerover timer for mouse input."
+tests = "R-65 (UI) hover peek on desktop (P4, desktop project); AD-13 openPeek closes a hover peek, hover then hold → only the peek sheet (P4 desktop + S from entry 5)."
+owns = "HoverPeek.svelte and the older-cards strings."
+references = ["spec — _bmad-output/specs/spec-epic-4-board/build-notes.md, CAP-9 (Hover peek)"]
+
+[[entry]]
+id = 13
+type = "story"
+title = "Refactor sweep"
+description = "Closing cleanup of epic 4 from the build records and deferred review findings, plus the epic 3 carry-ins: move the history.svelte.ts cases into src/shell/history.svelte.test.ts with names unchanged (R7), fold the game, history and prefs stores' repeated rejectReason, launch-text/isStale()/loaded() snapshot and halted/booting write guard into src/shell/stored-key.ts (F18, never importing ./storage; no behaviour or message change; R6), and re-measure the unit suite (median of three warm npm test runs after a discarded warm-up and the slowest engine file's watch re-run, recorded in the plan), splitting src/architecture.test.ts with its exemption first if the median exceeds 5 s and stopping for the owner before built if it still does or a watch re-run exceeds 1 s."
+verify = "npm run test:all and npm run test:screens are green with every existing test passing unedited except imports, game.svelte.test.ts holding only game-store cases, the plan recording the warm median, the watch re-run and every change mapped to a deferred finding, and the median under 5 s or the owner stop recorded."
+covers = ["CAP-10"]
+after = [12]
+hitl = false
+risk = "low"
+unknown = "Scope beyond R6, R7 and the re-measure is unknown until the earlier builds finish."
+interface = "New src/shell/stored-key.ts and src/shell/history.svelte.test.ts; no export change outside src/shell/."
+tests = "Existing suites; AD-17 unit budget re-measure; no new rule coverage."
+owns = "R6, R7, the AD-17 re-measure and the architecture.test.ts split, the epic's deferred minors, and recording in its plan the AGENTS.md Where-things-are update (stored-key.ts, layout/, gestures/, act.ts) for a bmad-project-context refresh."
+references = ["spec — _bmad-output/specs/spec-epic-4-board/build-notes.md, CAP-10", "retro — _bmad-output/initiative-wordcell-v1/epic-app-shell/epic-app-shell-retrospective.md, Action items R6, R7"]

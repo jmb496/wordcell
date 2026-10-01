@@ -19,3 +19,10 @@ slug = "epic-app-shell"
 title = "App shell services"
 covers = []
 after = [{ epic = 2, needs = "the AD-2 engine surface (createSession, apply, accrue, view, parse/serialize, history functions), the command table, the valid and rejecting fixtures, and the R-02 golden deal test" }]
+
+[[epic]]
+id = 4
+slug = "epic-board-and-gestures"
+title = "Board and gestures"
+covers = []
+after = [{ epic = 3, needs = "the game store (dispatch, newGame, registerBeforeHide, halt), the overlays core and nav adapter, the dictionary showBanner state, motion.ts and text.ts, the test hook, touch/lifecycle/storage-spy helpers, the valid fixtures and the shared Playwright config" }]
