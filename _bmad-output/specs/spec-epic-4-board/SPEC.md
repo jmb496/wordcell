@@ -274,7 +274,7 @@ holds the how, the component tree and the spine close-out edits.
     closes on release unless the rendered sheet's scroll area overflows at release
     (`scrollHeight > clientHeight`, F14), when it stays as the sticky view and pushes one entry
     then (`peekToSticky`, above a kept tail-selection entry); a tap in Idle with
-    nothing selected or in Game over opens the sticky view (one entry) with the view title (Open Questions), bottom card first,
+    nothing selected or in Game over opens the sticky view (one entry) with the view title (F27), bottom card first,
     `top` on the last; a view lists `CellView.cards` in full, so in view, peek and hover peek a
     used cell's top (live in the tray or strip) is a normal-card mirror (AD-14), still tagged
     `top`, the count is `cards.length` and "empty" means `cards.length === 0` (P4: the used cell's
@@ -291,7 +291,7 @@ holds the how, the component tree and the spine close-out edits.
     long-press on a non-empty WordCell with a tail selected keeps the selection (on an empty one it
     deselects on release, CAP-6); a WordCell drag never lifts a tail
     (R-12); `desktop`: hovering 400 ms opens the hover peek above the cell (F19), the top 14
-    cards, oldest of them first, top card last and tagged `top`, a `+n older cards` line above
+    cards, oldest of them first, top card last and tagged `top`, a `+n older cards` line (F27) above
     them only above 14 cards, no scrim, takes no clicks, closes on leave, never opens during a drag or with a peek or view open (P4 `desktop`: hover 400 ms, then press
     and hold 400 ms → only the peek sheet visible);
     Playwright asserts that viewing never changes `current().session` or storage, and AD-13's
@@ -389,21 +389,20 @@ every P4 row of `rule-coverage.md` covered.
 
 ## Open Questions
 
-- Deploying epic 4 on its own: with the static tray (F2) the live site would let a player drop a
-  tail, set k from the column, Validate the dropped order and Confirm on the default cell, but not
-  arrange tiles, add free letters or choose a cell until epic 5, a draft of more than 14
-  tray tiles (two compact rows of 7 at both 360 and 412 px, DESIGN.md) is clipped by the static tray, hiding live word
-  cards, and a win shows no end sheet until epic 6; epic 4 also takes F1/F2/F17
-  from spine Proposed-epics row 5. Proposed default: merge and deploy as for epics 1–3, and
-  accept the row 5 move, folded into Proposed epics at close-out. (Owner.)
-- Spine bug report (AGENTS.md Policy): AD-11 makes `bannerShown` a latched copy of
-  `dictionary.state === 'failed'`, but Q-42 keeps the banner visible during a service-worker
-  retry. Default: latch `dictionary.showBanner` (Q-42 is spec text, which wins; F20) and fold the
-  correction into AD-11 at close-out. (Owner.)
-- PROPOSED BY REVIEW: the WordCell view and peek title (CAP-9). DESIGN.md asks for "cell number
-  and card count as the title", but EXPERIENCE.md's message catalogue has no wording, the
-  one-card form included. Proposed default: `WordCell 6 · 7 cards`, singular `WordCell 6 · 1
-  card`, in `text.ts`, added to the catalogue at close-out; likewise the hover peek's `+n older cards` has no n = 1 form: proposed `+1 older card`. (Owner.)
+None open for the build. The owner (Jared, 2026-10-01) answered three; each answer is a decision
+below (F27–F29). The spine bug report stands as a report, its default per AGENTS.md Policy:
+
+- Deploying epic 4 on its own (static tray F2, no end sheet until epic 6, F1/F2/F17 moved from spine
+  Proposed-epics row 5): accepted. Epic 4 is merged and deployed on its own like epics 1–3, after
+  the owner's go-ahead; the row 5 move is folded into Proposed epics at close-out (F29).
+- Spine bug report (AGENTS.md Policy): AD-11's `bannerShown` as a latched copy of
+  `dictionary.state === 'failed'` vs Q-42's banner kept during a service-worker retry. Not answered
+  2026-10-01; Q-42 is spec text and wins, so the default applies: latch `dictionary.showBanner`
+  (F20), correction folded into AD-11 at close-out.
+- The WordCell view and peek title and the hover peek's older-cards line (CAP-9): accepted as
+  proposed (F27).
+- A drag interrupted by the platform (e.g. an Android edge-swipe back) that had replaced a
+  tap-selected tail: it restores the earlier selection, as F24 states (F28).
 
 ## Decisions
 
@@ -438,3 +437,6 @@ Rationale in `build-notes.md`.
 | F24 | One `cancel` for hide, Undo and back. | `cancel({ byBack })` deselects only when the gesture it ends is a drag that replaced a selection, and `byBack` skips even that (`closedByBack` clears it); a release over nothing ending such a drag deselects (`overlays.deselect()`, entry popped), while a real `pointercancel`/`lostpointercapture` flies it back and restores the old selection's classes, selection and entry kept as with `byBack` (an Android edge-swipe may send `pointercancel` then back; `unverified`, epic 7); so hide during such a drag returns the tail and leaves nothing selected, its entry popped through nav's queue (`wc` 0 after `showPage`), while hide keeps a plain tap-selection; Undo, Redo, the banner `Reload` and the outside tap deselect in their own handlers. |
 | F25 | Outside-tap deselect. | The controller listens on App's active-branch root spanning the viewport (F8) (side margins, bars and banner included); presses on enabled buttons are never classified or captured (their `act()` handlers run), disabled controls fall through to this path. On the controller's `tap` classification for pointer input (`click` only for non-pointer activation, never both for one gesture), never on `pointerdown`; excludes `[data-wordcell]` (the controller handles WordCells; the cell-number labels sit outside it and take this path), the open view sheet and scrim (classified per CAP-9), and long-presses; `deselect()` with nothing selected is a no-op with no `nav` call. |
 | F26 | Hit rects (DESIGN.md Hit rects) vs the drawn card. | Each live card and WordCell element is a slot wrapper spanning its full slot pitch (w + 4 wide; strip or H tall) with the drawn face inside; the wrapper carries `data-card-id`, `data-testid` and `data-place` (AD-14's one live element), the face none and is `pointer-events: none`, so hit-testing and `elementFromPoint` see only wrappers. The 8 px selection lift moves only the face, so hit areas never move under a finger; a drag's `transform` moves the faces (the wrappers stay to draw the ghosts, CAP-7), and overlap uses the grabbed face's rect. |
+| F27 | WordCell view and peek title; hover peek older-cards line. | Owner, 2026-10-01: `WordCell 6 · 7 cards`, singular `WordCell 6 · 1 card`; `desktop` hover peek line `+1 older card` / `+n older cards`; all in `src/ui/text.ts`; EXPERIENCE.md's message catalogue gains them at close-out (`build-notes.md`). |
+| F28 | A platform-interrupted drag (e.g. Android edge-swipe back) that had replaced a tap-selected tail. | Owner, 2026-10-01: restores the earlier selection, as F24 states (real `pointercancel`/`lostpointercapture` → fly-back, old selection, classes and entry kept; a following back clears it via `closedByBack`). EXPERIENCE.md Drop targeting step 6, its Pointer thresholds line and spine AD-12 are amended at close-out (`build-notes.md`). |
+| F29 | Merge and deploy. | Owner, 2026-10-01: epic 4 is merged and deployed on its own like epics 1–3, after the owner's go-ahead; spine Proposed epics takes the F1/F2/F17 move from row 5 at close-out. |

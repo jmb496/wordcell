@@ -28,15 +28,31 @@ Spine edits are batched at close-out as in epic 3, so the R1 AD-13 record (retro
   epic 4 proves the one-overlay case with a tail selection and with the sticky view.
 - Proposed epics rows 4/5 (F1, F2, F17): epic 4 renders every `GameView` board state, a static tray
   (live tiles, no gestures) and the Composing column gestures; epic 5 keeps the tray interactions,
-  the WordCell commands in Composing and Place, the placement strip, FLIP and tray growth wiring.
+  the WordCell commands in Composing and Place, the placement strip, FLIP and tray growth wiring. Owner-accepted 2026-10-01 (F29): fold the move into Proposed epics; epic 4 is
+  merged and deployed on its own like epics 1–3, after the owner's go-ahead.
 - AD-12 (F13): cancel-on-back flies the tail back as for `pointercancel` (EXPERIENCE.md); cancel
   from `act()` and before-hide settles it at once, since a button press acts on the settled state.
   A real `pointercancel` ending a selection-replacing drag keeps the old selection (F24), unlike a
-  release over nothing.
+  release over nothing. Owner-confirmed 2026-10-01 (F28): amend AD-12 to say a drag interrupted by
+  the platform (e.g. an Android edge-swipe back) that had replaced a tap-selected tail restores the
+  earlier selection.
 - AD-12 (F26): "full slot pitch applies only to tile tap hit rects" reads as tile drags vs tile
   taps; column cards and WordCells also hit-test on the full slot pitch (DESIGN.md Hit rects).
 - AD-17 Touch (F10): `touch.ts` adds the stepwise held-touch API beside `touchDrag` and `longPress`.
 - AD-17 Speed: record the epic 4 warm median and, if it was done, the `architecture.test.ts` split.
+
+## EXPERIENCE.md close-out edits (owner answers 2026-10-01; EXPERIENCE.md is not edited by this epic)
+
+- Message catalogue (F27): add the WordCell view and peek title `WordCell 6 · 7 cards`, singular
+  `WordCell 6 · 1 card`, and the `desktop` hover peek line `+1 older card` / `+n older cards`, as
+  they stand in `src/ui/text.ts`.
+- Drop targeting by overlap step 6 (F24, F28): a drag that replaced a tap-selection and is
+  interrupted by the platform (real `pointercancel`/`lostpointercapture`, e.g. an Android
+  edge-swipe back) flies back and restores the earlier selection (lift, outline, foot states and
+  history entry kept); a release over nothing still leaves nothing selected.
+- Pointer thresholds, the `pointercancel` line (F24, F28): the same restore for a column drag that
+  replaced a tap-selection; a following back then clears the restored selection by the normal
+  back rule.
 
 ## As-built facts that bite (a887379)
 
