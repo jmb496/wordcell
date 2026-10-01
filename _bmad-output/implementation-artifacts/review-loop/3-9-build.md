@@ -1,6 +1,6 @@
 # Review loop — ticket 3.9 build (code, 43d46dc..5f2d46b)
 
-State: pass 1: done
+State: pass 2: done
 
 Target: `_bmad-output/implementation-artifacts/review-loop/3-9-build.passes/pass0.diff` (43d46dc..5f2d46b)
 Intent: `_bmad-output/initiative-wordcell-v1/epic-app-shell/story-dictionary-load-retry-and-validate-plan.md`
@@ -22,3 +22,26 @@ Fixer: all 4 applied (plan Design Notes 5 test names updated)
 ### Dropped
 - correctness [major] / intent [decision-needed] — banner hides after a successful in-place Reload under a controlling SW vs spec Q-42 / AD-8 / EXPERIENCE "stays until the next launch": the owner accepted the ticket review's proposed default (ticket review-log line 88: "recovered words make Validate work again and the banner then hides"), recorded in the epic and ticket Notes; the stale spec/spine/EXPERIENCE wording is owner-owned text already listed as deferred in the plan front matter. Not a code defect; carried to the owner as a doc sync.
 - edge cases [minor] — controller sampled at Reload tap rather than at the 404: the plan (Load bullet) specifies the tap-time read, and the owner decision is "a controlled page never reloads", which tap-time sampling implements.
+
+## Pass 2 — 2026-10-01
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 0, minor 3, decision-needed 0  |  Dropped in triage: 0
+Snapshot: tree 94bb292d4e3485627c894bf4c2ed1dfd3f6a09cd (no fix pass)  |  Verify: npm test 1612 passed (32 files), lint clean, check 0 errors
+### Applied
+- none (converged)
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Result — converged after 2 passes
+
+Majors per pass: 1, 0. Technical defaults applied: 1. Final state: npm test 1612 passed, lint clean, check 0 errors.
+
+Owner doc sync (not a code defect, carried from pass 1 triage): spec §9 Q-42, spine AD-8 Load bullet and EXPERIENCE.md State Patterns › Dictionary failed still say "under the service worker the banner stays until the next launch"; the owner decision of 2026-10-01 (retry in place, banner kept visible during the retry, hides once the list loads) is recorded only in the epic/ticket Notes and the spec memlog (plan front matter lists it as deferred).
+
+Unapplied minors:
+- src/ui/text.test.ts 'AD-8 invalidWord uppercases the engine spelling' — no QU case; add `text.invalidWord('quit')` → `QUIT isn't in the word list.`
+- e2e/dictionary.spec.ts 'AD-8 Timeout: …' — the 30 s banner check uses the default 5 s auto-retrying expect on a running page clock, so a 30–35 s timeout would pass; bound it (`toBeVisible({ timeout: 500 })`); the exact boundary stays in the shell Vitest.
+- src/shell/dictionary.svelte.test.ts (describe and two `it` names carrying "(Q-42)") — drop Q-42 from shell Vitest names so the controlled-SW branch stays open for epic 7 P7 (consistent with pass 1 item 4).
