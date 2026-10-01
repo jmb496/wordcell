@@ -44,9 +44,10 @@ contract; these notes fix what they leave open. `[ASSUMPTION]` marks inferences.
 ## Fixtures (with the CAP that first needs each)
 
 - CAP-4: `session-invalid-version-unknown.json` (new, below); `session-invalid-null.json`
-  (exists, `version-unreadable`); `session-invalid-s2-last-only.json` (exists, `replay-failed`:
-  `moves[1]` is below committed but not last, a Q-41 redo-tail violation past `cursor.index`
-  1). Only the unknown-version and replay-failed variants show a version number.
+  (exists, `version-unreadable`); `session-invalid-s2-last-only.json` (exists, pre-replay AD-7
+  check, `replay-failed`: `moves[1]` is below committed but not last, a Q-41 redo-tail violation
+  past `cursor.index` 1); `session-invalid-r50-placement-order.json` (exists, replay rule,
+  `replay-failed`). Only the unknown-version and replay-failed variants show a version number.
 - CAP-6: `session-won.json` with the history absent: Undo (un-finish, nothing to remove), Redo
   (finish appends), Undo (removes). `session-gave-up.json` + `history-three-records.json` (its
   last record equals `gameRecord` of `session-gave-up`: seed 1, `gaveUp`, −530, 1000 ms): Undo

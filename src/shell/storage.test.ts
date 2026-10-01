@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { HISTORY_KEY, PREFS_KEY, read, remove, SESSION_KEY, write } from './storage';
+import { HISTORY_KEY, isLocalArea, PREFS_KEY, read, remove, SESSION_KEY, write } from './storage';
 
 function fakeStorage(entries: Record<string, string> = {}) {
   const map = new Map(Object.entries(entries));
@@ -67,5 +67,13 @@ describe('storage.ts', () => {
     expect(read(SESSION_KEY)).toBe('second');
     write(SESSION_KEY, 'third');
     expect(second.map.get('wordcell:session')).toBe('third');
+  });
+
+  it('AD-7 isLocalArea is true only for the localStorage object', () => {
+    const local = fakeStorage();
+    vi.stubGlobal('localStorage', local);
+    expect(isLocalArea(local as unknown as Storage)).toBe(true);
+    expect(isLocalArea(fakeStorage() as unknown as Storage)).toBe(false);
+    expect(isLocalArea(null)).toBe(false);
   });
 });

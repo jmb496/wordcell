@@ -95,7 +95,7 @@ hitl = false
 risk = "medium"
 unknown = "None."
 interface = "game.svelte.ts gains registerLifecycle(), registerBeforeHide(fn), whenVisible(), isStale(); lifecycle.ts gains startHidden(page)."
-tests = "R-73 saved when hidden (hidePage, pageHide); R-73 activeMs flushed not on ticks; R-76 clock sentences; AD-17 hidePage single write and resume only when visible; Q-38 bfcache halt and mirror; AD-9 shell Vitest (registerBeforeHide order)."
+tests = "R-73 saved when hidden (hidePage, pageHide); R-73 activeMs flushed not on ticks; R-76 clock sentences; AD-17 hidePage single write and resume only when visible; Q-38 bfcache halt and mirror; AD-9 shell Vitest (registerBeforeHide order); AD-15 halted: hide flush writes no wordcell:session (Playwright, spy); AD-16 halted boot registers no lifecycle listeners (shell Vitest)."
 owns = "whenVisible (entry 9 uses it) and the isStale protocol (entries 7 and 10 implement it)."
 
 [[entry]]
@@ -141,7 +141,7 @@ hitl = false
 risk = "medium"
 unknown = "None."
 interface = "dictionary.svelte.ts exports state, words, load(), retry(); test hook gains dictionaryState(); primary-action gains the Validate path; banner component."
-tests = "R-38 shell load and Validate enablement; R-73 Validate saved; §2 replay never consults the dictionary (restore to Place with the route failing); Q-42 404 → reload; AD-8 shell Vitest (never-closing body → failed after 30 s fake time)."
+tests = "R-38 shell load and Validate enablement; R-73 Validate saved; §2 replay never consults the dictionary (restore to Place with the route failing); Q-42 404 → reload; AD-8 shell Vitest (never-closing body → failed after 30 s fake time); AD-16 halted boot requests no dictionary (Playwright)."
 owns = "The dictionary state, the banner and the Validate label rules."
 references = ["spec — _bmad-output/specs/spec-epic-3-app-shell/build-notes.md, CAP-8"]
 

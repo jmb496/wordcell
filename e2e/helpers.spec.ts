@@ -5,6 +5,7 @@ import { expect, type Page, test } from '@playwright/test';
 import { buildRoot } from './helpers/dist-test';
 import { hidePage, pageHide, pageShow, showPage } from './helpers/lifecycle';
 import { captureBoot, fixture, seedStorage } from './helpers/seed';
+import { armStorageSpy, storageWrites } from './helpers/storage-spy';
 import { longPress, touchDrag } from './helpers/touch';
 
 // AD-17 helper self-tests. The direct `page.evaluate` writes to `wordcell:*` below stand in for the
@@ -211,6 +212,70 @@ test.describe('seedStorage / captureBoot', () => {
     await captureBoot(fresh);
     await fresh.goto('/');
     await expect(captureBoot(fresh)).rejects.toThrow(/already called/);
+  });
+});
+
+test.describe('storage spy', () => {
+  test('AD-17 the spy records localStorage writes and removals in order across keys', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await armStorageSpy(page);
+    expect(await storageWrites(page)).toEqual([]);
+    await page.evaluate(() => {
+      localStorage.setItem('wordcell:prefs', 'p1');
+      localStorage.setItem('other', 'o');
+      localStorage.removeItem('wordcell:prefs');
+      localStorage.setItem('wordcell:session', 's');
+      localStorage.removeItem('absent');
+    });
+    expect(await storageWrites(page)).toEqual([
+      { key: 'wordcell:prefs', value: 'p1' },
+      { key: 'other', value: 'o' },
+      { key: 'wordcell:prefs', value: null },
+      { key: 'wordcell:session', value: 's' },
+      { key: 'absent', value: null },
+    ]);
+    expect(await readKey(page, 'session')).toBe('s');
+    expect(await readKey(page, 'prefs')).toBeNull();
+    await expect(armStorageSpy(page)).rejects.toThrow(/already armed/);
+  });
+
+  test('AD-17 the thrower records its key, throws storage-spy: <key> and leaves the stored value', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await armStorageSpy(page, { throwOn: 'wordcell:session' });
+    const before = await readKey(page, 'session');
+    expect(before).not.toBeNull();
+    const thrown = await page.evaluate(() => {
+      try {
+        localStorage.setItem('wordcell:session', 'x');
+        return null;
+      } catch (error) {
+        return (error as Error).message;
+      }
+    });
+    expect(thrown).toBe('storage-spy: wordcell:session');
+    expect(await readKey(page, 'session')).toBe(before);
+    await writeKey(page, 'prefs', 'p');
+    expect(await readKey(page, 'prefs')).toBe('p');
+    expect(await storageWrites(page)).toEqual([
+      { key: 'wordcell:session', value: 'x' },
+      { key: 'wordcell:prefs', value: 'p' },
+    ]);
+  });
+
+  test('AD-17 the spy does not record sessionStorage writes', async ({ page }) => {
+    await page.goto('/');
+    await armStorageSpy(page, { throwOn: 'wordcell:session' });
+    await page.evaluate(() => {
+      sessionStorage.setItem('wordcell:session', 's');
+      sessionStorage.setItem('other', 'o');
+      sessionStorage.removeItem('wordcell:session');
+    });
+    expect(await page.evaluate(() => sessionStorage.getItem('other'))).toBe('o');
+    expect(await storageWrites(page)).toEqual([]);
   });
 });
 

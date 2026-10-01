@@ -1,5 +1,9 @@
 <script lang="ts">
-import { game } from '../shell/game.svelte';
+import { game, type RejectReason } from '../shell/game.svelte';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import BlockingMessage from './BlockingMessage.svelte';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import Halted from './Halted.svelte';
 import { text } from './text';
 
 // Minimal board (epic 3 SPEC E1): columns, WordCells, Undo/Redo, the Seed line and the primary
@@ -21,6 +25,18 @@ function confirm(): void {
 
 function newGame(): void {
   game.newGame();
+}
+
+// §2 Session rejected: the catalogue body for the parse reason (EXPERIENCE.md message catalogue).
+function rejectedBody(reason: RejectReason): string {
+  switch (reason.reason) {
+    case 'version-unknown':
+      return text.rejectedVersionUnknown(reason.version);
+    case 'version-unreadable':
+      return text.rejectedVersionUnreadable;
+    case 'replay-failed':
+      return text.rejectedReplayFailed(reason.version);
+  }
 }
 
 // Label precedence: status ≠ playing → New game whatever the phase; otherwise by phase. Validate
@@ -49,7 +65,16 @@ const primary = $derived.by(
 );
 </script>
 
-{#if game.state.kind === 'active' && board}
+{#if game.state.kind === 'halted'}
+  <Halted />
+{:else if game.state.kind === 'rejected'}
+  <BlockingMessage
+    title={text.rejectedTitle}
+    body={rejectedBody(game.state.reason)}
+    action={text.newGame}
+    onaction={newGame}
+  />
+{:else if game.state.kind === 'active' && board}
   <main>
     <div class="top">
       <h1>WordCell</h1>

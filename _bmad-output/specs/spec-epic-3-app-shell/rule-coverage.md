@@ -18,13 +18,13 @@ with no R-id sentence; `AD-n …` for spine behaviour with no rule id (AGENTS.md
 
 | Sentence | CAP | Kind | Notes |
 | --- | --- | --- | --- |
-| Unknown `version` rejected on launch; message naming the version; New game offered; stored session not overwritten until the player starts one | 4 | P3 | One test per EXPERIENCE.md variant: `session-invalid-version-unknown` (new fixture, version 3), `session-invalid-null` (`version-unreadable`), `session-invalid-s2-last-only` (`replay-failed`); each asserts its catalogue text (the stored version only in the unknown-version and replay-failed variants), only New game, `wordcell:session` byte-identical after a reload, and New game writing a fresh Session at once. |
+| Unknown `version` rejected on launch; message naming the version; New game offered; stored session not overwritten until the player starts one | 4 | P3 | One test per variant (four): `session-invalid-version-unknown` (new fixture, version 3), `session-invalid-null` (`version-unreadable`), `session-invalid-s2-last-only` (pre-replay AD-7 check, `replay-failed`), `session-invalid-r50-placement-order` (replay rule, `replay-failed`); each asserts its catalogue text (the stored version only in the unknown-version and replay-failed variants), only New game, `wordcell:session` byte-identical after a reload, and New game writing a fresh Session at once. |
 | History unreadable or unknown version: reported with a message naming its version and a Reset history action | 7 | P3 | History notice, three version sentences (unknown, unreadable version, unreadable contents). |
 | The stored score history is never overwritten silently | 6, 7 | P3 | Bytes unchanged after a finish, an un-finish, New game and reload while unreadable; changed only by Delete history. |
 | Statistics are unavailable until the player resets it | — | P4–6 | Statistics panel (epic 6); the store's `statistics` absent while unreadable is S. |
 | A game that finishes meanwhile still finishes; its record is not written | 6 | P3 | Redo onto a winning commit from a seeded fixture with an unreadable history: status won in `current()`, history bytes unchanged. |
 | … the end screen repeats the message with the Reset action (Q-33) | — | P4–6 | End sheet, epic 6. |
-| Replay's first violation aborts the load and is surfaced exactly like an unknown `version` | 4 | P3 | The `replay-failed` variant above, from `session-invalid-s2-last-only` (redo-tail violation, Q-41 order). |
+| Replay's first violation aborts the load and is surfaced exactly like an unknown `version` | 4 | P3 | The replay-rule `replay-failed` variant above, from `session-invalid-r50-placement-order`; `session-invalid-s2-last-only` is the pre-replay AD-7 check (redo-tail violation, Q-41 order). |
 | Replay never consults the dictionary | 8 | P3 | Redo into Place from Composing works while the dictionary route fails (Validate disabled); a reload of a seeded Place fixture with the dictionary route failing restores to Place. V in epic 2. |
 | `status` and "in progress" derivation | — | V | Epic 2; the New game/Replay confirm is P4–6. |
 
@@ -97,7 +97,7 @@ with no R-id sentence; `AD-n …` for spine behaviour with no rule id (AGENTS.md
 | AD-9 clock fractional carry, `peek`, resume/pause idempotence, `registerBeforeHide` order | 3, 5 | S |
 | AD-13 launch rewind, stale launch ignored, Forward correction, queued pop before push, reload cases as restated for epic 3 (notice re-pushed at boot, `{ wc: 1, launch: <new> }`, back closes it, next back leaves; literal plain-overlay wording re-proven in epics 4/6), win → New game → back leaves the app (smoke; the end-sheet-expanded discriminating case is P4–6) | 7 | P3 + S + P4–6 |
 | AD-13 launch rewind with no `popstate` within 250 ms → AD-15 | 7 | S (`nav.ts` Vitest, stubbed history that never fires `popstate`) |
-| AD-15 fatal before and after mount; Session and history writes blocked while halted | 4 | P3 |
+| AD-15 fatal before and after mount; Session and history writes blocked while halted | 4, 5 | P3 |
 | AD-15 a prefs setter throwing while halted | 9 | S (AD-10); P4–6 with the Preferences panel |
 | AD-15 `scoreHistory.reset()` throwing while halted | 6 | S |
 | AD-16 boot order (nothing written before the font check, rejected root before the History notice, dictionary after first paint: `card-0` and `primary-action` in the DOM when the held `**/en*.txt` request arrives; a `startHidden` page requests it only after `showPage`, via the store's `whenVisible()`) | 8, 10 | P3 (the double rAF and `whenVisible` themselves S) |

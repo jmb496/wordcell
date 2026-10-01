@@ -67,8 +67,11 @@ function fakeStorage(stored: string | undefined) {
   };
 }
 
-// Fresh store and clock modules per test, over stubbed localStorage, performance and crypto.
+// Fresh store and clock modules per test, over stubbed window (an EventTarget: the store adds its
+// Q-38 `storage` listener at import), localStorage, performance and crypto.
 async function setup(options: Options = {}) {
+  const win = new EventTarget();
+  vi.stubGlobal('window', win);
   vi.resetModules();
   const storage = { ...fakeStorage(options.stored), ...options.storage };
   vi.stubGlobal('localStorage', storage);
@@ -85,7 +88,11 @@ async function setup(options: Options = {}) {
   }
   const { game } = await import('./game.svelte');
   const clock = await import('./clock');
-  return { game, clock, storage, time };
+  // A synthetic `storage` event (another window's write) dispatched on the stubbed window.
+  const storageEvent = (key: string | null, area: object, newValue: string | null = 'x') => {
+    win.dispatchEvent(Object.assign(new Event('storage'), { key, newValue, storageArea: area }));
+  };
+  return { game, clock, storage, time, storageEvent };
 }
 
 async function active(stored: string) {
@@ -486,4 +493,137 @@ describe('game store feedback', () => {
     game.replay();
     expectCleared(game.feedback);
   });
+});
+
+describe('game store halt', () => {
+  const SESSION_STORAGE = { getItem: () => null };
+  const HALTED = { kind: 'halted' };
+
+  const beforeLoad: [string, string | undefined, object][] = [
+    ['the key absent', undefined, { session: null }],
+    ['a valid Session', JSON.stringify(place), { session: place }],
+    [
+      'a rejected Session',
+      JSON.stringify(invalidNull),
+      { session: { rejected: { reason: 'version-unreadable' } } },
+    ],
+  ];
+  for (const [name, stored, launch] of beforeLoad) {
+    it(`AD-4 a storage event before load with ${name}: load writes nothing and stays halted`, async () => {
+      const { game, storage, storageEvent } = await setup({ stored, seed: 7 });
+      storageEvent(KEY, storage);
+      expect(game.current()).toEqual(HALTED);
+      expect(game.haltCause).toBe('another-window');
+      expect(() => game.load()).not.toThrow();
+      expect(storage.writes).toEqual([]);
+      expect(game.current()).toEqual(HALTED);
+      expect(game.haltCause).toBe('another-window');
+      expect(game.view).toBeUndefined();
+      expect(game.loaded()).toEqual(launch);
+    });
+  }
+
+  it('AD-4 fatal then a storage event: the cause stays fatal with its text', async () => {
+    const { game, storage, storageEvent } = await active(JSON.stringify(place));
+    game.halt('fatal', 'boom');
+    storageEvent(KEY, storage);
+    expect(game.current()).toEqual(HALTED);
+    expect(game.haltCause).toBe('fatal');
+    expect(game.haltText).toBe('boom');
+  });
+
+  it('AD-4 a storage event then fatal: the cause becomes fatal with its text', async () => {
+    const { game, storage, storageEvent } = await active(JSON.stringify(place));
+    storageEvent(KEY, storage);
+    expect(game.haltCause).toBe('another-window');
+    expect(game.haltText).toBeUndefined();
+    game.halt('fatal', 'boom');
+    expect(game.current()).toEqual(HALTED);
+    expect(game.haltCause).toBe('fatal');
+    expect(game.haltText).toBe('boom');
+  });
+
+  it('AD-4 a second fatal replaces the text', async () => {
+    const { game } = await active(JSON.stringify(place));
+    game.halt('fatal', 'first');
+    game.halt('fatal', 'second');
+    expect(game.haltCause).toBe('fatal');
+    expect(game.haltText).toBe('second');
+  });
+
+  it('AD-4 rejected + a storage event halts with another-window', async () => {
+    const { game, storage, storageEvent } = await active(JSON.stringify(invalidNull));
+    storageEvent(KEY, storage);
+    expect(game.current()).toEqual(HALTED);
+    expect(game.haltCause).toBe('another-window');
+    expect(storage.writes).toEqual([]);
+  });
+
+  it('AD-4 rejected + halt(fatal) halts with fatal', async () => {
+    const { game } = await active(JSON.stringify(invalidNull));
+    game.halt('fatal', 'boom');
+    expect(game.current()).toEqual(HALTED);
+    expect(game.haltCause).toBe('fatal');
+    expect(game.haltText).toBe('boom');
+  });
+
+  const ignored: [string, string | null, 'local' | 'session'][] = [
+    ['a foreign localStorage key', 'other:key', 'local'],
+    ['a sessionStorage wordcell:session', KEY, 'session'],
+    ['a sessionStorage clear (key null)', null, 'session'],
+  ];
+  for (const [name, key, area] of ignored) {
+    it(`AD-4 ${name} does not halt`, async () => {
+      const { game, storage, storageEvent } = await active(JSON.stringify(place));
+      storageEvent(key, area === 'local' ? storage : SESSION_STORAGE);
+      expect(game.current().kind).toBe('active');
+      expect(game.haltCause).toBeUndefined();
+    });
+  }
+
+  const halting: [string, string | null, string | null][] = [
+    ['wordcell:session removed (newValue null)', KEY, null],
+    ['a localStorage clear (key null)', null, null],
+    ['wordcell:prefs written', 'wordcell:prefs', '{}'],
+  ];
+  for (const [name, key, newValue] of halting) {
+    it(`AD-4 ${name} halts with another-window`, async () => {
+      const { game, storage, storageEvent } = await active(JSON.stringify(place));
+      storageEvent(key, storage, newValue);
+      expect(game.current()).toEqual(HALTED);
+      expect(game.haltCause).toBe('another-window');
+    });
+  }
+
+  it('AD-4 haltCause and haltText are undefined while booting, active and rejected', async () => {
+    const booting = await setup({ stored: JSON.stringify(place) });
+    expect(booting.game.haltCause).toBeUndefined();
+    expect(booting.game.haltText).toBeUndefined();
+    booting.game.load();
+    expect(booting.game.current().kind).toBe('active');
+    expect(booting.game.haltCause).toBeUndefined();
+    expect(booting.game.haltText).toBeUndefined();
+    const { game } = await active(JSON.stringify(invalidNull));
+    expect(game.current().kind).toBe('rejected');
+    expect(game.haltCause).toBeUndefined();
+    expect(game.haltText).toBeUndefined();
+  });
+
+  const commands: [string, (game: Awaited<ReturnType<typeof setup>>['game']) => unknown][] = [
+    ['dispatch', (game) => game.dispatch(UNDO)],
+    ['newGame', (game) => game.newGame()],
+    ['replay', (game) => game.replay()],
+  ];
+  for (const [name, call] of commands) {
+    it(`AD-15 while halted (from active) ${name} throws and writes nothing`, async () => {
+      const text = JSON.stringify(place);
+      const { game, storage } = await setup({ stored: text, seed: 7 });
+      game.load();
+      game.halt('fatal', 'boom');
+      expect(() => call(game)).toThrow('while halted');
+      expect(storage.writes).toEqual([]);
+      expect(storage.map.get(KEY)).toBe(text);
+      expect(game.current()).toEqual(HALTED);
+    });
+  }
 });

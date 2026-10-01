@@ -18,3 +18,8 @@ export function write(key: StorageKey, text: string): void {
 export function remove(key: StorageKey): void {
   localStorage.removeItem(key);
 }
+
+/** Q-38: whether a `storage` event's area is this origin's `localStorage` (not sessionStorage). */
+export function isLocalArea(area: Storage | null): boolean {
+  return area !== null && area === localStorage;
+}

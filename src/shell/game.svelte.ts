@@ -1,7 +1,9 @@
 // AD-4 game store: the one writer. `load()` (called by `main.ts` before mount) enters `active` or
 // `rejected`; `dispatch` is the only way a player action reaches the engine; `newGame()` and
 // `replay()` start a fresh Session (R-74). `feedback.rejectedWord` is the last failed Validate's
-// spelling (R-38). `halted` (AD-15, Q-38) is not reachable yet.
+// spelling (R-38). `halt()` enters `halted` from any state (AD-15 fatal from the `main.ts`
+// handlers, Q-38 another-window from the `storage` listener registered at import); while halted
+// nothing writes and `load()` only records the launch result.
 import {
   accrue,
   apply,
@@ -18,7 +20,7 @@ import {
 import * as clock from './clock';
 import { words } from './dictionary.svelte';
 import { newSeed } from './seed';
-import { read, SESSION_KEY, write } from './storage';
+import { isLocalArea, read, SESSION_KEY, write } from './storage';
 
 /** AD-4: a failed `parseSession` result without `ok`. */
 export type RejectReason = ParseSessionResult extends infer R
@@ -57,7 +59,13 @@ export interface Feedback {
   readonly rejectedWord?: string;
 }
 
+/** AD-15/Q-38: why the store is halted; a fatal always wins over another-window. */
+export type HaltCause = 'fatal' | 'another-window';
+
 let state = $state.raw<GameState>({ kind: 'booting' });
+let halted = $state.raw<{ cause: 'fatal'; text: string } | { cause: 'another-window' } | undefined>(
+  undefined,
+);
 let launch: Loaded | undefined;
 let feedback = $state.raw<Feedback>({});
 
@@ -72,6 +80,18 @@ function rejectReason(parsed: Exclude<ParseSessionResult, { ok: true }>): Reject
 }
 
 function load(): void {
+  if (state.kind === 'halted') {
+    // Q-38: halted during boot; record the launch result (AD-17 `loaded()`) and write nothing.
+    if (launch !== undefined) throw new Error('AD-4 load() called twice');
+    const stored = read(SESSION_KEY);
+    if (stored === null) {
+      launch = { session: null };
+      return;
+    }
+    const result = parseSession(stored, EN);
+    launch = { session: result.ok ? result.session : { rejected: rejectReason(result) } };
+    return;
+  }
   if (state.kind !== 'booting') throw new Error(`AD-4 load() while ${state.kind}`);
   const text = read(SESSION_KEY);
   if (text === null) {
@@ -147,6 +167,20 @@ function replay(): void {
   fresh(state.session.seed);
 }
 
+/** AD-15: a fatal error; replaces the text of an earlier fatal and any another-window cause. */
+function halt(cause: 'fatal', text: string): void;
+/** Q-38: another window wrote a `wordcell:` key; an earlier fatal keeps its cause and text. */
+function halt(cause: 'another-window'): void;
+function halt(cause: HaltCause, text?: string): void {
+  if (cause === 'fatal') {
+    if (text === undefined) throw new Error('AD-15 halt(fatal) without text');
+    halted = { cause, text };
+  } else if (halted?.cause !== 'fatal') {
+    halted = { cause };
+  }
+  if (state.kind !== 'halted') state = { kind: 'halted' };
+}
+
 function loaded(): Loaded {
   if (launch === undefined) throw new Error(`AD-17 loaded() while ${state.kind}`);
   return launch;
@@ -166,6 +200,15 @@ export const game = {
   get feedback(): Feedback {
     return feedback;
   },
+  /** AD-4: undefined unless halted. */
+  get haltCause(): HaltCause | undefined {
+    return state.kind === 'halted' ? halted?.cause : undefined;
+  },
+  /** AD-15: the fatal error text; undefined unless halted with cause `fatal`. */
+  get haltText(): string | undefined {
+    return state.kind === 'halted' && halted?.cause === 'fatal' ? halted.text : undefined;
+  },
+  halt,
   load,
   dispatch,
   newGame,
@@ -173,3 +216,10 @@ export const game = {
   loaded,
   current,
 };
+
+// Q-38: another window wrote (or cleared) a `wordcell:` key in this origin's localStorage.
+// Registered at import, while booting (AD-15: listener registration only, no storage reads).
+window.addEventListener('storage', (event) => {
+  if (!isLocalArea(event.storageArea)) return;
+  if (event.key === null || event.key.startsWith('wordcell:')) halt('another-window');
+});

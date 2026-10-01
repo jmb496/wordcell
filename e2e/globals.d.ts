@@ -21,5 +21,7 @@ declare global {
       'wordcell:session' | 'wordcell:history' | 'wordcell:prefs',
       string | null
     >;
+    // e2e/helpers/storage-spy.ts: localStorage writes in order (removeItem as a null value).
+    __wordcellStorageWrites?: { key: string; value: string | null }[];
   }
 }
