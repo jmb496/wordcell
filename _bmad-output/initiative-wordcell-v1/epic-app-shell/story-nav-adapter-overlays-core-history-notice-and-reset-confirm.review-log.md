@@ -1,5 +1,5 @@
 # Review log — story-nav-adapter-overlays-core-history-notice-and-reset-confirm (ticket 3.8)
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 266 words, snapshot `story-nav-adapter-overlays-core-history-notice-and-reset-confirm.passes/pass0.md`, HEAD 2a6822b.
 Note: the pull from tickets.toml entry 8 dropped `interface`, `tests`, `owns`; they are passed to reviewers and fixer as intent, and the pass 1 fixer adds them to the Description as `Interface:`, `Tests:`, `Owns:` lines.
@@ -34,3 +34,31 @@ Words (docs): 1084 (4.1 x pass 0)  |  Snapshot: story-nav-adapter-overlays-core-
 - History notice — should tapping outside the notice (on the dimmed board) dismiss it like Not now, and should keyboard focus start on Not now? EXPERIENCE gives these only for confirm dialogs — proposed default: yes, same as the confirm dialog (focus on Not now, scrim tap acts as Not now)
 ### Dropped
 - 17 duplicates of the above across lenses
+
+## Pass 2 — 2026-10-01
+Reviewers: fix diff, edge-case, adversarial, ref alignment  |  Findings: major 6, minor 7, decision-needed 0  |  Dropped in triage: 9 (duplicates: stale-launch end state ×3, native dialog ×1, focus/reset/unregistered tests ×3, before-back S half ×1, expect.poll ×1)
+### Applied
+- [major] Tests P3 Stale launch — after goForward() onto the ignored entry the page stays there; first back returns to { wc: 0, launch: <new> }, the next back leaves → fixer 1
+- [major] Dialog — a native showModal <dialog> takes Android back as its own close request (no popstate); build a non-native dialog → fixer 2
+- [major] Tests — ticket 3.7 carry-forward: e2e/history.spec.ts §2 unreadable test must tap Not now before its first Undo → fixer 3
+- [major] Tests — stated rules untested: focus on Keep it, Esc leaves the confirm open, board inert under the scrim, resetForNewSession (U), popstate before register() throws (S) → fixer 4
+- [major] Variant sentences — interpolation tested only with 2 (= catalogue sample); U case with another version → fixer 5
+- [major] Dialog — notice/confirm while the store halts (throwing Delete history write, fatal, another window) unspecified → fixer 6
+- [minor] rewind timeout rejects launch() (boot's await carries it to AD-15), not a throw inside the timer → fixer 7
+- [minor] S nav case: drop "nor a before-back hook" (no hook in epic 3) → fixer 8
+- [minor] open(id) on an already-open id throws (U) → fixer 9
+- [minor] history.state assertions after queued pops / Forward use expect.poll → fixer 10
+- [minor] reload cases: "full flow" → the Verify flows incl. both reload cases; <new> = launch differs from before the reload → fixer 11
+- [minor] once-per-launch/deferred flag: one module-level flag in one src/ui module → fixer 12
+- [minor] win smoke uses the history-invalid-* exemption; plan records it → fixer 13
+Fixer: all 13 items applied (item 7: the S rejection assertion detail left to the plan).
+Words (docs): 1382 (5.2 x pass 0)  |  Snapshot: story-nav-adapter-overlays-core-history-notice-and-reset-confirm.passes/pass2.md
+### Default applied (technical)
+- Dialog — non-native element (role="dialog", aria-modal="true", own scrim, board `inert`), never showModal()
+- halted — notice and confirm render only while the store is not halted; entries stay in the overlay stack
+- nav launch timeout — launch() rejects after 250 ms without popstate
+- overlays open(id) on an open id throws (rule 6)
+### Decision needed (functionality / UX / gameplay)
+- none new (pass 1's History-notice scrim/focus question stays open)
+### Dropped
+- 9 duplicates (see header)
