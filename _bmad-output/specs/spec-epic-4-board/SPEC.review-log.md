@@ -1,0 +1,49 @@
+# Review log — spec-epic-4-board (SPEC.md + rule-coverage.md + build-notes.md)
+
+State: pass 1: done
+
+Mode: docs, thorough, max 7. Pre-loop: HEAD 1c93404; copies at SPEC.review-log.passes/pass0/; words 8184 (SPEC 3515, rule-coverage 2298, build-notes 2371).
+Caller rule: stop as diverging if majors rise pass-over-pass.
+
+## Pass 1 — 2026-10-01
+Reviewers: builder's reading, edge-case hunter, adversarial, ref alignment  |  Findings: major 19, minor 13, decision-needed 0  |  Dropped in triage: 0 (duplicates merged across lenses)
+### Applied (sent to fixer)
+- [major] CAP-4/F9 — `act()` cancel-first on the Blocking message before the controller exists (standalone Halted surface) → 1
+- [major] CAP-1/build-notes — `BAND_ORDER` shape contradictory (11 bands vs 9 ids, gaps separate); invalid `?bands=` → 2
+- [major] CAP-7 — drag replacing a selection: old selection visuals mid-drag under F12; drag from the selected source column unspecified → 3
+- [major] CAP-4/CAP-8 — after `cancel()`/`pointercancel` the held pointer's later events, destination-card press and long-press timer; `lostpointercapture`, non-primary buttons → 4
+- [major] CAP-4 — the before-back cancel must be distinguishable (no `deselect()`) from hide/Undo cancel → 5
+- [major] CAP-5 — peek / hover-peek open state has no owner in the overlays store → 6
+- [major] CAP-4 — press resolution: tray/strip tiles and WordCell stack cards carry `data-card-id` → 7
+- [major] rule-coverage AD-12 cancel-first P4 — second-touch Undo unwritable; second pointer must not block native buttons → 8
+- [major] CAP-3 — banner-during-scroll test not reproducible → 9
+- [major] Assumptions/rule-coverage S rows — node Vitest needs pure seams (classify, gate injection); AD-16 S unwritable → 10
+- [major] F20 — contradicts AD-11 text; builder must stop under Policy unless the spec states the spec-wins supersession → 11
+- [major] rule-coverage R-75/R-65/R-22 — fixtures cannot carry the assertions (gave-up cells empty; no Idle non-empty cell; no empty-column Idle) → 12
+- [major] CAP-1/CAP-3 — innerHeight-only re-layout outcome unspecified, untested → 13
+- [major] CAP-9/F14 — overflow decided by a guessed-padding formula, not the rendered sheet → 14
+- [major] CAP-6/build-notes — deselect on capture `pointerdown` clears selection on long-press/pan; must be a completed tap → 15
+- [major] F13 — press during fly-back must act on the settled layout → 16
+- [major] CAP-9 — sticky view must scroll (pan-y) and close only on a tap → 17
+- [major] CAP-10/F18 — retro R6's `loaded()` pattern dropped → 18
+- [major] CAP-8/CAP-9 — WordCell tap/drag in Composing and Place in epic 4 unspecified → 19
+- [minor] R6/R7 labels swapped in build-notes and F18 → 20
+- [minor] R-03 test named `AD-3` against the naming rule → 21
+- [minor] CAP-1 inset case lacks expected numbers → 22
+- [minor] CAP-1 no case for height rule above innerHeight (desktop 720) → 23
+- [minor] CAP-6 re-select both directions → 24
+- [minor] C-E4a letter read vs `QU` ×2 badge → 25
+- [minor] CAP-9 hover peek must close on `pointerdown` → 26
+- [minor] DESIGN.md desktop foot number and Undo/Redo tooltips dropped silently → 27
+- [minor] rule-coverage: AD-11 tray-growth bounding-box test unrouted (P5) → 28
+- [minor] Success signal "lights while over it" needs `touchHold` → 29
+- [minor] Constraints test split vs `dist-smoke` row; "dist-smoke build" wording; Game-over fixture unnamed → 30
+### Default applied (technical)
+- all 19 majors take the reviewers' recommended defaults (see fixer items)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none (duplicates across lenses merged)
+### Fixer outcome
+All 30 items applied (fixer summary): new Decisions F21 (innerHeight-only re-layout), F22 (BAND_ORDER units), F23 (press resolution by data-place), F24 (cancel({ byBack })), F25 (deselect on completed tap); new scripted fixtures planned `session-idle-empty-column`, `session-gave-up-after-commit`; numbers checked against DESIGN.md arithmetic; `Locator.dispatchEvent` checked in Playwright 1.63. Unverified: band unit id names ([ASSUMPTION]), Chromium pointer events on disabled buttons (as before).
+Words: 10011 (1.22 x pass 0)  |  Snapshot: SPEC.review-log.passes/pass1/ ; fix diff pass1.fix.diff

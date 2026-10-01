@@ -14,10 +14,13 @@ the contract; these notes fix what they leave open. `[ASSUMPTION]` marks inferen
 - AD-9/AD-17: the gesture-cancel half of the hide assertion lands (epic 3 build-notes "Not folded"
   note, retrospective S2, C-E4b): name the Playwright test that proves it.
 - AD-12 (R2, F9): the cancel-first list widens to every dialog, notice, dictionary-banner and
-  Blocking-message action, matching AGENTS.md's "(opening it and its items)"; all go through one UI
-  helper that epic 6's menu and `keys.ts` reuse.
+  Blocking-message action mounted after the controller, matching AGENTS.md's "(opening it and its
+  items)"; all go through one UI helper that epic 6's menu and `keys.ts` reuse. The standalone
+  Halted surface's Reload (font-check `fatal()`, `game.load()` halted return) mounts before the
+  controller and is exempt.
 - AD-11 (F20): `bannerShown` is the gate-latched copy of `dictionary.showBanner` (`failed`, or the
-  Q-42 kept banner during a service-worker retry), not `state === 'failed'`.
+  Q-42 kept banner during a service-worker retry), not `state === 'failed'`. A reported spine bug
+  (Q-42 wins per AGENTS.md Policy); the build does not stop on it.
 - AD-13 (F16): the two-plain-overlay reload case is proven in epic 6 (menu plus confirm dialog);
   epic 4 proves the one-overlay case with a tail selection and with the sticky view.
 - Proposed epics rows 4/5 (F1, F2, F17): epic 4 renders every `GameView` board state, a static tray
@@ -82,10 +85,12 @@ Components receive `GameView` slices and UI state as props; none imports the eng
 
 ## CAP-1 Layout definition and geometry
 
-- `BAND_ORDER` ids [ASSUMPTION]: `topBar`, `banner`, `leftover`, `columns` (with the foot row),
-  `trayGap` (4 px, grouped with the tray), `tray`, `wordcells` (labels 16 px + cells), `actionGap`
-  (8 px, grouped with the action bar), `actionBar`. "Each gap with its lower neighbour" and
-  "labels with the WordCell row" are units, so a fallback order moves them together.
+- `BAND_ORDER` (F22) [ASSUMPTION ids]: units `[['topBar'], ['banner'], ['leftover'],
+  ['columns'], ['footRow'], ['trayGap', 'tray'], ['labels', 'wordcells'], ['actionGap',
+  'actionBar']]`, the eleven AD-11 bands (gaps 4 px and 8 px with their lower neighbour, labels
+  16 px with the WordCell row). A unit's id for `?bands=` is its non-gap, non-label band
+  [ASSUMPTION]: `topBar,banner,leftover,columns,footRow,tray,wordcells,actionBar`; a list that is
+  not a permutation of them throws (AD-15).
 - `cardWidth`: available width = innerWidth − 2 × (hoverFine ? 16 : 4); width-derived
   `floor(avail / 8 − 4)`; height-derived = the largest integer w whose height-rule sum (with
   insets, H = round(4w/3), strip = max(44, round(0.72 H)), tray reserved = 24 + max(H, 92) + 44 +
@@ -98,6 +103,10 @@ Components receive `GameView` slices and UI state as props; none imports the eng
   `max(0, r × 44 + (r − 1) × 4 − max(H, 92))`. Epic 5 feeds real values; epic 4 always passes 1.
 - The w-recompute predicate is a pure function of (last w inputs, new innerWidth/innerHeight):
   recompute iff innerWidth changed or |ΔinnerHeight| ≥ 80 px against the last computation.
+- innerHeight-only change under 80 px (F21): `bands(...)` recomputes leftover = max(0,
+  innerHeight − sum − banner); the anchor offset changes by exactly the leftover change, which
+  keeps its distance to the viewport bottom, so the layout module applies no `scrollTop` delta;
+  past exhaustion the page scrolls by the shortfall.
 
 ## CAP-2 Board render
 
@@ -118,8 +127,10 @@ Components receive `GameView` slices and UI state as props; none imports the eng
   its hatch at 40 % and the whole cell at 35 %.
 - Visually hidden `h1` `WordCell`; replace every `Seed <n>` read in specs with
   `current().session.seed` (F4).
-- C-E4a: extend `smoke.spec.ts` to assert every column's letters top→bottom for
-  `session-idle-fresh` (literal lists, as column 1's `L D X O M I W` today), not only column 1.
+- C-E4a: extend `smoke.spec.ts`, as `R-03 …`, to assert every column's letters top→bottom for
+  `session-idle-fresh` (literal lists, as column 1's `L D X O M I W` today), not only column 1;
+  read each card's letter from its glyph element so the `QU` ×2 badge does not pollute the text,
+  `QU` written as `QU`.
 - Screenshots: `e2e/board.screens.spec.ts` with Idle (`session-idle-fresh`), Composing
   (`session-composing`), Place (`session-place-free-letter-redo-tail`) and Game over
   (`session-gave-up`) on both projects; delete the placeholder spec and baselines.
@@ -131,7 +142,8 @@ Components receive `GameView` slices and UI state as props; none imports the eng
   through `gate.whenIdle(fn)`; it applies `scrollTop += delta` in the same frame it re-lays bands.
 - Insets probe: an absolutely positioned, invisible element with `padding: env(safe-area-inset-*)`,
   read with `getComputedStyle`.
-- `gate.ts`: a counter (`enter()`/`leave()`) for gestures and running animations, a scroll-busy
+- `gate.ts` (`createGate({ raf, setTimer, clearTimer })`, injected for S tests): a counter
+  (`enter()`/`leave()`) for gestures and running animations, a scroll-busy
   flag (`scroll` sets, `scrollend` or a 150 ms quiet timer or the before-hide reset clears),
   `whenIdle(fn)` queues work for the first `requestAnimationFrame` with the gate idle.
 - Score text `Score <n>` goes in `text.ts` (`score(n)`), with U+2212 for negatives.
@@ -141,29 +153,49 @@ Components receive `GameView` slices and UI state as props; none imports the eng
   Pixel 7 card size (46 × 61, font-independent); never a text-dependent px value.
 - Banner anchoring test: a viewport with leftover < 44 px (e.g. 412 × 780 → leftover 42 at
   w = 46) and the dictionary route failing; record the WordCell row box before and after the banner
-  appears. Scroll test: start a scroll (`page.mouse.wheel` on desktop or a touch pan on a `pan-y`
-  region), fail the dictionary during it, assert the banner applies only after `scrollend`.
+  appears. Scroll test: a viewport where the page scrolls (e.g. 412 × 700 → w 40, sum 722), the
+  dictionary route held; start an in-page `scrollBy` loop every 50 ms, fulfil the route with a
+  failure, assert no banner while the loop runs, stop it, assert the banner appears after
+  `scrollend` or the 150 ms backstop.
 
 ## CAP-4 Pointer controller core and cancel wiring
 
 - `createController()` returns `{ cancel, attach(root) }` [ASSUMPTION]; listeners on the board
-  root for `pointerdown`, then `setPointerCapture` on the pressed element; `pointermove`,
-  `pointerup`, `pointercancel` on it; a second `pointerId` is ignored until the first ends.
-- Press targets are found by `closest('[data-card-id]')`, `closest('[data-column]')`,
-  `closest('[data-wordcell]')`, `closest('[data-foot]')` [ASSUMPTION attribute names, not test
-  ids]; drop targets register with `use:dropTarget={{ kind: 'column', id }}` on the whole slot.
+  root for `pointerdown` (`button !== 0` ignored), then `setPointerCapture` on the pressed
+  element; `pointermove`, `pointerup`, `pointercancel`, `lostpointercapture` on it; a second
+  `pointerId` is ignored by classification until the first ends, with no `preventDefault` or
+  `stopPropagation`, so a second finger's native button `click` still fires. Classification is
+  the pure `classify(...)` in `gestures/` (S); the listeners only feed it.
+- Press targets (F23): a card press resolves by its `data-place`: `column` → column press,
+  `cell` → its WordCell's press, `tray`/`strip` → inert (no dispatch, no selection change);
+  non-card presses by `closest('[data-column]')`, `closest('[data-wordcell]')`,
+  `closest('[data-foot]')` [ASSUMPTION attribute names, not test ids]; drop targets register with
+  `use:dropTarget={{ kind: 'column', id }}` on the whole slot.
 - Long-press: a plain `setTimeout(400)` in the UI, cleared on threshold crossing, release or
   cancel; only WordCell presses start it.
-- `cancel()` = `pointercancel` semantics: column drag → fly-back, no command; peek → closes; no
-  overlay entry is closed by `cancel()` itself (AD-13).
+- `cancel({ byBack })` = `pointercancel` = `lostpointercapture` semantics: any press in progress
+  ends with no command (tap candidate, below-threshold press, Composing destination-card press,
+  long-press timer cleared, drag → fly-back); peek → `closePeek()`; the controller then marks the
+  `pointerId` dead and ignores its events until its `pointerup`/`pointercancel`. A drag that
+  replaced a selection calls `overlays.deselect()` unless `byBack` (F24; back's `closedByBack`
+  clears it); no other overlay entry is closed by `cancel()` (AD-13). `main.ts`:
+  `game.registerBeforeHide(() => controller.cancel())`,
+  `nav.registerBeforeBack(() => controller.cancel({ byBack: true }))`.
 - `act(handler)` (F9) wraps every native button `onclick` in `App`, `TopBar`, `ActionBar`,
-  `HistoryNotice`, `Dialog` callers, `DictionaryBanner` and `BlockingMessage`; S test spies that
-  `cancel` runs before the handler.
+  `HistoryNotice`, `Dialog` callers, `DictionaryBanner` and `BlockingMessage` as mounted inside
+  `App`; the standalone `Halted` mount (before the controller exists) is exempt, its Reload ends
+  everything. S test spies that `cancel` runs before the handler.
 - Held-touch helper (F10): `touchHold(page, from)` returning `{ moveTo(point), end() }` on one CDP
   session (`touchStart`, `touchMove`s, `touchEnd`), with a `helpers.spec.ts` case.
-- AD-17 hide case: `touchHold` from a column card, `moveTo` another column, `hidePage`, then
-  `end()`: no `drop` (Session reference unchanged), exactly one `wordcell:session` write
-  (`armStorageSpy`), the tail back in its column, clock resumes only after `showPage`.
+- AD-17 hide case: `touchHold` from a column card, `moveTo` another column, `hidePage`, `moveTo`
+  again, then `end()`: no `drop` (Session reference unchanged), exactly one `wordcell:session`
+  write (`armStorageSpy`), the tail back in its column, clock resumes only after `showPage`.
+  Same with a held destination-card press in `session-composing`: `hidePage`, `end()` → no
+  `tapDestinationCard`.
+- Cancel-first P4: during a held `touchHold` drag, trigger Undo with
+  `getByTestId('undo').dispatchEvent('click')` (the one-point helper has no second touch); on
+  `desktop` the same while a `page.mouse` drag is held; assert the tail returned, then Undo
+  acted.
 - Rejected root: the controller exists but nothing is attached; `hidePage` there writes nothing
   (epic 3) and the before-hide `cancel` is a no-op.
 
@@ -184,11 +216,14 @@ Components receive `GameView` slices and UI state as props; none imports the eng
   keeps the pop before any later push.
 - Gate on `GameView`: select only when `column.canPickUp`; drop only when `column.canDropOn`; no
   dispatch otherwise.
-- Taps outside the columns: a capture-phase `pointerdown`/`click` on the document that deselects
-  when the target is outside every column hit rect and is not an enabled control (an enabled
-  control deselects in its own `act` handler before acting). Whether Chromium fires pointer events
-  on a disabled `<button>` is unverified: the ticket checks and, if not, wraps disabled controls'
-  hit area [ASSUMPTION].
+- Taps outside the columns (F25): deselect only on a completed tap (press–release under 8 px, or
+  `click`) whose target is outside every column hit rect and is not an enabled control (an
+  enabled control deselects in its own `act` handler before acting), never on `pointerdown`, so a
+  WordCell long-press and a `pan-y` pan keep the selection. Outside regions: top bar background,
+  banner background, leftover band, tray band, labels, gaps, action bar background, `desktop`
+  side margins, disabled controls. Whether Chromium fires pointer events on a disabled
+  `<button>` is unverified: the ticket checks and, if not, wraps disabled controls' hit area
+  [ASSUMPTION].
 - Desktop hover under `(hover: hover) and (pointer: fine)` only, via CSS and the controller's
   `pointerover`; outlines are classes on the column cards, never Svelte state per move.
 
@@ -199,9 +234,15 @@ Components receive `GameView` slices and UI state as props; none imports the eng
 - `hasLeftSource` becomes true at the first post-threshold `pointermove` where `raw !== sourceId`.
 - Fly-back: WAAPI `transform` from the release offset to 0 over `duration('flyBack')` (reduced
   motion: the 120 ms opacity fade), `gate.enter()` until finished; a new `pointerdown` calls
-  `finish()` first.
-- A drag that replaced a selection: on a `drop`, `overlays.deselect()` then dispatch; with no
-  command, `overlays.deselect()` too, except when ended by the before-back `cancel()`.
+  `finish()` first, then re-resolves its press target with `document.elementFromPoint` at the
+  press point, so it acts on the settled layout (EXPERIENCE.md Interaction Primitives; P4).
+- A drag that replaces a selection, from any column including the selected source column (the
+  selected card or one above or below it): at threshold crossing the controller removes the old
+  selection's lift/outline and foot-state classes from the DOM only (F12), and the new drag gets
+  Q-34 source suppression; at release, on a `drop`, `overlays.deselect()` then dispatch; with no
+  command, `overlays.deselect()` too; ended by `cancel({ byBack: true })`, no deselect
+  (`closedByBack` clears it). P4: drag from the source column of a tap-selected tail, assert one
+  lifted tail mid-drag.
 - The lifted tail draws above the bars (layer order: drag layer above sticky bars).
 
 ## CAP-8 Composing, Place, Game over
@@ -213,22 +254,27 @@ Components receive `GameView` slices and UI state as props; none imports the eng
 
 ## CAP-9 WordCell view
 
-- Overflow (F14): `rows = ceil(count / perRow)`, `perRow = floor((boardWidth − 32 + 4) / (w + 4))`;
-  overflow iff title + rows × (H + 4) − 4 + padding > 0.8 × innerHeight [ASSUMPTION exact paddings
-  per DESIGN.md view-sheet].
-- Sticky view: `overlays.open('wordcellView')`; a full-viewport scrim catches the closing tap
-  (consumed); back → `closedByBack`.
-- Hover peek: 400 ms `pointerover` timer on the cell, cancelled on leave or any `pointerdown`;
+- Overflow (F14): at release, the peek stays as the sticky view iff the rendered sheet's scroll
+  area overflows (`scrollHeight > clientHeight`); no pure formula.
+- Peek and sticky state through the overlays store only (CAP-5): long-press → `openPeek(cell)`,
+  release → `closePeek()` or `peekToSticky()`; tap → the sticky view
+  (`overlays.open('wordcellView')`); `HoverPeek` uses the store's hover-peek state.
+- Sticky view: the sheet and its mirror cards are `touch-action: pan-y`, so a swipe scrolls it
+  and keeps it open; a full-viewport scrim and the sheet close it on a completed tap (< 8 px,
+  consumed); back → `closedByBack`.
+- Hover peek: 400 ms `pointerover` timer on the cell, cancelled on leave; any `pointerdown`
+  cancels the timer and closes an open hover peek;
   never while the controller has a drag; positioned above the cell, clamped inside the board,
   below when no room (F19).
 - The peek and hover copies are mirrors (`data-mirror-of`).
 
 ## CAP-10 Refactor sweep
 
-- R6: move the `describe('score history store', …)` block (`game.svelte.test.ts:1197` on) and any
+- R7: move the `describe('score history store', …)` block (`game.svelte.test.ts:1197` on) and any
   history-only helpers into `src/shell/history.svelte.test.ts`; test names unchanged.
-- R7 / F18 `src/shell/stored-key.ts`: `rejectReason(parsed)` generic over the three parse result
-  types; `lastText` tracker `{ remember(text), isStale(key) }`; `assertWritable(owner, op)` for the
+- R6 / F18 `src/shell/stored-key.ts`: `rejectReason(parsed)` generic over the three parse result
+  types; `lastText` tracker `{ remember(text), isStale(key) }` and the `loaded()` launch snapshot
+  pattern; `assertWritable(owner, op)` for the
   history `reset` and prefs setters (`AD-15 <op>() while <kind>`). Derive `PrefsRejectReason`
   from `ParsePrefsResult`. Update AGENTS.md "Where things are" through `bmad-project-context`.
 - Re-measure (AD-17): three `npm test` runs after a discarded warm-up, warm `fsModuleCache`; record
