@@ -1,5 +1,5 @@
 # Review log — story-dictionary-load-retry-and-validate (ticket 3.9)
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 223 words, snapshot `story-dictionary-load-retry-and-validate.passes/pass0.md`, HEAD 2d4e499.
 Note: the pull from tickets.toml entry 9 dropped `interface`, `tests`, `owns`; they are passed to reviewers and fixer as intent, and the pass 1 fixer adds them to the Description as `Interface:`, `Tests:`, `Owns:` lines.
@@ -32,5 +32,30 @@ Words (docs): 1001 (4.49 x pass 0; budget 1500)  |  Snapshot: story-dictionary-l
 - Banner — `src/ui/DictionaryBanner.svelte`, board only, straight from state (no gesture latch until epic 4); not on the rejected root
 - retry() throws unless `failed`; load() throws if called twice
 - startHidden ordering case stays with CAP-10 (ticket 11)
+### Dropped
+- none
+
+## Pass 2 — 2026-10-01
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 5, minor 8, decision-needed 0  |  Dropped in triage: 0 (duplicates merged across lenses)
+Words (docs): 1238 (5.55 x pass 0; budget 1500)  |  Snapshot: story-dictionary-load-retry-and-validate.passes/pass2.md  |  Fixer: all 13 applied; no runnable command added
+### Applied
+- [major] Verify › Invalid word — "stored `wordcell:session` unchanged" fails: dispatch writes the accrued Session (activeMs) on a rejected Validate (2 lenses) → fixer 1
+- [major] Verify › Timeout — 29 999 ms bound after the route sees the request is not deterministic in Playwright (timer starts at fetch; clock/rAF interplay) (3 lenses) → fixer 2
+- [major] Start — dictionary start must be scheduled only on the App mount path (whenVisible throws before registerLifecycle on the standalone halted path); halted check after the double rAF too (1 lens) → fixer 3
+- [major] Verify › AD-16 — no deterministic trigger for the in-load / after-mount halt (3 lenses) → fixer 4
+- [major] Validate — dictionary reason labels in ink secondary (DESIGN.md Ink) in Composing and Idle, untested (2 lenses) → fixer 5
+- [minor] retry() sets 'loading' synchronously → fixer 6
+- [minor] controlled-SW parenthetical states an outcome, reads against the Retry rules (3 lenses) → fixer 7
+- [minor] Vitest never-closing body: race text() against the abort signal → fixer 8
+- [minor] ✕ glyph vs exact-text assertion (2 lenses) → fixer 9
+- [minor] paused-clock specs and the 'ready' wait → fixer 10
+- [minor] session-idle-pending-draft.json row in the rewritten LABELS table → fixer 11
+- [minor] banner DESIGN.md look not cited → fixer 12
+- [minor] §2 case: Validate disabled `Word list unavailable` while failing (rule-coverage) → fixer 13
+### Default applied (technical)
+- Invalid word — assert stored moves/cursor unchanged and stored == current().session (activeMs may grow)
+- Timeout — exact 29 999/30 000 boundary in the shell Vitest (fake timers); Playwright keeps a margin (still loading at 29 000 ms, banner by 30 000 ms after the request)
+- Halt triggers — in-load: Q-38 storage write during boot (blocking.spec.ts pattern); after mount: startHidden page halted by another window's write, then showPage
+- ✕ in its own aria-hidden element; assertion targets the message element
 ### Dropped
 - none
