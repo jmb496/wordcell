@@ -36,11 +36,11 @@ each ticket it runs `scripts/limits.py`, which reads the plan's 5-hour and weekl
 from the local cache of the owner's "Claude Code Usage" VS Code extension (no network call), and
 exits 5, asking the owner to rerun it by hand, when either is at or over its threshold
 (`MAX_FIVE_HOUR`, `MAX_SEVEN_DAY`, default 80); 6 if the cache is missing or more than 30 minutes
-old, i.e. VS Code is closed (`LIMIT_CHECK=off` skips the check). The owner
-can run it in a terminal, or an interactive session can run it with `run_in_background: true`
-and report the handoff when it exits. After answering an owner question in an interactive
-session, record the decision (ticket Notes, epic Notes, spec memlog), commit, and rerun the
-driver: the next session resumes the ticket from its files.
+old, i.e. VS Code is closed (`LIMIT_CHECK=off` skips the check). The owner can run it in a
+terminal, or an interactive session can run it with `run_in_background: true`, relay its
+progress lines (Watching progress, below) and report the handoff when it exits. After answering
+an owner question in an interactive session, record the decision (ticket Notes, epic Notes, spec
+memlog), commit, and rerun the driver: the next session resumes the ticket from its files.
 
 With the argument `one-ticket` (always headless):
 
@@ -84,6 +84,34 @@ With the argument `one-ticket` (always headless):
 - The digest entry gets a `Tokens:` line from
   `python3 .claude/skills/epic-autopilot/scripts/usage-report.py --since <S>` (this session and
   its steps).
+
+### Watching progress
+
+While a session runs, the driver prints a progress line whenever a step starts or finishes (with
+the step's result summary: passes, majors, built or blocked, decisions for the owner) and for
+each new commit (e.g. each review pass's WIP commit). It reads only the run directory and git
+(polling every `PROGRESS_SECS`, default 15), so no orchestrator or step context grows. The build
+step prints nothing between its start and finish (it does not commit until it is built).
+
+```
+[13:02]   3.12 ticket review: started
+[13:28]   3.12 ticket review: finished (exit 0) — converged; 7 passes; majors 8, 5, 4, 3, 3, 2, 0
+[13:28]   3.12 build: started
+[14:36]   commit dcf317d refactor(epic-3): refactor sweep and shared Playwright config (3.12)
+```
+
+When the owner asks how to run the driver and see this detail, offer both ways:
+
+1. **In the owner's Claude Code session (default).** Start the driver with the Bash tool and
+   `run_in_background: true`; the result names its output file. Then load the Monitor tool
+   (`ToolSearch` `select:Monitor`) and watch that output file, so each new line wakes the
+   session; relay each progress line to the owner as one short line (started/finished lines
+   always; commit lines may be grouped). The lines cost only the interactive session's context.
+   When the driver exits, read its last lines and the handoff and report as above.
+2. **A separate terminal (live, no context cost).** The owner runs
+   `.claude/skills/epic-autopilot/scripts/loop.sh <epic>` in a terminal and tells the session
+   when it exits; or, when the session started the driver, follows it with
+   `tail -f <output file>`, using the output file path the session gives them.
 
 ## Stop rule
 
