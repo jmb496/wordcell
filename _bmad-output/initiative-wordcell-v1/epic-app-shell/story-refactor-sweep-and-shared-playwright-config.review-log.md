@@ -1,6 +1,6 @@
 # Review log — story-refactor-sweep-and-shared-playwright-config.md (ticket 3.12)
 
-State: pass 6: done
+State: pass 7: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD d74ceb0, copy story-refactor-sweep-and-shared-playwright-config.passes/pass0.md, 188 words.
 Intent carried from tickets.toml entry 12 (not copied by the pull): interface, tests, owns; pass-1 fixer adds them to Description as 'Interface:', 'Tests:', 'Owns:'.
@@ -178,3 +178,17 @@ Fixer: applied 1–7; offset words by tightening (Tests rule-coverage clause rem
 - base 'constants' wording vs process.env.CI reads
 - idle precondition: record load average (plan)
 - AGENTS.md carry-forward deadline before epic 4 (plan)
+
+## Pass 7 — 2026-10-01 (verify-only)
+Reviewers: fix diff  |  Findings: major 0, minor 2, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1499 (8.0 x pass 0; budget 1500)  |  Snapshot: story-refactor-sweep-and-shared-playwright-config.passes/pass6.md (no fix)
+### Applied
+- none (verify-only)
+
+## Result — converged after 7 passes
+Majors per pass: 8, 5, 4, 3, 3, 2, 0. Decision needed: none. Words 188 → 1499.
+
+### Unapplied minors (for the build's plan)
+- Watch re-run clause: 'or if split the slowest successor' no longer matches anything (engine files are not split; Inventory (e) splits architecture.test.ts) — drop it or move it to the informational unit-file clause
+- Slowest unit file's watch re-run (architecture.test.ts ~1.9 s) is informational only; if over 1 s, record a carry-forward row (AD-17 watch scope / spine owner)
+- Pass 5/6 'Not applied' lists above: cold run beside the medians; per-file timings from `--reporter=json`; test identity without file path after a split; exact `docker run -e CI=1` screens command; whether a fold may add a new internal src/ module; observing seam for the main.ts halt order and flush() fixes; computed-style gate as a one-off script; commit state of landed items on a budget miss; pwa reusing the base android `use`; base 'constants' vs process.env.CI reads; record load average beside timings; AGENTS.md carry-forward deadline before epic 4
