@@ -11,6 +11,13 @@ interface Props {
 
 const { title, body, action, onaction }: Props = $props();
 const id = $props.id();
+
+// Owner decision 2026-09-30 (ticket 3.5): keyboard focus moves to the one button when the message
+// appears and again when its cause (the title) changes.
+function focusOnCause(button: HTMLButtonElement): void {
+  void title;
+  button.focus();
+}
 </script>
 
 <div class="table">
@@ -24,7 +31,7 @@ const id = $props.id();
     {#if body !== undefined}
       <p id="{id}-body">{body}</p>
     {/if}
-    <button type="button" class="primary" onclick={onaction}>{action}</button>
+    <button type="button" class="primary" onclick={onaction} {@attach focusOnCause}>{action}</button>
   </div>
 </div>
 

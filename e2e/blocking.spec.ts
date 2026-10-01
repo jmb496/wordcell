@@ -327,3 +327,55 @@ test.describe('Q-38 single instance', () => {
     expect(await stored(page1)).toBe(text);
   });
 });
+
+// Owner decision 2026-09-30 (ticket 3.5): the Blocking message's one button takes keyboard focus.
+test.describe('Blocking message focus', () => {
+  const focused = (page: Page) =>
+    page.evaluate(() => {
+      const active = document.activeElement;
+      return active instanceof HTMLButtonElement ? active.textContent : active?.tagName;
+    });
+
+  test('AD-15 a fatal after mount focuses Reload', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByTestId('card-0')).toBeVisible();
+    await page.getByTestId('primary-action').focus();
+    await page.evaluate(() => {
+      setTimeout(() => {
+        throw new Error('AD-15 focus');
+      });
+    });
+    await expectFatal(page, 'AD-15 focus');
+    await expect.poll(() => focused(page)).toBe('Reload');
+  });
+
+  test('§2 the rejected root focuses New game', async ({ page }) => {
+    await seedStorage(page, { session: fixture('session-invalid-null.json') });
+    await page.goto('/');
+    await expect(page.getByRole('heading', { name: REJECTED, exact: true })).toBeVisible();
+    await expect.poll(() => focused(page)).toBe('New game');
+  });
+
+  test('Q-38 another window focuses Reload, and a later fatal focuses it again', async ({
+    page,
+  }) => {
+    const page1 = page;
+    await page1.goto('/');
+    await expect(page1.getByTestId('card-0')).toBeVisible();
+
+    const page2 = await page.context().newPage();
+    await page2.goto('/favicon.svg');
+    await page2.evaluate(() => localStorage.setItem('wordcell:prefs', '{}'));
+    await expectAnotherWindow(page1);
+    await expect.poll(() => focused(page1)).toBe('Reload');
+
+    await page1.evaluate(() => {
+      (document.activeElement as HTMLElement).blur();
+      setTimeout(() => {
+        throw new Error('Q-38 cause change');
+      });
+    });
+    await expectFatal(page1, 'Q-38 cause change');
+    await expect.poll(() => focused(page1)).toBe('Reload');
+  });
+});

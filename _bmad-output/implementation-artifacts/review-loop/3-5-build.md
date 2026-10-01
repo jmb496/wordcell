@@ -55,3 +55,11 @@ Unapplied minors (for the next build or loop):
 - src/main.ts `fatal` — `console.error` runs before `game.halt`; AD-15 says halt first (swap the order)
 - rule-coverage.md rows R-74 New game / R-74 Q-29 — CAP column should read `3, 4` for the rejected-root half now proven in CAP 4
 - unit-suite duration — fixer measured 4.61–4.76 s standalone; orchestrator rerun 5.35 s: the 5 s AD-17 budget is marginal on /mnt/d (69 % transform); consider `fsModuleCache` upstream
+
+## Owner decision applied — 2026-09-30
+
+Decision (pass 1 decision-needed): YES — the Blocking message's one button (Reload / New game) takes keyboard focus when the message appears (standalone mount before the UI and the in-App switch) and again when its cause changes.
+- Change: `src/ui/BlockingMessage.svelte` — `{@attach focusOnCause}` on the button; the attachment reads `title`, so it re-runs (and refocuses) when the cause changes. No new dependency.
+- Tests (android, `e2e/blocking.spec.ts` describe `Blocking message focus`): `AD-15 a fatal after mount focuses Reload`, `§2 the rejected root focuses New game`, `Q-38 another window focuses Reload, and a later fatal focuses it again` (blurs before the fatal so the refocus is observed).
+- Plan: dated `Decision: owner …` line in Implementation Notes.
+- Verification: `npx playwright test e2e/blocking.spec.ts --project android` 16 passed; `npm test` 1504 passed (4.65 s); lint clean; check 0 errors.
