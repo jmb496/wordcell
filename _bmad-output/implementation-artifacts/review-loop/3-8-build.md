@@ -1,6 +1,6 @@
 # Review loop — ticket 3.8 build (code, a9c25cf..813e935)
 
-State: pass 3: done
+State: pass 4: done
 
 Target: `_bmad-output/implementation-artifacts/review-loop/3-8-build.passes/pass0.diff` (a9c25cf..813e935)
 Intent: `_bmad-output/initiative-wordcell-v1/epic-app-shell/story-nav-adapter-overlays-core-history-notice-and-reset-confirm-plan.md`
@@ -56,3 +56,25 @@ Fixer: all 5 applied (test-only)
 - none
 ### Dropped
 - none
+
+## Pass 4 — 2026-10-01
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 0, minor 3, decision-needed 0  |  Dropped in triage: 0
+Snapshot: tree 30b1099fc986dd02130004198d5a6dfdf1b6f4c1 (no fix pass)  |  Final: npm test 1590 passed (31 files), lint clean, check 0 errors
+### Applied
+- none (converged)
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Result — converged after 4 passes
+
+Majors per pass: 1, 2, 2, 0. Technical defaults applied: 8 (Dialog multi-click guard on scrim and buttons; residual-risk records; test additions). Decision-needed: none.
+
+Unapplied minors (for the next build or loop):
+- e2e/nav.spec.ts inlines the elementFromPoint probe that e2e/history-notice.spec.ts defines as `hitAt`; move it to `e2e/helpers/` with a case in e2e/helpers.spec.ts
+- src/shell/nav.test.ts 'AD-13 a stale-launch popstate closes nothing and calls no back' now also asserts count unchanged; rename to say so
+- e2e/history-notice.spec.ts: no assertion of `aria-modal="true"` on the dialogs (ticket Decisions, Dialog); add it to `expectNotice` and `openConfirm`
+- carried from pass 1 as plan residual risks (not code): back in the gap between Delete history's two queued pops; AD-13 stale-launch Forward-then-push edge for the spine owner
