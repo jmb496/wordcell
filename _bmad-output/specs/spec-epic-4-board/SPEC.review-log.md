@@ -1,6 +1,6 @@
 # Review log — spec-epic-4-board (SPEC.md + rule-coverage.md + build-notes.md)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7. Pre-loop: HEAD 1c93404; copies at SPEC.review-log.passes/pass0/; words 8184 (SPEC 3515, rule-coverage 2298, build-notes 2371).
 Caller rule: stop as diverging if majors rise pass-over-pass.
@@ -72,3 +72,26 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 ### Fixer outcome
 All 28 items applied. Open Questions gains the AD-11 `bannerShown` vs Q-42 spine-bug report (default: latch `dictionary.showBanner`, fold into AD-11 at close-out). F21 now AD-11's clamped anchor delta with exact values (412 × 839 → 779: leftover 101 → 41, delta −60 clamped 0; 412 × 780 → 710: leftover 42 → 0, scroll range 0 → 28). Scroll test 412 × 600 (range 122 px). No commands or tool claims added.
 Words: 10844 (1.33 x pass 0)  |  Snapshot: SPEC.review-log.passes/pass2/ ; fix diff pass2.fix.diff
+
+## Pass 3 — 2026-10-01
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 9, minor 18, decision-needed 1  |  Dropped in triage: 0 (duplicates merged)
+### Applied (sent to fixer)
+- [major] F13/CAP-4 — programmatic `cancel()` (act, hide, back) starts a fly-back still running when the handler acts; "every new press calls cancel()" contradicts the one-pointer rule → 1
+- [major] CAP-3 scroll test — instant `scrollTo` fires `scrollend`, gate idles between ticks → 2
+- [major] CAP-7 — "Undo pressed during a fly-back" P4 has no procedure or observable → 3
+- [major] F24 — hide during a selection-replacing drag: outcome and test missing → 4
+- [major] build-notes CAP-4/F25 — controller listens on the board root, so desktop margins and bars never classify; capture/classify of enabled buttons unspecified → 5
+- [major] CAP-9 — peek/view of a used WordCell (used top card) unspecified; "empty" undefined → 6
+- [major] CAP-4 classify — tap/drag read at `pointerup` vs latched at threshold crossing → 7
+- [major] CAP-5/F5 — whether epic 4 wires `DispatchResult` finished/unfinished to the end-sheet state (invisible sheet pushing an entry) → 8
+- [major] F18/build-notes CAP-10 — `stored-key.ts` `isStale(key)` would call `storage.ts`, breaking the single-owner rule → 9
+- [minor] 10–27: success-signal long-press fixture; foot row `touch-action: none` while selected; horizontal centre tie-break; exactly-25 % case; no hover in Place/Game over; F1/F2/F17 row moves acknowledged in Open Questions; R1 AD-13 record deferral stated; Composing non-card/ghost presses inert; whole-column self-drop highlights placeholder; banner-hide reverse case; second-pointer DOM listener test; banner Reload page-reload branch skips deselect; scroll ignore-flag cleared next frame; clamp range from `bands()` total; anchor delta after w recompute; flying tail `pointer-events: none`; 20 px cancel case pinned
+### Default applied (technical)
+- all majors take reviewers' defaults
+### Decision needed (functionality / UX / gameplay)
+- SPEC CAP-9 — WordCell view/peek title wording (player-visible copy missing from the EXPERIENCE.md catalogue, incl. singular) — proposed default: `WordCell 6 · 7 cards` / `WordCell 6 · 1 card`, added to `text.ts` and the catalogue at close-out
+### Dropped
+- none
+### Fixer outcome
+All 25 items applied; decision-needed view title appended to Open Questions as PROPOSED BY REVIEW. Marked `unverified`: a held CDP touch pan fires no `scrollend` before release (scroll test, ticket checks). Cancel-from-code returns the tail at once; classify latches drag at ≥ 8 px; controller on the App root; end sheet not wired in epic 4; `stored-key.ts` never imports storage.
+Words: 11824 (1.44 x pass 0)  |  Snapshot: SPEC.review-log.passes/pass3/ ; fix diff pass3.fix.diff

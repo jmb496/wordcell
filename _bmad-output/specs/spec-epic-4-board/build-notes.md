@@ -5,6 +5,8 @@ the contract; these notes fix what they leave open. `[ASSUMPTION]` marks inferen
 
 ## Spine close-out edits (for the owner to fold in at the retrospective; the spine is not edited by this epic)
 
+Spine edits are batched at close-out as in epic 3, so the R1 AD-13 record (retrospective routing) is deliberately deferred to here.
+
 - AD-13 (R1, F7): `nav` gains `registerBeforeBack(fn)`, separate from `register()` (which still
   throws on a second call). `main.ts` calls it once, after the pointer controller exists
   (AD-16 order). It throws before `launch()` resolves or on a second call. The hook runs for every
@@ -104,9 +106,10 @@ Components receive `GameView` slices and UI state as props; none imports the eng
   `max(0, r × 44 + (r − 1) × 4 − max(H, 92))`. Epic 5 feeds real values; epic 4 always passes 1.
 - The w-recompute predicate is a pure function of (last w inputs, new innerWidth/innerHeight):
   recompute iff innerWidth changed or |ΔinnerHeight| ≥ 80 px against the last computation.
-- innerHeight-only change under 80 px (F21): `bands(...)` recomputes leftover = max(0,
-  innerHeight − sum − banner) and the anchor offset; the layout module applies the offset delta
-  clamped to the scroll range `[0, scrollHeight − innerHeight]` (SPEC CAP-1 values).
+- innerHeight-only change under 80 px (F21) and a w recompute: `bands(...)` recomputes leftover
+  = max(0, innerHeight − sum − banner) and the anchor offset; the layout module applies the
+  offset delta clamped to `[0, total − innerHeight]`, total from the new `bands(...)` result,
+  never a stale `scrollHeight` (SPEC CAP-1 values).
 
 ## CAP-2 Board render
 
@@ -142,7 +145,9 @@ Components receive `GameView` slices and UI state as props; none imports the eng
 - `layout.svelte.ts` holds `$state` w, band heights and the anchor offset; it listens to `resize`
   and `orientationchange` (allowed in `src/ui/`) and to the latched banner flag; it schedules work
   through `gate.whenIdle(fn)`; it applies `scrollTop += delta` in the same frame it re-lays bands,
-  and the `scroll` event of that one write does not mark the gate scroll-busy.
+  writing only when the clamped target differs from the current value, and the `scroll` event of
+  that one write does not mark the gate scroll-busy (the ignore flag clears in the next
+  `requestAnimationFrame` whether or not a `scroll` fired).
 - Insets probe: an absolutely positioned, invisible element with `padding: env(safe-area-inset-*)`,
   read with `getComputedStyle`.
 - `gate.ts` (`createGate({ raf, setTimer, clearTimer })`, injected for S tests): a counter
@@ -157,20 +162,26 @@ Components receive `GameView` slices and UI state as props; none imports the eng
 - Banner anchoring test: a viewport with leftover < 44 px (e.g. 412 × 780 → leftover 42 at
   w = 46) and the dictionary route failing; record the WordCell row box before and after the banner
   appears. Scroll test: 412 × 600 (w 40, sum 722, scroll range 122 px), the dictionary route
-  held; start an in-page loop every 50 ms alternating `scrollTo` between 0 and the max so every
-  tick fires `scroll`, fulfil the route with a failure, assert no banner while the loop runs,
-  stop it, assert the banner appears after `scrollend` or the 150 ms backstop.
+  held; `touchHold` on a foot pad with nothing selected (`pan-y`; the leftover band is 0 px
+  there), `moveTo` upward steps with the finger kept down (an instant `scrollTo` is a completed
+  scroll and fires `scrollend`, so it cannot hold the gate), fulfil the route with a failure,
+  assert no banner, `end()`, assert the banner appears after `scrollend` or the 150 ms backstop.
+  `unverified`: a held CDP touch pan fires no `scrollend` until release; the ticket checks it.
 
 ## CAP-4 Pointer controller core and cancel wiring
 
-- `createController()` returns `{ cancel, attach(root) }` [ASSUMPTION]; listeners on the board
-  root for `pointerdown` (`button !== 0` ignored), then `setPointerCapture` on the pressed
-  element; `pointermove`, `pointerup`, `pointercancel`, `lostpointercapture` on it; a second
-  `pointerId` is ignored by classification until the first ends, with no `preventDefault` or
-  `stopPropagation`, so a second finger's native button `click` still fires. Classification is
-  the pure `classify(...)` in `gestures/` (S); the listeners only feed it. After a fly-back
-  `finish()` the press resolves from `elementFromPoint` at the press point (never `event.target`)
-  and captures on the resolved element.
+- `createController()` returns `{ cancel, attach(root) }` [ASSUMPTION]; listeners on the App
+  root spanning the viewport (or `document`) for `pointerdown` (`button !== 0` ignored), then
+  `setPointerCapture` only for a press resolved to a column, a WordCell or a tile;
+  `pointermove`, `pointerup`, `pointercancel`, `lostpointercapture` on it; presses on enabled
+  buttons are never classified or captured (their own `act()` handlers run); disabled controls
+  fall through to the outside-tap path (F25). A second `pointerId` during an active press never
+  touches controller state, with no `preventDefault` or `stopPropagation`, so a second finger's
+  native button `click` still fires. Classification is the pure `classify(...)` in `gestures/`
+  (S); the listeners only feed it. A primary `pointerdown` with no active press `finish()`es a
+  running fly-back (gate `leave()` included) without calling `cancel()`, then resolves from
+  `elementFromPoint` at the press point (never `event.target`) and captures on the resolved
+  element.
 - Press targets (F23): a card press resolves by its `data-place`: `column` → column press,
   `cell` → its WordCell's press, `tray`/`strip` → inert (no dispatch, no selection change);
   non-card presses by `closest('[data-column]')`, `closest('[data-wordcell]')`,
@@ -180,14 +191,16 @@ Components receive `GameView` slices and UI state as props; none imports the eng
   `use:dropTarget={{ kind: 'column', id }}` on the whole slot.
 - Long-press: a plain `setTimeout(400)` in the UI, cleared on threshold crossing, release or
   cancel; only WordCell presses start it.
-- `cancel({ byBack })` first `finish()`es a running fly-back (gate `leave()` included), then
-  `pointercancel` = `lostpointercapture` semantics: any press in progress
-  ends with no command (tap candidate, below-threshold press, Composing destination-card press,
-  long-press timer cleared, drag → fly-back); peek → `closePeek()`; it releases capture and clears
+- `cancel({ byBack })` `finish()`es a running fly-back (gate `leave()` included); any press in
+  progress ends with no command (tap candidate, below-threshold press, Composing destination-card
+  press, long-press timer cleared, drag → tail back in its slot at once, transform cleared, no
+  fly-back), gate idle before it returns; a real `pointercancel`/`lostpointercapture` ends a press
+  the same way except that a drag flies back; peek → `closePeek()`; it releases capture and clears
   the active press at once, so another pointer's `pointerdown` starts a new gesture; only the dead
   `pointerId`'s own events are dropped until its `pointerup`/`pointercancel`. Only a drag that
   replaced a selection calls `overlays.deselect()`, and not with `byBack` (F24; back's
-  `closedByBack` clears it); a tap-selection survives hide (no `nav.pop()` during pagehide), and
+  `closedByBack` clears it); on hide that deselect's `nav.pop()` goes through nav's queue (`wc` 0
+  after `showPage`); a plain tap-selection survives hide (no `nav.pop()` during pagehide), and
   no other overlay entry is closed by `cancel()` (AD-13). `main.ts`:
   `game.registerBeforeHide(() => controller.cancel())`,
   `nav.registerBeforeBack(() => controller.cancel({ byBack: true }))`.
@@ -195,7 +208,8 @@ Components receive `GameView` slices and UI state as props; none imports the eng
   included), `TopBar`, `ActionBar`, `HistoryNotice`, `Dialog` callers and `DictionaryBanner`;
   `Halted.svelte` owns its `reload` and is exempt in both mounts (`main.ts` `showStandalone` and
   App's `{#if halted}`). Undo, Redo and the banner `Reload` call `overlays.deselect()` in their
-  handler before acting. S tests spy that `cancel` (and so a fly-back `finish()`) runs before
+  handler before acting, except the banner `Reload`'s page-reload branch (a reload clears UI
+  state). S tests spy that `cancel` (and so a fly-back `finish()`) runs before
   the handler.
 - Held-touch helper (F10): `touchHold(page, from)` returning `{ moveTo(point), end() }` on one CDP
   session (`touchStart`, `touchMove`s, `touchEnd`), with a `helpers.spec.ts` case.
@@ -247,9 +261,11 @@ Components receive `GameView` slices and UI state as props; none imports the eng
   registered column hit rect, read live each `pointermove`.
 - `hasLeftSource` becomes true at the first post-threshold `pointermove` where `raw !== sourceId`.
 - Fly-back: WAAPI `transform` from the release offset to 0 over `duration('flyBack')` (reduced
-  motion: the 120 ms opacity fade), `gate.enter()` until finished; a new `pointerdown` or an
-  `act()` handler calls `cancel()`, which `finish()`es it first, so the press (re-resolved per
-  CAP-4) or the button acts on the settled layout (EXPERIENCE.md Interaction Primitives; P4).
+  motion: the 120 ms opacity fade), `gate.enter()` until finished, the flying tail
+  `pointer-events: none`; a primary `pointerdown` `finish()`es it (no `cancel()`) and an `act()`
+  handler's `cancel()` does, so the press (re-resolved per CAP-4; `elementFromPoint` stays the
+  resolver after `finish()`) or the button acts on the settled layout (EXPERIENCE.md Interaction
+  Primitives; P4).
 - A drag that replaces a selection, from any column including the selected source column (the
   selected card or one above or below it): at threshold crossing the controller removes the old
   selection's lift/outline and foot-state classes from the DOM only (F12), and the new drag gets
@@ -280,15 +296,19 @@ Components receive `GameView` slices and UI state as props; none imports the eng
   cancels the timer and closes an open hover peek;
   never while the controller has a drag; positioned above the cell, clamped inside the board,
   below when no room (F19).
-- The peek and hover copies are mirrors (`data-mirror-of`).
+- The peek and hover copies are mirrors (`data-mirror-of`). Every view lists `CellView.cards`
+  in full: a used cell's top (live in the tray or strip) is a mirror in the used (hatched)
+  style, still tagged `top`; count `cards.length`; empty = `cards.length === 0`.
 
 ## CAP-10 Refactor sweep
 
 - R7: move the `describe('score history store', …)` block (`game.svelte.test.ts:1197` on) and any
   history-only helpers into `src/shell/history.svelte.test.ts`; test names unchanged.
 - R6 / F18 `src/shell/stored-key.ts`: `rejectReason(parsed)` generic over the three parse result
-  types; `lastText` tracker `{ remember(text), isStale(key) }` and the `loaded()` launch snapshot
-  pattern; `assertWritable(owner, op)` for the
+  types; `lastText` tracker `{ remember(text), isStale(currentText) }` (each store passes its own
+  `read(KEY)`, as `history.svelte.ts` `read(HISTORY_KEY) !== lastText` today) and the `loaded()`
+  launch snapshot pattern fed by the store; `stored-key.ts` never imports `./storage` (AGENTS.md:
+  only the shell stores call it); `assertWritable(owner, op)` for the
   history `reset` and prefs setters (`AD-15 <op>() while <kind>`). Derive `PrefsRejectReason`
   from `ParsePrefsResult`. Update AGENTS.md "Where things are" through `bmad-project-context`.
 - Re-measure (AD-17): three `npm test` runs after a discarded warm-up, warm `fsModuleCache`; record
