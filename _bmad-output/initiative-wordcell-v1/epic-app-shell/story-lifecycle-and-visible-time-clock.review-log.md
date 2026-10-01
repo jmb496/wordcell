@@ -1,5 +1,5 @@
 # Review log — story-lifecycle-and-visible-time-clock (ticket 3.6)
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 203 words, snapshot `story-lifecycle-and-visible-time-clock.passes/pass0.md`, HEAD d02367e.
 Note: the pull from tickets.toml entry 6 dropped `interface`, `tests`, `owns`; they are passed to reviewers and fixer as intent, and the pass 1 fixer adds them to the Description as `Interface:`, `Tests:`, `Owns:` lines.
@@ -59,3 +59,27 @@ Words (docs): 1078 (5.31 x pass 0; budget 1500)  |  Snapshot: story-lifecycle-an
 - registerBeforeHide — accepts callbacks in any state, before registerLifecycle(), never throws
 ### Dropped
 - whenVisible resolves only on visibilitychange (adversarial stretch) — already explicit in the ticket
+
+## Pass 3 — 2026-09-30
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 3, minor 11, decision-needed 0  |  Dropped in triage: 1
+Words (docs): 1314 (6.47 x pass 0; budget 1500)  |  Snapshot: story-lifecycle-and-visible-time-clock.passes/pass3.md  |  Fixer: all 13 applied; verified with node v24.1.0 that EventTarget.dispatchEvent returns normally and re-raises a listener throw as uncaught
+### Applied
+- [major] Verify, Shell Vitest — throwing before-hide callback cannot be observed: Node EventTarget dispatchEvent swallows listener throws (re-raised as uncaught) (3 lenses) → fixer 1
+- [major] Description, Hide flush — throwing flush write (no assign, propagates) untested; assign-before-write passes every case (2 lenses) → fixer 2
+- [major] Description, isStale — recording the text read at load (rejected, valid-stored) untested; a null text would wrongly halt a restored rejected page → fixer 3
+- [minor] "No listener added" asserted via addEventListener spies (Node EventTarget cannot list listeners) → fixer 1
+- [minor] whenVisible before registerLifecycle throws synchronously; add the case → fixer 4
+- [minor] pageshow resume runs in every state (like take/pause), after the staleness check (2 lenses) → fixer 5
+- [minor] registerBeforeHide order test: one stub before, one after registerLifecycle(); callbacks run before take (AD-9 order) (2 lenses) → fixer 6
+- [minor] startHidden case sequence and fixture (hidePage throws on a hidden page) (2 lenses) → fixer 7
+- [minor] Fresh first-launch deal asserted exactly N → fixer 8
+- [minor] R-73 hidePage single-write case names session-place.json → fixer 9
+- [minor] Drop "halted-boot" read point (unobservable) → fixer 10
+- [minor] R-73 not-on-ticks: epic 6 reruns with the UI interval (Show timer) → fixer 11
+- [minor] R-76 "shell measures visible time" sentence mapped to the seeded-growth case → fixer 12
+- [minor] References add AD-4, AD-15, spec R-73/R-76/Q-38 → fixer 13
+### Default applied (technical)
+- Shell Vitest listener access — spy on the window/document stubs' addEventListener, record listeners by type, call them directly; `toThrow` for the throwing cases
+- whenVisible before registration — throws synchronously `AD-16 whenVisible() before registerLifecycle()`
+### Dropped
+- gaveUp → Undo un-finish boundary (adversarial stretch) — accrue ignoring non-playing time is engine R-76 coverage, not this ticket's
