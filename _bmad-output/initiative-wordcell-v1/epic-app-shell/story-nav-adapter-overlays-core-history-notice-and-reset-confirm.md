@@ -59,3 +59,4 @@ Tests (P3 = Playwright android, S = shell Vitest, U = UI Vitest; P3 names start 
 
 - Open question: Whether Playwright's goBack reproduces Chrome's handling of entries pushed without user activation (A-A11 stays an epic 7 device check).
 - Open question (owner): whether a scrim tap on the History notice acts as Not now and focus starts on Not now — pending; see the review log.
+- Decision: owner, 2026-10-01: the History notice is not dismissed by a tap outside it (scrim); the player must press Not now or Reset history (back still acts as Not now, per EXPERIENCE.md). Keyboard focus starts on its Not now button (the non-destructive button). Supersedes this ticket's open question on scrim tap and initial focus.
