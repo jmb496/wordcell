@@ -1,6 +1,6 @@
 # Review log — story-boot-order-and-restore-boundaries.md (ticket 3.11)
 
-State: pass 4: done
+State: pass 5: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD f2c76de, copy story-boot-order-and-restore-boundaries.passes/pass0.md, 218 words.
 Intent carried from tickets.toml entry 11 (not copied by the pull): interface, tests, owns; pass-1 fixer adds them to Description as 'Interface:', 'Tests:', 'Owns:'.
@@ -115,3 +115,29 @@ Fixer: applied 1–13; no commands added
 - none
 ### Dropped
 - none
+
+## Pass 5 — 2026-10-01
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 11, decision-needed 0  |  Dropped in triage: 0 (about 5 duplicates merged)
+Words (docs): 1034 (4.7 x pass 0), unchanged (no fix pass)  |  Snapshot: story-boot-order-and-restore-boundaries.passes/pass4.md
+### Open (not fixed; stopping rule: passes 4 and 5 each at most one major)
+- [major] Description, restore suite (pass 4 item 11) — the primary-action label check races the dictionary: for the idle-phase cases (R-84 finish undone, §7.10 fresh Session) the label is 'Loading words…' or 'Validate' depending on dictionaryState(), a hidden page never starts the fetch, and the step list does not say when the pre-reload label is read. Proposed fix: read the label in the snapshot step (before hidePage) after waiting for dictionaryState() 'ready' (dictionaryReady() moving to e2e/helpers/restore.ts); after the reload wait for the kind predicate, then 'ready', then read it.
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Result — converged after 5 passes
+open major: restore-suite primary-action label check races the dictionary state and its pre-reload read point is unstated (Pass 5 Open).
+Majors per pass: 7, 2, 2, 1, 1. Technical defaults applied: 19. Words 218 → 1034.
+
+### Unapplied minors (for the build's plan)
+- snapshot() `present` order undefined: filter in fixed order ['wordcell:session', 'wordcell:history', 'wordcell:prefs'].
+- Crash mode: also compare page2's primary-action label with page's after the Undo (Place → Confirm, no dictionary race), for rule-coverage "R-73 exact phase after Android kills the app".
+- Q-41 case title order: 'R-73 Q-41 …' per AGENTS.md (R-id first).
+- Restore flow: call open(page) instead of restating goto + predicate; reuse the same wait after page.reload().
+- Font case: fold `window.__wordcell !== undefined` into the stamp/'booting' waitForFunction predicate.
+- animationFrames helper test in helpers.spec.ts unnamed (e.g. resolves after N frames).
+- First sentence: "pins CAP-10's three ordering promises" (prefs → Session and lifecycle → surfaces → mount order stay S).
+- Hidden-mode exact activeMs is stricter than SPEC CAP-10 / Done when 2: cite AD-9 paused clock as the reason.
+- After reload, when loaded().history/.prefs is null, optionally assert current()'s in-memory defaults (SPEC CAP-10).
+- Restore titles: R-73 and Q-41 cases could also carry AD-17 for the rule-coverage AD-17 row, or say why only two do.
