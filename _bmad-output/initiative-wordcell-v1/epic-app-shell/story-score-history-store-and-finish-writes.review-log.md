@@ -1,5 +1,5 @@
 # Review log — story-score-history-store-and-finish-writes (ticket 3.7)
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 218 words, snapshot `story-score-history-store-and-finish-writes.passes/pass0.md`, HEAD e897707.
 Note: the pull from tickets.toml entry 7 dropped `interface`, `tests`, `owns`; they are passed to reviewers and fixer as intent, and the pass 1 fixer adds them to the Description as `Interface:`, `Tests:`, `Owns:` lines.
@@ -38,3 +38,28 @@ Words (docs): 1099 (5.04 x pass 0; budget 1500)  |  Snapshot: story-score-histor
 - Final Undo of an own-appended record writes `{"version":1,"records":[]}` (key never removed outside rollback)
 ### Dropped
 - none
+
+## Pass 2 — 2026-09-30
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 5, minor 10, decision-needed 0  |  Dropped in triage: 1
+Words (docs): 1313 (6.02 x pass 0; budget 1500)  |  Snapshot: story-score-history-store-and-finish-writes.passes/pass2.md  |  Fixer: all 13 applied; no runnable command added; storage-spy log semantics checked in e2e/helpers/storage-spy.ts
+### Applied
+- [major] Test hook — `current().history` added to the rejected variant contradicts AD-17 (4 lenses) → fixer 1
+- [major] Test hook — existing `loaded()`/`current()` deep-equality assertions break; game.svelte.test.ts `not.toEqual` becomes vacuous (2 lenses) → fixer 2
+- [major] Verify Q-39 — neither case proves the write-back (no-write implementation passes) → fixer 3
+- [major] Verify R-84 — same-task proof, spy arming after the Undo, un-finish order (2 lenses) → fixer 4
+- [major] Verify R-84 — container `{ version: 1, records }` and record content not asserted under R-84 (2 lenses) → fixer 5
+- [minor] Q-29 "extend in place" redundant with existing tests (3 lenses) → fixer 6
+- [minor] Shell Vitest AD-4 "state"/"isStale()" ambiguous; assert fake-storage bytes too (3 lenses) → fixer 7
+- [minor] throwing rollback untested → fixer 8
+- [minor] AD-6 `status` discriminant; `recorded` wording (2 lenses) → fixer 9
+- [minor] state before load; second load → fixer 10
+- [minor] fake storage per-key throw and removeItem recording → fixer 11
+- [minor] ticket 8's History notice will cover the §2 unreadable test's board → fixer 12
+- [minor] import-cycle rule symmetric for game.svelte.ts → fixer 13
+### Default applied (technical)
+- current().history — active variant only (AD-17); rejected-root cases assert stored bytes
+- Q-29 — existing game-store.spec.ts game-over and blocking.spec.ts version-unknown cases are the coverage; keep green, no new null variant
+- Initial `scoreHistory.state` `{ status: 'ok', records: [] }`, lastText null; second load() throws
+- Fake storage — `control.failKey` throws for that key only; removeItem recorded
+### Dropped
+- dispatch-time cost of calling reconcile every dispatch (stretch; AD-4 prescribes the order, no measured breach)
