@@ -46,3 +46,4 @@ risk: medium
 ## Notes
 
 - Open question: Q-42 under a controlling service worker: after a 404, does Reload still retry in place (banner kept visible) or do nothing? Proposed default: retry in place with the banner kept visible; never reload. Playwright proof is P7 (epic 7).
+- Decision: owner, 2026-10-01 (Q-42 under a controlling service worker): after a 404 on the word list, the banner's Reload retries the download in place while the banner stays visible; the page is never reloaded; if the word list loads, Validate works again. Supersedes this ticket's open question.
