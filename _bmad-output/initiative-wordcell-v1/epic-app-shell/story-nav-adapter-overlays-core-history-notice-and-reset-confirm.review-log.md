@@ -1,5 +1,5 @@
 # Review log — story-nav-adapter-overlays-core-history-notice-and-reset-confirm (ticket 3.8)
-State: pass 4: done
+State: pass 5: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 266 words, snapshot `story-nav-adapter-overlays-core-history-notice-and-reset-confirm.passes/pass0.md`, HEAD 2a6822b.
 Note: the pull from tickets.toml entry 8 dropped `interface`, `tests`, `owns`; they are passed to reviewers and fixer as intent, and the pass 1 fixer adds them to the Description as `Interface:`, `Tests:`, `Owns:` lines.
@@ -121,3 +121,30 @@ Words (docs): 1497 (5.6 x pass 0)  |  Snapshot: story-nav-adapter-overlays-core-
 - after launch() rejects, nav ignores later popstates (no second fatal overwriting the timeout text)
 - P3 Forward at depth 1: after Keep it, goForward() leaves the notice open, confirm closed (wc 1)
 - once-per-launch flag is structurally redundant in epic 3 (rejection only at boot)
+
+## Pass 5 — 2026-10-01
+Reviewers: fix diff, edge-case, adversarial, ref alignment  |  Findings: major 1, minor 6 applied + 7 plan-level unapplied, decision-needed 0  |  Dropped in triage: 1 (duplicate: single New game handler)
+### Applied
+- [major] nav push — wc of a queued push unspecified; reading the depth getter at send time gives two queued pushes the same wc → nav keeps its own count of pushed-not-popped entries, sends { wc: count + 1, launch }; S: two pushes queued behind a pop go out as consecutive wc → fixer 1
+- [minor] App.svelte has one newGame() for both roots: "in the New game handler (rejected root and game over)"; Boot deferred push condition explicit (store state read before newGame() was rejected) → fixer 2
+- [minor] S queue case: "a pop() or Forward correction is pending" → fixer 3
+- [minor] halt test also asserts history.state.wc 2 (entries stay in the stack) → fixer 4
+- [minor] §2 variants assert the sentence and the Reset history button (rule-coverage row 22) → fixer 5
+- [minor] "runs the Verify flows" → "runs Verify's notice and confirm flows" → fixer 6
+Fixer: all 6 items applied; wording tightened across Description, Interface, Decisions and Tests to pay for them (no substance dropped per fixer).
+Words (docs): 1511 (5.7 x pass 0)  |  Snapshot: story-nav-adapter-overlays-core-history-notice-and-reset-confirm.passes/pass5.md
+### Default applied (technical)
+- nav push numbering — own pushed-not-popped count, wc = count + 1
+### Decision needed (functionality / UX / gameplay)
+- none new
+### Dropped
+- 1 duplicate
+### Unapplied minors (plan-level; ticket at budget)
+- close(id) throws unless id is the top entry, including an empty stack
+- variant tests assert the dialog's exact title and body (accessible name/description)
+- after reload, wait for card-0 before asserting no dialog
+- assert undo's centre lies outside the confirm's box before the inert click
+- Forward is decided before the before-back hook (epic 4 note)
+- "nav launch awaited before the font check" as an entry 10 ordering case
+- notice renders from the reason captured when opened (reset() flips state to ok before the closes)
+- while halted, back closes hidden entries (plan line)
