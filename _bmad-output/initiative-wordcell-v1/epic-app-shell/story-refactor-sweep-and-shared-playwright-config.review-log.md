@@ -1,6 +1,6 @@
 # Review log — story-refactor-sweep-and-shared-playwright-config.md (ticket 3.12)
 
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD d74ceb0, copy story-refactor-sweep-and-shared-playwright-config.passes/pass0.md, 188 words.
 Intent carried from tickets.toml entry 12 (not copied by the pull): interface, tests, owns; pass-1 fixer adds them to Description as 'Interface:', 'Tests:', 'Owns:'.
@@ -95,3 +95,32 @@ Fixer: applied 1–16; 3-2 #4 moved from carry-forward examples to 'no change' (
 - none
 ### Dropped
 - none (duplicates merged)
+
+## Pass 4 — 2026-10-01
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 3, minor 10, decision-needed 0  |  Dropped in triage: 2
+Words (docs): 1446 (7.7 x pass 0)  |  Snapshot: story-refactor-sweep-and-shared-playwright-config.passes/pass4.md
+Fixer: applied 1–13; Carry-forward rule-coverage.md sentence aligned with item 3; fixtures-pitfall paragraph folded into Owns; no commands changed
+### Applied
+- [major] Unit-suite budget — 'each check keeps its compiler inputs' contradicts the noLib lever (coverage contract) → fixer item 1
+- [major] Tests / Inventory (a) — no rule for a strengthened test that fails on current code (src fix vs carry forward) → fixer item 2
+- [major] Tests rename rule — rule-coverage.md rows carry ids not titles; a rename (3-6 R-76→R-74) can drop the R-76 test the epic's Done when 1 needs → fixer item 3
+- [minor] 3-2-build.md item 4 listed as 'no change' but its 3.2 plan records an owner data-rule decision (carry-forward) → fixer item 4
+- [minor] Inventory — minors with two or optional fixes have no default choice → fixer item 5
+- [minor] Watch re-run — 'slowest engine test file' → 'slowest unit test file' → fixer item 6
+- [minor] AGENTS.md refresh records not in the carry-forward list → fixer item 7
+- [minor] Interface — 'no src/ export change' → 'no src/engine/index.ts export change' → fixer item 8
+- [minor] AC bullet 1 — 'starting list' ambiguous → list at the ticket's start commit → fixer item 9
+- [minor] Verify line — single Duration, watch budget missing → fixer item 10
+- [minor] Inventory (c) — 'move to' → 'are candidates for' → fixer item 11
+- [minor] Inventory — SPEC.review-log.md Pass 3 'Minors (unapplied)' carried by the entries are not a source → fixer item 12
+- [minor] Carry-forward — 'the epic SPEC's owner wording' undefined → 'SPEC.md or build-notes.md' → fixer item 13
+### Default applied (technical)
+- noLib only on the AD-2 type-export program (build-notes CAP-1), never on the AD-1 globals program; deliberate-break proviso stays
+- strengthened test failing on current code: fix in src/ as its own plan item when it restores specified behaviour with nothing player-visible changed; else the test is left out (never skip/todo) and the item carried forward with the failing case
+- rename keeps every id its old title carried and every rule-coverage.md row keeps a passing test named with its id; rule-coverage.md edited only where a row's id or CAP changes
+- two-option minors: the stronger test option when no done-ticket change is needed; 'optionally' items → no change unless they close a named gap
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- risk: low → medium (stretch; frontmatter is ticketing metadata, the guarded changes are covered by the gates)
+- directory-walker target module (plan-level choice, no ticket words needed; Inventory (e) already gives it a disposition)
