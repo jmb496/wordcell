@@ -4,6 +4,7 @@ title: "App shell services"
 parent: initiative-wordcell-v1
 covers: []
 after: [epic-rules-engine]
+status: done
 assignee: ""
 risk: medium
 ---
