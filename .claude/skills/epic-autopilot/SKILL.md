@@ -204,7 +204,10 @@ exists without one, this is a **resume**: add to the prompt *"The review log is 
 with the review-loop skill's resume rule; do not restart."*
 
 Prompt: *"Run the review-loop skill on `T` (docs mode, thorough, max 7<, budget=1500 when `T` is a
-stub under ~300 words>). Refs: the epic's
+stub under ~300 words>). <When the ticket's `tickets.toml` entry has extra keys `pull` does not
+copy (e.g. `interface`, `tests`, `owns`): The ticket was pulled from entry <id> of `<tickets.toml
+path>`, whose fields <names> were not copied; pass them to the reviewers and fixer as part of
+the ticket's intent, and the fixer adds them to the Description in pass 1.> Refs: the epic's
 SPEC.md and every companion its `companions:` frontmatter lists inside the spec folder
 (`_bmad-output/specs/<epic spec>/`, e.g. build-notes.md, rule-coverage.md), the epic file, ARCHITECTURE-SPINE.md, AGENTS.md, and the plans of this epic's done tickets for continuity.
 Checkpoint: after each pass's fixes are written (and its state line updated), commit only `T` and its
