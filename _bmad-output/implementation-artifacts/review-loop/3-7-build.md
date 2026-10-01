@@ -1,6 +1,6 @@
 # Review loop — ticket 3.7 build (code, 6da8e6f..9734152)
 
-State: pass 1: done
+State: pass 2: done
 
 Target: `_bmad-output/implementation-artifacts/review-loop/3-7-build.passes/pass0.diff` (6da8e6f..9734152)
 Intent: `_bmad-output/initiative-wordcell-v1/epic-app-shell/story-score-history-store-and-finish-writes-plan.md`
@@ -23,3 +23,23 @@ Fixer: all 6 applied; item 5 uses Undo then giveUp (Redo after undoing a give-up
 - none
 ### Dropped
 - none
+
+## Pass 2 — 2026-09-30
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 0, minor 4, decision-needed 0  |  Dropped in triage: 0
+Snapshot: tree db8de07245516455abfdec5a4a7eaf316dd83903 (no fix pass)  |  Final: npm test 1556 passed (27 files, 5.14 s), lint clean, check 0 errors
+### Applied
+- none (converged)
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none (the verification-gap "own finish then persisted pageshow" item was reclassified minor: build-notes Q-38 assigns that no-halt proof to shell Vitest `AD-4`, which exists; the Playwright half "nothing changed → stays active" is covered)
+
+## Result — converged after 2 passes
+
+Unapplied minors (for a later build or loop):
+- plan Implementation Notes / Auto Run Result: counts still say 1554 tests and "+26"/"26 cases"; after pass 1 they are 1556 tests and 28 cases, and the Shell Vitest list omits `AD-4 a give-up finish appends its gaveUp record…` and `AD-4 Q-39 a throwing write-back rollback…`.
+- e2e/lifecycle.spec.ts: no Playwright `Q-38 … after an own finish (wordcell:history written) stays active` (session-won.json, Undo, Redo, pageHide, pageShow persisted → active); only the shell Vitest `AD-4 an own finish …` proves it.
+- e2e/history.spec.ts `Q-39 (a) …`: the history set entry is `expect.any(String)`; parse it and assert one won record with the session-won.json seed, as the R-84 Redo test does.
+- src/shell/game.svelte.test.ts AD-17 load table: only the version-unknown history rejection is seeded; add rows for `history-invalid-null.json` (`version-unreadable`, no `version`) and a contents-unreadable fixture (`contents-unreadable`, version 1), each with no history write.
