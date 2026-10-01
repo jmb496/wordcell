@@ -1,6 +1,6 @@
 # Review log — story-refactor-sweep-and-shared-playwright-config.md (ticket 3.12)
 
-State: pass 4: done
+State: pass 5: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD d74ceb0, copy story-refactor-sweep-and-shared-playwright-config.passes/pass0.md, 188 words.
 Intent carried from tickets.toml entry 12 (not copied by the pull): interface, tests, owns; pass-1 fixer adds them to Description as 'Interface:', 'Tests:', 'Owns:'.
@@ -124,3 +124,31 @@ Fixer: applied 1–13; Carry-forward rule-coverage.md sentence aligned with item
 ### Dropped
 - risk: low → medium (stretch; frontmatter is ticketing metadata, the guarded changes are covered by the gates)
 - directory-walker target module (plan-level choice, no ticket words needed; Inventory (e) already gives it a disposition)
+
+## Pass 5 — 2026-10-01
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 3, minor 11, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+Words (docs): 1499 (8.0 x pass 0)  |  Snapshot: story-refactor-sweep-and-shared-playwright-config.passes/pass5.md
+Fixer: applied 1–9; offset words by tightening 'are allowed and add no row' → 'add no row' and the Notes line; no commands changed
+### Applied
+- [major] Tests — 'a rename keeps every id' forbids the 3-9-build.md minor dropping Q-42 from shell Vitest names (AGENTS.md: shell tests AD-n) → fixer item 1
+- [major] Inventory (c) / AC 3 — style-fold gate checks only card root and direct children; Dialog's buttons (.card > .buttons > button) and the standalone pre-mount fatal escape it → fixer item 2
+- [major] Tests / dispositions — an applied src/ change (e.g. 3-5 AD-15 halt before console.error) needs no pinning test → fixer item 3
+- [minor] Interface — pass-4 narrowing to src/engine/index.ts drops entry-12 'no src/ export change' → restore → fixer item 4
+- [minor] Watch re-run file may be split by Inventory (e) → successor files, slowest counts → fixer item 5
+- [minor] Tests — 'nothing player-visible changes' → 'what the player sees is already specified' (rule 6) → fixer item 6
+- [minor] Budget — 'commit recorded' → 'at the ticket's start commit' → fixer item 7
+- [minor] base paragraph — pwa 'only the scalar settings' → 'everything except the device map' → fixer item 8
+- [minor] Tests — 'each mapping to an existing row' fails for epic-2 engine rows → 'each carrying only ids an existing test already carries' → fixer item 9
+### Default applied (technical)
+- shell/UI Vitest renames may drop R/Q/§ ids; engine Vitest and Playwright renames keep them
+- style gate: every element of the card subtree plus Dialog layer/scrim, initially focused button focused, and the standalone pre-mount fatal
+- applied src/ change carries an AD-n-named test failing before, passing after
+### Decision needed (functionality / UX / gameplay)
+- none
+### Not applied (over budget, plan-level)
+- record one cold run beside the medians (fsModuleCache warm-cache bias)
+- per-file timings from `--reporter=json`
+- test identity without file path after a split
+- exact docker run -e CI=1 command for the screens comparison
+### Dropped
+- none
