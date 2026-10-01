@@ -1,6 +1,6 @@
 # Review log — story-boot-order-and-restore-boundaries.md (ticket 3.11)
 
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD f2c76de, copy story-boot-order-and-restore-boundaries.passes/pass0.md, 218 words.
 Intent carried from tickets.toml entry 11 (not copied by the pull): interface, tests, owns; pass-1 fixer adds them to Description as 'Interface:', 'Tests:', 'Owns:'.
@@ -89,3 +89,29 @@ Fixer: applied 1–12; no commands added
 - none
 ### Dropped
 - restore.spec.ts comment pointing at the kill variant — Owns line and Crash mode paragraph already locate it
+
+## Pass 4 — 2026-10-01
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 13, decision-needed 0  |  Dropped in triage: 0 (about 5 duplicates merged)
+Words (docs): 1034 (4.7 x pass 0)  |  Snapshot: story-boot-order-and-restore-boundaries.passes/pass4.md
+Fixer: applied 1–13; no commands added
+### Applied
+- [major] Verify, font case — pass 3 dropped pass 2's wait for the held woff2 request; releasing before it is held leaves the font held until the 30 s fatal, so the gating case can hang → fixer item 1
+- [minor] Description, open() — keep signature open(page, url = '/') and the heading wait; predicate `__wordcell !== undefined && current().kind !== 'booting'` (optional chaining is true while undefined), same after reload → fixer item 2
+- [minor] Description, helper move — sessionOf() and the Snapshot type move too → fixer item 3
+- [minor] Description, snapshot() — name the field `present` and the helpers.spec.ts case → fixer item 4
+- [minor] Description — Undo dispatched by the Undo button click, as the kill variant → fixer item 5
+- [minor] Description, Asserts — "the snapshot's current().session/.history/.prefs" (SPEC CAP-10) → fixer item 6
+- [minor] Verify, startHidden — count with countRequests from goto until 'ready': exactly one → fixer item 7
+- [minor] Verify lead — bodies kept except the rename and kill extension; only helper imports change → fixer item 8
+- [minor] Description — "Pins the CAP-10 ordering promises of AD-16's boot order" → fixer item 9
+- [minor] Description, Asserts — hidden mode: activeMs equal (clock paused after hidePage); plain mode not smaller → fixer item 10
+- [minor] Description, Asserts — primary-action label after reload equals the pre-reload label (R-73 (UI) exact phase) → fixer item 11
+- [minor] Description, titles — finish-undone 'R-84 AD-17 …', prefs '§7.10 AD-17 …' (AGENTS.md id order) → fixer item 12
+- [minor] Verify, first bullet — the existing test's route handler checks the DOM when the request arrives (not a held route) → fixer item 13
+### Default applied (technical)
+- font case — expect.poll until at least one woff2 route is held, then the stamp/booting/two-frames wait, then continue every held route
+- snapshot() field `present: ('wordcell:session' | 'wordcell:history' | 'wordcell:prefs')[]`; helpers.spec.ts: a session-only seeded page reports ['wordcell:session'] and open() resolves with kind 'active'
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
