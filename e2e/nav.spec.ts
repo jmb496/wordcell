@@ -206,6 +206,8 @@ test('AD-13 win → New game → back leaves the app; no notice (already shown t
   const primary = page.getByTestId('primary-action');
   await expect(primary).toHaveText('New game');
   await primary.click();
+  // AD-8: a plain Validate label needs the word list loaded.
+  await page.waitForFunction(() => window.__wordcell?.dictionaryState() === 'ready');
   await expect(primary).toHaveText('Validate');
   await expect(notice(page)).toHaveCount(0);
   expect((await wc(page))?.wc).toBe(0);

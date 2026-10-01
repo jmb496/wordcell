@@ -1,7 +1,10 @@
 <script lang="ts">
+import { dictionary } from '../shell/dictionary.svelte';
 import { game, type RejectReason } from '../shell/game.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import BlockingMessage from './BlockingMessage.svelte';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import DictionaryBanner from './DictionaryBanner.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Halted from './Halted.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
@@ -10,8 +13,9 @@ import { openHistoryNotice } from './history-notice.svelte';
 import { overlays } from './overlays.svelte';
 import { text } from './text';
 
-// Minimal board (epic 3 SPEC E1): columns, WordCells, Undo/Redo, the Seed line and the primary
-// action (Validate stays disabled until entry 9). Replaced by the board UI epic. Script-side uses
+// Minimal board (epic 3 SPEC E1): columns, WordCells, Undo/Redo, the Seed line, the
+// dictionary-failed banner, the invalid-word line and the primary action (Validate enabled iff
+// `canValidate` and the dictionary is ready, AD-8). Replaced by the board UI epic. Script-side uses
 // of `game` keep Biome from flagging the import (it misses markup).
 const board = $derived(game.view);
 
@@ -21,6 +25,10 @@ function undo(): void {
 
 function redo(): void {
   game.dispatch({ type: 'redo' });
+}
+
+function validate(): void {
+  game.dispatch({ type: 'validate' });
 }
 
 function confirm(): void {
@@ -48,8 +56,9 @@ function rejectedBody(reason: RejectReason): string {
   }
 }
 
-// Label precedence: status ≠ playing → New game whatever the phase; otherwise by phase. Validate
-// stays disabled until entry 9; an undefined handler disables the button.
+// Label precedence (EXPERIENCE.md Validate): status ≠ playing → New game whatever the phase; Place
+// → Confirm; otherwise `Word list unavailable` > `Loading words…` > `Need 3+ letters` (reason
+// style) > Validate (AD-8). An undefined handler disables the button.
 const primary = $derived.by(
   (): { label: string; reason: boolean; onclick: (() => void) | undefined } => {
     if (board === undefined) throw new Error('AD-3 primary action without a view');
@@ -61,6 +70,12 @@ const primary = $derived.by(
         onclick: board.canConfirm ? confirm : undefined,
       };
     }
+    if (dictionary.state === 'failed') {
+      return { label: text.wordListUnavailable, reason: true, onclick: undefined };
+    }
+    if (dictionary.state === 'loading') {
+      return { label: text.loadingWords, reason: true, onclick: undefined };
+    }
     const structural = board.draft?.structural;
     if (
       board.phase === 'composing' &&
@@ -69,7 +84,11 @@ const primary = $derived.by(
     ) {
       return { label: text.needLetters, reason: true, onclick: undefined };
     }
-    return { label: text.validate, reason: false, onclick: undefined };
+    return {
+      label: text.validate,
+      reason: false,
+      onclick: board.canValidate ? validate : undefined,
+    };
   },
 );
 </script>
@@ -117,6 +136,7 @@ const primary = $derived.by(
         </button>
       </div>
     </div>
+    <DictionaryBanner />
     <p class="seed">Seed {game.state.session.seed}</p>
     <section class="columns" aria-label="columns">
       {#each board.columns as column (column.column)}
@@ -149,6 +169,14 @@ const primary = $derived.by(
         </div>
       {/each}
     </section>
+    {#if game.feedback.rejectedWord !== undefined}
+      <p class="invalid">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+          <path d="M6 6 L18 18 M18 6 L6 18" />
+        </svg>
+        <span>{text.invalidWord(game.feedback.rejectedWord)}</span>
+      </p>
+    {/if}
     <button
       type="button"
       class="primary"
@@ -191,6 +219,12 @@ const primary = $derived.by(
     text-align: center;
   }
   .stack.empty { aspect-ratio: 3 / 4; border: 2px solid var(--wc-outline); border-radius: 6px; box-sizing: border-box; }
+  .invalid {
+    display: flex; align-items: center; gap: 6px; margin: 16px 0 0;
+    font: 400 16px/24px system-ui, "Roboto", sans-serif; color: var(--wc-error);
+  }
+  .invalid svg { flex: none; fill: none; stroke: var(--wc-error); stroke-width: 2.5; stroke-linecap: round; }
+  .invalid span { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   .primary {
     display: block; width: 100%; height: 48px; margin-top: 16px; padding: 0 16px;
     border: none; border-radius: 9999px;

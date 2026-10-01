@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-test('AD-17 test hook is present in the test build: frozen, exposes loaded and current', async ({
+test('AD-17 test hook is present in the test build: frozen, exposes loaded, current and dictionaryState', async ({
   page,
 }) => {
   await page.goto('/');
@@ -15,5 +15,9 @@ test('AD-17 test hook is present in the test build: frozen, exposes loaded and c
           kind: value.current().kind,
         };
   });
-  expect(hook).toEqual({ frozen: true, keys: ['current', 'loaded'], kind: 'active' });
+  expect(hook).toEqual({
+    frozen: true,
+    keys: ['current', 'dictionaryState', 'loaded'],
+    kind: 'active',
+  });
 });

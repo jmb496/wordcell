@@ -495,7 +495,10 @@ describe('game store newGame() and replay()', () => {
 describe('game store feedback', () => {
   // session-composing.json spells TAN; the dictionary lacks it, so Validate is rejected (R-38).
   beforeAll(() => {
-    vi.doMock('./dictionary.svelte', () => ({ dictionaryUrl: '', words: new Set(['cat']) }));
+    vi.doMock('./dictionary.svelte', () => ({
+      dictionaryUrl: '',
+      dictionary: { state: 'ready', words: new Set(['cat']) },
+    }));
   });
   afterAll(() => {
     vi.doUnmock('./dictionary.svelte');

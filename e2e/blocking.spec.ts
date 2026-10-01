@@ -101,6 +101,8 @@ test.describe('Q-37 AD-15 fatal', () => {
     await page.clock.install();
     await page.goto('/', { waitUntil: 'domcontentloaded' });
     await expect(page.getByTestId('card-0')).toBeVisible();
+    // AD-8: the word list loads first, so the runFor below does not also fire its 30 s timeout.
+    await page.waitForFunction(() => window.__wordcell?.dictionaryState() === 'ready');
     await page.clock.runFor(31_000);
     expect(await kind(page)).toBe('active');
     await expect(page.getByRole('alertdialog')).toHaveCount(0);

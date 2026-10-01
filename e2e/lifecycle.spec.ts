@@ -179,6 +179,11 @@ test.describe('R-76 visible-time clock', () => {
     const primary = page.getByTestId('primary-action');
     await expect(primary).toHaveText('New game');
     await primary.click();
+    // AD-8: a plain Validate label needs the word list; the runFor above fired the double rAF that
+    // starts it, and the paused clock stops rAF-polled waits, so poll from the runner.
+    await expect
+      .poll(() => page.evaluate(() => window.__wordcell?.dictionaryState()))
+      .toBe('ready');
     await expect(primary).toHaveText('Validate');
     await page.clock.runFor(350);
     await hidePage(page);

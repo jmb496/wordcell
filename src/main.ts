@@ -1,7 +1,6 @@
 import { mount } from 'svelte';
 import './shell/test-hook';
-// AD-8: side-effect import so Vite emits the hashed en-*.txt (an unused named import is tree-shaken).
-import './shell/dictionary.svelte';
+import { dictionary } from './shell/dictionary.svelte';
 import { game } from './shell/game.svelte';
 import { nav } from './shell/nav';
 import App from './ui/App.svelte';
@@ -78,8 +77,22 @@ async function fontCheck(): Promise<void> {
   if (faces.length === 0) throw new Error('AD-15 font check: WordCell Serif did not load');
 }
 
-// AD-16: nav launch, font check, load, lifecycle, boot surfaces, mount. Not awaited: a failure is
-// an unhandledrejection that writes nothing.
+// AD-16 first paint: resolves in the second nested animation frame, after the mounted board has
+// been painted once.
+function nextPaint(): Promise<void> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  });
+}
+
+// A halt can arrive during any await (a function, so TypeScript keeps no stale narrowing).
+function halted(): boolean {
+  return game.state.kind === 'halted';
+}
+
+// AD-16: nav launch, font check, load, lifecycle, boot surfaces, mount, then (only on the path that
+// mounts App) the dictionary fetch once painted and visible, unless halted meanwhile. Not awaited:
+// a failure is an unhandledrejection that writes nothing (AD-8 outcomes never reject).
 async function boot(): Promise<void> {
   // AD-13: rewind and stamp the base entry, then register the overlays before any push.
   await nav.launch();
@@ -99,6 +112,11 @@ async function boot(): Promise<void> {
   openHistoryNotice();
   mount(App, { target });
   surface = true;
+  await nextPaint();
+  if (halted()) return;
+  await game.whenVisible();
+  if (halted()) return;
+  await dictionary.load();
 }
 
 void boot();

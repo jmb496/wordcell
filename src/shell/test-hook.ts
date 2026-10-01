@@ -1,11 +1,16 @@
 // AD-17 test hook: installed only under `vite dev` and the `build:test` build; read-only accessors
 // delegate to the stores (update `e2e/globals.d.ts` in the same change); `history` comes from
-// the score-history store through the game store (AD-6).
+// the score-history store through the game store (AD-6); `dictionaryState` from the AD-8 store.
+import { type DictionaryState, dictionary } from './dictionary.svelte';
 import { type Current, game, type Loaded } from './game.svelte';
 
 declare global {
   interface Window {
-    __wordcell?: Readonly<{ loaded(): Loaded; current(): Current }>;
+    __wordcell?: Readonly<{
+      loaded(): Loaded;
+      current(): Current;
+      dictionaryState(): DictionaryState;
+    }>;
   }
 }
 
@@ -13,5 +18,6 @@ if (import.meta.env.DEV || import.meta.env.VITE_TEST_HOOKS === '1') {
   window.__wordcell = Object.freeze({
     loaded: () => game.loaded(),
     current: () => game.current(),
+    dictionaryState: () => dictionary.state,
   });
 }

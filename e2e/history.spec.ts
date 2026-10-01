@@ -186,6 +186,8 @@ test.describe('AD-7 absent history', () => {
     expect(await stored(page, HISTORY)).toBeNull();
     await expect(primary).toHaveText('Confirm');
     await primary.click();
+    // AD-8: a plain Validate label needs the word list loaded.
+    await page.waitForFunction(() => window.__wordcell?.dictionaryState() === 'ready');
     await expect(primary).toHaveText('Validate');
     expect(await stored(page, HISTORY)).toBeNull();
   });
@@ -196,6 +198,8 @@ test.describe('AD-7 absent history', () => {
     const primary = page.getByTestId('primary-action');
     await expect(primary).toHaveText('New game');
     await primary.click();
+    // AD-8: a plain Validate label needs the word list loaded.
+    await page.waitForFunction(() => window.__wordcell?.dictionaryState() === 'ready');
     await expect(primary).toHaveText('Validate');
     expect(await stored(page, HISTORY)).toBeNull();
   });
@@ -246,6 +250,8 @@ test('§2 an unreadable history (history-invalid-version-unknown.json) is never 
   expect(await stored(page, HISTORY)).toBe(historyText);
   const rejected = { rejected: { reason: 'version-unknown', version: 2 } };
   await primary.click();
+  // AD-8: a plain Validate label needs the word list loaded.
+  await page.waitForFunction(() => window.__wordcell?.dictionaryState() === 'ready');
   await expect(primary).toHaveText('Validate');
   expect(await stored(page, HISTORY)).toBe(historyText);
   expect((await current(page)).history).toEqual(rejected);

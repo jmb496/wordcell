@@ -37,6 +37,11 @@ async function open(page: Page, url = '/'): Promise<void> {
   await expect(page.getByRole('heading', { name: 'WordCell' })).toBeVisible();
 }
 
+// AD-8: the word list has loaded (plain Validate labels need it).
+async function dictionaryReady(page: Page): Promise<void> {
+  await page.waitForFunction(() => window.__wordcell?.dictionaryState() === 'ready');
+}
+
 test('R-74 a fresh context stores a uint32-seeded Session before any input, equal to current().session, loaded().session null', async ({
   page,
 }) => {
@@ -73,24 +78,30 @@ test('R-74 two fresh contexts get different seeds', async ({ page, browser }) =>
   }
 });
 
-test('R-73 Undo, Redo and Confirm on session-place.json are each stored before the next action', async ({
+test('R-73 Undo, Validate, Redo and Confirm on session-place.json are each stored before the next action', async ({
   page,
 }) => {
   await seedStorage(page, { session: fixture('session-place.json') });
   await open(page);
+  // The real word list contains TAN (R-38).
+  await dictionaryReady(page);
   const undo = page.getByRole('button', { name: 'Undo', exact: true });
   const redo = page.getByRole('button', { name: 'Redo', exact: true });
   const primary = page.getByTestId('primary-action');
   await expect(redo).toBeDisabled();
   let before = sessionOf(await snapshot(page));
   expect(before).toEqual(JSON.parse(fixture('session-place.json')));
-  for (const step of ['undo', 'redo', 'confirm'] as const) {
+  for (const step of ['undo', 'validate', 'undo', 'redo', 'confirm'] as const) {
+    if (step === 'validate') {
+      await expect(primary).toHaveText('Validate');
+      await expect(primary).toBeEnabled();
+    }
     if (step === 'confirm') {
       // Confirm is the primary action, enabled in Place (R-42).
       await expect(primary).toHaveText('Confirm');
       await expect(primary).toBeEnabled();
     }
-    await { undo, redo, confirm: primary }[step].click();
+    await { undo, redo, validate: primary, confirm: primary }[step].click();
     const snap = await snapshot(page);
     const after = sessionOf(snap);
     expect(snap.stored).toEqual(after);
@@ -98,6 +109,12 @@ test('R-73 Undo, Redo and Confirm on session-place.json are each stored before t
     before = after;
     if (step === 'undo') await expect(redo).toBeEnabled();
     if (step === 'redo') await expect(redo).toBeDisabled();
+    if (step === 'validate') {
+      // R-38: Validate enters Place and discards the redo data.
+      expect(after).toMatchObject({ cursor: { phase: 'place' } });
+      await expect(primary).toHaveText('Confirm');
+      await expect(redo).toBeDisabled();
+    }
     if (step === 'confirm') {
       // R-42: Confirm commits the one move and returns to Idle.
       expect(after).toMatchObject({ cursor: { index: 1, phase: 'idle' } });
@@ -107,7 +124,6 @@ test('R-73 Undo, Redo and Confirm on session-place.json are each stored before t
   }
 });
 
-// Interim: entry 9 rewrites the primary-action label assertions (dictionary loading/failed).
 test('R-74 R-73 Q-29 game-over New game on session-gave-up.json stores a fresh Session at once', async ({
   page,
 }) => {
@@ -135,6 +151,7 @@ test('R-74 R-73 Q-29 game-over New game on session-gave-up.json stores a fresh S
   expect(seed).toBeLessThanOrEqual(4294967295);
   // Q-29: New game leaves the score history untouched.
   expect(await page.evaluate(() => localStorage.getItem('wordcell:history'))).toBe(historyText);
+  await dictionaryReady(page);
   await expect(primary).toHaveText('Validate');
   await expect(primary).toBeDisabled();
 });
@@ -151,30 +168,69 @@ function tokenColor(page: Page, token: string): Promise<string> {
   }, token);
 }
 
-// Interim labels (entry 9 adds loading/failed and Validate enablement).
-const LABELS: [fixture: string, label: string, enabled: boolean][] = [
-  ['session-idle-fresh.json', 'Validate', false],
-  ['session-idle-pending-draft.json', 'Validate', false],
-  ['session-composing-draft-2-letters.json', 'Need 3+ letters', false],
-  ['session-composing.json', 'Validate', false],
-  ['session-place.json', 'Confirm', true],
-  ['session-gave-up.json', 'New game', true],
-  ['session-won.json', 'New game', true],
+type Dictionary = 'held' | 'failing' | 'ready';
+
+// AD-8: hold the word list (never answered), fail it (500) or let the real list through.
+async function routeDictionary(page: Page, dictionary: Dictionary): Promise<void> {
+  if (dictionary === 'held') await page.route('**/en*.txt', () => {});
+  if (dictionary === 'failing') {
+    await page.route('**/en*.txt', (route) => route.fulfill({ status: 500, body: '' }));
+  }
+}
+
+// Primary-action label per Session fixture and dictionary state (EXPERIENCE.md Validate
+// precedence); `reason` is the ink-secondary disabled-reason style.
+type Row = [
+  fixture: string,
+  dictionary: Dictionary,
+  label: string,
+  enabled: boolean,
+  reason: boolean,
+];
+const LABELS: Row[] = [
+  ['session-idle-fresh.json', 'held', 'Loading words…', false, true],
+  ['session-idle-fresh.json', 'failing', 'Word list unavailable', false, true],
+  ['session-idle-fresh.json', 'ready', 'Validate', false, false],
+  ['session-idle-pending-draft.json', 'held', 'Loading words…', false, true],
+  ['session-idle-pending-draft.json', 'failing', 'Word list unavailable', false, true],
+  ['session-idle-pending-draft.json', 'ready', 'Validate', false, false],
+  ['session-composing-draft-2-letters.json', 'held', 'Loading words…', false, true],
+  ['session-composing-draft-2-letters.json', 'failing', 'Word list unavailable', false, true],
+  ['session-composing-draft-2-letters.json', 'ready', 'Need 3+ letters', false, true],
+  ['session-composing.json', 'held', 'Loading words…', false, true],
+  ['session-composing.json', 'failing', 'Word list unavailable', false, true],
+  ['session-composing.json', 'ready', 'Validate', true, false],
+  ['session-place.json', 'held', 'Confirm', true, false],
+  ['session-place.json', 'failing', 'Confirm', true, false],
+  ['session-place.json', 'ready', 'Confirm', true, false],
+  ['session-gave-up.json', 'held', 'New game', true, false],
+  ['session-gave-up.json', 'failing', 'New game', true, false],
+  ['session-won.json', 'held', 'New game', true, false],
+  ['session-won.json', 'failing', 'New game', true, false],
 ];
 
-for (const [name, label, enabled] of LABELS) {
-  test(`AD-3 primary-action on ${name} reads ${label}, ${enabled ? 'enabled' : 'disabled'}`, async ({
+for (const [name, dictionary, label, enabled, reason] of LABELS) {
+  test(`R-38 AD-3 primary-action on ${name} with the word list ${dictionary} reads ${label}, ${enabled ? 'enabled' : 'disabled'}`, async ({
     page,
   }) => {
+    await routeDictionary(page, dictionary);
     await seedStorage(page, { session: fixture(name) });
     await open(page);
+    const state = { held: 'loading', failing: 'failed', ready: 'ready' }[dictionary];
+    await page.waitForFunction(
+      (expected) => window.__wordcell?.dictionaryState() === expected,
+      state,
+    );
     const primary = page.getByTestId('primary-action');
     await expect(primary).toHaveText(label);
     if (enabled) await expect(primary).toBeEnabled();
     else await expect(primary).toBeDisabled();
-    if (name === 'session-composing-draft-2-letters.json') {
-      // Ticket 3.4 Look: the disabled reason reads in ink-secondary, plain Validate in ink-disabled.
-      await expect(primary).toHaveCSS('color', await tokenColor(page, '--wc-ink-secondary'));
+    if (!enabled) {
+      // DESIGN.md Ink: a disabled reason reads in ink-secondary, plain Validate in ink-disabled.
+      const token = reason ? '--wc-ink-secondary' : '--wc-ink-disabled';
+      await expect(primary).toHaveCSS('color', await tokenColor(page, token));
+    }
+    if (name === 'session-composing-draft-2-letters.json' && dictionary === 'ready') {
       // Undo leaves Idle with a 2-letter pending draft: plain Validate.
       await page.getByRole('button', { name: 'Undo', exact: true }).click();
       await expect

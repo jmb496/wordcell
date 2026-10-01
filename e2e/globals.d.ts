@@ -34,6 +34,7 @@ declare global {
           }
         | { readonly kind: 'rejected'; readonly reason: RejectReason }
         | { readonly kind: 'halted' };
+      dictionaryState(): 'loading' | 'ready' | 'failed';
     }>;
     __wordcellBoot?: Record<
       'wordcell:session' | 'wordcell:history' | 'wordcell:prefs',

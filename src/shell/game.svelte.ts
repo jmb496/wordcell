@@ -25,7 +25,7 @@ import {
   view,
 } from '../engine/index';
 import * as clock from './clock';
-import { words } from './dictionary.svelte';
+import { dictionary } from './dictionary.svelte';
 import { type CurrentHistory, type LoadedHistory, scoreHistory } from './history.svelte';
 import { newSeed } from './seed';
 import { isLocalArea, read, SESSION_KEY, write } from './storage';
@@ -138,7 +138,10 @@ function dispatch(command: Command): DispatchResult {
   const before = state.session;
   // The taken ms are dropped if a later step throws; entry 5 (AD-15 halt) makes that fatal.
   const accrued = accrue(before, clock.take(performance.now()), EN);
-  const result = apply(accrued, command, { lang: EN, dictionary: words });
+  const result = apply(accrued, command, {
+    lang: EN,
+    dictionary: dictionary.state === 'ready' ? dictionary.words : undefined,
+  });
   const changed = result.session !== accrued;
   let finished: 'won' | 'gaveUp' | undefined;
   let unfinished: true | undefined;

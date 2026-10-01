@@ -10,6 +10,8 @@ test('AD-17 placeholder board screenshot', async ({ page }) => {
   for (let id = 0; id < 52; id++) {
     await expect(page.getByTestId(`card-${id}`)).toBeVisible();
   }
+  // AD-8: the primary action reads plain Validate once the word list is ready.
+  await page.waitForFunction(() => window.__wordcell?.dictionaryState() === 'ready');
 
   // Copied from e2e/pwa/font.spec.ts.
   const fonts = await page.evaluate(async () => {

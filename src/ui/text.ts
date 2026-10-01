@@ -3,6 +3,12 @@
 export const text = Object.freeze({
   validate: 'Validate',
   needLetters: 'Need 3+ letters',
+  // AD-8 dictionary states: Validate reason labels, the dictionary-failed banner line.
+  loadingWords: 'Loading words\u2026',
+  wordListUnavailable: 'Word list unavailable',
+  wordListFailed: "Word list didn't load.",
+  // R-38 invalid word: takes the engine spelling (lowercase, `qu` for QU) and uppercases it.
+  invalidWord: (word: string) => `${word.toUpperCase()} isn't in the word list.`,
   confirm: 'Confirm',
   newGame: 'New game',
   undo: 'Undo',
