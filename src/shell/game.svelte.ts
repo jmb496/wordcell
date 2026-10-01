@@ -6,11 +6,13 @@
 // nothing writes and `load()` only records the launch result. `registerLifecycle()` (called by
 // `main.ts` after `load()`, AD-16) adds the AD-9 visibilitychange/pagehide/pageshow listeners that
 // run the visible-time clock and the hide flush (`registerBeforeHide` callbacks run first);
-// `whenVisible()` and `isStale()` (Q-38 bfcache) are owned here, and `staleOwners()` is the OR
-// list of key-owner checks that entry 10 extends. Score history (AD-6): `load()` calls
+// `whenVisible()` and `isStale()` (Q-38 bfcache) are owned here, and `staleOwners()` ORs every
+// key owner's check (Session, history, prefs). Score history (AD-6): `load()` calls
 // `scoreHistory.load()` right after the Session read in every branch, `dispatch` calls
 // `scoreHistory.reconcile()` before the Session write and its rollback if that write throws
 // (Q-39), and `loaded()`/`current()` report `history`; scoreHistory is used only inside functions.
+// Prefs (AD-10): `main.ts` calls `prefs.load()` before `load()`; `loaded()`/`current()` report
+// `prefs` and `staleOwners()` includes it; prefs is used only inside functions.
 import {
   accrue,
   apply,
@@ -27,6 +29,7 @@ import {
 import * as clock from './clock';
 import { dictionary } from './dictionary.svelte';
 import { type CurrentHistory, type LoadedHistory, scoreHistory } from './history.svelte';
+import { type LoadedPrefs, type Prefs, prefs } from './prefs.svelte';
 import { newSeed } from './seed';
 import { isLocalArea, read, SESSION_KEY, write } from './storage';
 
@@ -50,16 +53,22 @@ export interface DispatchResult {
   readonly unfinished?: true;
 }
 
-/** AD-17 `loaded()`: the launch parse results in stored shape (entry 10 adds prefs). */
+/** AD-17 `loaded()`: the launch parse results in stored shape. */
 export interface Loaded {
   readonly session: Session | null | { readonly rejected: RejectReason };
   readonly history: LoadedHistory;
+  readonly prefs: LoadedPrefs;
 }
 
-/** AD-17 `current()` (entry 10 adds prefs to the active variant). */
+/** AD-17 `current()`: the active variant reports the in-memory history and prefs. */
 export type Current =
   | { readonly kind: 'booting' }
-  | { readonly kind: 'active'; readonly session: Session; readonly history: CurrentHistory }
+  | {
+      readonly kind: 'active';
+      readonly session: Session;
+      readonly history: CurrentHistory;
+      readonly prefs: Prefs;
+    }
   | { readonly kind: 'rejected'; readonly reason: RejectReason }
   | { readonly kind: 'halted' };
 
@@ -221,9 +230,9 @@ function isStale(): boolean {
   return read(SESSION_KEY) !== sessionText;
 }
 
-// Q-38 bfcache: every key owner's check, ORed; entry 10 appends prefs.
+// Q-38 bfcache: every key owner's check, ORed.
 function staleOwners(): boolean {
-  return isStale() || scoreHistory.isStale();
+  return isStale() || scoreHistory.isStale() || prefs.isStale();
 }
 
 /** AD-9: a callback run first on every hide flush, in registration order; accepted in any state. */
@@ -286,12 +295,17 @@ function whenVisible(): Promise<void> {
 
 function loaded(): Loaded {
   if (launch === undefined) throw new Error(`AD-17 loaded() while ${state.kind}`);
-  return { session: launch.session, history: scoreHistory.loaded() };
+  return { session: launch.session, history: scoreHistory.loaded(), prefs: prefs.loaded() };
 }
 
 function current(): Current {
   return state.kind === 'active'
-    ? { kind: 'active', session: state.session, history: scoreHistory.current() }
+    ? {
+        kind: 'active',
+        session: state.session,
+        history: scoreHistory.current(),
+        prefs: prefs.value,
+      }
     : state;
 }
 

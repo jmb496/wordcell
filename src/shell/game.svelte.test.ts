@@ -28,8 +28,11 @@ import {
 
 const KEY = 'wordcell:session';
 const HISTORY = 'wordcell:history';
+const PREFS = 'wordcell:prefs';
 // AD-17 `current().history` for a never-written history.
 const EMPTY = { version: 1, records: [] };
+// AD-7 defaults: `current().prefs` for never-written prefs.
+const DEFAULT_PREFS = { version: 1, animationSpeed: 'normal', showTimer: false };
 // Q-39 harness: a fake storage `control.fail` that throws on every setItem.
 const FAIL_SETS = (op: 'set' | 'remove') =>
   op === 'set' ? new Error('setItem failed') : undefined;
@@ -60,6 +63,10 @@ function parsed(text: string): Session {
 type Options = {
   stored?: string;
   history?: string;
+  /** Seeds `wordcell:prefs`. */
+  prefs?: string;
+  /** Calls `prefs.load()` after the imports (default true; false only for import safety). */
+  loadPrefs?: boolean;
   storage?: Partial<FakeStorage>;
   seed?: number;
 };
@@ -67,9 +74,10 @@ type FakeStorage = ReturnType<typeof fakeStorage>;
 
 // `writes` logs setItem and removeItem (as `[key, null]`) in order; `control.fail` returns the
 // error a call throws before it changes anything (undefined: the call succeeds).
-function fakeStorage(stored: string | undefined, historyText?: string) {
+function fakeStorage(stored: string | undefined, historyText?: string, prefsText?: string) {
   const map = new Map<string, string>(stored === undefined ? [] : [[KEY, stored]]);
   if (historyText !== undefined) map.set(HISTORY, historyText);
+  if (prefsText !== undefined) map.set(PREFS, prefsText);
   const writes: [string, string | null][] = [];
   const control: { fail: (op: 'set' | 'remove', key: string) => Error | undefined } = {
     fail: () => undefined,
@@ -94,19 +102,44 @@ function fakeStorage(stored: string | undefined, historyText?: string) {
   };
 }
 
+// AD-10 stub: the root element's inline style (map-backed).
+function fakeStyle() {
+  const props = new Map<string, string>();
+  return {
+    props,
+    setProperty: (name: string, value: string) => {
+      props.set(name, value);
+    },
+    getPropertyValue: (name: string) => props.get(name) ?? '',
+  };
+}
+
 // Fresh store and clock modules per test, over stubbed window (an EventTarget: the store adds its
-// Q-38 `storage` listener at import), document (an EventTarget with a settable visibilityState),
-// localStorage, performance and crypto. `added(type)` lists the listeners the store added after
-// import (Node's dispatchEvent swallows a listener's throw, so tests call them directly).
+// Q-38 `storage` listener at import), document (an EventTarget with a settable visibilityState and
+// a `documentElement.style`), matchMedia, localStorage, performance and crypto; `prefs.load()` runs
+// after the imports, as `main.ts` does before `game.load()`. `added(type)` lists the listeners the
+// store added after import (Node's dispatchEvent swallows a listener's throw, so tests call them
+// directly).
 async function setup(options: Options = {}) {
   const win = new EventTarget();
   vi.stubGlobal('window', win);
+  const style = fakeStyle();
   const doc = Object.assign(new EventTarget(), {
     visibilityState: 'visible' as DocumentVisibilityState,
+    documentElement: { style },
   });
   vi.stubGlobal('document', doc);
+  // The reduced-motion MediaQueryList: not matching; prefs cases live in prefs.svelte.test.ts.
+  const queries: string[] = [];
+  vi.stubGlobal('matchMedia', (query: string) => {
+    queries.push(query);
+    return Object.assign(new EventTarget(), { matches: false });
+  });
   vi.resetModules();
-  const storage = { ...fakeStorage(options.stored, options.history), ...options.storage };
+  const storage = {
+    ...fakeStorage(options.stored, options.history, options.prefs),
+    ...options.storage,
+  };
   vi.stubGlobal('localStorage', storage);
   const time = { now: 0 };
   vi.stubGlobal('performance', { now: () => time.now });
@@ -121,7 +154,9 @@ async function setup(options: Options = {}) {
   }
   const { game } = await import('./game.svelte');
   const { scoreHistory } = await import('./history.svelte');
+  const { prefs } = await import('./prefs.svelte');
   const clock = await import('./clock');
+  if (options.loadPrefs ?? true) prefs.load();
   // A synthetic `storage` event (another window's write) dispatched on the stubbed window.
   const storageEvent = (key: string | null, area: object, newValue: string | null = 'x') => {
     win.dispatchEvent(Object.assign(new Event('storage'), { key, newValue, storageArea: area }));
@@ -139,7 +174,20 @@ async function setup(options: Options = {}) {
     if (listeners.length !== 1) throw new Error(`${listeners.length} ${type} listeners`);
     listeners[0]?.(event);
   };
-  return { game, scoreHistory, clock, storage, time, storageEvent, doc, added, fire };
+  return {
+    game,
+    scoreHistory,
+    prefs,
+    clock,
+    storage,
+    time,
+    storageEvent,
+    doc,
+    style,
+    queries,
+    added,
+    fire,
+  };
 }
 
 async function active(stored: string, historyText?: string) {
@@ -171,9 +219,12 @@ describe('game store', () => {
     const throwing = () => {
       throw new Error('storage touched at import');
     };
-    const { game } = await setup({
+    const { game, queries, style } = await setup({
       storage: { getItem: throwing, setItem: throwing, removeItem: throwing },
+      loadPrefs: false,
     });
+    expect(queries).toEqual([]);
+    expect([...style.props]).toEqual([]);
     expect(game.state).toEqual({ kind: 'booting' });
     expect(game.current()).toEqual({ kind: 'booting' });
     expect(game.view).toBeUndefined();
@@ -189,9 +240,14 @@ describe('game store', () => {
     const session = parsed(text ?? '');
     expect(session.seed).toBe(7);
     expect(session.activeMs).toBe(0);
-    expect(game.current()).toEqual({ kind: 'active', session, history: EMPTY });
+    expect(game.current()).toEqual({
+      kind: 'active',
+      session,
+      history: EMPTY,
+      prefs: DEFAULT_PREFS,
+    });
     expect(JSON.parse(text ?? '')).toEqual(session);
-    expect(game.loaded()).toEqual({ session: null, history: null });
+    expect(game.loaded()).toEqual({ session: null, history: null, prefs: null });
   });
 
   for (const seed of [0, 4294967295]) {
@@ -201,7 +257,12 @@ describe('game store', () => {
       const text = storage.map.get(KEY) ?? '';
       expect(parseSession(text, EN).ok).toBe(true);
       expect(parsed(text).seed).toBe(seed);
-      expect(game.current()).toEqual({ kind: 'active', session: parsed(text), history: EMPTY });
+      expect(game.current()).toEqual({
+        kind: 'active',
+        session: parsed(text),
+        history: EMPTY,
+        prefs: DEFAULT_PREFS,
+      });
     });
   }
 
@@ -218,8 +279,13 @@ describe('game store', () => {
     const text = JSON.stringify(place);
     const { game, storage } = await active(text);
     expect(storage.writes).toEqual([]);
-    expect(game.current()).toEqual({ kind: 'active', session: JSON.parse(text), history: EMPTY });
-    expect(game.loaded()).toEqual({ session: JSON.parse(text), history: null });
+    expect(game.current()).toEqual({
+      kind: 'active',
+      session: JSON.parse(text),
+      history: EMPTY,
+      prefs: DEFAULT_PREFS,
+    });
+    expect(game.loaded()).toEqual({ session: JSON.parse(text), history: null, prefs: null });
   });
 
   it('AD-4 a version-unknown load is rejected with its version and writes nothing', async () => {
@@ -228,7 +294,7 @@ describe('game store', () => {
     const reason = { reason: 'version-unknown', version: 99 };
     expect(game.state).toEqual({ kind: 'rejected', reason });
     expect(game.current()).toEqual({ kind: 'rejected', reason });
-    expect(game.loaded()).toEqual({ session: { rejected: reason }, history: null });
+    expect(game.loaded()).toEqual({ session: { rejected: reason }, history: null, prefs: null });
     expect(game.view).toBeUndefined();
     expect(storage.writes).toEqual([]);
     expect(storage.map.get(KEY)).toBe(text);
@@ -238,7 +304,7 @@ describe('game store', () => {
     const { game, storage } = await active(JSON.stringify(invalidNull));
     const reason = { reason: 'version-unreadable' };
     expect(game.current()).toEqual({ kind: 'rejected', reason });
-    expect(game.loaded()).toEqual({ session: { rejected: reason }, history: null });
+    expect(game.loaded()).toEqual({ session: { rejected: reason }, history: null, prefs: null });
     expect(storage.writes).toEqual([]);
   });
 
@@ -246,7 +312,7 @@ describe('game store', () => {
     const { game, storage } = await active(JSON.stringify(invalidLastOnly));
     const reason = { reason: 'replay-failed', version: 1 };
     expect(game.current()).toEqual({ kind: 'rejected', reason });
-    expect(game.loaded()).toEqual({ session: { rejected: reason }, history: null });
+    expect(game.loaded()).toEqual({ session: { rejected: reason }, history: null, prefs: null });
     expect(storage.writes).toEqual([]);
   });
 
@@ -279,7 +345,12 @@ describe('game store', () => {
     const expected = apply(parsed(text), UNDO, { lang: EN }).session;
     expect(game.dispatch(UNDO)).toEqual({ changed: true });
     expect(storage.writes).toEqual([[KEY, serializeSession(expected)]]);
-    expect(game.current()).toEqual({ kind: 'active', session: expected, history: EMPTY });
+    expect(game.current()).toEqual({
+      kind: 'active',
+      session: expected,
+      history: EMPTY,
+      prefs: DEFAULT_PREFS,
+    });
   });
 
   it('AD-4 a throwing session write rethrows and leaves game.state the same reference', async () => {
@@ -308,7 +379,12 @@ describe('game store', () => {
     expect(game.dispatch(NO_OP)).toEqual({ changed: false });
     const expected = { ...parsed(text), activeMs: composing.activeMs + 1000 };
     expect(storage.writes).toEqual([[KEY, serializeSession(expected)]]);
-    expect(game.current()).toEqual({ kind: 'active', session: expected, history: EMPTY });
+    expect(game.current()).toEqual({
+      kind: 'active',
+      session: expected,
+      history: EMPTY,
+      prefs: DEFAULT_PREFS,
+    });
   });
 
   it('AD-4 dispatch takes and accrues the clock ms; the written Session is Undo of the accrued one', async () => {
@@ -320,7 +396,12 @@ describe('game store', () => {
     const expected = apply(accrue(parsed(text), 1000, EN), UNDO, { lang: EN }).session;
     expect(expected.activeMs).toBe(place.activeMs + 1000);
     expect(storage.writes).toEqual([[KEY, serializeSession(expected)]]);
-    expect(game.current()).toEqual({ kind: 'active', session: expected, history: EMPTY });
+    expect(game.current()).toEqual({
+      kind: 'active',
+      session: expected,
+      history: EMPTY,
+      prefs: DEFAULT_PREFS,
+    });
   });
 
   it('AD-4 dispatch order: accrue runs before apply, so a Redo onto a win keeps the accrued ms', async () => {
@@ -353,14 +434,18 @@ describe('game store', () => {
     const text = JSON.stringify(place);
     const { game } = await active(text);
     game.dispatch(UNDO);
-    expect(game.loaded()).toEqual({ session: JSON.parse(text), history: null });
+    expect(game.loaded()).toEqual({ session: JSON.parse(text), history: null, prefs: null });
     expect(sessionOf(game)).not.toEqual(JSON.parse(text));
   });
 });
 
 describe('game store newGame() and replay()', () => {
   const REJECTED = JSON.stringify(invalidNull);
-  const REJECT_LAUNCH = { session: { rejected: { reason: 'version-unreadable' } }, history: null };
+  const REJECT_LAUNCH = {
+    session: { rejected: { reason: 'version-unreadable' } },
+    history: null,
+    prefs: null,
+  };
 
   async function rejected(seed: number) {
     const env = await setup({ stored: REJECTED, seed });
@@ -397,6 +482,7 @@ describe('game store newGame() and replay()', () => {
       kind: 'active',
       session: JSON.parse(text),
       history: EMPTY,
+      prefs: DEFAULT_PREFS,
     });
   }
 
@@ -561,12 +647,12 @@ describe('game store halt', () => {
   const HALTED = { kind: 'halted' };
 
   const beforeLoad: [string, string | undefined, object][] = [
-    ['the key absent', undefined, { session: null, history: null }],
-    ['a valid Session', JSON.stringify(place), { session: place, history: null }],
+    ['the key absent', undefined, { session: null, history: null, prefs: null }],
+    ['a valid Session', JSON.stringify(place), { session: place, history: null, prefs: null }],
     [
       'a rejected Session',
       JSON.stringify(invalidNull),
-      { session: { rejected: { reason: 'version-unreadable' } }, history: null },
+      { session: { rejected: { reason: 'version-unreadable' } }, history: null, prefs: null },
     ],
   ];
   for (const [name, stored, launch] of beforeLoad) {
@@ -785,6 +871,7 @@ describe('game store lifecycle', () => {
         kind: 'active',
         session: parsed(env.storage.map.get(KEY) ?? ''),
         history: EMPTY,
+        prefs: DEFAULT_PREFS,
       });
       expectNotStale(env, 'active');
     });
@@ -833,6 +920,43 @@ describe('game store lifecycle', () => {
     env.fire('pageshow', { persisted: false });
     expect(env.game.current().kind).toBe('active');
   });
+
+  it('AD-4 an own setShowTimer(true), then a persisted pageshow does not halt', async () => {
+    const env = await active(JSON.stringify(place));
+    env.game.registerLifecycle();
+    env.prefs.setShowTimer(true);
+    expect(env.storage.map.get(PREFS)).toBe(
+      '{"version":1,"animationSpeed":"normal","showTimer":true}',
+    );
+    expect(env.prefs.isStale()).toBe(false);
+    env.fire('pageshow', PERSISTED);
+    expect(env.game.current().kind).toBe('active');
+    expect(env.game.haltCause).toBeUndefined();
+  });
+
+  const prefsOthers: [string, string | undefined, (env: Env) => void][] = [
+    [
+      'written',
+      undefined,
+      (env) => env.storage.map.set(PREFS, '{"version":1,"animationSpeed":"fast","showTimer":true}'),
+    ],
+    ['removed', JSON.stringify(DEFAULT_PREFS), (env) => env.storage.map.delete(PREFS)],
+  ];
+  for (const [name, prefsText, change] of prefsOthers) {
+    it(`AD-4 wordcell:prefs ${name} outside the setters, then a persisted pageshow halts with another-window`, async () => {
+      const env = await setup({ stored: JSON.stringify(place), prefs: prefsText });
+      env.game.load();
+      env.game.registerLifecycle();
+      expect(env.prefs.isStale()).toBe(false);
+      change(env);
+      expect(env.game.isStale()).toBe(false);
+      expect(env.scoreHistory.isStale()).toBe(false);
+      expect(env.prefs.isStale()).toBe(true);
+      env.fire('pageshow', PERSISTED);
+      expect(env.game.current()).toEqual({ kind: 'halted' });
+      expect(env.game.haltCause).toBe('another-window');
+    });
+  }
 
   it('AD-16 halted before load: load, then registerLifecycle() throws and adds no listener', async () => {
     const env = await setup({ stored: JSON.stringify(place) });
@@ -969,7 +1093,12 @@ describe('game store lifecycle', () => {
     expect(() => env.fire('visibilitychange')).toThrow('setItem failed');
     expect(env.storage.map.get(KEY)).toBe(text);
     expect(env.game.state).toBe(before);
-    expect(env.game.current()).toEqual({ kind: 'active', session: place, history: EMPTY });
+    expect(env.game.current()).toEqual({
+      kind: 'active',
+      session: place,
+      history: EMPTY,
+      prefs: DEFAULT_PREFS,
+    });
   });
 
   it('AD-9 the hide flush while rejected writes nothing', async () => {
@@ -1009,21 +1138,26 @@ describe('score history store', () => {
       () => active(JSON.stringify(place)),
       { status: 'ok', records: [] },
       null,
-      { kind: 'active', session: place, history: EMPTY },
+      { kind: 'active', session: place, history: EMPTY, prefs: DEFAULT_PREFS },
     ],
     [
       'ok (history-three-records.json)',
       () => active(JSON.stringify(place), THREE),
       { status: 'ok', records: threeRecords.records },
       threeRecords,
-      { kind: 'active', session: place, history: threeRecords },
+      { kind: 'active', session: place, history: threeRecords, prefs: DEFAULT_PREFS },
     ],
     [
       'unreadable (history-invalid-version-unknown.json)',
       () => active(JSON.stringify(place), UNKNOWN),
       { status: 'unreadable', reason: UNKNOWN_REASON },
       { rejected: UNKNOWN_REASON },
-      { kind: 'active', session: place, history: { rejected: UNKNOWN_REASON } },
+      {
+        kind: 'active',
+        session: place,
+        history: { rejected: UNKNOWN_REASON },
+        prefs: DEFAULT_PREFS,
+      },
     ],
     [
       'beside a rejected Session',
@@ -1064,7 +1198,7 @@ describe('score history store', () => {
     env.game.load();
     expect(env.storage.writes.map(([key]) => key)).toEqual([KEY]);
     expect(env.scoreHistory.state).toEqual({ status: 'ok', records: [] });
-    expect(env.game.loaded()).toEqual({ session: null, history: null });
+    expect(env.game.loaded()).toEqual({ session: null, history: null, prefs: null });
   });
 
   it('AD-4 a finish writes the history before the Session; an un-finish of the recorded game removes it', async () => {
@@ -1086,6 +1220,7 @@ describe('score history store', () => {
       kind: 'active',
       session: sessionOf(env.game),
       history: { version: 1, records: [record] },
+      prefs: DEFAULT_PREFS,
     });
     env.game.dispatch(UNDO);
     expect(env.storage.map.get(HISTORY)).toBe(EMPTY_TEXT);

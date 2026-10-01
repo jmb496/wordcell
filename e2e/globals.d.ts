@@ -5,7 +5,7 @@ import type {
   Session,
 } from '../src/engine/index';
 
-// Mirrors src/shell/test-hook.ts and its game-store and score-history types (change together).
+// Mirrors src/shell/test-hook.ts and its game-store, score-history and prefs types (change together).
 type RejectReason = ParseSessionResult extends infer R
   ? R extends { readonly ok: false }
     ? Omit<R, 'ok'>
@@ -18,12 +18,24 @@ type HistoryRejectReason = ParseHistoryResult extends infer R
     : never
   : never;
 
+// AD-10 prefs (src/shell/prefs.svelte.ts), declared inline.
+type Prefs = {
+  readonly version: 1;
+  readonly animationSpeed: 'fast' | 'normal' | 'slow';
+  readonly showTimer: boolean;
+};
+
+type PrefsRejectReason =
+  | { readonly reason: 'version-unreadable' }
+  | { readonly reason: 'version-unknown' | 'contents-unreadable'; readonly version: number };
+
 declare global {
   interface Window {
     __wordcell?: Readonly<{
       loaded(): {
         readonly session: Session | null | { readonly rejected: RejectReason };
         readonly history: ScoreHistory | null | { readonly rejected: HistoryRejectReason };
+        readonly prefs: Prefs | null | { readonly rejected: PrefsRejectReason };
       };
       current():
         | { readonly kind: 'booting' }
@@ -31,6 +43,7 @@ declare global {
             readonly kind: 'active';
             readonly session: Session;
             readonly history: ScoreHistory | { readonly rejected: HistoryRejectReason };
+            readonly prefs: Prefs;
           }
         | { readonly kind: 'rejected'; readonly reason: RejectReason }
         | { readonly kind: 'halted' };

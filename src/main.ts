@@ -3,6 +3,7 @@ import './shell/test-hook';
 import { dictionary } from './shell/dictionary.svelte';
 import { game } from './shell/game.svelte';
 import { nav } from './shell/nav';
+import { prefs } from './shell/prefs.svelte';
 import App from './ui/App.svelte';
 import Halted from './ui/Halted.svelte';
 import { openHistoryNotice } from './ui/history-notice.svelte';
@@ -90,9 +91,10 @@ function halted(): boolean {
   return game.state.kind === 'halted';
 }
 
-// AD-16: nav launch, font check, load, lifecycle, boot surfaces, mount, then (only on the path that
-// mounts App) the dictionary fetch once painted and visible, unless halted meanwhile. Not awaited:
-// a failure is an unhandledrejection that writes nothing (AD-8 outcomes never reject).
+// AD-16: nav launch, font check, prefs and game load, lifecycle, boot surfaces, mount, then (only
+// on the path that mounts App) the dictionary fetch once painted and visible, unless halted
+// meanwhile. Not awaited: a failure is an unhandledrejection that writes nothing (AD-8 outcomes
+// never reject).
 async function boot(): Promise<void> {
   // AD-13: rewind and stamp the base entry, then register the overlays before any push.
   await nav.launch();
@@ -101,6 +103,8 @@ async function boot(): Promise<void> {
     depth: () => overlays.depth,
   });
   await fontCheck();
+  // AD-10: prefs and the motion mirror before the Session load, also when halted meanwhile.
+  prefs.load();
   game.load();
   if (game.state.kind === 'halted') {
     showStandalone();

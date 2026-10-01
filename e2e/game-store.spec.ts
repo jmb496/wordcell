@@ -59,7 +59,7 @@ test('R-74 a fresh context stores a uint32-seeded Session before any input, equa
     gaveUp: false,
     cursor: { index: 0, phase: 'idle' },
   });
-  expect(snap.loaded).toEqual({ session: null, history: null });
+  expect(snap.loaded).toEqual({ session: null, history: null, prefs: null });
 });
 
 test('R-74 two fresh contexts get different seeds', async ({ page, browser }) => {
@@ -266,7 +266,7 @@ test('R-73 kill variant: an Undo on session-place-free-letter-redo-tail.json sur
   const page2 = await page.context().newPage();
   await open(page2);
   const restored = await snapshot(page2);
-  expect(restored.loaded).toEqual({ session: written, history: null });
+  expect(restored.loaded).toEqual({ session: written, history: null, prefs: null });
   expect(sessionOf(restored)).toEqual(written);
 });
 
