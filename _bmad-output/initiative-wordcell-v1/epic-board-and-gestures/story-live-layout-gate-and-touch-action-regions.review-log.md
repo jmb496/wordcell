@@ -1,6 +1,6 @@
 # Review log — story-live-layout-gate-and-touch-action-regions.md (ticket 4.4)
 
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1245 words (2.5 x (374 pass-0 words + 124 carried toml words)). Pass 0: HEAD affe546, copy story-live-layout-gate-and-touch-action-regions.passes/pass0.md, 374 words.
 
@@ -108,3 +108,34 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 ### Fix outcome
 Fixer applied items 1–13, none skipped; minors 10–11 added ~8 words, offset by cuts (CAP-3 conditions now cited, not restated). Pan-y column region chosen as `.column` (AD-12 hit rect unchanged). Checked: desktop 390 × 750 clientWidth 375 (343 < 352) with the pinned Chromium; band ids against bands.ts `unitId`.
 Words (docs): 1292 (3.45 x pass 0; over the 1245 budget, additions are minor)  |  Snapshot: story-live-layout-gate-and-touch-action-regions.passes/pass3.md
+
+## Pass 4 — 2026-10-02
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 3, minor 10, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+### Applied
+- [major] AC wide case — desktop 390 × 750 is not wide: headless Chromium runs with `--hide-scrollbars` (playwright-core coreBundle.js:43341, checked), so clientWidth 390 → available 358 ≥ 352; gating case fails (pass 3 regression) → fixer item 1
+- [major] layout — relayout task reads `dictionary.showBanner` from the store, not deps, so the createLayout banner-hide Vitest cannot run → fixer item 2
+- [major] AC hide case — the last move's compositor `scroll` can land after `visibilitychange`, re-marking busy; no margin before the quiet point → flaky gating check → fixer item 3
+- [minor] AC regions — bar and banner buttons `none` unasserted → fixer item 4
+- [minor] touchHold — `end()` idempotent after `end()`; `moveTo` after a failed `moveTo` throws → fixer item 5
+- [minor] AC timing slack bounded to one rAF → fixer item 6
+- [minor] main.ts "entry 6 registers cancel first" ambiguous → fixer item 7
+- [minor] deps list rewording ("`window`: every read, write and listener") → fixer item 8
+- [minor] gate AC "each busy→idle transition releases queued work" (scrollEnd omitted) → fixer item 9
+- [minor] w, metrics and wide update together on a w recompute → fixer item 10
+### Default applied (technical)
+- wide case — desktop 370 × 750 (338 < 352 with or without a gutter; ≥ 360 supported)
+- banner value — `deps.showBanner()`; `browserLayoutDeps()` returns `() => dictionary.showBanner`
+- hide case — await one rAF after the last move; last-scroll timestamp before visibilitychange and visibilitychange before last scroll + 100 ms, else invalid
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+### Left for the plan (minor, over budget)
+- synthesizeScrollGesture is one atomic gesture: the poll and hide steps need a per-path procedure
+- ignore flag suppresses every scroll until the next rAF but not the own write's scrollend (accepted edge)
+- `.board` gutters/margins outside bands stay `auto`
+- the wheel fallback leaves row 96's scroll clause without an android test: report at close-out
+- `?bands=` non-permutation throw reaching AD-15 in dev (entry 1 plan deferral): createLayout runs inside `boot()`
+### Fix outcome
+Fixer applied items 1–10, none skipped, net 0 words (three no-meaning cuts). Checked: 370 × 750 desktop → available 338 < 352 (geometry.ts), `--hide-scrollbars` in the pinned playwright-core.
+Words (docs): 1292 (3.45 x pass 0)  |  Snapshot: story-live-layout-gate-and-touch-action-regions.passes/pass4.md
