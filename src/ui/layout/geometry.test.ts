@@ -115,6 +115,13 @@ describe('geometry', () => {
     expect(l.total).toBe(839);
   });
 
+  it('AD-11 thirds-valued insets fill innerHeight exactly', () => {
+    const ih = 839;
+    const l = layout({ innerHeight: ih, insets: { top: 1 / 3, bottom: 8 / 3 } });
+    expect(l.total).toBe(839);
+    expect(anchorScroll(l, l, 1e6, ih)).toBe(0);
+  });
+
   it('AD-11 40 px floor, width- and height-derived', () => {
     expect(availableWidth(360, false)).toBe(352);
     expect(cardWidth(360, 750, NO_INSETS, false)).toBe(40);
@@ -199,6 +206,8 @@ describe('geometry', () => {
     const bannerOne = layout({ w: 46, innerHeight: 839, bannerShown: true });
     const bannerThree = layout({ w: 46, innerHeight: 839, bannerShown: true, trayRows: 3 });
     expect(bannerThree.heights.leftover).toBe(9);
+    expect(bannerThree.total).toBe(839);
+    expect(bannerThree.heights.tray).toBe(224);
     expect(bannerOne.anchorOffset).toBe(710);
     expect(bannerThree.anchorOffset).toBe(710);
   });
@@ -237,6 +246,15 @@ describe('geometry', () => {
     expect(one.anchorOffset).toBe(429);
     expect(three.anchorOffset).toBe(429);
     expect(three.total).toBe(839);
+
+    const one780 = layout({ w: 46, innerHeight: 780, order });
+    const three780 = layout({ w: 46, innerHeight: 780, order, trayRows: 3 });
+    expect(one780.heights.leftover).toBe(42);
+    expect(three780.heights.leftover).toBe(0);
+    expect(one780.anchorOffset).toBe(429);
+    expect(three780.anchorOffset).toBe(429);
+    expect(three780.total).toBe(786);
+    expect(anchorScroll(one780, three780, 0, 780)).toBe(0);
   });
 
   it('AD-11 tray growth above the anchor with slack below', () => {
@@ -263,6 +281,38 @@ describe('geometry', () => {
     expect(before.total).toBe(839);
     expect(after.total).toBe(883);
     expect(anchorScroll(before, after, 0, 839)).toBe(44);
+  });
+
+  it('AD-11 banner growth below the anchor', () => {
+    const slackAbove = 'topBar,leftover,columns,tray,wordcells,banner,actionBar';
+    const before = layout({ w: 46, innerHeight: 839, order: slackAbove });
+    const after = layout({ w: 46, innerHeight: 839, order: slackAbove, bannerShown: true });
+    expect(before.heights.leftover).toBe(101);
+    expect(after.heights.leftover).toBe(101);
+    expect(before.anchorOffset).toBe(710);
+    expect(after.anchorOffset).toBe(710);
+    expect(before.total).toBe(839);
+    expect(after.total).toBe(883);
+    expect(anchorScroll(before, after, 0, 839)).toBe(0);
+
+    const slackBelow = 'topBar,columns,tray,wordcells,banner,leftover,actionBar';
+    const beforeBelow = layout({ w: 46, innerHeight: 839, order: slackBelow });
+    const afterBelow = layout({ w: 46, innerHeight: 839, order: slackBelow, bannerShown: true });
+    expect(beforeBelow.heights.leftover).toBe(101);
+    expect(afterBelow.heights.leftover).toBe(57);
+    expect(beforeBelow.anchorOffset).toBe(609);
+    expect(afterBelow.anchorOffset).toBe(609);
+    expect(afterBelow.total).toBe(839);
+  });
+
+  it('AD-11 banner and tray growth together exceed leftover', () => {
+    const before = layout({ w: 46, innerHeight: 780 });
+    const after = layout({ w: 46, innerHeight: 780, bannerShown: true, trayRows: 3 });
+    expect(before.heights.leftover).toBe(42);
+    expect(after.heights.leftover).toBe(0);
+    expect(before.anchorOffset).toBe(651);
+    expect(after.anchorOffset).toBe(701);
+    expect(anchorScroll(before, after, 0, 780)).toBe(50);
   });
 
   it('AD-11 w-recompute predicate', () => {

@@ -60,10 +60,16 @@ function sumOf(heights: Record<BandId, number>): number {
   return sum;
 }
 
+/** The height-rule sum: the integer band terms first, the insets last (no float drift). */
+function heightRuleSum(w: number, insets: Insets): number {
+  return sumOf(baseHeights(w, { top: 0, bottom: 0 })) + (insets.top + insets.bottom);
+}
+
 /**
  * AD-11: card width w for the available viewport width (the layout module passes
  * `document.documentElement.clientWidth`, build-notes CAP-1) and `innerHeight`. Takes no banner
- * or tray input (A-D4).
+ * or tray input (A-D4). Like `bands`, it does no input validation (rule 6; callers pass DOM
+ * numbers).
  */
 export function cardWidth(
   clientWidth: number,
@@ -74,10 +80,7 @@ export function cardWidth(
   const widthDerived = Math.floor(availableWidth(clientWidth, hoverFine) / 8 - 4);
   // The height-rule sum is non-decreasing in w, so walk up while the next w still fits.
   let heightDerived = MIN_W;
-  while (
-    heightDerived < widthDerived &&
-    sumOf(baseHeights(heightDerived + 1, insets)) <= innerHeight
-  ) {
+  while (heightDerived < widthDerived && heightRuleSum(heightDerived + 1, insets) <= innerHeight) {
     heightDerived++;
   }
   return Math.max(MIN_W, Math.min(widthDerived, heightDerived));
@@ -102,7 +105,8 @@ export function bands(
   const slackAbove = order.indexOf(SLACK_BAND) < anchorAt;
   const sameSideAsSlack = (band: BandId) => order.indexOf(band) < anchorAt === slackAbove;
 
-  const leftover = Math.max(0, innerHeight - sumOf(heights));
+  const baseSum = heightRuleSum(w, insets);
+  const leftover = Math.max(0, innerHeight - baseSum);
   const bannerGrowth = bannerShown ? BANNER_H : 0;
   const tray = trayGrowth(trayRows, cardMetrics(w).H);
   const absorbed =
@@ -111,10 +115,15 @@ export function bands(
   heights.banner = bannerGrowth;
   heights.tray += tray;
   heights.leftover = Math.max(0, leftover - absorbed);
+  // While leftover remains, the document fills innerHeight exactly plus the unabsorbed growth.
+  const total =
+    heights.leftover > 0
+      ? innerHeight + bannerGrowth + tray - absorbed
+      : baseSum + bannerGrowth + tray;
 
   let anchorOffset = 0;
   for (const band of order.slice(0, anchorAt)) anchorOffset += heights[band];
-  return { heights, anchorOffset, total: sumOf(heights) };
+  return { heights, anchorOffset, total };
 }
 
 /**
