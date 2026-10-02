@@ -1,6 +1,6 @@
 # Review log — story-layout-definition-and-geometry.md (ticket 4.1)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 626b60d, copy story-layout-definition-and-geometry.passes/pass0.md, 231 words.
 Intent carried from tickets.toml entry 1 (not copied by the pull): interface, tests, owns, unknown; pass-1 fixer adds them to Description as 'Interface:', 'Tests:', 'Owns:', 'Unknown:'.
@@ -62,3 +62,22 @@ Fixer: applied 1–13; all derived numbers recomputed and matched
 - 1905 × 950 with 24/24 insets heights case — wrong (insets drop w below 70: 941 + 48 > 950); 412 × 915 24/24 used instead
 ### Unapplied (outside the target)
 - tickets.toml entry 4 still describes the clamp as layout.svelte.ts's own work and does not name anchorScroll/availableWidth/cardMetrics; reconcile when entry 4 is pulled
+
+## Pass 3 — 2026-10-01
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 2, minor 6, decision-needed 0  |  Dropped in triage: 5 (stretch, outside refs)
+Words (docs): 1437 (6.2 x pass 0)  |  Snapshot: story-layout-definition-and-geometry.passes/pass3.md
+Fixer: applied 1–7; all numbers recomputed and matched
+### Applied
+- [major] AC — no height-fit equality case (sum = innerHeight fits; `<` vs `≤` passes everything) → fixer item 1 (reword the inset case to 412 × 782, no added words)
+- [major] AC — same-side absorb tested only with both above the anchor; add a both-below order → fixer item 2
+- [minor] Owns — carve-out names entry 11, which owns no per-row metric → fixer item 3
+- [minor] AC — H > 92 case pins tray 177 → fixer item 4
+- [minor] Description — anchorOffset defined by order position, not named bands → fixer item 5
+- [minor] Notes — stop-and-report covers any number in the ticket → fixer item 6
+- [minor] bands() return — drop the duplicate top-level leftover (heights.leftover) → fixer item 7
+### Dropped
+- unitId helper export (budget; the plan may add it if entry 4 needs it)
+- parser default toBe vs toEqual (plan's choice)
+- inset-only change in the predicate (outside refs: A-D11 names resize/orientationchange)
+- left/right insets (refs define top/bottom only)
+- anchorScroll across a w change (arithmetic is w-agnostic; first-layout call shape is entry 4's)
