@@ -1,6 +1,6 @@
 # Review log — story-pointer-controller-core-and-cancel-wiring.md (ticket 4.6)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget default (2.5x pass 0). Pass 0: HEAD 6432e75, copy story-pointer-controller-core-and-cancel-wiring.passes/pass0.md, 409 words. Intent includes tickets.toml entry 6 fields interface, tests, owns, unknown (not copied at pull; fixer adds them to the Description in pass 1).
 
@@ -38,10 +38,28 @@ Fixer: applied items 1–10; no commands added.
 - [major] F24 press-only S cases vacuous with no press; refs' case is a sticky view over a selection → each case holds an active press; sticky view over a tap-selection → fixer item 5
 - [major] AC rejected-root hidePage — existing test asserts no writes only; refs require "throws nothing" → extend with no halted surface, still rejected → fixer item 6
 - [major] classify input "whether the WordCell is empty" — source unstated, DOM counting would re-derive game state (AD-3) → read from game.view at pointerdown → fixer item 7 (default applied)
-- [minor] zero-word fixes: duplicate tray-tile contextmenu clause cut; "(deselect, SPEC CAP-4)" → "(handled in entry 11)"; button filter scoped to pointerdown → fixer items 8–10
+- [minor] zero-word fixes: duplicate tray-tile contextmenu clause cut; "(deselect, SPEC CAP-4)" → "(its deselect is entry 7's)"; button filter scoped to pointerdown → fixer items 8–10
 ### Default applied (technical)
 - items 1–4, 7
 ### Decision needed (functionality / UX / gameplay)
 - none
 ### Dropped
 - none (minors over budget left unapplied; listed in Result)
+
+## Pass 3 — 2026-10-02 13:10
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 5, minor 22, decision-needed 0  |  Dropped in triage: 1 (log wording, fixed in the log directly)
+Words (docs): 1163 (2.84 x pass 0)  |  Snapshot: story-pointer-controller-core-and-cancel-wiring.passes/pass3.md (fix diff pass3.fix.diff)
+Fixer: applied items 1–9 with offsetting wording cuts; no commands added.
+### Applied
+- [major] AC AD-12 scan — ActionBar's `onclick={primary.onclick}` can never be an act( call → exempt that markup value; each non-undefined onclick value of the derived primary object is an act( call → fixer item 1 (default applied)
+- [major] cancel bullet / AC "gate count 0" — Gate exposes no count and busy() includes scrollBusy, so "gate idle" can be false in a hide mid-scroll → "every enter() the controller made is matched by one leave() before cancel() returns", S uses a counting fake Gate → fixer item 2 (default applied)
+- [major] End bullet — a lostpointercapture from the implicit-capture target (touch) or a late one after a same-id new press would end the active press → ends it only when its target is the element captured for the active press; S case → fixer item 3 (default applied)
+- [major] AC S one pointer — SPEC/rule-coverage require stopPropagation never called on the second pointer, AC asserts only preventDefault → fixer item 4
+- [major] cancel bullet — peek close untested, conflicts with the no-press no-op, and nothing opens a peek before entry 11 → all peek closing (cancel, pointercancel, lostpointercapture) lands with openPeek in entry 11; keep "closes no overlay entry" here → fixer item 5 (default applied)
+- [minor] zero/near-zero-word fixes: scan "have none" → "contain no act( call"; F24 (a) "no nav call after select()"; F24 (b) press held before openView; "active-branch (Board) root" → fixer items 6–9
+### Default applied (technical)
+- items 1–3, 5
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- fix-diff: log said "(handled in entry 11)" where the ticket says "(its deselect is entry 7's)" — log corrected; ticket right
