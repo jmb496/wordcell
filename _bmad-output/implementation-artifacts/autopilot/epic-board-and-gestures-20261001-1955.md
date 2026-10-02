@@ -86,3 +86,10 @@ Paused: usage limit at code review pass 2 (reset 1:30pm America/New_York), resum
 Tokens: 1.0M input-equivalent in the review session (code review 87%, orchestrator 8%, other 5%), under 0.1M in the close-out session; orchestrator peak context 55k
 Worth knowing: open major carried to ticket 4.7 / the refactor sweep (4.13): the controller tests never check which target (column, WordCell, other) a press resolves to, so a wrong lookup would pass; 4.7's tap tests should cover it. Five unapplied minors are listed in the review log's Result (e.g. a missed release leaving a card peek open). On desktop, a mouse press released over the thin right-edge scrollbar strip stays "held" until the next click (your F30 decision).
 Close-out docs: SPEC.md (spec-epic-4-board) § open questions F30 and F25 "spanning the viewport" ← the controller root excludes the desktop scrollbar gutter (owner, 2026-10-02; already recorded in the spec's F30 row, F25 wording may want the same note)
+
+## Stopped — owner decision at ticket 4.7 ticket review
+Ticket 4.7 (Tap-select, foot pads and tap-drop) was pulled (cfe9343) and its ticket review ran 5 passes and converged (majors 7, 9, 6, 1, 1; WIP commits up to 6532cef), but it raised one question for you, so the build has not started.
+Question: on desktop, with a whole column selected by tapping its top card, which element lights up as the drop target when you point at that same column's empty space or its Here pad? Proposed: the Here pad gets the teal drop-target outline and wash. Desktop only; no rule, score or touch change.
+Open item for the build: the "Here" label must show on phones too, not only on desktop (the review recorded it as an open major; the build should state it and test it on android).
+Tokens: 6.4M input-equivalent (ticket review 97%, orchestrator 1%, other 1%); orchestrator peak context 52k
+Resume: record the answer in the ticket (Notes), commit, rerun `loop.sh epic-board-and-gestures`; the next session starts at the build (Step B).

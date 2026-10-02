@@ -1,6 +1,6 @@
 # Review log — story-tap-select-foot-pads-and-tap-drop.md (ticket 4.7)
 
-State: pass 4: done
+State: pass 5: done
 
 Mode: docs, thorough, max 7, budget default (2.5x pass 0). Pass 0: HEAD cfe9343, copy story-tap-select-foot-pads-and-tap-drop.passes/pass0.md, 373 words. Intent includes tickets.toml entry 7 fields unknown, interface, tests, owns, risk, references (not copied at pull; fixer adds them to the Description in pass 1).
 
@@ -99,3 +99,29 @@ Words (docs): 1337 (3.58 x pass 0)  |  Snapshot: story-tap-select-foot-pads-and-
 - top-bar outside taps include the score text
 - another column's foot counts as "hovered anywhere"
 - column and WordCell deselect paths are unreachable under a view in this ticket (entry 11's scrim)
+
+## Pass 5 — 2026-10-02
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 4 (+7 plan-level), decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1337 (3.58 x pass 0), no fix pass  |  Snapshot: story-tap-select-foot-pads-and-tap-drop.passes/pass4.md
+### Open (not fixed; second consecutive pass with ≤ 1 major)
+- [major] Description, Here bullet; AC P4 — "replacing the desktop column numbers" can be read as reusing the foot's `.number` span, which Column.svelte hides outside (hover: hover) and (pointer: fine), so Here would not show on android; the android Here tap is made off the label and P4 checks only the fill, so no AC catches it. Fix: "Here shown on touch and desktop (replacing the desktop number)" and "Here visible" in the android P4 feet clause (SPEC CAP-6 android success, DESIGN.md Column slot).
+### Decision needed (functionality / UX / gameplay)
+- none new (pass 2 item still open)
+
+## Result — converged after 5 passes
+open major: Here bullet / P4 — Here must be visible on android too (not the desktop-only `.number` span); assert "Here visible" in the android P4 feet clause.
+
+Majors per pass: 7, 9, 6, 1, 1. Words 373 → 1337 (over the 2.5x budget from pass 1; later fixes kept terse). Technical defaults applied: 14. Decision-needed: 1 (pass 2, whole-column tap-selection hover highlight).
+
+### Unapplied minors (for the build plan)
+- Disabled controls: "in either project" → "in any project" (wrapper if any one project gets no pointer events)
+- Foot-row AC: "a held non-card press" → "a held non-card column press" (outside presses are not captured)
+- Select bullet: start "With nothing selected, …" (a tap on another column's card with a tail selected is a drop; overlays.select would throw); AC taps another column's upper card, not only its bottom card (R-20)
+- Inert bullet: "with nothing selected" also governs the WordCell clause
+- Wrapper carries the title only while the button is disabled (F3 tooltips unchanged)
+- Banner Reload's full-reload path relies on AD-13's launch rewind
+- Whole-column self-drop column: default column 5 (same as the partial case)
+- Disabled primary-action tap waits for the dictionary to be ready
+- Faces keep pointer-events none under the lift class (F26)
+- Pass 4 plan-level list above (hover reaction in App.svelte $effect; last pointer position inside the root; hover computed-style asserts; deselect-before-act spy order; disabled Reload during a held retry; score text as a top-bar outside point; another column's foot counts as hovered; column/WordCell deselect unreachable under a view)
+- Pass 3 list above (pointerType 'mouse' only for hover; capture element; drag with a tail selected keeps it in this ticket; whole-column lift over the bar above)
