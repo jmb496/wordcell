@@ -1,6 +1,6 @@
 # Review log — story-composing-place-and-static-tray-rendering.md (ticket 4.3)
 
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1120 words (2.5 x (339 pass-0 words + 109 carried toml words)). Pass 0: HEAD c01b011, copy story-composing-place-and-static-tray-rendering.passes/pass0.md, 339 words.
 
@@ -90,3 +90,26 @@ Fixer: all 11 applied; checked DraftView fields, current().session.cursor, dicti
 - Duplicates of items 1–2 and of the 'compact never rendered' minor.
 ### Left for the plan (minors, over budget)
 - 22-tile helper case (compact 4); 0-tile Idle/Game over tray and helper module path; destination/ghost/used/legal/target DOM hooks (class + one computed style); R-73 reload after an action; R-22 test is render support only (R-22 P4 supp. stays with the gesture ticket); in-board mirrors touch-action/user-select; AD-11 (F2) labels-boundary assertion strength; deferred list records compact/clip DOM rendering unverified until epic 5.
+
+## Pass 4 — 2026-10-02
+Reviewers: fix-diff, edge-case, adversarial, ref-alignment (late-pass bar)  |  Findings: major 1, minor 9 applied (word-neutral or cuts) + 4 left for the plan, decision-needed 0  |  Dropped in triage: 3 (duplicates)
+Words (docs): 1117 (3.3 x pass 0; within the 1120 budget)  |  Snapshot: story-composing-place-and-static-tray-rendering.passes/pass4.md
+Fixer: all 9 applied; cuts in Interface/Tests and two Description parentheticals.
+### Applied
+- [major] Screens bullet — 'waits for 52 visible cards' times out on the Place capture (cell 3's non-top cards 42, 0 are live but visibility hidden, WordCellRow.svelte:57) → fixer item 1
+- [minor] Over budget (1151/1120) — cut Interface/Tests repetition → 2
+- [minor] AD-14 list — moves[2] Composing is reached by two Redos from the fixture as loaded → 3
+- [minor] AD-14 — 'exact set' → 'sorted list' (catches duplicate mirrors) → 4
+- [minor] Hand-over clause — 'inside the tray band's word-line slot' → 5
+- [minor] Static tiles — 'card face (×2 badge kept)' → 6
+- [minor] Tray sizing — tile width max(w, 44) in both modes → 7
+- [minor] R-22 — placeholder at column 1's top slot under the ghosts → 8
+- [minor] Count-badge deferral reason is scope, not impossibility → 9
+### Default applied (technical)
+- Screens wait → 52 attached [data-card-id] (toBeAttached), dictionary 'ready', font
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- Duplicates of item 1 and the budget finding.
+### Left for the plan (minors)
+- Order measured as DOM order matching ascending x (row-major); destination-style and check-chip observables (computed style, effective opacity, chip by class); QU tile render check deferred; 'Resolved (F2)' is browser-unverified until a drop ticket reaches 8+ tiles.
