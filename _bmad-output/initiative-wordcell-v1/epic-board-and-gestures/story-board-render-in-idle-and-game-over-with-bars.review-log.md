@@ -1,6 +1,6 @@
 # Review log — story-board-render-in-idle-and-game-over-with-bars.md (ticket 4.2)
 
-State: pass 4: done
+State: pass 5: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 88bf030, copy story-board-render-in-idle-and-game-over-with-bars.passes/pass0.md, 361 words.
 Intent carried from tickets.toml entry 2 (not copied by the pull): verify, unknown, interface, tests, owns, references; pass-1 fixer adds interface, tests, owns to Description as 'Interface:', 'Tests:', 'Owns:' (verify, unknown, references are already in AC, Notes, References).
@@ -92,6 +92,21 @@ Fixer: 3 majors + 3 zero-word minors applied; redundant restatements cut to pay 
 - Bar band heights are content-box; env() padding adds on top; leftover may be off on real-inset devices until entry 4's probe
 - Count-badge hook `.count`
 - wordcell-<n> role="group"
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- Plan-level items listed above.
+
+## Pass 5 — 2026-10-01 22:40
+Reviewers: fix-diff, edge-case, adversarial, ref-alignment (late-pass bar)  |  Findings: major 2, minor 5 (zero-word), decision-needed 0  |  Dropped in triage: 8 (plan-level: 1-card badge boundary, strip worked example, Seed-line-gone assert, project matrix, rejected-root remount banner, entry 3 rewrite of AD-17 test, long invalid word ellipsis; 'entry 3 drops it' kept — ref-alignment recommends it, plan hands it to entry 3)
+Words (docs): 1498 (4.1 x pass 0; budget 1500)  |  Snapshot: story-board-render-in-idle-and-game-over-with-bars.passes/pass5.md
+Fixer: 2 majors + 5 zero-word minors applied; Notes open question replaced by a Resolved line.
+### Applied
+- [major] Board — pass-4 'bands() heights are content-box' double-counts insets once entry 4 feeds them (geometry.ts topBar 44 + insets.top) → fixer item 1
+- [major] Bands — foot-<n> position inside column-<n> unstated; in-flow puts it under the last card (6-card and empty columns misaligned with the footRow track) → item 2
+### Default applied (technical)
+- Bar content fixed 44/60 px with env() padding; bands() bar heights include insets and equal the border box
+- foot-<n> occupies the footRow track whatever the card count; AD-17 asserts foot tops = footRow top
 ### Decision needed (functionality / UX / gameplay)
 - none
 ### Dropped
