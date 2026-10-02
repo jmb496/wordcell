@@ -45,3 +45,4 @@ Verify: npm run test:all green (entry 4's scroll test included) with:
 ## Notes
 
 - Open question: Whether a Svelte action on the active-branch root sees pointer events from sticky bars and the banner with one listener set (F25 assumes it spans the viewport). Probe: a P4 assertion that the action's element contains the top bar, banner band and action bar and its rect covers the viewport; if not, stop and report (AGENTS.md rule 7) rather than adding listeners elsewhere.
+- Owner decision 2026-10-02 (spec F30): on `desktop` the root stops ~15 px short of the right edge at the `scrollbar-gutter: stable` strip; accepted as built (relaxed probe, deviation in the plan). No listeners outside the root; a mouse press released over the strip stays held until the next click, which recovers.
