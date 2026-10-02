@@ -3,7 +3,7 @@ title: 'Overlays store: tail selection, end-sheet and view states'
 type: 'feature'
 ticket: '5'
 created: '2026-10-02'
-status: 'built'
+status: done
 baseline_revision: 'b88105e5ab6e88f905b01c705c99e7c7a6b3bde7'
 route: 'full'
 route_source: 'auto'

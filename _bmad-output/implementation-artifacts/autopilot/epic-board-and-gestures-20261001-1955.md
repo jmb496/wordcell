@@ -61,3 +61,15 @@ Ref to fix upstream: none
 Tokens: 17.6M input-equivalent (ticket review 47%, code review 30%, build 20%, other 2%, orchestrator 1%); orchestrator peak context 61k
 Worth knowing: the desktop screenshots shifted 7 px because of the new reserved scrollbar gutter (regenerated in the container; phone screenshots unchanged). One test needs the page hidden within 100 ms of a scroll (measured about 40 ms) and could be flaky on a slow machine. Left as known limits: on very narrow desktop windows (under 384 px) the height rule is unchecked; a safe-area change with no resize is only applied at the next resize. Small leftovers for the epic's close-out: build-notes.md CAP-3 says the insets probe is "absolutely positioned" but it is fixed; the touch-action test could add a narrow desktop case.
 Close-out docs: none
+
+## 4.5 Overlays store: tail selection, end-sheet and view states — done
+What it adds: one place that keeps track of what is "open" on the board: a selected stack of cards, the end-of-game sheet (hidden, folded or expanded), and the WordCell peek, pinned view and desktop hover peek. It also makes the phone's Back button close these in the right order. Nothing new is visible yet; later gesture tickets will use it.
+Ticket review: 4 passes (resumed after a usage limit at pass 2), converged; nothing needed your input
+Build: built; commits c3c4415
+Code review: thorough (ticket risk medium), 2 passes, converged; 1 fix applied (tests only); commits 459c6be, 3857dfa
+Tests: all passing
+Ref to fix upstream: none
+Paused: usage limit at ticket review pass 2 (reset 8:30am America/New_York), resumed 2026-10-02 13:35 UTC
+Tokens: 4.9M input-equivalent (ticket review 34%, code review 29%, build 28%, other 5%, orchestrator 3%); orchestrator peak context 58k
+Worth knowing: one test gap left open for the refactor sweep (4.13): no test checks that opening a deferred end sheet is refused when a dialog sits above a pinned WordCell view (the code handles it; only the test is missing), plus a test name that mentions a hover peek it never opens. The build saw two existing "banner during a scroll" layout tests flake once each under full-suite load (they passed on rerun and in this run); recorded as deferred in the plan.
+Close-out docs: none
