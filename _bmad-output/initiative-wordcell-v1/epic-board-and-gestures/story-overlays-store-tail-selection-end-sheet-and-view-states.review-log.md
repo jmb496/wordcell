@@ -1,6 +1,6 @@
 # Review log — story-overlays-store-tail-selection-end-sheet-and-view-states.md (ticket 4.5)
 
-State: pass 2: fix
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD e204ca9, copy story-overlays-store-tail-selection-end-sheet-and-view-states.passes/pass0.md, 261 words.
 Ticket fields not copied from tickets.toml entry 5 (interface, tests, owns, unknown) passed to reviewers and fixer as intent; fixer adds them to the Description in pass 1.
@@ -39,6 +39,8 @@ Fixer: applied items 1–14 and copied interface/tests/owns into the Description
 
 ## Pass 2 — 2026-10-02
 Reviewers: fix diff, edge-case, adversarial, ref alignment  |  Findings: major 5, minor 6, decision-needed 0  |  Dropped in triage: 2
+Words (docs): 1087 (4.16 x pass 0, budget 1500)  |  Snapshot: story-overlays-store-tail-selection-end-sheet-and-view-states.passes/pass2.md
+Fixer: applied items 1–11 (verified on resume against pass2.fix.diff); no commands touched.
 ### Applied
 - [major] Generic paths — close('endSheet') effect on the state unstated (all four lenses) → removing the endSheet entry by close or closedByBack sets collapsed; onUnfinished/reset then set hidden → fixer item 1
 - [major] Hover peek — closeHoverPeek with none open and openHoverPeek while one is open unstated under the blanket throw rule (pointerleave path) → fixer item 2
@@ -61,3 +63,30 @@ Reviewers: fix diff, edge-case, adversarial, ref alignment  |  Findings: major 5
 ### Dropped
 - re-select under a view unreachable from the UI — harmless unit-level case, keep
 - openDeferred with a modal above the view — covered by the generic close throw (stated via item 3)
+
+## Pass 3 — 2026-10-02
+Reviewers: fix diff, edge-case, adversarial, ref alignment  |  Findings: major 4, minor 9, decision-needed 0  |  Dropped in triage: 1
+Words (docs): 1278 (4.90 x pass 0, budget 1500)  |  Snapshot: story-overlays-store-tail-selection-end-sheet-and-view-states.passes/pass3.md
+Fixer: applied items 1–12; item 1 worded "before the Undo dispatch, in AD-14's order" (complete, cancel, undo) instead of "before it completes the animation", to match the spine; no commands touched.
+### Applied
+- [major] End sheet — no cancel callable before the Undo path completes the winning animation (AD-14 order: complete, cancel, undo; AD-13 no entry pushed) → add cancelEndSheetOpen() → fixer item 1
+- [major] End sheet — openDeferred silently clears an open peek, so the controller's release closePeek()/peekToSticky() throws → openDeferred throws while a peek is open (unreachable: key commands call cancel() first, AD-12) → fixer item 2
+- [major] Hover peek / Tests — "hover peek closed by peekToSticky" cannot be set up through the API → test the invariant instead → fixer item 3
+- [major] Acceptance Criteria — Playwright wc poll passes on the first sample (session-won starts at wc 0) → wait through Undo and Redo, assert history.length unchanged and wc 0 → fixer item 4
+- [minor] non-integer column or cell throws (fix diff + edge-case) → fixer item 5
+- [minor] immediate end-sheet open (Give up, boot push) is epic 6's, via openDeferred(deferEndSheetOpen()) or a wrapper it adds (3 lenses) → fixer item 6
+- [minor] any token other than the live one is a no-op → fixer item 7
+- [minor] openView/openPeek/peekToSticky throw while historyNotice, resetConfirm or endSheet is on top; expandEndSheet throws unless the stack is empty; openDeferred throws unless the stack is empty after closing the view → fixer item 8
+- [minor] first select while a peek is open throws → fixer item 9
+- [minor] callers never start the hover timer while hoverPeek is non-null → fixer item 10
+- [minor] deselect justification names Undo, Redo and the banner Reload → fixer item 11
+- [minor] throw tests match /^AD-13 / only → fixer item 12
+### Default applied (technical)
+- cancelEndSheetOpen() (no-op without a live token), called by the AD-14 Undo exception before it completes the animation; onUnfinished-from-hidden and reset cancel through it
+- openDeferred with a peek open → throws
+- Playwright → history.length unchanged plus wc 0 after Undo then Redo settle
+- non-live tokens no-op; modal/sheet-on-top preconditions throw; first select with a peek throws; throw tests match /^AD-13 /
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- re-select assigns a fresh object — obvious under $state.raw, no ticket text needed
