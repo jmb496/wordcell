@@ -10,13 +10,30 @@ import type { Gate } from './gate';
 // Entry 8: elements also have children (`querySelector` over descendants: attribute and `.class`
 // selectors), a settable `rect` (`getBoundingClientRect` adds a parsed inline `translate`), a
 // `style.transform`, and `animate()` returning a fake Animation that finishes in virtual time
-// (`finish()` queues `onfinish` once on the virtual clock, as real WAAPI fires it later); prefs mocked (motion, as in motion.test.ts).
+// (`finish()` queues `onfinish` once on the virtual clock, as real WAAPI fires it later); prefs mocked (motion, as in motion.test.ts);
+// `duration` from ../motion wrapped to log its kinds and answer `durations.override` per kind.
 const navCalls: string[] = [];
 const shared: { view: unknown; onDispatch: (() => void) | null } = {
   view: undefined,
   onDispatch: null,
 };
 const motion = vi.hoisted(() => ({ value: { baseMs: 180, reduced: false } }));
+
+const durations = vi.hoisted(() => ({
+  kinds: [] as string[],
+  override: {} as Record<string, number>,
+}));
+
+vi.mock('../motion', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../motion')>();
+  return {
+    ...actual,
+    duration: (kind: Parameters<typeof actual.duration>[0]) => {
+      durations.kinds.push(kind);
+      return durations.override[kind] ?? actual.duration(kind);
+    },
+  };
+});
 
 vi.mock('../../shell/prefs.svelte', () => ({
   prefs: {
@@ -310,6 +327,8 @@ async function setup() {
     ],
   };
   motion.value = { baseMs: 180, reduced: false };
+  durations.kinds.length = 0;
+  durations.override = {};
   const { overlays } = await import('../overlays.svelte');
   const { createController } = await import('./controller');
   const { dropTarget } = await import('./drop-target');
@@ -1074,7 +1093,7 @@ describe('AD-12 entry 8 drag', () => {
     expect(t.active()).toBe(0);
   });
 
-  it('AD-12 Q-34 a drag that never leaves the source highlights nothing and releases with no dispatch', async () => {
+  it('AD-12 a drag that never leaves the source highlights nothing and releases with no dispatch', async () => {
     const t = await setup();
     t.detach();
     t.down(t.b.card1b, { clientX: 25, clientY: 50 });
@@ -1118,6 +1137,21 @@ describe('AD-12 entry 8 drag', () => {
     expect(dragClasses(t)).toEqual([]);
   });
 
+  it('AD-12 overlap is measured on the grabbed face (tail[0]), not the faces below it', async () => {
+    const t = await setup();
+    t.detach();
+    // Tail [face1 (y 0–60), face1b (y 20–80)] over column 3 (y 0–400). Down 380: face1 keeps
+    // 20/60 in column 3, face1b none → column 3 lights.
+    t.down(t.b.card1, { clientX: 25, clientY: 10 });
+    move(t, 125, 390);
+    expect(t.b.placeholder3.classes.has('wc-drag-target')).toBe(true);
+    // Up 50: face1 keeps 10/60 (< 25 %), face1b 30/60 → nothing lights.
+    move(t, 125, -40);
+    expect(dragClasses(t).filter((c) => c.endsWith('wc-drag-target'))).toEqual([]);
+    t.controller.cancel();
+    expect(navCalls).toEqual([]);
+  });
+
   it('AD-12 leaving the source through no column (raw null) and returning highlights the source', async () => {
     const t = await setup();
     t.detach();
@@ -1130,10 +1164,13 @@ describe('AD-12 entry 8 drag', () => {
     expect(navCalls).toEqual([drop(1, 1, 1)]);
   });
 
+  // `duration('flyBack')` answers 237 (no other kind does), proving the kind, not just the baseMs.
   for (const baseMs of [180, 320]) {
     it(`AD-10 the fly-back runs over duration('flyBack') at baseMs ${baseMs} from the last transform`, async () => {
       const t = await setup();
       motion.value = { baseMs, reduced: false };
+      durations.override = { flyBack: 237 };
+      const ms = 237;
       t.detach();
       t.down(t.b.card1b, { clientX: 25, clientY: 50 });
       move(t, 25, 600);
@@ -1144,11 +1181,12 @@ describe('AD-12 entry 8 drag', () => {
         { transform: 'translate(0px, 1000px)' },
         { transform: 'translate(0px, 0px)' },
       ]);
-      expect(a?.options).toEqual({ duration: baseMs, easing: 'ease-out' });
+      expect(durations.kinds).toEqual(['flyBack']);
+      expect(a?.options).toEqual({ duration: ms, easing: 'ease-out' });
       expect(t.b.face1b.style.transform).toBe('');
       expect(dragClasses(t).sort()).toEqual(['div:wc-drag-ghost', 'div:wc-drag-layer']);
       expect(t.active()).toBe(1);
-      t.advance(baseMs - 1);
+      t.advance(ms - 1);
       expect(t.active()).toBe(1);
       t.advance(1);
       expect(t.active()).toBe(0);

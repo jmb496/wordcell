@@ -175,6 +175,39 @@ const hasClass = (locator: Locator, name: string) =>
 const css = (locator: Locator, property: string) =>
   locator.evaluate((el, p) => getComputedStyle(el).getPropertyValue(p), property);
 
+// A held drag of `card`'s tail: its face carries an inline transform, its wrapper `wc-drag-ghost`.
+async function expectDragging(card: Locator): Promise<void> {
+  expect(await faceOf(card).evaluate((el) => (el as HTMLElement).style.transform)).not.toBe('');
+  expect(await hasClass(card, 'wc-drag-ghost')).toBe(true);
+}
+
+// R-14 the tail returned: `card`'s face has no running animation and is back on `rest` (±1 px).
+async function expectFlownBack(card: Locator, rest: Box): Promise<void> {
+  await expect.poll(() => faceOf(card).evaluate((el) => el.getAnimations().length)).toBe(0);
+  const now = await box(faceOf(card));
+  for (const k of ['x', 'y', 'w', 'h'] as const) {
+    expect(Math.abs(now[k] - rest[k]), k).toBeLessThanOrEqual(1);
+  }
+}
+
+// Logs the card id of every `.face` an `animate` call targets (the fly-back, F13); before goto.
+async function recordFaceAnimations(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const ids: number[] = [];
+    (window as unknown as { __faceAnimations: number[] }).__faceAnimations = ids;
+    const original = Element.prototype.animate;
+    Element.prototype.animate = function animate(this: Element, keyframes, options) {
+      if (this.classList.contains('face')) {
+        ids.push(Number(this.parentElement?.getAttribute('data-card-id')));
+      }
+      return original.call(this, keyframes, options);
+    };
+  });
+}
+
+const faceAnimations = (page: Page) =>
+  page.evaluate(() => (window as unknown as { __faceAnimations: number[] }).__faceAnimations);
+
 // One held touch moved to each point in turn, a frame after each move (pointermove is
 // frame-aligned); `check` runs after every move.
 async function holdThrough(
@@ -256,9 +289,12 @@ test.describe('android', () => {
   test('Q-34 R-14 the same drag held over column 1 alone highlights nothing and leaves the stored Session byte-identical', async ({
     page,
   }) => {
+    await recordFaceAnimations(page);
     await openFixture(page, 'session-idle-fresh');
     const before = await stashSession(page);
-    const from = await centre(cards(page, 1).last());
+    const dragged = cards(page, 1).last();
+    const rest = await box(faceOf(dragged));
+    const from = await centre(dragged);
     const points = [
       plus(from, 0, -20),
       plus(from, 6, -60),
@@ -266,12 +302,16 @@ test.describe('android', () => {
       plus(from, 0, 20),
     ];
     const hold = await holdThrough(page, from, points, async () => {
+      // Every move is ≥ 8 px from the press: a drag from the first.
+      await expectDragging(dragged);
       expect(await targets(page)).toEqual([]);
       expect(await sameSession(page)).toBe(true);
     });
     await hold.end();
     await animationFrames(page, 2);
     expect(await targets(page)).toEqual([]);
+    await expect.poll(() => faceAnimations(page)).toEqual([await idOf(dragged)]);
+    await expectFlownBack(dragged, rest);
     expect(await storedText(page)).toBe(before);
     expect(await sameSession(page)).toBe(true);
     await expectNoResidue(page);
@@ -333,7 +373,7 @@ test.describe('android', () => {
     expect(drafts[0]).toEqual(drafts[1]);
   });
 
-  test('R-11 R-23 a whole-column drag from column 5’s top card onto column 2: ghosts, the face keeps its fill and paints on top, S in column order', async ({
+  test('R-10 R-11 R-23 a whole-column drag from column 5’s top card onto column 2: ghosts, the face keeps its fill and paints on top, S in column order', async ({
     page,
   }) => {
     await openFixture(page, 'session-idle-fresh');
@@ -359,11 +399,20 @@ test.describe('android', () => {
       expect(await css(faceOf(top), 'background-color')).toBe(fill);
       await expect(page.locator('[data-mirror-of]')).toHaveCount(0);
       await expect(page.locator('[data-card-id]')).toHaveCount(52);
-      // The dragged face paints above the top bar where it covers it.
+      // The dragged face paints above the top bar where it covers it: probed at the centre of
+      // the face ∩ top bar.
       const onTop = await faceOf(top).evaluate((face) => {
         const r = face.getBoundingClientRect();
-        const x = r.left + r.width / 2;
-        const y = r.top + r.height / 2;
+        const barEl = document.querySelector('[data-band="topBar"]');
+        if (barEl === null) throw new Error('no top bar');
+        const b = barEl.getBoundingClientRect();
+        const left = Math.max(r.left, b.left);
+        const right = Math.min(r.right, b.right);
+        const top = Math.max(r.top, b.top);
+        const bottom = Math.min(r.bottom, b.bottom);
+        if (right <= left || bottom <= top) throw new Error('the face does not cover the top bar');
+        const x = (left + right) / 2;
+        const y = (top + bottom) / 2;
         const el = face as HTMLElement;
         el.style.pointerEvents = 'auto';
         try {
@@ -422,6 +471,7 @@ test.describe('android', () => {
     await openFixture(page, 'session-idle-fresh');
     const before = await stashSession(page);
     const pressed = cards(page, 1).nth(5);
+    const rest = await box(faceOf(pressed));
     const from = await centre(pressed);
     const cell = await centre(page.getByTestId('wordcell-6'));
     const points = path(from, cell, 5);
@@ -456,19 +506,27 @@ test.describe('android', () => {
     expect(await storedText(page)).toBe(before);
     expect(await sameSession(page)).toBe(true);
     await expectNoResidue(page);
+    await expectFlownBack(pressed, rest);
     expect(await storedText(page)).toBe(before);
   });
 
   test('Q-34 R-14 a 20 px drag down from column 4’s bottom card highlights nothing and flies back', async ({
     page,
   }) => {
+    await recordFaceAnimations(page);
     await openFixture(page, 'session-idle-fresh');
     const before = await stashSession(page);
-    const from = await centre(cards(page, 4).last());
-    const hold = await holdThrough(page, from, path(from, plus(from, 0, 20), 5), async () => {
+    const dragged = cards(page, 4).last();
+    const rest = await box(faceOf(dragged));
+    const from = await centre(dragged);
+    const hold = await holdThrough(page, from, path(from, plus(from, 0, 20), 5), async (i) => {
       expect(await targets(page)).toEqual([]);
+      // From the threshold crossing (≥ 8 px) on, as in the desktop case.
+      if (i >= 2) await expectDragging(dragged);
     });
     await hold.end();
+    await expect.poll(() => faceAnimations(page)).toEqual([await idOf(dragged)]);
+    await expectFlownBack(dragged, rest);
     await expectNoResidue(page);
     expect(await storedText(page)).toBe(before);
     expect(await sameSession(page)).toBe(true);
@@ -504,7 +562,7 @@ test.describe('android', () => {
     expect(await sameSession(page)).toBe(true);
   });
 
-  test('R-14 R-21 leave and return on column 1’s third card from the bottom drops on column 1 with D the card above the tail', async ({
+  test('R-10 R-14 R-20 R-21 leave and return on column 1’s third card from the bottom drops on column 1 with D the card above the tail', async ({
     page,
   }) => {
     await openFixture(page, 'session-idle-fresh');
@@ -533,7 +591,7 @@ test.describe('android', () => {
     expect(destination).toEqual([aboveId]);
   });
 
-  test('R-14 R-22 whole-column self-drop: column 5’s top card off column 5 and back reveals the placeholder, k = 0', async ({
+  test('R-14 R-20 R-22 whole-column self-drop: column 5’s top card off column 5 and back reveals the placeholder, k = 0', async ({
     page,
   }) => {
     await openFixture(page, 'session-idle-fresh');

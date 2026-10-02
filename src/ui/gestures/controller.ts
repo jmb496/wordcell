@@ -265,6 +265,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
   // F13: WAAPI on the faces from the last written transform back to the slot; under reduced motion
   // the transform clears at once and the faces fade in. Gate-counted until settled.
   function flyBack(drag: Drag): void {
+    if (flying !== null) throw new Error('AD-12 fly-back while one is running');
     gate.enter();
     const ms = duration('flyBack');
     const reduced = prefs.motion.reduced;

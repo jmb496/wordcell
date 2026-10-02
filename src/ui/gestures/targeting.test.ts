@@ -34,6 +34,14 @@ describe('AD-12 pickTarget', () => {
     // 30 px in column 2 (75 %), 10 px in column 3 (25 %); then 15 px (37.5 %) vs 25 px (62.5 %).
     expect(pickTarget(dragged(70), columns, 1, false)).toEqual({ raw: 2, highlighted: 2 });
     expect(pickTarget(dragged(85), columns, 1, false)).toEqual({ raw: 3, highlighted: 3 });
+    // The larger ratio wins even when it is the farther centre: dragged 30..70 (centre 50) over a
+    // short column 1 centred on it (20 × 20 in, 25 %) and a tall column 2 to the right (15 × 40 in,
+    // 37.5 %, centre 127.5).
+    const farther: Candidate[] = [
+      { id: 1, rect: { left: 40, top: 0, right: 60, bottom: 20 } },
+      { id: 2, rect: { left: 55, top: 0, right: 200, bottom: 200 } },
+    ];
+    expect(pickTarget(dragged(30), farther, 4, true).raw).toBe(2);
   });
 
   it('AD-12 equal ratios → the horizontally nearest centre, then the lower id', () => {
