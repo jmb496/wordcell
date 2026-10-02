@@ -12,18 +12,47 @@ risk: medium
 
 ## Description
 
-Builds the pure AD-11 layout core: src/ui/layout/bands.ts with BAND_ORDER as seven ordered units of the eleven band ids (F22), ANCHOR_BAND = 'wordcells', SLACK_BAND = 'leftover' and the ?bands= unit-list parser (absent or empty → default, repeated → first value, a non-permutation throws to AD-15), and src/ui/layout/geometry.ts with cardWidth(innerWidth, innerHeight, insets, hoverFine) (fed clientWidth per build-notes CAP-1), bands(w, bandOrder, trayRows, bannerShown, innerHeight, insets) returning band heights, leftover and the absolute anchor offset, the A-D4 tray growth term and the pure w-recompute predicate, with every SPEC CAP-1 reference case as UI Vitest.
+Builds the pure AD-11 layout core: src/ui/layout/bands.ts with BAND_ORDER as seven ordered units of the eleven band ids (F22), ANCHOR_BAND = 'wordcells', SLACK_BAND = 'leftover' and the ?bands= unit-list parser (absent or empty → default, repeated → first value, a non-permutation throws to AD-15), and src/ui/layout/geometry.ts with cardWidth(innerWidth, innerHeight, insets, hoverFine) (fed clientWidth per build-notes CAP-1), bands(w, bandOrder, trayRows, bannerShown, innerHeight, insets) returning band heights, leftover, the absolute anchor offset and the document total, the A-D4 tray growth term, card metrics, the clamped anchor scroll and the pure w-recompute predicate, with every SPEC CAP-1 reference case as UI Vitest.
+
+- Types: `type BandId` = the eleven ids `topBar`, `banner`, `leftover`, `columns`, `footRow`, `trayGap`, `tray`, `labels`, `wordcells`, `actionGap`, `actionBar`; `type Unit = readonly BandId[]`. BAND_ORDER = `[['topBar'], ['banner'], ['leftover'], ['columns', 'footRow'], ['trayGap', 'tray'], ['labels', 'wordcells'], ['actionGap', 'actionBar']]` (build-notes CAP-1); unit ids (first non-gap, non-label band): `topBar,banner,leftover,columns,tray,wordcells,actionBar`.
+- `parseBandsParam(search: URLSearchParams): readonly Unit[]` reads the first `bands` value; pure (no `import.meta.env`; entry 4 calls it only in dev); exact case-sensitive tokens, no trimming; a non-permutation throws a plain `Error` naming the bad list.
+- `insets: { top: number; bottom: number }`, used as measured (no rounding); the top inset counts inside topBar's height, the bottom inside actionBar's.
+- `cardMetrics(w) → { H, strip, slot, board }`: H = round(4w/3), strip = max(44, round(0.72 H)), slot = w + 4, board = 8 × slot; cardWidth and bands use it. cardWidth takes no banner or tray input (A-D4).
+- `bands(...)` takes `readonly Unit[]` and returns `{ heights: Record<BandId, number>; leftover: number; anchorOffset: number; total: number }`. banner is 44 when bannerShown, else 0; trayRows ≥ 1 counts compact rows (1 = card-height mode; epic 4 always passes 1), adding `trayGrowth(trayRows, H)` (A-D4: max(0, r × 44 + (r − 1) × 4 − max(H, 92))) to tray. anchorOffset = document y of the top of the `wordcells` band (below its labels), counting insets and the banner; total = document height, every band including leftover, insets, banner and tray growth. It implements AD-11's order-independent growth rule: banner and tray growth draw down leftover only when the growing band and SLACK_BAND are on the same side of ANCHOR_BAND; the rest, and all growth on the other side, pushes away from the anchor and lands in total. build-notes' "leftover = max(0, innerHeight − sum − banner)" is the default-order instance.
+- `anchorScroll(prev, next, scrollTop, innerHeight)` returns the new scrollTop = clamp(scrollTop + next.anchorOffset − prev.anchorOffset, 0, max(0, next.total − innerHeight)); entry 4's layout module calls it (how it "computes the delta", AD-11) and never re-derives the clamp.
+- `shouldRecomputeWidth(last: { innerWidth; innerHeight }, next: { innerWidth; innerHeight }): boolean`: true iff innerWidth differs or |ΔinnerHeight| ≥ 80; `last` is the inputs of the last w computation (the caller replaces it only after a recompute; entry 4 handles the hoverFine query change outside it).
+- trayGrowth, cardMetrics, anchorScroll and shouldRecomputeWidth are helpers beside AD-11's two entry points (cardWidth, bands), not new layout paths.
+
+Interface: New src/ui/layout/bands.ts (BandId, Unit, BAND_ORDER, ANCHOR_BAND, SLACK_BAND, parseBandsParam) and src/ui/layout/geometry.ts (cardWidth, cardMetrics, bands, trayGrowth, anchorScroll, shouldRecomputeWidth); no shell or engine change.
+
+Tests: AD-11 BAND_ORDER units, anchor and slack; AD-11 ?bands= parser (defaults, reorder, throws); AD-11 cardMetrics; AD-11 cardWidth and bands reference numbers, insets, floor, H > 92, height rule above innerHeight (leftover 0); AD-11 banner and tray growth (default and fallback order) with anchorScroll; AD-11 w-recompute predicate; AD-11 F21 innerHeight-only change.
+
+Owns: The band ids, unit ids and every geometry formula (cardMetrics, trayGrowth, the anchorScroll clamp); later entries call these functions and never re-derive a band height, H, strip, slot, board, w or scroll clamp.
 
 ## Acceptance Criteria
 
-Verify: npm run test:all is green with UI Vitest AD-11 cases pinning every SPEC CAP-1 number (412 × 915, 412 × 839, 360 × 750, 1080p/950, 24/24 insets, 1280 × 720 with banner show and hide, the 40 px floor, H > 92, tray growth in the default and one fallback order, the 80 px and two-60 px predicate cases, both F21 innerHeight-only cases) and a non-permutation ?bands= list throwing.
+Verify: npm run test:all is green with UI Vitest AD-11 cases pinning every SPEC CAP-1 number and a non-permutation ?bands= list throwing. Inputs are (clientWidth, innerHeight, insets, hoverFine); insets {0, 0} unless stated; deltas and ranges go through anchorScroll.
+
+- BAND_ORDER deep-equals the list above; ANCHOR_BAND 'wordcells', SLACK_BAND 'leftover'.
+- Parser: absent → default; `?bands=` empty → default; repeated → first value; a valid reorder returns it; throws (toThrow()) for an unknown id, a duplicate, a missing id and a trailing comma.
+- cardMetrics: w 40 → 53/44/44/352; 46 → 61/44/50/400; 70 → 93/67/74/592.
+- 412 × 915, hoverFine false → w 46, H 61, strip 44, sum 738, leftover 177; 412 × 839 → leftover 101, anchor 710; 360 × 750, false → w 40, sum 722; cardWidth(1905, 950, {0, 0}, true) → 70 (H 93, board 592; H > 92 sum 941); 412 × 915 with 24/24 insets → w 46, H 61, sum 786, leftover 129.
+- 40 px floor: width (cardWidth(360, 750, {0, 0}, false), available 352 → 40; clientWidth 359 → 40); height-derived (412 × 500 → 40).
+- 1280 × 720 (clientWidth 1265, hoverFine true) → w 40, sum 722 > 720, leftover 0, total 722. Banner shown: anchor +44, total 766, scrollTop 0 → 44 (range 0–46); hidden: anchor −44, delta −44 clamped to the new 0–2 range (44 → 0, 46 → 2).
+- Banner from leftover first: 412 × 839 → leftover 101 → 57, anchor 710 unchanged, delta 0; 412 × 780 → leftover 42 → 0, anchor 651 → 653, scrollTop 0 → 2 (range 0–2).
+- trayGrowth(3, 61) 48, (4, 61) 96, (3, 93) 47, (4, 93) 95. Default order at 412 × 839, w 46: trayRows 3 → leftover 101 → 53, 4 → 5, anchor 710 unchanged. Fallback order `?bands=topBar,banner,leftover,wordcells,tray,columns,actionBar` (WordCells and tray above the columns; tray below the anchor, slack above), trayRows 3: leftover stays 101, anchor 161 unchanged, total 839 → 887, delta 0.
+- Predicate: Δh 79 → false; 80 → true; −80 → true; innerWidth ±1 → true; two −60 shrinks, the second checked against the original → true.
+- F21 at w 46: 412 × 839 → 412 × 779: leftover 101 → 41, anchor 710 → 650, delta −60 clamped to 0 at scrollTop 0, range 0; 412 × 780 → 412 × 710: leftover 42 → 0, anchor 651 → 609, delta −42 clamped to 0, scrollTop stays 0, range 0 → 28.
 
 ## References
 
 - parent — _bmad-output/initiative-wordcell-v1/epic-board-and-gestures/epic-board-and-gestures.md
+- spec — _bmad-output/specs/spec-epic-4-board/SPEC.md, CAP-1
 - spec — _bmad-output/specs/spec-epic-4-board/build-notes.md, CAP-1
+- spec — _bmad-output/specs/spec-epic-4-board/rule-coverage.md, AD-11 row (entry 1)
+- architecture — _bmad-output/planning-artifacts/architecture/architecture-wordcell-2026-09-27/ARCHITECTURE-SPINE.md, AD-11
 - design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/DESIGN.md, Layout (height rule)
 
 ## Notes
 
-- Open question: Whether the height-derived w search stays exact at every reference viewport with insets; the SPEC numbers are the oracle.
+- Open question: Whether the height-derived w search stays exact at every reference viewport with insets; the SPEC numbers are the oracle. A mismatch with a SPEC number is a spec bug to stop and report (AGENTS.md Policy), never a literal to adjust.
