@@ -1,20 +1,41 @@
 <script lang="ts">
-import type { ColumnView, Face } from '../engine/index';
+import type { ColumnView, DraftView, Face, Phase } from '../engine/index';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Card from './Card.svelte';
 
 // AD-12 column hit rect: the whole slot, a grid item spanning its unit's rows (subgrid), with the
 // fanned cards in the `cardsRow` track and the foot pad in the `footRow` track (build-notes CAP-1,
 // CAP-4). The placeholder is always rendered in the top slot and shown only when the column is
-// empty (DESIGN.md Column slot).
+// empty, or in Composing under the S ghosts when the emptied source is the destination (DESIGN.md
+// Column slot, Card ghost). Ghosts and destination style come from membership in `draft.source` /
+// `draft.destination` (AD-3, AD-14): S slots are ghosts in Composing and Place, D slots are live
+// in destination style in Composing and ghosts in Place.
 let {
   column,
   faces,
+  draft,
+  phase,
   cardsRow,
   footRow,
-}: { column: ColumnView; faces: readonly Face[]; cardsRow: number; footRow: number } = $props();
+}: {
+  column: ColumnView;
+  faces: readonly Face[];
+  draft: DraftView | undefined;
+  phase: Phase;
+  cardsRow: number;
+  footRow: number;
+} = $props();
 
 const last = $derived(column.cards.length - 1);
+const inSource = (id: number) => draft?.source.includes(id) === true;
+const inDestination = (id: number) => draft?.destination.includes(id) === true;
+const placeholder = $derived(
+  column.cards.length === 0 ||
+    (phase === 'composing' &&
+      draft?.sourceColumn === column.column &&
+      draft.destinationColumn === column.column &&
+      column.cards.every(inSource)),
+);
 </script>
 
 <div
@@ -24,9 +45,17 @@ const last = $derived(column.cards.length - 1);
   style:grid-column={column.column}
 >
   <div class="cards" style:grid-row={cardsRow}>
-    <div class="placeholder" class:shown={column.cards.length === 0}></div>
+    <div class="placeholder" class:shown={placeholder}></div>
     {#each column.cards as id, i (id)}
-      <Card {id} face={faces[id] as Face} place="column" full={i === last} />
+      {@const ghost = inSource(id) || (phase === 'place' && inDestination(id))}
+      <Card
+        {id}
+        face={faces[id] as Face}
+        place="column"
+        full={i === last}
+        mirror={ghost ? 'ghost' : undefined}
+        destination={phase === 'composing' && inDestination(id)}
+      />
     {/each}
   </div>
   <div class="foot" data-testid="foot-{column.column}" data-foot={column.column} style:grid-row={footRow}>

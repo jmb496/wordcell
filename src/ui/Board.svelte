@@ -1,8 +1,6 @@
 <script lang="ts">
 import type { GameView } from '../engine/index';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
-import { game } from '../shell/game.svelte';
-// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import ActionBar from './ActionBar.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Column from './Column.svelte';
@@ -13,7 +11,7 @@ import { bands, cardMetrics, cardWidth } from './layout/geometry';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import TopBar from './TopBar.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
-import { text } from './text';
+import Tray from './Tray.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import WordCellRow from './WordCellRow.svelte';
 
@@ -48,16 +46,7 @@ function row(unit: Unit, band: BandId): number {
   {:else if id === 'banner'}
     <div class="banner" data-band="banner"><DictionaryBanner /></div>
   {:else if id === 'tray'}
-    <div class="tray" data-band="tray" style:height="{heights.tray}px">
-      {#if game.feedback.rejectedWord !== undefined}
-        <p class="invalid">
-          <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-            <path d="M6 6 L18 18 M18 6 L6 18" />
-          </svg>
-          <span>{text.invalidWord(game.feedback.rejectedWord)}</span>
-        </p>
-      {/if}
-    </div>
+    <Tray {view} {w} innerWidth={metrics.board - 16} height={heights.tray} />
   {:else if id === 'actionBar'}
     <ActionBar {view} />
   {:else}
@@ -85,6 +74,8 @@ function row(unit: Unit, band: BandId): number {
             <Column
               {column}
               faces={view.faces}
+              draft={view.draft}
+              phase={view.phase}
               cardsRow={row(unit, 'columns')}
               footRow={row(unit, 'footRow')}
             />
@@ -127,16 +118,4 @@ function row(unit: Unit, band: BandId): number {
     position: sticky; top: calc(44px + env(safe-area-inset-top)); z-index: 2; flex: none;
     width: var(--wc-board); background: var(--wc-table);
   }
-  /* DESIGN.md Tray band: reserved height in every phase; the invalid-word line in the word-line
-     position until entry 3's Tray. */
-  .tray {
-    flex: none; box-sizing: border-box; width: var(--wc-board); padding: 8px;
-    background: var(--wc-surface); border-radius: 12px;
-  }
-  .invalid {
-    display: flex; align-items: center; gap: 6px; margin: 0;
-    font: 400 16px/24px system-ui, "Roboto", sans-serif; color: var(--wc-error);
-  }
-  .invalid svg { flex: none; fill: none; stroke: var(--wc-error); stroke-width: 2.5; stroke-linecap: round; }
-  .invalid span { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 </style>

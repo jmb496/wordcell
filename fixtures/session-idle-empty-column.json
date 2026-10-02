@@ -1,0 +1,1 @@
+{"version":1,"seed":1,"moves":[{"sourceColumn":1,"sourceCount":7,"destinationColumn":1,"destinationCount":0,"destinationSide":"left","freeLetters":[],"arrangement":[24,6,49,30,25,20,48],"reached":"committed","targetCell":7,"placementOrder":[24,6,49,30,25,20,48]}],"cursor":{"index":1,"phase":"idle"},"gaveUp":false,"activeMs":0}

@@ -58,6 +58,9 @@ import validComposingDraft2Letters from '../../fixtures/session-composing-draft-
   type: 'json',
 };
 import validGaveUp from '../../fixtures/session-gave-up.json' with { type: 'json' };
+import validIdleEmptyColumn from '../../fixtures/session-idle-empty-column.json' with {
+  type: 'json',
+};
 import validIdleFresh from '../../fixtures/session-idle-fresh.json' with { type: 'json' };
 import validIdlePendingDraft from '../../fixtures/session-idle-pending-draft.json' with {
   type: 'json',
@@ -277,9 +280,10 @@ type ValidName =
   | 'place-free-letter-redo-tail'
   | 'below-committed-last'
   | 'won'
-  | 'gave-up';
+  | 'gave-up'
+  | 'idle-empty-column';
 
-/** The nine CAP-9 round-trip fixtures (generator record: the plan's Implementation Notes). */
+/** The ten CAP-9 round-trip fixtures (generator record: the plan's Implementation Notes). */
 const VALID: readonly (readonly [ValidName, unknown])[] = [
   ['idle-fresh', validIdleFresh],
   ['composing', validComposing],
@@ -290,6 +294,7 @@ const VALID: readonly (readonly [ValidName, unknown])[] = [
   ['below-committed-last', validBelowCommittedLast],
   ['won', validWon],
   ['gave-up', validGaveUp],
+  ['idle-empty-column', validIdleEmptyColumn],
 ];
 
 // --- rejection table ------------------------------------------------------------------------
@@ -812,6 +817,13 @@ describe('defining properties (§2, CAP-9)', () => {
     'gave-up': (s) => {
       expect(s.gaveUp).toBe(true);
       expect(s.activeMs).toBeGreaterThan(0);
+    },
+    'idle-empty-column': (s) => {
+      expect(s.cursor.phase).toBe('idle');
+      expect(s.cursor.index).toBe(s.moves.length);
+      const v = view(s, EN);
+      expect(v.columns[0]?.cards).toStrictEqual([]);
+      expect(v.cells.find((c) => c.cell === 7)?.cards).toHaveLength(7);
     },
   };
 
@@ -1634,6 +1646,11 @@ const REBUILDS: readonly (readonly [string, unknown, () => Session])[] = [
     'session-gave-up',
     validGaveUp,
     () => play(accrue(deepFreeze(createSession(1)), 1000, EN), [GIVE_UP]),
+  ],
+  [
+    'session-idle-empty-column',
+    validIdleEmptyColumn,
+    () => play(createSession(1), [drop(1, 7, 1), VALIDATE, CONFIRM], ['ldxomiw']),
   ],
 ];
 

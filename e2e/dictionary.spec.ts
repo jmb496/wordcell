@@ -90,6 +90,12 @@ test("R-38 a word not in the list shows TAN isn't in the word list., stays Compo
 
   const message = page.getByText("TAN isn't in the word list.", { exact: true });
   await expect(message).toBeVisible();
+  // 4.2 hand-over: the message sits in the tray band's word-line slot (DESIGN.md Invalid-word message).
+  await expect(
+    page
+      .locator('[data-band="tray"] .word-line')
+      .getByText("TAN isn't in the word list.", { exact: true }),
+  ).toBeVisible();
   await expect(message).toHaveCSS('color', await tokenColor(page, '--wc-error'));
   await expect(message.locator('xpath=preceding-sibling::*[1]')).toHaveAttribute(
     'aria-hidden',

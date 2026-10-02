@@ -44,23 +44,29 @@ test('AD-17 board renders 52 live card elements with AD-14 attributes', async ({
 
 test('AD-17 WordCell cards render bottom → top as live cell cards', async ({ page }) => {
   test.skip(test.info().project.name !== 'android', 'AD-17 cell rendering runs on android');
-  await seedStorage(page, { session: fixture('session-place-free-letter-redo-tail.json') });
+  await seedStorage(page, { session: fixture('session-idle-empty-column.json') });
   await page.goto('/');
-  // Cell 3 holds the committed first move, bottom → top (view(...).cells for cell 3).
-  const cell3 = page.getByTestId('wordcell-3').getByTestId(/^card-\d+$/);
-  await expect(cell3).toHaveCount(3);
+  // Cell 7 holds the committed column 1, bottom → top (view(...).cells for cell 7).
+  const cell7 = page.getByTestId('wordcell-7').locator('[data-card-id]');
+  await expect(cell7).toHaveCount(7);
   expect(
-    await cell3.evaluateAll((els) => els.map((el) => el.getAttribute('data-card-id'))),
-  ).toEqual(['42', '0', '28']);
+    await cell7.evaluateAll((els) => els.map((el) => el.getAttribute('data-card-id'))),
+  ).toEqual(['24', '6', '49', '30', '25', '20', '48']);
   // Only the top card is visible; the cards beneath stay live but hidden (build-notes CAP-2).
-  await expect(page.getByTestId('card-28')).toBeVisible();
-  await expect(page.getByTestId('card-42')).toBeHidden();
-  await expect(page.getByTestId('card-0')).toBeHidden();
-  for (const card of await cell3.all()) {
+  await expect(page.getByTestId('card-48')).toBeVisible();
+  for (const id of [24, 6, 49, 30, 25, 20]) {
+    await expect(page.getByTestId(`card-${id}`)).toBeHidden();
+  }
+  for (const card of await cell7.all()) {
     await expect(card).toHaveAttribute('data-place', 'cell');
   }
   await expect(page.locator('[data-card-id]')).toHaveCount(52);
   await expect(page.locator('[data-mirror-of]')).toHaveCount(0);
+  const cursor = await page.evaluate(() => {
+    const current = window.__wordcell?.current();
+    return current?.kind === 'active' ? current.session.cursor : null;
+  });
+  expect(cursor).toEqual({ index: 1, phase: 'idle' });
 });
 
 test('R-03 the dealt layout renders top → bottom in every column', async ({ page }) => {

@@ -5,8 +5,9 @@ import Card from './Card.svelte';
 
 // DESIGN.md WordCell, build-notes CAP-2: labels 3–10 in the `labelsRow` track, each wordcell-<n>
 // in the `cellsRow` track under column n − 2 (A-D7), outside its label (F25). Every cell card is
-// a live Card (AD-14) in DOM order bottom → top, stacked; only the top one is visible. States
-// come from `CellView` and `view.place` (AD-3).
+// a live Card (AD-14) in DOM order bottom → top, stacked; only the top one is visible, except a
+// `used` cell's top card, which is live in the tray or strip and drawn here as a used mirror
+// (R-33). States come from `CellView` and `view.place` (AD-3).
 let {
   cells,
   faces,
@@ -55,7 +56,7 @@ const inPlace = $derived(place !== undefined);
         place="cell"
         full
         hidden={i !== top}
-        used={i === top && cell.used}
+        mirror={i === top && cell.used ? 'used' : undefined}
       />
     {/each}
     {#if cell.cards.length >= 2}<span class="count">{cell.cards.length}</span>{/if}
