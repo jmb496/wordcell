@@ -1,6 +1,6 @@
 # Review log — story-tap-select-foot-pads-and-tap-drop.md (ticket 4.7)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget default (2.5x pass 0). Pass 0: HEAD cfe9343, copy story-tap-select-foot-pads-and-tap-drop.passes/pass0.md, 373 words. Intent includes tickets.toml entry 7 fields unknown, interface, tests, owns, risk, references (not copied at pull; fixer adds them to the Description in pass 1).
 
@@ -55,3 +55,27 @@ Words (docs): 1226 (3.29 x pass 0)  |  Snapshot: story-tap-select-foot-pads-and-
 - fixture for the canPickUp-false case — moot after item 1
 ### Dropped
 - source column 7 cards may leave no empty space (edge) — merged into item 6's fixture choice
+
+## Pass 3 — 2026-10-02
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 6, minor 8 (+4 unapplied, over budget), decision-needed 0  |  Dropped in triage: 1
+Words (docs): 1312 (3.52 x pass 0)  |  Snapshot: story-tap-select-foot-pads-and-tap-drop.passes/pass3.md (fix diff pass3.fix.diff)
+### Applied
+- [major] Disabled controls — wrapper cannot receive the press while the disabled button stays the hit target; title placement unstated → fixer item 1 (default applied)
+- [major] Select / P4 — lifted tail's soft shadow and selection/lift layer above the sticky bars (DESIGN.md Elevation & Depth) missing → fixer item 2
+- [major] P4 — selection outline encloses the whole lifted tail (DESIGN.md Focus ring), not each face → fixer item 3
+- [major] AC — tail-selected capture of empty-space/placeholder/foot presses untested (AD-11 contextmenu row) → fixer item 4
+- [major] Desktop hover — recompute must also follow deselects outside the controller (Undo, Redo, Reload, back via closedByBack); untested → fixer item 5 (default applied)
+- [major] Tap-drop / hover — "Here" read as the label, not the whole source foot pad (DESIGN.md Column slot) → fixer item 6
+- [minor] locator.tap claim unverified → 7; whole-column fixture binding → 8; canDropOn reorder → 9; --wc-pan otherwise → 10; primary-action by test id → 11; probe step folded into the AC tap → 12; baseline reason "wrap fallback included" → 13; every foot's desktop number replaced → 14
+### Default applied (technical)
+- disabled fallback — the button gets pointer-events none only while disabled; a same-box non-button wrapper carries the title; role, name and data-testid stay on the button; baselines and locators unchanged
+- hover recompute — from one reaction to overlays.selection and game.view (wired where the controller is wired), not per call site
+### Decision needed (functionality / UX / gameplay)
+- none new (pass 2 item still open)
+### Unapplied minors (over budget, add words; for the plan)
+- hover classes only for pointerType 'mouse' (match CAP-9)
+- capture element for non-card presses: resolved [data-foot] for foot presses, [data-column] otherwise
+- a drag with a tail selected in this ticket ends with no command and keeps the selection (entries 8–9 add drag)
+- whole-column lift from column 1 drawing over the bar above — a plan check
+### Dropped
+- cut the non-pointer click clause (adversarial) — build-notes CAP-6 and F25 state it; the ticket mirrors the ref
