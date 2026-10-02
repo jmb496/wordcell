@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { createGate } from '../gestures/gate';
 import { BAND_ORDER } from './bands';
-import { createLayout, type LayoutDeps } from './layout.svelte';
+import { createLayout, type Layout, type LayoutDeps } from './layout.svelte';
 
 // AD-11 live layout with fake deps and a real gate on fake frames/timers. Server-compiled runes:
 // no `$effect` runs and `flushSync` is a no-op, so only getters and fake scroll writes are
-// asserted. Reference numbers from geometry.ts (plan Code Map): 412 × 915 w 46 leftover 177
+// asserted. Server-compiled `$state` updates synchronously, so the fake `scrollY` clamps to the
+// document the layout's `heights` describe (their sum, at the innerHeight they were laid out for)
+// as soon as a relayout sets state, like a real browser after `flushSync`. Reference numbers from geometry.ts (plan Code Map): 412 × 915 w 46 leftover 177
 // (banner 133), hoverFine w 43; 412 × 839 leftover 101; 412 × 779 leftover 41; 412 × 719 w 40;
 // 412 × 780 leftover 42, banner total 782 and anchor 651 → 653; 412 × 600 and 1280 × 720 w 40
 // total 722 (banner 766); 412 × 780 hoverFine w 43 total 780.
@@ -18,20 +20,23 @@ type Viewport = {
   banner?: boolean;
 };
 
-function setup(viewport: Viewport) {
+function setup(viewport: Viewport, initialPadding = { paddingTop: '0px', paddingBottom: '0px' }) {
   const listeners = new Map<string, (() => void)[]>();
+  const listenerOptions = new Map<string, ({ passive: boolean } | undefined)[]>();
   const mediaListeners: (() => void)[] = [];
   const calls: string[] = [];
   const scrolls: number[] = [];
   let bannerCallback: (() => void) | undefined;
-  const padding = { paddingTop: '0px', paddingBottom: '0px' };
-  const appended: unknown[] = [];
+  const padding = { ...initialPadding };
+  const appended: { style: { cssText: string } }[] = [];
   const v = {
     hoverFine: false,
     scrollY: 0,
     banner: false,
     ...viewport,
   };
+  let layout: Layout | undefined;
+  let laidOut: { heights: Layout['heights']; innerHeight: number } | undefined;
 
   const win = {
     get innerWidth() {
@@ -41,6 +46,14 @@ function setup(viewport: Viewport) {
       return v.innerHeight;
     },
     get scrollY() {
+      if (layout !== undefined) {
+        if (laidOut?.heights !== layout.heights) {
+          laidOut = { heights: layout.heights, innerHeight: v.innerHeight };
+        }
+        let total = 0;
+        for (const height of Object.values(laidOut.heights)) total += height;
+        v.scrollY = Math.min(v.scrollY, Math.max(0, total - laidOut.innerHeight));
+      }
       return v.scrollY;
     },
     location: { search: '' },
@@ -50,11 +63,12 @@ function setup(viewport: Viewport) {
           return v.clientWidth;
         },
       },
-      body: { append: (node: unknown) => appended.push(node) },
+      body: { append: (node: { style: { cssText: string } }) => appended.push(node) },
       createElement: () => ({ style: { cssText: '' } }),
     },
-    addEventListener(type: string, listener: () => void) {
+    addEventListener(type: string, listener: () => void, options?: { passive: boolean }) {
       listeners.set(type, [...(listeners.get(type) ?? []), listener]);
+      listenerOptions.set(type, [...(listenerOptions.get(type) ?? []), options]);
     },
     scrollTo({ top }: { top: number }) {
       calls.push(`scrollTo ${top}`);
@@ -96,7 +110,8 @@ function setup(viewport: Viewport) {
     ignoreNextScroll();
   };
 
-  const layout = createLayout(gate, deps);
+  layout = createLayout(gate, deps);
+  laidOut = { heights: layout.heights, innerHeight: v.innerHeight };
   const emit = (type: string) => {
     for (const listener of listeners.get(type) ?? []) listener();
   };
@@ -109,6 +124,7 @@ function setup(viewport: Viewport) {
     scrolls,
     appended,
     listeners,
+    listenerOptions,
     resize: () => emit('resize'),
     emit,
     flipMedia: (matches: boolean) => {
@@ -138,10 +154,35 @@ describe('AD-11 live layout', () => {
     expect(t.layout.bandOrder).toBe(BAND_ORDER);
     expect(t.layout.bannerShown).toBe(false);
     expect(t.appended).toHaveLength(1);
+    const css = t.appended[0]?.style.cssText;
+    for (const part of [
+      'position: fixed',
+      'visibility: hidden',
+      'pointer-events: none',
+      'padding-top: env(safe-area-inset-top)',
+      'padding-bottom: env(safe-area-inset-bottom)',
+    ]) {
+      expect(css).toContain(part);
+    }
     expect(t.calls).toEqual([]);
     for (const type of ['resize', 'orientationchange', 'scroll', 'scrollend']) {
       expect(t.listeners.get(type), type).toHaveLength(1);
     }
+    for (const type of ['scroll', 'scrollend']) {
+      expect(t.listenerOptions.get(type), type).toEqual([{ passive: true }]);
+    }
+  });
+
+  it('AD-11 creation reads the insets probe: 412 × 915 with 24/24 insets lays the bands at once', () => {
+    const t = setup(
+      { ...PIXEL_7, innerHeight: 915 },
+      { paddingTop: '24px', paddingBottom: '24px' },
+    );
+    expect(t.layout.w).toBe(46);
+    expect(t.layout.heights.topBar).toBe(68);
+    expect(t.layout.heights.actionBar).toBe(84);
+    expect(t.layout.heights.leftover).toBe(129);
+    expect(t.calls).toEqual([]);
   });
 
   it('AD-11 creation with the banner already shown lays it out at once', () => {

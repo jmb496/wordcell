@@ -107,10 +107,10 @@ deferred:
 - [x] `e2e/pwa/dist-smoke.spec.ts` -- `AD-11 ?bands= ignored in dist/`: same query, `[data-band]` order equals the default list -- row 95 dist half.
 
 **Acceptance Criteria:**
-- Given the built app on `android`, when the word list fails at 412 × 915, then the banner appears in the banner band, the leftover band shrinks by 44 px and every band from the columns down keeps its top.
+- Given the dev server on `android`, when the word list fails at 412 × 915, then the banner appears in the banner band, the leftover band shrinks by 44 px and every band from the columns down keeps its top.
 - Given 412 × 780 (leftover 42), when the banner shows, then the WordCell row's bounding box moves by less than 1 px (the layout writes `scrollTop` 2 in the same frame).
 - Given a held foot-pad pan at 412 × 600 with scroll events under 150 ms apart and the word list failed mid-pan, when the pan continues, then no banner is inserted until the first rAF after `scrollend` or the 150 ms quiet point (one tick slack); and when the page is hidden mid-pan, the banner is inserted by the first rAF after `visibilitychange`, before the quiet point (touch paths only).
-- Given any phase fixture, when a computed-style probe runs, then cards, tiles, WordCells and bar/banner buttons compute `touch-action: none`; the non-card regions compute `pan-y` on android and `pan-x pan-y` at desktop 370 × 750; region ancestors outside other regions up to html compute `auto`; user-select is `none` on cards, tiles, WordCells and their count badges, labels and foot pads.
+- Given `session-composing` with a failed word list (and `session-won` for count badges), when a computed-style probe runs, then cards, tiles, WordCells and bar/banner buttons compute `touch-action: none`; the non-card regions compute `pan-y` on android and `pan-x pan-y` at desktop 370 × 750; region ancestors outside other regions up to html compute `auto`; user-select is `none` on cards, tiles, WordCells and their count badges, labels and foot pads.
 - Given `npm run test:all` and `npm run test:screens`, when run, then both pass, with baselines unchanged unless a fixture render changed.
 
 ## Implementation Notes
