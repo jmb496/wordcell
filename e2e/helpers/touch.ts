@@ -70,3 +70,53 @@ export async function longPress(page: Page, target: Point, ms: number): Promise<
     await session.detach();
   }
 }
+
+export type TouchHold = { moveTo(point: Point): Promise<void>; end(): Promise<void> };
+
+// AD-17 Touch (F10): one touch held across `moveTo` steps until `end()`, on one CDP session.
+// `from` is checked before the session opens. A failed `moveTo` (validation or a CDP rejection)
+// ends the hold (touchEnd attempt, detach) and rethrows; once ended, `moveTo` throws and `end()`
+// is a no-op. Callers end holds in try/finally.
+export async function touchHold(page: Page, from: Point): Promise<TouchHold> {
+  await checkPoints(page, 'touchHold', [from]);
+  const session = await page.context().newCDPSession(page);
+  try {
+    await session.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [{ x: from.x, y: from.y }],
+    });
+  } catch (error) {
+    await session.detach().catch(() => undefined);
+    throw error;
+  }
+  let ended = false;
+
+  async function finish(): Promise<void> {
+    ended = true;
+    try {
+      await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    } finally {
+      await session.detach();
+    }
+  }
+
+  return {
+    async moveTo(point: Point): Promise<void> {
+      if (ended) throw new Error('touchHold: moveTo after the hold ended');
+      try {
+        await checkPoints(page, 'touchHold', [point]);
+        await session.send('Input.dispatchTouchEvent', {
+          type: 'touchMove',
+          touchPoints: [{ x: point.x, y: point.y }],
+        });
+      } catch (error) {
+        await finish().catch(() => undefined);
+        throw error;
+      }
+    },
+    async end(): Promise<void> {
+      if (ended) return;
+      await finish();
+    },
+  };
+}

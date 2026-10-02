@@ -37,6 +37,12 @@ body {
   height: 100%;
   background: var(--wc-table);
 }
+/* build-notes CAP-1: clientWidth stays stable when the page starts scrolling; AD-11: no browser
+   scroll anchoring beside the layout's own anchor write. */
+html {
+  scrollbar-gutter: stable;
+  overflow-anchor: none;
+}
 #app {
   height: 100%;
 }

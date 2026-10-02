@@ -72,8 +72,13 @@ const inPlace = $derived(place !== undefined);
   .label {
     align-self: center; text-align: center;
     font: 600 13px/16px system-ui, "Roboto", sans-serif; color: var(--wc-ink-secondary);
+    touch-action: var(--wc-pan); user-select: none; -webkit-user-select: none;
+    -webkit-touch-callout: none;
   }
-  .wordcell { position: relative; width: var(--wc-slot); height: var(--wc-H); }
+  .wordcell {
+    position: relative; width: var(--wc-slot); height: var(--wc-H);
+    touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  }
   .dim { opacity: 0.35; }
   /* The card rect inside the slot: empty outline, legal ring, selected-target ring. */
   .wordcell.empty::before,
@@ -91,7 +96,8 @@ const inPlace = $derived(place !== undefined);
     min-width: 16px; height: 16px; padding: 0 4px; border-radius: 9999px;
     background: var(--wc-surface-raised); color: var(--wc-ink-primary);
     font: 700 11px/16px system-ui, "Roboto", sans-serif; text-align: center;
-    pointer-events: none;
+    pointer-events: none; touch-action: none; user-select: none; -webkit-user-select: none;
+    -webkit-touch-callout: none;
   }
   .check {
     position: absolute; top: 2px; left: 4px; width: 14px; height: 14px; border-radius: 50%;

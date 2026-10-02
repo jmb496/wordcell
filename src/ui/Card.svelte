@@ -79,7 +79,7 @@ const lock = $derived(destination || (block && segment?.start === true));
 <style>
   .card {
     width: var(--wc-slot); height: var(--wc-strip); flex: none;
-    touch-action: none; user-select: none; -webkit-user-select: none;
+    touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
   }
   .card.full { height: var(--wc-H); }
   .card.cell { position: absolute; top: 0; left: 0; }

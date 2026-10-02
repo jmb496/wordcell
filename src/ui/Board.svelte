@@ -6,8 +6,8 @@ import ActionBar from './ActionBar.svelte';
 import Column from './Column.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import DictionaryBanner from './DictionaryBanner.svelte';
-import { BAND_ORDER, type BandId, type Unit } from './layout/bands';
-import { bands, cardMetrics, cardWidth } from './layout/geometry';
+import type { BandId, Unit } from './layout/bands';
+import type { Layout } from './layout/layout.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import TopBar from './TopBar.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
@@ -15,17 +15,16 @@ import Tray from './Tray.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import WordCellRow from './WordCellRow.svelte';
 
-// AD-11 tracer bullet: the Board iterates BAND_ORDER and lays every band out from geometry.ts,
-// with the mount inputs read once here until entry 4's live layout replaces them (build-notes
-// CAP-1): clientWidth, innerHeight, zero insets, one hover/pointer read, one tray row, no banner.
-// The bars and the banner are content-sized; every other band takes its `bands()` height.
-let { view }: { view: GameView } = $props();
+// AD-11: the Board iterates the live layout's band order and lays every band out from its getters
+// (w, metrics, wide, heights, bandOrder, the gate-latched bannerShown; build-notes CAP-1, CAP-3,
+// F20). The bars and the banner are content-sized; every other band takes its `bands()` height.
+// DESIGN.md Scrolling: `--wc-pan` is the non-card regions' touch-action (`pan-x pan-y` when wide);
+// the Board itself and its units set no touch-action (they compute `auto`).
+let { view, layout }: { view: GameView; layout: Layout } = $props();
 
-const insets = { top: 0, bottom: 0 };
-const hoverFine = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-const w = cardWidth(document.documentElement.clientWidth, window.innerHeight, insets, hoverFine);
-const metrics = cardMetrics(w);
-const { heights } = bands(w, BAND_ORDER, 1, false, window.innerHeight, insets);
+const w = $derived(layout.w);
+const metrics = $derived(layout.metrics);
+const heights = $derived(layout.heights);
 
 // Units whose bands are row tracks of one CSS grid (F22: the column hit rect spans its foot pad;
 // the labels sit above the WordCells outside [data-wordcell]).
@@ -44,7 +43,7 @@ function row(unit: Unit, band: BandId): number {
   {#if id === 'topBar'}
     <TopBar {view} />
   {:else if id === 'banner'}
-    <div class="banner" data-band="banner"><DictionaryBanner /></div>
+    <div class="banner" data-band="banner">{#if layout.bannerShown}<DictionaryBanner />{/if}</div>
   {:else if id === 'tray'}
     <Tray {view} {w} innerWidth={metrics.board - 16} height={heights.tray} />
   {:else if id === 'actionBar'}
@@ -61,9 +60,10 @@ function row(unit: Unit, band: BandId): number {
   style:--wc-strip="{metrics.strip}px"
   style:--wc-slot="{metrics.slot}px"
   style:--wc-board="{metrics.board}px"
+  style:--wc-pan={layout.wide ? 'pan-x pan-y' : 'pan-y'}
 >
   <h1 class="sr-only">WordCell</h1>
-  {#each BAND_ORDER as unit, u (u)}
+  {#each layout.bandOrder as unit, u (u)}
     {#if gridUnit(unit)}
       <div class="unit" style:grid-template-rows={unit.map((b) => `${heights[b]}px`).join(' ')}>
         {#each unit as id, i (id)}
@@ -112,10 +112,11 @@ function row(unit: Unit, band: BandId): number {
     width: var(--wc-board);
   }
   .track { grid-column: 1 / -1; pointer-events: none; }
-  .spacer { flex: none; width: var(--wc-board); }
-  /* DESIGN.md Dictionary-failed banner: sticky directly under the top bar (entry 4 re-lays it). */
+  .spacer { flex: none; width: var(--wc-board); touch-action: var(--wc-pan); }
+  /* DESIGN.md Dictionary-failed banner: sticky directly under the top bar's DESIGN.md 44 px (F22
+     exception, plan-recorded); its background pans, Reload sets none. */
   .banner {
     position: sticky; top: calc(44px + env(safe-area-inset-top)); z-index: 2; flex: none;
-    width: var(--wc-board); background: var(--wc-table);
+    width: var(--wc-board); background: var(--wc-table); touch-action: var(--wc-pan);
   }
 </style>

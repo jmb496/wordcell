@@ -8,6 +8,7 @@ import Board from './Board.svelte';
 import Halted from './Halted.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import HistoryNotice from './HistoryNotice.svelte';
+import type { Layout } from './layout/layout.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { newGame } from './new-game';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
@@ -15,7 +16,10 @@ import { overlays } from './overlays.svelte';
 import { text } from './text';
 
 // Roots: halted, Session rejected, the Board (AD-11) with the dialogs beside it. Script-side uses
-// of `game` keep Biome from flagging the import (it misses markup).
+// of `game` keep Biome from flagging the import (it misses markup). `layout` is the one live
+// layout main.ts creates (AD-11), passed to the Board.
+let { layout }: { layout: Layout } = $props();
+
 const board = $derived(game.view);
 
 // §2 Session rejected: the catalogue body for the parse reason (EXPERIENCE.md message catalogue).
@@ -43,7 +47,7 @@ function rejectedBody(reason: RejectReason): string {
 {:else if game.state.kind === 'active' && board}
   <!-- AD-13: dialogs render beside the board; while the notice is rendered the board is inert. -->
   <main inert={overlays.isOpen('historyNotice')}>
-    <Board view={board} />
+    <Board view={board} {layout} />
   </main>
   {#if overlays.isOpen('historyNotice')}
     <HistoryNotice />

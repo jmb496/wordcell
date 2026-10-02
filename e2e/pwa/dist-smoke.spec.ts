@@ -32,3 +32,25 @@ test('AD-18 no file in dist/ contains __wordcell', () => {
   );
   expect(hits).toEqual([]);
 });
+
+test('AD-11 ?bands= ignored in dist/', async ({ page }) => {
+  await seedStorage(page, { session: fixture('session-idle-fresh.json') });
+  await page.goto('/?bands=topBar,banner,leftover,tray,columns,wordcells,actionBar');
+  await expect(page.locator('[data-card-id]')).toHaveCount(52);
+  const order = await page
+    .locator('[data-band]')
+    .evaluateAll((els) => els.map((el) => el.getAttribute('data-band')));
+  expect(order).toEqual([
+    'topBar',
+    'banner',
+    'leftover',
+    'columns',
+    'footRow',
+    'trayGap',
+    'tray',
+    'labels',
+    'wordcells',
+    'actionGap',
+    'actionBar',
+  ]);
+});

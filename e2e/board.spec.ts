@@ -201,3 +201,36 @@ test('AD-11 bands render in BAND_ORDER (default)', async ({ page }) => {
     'actionBar',
   ]);
 });
+
+// AD-11 `?bands=` (dev only): the units in the query's order, flattened as DOM order.
+const PERMUTED = 'topBar,banner,leftover,tray,columns,wordcells,actionBar';
+const PERMUTED_BANDS = [
+  'topBar',
+  'banner',
+  'leftover',
+  'trayGap',
+  'tray',
+  'columns',
+  'footRow',
+  'labels',
+  'wordcells',
+  'actionGap',
+  'actionBar',
+];
+
+test('AD-11 ?bands= reorders bands in dev', async ({ page }) => {
+  test.skip(test.info().project.name !== 'android', 'AD-11 band order runs on android');
+  await seedStorage(page, { session: fixture('session-idle-fresh.json') });
+  await page.goto(`/?bands=${PERMUTED}`);
+  await expect(page.locator('[data-card-id]')).toHaveCount(52);
+  const bands = await page.locator('[data-band]').evaluateAll((els) =>
+    els.map((el) => ({
+      id: el.getAttribute('data-band'),
+      top: el.getBoundingClientRect().top + window.scrollY,
+    })),
+  );
+  expect(bands.map((b) => b.id)).toEqual(PERMUTED_BANDS);
+  for (let i = 1; i < bands.length; i++) {
+    expect(bands[i]?.top, bands[i]?.id ?? '').toBeGreaterThanOrEqual(bands[i - 1]?.top ?? 0);
+  }
+});

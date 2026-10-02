@@ -5,8 +5,10 @@ import { game } from './shell/game.svelte';
 import { nav } from './shell/nav';
 import { prefs } from './shell/prefs.svelte';
 import App from './ui/App.svelte';
+import { createGate } from './ui/gestures/gate';
 import Halted from './ui/Halted.svelte';
 import { openHistoryNotice } from './ui/history-notice.svelte';
+import { browserLayoutDeps, createLayout } from './ui/layout/layout.svelte';
 import { overlays } from './ui/overlays.svelte';
 // Imported before boot so the `@font-face` the font check loads is registered.
 import './ui/app.css';
@@ -111,11 +113,21 @@ async function boot(): Promise<void> {
     showStandalone();
     return;
   }
+  // AD-11: the one gate, its scroll reset in the hide flush (AD-9; entry 6 registers the pointer
+  // controller's cancel above it), then the live layout (a `?bands=` non-permutation throws here
+  // to AD-15 in dev).
+  const gate = createGate({
+    raf: (callback) => requestAnimationFrame(() => callback()),
+    setTimer: (callback, ms) => setTimeout(callback, ms),
+    clearTimer: (handle) => clearTimeout(handle),
+  });
+  game.registerBeforeHide(() => gate.scrollReset());
+  const layout = createLayout(gate, browserLayoutDeps());
   // AD-16 order: lifecycle listeners (and the visible-time clock) right after the load, before mount.
   game.registerLifecycle();
   // AD-16 boot surfaces: the History notice (active store, unreadable history; once per launch).
   openHistoryNotice();
-  mount(App, { target });
+  mount(App, { target, props: { layout } });
   surface = true;
   await nextPaint();
   if (halted()) return;

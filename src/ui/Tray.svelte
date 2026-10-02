@@ -77,7 +77,7 @@ function segment(i: number): { start: boolean; end: boolean } {
   .tray {
     flex: none; box-sizing: border-box; width: var(--wc-board); padding: 8px;
     display: flex; flex-direction: column;
-    background: var(--wc-surface); border-radius: 12px;
+    background: var(--wc-surface); border-radius: 12px; touch-action: var(--wc-pan);
   }
   .word-line { flex: none; height: 24px; min-width: 0; }
   .tiles {

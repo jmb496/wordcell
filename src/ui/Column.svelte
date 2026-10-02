@@ -64,7 +64,12 @@ const placeholder = $derived(
 </div>
 
 <style>
-  .column { grid-row: 1 / -1; display: grid; grid-template-rows: subgrid; min-width: 0; }
+  /* DESIGN.md Scrolling: the column background and its foot pad pan (cards set none); the hit
+     rect is unchanged (AD-12). The foot row's none while a tail is selected is entry 7. */
+  .column {
+    grid-row: 1 / -1; display: grid; grid-template-rows: subgrid; min-width: 0;
+    touch-action: var(--wc-pan);
+  }
   .cards { position: relative; display: flex; flex-direction: column; }
   .placeholder {
     position: absolute; top: 0; left: 2px; box-sizing: border-box;
@@ -72,7 +77,10 @@ const placeholder = $derived(
     border: 2px dashed var(--wc-outline); border-radius: 6px; visibility: hidden;
   }
   .placeholder.shown { visibility: visible; }
-  .foot { display: grid; place-items: center; }
+  .foot {
+    display: grid; place-items: center; touch-action: var(--wc-pan);
+    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  }
   /* DESIGN.md Column slot: the column number only under (hover: hover) and (pointer: fine). */
   .number { display: none; font: 500 14px/20px system-ui, "Roboto", sans-serif; color: var(--wc-ink-secondary); }
   @media (hover: hover) and (pointer: fine) {

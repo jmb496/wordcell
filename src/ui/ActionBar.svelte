@@ -70,13 +70,14 @@ const primary = $derived.by(
     box-sizing: border-box; width: var(--wc-board); height: calc(60px + env(safe-area-inset-bottom));
     padding: 0 4px env(safe-area-inset-bottom);
     display: flex; align-items: center; background: var(--wc-surface);
+    touch-action: var(--wc-pan);
   }
   .primary {
     display: block; width: 100%; height: 48px; padding: 0 16px;
     border: none; border-radius: 9999px;
     background: var(--wc-accent-orange); color: var(--wc-ink-on-accent);
     font: 600 16px/24px system-ui, "Roboto", sans-serif;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; touch-action: none;
   }
   .primary:disabled { background: var(--wc-surface-raised); color: var(--wc-ink-disabled); }
   .primary.reason:disabled { color: var(--wc-ink-secondary); }

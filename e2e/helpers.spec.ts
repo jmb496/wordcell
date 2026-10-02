@@ -26,7 +26,7 @@ import {
 import { captureBoot, fixture, seedStorage } from './helpers/seed';
 import { armStorageSpy, storageWrites } from './helpers/storage-spy';
 import { tokenColor } from './helpers/style';
-import { longPress, touchDrag } from './helpers/touch';
+import { longPress, touchDrag, touchHold } from './helpers/touch';
 
 // AD-17 helper self-tests. The direct `page.evaluate` writes to `wordcell:*` below stand in for the
 // app's own writes during a prior load; they are not seeding and are allowed only in this file.
@@ -435,7 +435,7 @@ test.describe('storage spy', () => {
   });
 });
 
-test.describe('touchDrag / longPress', () => {
+test.describe('touchDrag / longPress / touchHold', () => {
   async function installProbe(page: Page): Promise<void> {
     await page.evaluate(() => {
       const w = window as unknown as { __probeEvents: ProbeEvent[] };
@@ -533,6 +533,86 @@ test.describe('touchDrag / longPress', () => {
     expect(Math.abs((down?.clientY ?? Number.NaN) - at.y)).toBeLessThanOrEqual(1);
     expect(Math.abs((up?.clientX ?? Number.NaN) - at.x)).toBeLessThanOrEqual(1);
     expect(Math.abs((up?.clientY ?? Number.NaN) - at.y)).toBeLessThanOrEqual(1);
+  });
+  const probed = (page: Page) =>
+    page.evaluate(() => (window as unknown as { __probeEvents: ProbeEvent[] }).__probeEvents);
+
+  test('AD-17 touchHold holds a touch pointer across moveTo steps until end()', async ({
+    page,
+  }) => {
+    const from = { x: 100, y: 300 };
+    const steps = [
+      { x: 120, y: 320 },
+      { x: 140, y: 340 },
+      { x: 160, y: 360 },
+    ];
+    await page.goto('/');
+    await installProbe(page);
+    const hold = await touchHold(page, from);
+    try {
+      for (const step of steps) await hold.moveTo(step);
+      await animationFrames(page, 2);
+      const held = await probed(page);
+      expect(held.map((e) => e.type)).not.toContain('pointerup');
+      expect(held.map((e) => e.type)).not.toContain('pointercancel');
+      expect(held[0]?.type).toBe('pointerdown');
+    } finally {
+      await hold.end();
+    }
+    const events = (await probeEvents(page)).filter((e) => e.type !== 'contextmenu');
+    for (const e of events) expect(e.pointerType).toBe('touch');
+    const types = events.map((e) => e.type);
+    expect(types[0]).toBe('pointerdown');
+    expect(types.at(-1)).toBe('pointerup');
+    expect(types.slice(1, -1).every((type) => type === 'pointermove')).toBe(true);
+    expect(events.slice(1, -1).reduce((sum, e) => sum + e.coalesced, 0)).toBeGreaterThanOrEqual(
+      steps.length,
+    );
+    const down = events[0];
+    const up = events.at(-1);
+    expect(Math.abs((down?.clientX ?? Number.NaN) - from.x)).toBeLessThanOrEqual(1);
+    expect(Math.abs((down?.clientY ?? Number.NaN) - from.y)).toBeLessThanOrEqual(1);
+    expect(Math.abs((up?.clientX ?? Number.NaN) - 160)).toBeLessThanOrEqual(1);
+    expect(Math.abs((up?.clientY ?? Number.NaN) - 360)).toBeLessThanOrEqual(1);
+  });
+
+  test('AD-17 touchHold moveTo throws after a failed moveTo or after end(); end() is then a no-op', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await installProbe(page);
+    const viewport = page.viewportSize();
+    if (viewport === null) throw new Error('no viewport');
+    const failed = await touchHold(page, { x: 100, y: 300 });
+    await expect(failed.moveTo({ x: viewport.width + 10, y: 300 })).rejects.toThrow(/outside the/);
+    // The failed moveTo ended the hold: a pointerup arrives with no further move.
+    const events = await probeEvents(page);
+    expect(events.filter((e) => e.type === 'pointerup')).toHaveLength(1);
+    await expect(failed.moveTo({ x: 120, y: 300 })).rejects.toThrow(/after the hold ended/);
+    await failed.end();
+    await failed.end();
+
+    const ended = await touchHold(page, { x: 100, y: 300 });
+    await ended.end();
+    await expect(ended.moveTo({ x: 120, y: 300 })).rejects.toThrow(/after the hold ended/);
+    await ended.end();
+    await animationFrames(page, 2);
+    const all = await probed(page);
+    expect(all.filter((e) => e.type === 'pointerdown')).toHaveLength(2);
+    expect(all.filter((e) => e.type === 'pointerup')).toHaveLength(2);
+    expect(all.filter((e) => e.type === 'pointermove')).toEqual([]);
+  });
+
+  test('AD-17 touchHold from outside the viewport rejects with no touch events', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await installProbe(page);
+    const viewport = page.viewportSize();
+    if (viewport === null) throw new Error('no viewport');
+    await expect(touchHold(page, { x: 100, y: viewport.height })).rejects.toThrow(/outside the/);
+    await animationFrames(page, 2);
+    expect(await probed(page)).toEqual([]);
   });
 });
 

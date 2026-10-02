@@ -58,6 +58,7 @@ function redo(): void {
     box-sizing: content-box; width: var(--wc-board); height: 44px;
     padding-top: env(safe-area-inset-top);
     display: flex; align-items: center; background: var(--wc-table);
+    touch-action: var(--wc-pan);
   }
   .menu-slot { flex: none; width: 44px; height: 44px; }
   .score {
@@ -70,7 +71,7 @@ function redo(): void {
     width: 44px; height: 44px; padding: 0; border-radius: 9999px;
     display: grid; place-items: center;
     background: var(--wc-surface-raised); border: 1px solid var(--wc-outline);
-    color: var(--wc-ink-primary);
+    color: var(--wc-ink-primary); touch-action: none;
   }
   .icon:disabled { color: var(--wc-ink-disabled); }
   .icon svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }

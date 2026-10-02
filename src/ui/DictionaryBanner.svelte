@@ -3,26 +3,24 @@ import { dictionary } from '../shell/dictionary.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { text } from './text';
 
-// AD-8 dictionary-failed banner (DESIGN.md Components): shown straight from the store, on the
-// board only. Reload is disabled while a Q-42 in-place retry runs (the banner stays shown then),
-// a UI-level no-op so a tap never reaches retry() outside 'failed'. The Board's banner band holds
-// it (sticky under the top bar); entry 4 adds the AD-11 gesture latch and re-layout.
+// AD-8 dictionary-failed banner (DESIGN.md Components), on the board only. The Board renders it
+// while the AD-11 gate-latched `layout.bannerShown` holds (F20); only Reload's disabled state reads
+// the live store: disabled while a Q-42 in-place retry runs (the banner stays shown then), a
+// UI-level no-op so a tap never reaches retry() outside 'failed'.
 function reload(): void {
   void dictionary.retry();
 }
 </script>
 
-{#if dictionary.showBanner}
-  <div class="banner">
-    <p>{text.wordListFailed}</p>
-    <button
-      type="button"
-      class="secondary"
-      disabled={dictionary.state !== 'failed'}
-      onclick={reload}
-    >{text.reload}</button>
-  </div>
-{/if}
+<div class="banner">
+  <p>{text.wordListFailed}</p>
+  <button
+    type="button"
+    class="secondary"
+    disabled={dictionary.state !== 'failed'}
+    onclick={reload}
+  >{text.reload}</button>
+</div>
 
 <style>
   .banner {
@@ -37,6 +35,7 @@ function reload(): void {
     flex: none; height: 44px; padding: 0 16px; border-radius: 9999px;
     background: var(--wc-surface-raised); border: 1px solid var(--wc-outline);
     color: var(--wc-ink-primary); font: 600 16px/24px system-ui, "Roboto", sans-serif;
+    touch-action: none;
   }
   .secondary:disabled { color: var(--wc-ink-disabled); }
 </style>
