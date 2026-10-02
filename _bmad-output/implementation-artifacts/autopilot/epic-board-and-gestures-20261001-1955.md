@@ -26,3 +26,16 @@ Tokens: 10.2M input-equivalent (ticket review 98%, other 1%, orchestrator 1%); o
 Owner question: on phones with a notch or gesture bar, do the top bar and action bar keep their full 44 px / 60 px content height with the safe-area padding added outside it (proposed), or is the padding squeezed inside the band heights the layout computes?
 Resume: record the answer in build-notes.md CAP-1 (or the ticket Notes), apply the three open majors in the ticket (the two ticket-wording ones take the proposed defaults), commit, and rerun the driver. The ticket review log already has its `## Result`, so the next session goes straight to the build.
 Close-out docs: build-notes.md CAP-1 / CAP-3 ← bar box model and safe-area padding (pending owner answer, 2026-10-01)
+
+## 4.2 Board render in Idle and Game over with bars — done
+What it adds: the real game board on screen when no word is being built and at game over: the eight columns, the WordCell row with labels and card counts, the top bar, the dictionary banner and the action bar. On phones with a notch or gesture bar, the bars keep their full size and get extra padding (your Option A).
+Ticket review: 6 passes, diverging; your answer on bar sizing (2026-10-02, Option A) settled the late major; the two wording fixes took their defaults (board spans the full width; min-height 100dvh)
+Build: built; commits 55e6beb
+Code review: thorough (ticket risk high), 1 pass, converged; 0 fixes applied (log 4-2-build.md)
+Tests: all passing
+Ref to fix upstream: build-notes CAP-1 / CAP-3 bar box model (now settled by the owner answer)
+Paused: resumed 2026-10-02T06:25Z after the owner answer
+Tokens: 4.1M input-equivalent (build 69%, code review 25%, orchestrator 3%, other 3%); orchestrator peak context 59k
+Worth knowing: three small items moved on: the card-count badge at exactly 1 or 2 cards is untested (no saved game has such a WordCell; ticket 4.3 should script one); the banner's position under the top bar hard-codes the bar height, which ticket 4.4 (live layout) should derive or record as an exception; one ticket sentence sits under the wrong heading (wording only). Until 4.4, the board can be a few pixels taller than the screen on notched phones. Code review left minors only (e.g. a test labelled AD-17 where AD-3 fits better).
+Close-out docs:
+- build-notes.md CAP-1 / CAP-3 ← bars are content-sized, 44/60 px plus safe-area padding, bands() matches from entry 4 (owner, 2026-10-02; already written into build-notes CAP-1; check DESIGN.md bar section and spine AD-11 bands() wording agree at the retro)

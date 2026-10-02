@@ -3,7 +3,7 @@ title: 'Board render in Idle and Game over with bars (tracer bullet)'
 type: 'feature'
 ticket: '2'
 created: '2026-10-02'
-status: 'built'
+status: done
 baseline_revision: '17cfcad2819b899ee52e43e5ac17b3314f038f2c'
 route: 'full'
 route_source: 'auto'
