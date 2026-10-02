@@ -131,6 +131,11 @@ Words (docs): 1498 (4.1 x pass 0; budget 1500)  |  Snapshot: story-board-render-
 - Shared newGame() for rejected root and ActionBar — plan.
 - Score bullet 'then Redo disabled' duplicates R-70/R-71 — cut.
 
-## Result — diverging at pass 6 (fix build-notes CAP-1/CAP-3: bar box model and safe-area padding ownership before/after entry 4's probe; SPEC F25 root extent)
+## Stopped — diverging at pass 6 (fix build-notes CAP-1/CAP-3: bar box model and safe-area padding ownership before/after entry 4's probe; SPEC F25 root extent)
 Majors per pass: 11, 8, 6, 3, 2, 3. The rise at pass 6 comes from the bar-height / safe-area area, where three successive fixes (passes 3–5) each traded one defect for another. The refs leave open how bands() (insets folded into bar heights, geometry.ts) relates to DESIGN's env() padding while entry 2 passes zero insets. Settle it once in build-notes CAP-1 (which band heights bands() owns vs content-sized bars, and that the bars' env() padding ships in entry 2), then rerun the loop or apply the three open majors above directly.
 Unapplied minors: listed under Pass 6. Decision-needed: none. Technical defaults applied: ~30 across passes 1–5.
+
+## Owner answer — 2026-10-02
+The late major (bar height source vs safe-area padding) was spec intent and is resolved by the owner answer (Jared, Option A): bars are content-sized, 44/60 px of content plus env(safe-area-inset-*) padding shipped by this ticket, every other band but the banner from bands(); recorded in build-notes CAP-1. The two other pass-6 majors took their proposed defaults: the Board root spans the full viewport width including side margins (F25), and its min-height is 100dvh, not 100vh. All three applied to the ticket directly; no further pass run.
+
+## Result — diverging (6 passes), late major resolved by owner answer 2026-10-02

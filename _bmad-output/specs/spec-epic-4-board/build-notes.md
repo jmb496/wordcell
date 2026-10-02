@@ -110,6 +110,10 @@ Components receive `GameView` slices and UI state as props; none imports the eng
 
 ## CAP-1 Layout definition and geometry
 
+- Bar sizing (owner decision 2026-10-02, Jared, Option A): The top and action bars are
+  content-sized: 44 px and 60 px of content plus `env(safe-area-inset-*)` padding, which entry 2
+  ships; every other band but the banner takes its height from `bands()`. Once entry 4 feeds real
+  insets, `bands()` bar heights equal the rendered bars.
 - `BAND_ORDER` (F22) [ASSUMPTION ids]: seven units `[['topBar'], ['banner'], ['leftover'],
   ['columns', 'footRow'], ['trayGap', 'tray'], ['labels', 'wordcells'], ['actionGap',
   'actionBar']]`, the eleven AD-11 bands (foot row with its columns, DESIGN.md, so the column hit
