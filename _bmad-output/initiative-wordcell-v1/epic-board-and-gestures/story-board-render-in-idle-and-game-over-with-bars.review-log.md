@@ -1,6 +1,6 @@
 # Review log — story-board-render-in-idle-and-game-over-with-bars.md (ticket 4.2)
 
-State: pass 5: done
+State: pass 6: review (stopped: diverging)
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 88bf030, copy story-board-render-in-idle-and-game-over-with-bars.passes/pass0.md, 361 words.
 Intent carried from tickets.toml entry 2 (not copied by the pull): verify, unknown, interface, tests, owns, references; pass-1 fixer adds interface, tests, owns to Description as 'Interface:', 'Tests:', 'Owns:' (verify, unknown, references are already in AC, Notes, References).
@@ -111,3 +111,26 @@ Fixer: 2 majors + 5 zero-word minors applied; Notes open question replaced by a 
 - none
 ### Dropped
 - Plan-level items listed above.
+
+## Pass 6 — 2026-10-01 23:05
+Reviewers: fix-diff, edge-case, adversarial, ref-alignment (late-pass bar)  |  Findings: major 3, minor 10, decision-needed 0  |  Dropped in triage: 6 (duplicates; ref-alignment returned [])
+Words (docs): 1498 (4.1 x pass 0; budget 1500)  |  Snapshot: story-board-render-in-idle-and-game-over-with-bars.passes/pass5.md (no fix this pass)
+### Open (not fixed — diverging)
+- [major] Bands vs Board — bar height source still contradictory: 'all but the banner take their height from the mount bands() result' vs 'Bar content stays 44/60 px' + env() padding; on inset devices the builder must pick border-box squeeze or double count (third pass in this area: pass 4 item 1, pass 5 item 1). Proposed: exclude the two bars from the bands()-height rule; bars are content-sized (44/60 px + env() padding), equal to bands() once entry 4 feeds real insets.
+- [major] Board — the pass-5 trim 'the root has viewport min-height (F25, F8)' dropped 'spans the viewport' (width); SPEC F25 needs the active-branch root to span the viewport, side margins included. Proposed: 'spans the viewport width with min-height 100dvh'.
+- [major] Board — viewport min-height unit unnamed; 100vh exceeds innerHeight on Android Chrome with the URL bar shown, so the page scrolls (browser mode; installed PWA unaffected). Proposed: min-height: 100dvh, never 100vh.
+### Minors (unapplied)
+- WordCellRow — no card-0 board-ready wait actually runs on session-place-free-letter-redo-tail (verified by edge-case lens); the sentence can be cut, or reworded 'wherever card 0 is a non-top cell card'.
+- Placeholder paragraph — the foot column-number sentence sits under the wrong heading; move it after the foot-<n> clause in Bands.
+- Placeholder show/hide has no test (session-won all empty vs idle-fresh none) — plan.
+- AD-14 'data-place column/cell' accepts either value; assert per container — plan.
+- Count badge 1/2 boundary untested — plan or entry 3.
+- Grid column tracks/placement for unit wrappers — plan (8 slot tracks).
+- .count hook placement (inside wordcell-<n>, pointer-events: none) — move from Card to WordCellRow sentence.
+- Banner sticky offset names the top bar's height (F22 exception) — entry 4.
+- Shared newGame() for rejected root and ActionBar — plan.
+- Score bullet 'then Redo disabled' duplicates R-70/R-71 — cut.
+
+## Result — diverging at pass 6 (fix build-notes CAP-1/CAP-3: bar box model and safe-area padding ownership before/after entry 4's probe; SPEC F25 root extent)
+Majors per pass: 11, 8, 6, 3, 2, 3. The rise at pass 6 comes from the bar-height / safe-area area, where three successive fixes (passes 3–5) each traded one defect for another. The refs leave open how bands() (insets folded into bar heights, geometry.ts) relates to DESIGN's env() padding while entry 2 passes zero insets. Settle it once in build-notes CAP-1 (which band heights bands() owns vs content-sized bars, and that the bars' env() padding ships in entry 2), then rerun the loop or apply the three open majors above directly.
+Unapplied minors: listed under Pass 6. Decision-needed: none. Technical defaults applied: ~30 across passes 1–5.
