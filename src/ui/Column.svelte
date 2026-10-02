@@ -2,6 +2,8 @@
 import type { ColumnView, DraftView, Face, Phase } from '../engine/index';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Card from './Card.svelte';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import { dropTarget } from './gestures/drop-target';
 import type { TailSelection } from './overlays.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { text } from './text';
@@ -18,6 +20,12 @@ import { text } from './text';
 // the other feet the wash and dashed border, and every foot is `touch-action: none` (AD-11 row).
 // Desktop hover classes are toggled on the column element by the controller (never Svelte state);
 // this component's CSS maps them to the right child.
+// Entry 8 (SPEC CAP-7, DESIGN.md Card states dragging / drop target / ghost, Layer order): the whole
+// slot registers as a drop target; during a drag the controller adds `wc-drag-ghost` to the tail's
+// slot wrappers (a dashed ghost drawn by `::before`, the face keeping its fill), `wc-drag-layer` to
+// their faces (above the bars, the lift and the hover peek, below the scrim) and `wc-drag-target` to
+// the target's bottom card, placeholder (revealed) or the card above a partial tail, in every media
+// context. Svelte toggles its own class directives with `classList`, so these survive re-renders.
 let {
   column,
   faces,
@@ -57,6 +65,7 @@ const liftStart = $derived(column.cards.length - count);
   data-testid="column-{column.column}"
   data-column={column.column}
   style:grid-column={column.column}
+  use:dropTarget={{ kind: 'column', id: column.column }}
 >
   <div
     class="cards"
@@ -65,7 +74,7 @@ const liftStart = $derived(column.cards.length - count);
     style:--wc-lift-start={liftStart}
     style:--wc-lift={source ? '8px' : '0px'}
   >
-    <div class="placeholder" class:shown={placeholder}></div>
+    <div class="placeholder" class:shown={placeholder} data-placeholder></div>
     {#each column.cards as id, i (id)}
       {@const ghost = inSource(id) || (phase === 'place' && inDestination(id))}
       <Card
@@ -173,5 +182,27 @@ const liftStart = $derived(column.cards.length - count);
       );
     }
     .column:global(.wc-drop-self) .foot.whole { outline-offset: -3px; }
+  }
+
+  /* DESIGN.md Card states, dragging and ghost (entry 8): the old slot draws a ghost the size and
+     inset of Card's ghost face; the dragged face keeps its fill, raised to the drag layer (above
+     the sticky bars 2, the lift 3 and the hover peek's reserved 4, below any scrim) with the lift
+     shadow. Every media context. */
+  .cards :global(.card.wc-drag-ghost) { position: relative; }
+  .cards :global(.card.wc-drag-ghost)::before {
+    content: ''; position: absolute; top: 0; left: 2px; box-sizing: border-box;
+    width: var(--wc-w); height: var(--wc-H); border: 1px dashed var(--wc-outline);
+    border-radius: 6px; pointer-events: none;
+  }
+  .cards :global(.face.wc-drag-layer) { z-index: 5; box-shadow: 0 6px 16px #0008; }
+  /* DESIGN.md Card states, drop target under a drag: 3 px teal outline and 12 % teal wash. */
+  .cards :global(.card.wc-drag-target) > :global(.face),
+  .placeholder:global(.wc-drag-target) {
+    visibility: visible;
+    outline: 3px solid var(--wc-accent-teal);
+    background-image: linear-gradient(
+      color-mix(in srgb, var(--wc-accent-teal) 12%, transparent),
+      color-mix(in srgb, var(--wc-accent-teal) 12%, transparent)
+    );
   }
 </style>

@@ -18,7 +18,21 @@
 // hover (`pointerType === 'mouse'`) toggles `wc-hover-tail` (+ `--wc-hover-from`), `wc-grab`,
 // `wc-drop` and `wc-drop-self` on at most one `[data-column]`, recomputed at the last point by
 // `pointerover` and `refreshHover()` (App's reaction to the selection and the GameView).
+// Entry 8 (SPEC CAP-7, AD-12, F12, F13, F26): a column-card press whose column `canPickUp` turns
+// into a drag at the threshold-crossing move (the first drag move): the tail (pressed card to the
+// bottom, R-10) gets `wc-drag-ghost` on its slot wrappers and `wc-drag-layer` on its faces; each
+// drag move writes `translate(pointer − press point)` on the faces, measures the grabbed face
+// against every registered drop target (`drop-target.ts`) with `pickTarget` and moves
+// `wc-drag-target` to the highlighted column's target element, all by DOM only (no Svelte state,
+// store call or dispatch before release). Release drops on the last highlight (deselect first),
+// else flies back; pointercancel, lostpointercapture and cancel({ byBack: true }) fly back from the
+// last transform; any other end snaps back at once. The fly-back (WAAPI over
+// `duration('flyBack')`, a fade under reduced motion) is gate-counted and settles on its faces'
+// `onfinish`, or at once from cancel() or a new drag. Hover classes are cleared during a drag or
+// fly-back and recomputed after.
 import { game } from '../../shell/game.svelte';
+import { prefs } from '../../shell/prefs.svelte';
+import { duration } from '../motion';
 import { overlays } from '../overlays.svelte';
 import {
   classify,
@@ -28,8 +42,10 @@ import {
   type PressTarget,
   start,
 } from './classify';
+import { columnTargets } from './drop-target';
 import type { Gate } from './gate';
 import { type Hit, type HoverAction, hoverAction, tapAction } from './intent';
+import { pickTarget } from './targeting';
 
 export type ControllerDeps<H> = {
   elementFromPoint(x: number, y: number): Element | null;
@@ -50,8 +66,33 @@ export type Controller = {
 
 type EndReason =
   | { readonly kind: 'up' | 'pointercancel' | 'lostCapture' | 'sameId' }
-  // `byBack` is recorded for entries 8–9 (fly-back, F13, F24); no behavioural difference yet.
+  // `byBack`: a drag flies back (F13) instead of snapping.
   | { readonly kind: 'cancel'; readonly byBack: boolean };
+
+/** Entry 8: a press that crossed the threshold on a column card whose column `canPickUp`. */
+type Drag = {
+  readonly source: number;
+  /** The source `[data-column]` element. */
+  readonly sourceEl: Element;
+  readonly count: number;
+  /** The source column's card above the tail (the partial self-drop target, R-21). */
+  readonly remainderTop: number | null;
+  readonly wrappers: readonly HTMLElement[];
+  /** The tail's faces; `faces[0]` is the grabbed card's (the dragged rect, AD-12). */
+  readonly faces: readonly HTMLElement[];
+  /** The pointerdown point. */
+  readonly x: number;
+  readonly y: number;
+  /** The last transform written on the faces. */
+  transform: string;
+  hasLeftSource: boolean;
+  highlighted: number | null;
+  /** The element carrying `wc-drag-target`. */
+  target: Element | null;
+};
+
+/** A running fly-back (F13). */
+type Flight = { readonly drag: Drag; readonly animations: Animation[]; settled: boolean };
 
 type Press<H> = {
   readonly pointerId: number;
@@ -60,6 +101,7 @@ type Press<H> = {
   readonly hit: Hit;
   state: PressState;
   timer: { readonly handle: H } | null;
+  drag: Drag | null;
 };
 
 type Resolved = {
@@ -82,6 +124,9 @@ const LISTENED = [
 
 const HOVER_CLASSES = ['wc-hover-tail', 'wc-grab', 'wc-drop', 'wc-drop-self'] as const;
 const HOVER_FROM = '--wc-hover-from';
+const DRAG_GHOST = 'wc-drag-ghost';
+const DRAG_LAYER = 'wc-drag-layer';
+const DRAG_TARGET = 'wc-drag-target';
 const OUTSIDE: Hit = { kind: 'outside' };
 
 function attribute(el: Element, name: string): number {
@@ -161,6 +206,8 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
   let lastPoint: { readonly x: number; readonly y: number } | null = null;
   /** The `[data-column]` element carrying the hover classes. */
   let hovered: HTMLElement | null = null;
+  /** The running fly-back, if any. */
+  let flying: Flight | null = null;
 
   function stopTimer(p: Press<H>): void {
     if (p.timer === null) return;
@@ -186,7 +233,178 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     if ((kind === 'cancel' || kind === 'lostCapture') && p.captured !== null) {
       menuSlot = p.pointerId;
     }
+    const drag = p.drag;
+    let flies = false;
+    if (drag !== null) {
+      drag.target?.classList.remove(DRAG_TARGET);
+      drag.target = null;
+      flies =
+        kind === 'up'
+          ? drag.highlighted === null
+          : kind === 'pointercancel' ||
+            kind === 'lostCapture' ||
+            (reason.kind === 'cancel' && reason.byBack);
+      // The fly-back enters the gate before the press leaves it (F13).
+      if (flies) flyBack(drag);
+      else clearDrag(drag);
+    }
     gate.leave();
+    // A drop refreshes after its dispatch (pointerup).
+    if (drag !== null && !flies && kind !== 'up') refreshHover();
+  }
+
+  // Removes every drag class and the inline transform from the tail.
+  function clearDrag(drag: Drag): void {
+    for (const face of drag.faces) {
+      face.style.transform = '';
+      face.classList.remove(DRAG_LAYER);
+    }
+    for (const wrapper of drag.wrappers) wrapper.classList.remove(DRAG_GHOST);
+  }
+
+  // F13: WAAPI on the faces from the last written transform back to the slot; under reduced motion
+  // the transform clears at once and the faces fade in. Gate-counted until settled.
+  function flyBack(drag: Drag): void {
+    gate.enter();
+    const ms = duration('flyBack');
+    const reduced = prefs.motion.reduced;
+    const flight: Flight = { drag, animations: [], settled: false };
+    flying = flight;
+    let remaining = drag.faces.length;
+    const done = (): void => {
+      remaining -= 1;
+      if (remaining === 0) settle(flight);
+    };
+    for (const face of drag.faces) {
+      let animation: Animation;
+      if (reduced) {
+        face.style.transform = '';
+        animation = face.animate([{ opacity: 0 }, { opacity: 1 }], { duration: ms });
+      } else {
+        animation = face.animate(
+          [{ transform: drag.transform }, { transform: 'translate(0px, 0px)' }],
+          { duration: ms, easing: 'ease-out' },
+        );
+        face.style.transform = '';
+      }
+      animation.onfinish = done;
+      flight.animations.push(animation);
+    }
+  }
+
+  // Idempotent: the last face's onfinish, or finishFlight().
+  function settle(flight: Flight): void {
+    if (flight.settled) return;
+    flight.settled = true;
+    if (flying === flight) flying = null;
+    clearDrag(flight.drag);
+    gate.leave();
+    refreshHover();
+  }
+
+  // F13: completes a running fly-back at once; its settle runs synchronously.
+  function finishFlight(): void {
+    const flight = flying;
+    if (flight === null) return;
+    for (const animation of flight.animations) animation.finish();
+    settle(flight);
+  }
+
+  function cardIn(columnEl: Element, id: number): HTMLElement {
+    const el = columnEl.querySelector(`[data-card-id="${id}"]`);
+    if (el === null) throw new Error(`AD-12 card ${id} not rendered in its column`);
+    return el as HTMLElement;
+  }
+
+  function placeholderIn(columnEl: Element): Element {
+    const el = columnEl.querySelector('[data-placeholder]');
+    if (el === null) throw new Error('AD-12 column without [data-placeholder]');
+    return el;
+  }
+
+  function viewColumn(column: number) {
+    const view = game.view;
+    if (view === undefined) throw new Error('AD-12 drag without a GameView');
+    const entry = view.columns[column - 1];
+    if (entry === undefined || entry.column !== column) {
+      throw new Error(`AD-12 column ${column} is not in the GameView`);
+    }
+    return entry;
+  }
+
+  // SPEC CAP-7: the threshold-crossing move of a column-card press; null when the press is not a
+  // pick-up (another kind of press, or the column cannot be picked up: the drag is inert).
+  function startDrag(p: Press<H>): Drag | null {
+    const hit = p.hit;
+    if (hit.kind !== 'card' || p.captured === null) return null;
+    const entry = viewColumn(hit.column);
+    if (!entry.canPickUp) return null;
+    const start = entry.cards.indexOf(hit.card);
+    if (start < 0) throw new Error(`AD-12 card ${hit.card} is not in column ${hit.column}`);
+    const sourceEl = p.captured.closest('[data-column]');
+    if (sourceEl === null) throw new Error('AD-12 column card outside [data-column]');
+    finishFlight();
+    clearHover();
+    const wrappers = entry.cards.slice(start).map((id) => cardIn(sourceEl, id));
+    const faces = wrappers.map((wrapper) => {
+      const face = wrapper.querySelector('.face');
+      if (face === null) throw new Error('AD-12 card without a .face');
+      return face as HTMLElement;
+    });
+    for (const wrapper of wrappers) wrapper.classList.add(DRAG_GHOST);
+    for (const face of faces) face.classList.add(DRAG_LAYER);
+    return {
+      source: hit.column,
+      sourceEl,
+      count: wrappers.length,
+      remainderTop: start === 0 ? null : (entry.cards[start - 1] as number),
+      wrappers,
+      faces,
+      x: p.state.x,
+      y: p.state.y,
+      transform: '',
+      hasLeftSource: false,
+      highlighted: null,
+      target: null,
+    };
+  }
+
+  // DESIGN.md Card states, drop target: another column's bottom card or placeholder; on the source,
+  // the card above a partial tail (R-21) or the placeholder under a whole column's ghosts.
+  function targetElement(drag: Drag, column: number, columnEl: Element): Element {
+    if (column === drag.source) {
+      return drag.remainderTop === null
+        ? placeholderIn(drag.sourceEl)
+        : cardIn(drag.sourceEl, drag.remainderTop);
+    }
+    const last = viewColumn(column).cards.at(-1);
+    return last === undefined ? placeholderIn(columnEl) : cardIn(columnEl, last);
+  }
+
+  // AD-12 one drag move: transform, measure, pick, highlight (DOM only, F12).
+  function dragMove(drag: Drag, x: number, y: number): void {
+    const transform = `translate(${x - drag.x}px, ${y - drag.y}px)`;
+    drag.transform = transform;
+    for (const face of drag.faces) face.style.transform = transform;
+    const grabbed = drag.faces[0];
+    if (grabbed === undefined) throw new Error('AD-12 drag without a face');
+    const targets = columnTargets();
+    const { raw, highlighted } = pickTarget(
+      grabbed.getBoundingClientRect(),
+      targets.map(({ id, el }) => ({ id, rect: el.getBoundingClientRect() })),
+      drag.source,
+      drag.hasLeftSource,
+    );
+    if (raw !== drag.source) drag.hasLeftSource = true;
+    if (highlighted === drag.highlighted) return;
+    drag.target?.classList.remove(DRAG_TARGET);
+    drag.highlighted = highlighted;
+    drag.target = null;
+    if (highlighted === null) return;
+    const columnEl = targets.find((t) => t.id === highlighted)?.el;
+    if (columnEl === undefined) throw new Error(`AD-12 column ${highlighted} not registered`);
+    drag.target = targetElement(drag, highlighted, columnEl);
+    drag.target.classList.add(DRAG_TARGET);
   }
 
   function onTimer(p: Press<H>): void {
@@ -223,6 +441,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       hit: resolved.hit,
       state: start(resolved.target, event.clientX, event.clientY),
       timer: null,
+      drag: null,
     };
     press = p;
     if (p.captured !== null) {
@@ -239,8 +458,12 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     if (p === null || !own(event)) return;
     const next = classify(p.state, { type: 'move', x: event.clientX, y: event.clientY });
     if (typeof next === 'string') throw new Error(`AD-12 move classified as ${next}`);
-    if (next.kind === 'drag' && p.state.kind !== 'drag') stopTimer(p);
+    const crossing = next.kind === 'drag' && p.state.kind !== 'drag';
+    if (crossing) stopTimer(p);
     p.state = next;
+    // The threshold-crossing move is the first drag move (SPEC CAP-7).
+    if (crossing) p.drag = startDrag(p);
+    if (p.drag !== null) dragMove(p.drag, event.clientX, event.clientY);
   }
 
   // SPEC CAP-6: the tap's action, at tap time from the GameView (AD-3) and the selection.
@@ -274,8 +497,19 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     const p = press;
     if (p === null || !own(event)) return;
     const outcome = classify(p.state, { type: 'up' });
+    const drag = p.drag;
     end({ kind: 'up' });
     if (outcome === 'tap') perform(p.hit);
+    if (drag === null || drag.highlighted === null) return;
+    // AD-12: the one command of a drag, on the last-shown highlight (EXPERIENCE.md step 6).
+    if (overlays.selection !== null) overlays.deselect();
+    game.dispatch({
+      type: 'drop',
+      sourceColumn: drag.source,
+      sourceCount: drag.count,
+      destinationColumn: drag.highlighted,
+    });
+    refreshHover();
   }
 
   function pointercancel(event: PointerEvent): void {
@@ -332,6 +566,8 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
   // DESIGN.md Card states, hover: at most one `[data-column]` carries the classes (old cleared).
   function refreshHover(): void {
     clearHover();
+    // Entry 8: no hover during a drag or a fly-back.
+    if (flying !== null || (press !== null && press.drag !== null)) return;
     const view = game.view;
     if (root === null || lastPoint === null || view === undefined) return;
     const el = deps.elementFromPoint(lastPoint.x, lastPoint.y);
@@ -378,7 +614,9 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
   };
 
   function cancel(options: CancelOptions = {}): void {
-    if (root === null || press === null) return;
+    if (root === null) return;
+    finishFlight();
+    if (press === null) return;
     end({ kind: 'cancel', byBack: options.byBack === true });
   }
 

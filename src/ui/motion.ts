@@ -1,6 +1,6 @@
 // AD-10: the only source of WAAPI animation durations, after EXPERIENCE.md Motion: each kind is a
 // multiple of `prefs.motion.baseMs`; under reduced motion every kind is the 120 ms fade except
-// parting, which snaps (0), and there is no stagger. No animation uses it until epic 5.
+// parting, which snaps (0), and there is no stagger.
 import { prefs } from '../shell/prefs.svelte';
 
 export type MotionKind = 'snap' | 'flyBack' | 'parting' | 'undoRedo' | 'flyToCell' | 'overlay';

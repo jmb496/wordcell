@@ -7,8 +7,49 @@ import type { Gate } from './gate';
 // with preventDefault/stopPropagation spies, a counting gate, a virtual-time scheduler, nav stubbed
 // with a call log, `game.view` settable, `game.dispatch` logging into the same order log (entry 7),
 // the real overlays store (fresh modules per test).
+// Entry 8: elements also have children (`querySelector` over descendants: attribute and `.class`
+// selectors), a settable `rect` (`getBoundingClientRect` adds a parsed inline `translate`), a
+// `style.transform`, and `animate()` returning a fake Animation that finishes in virtual time
+// (`finish()` queues `onfinish` once on the virtual clock, as real WAAPI fires it later); prefs mocked (motion, as in motion.test.ts).
 const navCalls: string[] = [];
-const shared: { view: unknown } = { view: undefined };
+const shared: { view: unknown; onDispatch: (() => void) | null } = {
+  view: undefined,
+  onDispatch: null,
+};
+const motion = vi.hoisted(() => ({ value: { baseMs: 180, reduced: false } }));
+
+vi.mock('../../shell/prefs.svelte', () => ({
+  prefs: {
+    get motion() {
+      return motion.value;
+    },
+  },
+}));
+
+type Rect = { left: number; top: number; right: number; bottom: number };
+
+class FakeAnimation {
+  onfinish: (() => void) | null = null;
+  finished = false;
+  readonly finish = vi.fn(() => {
+    if (this.finished) return;
+    this.finished = true;
+    clock.add(() => this.onfinish?.(), 0);
+  });
+  constructor(
+    readonly keyframes: Record<string, unknown>[],
+    readonly options: { duration: number; easing?: string },
+    /** The animated element. */
+    readonly el: FakeEl,
+  ) {}
+}
+
+// The virtual-time scheduler animations run on (set by setup()).
+const clock: { add: (cb: () => void, ms: number) => void } = {
+  add: () => {
+    throw new Error('clock used before setup()');
+  },
+};
 
 vi.mock('../../shell/nav', () => ({
   nav: {
@@ -23,6 +64,7 @@ vi.mock('../../shell/game.svelte', () => ({
       return shared.view;
     },
     dispatch: (command: Record<string, unknown>) => {
+      shared.onDispatch?.();
       navCalls.push(`dispatch ${JSON.stringify(command)}`);
       return { kind: 'applied' };
     },
@@ -49,13 +91,44 @@ class FakeEl {
   readonly style = {
     setProperty: (name: string, value: string) => this.props.set(name, value),
     removeProperty: (name: string) => this.props.delete(name),
+    transform: '',
   };
+  readonly children: FakeEl[] = [];
+  readonly animations: FakeAnimation[] = [];
+  rect: Rect | null = null;
   constructor(
     readonly tag: string,
     readonly attrs: Record<string, string> = {},
     readonly parent: FakeEl | null = null,
     readonly disabled = false,
-  ) {}
+  ) {
+    parent?.children.push(this);
+  }
+  querySelector(selector: string): FakeEl | null {
+    for (const child of this.children) {
+      if (child.is(selector)) return child;
+      const found = child.querySelector(selector);
+      if (found !== null) return found;
+    }
+    return null;
+  }
+  getBoundingClientRect(): Rect {
+    if (this.rect === null) throw new Error(`fake ${this.tag} has no rect`);
+    const m = /^translate\((-?[\d.]+)px, (-?[\d.]+)px\)$/.exec(this.style.transform);
+    if (this.style.transform !== '' && m === null) {
+      throw new Error(`fake transform ${this.style.transform}`);
+    }
+    const dx = m === null ? 0 : Number(m[1]);
+    const dy = m === null ? 0 : Number(m[2]);
+    const r = this.rect;
+    return { left: r.left + dx, top: r.top + dy, right: r.right + dx, bottom: r.bottom + dy };
+  }
+  animate(keyframes: Record<string, unknown>[], options: { duration: number; easing?: string }) {
+    const animation = new FakeAnimation(keyframes, options, this);
+    this.animations.push(animation);
+    clock.add(() => animation.finish(), options.duration);
+    return animation;
+  }
   getAttribute(name: string): string | null {
     return this.attrs[name] ?? null;
   }
@@ -65,8 +138,9 @@ class FakeEl {
     }
     return null;
   }
-  private is(selector: string): boolean {
+  is(selector: string): boolean {
     if (selector === 'button:enabled') return this.tag === 'button' && !this.disabled;
+    if (/^\.[\w-]+$/.test(selector)) return this.classes.has(selector.slice(1));
     const m = /^\[([\w-]+)(?:="([^"]*)")?\]$/.exec(selector);
     if (m === null) throw new Error(`fake closest: unsupported selector ${selector}`);
     const value = this.attrs[m[1] as string];
@@ -140,17 +214,40 @@ function board() {
     e.root = root;
     return e;
   };
+  // Geometry (entry 8): column n spans x (n − 1) × 50 … n × 50, y 0 … 400; strip 20, H 60.
+  const at = (e: FakeEl, rect: Rect) => {
+    e.rect = rect;
+    return e;
+  };
+  const colRect = (n: number): Rect => ({ left: (n - 1) * 50, top: 0, right: n * 50, bottom: 400 });
+  const face = (wrapper: FakeEl, n: number, top: number) => {
+    const f = at(el('div', {}, wrapper), {
+      left: (n - 1) * 50,
+      top,
+      right: n * 50,
+      bottom: top + 60,
+    });
+    f.classes.add('face');
+    return f;
+  };
   const topBar = el('div', { 'data-band': 'topBar' }, root);
   const undo = el('button', {}, topBar);
   const undoIcon = el('svg', {}, undo);
   const redoDisabled = el('button', {}, topBar, true);
-  const column1 = el('div', { 'data-column': '1' }, root);
+  const column1 = at(el('div', { 'data-column': '1' }, root), colRect(1));
+  const placeholder1 = el('div', { 'data-placeholder': '' }, column1);
   const card1 = el('div', { 'data-place': 'column', 'data-card-id': '0' }, column1);
+  const face1 = face(card1, 1, 0);
   const card1b = el('div', { 'data-place': 'column', 'data-card-id': '5' }, column1);
+  const face1b = face(card1b, 1, 20);
   const ghost = el('div', { 'data-mirror-of': '7' }, column1);
   const foot1 = el('div', { 'data-foot': '1' }, column1);
-  const column2 = el('div', { 'data-column': '2' }, root);
+  const column2 = at(el('div', { 'data-column': '2' }, root), colRect(2));
+  el('div', { 'data-placeholder': '' }, column2);
   const card2 = el('div', { 'data-place': 'column', 'data-card-id': '1' }, column2);
+  const face2 = face(card2, 2, 0);
+  const column3 = at(el('div', { 'data-column': '3' }, root), colRect(3));
+  const placeholder3 = el('div', { 'data-placeholder': '' }, column3);
   const cell3 = el('div', { 'data-wordcell': '3' }, root);
   const cellCard = el('div', { 'data-place': 'cell', 'data-card-id': '2' }, cell3);
   const badge = el('span', {}, cell3);
@@ -167,12 +264,18 @@ function board() {
     undoIcon,
     redoDisabled,
     column1,
+    placeholder1,
     card1,
+    face1,
     card1b,
+    face1b,
     ghost,
     foot1,
     column2,
     card2,
+    face2,
+    column3,
+    placeholder3,
     cell3,
     cellCard,
     badge,
@@ -190,6 +293,7 @@ type Timer = { cb: () => void; due: number; done: boolean };
 async function setup() {
   vi.resetModules();
   navCalls.length = 0;
+  shared.onDispatch = null;
   const col = (column: number, cards: number[]) => ({
     column,
     cards,
@@ -205,8 +309,10 @@ async function setup() {
       { cell: 4, cards: [] },
     ],
   };
+  motion.value = { baseMs: 180, reduced: false };
   const { overlays } = await import('../overlays.svelte');
   const { createController } = await import('./controller');
+  const { dropTarget } = await import('./drop-target');
 
   const counts = { enter: 0, leave: 0 };
   const gate = {
@@ -242,8 +348,14 @@ async function setup() {
     }
     return fired;
   };
+  clock.add = (cb, ms) => {
+    timers.push({ cb, due: now + ms, done: false });
+  };
 
   const b = board();
+  for (const [id, column] of [b.column1, b.column2, b.column3].entries()) {
+    dropTarget(column as unknown as Element, { kind: 'column', id: id + 1 });
+  }
   let hit: FakeEl | null = null;
   const controller = createController(gate, {
     elementFromPoint: () => hit as unknown as Element | null,
@@ -269,7 +381,12 @@ async function setup() {
     return b.root.fire('pointerover', { pointerType: 'mouse', target });
   };
   const active = () => counts.enter - counts.leave;
+  // Sets what elementFromPoint answers (hover recomputes read it).
+  const point = (target: FakeEl | null) => {
+    hit = target;
+  };
   return {
+    point,
     overlays,
     controller,
     detach,
@@ -884,5 +1001,317 @@ describe('AD-12 entry 7 hover', () => {
     expect(t.b.column2.classes.size).toBe(0);
     t.controller.refreshHover();
     expect(t.b.column2.classes.size).toBe(0);
+  });
+});
+
+describe('AD-12 entry 8 drag', () => {
+  type T = Awaited<ReturnType<typeof setup>>;
+  const drop = (source: number, count: number, destination: number) =>
+    `dispatch ${JSON.stringify({ type: 'drop', sourceColumn: source, sourceCount: count, destinationColumn: destination })}`;
+  // Every `wc-drag-*` class on any element of the board, as `<tag>#<i>:<class>`.
+  const dragClasses = (t: T): string[] => {
+    const out: string[] = [];
+    const walk = (el: FakeEl) => {
+      for (const c of el.classes) if (c.startsWith('wc-drag')) out.push(`${el.tag}:${c}`);
+      for (const child of el.children) walk(child);
+    };
+    walk(t.b.root);
+    return out;
+  };
+  const faces = (t: T) => [t.b.face1, t.b.face1b, t.b.face2];
+  const transforms = (t: T) => faces(t).map((f) => f.style.transform);
+  const animations = (t: T) => faces(t).flatMap((f) => f.animations);
+  const move = (t: T, x: number, y: number, init: Partial<FakeEvent> = {}) =>
+    t.fire('pointermove', { clientX: x, clientY: y, ...init });
+
+  it('AD-12 a single-move flick onto column 3 drops there', async () => {
+    const t = await setup();
+    t.detach();
+    t.down(t.b.card1b, { clientX: 25, clientY: 50 });
+    move(t, 125, 50);
+    expect(t.b.face1b.style.transform).toBe('translate(100px, 0px)');
+    expect(t.b.placeholder3.classes.has('wc-drag-target')).toBe(true);
+    expect(navCalls).toEqual([]);
+    // What the tail and target carry at the moment the drop dispatches.
+    let atDispatch: { classes: string[]; transforms: string[] } | null = null;
+    shared.onDispatch = () => {
+      atDispatch = { classes: dragClasses(t), transforms: transforms(t) };
+    };
+    t.fire('pointerup');
+    expect(atDispatch).toEqual({ classes: [], transforms: ['', '', ''] });
+    expect(navCalls).toEqual([drop(1, 1, 3)]);
+    expect(dragClasses(t)).toEqual([]);
+    expect(transforms(t)).toEqual(['', '', '']);
+    expect(animations(t)).toEqual([]);
+    expect(t.active()).toBe(0);
+  });
+
+  it('AD-12 the transform is written on every tail face per move, with no dispatch or nav call before release and one dispatch at release', async () => {
+    const t = await setup();
+    t.detach();
+    t.down(t.b.card1, { clientX: 25, clientY: 10 });
+    move(t, 25, 20);
+    expect(transforms(t)).toEqual(['translate(0px, 10px)', 'translate(0px, 10px)', '']);
+    expect(dragClasses(t).sort()).toEqual(
+      ['div:wc-drag-ghost', 'div:wc-drag-ghost', 'div:wc-drag-layer', 'div:wc-drag-layer'].sort(),
+    );
+    expect([...t.b.card1.classes, ...t.b.face1b.classes]).toEqual([
+      'wc-drag-ghost',
+      'face',
+      'wc-drag-layer',
+    ]);
+    move(t, 60, 12);
+    expect(transforms(t)).toEqual(['translate(35px, 2px)', 'translate(35px, 2px)', '']);
+    move(t, 75, 10);
+    expect(transforms(t)).toEqual(['translate(50px, 0px)', 'translate(50px, 0px)', '']);
+    expect(t.b.card2.classes.has('wc-drag-target')).toBe(true);
+    expect(navCalls).toEqual([]);
+    expect(t.overlays.selection).toBeNull();
+    t.fire('pointerup');
+    expect(navCalls).toEqual([drop(1, 2, 2)]);
+    expect(dragClasses(t)).toEqual([]);
+    expect(transforms(t)).toEqual(['', '', '']);
+    expect(t.active()).toBe(0);
+  });
+
+  it('AD-12 Q-34 a drag that never leaves the source highlights nothing and releases with no dispatch', async () => {
+    const t = await setup();
+    t.detach();
+    t.down(t.b.card1b, { clientX: 25, clientY: 50 });
+    for (const [x, y] of [
+      [25, 60],
+      [25, 70],
+      [30, 80],
+    ] as const) {
+      move(t, x, y);
+      expect(dragClasses(t).filter((c) => c.endsWith('wc-drag-target'))).toEqual([]);
+    }
+    t.fire('pointerup');
+    expect(navCalls).toEqual([]);
+    expect(t.b.face1b.animations).toHaveLength(1);
+    expect(t.active()).toBe(1);
+    t.advance(180);
+    expect(t.active()).toBe(0);
+    expect(dragClasses(t)).toEqual([]);
+  });
+
+  it('AD-12 leave and return highlights the source: partial on the card above the tail, whole on the placeholder', async () => {
+    const t = await setup();
+    t.detach();
+    t.down(t.b.card1b, { clientX: 25, clientY: 50 });
+    move(t, 75, 50);
+    expect(t.b.card2.classes.has('wc-drag-target')).toBe(true);
+    move(t, 25, 50);
+    expect(t.b.card2.classes.has('wc-drag-target')).toBe(false);
+    expect(t.b.card1.classes.has('wc-drag-target')).toBe(true);
+    t.fire('pointerup');
+    expect(navCalls).toEqual([drop(1, 1, 1)]);
+    expect(dragClasses(t)).toEqual([]);
+
+    navCalls.length = 0;
+    t.down(t.b.card1, { clientX: 25, clientY: 10 });
+    move(t, 75, 10);
+    move(t, 25, 10);
+    expect(t.b.placeholder1.classes.has('wc-drag-target')).toBe(true);
+    t.fire('pointerup');
+    expect(navCalls).toEqual([drop(1, 2, 1)]);
+    expect(dragClasses(t)).toEqual([]);
+  });
+
+  it('AD-12 leaving the source through no column (raw null) and returning highlights the source', async () => {
+    const t = await setup();
+    t.detach();
+    t.down(t.b.card1b, { clientX: 25, clientY: 50 });
+    move(t, 25, 1050);
+    expect(dragClasses(t).filter((c) => c.endsWith('wc-drag-target'))).toEqual([]);
+    move(t, 25, 50);
+    expect(t.b.card1.classes.has('wc-drag-target')).toBe(true);
+    t.fire('pointerup');
+    expect(navCalls).toEqual([drop(1, 1, 1)]);
+  });
+
+  for (const baseMs of [180, 320]) {
+    it(`AD-10 the fly-back runs over duration('flyBack') at baseMs ${baseMs} from the last transform`, async () => {
+      const t = await setup();
+      motion.value = { baseMs, reduced: false };
+      t.detach();
+      t.down(t.b.card1b, { clientX: 25, clientY: 50 });
+      move(t, 25, 600);
+      move(t, 25, 1050);
+      t.fire('pointerup');
+      const [a] = t.b.face1b.animations;
+      expect(a?.keyframes).toEqual([
+        { transform: 'translate(0px, 1000px)' },
+        { transform: 'translate(0px, 0px)' },
+      ]);
+      expect(a?.options).toEqual({ duration: baseMs, easing: 'ease-out' });
+      expect(t.b.face1b.style.transform).toBe('');
+      expect(dragClasses(t).sort()).toEqual(['div:wc-drag-ghost', 'div:wc-drag-layer']);
+      expect(t.active()).toBe(1);
+      t.advance(baseMs - 1);
+      expect(t.active()).toBe(1);
+      t.advance(1);
+      expect(t.active()).toBe(0);
+      expect(dragClasses(t)).toEqual([]);
+      expect(navCalls).toEqual([]);
+    });
+  }
+
+  it('AD-10 reduced motion clears the transform at once and fades the faces 0 → 1 over 120 ms, gate entered then left', async () => {
+    const t = await setup();
+    motion.value = { baseMs: 320, reduced: true };
+    t.detach();
+    t.down(t.b.card1, { clientX: 25, clientY: 10 });
+    move(t, 25, 1010);
+    t.fire('pointerup');
+    expect(transforms(t)).toEqual(['', '', '']);
+    for (const f of [t.b.face1, t.b.face1b]) {
+      expect(f.animations.map((a) => [a.keyframes, a.options])).toEqual([
+        [[{ opacity: 0 }, { opacity: 1 }], { duration: 120 }],
+      ]);
+    }
+    expect(t.counts).toEqual({ enter: 2, leave: 1 });
+    t.advance(120);
+    expect(t.counts).toEqual({ enter: 2, leave: 2 });
+    expect(dragClasses(t)).toEqual([]);
+  });
+
+  const platformEnds: [string, (t: T) => void][] = [
+    ['pointercancel', (t) => t.fire('pointercancel')],
+    ['lostpointercapture', (t) => t.fire('lostpointercapture', { target: t.b.card1b })],
+    ['cancel({ byBack: true })', (t) => t.controller.cancel({ byBack: true })],
+  ];
+  for (const [name, ender] of platformEnds) {
+    it(`AD-12 ${name} with a column highlighted flies back from the last transform, no dispatch`, async () => {
+      const t = await setup();
+      t.detach();
+      t.down(t.b.card1b, { clientX: 25, clientY: 50 });
+      move(t, 125, 50);
+      expect(t.b.placeholder3.classes.has('wc-drag-target')).toBe(true);
+      ender(t);
+      expect(t.b.placeholder3.classes.has('wc-drag-target')).toBe(false);
+      const [a] = t.b.face1b.animations;
+      expect(a?.keyframes[0]).toEqual({ transform: 'translate(100px, 0px)' });
+      expect(a?.options.duration).toBe(180);
+      expect(t.b.face1b.style.transform).toBe('');
+      expect(t.active()).toBe(1);
+      t.advance(180);
+      expect(t.active()).toBe(0);
+      expect(dragClasses(t)).toEqual([]);
+      expect(navCalls).toEqual([]);
+    });
+  }
+
+  it('AD-12 a plain cancel(), detach and a same-id pointerdown mid-drag snap back: no transform or drag class, gate idle, no dispatch', async () => {
+    const enders: [string, (t: T, detach: () => void) => void][] = [
+      ['cancel()', (t) => t.controller.cancel()],
+      ['detach', (_t, detach) => detach()],
+      [
+        'same-id pointerdown',
+        (t) => {
+          t.down(t.b.leftover);
+          t.fire('pointerup');
+        },
+      ],
+    ];
+    for (const [name, ender] of enders) {
+      const t = await setup();
+      const detach = t.detach();
+      t.down(t.b.card1, { clientX: 25, clientY: 10 });
+      move(t, 125, 10);
+      expect(t.b.placeholder3.classes.has('wc-drag-target'), name).toBe(true);
+      ender(t, detach);
+      expect(dragClasses(t), name).toEqual([]);
+      expect(transforms(t), name).toEqual(['', '', '']);
+      expect(animations(t), name).toEqual([]);
+      expect(t.active(), name).toBe(0);
+      expect(navCalls, name).toEqual([]);
+    }
+  });
+
+  it('AD-12 a plain cancel() mid-fly-back finishes it at once, with or without a press: gate idle before it returns', async () => {
+    for (const withPress of [false, true]) {
+      const t = await setup();
+      t.detach();
+      t.down(t.b.card1b, { clientX: 25, clientY: 50 });
+      move(t, 25, 1050);
+      t.fire('pointerup');
+      expect(t.active()).toBe(1);
+      if (withPress) t.down(t.b.card2);
+      t.controller.cancel();
+      const [a] = t.b.face1b.animations;
+      expect(a?.finish).toHaveBeenCalledOnce();
+      expect(t.active()).toBe(0);
+      expect(dragClasses(t)).toEqual([]);
+      expect(transforms(t)).toEqual(['', '', '']);
+      expect(navCalls).toEqual([]);
+      // The finished animation's own end changes nothing more.
+      t.advance(1000);
+      expect(t.active()).toBe(0);
+    }
+  });
+
+  it('AD-12 a new drag settles a running fly-back first', async () => {
+    const t = await setup();
+    t.detach();
+    t.down(t.b.card1b, { clientX: 25, clientY: 50 });
+    move(t, 25, 1050);
+    t.fire('pointerup');
+    t.down(t.b.card2, { clientX: 75, clientY: 30 });
+    move(t, 75, 1030);
+    expect(t.b.face1b.animations[0]?.finish).toHaveBeenCalledOnce();
+    expect(t.b.card1b.classes.has('wc-drag-ghost')).toBe(false);
+    expect(t.b.card2.classes.has('wc-drag-ghost')).toBe(true);
+    expect(t.active()).toBe(1);
+    t.controller.cancel();
+    expect(t.active()).toBe(0);
+  });
+
+  it('AD-13 with a selection open, a drag dropped on a column other than its source deselects (pop) once, before the dispatch', async () => {
+    const t = await setup();
+    t.detach();
+    t.tap(t.b.card2);
+    expect(t.overlays.selection).toEqual({ column: 2, count: 1 });
+    t.down(t.b.card1b, { clientX: 25, clientY: 50 });
+    move(t, 125, 50);
+    expect(navCalls).toEqual(['push']);
+    t.fire('pointerup');
+    expect(navCalls).toEqual(['push', 'pop', drop(1, 1, 3)]);
+    expect(t.overlays.selection).toBeNull();
+  });
+
+  it('AD-12 hover classes clear at threshold; refreshHover() and pointerover add none mid-drag or mid-fly-back; the fly-back end recomputes them', async () => {
+    const t = await setup();
+    t.detach();
+    const mouse = { pointerType: 'mouse' };
+    t.hover(t.b.card1b);
+    expect([...t.b.column1.classes]).toEqual(['wc-hover-tail', 'wc-grab']);
+    t.down(t.b.card1b, { ...mouse, clientX: 25, clientY: 50 });
+    move(t, 25, 1050, mouse);
+    expect(t.b.column1.classes.size).toBe(0);
+    t.controller.refreshHover();
+    t.hover(t.b.card1b);
+    expect(t.b.column1.classes.size).toBe(0);
+    t.fire('pointerup', mouse);
+    t.controller.refreshHover();
+    t.hover(t.b.card1b);
+    expect(t.b.column1.classes.size).toBe(0);
+    t.advance(180);
+    expect([...t.b.column1.classes]).toEqual(['wc-hover-tail', 'wc-grab']);
+  });
+
+  it('AD-12 a drag from a column whose canPickUp is false does nothing', async () => {
+    const t = await setup();
+    t.detach();
+    const view = shared.view as { columns: { canPickUp: boolean }[] };
+    (view.columns[0] as { canPickUp: boolean }).canPickUp = false;
+    t.down(t.b.card1b, { clientX: 25, clientY: 50 });
+    move(t, 125, 50);
+    expect(dragClasses(t)).toEqual([]);
+    expect(transforms(t)).toEqual(['', '', '']);
+    t.fire('pointerup');
+    expect(navCalls).toEqual([]);
+    expect(animations(t)).toEqual([]);
+    expect(t.active()).toBe(0);
   });
 });
