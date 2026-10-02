@@ -301,9 +301,12 @@ test.describe('android', () => {
       plus(from, -6, -120),
       plus(from, 0, 20),
     ];
+    const source = await box(column(page, 1));
     const hold = await holdThrough(page, from, points, async () => {
       // Every move is ≥ 8 px from the press: a drag from the first.
       await expectDragging(dragged);
+      // Raw is the source (≥ 25 %): the empty highlight is Q-34's suppression.
+      expect(ratio(await box(faceOf(dragged)), source)).toBeGreaterThanOrEqual(0.25);
       expect(await targets(page)).toEqual([]);
       expect(await sameSession(page)).toBe(true);
     });
@@ -447,9 +450,9 @@ test.describe('android', () => {
     page,
   }) => {
     // The fly-back guard: each `animate` call records its first keyframe's transform at call
-    // time and the element's inline transform a microtask later.
+    // time, the element's inline transform a microtask later and the face's card id.
     await page.addInitScript(() => {
-      const log: { first: string | null; inline: string | null; face: boolean }[] = [];
+      const log: { first: string | null; inline: string | null; face: boolean; id: number }[] = [];
       (window as unknown as { __flyBack: typeof log }).__flyBack = log;
       const original = Element.prototype.animate;
       Element.prototype.animate = function animate(this: Element, keyframes, options) {
@@ -459,6 +462,7 @@ test.describe('android', () => {
           first: typeof first === 'string' ? first : null,
           inline: null as string | null,
           face: this.classList.contains('face'),
+          id: Number(this.parentElement?.getAttribute('data-card-id')),
         };
         log.push(entry);
         const result = original.call(this, keyframes, options);
@@ -471,7 +475,10 @@ test.describe('android', () => {
     await openFixture(page, 'session-idle-fresh');
     const before = await stashSession(page);
     const pressed = cards(page, 1).nth(5);
+    const below = cards(page, 1).nth(6);
+    const tail = [await idOf(pressed), await idOf(below)].sort((a, b) => a - b);
     const rest = await box(faceOf(pressed));
+    const restBelow = await box(faceOf(below));
     const from = await centre(pressed);
     const cell = await centre(page.getByTestId('wordcell-6'));
     const points = path(from, cell, 5);
@@ -491,10 +498,12 @@ test.describe('android', () => {
       () =>
         (
           window as unknown as {
-            __flyBack: { first: string | null; inline: string | null; face: boolean }[];
+            __flyBack: { first: string | null; inline: string | null; face: boolean; id: number }[];
           }
         ).__flyBack,
     );
+    // One animation per tail face: the two tail cards' ids.
+    expect(log.map((entry) => entry.id).sort((a, b) => a - b)).toEqual(tail);
     for (const entry of log) {
       expect(entry.face).toBe(true);
       expect(entry.inline).toBe('');
@@ -507,6 +516,7 @@ test.describe('android', () => {
     expect(await sameSession(page)).toBe(true);
     await expectNoResidue(page);
     await expectFlownBack(pressed, rest);
+    await expectFlownBack(below, restBelow);
     expect(await storedText(page)).toBe(before);
   });
 
@@ -519,10 +529,14 @@ test.describe('android', () => {
     const dragged = cards(page, 4).last();
     const rest = await box(faceOf(dragged));
     const from = await centre(dragged);
+    const source = await box(column(page, 4));
     const hold = await holdThrough(page, from, path(from, plus(from, 0, 20), 5), async (i) => {
       expect(await targets(page)).toEqual([]);
-      // From the threshold crossing (≥ 8 px) on, as in the desktop case.
-      if (i >= 2) await expectDragging(dragged);
+      // From the threshold crossing (≥ 8 px) on, as in the desktop case; raw is the source.
+      if (i >= 2) {
+        await expectDragging(dragged);
+        expect(ratio(await box(faceOf(dragged)), source)).toBeGreaterThanOrEqual(0.25);
+      }
     });
     await hold.end();
     await expect.poll(() => faceAnimations(page)).toEqual([await idOf(dragged)]);
@@ -535,6 +549,7 @@ test.describe('android', () => {
   test('Q-34 a sub-25 % drag over the source only highlights nothing and flies back', async ({
     page,
   }) => {
+    await recordFaceAnimations(page);
     await openFixture(page, 'session-idle-fresh');
     const before = await stashSession(page);
     const dragged = cards(page, 4).last();
@@ -543,8 +558,11 @@ test.describe('android', () => {
     const col = await box(column(page, 4));
     // Straight up until 15 % of the face's height still overlaps column 4's top.
     const dy = col.y + 0.15 * face.h - (face.y + face.h);
-    const hold = await holdThrough(page, from, path(from, plus(from, 0, dy), 8), async () => {
+    const points = path(from, plus(from, 0, dy), 8);
+    const hold = await holdThrough(page, from, points, async (i) => {
       expect(await targets(page)).toEqual([]);
+      // From the threshold crossing (≥ 8 px) on.
+      if (Math.abs((points[i] as Point).y - from.y) > 8) await expectDragging(dragged);
     });
     try {
       const moved = await box(faceOf(dragged));
@@ -557,6 +575,8 @@ test.describe('android', () => {
     } finally {
       await hold.end();
     }
+    await expect.poll(() => faceAnimations(page)).toEqual([await idOf(dragged)]);
+    await expectFlownBack(dragged, face);
     await expectNoResidue(page);
     expect(await storedText(page)).toBe(before);
     expect(await sameSession(page)).toBe(true);

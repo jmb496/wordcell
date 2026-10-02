@@ -289,6 +289,11 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
         face.style.transform = '';
       }
       animation.onfinish = done;
+      // Rule 6: a cancelled fly-back would never settle (gate held, drag classes on); finishFlight's
+      // finish() never cancels.
+      animation.oncancel = () => {
+        throw new Error('AD-12 fly-back animation cancelled');
+      };
       flight.animations.push(animation);
     }
   }

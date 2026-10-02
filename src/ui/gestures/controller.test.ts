@@ -47,6 +47,8 @@ type Rect = { left: number; top: number; right: number; bottom: number };
 
 class FakeAnimation {
   onfinish: (() => void) | null = null;
+  /** Never called by the fake; a test fires it to simulate a cancelled animation. */
+  oncancel: (() => void) | null = null;
   finished = false;
   readonly finish = vi.fn(() => {
     if (this.finished) return;
@@ -1164,13 +1166,14 @@ describe('AD-12 entry 8 drag', () => {
     expect(navCalls).toEqual([drop(1, 1, 1)]);
   });
 
-  // `duration('flyBack')` answers 237 (no other kind does), proving the kind, not just the baseMs.
+  // `duration('flyBack')` answers baseMs + 57 (no other kind does), proving the kind, not just the
+  // baseMs.
   for (const baseMs of [180, 320]) {
     it(`AD-10 the fly-back runs over duration('flyBack') at baseMs ${baseMs} from the last transform`, async () => {
       const t = await setup();
       motion.value = { baseMs, reduced: false };
-      durations.override = { flyBack: 237 };
-      const ms = 237;
+      const ms = baseMs + 57;
+      durations.override = { flyBack: ms };
       t.detach();
       t.down(t.b.card1b, { clientX: 25, clientY: 50 });
       move(t, 25, 600);
@@ -1208,6 +1211,7 @@ describe('AD-12 entry 8 drag', () => {
         [[{ opacity: 0 }, { opacity: 1 }], { duration: 120 }],
       ]);
     }
+    expect(durations.kinds).toEqual(['flyBack']);
     expect(t.counts).toEqual({ enter: 2, leave: 1 });
     t.advance(120);
     expect(t.counts).toEqual({ enter: 2, leave: 2 });
@@ -1336,6 +1340,37 @@ describe('AD-12 entry 8 drag', () => {
     expect(t.b.column1.classes.size).toBe(0);
     t.advance(180);
     expect([...t.b.column1.classes]).toEqual(['wc-hover-tail', 'wc-grab']);
+  });
+
+  it('AD-12 a mouse drag dropped on a column, or snapped back by cancel(), recomputes the hover at the last point with no further pointer event', async () => {
+    const mouse = { pointerType: 'mouse' };
+    const enders: [string, (t: T) => void][] = [
+      ['drop', (t) => t.fire('pointerup', mouse)],
+      ['cancel()', (t) => t.controller.cancel()],
+    ];
+    for (const [name, ender] of enders) {
+      const t = await setup();
+      t.detach();
+      t.hover(t.b.card1b);
+      t.down(t.b.card1b, { ...mouse, clientX: 25, clientY: 50 });
+      move(t, 75, 50, mouse);
+      expect(t.b.card2.classes.has('wc-drag-target'), name).toBe(true);
+      // The last pointer point is over column 2's card.
+      t.point(t.b.card2);
+      ender(t);
+      expect(t.active(), name).toBe(0);
+      expect([...t.b.column2.classes], name).toEqual(['wc-hover-tail', 'wc-grab']);
+    }
+  });
+
+  it('AD-12 a cancelled fly-back animation throws (rule 6)', async () => {
+    const t = await setup();
+    t.detach();
+    t.down(t.b.card1b, { clientX: 25, clientY: 50 });
+    move(t, 25, 1050);
+    t.fire('pointerup');
+    const [a] = t.b.face1b.animations;
+    expect(() => a?.oncancel?.()).toThrow(/^AD-12 fly-back animation cancelled$/);
   });
 
   it('AD-12 a drag from a column whose canPickUp is false does nothing', async () => {

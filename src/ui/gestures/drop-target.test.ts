@@ -8,7 +8,9 @@ beforeEach(async () => {
   mod = await import('./drop-target');
 });
 
-const el = () => ({}) as Element;
+// Each fake carries a distinct `n` so `toEqual` tells them apart.
+let n = 0;
+const el = () => ({ n: ++n }) as unknown as Element;
 
 describe('AD-12 dropTarget', () => {
   it('AD-12 registers in insertion order; update replaces; destroy removes', () => {

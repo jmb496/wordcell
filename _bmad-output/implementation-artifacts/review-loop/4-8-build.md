@@ -1,6 +1,6 @@
 # Review loop — ticket 4.8 build (code mode, cb23a41..HEAD)
 
-State: pass 1: done
+State: pass 2: done
 
 Target: commit range cb23a41..HEAD (diff `4-8-build.passes/pass0.diff`)
 Intent: `_bmad-output/initiative-wordcell-v1/epic-board-and-gestures/story-drag-overlap-targeting-and-drop-into-composing-plan.md`
@@ -43,3 +43,38 @@ Reviewers: correctness, edge cases, verification gap, intent alignment  |  Findi
 ### Verify (orchestrator)
 - npm test 45 files / 1907 passed; lint clean; check 0 errors.
 Snapshot: tree cb361b0715c6492bd95e03472e8c65dd481684d8 (fix diff `4-8-build.passes/pass1.fix.diff`, next target `4-8-build.passes/pass1.diff`)
+
+## Pass 2 — 2026-10-02
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 2, minor 7, decision-needed 0  |  Dropped in triage: 2 (2 duplicates merged)
+### Applied
+- [major] e2e/drag.spec.ts 'R-14 a drag released over the WordCell row flies back …' — the plan's triage log says the guard records card ids and asserts the two tail cards; it does not (two calls on one face pass), and only the pressed face's return is checked (verification-gap + intent, merged) → fixer item 1
+- [major] e2e/drag.spec.ts 'Q-34 a sub-25 % drag over the source only … flies back' — the one Q-34 held case pass 1 item 2 missed: no fly-back animation or return asserted (verification-gap + intent, merged) → fixer item 2
+- [minor] controller.test.ts AD-10 fly-back baseMs loop — forced override makes both iterations identical → fixer item 3
+- [minor] plan test list — Q-34 held entries not updated for pass 1 item 2's new assertions → fixer item 4
+- [minor] controller.test.ts reduced-motion fly-back — does not assert the 'flyBack' kind → fixer item 5
+- [minor] controller.ts refreshHover after a drop and after a snap — untested → fixer item 6
+- [minor] e2e/drag.spec.ts android Q-34 held cases — no check that raw is the source (face ≥ 25 % on it), so suppression is not proven → fixer item 7
+- [minor] drop-target.test.ts — fakes are all `{}`, so `toEqual` cannot tell elements apart → fixer item 8
+- [minor] controller.ts flyBack — only `onfinish` settles; a cancelled animation leaves the gate held silently (rule 6) → fixer item 9
+### Default applied (technical)
+- item 3 — override `baseMs + 57` per iteration so the cases differ
+- item 9 — `oncancel` throws `AD-12 fly-back animation cancelled` (AD-15 surface)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- edge: transform drifts off the pointer on scroll/resize mid-drag — already accepted as specified (EXPERIENCE.md step 6) in the plan's Residual risks (pass 1 item 10); listed as unapplied minor
+- edge: classify treats a release ≥ 8 px away with no intervening pointermove as a tap — in `classify.ts` (ticket 4.6), outside this diff; listed as unapplied minor
+### Fixer outcome
+- 1: WordCell-row guard records each face's card id; sorted ids asserted equal to the two tail cards; `expectFlownBack` on both tail cards.
+- 2: sub-25 % test records face animations, asserts `expectDragging`, the one fly-back animation and `expectFlownBack`.
+- 3: override `baseMs + 57` per iteration.
+- 4: plan test list entries updated for the four fly-back cases.
+- 5: reduced-motion test asserts kinds `['flyBack']`.
+- 6: new 'AD-12 a mouse drag dropped on a column, or snapped back by cancel(), recomputes the hover …'; mutation-checked against both `refreshHover()` calls.
+- 7: both held Q-34 tests assert face ≥ 25 % over the source column from the threshold crossing.
+- 8: distinct fakes in drop-target.test.ts.
+- 9: `oncancel` throws `AD-12 fly-back animation cancelled`; new test 'AD-12 a cancelled fly-back animation throws (rule 6)'.
+- Fixer runs: npm test 1909 passed; lint clean; check 0 errors; drag.spec.ts 12 passed, 12 skipped (other-project).
+### Verify (orchestrator)
+- npm test 45 files / 1909 passed; lint clean; check 0 errors.
+Snapshot: tree 9aea03704fe81d6d1986d6180b1c6d49c473d734 (fix diff `4-8-build.passes/pass2.fix.diff`, next target `4-8-build.passes/pass2.diff`)
