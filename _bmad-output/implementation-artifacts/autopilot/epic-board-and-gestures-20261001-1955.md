@@ -75,16 +75,14 @@ Worth knowing: one test gap left open for the refactor sweep (4.13): no test che
 Close-out docs: none
 
 ## Stopped — owner decision at ticket 4.6 code review
-## 4.6 Pointer controller core and cancel wiring — stopped
+## 4.6 Pointer controller core and cancel wiring — done
 What it adds: the one piece of code that watches every finger or mouse press on the board and decides whether it is a tap, a long press or the start of a drag, plus the "cancel any press first" hook that Undo, Redo, the menu, keys, Back and hiding the app all call. Nothing new is visible yet; tap and drag tickets 4.7–4.9 build on it.
 Ticket review: 6 passes, converged; nothing needed your input (one open item on clearing the long-press timer was resolved in the build plan)
 Build: built; commits 9c25a0c
-Code review: thorough (one medium item deferred in the plan), 2 passes, converged; pass 1 applied 6 fixes (c027aff); stopped on a decision-needed item
-Tests: unit, lint and type check passing in the review; test:all not yet run
+Code review: thorough (one medium item deferred in the plan), 2 passes, converged; pass 1 applied 6 fixes (c027aff); stopped once for your decision on the desktop scrollbar strip (F30: accepted as built, 2026-10-02, commit 74d59c2)
+Tests: all passing (test:all, 2026-10-02)
 Ref to fix upstream: none
-Paused: usage limit at code review pass 2 (reset 1:30pm America/New_York), resumed 2026-10-02 18:32 UTC
-Tokens: 1.0M input-equivalent this session (code review 87%, orchestrator 8%, other 5%); orchestrator peak context 55k
-Worth knowing: open major carried forward: the controller tests never check which target (column, WordCell, other) a press resolves to, so a wrong lookup would pass; default is to add throw cases and let ticket 4.7's tap tests cover the outcomes. Five unapplied minors are listed in the review log's Result (e.g. a missed release leaving a card peek open).
-Decision needed: desktop scrollbar strip outside the gesture area (see handoff).
-Close-out docs: none yet
-Resume: after the owner answers, record the decision in the ticket Notes, commit, and rerun the driver; the next session resumes at Step D (test:all, mark done).
+Paused: usage limit at code review pass 2 (reset 1:30pm America/New_York), resumed 2026-10-02 18:32 UTC; owner decision stop, resumed 2026-10-02 18:41 UTC
+Tokens: 1.0M input-equivalent in the review session (code review 87%, orchestrator 8%, other 5%), under 0.1M in the close-out session; orchestrator peak context 55k
+Worth knowing: open major carried to ticket 4.7 / the refactor sweep (4.13): the controller tests never check which target (column, WordCell, other) a press resolves to, so a wrong lookup would pass; 4.7's tap tests should cover it. Five unapplied minors are listed in the review log's Result (e.g. a missed release leaving a card peek open). On desktop, a mouse press released over the thin right-edge scrollbar strip stays "held" until the next click (your F30 decision).
+Close-out docs: SPEC.md (spec-epic-4-board) § open questions F30 and F25 "spanning the viewport" ← the controller root excludes the desktop scrollbar gutter (owner, 2026-10-02; already recorded in the spec's F30 row, F25 wording may want the same note)

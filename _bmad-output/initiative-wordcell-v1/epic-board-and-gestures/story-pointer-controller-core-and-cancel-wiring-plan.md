@@ -3,7 +3,7 @@ title: 'Pointer controller core and cancel wiring'
 type: 'feature'
 ticket: '6'
 created: '2026-10-02'
-status: 'built'
+status: done
 route: 'full'
 route_source: 'auto'
 baseline_revision: '33015bff2e291eeeb0d088cf8437b6d5b25cc48b'
