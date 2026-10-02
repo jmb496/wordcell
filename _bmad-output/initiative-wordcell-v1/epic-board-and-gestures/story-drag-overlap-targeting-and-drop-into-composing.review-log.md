@@ -1,6 +1,6 @@
 # Review log — story-drag-overlap-targeting-and-drop-into-composing.md (ticket 4.8)
 
-State: pass 4: done
+State: pass 5: done
 
 Mode: docs, thorough, max 7, budget default (2.5x pass 0). Pass 0: HEAD bc50d5f, copy story-drag-overlap-targeting-and-drop-into-composing.passes/pass0.md, 421 words. Intent includes tickets.toml entry 8 fields unknown, interface, tests, owns (not copied at pull; fixer adds them to the Description in pass 1).
 
@@ -95,6 +95,36 @@ Fixer: all 6 applied; nothing unverified.
 - byBack with no press during a fly-back — plan detail
 - drag layer above the hover peek untestable until entry 12 — no change needed
 ### Unapplied minors (over budget, fix adds words)
+- desktop asserts for entry 7 hover classes cleared mid-drag and restored after fly-back; refreshHover() during a fly-back
+- drag ghost pseudo-element sized and placed like Card's .ghost face (w × H, 2 px inset)
+- empty-column k = 0 case names its source card and asserts the placeholder highlight
+
+## Pass 5 — 2026-10-02
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 10, decision-needed 0  |  Dropped in triage: 3
+Words (docs): 1365 (3.24 x pass 0), unchanged (no fix pass)  |  Snapshot: story-drag-overlap-targeting-and-drop-into-composing.passes/pass4.md
+### Open (not fixed; stopping rule)
+- [major] Notes guard — pass 4 re-added sampling "no inline transform while face.getAnimations() still runs" after touchHold end(), so the gating P4 is timing-dependent again (the pass 2 flake): a 180 ms fly-back can finish before page.evaluate. Fix: the addInitScript animate() wrapper also records, in a microtask after each call, that the face's style.transform is empty; assert that record and drop the "while … still runs" sampling.
+### Default applied (technical)
+- none (no fix pass)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- fly-back faces end on their slot rects (stretch; plan)
+- drop gated only on canPickUp (Idle canPickUp implies canDropOn; no change)
+- where the ghost/drag-layer CSS lives (plan: Column.svelte :global selectors)
+
+## Result — converged after 5 passes
+open major: Notes guard samples a running fly-back after touchHold end() (timing-dependent); record the cleared inline transform in the animate() wrapper's microtask instead (fix-diff lens, pass 5).
+
+Unapplied minors (for the build's plan or a later loop):
+- Lifetime "first keyframe: release offset" → "last written transform" (pointercancel/lostpointercapture/byBack carry no reliable release point)
+- Drag bullet: "writes the transform" → "writes translate(pointer − press point)"
+- "hasLeftSource set from raw including null" belongs to the controller (AD-12), not pickTarget's return
+- End kinds plain cancel(): "clears transform, ghost and highlight classes" omits drag-layer → "clears every drag class (Lifetime)"
+- Drop targets "on each pointermove" → "on each drag move"
+- S selection-open case "released on another column" → "dropped on a column other than its source"
+- End kinds: a same-id pointerdown end (controller.ts sameId) cleans up like a plain cancel()
+- column 5 P4: assert no [data-mirror-of] mid-drag and 52 [data-card-id] (SPEC CAP-7 "no mirror element mid-drag")
 - desktop asserts for entry 7 hover classes cleared mid-drag and restored after fly-back; refreshHover() during a fly-back
 - drag ghost pseudo-element sized and placed like Card's .ghost face (w × H, 2 px inset)
 - empty-column k = 0 case names its source card and asserts the placeholder highlight
