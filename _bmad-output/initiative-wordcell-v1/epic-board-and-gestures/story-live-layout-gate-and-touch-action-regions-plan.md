@@ -3,7 +3,7 @@ title: 'Live layout, gate and touch-action regions'
 type: 'feature'
 ticket: '4'
 created: '2026-10-02'
-status: 'built'
+status: done
 baseline_revision: 'dfa68a1edba2922de39ab35e6a1093a18dee8133'
 route: 'full'
 route_source: 'auto'

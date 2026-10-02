@@ -50,3 +50,14 @@ Ref to fix upstream: none
 Tokens: 12.5M input-equivalent (ticket review 59%, build 29%, code review 8%, other 2%, orchestrator 2%); orchestrator peak context 62k
 Worth knowing: the tray's compact mode (8 or more tiles in up to two rows) can't be reached by any saved game yet, so it is only unit-tested; ticket 4.7 (tap-drop) is the first that can reach it and should add a browser check. The "dropped a whole column on another column" placeholder case also waits for the drop tickets (4.7/4.8). The 1- and 2-card count badge from 4.2 is still untested, carried to the retrospective. Code review left minors only: a few highlight-ring and ghost-placement checks could be stricter, column and WordCell lists should be keyed like the tray before animations land, and a small badge overlap on a QU tile inside a tray block.
 Close-out docs: none
+
+## 4.4 Live layout, gate and touch-action regions — done
+What it adds: the board now adapts live to the screen. It recomputes its size when the window or phone rotates, slots the dictionary banner into spare space without shifting the word row, and holds back layout changes while you are scrolling or touching (a "gate") so nothing jumps under your finger. It also marks which parts of the screen scroll and which are for card touches, and stops long-press text selection on cards. Tests gained a "hold a finger down and move" helper that the later drag tickets will use.
+Ticket review: 6 passes, converged; nothing needed your input
+Build: built; commits 0fffa6c
+Code review: thorough (ticket risk high), 4 passes, converged; 9 fixes applied (tests and plan only, no game code changed); commits 8f61600, 6241c47, 2f8b783, 6af0dff
+Tests: all passing
+Ref to fix upstream: none
+Tokens: 17.6M input-equivalent (ticket review 47%, code review 30%, build 20%, other 2%, orchestrator 1%); orchestrator peak context 61k
+Worth knowing: the desktop screenshots shifted 7 px because of the new reserved scrollbar gutter (regenerated in the container; phone screenshots unchanged). One test needs the page hidden within 100 ms of a scroll (measured about 40 ms) and could be flaky on a slow machine. Left as known limits: on very narrow desktop windows (under 384 px) the height rule is unchecked; a safe-area change with no resize is only applied at the next resize. Small leftovers for the epic's close-out: build-notes.md CAP-3 says the insets probe is "absolutely positioned" but it is fixed; the touch-action test could add a narrow desktop case.
+Close-out docs: none
