@@ -1,6 +1,6 @@
 # Review log — story-live-layout-gate-and-touch-action-regions.md (ticket 4.4)
 
-State: pass 4: done
+State: pass 5: done
 
 Mode: docs, thorough, max 7, budget 1245 words (2.5 x (374 pass-0 words + 124 carried toml words)). Pass 0: HEAD affe546, copy story-live-layout-gate-and-touch-action-regions.passes/pass0.md, 374 words.
 
@@ -139,3 +139,30 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar
 ### Fix outcome
 Fixer applied items 1–10, none skipped, net 0 words (three no-meaning cuts). Checked: 370 × 750 desktop → available 338 < 352 (geometry.ts), `--hide-scrollbars` in the pinned playwright-core.
 Words (docs): 1292 (3.45 x pass 0)  |  Snapshot: story-live-layout-gate-and-touch-action-regions.passes/pass4.md
+
+## Pass 5 — 2026-10-02
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 2, minor 11, decision-needed 0  |  Dropped in triage: 1 (cut the Notes open question: it carries the toml `unknown` field)
+### Applied
+- [major] CSS/AC regions — column pan-y on `.column` leaves the foot pad `auto`; entry 7 asserts the foot row's computed pan-y, and `.foot` inside `.column` breaks the ancestor-auto rule → fixer item 1
+- [major] layout anchor write — `scrollTo(0, y)` would reset the horizontal pan whenever `wide` holds → fixer item 2
+- [minor] AC "at most one rAF of slack" reads as re-loosening "within a frame"; hide case states none → fixer item 3
+- [minor] Validate label is the ActionBar's today, not epic 5's → fixer item 4
+- [minor] helpers.spec: repeat `end()` no-op unasserted → fixer item 5
+- [minor] Notes deferral bound: desktop < 384 px clientWidth (16 px gutters), not < 360 → fixer item 6
+- [minor] gate: "every transition that leaves the gate idle" (leave to 0 under scroll-busy is not one) → fixer item 7
+### Default applied (technical)
+- foot row — `.foot` carries the column's value; the ancestor-auto check covers ancestors outside other pan-y regions
+- anchor write — `deps.window.scrollTo({ top })`, scrollX kept
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- cut the Notes open question to save words — it is the toml `unknown` field, kept
+### Left for the plan (minor, over budget)
+- createLayout Vitest viewports where w actually changes (412 × 839 → 779 → 719, F21; a width-limited hoverFine flip) and a w-recompute case at scrollTop > 0
+- inset-only change detection (seen on resize; optional ResizeObserver on the probe)
+- `html { overflow-anchor: none }` so browser scroll anchoring does not add an unignored scroll
+- regions test setup (`session-composing` for tiles, failed route for the banner); `?bands=` order as non-decreasing tops plus DOM order
+- layout runs on the rejected root with no Board (harmless, latched state carries to New game)
+### Fix outcome
+Fixer applied items 1–7, none skipped, net 0 words (cut "in the container" from the screens note, which AGENTS.md already requires, and "every later" → "later").
+Words (docs): 1292 (3.45 x pass 0)  |  Snapshot: story-live-layout-gate-and-touch-action-regions.passes/pass5.md
