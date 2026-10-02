@@ -9,6 +9,8 @@ import DictionaryBanner from './DictionaryBanner.svelte';
 import type { BandId, Unit } from './layout/bands';
 import type { Layout } from './layout/layout.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import { overlays } from './overlays.svelte';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import TopBar from './TopBar.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Tray from './Tray.svelte';
@@ -78,6 +80,7 @@ function row(unit: Unit, band: BandId): number {
               phase={view.phase}
               cardsRow={row(unit, 'columns')}
               footRow={row(unit, 'footRow')}
+              selection={overlays.selection}
             />
           {/each}
         {:else}

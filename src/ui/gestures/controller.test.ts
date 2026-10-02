@@ -5,7 +5,8 @@ import type { Gate } from './gate';
 // (`closest` over a parent chain and an attribute map; capture spies with `hasPointerCapture`
 // state; releasing capture fires `lostpointercapture` synchronously, as a browser may), fake events
 // with preventDefault/stopPropagation spies, a counting gate, a virtual-time scheduler, nav stubbed
-// with a call log, `game.view` settable, the real overlays store (fresh modules per test).
+// with a call log, `game.view` settable, `game.dispatch` logging into the same order log (entry 7),
+// the real overlays store (fresh modules per test).
 const navCalls: string[] = [];
 const shared: { view: unknown } = { view: undefined };
 
@@ -21,6 +22,10 @@ vi.mock('../../shell/game.svelte', () => ({
     get view() {
       return shared.view;
     },
+    dispatch: (command: Record<string, unknown>) => {
+      navCalls.push(`dispatch ${JSON.stringify(command)}`);
+      return { kind: 'applied' };
+    },
   },
 }));
 
@@ -31,6 +36,20 @@ class FakeEl {
   readonly log: string[] = [];
   listeners = new Map<string, Listener>();
   root: FakeEl | null = null;
+  readonly classes = new Set<string>();
+  readonly props = new Map<string, string>();
+  readonly classList = {
+    add: (...names: string[]) => {
+      for (const n of names) this.classes.add(n);
+    },
+    remove: (...names: string[]) => {
+      for (const n of names) this.classes.delete(n);
+    },
+  };
+  readonly style = {
+    setProperty: (name: string, value: string) => this.props.set(name, value),
+    removeProperty: (name: string) => this.props.delete(name),
+  };
   constructor(
     readonly tag: string,
     readonly attrs: Record<string, string> = {},
@@ -86,6 +105,9 @@ class FakeEl {
 
 type FakeEvent = {
   pointerId: number;
+  pointerType: string;
+  detail: number;
+  relatedTarget: unknown;
   button: number;
   clientX: number;
   clientY: number;
@@ -97,6 +119,9 @@ type FakeEvent = {
 function makeEvent(init: Partial<FakeEvent>): FakeEvent {
   return {
     pointerId: 1,
+    pointerType: 'touch',
+    detail: 1,
+    relatedTarget: null,
     button: 0,
     clientX: 0,
     clientY: 0,
@@ -121,6 +146,7 @@ function board() {
   const redoDisabled = el('button', {}, topBar, true);
   const column1 = el('div', { 'data-column': '1' }, root);
   const card1 = el('div', { 'data-place': 'column', 'data-card-id': '0' }, column1);
+  const card1b = el('div', { 'data-place': 'column', 'data-card-id': '5' }, column1);
   const ghost = el('div', { 'data-mirror-of': '7' }, column1);
   const foot1 = el('div', { 'data-foot': '1' }, column1);
   const column2 = el('div', { 'data-column': '2' }, root);
@@ -140,9 +166,12 @@ function board() {
     undo,
     undoIcon,
     redoDisabled,
+    column1,
     card1,
+    card1b,
     ghost,
     foot1,
+    column2,
     card2,
     cell3,
     cellCard,
@@ -161,7 +190,16 @@ type Timer = { cb: () => void; due: number; done: boolean };
 async function setup() {
   vi.resetModules();
   navCalls.length = 0;
+  const col = (column: number, cards: number[]) => ({
+    column,
+    cards,
+    canPickUp: cards.length > 0,
+    canDropOn: true,
+  });
   shared.view = {
+    status: 'playing',
+    phase: 'idle',
+    columns: [col(1, [0, 5]), col(2, [1]), ...[3, 4, 5, 6, 7, 8].map((c) => col(c, []))],
     cells: [
       { cell: 3, cards: [2] },
       { cell: 4, cards: [] },
@@ -220,6 +258,16 @@ async function setup() {
     return b.root.fire('pointerdown', { target: b.leftover, ...init });
   };
   const fire = (type: string, init: Partial<FakeEvent> = {}) => b.root.fire(type, init);
+  // A complete touch tap (pointerdown, pointerup) on `target`.
+  const tap = (target: FakeEl | null) => {
+    down(target);
+    fire('pointerup', { target });
+  };
+  // A mouse pointerover at `target` (elementFromPoint answers it).
+  const hover = (target: FakeEl | null) => {
+    hit = target;
+    return b.root.fire('pointerover', { pointerType: 'mouse', target });
+  };
   const active = () => counts.enter - counts.leave;
   return {
     overlays,
@@ -228,6 +276,8 @@ async function setup() {
     b,
     down,
     fire,
+    tap,
+    hover,
     counts,
     active,
     setTimer,
@@ -341,7 +391,8 @@ describe('AD-12 press ends', () => {
       expect(t.b.card1.log).toEqual(['set 1', 'release 1']);
       t.fire('lostpointercapture', { target: t.b.card1 });
       expect(t.counts).toEqual({ enter: 1, leave: 1 });
-      expect(navCalls).toEqual([]);
+      // Entry 7: the pointerup end is a tap, which selects (one push); the others act on nothing.
+      expect(navCalls).toEqual(ender === enders[0] ? ['push'] : []);
     }
   });
 
@@ -664,5 +715,174 @@ describe('AD-13 F24 press-only paths', () => {
     expect(t.overlays.viewCell).toBe(3);
     expect(navCalls).toEqual([]);
     expect(t.counts).toEqual({ enter: 1, leave: 1 });
+  });
+});
+
+describe('AD-12 entry 7 tap actions', () => {
+  it('AD-12 a held column-card press released without a drag is a tap and selects the tail', async () => {
+    const t = await setup();
+    t.detach();
+    t.down(t.b.card1);
+    t.advance(1000);
+    t.fire('pointerup', { target: t.b.card1 });
+    expect(t.overlays.selection).toEqual({ column: 1, count: 2 });
+    expect(navCalls).toEqual(['push']);
+    expect(t.active()).toBe(0);
+  });
+
+  it('AD-13 a tap-drop deselects (nav pop) before it dispatches the drop', async () => {
+    const t = await setup();
+    t.detach();
+    t.tap(t.b.card1);
+    t.tap(t.b.card2);
+    expect(t.overlays.selection).toBeNull();
+    expect(navCalls).toEqual([
+      'push',
+      'pop',
+      'dispatch {"type":"drop","sourceColumn":1,"sourceCount":2,"destinationColumn":2}',
+    ]);
+  });
+
+  it('AD-13 a re-select changes the count with no nav call; the selected card is a no-op', async () => {
+    const t = await setup();
+    t.detach();
+    t.tap(t.b.card1);
+    t.tap(t.b.card1b);
+    expect(t.overlays.selection).toEqual({ column: 1, count: 1 });
+    t.tap(t.b.card1b);
+    expect(t.overlays.selection).toEqual({ column: 1, count: 1 });
+    expect(navCalls).toEqual(['push']);
+  });
+
+  it('AD-12 a self-drop from the source foot; nothing selected, a foot tap is inert', async () => {
+    const t = await setup();
+    t.detach();
+    t.tap(t.b.foot1);
+    expect(t.overlays.selection).toBeNull();
+    t.tap(t.b.card1b);
+    t.tap(t.b.foot1);
+    expect(navCalls).toEqual([
+      'push',
+      'pop',
+      'dispatch {"type":"drop","sourceColumn":1,"sourceCount":1,"destinationColumn":1}',
+    ]);
+  });
+
+  it('AD-12 a drag and a non-empty WordCell long-press change nothing; an empty-WordCell long-press deselects on release', async () => {
+    const t = await setup();
+    t.detach();
+    t.tap(t.b.card1);
+    t.down(t.b.card2, { clientX: 0, clientY: 0 });
+    t.fire('pointermove', { clientX: 20, clientY: 0 });
+    t.fire('pointerup', { target: t.b.card2 });
+    t.down(t.b.cellCard);
+    t.advance(400);
+    t.fire('pointerup', { target: t.b.cellCard });
+    expect(t.overlays.selection).toEqual({ column: 1, count: 2 });
+    expect(navCalls).toEqual(['push']);
+    t.down(t.b.cell4);
+    t.advance(400);
+    t.fire('pointerup', { target: t.b.cell4 });
+    expect(t.overlays.selection).toBeNull();
+    expect(navCalls).toEqual(['push', 'pop']);
+  });
+
+  it('AD-12 a WordCell tap deselects; F25 an outside tap deselects', async () => {
+    const t = await setup();
+    t.detach();
+    t.tap(t.b.card1);
+    t.tap(t.b.cellCard);
+    expect(t.overlays.selection).toBeNull();
+    t.tap(t.b.card2);
+    t.tap(t.b.leftover);
+    expect(t.overlays.selection).toBeNull();
+    t.tap(t.b.card2);
+    t.tap(t.b.redoDisabled);
+    expect(t.overlays.selection).toBeNull();
+    expect(navCalls).toEqual(['push', 'pop', 'push', 'pop', 'push', 'pop']);
+  });
+
+  it('AD-13 F25 with openView above a selection an outside tap keeps it and does not throw', async () => {
+    const t = await setup();
+    t.detach();
+    t.tap(t.b.card1);
+    t.overlays.openView(3);
+    navCalls.length = 0;
+    expect(() => t.tap(t.b.leftover)).not.toThrow();
+    expect(t.overlays.selection).toEqual({ column: 1, count: 2 });
+    expect(t.overlays.viewCell).toBe(3);
+    expect(navCalls).toEqual([]);
+  });
+
+  it('AD-11 a non-card column press is captured and its contextmenu prevented only with a selection', async () => {
+    const t = await setup();
+    t.detach();
+    t.down(t.b.foot1);
+    expect(t.fire('contextmenu').preventDefault).not.toHaveBeenCalled();
+    t.fire('pointercancel');
+    expect(t.b.foot1.log).toEqual([]);
+    t.tap(t.b.card2);
+    t.down(t.b.foot1);
+    expect(t.b.foot1.log).toEqual(['set 1']);
+    expect(t.fire('contextmenu').preventDefault).toHaveBeenCalled();
+    t.fire('pointercancel');
+    t.down(t.b.ghost);
+    expect(t.b.column1.log).toEqual(['set 1']);
+    expect(t.fire('contextmenu').preventDefault).toHaveBeenCalled();
+    t.fire('pointercancel');
+    expect(t.overlays.selection).toEqual({ column: 2, count: 1 });
+  });
+
+  it('AD-12 F25 a click with detail 0 resolving outside deselects; detail 1 and a column target do nothing', async () => {
+    const t = await setup();
+    t.detach();
+    t.tap(t.b.card1);
+    t.fire('click', { target: t.b.leftover, detail: 1 });
+    t.fire('click', { target: t.b.card2, detail: 0 });
+    t.fire('click', { target: t.b.undo, detail: 0 });
+    expect(t.overlays.selection).toEqual({ column: 1, count: 2 });
+    t.fire('click', { target: t.b.leftover, detail: 0 });
+    expect(t.overlays.selection).toBeNull();
+    expect(navCalls).toEqual(['push', 'pop']);
+  });
+});
+
+describe('AD-12 entry 7 hover', () => {
+  it('AD-12 refreshHover toggles the column classes and clears them on leave and detach', async () => {
+    const t = await setup();
+    const detach = t.detach();
+    t.hover(t.b.card1b);
+    expect([...t.b.column1.classes]).toEqual(['wc-hover-tail', 'wc-grab']);
+    expect(t.b.column1.props.get('--wc-hover-from')).toBe('1');
+    t.hover(t.b.card2);
+    expect(t.b.column1.classes.size).toBe(0);
+    expect(t.b.column1.props.size).toBe(0);
+    expect([...t.b.column2.classes]).toEqual(['wc-hover-tail', 'wc-grab']);
+    // A touch pointerover is not hover.
+    t.b.root.fire('pointerover', { pointerType: 'touch', target: t.b.card1 });
+    expect([...t.b.column2.classes]).toEqual(['wc-hover-tail', 'wc-grab']);
+    t.overlays.select(1, 1);
+    t.controller.refreshHover();
+    expect([...t.b.column2.classes]).toEqual(['wc-drop']);
+    t.hover(t.b.foot1);
+    expect(t.b.column2.classes.size).toBe(0);
+    expect([...t.b.column1.classes]).toEqual(['wc-drop-self']);
+    t.hover(t.b.card1b);
+    expect(t.b.column1.classes.size).toBe(0);
+    t.hover(t.b.card1);
+    expect([...t.b.column1.classes]).toEqual(['wc-hover-tail']);
+    expect(t.b.column1.props.get('--wc-hover-from')).toBe('0');
+    t.b.root.fire('pointerout', { pointerType: 'mouse', relatedTarget: t.b.card2 });
+    expect([...t.b.column1.classes]).toEqual(['wc-hover-tail']);
+    t.b.root.fire('pointerout', { pointerType: 'mouse', relatedTarget: null });
+    expect(t.b.column1.classes.size).toBe(0);
+    t.controller.refreshHover();
+    expect(t.b.column1.classes.size).toBe(0);
+    t.hover(t.b.card2);
+    expect([...t.b.column2.classes]).toEqual(['wc-drop']);
+    detach();
+    expect(t.b.column2.classes.size).toBe(0);
+    t.controller.refreshHover();
+    expect(t.b.column2.classes.size).toBe(0);
   });
 });

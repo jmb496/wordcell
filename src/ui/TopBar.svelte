@@ -3,18 +3,22 @@ import type { GameView } from '../engine/index';
 import { game } from '../shell/game.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { act } from './act';
+import { overlays } from './overlays.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { text } from './text';
 
 // DESIGN.md Top bar: sticky, 44 px of content plus the top safe-area inset (owner Option A),
-// menu slot (epic 6), live score (R-82), Undo/Redo with desktop tooltips (F3).
+// menu slot (epic 6), live score (R-82), Undo/Redo with desktop tooltips (F3). Undo and Redo clear
+// a tail selection first, after act()'s cancel() (AD-13, SPEC CAP-6).
 let { view }: { view: GameView } = $props();
 
 function undo(): void {
+  overlays.deselect();
   game.dispatch({ type: 'undo' });
 }
 
 function redo(): void {
+  overlays.deselect();
   game.dispatch({ type: 'redo' });
 }
 </script>

@@ -11,6 +11,7 @@ function fakeController(log: string[]): Controller {
   return {
     cancel: () => log.push('cancel'),
     attach: () => () => {},
+    refreshHover: () => {},
   };
 }
 

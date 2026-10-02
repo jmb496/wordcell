@@ -14,7 +14,6 @@ import HistoryNotice from './HistoryNotice.svelte';
 import type { Layout } from './layout/layout.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { newGame } from './new-game';
-// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { overlays } from './overlays.svelte';
 import { text } from './text';
 
@@ -29,6 +28,14 @@ function pointerRoot(node: HTMLElement): { destroy: () => void } {
 }
 
 const board = $derived(game.view);
+
+// Entry 7 (SPEC CAP-6): one reaction recomputes the desktop hover classes at the last pointer
+// point whenever the selection or the GameView changes (tap, drop, Undo, Redo, Reload, back).
+$effect(() => {
+  void overlays.selection;
+  void game.view;
+  controller.refreshHover();
+});
 
 // §2 Session rejected: the catalogue body for the parse reason (EXPERIENCE.md message catalogue).
 function rejectedBody(reason: RejectReason): string {

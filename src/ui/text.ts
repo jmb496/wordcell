@@ -12,6 +12,8 @@ export const text = Object.freeze({
   confirm: 'Confirm',
   newGame: 'New game',
   undo: 'Undo',
+  // DESIGN.md Column slot: the source foot pad while a tail is selected (EXPERIENCE.md Foot pad).
+  here: 'Here',
   redo: 'Redo',
   // R-82 top-bar score; negatives with U+2212 (DESIGN.md Typography).
   score: (n: number) => `Score ${n < 0 ? `\u2212${-n}` : n}`,

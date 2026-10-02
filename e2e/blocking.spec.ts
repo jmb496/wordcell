@@ -334,6 +334,20 @@ test.describe('§2 Session rejected', () => {
       }
     });
   }
+
+  test('§2 AD-13 New game from a rejected Session, then a tap selects', async ({ page }) => {
+    await seedStorage(page, { session: fixture('session-invalid-null.json') });
+    await page.goto('/');
+    await expect(page.getByRole('alertdialog')).toHaveCount(1);
+    await page.getByRole('button', { name: 'New game', exact: true }).tap();
+    await expect(page.locator('[data-card-id]')).toHaveCount(52);
+    const card = page.locator('[data-testid="column-1"] [data-place="column"]').last();
+    const box = await card.boundingBox();
+    if (box === null) throw new Error('column 1 has no bottom card box');
+    await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+    await expect(page.locator('[data-selection-outline]')).toHaveCount(1);
+    await expect.poll(() => page.evaluate(() => (history.state as { wc: number }).wc)).toBe(1);
+  });
 });
 
 test.describe('Q-38 single instance', () => {

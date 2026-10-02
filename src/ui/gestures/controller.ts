@@ -2,15 +2,22 @@
 // the pure `classify`. A button-0 pointerdown with no active press, not on an enabled button (F25),
 // enters the gate and resolves from `elementFromPoint` at the press point, never `event.target`
 // (F13): a card by `data-place` (F23), a tray-band mirror as a tile, a WordCell part by
-// `[data-wordcell]`, a non-card column part by `[data-column]`/`[data-foot]` (uncaptured, so a pan
-// cancels it), anything else uncaptured. Every other pointerId is untouched (no preventDefault or
-// stopPropagation). One `end` path for pointerup, pointercancel, lostpointercapture (captured
-// element only), cancel(), a same-id pointerdown and detach: timer cleared, press cleared before
-// capture is released, a peek closed (cancel/pointercancel/lostpointercapture, AD-13), then one
-// `gate.leave()`. `contextmenu` is preventDefaulted for a press it captured (SPEC CAP-4,
-// rule-coverage AD-11) and, after cancel()/lostpointercapture of one, until that pointerId's
-// pointerup/pointercancel, the next captured press or detach. Entries 7–12 add the handlers;
-// here every gesture ends with no command and no selection change.
+// `[data-wordcell]`, a non-card column part by `[data-column]`/`[data-foot]` (uncaptured with
+// nothing selected, so a pan cancels it), anything else uncaptured. Every other pointerId is
+// untouched (no preventDefault or stopPropagation). One `end` path for pointerup, pointercancel,
+// lostpointercapture (captured element only), cancel(), a same-id pointerdown and detach: timer
+// cleared, press cleared before capture is released, a peek closed
+// (cancel/pointercancel/lostpointercapture, AD-13), then one `gate.leave()`. `contextmenu` is
+// preventDefaulted for a press it captured (SPEC CAP-4, rule-coverage AD-11) and, after
+// cancel()/lostpointercapture of one, until that pointerId's pointerup/pointercancel, the next
+// captured press or detach.
+// Entry 7 (SPEC CAP-6, F25, F26, F31): the pointerdown also resolves a `Hit` (intent.ts); with a
+// tail selected a non-card column press is captured on its `[data-foot]` or `[data-column]`. Only
+// `classify`'s final `tap` acts, after `end()`: select, deselect, or deselect then one `drop`. A
+// `click` acts only for non-pointer activation (`detail === 0`) resolving outside (F25). Mouse
+// hover (`pointerType === 'mouse'`) toggles `wc-hover-tail` (+ `--wc-hover-from`), `wc-grab`,
+// `wc-drop` and `wc-drop-self` on at most one `[data-column]`, recomputed at the last point by
+// `pointerover` and `refreshHover()` (App's reaction to the selection and the GameView).
 import { game } from '../../shell/game.svelte';
 import { overlays } from '../overlays.svelte';
 import {
@@ -22,6 +29,7 @@ import {
   start,
 } from './classify';
 import type { Gate } from './gate';
+import { type Hit, type HoverAction, hoverAction, tapAction } from './intent';
 
 export type ControllerDeps<H> = {
   elementFromPoint(x: number, y: number): Element | null;
@@ -36,6 +44,8 @@ export type Controller = {
   cancel(options?: CancelOptions): void;
   /** F8: attaches the listeners to the active-branch root; returns the detach. */
   attach(root: HTMLElement): () => void;
+  /** Recomputes the mouse hover classes at the last pointer point (App's reaction, entry 7). */
+  refreshHover(): void;
 };
 
 type EndReason =
@@ -47,11 +57,16 @@ type Press<H> = {
   readonly pointerId: number;
   /** The element holding this press's capture; null for an uncaptured press. */
   readonly captured: Element | null;
+  readonly hit: Hit;
   state: PressState;
   timer: { readonly handle: H } | null;
 };
 
-type Resolved = { readonly target: PressTarget; readonly capture: Element | null };
+type Resolved = {
+  readonly target: PressTarget;
+  readonly capture: Element | null;
+  readonly hit: Hit;
+};
 
 const LISTENED = [
   'pointerdown',
@@ -60,7 +75,14 @@ const LISTENED = [
   'pointercancel',
   'lostpointercapture',
   'contextmenu',
+  'click',
+  'pointerover',
+  'pointerout',
 ] as const;
+
+const HOVER_CLASSES = ['wc-hover-tail', 'wc-grab', 'wc-drop', 'wc-drop-self'] as const;
+const HOVER_FROM = '--wc-hover-from';
+const OUTSIDE: Hit = { kind: 'outside' };
 
 function attribute(el: Element, name: string): number {
   const value = Number(el.getAttribute(name));
@@ -78,32 +100,56 @@ function wordcellTarget(cellEl: Element): PressTarget {
   return cell.cards.length === 0 ? 'emptyWordcell' : 'wordcell';
 }
 
+// The column number of the `[data-column]` an element sits in.
+function columnOf(el: Element): number {
+  const columnEl = el.closest('[data-column]');
+  if (columnEl === null) throw new Error('AD-12 column part outside [data-column]');
+  return attribute(columnEl, 'data-column');
+}
+
 // F23 press resolution, build-notes CAP-4. `null` = an enabled button: not a press at all (F25).
-function resolve(root: HTMLElement, hit: Element | null): Resolved | null {
-  if (hit === null || !root.contains(hit)) return { target: 'other', capture: null };
+// `selected`: with a tail selected, non-card column presses are captured (entry 7).
+function resolve(root: HTMLElement, hit: Element | null, selected: boolean): Resolved | null {
+  if (hit === null || !root.contains(hit)) return { target: 'other', capture: null, hit: OUTSIDE };
   if (hit.closest('button:enabled') !== null) return null;
   const card = hit.closest('[data-place]');
   if (card !== null) {
     const place = card.getAttribute('data-place');
-    if (place === 'column') return { target: 'column', capture: card };
+    if (place === 'column') {
+      return {
+        target: 'column',
+        capture: card,
+        hit: { kind: 'card', column: columnOf(card), card: attribute(card, 'data-card-id') },
+      };
+    }
     if (place === 'cell') {
       const cellEl = card.closest('[data-wordcell]');
       if (cellEl === null) throw new Error('AD-12 cell card outside [data-wordcell]');
-      return { target: wordcellTarget(cellEl), capture: card };
+      return { target: wordcellTarget(cellEl), capture: card, hit: { kind: 'wordcell' } };
     }
-    if (place === 'tray' || place === 'strip') return { target: 'other', capture: card };
+    if (place === 'tray' || place === 'strip') {
+      return { target: 'other', capture: card, hit: { kind: 'tile' } };
+    }
     throw new Error(`AD-12 unknown data-place ${place}`);
   }
   const mirror = hit.closest('[data-mirror-of]');
   if (mirror !== null && hit.closest('[data-band="tray"]') !== null) {
-    return { target: 'other', capture: mirror };
+    return { target: 'other', capture: mirror, hit: { kind: 'tile' } };
   }
   const cellEl = hit.closest('[data-wordcell]');
-  if (cellEl !== null) return { target: wordcellTarget(cellEl), capture: cellEl };
-  if (hit.closest('[data-column]') !== null || hit.closest('[data-foot]') !== null) {
-    return { target: 'column', capture: null };
+  if (cellEl !== null) {
+    return { target: wordcellTarget(cellEl), capture: cellEl, hit: { kind: 'wordcell' } };
   }
-  return { target: 'other', capture: null };
+  const foot = hit.closest('[data-foot]');
+  const columnEl = foot ?? hit.closest('[data-column]');
+  if (columnEl !== null) {
+    return {
+      target: 'column',
+      capture: selected ? columnEl : null,
+      hit: { kind: 'space', column: columnOf(columnEl), foot: foot !== null },
+    };
+  }
+  return { target: 'other', capture: null, hit: OUTSIDE };
 }
 
 export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Controller {
@@ -111,6 +157,10 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
   let press: Press<H> | null = null;
   /** The pointerId whose contextmenu stays suppressed after its captured press was cancelled. */
   let menuSlot: number | null = null;
+  /** The last mouse point inside the root (hover), null once it left. */
+  let lastPoint: { readonly x: number; readonly y: number } | null = null;
+  /** The `[data-column]` element carrying the hover classes. */
+  let hovered: HTMLElement | null = null;
 
   function stopTimer(p: Press<H>): void {
     if (p.timer === null) return;
@@ -160,12 +210,17 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       // A same-id pointerdown: the old press's end was lost.
       end({ kind: 'sameId' });
     }
-    const resolved = resolve(root, deps.elementFromPoint(event.clientX, event.clientY));
+    const resolved = resolve(
+      root,
+      deps.elementFromPoint(event.clientX, event.clientY),
+      overlays.selection !== null,
+    );
     if (resolved === null) return;
     gate.enter();
     const p: Press<H> = {
       pointerId: event.pointerId,
       captured: resolved.capture,
+      hit: resolved.hit,
       state: start(resolved.target, event.clientX, event.clientY),
       timer: null,
     };
@@ -188,12 +243,39 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     p.state = next;
   }
 
+  // SPEC CAP-6: the tap's action, at tap time from the GameView (AD-3) and the selection.
+  function perform(hit: Hit): void {
+    const view = game.view;
+    if (view === undefined) throw new Error('AD-12 tap without a GameView');
+    const action = tapAction(hit, view, overlays.selection, overlays.top);
+    switch (action.kind) {
+      case 'select':
+        overlays.select(action.column, action.count);
+        return;
+      case 'deselect':
+        overlays.deselect();
+        return;
+      case 'drop':
+        overlays.deselect();
+        game.dispatch({
+          type: 'drop',
+          sourceColumn: action.sourceColumn,
+          sourceCount: action.sourceCount,
+          destinationColumn: action.destinationColumn,
+        });
+        return;
+      case 'none':
+        return;
+    }
+  }
+
   function pointerup(event: PointerEvent): void {
     if (event.pointerId === menuSlot) menuSlot = null;
-    if (own(event)) {
-      end({ kind: 'up' });
-      return;
-    }
+    const p = press;
+    if (p === null || !own(event)) return;
+    const outcome = classify(p.state, { type: 'up' });
+    end({ kind: 'up' });
+    if (outcome === 'tap') perform(p.hit);
   }
 
   function pointercancel(event: PointerEvent): void {
@@ -214,13 +296,85 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     if ((press !== null && press.captured !== null) || menuSlot !== null) event.preventDefault();
   }
 
+  // F25: a `click` counts only for non-pointer activation; a pointer tap's trailing click
+  // (detail ≥ 1) was already classified by pointerup.
+  function click(event: MouseEvent): void {
+    if (event.detail !== 0 || root === null) return;
+    const resolved = resolve(root, event.target as Element | null, overlays.selection !== null);
+    if (resolved === null || resolved.hit.kind !== 'outside') return;
+    perform(resolved.hit);
+  }
+
+  function clearHover(): void {
+    if (hovered === null) return;
+    hovered.classList.remove(...HOVER_CLASSES);
+    hovered.style.removeProperty(HOVER_FROM);
+    hovered = null;
+  }
+
+  function showHover(columnEl: HTMLElement, action: HoverAction): void {
+    hovered = columnEl;
+    switch (action.kind) {
+      case 'tail':
+        columnEl.classList.add('wc-hover-tail');
+        columnEl.style.setProperty(HOVER_FROM, String(action.from));
+        if (action.grab) columnEl.classList.add('wc-grab');
+        return;
+      case 'drop':
+        columnEl.classList.add('wc-drop');
+        return;
+      case 'dropSelf':
+        columnEl.classList.add('wc-drop-self');
+        return;
+    }
+  }
+
+  // DESIGN.md Card states, hover: at most one `[data-column]` carries the classes (old cleared).
+  function refreshHover(): void {
+    clearHover();
+    const view = game.view;
+    if (root === null || lastPoint === null || view === undefined) return;
+    const el = deps.elementFromPoint(lastPoint.x, lastPoint.y);
+    const resolved = resolve(root, el, false);
+    if (el === null || resolved === null) return;
+    const action = hoverAction(resolved.hit, view, overlays.selection);
+    if (action === null) return;
+    const columnEl = el.closest('[data-column]') as HTMLElement | null;
+    if (columnEl === null) throw new Error('AD-12 hover column outside [data-column]');
+    showHover(columnEl, action);
+  }
+
+  function track(event: PointerEvent): boolean {
+    if (event.pointerType !== 'mouse') return false;
+    lastPoint = { x: event.clientX, y: event.clientY };
+    return true;
+  }
+
+  function pointerover(event: PointerEvent): void {
+    if (track(event)) refreshHover();
+  }
+
+  function pointerout(event: PointerEvent): void {
+    if (event.pointerType !== 'mouse' || root === null) return;
+    const to = event.relatedTarget as Node | null;
+    if (to !== null && root.contains(to)) return;
+    lastPoint = null;
+    clearHover();
+  }
+
   const handlers: Record<(typeof LISTENED)[number], (event: never) => void> = {
     pointerdown,
-    pointermove,
+    pointermove: (event: PointerEvent) => {
+      track(event);
+      pointermove(event);
+    },
     pointerup,
     pointercancel,
     lostpointercapture,
     contextmenu,
+    click,
+    pointerover,
+    pointerout,
   };
 
   function cancel(options: CancelOptions = {}): void {
@@ -243,9 +397,11 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
         next.removeEventListener(type, handlers[type] as EventListener);
       }
       menuSlot = null;
+      lastPoint = null;
+      clearHover();
       root = null;
     };
   }
 
-  return { cancel, attach };
+  return { cancel, attach, refreshHover };
 }

@@ -19,6 +19,8 @@ let {
   destination = false,
   tile,
   segment,
+  lifted = false,
+  remainderTop = false,
 }: {
   id: CardId;
   face: Face;
@@ -32,6 +34,10 @@ let {
   tile?: { mode: 'card' | 'compact'; width: number };
   /** A `block` mirror's place in its row segment: outline ends and the lock at the start. */
   segment?: { start: boolean; end: boolean };
+  /** Entry 7: in the tap-selected tail; only the face rises (F26). */
+  lifted?: boolean;
+  /** Entry 7: the source column's lowest card outside the selected tail (R-21 drop-self hover). */
+  remainderTop?: boolean;
 } = $props();
 
 // DESIGN.md Card: `QU` is set as `Qu` with the ×2 badge (Q-06).
@@ -55,6 +61,8 @@ const lock = $derived(destination || (block && segment?.start === true));
   class:block
   class:start={segment?.start}
   class:end={segment?.end}
+  class:lifted
+  class:remainder-top={remainderTop}
   style:--tile-w={tile ? `${tile.width}px` : undefined}
   data-card-id={mirror ? undefined : id}
   data-testid={mirror ? undefined : `card-${id}`}
@@ -148,6 +156,10 @@ const lock = $derived(destination || (block && segment?.start === true));
   /* Overlap the next block tile by 1 px so fractional device pixels leave no seam. */
   .block:not(.start):not(.end) .face { width: calc(var(--tile-w) + 5px); }
   .block.start:not(.end) .face { width: calc(var(--tile-w) + 3px); }
+
+  /* DESIGN.md Elevation & Depth: a tap-selected card's face rises 8 px with the soft shadow, above
+     the sticky bars (z-index 2); the wrapper (hit rect) never moves (F26). */
+  .lifted .face { transform: translateY(-8px); box-shadow: 0 6px 16px #0008; z-index: 3; }
 
   /* DESIGN.md WordCell used this word (R-33): the top card at 40 % with a 45° hatch. */
   .used .face {

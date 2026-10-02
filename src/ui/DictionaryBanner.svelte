@@ -2,6 +2,7 @@
 import { dictionary } from '../shell/dictionary.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { act } from './act';
+import { overlays } from './overlays.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { text } from './text';
 
@@ -10,6 +11,8 @@ import { text } from './text';
 // the live store: disabled while a Q-42 in-place retry runs (the banner stays shown then), a
 // UI-level no-op so a tap never reaches retry() outside 'failed'.
 function reload(): void {
+  // SPEC CAP-6: Reload clears a tail selection first, after act()'s cancel() (AD-13).
+  overlays.deselect();
   void dictionary.retry();
 }
 </script>
