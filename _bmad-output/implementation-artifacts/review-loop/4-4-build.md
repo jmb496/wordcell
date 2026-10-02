@@ -1,5 +1,5 @@
 # Review loop — ticket 4.4 build (code mode, dfa68a1..0fffa6c)
-State: pass 3: done
+State: pass 4: done
 
 Target: `_bmad-output/implementation-artifacts/review-loop/4-4-build.passes/pass0.diff` (git diff dfa68a1..0fffa6c)
 Intent: `_bmad-output/initiative-wordcell-v1/epic-board-and-gestures/story-live-layout-gate-and-touch-action-regions-plan.md`
@@ -56,3 +56,23 @@ Snapshot: tree a78686abd3270c8bc6c3f2e90c92c7a640017901  |  Fix: items 1–3 app
 - none
 ### Dropped
 - none
+
+## Pass 4 — 2026-10-02
+Reviewers: fix diff, edge cases, verification gap, intent alignment (late-pass bar)  |  Findings: major 0, minor 1, decision-needed 0  |  Dropped in triage: 0
+Snapshot: tree a78686abd3270c8bc6c3f2e90c92c7a640017901 (no fix pass; pass 3 state)
+### Applied
+- none (zero majors: stopping rule met before the fix step)
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Result — converged after 4 passes (majors 2, 3, 1, 0)
+Final state (orchestrator run at 2f8b783, tree a78686a): `npm test` 39 files, 1749 passed; `npm run lint` clean (147 files); `npm run check` 0 errors, 0 warnings. The fixer ran `npx playwright test e2e/layout.spec.ts` in pass 2: 6 passed, 4 skipped (android-only on desktop). The full `test:all` was not run by this loop.
+Technical defaults applied: 9 (all test or plan only; no production code changed).
+
+Unapplied minors (for the next build or loop):
+1. _bmad-output/specs/spec-epic-4-board/build-notes.md CAP-3 "Insets probe" — says the probe is "absolutely positioned"; the code and plan use `position: fixed`. Fix it with the epic's close-out doc edits.
+2. e2e/layout.spec.ts 'AD-11 touch-action and user-select regions' — android is never wide and the only desktop case is wide, so a `--wc-pan` keyed on hoverFine rather than `wide` would pass. Add a non-wide desktop check (e.g. 1280 × 720 → `pan-y` on `[data-band="leftover"]`) before the 370 × 750 step.
