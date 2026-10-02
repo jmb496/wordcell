@@ -366,22 +366,24 @@ test.describe('android', () => {
     page,
   }) => {
     await openFixture(page, 'session-idle-empty-column');
-    const cursor = await cursorOf(page);
+    expect(await cursorOf(page)).toEqual({ index: 1, phase: 'idle' });
     await select(page, 2, 6);
     await tapAt(page, await centre(page.getByTestId('undo')));
     await expectSelection(page, null, 0);
-    await expect.poll(() => cursorOf(page)).not.toEqual(cursor);
+    // R-70: one phase state back, from Idle at 1 to the committed move's Place.
+    await expect.poll(() => cursorOf(page)).toEqual({ index: 0, phase: 'place' });
   });
 
   test('R-14 AD-13 Redo with a selection clears it (entry popped), then redoes', async ({
     page,
   }) => {
     await openFixture(page, 'session-idle-pending-draft');
-    const cursor = await cursorOf(page);
+    expect(await cursorOf(page)).toEqual({ index: 0, phase: 'idle' });
     await select(page, 2, 6);
     await tapAt(page, await centre(page.getByTestId('redo')));
     await expectSelection(page, null, 0);
-    await expect.poll(() => cursorOf(page)).not.toEqual(cursor);
+    // R-71: one phase state forward, into the pending draft's Composing.
+    await expect.poll(() => cursorOf(page)).toEqual({ index: 0, phase: 'composing' });
   });
 
   test('AD-13 the selection entry is popped on drop and deselect; back clears it with the app open', async ({
@@ -478,6 +480,11 @@ test.describe('android', () => {
     expect(outline.bottom).toBeCloseTo(Math.max(...lifted.map((f) => f.bottom)), 1);
     expect(outline.left).toBeCloseTo(lifted[0]?.left ?? Number.NaN, 1);
     expect(outline.right).toBeCloseTo(lifted[0]?.right ?? Number.NaN, 1);
+    // DESIGN.md Card selected: the lifted faces and the outline paint above the sticky bars.
+    const zOf = (locator: Locator) => locator.evaluate((el) => Number(getComputedStyle(el).zIndex));
+    const bar = await zOf(page.locator('[data-band="topBar"]'));
+    expect(await zOf(cards(page, 1).nth(4).locator('.face'))).toBeGreaterThan(bar);
+    expect(await zOf(page.locator('[data-selection-outline]'))).toBeGreaterThan(bar);
 
     // F26: elementFromPoint at each card's original slot still answers that card's wrapper.
     const hits = await cards(page, 1).evaluateAll((els) =>
@@ -686,6 +693,7 @@ test.describe('desktop', () => {
       await moveTo(page, p);
       expect(await classes(page, 5)).toEqual(['wc-drop-self']);
       expect(await outlineOf(cards(page, 5).nth(2).locator('.face'))).toBe(`3px solid ${teal}`);
+      expect(await imageOf(cards(page, 5).nth(2).locator('.face'))).toBe(wash);
     }
   });
 
@@ -705,12 +713,37 @@ test.describe('desktop', () => {
   test('AD-12 F31 hover with a whole column selected lights the Here pad', async ({ page }) => {
     await openFixture(page, 'session-idle-fresh');
     const teal = await tokenColor(page, '--wc-accent-teal');
+    const wash = await wash12(page);
     await select(page, 5, 0);
     for (const p of [await space(page, 5), await centre(foot(page, 5))]) {
       await moveTo(page, p);
       expect(await classes(page, 5)).toEqual(['wc-drop-self']);
       expect(await outlineOf(foot(page, 5))).toBe(`3px solid ${teal}`);
+      expect(await imageOf(foot(page, 5))).toBe(wash);
     }
+  });
+
+  test('AD-12 a selected tail replaces the column numbers with Here on the source foot; deselect restores them', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-idle-fresh');
+    const numbers = async () => {
+      const shown: string[] = [];
+      for (let n = 1; n <= 8; n++) {
+        if (await foot(page, n).getByText(String(n), { exact: true }).isVisible())
+          shown.push(`${n}`);
+      }
+      return shown;
+    };
+    expect(await numbers()).toEqual(['1', '2', '3', '4', '5', '6', '7', '8']);
+    await select(page, 3, 6);
+    expect(await numbers()).toEqual([]);
+    await expect(foot(page, 3).getByText('Here', { exact: true })).toBeVisible();
+    await expect(page.locator('[data-foot]').getByText('Here', { exact: true })).toHaveCount(1);
+    await tapAt(page, await centre(page.locator('[data-band="leftover"]')));
+    await expectSelection(page, null, 0);
+    await expect(page.locator('[data-foot]').getByText('Here', { exact: true })).toHaveCount(0);
+    expect(await numbers()).toEqual(['1', '2', '3', '4', '5', '6', '7', '8']);
   });
 
   test('R-14 F25 a side-margin click and box-centre clicks on the disabled controls deselect', async ({
