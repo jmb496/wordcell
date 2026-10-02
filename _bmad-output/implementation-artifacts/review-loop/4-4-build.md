@@ -1,5 +1,5 @@
 # Review loop — ticket 4.4 build (code mode, dfa68a1..0fffa6c)
-State: pass 1: done
+State: pass 2: done
 
 Target: `_bmad-output/implementation-artifacts/review-loop/4-4-build.passes/pass0.diff` (git diff dfa68a1..0fffa6c)
 Intent: `_bmad-output/initiative-wordcell-v1/epic-board-and-gestures/story-live-layout-gate-and-touch-action-regions-plan.md`
@@ -21,3 +21,24 @@ Snapshot: tree 83d73571fac027ef13634024f141f92320dbd3a1  |  Fix: items 1–5 app
 - none
 ### Dropped
 - none. Not sent to the fixer: build-notes CAP-3 says the probe is "absolutely positioned" while code and plan say `position: fixed`. That doc is outside this diff, so the fix belongs with the epic's close-out doc edits (left as an unapplied minor).
+
+## Pass 2 — 2026-10-02
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 3, minor 6, decision-needed 0  |  Dropped in triage: 1 (duplicate)
+Snapshot: tree 9edb67bb390e8d9cf7964a7be9e8d6009edd9b31  |  Fix: items 1–9 applied, test-only. Each new or tightened test fails with its guarded behaviour broken (fixer). The item 7 MutationObserver catches a scroll write deferred by one frame (scrollY 0). e2e/layout.spec.ts: 6 passed, 4 skipped (android-only on desktop). Orchestrator: npm test 39 files, 1746 passed; lint clean; check 0 errors
+Note: majors rose 2 → 3, but not because the refs are unclear. The pass-1 fixes all held (the fix-diff reviewer found nothing), and the three majors are independent test gaps in areas pass 1 did not touch. As in 3-8-build, the diverging diagnosis does not apply, so the loop continues.
+### Applied
+- [major] layout.svelte.test.ts 'two 60 px shrinks' — the first shrink's "keeps w" holds even under an always-recompute layout (cardWidth gives 46 at both 839 and 779) → fixer item 1 (default applied: a 779 → 719 case where a recompute would give 40)
+- [major] layout.svelte.test.ts — "cardWidth/availableWidth get clientWidth; innerWidth feeds only the predicate" is untested: every case gives the same w from either input → fixer item 2 (default applied: hoverFine 427/412 case at 915, w 43, plus a clientWidth-only change that does not recompute)
+- [major] gate.test.ts — "each raf first clears the flag … if busy it stops" has no busy-frame case → fixer item 3
+- [minor] layout.svelte.test.ts flip/flip-back no-op — assert the `heights`/`metrics` references stay the same → fixer item 4
+- [minor] layout.svelte.test.ts inset change — change one inset at a time → fixer item 5
+- [minor] layout.svelte.test.ts fake matchMedia — record and assert the query → fixer item 6
+- [minor] e2e/layout.spec.ts banner-shows-with-leftover-under-44 — check the row box at insertion time (same frame) → fixer item 7 (raised by two reviewers; merged)
+- [minor] e2e/layout.spec.ts desktop regions premise — measure the rendered board width rather than a hard-coded 352 → fixer item 8
+- [minor] e2e/layout.spec.ts 'banner takes leftover first' — assert w 46 at 412 × 915 → fixer item 9
+### Default applied (technical)
+- New Vitest cases for items 1–3, as above.
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- Edge-case reviewer's same-frame finding: a duplicate of the verification-gap reviewer's (merged into item 7).

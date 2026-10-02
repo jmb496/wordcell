@@ -55,6 +55,8 @@ test.describe('AD-11 banner at 412 × 915', () => {
     const list = await holdList(page);
     await openFixture(page, 'session-idle-fresh');
     expect((await rect(page, '[data-band="leftover"]')).height).toBe(177);
+    const face = page.locator('[data-testid="column-1"] [data-card-id] > .face').first();
+    expect((await face.boundingBox())?.width).toBe(46);
     const tops = async () => {
       const out: Record<string, number> = {};
       for (const id of [...BELOW, 'actionBar']) {
@@ -84,8 +86,28 @@ test.describe('AD-11 banner at 412 × 780', () => {
     await openFixture(page, 'session-idle-fresh');
     expect((await rect(page, '[data-band="leftover"]')).height).toBe(42);
     const before = await rect(page, '[data-band="wordcells"]');
+    // Recorded in the MutationObserver callback for the banner's insertion: the relayout inserts
+    // it (flushSync) and writes scrollTop in one rAF callback, and the observer runs at the
+    // microtask checkpoint right after that callback, so a correction in a later frame (or a
+    // write before the insertion, clamped to the old range) shows here as scrollY 0.
+    await page.evaluate(() => {
+      const band = document.querySelector('[data-band="banner"]');
+      const row = document.querySelector('[data-band="wordcells"]');
+      if (band === null || row === null) throw new Error('no banner or wordcells band');
+      new MutationObserver((_, observer) => {
+        if (band.firstElementChild === null) return;
+        observer.disconnect();
+        const at = { y: scrollY, top: row.getBoundingClientRect().top };
+        (window as unknown as { __atInsert: typeof at }).__atInsert = at;
+      }).observe(band, { childList: true });
+    });
     await list.fail();
     await expect(banner(page)).toHaveCount(1);
+    const atInsert = await page.evaluate(
+      () => (window as unknown as { __atInsert: { y: number; top: number } }).__atInsert,
+    );
+    expect(atInsert.y).toBe(2);
+    expect(Math.abs(atInsert.top - before.top)).toBeLessThan(1);
     await animationFrames(page, 2);
     const after = await rect(page, '[data-band="wordcells"]');
     expect(Math.abs(after.top - before.top)).toBeLessThan(1);
@@ -383,6 +405,8 @@ test('AD-11 touch-action and user-select regions (computed style)', async ({ pag
   await waitForDictionary(page, 'failed');
   await expect(banner(page)).toHaveCount(1);
   const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);
-  expect(clientWidth - 32).toBeLessThan(352);
+  const board = (await rect(page, '[data-band="topBar"]')).width;
+  expect(board).toBe(352);
+  expect(board).toBeGreaterThan(clientWidth - 32);
   await expectRegions(page, 'pan-x pan-y');
 });

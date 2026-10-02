@@ -29,6 +29,7 @@ function setup(viewport: Viewport, initialPadding = { paddingTop: '0px', padding
   let bannerCallback: (() => void) | undefined;
   const padding = { ...initialPadding };
   const appended: { style: { cssText: string } }[] = [];
+  const queries: string[] = [];
   const v = {
     hoverFine: false,
     scrollY: 0,
@@ -78,12 +79,15 @@ function setup(viewport: Viewport, initialPadding = { paddingTop: '0px', padding
   };
   const deps: LayoutDeps = {
     window: win,
-    matchMedia: () => ({
-      get matches() {
-        return v.hoverFine;
-      },
-      addEventListener: (_type, listener) => mediaListeners.push(listener),
-    }),
+    matchMedia: (query) => {
+      queries.push(query);
+      return {
+        get matches() {
+          return v.hoverFine;
+        },
+        addEventListener: (_type, listener) => mediaListeners.push(listener),
+      };
+    },
     getComputedStyle: () => padding,
     showBanner: () => v.banner,
     watchBanner: (callback) => {
@@ -123,6 +127,7 @@ function setup(viewport: Viewport, initialPadding = { paddingTop: '0px', padding
     calls,
     scrolls,
     appended,
+    queries,
     listeners,
     listenerOptions,
     resize: () => emit('resize'),
@@ -194,6 +199,7 @@ describe('AD-11 live layout', () => {
 
   it('AD-11 w recompute on a hoverFine change', () => {
     const t = setup({ ...PIXEL_7, innerHeight: 915 });
+    expect(t.queries).toEqual(['(hover: hover) and (pointer: fine)']);
     t.flipMedia(true);
     expect(t.layout.w).toBe(46);
     t.frame();
@@ -205,6 +211,8 @@ describe('AD-11 live layout', () => {
 
   it('AD-11 a hoverFine flip and flip-back before idle changes nothing', () => {
     const t = setup({ ...PIXEL_7, innerHeight: 915 });
+    const heights = t.layout.heights;
+    const metrics = t.layout.metrics;
     t.gate.enter();
     t.flipMedia(true);
     t.flipMedia(false);
@@ -212,6 +220,8 @@ describe('AD-11 live layout', () => {
     t.gate.leave();
     t.frame();
     expect(t.layout.w).toBe(46);
+    expect(t.layout.heights).toBe(heights);
+    expect(t.layout.metrics).toBe(metrics);
     expect(t.calls).toEqual([]);
   });
 
@@ -234,10 +244,46 @@ describe('AD-11 live layout', () => {
     expect(t.calls).toEqual([]);
   });
 
+  it('AD-11 a 60 px shrink keeps w where a recompute would change it: 412 × 779 → 719 stays w 46, leftover 0, no scroll', () => {
+    // cardWidth(412, 719) is 40; the predicate (A-D11) does not hold for 60 px.
+    const t = setup({ ...PIXEL_7, innerHeight: 779 });
+    expect(t.layout.w).toBe(46);
+    const metrics = t.layout.metrics;
+    t.v.innerHeight = 719;
+    t.resize();
+    t.frame();
+    expect(t.layout.w).toBe(46);
+    expect(t.layout.metrics).toBe(metrics);
+    expect(t.layout.heights.leftover).toBe(0);
+    expect(t.calls).toEqual([]);
+  });
+
+  it('AD-11 cardWidth and availableWidth take clientWidth; innerWidth feeds only the predicate', () => {
+    // hoverFine 412 × 915: w 43 (innerWidth 427 would give 45).
+    const t = setup({ innerWidth: 427, clientWidth: 412, innerHeight: 915, hoverFine: true });
+    expect(t.layout.w).toBe(43);
+    const heights = t.layout.heights;
+    // clientWidth 380 would give w 40; innerWidth is unchanged, so no recompute.
+    t.v.clientWidth = 380;
+    t.resize();
+    t.frame();
+    expect(t.layout.w).toBe(43);
+    expect(t.layout.heights).toBe(heights);
+    // wide: board 352 > availableWidth(380) 348, not > availableWidth(400) 368.
+    const u = setup({ innerWidth: 400, clientWidth: 380, innerHeight: 750, hoverFine: true });
+    expect(u.layout.w).toBe(40);
+    expect(u.layout.wide).toBe(true);
+  });
+
   it('AD-11 an inset change delivered with a resize re-lays the bands with the new insets', () => {
     const t = setup({ ...PIXEL_7, innerHeight: 915 });
-    t.padding.paddingTop = '24px';
     t.padding.paddingBottom = '24px';
+    t.resize();
+    t.frame();
+    expect(t.layout.w).toBe(46);
+    expect(t.layout.heights.topBar).toBe(44);
+    expect(t.layout.heights.actionBar).toBe(84);
+    t.padding.paddingTop = '24px';
     t.resize();
     t.frame();
     expect(t.layout.w).toBe(46);

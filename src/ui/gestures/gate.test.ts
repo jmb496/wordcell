@@ -170,6 +170,16 @@ describe('AD-11 gate pending work in the next idle frame, scroll busy until scro
     expect(gate.busy).toBe(true);
   });
 
+  it('AD-11 a busy frame still clears the own-write flag', () => {
+    const { gate, frame } = setup();
+    gate.ignoreNextScroll();
+    gate.enter();
+    frame();
+    gate.leave();
+    gate.scroll();
+    expect(gate.busy).toBe(true);
+  });
+
   it('AD-11 at most one frame is outstanding', () => {
     const { gate, frames, frame, work } = setup();
     gate.whenIdle(work('a'));
