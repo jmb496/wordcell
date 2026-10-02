@@ -1,6 +1,6 @@
 # Review log — story-tap-select-foot-pads-and-tap-drop.md (ticket 4.7)
 
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget default (2.5x pass 0). Pass 0: HEAD cfe9343, copy story-tap-select-foot-pads-and-tap-drop.passes/pass0.md, 373 words. Intent includes tickets.toml entry 7 fields unknown, interface, tests, owns, risk, references (not copied at pull; fixer adds them to the Description in pass 1).
 
@@ -79,3 +79,23 @@ Words (docs): 1312 (3.52 x pass 0)  |  Snapshot: story-tap-select-foot-pads-and-
 - whole-column lift from column 1 drawing over the bar above — a plan check
 ### Dropped
 - cut the non-pointer click clause (adversarial) — build-notes CAP-6 and F25 state it; the ticket mirrors the ref
+
+## Pass 4 — 2026-10-02
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 6 (+9 unapplied, over budget or plan-level), decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1337 (3.58 x pass 0)  |  Snapshot: story-tap-select-foot-pads-and-tap-drop.passes/pass4.md (fix diff pass4.fix.diff)
+### Applied
+- [major] Disabled controls / AC — probe and deselect test run only on android touch; SPEC CAP-6 makes a disabled control an outside region on desktop too and mouse input on disabled controls is handled separately → fixer item 1 (default applied: probe and test on both projects, page.mouse.click on desktop; disabled Undo added)
+- [minor] AC desktop "and Here only" → source foot → 2; "cancel() never deselects" contradicts the AD-13 row → 3; "selected top" → "selected card" → 4; desktop stale-highlight check: Undo cannot run with a still mouse, keep back only → 5; R-11/R-20/R-22 tags inline on existing AC clauses (DoD) → 6; contextmenu clause covers empty-space and placeholder presses too → 7
+### Default applied (technical)
+- disabled-control probe — page.touchscreen.tap on android and page.mouse.click on desktop at the box centre; wrapper fallback if either gets no pointer events
+### Decision needed (functionality / UX / gameplay)
+- none new (pass 2 item still open)
+### Unapplied minors (plan-level)
+- hover reaction location: an $effect in App.svelte calling a controller hover refresh (a Controller member is allowed)
+- "last pointer position" means inside the root; none after a pointerout to outside it
+- desktop hover asserts computed style per DESIGN.md Card states, not class presence only
+- deselect-before-dispatch/retry order: one UI Vitest per handler (spy order)
+- disabled banner Reload during a held retry: a tap deselects
+- top-bar outside taps include the score text
+- another column's foot counts as "hovered anywhere"
+- column and WordCell deselect paths are unreachable under a view in this ticket (entry 11's scrim)
