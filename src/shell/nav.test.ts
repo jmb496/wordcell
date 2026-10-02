@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 // own traversals. Fresh module per test (module-level state).
 
 type Entry = { state: unknown };
-type Call = ['push' | 'replace', unknown] | ['go', number] | ['back'];
+type Call = ['push' | 'replace', unknown] | ['go', number] | ['back'] | ['hook'];
 
 function fakeHistory(initial: unknown[] = [null], index = initial.length - 1) {
   const entries: Entry[] = initial.map((state) => ({ state }));
@@ -345,7 +345,10 @@ describe('AD-13 before-back hook', () => {
       },
       depth: () => t.callbacks.depth,
     });
-    t.nav.registerBeforeBack(() => log.push('hook'));
+    t.nav.registerBeforeBack(() => {
+      log.push('hook');
+      t.fake.calls.push(['hook']);
+    });
     for (let i = 0; i < depth; i++) {
       t.nav.push();
       t.callbacks.depth += 1;
@@ -371,7 +374,7 @@ describe('AD-13 before-back hook', () => {
     t.log.length = 0;
     t.traverse(2);
     expect(t.log).toEqual(['hook']);
-    expect(t.fake.calls).toEqual([['go', -2]]);
+    expect(t.fake.calls).toEqual([['hook'], ['go', -2]]);
     t.settle();
     expect(t.log).toEqual(['hook']);
   });

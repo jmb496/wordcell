@@ -28,7 +28,7 @@ deferred:
     evidence: 'review-log Unapplied minors (stretch)'
     severity: low
   - summary: >-
-      A press whose end is lost (captured or implicit-capture element removed mid-press, so lostpointercapture fires at document, or the root turned inert) is recovered only by a same-id pointerdown; a touch press (new pointerId each touch) would leave the controller and gate stuck.
+      A press whose end is lost (captured or implicit-capture element removed mid-press, so lostpointercapture fires at document, or the root turned inert) is recovered only by a same-id pointerdown; a touch press (new pointerId each touch) would leave the controller and gate stuck. Also: an uncaptured mouse press (board background, non-card column part, foot pad) released over the desktop `scrollbar-gutter: stable` strip sends its pointerup to <html>, not the root, so the press and gate stay busy until the next click (same-id pointerdown recovers).
     evidence: |-
       Blind hunter and edge-case hunter; not reachable in entry 6 (no command or re-render runs during a press: buttons cancel first, layout waits on the gate, hide cancels). Settle when entries 8-11 re-render cards during a press: hold a press, remove its captured element, then touch with a new pointerId.
     location: >-
@@ -48,6 +48,13 @@ deferred:
     location: >-
       e2e/layout.spec.ts:250, :272
     severity: medium
+  - summary: >-
+      Deviation from the ticket Notes probe ("rect covers the viewport"), for the owner: on desktop the root's box stops at the `scrollbar-gutter: stable` strip (≤ 20 px, receives no page pointer events), so 'AD-12 the controller root spans the viewport' bounds desktop by the root's box right edge plus ≤ 20 px of gutter; android is exact.
+    evidence: |-
+      This Chromium reports documentElement.clientWidth 1280 while main/body/html end at 1265 (Implementation Notes, Notes probe).
+    location: >-
+      e2e/pointer.spec.ts 'AD-12 the controller root spans the viewport'
+    severity: low
 ---
 
 <intent-contract>
@@ -75,8 +82,8 @@ deferred:
 | Other / null / outside root | bars' non-button area, margins, `null` hit, hit not in root | active, uncaptured, gate +1 | — |
 | Enabled button | hit's `closest('button:enabled')` | ignored entirely (no gate) | disabled buttons fall to the rows above |
 | Second pointer / button ≠ 0 | other pointerId during a press; `button !== 0` | ignored, no preventDefault/stopPropagation | — |
-| Dead press events | ended press's later move/up/cancel/lostpointercapture | no gesture, gate or peek change; its up/cancel only clears contextmenu suppression | — |
-| Contextmenu slot | captured press ended by cancel()/lostpointercapture, finger down | contextmenu preventDefaulted until that pointerId's up/cancel, the next captured press, or detach | — |
+| Dead press events | ended press's later move/up/cancel/lostpointercapture | no gesture, gate or peek change; its up/cancel (or its pointerId's next pointerdown) only clears contextmenu suppression | — |
+| Contextmenu slot | captured press ended by cancel()/lostpointercapture, finger down | contextmenu preventDefaulted until that pointerId's up/cancel or next pointerdown, the next captured press, or detach (a touch whose up/cancel never reaches the root holds a dead id until then: bounded) | — |
 | Same-id pointerdown during a press | lost end | old press ends (one leave, timer cleared, capture released), new press starts | — |
 | Peek on end | `overlays.peek !== null` when an active press ends by cancel()/pointercancel/lostpointercapture | `closePeek()` | never with no active press |
 | Timer | WordCell press: drag latch at 300 ms / cancel() at 200 ms | `clearTimer(handle)`; advancing time fires nothing | — |
@@ -173,7 +180,7 @@ deferred:
 
 ## Design Notes
 
-**Review-log resolutions (ticket 4.6).** Open major (timer clearing + S cases) → Always + controller tasks. Unapplied minors: AD-11 parenthetical re-cited → Always; dead-press events, bounded contextmenu slot, `hasPointerCapture` release, `button:enabled` on the hit with null/outside-root handling, D-block mirrors as tray tiles, uncaptured non-card column presses whatever the selection → I/O matrix + controller test; scan shorthand/spread → scan task; F24 (b) "no nav call after openView" and "hide" as the registered callbacks (the real store flush needs the full game store; main.ts's registration order is proven by the lifecycle P4 tests) → controller test; act() throw-on-call, arg forwarding, resetModules → act tasks; Notes probe on desktop → pointer.spec; row 100 evidence and session-composing tray test → pointer.spec; classify "399 ms" via the fake scheduler's virtual time → controller test; AD-16 Board half, on-device contextmenu, other-pointerType recovery, desktop-touch contextmenu → frontmatter `deferred`.
+**Review-log resolutions (ticket 4.6).** Open major (timer clearing + S cases) → Always + controller tasks. Unapplied minors: AD-11 parenthetical re-cited → Always; dead-press events, bounded contextmenu slot, `hasPointerCapture` release, `button:enabled` on the hit with null/outside-root handling, D-block mirrors as tray tiles, uncaptured non-card column presses whatever the selection → I/O matrix + controller test; scan shorthand/spread → scan task; F24 (b) "no nav call after openView" and "hide" as the registered callbacks (the real store flush needs the full game store; main.ts's registrations are a reviewed main.ts step, and the held-press hide/back Playwright cases that prove them come in entry 9) → controller test; act() throw-on-call, arg forwarding, resetModules → act tasks; Notes probe on desktop → pointer.spec; row 100 evidence and session-composing tray test → pointer.spec; classify "399 ms" via the fake scheduler's virtual time → controller test; AD-16 Board half, on-device contextmenu, other-pointerType recovery, desktop-touch contextmenu → frontmatter `deferred`.
 
 **Lost touch ends.** Touch presses rely on implicit capture, `pointercancel` (pan start, system gesture) and the before-hide `cancel()`; a lost mouse `pointerup` is recovered by the same-id pointerdown rule.
 

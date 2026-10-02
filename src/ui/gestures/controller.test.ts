@@ -488,6 +488,17 @@ describe('AD-12 contextmenu', () => {
     t.detach();
     expect(t.fire('contextmenu').preventDefault).not.toHaveBeenCalled();
   });
+
+  it('AD-12 the slot clears on that pointer’s next uncaptured press', async () => {
+    const t = await setup();
+    t.detach();
+    t.down(t.b.card1);
+    t.controller.cancel();
+    t.down(t.b.foot1);
+    t.fire('pointerup');
+    expect(t.fire('contextmenu').preventDefault).not.toHaveBeenCalled();
+    expect(t.counts).toEqual({ enter: 2, leave: 2 });
+  });
 });
 
 describe('AD-12 peek on end', () => {

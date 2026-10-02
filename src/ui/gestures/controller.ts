@@ -152,6 +152,8 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
   }
 
   function pointerdown(event: PointerEvent): void {
+    // A same-id pointerdown: that pointer was released, so its slot is spent.
+    if (event.pointerId === menuSlot) menuSlot = null;
     if (event.button !== 0 || root === null) return;
     if (press !== null) {
       if (event.pointerId !== press.pointerId) return;
@@ -187,19 +189,19 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
   }
 
   function pointerup(event: PointerEvent): void {
+    if (event.pointerId === menuSlot) menuSlot = null;
     if (own(event)) {
       end({ kind: 'up' });
       return;
     }
-    if (event.pointerId === menuSlot) menuSlot = null;
   }
 
   function pointercancel(event: PointerEvent): void {
+    if (event.pointerId === menuSlot) menuSlot = null;
     if (own(event)) {
       end({ kind: 'pointercancel' });
       return;
     }
-    if (event.pointerId === menuSlot) menuSlot = null;
   }
 
   function lostpointercapture(event: PointerEvent): void {

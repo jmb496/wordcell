@@ -117,7 +117,7 @@ test('AD-12 the controller root spans the viewport', async ({ page }) => {
   }, desktop);
   expect(r.left).toBeLessThanOrEqual(0);
   expect(r.right).toBeGreaterThanOrEqual(r.width);
-  // The only uncovered strip is at most a classic scrollbar's gutter.
+  // The only uncovered strip is the `scrollbar-gutter: stable` gutter (no page pointer events).
   expect(r.innerWidth - r.width).toBeLessThanOrEqual(desktop ? 20 : 0);
   expect(r.top).toBeLessThanOrEqual(0);
   expect(r.bottom).toBeGreaterThanOrEqual(r.height);
