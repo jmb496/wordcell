@@ -1,6 +1,6 @@
 # Review log — story-live-layout-gate-and-touch-action-regions.md (ticket 4.4)
 
-State: pass 5: done
+State: pass 6: done (converged)
 
 Mode: docs, thorough, max 7, budget 1245 words (2.5 x (374 pass-0 words + 124 carried toml words)). Pass 0: HEAD affe546, copy story-live-layout-gate-and-touch-action-regions.passes/pass0.md, 374 words.
 
@@ -166,3 +166,25 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar
 ### Fix outcome
 Fixer applied items 1–7, none skipped, net 0 words (cut "in the container" from the screens note, which AGENTS.md already requires, and "every later" → "later").
 Words (docs): 1292 (3.45 x pass 0)  |  Snapshot: story-live-layout-gate-and-touch-action-regions.passes/pass5.md
+
+## Pass 6 — 2026-10-02
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 0, minor 17, decision-needed 0  |  Dropped in triage: 1 (synthesizeScrollGesture procedure, already left for the plan in pass 4)
+Words (docs): 1292 (3.45 x pass 0; 1.04 x the 1245 budget)  |  Snapshot: story-live-layout-gate-and-touch-action-regions.passes/pass5.md (no fix this pass)
+### Applied
+- none (converged)
+### Decision needed (functionality / UX / gameplay)
+- none
+
+## Result — converged after 6 passes
+
+Majors per pass: 10, 7, 7, 3, 2, 0. No decision-needed items; every gap took a technical default (logged per pass). No open major.
+
+### Unapplied minors (for the build's plan)
+- Notes cites "entry 1 plan" for the < 384 px bound; entry 1 recorded < 360 (superseded: gutter-corrected).
+- createLayout Vitest: a case where the anchor clamp's upper bound binds (e.g. 412 × 600 → 660 at max scroll, 122 → 62); a banner show that reverts before idle; creation-time getters with no `scrollTo`; every case named `AD-11 …`.
+- touchHold: send failures (CDP rejection) handled like validation failures; `from` validated before the session opens.
+- Layout keeps running after a mid-game AD-15 halt (harmless, the write clamps), like the rejected root.
+- Regions AC: user-select targets are the Description's list plus the WordCell count badge (SPEC CAP-3, rule-coverage row 98); mirror cards stay `none` here, entry 11 overrides in the view sheet; assert `scrollbar-gutter` on html; 370 × 750 asserts computed style only.
+- Hide case: retry once when the timing precondition is invalid; on the wheel fallback, rule-coverage row 99 also loses its android P4 (report with row 96).
+- Inset change in Vitest is delivered with a `resize` event.
+- Plus the per-pass "Left for the plan" lists above (passes 3–5).
