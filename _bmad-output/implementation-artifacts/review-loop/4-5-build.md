@@ -1,5 +1,5 @@
 # Review loop — ticket 4.5 build (code mode, b88105e..c3c4415)
-State: pass 1: done
+State: pass 2: done
 
 Target: `_bmad-output/implementation-artifacts/review-loop/4-5-build.passes/pass0.diff` (git diff b88105e..c3c4415)
 Intent: `_bmad-output/initiative-wordcell-v1/epic-board-and-gestures/story-overlays-store-tail-selection-end-sheet-and-view-states-plan.md`
@@ -24,3 +24,23 @@ Fixer: items 1–6 applied (plan counts 43 new / 49 in file; Design Notes peek s
 - none
 ### Dropped
 - intent alignment: stale counts in Implementation Notes — duplicate of the correctness finding (kept as item 2)
+
+## Pass 2 — 2026-10-02
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 1, minor 1, decision-needed 0  |  Dropped in triage: 0
+Snapshot: tree 76d8b3c7be9f7dd71a3ceb52023a51513ec7a67c (no fix pass; stopping rule met: passes 1 and 2 each yielded at most one major)
+### Applied
+- none (stopping rule met before the fix step; the major is recorded as open)
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none (fix diff, edge cases and intent alignment returned [])
+
+## Result — converged after 2 passes
+open major: src/ui/overlays.svelte.test.ts:586-615 ('AD-13 openDeferred(live) throws … with a non-top view …') — no test covers the ticket's "a view that is not the top entry throws per the generic close rule" with a modal above the view: the "a modal on top of a view" step runs `closedByBack(0)` before `open('historyNotice')`, so the stack is only [historyNotice]. The code is correct (openDeferred throws before any mutation when the view is not on top); the gap is the test. Fix: openView(6), open('historyNotice'), expect openDeferred(token) to throw /^AD-13 /, then assert viewCell 6, depth 2, top 'historyNotice', no new nav calls, token still live; fix the comment at line 604.
+
+Final state (orchestrator run at the pass 1 fix tree, unchanged since): `npm test` 39 files / 1792 passed; `npm run lint` clean (147 files); `npm run check` 0 errors 0 warnings. Fixer's complete `npm run test:all` at the same state: green (unit 1792, e2e:dist 14, e2e 250, pwa 12).
+
+Unapplied minors (for the next build or loop):
+1. src/ui/overlays.svelte.test.ts:617 — the reset test name promises "a hover peek" but none is opened (unreachable with a view open; covered at :638); drop "a hover peek" from the name.
