@@ -1,6 +1,6 @@
 # Review log — story-overlays-store-tail-selection-end-sheet-and-view-states.md (ticket 4.5)
 
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD e204ca9, copy story-overlays-store-tail-selection-end-sheet-and-view-states.passes/pass0.md, 261 words.
 Ticket fields not copied from tickets.toml entry 5 (interface, tests, owns, unknown) passed to reviewers and fixer as intent; fixer adds them to the Description in pass 1.
@@ -90,3 +90,33 @@ Fixer: applied items 1–12; item 1 worded "before the Undo dispatch, in AD-14's
 - none
 ### Dropped
 - re-select assigns a fresh object — obvious under $state.raw, no ticket text needed
+
+## Pass 4 — 2026-10-02
+Reviewers: fix diff, edge-case, adversarial, ref alignment (late-pass bar)  |  Findings: major 0, minor 13, decision-needed 0  |  Dropped in triage: 3
+Words (docs): 1278 (4.90 x pass 0, budget 1500)  |  Snapshot: story-overlays-store-tail-selection-end-sheet-and-view-states.passes/pass3.md (no fix pass)
+### Applied
+- none (converged)
+### Default applied (technical)
+- none this pass
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- re-select under a view asymmetry — settled in pass 2, unit-only path
+- openDeferred with a tail selection left — reviewer proposes no ticket change (epic 6 plan cites build-notes CAP-6)
+- closedByBack vs peek/hover peek — duplicate of the edge-case item, kept once below
+
+## Result — converged after 4 passes
+
+Majors per pass: 10, 5, 4, 0. Decision-needed: none. Word count 261 → 1278 (budget 1500).
+
+Unapplied minors (for the build plan):
+- Acceptance Criteria: after Redo, wait for the commit animation to settle (or keep checking for a short window) before asserting history.length unchanged and wc 0; after Undo use auto-retrying not.toHaveText('New game') and expect(redo).toBeEnabled() before Redo (nav.spec.ts:194–195 pattern).
+- End sheet: openDeferred checks every throw precondition (peek open; endSheet above the view) before it consumes the token or changes state.
+- Description, last bullet: entry 5 touches only the overlays files plus one appended test in e2e/nav.spec.ts, which entries 2–4 never edit (epic parallel-lane note, epic file line 58).
+- Hover peek: openHoverPeek with historyNotice, resetConfirm or endSheet on top — pick no-op (timer-fires-late) or allowed (scrims stop pointerover) in the plan; validate the cell before the no-op checks so a bad cell always throws.
+- Generic paths: closedByBack never touches peek or hover peek (the controller's before-back cancel and pointerleave close them); one Vitest assertion.
+- Selection: reword "a first select throws while the stack is non-empty (…) or while a peek is open" (the "unless … or" reading is ambiguous).
+- Error format: only the "AD-13 " prefix is binding; argument errors may read e.g. "AD-13 select(9, 1): column out of range".
+- Interface: note isOpen('endSheet') ⇔ endSheet === 'expanded', with one assertion.
+- deferEndSheetOpen supersede: one Vitest case (defer twice; first token no-op, second opens).
+- Reset: the tile selection AD-13 names is epic 5's.
