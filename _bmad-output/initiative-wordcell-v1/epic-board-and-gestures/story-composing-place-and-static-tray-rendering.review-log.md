@@ -1,6 +1,6 @@
 # Review log — story-composing-place-and-static-tray-rendering.md (ticket 4.3)
 
-State: pass 4: done
+State: pass 5: done (converged)
 
 Mode: docs, thorough, max 7, budget 1120 words (2.5 x (339 pass-0 words + 109 carried toml words)). Pass 0: HEAD c01b011, copy story-composing-place-and-static-tray-rendering.passes/pass0.md, 339 words.
 
@@ -113,3 +113,33 @@ Fixer: all 9 applied; cuts in Interface/Tests and two Description parentheticals
 - Duplicates of item 1 and the budget finding.
 ### Left for the plan (minors)
 - Order measured as DOM order matching ascending x (row-major); destination-style and check-chip observables (computed style, effective opacity, chip by class); QU tile render check deferred; 'Resolved (F2)' is browser-unverified until a drop ticket reaches 8+ tiles.
+
+## Pass 5 — 2026-10-02
+Reviewers: fix-diff, edge-case, adversarial, ref-alignment (late-pass bar)  |  Findings: major 0, minor 16, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1117 (no fix pass)  |  Snapshot: story-composing-place-and-static-tray-rendering.passes/pass4.md
+### Reclassified
+- edge-case 'no Playwright test renders a compact tray' (major → minor): re-raises the pass-2/3 technical default (pure helper Vitest + structural overflow/height/labels check; compact DOM rendering recorded for the plan's deferred list); no defect in shipped behaviour or the ticket contract.
+### Decision needed (functionality / UX / gameplay)
+- none
+
+## Result — converged after 5 passes
+Majors per pass: 13, 8, 5, 1, 0. Words 339 → 1117 (budget 1120). Technical defaults applied: ~14. No decision-needed items.
+
+### Unapplied minors (for the plan)
+- Tests line: restore '(P4 parts)' on R-33/R-42/R-73 (rule-coverage P4 + P5).
+- Screens bullet: '(as the deleted placeholder spec)' applies to dictionary/font waits only; that spec waited for visible card-<id>.
+- Compact tray never rendered in a browser (≤ 7 tiles in all states); deferred-list entry naming the first drop ticket that reaches 8+ tiles.
+- Used + selected target on cell 3 of session-place-free-letter-redo-tail (DESIGN.md: ring over the hatch at full opacity) — assert in R-33.
+- 360 px AD-11 case: set the viewport before seedStorage/goto (geometry read once at mount) and assert w = 40.
+- max(H, 92) only ever 92 at tested widths; one helper case at w ≥ 70.
+- 'AD-n-named' UI Vitest → AD-11.
+- Hand-over clause reads as fact; plan makes the dictionary.spec.ts assertion explicit.
+- New fixture insertion order: same index in VALID/REBUILDS, alphabetical in the architecture.test.ts list.
+- Placeholder negative case (whole column dropped on another column) → drop ticket deferred list.
+- Tray-order helper returns { id, mirror } entries; Vitest left, right, k = 0.
+- Screens baselines self-certify (updateSnapshots 'missing'): plan records the eight PNGs were checked against DESIGN.md.
+- AD-14 loop may add session-composing-draft-2-letters, session-idle-pending-draft, session-below-committed-last.
+- R-22 Idle clause duplicates 4.2's placeholder check (keep as baseline).
+- AD-11 check: also tray band bottom = labels top and band height 176.
+- References: 'build-notes.md, CAP-2' without the parenthetical (WordCell states bullet; used non-legal cell keeps hatch 40 %, cell 35 %).
+- Earlier left-for-plan items in passes 3 and 4.
