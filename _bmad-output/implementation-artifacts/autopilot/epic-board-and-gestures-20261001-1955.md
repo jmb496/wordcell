@@ -93,3 +93,17 @@ Question: on desktop, with a whole column selected by tapping its top card, whic
 Open item for the build: the "Here" label must show on phones too, not only on desktop (the review recorded it as an open major; the build should state it and test it on android).
 Tokens: 6.4M input-equivalent (ticket review 97%, orchestrator 1%, other 1%); orchestrator peak context 52k
 Resume: record the answer in the ticket (Notes), commit, rerun `loop.sh epic-board-and-gestures`; the next session starts at the build (Step B).
+
+## 4.7 Tap-select, foot pads and tap-drop — done
+What it adds: the first playable touch gestures. Tap a card to pick up it and the cards below it (they lift and get an outline), then tap another column or its "Here" pad at the foot to drop them there. Tapping the same column again puts them back, and tapping elsewhere lets go. On desktop, hovering a column while holding a selection lights up where the cards would land.
+Ticket review: 5 passes, converged; stopped once for your decision F31 (desktop: tapping a whole column then hovering it lights the Here pad, 2026-10-02, commit 7766b23); the open item "Here must show on phones too" went to the build
+Build: built; commits 45e9fb8
+Code review: thorough (ticket risk medium), 2 passes, converged; 5 fixes applied (tests and one plan note); commits 8bf3dac, 9f469de
+Tests: all passing (test:all, 2026-10-02, second run; the first run hit the known "banner during a scroll after a hide" android layout flake also seen in 4.5, in code this ticket does not touch)
+Ref to fix upstream: none
+Paused: owner decision stop at ticket review, resumed 2026-10-02 19:18 UTC
+Tokens: 7.5M input-equivalent (build 54%, code review 42%, orchestrator 2%, other 1%); orchestrator peak context 57k
+Worth knowing: Undo, Redo, Reload and column or WordCell taps would crash if a WordCell view were open on top of a selection. That can't happen yet, but ticket 4.11 (which adds the view) must handle it. On desktop, a hover highlight may stay on the wrong column if the layout shifts while the mouse is still (cosmetic, unconfirmed). The "banner during a scroll" layout test flaked again under full-suite load and is worth fixing in the refactor sweep (4.13). Two small unapplied review notes are in the review log (a keyboard-click path that ignores tiles, which can't happen today, and a stacking check).
+Close-out docs:
+- DESIGN.md § Column slot / drop-target highlight ← F31: on desktop, with a whole column tap-selected, hovering its empty space or Here pad lights the Here pad with the teal outline and wash (owner, 2026-10-02)
+- SPEC.md (spec-epic-4-board) build-notes CAP-6 "hover classes on cards" ← the build puts them on the column (`[data-column]`), a wording update (technical, from code review)

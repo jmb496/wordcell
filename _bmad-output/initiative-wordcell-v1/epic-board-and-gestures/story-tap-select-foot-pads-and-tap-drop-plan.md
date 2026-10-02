@@ -3,7 +3,7 @@ title: 'Tap-select, foot pads and tap-drop'
 type: 'feature'
 ticket: '7'
 created: '2026-10-02'
-status: 'built'
+status: done
 route: 'full'
 route_source: 'auto'
 baseline_revision: '7766b236fa4bd5efd741c1131e6da07573c8f1b6'
