@@ -125,3 +125,5 @@ Majors per pass: 7, 9, 6, 1, 1. Words 373 → 1337 (over the 2.5x budget from pa
 - Faces keep pointer-events none under the lift class (F26)
 - Pass 4 plan-level list above (hover reaction in App.svelte $effect; last pointer position inside the root; hover computed-style asserts; deselect-before-act spy order; disabled Reload during a held retry; score text as a top-bar outside point; another column's foot counts as hovered; column/WordCell deselect unreachable under a view)
 - Pass 3 list above (pointerType 'mouse' only for hover; capture element; drag with a tail selected keeps it in this ticket; whole-column lift over the bar above)
+
+Owner decision (2026-10-02, spec F31): pass 2 decision-needed item answered: the Here pad gets the teal drop-target outline and wash.

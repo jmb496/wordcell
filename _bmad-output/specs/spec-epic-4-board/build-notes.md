@@ -54,6 +54,12 @@ Spine edits are batched at close-out as in epic 3, so the R1 AD-13 record (retro
   replaced a tap-selection; a following back then clears the restored selection by the normal
   back rule.
 
+## DESIGN.md close-out edits (owner answer 2026-10-02; DESIGN.md is not edited by this epic)
+
+- Column slot / drop-target highlight (F31): on `desktop`, with a whole column tap-selected,
+  hovering that column's empty space or Here pad lights the Here pad with the usual teal
+  drop-target outline and wash.
+
 ## As-built facts that bite (a887379)
 
 - `src/ui/App.svelte` is the epic 3 minimal board: a visible `h1` `WordCell` (a locator in

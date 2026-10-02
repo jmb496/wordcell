@@ -56,3 +56,4 @@ Verify: npm run test:all and npm run test:screens are green (the four e2e/board.
 ## Notes
 
 - Open question: disabled-control pointer events; resolved by the probe default in the Description [ASSUMPTION, build-notes CAP-6].
+- Owner decision 2026-10-02 (spec F31): on `desktop`, with a whole column tap-selected, hovering that column's empty space or Here pad lights the Here pad with the usual teal drop-target outline and wash.
