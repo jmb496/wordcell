@@ -1,6 +1,6 @@
 # Review log — story-tap-select-foot-pads-and-tap-drop.md (ticket 4.7)
 
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7, budget default (2.5x pass 0). Pass 0: HEAD cfe9343, copy story-tap-select-foot-pads-and-tap-drop.passes/pass0.md, 373 words. Intent includes tickets.toml entry 7 fields unknown, interface, tests, owns, risk, references (not copied at pull; fixer adds them to the Description in pass 1).
 
@@ -26,3 +26,32 @@ Words (docs): 1199 (3.21 x pass 0)  |  Snapshot: story-tap-select-foot-pads-and-
 - none
 ### Dropped
 - source column empty space keeps --wc-pan while selected (adversarial stretch) — AD-11 row assigns none only to the foot row; spec scope
+
+## Pass 2 — 2026-10-02
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 9, minor 7 (+3 unapplied, over budget), decision-needed 1  |  Dropped in triage: 1
+Words (docs): 1226 (3.29 x pass 0)  |  Snapshot: story-tap-select-foot-pads-and-tap-drop.passes/pass2.md (fix diff pass2.fix.diff)
+### Applied
+- [major] Inert bullet / AC — "card of a column with canPickUp false" cannot occur in Idle (view.ts canPickUp = idle && …); test belongs to entry 10 → fixer item 1
+- [major] F25 bullet / Controller Vitest — sheet and scrim do not exist until entry 11; no DOM marker → fixer item 2 (default applied)
+- [major] Disabled controls — `button:disabled { pointer-events: none }` drops F3 title tooltips and contradicts build-notes' wrapper → fixer item 3 (default applied)
+- [major] Disabled probe/AC — locator.tap() waits for enabled; cannot test a disabled button → fixer item 4 (default applied)
+- [major] Desktop hover — classes set only on pointerover/pointerout go stale after select/drop/Undo/Redo with a still mouse → fixer item 5 (default applied)
+- [major] AC — source-column empty-space self-drop untested (only Here) → fixer item 6
+- [major] AC android — "desktop side margins" cannot run on android → fixer item 7
+- [major] Tap-drop — entry 6 left the tail-selected capture of non-card column presses to this ticket; unspecified → fixer item 8 (default applied)
+- [major] Inert bullet — "entry 10 adds the view" is entry 11 (wrong cross-reference, raised major by one reviewer) → fixer item 9
+- [minor] foot styling per DESIGN.md Column slot (Here fill, dashed border) → 10; WordCell long-press wording → 11; eight baselines → 12; source placeholder unhoverable → 13; Game-over hover is entry 10's → 14; re-select outline is the tail → 15; F26/other none
+### Default applied (technical)
+- F25 sheet/scrim exclusion — gate the outside-tap deselect on overlays' top entry being tailSelection; sheet and scrim DOM classification left to entry 11
+- disabled fallback — build-notes wrapper (non-button element carrying title receives the press), tooltip kept
+- disabled taps — page.touchscreen.tap / page.mouse.click at the box centre, never locator.tap()
+- hover — controller recomputes hover classes for the last pointer position after every select, re-select, deselect and dispatch
+- tail-selected non-card column press — captured like a card press (setPointerCapture, contextmenu suppressed); tap drops
+### Decision needed (functionality / UX / gameplay)
+- Desktop hover, whole column tap-selected — when the player selects an entire column by tapping and hovers that same column's empty space or Here pad, which element shows the drop-target highlight? DESIGN.md defines it only for a drag (placeholder under the ghosts) and for a partial tail (lowest non-tail card). — proposed default: the Here pad takes the teal outline and wash
+### Unapplied minors (over budget, add words)
+- banner Reload setup (route abort of the dictionary URL) — leave to the plan
+- non-pointer click activation path untested — controller Vitest case in the plan
+- fixture for the canPickUp-false case — moot after item 1
+### Dropped
+- source column 7 cards may leave no empty space (edge) — merged into item 6's fixture choice
