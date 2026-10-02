@@ -96,10 +96,10 @@ for (const colorScheme of ['dark', 'light'] as const) {
       'dark',
     );
     expect(
-      await card.evaluate((element) => {
-        const style = getComputedStyle(element);
-        return { backgroundColor: style.backgroundColor, color: style.color };
-      }),
-    ).toEqual({ backgroundColor: 'rgb(35, 38, 44)', color: 'rgb(243, 238, 228)' });
+      await card.locator('.face').evaluate((element) => getComputedStyle(element).backgroundColor),
+    ).toBe('rgb(35, 38, 44)');
+    expect(
+      await card.locator('.glyph').evaluate((element) => getComputedStyle(element).color),
+    ).toBe('rgb(243, 238, 228)');
   });
 }

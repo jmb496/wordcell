@@ -13,6 +13,10 @@ export const text = Object.freeze({
   newGame: 'New game',
   undo: 'Undo',
   redo: 'Redo',
+  // R-82 top-bar score; negatives with U+2212 (DESIGN.md Typography).
+  score: (n: number) => `Score ${n < 0 ? `\u2212${-n}` : n}`,
+  // Q-06 the QU card's badge (DESIGN.md Components, QU card).
+  quBadge: '\u00d72',
   // §2 Session rejected: one title, one body per reason.
   rejectedTitle: "This saved game can't be opened.",
   rejectedVersionUnknown: (version: number) =>

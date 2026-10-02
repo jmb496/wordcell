@@ -5,8 +5,8 @@ import { text } from './text';
 
 // AD-8 dictionary-failed banner (DESIGN.md Components): shown straight from the store, on the
 // board only. Reload is disabled while a Q-42 in-place retry runs (the banner stays shown then),
-// a UI-level no-op so a tap never reaches retry() outside 'failed'. The epic-4 top bar adds the
-// sticky offset and the AD-11 gesture latch.
+// a UI-level no-op so a tap never reaches retry() outside 'failed'. The Board's banner band holds
+// it (sticky under the top bar); entry 4 adds the AD-11 gesture latch and re-layout.
 function reload(): void {
   void dictionary.retry();
 }
@@ -27,7 +27,7 @@ function reload(): void {
 <style>
   .banner {
     display: flex; align-items: center; justify-content: space-between; gap: 8px;
-    min-height: 44px; margin: 0 0 4px;
+    box-sizing: border-box; height: 44px; padding: 0 4px;
   }
   p {
     margin: 0; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;

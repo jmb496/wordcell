@@ -325,8 +325,9 @@ test.describe('§2 Session rejected', () => {
       if (historyText !== undefined) {
         expect(await stored(page, 'wordcell:history')).toBe(historyText);
         await page.reload();
-        await expect(page.getByText(`Seed ${seed}`, { exact: true })).toBeVisible();
         await expect(page.getByTestId('card-0')).toBeVisible();
+        const reloaded = await page.evaluate(() => window.__wordcell?.current());
+        expect(reloaded?.kind === 'active' && reloaded.session.seed).toBe(seed);
         expect(await stored(page, 'wordcell:history')).toBe(historyText);
       } else {
         expect(await stored(page, 'wordcell:history')).toBeNull();

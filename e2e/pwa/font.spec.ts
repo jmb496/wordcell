@@ -64,9 +64,7 @@ test('AD-18 the build holds the WordCell Serif font once and never as a data: UR
   expect(dataUrls).toEqual([]);
 });
 
-test('AD-18 the placeholder card letters render in WordCell Serif and nothing else does', async ({
-  page,
-}) => {
+test('AD-18 the card letters render in WordCell Serif and nothing else does', async ({ page }) => {
   await page.goto('/');
   const card = page.getByTestId('card-0');
   await expect(card).toBeVisible();
@@ -90,13 +88,13 @@ test('AD-18 the placeholder card letters render in WordCell Serif and nothing el
   };
   const firstFamily = (family: string) => (family.split(',')[0] ?? '').trim().replace(/['"]/g, '');
 
-  const cardStyle = await card.evaluate(style);
+  const cardStyle = await card.locator('.glyph').evaluate(style);
   expect(firstFamily(cardStyle.family)).toBe('WordCell Serif');
   expect(cardStyle.weight).toBe('600');
 
   for (const other of [
     page.getByRole('heading', { name: 'WordCell' }),
-    page.getByText(/^Seed \d+/),
+    page.getByText(/^Score /),
   ]) {
     const { family } = await other.evaluate(style);
     expect(family.replace(/['"]/g, '').startsWith('WordCell Serif')).toBe(false);

@@ -1,9 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { fixture, seedStorage } from './helpers/seed';
 
-test('AD-17 minimal board renders 52 live card elements with AD-14 attributes', async ({
-  page,
-}) => {
+test('AD-17 board renders 52 live card elements with AD-14 attributes', async ({ page }) => {
   await seedStorage(page, { session: fixture('session-idle-fresh.json') });
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'WordCell' })).toBeVisible();
@@ -24,14 +22,14 @@ test('AD-17 minimal board renders 52 live card elements with AD-14 attributes', 
   expect(
     await column1.evaluateAll((els) => els.map((el) => el.getAttribute('data-card-id'))),
   ).toEqual(['24', '6', '49', '30', '25', '20', '48']);
-  await expect(column1).toHaveText(['L', 'D', 'X', 'O', 'M', 'I', 'W']);
   await expect(page.getByTestId('column-8').getByTestId(/^card-\d+$/)).toHaveCount(6);
   for (let cell = 3; cell <= 10; cell++) {
     await expect(page.getByTestId(`wordcell-${cell}`)).toBeVisible();
     await expect(page.getByTestId(`wordcell-${cell}`)).toHaveAccessibleName(`WordCell ${cell}`);
   }
   await expect(page.getByTestId('app')).toHaveCount(0);
-  await expect(page.getByText('Seed 1', { exact: true })).toBeVisible();
+  const current = await page.evaluate(() => window.__wordcell?.current());
+  expect(current?.kind === 'active' && current.session.seed).toBe(1);
   for (const name of ['Undo', 'Redo']) {
     const button = page.getByRole('button', { name, exact: true });
     await expect(button).toBeVisible();
@@ -54,18 +52,37 @@ test('AD-17 WordCell cards render bottom → top as live cell cards', async ({ p
   expect(
     await cell3.evaluateAll((els) => els.map((el) => el.getAttribute('data-card-id'))),
   ).toEqual(['42', '0', '28']);
-  // Visually bottom → top too: card 42 sits lowest on screen.
-  const y = async (id: number) => {
-    const box = await page.getByTestId(`card-${id}`).boundingBox();
-    if (box === null) throw new Error(`card-${id} has no box`);
-    return box.y;
-  };
-  const [y42, y0, y28] = [await y(42), await y(0), await y(28)];
-  expect(y42).toBeGreaterThan(y0);
-  expect(y0).toBeGreaterThan(y28);
+  // Only the top card is visible; the cards beneath stay live but hidden (build-notes CAP-2).
+  await expect(page.getByTestId('card-28')).toBeVisible();
+  await expect(page.getByTestId('card-42')).toBeHidden();
+  await expect(page.getByTestId('card-0')).toBeHidden();
   for (const card of await cell3.all()) {
     await expect(card).toHaveAttribute('data-place', 'cell');
   }
   await expect(page.locator('[data-card-id]')).toHaveCount(52);
   await expect(page.locator('[data-mirror-of]')).toHaveCount(0);
+});
+
+test('R-03 the dealt layout renders top → bottom in every column', async ({ page }) => {
+  test.skip(test.info().project.name !== 'android', 'R-03 runs on android');
+  await seedStorage(page, { session: fixture('session-idle-fresh.json') });
+  await page.goto('/');
+  await expect(page.locator('[data-card-id]')).toHaveCount(52);
+  const expected: Record<number, string[]> = {
+    1: ['L', 'D', 'X', 'O', 'M', 'I', 'W'],
+    2: ['T', 'N', 'P', 'D', 'V', 'I', 'M'],
+    3: ['L', 'QU', 'E', 'J', 'A', 'T', 'A'],
+    4: ['E', 'K', 'G', 'H', 'H', 'I', 'O'],
+    5: ['T', 'S', 'C', 'F', 'S', 'Z'],
+    6: ['O', 'P', 'N', 'A', 'E', 'N'],
+    7: ['Y', 'E', 'U', 'R', 'H', 'F'],
+    8: ['S', 'B', 'R', 'R', 'C', 'U'],
+  };
+  for (const [column, letters] of Object.entries(expected)) {
+    const glyphs = await page
+      .getByTestId(`column-${column}`)
+      .locator('[data-card-id] .glyph')
+      .evaluateAll((els) => els.map((el) => (el.textContent ?? '').toUpperCase()));
+    expect(glyphs, `column ${column}`).toEqual(letters);
+  }
 });
