@@ -1,6 +1,6 @@
 # Review log — story-drag-overlap-targeting-and-drop-into-composing.md (ticket 4.8)
 
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7, budget default (2.5x pass 0). Pass 0: HEAD bc50d5f, copy story-drag-overlap-targeting-and-drop-into-composing.passes/pass0.md, 421 words. Intent includes tickets.toml entry 8 fields unknown, interface, tests, owns (not copied at pull; fixer adds them to the Description in pass 1).
 
@@ -31,3 +31,29 @@ Fixer: all 20 applied; nothing unverified; Success-signal wording shortened to c
 - none
 ### Dropped
 - none (overlapping findings from four lenses merged)
+
+## Pass 2 — 2026-10-02
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 9, minor 5, decision-needed 0  |  Dropped in triage: 1
+Words (docs): 1285 (3.05 x pass 0)  |  Snapshot: story-drag-overlap-targeting-and-drop-into-composing.passes/pass2.md (fix diff pass2.fix.diff)
+Fixer: all 14 applied; nothing unverified; cut ~30 words (baseline phase list, Classes DESIGN.md cite, Lifetime closing clause).
+### Applied
+- [major] Notes guard — samples a 180 ms running animation after touchHold end() (flaky) and cannot read the already-cleared inline transform → fixer item 1 (default applied)
+- [major] End kinds — deselect-then-dispatch with a selection open tested by neither entry 8 nor 9 → item 2 (default applied)
+- [major] AC — whole-column self-drop placeholder reveal/outline unasserted → item 3
+- [major] AC desktop — SPEC CAP-7 "desktop repeats the drop and the cancel": the Q-34 cancel replaced by the WordCell-row release → item 4
+- [major] Drag layer — DESIGN.md dragging lift shadow missing and untested → item 5
+- [major] AC — elementsFromPoint never returns pointer-events: none faces (F26, Card.svelte) → item 6 (default applied)
+- [major] End kinds — no test for pointercancel/lostpointercapture/byBack fly-back or plain cancel() → item 7 (default applied)
+- [major] AC — R-23 S column order only checked on 1-card tails → item 8
+- [major] Classes — existing drop outline CSS is inside the (hover: hover) and (pointer: fine) query; drag highlight look and android visibility unspecified → item 9 (default applied)
+- [minor] items 10–14: "highlighted at release"; "registered column element's"; "D = the highlighted card"; stacking-context ancestor wording; "moved straight up"
+### Default applied (technical)
+- guard: addInitScript wrapper of Element.prototype.animate records the first keyframe at call time; compared with translate of the last touchHold move minus the press point within 1 px
+- selection-open drop: S case, overlays.deselect called once before dispatch
+- drag layer test: one page.evaluate sets the face's pointer-events to auto, asserts it first in elementsFromPoint over the top bar, restores
+- end kinds: S cases per kind
+- drag-target CSS in every media context; android asserts computed outline-width 3px
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- motion.ts "No animation uses it until epic 5" comment — plan file-list detail, no ticket words needed
