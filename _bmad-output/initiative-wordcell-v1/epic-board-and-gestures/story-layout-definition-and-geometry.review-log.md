@@ -1,6 +1,6 @@
 # Review log — story-layout-definition-and-geometry.md (ticket 4.1)
 
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 626b60d, copy story-layout-definition-and-geometry.passes/pass0.md, 231 words.
 Intent carried from tickets.toml entry 1 (not copied by the pull): interface, tests, owns, unknown; pass-1 fixer adds them to Description as 'Interface:', 'Tests:', 'Owns:', 'Unknown:'.
@@ -81,3 +81,24 @@ Fixer: applied 1–7; all numbers recomputed and matched
 - inset-only change in the predicate (outside refs: A-D11 names resize/orientationchange)
 - left/right insets (refs define top/bottom only)
 - anchorScroll across a w change (arithmetic is w-agnostic; first-layout call shape is entry 4's)
+
+## Pass 4 — 2026-10-01
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 0, minor 12, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1437 (6.2 x pass 0; within the 1500 budget)  |  Snapshot: story-layout-definition-and-geometry.passes/pass3.md (no fix)
+
+## Result — converged after 4 passes
+Majors per pass: 7, 4, 2, 0. Decision-needed: none. Technical defaults applied: 8.
+
+Unapplied minors (for the build plan or entry 4):
+- AC fallback order — add "banner shown" to the fallback case to cover banner and tray on opposite sides together (leftover 101 → 57, anchor 161, total 887, delta 0)
+- anchorScroll — no case across a w change (e.g. 412 × 839 → 412 × 700, w 46 → 40: anchor 710 → 601, scrollTop stays 0, range 0–22)
+- AC — how a test asserts a scroll "range" through anchorScroll (e.g. scrollTop past the top, or next.total − innerHeight in the test only)
+- growth branch "grower above, slack below" unpinned (e.g. topBar,banner,columns,tray,wordcells,leftover,actionBar, trayRows 3 → leftover 101, anchor 429 → 477, total 887)
+- cardWidth's first parameter named innerWidth but fed clientWidth; name the TS parameter clientWidth (AD-11 signature kept)
+- fractional insets make heights/anchor fractional; entry 4's bounding-box assertions may need sub-pixel tolerance
+- `?bands=&bands=<valid>` → get() semantics (first value even if empty → default)
+- AC preamble — state bannerShown false and trayRows 1 as defaults for every bands call
+- geometry.ts exports beyond AD-11's "two entry points": note for the spine close-out
+- desktop below 360 px clientWidth: horizontal pan scrollbar reduces clientHeight vs innerHeight (entry 4 corner case)
+- Notes — a mismatch with a derived number: recheck the derivation before stopping
+- tickets.toml entry 4 does not name anchorScroll/availableWidth/cardMetrics (from pass 2; reconcile when entry 4 is pulled)
