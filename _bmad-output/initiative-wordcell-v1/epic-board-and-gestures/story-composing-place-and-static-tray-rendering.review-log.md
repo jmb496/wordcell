@@ -1,6 +1,6 @@
 # Review log — story-composing-place-and-static-tray-rendering.md (ticket 4.3)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1120 words (2.5 x (339 pass-0 words + 109 carried toml words)). Pass 0: HEAD c01b011, copy story-composing-place-and-static-tray-rendering.passes/pass0.md, 339 words.
 
@@ -64,3 +64,29 @@ Fixer: all 15 applied; engine/geometry probes via npx tsx (412: w 46 inner 384; 
 - none
 ### Dropped
 - R-22 test naming (toml tests field names R-22 explicitly); duplicates of items 1, 2, 3, 5, 11.
+
+## Pass 3 — 2026-10-02
+Reviewers: fix-diff, edge-case, adversarial, ref-alignment  |  Findings: major 5, minor 6 applied (word-neutral) + 9 left for the plan, decision-needed 0  |  Dropped in triage: 4 (duplicates)
+Words (docs): 1151 (3.4 x pass 0; 1.03 of budget)  |  Snapshot: story-composing-place-and-static-tray-rendering.passes/pass3.md
+Fixer: all 11 applied; checked DraftView fields, current().session.cursor, dictionary.spec.ts rejected-word flow, deleted placeholder spec waits, targetCellAllowed.
+### Applied
+- [major] Static tiles touch-action/user-select required but untested (rule-coverage AD-11 row, tickets 3, 4) → fixer item 1
+- [major] Invalid-word line parenthetical claims an existing test asserts placement; none does (4.2 hand-over) → 2
+- [major] D-block at the left end (draft.side left) untested; tray order derived in UI → 3
+- [major] AD-14 AC never checks mirrors carry no data-testid (SPEC CAP-2) → 4
+- [major] P4 tests must assert current() and stored wordcell:session (rule-coverage preamble) → 5
+- [minor] Word-line slot / empty control row applies to Place too (F2) → 6
+- [minor] R-42 one-Undo state: 7 selected, 8–10 not legal → 7
+- [minor] Ghost bullet lost its comma → 8
+- [minor] 'move n' → moves[n] → 9
+- [minor] Screens wait: 'ready label' undefined per phase; placeholder spec waited for dictionary, cards, font → 10
+- [minor] AD-11 (F2) AC on 412 and 360 px → 11
+### Default applied (technical)
+- Tray order (arrangement + D per side) → pure UI helper beside the sizing helper, Vitest both sides
+- Screens wait → dictionaryState 'ready', 52 cards visible, font loaded (as the deleted placeholder spec)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- Duplicates of items 1–2 and of the 'compact never rendered' minor.
+### Left for the plan (minors, over budget)
+- 22-tile helper case (compact 4); 0-tile Idle/Game over tray and helper module path; destination/ghost/used/legal/target DOM hooks (class + one computed style); R-73 reload after an action; R-22 test is render support only (R-22 P4 supp. stays with the gesture ticket); in-board mirrors touch-action/user-select; AD-11 (F2) labels-boundary assertion strength; deferred list records compact/clip DOM rendering unverified until epic 5.
