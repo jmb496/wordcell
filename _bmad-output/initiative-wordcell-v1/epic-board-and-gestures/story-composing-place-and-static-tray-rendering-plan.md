@@ -3,7 +3,7 @@ title: 'Composing, Place and static tray rendering'
 type: 'feature'
 ticket: '3'
 created: '2026-10-02'
-status: 'built'
+status: done
 baseline_revision: 'b48f46623148b961e14947295ce5079fcd030d51'
 route: 'full'
 route_source: 'auto'

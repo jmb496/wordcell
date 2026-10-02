@@ -39,3 +39,14 @@ Tokens: 4.1M input-equivalent (build 69%, code review 25%, orchestrator 3%, othe
 Worth knowing: three small items moved on: the card-count badge at exactly 1 or 2 cards is untested (no saved game has such a WordCell; ticket 4.3 should script one); the banner's position under the top bar hard-codes the bar height, which ticket 4.4 (live layout) should derive or record as an exception; one ticket sentence sits under the wrong heading (wording only). Until 4.4, the board can be a few pixels taller than the screen on notched phones. Code review left minors only (e.g. a test labelled AD-17 where AD-3 fits better).
 Close-out docs:
 - build-notes.md CAP-1 / CAP-3 ← bars are content-sized, 44/60 px plus safe-area padding, bands() matches from entry 4 (owner, 2026-10-02; already written into build-notes CAP-1; check DESIGN.md bar section and spine AD-11 bands() wording agree at the retro)
+
+## 4.3 Composing, Place and static tray rendering — done
+What it adds: the board now draws the two in-move states too. While composing a word, the cards being used show as faint "ghosts" where they came from, the destination cards are styled and locked, and a simple (not yet interactive) tray shows the letters in order; while placing, the letter strip and the chosen WordCell's highlight ring show. A new saved game with an empty column was added for tests, plus screenshots of all four board states on phone and desktop.
+Ticket review: 5 passes, converged; nothing needed your input
+Build: built; commits 7ca5c5a
+Code review: thorough (ticket risk medium), 1 pass, converged; 0 fixes applied
+Tests: all passing
+Ref to fix upstream: none
+Tokens: 12.5M input-equivalent (ticket review 59%, build 29%, code review 8%, other 2%, orchestrator 2%); orchestrator peak context 62k
+Worth knowing: the tray's compact mode (8 or more tiles in up to two rows) can't be reached by any saved game yet, so it is only unit-tested; ticket 4.7 (tap-drop) is the first that can reach it and should add a browser check. The "dropped a whole column on another column" placeholder case also waits for the drop tickets (4.7/4.8). The 1- and 2-card count badge from 4.2 is still untested, carried to the retrospective. Code review left minors only: a few highlight-ring and ghost-placement checks could be stricter, column and WordCell lists should be keyed like the tray before animations land, and a small badge overlap on a QU tile inside a tray block.
+Close-out docs: none
