@@ -204,3 +204,24 @@ test('AD-13 win → New game → back leaves the app; no notice (already shown t
   expect((await wc(page))?.wc).toBe(0);
   await expectLeaves(page);
 });
+
+// Epic 6 wires finished to the end sheet and replaces this test.
+test('AD-13 epic 4 leaves DispatchResult finished unwired: Undo then Redo into won on session-won keeps history.length and history.state.wc 0', async ({
+  page,
+}) => {
+  await start(page, { history: 'history-three-records.json', session: 'session-won.json' });
+  await boardReady(page);
+  await expect(notice(page)).toHaveCount(0);
+  const length = await page.evaluate(() => history.length);
+  expect((await wc(page))?.wc).toBe(0);
+  const primary = page.getByTestId('primary-action');
+  const redo = page.getByTestId('redo');
+  await page.getByTestId('undo').click();
+  await expect(primary).not.toHaveText('New game');
+  await expect(redo).toBeEnabled();
+  await redo.click();
+  await expect(primary).toHaveText('New game');
+  await page.waitForFunction(() => document.getAnimations().length === 0);
+  expect(await page.evaluate(() => history.length)).toBe(length);
+  expect((await wc(page))?.wc).toBe(0);
+});
