@@ -1,6 +1,6 @@
 # Review log — story-drag-overlap-targeting-and-drop-into-composing.md (ticket 4.8)
 
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget default (2.5x pass 0). Pass 0: HEAD bc50d5f, copy story-drag-overlap-targeting-and-drop-into-composing.passes/pass0.md, 421 words. Intent includes tickets.toml entry 8 fields unknown, interface, tests, owns (not copied at pull; fixer adds them to the Description in pass 1).
 
@@ -77,3 +77,24 @@ Fixer: all 12 applied; nothing unverified.
 ### Dropped
 - existing entry-7 controller.test.ts selection+drag case needs rewriting — plan detail
 - DESIGN.md/Q-34 cite after "placeholder hidden" — optional, reviewer agreed behaviour is right
+
+## Pass 4 — 2026-10-02
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 9, decision-needed 0  |  Dropped in triage: 4
+Words (docs): 1365 (3.24 x pass 0)  |  Snapshot: story-drag-overlap-targeting-and-drop-into-composing.passes/pass4.md (fix diff pass4.fix.diff)
+Fixer: all 6 applied; nothing unverified.
+### Applied
+- [major] Classes Lifetime / Notes guard — the inline transform is removed at the fly-back's end, so with an unfilled WAAPI animation the tail jumps back to the release point for a frame, and it contradicts the guard and the reduced-motion "clears the transform at once" → fixer item 1 (default applied)
+- [minor] items 2–6 (no added words): "keep their fill"; fly-back S case clears ghost and drag-layer classes at the end; WordCell-row fly-back "storage byte-identical" (SPEC CAP-7); placeholder reveal through the drag-target class (follows the highlight lifetime); "on the last-shown highlight"
+### Default applied (technical)
+- inline transform cleared in the same task as animate() at fly-back start; ghost and drag-layer classes wait for its end or finish(); guard asserts no inline transform while the animation runs
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- deep-equal drafts compare object — plan names it (reviewer agreed)
+- press on a still-flying tail before entry 9 — interim, entry 9 owns finish() on press
+- byBack with no press during a fly-back — plan detail
+- drag layer above the hover peek untestable until entry 12 — no change needed
+### Unapplied minors (over budget, fix adds words)
+- desktop asserts for entry 7 hover classes cleared mid-drag and restored after fly-back; refreshHover() during a fly-back
+- drag ghost pseudo-element sized and placed like Card's .ghost face (w × H, 2 px inset)
+- empty-column k = 0 case names its source card and asserts the placeholder highlight
