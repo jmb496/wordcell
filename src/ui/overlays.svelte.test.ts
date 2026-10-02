@@ -516,7 +516,7 @@ describe('AD-13 overlays epic 4: selection, views and end sheet', () => {
     expect(calls).toEqual([]);
   });
 
-  it('AD-13 openDeferred without a view pushes one entry; with a view on top clears the hover peek, pops the view, then pushes the sheet', async () => {
+  it('AD-13 openDeferred without a view pushes one entry; with a view on top pops the view, then pushes the sheet', async () => {
     const overlays = await load();
     overlays.openDeferred(overlays.deferEndSheetOpen());
     expect(calls).toEqual(['push']);
@@ -558,6 +558,22 @@ describe('AD-13 overlays epic 4: selection, views and end sheet', () => {
     expect(calls).toEqual(['push']);
   });
 
+  it('AD-13 a superseded token is a no-op, not a throw, while a peek or a selection is open', async () => {
+    const overlays = await load();
+    const t1 = overlays.deferEndSheetOpen();
+    overlays.deferEndSheetOpen();
+    overlays.openPeek(5);
+    expect(() => overlays.openDeferred(t1)).not.toThrow();
+    expect(overlays.endSheet).toBe('hidden');
+    expect(calls).toEqual([]);
+    overlays.closePeek();
+    overlays.select(1, 1);
+    calls.length = 0;
+    expect(() => overlays.openDeferred(t1)).not.toThrow();
+    expect(overlays.endSheet).toBe('hidden');
+    expect(calls).toEqual([]);
+  });
+
   it('AD-13 deferEndSheetOpen throws unless the sheet is hidden', async () => {
     const overlays = await load();
     overlays.openDeferred(overlays.deferEndSheetOpen());
@@ -581,7 +597,9 @@ describe('AD-13 overlays epic 4: selection, views and end sheet', () => {
     expect(overlays.viewCell).toBe(6);
     overlays.close('wordcellView');
     // another entry (the selection) open
+    overlays.openHoverPeek(4);
     expect(() => overlays.openDeferred(token)).toThrow(AD13);
+    expect(overlays.hoverPeek).toBe(4);
     overlays.deselect();
     // a modal on top of a view
     overlays.openView(6);

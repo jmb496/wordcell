@@ -76,10 +76,10 @@ deferred:
 
 ## Implementation Notes
 
-- Files touched: `src/ui/overlays.svelte.ts`, `src/ui/overlays.svelte.test.ts` (one new `describe`, 37 cases), `e2e/nav.spec.ts` (one appended android test). Ticket API names kept as-is; added exported types `EndSheetState`, `TailSelection`.
+- Files touched: `src/ui/overlays.svelte.ts`, `src/ui/overlays.svelte.test.ts` (one new `describe`, 43 cases, 49 in file), `e2e/nav.spec.ts` (one appended android test). Ticket API names kept as-is; added exported types `EndSheetState`, `TailSelection`.
 - Error text: range errors read `AD-13 <op>(<args>): … out of range`, state errors `AD-13 <op> while …`; only the prefix is binding.
 - Unreachable but specified branches kept without tests: `peekToSticky` clearing a hover peek (openHoverPeek is a no-op while a peek is open) and `openDeferred(live)` throwing when the sheet is not hidden (a live token implies hidden).
-- Verification: overlays Vitest 43/43; `npm run test:all` passed lint, check, unit, build, `test:e2e:dist`; `test:e2e` had one failure in untouched `e2e/layout.spec.ts:272` (AD-11 banner during a scroll after a hide, `scrollY changes between steps`), a timing flake: it passed 3/3 with `--repeat-each=3` and the implementer's own full run; `test:e2e` and `test:e2e:pwa` then re-ran green (250 + 12 passed).
+- Verification: overlays Vitest 49/49; one complete `npm run test:all` run green (see Auto Run Result). Earlier runs each had one failure in untouched `e2e/layout.spec.ts` (AD-11 banner during a scroll, `scrollY changes between steps`), the deferred timing flake.
 
 ## Plan Change Log
 
@@ -123,7 +123,7 @@ Review-log minors resolved here:
 9. Supersede → one Vitest case.
 10. Tile selection → epic 5 (Never).
 
-Shape: one `removeTop()` used by `close` and `closedByBack` that pops the stack and applies the per-id effect (`tailSelection` → selection null; `wordcellView` → viewCell null; `endSheet` → `collapsed`); `close` adds `nav.pop()`. `onUnfinished` and `resetForNewSession` set `hidden` after their closes. Cells are integers 3–10, columns integers 1–8, counts integers ≥ 1.
+Shape: one `removeTop()` used by `close` and `closedByBack` that pops the stack and applies the per-id effect (`tailSelection` → selection null; `wordcellView` → viewCell null; `endSheet` → `collapsed`); `close` adds `nav.pop()`. `onUnfinished` and `resetForNewSession` set `hidden` after their closes. Cells are integers 3–10, columns integers 1–8, counts integers ≥ 1. `expandEndSheet` checks only collapsed with the stack empty (the ticket's precondition), not an open peek, so a peek can stay open under the expanded sheet while `openDeferred` throws in that case; it has no epic 4 caller, and epic 6's wiring should check the peek.
 
 ## Verification
 
@@ -136,10 +136,10 @@ Shape: one `removeTop()` used by `close` and `closedByBack` that pops the stack 
 - **Summary:** `src/ui/overlays.svelte.ts` now owns the tail selection, sticky WordCell view, peek, hover peek and the end sheet's `hidden | collapsed | expanded` with the deferred-open token (AD-13, CAP-5); `DispatchResult` finished stays unwired.
 - **Files:**
   - `src/ui/overlays.svelte.ts` -- new ids, state, operations; shared `removeTop()` per-id effects; widened `resetForNewSession`.
-  - `src/ui/overlays.svelte.test.ts` -- 42 new AD-13 cases (48 in file) on the stubbed nav.
+  - `src/ui/overlays.svelte.test.ts` -- 43 new AD-13 cases (49 in file) on the stubbed nav.
   - `e2e/nav.spec.ts` -- appended android test: Undo then Redo into won keeps `history.length` and `wc` 0.
 - **Review-log minors:** all 10 resolved in Design Notes (1, 2, 4, 5, 8, 9 implemented and tested; 3, 6, 7, 10 recorded as boundaries).
 - **Review findings:** 20 (thorough: blind-hunter, edge-case-hunter, verification-gap, intent-alignment). Patched 5 low (new test cases, CAP-5 comment wording, epic 6 note on the e2e test, a fresh `test:all`). Rejected 15 with reasons in the Review Triage Log (unreachable hover/peek-under-modal paths with no epic 4 caller; choices the ticket's review log delegated; plan bookkeeping). Deferred 1: the pre-existing layout.spec scroll flake.
 - **Follow-up review recommended:** false (patched: high 0, medium 0, low 5).
-- **Verification:** `npm run test:all` after patches: lint, check, unit (1791 passed), build, `test:e2e:dist` (14 passed) green; `test:e2e` 1 failure in untouched `e2e/layout.spec.ts:250` (deferred flake); standalone re-run `test:e2e` 250 passed, `test:e2e:pwa` 12 passed.
+- **Verification:** one complete `npm run test:all` run after the review-loop fixes, green on the first attempt (exit 0): lint, check, unit (1792 passed), build with size budget, `test:e2e:dist` (14 passed), `test:e2e` (250 passed), `test:e2e:pwa` (12 passed).
 - **Residual risks:** openHoverPeek is a no-op under historyNotice/resetConfirm/expanded endSheet (Design Note 4, a choice the review log delegated); an already-open hover peek is not cleared when a modal or the sheet opens over it (no epic 4 caller can reach that; epic 6 should check when wiring the keyboard and the end sheet).
