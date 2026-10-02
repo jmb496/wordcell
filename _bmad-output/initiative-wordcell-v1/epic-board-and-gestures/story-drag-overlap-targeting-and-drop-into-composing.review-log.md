@@ -1,6 +1,6 @@
 # Review log — story-drag-overlap-targeting-and-drop-into-composing.md (ticket 4.8)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget default (2.5x pass 0). Pass 0: HEAD bc50d5f, copy story-drag-overlap-targeting-and-drop-into-composing.passes/pass0.md, 421 words. Intent includes tickets.toml entry 8 fields unknown, interface, tests, owns (not copied at pull; fixer adds them to the Description in pass 1).
 
@@ -57,3 +57,23 @@ Fixer: all 14 applied; nothing unverified; cut ~30 words (baseline phase list, C
 - none
 ### Dropped
 - motion.ts "No animation uses it until epic 5" comment — plan file-list detail, no ticket words needed
+
+## Pass 3 — 2026-10-02
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 4, minor 9, decision-needed 0  |  Dropped in triage: 2
+Words (docs): 1351 (3.21 x pass 0)  |  Snapshot: story-drag-overlap-targeting-and-drop-into-composing.passes/pass3.md (fix diff pass3.fix.diff)
+Fixer: all 12 applied; nothing unverified.
+### Applied
+- [major] Classes/Drag layer — drag-layer class (z-index, lift shadow) has no lifetime and no removal assert → fixer item 1
+- [major] Targeting — "source suppressed" readable as candidate exclusion (runner-up wins) vs highlighted null (AD-12); no pickTarget case separates them → item 2
+- [major] Fly-back — gate counting read as reduced-motion only; normal fly-back gate enter/leave untested (F13, build-notes CAP-7) → item 3
+- [major] Classes — ghosts drop SPEC CAP-7's pseudo-element on the slot wrappers; Card.svelte's .ghost .face would restyle the dragged faces → item 4 (default applied)
+- [minor] items 5–13: outline asserted on column 3's bottom card face; elementsFromPoint first hit inside the face, on the held column-5 drag moved over the top bar; "between 0 and 25 %"; k = 0 over column 1's placeholder; cut the duplicate drop clause into the Success-signal case; Interface names cancel() (finishes a fly-back with no active press); transform cleared before a drop dispatches; stacking-context wording
+### Default applied (technical)
+- ghost: pseudo-element of a controller class on the slot wrappers, not Card's .ghost; P4 asserts the dragged face keeps its fill
+- top-bar probe: the column 5 held drag moved up over the top bar
+- cancel() finishes a running fly-back even with no active press (entry 8); entry 9 adds only the act() P4
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- existing entry-7 controller.test.ts selection+drag case needs rewriting — plan detail
+- DESIGN.md/Q-34 cite after "placeholder hidden" — optional, reviewer agreed behaviour is right
