@@ -1,6 +1,6 @@
 # Review loop — ticket 4.7 build (code mode, 7766b23..HEAD)
 
-State: pass 1: done
+State: pass 2: done
 
 Target: commit range 7766b23..HEAD (diff `4-7-build.passes/pass0.diff`)
 Intent: `_bmad-output/initiative-wordcell-v1/epic-board-and-gestures/story-tap-select-foot-pads-and-tap-drop-plan.md`
@@ -31,3 +31,25 @@ Snapshot: tree de6d0698ce98a06dfb08d6d642e060fe2b176c1a (fix diff `4-7-build.pas
 - 4: P4 asserts lifted face and outline z-index (3) > top bar z-index (2).
 - 5: plan Design Notes bullet reworded (order checked by code review only).
 - Verified: `npx playwright test e2e/tap.spec.ts` 30 passed; orchestrator re-ran `npm test` (1877 passed), `npm run lint` clean, `npm run check` 0 errors.
+
+## Pass 2 — 2026-10-02
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 0, minor 2, decision-needed 0  |  Dropped in triage: 0
+Snapshot: tree de6d0698ce98a06dfb08d6d642e060fe2b176c1a (no fix pass)
+### Applied
+- none (converged)
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Result — converged after 2 passes
+
+Majors per pass: 2, 0. Technical defaults applied: 2. Final state: `npm test` 1877 passed, `npm run lint` clean, `npm run check` 0 errors; `npx playwright test e2e/tap.spec.ts` 30 passed (pass 1 fixer).
+
+Unapplied minors:
+- src/ui/gestures/controller.ts:304 — the non-pointer `click` F25 path accepts only `hit.kind === 'outside'`, while `tapAction` treats `tile` like outside; default: accept `tile` too and extend the detail-0 controller test (unreachable today: tiles are not focusable and no tiles exist in Idle).
+- e2e/tap.spec.ts:483-487 — the P4 z-index assertion compares local computed z-index only; default: also assert no ancestor up to `.board` creates a stacking context.
+- build-notes CAP-6 says hover classes go on column cards; the build uses `[data-column]` (plan Design Notes) — reword at epic close-out.
+- WordCell tap / Undo / Redo / banner Reload call `overlays.deselect()`, which throws with a view above a selection — unreachable until ticket 4.11 adds `openView`; carry into 4.11 as a precondition.
