@@ -1,6 +1,6 @@
 # Review log — story-pointer-controller-core-and-cancel-wiring.md (ticket 4.6)
 
-State: pass 5: done
+State: pass 6: done
 
 Mode: docs, thorough, max 7, budget default (2.5x pass 0). Pass 0: HEAD 6432e75, copy story-pointer-controller-core-and-cancel-wiring.passes/pass0.md, 409 words. Intent includes tickets.toml entry 6 fields interface, tests, owns, unknown (not copied at pull; fixer adds them to the Description in pass 1).
 
@@ -93,3 +93,37 @@ Fixer: applied items 1–6; no commands added.
 - none
 ### Dropped
 - none
+
+## Pass 6 — 2026-10-02 14:25
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 1, minor 23, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+Words (docs): 1254 (3.07 x pass 0), no fix pass  |  Snapshot: story-pointer-controller-core-and-cancel-wiring.passes/pass5.md
+### Open (not fixed; stopping rule)
+- [major] classify / End / cancel bullets, AC S classify list — the 400 ms long-press timer is never said to be cleared on a drag latch or on any press end (pointerup, pointercancel, lostpointercapture, cancel(), same-id pointerdown, detach), and no S case covers it (EXPERIENCE.md Pointer thresholds "once a drag starts, the long-press timer is cancelled"; build-notes CAP-4 "cleared on threshold crossing, release or cancel"; SPEC CAP-4 lists the timer among what cancel ends). Proposed: every press end and drag latch calls clearTimer; S cases: WordCell press latching drag at 300 ms held past 400 ms stays drag; WordCell press cancel()ed at 200 ms, advancing time fires nothing (clearTimer spy).
+### Decision needed (functionality / UX / gameplay)
+- none
+
+## Result — converged after 6 passes
+open major: long-press timer not cleared on drag latch / press end, and untested (pass 6; see Open above) — fold into the build plan.
+
+Majors per pass: 8, 7, 5, 3, 1, 1. Words 409 → 1254 (over the 2.5x budget from pass 2; fixes kept terse). Technical defaults applied: 21. Decision-needed: 0.
+
+### Unapplied minors (for the build plan or a later loop)
+- Press bullet: the "(AD-11's sole second-pointer exception)" parenthetical cites no ref (spine AD-11 is layout); recite as SPEC CAP-4 "preventDefault()s contextmenu for a press it captured" / rule-coverage AD-11 row, a ticket default that touches no pointer events.
+- End bullet: say a dead press's events are ignored except that its pointerup/pointercancel end contextmenu suppression (so a stale pointercancel/lostpointercapture cannot close a peek).
+- Contextmenu suppression after cancel()/lostpointercapture: bound it (one waiting slot cleared by that pointer's pointerup/pointercancel, the next captured press, or detach); S cases for the lostpointercapture end and for suppression stopping at pointerup.
+- cancel(): release capture only while the element holds it (hasPointerCapture); S case with the captured element detached mid-press.
+- Enabled-button check: read closest('button:enabled') on the elementFromPoint result; null/outside-root result handling.
+- Tray D-block mirrors (no data-place): resolve as a tray tile (captured, inert) or explicitly outside.
+- AD-12 scan: also fail on shorthand {onclick}/{onaction}/{ondismiss}/{onscrim} and spreads.
+- F24 case (b): "no nav call after openView"; define "hide" in S as running the store's before-hide callbacks, not a direct cancel().
+- Non-card column presses: uncaptured whatever the selection until entry 7.
+- act(): the returned handler throws when called with no controller (wrapping never throws) and forwards its arguments; act tests use vi.resetModules + dynamic import, no reset export.
+- Run the Notes probe on the desktop project too (side margins).
+- Lost touch ends: record that touch presses rely on implicit capture, pointercancel and before-hide cancel().
+- AD-16 Board half: entry 9's hidePage mid-drag test should carry the AD-16 id (record when entry 9 is hardened).
+- AD-11 P4: note the on-device long-press contextmenu check as `unverified`, recorded for epic 7.
+- AD-12 DOM-wiring P4 (rule-coverage row 100): name the column-card contextmenu touchHold case as that evidence or hand it to entry 7.
+- Tray-tile P4: name session-composing; the contextmenu defaultPrevented assertion is the discriminating half.
+- classify "399 ms not" is untestable with an injected timer: assert setTimer(…, 400) only for WordCell presses and longPress only after the callback fires.
+- Uncaptured press with a lost end from a different pointerType (pointerleave / other-type pointerdown recovery) — stretch.
+- Desktop-touch contextmenu-on-release — record as unverified for epic 7 — stretch.
