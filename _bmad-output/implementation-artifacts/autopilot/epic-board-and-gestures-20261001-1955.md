@@ -107,3 +107,7 @@ Worth knowing: Undo, Redo, Reload and column or WordCell taps would crash if a W
 Close-out docs:
 - DESIGN.md § Column slot / drop-target highlight ← F31: on desktop, with a whole column tap-selected, hovering its empty space or Here pad lights the Here pad with the teal outline and wash (owner, 2026-10-02)
 - SPEC.md (spec-epic-4-board) build-notes CAP-6 "hover classes on cards" ← the build puts them on the column (`[data-column]`), a wording update (technical, from code review)
+
+## Stopped — usage limit
+
+Ticket 4.8, Step B (build), 2026-10-02 17:21 EDT: "You've hit your session limit · resets 7pm (America/New_York)". The build's own files are left uncommitted in the tree for bmad-build-auto's resume (plan `story-drag-overlap-targeting-and-drop-into-composing-plan.md` at `in-review`; `src/ui/gestures/{targeting,drop-target}.ts` with tests, `e2e/drag.spec.ts`, edits to `controller.ts`, `controller.test.ts`, `Column.svelte`, `motion.ts`). Resume: rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-board-and-gestures`; Setup 2's exception resumes Step B.
