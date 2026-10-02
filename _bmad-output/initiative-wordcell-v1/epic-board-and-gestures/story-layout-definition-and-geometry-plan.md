@@ -3,7 +3,7 @@ title: 'Layout definition and geometry (AD-11 pure core)'
 type: 'feature'
 ticket: '1'
 created: '2026-10-01'
-status: 'built'
+status: done
 baseline_revision: 'c3e49c1d4434448ca4a60f6eb9b47514d0ca85f8'
 route: 'full'
 route_source: 'auto'
