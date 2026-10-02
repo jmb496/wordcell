@@ -1,6 +1,6 @@
 # Review log — story-board-render-in-idle-and-game-over-with-bars.md (ticket 4.2)
 
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 88bf030, copy story-board-render-in-idle-and-game-over-with-bars.passes/pass0.md, 361 words.
 Intent carried from tickets.toml entry 2 (not copied by the pull): verify, unknown, interface, tests, owns, references; pass-1 fixer adds interface, tests, owns to Description as 'Interface:', 'Tests:', 'Owns:' (verify, unknown, references are already in AC, Notes, References).
@@ -79,3 +79,20 @@ Fixer: 6 majors + 3 zero-word minors applied; redundancy cut to stay under budge
 - none
 ### Dropped
 - Plan-level notes listed above; duplicates.
+
+## Pass 4 — 2026-10-01 22:15
+Reviewers: fix-diff, edge-case, adversarial, ref-alignment (late-pass bar)  |  Findings: major 3, minor 3 (zero-word), decision-needed 0  |  Dropped in triage: 8 (plan-level: e2e literals vs src imports, interim banner scroll, word-line position, shared newGame, state screenshots, desktop scrollbar, active-branch root naming; duplicates)
+Words (docs): 1496 (4.1 x pass 0; budget 1500)  |  Snapshot: story-board-render-in-idle-and-game-over-with-bars.passes/pass4.md
+Fixer: 3 majors + 3 zero-word minors applied; redundant restatements cut to pay for item 1.
+### Applied
+- [major] Board/Mount inputs — bars' env() padding vs bands() heights with zero insets: box model unspecified; on real-inset Android devices bars squeeze or overflow (shipped behaviour) → fixer item 1
+- [major] Card hooks — count badge `.badge` collides with the QU ×2 badge inside wordcell-8 on session-won (gating render-rule test) → item 2
+- [major] App — wordcell-<n> role unspecified; a generic div drops the accessible name the kept smoke check asserts (gating) → item 3
+### Default applied (technical)
+- Bar band heights are content-box; env() padding adds on top; leftover may be off on real-inset devices until entry 4's probe
+- Count-badge hook `.count`
+- wordcell-<n> role="group"
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- Plan-level items listed above.
