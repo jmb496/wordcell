@@ -1,6 +1,6 @@
 # Review log — story-pointer-controller-core-and-cancel-wiring.md (ticket 4.6)
 
-State: pass 4: done
+State: pass 5: done
 
 Mode: docs, thorough, max 7, budget default (2.5x pass 0). Pass 0: HEAD 6432e75, copy story-pointer-controller-core-and-cancel-wiring.passes/pass0.md, 409 words. Intent includes tickets.toml entry 6 fields interface, tests, owns, unknown (not copied at pull; fixer adds them to the Description in pass 1).
 
@@ -75,6 +75,20 @@ Fixer: applied items 1–7; also shortened the Owns bullet (refers to Interface)
 - [minor] zero/near-zero-word fixes: scan every src/ui/**/*.svelte except Dialog, BlockingMessage, Halted (replaces the file list); restore "without byBack" on the gate-balance clause; "(Board) root" → App's active-branch `<main>`; F24 (a) "later pointerup dispatches nothing" → "later pointerup is ignored" → fixer items 4–7
 ### Default applied (technical)
 - items 1–3
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Pass 5 — 2026-10-02 14:00
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 1, minor 20, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+Words (docs): 1254 (3.07 x pass 0)  |  Snapshot: story-pointer-controller-core-and-cancel-wiring.passes/pass5.md (fix diff pass5.fix.diff)
+Fixer: applied items 1–6; no commands added.
+### Applied
+- [major] Press bullet / AC P4 AD-11 — how a contextmenu is matched to the captured (or cancelled, still-held) press is unstated; the gating P4 dispatches a synthetic contextmenu with no pointerId, and matching any press brushes the second-pointer rule → the root's contextmenu listener preventDefaults whenever a captured press is active or a cancelled/lostpointercapture-ended captured press awaits its pointerup/pointercancel, with no pointerId or target matching (the one sanctioned exception to the second-pointer rule, AD-11) → fixer item 1 (default applied)
+- [minor] zero/near-zero-word fixes: End bullet "ignored" scoped to gestures (its pointerup/pointercancel still ends contextmenu suppression); peek S case includes lostpointercapture; cancel S cases cover cancel({ byBack: true }) too; drop "Halted exempt" from the S act() item (the scan proves it); the AD-16 id goes on the '§2 rejected' test, the clock-resume assertion on 'R-73 AD-17 hidePage alone' → fixer items 2–6
+### Default applied (technical)
+- item 1
 ### Decision needed (functionality / UX / gameplay)
 - none
 ### Dropped
