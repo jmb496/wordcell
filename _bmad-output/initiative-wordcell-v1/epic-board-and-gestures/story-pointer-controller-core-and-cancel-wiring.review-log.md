@@ -1,6 +1,6 @@
 # Review log — story-pointer-controller-core-and-cancel-wiring.md (ticket 4.6)
 
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget default (2.5x pass 0). Pass 0: HEAD 6432e75, copy story-pointer-controller-core-and-cancel-wiring.passes/pass0.md, 409 words. Intent includes tickets.toml entry 6 fields interface, tests, owns, unknown (not copied at pull; fixer adds them to the Description in pass 1).
 
@@ -63,3 +63,19 @@ Fixer: applied items 1–9 with offsetting wording cuts; no commands added.
 - none
 ### Dropped
 - fix-diff: log said "(handled in entry 11)" where the ticket says "(its deselect is entry 7's)" — log corrected; ticket right
+
+## Pass 4 — 2026-10-02 13:35
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 3, minor 20, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+Words (docs): 1215 (2.97 x pass 0)  |  Snapshot: story-pointer-controller-core-and-cancel-wiring.passes/pass4.md (fix diff pass4.fix.diff)
+Fixer: applied items 1–7; also shortened the Owns bullet (refers to Interface) and the End bullet wording; no commands added.
+### Applied
+- [major] cancel bullet — pass 3 moved peek closing to entry 11, whose tickets.toml entry never lists it, so SPEC CAP-4's peek close on cancel()/pointercancel/lostpointercapture has no owner; overlays.openPeek already exists (entry 5) → keep it here (closePeek only when open) with an S case; reverses pass 3 item 5 → fixer item 1 (default applied)
+- [major] End/cancel bullets — pointerId lifecycle contradicts itself ("later terminal events ignored" unbounded; dead id's events dropped vs a same-id pointerdown starting a press; a lost pointerup on an uncaptured mouse press stalls the controller and gate) → one rule: ignoring is scoped to the ended/cancelled press until the next pointerdown of that id; a same-id pointerdown during an active press ends the stale press (one leave, no command) and starts the new one; S cases → fixer item 2 (default applied)
+- [major] Press/cancel bullets — after cancel() of a captured press with the finger still down (second-finger Undo, back, hide), a later long-press contextmenu is no longer suppressed (AD-11) → keep contextmenu preventDefaulted for that cancelled pointer until its pointerup/pointercancel; S case → fixer item 3 (default applied)
+- [minor] zero/near-zero-word fixes: scan every src/ui/**/*.svelte except Dialog, BlockingMessage, Halted (replaces the file list); restore "without byBack" on the gate-balance clause; "(Board) root" → App's active-branch `<main>`; F24 (a) "later pointerup dispatches nothing" → "later pointerup is ignored" → fixer items 4–7
+### Default applied (technical)
+- items 1–3
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
