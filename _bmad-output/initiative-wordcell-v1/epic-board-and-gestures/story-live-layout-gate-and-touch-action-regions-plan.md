@@ -188,8 +188,8 @@ if (target !== y) { gate.ignoreNextScroll(); deps.window.scrollTo({ top: target 
 **Summary.** Ticket 4.4 built: the AD-11 gate (`src/ui/gestures/gate.ts`), the live layout (`src/ui/layout/layout.svelte.ts`) created in `main.ts` and passed App → Board, the F20 gate-latched banner, the DESIGN.md Scrolling touch-action/user-select regions (`--wc-pan`), `html { scrollbar-gutter: stable; overflow-anchor: none }`, the `touchHold` e2e helper, and the AD-11 Vitest and Playwright cases.
 
 **Files changed.**
-- `src/ui/gestures/gate.ts`, `gate.test.ts` — gate and 15 S cases.
-- `src/ui/layout/layout.svelte.ts`, `layout.svelte.test.ts` — live layout, `browserLayoutDeps()`, 16 cases.
+- `src/ui/gestures/gate.ts`, `gate.test.ts` — gate and its S cases.
+- `src/ui/layout/layout.svelte.ts`, `layout.svelte.test.ts` — live layout, `browserLayoutDeps()` and its fake-deps cases.
 - `src/main.ts` — gate, `registerBeforeHide(scrollReset)`, layout, `mount(App, { props: { layout } })`.
 - `src/ui/App.svelte`, `Board.svelte`, `DictionaryBanner.svelte` — layout prop, layout getters and band order, banner latch.
 - `src/ui/TopBar.svelte`, `ActionBar.svelte`, `Column.svelte`, `Tray.svelte`, `WordCellRow.svelte`, `Card.svelte`, `app.css` — touch-action/user-select regions, html gutter and anchoring.

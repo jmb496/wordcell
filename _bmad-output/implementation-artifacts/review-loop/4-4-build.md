@@ -1,5 +1,5 @@
 # Review loop — ticket 4.4 build (code mode, dfa68a1..0fffa6c)
-State: pass 2: done
+State: pass 3: done
 
 Target: `_bmad-output/implementation-artifacts/review-loop/4-4-build.passes/pass0.diff` (git diff dfa68a1..0fffa6c)
 Intent: `_bmad-output/initiative-wordcell-v1/epic-board-and-gestures/story-live-layout-gate-and-touch-action-regions-plan.md`
@@ -42,3 +42,17 @@ Note: majors rose 2 → 3, but not because the refs are unclear. The pass-1 fixe
 - none
 ### Dropped
 - Edge-case reviewer's same-frame finding: a duplicate of the verification-gap reviewer's (merged into item 7).
+
+## Pass 3 — 2026-10-02
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 1, minor 2, decision-needed 0  |  Dropped in triage: 0
+Snapshot: tree a78686abd3270c8bc6c3f2e90c92c7a640017901  |  Fix: items 1–3 applied, test and plan only. Each new case fails with its guarded behaviour broken (fixer: stale `applied`, stale `last`, BAND_ORDER passed to bands()). Orchestrator: npm test 39 files, 1749 passed; lint clean; check 0 errors
+### Applied
+- [major] layout.svelte.test.ts — nothing chains two relayouts where the second depends on stored state. Untested: `applied` updated after each relayout (bands re-lay against the last applied inputs, anchor from the last applied result), and `last` updated on a w recompute. Production code is correct (layout.svelte.ts:166-174) → fixer item 1 (default applied: banner show → hide at 412 × 780; 915 → 779 → 719 shrinks)
+- [minor] layout.svelte.test.ts — `?bands=` order not shown to feed `bands()`/`anchorScroll` → fixer item 2
+- [minor] plan Auto Run Result > Files changed — stale case counts (15/16) → fixer item 3
+### Default applied (technical)
+- Two new chained-relayout Vitest cases and a `?bands=` case, as above.
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none

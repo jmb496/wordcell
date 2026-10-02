@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createGate } from '../gestures/gate';
-import { BAND_ORDER } from './bands';
+import { BAND_ORDER, parseBandsParam } from './bands';
 import { createLayout, type Layout, type LayoutDeps } from './layout.svelte';
 
 // AD-11 live layout with fake deps and a real gate on fake frames/timers. Server-compiled runes:
@@ -18,6 +18,7 @@ type Viewport = {
   hoverFine?: boolean;
   scrollY?: number;
   banner?: boolean;
+  search?: string;
 };
 
 function setup(viewport: Viewport, initialPadding = { paddingTop: '0px', paddingBottom: '0px' }) {
@@ -34,6 +35,7 @@ function setup(viewport: Viewport, initialPadding = { paddingTop: '0px', padding
     hoverFine: false,
     scrollY: 0,
     banner: false,
+    search: '',
     ...viewport,
   };
   let layout: Layout | undefined;
@@ -57,7 +59,7 @@ function setup(viewport: Viewport, initialPadding = { paddingTop: '0px', padding
       }
       return v.scrollY;
     },
-    location: { search: '' },
+    location: { search: v.search },
     document: {
       documentElement: {
         get clientWidth() {
@@ -338,6 +340,46 @@ describe('AD-11 live layout', () => {
     expect(t.layout.w).toBe(43);
     expect(t.layout.heights.leftover).toBe(6);
     expect(t.calls).toEqual(['ignoreNextScroll', 'scrollTo 0']);
+  });
+
+  it('AD-11 a banner hide after a show re-lays from the last applied inputs: 412 × 780 writes 2, then 0', () => {
+    const t = setup({ ...PIXEL_7, innerHeight: 780 });
+    t.bannerChange(true);
+    t.frame();
+    t.bannerChange(false);
+    t.frame();
+    expect(t.layout.bannerShown).toBe(false);
+    expect(t.layout.heights.leftover).toBe(42);
+    expect(t.calls).toEqual(['ignoreNextScroll', 'scrollTo 2', 'ignoreNextScroll', 'scrollTo 0']);
+  });
+
+  it('AD-11 a w recompute updates last: 412 × 915 → 779 recomputes (w 46), then 779 → 719 keeps w 46', () => {
+    // 915 → 779 is 136 px (A-D11 holds); 779 → 719 is 60 px from the new last (a stale 915 gives w 40).
+    const t = setup({ ...PIXEL_7, innerHeight: 915 });
+    const metrics0 = t.layout.metrics;
+    t.v.innerHeight = 779;
+    t.resize();
+    t.frame();
+    expect(t.layout.w).toBe(46);
+    expect(t.layout.metrics).not.toBe(metrics0);
+    const metrics = t.layout.metrics;
+    t.v.innerHeight = 719;
+    t.resize();
+    t.frame();
+    expect(t.layout.w).toBe(46);
+    expect(t.layout.metrics).toBe(metrics);
+    expect(t.layout.heights.leftover).toBe(0);
+  });
+
+  it('AD-11 a ?bands= permutation sets bandOrder and drives the relayout: leftover below the anchor, banner show at 412 × 780 writes 44', () => {
+    const search = '?bands=topBar,banner,columns,tray,wordcells,leftover,actionBar';
+    const t = setup({ ...PIXEL_7, innerHeight: 780, search });
+    expect(t.layout.bandOrder).toEqual(parseBandsParam(new URLSearchParams(search)));
+    t.bannerChange(true);
+    t.frame();
+    // The banner sits above the anchor and the slack below it, so nothing absorbs the 44 px.
+    expect(t.layout.heights.leftover).toBe(42);
+    expect(t.calls).toEqual(['ignoreNextScroll', 'scrollTo 44']);
   });
 
   it('AD-11 a relayout whose clamped target equals scrollY writes nothing', () => {
