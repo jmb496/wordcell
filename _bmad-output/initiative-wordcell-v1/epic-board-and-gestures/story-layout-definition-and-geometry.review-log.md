@@ -1,6 +1,6 @@
 # Review log — story-layout-definition-and-geometry.md (ticket 4.1)
 
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 626b60d, copy story-layout-definition-and-geometry.passes/pass0.md, 231 words.
 Intent carried from tickets.toml entry 1 (not copied by the pull): interface, tests, owns, unknown; pass-1 fixer adds them to Description as 'Interface:', 'Tests:', 'Owns:', 'Unknown:'.
@@ -35,3 +35,30 @@ Fixer: applied 1–14; all derived numbers recomputed and matched; pinned fallba
 - shouldRecomputeWidth(last, next) with |Δh| ≥ 80 → true
 ### Dropped
 - Rename cardWidth's first parameter to availableViewportWidth — build-notes keeps AD-11's signature on purpose
+
+## Pass 2 — 2026-10-01
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 4, minor 14, decision-needed 0  |  Dropped in triage: 1 (about 6 duplicates merged)
+Words (docs): 1411 (6.1 x pass 0)  |  Snapshot: story-layout-definition-and-geometry.passes/pass2.md
+Fixer: applied 1–13; all derived numbers recomputed and matched
+### Applied
+- [major] AC — no inset case where the insets decide the height-derived w (the Notes unknown untested) → fixer item 1
+- [major] Description / Owns — available-width (gutter) formula not exported; entry 4's pan-x pan-y "board wider" check would re-derive it → fixer item 2
+- [major] AC — bands() `heights` record never pinned; a wrong per-band split passes → fixer item 3
+- [major] AC — anchorScroll upper clamp bound unexercised → fixer item 4
+- [minor] anchorScroll — which innerHeight (new) → fixer item 5
+- [minor] AC — `sum` is not a returned field; define it → fixer item 6
+- [minor] AC — hoverFine default false → fixer item 6
+- [minor] Description ¶1 — reads as bands() returning the helpers → fixer item 7
+- [minor] shouldRecomputeWidth — `last` holds window.innerWidth, not clientWidth → fixer item 8
+- [minor] AC — 1280 × 720 hide "clamped" and 360 "floor" mislabelled; desktop-gutter floor case → fixer item 9
+- [minor] trayRows — no input validation (rule 6) → fixer item 10
+- [minor] Owns — "every geometry formula" wider than provided (tile width, tiles/cards per row are entries 3/11) → fixer item 11
+- [minor] AC — trayGrowth(2, 61) 0; default-order tray exhausting leftover; banner + tray together → fixer item 12
+- [minor] AC — non-unit band id (footRow) throws → fixer item 13
+### Default applied (technical)
+- availableWidth(clientWidth, hoverFine) exported from geometry.ts
+- trayRows unvalidated (type and callers guarantee it; rule 6 forbids guards)
+### Dropped
+- 1905 × 950 with 24/24 insets heights case — wrong (insets drop w below 70: 941 + 48 > 950); 412 × 915 24/24 used instead
+### Unapplied (outside the target)
+- tickets.toml entry 4 still describes the clamp as layout.svelte.ts's own work and does not name anchorScroll/availableWidth/cardMetrics; reconcile when entry 4 is pulled
