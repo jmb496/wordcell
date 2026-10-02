@@ -1,6 +1,6 @@
 # Review log — story-board-render-in-idle-and-game-over-with-bars.md (ticket 4.2)
 
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 88bf030, copy story-board-render-in-idle-and-game-over-with-bars.passes/pass0.md, 361 words.
 Intent carried from tickets.toml entry 2 (not copied by the pull): verify, unknown, interface, tests, owns, references; pass-1 fixer adds interface, tests, owns to Description as 'Interface:', 'Tests:', 'Owns:' (verify, unknown, references are already in AC, Notes, References).
@@ -33,3 +33,26 @@ Fixer: all 16 items applied; --pass-with-no-tests verified against Playwright 1.
 - none
 ### Dropped
 - Duplicates across lenses merged into items 1–11; "used/target states duplicated with entry 3" folded into minor 13.
+
+## Pass 2 — 2026-10-01 21:25
+Reviewers: fix-diff, edge-case, adversarial, ref-alignment  |  Findings: major 8, minor 9, decision-needed 0  |  Dropped in triage: 4 (duplicates merged; AD-11 'hard-coded template' stretch kept as minor rename)
+Words (docs): 1490 (4.1 x pass 0; at the 1500 budget)  |  Snapshot: story-board-render-in-idle-and-game-over-with-bars.passes/pass2.md
+Fixer: all 14 items applied; fixture values (scores 0/0/9→15,15,15,24/355/−530, enablement, badges 24/21/7) checked with npx tsx against the engine; labels track is 16 px per geometry.ts.
+### Applied
+- [major] WordCellRow — 'visually hidden' ambiguous with h1 sr-only; non-top cell cards need a mechanism; card-0 board-ready waits hit non-top cards → fixer item 1
+- [major] Bands — columns/footRow and labels/wordcells band elements vs contiguous column-<n> hit rect incl. foot pad (AD-12) → item 2
+- [major] WordCellRow states — pass-1 reword dropped the not-legal (35 %) state (toml, SPEC CAP-2, build-notes CAP-2) → item 3
+- [major] Bands — '0 px when empty' contradicts DESIGN reserved tray height; banner 'absent' vs always-rendered band → item 4
+- [major] F26 — wordcell-<n> and card wrapper extents unspecified → item 5
+- [major] R-70/R-71 — no fixtures or expected states → item 6
+- [major] F11 measurement drops H, strip and band-stack fit (build-notes CAP-3) → item 7
+- [major] Count badge, desktop column number, tooltip, tabular numerals have no assertion → item 8
+### Default applied (technical)
+- Non-top cell cards → visibility: hidden; card-0 visibility waits on fixtures where it is non-top → toBeAttached / another ready signal
+- Two-band units → one CSS grid per unit, [data-band] row tracks, column-<n> grid item spanning both rows
+- Desktop column number via CSS @media (hover: hover) and (pointer: fine); title always present
+- Bars take no env() padding until entry 4's probe
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- Duplicates across lenses.
