@@ -1,6 +1,6 @@
 # Review log — story-live-layout-gate-and-touch-action-regions.md (ticket 4.4)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1245 words (2.5 x (374 pass-0 words + 124 carried toml words)). Pass 0: HEAD affe546, copy story-live-layout-gate-and-touch-action-regions.passes/pass0.md, 374 words.
 
@@ -75,3 +75,36 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 ### Fix outcome
 Fixer applied items 1–19, none skipped. Checked: `dictionaryState` (test-hook.ts), `hidePage`/`showPage` (e2e/helpers/lifecycle.ts), svelte server `flushSync` noop, desktop 370 × 750 → clientWidth 355, available 323 < board 352 (throwaway Playwright measurement). Unverified: the scroll fallbacks (as in build-notes).
 Words (docs): 1244 (3.33 x pass 0; at the 1245 budget, further additions are minor)  |  Snapshot: story-live-layout-gate-and-touch-action-regions.passes/pass2.md
+
+## Pass 3 — 2026-10-02
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 7, minor 9, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+### Applied
+- [major] gate — nothing requests the raf that clears the ignore flag when the queue is empty, so later user scrolls are ignored (pass 2 regression) → fixer item 1
+- [major] CSS/AC touch-action — "every ancestor of each checked region computes auto" contradicts cards/tiles inside pan-y regions; pan-y regions with no element of their own (space below the bottom card, bar backgrounds) → fixer item 2
+- [major] touchHold — `end()` after a failed `moveTo` throws in the mandated finally and masks the original error (pass 2 regression) → fixer item 3
+- [major] AC hide case — no observable, no reference time, no failed/no-banner precondition, undefined on fallbacks → fixer item 4
+- [major] layout task — scroll position read after flushSync is already clamped; banner hide at max scroll (1280 × 720, 46 → 2) lands at 0; write API vs injected deps → fixer item 5
+- [major] layout — browser deps (watchBanner's `$effect.root`) built where? plain main.ts cannot compile runes → fixer item 6
+- [major] AC createLayout — band re-layout triggers (innerHeight-only under 80 px, inset change) have no test → fixer item 7
+- [minor] desktop wheel fallback mislabelled "SPEC Constraints exception" (only ?bands= is) → fixer item 8
+- [minor] wide-case viewport: 390 × 750, assert measured clientWidth − 32 < 352 → fixer item 9
+- [minor] AC regions list: banner and 4 px tray gap → fixer item 10
+- [minor] ?bands= dev case: fixed permutation, in board.spec.ts → fixer item 11
+- [minor] owns line: layout defers through the gate, does not count → fixer item 12
+- [minor] `busy` getter vs method → fixer item 13
+### Default applied (technical)
+- ignore flag — `ignoreNextScroll()` requests the single raf; the outstanding mark clears as the raf callback starts
+- touch-action — pan-y on leaf/background elements; the ancestor-auto check applies to ancestors of pan-y regions
+- touchHold — `end()` is a no-op after a failed `moveTo` ended the hold
+- hide case — in-page timestamps, assert hide before last scroll + 150, touch paths only, else S-only recorded in the plan
+- scroll read — before setting state; write via `deps.window.scrollTo` when the target differs from the value read
+- browser deps — `browserLayoutDeps()` exported from layout.svelte.ts
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+### Left for the plan (minor, over budget)
+- `leave()`-at-0 throw case in the gate Vitest; touch slop (first steps one way before alternating, build-notes CAP-3)
+### Fix outcome
+Fixer applied items 1–13, none skipped; minors 10–11 added ~8 words, offset by cuts (CAP-3 conditions now cited, not restated). Pan-y column region chosen as `.column` (AD-12 hit rect unchanged). Checked: desktop 390 × 750 clientWidth 375 (343 < 352) with the pinned Chromium; band ids against bands.ts `unitId`.
+Words (docs): 1292 (3.45 x pass 0; over the 1245 budget, additions are minor)  |  Snapshot: story-live-layout-gate-and-touch-action-regions.passes/pass3.md
