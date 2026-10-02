@@ -1,6 +1,8 @@
 <script lang="ts">
 import { dictionary } from '../shell/dictionary.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import { act } from './act';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { text } from './text';
 
 // AD-8 dictionary-failed banner (DESIGN.md Components), on the board only. The Board renders it
@@ -18,7 +20,7 @@ function reload(): void {
     type="button"
     class="secondary"
     disabled={dictionary.state !== 'failed'}
-    onclick={reload}
+    onclick={act(reload)}
   >{text.reload}</button>
 </div>
 

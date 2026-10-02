@@ -331,3 +331,88 @@ describe('AD-13 push, pop and back', () => {
     expect(t.fake.calls).toEqual([['back'], ['push', { wc: 3, launch }]]);
   });
 });
+
+describe('AD-13 before-back hook', () => {
+  // A ready nav with the close callback logging into `log` and the hook registered beside it.
+  async function hooked(depth = 0) {
+    const t = await setup();
+    await t.nav.launch();
+    const log: string[] = [];
+    t.nav.register({
+      closedByBack: (d) => {
+        log.push(`closed ${d}`);
+        t.callbacks.depth = Math.min(t.callbacks.depth, d);
+      },
+      depth: () => t.callbacks.depth,
+    });
+    t.nav.registerBeforeBack(() => log.push('hook'));
+    for (let i = 0; i < depth; i++) {
+      t.nav.push();
+      t.callbacks.depth += 1;
+    }
+    t.fake.calls.length = 0;
+    return { ...t, log };
+  }
+
+  it('AD-13 a back runs the hook before closedByBack', async () => {
+    const t = await hooked(1);
+    t.traverse(-1);
+    expect(t.log).toEqual(['hook', 'closed 0']);
+  });
+
+  it('AD-13 a Forward runs the hook before the correction and closes nothing', async () => {
+    const t = await hooked(2);
+    t.callbacks.depth = 0;
+    t.nav.pop();
+    t.nav.pop();
+    t.settle();
+    t.settle();
+    t.fake.calls.length = 0;
+    t.log.length = 0;
+    t.traverse(2);
+    expect(t.log).toEqual(['hook']);
+    expect(t.fake.calls).toEqual([['go', -2]]);
+    t.settle();
+    expect(t.log).toEqual(['hook']);
+  });
+
+  it('AD-13 no hook on nav’s own pop(), a stale launch or a missing wc', async () => {
+    const t = await hooked(1);
+    const launch = t.launchId();
+    t.callbacks.depth = 0;
+    t.nav.pop();
+    t.settle();
+    t.listener()({ state: { wc: 0, launch: -1 } });
+    t.listener()({ state: null });
+    t.listener()({ state: { launch } });
+    t.listener()({ state: { launch, wc: '0' } });
+    expect(t.log).toEqual([]);
+  });
+
+  it('AD-13 a back before registration runs no hook and still closes', async () => {
+    const t = await setup();
+    await t.nav.launch();
+    t.register();
+    t.nav.push();
+    t.callbacks.depth = 1;
+    t.traverse(-1);
+    expect(t.callbacks.closed).toEqual([0]);
+    const log: string[] = [];
+    t.nav.registerBeforeBack(() => log.push('hook'));
+    expect(log).toEqual([]);
+  });
+
+  it('AD-13 registerBeforeBack() before launch resolves throws; twice throws', async () => {
+    const t = await setup([null, { wc: 1, launch: 1 }]);
+    const launched = t.nav.launch();
+    expect(() => t.nav.registerBeforeBack(() => {})).toThrow(
+      /^AD-13 registerBeforeBack\(\) before launch\(\) resolved/,
+    );
+    t.settle();
+    await launched;
+    t.nav.registerBeforeBack(() => {});
+    expect(() => t.nav.registerBeforeBack(() => {})).toThrow(
+      /^AD-13 registerBeforeBack\(\) called twice/,
+    );
+  });
+});

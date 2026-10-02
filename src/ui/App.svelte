@@ -1,9 +1,12 @@
 <script lang="ts">
 import { game, type RejectReason } from '../shell/game.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import { act } from './act';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import BlockingMessage from './BlockingMessage.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Board from './Board.svelte';
+import type { Controller } from './gestures/controller';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Halted from './Halted.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
@@ -17,8 +20,13 @@ import { text } from './text';
 
 // Roots: halted, Session rejected, the Board (AD-11) with the dialogs beside it. Script-side uses
 // of `game` keep Biome from flagging the import (it misses markup). `layout` is the one live
-// layout main.ts creates (AD-11), passed to the Board.
-let { layout }: { layout: Layout } = $props();
+// layout main.ts creates (AD-11), passed to the Board. `controller` is the one pointer controller
+// (AD-12): the active branch's root attaches it on every mount and detaches it on unmount (F8).
+let { layout, controller }: { layout: Layout; controller: Controller } = $props();
+
+function pointerRoot(node: HTMLElement): { destroy: () => void } {
+  return { destroy: controller.attach(node) };
+}
 
 const board = $derived(game.view);
 
@@ -42,11 +50,11 @@ function rejectedBody(reason: RejectReason): string {
     title={text.rejectedTitle}
     body={rejectedBody(game.state.reason)}
     action={text.newGame}
-    onaction={newGame}
+    onaction={act(newGame)}
   />
 {:else if game.state.kind === 'active' && board}
   <!-- AD-13: dialogs render beside the board; while the notice is rendered the board is inert. -->
-  <main inert={overlays.isOpen('historyNotice')}>
+  <main use:pointerRoot inert={overlays.isOpen('historyNotice')}>
     <Board view={board} {layout} />
   </main>
   {#if overlays.isOpen('historyNotice')}

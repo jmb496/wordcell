@@ -2,6 +2,7 @@
 import type { GameView } from '../engine/index';
 import { dictionary } from '../shell/dictionary.svelte';
 import { game } from '../shell/game.svelte';
+import { act } from './act';
 import { newGame } from './new-game';
 import { text } from './text';
 
@@ -19,15 +20,17 @@ function confirm(): void {
 
 // Label precedence (EXPERIENCE.md Validate): status ≠ playing → New game whatever the phase; Place
 // → Confirm; otherwise `Word list unavailable` > `Loading words…` > `Need 3+ letters` (reason
-// style) > Validate (AD-8). An undefined handler disables the button.
+// style) > Validate (AD-8). An undefined handler disables the button; every handler goes through
+// act() (AD-12 F9).
 const primary = $derived.by(
   (): { label: string; reason: boolean; onclick: (() => void) | undefined } => {
-    if (view.status !== 'playing') return { label: text.newGame, reason: false, onclick: newGame };
+    if (view.status !== 'playing')
+      return { label: text.newGame, reason: false, onclick: act(newGame) };
     if (view.phase === 'place') {
       return {
         label: text.confirm,
         reason: false,
-        onclick: view.canConfirm ? confirm : undefined,
+        onclick: view.canConfirm ? act(confirm) : undefined,
       };
     }
     if (dictionary.state === 'failed') {
@@ -47,7 +50,7 @@ const primary = $derived.by(
     return {
       label: text.validate,
       reason: false,
-      onclick: view.canValidate ? validate : undefined,
+      onclick: view.canValidate ? act(validate) : undefined,
     };
   },
 );

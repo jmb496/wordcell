@@ -55,6 +55,14 @@ test.describe('R-73 saved when hidden', () => {
     const writes = await storageWrites(page);
     expect(writes).toHaveLength(1);
     expect(writes[0]?.key).toBe(SESSION);
+    // The clock resumes only after showPage: hidden time accrues nothing.
+    const [first] = await sessionEntries(page);
+    if (first === undefined) throw new Error('no wordcell:session entry');
+    await page.clock.runFor(2000);
+    await showPage(page);
+    await page.clock.runFor(300);
+    await hidePage(page);
+    expect(await sessionEntries(page)).toEqual([first, first + 300]);
   });
 
   test('R-73 pageHide alone writes the accrued activeMs', async ({ page }) => {
@@ -259,14 +267,27 @@ test('AD-15 halted: the hide flush writes nothing', async ({ page }) => {
   expect(await storageWrites(page)).toEqual([]);
 });
 
-test('§2 rejected: the hide flush writes nothing', async ({ page }) => {
+test('§2 AD-16 rejected: the hide flush writes nothing', async ({ page }) => {
+  const errors: Error[] = [];
+  page.on('pageerror', (error) => errors.push(error));
   const text = fixture('session-invalid-version-unknown.json');
   await open(page, 'session-invalid-version-unknown.json');
   expect(await kind(page)).toBe('rejected');
   await armStorageSpy(page);
   await page.clock.runFor(500);
   await hidePage(page);
+  expect(await storageWrites(page)).toEqual([]);
+  expect(errors).toEqual([]);
   await pageHide(page);
   expect(await storageWrites(page)).toEqual([]);
   expect(await stored(page, SESSION)).toBe(text);
+  // AD-16: the controller exists but is detached on the rejected root, so the before-hide cancel
+  // is a no-op: no AD-15 halted surface, the rejected message kept.
+  expect(errors).toEqual([]);
+  expect(await kind(page)).toBe('rejected');
+  const dialog = page.getByRole('alertdialog');
+  await expect(dialog).toHaveCount(1);
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toHaveAccessibleName("This saved game can't be opened.");
+  await expect(page.getByRole('heading', { name: 'Something went wrong.' })).toHaveCount(0);
 });

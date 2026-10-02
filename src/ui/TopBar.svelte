@@ -2,6 +2,8 @@
 import type { GameView } from '../engine/index';
 import { game } from '../shell/game.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import { act } from './act';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { text } from './text';
 
 // DESIGN.md Top bar: sticky, 44 px of content plus the top safe-area inset (owner Option A),
@@ -28,7 +30,7 @@ function redo(): void {
       title={text.undo}
       data-testid="undo"
       disabled={!view.canUndo}
-      onclick={undo}
+      onclick={act(undo)}
     >
       <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
         <path d="M7 16 A6 6 0 1 1 17 16" />
@@ -42,7 +44,7 @@ function redo(): void {
       title={text.redo}
       data-testid="redo"
       disabled={!view.canRedo}
-      onclick={redo}
+      onclick={act(redo)}
     >
       <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
         <path d="M17 16 A6 6 0 1 0 7 16" />

@@ -4,7 +4,8 @@
 // callback and depth getter; `push()` / `pop()` are queued so a pop's `popstate` settles before
 // the next push. `count` is the wc of the current entry as nav knows it: each push sends
 // `{ wc: count + 1, launch }`. A `popstate` nav did not start is a back (close callback) or a
-// Forward (corrected with `go`, closes nothing); a stale launch's entry is ignored (A-E1).
+// Forward (corrected with `go`, closes nothing), each preceded by the `registerBeforeBack` hook
+// (R1/F7); a stale launch's entry is ignored (A-E1).
 import { newSeed } from './seed';
 
 export interface NavCallbacks {
@@ -23,6 +24,7 @@ let count = 0;
 let pending = 0;
 const queue: Op[] = [];
 let callbacks: NavCallbacks | undefined;
+let beforeBack: (() => void) | undefined;
 let ready = false;
 let failed = false;
 let rewound: (() => void) | undefined;
@@ -70,6 +72,9 @@ function onPopState(event: PopStateEvent): void {
   }
   if (!current) return;
   if (typeof wc !== 'number') return;
+  // R1/F7: the before-back hook (the pointer controller's cancel) runs first for every back nav
+  // did not start, before the Forward check and the close callback.
+  beforeBack?.();
   if (callbacks === undefined) throw new Error('AD-13 back before register()');
   count = wc;
   const depth = callbacks.depth();
@@ -116,6 +121,13 @@ function register(next: NavCallbacks): void {
   callbacks = next;
 }
 
+/** AD-13 R1/F7: called once by `main.ts` after `launch()` resolves; separate from `register()`. */
+function registerBeforeBack(fn: () => void): void {
+  if (!ready) throw new Error('AD-13 registerBeforeBack() before launch() resolved');
+  if (beforeBack !== undefined) throw new Error('AD-13 registerBeforeBack() called twice');
+  beforeBack = fn;
+}
+
 function enqueue(op: Op): void {
   if (callbacks === undefined) throw new Error(`AD-13 ${op}() before register()`);
   queue.push(op);
@@ -132,4 +144,4 @@ function pop(): void {
   enqueue('pop');
 }
 
-export const nav = { launch, register, push, pop };
+export const nav = { launch, register, registerBeforeBack, push, pop };

@@ -1,6 +1,8 @@
 <script lang="ts">
 import { type HistoryRejectReason, scoreHistory } from '../shell/history.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import { act } from './act';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Dialog from './Dialog.svelte';
 import { noticeReason } from './history-notice.svelte';
 import { overlays } from './overlays.svelte';
@@ -51,8 +53,8 @@ function deleteHistory(): void {
   {body}
   dismiss={text.notNow}
   action={text.resetHistory}
-  ondismiss={notNow}
-  onaction={openConfirm}
+  ondismiss={act(notNow)}
+  onaction={act(openConfirm)}
   inert={overlays.top !== 'historyNotice'}
 />
 {#if overlays.isOpen('resetConfirm')}
@@ -61,8 +63,8 @@ function deleteHistory(): void {
     body={text.resetConfirmBody}
     dismiss={text.keepIt}
     action={text.deleteHistory}
-    ondismiss={keepIt}
-    onaction={deleteHistory}
-    onscrim={keepIt}
+    ondismiss={act(keepIt)}
+    onaction={act(deleteHistory)}
+    onscrim={act(keepIt)}
   />
 {/if}
