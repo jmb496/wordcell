@@ -1,6 +1,6 @@
 # Review log — story-board-render-in-idle-and-game-over-with-bars.md (ticket 4.2)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 88bf030, copy story-board-render-in-idle-and-game-over-with-bars.passes/pass0.md, 361 words.
 Intent carried from tickets.toml entry 2 (not copied by the pull): verify, unknown, interface, tests, owns, references; pass-1 fixer adds interface, tests, owns to Description as 'Interface:', 'Tests:', 'Owns:' (verify, unknown, references are already in AC, Notes, References).
@@ -56,3 +56,26 @@ Fixer: all 14 items applied; fixture values (scores 0/0/9→15,15,15,24/355/−5
 - none
 ### Dropped
 - Duplicates across lenses.
+
+## Pass 3 — 2026-10-01 21:50
+Reviewers: fix-diff, edge-case, adversarial, ref-alignment  |  Findings: major 6, minor 4 (over budget: only zero-word fixes sent), decision-needed 0  |  Dropped in triage: 9 (duplicates; plan-level notes: newGame prop, scrollbar shift, wordcell role, strip worked-example, 1-card badge boundary, test file names)
+Words (docs): 1499 (4.2 x pass 0; budget 1500)  |  Snapshot: story-board-render-in-idle-and-game-over-with-bars.passes/pass3.md
+Fixer: 6 majors + 3 zero-word minors applied; redundancy cut to stay under budget.
+### Applied
+- [major] Bands grid — empty [data-band] track elements overlap column-<n>/wordcell-<n> items; paint/hit order unstated (F26, CAP-4 elementFromPoint) → fixer item 1
+- [major] Bands vs Mount inputs — banner band 0 px from mount bands() vs 44 px content pushing bands → item 2
+- [major] Render rules AC — foot number via CSS cannot pass a textContent toHaveText on both projects → item 3
+- [major] Board — 'no env() padding until entry 4' hands bar safe-area padding to an entry that does not own it (DESIGN Top bar/Action bar/banner) → item 4
+- [major] Bands — wrapping single-band units would break sticky bars → item 5
+- [major] Card — epic 3's touch-action: none / user-select: none on cards dropped (helpers.spec touchDrag) → item 6
+### Default applied (technical)
+- Track elements empty, first in DOM, pointer-events: none
+- Banner band content-sized until entry 4
+- Foot number DOM span, display: none outside the @media rule; asserted with innerText
+- Bars carry DESIGN env() padding now; bands() takes insets {0,0} until entry 4
+- Only two-band units get a wrapper; other bands are direct Board children
+- Card wrapper keeps touch-action: none and user-select: none (entry 4 adds other regions)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- Plan-level notes listed above; duplicates.
