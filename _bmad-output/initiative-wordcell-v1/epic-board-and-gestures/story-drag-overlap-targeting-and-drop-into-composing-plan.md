@@ -3,7 +3,7 @@ title: 'Drag, overlap targeting and drop into Composing'
 type: 'feature'
 ticket: '8'
 created: '2026-10-02'
-status: 'built'
+status: done
 route: 'full'
 route_source: 'auto'
 baseline_revision: '472db5238a40f7bb92757807ae449320e01d4212'

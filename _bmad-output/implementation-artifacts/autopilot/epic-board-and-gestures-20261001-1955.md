@@ -111,3 +111,15 @@ Close-out docs:
 ## Stopped — usage limit
 
 Ticket 4.8, Step B (build), 2026-10-02 17:21 EDT: "You've hit your session limit · resets 7pm (America/New_York)". The build's own files are left uncommitted in the tree for bmad-build-auto's resume (plan `story-drag-overlap-targeting-and-drop-into-composing-plan.md` at `in-review`; `src/ui/gestures/{targeting,drop-target}.ts` with tests, `e2e/drag.spec.ts`, edits to `controller.ts`, `controller.test.ts`, `Column.svelte`, `motion.ts`). Resume: rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-board-and-gestures`; Setup 2's exception resumes Step B.
+
+## 4.8 Drag, overlap targeting and drop into Composing — done
+What it adds: you can now drag cards with your finger (or mouse). Hold a card and the cards below it, move them over another column and it lights up; let go and the word starts there. Let go anywhere else (or over the column you started from without leaving it) and the cards fly back to where they were.
+Ticket review: 5 passes, converged; nothing needed your input. One open item and eleven small notes went to the build, which handled them in its plan.
+Build: built (resumed after the usage limit, from its review stage); commits 6a9b473
+Code review: thorough (ticket risk high), 3 passes, converged; 5 major fixes and 6 technical defaults applied (tests and controller fixes); commits f68221b, 65f189b, 712dba1
+Tests: all passing (test:all, 2026-10-02, first run); the build also ran the screenshot suite in the container: 8/8, pictures unchanged
+Ref to fix upstream: none
+Paused: usage limit at Step B, reset 7pm (America/New_York), resumed 2026-10-02 23:19 UTC
+Tokens: 6.4M input-equivalent (code review 77%, build 19%, orchestrator 3%, other 2%); orchestrator peak context 55k
+Worth knowing: three small review notes were left unapplied, logged in `review-loop/4-8-build.md`: (1) when the board is scrolled under the sticky top bar, dragging cards over the bar could light the column hidden beneath it — worth deciding in the refactor sweep (4.13) whether to clip that; (2) a plan sentence about a cancelled fly-back is out of date; (3) one tie-break unit test could be sharper. The known "banner during a scroll" layout flake hit the build's first full run again (not this session's), so it is still worth fixing in 4.13.
+Close-out docs: none
