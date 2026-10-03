@@ -1,6 +1,6 @@
 # Review loop — ticket 4.8 build (code mode, cb23a41..HEAD)
 
-State: pass 2: done
+State: pass 3: done
 
 Target: commit range cb23a41..HEAD (diff `4-8-build.passes/pass0.diff`)
 Intent: `_bmad-output/initiative-wordcell-v1/epic-board-and-gestures/story-drag-overlap-targeting-and-drop-into-composing-plan.md`
@@ -78,3 +78,29 @@ Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings
 ### Verify (orchestrator)
 - npm test 45 files / 1909 passed; lint clean; check 0 errors.
 Snapshot: tree 9aea03704fe81d6d1986d6180b1c6d49c473d734 (fix diff `4-8-build.passes/pass2.fix.diff`, next target `4-8-build.passes/pass2.diff`)
+
+## Pass 3 — 2026-10-02
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 0, minor 8, decision-needed 0  |  Dropped in triage: 0 (2 duplicates merged)
+### Applied
+- none (converged; minors listed below, not applied)
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+Snapshot: unchanged, tree 9aea03704fe81d6d1986d6180b1c6d49c473d734 (npm test 1909 passed, lint clean, check 0 errors at this tree)
+
+## Result — converged after 3 passes
+Majors per pass: 3, 2, 0. Technical defaults applied: 6. Decision-needed: none. Final state: npm test pass (45 files, 1909 tests), lint pass, check pass; `npx playwright test e2e/drag.spec.ts` passed in both fix passes (fixer runs).
+
+### Unapplied minors
+- plan Residual risks l.232 — still says a cancelled fly-back would not settle; since pass 2 item 9 it throws `AD-12 fly-back animation cancelled` (rule 6); reword (intent + verification-gap + edge, merged).
+- src/ui/gestures/controller.ts dragMove — column rects are not clipped to the sticky top bar, so with the board scrolled under the bar (A-D4) a tail over the bar can light the column beneath (EXPERIENCE.md Drop targeting step 7); default: clip each column rect to the top bar's bottom edge before `pickTarget`, or record as accepted.
+- targeting.test.ts equal-ratio tie-break — no case separates horizontal from 2-D centre distance; add a horizontally-nearer, vertically-farther candidate.
+- controller.test.ts pointercancel / lostpointercapture / cancel({ byBack: true }) fly-back cases — assert duration 180 only; add `durations.kinds` `['flyBack']`.
+- e2e/drag.spec.ts R-10 R-11 R-23 whole-column test — `arrangement.slice(0, 6)`; assert the whole array.
+- e2e/drag.spec.ts leave-and-return and whole-column self-drop — the before-leaving checks do not assert `expectDragging` and ≥ 25 % source overlap.
+- e2e/drag.spec.ts 'Q-34 a sub-25 % drag …' — name lacks R-14 (rule-coverage R-14 row); rename and update the plan list.
+- (pass 2, out of scope) classify.ts treats a release ≥ 8 px from the press with no intervening pointermove as a tap (EXPERIENCE.md Pointer thresholds) — ticket 4.6 code.
+- (pass 2, accepted) the transform drifts off the pointer on scroll/resize mid-drag until the next move — covered by the plan's Residual risks line.
