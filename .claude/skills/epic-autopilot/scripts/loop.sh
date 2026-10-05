@@ -8,12 +8,14 @@
 # Before each ticket it checks the plan's usage limits (limits.py, from the Claude Code Usage
 # VS Code extension's local cache): at or over MAX_FIVE_HOUR (default 80) percent of the 5-hour
 # window or MAX_SEVEN_DAY (default 80) percent of a weekly window it stops and waits for the
-# owner to rerun it. LIMIT_CHECK=off skips the check. One driver per epic at a time (lock file).
+# owner to rerun it. If the limits cannot be read (cache missing, unreadable or stale) it runs
+# that one ticket and then stops, so an unchecked run never goes past one ticket.
+# LIMIT_CHECK=off skips the check. One driver per epic at a time (lock file).
 # While a session runs it prints progress lines (steps started/finished, new commits; see
 # watch_progress and SKILL.md "Watching progress").
 # Exit codes: 0 complete or max reached, 2 stopped (see handoff), 3 usage limit hit, 4 no
 # progress (or a dirty tree, a live leftover step, or another driver running), 5 limit threshold
-# reached before a ticket, 6 limits could not be read.
+# reached before a ticket, 6 limits could not be read (after the one unchecked ticket).
 set -u
 if [ $# -lt 1 ]; then echo "usage: $0 <epic-slug> [max-tickets]"; exit 4; fi
 EPIC=$1; MAX=${2:-99}
@@ -91,11 +93,12 @@ for i in $(seq 1 "$MAX"); do
   if [ "${LIMIT_CHECK:-on}" != off ]; then
     python3 "$HERE/limits.py" --max-five-hour "${MAX_FIVE_HOUR:-80}" --max-seven-day "${MAX_SEVEN_DAY:-80}"
     rc=$?
-    if [ "$rc" -ne 0 ]; then
-      [ "$rc" -eq 5 ] && echo "Paused before the next ticket: usage limit threshold. Rerun $0 $EPIC when you want to continue."
-      [ "$rc" -ne 5 ] && echo "Usage limits unreadable or stale (is VS Code open?). Rerun with LIMIT_CHECK=off to skip the check."
-      [ "$rc" -eq 5 ] && exit 5
-      exit 6
+    if [ "$rc" -eq 5 ]; then
+      echo "Paused before the next ticket: usage limit threshold. Rerun $0 $EPIC when you want to continue."
+      exit 5
+    elif [ "$rc" -ne 0 ]; then
+      echo "Usage limits unreadable or stale (is VS Code open?): running this one ticket, then stopping."
+      unchecked=1
     fi
   fi
   start=$(date -u +%Y-%m-%dT%H:%M:%S)
@@ -121,7 +124,12 @@ for i in $(seq 1 "$MAX"); do
   reason=$(sed -n 's/^reason: //p' "$H" | head -1)
   echo "[$(date +%H:%M)] session $i: $outcome — $(sed -n 's/^summary: //p' "$H" | head -1)"
   case "$outcome" in
-    done) continue ;;
+    done)
+      if [ -n "${unchecked:-}" ]; then
+        echo "Stopped after one ticket: usage limits could not be read. Rerun $0 $EPIC once they can (or with LIMIT_CHECK=off)."
+        exit 6
+      fi
+      continue ;;
     complete) echo "Epic complete. Handoff: $H"; exit 0 ;;
     *)
       if echo "$reason" | grep -qi 'usage limit'; then echo "A step hit a usage limit: $reason"; echo "Rerun after the reset: $0 $EPIC"; exit 3; fi

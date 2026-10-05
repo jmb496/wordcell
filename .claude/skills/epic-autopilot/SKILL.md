@@ -35,8 +35,9 @@ usage limit (rerun after the reset), 4 when a session made no progress (read its
 each ticket it runs `scripts/limits.py`, which reads the plan's 5-hour and weekly utilization
 from the local cache of the owner's "Claude Code Usage" VS Code extension (no network call), and
 exits 5, asking the owner to rerun it by hand, when either is at or over its threshold
-(`MAX_FIVE_HOUR`, `MAX_SEVEN_DAY`, default 80); 6 if the cache is missing or more than 30 minutes
-old, i.e. VS Code is closed (`LIMIT_CHECK=off` skips the check). The owner can run it in a
+(`MAX_FIVE_HOUR`, `MAX_SEVEN_DAY`, default 80). If the cache is missing, unreadable or more than
+30 minutes old (i.e. VS Code is closed) it runs that one ticket unchecked and then exits 6
+(`LIMIT_CHECK=off` skips the check). The owner can run it in a
 terminal, or an interactive session can run it with `run_in_background: true`, relay its
 progress lines (Watching progress, below) and report the handoff when it exits. After answering
 an owner question in an interactive session, record the decision (ticket Notes, epic Notes, spec
