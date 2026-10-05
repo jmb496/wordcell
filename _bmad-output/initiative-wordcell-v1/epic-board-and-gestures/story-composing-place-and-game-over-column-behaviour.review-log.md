@@ -1,6 +1,6 @@
 # Review log — story-composing-place-and-game-over-column-behaviour.md (ticket 4.10)
 
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 6621aa5, copy story-composing-place-and-game-over-column-behaviour.passes/pass0.md, 292 words. Intent includes tickets.toml entry 10 fields unknown, interface, tests, owns (not copied at pull; fixer adds them to the Description in pass 1).
 
@@ -22,6 +22,27 @@ Words (docs): 943 (3.23 x pass 0)  |  Snapshot: story-composing-place-and-game-o
 - self-drop reach — in-test from session-idle-fresh (tap-select a partial tail, tap its own foot), no new fixture
 - inert asserts — current().session reference, stored Session, nothing selected, no drag classes
 - destination cards keep the default cursor; preview repaints via the existing refreshHover
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Pass 2 — 2026-10-05
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 6, minor 11, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+Words (docs): 1285 (4.40 x pass 0)  |  Snapshot: story-composing-place-and-game-over-column-behaviour.passes/pass2.md (fix diff pass2.fix.diff)
+### Applied
+- [major] AC hide case — asserts the current().session reference unchanged, but the AD-9 flush accrues activeMs into a new reference (game.svelte.ts flush) and writes once → fixer item 1 (default applied: compare with activeMs zeroed, one write)
+- [major] Description/AC — "no … ghost class" collides with Card.svelte `.ghost` on S-ghost mirrors; name wc-drag-layer / wc-drag-ghost / wc-drag-target → fixer item 2
+- [major] AC drag-as-tap — "k − 1, not k − 2" is wrong: a second tap on the same card restores k (R-31); prove one dispatch by one wordcell:session write → fixer item 3 (default applied)
+- [major] Description drag-as-tap — "hover is suspended as for any press" is not existing behaviour (refreshHover only skips when press.drag !== null) → fixer item 4 (default applied: clear hover at threshold crossing, refreshHover at pointerup)
+- [major] AC inert drags — "no drag class" has no moment; assert mid-gesture while held (dragResidue) before end() → fixer item 5
+- [major] Description/AC — k = 0 empty destination rule stated with no test → fixer item 6 (default applied: from session-idle-empty-column)
+- [minor] --wc-len counts S ghosts: state it, remainder-length variable → 7; hoverAction gains a Composing destination branch → 8; Interface line vs controller-toggled class → 9; self-drop remainder ≥ 2 and tap above top of D → 10; refreshHover repaint check at k 2 → 1 → 11; drag-as-tap null case at k = 1 → 12; Place/Game-over sweep includes non-card parts and ghosts → 13; desktop composing: cursor not grab and no preview on non-card parts → 14; Undo also new source → 15; baseline clause supersedes toml wording → 16; AD-12 intent.test.ts cases for the new branches → 17
+### Default applied (technical)
+- hide case — Session equality with activeMs zeroed (game()/storedGame() pattern of e2e/drag-interruptions.spec.ts) plus exactly one wordcell:session write
+- one-dispatch proof — armStorageSpy: exactly one wordcell:session write during the gesture
+- hover during drag-as-tap — cleared at the threshold-crossing move, repainted by refreshHover at pointerup
+- k = 0 case — from session-idle-empty-column, drop a tail onto the empty column
 ### Decision needed (functionality / UX / gameplay)
 - none
 ### Dropped
