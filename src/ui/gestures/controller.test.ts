@@ -1444,6 +1444,13 @@ describe('AD-13 entry 9 selection replacement', () => {
       to: [25, 70],
       end: (t) => t.fire('pointerup'),
     },
+    {
+      // Column 4 registers no drop target in the fixture: nothing is highlighted over it.
+      name: 'release over a non-target column',
+      selection: [2, 1],
+      to: [175, 50],
+      end: (t) => t.fire('pointerup'),
+    },
   ];
   it.each(deselecting)(
     'AD-13 F24 $name: fly-back, class gone at end(), one pop, no dispatch',
@@ -1530,11 +1537,12 @@ describe('AD-13 entry 9 selection replacement', () => {
     },
   );
 
-  const settles: [string, (t: T) => void][] = [
+  const settles: [string, (t: T & { detachFn: () => void }) => void][] = [
     ['onfinish', (t) => t.advance(180)],
     // An enabled button: the press finishes the flight, resolves to nothing and leaves the gate.
     ['a press', (t) => t.down(t.b.undoIcon)],
     ['cancel()', (t) => t.controller.cancel()],
+    ['detach', (t) => t.detachFn()],
   ];
   it.each(settles)(
     'AD-13 F28 a restoring fly-back settled by %s: class removed, selection kept, no nav call, gate idle',
@@ -1567,6 +1575,21 @@ describe('AD-13 entry 9 selection replacement', () => {
     expect(navCalls).toEqual([]);
   });
 
+  it('AD-13 F28 a press during a restoring fly-back settles it; the press is captured with the selection open', async () => {
+    const t = await replacing([2, 1], 125, 50);
+    t.fire('pointercancel');
+    expect(suppressed(t)).toBe(true);
+    t.down(t.b.foot1);
+    expect(suppressed(t)).toBe(false);
+    expect(t.overlays.selection).toEqual({ column: 2, count: 1 });
+    // A foot press is captured only with a selection open (entry 7).
+    expect(t.b.foot1.log).toEqual(['set 1']);
+    expect(navCalls).toEqual([]);
+    t.fire('pointercancel');
+    expect(t.active()).toBe(0);
+    expect(navCalls).toEqual([]);
+  });
+
   it('AD-12 F24 the class goes on at the threshold-crossing move, not below it', async () => {
     const t = await setup();
     t.detach();
@@ -1580,8 +1603,8 @@ describe('AD-13 entry 9 selection replacement', () => {
     t.controller.cancel();
   });
 
-  it('AD-12 CAP-4 an inert drag with a selection (foot pad, column space, non-pickable card, WordCell) and a pick-up drag with nothing selected never add the class', async () => {
-    for (const from of ['foot', 'space', 'non-pickable card', 'WordCell'] as const) {
+  it('AD-12 CAP-4 an inert drag with a selection (foot pad, column space, placeholder, non-pickable card, WordCell) and a pick-up drag with nothing selected never add the class', async () => {
+    for (const from of ['foot', 'space', 'placeholder', 'non-pickable card', 'WordCell'] as const) {
       const t = await setup();
       t.detach();
       t.overlays.select(2, 1);
@@ -1591,6 +1614,7 @@ describe('AD-13 entry 9 selection replacement', () => {
       const pressed = {
         foot: t.b.foot1,
         space: t.b.column1,
+        placeholder: t.b.placeholder1,
         'non-pickable card': t.b.card1b,
         WordCell: t.b.cellCard,
       }[from];

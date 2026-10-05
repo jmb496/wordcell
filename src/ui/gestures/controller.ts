@@ -38,7 +38,9 @@
 // call (back's `closedByBack` clears it); every other end at `end()`, where a release with no
 // highlight and a plain cancel() (before-hide, act(), detach) deselect once, a drop deselects in
 // `pointerup` before its dispatch, and a same-id pointerdown restores. A button-0 pointerdown with
-// no active press during a fly-back enters the gate, finishes the flight, then resolves (F13).
+// no active press during a fly-back enters the gate, finishes the flight, then resolves (F13); the
+// settle's refreshHover() may repaint the mouse hover before the press resolves, and a drag that
+// then starts clears it again.
 import { game } from '../../shell/game.svelte';
 import { prefs } from '../../shell/prefs.svelte';
 import { duration } from '../motion';

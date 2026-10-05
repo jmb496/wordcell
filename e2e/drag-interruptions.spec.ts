@@ -269,6 +269,8 @@ test.describe('android', () => {
     expect(writes).toHaveLength(2);
     const later = (JSON.parse(writes[1]?.value ?? 'null') as { activeMs: number }).activeMs;
     expect(later - hiddenMs).toBeGreaterThanOrEqual(290);
+    // Any counted hidden time (2 s) would give ≥ 2290; 2000 leaves room for load.
+    expect(later - hiddenMs).toBeLessThan(2000);
   });
 
   test('AD-13 F24 select, drag from another column, hidePage, showPage: nothing selected at wc 0', async ({
@@ -409,6 +411,12 @@ test.describe('android', () => {
     const rest = await box(faceOf(bottom));
     await select(page, 1, 4);
     await stashSession(page);
+    // Lifted and `Here` shown before the drag, so the mid-drag checks prove suppression.
+    for (const i of [4, 5]) {
+      expect(await css(faceOf(cards(page, 1).nth(i)), 'transform'), `card ${i}`).not.toBe('none');
+    }
+    await expect(here(page, 1)).toHaveCount(1);
+    await expect(here(page, 1)).toBeVisible();
     const bottomId = await idOf(bottom);
     const from = await centre(bottom);
     const cell = await centre(page.getByTestId('wordcell-6'));
@@ -482,17 +490,31 @@ test.describe('android', () => {
     const cell = await centre(page.getByTestId('wordcell-6'));
     const hold = await holdThrough(page, from, path(from, cell, 5));
     expect(await targets(page)).toEqual([]);
-    await hold.end();
-    const running = await page.evaluate((id) => {
-      const face = document.querySelector(`[data-testid="card-${id}"] > .face`);
-      if (face === null) throw new Error(`card ${id} has no face`);
-      const count = face.getAnimations().length;
-      const undo = document.querySelector<HTMLElement>('[data-testid="undo"]');
-      if (undo === null) throw new Error('no Undo button');
-      undo.click();
-      return count;
+    // One-shot hook: the fly-back's `animate` on the dragged face queues a microtask (after the
+    // controller's pointerup listener returns) that records the running animations and clicks Undo.
+    await page.evaluate((id) => {
+      const w = window as unknown as { __undoInFlight?: number };
+      const original = Element.prototype.animate;
+      Element.prototype.animate = function animate(this: Element, keyframes, options) {
+        const animation = original.call(this, keyframes, options);
+        if (this.parentElement?.getAttribute('data-card-id') === String(id)) {
+          Element.prototype.animate = original;
+          queueMicrotask(() => {
+            w.__undoInFlight = this.getAnimations().length;
+            const undo = document.querySelector<HTMLElement>('[data-testid="undo"]');
+            if (undo === null) throw new Error('no Undo button');
+            undo.click();
+          });
+        }
+        return animation;
+      };
     }, draggedId);
-    expect(running).toBeGreaterThan(0);
+    await hold.end();
+    await expect
+      .poll(() =>
+        page.evaluate(() => (window as unknown as { __undoInFlight?: number }).__undoInFlight),
+      )
+      .toBeGreaterThan(0);
     const face = faceOf(page.getByTestId(`card-${draggedId}`));
     expect(await runningAnimations(face)).toBe(0);
     expect(await css(face, 'transform')).toBe('none');
@@ -513,6 +535,7 @@ test.describe('android', () => {
       expect(await suppressed(page)).toBe(false);
       expect(await css(outline(page), 'display')).not.toBe('none');
       await expect(here(page, 1)).toBeVisible();
+      expect(await css(faceOf(cards(page, 1).nth(4)), 'transform')).not.toBe('none');
       expect(await css(foot(page, 3), 'touch-action')).toBe('none');
       expect(await css(foot(page, 3), 'background-color')).not.toBe('rgba(0, 0, 0, 0)');
       expect(await css(foot(page, 3), 'border-top-style')).toBe('dashed');
