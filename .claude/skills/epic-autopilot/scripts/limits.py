@@ -8,7 +8,7 @@ does the lookup while VS Code runs. Uses the newest observation of each window (
 seven-day, and provider-scoped-seven-day, a narrower weekly cap checked against the weekly
 threshold) for the account QUOTA_ACCOUNT names (a fingerprint from the file, e.g.
 acct_6e7db6...), else the most recently observed account; the printed line shows the account's
-last 6 characters. A window whose reset time has passed counts as 0%. Prints one line, exits:
+last 6 characters. A window whose reset time has passed or is null (not started) counts as 0%. Prints one line, exits:
   0  both windows below their thresholds
   5  a window is at or over its threshold (the line names it and its reset time)
   6  the cache is missing, unreadable, or older than --max-age-minutes (open VS Code so the
@@ -64,8 +64,11 @@ def main():
         age = (now_ms - min(w['observedAt'] for _, w, _ in windows)) / 60000
         over, parts = [], []
         for name, w, cap in windows:
-            used = 0.0 if w['resetAt'] <= now_ms else float(w['usedFraction']) * 100
-            reset = datetime.fromtimestamp(w['resetAt'] / 1000).astimezone().strftime('%a %H:%M %Z')
+            # resetAt is null while no window is open (e.g. no 5-hour window since the last reset)
+            open_ = w['resetAt'] is not None and w['resetAt'] > now_ms
+            used = float(w['usedFraction']) * 100 if open_ else 0.0
+            reset = (datetime.fromtimestamp(w['resetAt'] / 1000).astimezone().strftime('%a %H:%M %Z')
+                     if w['resetAt'] is not None else 'not started')
             parts.append(f'{name} {used:.0f}% (resets {reset})')
             if used >= cap:
                 over.append(f'{name} at {used:.0f}% >= {cap:.0f}%')
