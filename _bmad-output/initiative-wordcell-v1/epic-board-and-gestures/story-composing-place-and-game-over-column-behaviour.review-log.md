@@ -1,6 +1,6 @@
 # Review log — story-composing-place-and-game-over-column-behaviour.md (ticket 4.10)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 6621aa5, copy story-composing-place-and-game-over-column-behaviour.passes/pass0.md, 292 words. Intent includes tickets.toml entry 10 fields unknown, interface, tests, owns (not copied at pull; fixer adds them to the Description in pass 1).
 
@@ -47,3 +47,24 @@ Words (docs): 1285 (4.40 x pass 0)  |  Snapshot: story-composing-place-and-game-
 - none
 ### Dropped
 - none
+
+## Pass 3 — 2026-10-05
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 6, minor 14, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+Words (docs): 1481 (5.07 x pass 0)  |  Snapshot: story-composing-place-and-game-over-column-behaviour.passes/pass3.md (fix diff pass3.fix.diff)
+### Applied
+- [major] AC session-composing tap sequence — "tap it again" names the card that has left D, so it dispatches k → 2; the no-op is the bottom card at k = 1 → fixer item 1
+- [major] Description drag-as-tap — clearing hover once at the crossing does not stop later refreshHover repaints (pointerover, App reaction) while press.drag === null → fixer item 2 (default applied: refreshHover also skips while a press is past the threshold; unconditional refreshHover at drag-as-tap pointerup)
+- [major] AC desktop — main preview case (hover a remainder card above D at k = 1) untested; "a lower D card" ambiguous → fixer item 3
+- [major] AC — session-won has no column cards (8 whole-column moves), so its column-card hover/grab and inert checks are vacuous → fixer item 4 (default applied: also run on session-gave-up; per-fixture targets)
+- [major] AC desktop "no ghost inside the preview" fails by geometry (stacked cards overlap) → fixer item 5 (default applied: assert by index / no data-mirror-of in the outline range)
+- [major] Description — drag-as-tap needs a controller pointerup change (perform only on outcome 'tap', controller.ts:585); the obvious edit would make an Idle space drag with a selection drop → fixer item 6 (default applied: dispatch on a drag outcome only for a Composing destination-column card hit; AD-12 controller.test.ts cases)
+- [minor] remainder length from column.kIfTapped.size (AD-3) → 7; release-over-another-column case given from k = 1 on the card above D → 8; "saved" checked as stored = current().session with literal destinationCount, tap and drag → 9; baselines captured after the in-test drop settles → 10; lostpointercapture/pointercancel/cancel() end a drag-as-tap with no dispatch → 11; dragResidue duplicated locally — move to e2e/helpers if reused → 12
+### Default applied (technical)
+- hover during drag-as-tap — refreshHover skips while the press is in the drag state; pointerup of every drag-as-tap press calls refreshHover
+- drag-as-tap dispatch — only for phase composing and a live card of the destination column; Idle drags keep today's behaviour
+- session-won vacuity — desktop and android Game-over checks also on session-gave-up
+- self-drop preview check — by index (hover-from and remainder-length values), no data-mirror-of element in range
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none (not sent to the fixer for budget, left as unapplied minors: whole-column self-drop case; long still press on a destination card is a tap; android tap on a lower D card at k ≥ 3)
