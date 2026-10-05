@@ -163,8 +163,10 @@ async function expectSaved(page: Page, count: number): Promise<void> {
   const { stored, current } = await page.evaluate(() => {
     const c = window.__wordcell?.current();
     if (c?.kind !== 'active') throw new Error(`store is ${c?.kind}`);
+    const text = localStorage.getItem('wordcell:session');
+    if (text === null) throw new Error('wordcell:session is absent');
     return {
-      stored: JSON.parse(localStorage.getItem('wordcell:session') ?? 'null'),
+      stored: JSON.parse(text),
       current: c.session,
     };
   });
@@ -197,7 +199,9 @@ const sessionWrites = async (page: Page) =>
 // held), each changing neither the Session reference nor the stored text, selecting nothing and
 // leaving no drag residue. Captured per gesture, after any in-test drop settled.
 async function expectInert(page: Page, at: Point[]): Promise<void> {
-  const width = page.viewportSize()?.width ?? 0;
+  const size = page.viewportSize();
+  if (size === null) throw new Error('page has no viewport size');
+  const width = size.width;
   for (const p of at) {
     let before = await stashSession(page);
     await tapAt(page, p);
@@ -656,7 +660,8 @@ test.describe('desktop', () => {
   });
 
   for (const name of ['session-place', 'session-gave-up', 'session-won']) {
-    test(`R-39 R-75 on ${name} no hover outline and no grab cursor on any column card or placeholder`, async ({
+    const id = name === 'session-place' ? 'R-39' : 'R-75';
+    test(`${id} on ${name} no hover outline and no grab cursor on any column card or placeholder`, async ({
       page,
     }) => {
       await openFixture(page, name);

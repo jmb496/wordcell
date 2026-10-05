@@ -28,7 +28,7 @@ deferred:
   - summary: >-
       npm run test:screens was not run: Docker is unavailable in this WSL session.
     evidence: |-
-      `docker info` fails. The ticket expects no baseline change (hover is not in the screenshot specs); the only CSS change is the .hover-outline height fallback var(--wc-hover-len, var(--wc-len)), shown only under a hover class. Run npm run test:screens before marking done.
+      `docker info` fails. The ticket expects no baseline change (hover is not in the screenshot specs); the only CSS change is the .hover-outline height fallback var(--wc-hover-len, var(--wc-len)), shown only under a hover class. Re-checked during the code-review loop on 2026-10-05: still blocked (`docker` not found in this WSL distro). npm run test:screens must run (CI or the screenshot container) before done.
     location: >-
       src/ui/Column.svelte
     severity: low
@@ -151,5 +151,5 @@ deferred:
 - **Review-log items:** all three majors resolved as the Design Notes record (null drag on the bottom card at k = 1; disappearance by clicking the bottom card at k = 2; repaint after every crossed no-pick-up press with the Idle-drop controller case); every listed minor resolved except tray tile-selection clearing (tray epic) and keyboard activation (out of scope).
 - **Files:** `src/ui/gestures/intent.ts` (destinationTap, Composing tap/hover branches); `src/ui/gestures/controller.ts` (dispatch, drag-as-tap, hover suppression/repaint, k hover vars); `src/ui/Column.svelte` (`--wc-hover-len`); `src/ui/gestures/intent.test.ts`, `controller.test.ts` (AD-12 entry 10 cases); `e2e/column-phases.spec.ts` (new, android + desktop ACs); `e2e/helpers/drag.ts` (dragResidue moved), `e2e/helpers.spec.ts`, `e2e/drag.spec.ts`, `e2e/drag-interruptions.spec.ts`; `_bmad-output/specs/spec-epic-4-board/build-notes.md` (CAP-8 hover bullet).
 - **Review:** thorough, 4 lenses, 23 findings: 5 patched (1 medium, 4 low), 1 deferred (test:screens; the layout.spec flake was deferred from verification), 17 rejected with reasons in the triage log. Follow-up review: false (one medium patched, a test-only gap).
-- **Verification:** `npm run test:all` green on the final tree (1959 unit, 14 dist, 332 e2e, 12 pwa). Earlier runs had the deferred layout.spec timing flake. `npm run test:screens` not run (no Docker).
+- **Verification:** `npm run test:all` green on the final tree (1959 unit, 14 dist, 332 e2e, 12 pwa). Earlier runs had the deferred layout.spec timing flake. `npm run test:screens` not run (no Docker); re-checked during the code-review loop on 2026-10-05, still blocked (`docker` not found); it must run (CI or the screenshot container) before done.
 - **Residual risks:** the layout.spec flake under load; screenshots unverified until run in the container.

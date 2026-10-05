@@ -71,11 +71,21 @@ function composing(view: GameView): boolean {
   return view.status === 'playing' && view.phase === 'composing';
 }
 
+// Entry 10 (R-31): a Composing destination-card hit with a numeric `kIfTapped`, else null.
+function destinationHit(
+  hit: Hit,
+  view: GameView,
+): { card: CardId; value: number; size: number } | null {
+  if (!composing(view) || hit.kind !== 'card') return null;
+  const kIfTapped = columnOf(view, hit.column).kIfTapped;
+  const value = kIfTapped?.get(hit.card);
+  if (kIfTapped === undefined || typeof value !== 'number') return null;
+  return { card: hit.card, value, size: kIfTapped.size };
+}
+
 /** Entry 10 (R-31): the card a Composing destination-column press sets k from, else null. */
 export function destinationTap(hit: Hit, view: GameView): CardId | null {
-  if (!composing(view) || hit.kind !== 'card') return null;
-  const value = columnOf(view, hit.column).kIfTapped?.get(hit.card);
-  return typeof value === 'number' ? hit.card : null;
+  return destinationHit(hit, view)?.card ?? null;
 }
 
 export function tapAction(
@@ -126,14 +136,10 @@ export function hoverAction(
   selection: TailSelection | null,
 ): HoverAction | null {
   if (composing(view)) {
-    const card = destinationTap(hit, view);
-    if (card === null || hit.kind !== 'card') return null;
-    const kIfTapped = columnOf(view, hit.column).kIfTapped;
-    const value = kIfTapped?.get(card);
-    if (kIfTapped === undefined || typeof value !== 'number') {
-      throw new Error(`AD-12 destinationTap gave card ${card} without a kIfTapped number`);
-    }
-    return { column: hit.column, kind: 'k', from: kIfTapped.size - value, length: kIfTapped.size };
+    if (hit.kind !== 'card') return null;
+    const target = destinationHit(hit, view);
+    if (target === null) return null;
+    return { column: hit.column, kind: 'k', from: target.size - target.value, length: target.size };
   }
   if (view.status !== 'playing' || view.phase !== 'idle') return null;
   if (hit.kind !== 'card' && hit.kind !== 'space') return null;

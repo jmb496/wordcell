@@ -1866,10 +1866,12 @@ describe('AD-12 entry 10 Composing columns', () => {
     `dispatch ${JSON.stringify({ type: 'tapDestinationCard', card })}`;
   // Composing (src/engine/view.ts): no column picks up or takes drops; column 1 is the destination,
   // remainder [0, 5] at k = 1 (card 0 → 2, card 5 the top of D → null); the ghost is an S mirror.
+  // Card 7 (the ghost's data-mirror-of) has a number so a mirror misresolved as a card would dispatch.
   const compose = (
     kIfTapped: [number, number | null][] = [
       [0, 2],
       [5, null],
+      [7, 1],
     ],
   ) => {
     const col = (column: number, cards: number[]) => ({
@@ -1997,8 +1999,8 @@ describe('AD-12 entry 10 Composing columns', () => {
     t.hover(t.b.card1);
     expect([...t.b.column1.classes]).toEqual(['wc-hover-tail']);
     expect(Object.fromEntries(t.b.column1.props)).toEqual({
-      '--wc-hover-from': '0',
-      '--wc-hover-len': '2',
+      '--wc-hover-from': '1',
+      '--wc-hover-len': '3',
     });
     for (const el of [t.b.card1b, t.b.ghost, t.b.foot1, t.b.card2, t.b.column3]) {
       t.hover(el);
