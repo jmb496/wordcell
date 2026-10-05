@@ -26,6 +26,10 @@ import { text } from './text';
 // their faces (above the bars, the lift and the hover peek, below the scrim) and `wc-drag-target` to
 // the target's bottom card, placeholder (revealed) or the card above a partial tail, in every media
 // context. Svelte toggles its own class directives with `classList`, so these survive re-renders.
+// Entry 9 (SPEC CAP-4, CAP-7, F12, F24): while a drag replaces a selection the controller puts
+// `wc-selection-suppressed` on App's `<main>`; under it the old selection's lift, outline, `Here`
+// and every foot's source/target paint are cancelled (visual properties only: hit rects and the
+// foot row's `touch-action` stay, AD-11, AD-12); dragged faces are never affected.
 let {
   column,
   faces,
@@ -194,6 +198,14 @@ const liftStart = $derived(column.cards.length - count);
     width: var(--wc-w); height: var(--wc-H); border: 1px dashed var(--wc-outline);
     border-radius: 6px; pointer-events: none;
   }
+  /* Entry 9: a selection being replaced by a drag shows no lift, outline, `Here` or foot state. */
+  :global(main.wc-selection-suppressed) .cards :global(.card.lifted) > :global(.face:not(.wc-drag-layer)) {
+    transform: none; box-shadow: none; z-index: auto;
+  }
+  :global(main.wc-selection-suppressed) .selection-outline { display: none; }
+  :global(main.wc-selection-suppressed) .foot.source { background: none; }
+  :global(main.wc-selection-suppressed) .here { visibility: hidden; }
+  :global(main.wc-selection-suppressed) .foot.target { border-color: transparent; background: none; }
   .cards :global(.face.wc-drag-layer) { z-index: 5; box-shadow: 0 6px 16px #0008; }
   /* DESIGN.md Card states, drop target under a drag: 3 px teal outline and 12 % teal wash. */
   .cards :global(.card.wc-drag-target) > :global(.face),

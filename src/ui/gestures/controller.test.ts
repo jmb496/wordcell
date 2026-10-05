@@ -13,6 +13,8 @@ import type { Gate } from './gate';
 // (`finish()` queues `onfinish` once on the virtual clock, as real WAAPI fires it later); prefs mocked (motion, as in motion.test.ts);
 // `duration` from ../motion wrapped to log its kinds and answer `durations.override` per kind.
 const navCalls: string[] = [];
+// Entry 9: gate enter/leave, animation finish and elementFromPoint calls, in order.
+const order: string[] = [];
 const shared: { view: unknown; onDispatch: (() => void) | null } = {
   view: undefined,
   onDispatch: null,
@@ -51,6 +53,7 @@ class FakeAnimation {
   oncancel: (() => void) | null = null;
   finished = false;
   readonly finish = vi.fn(() => {
+    order.push('finish');
     if (this.finished) return;
     this.finished = true;
     clock.add(() => this.onfinish?.(), 0);
@@ -312,6 +315,7 @@ type Timer = { cb: () => void; due: number; done: boolean };
 async function setup() {
   vi.resetModules();
   navCalls.length = 0;
+  order.length = 0;
   shared.onDispatch = null;
   const col = (column: number, cards: number[]) => ({
     column,
@@ -338,10 +342,12 @@ async function setup() {
   const counts = { enter: 0, leave: 0 };
   const gate = {
     enter: () => {
+      order.push('enter');
       counts.enter += 1;
     },
     leave: () => {
       if (counts.enter - counts.leave === 0) throw new Error('fake gate leave() at count 0');
+      order.push('leave');
       counts.leave += 1;
     },
   } as unknown as Gate;
@@ -379,7 +385,10 @@ async function setup() {
   }
   let hit: FakeEl | null = null;
   const controller = createController(gate, {
-    elementFromPoint: () => hit as unknown as Element | null,
+    elementFromPoint: () => {
+      order.push('point');
+      return hit as unknown as Element | null;
+    },
     setTimer,
     clearTimer,
   });
@@ -906,13 +915,11 @@ describe('AD-12 entry 7 tap actions', () => {
     ]);
   });
 
-  it('AD-12 a drag and a non-empty WordCell long-press change nothing; an empty-WordCell long-press deselects on release', async () => {
+  // Entry 9: a pick-up drag with a selection open replaces it (AD-13 entry 9 selection replacement).
+  it('AD-12 a non-empty WordCell long-press changes nothing; an empty-WordCell long-press deselects on release', async () => {
     const t = await setup();
     t.detach();
     t.tap(t.b.card1);
-    t.down(t.b.card2, { clientX: 0, clientY: 0 });
-    t.fire('pointermove', { clientX: 20, clientY: 0 });
-    t.fire('pointerup', { target: t.b.card2 });
     t.down(t.b.cellCard);
     t.advance(400);
     t.fire('pointerup', { target: t.b.cellCard });
@@ -1385,6 +1392,258 @@ describe('AD-12 entry 8 drag', () => {
     t.fire('pointerup');
     expect(navCalls).toEqual([]);
     expect(animations(t)).toEqual([]);
+    expect(t.active()).toBe(0);
+  });
+});
+
+describe('AD-13 entry 9 selection replacement', () => {
+  type T = Awaited<ReturnType<typeof setup>>;
+  const SUPPRESSED = 'wc-selection-suppressed';
+  const drop = (source: number, count: number, destination: number) =>
+    `dispatch ${JSON.stringify({ type: 'drop', sourceColumn: source, sourceCount: count, destinationColumn: destination })}`;
+  const suppressed = (t: T) => t.b.root.classes.has(SUPPRESSED);
+  const move = (t: T, x: number, y: number) => t.fire('pointermove', { clientX: x, clientY: y });
+  const animations = (t: T) => [t.b.face1, t.b.face1b, t.b.face2].flatMap((f) => f.animations);
+  const dragResidue = (t: T) =>
+    [t.b.card1, t.b.card1b, t.b.card2, t.b.face1, t.b.face1b, t.b.face2].filter(
+      (el) => [...el.classes].some((c) => c.startsWith('wc-drag')) || el.style.transform !== '',
+    ).length;
+  // Opens `selection`, then starts a pick-up drag of column 1's bottom card (card1b) and moves it
+  // to (x, y); navCalls start empty after the select.
+  async function replacing(
+    selection: [column: number, count: number],
+    x: number,
+    y: number,
+  ): Promise<T & { detachFn: () => void }> {
+    const t = await setup();
+    const detachFn = t.detach();
+    t.overlays.select(...selection);
+    navCalls.length = 0;
+    t.down(t.b.card1b, { clientX: 25, clientY: 50 });
+    move(t, x, y);
+    expect(suppressed(t)).toBe(true);
+    return { ...t, detachFn };
+  }
+
+  type Ending = {
+    name: string;
+    selection: [number, number];
+    to: [number, number];
+    end: (t: T & { detachFn: () => void }) => void;
+  };
+  const deselecting: Ending[] = [
+    {
+      name: 'release over nothing',
+      selection: [2, 1],
+      to: [25, 1050],
+      end: (t) => t.fire('pointerup'),
+    },
+    {
+      name: 'release on the never-left source',
+      selection: [1, 2],
+      to: [25, 70],
+      end: (t) => t.fire('pointerup'),
+    },
+  ];
+  it.each(deselecting)(
+    'AD-13 F24 $name: fly-back, class gone at end(), one pop, no dispatch',
+    async ({ selection, to, end }) => {
+      const t = await replacing(selection, ...to);
+      end(t);
+      expect(suppressed(t)).toBe(false);
+      expect(t.b.face1b.animations).toHaveLength(1);
+      expect(navCalls).toEqual(['pop']);
+      expect(t.overlays.selection).toBeNull();
+      t.advance(180);
+      expect(t.active()).toBe(0);
+      expect(navCalls).toEqual(['pop']);
+    },
+  );
+
+  it('AD-13 F24 a drop on another column: class gone before the dispatch, pop then one drop', async () => {
+    const t = await replacing([2, 1], 125, 50);
+    expect(t.b.placeholder3.classes.has('wc-drag-target')).toBe(true);
+    let atDispatch: boolean | null = null;
+    shared.onDispatch = () => {
+      atDispatch = suppressed(t);
+    };
+    t.fire('pointerup');
+    expect(atDispatch).toBe(false);
+    expect(navCalls).toEqual(['pop', drop(1, 1, 3)]);
+    expect(t.overlays.selection).toBeNull();
+    expect(t.active()).toBe(0);
+  });
+
+  const snapping: Ending[] = [
+    { name: 'plain cancel()', selection: [2, 1], to: [125, 50], end: (t) => t.controller.cancel() },
+    { name: 'detach', selection: [2, 1], to: [125, 50], end: (t) => t.detachFn() },
+  ];
+  it.each(snapping)(
+    'AD-13 F24 $name: snap back, class gone, one pop',
+    async ({ selection, to, end }) => {
+      const t = await replacing(selection, ...to);
+      end(t);
+      expect(suppressed(t)).toBe(false);
+      expect(animations(t)).toEqual([]);
+      expect(dragResidue(t)).toBe(0);
+      expect(navCalls).toEqual(['pop']);
+      expect(t.overlays.selection).toBeNull();
+      expect(t.active()).toBe(0);
+    },
+  );
+
+  const restoring: Ending[] = [
+    {
+      name: 'cancel({ byBack: true })',
+      selection: [2, 1],
+      to: [125, 50],
+      end: (t) => t.controller.cancel({ byBack: true }),
+    },
+    {
+      name: 'pointercancel',
+      selection: [2, 1],
+      to: [125, 50],
+      end: (t) => t.fire('pointercancel'),
+    },
+    {
+      name: 'lostpointercapture',
+      selection: [2, 1],
+      to: [125, 50],
+      end: (t) => t.fire('lostpointercapture', { target: t.b.card1b }),
+    },
+  ];
+  it.each(restoring)(
+    'AD-13 F28 $name: fly-back, class kept until settle, selection kept, no nav call',
+    async ({ selection, to, end }) => {
+      const t = await replacing(selection, ...to);
+      end(t);
+      expect(t.b.face1b.animations).toHaveLength(1);
+      expect(suppressed(t)).toBe(true);
+      expect(t.overlays.selection).toEqual({ column: 2, count: 1 });
+      t.advance(179);
+      expect(suppressed(t)).toBe(true);
+      t.advance(1);
+      expect(suppressed(t)).toBe(false);
+      expect(t.overlays.selection).toEqual({ column: 2, count: 1 });
+      expect(navCalls).toEqual([]);
+      expect(t.active()).toBe(0);
+    },
+  );
+
+  const settles: [string, (t: T) => void][] = [
+    ['onfinish', (t) => t.advance(180)],
+    // An enabled button: the press finishes the flight, resolves to nothing and leaves the gate.
+    ['a press', (t) => t.down(t.b.undoIcon)],
+    ['cancel()', (t) => t.controller.cancel()],
+  ];
+  it.each(settles)(
+    'AD-13 F28 a restoring fly-back settled by %s: class removed, selection kept, no nav call, gate idle',
+    async (_name, settle) => {
+      const t = await replacing([2, 1], 125, 50);
+      t.fire('pointercancel');
+      expect(suppressed(t)).toBe(true);
+      settle(t);
+      expect(suppressed(t)).toBe(false);
+      expect(dragResidue(t)).toBe(0);
+      expect(t.overlays.selection).toEqual({ column: 2, count: 1 });
+      expect(navCalls).toEqual([]);
+      expect(t.active()).toBe(0);
+    },
+  );
+
+  it('AD-13 F24 a same-id pointerdown mid-drag snaps back and restores at once; the new press sees the selection', async () => {
+    const t = await replacing([2, 1], 125, 50);
+    t.down(t.b.foot1);
+    expect(suppressed(t)).toBe(false);
+    expect(animations(t)).toEqual([]);
+    expect(dragResidue(t)).toBe(0);
+    expect(t.overlays.selection).toEqual({ column: 2, count: 1 });
+    expect(navCalls).toEqual([]);
+    // A foot press is captured only with a selection open (entry 7).
+    expect(t.b.foot1.log).toEqual(['set 1']);
+    expect(t.active()).toBe(1);
+    t.fire('pointercancel');
+    expect(t.active()).toBe(0);
+    expect(navCalls).toEqual([]);
+  });
+
+  it('AD-12 F24 the class goes on at the threshold-crossing move, not below it', async () => {
+    const t = await setup();
+    t.detach();
+    t.overlays.select(2, 1);
+    t.down(t.b.card1b, { clientX: 25, clientY: 50 });
+    move(t, 25, 54);
+    expect(suppressed(t)).toBe(false);
+    move(t, 25, 58);
+    expect(suppressed(t)).toBe(true);
+    expect(t.b.face1b.classes.has('wc-drag-layer')).toBe(true);
+    t.controller.cancel();
+  });
+
+  it('AD-12 CAP-4 an inert drag with a selection (foot pad, column space, non-pickable card, WordCell) and a pick-up drag with nothing selected never add the class', async () => {
+    for (const from of ['foot', 'space', 'non-pickable card', 'WordCell'] as const) {
+      const t = await setup();
+      t.detach();
+      t.overlays.select(2, 1);
+      navCalls.length = 0;
+      const view = shared.view as { columns: { canPickUp: boolean }[] };
+      (view.columns[0] as { canPickUp: boolean }).canPickUp = false;
+      const pressed = {
+        foot: t.b.foot1,
+        space: t.b.column1,
+        'non-pickable card': t.b.card1b,
+        WordCell: t.b.cellCard,
+      }[from];
+      t.down(pressed, { clientX: 25, clientY: 300 });
+      move(t, 45, 300);
+      expect(suppressed(t), from).toBe(false);
+      t.fire('pointerup');
+      expect(suppressed(t), from).toBe(false);
+      expect(t.overlays.selection, from).toEqual({ column: 2, count: 1 });
+      expect(navCalls, from).toEqual([]);
+    }
+    const t = await setup();
+    t.detach();
+    t.down(t.b.card1b, { clientX: 25, clientY: 50 });
+    move(t, 125, 50);
+    expect(t.b.placeholder3.classes.has('wc-drag-target')).toBe(true);
+    expect(suppressed(t)).toBe(false);
+    t.fire('pointercancel');
+    t.advance(180);
+    expect(suppressed(t)).toBe(false);
+  });
+
+  it('AD-12 F13 a press during a fly-back enters the gate, finishes the flight, then resolves by elementFromPoint and captures there', async () => {
+    const t = await setup();
+    t.detach();
+    t.down(t.b.card1b, { clientX: 25, clientY: 50 });
+    move(t, 25, 1050);
+    t.fire('pointerup');
+    expect(t.active()).toBe(1);
+    order.length = 0;
+    // event.target is another element (t.down's default); resolution reads elementFromPoint.
+    t.down(t.b.card2);
+    expect(order).toEqual(['enter', 'finish', 'leave', 'point']);
+    expect(t.b.card2.log).toEqual(['set 1']);
+    expect(t.b.leftover.log).toEqual([]);
+    expect(dragResidue(t)).toBe(0);
+    expect(t.active()).toBe(1);
+    t.fire('pointerup', { target: t.b.card2 });
+    expect(t.active()).toBe(0);
+  });
+
+  it('AD-12 F13 a press on an enabled button during a fly-back finishes it and leaves the gate at once', async () => {
+    const t = await setup();
+    t.detach();
+    t.down(t.b.card1b, { clientX: 25, clientY: 50 });
+    move(t, 25, 1050);
+    t.fire('pointerup');
+    order.length = 0;
+    t.down(t.b.undoIcon);
+    expect(order).toEqual(['enter', 'finish', 'leave', 'point', 'leave']);
+    expect(t.active()).toBe(0);
+    expect(dragResidue(t)).toBe(0);
+    t.advance(1000);
     expect(t.active()).toBe(0);
   });
 });

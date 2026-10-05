@@ -28,8 +28,17 @@
 // else flies back; pointercancel, lostpointercapture and cancel({ byBack: true }) fly back from the
 // last transform; any other end snaps back at once. The fly-back (WAAPI over
 // `duration('flyBack')`, a fade under reduced motion) is gate-counted and settles on its faces'
-// `onfinish`, or at once from cancel() or a new drag. Hover classes are cleared during a drag or
-// fly-back and recomputed after.
+// `onfinish`, or at once from cancel(), a new press or a new drag. Hover classes are cleared during
+// a drag or fly-back and recomputed after.
+// Entry 9 (SPEC CAP-4, CAP-7, F12, F13, F24, F28; AD-9, AD-13): a pick-up drag that starts with a
+// selection open is *replacing*: at its threshold crossing `wc-selection-suppressed` goes on the
+// attach root (CSS hides the old selection's lift, outline, `Here` and foot states; the overlays
+// store is untouched mid-drag). Every end removes it: a restoring fly-back (pointercancel,
+// lostpointercapture, cancel({ byBack: true })) at its settle, keeping the selection with no nav
+// call (back's `closedByBack` clears it); every other end at `end()`, where a release with no
+// highlight and a plain cancel() (before-hide, act(), detach) deselect once, a drop deselects in
+// `pointerup` before its dispatch, and a same-id pointerdown restores. A button-0 pointerdown with
+// no active press during a fly-back enters the gate, finishes the flight, then resolves (F13).
 import { game } from '../../shell/game.svelte';
 import { prefs } from '../../shell/prefs.svelte';
 import { duration } from '../motion';
@@ -89,6 +98,8 @@ type Drag = {
   highlighted: number | null;
   /** The element carrying `wc-drag-target`. */
   target: Element | null;
+  /** Entry 9: started with a selection open; the root carries `SUPPRESSED` until its end. */
+  readonly replacing: boolean;
 };
 
 /** A running fly-back (F13). */
@@ -127,6 +138,7 @@ const HOVER_FROM = '--wc-hover-from';
 const DRAG_GHOST = 'wc-drag-ghost';
 const DRAG_LAYER = 'wc-drag-layer';
 const DRAG_TARGET = 'wc-drag-target';
+const SUPPRESSED = 'wc-selection-suppressed';
 const OUTSIDE: Hit = { kind: 'outside' };
 
 function attribute(el: Element, name: string): number {
@@ -247,10 +259,26 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       // The fly-back enters the gate before the press leaves it (F13).
       if (flies) flyBack(drag);
       else clearDrag(drag);
+      // Entry 9 (F24/F28): a restoring fly-back keeps the class until its settle; every other end
+      // removes it here, deselecting on a release with no highlight and on a plain cancel().
+      if (drag.replacing && !(flies && kind !== 'up')) {
+        unsuppress();
+        if (
+          (kind === 'up' && drag.highlighted === null) ||
+          (reason.kind === 'cancel' && !reason.byBack)
+        ) {
+          overlays.deselect();
+        }
+      }
     }
     gate.leave();
     // A drop refreshes after its dispatch (pointerup).
     if (drag !== null && !flies && kind !== 'up') refreshHover();
+  }
+
+  function unsuppress(): void {
+    if (root === null) throw new Error('AD-12 selection suppression without a root');
+    root.classList.remove(SUPPRESSED);
   }
 
   // Removes every drag class and the inline transform from the tail.
@@ -304,6 +332,8 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     flight.settled = true;
     if (flying === flight) flying = null;
     clearDrag(flight.drag);
+    // Entry 9: a restoring fly-back's end (the selection was kept).
+    if (flight.drag.replacing) unsuppress();
     gate.leave();
     refreshHover();
   }
@@ -351,6 +381,11 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     if (sourceEl === null) throw new Error('AD-12 column card outside [data-column]');
     finishFlight();
     clearHover();
+    const replacing = overlays.selection !== null;
+    if (replacing) {
+      if (root === null) throw new Error('AD-12 drag without a root');
+      root.classList.add(SUPPRESSED);
+    }
     const wrappers = entry.cards.slice(start).map((id) => cardIn(sourceEl, id));
     const faces = wrappers.map((wrapper) => {
       const face = wrapper.querySelector('.face');
@@ -372,6 +407,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       hasLeftSource: false,
       highlighted: null,
       target: null,
+      replacing,
     };
   }
 
@@ -434,13 +470,22 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       // A same-id pointerdown: the old press's end was lost.
       end({ kind: 'sameId' });
     }
+    // F13: a press during a fly-back acts on the settled layout; the gate never idles between.
+    const inFlight = flying !== null;
+    if (inFlight) {
+      gate.enter();
+      finishFlight();
+    }
     const resolved = resolve(
       root,
       deps.elementFromPoint(event.clientX, event.clientY),
       overlays.selection !== null,
     );
-    if (resolved === null) return;
-    gate.enter();
+    if (resolved === null) {
+      if (inFlight) gate.leave();
+      return;
+    }
+    if (!inFlight) gate.enter();
     const p: Press<H> = {
       pointerId: event.pointerId,
       captured: resolved.capture,
