@@ -3,7 +3,7 @@ title: 'Composing, Place and Game-over column behaviour'
 type: 'feature'
 ticket: '10'
 created: '2026-10-05'
-status: 'built'
+status: done
 baseline_revision: '2d503b035e4c2d708125a02b016ec147d94f40de'
 route: 'full'
 route_source: 'auto'

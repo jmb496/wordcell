@@ -152,3 +152,14 @@ Worth knowing: the F32 review left one open item for the refactor sweep (4.13): 
 Close-out docs:
 - ARCHITECTURE-SPINE.md § AD-12 drag transform and fly-back target (and AD-11 naming `SELECTION_LIFT_PX`) ← F32/F33: a dragged stack inside a tap selection keeps the 8 px lift for the whole drag and its fly-back; a restoring fly-back returns lift, outline and `Here` at its start (owner, 2026-10-05; recorded in spec-epic-4-board build-notes.md)
 - DESIGN.md § selection lift ← F32: the lift persists while a selected card is dragged (owner, 2026-10-05)
+
+## 4.10 Composing, Place and Game-over column behaviour — done
+What it adds: while you are composing a word, tapping a card in the destination column changes how many of its cards are used (and pressing one and dragging works as a tap, without moving it); every other column, and the faint "ghost" copies, ignore taps and drags. While placing a word or after the game ends, columns ignore taps and drags entirely. On desktop, hovering a destination card outlines the cards a click would use.
+Ticket review: 5 passes, diverging (majors 7, 6, 6, 2, 3); nothing needed your input. Three late test-wording slips were handed to the build, which resolved them in its plan.
+Build: built; commits ad02f2e
+Code review: thorough (risk medium), 3 passes, converged (majors 1, 1, 0); fixes in b847e65, 6442caf
+Tests: all passing (test:all, 2026-10-05, second run; the first run hit the known "banner during a scroll" android layout flake, 150.3 ms against a 150 ms limit, in code this ticket does not touch)
+Ref to fix upstream: ticket test steps on how k changes after a tap (which card is the new top of the destination) → the ticket's own Acceptance Criteria, R-31; hover during a press that crosses the drag threshold without picking anything up → build-notes.md CAP-8 (the build added one bullet there, as the review log recommended)
+Tokens: 11.4M input-equivalent (ticket review 40%, code review 29%, build 27%, orchestrator 3%, other 2%); orchestrator peak context 72k
+Worth knowing: the screenshot suite (`npm run test:screens`) was not run: Docker is not reachable from this WSL distro (Docker Desktop's WSL integration looks off). The code review left that as its one open item, because the change touches the hover outline's height in Column.svelte; hover is not in the screenshots, so no picture change is expected, but run `npm run test:screens` (or let CI) before the epic merges. The "banner during a scroll" layout flake hit again (it is now in roughly every other full run) and should be fixed in the refactor sweep (4.13).
+Close-out docs: none
