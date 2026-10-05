@@ -1,6 +1,6 @@
 # Review loop — ticket 4.9 build (code mode)
 
-State: pass 1: done
+State: pass 2: done
 
 Target: commit range `996fd04..HEAD` (8ce0a98), staged diff `_bmad-output/implementation-artifacts/review-loop/4-9-build.passes/pass0.diff`
 Intent: `_bmad-output/initiative-wordcell-v1/epic-board-and-gestures/story-drag-interruptions-selection-replacement-hide-back-and-cance-plan.md`
@@ -29,3 +29,19 @@ Reviewers: correctness, edge cases, verification gap, intent alignment  |  Findi
 ### Fix outcome
 All 12 items applied (fixer: npm test 1928 passed, lint clean, check 0 errors; `drag-interruptions.spec.ts --repeat-each=3` 27 passed; hide and F13 Undo tests ×5 on android passed). Orchestrator re-ran test/lint/check: pass.
 Snapshot: tree a727ef47cf00c29b34e1edbde53bd84a23b1c713  |  fix diff `4-9-build.passes/pass1.fix.diff`  |  full diff `4-9-build.passes/pass1.diff`
+
+## Pass 2 — 2026-10-05
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 0, minor 5, decision-needed 0  |  Dropped in triage: 0
+Snapshot: tree a727ef47cf00c29b34e1edbde53bd84a23b1c713 (unchanged, no fix pass)
+### Applied
+- none (converged)
+
+## Result — converged after 2 passes
+Final state (tree a727ef4, commit 6b9bfed): npm test 1928 passed, lint clean, check 0 errors.
+Decision needed: the 8 px lift jump when dragging a selected card (pass 1).
+Unapplied minors (for the next build or loop):
+- controller.test.ts `deselecting` row 'release over a non-target column' — fixture column 4 is unregistered, so it duplicates 'release over nothing'; overlap a registered column below MIN_RATIO or drop the row and note the reduction in the plan.
+- e2e `AD-12 F24 a drag from the source column of a selection lifts one tail` — pre-drag baseline still missing for box-shadow, outline display and foot target states.
+- controller.test.ts `replacing()` helper — assert selection unchanged and navCalls empty mid-drag (F12), so end-path rows catch an early deselect.
+- plan Design Notes 'Rule → test mapping' — add rule-coverage row 103 (one tail lifted) and use exact test titles.
+- e2e one-lifted-tail release is over the WordCell row, not empty space; note it in the mapping or release over empty board space.

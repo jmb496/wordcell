@@ -123,3 +123,18 @@ Paused: usage limit at Step B, reset 7pm (America/New_York), resumed 2026-10-02 
 Tokens: 6.4M input-equivalent (code review 77%, build 19%, orchestrator 3%, other 2%); orchestrator peak context 55k
 Worth knowing: three small review notes were left unapplied, logged in `review-loop/4-8-build.md`: (1) when the board is scrolled under the sticky top bar, dragging cards over the bar could light the column hidden beneath it — worth deciding in the refactor sweep (4.13) whether to clip that; (2) a plan sentence about a cancelled fly-back is out of date; (3) one tie-break unit test could be sharper. The known "banner during a scroll" layout flake hit the build's first full run again (not this session's), so it is still worth fixing in 4.13.
 Close-out docs: none
+
+## 4.9 Drag interruptions: selection replacement, hide, back and cancel-first — stopped
+What it adds: dragging keeps working when you're interrupted. If you drag while some cards are already selected, the drag takes over cleanly and the old selection is dropped. If the drag is cut short (the app goes to the background, you press back, or the system cancels the touch), the cards fly back and your earlier selection comes back too. Pressing Undo in the middle of a drag first puts the dragged cards back, then undoes.
+Ticket review: 4 passes, converged; nothing needed your input. One open item (check that the old selection's outline and "Here" marker hide during the drag and return after a cancel) and nine small notes went to the build.
+Build: built; commits 8ce0a98
+Code review: thorough (ticket risk high), 2 passes, converged; 1 major fix applied; commits 6b9bfed. One decision for you (below).
+Tests: not run yet by the autopilot (the code review's own unit tests, lint and type check pass); `test:all` runs when the ticket resumes at Step D
+Ref to fix upstream: none
+Tokens: 9.8M input-equivalent (ticket review 39%, build 32%, code review 25%, orchestrator 2%, other 1%); orchestrator peak context 58k
+Worth knowing: the unit suite takes about 5.3 s, a little over its 5 s budget (not caused by this ticket; left for the refactor sweep 4.13). The "banner during a scroll" layout test flaked once more during the build. Three small unapplied test notes are in `review-loop/4-9-build.md`.
+Close-out docs: none yet (depends on your answer below)
+
+## Stopped — owner decision at ticket 4.9 code review
+
+Stop rule 1. The code review asks: when you drag a card that is already lifted because it is selected, should it keep its lift while dragged? Today it drops 8 px when the drag starts, and if the drag is cancelled it flies back 8 px too low and then snaps up. Proposed default: keep the current behaviour for v1 and revisit in a polish ticket. The ticket is `built`; the code review log has its `## Result`, so a resume goes straight to Step D (test:all, mark done).

@@ -1,27 +1,37 @@
-outcome: done
-ticket: 4.8
-reason: done
+outcome: stopped
+ticket: 4.9
+reason: 1 — the code review needs your decision on how a selected card looks when you drag it
 next: 4.9
-updated: 2026-10-03T00:06:11Z
-summary: Ticket 4.8 (drag cards onto a column to start a word) is built, reviewed, fully tested and marked done.
+updated: 2026-10-05T13:43:39Z
+summary: Ticket 4.9 (dragging when interrupted) is built and reviewed, but one look-and-feel question needs your answer before it is finished.
 
 # Epic board-and-gestures — handoff
 
-Ticket 4.8 is done. You can now drag cards: hold a card (and the cards below it), move over another column and it lights up; let go and the word starts there. Letting go anywhere else sends the cards flying back.
+Ticket 4.9 is built and reviewed. Dragging now copes with interruptions: if you drag while other cards are selected, the drag replaces the selection; if the drag is cut short (app sent to the background, back pressed, touch cancelled by the system), the cards fly home and your earlier selection comes back; Undo during a drag first puts the cards back.
 
-- The build picked up where the usage limit stopped it and finished (one commit, 6a9b473).
-- Code review: 3 rounds, careful depth (the ticket is high risk), which fixed 5 real problems and applied 6 technical defaults. Nothing needed your input.
-- Tests: every suite passed on the first run; the screenshots were unchanged.
+- Ticket review: 4 rounds, settled, nothing needed you.
+- Build: done (commit 8ce0a98).
+- Code review: 2 rounds, careful depth; it fixed one real problem (commit 6b9bfed) and raised one question for you.
+- Full test run (`test:all`): not run yet. It runs when the ticket resumes.
+
+## Your decision
+
+**When you drag a card that is already selected (so it sits lifted 8 px), should it stay lifted while you drag it?**
+
+- **Keep things as they are for now (proposed).** The card visibly drops 8 px when the drag starts. If the drag is cancelled, it flies back 8 px too low and then snaps up. With reduced motion turned on, only the dragged cards show the lift until the fade ends. A later polish ticket can smooth this out. No extra work now.
+- **Fix it now.** The dragged card keeps its lift, so there is no jump at the start and no snap after a cancelled drag. This changes how the drag position is worked out (the architecture's drag formula, AD-12), so the architecture doc needs a small wording change and the ticket gets a little more work and review.
 
 ## Worth knowing
 
-- If the board is scrolled under the sticky top bar, dragging cards over the bar may light the column hidden beneath it. Left for the refactor sweep (4.13) to fix or accept.
-- The flaky "banner during a scroll" layout test showed up again during the build; still worth fixing in 4.13.
+- The unit tests take about 5.3 s, a little over the 5 s budget. This ticket didn't cause it; the refactor sweep (4.13) owns it.
+- The flaky "banner during a scroll" layout test failed once more during the build (it passed on rerun). Still worth fixing in 4.13.
 
 ## Close-out docs
 
-None from 4.8. Earlier tickets' entries are in the digest (`_bmad-output/implementation-artifacts/autopilot/epic-board-and-gestures-20261001-1955.md`).
+None from 4.9 yet. If you choose "fix it now", ARCHITECTURE-SPINE.md AD-12 (drag transform) gets an entry. Earlier tickets' entries are in the digest (`_bmad-output/implementation-artifacts/autopilot/epic-board-and-gestures-20261001-1955.md`).
 
 ## Resume
 
-Rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-board-and-gestures`; the next session starts ticket 4.9 (drag interruptions).
+Record your answer in the ticket's Notes (or tell a Claude session, which records it and commits). Then rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-board-and-gestures`.
+- If you keep the current behaviour, the next session picks up ticket 4.9 at the final check (full test run, then mark done).
+- If you want it fixed now, the fix has to be built first. Ask a session to do that before you rerun the driver.
