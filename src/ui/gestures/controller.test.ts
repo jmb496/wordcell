@@ -1866,12 +1866,10 @@ describe('AD-12 entry 10 Composing columns', () => {
     `dispatch ${JSON.stringify({ type: 'tapDestinationCard', card })}`;
   // Composing (src/engine/view.ts): no column picks up or takes drops; column 1 is the destination,
   // remainder [0, 5] at k = 1 (card 0 → 2, card 5 the top of D → null); the ghost is an S mirror.
-  // Card 7 (the ghost's data-mirror-of) has a number so a mirror misresolved as a card would dispatch.
   const compose = (
     kIfTapped: [number, number | null][] = [
       [0, 2],
       [5, null],
-      [7, 1],
     ],
   ) => {
     const col = (column: number, cards: number[]) => ({
@@ -1900,6 +1898,14 @@ describe('AD-12 entry 10 Composing columns', () => {
     walk(t.b.root);
     return out;
   };
+  // Card 7 (the ghost's data-mirror-of) is mapped only so a mirror misresolved as a card would
+  // dispatch or preview; ghost cases only, no engine view gives it a number.
+  const composeGhostMapped = () =>
+    compose([
+      [0, 2],
+      [5, null],
+      [7, 1],
+    ]);
   const transforms = (t: T) => [t.b.face1, t.b.face1b, t.b.face2].map((f) => f.style.transform);
   const move = (t: T, x: number, y: number, init: Partial<FakeEvent> = {}) =>
     t.fire('pointermove', { clientX: x, clientY: y, ...init });
@@ -1916,9 +1922,11 @@ describe('AD-12 entry 10 Composing columns', () => {
     compose();
     t.tap(t.b.card1);
     expect(navCalls).toEqual([tapDest(0)]);
-    for (const el of [t.b.card1b, t.b.ghost, t.b.foot1, t.b.placeholder1, t.b.card2, t.b.column3]) {
+    for (const el of [t.b.card1b, t.b.foot1, t.b.placeholder1, t.b.card2, t.b.column3]) {
       t.tap(el);
     }
+    composeGhostMapped();
+    t.tap(t.b.ghost);
     expect(navCalls).toEqual([tapDest(0)]);
     expect(t.overlays.selection).toBeNull();
     expect(t.active()).toBe(0);
@@ -1959,12 +1967,13 @@ describe('AD-12 entry 10 Composing columns', () => {
   it('AD-12 a drag-as-tap on a null card, a ghost or another column dispatches nothing', async () => {
     const t = await setup();
     t.detach();
-    compose();
     for (const [el, x] of [
       [t.b.card1b, 25],
       [t.b.ghost, 25],
       [t.b.card2, 75],
     ] as const) {
+      if (el === t.b.ghost) composeGhostMapped();
+      else compose();
       t.down(el, { clientX: x, clientY: 30 });
       move(t, x + 50, 30);
       expect(dragClasses(t)).toEqual([]);
@@ -1999,10 +2008,12 @@ describe('AD-12 entry 10 Composing columns', () => {
     t.hover(t.b.card1);
     expect([...t.b.column1.classes]).toEqual(['wc-hover-tail']);
     expect(Object.fromEntries(t.b.column1.props)).toEqual({
-      '--wc-hover-from': '1',
-      '--wc-hover-len': '3',
+      '--wc-hover-from': '0',
+      '--wc-hover-len': '2',
     });
     for (const el of [t.b.card1b, t.b.ghost, t.b.foot1, t.b.card2, t.b.column3]) {
+      if (el === t.b.ghost) composeGhostMapped();
+      else compose();
       t.hover(el);
       for (const column of [t.b.column1, t.b.column2, t.b.column3]) {
         expect(column.classes.size).toBe(0);

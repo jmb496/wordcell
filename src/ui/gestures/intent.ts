@@ -75,12 +75,12 @@ function composing(view: GameView): boolean {
 function destinationHit(
   hit: Hit,
   view: GameView,
-): { card: CardId; value: number; size: number } | null {
+): { column: number; card: CardId; value: number; size: number } | null {
   if (!composing(view) || hit.kind !== 'card') return null;
   const kIfTapped = columnOf(view, hit.column).kIfTapped;
   const value = kIfTapped?.get(hit.card);
   if (kIfTapped === undefined || typeof value !== 'number') return null;
-  return { card: hit.card, value, size: kIfTapped.size };
+  return { column: hit.column, card: hit.card, value, size: kIfTapped.size };
 }
 
 /** Entry 10 (R-31): the card a Composing destination-column press sets k from, else null. */
@@ -136,10 +136,14 @@ export function hoverAction(
   selection: TailSelection | null,
 ): HoverAction | null {
   if (composing(view)) {
-    if (hit.kind !== 'card') return null;
     const target = destinationHit(hit, view);
     if (target === null) return null;
-    return { column: hit.column, kind: 'k', from: target.size - target.value, length: target.size };
+    return {
+      column: target.column,
+      kind: 'k',
+      from: target.size - target.value,
+      length: target.size,
+    };
   }
   if (view.status !== 'playing' || view.phase !== 'idle') return null;
   if (hit.kind !== 'card' && hit.kind !== 'space') return null;
