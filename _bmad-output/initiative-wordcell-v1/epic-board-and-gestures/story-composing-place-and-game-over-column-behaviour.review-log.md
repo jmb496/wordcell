@@ -1,6 +1,6 @@
 # Review log — story-composing-place-and-game-over-column-behaviour.md (ticket 4.10)
 
-State: pass 4: done
+State: pass 5: done (no fix: diverging)
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 6621aa5, copy story-composing-place-and-game-over-column-behaviour.passes/pass0.md, 292 words. Intent includes tickets.toml entry 10 fields unknown, interface, tests, owns (not copied at pull; fixer adds them to the Description in pass 1).
 
@@ -82,3 +82,21 @@ Words (docs): 1499 (5.13 x pass 0)  |  Snapshot: story-composing-place-and-game-
 - none
 ### Dropped
 - none (over budget, left as unapplied minors: pointerup refreshHover for every null-drag outcome; Composing branch placed before tapAction's selection split; controller.test.ts null-kIfTapped and pointercancel/lostpointercapture cases; cursor check on a remainder card above D; session-won hover on placeholder/foot plus zero live cards; TapAction kind name `tapDestinationCard`; desktop mouse drag-as-tap; another column's empty space in Composing inert list; no drop-target highlight on other columns' non-card parts in Composing; whole-column self-drop case)
+
+## Pass 5 — 2026-10-05
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 3, minor 17, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+Words (docs): 1499 (5.13 x pass 0)  |  Snapshot: story-composing-place-and-game-over-column-behaviour.passes/pass4.md (no fix this pass)
+### Open (not fixed: majors rose 2 → 3, stopping rule diverging)
+- [major] AC android destination-card drag, last sentence — "Tap the top of D (k → 1), then drag it": the tapped card has left D (kIfTapped 2), so the drag dispatches and writes; the null drag must be on the new top of D (the bottom card) — pass-4 fixer item 5 regression
+- [major] AC desktop session-composing — "at k = 2, clicking the top of D … the preview on that card disappears" is wrong: after the click the card is above D with kIfTapped 2, so the repaint shows a two-card preview (rules.ts tapDestinationCount, view.ts:188); test disappearance by clicking the bottom card at k = 2 instead
+- [major] Description drag-as-tap — pass-4 "threshold-crossing move of any column press calls clearHover" plus repaint only at drag-as-tap pointerup regresses Idle: a mouse drag on a space hit with a selection clears the wc-drop highlight and nothing repaints it (pointerup returns early when drag === null); repaint must follow every press that crossed with no pick-up drag
+### Minors (unapplied)
+- desktop self-drop k ≥ 2: say how it is reached; Idle-drop repaint controller.test.ts case; whole-column self-drop (k = 0, ghosts over placeholder; session-idle-empty-column two-Undo state); phase/destination test evaluated at pointerup from game.view; "raise k to ≥ 2" → "k = 2"; dragResidue (incl. wc-drag-target) during the destination drag; Composing branch before tapAction's selection split; hide runs as two seeded tests; keyboard activation of destination cards out of scope; tile-selection clearing on inert taps owned by the tray epic; another column's empty space in the Composing inert list; test-name ↔ bullet mapping left to the plan; desktop mouse drag-as-tap dispatches once; data-card-id citation is AD-14 not CAP-8; android tap on a middle D card at k = 3 (plan only)
+### Decision needed (functionality / UX / gameplay)
+- none
+
+## Result — diverging at pass 5 (fix the ticket's k-sequence steps and build-notes.md CAP-8 hover handling during drag-as-tap and inert drags)
+
+Majors per pass: 7, 6, 6, 2, 3. The rise at pass 5 comes from regressions the pass-4 fix introduced: two k arithmetic slips in Acceptance Criteria steps, and a hover-clear rule that build-notes CAP-8 never specifies for drag-as-tap or inert drags (passes 2–5 all reworked it). Fix the three open majors above (by hand, or a fresh loop, or in the build plan) and add one line to build-notes.md CAP-8 on hover during a press past the threshold that is not a pick-up drag: cleared at the crossing, repainted at every such pointerup.
+
+Unapplied minors: pass 5 list above; pass 4 Dropped list; pass 3 Dropped list (whole-column self-drop, long still press is a tap, android lower-D tap at k ≥ 3).
