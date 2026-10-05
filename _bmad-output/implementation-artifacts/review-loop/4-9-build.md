@@ -45,3 +45,6 @@ Unapplied minors (for the next build or loop):
 - controller.test.ts `replacing()` helper — assert selection unchanged and navCalls empty mid-drag (F12), so end-path rows catch an early deselect.
 - plan Design Notes 'Rule → test mapping' — add rule-coverage row 103 (one tail lifted) and use exact test titles.
 - e2e one-lifted-tail release is over the WordCell row, not empty space; note it in the mapping or release over empty board space.
+
+## Owner decision — 2026-10-05
+- Lift while dragging a selected card: **fix now** (SPEC F32). The dragged card keeps its 8 px lift; fly-back lands on the lifted slot; reduced-motion fade-back shows the same lift on all selected cards. Built as a follow-up to this ticket before `test:all`.

@@ -51,3 +51,4 @@ Verify: `npm run test:all` is green, and:
 ## Notes
 
 - Open question (epic 7 device check): whether Android delivers pointercancel before back on an edge swipe (restore path proven here synthetically), or before visibilitychange on an app switch mid-touch (restore path instead of hide's deselect).
+- Owner decision 2026-10-05 (SPEC F32): a dragged card that was already lifted as part of a selection keeps its 8 px lift for the whole drag; no jump at pickup, no snap after a cancelled fly-back, and the same lift on dragged and non-dragged selected cards during a reduced-motion fade-back. Fixed in this ticket (plan `deferred[0]`).
