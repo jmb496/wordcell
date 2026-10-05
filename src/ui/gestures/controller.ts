@@ -34,21 +34,22 @@
 // Entry 9 (SPEC CAP-4, CAP-7, F12, F13, F24, F28; AD-9, AD-13): a pick-up drag that starts with a
 // selection open is *replacing*: at its threshold crossing `wc-selection-suppressed` goes on the
 // attach root (CSS hides the old selection's lift, outline, `Here` and foot states; the overlays
-// store is untouched mid-drag). Every end removes it: a restoring fly-back (pointercancel,
-// lostpointercapture, cancel({ byBack: true })) at its settle, keeping the selection with no nav
-// call (back's `closedByBack` clears it); every other end at `end()`, where a release with no
-// highlight and a plain cancel() (before-hide, act(), detach) deselect once, a drop deselects in
-// `pointerup` before its dispatch, and a same-id pointerdown restores. A button-0 pointerdown with
+// store is untouched mid-drag). Every end removes it at `end()`: a restoring fly-back
+// (pointercancel, lostpointercapture, cancel({ byBack: true })) at its start under both motion
+// settings (F32, F33), keeping the selection with no nav call (back's `closedByBack` clears it);
+// a release with no highlight and a plain cancel() (before-hide, act(), detach) deselect once, a
+// drop deselects in `pointerup` before its dispatch, and a same-id pointerdown restores. A button-0 pointerdown with
 // no active press during a fly-back enters the gate, finishes the flight, then resolves (F13); the
 // settle's refreshHover() may repaint the mouse hover before the press resolves, and a drag that
 // then starts clears it again.
-// F32 (AD-12): a face whose wrapper is `lifted` (tap-selected) keeps its selection lift in the drag
-// transform, `translate(pointer − press point − lift)`; a restoring fly-back (every fly-back but a
-// release with no highlight, which deselects) lands on `translate(0px, −lift)`, so the face neither
-// jumps at the threshold nor snaps at settle. A restoring reduced-motion fade removes the
-// suppression at its start, so dragged and non-dragged selected faces show the same lift.
+// F32 (AD-12): a dragged stack inside the selection (its top wrapper is `lifted`, F33) keeps the
+// selection lift in the drag transform, `translate(pointer − press point − lift)`; any other stack
+// has lift 0. A restoring fly-back (every fly-back but a release with no highlight, which
+// deselects, and a back that closes the tail selection) lands on `translate(0px, −lift)`, so the
+// face neither jumps at the threshold nor snaps at settle; the others land on `translate(0px, 0px)`.
 import { game } from '../../shell/game.svelte';
 import { prefs } from '../../shell/prefs.svelte';
+import { SELECTION_LIFT_PX } from '../layout/geometry';
 import { duration } from '../motion';
 import { overlays } from '../overlays.svelte';
 import {
@@ -100,8 +101,8 @@ type Drag = {
   /** The pointerdown point. */
   readonly x: number;
   readonly y: number;
-  /** F32: each face's selection lift in px (0 unless its wrapper is `lifted`). */
-  readonly lifts: readonly number[];
+  /** F32/F33: the faces' selection lift in px (0 unless the stack lies inside the selection). */
+  readonly lift: number;
   /** The last pointer offset from the press point written on the faces. */
   dx: number;
   dy: number;
@@ -151,8 +152,6 @@ const DRAG_LAYER = 'wc-drag-layer';
 const DRAG_TARGET = 'wc-drag-target';
 const SUPPRESSED = 'wc-selection-suppressed';
 const OUTSIDE: Hit = { kind: 'outside' };
-/** F32: DESIGN.md Elevation & Depth, a tap-selected face rises 8 px (Card.svelte `.lifted`). */
-const LIFT_PX = 8;
 
 function translate(dx: number, dy: number): string {
   return `translate(${dx}px, ${dy}px)`;
@@ -273,12 +272,15 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
           : kind === 'pointercancel' ||
             kind === 'lostCapture' ||
             (reason.kind === 'cancel' && reason.byBack);
+      // F32: a back that closes the tail selection (its top entry) deselects, so it lands unlifted.
+      const closesSelection =
+        reason.kind === 'cancel' && reason.byBack && overlays.top === 'tailSelection';
       // The fly-back enters the gate before the press leaves it (F13).
-      if (flies) flyBack(drag, kind !== 'up');
+      if (flies) flyBack(drag, kind !== 'up' && !closesSelection);
       else clearDrag(drag);
-      // Entry 9 (F24/F28): a restoring fly-back keeps the class until its settle; every other end
-      // removes it here, deselecting on a release with no highlight and on a plain cancel().
-      if (drag.replacing && !(flies && kind !== 'up')) {
+      // Entry 9 (F24/F28, F33): every end removes the class here, a restoring fly-back at its start;
+      // a release with no highlight and a plain cancel() deselect.
+      if (drag.replacing) {
         unsuppress();
         if (
           (kind === 'up' && drag.highlighted === null) ||
@@ -322,10 +324,8 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       remaining -= 1;
       if (remaining === 0) settle(flight);
     };
-    // F32: the kept selection's faces show their lift during the fade, like the dragged ones.
-    if (reduced && restoring && drag.replacing) unsuppress();
-    drag.faces.forEach((face, i) => {
-      const lift = drag.lifts[i] as number;
+    const lift = drag.lift;
+    for (const face of drag.faces) {
       let animation: Animation;
       if (reduced) {
         face.style.transform = '';
@@ -347,7 +347,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
         throw new Error('AD-12 fly-back animation cancelled');
       };
       flight.animations.push(animation);
-    });
+    }
   }
 
   // Idempotent: the last face's onfinish, or finishFlight().
@@ -356,8 +356,6 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     flight.settled = true;
     if (flying === flight) flying = null;
     clearDrag(flight.drag);
-    // Entry 9: a restoring fly-back's end (the selection was kept).
-    if (flight.drag.replacing) unsuppress();
     gate.leave();
     refreshHover();
   }
@@ -416,7 +414,8 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       if (face === null) throw new Error('AD-12 card without a .face');
       return face as HTMLElement;
     });
-    const lifts = wrappers.map((wrapper) => (wrapper.classList.contains('lifted') ? LIFT_PX : 0));
+    // F33: lifted only when the stack lies inside the selection, i.e. its top card is lifted.
+    const lift = wrappers[0]?.classList.contains('lifted') === true ? SELECTION_LIFT_PX : 0;
     for (const wrapper of wrappers) wrapper.classList.add(DRAG_GHOST);
     for (const face of faces) face.classList.add(DRAG_LAYER);
     return {
@@ -428,7 +427,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       faces,
       x: p.state.x,
       y: p.state.y,
-      lifts,
+      lift,
       dx: 0,
       dy: 0,
       hasLeftSource: false,
@@ -454,9 +453,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
   function dragMove(drag: Drag, x: number, y: number): void {
     drag.dx = x - drag.x;
     drag.dy = y - drag.y;
-    drag.faces.forEach((face, i) => {
-      face.style.transform = translate(drag.dx, drag.dy - (drag.lifts[i] as number));
-    });
+    for (const face of drag.faces) face.style.transform = translate(drag.dx, drag.dy - drag.lift);
     const grabbed = drag.faces[0];
     if (grabbed === undefined) throw new Error('AD-12 drag without a face');
     const targets = columnTargets();

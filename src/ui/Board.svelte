@@ -7,6 +7,8 @@ import Column from './Column.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import DictionaryBanner from './DictionaryBanner.svelte';
 import type { BandId, Unit } from './layout/bands';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import { SELECTION_LIFT_PX } from './layout/geometry';
 import type { Layout } from './layout/layout.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { overlays } from './overlays.svelte';
@@ -63,6 +65,7 @@ function row(unit: Unit, band: BandId): number {
   style:--wc-slot="{metrics.slot}px"
   style:--wc-board="{metrics.board}px"
   style:--wc-pan={layout.wide ? 'pan-x pan-y' : 'pan-y'}
+  style:--wc-select-lift="{SELECTION_LIFT_PX}px"
 >
   <h1 class="sr-only">WordCell</h1>
   {#each layout.bandOrder as unit, u (u)}

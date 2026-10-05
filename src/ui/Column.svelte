@@ -76,7 +76,7 @@ const liftStart = $derived(column.cards.length - count);
     style:grid-row={cardsRow}
     style:--wc-len={column.cards.length}
     style:--wc-lift-start={liftStart}
-    style:--wc-lift={source ? '8px' : '0px'}
+    style:--wc-lift={source ? 'var(--wc-select-lift)' : '0px'}
   >
     <div class="placeholder" class:shown={placeholder} data-placeholder></div>
     {#each column.cards as id, i (id)}
@@ -96,7 +96,7 @@ const liftStart = $derived(column.cards.length - count);
       <div
         class="selection-outline"
         data-selection-outline
-        style:top="calc({liftStart} * var(--wc-strip) - 8px)"
+        style:top="calc({liftStart} * var(--wc-strip) - var(--wc-select-lift))"
         style:height="calc({count - 1} * var(--wc-strip) + var(--wc-H))"
       ></div>
     {/if}

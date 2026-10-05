@@ -338,6 +338,7 @@ test.describe('android', () => {
     await expectSelection(page, null, 0);
     await expect(page.locator('[data-card-id]')).toHaveCount(52);
     await expectFlownBack(faceOf(dragged), rest);
+    expect(await css(faceOf(dragged), 'transform')).toBe('none');
     await expectNoResidue(page);
     expect(await suppressed(page)).toBe(false);
   });
@@ -607,11 +608,20 @@ test.describe('android', () => {
         await animationFrames(page, 2);
         expect((await box(face)).y).toBeCloseTo(lifted.y + 40, 0);
         await cancelCaptured(page);
+        // F33: mid-flight (mid-fade), the kept selection is back: outline, `Here` and the
+        // non-dragged selected cards lifted.
+        await pauseNear(face, 0.5);
+        expect(await suppressed(page)).toBe(false);
+        await expect(outline(page)).toBeVisible();
+        await expect(here(page, 1)).toBeVisible();
+        for (const i of [4, 5]) {
+          expect(await css(faceOf(cards(page, 1).nth(i)), 'transform'), `card ${i}`).toBe(
+            keptTransform,
+          );
+        }
         if (reduced) {
           // Mid-fade: the dragged face and the kept selected face show the same lift.
-          await pauseNear(face, 0.5);
           expect((await box(face)).y).toBeCloseTo(lifted.y, 0);
-          expect(await css(kept, 'transform')).toBe(keptTransform);
           expect(await css(face, 'transform')).toBe(keptTransform);
         } else {
           // Just before the fly-back's end the face is already on its lifted slot.
@@ -632,6 +642,74 @@ test.describe('android', () => {
       expect((await box(face)).y).toBeCloseTo(lifted.y, 0);
     });
   }
+
+  test('AD-12 F32 select, drag a selected card, back: the face flies to its unlifted slot with no snap at settle', async ({
+    page,
+  }) => {
+    await recordFlyBack(page);
+    // Pauses every `.face` animation at its creation once `__pauseFaces` is set.
+    await page.addInitScript(() => {
+      const original = Element.prototype.animate;
+      Element.prototype.animate = function animate(this: Element, keyframes, options) {
+        const animation = original.call(this, keyframes, options);
+        const pause = (window as unknown as { __pauseFaces?: boolean }).__pauseFaces === true;
+        if (pause && this.classList.contains('face')) animation.pause();
+        return animation;
+      };
+    });
+    await openFixture(page, 'session-idle-fresh');
+    const dragged = cards(page, 1).last();
+    const face = faceOf(dragged);
+    // The unlifted slot: back closes the selection.
+    const rest = await box(face);
+    await select(page, 1, 4);
+    const draggedId = await idOf(dragged);
+    const from = await centre(dragged);
+    const hold = await holdThrough(page, from, path(from, plus(from, 0, 60), 5));
+    try {
+      await page.evaluate(() => {
+        (window as unknown as { __pauseFaces: boolean }).__pauseFaces = true;
+      });
+      await page.goBack();
+      await expect.poll(() => flyBackIds(page)).toEqual([draggedId]);
+      await expectSelection(page, null, 0);
+      // Just before the fly-back's end the face is already on its unlifted slot.
+      await pauseNear(face, 0.999);
+      expect((await box(face)).y).toBeCloseTo(rest.y, 0);
+      await finishAll(face);
+      await expectFlownBack(face, rest);
+      expect(await css(face, 'transform')).toBe('none');
+    } finally {
+      await hold.end();
+    }
+    await animationFrames(page, 2);
+    await expectNoResidue(page);
+    await expectSelection(page, null, 0);
+    expect((await box(face)).y).toBeCloseTo(rest.y, 0);
+  });
+
+  test('AD-12 F33 a drag from above the selection in its column is drawn evenly with no lift', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-idle-fresh');
+    const rests = await Promise.all([4, 5, 6].map((i) => box(faceOf(cards(page, 1).nth(i)))));
+    await select(page, 1, 5);
+    const from = await centre(cards(page, 1).nth(4));
+    // Past the 8 px threshold, then back to the press point: a drag with zero pointer delta.
+    const hold = await holdThrough(page, from, [plus(from, 0, 12), from]);
+    try {
+      expect(await suppressed(page)).toBe(true);
+      for (const [k, i] of [4, 5, 6].entries()) {
+        const y = (await box(faceOf(cards(page, 1).nth(i)))).y;
+        expect(y, `card ${i}`).toBeCloseTo((rests[k] as Box).y, 0);
+      }
+    } finally {
+      await hold.end();
+    }
+    // A release on the never-left source deselects (entry 9).
+    await expectSelection(page, null, 0);
+    await expectNoResidue(page);
+  });
 });
 
 test.describe('desktop', () => {

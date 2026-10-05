@@ -15,6 +15,10 @@ export type BandLayout = {
 
 export type WidthInputs = { readonly innerWidth: number; readonly innerHeight: number };
 
+/** DESIGN.md Elevation & Depth: a tap-selected face rises this many px (F32; Board's
+ * `--wc-select-lift`, read by Card.svelte and Column.svelte, and the drag transform). */
+export const SELECTION_LIFT_PX = 8;
+
 const MIN_W = 40;
 const BANNER_H = 44;
 const RECOMPUTE_DH = 80;

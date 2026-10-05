@@ -157,9 +157,10 @@ const lock = $derived(destination || (block && segment?.start === true));
   .block:not(.start):not(.end) .face { width: calc(var(--tile-w) + 5px); }
   .block.start:not(.end) .face { width: calc(var(--tile-w) + 3px); }
 
-  /* DESIGN.md Elevation & Depth: a tap-selected card's face rises 8 px with the soft shadow, above
-     the sticky bars (z-index 2); the wrapper (hit rect) never moves (F26). */
-  .lifted .face { transform: translateY(-8px); box-shadow: 0 6px 16px #0008; z-index: 3; }
+  /* DESIGN.md Elevation & Depth: a tap-selected card's face rises `--wc-select-lift` (Board, from
+     SELECTION_LIFT_PX) with the soft shadow, above the sticky bars (z-index 2); the wrapper (hit
+     rect) never moves (F26). */
+  .lifted .face { transform: translateY(calc(-1 * var(--wc-select-lift))); box-shadow: 0 6px 16px #0008; z-index: 3; }
 
   /* DESIGN.md WordCell used this word (R-33): the top card at 40 % with a 45° hatch. */
   .used .face {

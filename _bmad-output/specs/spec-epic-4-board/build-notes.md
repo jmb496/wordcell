@@ -41,6 +41,8 @@ Spine edits are batched at close-out as in epic 3, so the R1 AD-13 record (retro
 - AD-12 (F32): the drag transform keeps a tap-selected card's 8 px selection lift (DESIGN.md
   lift) for the whole drag, and a cancelled drag's fly-back lands on the lifted slot, so a
   selected card neither jumps at pickup nor snaps at settle. Owner answer 2026-10-05.
+  F33: a restoring fly-back returns the kept selection's lift, outline and `Here` at its start
+  (both motion settings); the lift is kept only for a dragged stack inside the selection.
 - AD-17 Touch (F10): `touch.ts` adds the stepwise held-touch API beside `touchDrag` and `longPress`.
 - AD-17 Speed: record the epic 4 warm median and, if it was done, the `architecture.test.ts` split.
 

@@ -1521,15 +1521,15 @@ describe('AD-13 entry 9 selection replacement', () => {
     },
   ];
   it.each(restoring)(
-    'AD-13 F28 $name: fly-back, class kept until settle, selection kept, no nav call',
+    'AD-13 F28 $name: fly-back, class gone at its start (F33), selection kept, no nav call',
     async ({ selection, to, end }) => {
       const t = await replacing(selection, ...to);
       end(t);
       expect(t.b.face1b.animations).toHaveLength(1);
-      expect(suppressed(t)).toBe(true);
+      expect(suppressed(t)).toBe(false);
       expect(t.overlays.selection).toEqual({ column: 2, count: 1 });
       t.advance(179);
-      expect(suppressed(t)).toBe(true);
+      expect(t.active()).toBe(1);
       t.advance(1);
       expect(suppressed(t)).toBe(false);
       expect(t.overlays.selection).toEqual({ column: 2, count: 1 });
@@ -1550,7 +1550,8 @@ describe('AD-13 entry 9 selection replacement', () => {
     async (_name, settle) => {
       const t = await replacing([2, 1], 125, 50);
       t.fire('pointercancel');
-      expect(suppressed(t)).toBe(true);
+      // F33: the class goes at the fly-back's start.
+      expect(suppressed(t)).toBe(false);
       settle(t);
       expect(suppressed(t)).toBe(false);
       expect(dragResidue(t)).toBe(0);
@@ -1579,7 +1580,8 @@ describe('AD-13 entry 9 selection replacement', () => {
   it('AD-13 F28 a press during a restoring fly-back settles it; the press is captured with the selection open', async () => {
     const t = await replacing([2, 1], 125, 50);
     t.fire('pointercancel');
-    expect(suppressed(t)).toBe(true);
+    // F33: the class goes at the fly-back's start.
+    expect(suppressed(t)).toBe(false);
     t.down(t.b.foot1);
     expect(suppressed(t)).toBe(false);
     expect(t.overlays.selection).toEqual({ column: 2, count: 1 });
@@ -1680,29 +1682,43 @@ describe('AD-12 F32 a dragged selected card keeps its lift', () => {
   const SUPPRESSED = 'wc-selection-suppressed';
   const move = (t: T, x: number, y: number) => t.fire('pointermove', { clientX: x, clientY: y });
   const keyframes = (f: FakeEl) => f.animations.map((a) => a.keyframes);
-  // Selects column 1's bottom card (card1b lifted), presses `card` at (25, 50) and crosses the
-  // threshold with a 30 px move down.
-  async function liftedDrag(card: 'card1' | 'card1b', reduced = false) {
+  // Selects column 1's bottom `count` cards (card1b, then card1, lifted), presses `card` at
+  // (25, 50) and crosses the threshold with a 30 px move down.
+  async function liftedDrag(card: 'card1' | 'card1b', reduced = false, count = 1) {
     const t = await setup();
     motion.value = { baseMs: 180, reduced };
     t.detach();
-    t.overlays.select(1, 1);
+    t.overlays.select(1, count);
     t.b.card1b.classes.add('lifted');
+    if (count === 2) t.b.card1.classes.add('lifted');
     navCalls.length = 0;
     t.down(t.b[card], { clientX: 25, clientY: 50 });
     move(t, 25, 80);
     return t;
   }
 
-  it('AD-12 F32 the threshold-crossing move keeps a lifted face 8 px up; an unlifted face in the same drag is not offset', async () => {
-    const t = await liftedDrag('card1');
-    expect(t.b.face1.style.transform).toBe('translate(0px, 30px)');
+  it('AD-12 F32 the threshold-crossing move keeps a lifted face 8 px up', async () => {
+    const t = await liftedDrag('card1b');
     expect(t.b.face1b.style.transform).toBe('translate(0px, 22px)');
     // AD-12 targeting measures the rendered rect: lifted face top 20 − 8 + 30.
     expect(t.b.face1b.getBoundingClientRect().top).toBe(42);
     move(t, 125, 50);
-    expect(t.b.face1.style.transform).toBe('translate(100px, 0px)');
     expect(t.b.face1b.style.transform).toBe('translate(100px, -8px)');
+  });
+
+  it('AD-12 F33 a stack bigger than the selection (pressed above it in the same column) has no lift on any face', async () => {
+    const t = await liftedDrag('card1');
+    expect(t.b.face1.style.transform).toBe('translate(0px, 30px)');
+    expect(t.b.face1b.style.transform).toBe('translate(0px, 30px)');
+    move(t, 125, 50);
+    expect(t.b.face1.style.transform).toBe('translate(100px, 0px)');
+    expect(t.b.face1b.style.transform).toBe('translate(100px, 0px)');
+    t.fire('pointercancel');
+    for (const face of [t.b.face1, t.b.face1b]) {
+      expect(keyframes(face)).toEqual([
+        [{ transform: 'translate(100px, 0px)' }, { transform: 'translate(0px, 0px)' }],
+      ]);
+    }
   });
 
   it('AD-12 F32 an unlifted face (no selection) keeps translate(pointer − press point)', async () => {
@@ -1716,26 +1732,49 @@ describe('AD-12 F32 a dragged selected card keeps its lift', () => {
   const restoring: [string, (t: T) => void][] = [
     ['pointercancel', (t) => t.fire('pointercancel')],
     ['lostpointercapture', (t) => t.fire('lostpointercapture', { target: t.b.card1 })],
-    ['cancel({ byBack: true })', (t) => t.controller.cancel({ byBack: true })],
+    [
+      // Back closes the WordCell view on top, so the selection stays open.
+      'cancel({ byBack: true }) under another entry',
+      (t) => {
+        t.overlays.openView(3);
+        t.controller.cancel({ byBack: true });
+        t.overlays.closedByBack(1);
+      },
+    ],
   ];
   it.each(restoring)(
-    'AD-12 F32 a restoring fly-back (%s) lands a lifted face on its lifted slot, an unlifted one on its slot',
+    'AD-12 F32 F33 a restoring fly-back (%s) lands every lifted face on its lifted slot and removes the suppression at its start',
     async (_name, end) => {
-      const t = await liftedDrag('card1');
+      const t = await liftedDrag('card1', false, 2);
       move(t, 125, 50);
       end(t);
-      expect(keyframes(t.b.face1b)).toEqual([
-        [{ transform: 'translate(100px, -8px)' }, { transform: 'translate(0px, -8px)' }],
-      ]);
-      expect(keyframes(t.b.face1)).toEqual([
-        [{ transform: 'translate(100px, 0px)' }, { transform: 'translate(0px, 0px)' }],
-      ]);
-      expect(t.b.root.classes.has(SUPPRESSED)).toBe(true);
-      t.advance(180);
+      for (const face of [t.b.face1, t.b.face1b]) {
+        expect(keyframes(face)).toEqual([
+          [{ transform: 'translate(100px, -8px)' }, { transform: 'translate(0px, -8px)' }],
+        ]);
+      }
       expect(t.b.root.classes.has(SUPPRESSED)).toBe(false);
-      expect(t.overlays.selection).toEqual({ column: 1, count: 1 });
+      t.advance(180);
+      expect(t.active()).toBe(0);
+      expect(t.overlays.selection).toEqual({ column: 1, count: 2 });
     },
   );
+
+  it('AD-12 F32 a drag cancelled by a back that closes the selection flies the lifted face to its unlifted slot', async () => {
+    const t = await liftedDrag('card1b');
+    move(t, 125, 50);
+    // nav's popstate order: the before-back hook, then closedByBack (AD-13).
+    t.controller.cancel({ byBack: true });
+    expect(t.b.root.classes.has(SUPPRESSED)).toBe(false);
+    t.overlays.closedByBack(0);
+    expect(keyframes(t.b.face1b)).toEqual([
+      [{ transform: 'translate(100px, -8px)' }, { transform: 'translate(0px, 0px)' }],
+    ]);
+    expect(t.overlays.selection).toBe(null);
+    expect(navCalls).toEqual([]);
+    t.advance(180);
+    expect(t.active()).toBe(0);
+  });
 
   it('AD-12 F32 a release over nothing deselects, so the lifted face flies back to its unlifted slot', async () => {
     const t = await liftedDrag('card1b');
@@ -1761,11 +1800,42 @@ describe('AD-12 F32 a dragged selected card keeps its lift', () => {
     expect(navCalls).toEqual([]);
   });
 
-  it('AD-12 F32 a restoring fly-back with full motion keeps the suppression until settle', async () => {
+  it('AD-12 F33 a restoring fly-back with full motion removes the suppression at its start, selection kept', async () => {
     const t = await liftedDrag('card1b');
     t.fire('pointercancel');
-    expect(t.b.root.classes.has(SUPPRESSED)).toBe(true);
-    t.advance(180);
     expect(t.b.root.classes.has(SUPPRESSED)).toBe(false);
+    expect(t.b.face1b.classes.has('wc-drag-layer')).toBe(true);
+    expect(t.overlays.selection).toEqual({ column: 1, count: 1 });
+    t.advance(180);
+    expect(t.b.face1b.classes.has('wc-drag-layer')).toBe(false);
+    expect(t.active()).toBe(0);
+    expect(navCalls).toEqual([]);
   });
+
+  it.each([false, true])(
+    'AD-12 F33 a replacing drag from another column (reduced motion %s): its restoring fly-back removes the suppression at its start; the unlifted face lands on its slot',
+    async (reduced) => {
+      const t = await setup();
+      motion.value = { baseMs: 180, reduced };
+      t.detach();
+      t.overlays.select(1, 1);
+      t.b.card1b.classes.add('lifted');
+      navCalls.length = 0;
+      t.down(t.b.card2, { clientX: 75, clientY: 30 });
+      move(t, 75, 60);
+      expect(t.b.face2.style.transform).toBe('translate(0px, 30px)');
+      expect(t.b.root.classes.has(SUPPRESSED)).toBe(true);
+      t.fire('pointercancel');
+      expect(t.b.root.classes.has(SUPPRESSED)).toBe(false);
+      expect(keyframes(t.b.face2)).toEqual([
+        reduced
+          ? [{ opacity: 0 }, { opacity: 1 }]
+          : [{ transform: 'translate(0px, 30px)' }, { transform: 'translate(0px, 0px)' }],
+      ]);
+      t.advance(180);
+      expect(t.active()).toBe(0);
+      expect(t.overlays.selection).toEqual({ column: 1, count: 1 });
+      expect(navCalls).toEqual([]);
+    },
+  );
 });
