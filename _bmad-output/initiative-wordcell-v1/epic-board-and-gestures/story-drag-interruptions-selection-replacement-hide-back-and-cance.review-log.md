@@ -1,6 +1,6 @@
 # Review log — story-drag-interruptions-selection-replacement-hide-back-and-cance.md (ticket 4.9)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget default (2.5x pass 0). Pass 0: HEAD c1c5974, copy story-drag-interruptions-selection-replacement-hide-back-and-cance.passes/pass0.md, 325 words. Intent includes tickets.toml entry 9 fields interface, tests, owns (and unknown, already in Notes), not copied at pull; fixer adds them to the Description in pass 1.
 
@@ -50,3 +50,21 @@ Words (docs): 933 (2.87 x pass 0)  |  Snapshot: story-drag-interruptions-selecti
 - none
 ### Dropped
 - 8 px lift jump at settle for a source-column restore — accepted outcome of the pass 1 restore-timing default; plan-level note, not ticket
+
+## Pass 3 — 2026-10-05
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 10, decision-needed 0  |  Dropped/deferred in triage: 5 (+ duplicates merged)
+Words (docs): 975 (3.00 x pass 0)  |  Snapshot: story-drag-interruptions-selection-replacement-hide-back-and-cance.passes/pass3.md (fix diff pass3.fix.diff)
+### Applied
+- [major] Description restore bullet/AC S — a plain cancel() (hide, act()) or press during a restoring fly-back (after pointercancel/lostpointercapture ended a replacing drag) unspecified and untested: finishes it, removes the class, keeps the selection, no deselect, no nav call (F24: the replacing drag already ended) → fixer item 1 (merged edge-case majors 1+2, adversarial and ref minors)
+- [minor] class timing on release over nothing (at end()) → 2; byBack "stay throughout"/"lost-end recovery" wording vs closedByBack → 3; "Board root (its attach root)" is App's `<main>` → 4; computed face transform `none` → 5; plain cancel nav.pop queued only on hide → 6; "primary" press (F13) → 7; entry-8 tests cover existing paths, only the press-order S case is new → 8; inert foot pad on a drop-target column → 9; select-drag-hide then end() changes nothing → 10; __flyBack spy source named → 11
+### Default applied (technical)
+- cancel()/press during a restoring fly-back: finish, class removed, selection and entry kept, no nav call
+- class on release over nothing removed at end() with the deselect
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped / deferred to the plan
+- lift transition flake under --wc-base-ms (plan: expect.poll or no transition)
+- inline --wc-lift beats stylesheet overrides (plan implementation detail)
+- deselect() throws under a sticky WordCell view (CAP-9 ticket owns it; no sticky view yet)
+- same-id new press sees the restored selection (covered by "resolves on the settled layout"; plan)
+- fixture for a ≥ 2-card pickable tail (plan names it)
