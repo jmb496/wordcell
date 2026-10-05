@@ -547,6 +547,91 @@ test.describe('android', () => {
     expect(await sameSession(page)).toBe(true);
     await expectSelection(page, { column: 1, count: 3 }, 1);
   });
+
+  // F32: records each pointerdown's id, then dispatches pointercancel on the element holding that
+  // pointer's capture (the F28 recipe above).
+  async function trackPointerId(page: Page): Promise<void> {
+    await page.evaluate(() => {
+      document.addEventListener(
+        'pointerdown',
+        (event) => {
+          (window as unknown as { __pointerId: number }).__pointerId = event.pointerId;
+        },
+        { capture: true },
+      );
+    });
+  }
+  async function cancelCaptured(page: Page): Promise<void> {
+    await page.evaluate(() => {
+      const id = (window as unknown as { __pointerId: number }).__pointerId;
+      const el = [...document.querySelectorAll('*')].find((e) => e.hasPointerCapture(id));
+      if (el === undefined) throw new Error(`no element holds pointer ${id}`);
+      el.dispatchEvent(new PointerEvent('pointercancel', { pointerId: id, bubbles: true }));
+    });
+  }
+  // Pauses the face's one running animation just before its end (or at `fraction` of it).
+  const pauseNear = (face: Locator, fraction: number) =>
+    face.evaluate((el, f) => {
+      const [a] = el.getAnimations();
+      if (a === undefined) throw new Error('no running animation');
+      const ms = Number(a.effect?.getTiming().duration);
+      a.pause();
+      a.currentTime = ms * f;
+    }, fraction);
+  const finishAll = (face: Locator) =>
+    face.evaluate((el) => {
+      for (const a of el.getAnimations()) a.finish();
+    });
+
+  for (const reduced of [false, true]) {
+    test(`AD-12 F32 a dragged selected card keeps its lift: no jump at pickup, ${reduced ? 'the reduced-motion fade shows every selected face lifted' : 'the fly-back lands on the lifted slot'}`, async ({
+      page,
+    }) => {
+      if (reduced) await page.emulateMedia({ reducedMotion: 'reduce' });
+      await openFixture(page, 'session-idle-fresh');
+      await trackPointerId(page);
+      await select(page, 1, 4);
+      const kept = faceOf(cards(page, 1).nth(4));
+      const keptTransform = await css(kept, 'transform');
+      expect(keptTransform).not.toBe('none');
+      const dragged = cards(page, 1).last();
+      const face = faceOf(dragged);
+      const lifted = await box(face);
+      const from = await centre(dragged);
+      // Past the 8 px threshold, then back to the press point: a drag with zero pointer delta.
+      const hold = await holdThrough(page, from, [plus(from, 0, 12), from]);
+      try {
+        expect(await suppressed(page)).toBe(true);
+        expect((await box(face)).y).toBeCloseTo(lifted.y, 0);
+        await hold.moveTo(plus(from, 0, 40));
+        await animationFrames(page, 2);
+        expect((await box(face)).y).toBeCloseTo(lifted.y + 40, 0);
+        await cancelCaptured(page);
+        if (reduced) {
+          // Mid-fade: the dragged face and the kept selected face show the same lift.
+          await pauseNear(face, 0.5);
+          expect((await box(face)).y).toBeCloseTo(lifted.y, 0);
+          expect(await css(kept, 'transform')).toBe(keptTransform);
+          expect(await css(face, 'transform')).toBe(keptTransform);
+        } else {
+          // Just before the fly-back's end the face is already on its lifted slot.
+          await pauseNear(face, 0.999);
+          expect((await box(face)).y).toBeCloseTo(lifted.y, 0);
+        }
+        await finishAll(face);
+        await expectFlownBack(face, lifted);
+        await expect.poll(() => suppressed(page)).toBe(false);
+        await expectSelection(page, { column: 1, count: 3 }, 1);
+        expect(await css(face, 'transform')).toBe(keptTransform);
+      } finally {
+        await hold.end();
+      }
+      await animationFrames(page, 2);
+      await expectNoResidue(page);
+      await expectSelection(page, { column: 1, count: 3 }, 1);
+      expect((await box(face)).y).toBeCloseTo(lifted.y, 0);
+    });
+  }
 });
 
 test.describe('desktop', () => {

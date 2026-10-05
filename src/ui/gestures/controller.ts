@@ -21,8 +21,9 @@
 // Entry 8 (SPEC CAP-7, AD-12, F12, F13, F26): a column-card press whose column `canPickUp` turns
 // into a drag at the threshold-crossing move (the first drag move): the tail (pressed card to the
 // bottom, R-10) gets `wc-drag-ghost` on its slot wrappers and `wc-drag-layer` on its faces; each
-// drag move writes `translate(pointer − press point)` on the faces, measures the grabbed face
-// against every registered drop target (`drop-target.ts`) with `pickTarget` and moves
+// drag move writes `translate(pointer − press point)` (F32: minus a selected face's lift) on the
+// faces, measures the grabbed face against every registered drop target (`drop-target.ts`) with
+// `pickTarget` and moves
 // `wc-drag-target` to the highlighted column's target element, all by DOM only (no Svelte state,
 // store call or dispatch before release). Release drops on the last highlight (deselect first),
 // else flies back; pointercancel, lostpointercapture and cancel({ byBack: true }) fly back from the
@@ -41,6 +42,11 @@
 // no active press during a fly-back enters the gate, finishes the flight, then resolves (F13); the
 // settle's refreshHover() may repaint the mouse hover before the press resolves, and a drag that
 // then starts clears it again.
+// F32 (AD-12): a face whose wrapper is `lifted` (tap-selected) keeps its selection lift in the drag
+// transform, `translate(pointer − press point − lift)`; a restoring fly-back (every fly-back but a
+// release with no highlight, which deselects) lands on `translate(0px, −lift)`, so the face neither
+// jumps at the threshold nor snaps at settle. A restoring reduced-motion fade removes the
+// suppression at its start, so dragged and non-dragged selected faces show the same lift.
 import { game } from '../../shell/game.svelte';
 import { prefs } from '../../shell/prefs.svelte';
 import { duration } from '../motion';
@@ -94,8 +100,11 @@ type Drag = {
   /** The pointerdown point. */
   readonly x: number;
   readonly y: number;
-  /** The last transform written on the faces. */
-  transform: string;
+  /** F32: each face's selection lift in px (0 unless its wrapper is `lifted`). */
+  readonly lifts: readonly number[];
+  /** The last pointer offset from the press point written on the faces. */
+  dx: number;
+  dy: number;
   hasLeftSource: boolean;
   highlighted: number | null;
   /** The element carrying `wc-drag-target`. */
@@ -142,6 +151,12 @@ const DRAG_LAYER = 'wc-drag-layer';
 const DRAG_TARGET = 'wc-drag-target';
 const SUPPRESSED = 'wc-selection-suppressed';
 const OUTSIDE: Hit = { kind: 'outside' };
+/** F32: DESIGN.md Elevation & Depth, a tap-selected face rises 8 px (Card.svelte `.lifted`). */
+const LIFT_PX = 8;
+
+function translate(dx: number, dy: number): string {
+  return `translate(${dx}px, ${dy}px)`;
+}
 
 function attribute(el: Element, name: string): number {
   const value = Number(el.getAttribute(name));
@@ -259,7 +274,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
             kind === 'lostCapture' ||
             (reason.kind === 'cancel' && reason.byBack);
       // The fly-back enters the gate before the press leaves it (F13).
-      if (flies) flyBack(drag);
+      if (flies) flyBack(drag, kind !== 'up');
       else clearDrag(drag);
       // Entry 9 (F24/F28): a restoring fly-back keeps the class until its settle; every other end
       // removes it here, deselecting on a release with no highlight and on a plain cancel().
@@ -292,9 +307,10 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     for (const wrapper of drag.wrappers) wrapper.classList.remove(DRAG_GHOST);
   }
 
-  // F13: WAAPI on the faces from the last written transform back to the slot; under reduced motion
-  // the transform clears at once and the faces fade in. Gate-counted until settled.
-  function flyBack(drag: Drag): void {
+  // F13: WAAPI on the faces from the last written transform back to the slot (F32: the lifted slot
+  // when `restoring`); under reduced motion the transform clears at once and the faces fade in.
+  // Gate-counted until settled.
+  function flyBack(drag: Drag, restoring: boolean): void {
     if (flying !== null) throw new Error('AD-12 fly-back while one is running');
     gate.enter();
     const ms = duration('flyBack');
@@ -306,14 +322,20 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       remaining -= 1;
       if (remaining === 0) settle(flight);
     };
-    for (const face of drag.faces) {
+    // F32: the kept selection's faces show their lift during the fade, like the dragged ones.
+    if (reduced && restoring && drag.replacing) unsuppress();
+    drag.faces.forEach((face, i) => {
+      const lift = drag.lifts[i] as number;
       let animation: Animation;
       if (reduced) {
         face.style.transform = '';
         animation = face.animate([{ opacity: 0 }, { opacity: 1 }], { duration: ms });
       } else {
         animation = face.animate(
-          [{ transform: drag.transform }, { transform: 'translate(0px, 0px)' }],
+          [
+            { transform: translate(drag.dx, drag.dy - lift) },
+            { transform: translate(0, restoring ? -lift : 0) },
+          ],
           { duration: ms, easing: 'ease-out' },
         );
         face.style.transform = '';
@@ -325,7 +347,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
         throw new Error('AD-12 fly-back animation cancelled');
       };
       flight.animations.push(animation);
-    }
+    });
   }
 
   // Idempotent: the last face's onfinish, or finishFlight().
@@ -394,6 +416,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       if (face === null) throw new Error('AD-12 card without a .face');
       return face as HTMLElement;
     });
+    const lifts = wrappers.map((wrapper) => (wrapper.classList.contains('lifted') ? LIFT_PX : 0));
     for (const wrapper of wrappers) wrapper.classList.add(DRAG_GHOST);
     for (const face of faces) face.classList.add(DRAG_LAYER);
     return {
@@ -405,7 +428,9 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       faces,
       x: p.state.x,
       y: p.state.y,
-      transform: '',
+      lifts,
+      dx: 0,
+      dy: 0,
       hasLeftSource: false,
       highlighted: null,
       target: null,
@@ -427,9 +452,11 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
 
   // AD-12 one drag move: transform, measure, pick, highlight (DOM only, F12).
   function dragMove(drag: Drag, x: number, y: number): void {
-    const transform = `translate(${x - drag.x}px, ${y - drag.y}px)`;
-    drag.transform = transform;
-    for (const face of drag.faces) face.style.transform = transform;
+    drag.dx = x - drag.x;
+    drag.dy = y - drag.y;
+    drag.faces.forEach((face, i) => {
+      face.style.transform = translate(drag.dx, drag.dy - (drag.lifts[i] as number));
+    });
     const grabbed = drag.faces[0];
     if (grabbed === undefined) throw new Error('AD-12 drag without a face');
     const targets = columnTargets();

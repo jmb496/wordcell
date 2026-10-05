@@ -109,6 +109,7 @@ class FakeEl {
     remove: (...names: string[]) => {
       for (const n of names) this.classes.delete(n);
     },
+    contains: (name: string) => this.classes.has(name),
   };
   readonly style = {
     setProperty: (name: string, value: string) => this.props.set(name, value),
@@ -1669,5 +1670,102 @@ describe('AD-13 entry 9 selection replacement', () => {
     expect(dragResidue(t)).toBe(0);
     t.advance(1000);
     expect(t.active()).toBe(0);
+  });
+});
+
+// F32: Card.svelte's `lifted` wrapper class marks a tap-selected face (8 px lift, DESIGN.md
+// Elevation & Depth); the fixture sets it by hand where the selection would.
+describe('AD-12 F32 a dragged selected card keeps its lift', () => {
+  type T = Awaited<ReturnType<typeof setup>>;
+  const SUPPRESSED = 'wc-selection-suppressed';
+  const move = (t: T, x: number, y: number) => t.fire('pointermove', { clientX: x, clientY: y });
+  const keyframes = (f: FakeEl) => f.animations.map((a) => a.keyframes);
+  // Selects column 1's bottom card (card1b lifted), presses `card` at (25, 50) and crosses the
+  // threshold with a 30 px move down.
+  async function liftedDrag(card: 'card1' | 'card1b', reduced = false) {
+    const t = await setup();
+    motion.value = { baseMs: 180, reduced };
+    t.detach();
+    t.overlays.select(1, 1);
+    t.b.card1b.classes.add('lifted');
+    navCalls.length = 0;
+    t.down(t.b[card], { clientX: 25, clientY: 50 });
+    move(t, 25, 80);
+    return t;
+  }
+
+  it('AD-12 F32 the threshold-crossing move keeps a lifted face 8 px up; an unlifted face in the same drag is not offset', async () => {
+    const t = await liftedDrag('card1');
+    expect(t.b.face1.style.transform).toBe('translate(0px, 30px)');
+    expect(t.b.face1b.style.transform).toBe('translate(0px, 22px)');
+    // AD-12 targeting measures the rendered rect: lifted face top 20 − 8 + 30.
+    expect(t.b.face1b.getBoundingClientRect().top).toBe(42);
+    move(t, 125, 50);
+    expect(t.b.face1.style.transform).toBe('translate(100px, 0px)');
+    expect(t.b.face1b.style.transform).toBe('translate(100px, -8px)');
+  });
+
+  it('AD-12 F32 an unlifted face (no selection) keeps translate(pointer − press point)', async () => {
+    const t = await setup();
+    t.detach();
+    t.down(t.b.card1b, { clientX: 25, clientY: 50 });
+    move(t, 25, 80);
+    expect(t.b.face1b.style.transform).toBe('translate(0px, 30px)');
+  });
+
+  const restoring: [string, (t: T) => void][] = [
+    ['pointercancel', (t) => t.fire('pointercancel')],
+    ['lostpointercapture', (t) => t.fire('lostpointercapture', { target: t.b.card1 })],
+    ['cancel({ byBack: true })', (t) => t.controller.cancel({ byBack: true })],
+  ];
+  it.each(restoring)(
+    'AD-12 F32 a restoring fly-back (%s) lands a lifted face on its lifted slot, an unlifted one on its slot',
+    async (_name, end) => {
+      const t = await liftedDrag('card1');
+      move(t, 125, 50);
+      end(t);
+      expect(keyframes(t.b.face1b)).toEqual([
+        [{ transform: 'translate(100px, -8px)' }, { transform: 'translate(0px, -8px)' }],
+      ]);
+      expect(keyframes(t.b.face1)).toEqual([
+        [{ transform: 'translate(100px, 0px)' }, { transform: 'translate(0px, 0px)' }],
+      ]);
+      expect(t.b.root.classes.has(SUPPRESSED)).toBe(true);
+      t.advance(180);
+      expect(t.b.root.classes.has(SUPPRESSED)).toBe(false);
+      expect(t.overlays.selection).toEqual({ column: 1, count: 1 });
+    },
+  );
+
+  it('AD-12 F32 a release over nothing deselects, so the lifted face flies back to its unlifted slot', async () => {
+    const t = await liftedDrag('card1b');
+    move(t, 25, 1050);
+    t.fire('pointerup');
+    expect(t.overlays.selection).toBe(null);
+    expect(keyframes(t.b.face1b)).toEqual([
+      [{ transform: 'translate(0px, 992px)' }, { transform: 'translate(0px, 0px)' }],
+    ]);
+  });
+
+  it('AD-12 F32 a restoring reduced-motion fade removes the suppression at its start, selection kept', async () => {
+    const t = await liftedDrag('card1b', true);
+    t.fire('pointercancel');
+    expect(t.b.face1b.style.transform).toBe('');
+    expect(keyframes(t.b.face1b)).toEqual([[{ opacity: 0 }, { opacity: 1 }]]);
+    expect(t.b.root.classes.has(SUPPRESSED)).toBe(false);
+    expect(t.b.face1b.classes.has('wc-drag-layer')).toBe(true);
+    expect(t.overlays.selection).toEqual({ column: 1, count: 1 });
+    t.advance(120);
+    expect(t.b.face1b.classes.has('wc-drag-layer')).toBe(false);
+    expect(t.active()).toBe(0);
+    expect(navCalls).toEqual([]);
+  });
+
+  it('AD-12 F32 a restoring fly-back with full motion keeps the suppression until settle', async () => {
+    const t = await liftedDrag('card1b');
+    t.fire('pointercancel');
+    expect(t.b.root.classes.has(SUPPRESSED)).toBe(true);
+    t.advance(180);
+    expect(t.b.root.classes.has(SUPPRESSED)).toBe(false);
   });
 });

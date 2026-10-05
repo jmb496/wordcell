@@ -20,13 +20,6 @@ context:
 warnings: ['oversized']
 deferred:
   - summary: >-
-      Dragging a lifted (selected) card loses its 8 px lift offset: the face jumps 8 px at the threshold crossing, and a restoring fly-back lands on the unlifted slot then snaps up 8 px at settle. Under reduced motion a restoring fade-back clears the inline transform at once, so the dragged faces (exempt from suppression as `.wc-drag-layer`) show Card's 8 px `.lifted` lift during the fade while the non-dragged selected faces stay unlifted until settle.
-    evidence: |-
-      The controller writes translate(pointer - press point) inline over Card's `.lifted .face { transform: translateY(-8px) }`; the fly-back animates to translate(0px, 0px). The settle jump was accepted in the ticket review log (pass 2); the threshold jump dates from entry 8, whose triage pointed it at entry 9, but ticket 4.9 does not specify it. A fix changes the AD-12 transform formula and fly-back keyframes, which is a UX call for the owner.
-    location: >-
-      src/ui/gestures/controller.ts dragMove / flyBack; src/ui/Card.svelte:162
-    severity: medium
-  - summary: >-
       A plain cancel() ending a replacing drag throws in overlays.deselect() when another entry (a sticky WordCell view) sits above tailSelection.
     evidence: |-
       deselect() throws 'AD-13 deselect() while X is the top entry' unless tailSelection is on top. Unreachable today: openView is not wired until entry 11. The ticket review log (pass 3) gives it to the CAP-9 ticket.
@@ -105,6 +98,8 @@ deferred:
 
 ## Plan Change Log
 
+- 2026-10-05, F32 built (owner decision, SPEC F32, build-notes spine close-out "AD-12 (F32)"): the former `deferred[0]` (8 px lift lost when a selected card is dragged) is fixed. `src/ui/gestures/controller.ts` records each dragged face's lift at the threshold crossing (its wrapper's `lifted` class → `LIFT_PX` 8, DESIGN.md Elevation & Depth) and writes `translate(pointer − press point − lift)`, so drop targeting measures the rendered, lifted rect; a restoring fly-back (pointercancel, lostpointercapture, `cancel({ byBack: true })`) animates to `translate(0px, −lift)`, while a release with no highlight (which deselects) still lands on `translate(0px, 0px)`; a restoring reduced-motion fade removes `wc-selection-suppressed` at its start instead of at settle, so the kept selection's non-dragged faces show the same lift as the dragged ones during the fade. Unlifted cards are unchanged. Tests: `src/ui/gestures/controller.test.ts` describe `AD-12 F32 a dragged selected card keeps its lift` (8 cases: threshold move and rect, no-selection drag, restoring fly-back × 3 ends, deselecting release, reduced fade, full-motion suppression until settle); `e2e/drag-interruptions.spec.ts` android `AD-12 F32 a dragged selected card keeps its lift: no jump at pickup, …` (full motion and reduced motion; both fail with the controller change reverted).
+
 ## Review Triage Log
 
 ### 2026-10-05 — Review pass
@@ -178,7 +173,7 @@ Read Card's `.face` rule for the resting shadow; dragged faces keep their inline
 - `AD-12 F13 Undo during a fly-back acts on the settled layout` (`session-idle-empty-column` + slow prefs; as resolved above; faces no transform, no running animation, `cursor.index` decreased).
 - `AD-12 CAP-4 an inert 20 px drag from another column's foot pad keeps the selection` (select, 20 px touchHold on a non-source foot, mid-drag outline and `Here` visible, class absent, foot `touch-action` `none`; release over it → Session and selection unchanged, wc 1).
 
-**Rule → test mapping.** AD-9/AD-17 hide, AD-16 Board half → hide P4; AD-12 cancel-first, F13 → Undo P4s + S; AD-13 F24/F28 → S + select-drag-hide, back, pointercancel P4s; AD-12 inert → foot-pad P4. Exempt: none.
+**Rule → test mapping.** AD-9/AD-17 hide, AD-16 Board half → hide P4; AD-12 cancel-first, F13 → Undo P4s + S; AD-13 F24/F28 → S + select-drag-hide, back, pointercancel P4s; AD-12 inert → foot-pad P4; AD-12 F32 (selection lift kept in the drag) → `AD-12 F32` S cases + the two `AD-12 F32` P4s. Exempt: none.
 
 ## Verification
 
@@ -242,4 +237,4 @@ Read Card's `.face` rule for the resting shadow; dragged faces keep their inline
 - The unit suite is over 5 s before and after this ticket. Entry 13's sweep owns it (epic Done when 5).
 - The `layout.spec.ts` scroll-gap flake recurs under load (pre-existing).
 - Whether Android delivers pointercancel before back on an edge swipe, or before visibilitychange on an app switch, is still `unverified` (epic 7 device check).
-- The 8 px lift offset when dragging a selected card, deferred for the owner.
+- The 8 px lift offset when dragging a selected card: owner decided (F32) and built, see Plan Change Log.
