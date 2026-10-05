@@ -45,8 +45,9 @@
 // F32 (AD-12): a dragged stack inside the selection (its top wrapper is `lifted`, F33) keeps the
 // selection lift in the drag transform, `translate(pointer − press point − lift)`; any other stack
 // has lift 0. A restoring fly-back (every fly-back but a release with no highlight, which
-// deselects, and a back that closes the tail selection) lands on `translate(0px, −lift)`, so the
-// face neither jumps at the threshold nor snaps at settle; the others land on `translate(0px, 0px)`.
+// deselects, and a back that closes the tail selection) lands each face on its resting slot
+// (lifted if its wrapper is `lifted`, else unlifted), so no face jumps at the threshold or snaps at
+// settle; the others land on `translate(0px, 0px)`.
 import { game } from '../../shell/game.svelte';
 import { prefs } from '../../shell/prefs.svelte';
 import { SELECTION_LIFT_PX } from '../layout/geometry';
@@ -273,6 +274,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
             kind === 'lostCapture' ||
             (reason.kind === 'cancel' && reason.byBack);
       // F32: a back that closes the tail selection (its top entry) deselects, so it lands unlifted.
+      // A mid-drag Forward popstate (not reachable on Android) lands unlifted and snaps at settle, accepted.
       const closesSelection =
         reason.kind === 'cancel' && reason.byBack && overlays.top === 'tailSelection';
       // The fly-back enters the gate before the press leaves it (F13).
@@ -309,9 +311,10 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     for (const wrapper of drag.wrappers) wrapper.classList.remove(DRAG_GHOST);
   }
 
-  // F13: WAAPI on the faces from the last written transform back to the slot (F32: the lifted slot
-  // when `restoring`); under reduced motion the transform clears at once and the faces fade in.
-  // Gate-counted until settled.
+  // F13: WAAPI on the faces from the last written transform back to the slot (F32/F33: when
+  // `restoring`, each face's resting slot, lifted if its wrapper is `lifted`); under reduced motion
+  // the transform clears at once (Card's `.lifted .face` rests a kept selection's faces lifted) and
+  // the faces fade in. Gate-counted until settled.
   function flyBack(drag: Drag, restoring: boolean): void {
     if (flying !== null) throw new Error('AD-12 fly-back while one is running');
     gate.enter();
@@ -324,17 +327,20 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       remaining -= 1;
       if (remaining === 0) settle(flight);
     };
-    const lift = drag.lift;
-    for (const face of drag.faces) {
+    for (const [i, face] of drag.faces.entries()) {
       let animation: Animation;
       if (reduced) {
         face.style.transform = '';
         animation = face.animate([{ opacity: 0 }, { opacity: 1 }], { duration: ms });
       } else {
+        const rest =
+          restoring && drag.wrappers[i]?.classList.contains('lifted') === true
+            ? -SELECTION_LIFT_PX
+            : 0;
         animation = face.animate(
           [
-            { transform: translate(drag.dx, drag.dy - lift) },
-            { transform: translate(0, restoring ? -lift : 0) },
+            { transform: translate(drag.dx, drag.dy - drag.lift) },
+            { transform: translate(0, rest) },
           ],
           { duration: ms, easing: 'ease-out' },
         );

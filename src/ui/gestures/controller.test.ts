@@ -1714,12 +1714,32 @@ describe('AD-12 F32 a dragged selected card keeps its lift', () => {
     expect(t.b.face1.style.transform).toBe('translate(100px, 0px)');
     expect(t.b.face1b.style.transform).toBe('translate(100px, 0px)');
     t.fire('pointercancel');
-    for (const face of [t.b.face1, t.b.face1b]) {
-      expect(keyframes(face)).toEqual([
-        [{ transform: 'translate(100px, 0px)' }, { transform: 'translate(0px, 0px)' }],
-      ]);
-    }
+    // The restoring fly-back aims each face at its resting slot: card1 unlifted, card1b (still
+    // `lifted`, selection kept) 8 px up, so nothing pops at settle.
+    expect(keyframes(t.b.face1)).toEqual([
+      [{ transform: 'translate(100px, 0px)' }, { transform: 'translate(0px, 0px)' }],
+    ]);
+    expect(keyframes(t.b.face1b)).toEqual([
+      [{ transform: 'translate(100px, 0px)' }, { transform: 'translate(0px, -8px)' }],
+    ]);
+    expect(t.overlays.selection).toEqual({ column: 1, count: 1 });
   });
+
+  // Column 2 spans y 0 … 400 and the face is 60 high: a 366 px drop puts an unlifted face's top at
+  // 386 (14 / 60 < 25 % overlap, AD-12) and a lifted one's at 378 (22 / 60 ≥ 25 %).
+  it.each([true, false])(
+    'AD-12 F32 drop targeting measures the lifted rect (lifted %s): the lift alone crosses the overlap threshold',
+    async (lifted) => {
+      const t = lifted ? await liftedDrag('card1b') : await setup();
+      if (!lifted) {
+        t.detach();
+        t.down(t.b.card1b, { clientX: 25, clientY: 50 });
+        move(t, 25, 80);
+      }
+      move(t, 75, 416);
+      expect(t.b.card2.classes.has('wc-drag-target')).toBe(lifted);
+    },
+  );
 
   it('AD-12 F32 an unlifted face (no selection) keeps translate(pointer − press point)', async () => {
     const t = await setup();

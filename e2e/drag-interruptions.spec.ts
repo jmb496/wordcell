@@ -710,6 +710,42 @@ test.describe('android', () => {
     await expectSelection(page, null, 0);
     await expectNoResidue(page);
   });
+
+  test('AD-12 F33 a pointercancel of a drag from above the selection flies each face to its resting slot: selected faces lifted, no snap at settle', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-idle-fresh');
+    await trackPointerId(page);
+    const faces = [4, 5, 6].map((i) => faceOf(cards(page, 1).nth(i)));
+    const unlifted = await box(faces[0] as Locator);
+    await select(page, 1, 5);
+    const keptTransform = await css(faces[1] as Locator, 'transform');
+    expect(keptTransform).not.toBe('none');
+    const rests = [unlifted, await box(faces[1] as Locator), await box(faces[2] as Locator)];
+    const from = await centre(cards(page, 1).nth(4));
+    const hold = await holdThrough(page, from, [plus(from, 0, 12), plus(from, 0, 40)]);
+    try {
+      expect(await suppressed(page)).toBe(true);
+      await cancelCaptured(page);
+      // Just before the fly-back's end each face is already on its resting slot.
+      for (const [k, face] of faces.entries()) {
+        await pauseNear(face, 0.999);
+        expect((await box(face)).y, `card ${k + 4}`).toBeCloseTo((rests[k] as Box).y, 0);
+      }
+      for (const [k, face] of faces.entries()) {
+        await finishAll(face);
+        await expectFlownBack(face, rests[k] as Box);
+      }
+      await expectSelection(page, { column: 1, count: 2 }, 1);
+      for (const face of faces.slice(1)) expect(await css(face, 'transform')).toBe(keptTransform);
+      expect(await css(faces[0] as Locator, 'transform')).toBe('none');
+    } finally {
+      await hold.end();
+    }
+    await animationFrames(page, 2);
+    await expectNoResidue(page);
+    await expectSelection(page, { column: 1, count: 2 }, 1);
+  });
 });
 
 test.describe('desktop', () => {

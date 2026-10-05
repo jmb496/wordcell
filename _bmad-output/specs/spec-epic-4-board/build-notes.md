@@ -43,6 +43,9 @@ Spine edits are batched at close-out as in epic 3, so the R1 AD-13 record (retro
   selected card neither jumps at pickup nor snaps at settle. Owner answer 2026-10-05.
   F33: a restoring fly-back returns the kept selection's lift, outline and `Here` at its start
   (both motion settings); the lift is kept only for a dragged stack inside the selection.
+  The spine's AD-11/AD-12 text should name `SELECTION_LIFT_PX` (`src/ui/layout/geometry.ts`, fed
+  to CSS as Board's `--wc-select-lift`) as the single owner of DESIGN.md's 8 px selection lift
+  (AD-11 lists only two `geometry.ts` entry points today).
 - AD-17 Touch (F10): `touch.ts` adds the stepwise held-touch API beside `touchDrag` and `longPress`.
 - AD-17 Speed: record the epic 4 warm median and, if it was done, the `architecture.test.ts` split.
 
