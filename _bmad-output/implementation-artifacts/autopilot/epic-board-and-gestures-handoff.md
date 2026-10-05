@@ -35,3 +35,6 @@ None from 4.9 yet. If you choose "fix it now", ARCHITECTURE-SPINE.md AD-12 (drag
 Record your answer in the ticket's Notes (or tell a Claude session, which records it and commits). Then rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-board-and-gestures`.
 - If you keep the current behaviour, the next session picks up ticket 4.9 at the final check (full test run, then mark done).
 - If you want it fixed now, the fix has to be built first. Ask a session to do that before you rerun the driver.
+
+## Resolved — 2026-10-05 (interactive session)
+Owner chose "fix it now" (SPEC F32) and answered two follow-ups (SPEC F33). The fix is built and code-reviewed: commits de3b04a, 7548c60, 6d09434; review log `_bmad-output/implementation-artifacts/review-loop/4-9-f32.md` (converged after 3 passes, one open major: a possibly flaky new e2e in `drag-interruptions.spec.ts`, default fix in the log). Close-out: build-notes spine entry AD-12 (F32/F33). Ticket 4.9 resumes at `test:all`, then mark done.
