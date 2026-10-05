@@ -5,6 +5,7 @@ import { expect, type Page, test } from '@playwright/test';
 import { expectAnotherWindow, expectOnlyButton, kind, stored } from './helpers/blocking';
 import { button, expectLeaves, hitAt, wc } from './helpers/dialogs';
 import { buildRoot } from './helpers/dist-test';
+import { dragResidue, expectNoResidue } from './helpers/drag';
 import {
   animationFrames,
   hidePage,
@@ -327,6 +328,25 @@ test.describe('board, dictionary and style helpers', () => {
     const before = await children();
     expect(await tokenColor(page, '--probe')).toBe('rgb(255, 128, 0)');
     expect(await children()).toBe(before);
+  });
+});
+
+test.describe('drag helpers', () => {
+  test('AD-17 dragResidue counts wc-drag-* classes and inline face transforms; a clean board is zero', async ({
+    page,
+  }) => {
+    await openBoard(page);
+    expect(await dragResidue(page)).toEqual({ classes: 0, transforms: 0 });
+    await expectNoResidue(page);
+    await page.evaluate(() => {
+      document.querySelector('[data-card-id="0"]')?.classList.add('wc-drag-ghost');
+      document.querySelector('[data-card-id="1"]')?.classList.add('wc-drag-target');
+      const face = document.querySelector<HTMLElement>('[data-card-id="2"] > .face');
+      if (face === null) throw new Error('card 2 has no face');
+      face.style.transform = 'translate(3px, 4px)';
+    });
+    expect(await dragResidue(page)).toEqual({ classes: 2, transforms: 1 });
+    await expect(expectNoResidue(page)).rejects.toThrow();
   });
 });
 

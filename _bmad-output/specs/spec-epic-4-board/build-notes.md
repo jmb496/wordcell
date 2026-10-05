@@ -348,6 +348,9 @@ Components receive `GameView` slices and UI state as props; none imports the eng
   'tapDestinationCard', card })`; `null` or absent → nothing.
 - Hover preview (desktop): outline the cards from the hovered card to the bottom when the map
   gives a number; for the top of D the outline shows the D at k − 1.
+- A press that crosses the threshold without a pick-up drag suppresses hover while held and
+  repaints it at every end; a column press also clears it at the crossing. The k preview ends at
+  the remainder's bottom card (never S ghosts).
 
 ## CAP-9 WordCell view
 

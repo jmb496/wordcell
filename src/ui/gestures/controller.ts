@@ -48,6 +48,14 @@
 // deselects, and a back that closes the tail selection) lands each face on its resting slot
 // (lifted if its wrapper is `lifted`, else unlifted), so no face jumps at the threshold or snaps at
 // settle; the others land on `translate(0px, 0px)`.
+// Entry 10 (SPEC CAP-8, R-31, R-39, CAP-4): in Composing a destination-column card whose
+// `kIfTapped` is a number dispatches `tapDestinationCard` on a tap (`perform`) and, as a drag-as-tap,
+// at the pointerup of a press that crossed the threshold (the card never moves: no pick-up), reading
+// `game.view` at pointerup wherever released; pointercancel, lostpointercapture and cancel() dispatch
+// nothing. A column press that crosses the threshold without a pick-up drag clears the hover at the
+// crossing; `refreshHover` skips while any crossed press is held and repaints at every end of one.
+// The desktop k preview (`hoverAction` kind `k`) is `wc-hover-tail` with `--wc-hover-from` and
+// `--wc-hover-len` (the remainder length, so the outline never covers S ghosts); no `wc-grab`.
 import { game } from '../../shell/game.svelte';
 import { prefs } from '../../shell/prefs.svelte';
 import { SELECTION_LIFT_PX } from '../layout/geometry';
@@ -63,7 +71,7 @@ import {
 } from './classify';
 import { columnTargets } from './drop-target';
 import type { Gate } from './gate';
-import { type Hit, type HoverAction, hoverAction, tapAction } from './intent';
+import { destinationTap, type Hit, type HoverAction, hoverAction, tapAction } from './intent';
 import { pickTarget } from './targeting';
 
 export type ControllerDeps<H> = {
@@ -148,6 +156,7 @@ const LISTENED = [
 
 const HOVER_CLASSES = ['wc-hover-tail', 'wc-grab', 'wc-drop', 'wc-drop-self'] as const;
 const HOVER_FROM = '--wc-hover-from';
+const HOVER_LEN = '--wc-hover-len';
 const DRAG_GHOST = 'wc-drag-ghost';
 const DRAG_LAYER = 'wc-drag-layer';
 const DRAG_TARGET = 'wc-drag-target';
@@ -293,8 +302,9 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       }
     }
     gate.leave();
-    // A drop refreshes after its dispatch (pointerup).
-    if (drag !== null && !flies && kind !== 'up') refreshHover();
+    // A drop and a drag-as-tap refresh after their dispatch (pointerup); entry 10: a crossed press
+    // with no pick-up drag repaints at every other end.
+    if (kind !== 'up' && (drag !== null ? !flies : p.state.kind === 'drag')) refreshHover();
   }
 
   function unsuppress(): void {
@@ -544,8 +554,12 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     const crossing = next.kind === 'drag' && p.state.kind !== 'drag';
     if (crossing) stopTimer(p);
     p.state = next;
-    // The threshold-crossing move is the first drag move (SPEC CAP-7).
-    if (crossing) p.drag = startDrag(p);
+    // The threshold-crossing move is the first drag move (SPEC CAP-7); entry 10: any column press
+    // clears the hover there, picked up or not.
+    if (crossing) {
+      if (p.hit.kind === 'card' || p.hit.kind === 'space') clearHover();
+      p.drag = startDrag(p);
+    }
     if (p.drag !== null) dragMove(p.drag, event.clientX, event.clientY);
   }
 
@@ -570,6 +584,9 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
           destinationColumn: action.destinationColumn,
         });
         return;
+      case 'tapDestinationCard':
+        game.dispatch({ type: 'tapDestinationCard', card: action.card });
+        return;
       case 'none':
         return;
     }
@@ -583,7 +600,17 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     const drag = p.drag;
     end({ kind: 'up' });
     if (outcome === 'tap') perform(p.hit);
-    if (drag === null || drag.highlighted === null) return;
+    if (drag === null) {
+      if (outcome !== 'drag') return;
+      // Entry 10 (R-39): a drag-as-tap reads the GameView now (AD-3), wherever released.
+      const view = game.view;
+      if (view === undefined) throw new Error('AD-12 drag-as-tap without a GameView');
+      const card = destinationTap(p.hit, view);
+      if (card !== null) game.dispatch({ type: 'tapDestinationCard', card });
+      refreshHover();
+      return;
+    }
+    if (drag.highlighted === null) return;
     // AD-12: the one command of a drag, on the last-shown highlight (EXPERIENCE.md step 6).
     if (overlays.selection !== null) overlays.deselect();
     game.dispatch({
@@ -626,6 +653,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     if (hovered === null) return;
     hovered.classList.remove(...HOVER_CLASSES);
     hovered.style.removeProperty(HOVER_FROM);
+    hovered.style.removeProperty(HOVER_LEN);
     hovered = null;
   }
 
@@ -643,14 +671,19 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       case 'dropSelf':
         columnEl.classList.add('wc-drop-self');
         return;
+      case 'k':
+        columnEl.classList.add('wc-hover-tail');
+        columnEl.style.setProperty(HOVER_FROM, String(action.from));
+        columnEl.style.setProperty(HOVER_LEN, String(action.length));
+        return;
     }
   }
 
   // DESIGN.md Card states, hover: at most one `[data-column]` carries the classes (old cleared).
   function refreshHover(): void {
     clearHover();
-    // Entry 8: no hover during a drag or a fly-back.
-    if (flying !== null || (press !== null && press.drag !== null)) return;
+    // Entry 8: no hover during a drag or a fly-back; entry 10: nor while any crossed press is held.
+    if (flying !== null || (press !== null && press.state.kind === 'drag')) return;
     const view = game.view;
     if (root === null || lastPoint === null || view === undefined) return;
     const el = deps.elementFromPoint(lastPoint.x, lastPoint.y);

@@ -1859,3 +1859,208 @@ describe('AD-12 F32 a dragged selected card keeps its lift', () => {
     },
   );
 });
+
+describe('AD-12 entry 10 Composing columns', () => {
+  type T = Awaited<ReturnType<typeof setup>>;
+  const tapDest = (card: number) =>
+    `dispatch ${JSON.stringify({ type: 'tapDestinationCard', card })}`;
+  // Composing (src/engine/view.ts): no column picks up or takes drops; column 1 is the destination,
+  // remainder [0, 5] at k = 1 (card 0 → 2, card 5 the top of D → null); the ghost is an S mirror.
+  const compose = (
+    kIfTapped: [number, number | null][] = [
+      [0, 2],
+      [5, null],
+    ],
+  ) => {
+    const col = (column: number, cards: number[]) => ({
+      column,
+      cards,
+      canPickUp: false,
+      canDropOn: false,
+      ...(column === 1 ? { kIfTapped: new Map(kIfTapped) } : {}),
+    });
+    shared.view = {
+      status: 'playing',
+      phase: 'composing',
+      columns: [col(1, [0, 5]), col(2, [1]), ...[3, 4, 5, 6, 7, 8].map((c) => col(c, []))],
+      cells: [
+        { cell: 3, cards: [2] },
+        { cell: 4, cards: [] },
+      ],
+    };
+  };
+  const dragClasses = (t: T): string[] => {
+    const out: string[] = [];
+    const walk = (el: FakeEl) => {
+      for (const c of el.classes) if (c.startsWith('wc-drag')) out.push(c);
+      for (const child of el.children) walk(child);
+    };
+    walk(t.b.root);
+    return out;
+  };
+  const transforms = (t: T) => [t.b.face1, t.b.face1b, t.b.face2].map((f) => f.style.transform);
+  const move = (t: T, x: number, y: number, init: Partial<FakeEvent> = {}) =>
+    t.fire('pointermove', { clientX: x, clientY: y, ...init });
+  // A press on card 0 (column 1, y 0–60) dragged past the threshold onto column 2.
+  const crossed = (t: T, init: Partial<FakeEvent> = {}) => {
+    t.down(t.b.card1, { clientX: 25, clientY: 10, ...init });
+    move(t, 25, 30, init);
+    move(t, 75, 10, init);
+  };
+
+  it('AD-12 a destination-card tap dispatches tapDestinationCard once; null and every other column part do nothing', async () => {
+    const t = await setup();
+    t.detach();
+    compose();
+    t.tap(t.b.card1);
+    expect(navCalls).toEqual([tapDest(0)]);
+    for (const el of [t.b.card1b, t.b.ghost, t.b.foot1, t.b.placeholder1, t.b.card2, t.b.column3]) {
+      t.tap(el);
+    }
+    expect(navCalls).toEqual([tapDest(0)]);
+    expect(t.overlays.selection).toBeNull();
+    expect(t.active()).toBe(0);
+  });
+
+  it('AD-12 a drag-as-tap never moves the card and dispatches once at pointerup', async () => {
+    const t = await setup();
+    t.detach();
+    compose();
+    crossed(t);
+    expect(dragClasses(t)).toEqual([]);
+    expect(transforms(t)).toEqual(['', '', '']);
+    expect(navCalls).toEqual([]);
+    t.fire('pointerup');
+    expect(navCalls).toEqual([tapDest(0)]);
+    expect(dragClasses(t)).toEqual([]);
+    expect(t.overlays.selection).toBeNull();
+    expect(t.active()).toBe(0);
+  });
+
+  it('AD-12 the drag-as-tap reads kIfTapped at pointerup, not at pointerdown', async () => {
+    const t = await setup();
+    t.detach();
+    compose();
+    crossed(t);
+    compose([
+      [0, null],
+      [5, null],
+    ]);
+    t.fire('pointerup');
+    expect(navCalls).toEqual([]);
+    crossed(t);
+    compose();
+    t.fire('pointerup');
+    expect(navCalls).toEqual([tapDest(0)]);
+  });
+
+  it('AD-12 a drag-as-tap on a null card, a ghost or another column dispatches nothing', async () => {
+    const t = await setup();
+    t.detach();
+    compose();
+    for (const [el, x] of [
+      [t.b.card1b, 25],
+      [t.b.ghost, 25],
+      [t.b.card2, 75],
+    ] as const) {
+      t.down(el, { clientX: x, clientY: 30 });
+      move(t, x + 50, 30);
+      expect(dragClasses(t)).toEqual([]);
+      t.fire('pointerup');
+    }
+    expect(navCalls).toEqual([]);
+    expect(t.active()).toBe(0);
+  });
+
+  it('AD-12 pointercancel, lostpointercapture and cancel() end a drag-as-tap with no dispatch', async () => {
+    const t = await setup();
+    t.detach();
+    compose();
+    crossed(t);
+    t.fire('pointercancel');
+    crossed(t);
+    t.fire('lostpointercapture', { target: t.b.card1 });
+    crossed(t);
+    t.controller.cancel();
+    t.fire('pointerup');
+    t.down(t.b.card1);
+    t.controller.cancel();
+    t.fire('pointerup');
+    expect(navCalls).toEqual([]);
+    expect(t.active()).toBe(0);
+  });
+
+  it('AD-12 the k hover previews the would-be D with no grab; null, ghosts, spaces and other columns nothing', async () => {
+    const t = await setup();
+    t.detach();
+    compose();
+    t.hover(t.b.card1);
+    expect([...t.b.column1.classes]).toEqual(['wc-hover-tail']);
+    expect(Object.fromEntries(t.b.column1.props)).toEqual({
+      '--wc-hover-from': '0',
+      '--wc-hover-len': '2',
+    });
+    for (const el of [t.b.card1b, t.b.ghost, t.b.foot1, t.b.card2, t.b.column3]) {
+      t.hover(el);
+      for (const column of [t.b.column1, t.b.column2, t.b.column3]) {
+        expect(column.classes.size).toBe(0);
+        expect(column.props.size).toBe(0);
+      }
+    }
+  });
+
+  it('AD-12 a crossed drag-as-tap clears the k hover, keeps it off while held and repaints it at every end', async () => {
+    const t = await setup();
+    t.detach();
+    compose();
+    const mouse = { pointerType: 'mouse' };
+    // A same-id pointerdown ends the crossed press, then starts a pending press on card 0.
+    let sameIdPending = false;
+    for (const finish of [
+      () => t.fire('pointerup', mouse),
+      () => t.fire('pointercancel', mouse),
+      () => t.fire('lostpointercapture', { target: t.b.card1, ...mouse }),
+      () => t.controller.cancel(),
+      () => {
+        t.down(t.b.card1, { clientX: 25, clientY: 10, ...mouse });
+        sameIdPending = true;
+      },
+    ]) {
+      t.hover(t.b.card1);
+      expect([...t.b.column1.classes]).toEqual(['wc-hover-tail']);
+      t.down(t.b.card1, { clientX: 25, clientY: 10, ...mouse });
+      move(t, 25, 30, mouse);
+      expect(t.b.column1.classes.size).toBe(0);
+      t.hover(t.b.card1);
+      t.controller.refreshHover();
+      expect(t.b.column1.classes.size).toBe(0);
+      finish();
+      expect([...t.b.column1.classes]).toEqual(['wc-hover-tail']);
+    }
+    // The same-id press's new pending press ends as a tap: one more tapDestinationCard.
+    expect(sameIdPending).toBe(true);
+    t.fire('pointerup', mouse);
+    expect(navCalls).toEqual([tapDest(0), tapDest(0)]);
+    expect(t.active()).toBe(0);
+  });
+
+  it('AD-12 an Idle space drag with a selection does not drop; wc-drop clears at the crossing and repaints at pointerup', async () => {
+    const t = await setup();
+    t.detach();
+    t.tap(t.b.card2);
+    const mouse = { pointerType: 'mouse' };
+    t.hover(t.b.foot1);
+    expect([...t.b.column1.classes]).toEqual(['wc-drop']);
+    t.down(t.b.foot1, { clientX: 25, clientY: 390, ...mouse });
+    move(t, 25, 370, mouse);
+    expect(t.b.column1.classes.size).toBe(0);
+    t.controller.refreshHover();
+    expect(t.b.column1.classes.size).toBe(0);
+    expect(dragClasses(t)).toEqual([]);
+    t.fire('pointerup', mouse);
+    expect([...t.b.column1.classes]).toEqual(['wc-drop']);
+    expect(t.overlays.selection).toEqual({ column: 2, count: 1 });
+    expect(navCalls).toEqual(['push']);
+    expect(t.active()).toBe(0);
+  });
+});

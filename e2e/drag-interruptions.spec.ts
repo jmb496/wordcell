@@ -1,5 +1,6 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
 import { wc } from './helpers/dialogs';
+import { dragResidue, expectNoResidue } from './helpers/drag';
 import { animationFrames, hidePage, showPage } from './helpers/lifecycle';
 import { booted } from './helpers/restore';
 import { fixture, seedStorage } from './helpers/seed';
@@ -164,22 +165,6 @@ const cursorIndex = (page: Page) =>
     if (current?.kind !== 'active') throw new Error(`store is ${current?.kind}`);
     return current.session.cursor.index;
   });
-
-// Every element with a `wc-drag-*` class, and every face with an inline transform.
-function dragResidue(page: Page): Promise<{ classes: number; transforms: number }> {
-  return page.evaluate(() => ({
-    classes: [...document.querySelectorAll('*')].filter((el) =>
-      [...el.classList].some((c) => c.startsWith('wc-drag-')),
-    ).length,
-    transforms: [...document.querySelectorAll<HTMLElement>('.face')].filter(
-      (el) => el.style.transform !== '',
-    ).length,
-  }));
-}
-
-async function expectNoResidue(page: Page): Promise<void> {
-  await expect.poll(() => dragResidue(page)).toEqual({ classes: 0, transforms: 0 });
-}
 
 // The `data-column`s of elements carrying `wc-drag-target`.
 function targets(page: Page): Promise<number[]> {

@@ -160,7 +160,9 @@ const liftStart = $derived(column.cards.length - count);
   }
 
   /* DESIGN.md Card states, hover (desktop only): classes the controller sets on the column. The
-     tail outline runs from `--wc-hover-from` to the bottom card, following any lift. */
+     tail outline runs from `--wc-hover-from` to the bottom card, following any lift. Entry 10 k
+     preview (SPEC CAP-8): `--wc-hover-len` (the remainder length) ends it at the remainder's bottom
+     card, never over a self-drop's S ghosts. */
   .hover-outline {
     display: none; position: absolute; left: 2px; width: var(--wc-w); z-index: 3;
     pointer-events: none; box-sizing: border-box; border-radius: 6px;
@@ -168,7 +170,7 @@ const liftStart = $derived(column.cards.length - count);
     --lifted: clamp(0, calc(var(--wc-hover-from, 0) - var(--wc-lift-start) + 1), 1);
     top: calc(var(--wc-hover-from, 0) * var(--wc-strip) - var(--lifted) * var(--wc-lift));
     height: calc(
-      (var(--wc-len) - 1 - var(--wc-hover-from, 0)) * var(--wc-strip) + var(--wc-H)
+      (var(--wc-hover-len, var(--wc-len)) - 1 - var(--wc-hover-from, 0)) * var(--wc-strip) + var(--wc-H)
         - var(--wc-lift) + var(--lifted) * var(--wc-lift)
     );
   }

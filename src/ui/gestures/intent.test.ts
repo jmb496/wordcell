@@ -1,10 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import type { GameView } from '../../engine/index';
-import { type Hit, hoverAction, tapAction } from './intent';
+import { destinationTap, type Hit, hoverAction, tapAction } from './intent';
 
 // AD-12 tap and hover intent (SPEC CAP-6, the plan's I/O matrix): a hand-built GameView slice.
 // Column 1 holds cards 10–14 (top → bottom), column 2 cards 20–21, column 3 is empty.
-type Overrides = { canPickUp?: boolean; canDropOn?: boolean; status?: string; phase?: string };
+// Entry 10: `kIfTapped` puts a map on one column (Composing destination).
+type Overrides = {
+  canPickUp?: boolean;
+  canDropOn?: boolean;
+  status?: string;
+  phase?: string;
+  kIfTapped?: { column: number; map: ReadonlyMap<number, number | null> };
+};
 
 function view(o: Overrides = {}): GameView {
   const col = (column: number, cards: number[]) => ({
@@ -13,6 +20,7 @@ function view(o: Overrides = {}): GameView {
     canPickUp: (o.canPickUp ?? true) && cards.length > 0,
     canDropOn: o.canDropOn ?? true,
     canTapForK: false,
+    ...(o.kIfTapped?.column === column ? { kIfTapped: o.kIfTapped.map } : {}),
   });
   return {
     status: o.status ?? 'playing',
@@ -191,6 +199,168 @@ describe('AD-12 hoverAction', () => {
     for (const hit of [{ kind: 'wordcell' }, { kind: 'tile' }, { kind: 'outside' }] as Hit[]) {
       expect(hoverAction(hit, view(), null)).toBeNull();
       expect(hoverAction(hit, view(), SEL)).toBeNull();
+    }
+  });
+});
+
+// Entry 10 (SPEC CAP-8): Composing as the engine gives it (src/engine/view.ts): columns neither pick
+// up nor take drops; column 1 (cards 10–14) is the destination, values as R-31 gives them.
+const composing = (map: [number, number | null][], o: Overrides = {}) =>
+  view({
+    phase: 'composing',
+    canPickUp: false,
+    canDropOn: false,
+    kIfTapped: { column: 1, map: new Map(map) },
+    ...o,
+  });
+// Plain destination at k = 2: 10 → 5, 11 → 4, 12 → 3, 13 (top of D) → 1, 14 (bottom) → 1.
+const K2 = composing([
+  [10, 5],
+  [11, 4],
+  [12, 3],
+  [13, 1],
+  [14, 1],
+]);
+// Plain destination at k = 1: the top of D (14) is the R-31 no-op.
+const K1 = composing([
+  [10, 5],
+  [11, 4],
+  [12, 3],
+  [13, 2],
+  [14, null],
+]);
+// Self-drop at k = 1: remainder 10–12, S ghosts 13–14 are not keys.
+const SELF = composing([
+  [10, 3],
+  [11, 2],
+  [12, null],
+]);
+const tapDest = (id: number) => ({ kind: 'tapDestinationCard', card: id });
+
+describe('AD-12 entry 10 Composing tapAction', () => {
+  it('AD-12 a destination card whose kIfTapped is a number taps it', () => {
+    expect(tapAction(card(1, 11), K1, null, undefined)).toEqual(tapDest(11));
+    expect(tapAction(card(1, 13), K1, null, undefined)).toEqual(tapDest(13));
+    expect(tapAction(card(1, 13), K2, null, undefined)).toEqual(tapDest(13));
+    expect(tapAction(card(1, 10), SELF, null, undefined)).toEqual(tapDest(10));
+  });
+
+  it('AD-12 null, absent, another column, space, foot and S ghost (space) are inert', () => {
+    for (const [hit, v] of [
+      [card(1, 14), K1],
+      [card(1, 12), SELF],
+      [card(1, 13), SELF],
+      [card(2, 20), K1],
+      [card(4, 40), K1],
+      [space(1), K1],
+      [space(1, true), K1],
+      [space(2), K1],
+      [space(3, true), K1],
+      [space(1), SELF],
+    ] as [Hit, GameView][]) {
+      expect(tapAction(hit, v, null, undefined)).toEqual({ kind: 'none' });
+    }
+  });
+
+  it('AD-12 the branch ignores a selection; WordCells, tiles and outside keep today’s paths', () => {
+    expect(tapAction(card(1, 11), K1, SEL, 'tailSelection')).toEqual(tapDest(11));
+    expect(tapAction(space(2), K1, SEL, 'tailSelection')).toEqual({ kind: 'none' });
+    expect(tapAction(card(2, 21), K1, SEL, 'tailSelection')).toEqual({ kind: 'none' });
+    expect(tapAction({ kind: 'wordcell' }, K1, SEL, 'tailSelection')).toEqual({ kind: 'deselect' });
+    expect(tapAction({ kind: 'outside' }, K1, null, undefined)).toEqual({ kind: 'none' });
+  });
+
+  it('AD-12 an empty destination (k = 0, kIfTapped empty) is inert', () => {
+    const empty = view({
+      phase: 'composing',
+      canPickUp: false,
+      canDropOn: false,
+      kIfTapped: { column: 3, map: new Map() },
+    });
+    for (const hit of [space(3), space(3, true)]) {
+      expect(tapAction(hit, empty, null, undefined)).toEqual({ kind: 'none' });
+    }
+  });
+
+  // R-39 (Place), R-75 (Game over).
+  it('AD-12 Place and Game over columns stay inert', () => {
+    const place = view({ phase: 'place', canPickUp: false, canDropOn: false });
+    const won = view({ status: 'won', canPickUp: false, canDropOn: false });
+    const gaveUp = view({ status: 'gaveUp', canPickUp: false, canDropOn: false });
+    for (const v of [place, won, gaveUp]) {
+      for (const hit of [card(1, 12), card(2, 21), space(1), space(3, true)]) {
+        expect(tapAction(hit, v, null, undefined)).toEqual({ kind: 'none' });
+      }
+    }
+  });
+});
+
+describe('AD-12 entry 10 destinationTap', () => {
+  it('AD-12 the card iff Composing, playing, a card hit and its kIfTapped is a number', () => {
+    expect(destinationTap(card(1, 12), K1)).toBe(12);
+    expect(destinationTap(card(1, 14), K1)).toBeNull();
+    expect(destinationTap(card(1, 13), SELF)).toBeNull();
+    expect(destinationTap(card(2, 20), K1)).toBeNull();
+    expect(destinationTap(space(1), K1)).toBeNull();
+    expect(destinationTap({ kind: 'wordcell' }, K1)).toBeNull();
+    expect(destinationTap(card(1, 12), composing([[12, 3]], { status: 'won' }))).toBeNull();
+    expect(destinationTap(card(1, 12), composing([[12, 3]], { phase: 'place' }))).toBeNull();
+    expect(destinationTap(card(1, 12), view())).toBeNull();
+  });
+});
+
+describe('AD-12 entry 10 hoverAction k preview', () => {
+  it('AD-12 a destination card with a number previews from size − value over the remainder', () => {
+    expect(hoverAction(card(1, 11), K1, null)).toEqual({
+      column: 1,
+      kind: 'k',
+      from: 1,
+      length: 5,
+    });
+    expect(hoverAction(card(1, 13), K1, null)).toEqual({
+      column: 1,
+      kind: 'k',
+      from: 3,
+      length: 5,
+    });
+    // The top of D at k = 2 previews k − 1 (the bottom card only).
+    expect(hoverAction(card(1, 13), K2, null)).toEqual({
+      column: 1,
+      kind: 'k',
+      from: 4,
+      length: 5,
+    });
+  });
+
+  it('AD-12 a self-drop bounds the preview by the remainder, not the column with its S ghosts', () => {
+    expect(hoverAction(card(1, 10), SELF, null)).toEqual({
+      column: 1,
+      kind: 'k',
+      from: 0,
+      length: 3,
+    });
+    expect(hoverAction(card(1, 11), SELF, null)).toEqual({
+      column: 1,
+      kind: 'k',
+      from: 1,
+      length: 3,
+    });
+  });
+
+  it('AD-12 null, ghosts, other columns, spaces and non-column hits preview nothing', () => {
+    for (const [hit, v] of [
+      [card(1, 14), K1],
+      [card(1, 12), SELF],
+      [card(1, 13), SELF],
+      [card(2, 20), K1],
+      [space(1), K1],
+      [space(1, true), K1],
+      [space(2), K1],
+      [{ kind: 'wordcell' }, K1],
+      [{ kind: 'tile' }, K1],
+      [{ kind: 'outside' }, K1],
+    ] as [Hit, GameView][]) {
+      expect(hoverAction(hit, v, null)).toBeNull();
     }
   });
 });

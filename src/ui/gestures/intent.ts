@@ -2,6 +2,9 @@
 // resolves a `Hit` at pointerdown and asks, at a released tap or a mouse hover, what it means for
 // the `GameView` (AD-3) and the tail selection (AD-13). Column membership and the card index come
 // from the view, never the DOM. `drop` implies deselect-first in the controller.
+// Entry 10 (SPEC CAP-8, R-31, R-39): in Composing only the destination column acts, keyed on its
+// `kIfTapped` (a number → `tapDestinationCard`, `null` or absent → nothing); every other column
+// part, S ghosts included (they resolve as `space`), is inert, with or without a selection.
 import type { CardId, ColumnView, GameView } from '../../engine/index';
 import type { OverlayId, TailSelection } from '../overlays.svelte';
 
@@ -26,6 +29,7 @@ export type TapAction =
       readonly destinationColumn: number;
     }
   | { readonly kind: 'deselect' }
+  | { readonly kind: 'tapDestinationCard'; readonly card: CardId }
   | { readonly kind: 'none' };
 
 export type HoverAction =
@@ -39,7 +43,12 @@ export type HoverAction =
   /** The drop-target highlight on another column. */
   | { readonly column: number; readonly kind: 'drop' }
   /** The drop-target highlight on the source column (partial: remainder top; whole: Here, F31). */
-  | { readonly column: number; readonly kind: 'dropSelf' };
+  | { readonly column: number; readonly kind: 'dropSelf' }
+  /**
+   * Entry 10 k preview: the would-be D from card index `from` down to the remainder's bottom card
+   * (index `length` − 1; `length` = `kIfTapped.size`, never the S ghosts of a self-drop).
+   */
+  | { readonly column: number; readonly kind: 'k'; readonly from: number; readonly length: number };
 
 const NONE: TapAction = { kind: 'none' };
 
@@ -58,12 +67,27 @@ function tailFrom(entry: ColumnView, card: CardId): { index: number; count: numb
   return { index, count: entry.cards.length - index };
 }
 
+function composing(view: GameView): boolean {
+  return view.status === 'playing' && view.phase === 'composing';
+}
+
+/** Entry 10 (R-31): the card a Composing destination-column press sets k from, else null. */
+export function destinationTap(hit: Hit, view: GameView): CardId | null {
+  if (!composing(view) || hit.kind !== 'card') return null;
+  const value = columnOf(view, hit.column).kIfTapped?.get(hit.card);
+  return typeof value === 'number' ? hit.card : null;
+}
+
 export function tapAction(
   hit: Hit,
   view: GameView,
   selection: TailSelection | null,
   top: OverlayId | undefined,
 ): TapAction {
+  if (composing(view) && (hit.kind === 'card' || hit.kind === 'space')) {
+    const card = destinationTap(hit, view);
+    return card === null ? NONE : { kind: 'tapDestinationCard', card };
+  }
   if (selection === null) {
     if (hit.kind !== 'card') return NONE;
     const entry = columnOf(view, hit.column);
@@ -101,6 +125,16 @@ export function hoverAction(
   view: GameView,
   selection: TailSelection | null,
 ): HoverAction | null {
+  if (composing(view)) {
+    const card = destinationTap(hit, view);
+    if (card === null || hit.kind !== 'card') return null;
+    const kIfTapped = columnOf(view, hit.column).kIfTapped;
+    const value = kIfTapped?.get(card);
+    if (kIfTapped === undefined || typeof value !== 'number') {
+      throw new Error(`AD-12 destinationTap gave card ${card} without a kIfTapped number`);
+    }
+    return { column: hit.column, kind: 'k', from: kIfTapped.size - value, length: kIfTapped.size };
+  }
   if (view.status !== 'playing' || view.phase !== 'idle') return null;
   if (hit.kind !== 'card' && hit.kind !== 'space') return null;
   const entry = columnOf(view, hit.column);
