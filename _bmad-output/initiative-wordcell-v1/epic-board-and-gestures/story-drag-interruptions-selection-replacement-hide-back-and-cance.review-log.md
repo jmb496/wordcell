@@ -1,6 +1,6 @@
 # Review log — story-drag-interruptions-selection-replacement-hide-back-and-cance.md (ticket 4.9)
 
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget default (2.5x pass 0). Pass 0: HEAD c1c5974, copy story-drag-interruptions-selection-replacement-hide-back-and-cance.passes/pass0.md, 325 words. Intent includes tickets.toml entry 9 fields interface, tests, owns (and unknown, already in Notes), not copied at pull; fixer adds them to the Description in pass 1.
 
@@ -68,3 +68,29 @@ Words (docs): 975 (3.00 x pass 0)  |  Snapshot: story-drag-interruptions-selecti
 - deselect() throws under a sticky WordCell view (CAP-9 ticket owns it; no sticky view yet)
 - same-id new press sees the restored selection (covered by "resolves on the settled layout"; plan)
 - fixture for a ≥ 2-card pickable tail (plan names it)
+
+## Pass 4 — 2026-10-05
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 1, minor 11, decision-needed 0  |  Dropped in triage: 0 (+ duplicates merged; 1 adversarial major reclassed minor)
+Words (docs): 975 (3.00 x pass 0), no fix pass  |  Snapshot: story-drag-interruptions-selection-replacement-hide-back-and-cance.passes/pass3.md
+### Open (not fixed; stopping rule)
+- [major] AC P4 one lifted tail — the Description says the suppression class cancels the old selection's outline and Here too, but no P4 (the only test kind that sees CSS) asserts `.selection-outline` / `.here` hidden mid-drag and visible again after a restoring settle; a build leaving them visible passes. Proposed fix: extend the one-lifted-tail P4 mid-drag assertion to the outline and Here, and the synthetic-pointercancel P4 to their return after settle.
+### Reclassified
+- Undo-during-fly-back P4 may race the 180 ms fly-back on slow CI → minor (verify-procedure precision; recipe is rule-coverage's own); plan default: seed `animationSpeed: 'slow'` or pause the face animations via an animate init script
+### Decision needed (functionality / UX / gameplay)
+- none
+
+## Result — converged after 4 passes
+Majors per pass: 11, 5, 1, 1. Two consecutive passes with at most one major; open major: AC P4 one lifted tail does not assert the old selection's outline and Here hidden mid-drag and back after a restoring settle (pass 4). Words 325 → 975. Decision-needed: none. Technical defaults applied: 12 (passes 1–3).
+
+Unapplied minors (for the build plan):
+- "release over nothing" means any release with no highlight (over nothing, WordCell row, non-target column, unhighlighted source) — all take the deselect path
+- Undo-during-fly-back P4: seed slow speed or pause the flight to avoid the race
+- select-drag back P4: then `end()` changes nothing
+- hide P4s: follow build-notes step order (moveTo another column so it is highlighted, past the threshold, hidePage, moveTo again, end())
+- synthetic-pointercancel P4: a moveTo over another column before `end()` yields no highlight and no drop
+- Tests line: press during fly-back is S only, Undo S + P4
+- "primary" = button 0 with no active press, enabled buttons included (resolve to nothing, leave the gate)
+- suppression CSS cancels visual properties only, never the foot row's touch-action (AD-11)
+- inert foot-pad P4: another (non-source) column's foot pad, per rule-coverage
+- unit budget: warm median was 4.93 s at 4.8; parametrise end-path S cases (it.each) and record the median
+- deferred from pass 3: lift transition flake (expect.poll or no transition), inline --wc-lift override, deselect() under a sticky view (CAP-9 ticket), same-id new press sees restored selection, fixture for a ≥ 2-card pickable tail
