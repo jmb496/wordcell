@@ -1,6 +1,6 @@
 # Review loop — ticket 4.10 build (code mode)
 
-State: pass 2: done
+State: pass 3: done
 
 Target: commit range `2d503b0..HEAD` (ad02f2e), staged diff `_bmad-output/implementation-artifacts/review-loop/4-10-build.passes/pass0.diff`
 Intent: `_bmad-output/initiative-wordcell-v1/epic-board-and-gestures/story-composing-place-and-game-over-column-behaviour-plan.md`
@@ -33,3 +33,14 @@ Note: pass 1's one major was environment-blocked, not a code defect, and this pa
 ### Fix outcome
 All 3 items applied: default compose() map restored to `[[0, 2], [5, null]]` and k-hover assertion to from 0 / len 2; new `composeGhostMapped()` (card 7 mapped) used only for the ghost tap, ghost drag-as-tap and ghost hover; comment moved; `destinationHit` returns `column`, hoverAction guard dropped. Fixer and orchestrator: npm test 1959 passed, lint clean, check 0 errors.
 Snapshot: tree bcb38630ec29dff9e3bb5606bc2e20237f66e5f8  |  fix diff `4-10-build.passes/pass2.fix.diff`  |  full diff `4-10-build.passes/pass2.diff`
+
+## Pass 3 — 2026-10-05
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 0, minor 0, decision-needed 0  |  Dropped in triage: 0
+Snapshot: tree bcb38630ec29dff9e3bb5606bc2e20237f66e5f8 (unchanged, no fix pass)
+### Applied
+- none (converged)
+
+## Result — converged after 3 passes
+open major: `npm run test:screens` not run (pass 1 item 1, environment-blocked: `docker` not installed in this WSL distro). The diff changes `.hover-outline` height in `src/ui/Column.svelte`; the ticket requires a green run with no baseline change before done (CI or the screenshot container).
+Final state (tree bcb3863, commit 6442caf): npm test 1959 passed, lint clean, check 0 errors.
+Unapplied minors: none.
