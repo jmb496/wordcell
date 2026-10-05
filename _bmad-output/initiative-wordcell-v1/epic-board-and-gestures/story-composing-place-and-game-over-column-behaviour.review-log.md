@@ -1,6 +1,6 @@
 # Review log — story-composing-place-and-game-over-column-behaviour.md (ticket 4.10)
 
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 6621aa5, copy story-composing-place-and-game-over-column-behaviour.passes/pass0.md, 292 words. Intent includes tickets.toml entry 10 fields unknown, interface, tests, owns (not copied at pull; fixer adds them to the Description in pass 1).
 
@@ -68,3 +68,17 @@ Words (docs): 1481 (5.07 x pass 0)  |  Snapshot: story-composing-place-and-game-
 - none
 ### Dropped
 - none (not sent to the fixer for budget, left as unapplied minors: whole-column self-drop case; long still press on a destination card is a tap; android tap on a lower D card at k ≥ 3)
+
+## Pass 4 — 2026-10-05
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 2, minor 14, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+Words (docs): 1499 (5.13 x pass 0)  |  Snapshot: story-composing-place-and-game-over-column-behaviour.passes/pass4.md (fix diff pass4.fix.diff)
+### Applied
+- [major] Description drag-as-tap — pass 3 dropped pass-2 item 4's clear-at-crossing; startDrag returns before clearHover when canPickUp is false (controller.ts:405/411), so the k preview stays painted through the drag (shipped behaviour) → fixer item 1
+- [major] AC partial self-drop — S-ghost checks at k = 1 are vacuous (a misresolved press onto the remainder's bottom card, the null top of D, also dispatches nothing); assert them after k ≥ 2 → fixer item 2
+- [minor] session-place sweep regains empty space (pass-2 item 13) → 3; hide order touchHold, moveTo, hidePage, end() → 4; destination-drag step order to reach k = 1 before the null drag → 5
+### Default applied (technical)
+- hover at drag-as-tap crossing — the threshold-crossing move of any column press calls clearHover even when startDrag returns null
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none (over budget, left as unapplied minors: pointerup refreshHover for every null-drag outcome; Composing branch placed before tapAction's selection split; controller.test.ts null-kIfTapped and pointercancel/lostpointercapture cases; cursor check on a remainder card above D; session-won hover on placeholder/foot plus zero live cards; TapAction kind name `tapDestinationCard`; desktop mouse drag-as-tap; another column's empty space in Composing inert list; no drop-target highlight on other columns' non-card parts in Composing; whole-column self-drop case)
