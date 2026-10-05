@@ -3,7 +3,7 @@ title: 'Drag interruptions: selection replacement, hide, back and cancel-first'
 type: 'feature'
 ticket: '9'
 created: '2026-10-05'
-status: 'built'
+status: done
 route: 'full'
 route_source: 'auto'
 baseline_revision: '996fd046e7e0aeb570216c0dc093866b37d13f0f'

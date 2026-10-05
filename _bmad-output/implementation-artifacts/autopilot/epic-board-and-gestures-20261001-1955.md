@@ -138,3 +138,17 @@ Close-out docs: none yet (depends on your answer below)
 ## Stopped — owner decision at ticket 4.9 code review
 
 Stop rule 1. The code review asks: when you drag a card that is already lifted because it is selected, should it keep its lift while dragged? Today it drops 8 px when the drag starts, and if the drag is cancelled it flies back 8 px too low and then snaps up. Proposed default: keep the current behaviour for v1 and revisit in a polish ticket. The ticket is `built`; the code review log has its `## Result`, so a resume goes straight to Step D (test:all, mark done).
+
+## 4.9 Drag interruptions: selection replacement, hide, back and cancel-first — done
+What it adds: dragging copes with interruptions (selection replaced by a drag, cancelled drags fly home and restore the earlier selection, Undo mid-drag puts the cards back first). After your F32/F33 answers, a dragged card that was already selected keeps its lift: no jump at pickup, no snap after a cancelled drag.
+Ticket review: 4 passes, converged; nothing needed your input
+Build: built; commits 8ce0a98; F32 fix de3b04a (built in an interactive session after your answer)
+Code review: thorough, 2 passes, converged (1 fix, 6b9bfed); then a separate F32 review, 3 passes, converged (7548c60, 6d09434, log `review-loop/4-9-f32.md`)
+Tests: all passing (test:all, 2026-10-05, first run)
+Ref to fix upstream: none
+Paused: owner decision stop at code review (F32), resolved 2026-10-05 with F32/F33; resumed at Step D 2026-10-05 14:17 UTC
+Tokens: 0.1M input-equivalent in the close-out session (other 69%, orchestrator 31%); orchestrator peak context 50k
+Worth knowing: the F32 review left one open item for the refactor sweep (4.13): a new drag-cancel test in `drag-interruptions.spec.ts` (bigger stack from above the selection) may flake on a loaded machine; the fix is in the review log. Four small unapplied notes are listed there too (a reduced-motion variant of that test, a comment reflow, two stale plan/ticket wording notes). Unit suite still about 5.3 s, over its 5 s budget (4.13).
+Close-out docs:
+- ARCHITECTURE-SPINE.md § AD-12 drag transform and fly-back target (and AD-11 naming `SELECTION_LIFT_PX`) ← F32/F33: a dragged stack inside a tap selection keeps the 8 px lift for the whole drag and its fly-back; a restoring fly-back returns lift, outline and `Here` at its start (owner, 2026-10-05; recorded in spec-epic-4-board build-notes.md)
+- DESIGN.md § selection lift ← F32: the lift persists while a selected card is dragged (owner, 2026-10-05)
