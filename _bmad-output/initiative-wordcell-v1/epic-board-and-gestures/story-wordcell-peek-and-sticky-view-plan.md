@@ -3,7 +3,7 @@ title: 'WordCell peek and sticky view'
 type: 'feature'
 ticket: '11'
 created: '2026-10-07'
-status: 'built'
+status: done
 baseline_revision: '69bf8b22b91cdfb75763be0f717eae861f917725'
 route: 'full'
 route_source: 'auto'

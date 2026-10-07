@@ -163,3 +163,14 @@ Ref to fix upstream: ticket test steps on how k changes after a tap (which card 
 Tokens: 11.4M input-equivalent (ticket review 40%, code review 29%, build 27%, orchestrator 3%, other 2%); orchestrator peak context 72k
 Worth knowing: the screenshot suite (`npm run test:screens`) was not run: Docker is not reachable from this WSL distro (Docker Desktop's WSL integration looks off). The code review left that as its one open item, because the change touches the hover outline's height in Column.svelte; hover is not in the screenshots, so no picture change is expected, but run `npm run test:screens` (or let CI) before the epic merges. The "banner during a scroll" layout flake hit again (it is now in roughly every other full run) and should be fixed in the refactor sweep (4.13).
 Close-out docs: none
+
+## 4.11 WordCell peek and sticky view — done
+What it adds: you can now see every card in any WordCell at any time. Press and hold a filled WordCell to peek at its cards; they close when you let go, unless the list is too long to fit, in which case it stays open so you can scroll. In Idle with nothing selected, or after the game ends, a tap on a filled WordCell opens the same list as a view that stays open, titled "WordCell n · m cards". Tapping outside it or pressing back closes it, and that closing tap never reaches the button underneath (e.g. Undo). Looking never changes the game, its saved state or the undo history. Tests also gained a new saved game: a game given up after one word.
+Ticket review: 5 passes, converged (majors 7, 7, 3, 1, 0); nothing needed your input
+Build: built; commits f97c288
+Code review: thorough (risk high), 4 passes, converged (majors 1, 3, 1, 1); fixes in 3ca10ad, 048cc7d, 041af96
+Tests: all passing (test:all, 2026-10-07, first run; unit 1988, e2e 349, pwa 12, dist 14)
+Ref to fix upstream: none
+Tokens: 17.7M input-equivalent (ticket review 42%, code review 30%, build 25%, orchestrator 1%, other 1%); orchestrator peak context 61k
+Worth knowing: the screenshot suite (`npm run test:screens`) was not run again (Docker still unreachable from WSL). The board now sits in a new wrapper element, but the closed view draws nothing and the wrapper has no layout of its own, so no picture change is expected; run it (or let CI) before the epic merges. The code review's one open item, recording the final full test run in the plan, was already done by the build. Four small leftovers for the refactor sweep (4.13) or the device pass in epic 7: a long still press on the view's background may close or keep it depending on the browser; on desktop the mouse wheel over the view's background scrolls the board behind it; on screens narrower than about 320 px the view is wider than the screen and its edge cards are cut off; and the test that peeks while a tail is selected should carry the R-65/Q-21 ids and check that nothing changed.
+Close-out docs: none
