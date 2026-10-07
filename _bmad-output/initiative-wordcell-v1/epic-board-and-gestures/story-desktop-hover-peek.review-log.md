@@ -1,6 +1,6 @@
 # Review log — story-desktop-hover-peek.md (ticket 4.12)
 
-State: pass 4: done
+State: pass 5: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 7c21189, copy story-desktop-hover-peek.passes/pass0.md, 265 words. Intent includes tickets.toml entry 12 fields interface, tests, owns (not copied at pull; fixer adds them to the Description in pass 1); copy at story-desktop-hover-peek.passes/intent-tickets-toml-12.md.
 
@@ -97,3 +97,22 @@ Words (docs): 1629 (6.15x pass 0; over the 1500 budget by the majors' additions,
 - viewport overflow in short scrolled windows — as specified (DESIGN.md clamps to the board only)
 ### Fixer outcome
 - all 12 items applied (no conflicts); first paragraph cut to pointers (Timer, Layout, press handling below); Card place/mirror pairing checked in Card.svelte:57–58 and WordCellView.svelte; overlays openHoverPeek throw checked; item 7 shortened to "else AD-12", item 10 relies on the Locator paragraph's definition, item 11 omits the stays-until-leave note (stated elsewhere); fix diff story-desktop-hover-peek.passes/pass4.fix.diff
+
+## Pass 5 — 2026-10-07
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 1, minor 15, decision-needed 0  |  Dropped in triage: 2 (fly-back settle before the few-px move and hidden-until-placed/coordinate space: plan detail)
+Words (docs): 1636 (6.17x pass 0; over budget by the major's 8 words, minors net −1)  |  Snapshot: story-desktop-hover-peek.passes/pass5.md
+### Applied
+- [major] AC — the "no press held" entry gate has no effective test: a captured column press gets no pointerover into cell 7 (controller.ts setPointerCapture), so the e2e drag check passes without the gate → fixer item 1
+### Default applied (technical)
+- AC — controller Vitest AD-12: an entry while a press is held (captured or uncaptured) does not arm → item 1
+- Layout — zero gap: bottom = label top above, top = cell bottom below; the helper returns y → item 2
+- Timer — the hover delay is LONG_PRESS_MS (§7.9 "the same delay") → item 8
+### Minors
+- helper y (item 2); page.clock installed and paused (item 3); drop the pointer-events-none badge step (item 4); slot pitch wording (item 5); "its right edge equals its right edge" (item 6); "peek or view close" redundant with press end/cancel() (item 7); LONG_PRESS_MS (item 8); suppression on mouse press ends only (item 9); hoverFine fire re-check and pick-up-drag release close tests (item 10); hoverFine turning false closes (item 11); pick-up drag hides the root by a controller class at the crossing (build-notes "closes … when the press starts a drag") (item 12); mouse pointerover with buttons ≠ 0 is no entry (item 13)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- fly-back settle before the few-px move — plan detail
+- hidden until first placement, .board-root-relative coordinates — plan detail
+### Fixer outcome
+- all 13 items applied, room made by tightening the Description pointers, layer-order and scroll sentences and the Verify summary (no rule or test dropped); checked in src: LONG_PRESS_MS = 400 (classify.ts), .count pointer-events none, track() mouse-only lastPoint, blocking.spec.ts install/pauseAt/runFor; unverified: the controller-added hide class name (left to the build) and the event.buttons check (the controller does not read buttons today); fix diff story-desktop-hover-peek.passes/pass5.fix.diff
