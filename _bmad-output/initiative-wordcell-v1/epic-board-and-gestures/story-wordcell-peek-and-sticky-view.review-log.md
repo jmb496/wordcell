@@ -1,6 +1,6 @@
 # Review log — story-wordcell-peek-and-sticky-view.md (ticket 4.11)
 
-State: pass 4: done
+State: pass 5: done
 
 Mode: docs, thorough, max 7, budget default (2.5x pass 0). Pass 0: HEAD 9581f2a, copy story-wordcell-peek-and-sticky-view.passes/pass0.md, 409 words. Intent includes tickets.toml entry 11 fields interface, tests, owns, unknown (not copied at pull; fixer adds them to the Description in pass 1); copy at story-wordcell-peek-and-sticky-view.passes/intent-tickets-toml-11.md.
 
@@ -114,3 +114,33 @@ Words (docs): 1321 (3.23x pass 0)  |  Snapshot: story-wordcell-peek-and-sticky-v
 - two duplicate reports of the mount major
 ### Fixer outcome
 - all 3 items applied, net 0 words (trimmed a duplicate overflow condition and filler); fix diff story-wordcell-peek-and-sticky-view.passes/pass4.fix.diff
+
+## Pass 5 — 2026-10-07
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 0, minor 15, decision-needed 0  |  Dropped in triage: 0 (two adversarial majors reclassified minor)
+Words (docs): 1321 (3.23x pass 0)  |  Snapshot: story-wordcell-peek-and-sticky-view.passes/pass4.md (no fix pass)
+### Reclassified
+- `top` tag string not listed in Interface/Owns → minor: SPEC Constraints "player strings only in src/ui/text.ts" already binds the builder; the plan adds the tag to text.ts
+- scrim-over-Undo gate "passes without the swallower" → minor: on android the touch gesture-tap click is hit-tested at the tap point, so an unwired swallower lets it reach Undo and the case fails; only the desktop half (click retargeted to the common ancestor) is weak, a verify-precision item from pass 4
+### Decision needed (functionality / UX / gameplay)
+- none
+
+## Result — converged after 5 passes
+
+Majors per pass: 7, 7, 3, 1, 0. Words 409 → 1321 (over the 2.5x budget from pass 1; later passes applied only majors and word-neutral minors). Technical defaults applied: 7 (overflow seam, swallower seam, swallower target/suppression, inert background, view mount and wrapper, failing-gate stop rule, fallback fixture name).
+
+Unapplied minors (for the build plan):
+- the view's `top` tag string lives in text.ts (SPEC Constraints); list it with the F27 titles
+- the scrim-over-Undo case records a capture-phase click recorder: the trailing click was defaultPrevented and never reached Undo; on desktop the click retargets to the common ancestor, so the desktop half is weak
+- "deepest cell" = session-won cell 6 (24 cards)
+- the sheet tap after the swipe lands on a non-top mirror (R-65 "only the top card is usable")
+- a WordCell drag does nothing in Game over too
+- the sheet has no open/close transition in epic 4 (SPEC Non-goals), so the release-time overflow read is stable
+- back while a peek is held above a selection: cancel({ byBack: true }) closes the peek (no sticky), closedByBack clears the selection (UI Vitest AD-13)
+- rename e2e/tap.spec.ts:176 to "… and an empty WordCell are inert" when dropping wordcell-7
+- `inert` applies while the sticky view (not a held peek) is open
+- sheet and scrim carry no click handlers; closing is the controller's pointer tap only
+- a tap that stops a fling inside the sheet closes the view (accepted, EXPERIENCE.md "closes on any tap")
+- any pointerdown on the root disarms the swallower, whatever its pointerId or button
+- sheet and scrim presses are classified without setPointerCapture (SPEC CAP-4)
+- if the fallback fixture is taken, the plan records it as the SPEC Assumptions exception to the epic's "two scripted valid Sessions" boundary
+- plus the deferred minors of passes 2–4 above (sheet/scrim hit kinds, dialog role and name, missing scroll area throws, scroll the row into view, top/unhatched assertion surface, overscroll on the sheet root, intent.ts Hit changes, double tap, release-path S case, P4+S note for peek-sticky above a selection, scrim above lifted faces, swipe source, Card.svelte `view` mirror kind, detail ≥ 1 click filter, Esc is epic 6, every EndReason closes the peek, bullet split, sheet-tap wc restore, Game-over empty cell, named cells, desktop mouse peek, still-finger lift closes, focus unmanaged, tap.spec.ts:357 no-overflow precondition, fallback viewport bar, injected timer stubs, F30 gutter strip)
