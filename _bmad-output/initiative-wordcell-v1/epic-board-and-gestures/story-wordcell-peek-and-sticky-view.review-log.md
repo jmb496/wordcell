@@ -1,6 +1,6 @@
 # Review log — story-wordcell-peek-and-sticky-view.md (ticket 4.11)
 
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget default (2.5x pass 0). Pass 0: HEAD 9581f2a, copy story-wordcell-peek-and-sticky-view.passes/pass0.md, 409 words. Intent includes tickets.toml entry 11 fields interface, tests, owns, unknown (not copied at pull; fixer adds them to the Description in pass 1); copy at story-wordcell-peek-and-sticky-view.passes/intent-tickets-toml-11.md.
 
@@ -87,3 +87,30 @@ Words (docs): 1321 (3.23x pass 0)  |  Snapshot: story-wordcell-peek-and-sticky-v
 - repeat reports of the focus-test and inert-placement majors (merged)
 ### Fixer outcome
 - all 4 items applied (no conflicts; line refs checked against the code); no commands or tool claims added; fix diff story-wordcell-peek-and-sticky-view.passes/pass3.fix.diff
+
+## Pass 4 — 2026-10-07
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 1, minor 14 (2 word-neutral sent to the fixer, 12 deferred), decision-needed 0  |  Dropped in triage: 3 (the same major from three lenses, merged)
+Words (docs): 1321 (3.23x pass 0)  |  Snapshot: story-wordcell-peek-and-sticky-view.passes/pass4.md
+### Applied
+- [major] Description — pass 3's mount default cannot be built: TopBar, the banner and ActionBar render inside `.board` (Board.svelte band snippet), and the `--wc-*` card-size properties are set only on `.board`, so a view outside it renders unsized mirrors → fixer item 1 (default applied)
+- [minor, no words] AC — "AD-14 F27 titles": AD-14 is one live element per card; the view is an AD-13 overlay → fixer item 2
+- [minor, no words] AC — banner Reload exists only when the dictionary failed; assert the banner band instead → fixer item 3
+### Default applied (technical)
+- Board.svelte gains a wrapper carrying the `--wc-*` properties that contains `.board` and WordCellView (a sibling after `.board`), inside `<main use:pointerRoot>`; while the sticky view is open `inert` goes on `.board` only, never on the wrapper, `<main>` or a view ancestor
+### Decision needed (functionality / UX / gameplay)
+- none
+### Deferred minors (for the build plan)
+- a sheet-tap close also restores the wc count (EXPERIENCE.md: non-back close pops its entry)
+- the empty-cell tap and long-press case also on session-gave-up-after-commit (Game over: empty is a no-op)
+- name the cells in the R-33/R-39 cases (used cell, empty cell, Composing available top card)
+- a desktop mouse long-press peek case, or a plan note why the shared pointer path covers it
+- a still finger held on the sheet then lifted closes the view ("closes on any tap"); pin it with one controller S case
+- focus is unmanaged in epic 4 (keyboard is epic 6); epic 6 shortcuts close the view before acting (EXPERIENCE.md Keyboard)
+- the tap.spec.ts:357 extension asserts the held peek does not overflow (precondition visible)
+- fallback fixture: its deepest cell overflows at the plan's viewport with the WordCell row reachable
+- "fake timers" = injected setTimer/clearTimer stubs as in gate.test.ts, no vi.useFakeTimers
+- a desktop press in the F30 scrollbar-gutter strip neither closes nor acts (accepted, F30)
+### Dropped
+- two duplicate reports of the mount major
+### Fixer outcome
+- all 3 items applied, net 0 words (trimmed a duplicate overflow condition and filler); fix diff story-wordcell-peek-and-sticky-view.passes/pass4.fix.diff
