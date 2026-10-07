@@ -113,8 +113,9 @@ const inView = $derived.by(() => {
   .top-tag {
     position: absolute; left: 50%; bottom: 3px; transform: translateX(-50%);
     box-sizing: border-box; height: 14px; padding: 0 6px; border-radius: 9999px;
+    display: grid; place-items: center;
     background: var(--wc-surface-raised); color: var(--wc-ink-primary);
-    font: 700 11px/14px system-ui, "Roboto", sans-serif; pointer-events: none;
+    font: 700 11px/1 system-ui, "Roboto", sans-serif; pointer-events: none;
   }
   .face {
     position: relative; box-sizing: border-box; width: var(--wc-w); height: var(--wc-H); margin: 0 2px;

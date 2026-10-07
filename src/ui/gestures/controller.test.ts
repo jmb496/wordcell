@@ -40,6 +40,20 @@ vi.mock('../motion', async (importOriginal) => {
   };
 });
 
+// Server-compiled runes make `flushSync` a no-op; the mock lets a test settle the fake DOM there.
+const svelteFlush = vi.hoisted(() => ({ onFlush: null as (() => void) | null }));
+
+vi.mock('svelte', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('svelte')>();
+  return {
+    ...actual,
+    flushSync: () => {
+      svelteFlush.onFlush?.();
+      svelteFlush.onFlush = null;
+    },
+  };
+});
+
 vi.mock('../../shell/prefs.svelte', () => ({
   prefs: {
     get motion() {
@@ -344,6 +358,7 @@ async function setup() {
   vi.resetModules();
   navCalls.length = 0;
   order.length = 0;
+  svelteFlush.onFlush = null;
   shared.onDispatch = null;
   const col = (column: number, cards: number[]) => ({
     column,
@@ -758,6 +773,22 @@ describe('AD-12 peek on end', () => {
     }
   });
 
+  it('AD-12 a same-id pointerdown that closes a peek flushes before resolving: its tap opens and closes no view', async () => {
+    const t = await setup();
+    t.detach();
+    t.down(t.b.cellCard);
+    t.advance(400);
+    expect(t.overlays.peek).toBe(3);
+    // The peek's scrim is under the new press until the flush removes it.
+    svelteFlush.onFlush = () => t.point(t.b.leftover);
+    t.down(t.b.scrim);
+    expect(t.overlays.peek).toBeNull();
+    expect(() => t.fire('pointerup', { target: t.b.leftover })).not.toThrow();
+    expect(t.overlays.viewCell).toBeNull();
+    expect(t.overlays.depth).toBe(0);
+    expect(navCalls).toEqual([]);
+  });
+
   it('AD-12 a stale pointercancel or lostpointercapture after cancel() leaves a peek open', async () => {
     const t = await setup();
     t.detach();
@@ -938,7 +969,9 @@ describe('AD-12 entry 11 sticky view', () => {
     const t = await setup();
     t.detach();
     t.tap(t.b.cellCard);
-    t.tap(t.b.scrim);
+    t.down(t.b.scrim);
+    t.advance(250);
+    t.fire('pointerup', { target: t.b.scrim });
     t.advance(299);
     expect(t.b.root.captureListeners.size).toBe(1);
     t.advance(1);

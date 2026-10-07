@@ -339,7 +339,7 @@ test.describe('android', () => {
       await expectNoView(page);
       const hold = await touchHold(page, await centre(cell(page, 3)));
       try {
-        await page.waitForTimeout(450);
+        await page.waitForTimeout(600);
         await expect(sheet(page)).toHaveCount(0);
         await expect(scrim(page)).toHaveCount(0);
       } finally {
@@ -388,6 +388,7 @@ test.describe('android', () => {
       expect(await wcOf(page)).toBe(before);
     });
     await expect(sheet(page)).toHaveAttribute('data-mode', 'sticky');
+    await expect(mirrors(page)).toHaveCount(24);
     await expect(sheet(page)).toHaveAccessibleName('WordCell 6 · 24 cards');
     await expect.poll(() => wcOf(page)).toBe(before + 1);
     const s = await sheet(page).boundingBox();

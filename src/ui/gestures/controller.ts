@@ -65,6 +65,7 @@
 // sheet pans): a tap closes the view (`close('wordcellView')`, never a deselect) and arms the
 // trailing-click swallower (click-swallow.ts) on the root; a drag does nothing. Every pointerdown
 // and detach disarm the swallower.
+import { flushSync } from 'svelte';
 import { game } from '../../shell/game.svelte';
 import { prefs } from '../../shell/prefs.svelte';
 import { SELECTION_LIFT_PX } from '../layout/geometry';
@@ -546,7 +547,11 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     if (press !== null) {
       if (event.pointerId !== press.pointerId) return;
       // A same-id pointerdown: the old press's end was lost.
+      const peeked = overlays.peek !== null;
       end({ kind: 'sameId' });
+      // That end closed the peek; flush so its scrim and sheet leave the DOM before
+      // elementFromPoint, else this press resolves against the stale view.
+      if (peeked) flushSync();
     }
     // F13: a press during a fly-back acts on the settled layout; the gate never idles between.
     const inFlight = flying !== null;

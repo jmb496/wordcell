@@ -1,5 +1,5 @@
 # Review loop — ticket 4.11 build (code mode, 69bf8b2..f97c288)
-State: pass 2: done
+State: pass 3: done
 
 Target: `_bmad-output/implementation-artifacts/review-loop/4-11-build.passes/pass0.diff` (git diff 69bf8b2..f97c288)
 Intent: `_bmad-output/initiative-wordcell-v1/epic-board-and-gestures/story-wordcell-peek-and-sticky-view-plan.md`
@@ -44,3 +44,22 @@ Majors rose 1 → 3, but not from unclear refs: one is a regression introduced b
 ### Dropped
 - fix diff minor: e2e `overflows` helper uses strict `>` — moot after the revert (item 1)
 - edge minor: plan l.134 contradicts the tolerance — moot after the revert (item 1)
+
+## Pass 3 — 2026-10-07
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 1, minor 5, decision-needed 0  |  Dropped in triage: 0
+Snapshot: tree 2794145c4f2dce345d40b875767709cbe3a9ef55  |  Fix: items 1–5 applied (item 1: `svelte` mocked in controller.test.ts so `flushSync` runs a hook; the new case fails at `not.toThrow` with the fix stashed). Fixer: e2e/wordcell-view.spec.ts 17 passed / 17 skipped. Orchestrator: npm test 46 files, 1988 passed; lint clean (169 files); check 0 errors, 0 warnings.
+### Applied
+- [major] src/ui/gestures/controller.ts pointerdown same-id path — `end({ kind: 'sameId' })` closes a held peek, but the scrim/sheet stay in the DOM until Svelte flushes, so `elementFromPoint` in the same handler hits the stale full-viewport scrim; released as a tap, `overlays.close('wordcellView')` throws (no view entry) → fixer item 1 (default applied: `flushSync()` after a same-id end that closed a peek, as layout.svelte.ts already does; controller.test case releasing that press as a tap)
+- [minor] e2e/wordcell-view.spec.ts empty-WordCell held check waits only 450 ms (50 ms past LONG_PRESS_MS) → fixer item 2 (600 ms)
+- [minor] controller.test.ts 'AD-12 the 300 ms expiry armed at pointerup disarms it' cannot tell pointerup arming from pointerdown arming → fixer item 3 (time between down and up)
+- [minor] e2e/wordcell-view.spec.ts session-won deepest-cell overflow test never counts the 24 mirrors → fixer item 4
+- [minor] src/ui/Card.svelte `.top-tag` line height 14px vs DESIGN `card-badge` lineHeight 1 → fixer item 5 (default applied: 11px/1, pill kept 14 px, text centred)
+### Default applied (technical)
+- same-id peek close → `flushSync()` before hit-testing
+- `.top-tag` → `11px/1` with centring
+### Decision needed (functionality / UX / gameplay)
+- none
+### Not applied (minor, UX-adjacent; left for owner/next build)
+- WordCellView.svelte .sheet — below ~320 px viewport (board `wide`), the fixed sheet is wider than the viewport and cannot pan, so edge cards clip (R-65 "every card viewable"); candidate default `max-width: 100vw`, but it reflows the sheet's cards-per-row below 360 px, so it is left for the owner/epic 7 device pass
+### Dropped
+- none
