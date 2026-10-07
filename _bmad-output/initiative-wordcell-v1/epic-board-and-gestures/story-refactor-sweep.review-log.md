@@ -1,6 +1,6 @@
 # Review log — story-refactor-sweep.md (ticket 4.13)
 
-State: pass 6: done
+State: pass 7: done
 
 - Mode: docs, thorough, max 7, budget 1500 words
 - Pre-loop: HEAD 149fa80; pass 0 copy story-refactor-sweep.review-log.passes/pass0.md, 226 words
@@ -161,3 +161,20 @@ Words (docs): 2073 (9.2x pass 0)  |  Snapshot: story-refactor-sweep.review-log.p
 - tickets.toml verify vs screenshot fallback — already cited (4.10–4.12 precedent)
 
 Fixer: major and all 7 minors applied, net −1 word; describe blocks and the drag.spec.ts whole-column test checked.
+
+## Pass 7 — 2026-10-07 (verify-only)
+Reviewers: fix diff (pass6.fix.diff only)  |  Findings: major 0, minor 1, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 2073 (9.2x pass 0, 226 → 2073; budget 1500)  |  Snapshot: pass6.md (no fix pass)
+### Unapplied minor
+- D20 — the two Out items added in pass 6 (main.ts registration order; key-command Undo/Redo under a view → epic 6) are not in the Item/Source cells; the key-command item has no source (cut it or name one)
+
+## Result — converged after 7 passes
+Majors per pass: 15, 9, 8, 6, 6, 2, 0. Decision needed: D7 (pass 2), still pending in the ticket; the build stops for the owner before any work while it is pending.
+
+Unapplied minors (for the build's plan):
+- D20 Item/Source cells miss the two pass-6 Out items (pass 7)
+- R6 loaded()/load() guard messages: the plan names the snapshot helper signature (caller passes messages) (pass 3/4)
+- re-measure: whether the watch file is re-chosen after a split (pass 3)
+- missing residuals: 4.9 Android pointercancel-before-back (epic 7), 4.3 ghost-fill owner glance and D-block seam (pass 3)
+- D14: a building home rather than the retrospective (pass 4)
+- word budget: 2073 vs 1500; procedure detail (re-measure method, D1 counting) can move to the plan

@@ -1,21 +1,19 @@
-outcome: done
-ticket: 4.12
-reason: done
+outcome: stopped
+ticket: 4.13
+reason: 1 — ticket review needs an owner decision (D7: drops onto columns hidden under the bars)
 next: 4.13
-updated: 2026-10-07T20:42:52Z
-summary: Ticket 4.12 (Desktop hover peek) passed every test and is marked done.
+updated: 2026-10-07T22:22:19Z
+summary: Ticket 4.13 (Refactor sweep) is hardened but needs one gameplay answer before it can be built.
 
 # Epic board-and-gestures — handoff
 
-Ticket 4.12 is done. On a desktop with a mouse, resting the pointer on a filled WordCell for a moment shows its cards in a small panel just above the WordCell row. Clicks pass straight through the panel, and it closes when the mouse leaves or you start pressing or dragging. Nothing needed your input. This session resumed the ticket review after the earlier session hit the usage limit.
+The last ticket of the epic, 4.13 (Refactor sweep), went through 7 rounds of review and now has a complete list of the leftover clean-up items. One of them changes how the game plays, so it needs your answer before the build:
 
-## Worth knowing
-- The first full test run hit the known flaky "banner during a scroll" layout test again (it passed 5 of 5 when run alone, and the second full run was all green). Fixing that flake belongs in the refactor sweep, ticket 4.13.
-- The plan's text about who watches the mouse/hover setting is out of date after a review fix. The code is correct; the plan wording is left for 4.13, along with six small review leftovers in `review-loop/4-12-build.md`.
-- Screenshot tests still not run (Docker unreachable from WSL). No change is expected, but run them, or let CI do it, before the epic merges.
+**Dragging over the top or bottom bars.** When you have scrolled the board so some columns are partly hidden under the sticky top bar (or the dictionary banner, or the bottom action bar), dragging cards over that bar can highlight a column you cannot see, and letting go drops the cards there.
 
-## Close-out docs
-- None from owner decisions. The build notes carry two technical-default DESIGN.md wording edits (hover peek width and surface, and its below-the-row placement in dev band orders) for the epic close-out.
+- **Fix it now (proposed).** Only the visible part of a column counts as a drop target. Letting go over a bar sends the cards back where they came from, which matches the design rule "what the player sees is what happens". It goes against the wording of architecture rule AD-12 ("whole hit rect"), so that wording would be updated at the retrospective.
+- **Leave it for v1.** No change now. The odd drop stays possible, and it gets noted at the retrospective.
 
-## Resume
-Next is 4.13 Refactor sweep, the epic's last ticket. Run `.claude/skills/epic-autopilot/scripts/loop.sh epic-board-and-gestures`.
+How to resume: put your answer in row D7 of `_bmad-output/initiative-wordcell-v1/epic-board-and-gestures/story-refactor-sweep.md` (replace "Owner decision pending"), commit, and rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-board-and-gestures`. It goes straight to the build.
+
+Close-out docs so far: none from owner decisions. If you choose the fix, ARCHITECTURE-SPINE.md AD-12 (drop targeting by "whole hit rect") changes at the retrospective. The 4.12 build notes also list two DESIGN.md wording edits made by technical default (hover peek width and its below-the-row placement in the dev band-order mode).
