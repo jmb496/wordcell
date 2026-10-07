@@ -65,6 +65,19 @@
 // sheet pans): a tap closes the view (`close('wordcellView')`, never a deselect) and arms the
 // trailing-click swallower (click-swallow.ts) on the root; a drag does nothing. Every pointerdown
 // and detach disarm the swallower.
+// Entry 12 (SPEC CAP-9, F19; AD-12, AD-13): the desktop hover peek. A mouse `pointerover` entering
+// a `[data-wordcell]` (relatedTarget outside it or null) arms one LONG_PRESS_MS timer (a single
+// slot) while `deps.hoverFine()`, with no press held, no fly-back, `buttons` 0, the cell not
+// suppressed, its hover peek not open and the cell non-empty in the GameView (AD-3); at fire it
+// re-checks `hoverFine` and emptiness and calls `overlays.openHoverPeek` (the store gates peek,
+// view and modal tops). A mouse `pointerout` leaving the cell clears its timer, closes the hover
+// peek and lifts its suppression. Every pointerdown (any type or button) first clears the timer. A
+// threshold crossing that starts a pick-up drag hides `[data-hover-peek]` with
+// `wc-hover-peek-hidden` (DOM only) and `end()` closes it before the fly-back or the drop; any other
+// crossing closes it there. Suppression is one `[data-wordcell]` slot: the cell whose rect holds
+// the last mouse point, set at every mouse press end, fly-back settle and cancel(), so boundary
+// pointerovers into it never arm until a pointerout leaves it. cancel() (idle too), detach and
+// `refreshHover()` with `hoverFine` false clear the timer and close the hover peek.
 import { flushSync } from 'svelte';
 import { game } from '../../shell/game.svelte';
 import { prefs } from '../../shell/prefs.svelte';
@@ -89,6 +102,8 @@ export type ControllerDeps<H> = {
   elementFromPoint(x: number, y: number): Element | null;
   setTimer(callback: () => void, ms: number): H;
   clearTimer(handle: H): void;
+  /** Entry 12: live `(hover: hover) and (pointer: fine)` (layout.hoverFine). */
+  hoverFine(): boolean;
 };
 
 export type CancelOptions = { readonly byBack?: boolean };
@@ -145,6 +160,8 @@ type Press<H> = {
   state: PressState;
   timer: { readonly handle: H } | null;
   drag: Drag | null;
+  /** Entry 12: `pointerType === 'mouse'` (a mouse press end sets the suppression). */
+  readonly mouse: boolean;
 };
 
 type Resolved = {
@@ -172,6 +189,7 @@ const DRAG_GHOST = 'wc-drag-ghost';
 const DRAG_LAYER = 'wc-drag-layer';
 const DRAG_TARGET = 'wc-drag-target';
 const SUPPRESSED = 'wc-selection-suppressed';
+const HOVER_PEEK_HIDDEN = 'wc-hover-peek-hidden';
 const OUTSIDE: Hit = { kind: 'outside' };
 
 function translate(dx: number, dy: number): string {
@@ -270,6 +288,10 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
   let flying: Flight | null = null;
   /** Entry 11: swallows the trailing click of a tap that closed the sticky view. */
   const swallower = createClickSwallower(deps);
+  /** Entry 12: the one pending hover-peek timer and the cell element it was armed for. */
+  let hoverTimer: { readonly handle: H; readonly cellEl: Element } | null = null;
+  /** Entry 12: the `[data-wordcell]` whose pointerovers never arm until a pointerout leaves it. */
+  let suppressed: Element | null = null;
 
   function stopTimer(p: Press<H>): void {
     if (p.timer === null) return;
@@ -285,6 +307,8 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     if (p.captured?.hasPointerCapture(p.pointerId) === true) {
       p.captured.releasePointerCapture(p.pointerId);
     }
+    // Entry 12: any mouse press end suppresses the cell under the last mouse point.
+    if (p.mouse) suppress();
     const kind = reason.kind;
     // Entry 11 (AD-12 peek on end): only a pointerup may turn the peek sticky (pointerup).
     if (kind !== 'up' && overlays.peek !== null) overlays.closePeek();
@@ -294,6 +318,8 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     const drag = p.drag;
     let flies = false;
     if (drag !== null) {
+      // Entry 12: a pick-up drag closes the hover peek at release, before the fly-back or drop.
+      overlays.closeHoverPeek();
       drag.target?.classList.remove(DRAG_TARGET);
       drag.target = null;
       flies =
@@ -393,6 +419,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     if (flying === flight) flying = null;
     clearDrag(flight.drag);
     gate.leave();
+    suppress();
     refreshHover();
   }
 
@@ -539,6 +566,8 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
   }
 
   function pointerdown(event: PointerEvent): void {
+    // Entry 12: any pointerdown, of any type or button, cancels a pending hover-peek timer.
+    stopHoverTimer();
     // Entry 11: a new press means the closing tap's trailing click is not coming.
     swallower.disarm();
     // A same-id pointerdown: that pointer was released, so its slot is spent.
@@ -576,6 +605,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       state: start(resolved.target, event.clientX, event.clientY),
       timer: null,
       drag: null,
+      mouse: event.pointerType === 'mouse',
     };
     press = p;
     if (p.captured !== null) {
@@ -600,6 +630,9 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     if (crossing) {
       if (p.hit.kind === 'card' || p.hit.kind === 'space') clearHover();
       p.drag = startDrag(p);
+      // Entry 12: a pick-up hides the hover peek (DOM only, AD-12); any other drag closes it.
+      if (p.drag !== null) hideHoverPeek();
+      else overlays.closeHoverPeek();
     }
     if (p.drag !== null) dragMove(p.drag, event.clientX, event.clientY);
   }
@@ -737,6 +770,9 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
 
   // DESIGN.md Card states, hover: at most one `[data-column]` carries the classes (old cleared).
   function refreshHover(): void {
+    // Entry 12: a hoverFine change to false closes the hover peek (never reads overlays.hoverPeek,
+    // so App's reaction does not track it).
+    if (!deps.hoverFine()) closeHover();
     clearHover();
     // Entry 8: no hover during a drag or a fly-back; entry 10: nor while any crossed press is held.
     if (flying !== null || (press !== null && press.state.kind === 'drag')) return;
@@ -758,12 +794,91 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     return true;
   }
 
+  function stopHoverTimer(): void {
+    if (hoverTimer === null) return;
+    deps.clearTimer(hoverTimer.handle);
+    hoverTimer = null;
+  }
+
+  // Entry 12: clears the timer and closes the hover peek.
+  function closeHover(): void {
+    stopHoverTimer();
+    overlays.closeHoverPeek();
+  }
+
+  function hideHoverPeek(): void {
+    if (root === null) throw new Error('AD-12 hover peek hide without a root');
+    root.querySelector('[data-hover-peek]')?.classList.add(HOVER_PEEK_HIDDEN);
+  }
+
+  // Entry 12: the suppression slot becomes the `[data-wordcell]` whose rect holds the last mouse
+  // point (geometric: a scrim may still cover it), else null.
+  function suppress(): void {
+    suppressed = null;
+    const pt = lastPoint;
+    if (root === null || pt === null) return;
+    for (const el of root.querySelectorAll('[data-wordcell]')) {
+      const r = el.getBoundingClientRect();
+      if (pt.x >= r.left && pt.x <= r.right && pt.y >= r.top && pt.y <= r.bottom) {
+        suppressed = el;
+        return;
+      }
+    }
+  }
+
+  // The `[data-wordcell]` a boundary event's target lies in, if any.
+  function cellOf(target: EventTarget | null): Element | null {
+    return target === null ? null : (target as Element).closest('[data-wordcell]');
+  }
+
+  // True when `to` lies outside `cellEl` (null: the pointer came from or went to nothing).
+  function outside(cellEl: Element, to: EventTarget | null): boolean {
+    return to === null || !cellEl.contains(to as Node);
+  }
+
+  function hoverEnter(event: PointerEvent): void {
+    const cellEl = cellOf(event.target);
+    if (cellEl === null || !outside(cellEl, event.relatedTarget)) return;
+    if (!deps.hoverFine() || press !== null || flying !== null || event.buttons !== 0) return;
+    if (cellEl === suppressed) return;
+    const n = attribute(cellEl, 'data-wordcell');
+    if (overlays.hoverPeek === n || cellCards(n) === 0) return;
+    stopHoverTimer();
+    hoverTimer = { handle: deps.setTimer(() => onHoverTimer(n), LONG_PRESS_MS), cellEl };
+  }
+
+  function onHoverTimer(n: number): void {
+    hoverTimer = null;
+    if (!deps.hoverFine() || cellCards(n) === 0) return;
+    overlays.openHoverPeek(n);
+  }
+
+  // AD-3: a WordCell's card count from the GameView.
+  function cellCards(n: number): number {
+    const view = game.view;
+    if (view === undefined) throw new Error('AD-12 hover peek without a GameView');
+    const cell = view.cells.find((c) => c.cell === n);
+    if (cell === undefined) throw new Error(`AD-12 hover peek on unknown cell ${n}`);
+    return cell.cards.length;
+  }
+
+  function hoverLeave(event: PointerEvent): void {
+    const cellEl = cellOf(event.target);
+    if (cellEl === null || !outside(cellEl, event.relatedTarget)) return;
+    if (hoverTimer?.cellEl === cellEl) stopHoverTimer();
+    overlays.closeHoverPeek();
+    if (suppressed === cellEl) suppressed = null;
+  }
+
   function pointerover(event: PointerEvent): void {
-    if (track(event)) refreshHover();
+    if (!track(event)) return;
+    refreshHover();
+    hoverEnter(event);
   }
 
   function pointerout(event: PointerEvent): void {
     if (event.pointerType !== 'mouse' || root === null) return;
+    hoverLeave(event);
     const to = event.relatedTarget as Node | null;
     if (to !== null && root.contains(to)) return;
     lastPoint = null;
@@ -787,7 +902,11 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
 
   function cancel(options: CancelOptions = {}): void {
     if (root === null) return;
+    // Entry 12: the settle suppresses; idle or not, the hover peek closes and the cell under the
+    // last mouse point is suppressed.
     finishFlight();
+    closeHover();
+    suppress();
     if (press === null) return;
     end({ kind: 'cancel', byBack: options.byBack === true });
   }
@@ -809,6 +928,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       }
       menuSlot = null;
       lastPoint = null;
+      suppressed = null;
       clearHover();
       root = null;
     };

@@ -56,6 +56,8 @@ export type Layout = {
   readonly heights: Record<BandId, number>;
   readonly bandOrder: readonly Unit[];
   readonly bannerShown: boolean;
+  /** Entry 12 (CAP-9): live `(hover: hover) and (pointer: fine)`, set at the media `change`. */
+  readonly hoverFine: boolean;
 };
 
 const HOVER_FINE = '(hover: hover) and (pointer: fine)';
@@ -129,6 +131,8 @@ export function createLayout<E extends ProbeElement>(gate: Gate, deps: LayoutDep
   let wide = $state(first.wide);
   let heights = $state.raw(result0.heights);
   let bannerShown = $state(banner0);
+  // Entry 12: follows the media query at once (the hover peek's watcher), unlike w (gate idle task).
+  let hoverFine = $state(hoverFine0);
 
   // `last`: the inputs of the last w computation (A-D11); `applied`: the last band layout's.
   let last = { innerWidth: win.innerWidth, innerHeight: win.innerHeight, hoverFine: hoverFine0 };
@@ -187,7 +191,10 @@ export function createLayout<E extends ProbeElement>(gate: Gate, deps: LayoutDep
 
   win.addEventListener('resize', schedule);
   win.addEventListener('orientationchange', schedule);
-  media.addEventListener('change', schedule);
+  media.addEventListener('change', () => {
+    hoverFine = media.matches;
+    schedule();
+  });
   deps.watchBanner(schedule);
   win.addEventListener('scroll', () => gate.scroll(), { passive: true });
   win.addEventListener('scrollend', () => gate.scrollEnd(), { passive: true });
@@ -210,6 +217,9 @@ export function createLayout<E extends ProbeElement>(gate: Gate, deps: LayoutDep
     },
     get bannerShown() {
       return bannerShown;
+    },
+    get hoverFine() {
+      return hoverFine;
     },
   };
 }

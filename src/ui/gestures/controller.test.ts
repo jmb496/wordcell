@@ -147,6 +147,14 @@ class FakeEl {
   ) {
     parent?.children.push(this);
   }
+  querySelectorAll(selector: string): FakeEl[] {
+    const found: FakeEl[] = [];
+    for (const child of this.children) {
+      if (child.is(selector)) found.push(child);
+      found.push(...child.querySelectorAll(selector));
+    }
+    return found;
+  }
   querySelector(selector: string): FakeEl | null {
     for (const child of this.children) {
       if (child.is(selector)) return child;
@@ -236,6 +244,7 @@ type FakeEvent = {
   detail: number;
   relatedTarget: unknown;
   button: number;
+  buttons: number;
   clientX: number;
   clientY: number;
   target: unknown;
@@ -250,6 +259,7 @@ function makeEvent(init: Partial<FakeEvent>): FakeEvent {
     detail: 1,
     relatedTarget: null,
     button: 0,
+    buttons: 0,
     clientX: 0,
     clientY: 0,
     target: null,
@@ -301,10 +311,23 @@ function board() {
   const face2 = face(card2, 2, 0);
   const column3 = at(el('div', { 'data-column': '3' }, root), colRect(3));
   const placeholder3 = el('div', { 'data-placeholder': '' }, column3);
-  const cell3 = el('div', { 'data-wordcell': '3' }, root);
+  // Entry 12: the cells lie below the columns, x 0 … 50 and 50 … 100, y 450 … 510.
+  const cell3 = at(el('div', { 'data-wordcell': '3' }, root), {
+    left: 0,
+    top: 450,
+    right: 50,
+    bottom: 510,
+  });
   const cellCard = el('div', { 'data-place': 'cell', 'data-card-id': '2' }, cell3);
   const badge = el('span', {}, cell3);
-  const cell4 = el('div', { 'data-wordcell': '4' }, root);
+  const cell4 = at(el('div', { 'data-wordcell': '4' }, root), {
+    left: 50,
+    top: 450,
+    right: 100,
+    bottom: 510,
+  });
+  // Entry 12: the hover peek root (rendered only while open in the app; always here).
+  const hoverPeek = el('div', { 'data-hover-peek': '' }, root);
   const tray = el('div', { 'data-band': 'tray' }, root);
   const tile = el('div', { 'data-place': 'tray', 'data-card-id': '3' }, tray);
   const trayMirror = el('div', { 'data-mirror-of': '1' }, tray);
@@ -348,6 +371,7 @@ function board() {
     sheetTitle,
     viewScroll,
     sheetMirror,
+    hoverPeek,
     outside,
   };
 }
@@ -427,6 +451,8 @@ async function setup() {
     dropTarget(column as unknown as Element, { kind: 'column', id: id + 1 });
   }
   let hit: FakeEl | null = null;
+  // Entry 12: hoverFine off by default, so the setTimer call counts above stay long-press only.
+  const media = { hoverFine: false };
   const controller = createController(gate, {
     elementFromPoint: () => {
       order.push('point');
@@ -434,6 +460,7 @@ async function setup() {
     },
     setTimer,
     clearTimer,
+    hoverFine: () => media.hoverFine,
   });
   const detach = () => controller.attach(b.root as unknown as HTMLElement);
   // A pointerdown whose resolution reads `target` from elementFromPoint; event.target is another
@@ -448,10 +475,11 @@ async function setup() {
     down(target);
     fire('pointerup', { target });
   };
-  // A mouse pointerover at `target` (elementFromPoint answers it).
-  const hover = (target: FakeEl | null) => {
+  // A mouse pointerover at `target` (elementFromPoint answers it); entry 12: `init` adds
+  // relatedTarget, buttons and the point.
+  const hover = (target: FakeEl | null, init: Partial<FakeEvent> = {}) => {
     hit = target;
-    return b.root.fire('pointerover', { pointerType: 'mouse', target });
+    return b.root.fire('pointerover', { pointerType: 'mouse', target, ...init });
   };
   const active = () => counts.enter - counts.leave;
   // Sets what elementFromPoint answers (hover recomputes read it).
@@ -473,6 +501,7 @@ async function setup() {
     setTimer,
     clearTimer,
     advance,
+    media,
   };
 }
 
@@ -2395,5 +2424,353 @@ describe('AD-12 entry 10 Composing columns', () => {
     expect(t.overlays.selection).toEqual({ column: 2, count: 1 });
     expect(navCalls).toEqual(['push']);
     expect(t.active()).toBe(0);
+  });
+});
+
+describe('AD-12 entry 12 desktop hover peek', () => {
+  type T = Awaited<ReturnType<typeof setup>>;
+  const mouse = { pointerType: 'mouse' };
+  const IN3 = { clientX: 25, clientY: 480 };
+  const drop = (source: number, count: number, destination: number) =>
+    `dispatch ${JSON.stringify({ type: 'drop', sourceColumn: source, sourceCount: count, destinationColumn: destination })}`;
+  const cells = () => (shared.view as { cells: { cell: number; cards: number[] }[] }).cells;
+  // A boundary entry into cell 3 (relatedTarget outside it) at a point inside its rect.
+  const enter3 = (t: T, init: Partial<FakeEvent> = {}) =>
+    t.hover(t.b.cellCard, { relatedTarget: t.b.leftover, ...IN3, ...init });
+  const leave3 = (t: T, to: FakeEl | null = t.b.leftover) =>
+    t.b.root.fire('pointerout', { ...mouse, target: t.b.cellCard, relatedTarget: to });
+  const hoverTimers = (t: T) => t.setTimer.mock.calls.filter(([, ms]) => ms === 400).length;
+  // hoverFine on, cell 3 entered and its 400 ms run: the hover peek is open on cell 3.
+  const open3 = (t: T) => {
+    t.media.hoverFine = true;
+    enter3(t);
+    t.advance(400);
+    expect(t.overlays.hoverPeek).toBe(3);
+  };
+
+  it('AD-12 a mouse entry into a non-empty cell arms one 400 ms timer: nothing at 399 ms, openHoverPeek at 400 ms', async () => {
+    const t = await setup();
+    t.detach();
+    t.media.hoverFine = true;
+    enter3(t);
+    expect(t.setTimer.mock.calls.map(([, ms]) => ms)).toEqual([400]);
+    t.advance(399);
+    expect(t.overlays.hoverPeek).toBeNull();
+    t.advance(1);
+    expect(t.overlays.hoverPeek).toBe(3);
+    expect(navCalls).toEqual([]);
+  });
+
+  it('AD-12 a relatedTarget-null entry arms; a move inside the cell (relatedTarget inside) does not', async () => {
+    const t = await setup();
+    t.detach();
+    t.media.hoverFine = true;
+    t.hover(t.b.badge, { relatedTarget: t.b.cellCard, ...IN3 });
+    expect(hoverTimers(t)).toBe(0);
+    enter3(t, { relatedTarget: null });
+    expect(hoverTimers(t)).toBe(1);
+    t.advance(400);
+    expect(t.overlays.hoverPeek).toBe(3);
+  });
+
+  it('AD-12 no arm when hoverFine is false, for a touch or pen pointerover, with buttons ≠ 0 and no press, or on an empty cell', async () => {
+    const t = await setup();
+    t.detach();
+    enter3(t);
+    t.media.hoverFine = true;
+    for (const pointerType of ['touch', 'pen']) {
+      t.b.root.fire('pointerover', {
+        pointerType,
+        target: t.b.cellCard,
+        relatedTarget: t.b.leftover,
+        ...IN3,
+      });
+    }
+    enter3(t, { buttons: 1 });
+    t.hover(t.b.cell4, { relatedTarget: t.b.leftover, clientX: 75, clientY: 480 });
+    expect(hoverTimers(t)).toBe(0);
+    t.advance(1000);
+    expect(t.overlays.hoverPeek).toBeNull();
+  });
+
+  it('AD-12 an entry while a press is held (captured or not) or during a fly-back does not arm', async () => {
+    const t = await setup();
+    t.detach();
+    t.media.hoverFine = true;
+    // Captured: a column-card press.
+    t.down(t.b.card1, { pointerId: 2 });
+    enter3(t);
+    t.fire('pointerup', { pointerId: 2 });
+    // Uncaptured: a press on nothing.
+    t.down(t.b.leftover, { pointerId: 2 });
+    enter3(t);
+    t.fire('pointerup', { pointerId: 2 });
+    // A fly-back: a pick-up drag released over nothing.
+    t.down(t.b.card1b, { pointerId: 2, clientX: 25, clientY: 50 });
+    t.fire('pointermove', { pointerId: 2, clientX: 25, clientY: 1050 });
+    t.fire('pointerup', { pointerId: 2 });
+    enter3(t);
+    expect(hoverTimers(t)).toBe(0);
+    t.advance(1000);
+    expect(t.overlays.hoverPeek).toBeNull();
+  });
+
+  it('AD-12 hoverFine flipped false between arm and fire: no openHoverPeek', async () => {
+    const t = await setup();
+    t.detach();
+    t.media.hoverFine = true;
+    enter3(t);
+    t.media.hoverFine = false;
+    t.advance(400);
+    expect(t.overlays.hoverPeek).toBeNull();
+  });
+
+  it('AD-12 a fire after the cell’s GameView became empty does not call openHoverPeek', async () => {
+    const t = await setup();
+    t.detach();
+    t.media.hoverFine = true;
+    enter3(t);
+    (cells()[0] as { cards: number[] }).cards = [];
+    t.advance(400);
+    expect(t.overlays.hoverPeek).toBeNull();
+  });
+
+  it('AD-12 an entry while that cell’s hover peek is open does not arm', async () => {
+    const t = await setup();
+    t.detach();
+    open3(t);
+    enter3(t);
+    expect(hoverTimers(t)).toBe(1);
+  });
+
+  it('AD-12 leave clears the timer and closes; moving straight to another cell closes the old one and arms the new one', async () => {
+    const t = await setup();
+    t.detach();
+    t.media.hoverFine = true;
+    enter3(t);
+    t.advance(300);
+    leave3(t);
+    expect(t.clearTimer).toHaveBeenCalledWith(t.setTimer.mock.results[0]?.value);
+    t.advance(1000);
+    expect(t.overlays.hoverPeek).toBeNull();
+    (cells()[1] as { cards: number[] }).cards = [9];
+    open3(t);
+    leave3(t, t.b.cell4);
+    expect(t.overlays.hoverPeek).toBeNull();
+    t.hover(t.b.cell4, { relatedTarget: t.b.cellCard, clientX: 75, clientY: 480 });
+    t.advance(399);
+    expect(t.overlays.hoverPeek).toBeNull();
+    t.advance(1);
+    expect(t.overlays.hoverPeek).toBe(4);
+  });
+
+  it('AD-12 cancel() and detach clear a pending hover timer and close an open hover peek', async () => {
+    for (const ender of ['cancel', 'detach'] as const) {
+      const t = await setup();
+      const detach = t.detach();
+      t.media.hoverFine = true;
+      enter3(t);
+      if (ender === 'cancel') t.controller.cancel();
+      else detach();
+      expect(t.clearTimer, ender).toHaveBeenCalledWith(t.setTimer.mock.results[0]?.value);
+      t.advance(1000);
+      expect(t.overlays.hoverPeek, ender).toBeNull();
+      if (ender === 'detach') continue;
+      leave3(t);
+      open3(t);
+      t.controller.cancel();
+      expect(t.overlays.hoverPeek).toBeNull();
+      const u = await setup();
+      const d = u.detach();
+      open3(u);
+      d();
+      expect(u.overlays.hoverPeek).toBeNull();
+    }
+  });
+
+  it('AD-12 cancel() with no press suppresses the cell under the last point: a boundary entry does not arm; pointerout then re-entry arms', async () => {
+    const t = await setup();
+    t.detach();
+    open3(t);
+    t.controller.cancel();
+    expect(t.overlays.hoverPeek).toBeNull();
+    enter3(t, { relatedTarget: null });
+    expect(hoverTimers(t)).toBe(1);
+    leave3(t);
+    enter3(t);
+    expect(hoverTimers(t)).toBe(2);
+    t.advance(400);
+    expect(t.overlays.hoverPeek).toBe(3);
+  });
+
+  it('AD-12 suppression is one slot: a mouse press end over cell 3 suppresses it; a later one over no cell clears it', async () => {
+    const t = await setup();
+    t.detach();
+    t.media.hoverFine = true;
+    t.fire('pointermove', { ...mouse, ...IN3 });
+    t.down(t.b.cellCard, { ...mouse, ...IN3 });
+    t.fire('pointerup', { ...mouse, ...IN3 });
+    // The tap opened the sticky view (Idle); closing it leaves the suppression.
+    expect(t.overlays.viewCell).toBe(3);
+    t.overlays.close('wordcellView');
+    enter3(t, { relatedTarget: null });
+    // Only the press's long-press timer.
+    expect(hoverTimers(t)).toBe(1);
+    t.fire('pointermove', { ...mouse, clientX: 25, clientY: 300 });
+    t.down(t.b.leftover, { ...mouse, clientX: 25, clientY: 300 });
+    t.fire('pointerup', mouse);
+    enter3(t, { relatedTarget: null });
+    expect(hoverTimers(t)).toBe(2);
+    t.advance(400);
+    expect(t.overlays.hoverPeek).toBe(3);
+  });
+
+  it('AD-12 a touch press end leaves the suppression slot as it was', async () => {
+    const t = await setup();
+    t.detach();
+    open3(t);
+    t.controller.cancel();
+    t.down(t.b.leftover);
+    t.fire('pointerup');
+    enter3(t, { relatedTarget: null });
+    expect(hoverTimers(t)).toBe(1);
+  });
+
+  it('AD-12 any pointerdown clears a pending timer first: an enabled button, a non-primary press', async () => {
+    for (const press of [
+      (t: T) => t.down(t.b.undoIcon, mouse),
+      (t: T) => t.down(t.b.cellCard, { ...mouse, button: 2 }),
+    ]) {
+      const t = await setup();
+      t.detach();
+      t.media.hoverFine = true;
+      enter3(t);
+      press(t);
+      expect(t.clearTimer).toHaveBeenCalledWith(t.setTimer.mock.results[0]?.value);
+      t.advance(1000);
+      expect(t.overlays.hoverPeek).toBeNull();
+      expect(t.active()).toBe(0);
+    }
+  });
+
+  it('AD-12 a non-primary press leaves an open hover peek open', async () => {
+    const t = await setup();
+    t.detach();
+    open3(t);
+    t.down(t.b.cellCard, { ...mouse, button: 2 });
+    expect(t.overlays.hoverPeek).toBe(3);
+  });
+
+  it('AD-12 a tap that does nothing keeps an open hover peek open', async () => {
+    const t = await setup();
+    t.detach();
+    open3(t);
+    t.down(t.b.leftover, { ...mouse, ...IN3 });
+    t.fire('pointerup', mouse);
+    expect(t.overlays.hoverPeek).toBe(3);
+  });
+
+  it('AD-12 a touch or mouse WordCell press crossing the threshold closes it at the crossing', async () => {
+    for (const pointerType of ['touch', 'mouse']) {
+      const t = await setup();
+      t.detach();
+      open3(t);
+      t.down(t.b.cellCard, { pointerType, pointerId: 2, ...IN3 });
+      expect(t.overlays.hoverPeek, pointerType).toBe(3);
+      t.fire('pointermove', { pointerType, pointerId: 2, clientX: 25, clientY: 440 });
+      expect(t.overlays.hoverPeek, pointerType).toBeNull();
+      t.fire('pointerup', { pointerType, pointerId: 2 });
+      expect(navCalls, pointerType).toEqual([]);
+    }
+  });
+
+  it('AD-12 another pointer’s pick-up drag hides it at the crossing and closes it in end(): before the drop dispatch, at pointercancel, lostpointercapture and cancel()', async () => {
+    const enders: [string, (t: T) => void][] = [
+      ['pointerup', (t) => t.fire('pointerup', { pointerId: 2 })],
+      ['pointercancel', (t) => t.fire('pointercancel', { pointerId: 2 })],
+      [
+        'lostpointercapture',
+        (t) => {
+          t.b.card1b.captures.clear();
+          t.fire('lostpointercapture', { pointerId: 2, target: t.b.card1b });
+        },
+      ],
+      ['cancel()', (t) => t.controller.cancel()],
+    ];
+    for (const [name, ender] of enders) {
+      const t = await setup();
+      t.detach();
+      open3(t);
+      let atDispatch: number | null | undefined;
+      shared.onDispatch = () => {
+        atDispatch = t.overlays.hoverPeek;
+      };
+      t.down(t.b.card1b, { pointerId: 2, clientX: 25, clientY: 50 });
+      t.fire('pointermove', { pointerId: 2, clientX: 125, clientY: 50 });
+      expect(t.b.hoverPeek.classes.has('wc-hover-peek-hidden'), name).toBe(true);
+      expect(t.overlays.hoverPeek, name).toBe(3);
+      ender(t);
+      expect(t.overlays.hoverPeek, name).toBeNull();
+      if (name === 'pointerup') {
+        expect(atDispatch).toBeNull();
+        expect(navCalls).toEqual([drop(1, 1, 3)]);
+      }
+      expect(t.active() <= 1, name).toBe(true);
+    }
+  });
+
+  it('AD-12 a fly-back settle suppresses the cell under the last mouse point: an entry does not arm; pointerout then re-entry arms', async () => {
+    const t = await setup();
+    t.detach();
+    t.media.hoverFine = true;
+    t.fire('pointermove', { ...mouse, ...IN3 });
+    // A touch pick-up drag released over no target: its end sets no suppression (touch), the
+    // settle does.
+    t.down(t.b.card1b, { pointerId: 2, clientX: 25, clientY: 50 });
+    t.fire('pointermove', { pointerId: 2, clientX: 25, clientY: 1050 });
+    t.fire('pointerup', { pointerId: 2 });
+    expect(t.b.face1b.animations).toHaveLength(1);
+    t.advance(180);
+    expect(t.active()).toBe(0);
+    enter3(t, { relatedTarget: null });
+    expect(hoverTimers(t)).toBe(0);
+    leave3(t);
+    enter3(t);
+    expect(hoverTimers(t)).toBe(1);
+    t.advance(400);
+    expect(t.overlays.hoverPeek).toBe(3);
+  });
+
+  it('AD-12 an inert column-card drag (canPickUp false) closes an open hover peek at the crossing, before pointerup', async () => {
+    const t = await setup();
+    t.detach();
+    open3(t);
+    const view = shared.view as { columns: { canPickUp: boolean }[] };
+    (view.columns[0] as { canPickUp: boolean }).canPickUp = false;
+    t.down(t.b.card1b, { pointerId: 2, clientX: 25, clientY: 50 });
+    expect(t.overlays.hoverPeek).toBe(3);
+    t.fire('pointermove', { pointerId: 2, clientX: 25, clientY: 90 });
+    expect(t.overlays.hoverPeek).toBeNull();
+    expect(t.b.hoverPeek.classes.has('wc-hover-peek-hidden')).toBe(false);
+    t.fire('pointerup', { pointerId: 2 });
+    expect(navCalls).toEqual([]);
+  });
+
+  it('AD-12 with hoverFine flipped false, refreshHover() clears the timer and closes an open hover peek', async () => {
+    const t = await setup();
+    t.detach();
+    open3(t);
+    t.media.hoverFine = false;
+    t.controller.refreshHover();
+    expect(t.overlays.hoverPeek).toBeNull();
+    t.media.hoverFine = true;
+    leave3(t);
+    enter3(t);
+    t.media.hoverFine = false;
+    t.controller.refreshHover();
+    expect(t.clearTimer).toHaveBeenCalledWith(t.setTimer.mock.results[1]?.value);
+    t.media.hoverFine = true;
+    t.advance(1000);
+    expect(t.overlays.hoverPeek).toBeNull();
   });
 });

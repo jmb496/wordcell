@@ -211,6 +211,20 @@ describe('AD-11 live layout', () => {
     expect(t.calls).toEqual([]);
   });
 
+  it('AD-11 hoverFine follows a media change at once, before the gate idle task', () => {
+    const t = setup({ ...PIXEL_7, innerHeight: 915 });
+    expect(t.layout.hoverFine).toBe(false);
+    t.gate.enter();
+    t.flipMedia(true);
+    expect(t.layout.hoverFine).toBe(true);
+    expect(t.layout.w).toBe(46);
+    t.flipMedia(false);
+    expect(t.layout.hoverFine).toBe(false);
+    t.gate.leave();
+    t.frame();
+    expect(t.layout.hoverFine).toBe(false);
+  });
+
   it('AD-11 a hoverFine flip and flip-back before idle changes nothing', () => {
     const t = setup({ ...PIXEL_7, innerHeight: 915 });
     const heights = t.layout.heights;

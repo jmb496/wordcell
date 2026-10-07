@@ -6,6 +6,8 @@ import ActionBar from './ActionBar.svelte';
 import Column from './Column.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import DictionaryBanner from './DictionaryBanner.svelte';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import HoverPeek from './HoverPeek.svelte';
 import type { BandId, Unit } from './layout/bands';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { SELECTION_LIFT_PX } from './layout/geometry';
@@ -29,6 +31,7 @@ import WordCellView from './WordCellView.svelte';
 // Entry 11 (SPEC CAP-9): the `--wc-*` properties sit on `.board-root`, which holds `.board` (bars
 // and banner inside) then the WordCell view (sheet and scrim), inside the controller's attach
 // root; while the sticky view is open `.board` alone is `inert`, never during a held peek.
+// Entry 12 (F19): `.board-root` is the hover peek's containing block (`position: relative`).
 let { view, layout }: { view: GameView; layout: Layout } = $props();
 
 const w = $derived(layout.w);
@@ -110,10 +113,11 @@ function row(unit: Unit, band: BandId): number {
   {/each}
 </div>
 <WordCellView {view} />
+<HoverPeek {view} {layout} />
 </div>
 
 <style>
-  .board-root { width: 100%; }
+  .board-root { position: relative; width: 100%; }
   .board {
     display: flex; flex-direction: column; align-items: safe center;
     width: 100%; min-height: 100dvh;

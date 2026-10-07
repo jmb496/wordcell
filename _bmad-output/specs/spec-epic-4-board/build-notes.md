@@ -67,6 +67,12 @@ Spine edits are batched at close-out as in epic 3, so the R1 AD-13 record (retro
 - Column slot / drop-target highlight (F31): on `desktop`, with a whole column tap-selected,
   hovering that column's empty space or Here pad lights the Here pad with the usual teal
   drop-target outline and wash.
+- Hover peek surface (ticket 12, F19): the view sheet's surface (`{colors.surface}`,
+  `{rounded.lg}`, 16 px padding, no title), content-sized width `min(n, 7)·(w + 4) − 4 + 32` px
+  for n shown cards (a technical default; DESIGN.md View sheet does not state it).
+- Hover peek placement (ticket 12, F19): with no room above the anchor box it goes below the
+  cell and may leave the board vertically, overriding "clamped inside the board"; this occurs
+  only with dev `?bands=` orders.
 
 ## As-built facts that bite (a887379)
 

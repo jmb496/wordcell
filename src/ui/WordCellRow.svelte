@@ -33,6 +33,7 @@ const inPlace = $derived(place !== undefined);
     class="label"
     class:dim
     aria-hidden="true"
+    data-wordcell-label={cell.cell}
     style:grid-column={cell.cell - 2}
     style:grid-row={labelsRow}
   >{cell.cell}</span>

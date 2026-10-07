@@ -53,4 +53,6 @@ export const text = Object.freeze({
   viewTitle: (cell: number, count: number) =>
     count === 1 ? `WordCell ${cell} \u00b7 1 card` : `WordCell ${cell} \u00b7 ${count} cards`,
   viewTop: 'top',
+  // F27 desktop hover peek (catalogue row 107): the older-cards line above the top 14.
+  olderCards: (n: number) => (n === 1 ? '+1 older card' : `+${n} older cards`),
 } as const);

@@ -53,4 +53,12 @@ describe('AD-13 F27 WordCell view text', () => {
   it('AD-13 F27 viewTop reads top', () => {
     expect(text.viewTop).toBe('top');
   });
+
+  it('AD-13 F27 olderCards(1) reads +1 older card', () => {
+    expect(text.olderCards(1)).toBe('+1 older card');
+  });
+
+  it('AD-13 F27 olderCards(10) reads +10 older cards', () => {
+    expect(text.olderCards(10)).toBe('+10 older cards');
+  });
 });

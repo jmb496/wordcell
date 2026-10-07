@@ -519,6 +519,67 @@ test.describe('android', () => {
   });
 });
 
+// Entry 12 (SPEC CAP-9, F19, F27): the desktop hover peek. The page clock is installed and paused
+// before load (as e2e/blocking.spec.ts), so every 300/400/600 ms boundary is advanced with runFor.
+const hoverPeek = (page: Page) => page.locator('[data-hover-peek]');
+const peekMirrors = (page: Page) => hoverPeek(page).locator('[data-mirror-of]');
+const label = (page: Page, n: number) => page.locator(`[data-wordcell-label="${n}"]`);
+
+async function openPaused(page: Page, name: string, url = '/'): Promise<void> {
+  await page.clock.install({ time: 0 });
+  await page.clock.pauseAt(1000);
+  await seedStorage(page, { session: fixture(`${name}.json`) });
+  await page.goto(url);
+  await expect(page.locator('[data-card-id]')).toHaveCount(52);
+  await booted(page);
+}
+
+async function box(
+  locator: Locator,
+): Promise<{ x: number; y: number; width: number; height: number }> {
+  const b = await locator.boundingBox();
+  if (b === null) throw new Error('element has no box');
+  return b;
+}
+
+// The board column: the WordCell unit's track spans it (--wc-board wide).
+const boardColumn = (page: Page) => box(page.locator('.track[data-band="wordcells"]'));
+
+// The cell's cards from engine data: `view()` over the store's Session (AD-17 hook).
+async function cellCards(page: Page, n: number): Promise<string[]> {
+  const session = await page.evaluate(() => {
+    const current = window.__wordcell?.current();
+    if (current?.kind !== 'active') throw new Error(`store is ${current?.kind}`);
+    return current.session;
+  });
+  const found = view(session, EN).cells.find((c) => c.cell === n);
+  if (found === undefined) throw new Error(`no cell ${n}`);
+  return found.cards.map(String);
+}
+
+// Moves the mouse onto the centre of cell `n` (a boundary entry from outside it).
+async function hoverCell(page: Page, n: number): Promise<Point> {
+  const c = await centre(cell(page, n));
+  await page.mouse.move(c.x, c.y);
+  return c;
+}
+
+// Moves the mouse well away from the WordCell row (onto the top bar's empty middle).
+async function moveAway(page: Page): Promise<void> {
+  const bar = await box(page.locator('[data-band="topBar"]'));
+  await page.mouse.move(bar.x + bar.width / 2, bar.y + 4);
+}
+
+// expectNoView without animation frames (the paused clock holds them).
+async function expectNoViewPaused(page: Page): Promise<void> {
+  await expect(sheet(page)).toHaveCount(0);
+  await expect(scrim(page)).toHaveCount(0);
+}
+
+const halted = (page: Page) => page.evaluate(() => window.__wordcell?.current().kind === 'halted');
+
+const historyLength = (page: Page) => page.evaluate(() => window.history.length);
+
 test.describe('desktop', () => {
   test.beforeEach(onDesktop);
 
@@ -553,6 +614,338 @@ test.describe('desktop', () => {
     await animationFrames(page, 2);
     await expect(sheet(page)).toHaveAttribute('data-mode', 'sticky');
     expect(await wcOf(page)).toBe(1);
+    await unchanged();
+  });
+
+  test('R-65 hover 400 ms on session-won cell 6 shows its last 14 cards oldest first, top tagged, +10 older cards, above the anchor at the column’s left edge, no scrim; leave closes it', async ({
+    page,
+  }) => {
+    await openPaused(page, 'session-won');
+    const cards = await cellCards(page, 6);
+    expect(cards).toHaveLength(24);
+    const unchanged = await stash(page);
+    await hoverCell(page, 6);
+    await page.clock.runFor(399);
+    await expect(hoverPeek(page)).toHaveCount(0);
+    await page.clock.runFor(1);
+    await expect(hoverPeek(page)).toBeVisible();
+    await expect(hoverPeek(page)).toHaveAttribute('aria-hidden', 'true');
+    expect(
+      await peekMirrors(page).evaluateAll((els) =>
+        els.map((el) => el.getAttribute('data-mirror-of')),
+      ),
+    ).toEqual(cards.slice(-14));
+    await expect(peekMirrors(page).last()).toContainText('top');
+    await expect(hoverPeek(page).locator('.top-tag')).toHaveCount(1);
+    await expect(hoverPeek(page)).toContainText('+10 older cards');
+    await expect(hoverPeek(page).locator('[data-card-id], [data-testid]')).toHaveCount(0);
+    await expect(scrim(page)).toHaveCount(0);
+    await expect(sheet(page)).toHaveCount(0);
+    const peek = await box(hoverPeek(page));
+    const anchor = await box(label(page, 6));
+    const column = await boardColumn(page);
+    expect(peek.y + peek.height).toBeLessThanOrEqual(anchor.y + 1);
+    expect(Math.abs(peek.x - column.x)).toBeLessThanOrEqual(1);
+    expect(peek.x + peek.width).toBeLessThanOrEqual(column.x + column.width + 1);
+    await moveAway(page);
+    await expect(hoverPeek(page)).toHaveCount(0);
+    expect(await wcOf(page)).toBe(0);
+    await unchanged();
+  });
+
+  test('R-65 hover 400 ms on session-won cell 8 (7 cards) shows 7 mirrors and no older line, its right edge on the column’s right edge', async ({
+    page,
+  }) => {
+    await openPaused(page, 'session-won');
+    const cards = await cellCards(page, 8);
+    expect(cards).toHaveLength(7);
+    const unchanged = await stash(page);
+    await hoverCell(page, 8);
+    await page.clock.runFor(400);
+    await expect(hoverPeek(page)).toBeVisible();
+    expect(
+      await peekMirrors(page).evaluateAll((els) =>
+        els.map((el) => el.getAttribute('data-mirror-of')),
+      ),
+    ).toEqual(cards);
+    await expect(hoverPeek(page)).not.toContainText('older');
+    const peek = await box(hoverPeek(page));
+    const anchor = await box(label(page, 8));
+    const column = await boardColumn(page);
+    expect(peek.y + peek.height).toBeLessThanOrEqual(anchor.y + 1);
+    expect(Math.abs(peek.x + peek.width - (column.x + column.width))).toBeLessThanOrEqual(1);
+    expect(peek.x).toBeGreaterThanOrEqual(column.x - 1);
+    await unchanged();
+  });
+
+  test('R-65 with the WordCell row under the top bar (?bands=), no room above: the hover peek sits below the cell', async ({
+    page,
+  }) => {
+    await openPaused(
+      page,
+      'session-won',
+      '/?bands=topBar,banner,wordcells,leftover,columns,tray,actionBar',
+    );
+    const unchanged = await stash(page);
+    await hoverCell(page, 8);
+    await page.clock.runFor(400);
+    await expect(hoverPeek(page)).toBeVisible();
+    const peek = await box(hoverPeek(page));
+    const anchor = await box(label(page, 8));
+    const board = await box(page.locator('.board'));
+    expect(anchor.y - board.y).toBeLessThan(peek.height);
+    const c = await box(cell(page, 8));
+    expect(peek.y).toBeGreaterThanOrEqual(c.y + c.height - 1);
+    await unchanged();
+  });
+
+  test('R-65 a click on the cell while the hover peek is open does its phase action (Game over: the sticky view), hover peek gone', async ({
+    page,
+  }) => {
+    await openPaused(page, 'session-won');
+    const unchanged = await stash(page);
+    const c = await hoverCell(page, 6);
+    await page.clock.runFor(400);
+    await expect(hoverPeek(page)).toBeVisible();
+    await page.mouse.down();
+    await page.mouse.up();
+    await expect(sheet(page)).toHaveAttribute('data-mode', 'sticky');
+    await expect(hoverPeek(page)).toHaveCount(0);
+    await expect.poll(() => wcOf(page)).toBe(1);
+    // No reopen: close the view with the pointer still on cell 6, then a few-px move inside it.
+    await page.mouse.down();
+    await page.mouse.up();
+    await expectNoViewPaused(page);
+    await page.mouse.move(c.x + 3, c.y + 3);
+    await page.clock.runFor(600);
+    await expect(hoverPeek(page)).toHaveCount(0);
+    // Out and back in: it opens 400 ms later.
+    await moveAway(page);
+    await hoverCell(page, 6);
+    await page.clock.runFor(399);
+    await expect(hoverPeek(page)).toHaveCount(0);
+    await page.clock.runFor(1);
+    await expect(hoverPeek(page)).toBeVisible();
+    await unchanged();
+  });
+
+  test('R-65 the hover peek takes no clicks: pointer-events none; elementFromPoint at its centre is outside it', async ({
+    page,
+  }) => {
+    await openPaused(page, 'session-won');
+    const unchanged = await stash(page);
+    await hoverCell(page, 6);
+    await page.clock.runFor(400);
+    await expect(hoverPeek(page)).toBeVisible();
+    const result = await hoverPeek(page).evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return {
+        pointerEvents: getComputedStyle(el).pointerEvents,
+        inside: hit?.closest('[data-hover-peek]') != null,
+      };
+    });
+    expect(result).toEqual({ pointerEvents: 'none', inside: false });
+    await unchanged();
+  });
+
+  test('R-65 opening and closing a hover peek leaves Undo/Redo enablement and window.history.length unchanged', async ({
+    page,
+  }) => {
+    await openPaused(page, 'session-won');
+    const unchanged = await stash(page);
+    const before = await historyLength(page);
+    await hoverCell(page, 6);
+    await page.clock.runFor(400);
+    await expect(hoverPeek(page)).toBeVisible();
+    expect(await historyLength(page)).toBe(before);
+    await moveAway(page);
+    await expect(hoverPeek(page)).toHaveCount(0);
+    expect(await historyLength(page)).toBe(before);
+    expect(await wcOf(page)).toBe(0);
+    await unchanged();
+  });
+
+  test('AD-12 hover 300 ms, leave, re-enter: none 300 ms after re-entry, open 400 ms after it', async ({
+    page,
+  }) => {
+    await openPaused(page, 'session-won');
+    const unchanged = await stash(page);
+    await hoverCell(page, 6);
+    await page.clock.runFor(300);
+    await moveAway(page);
+    await hoverCell(page, 6);
+    await page.clock.runFor(300);
+    await expect(hoverPeek(page)).toHaveCount(0);
+    await page.clock.runFor(99);
+    await expect(hoverPeek(page)).toHaveCount(0);
+    await page.clock.runFor(1);
+    await expect(hoverPeek(page)).toBeVisible();
+    await unchanged();
+  });
+
+  test('AD-12 entering the top card, then another point of the cell at 350 ms: absent at 399 ms, present at 400 ms after the first entry, app not halted', async ({
+    page,
+  }) => {
+    await openPaused(page, 'session-won');
+    const unchanged = await stash(page);
+    await hoverCell(page, 6);
+    await page.clock.runFor(350);
+    const c = await box(cell(page, 6));
+    await page.mouse.move(c.x + 2, c.y + c.height - 2);
+    await page.clock.runFor(49);
+    await expect(hoverPeek(page)).toHaveCount(0);
+    await page.clock.runFor(1);
+    await expect(hoverPeek(page)).toBeVisible();
+    expect(await halted(page)).toBe(false);
+    await unchanged();
+  });
+
+  test('AD-12 moving from cell 6 to cell 7: 6’s closes on leaving it, none before 400 ms on 7, then 7’s opens', async ({
+    page,
+  }) => {
+    await openPaused(page, 'session-won');
+    const seven = await cellCards(page, 7);
+    expect(seven).toHaveLength(21);
+    const unchanged = await stash(page);
+    await hoverCell(page, 6);
+    await page.clock.runFor(400);
+    await expect(hoverPeek(page)).toBeVisible();
+    await hoverCell(page, 7);
+    await expect(hoverPeek(page)).toHaveCount(0);
+    await page.clock.runFor(399);
+    await expect(hoverPeek(page)).toHaveCount(0);
+    await page.clock.runFor(1);
+    await expect(hoverPeek(page)).toBeVisible();
+    expect(
+      await peekMirrors(page).evaluateAll((els) =>
+        els.map((el) => el.getAttribute('data-mirror-of')),
+      ),
+    ).toEqual(seven.slice(-14));
+    await expect(hoverPeek(page)).toContainText('+7 older cards');
+    await unchanged();
+  });
+
+  test('AD-12 a press on cell 6 dragged past the threshold inside it closes the hover peek before mouse.up', async ({
+    page,
+  }) => {
+    await openPaused(page, 'session-won');
+    const unchanged = await stash(page);
+    const c = await hoverCell(page, 6);
+    await page.clock.runFor(400);
+    await expect(hoverPeek(page)).toBeVisible();
+    await page.mouse.down();
+    await page.mouse.move(c.x, c.y - 15, { steps: 3 });
+    await expect(hoverPeek(page)).toHaveCount(0);
+    await page.mouse.up();
+    await expectNoViewPaused(page);
+    await expect(hoverPeek(page)).toHaveCount(0);
+    await unchanged();
+  });
+
+  test('AD-12 a mouse tail drag from column 2 resting 600 ms over cell 7 shows no hover peek before release nor reopens after it; out and back in opens it', async ({
+    page,
+  }) => {
+    await openPaused(page, 'session-idle-empty-column');
+    expect(await cellCards(page, 7)).toHaveLength(7);
+    const unchanged = await stash(page);
+    const from = await centre(page.getByTestId('column-2').locator('[data-place="column"]').last());
+    const to = await centre(cell(page, 7));
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await page.mouse.move(to.x, to.y, { steps: 12 });
+    await expect(page.locator('.wc-drag-layer').first()).toBeAttached();
+    await page.clock.runFor(600);
+    await expect(hoverPeek(page)).toHaveCount(0);
+    await page.mouse.up();
+    // The fly-back (WAAPI) settles in real time.
+    await expect(page.locator('.wc-drag-layer, .wc-drag-ghost')).toHaveCount(0);
+    await page.clock.runFor(600);
+    await expect(hoverPeek(page)).toHaveCount(0);
+    await page.mouse.move(to.x + 3, to.y + 3);
+    await page.clock.runFor(600);
+    await expect(hoverPeek(page)).toHaveCount(0);
+    await moveAway(page);
+    await hoverCell(page, 7);
+    await page.clock.runFor(400);
+    await expect(hoverPeek(page)).toBeVisible();
+    await unchanged();
+  });
+
+  test('R-65 hovering session-idle-empty-column’s cell 7 for 400 ms opens its hover peek', async ({
+    page,
+  }) => {
+    await openPaused(page, 'session-idle-empty-column');
+    const cards = await cellCards(page, 7);
+    expect(cards).toHaveLength(7);
+    const unchanged = await stash(page);
+    await hoverCell(page, 7);
+    await page.clock.runFor(400);
+    await expect(hoverPeek(page)).toBeVisible();
+    await expect(peekMirrors(page)).toHaveCount(7);
+    await expect(hoverPeek(page)).not.toContainText('older');
+    await unchanged();
+  });
+
+  test('R-65 R-75 session-gave-up-after-commit’s empty cell 3 hovered 600 ms opens nothing', async ({
+    page,
+  }) => {
+    await openPaused(page, 'session-gave-up-after-commit');
+    expect(await cellCards(page, 3)).toHaveLength(0);
+    const unchanged = await stash(page);
+    await hoverCell(page, 3);
+    await page.clock.runFor(600);
+    await expect(hoverPeek(page)).toHaveCount(0);
+    await expectNoViewPaused(page);
+    await unchanged();
+  });
+
+  test('R-65 the used cell 3’s hover peek shows an unhatched mirror tagged top; one live element per card; a do-nothing click keeps it open', async ({
+    page,
+  }) => {
+    await openPaused(page, 'session-place-free-letter-redo-tail');
+    const cards = await cellCards(page, 3);
+    expect(cards).toHaveLength(3);
+    expect(
+      Number(await page.locator('[data-wordcell]:has(.used)').getAttribute('data-wordcell')),
+    ).toBe(3);
+    const unchanged = await stash(page);
+    await hoverCell(page, 3);
+    await page.clock.runFor(400);
+    await expect(hoverPeek(page)).toBeVisible();
+    expect(
+      await peekMirrors(page).evaluateAll((els) =>
+        els.map((el) => el.getAttribute('data-mirror-of')),
+      ),
+    ).toEqual(cards);
+    const last = peekMirrors(page).last();
+    await expect(last).toContainText('top');
+    const face = await last
+      .locator(':scope > .face')
+      .evaluate((el) => [getComputedStyle(el).opacity, getComputedStyle(el).backgroundImage]);
+    expect(face).toEqual(['1', 'none']);
+    await expect(page.locator('[data-card-id]')).toHaveCount(52);
+    for (const id of cards) await expect(page.locator(`[data-card-id="${id}"]`)).toHaveCount(1);
+    // Place: a WordCell click does nothing (CAP-9), so the hover peek stays.
+    await page.mouse.down();
+    await page.mouse.up();
+    await expect(hoverPeek(page)).toBeVisible();
+    await expectNoViewPaused(page);
+    await unchanged();
+  });
+
+  test('AD-13 hover 400 ms, then hold 400 ms: only the peek sheet', async ({ page }) => {
+    await openPaused(page, 'session-won');
+    const unchanged = await stash(page);
+    await hoverCell(page, 6);
+    await page.clock.runFor(400);
+    await expect(hoverPeek(page)).toBeVisible();
+    await page.mouse.down();
+    await page.clock.runFor(400);
+    await expect(sheet(page)).toBeVisible();
+    await expect(sheet(page)).toHaveAttribute('data-mode', 'peek');
+    await expect(hoverPeek(page)).toHaveCount(0);
+    await page.mouse.up();
     await unchanged();
   });
 });
