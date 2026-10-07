@@ -48,4 +48,9 @@ export const text = Object.freeze({
   resetConfirmBody: "This can't be undone.",
   keepIt: 'Keep it',
   deleteHistory: 'Delete history',
+  // F27 WordCell view and peek (DESIGN.md WordCell view): the sheet title (U+00B7, `cards.length`)
+  // and the top card's tag.
+  viewTitle: (cell: number, count: number) =>
+    count === 1 ? `WordCell ${cell} \u00b7 1 card` : `WordCell ${cell} \u00b7 ${count} cards`,
+  viewTop: 'top',
 } as const);

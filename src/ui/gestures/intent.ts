@@ -5,6 +5,9 @@
 // Entry 10 (SPEC CAP-8, R-31, R-39): in Composing only the destination column acts, keyed on its
 // `kIfTapped` (a number → `tapDestinationCard`, `null` or absent → nothing); every other column
 // part, S ghosts included (they resolve as `space`), is inert, with or without a selection.
+// Entry 11 (SPEC CAP-9, R-65, R-75, F14): with nothing selected a non-empty WordCell tap opens the
+// sticky view in Idle and Game over (`openView`), nothing in Composing and Place; the view sheet
+// and its scrim are `Hit`s the controller handles itself, never `tapAction`'s.
 import type { CardId, ColumnView, GameView } from '../../engine/index';
 import type { OverlayId, TailSelection } from '../overlays.svelte';
 
@@ -13,8 +16,12 @@ export type Hit =
   | { readonly kind: 'card'; readonly column: number; readonly card: CardId }
   /** A non-card part of a column: empty space, placeholder, ghost, or the foot pad. */
   | { readonly kind: 'space'; readonly column: number; readonly foot: boolean }
-  /** Any part of a `[data-wordcell]`. */
-  | { readonly kind: 'wordcell' }
+  /** Any part of a `[data-wordcell]`, cell 3–10. */
+  | { readonly kind: 'wordcell'; readonly cell: number }
+  /** The WordCell view sheet (entry 11; handled by the controller before `tapAction`). */
+  | { readonly kind: 'sheet' }
+  /** The WordCell view's scrim (entry 11; handled by the controller before `tapAction`). */
+  | { readonly kind: 'scrim' }
   /** A tray or strip tile or a tray mirror (no selection change of its own, F23; outside for F25). */
   | { readonly kind: 'tile' }
   /** Everything else (F25 outside regions, disabled controls, outside the root). */
@@ -30,6 +37,7 @@ export type TapAction =
     }
   | { readonly kind: 'deselect' }
   | { readonly kind: 'tapDestinationCard'; readonly card: CardId }
+  | { readonly kind: 'openView'; readonly cell: number }
   | { readonly kind: 'none' };
 
 export type HoverAction =
@@ -88,6 +96,15 @@ export function destinationTap(hit: Hit, view: GameView): CardId | null {
   return destinationHit(hit, view)?.card ?? null;
 }
 
+// R-65/R-75: a WordCell tap with nothing selected opens the sticky view in Idle and Game over when
+// the cell holds a card (AD-3: emptiness from the GameView).
+function viewTap(n: number, view: GameView): TapAction {
+  if (view.status === 'playing' && view.phase !== 'idle') return NONE;
+  const cell = view.cells.find((c) => c.cell === n);
+  if (cell === undefined) throw new Error(`AD-12 WordCell ${n} is not in the GameView`);
+  return cell.cards.length === 0 ? NONE : { kind: 'openView', cell: n };
+}
+
 export function tapAction(
   hit: Hit,
   view: GameView,
@@ -98,7 +115,11 @@ export function tapAction(
     const card = destinationTap(hit, view);
     return card === null ? NONE : { kind: 'tapDestinationCard', card };
   }
+  if (hit.kind === 'sheet' || hit.kind === 'scrim') {
+    throw new Error(`AD-12 tapAction on the view ${hit.kind}`);
+  }
   if (selection === null) {
+    if (hit.kind === 'wordcell') return viewTap(hit.cell, view);
     if (hit.kind !== 'card') return NONE;
     const entry = columnOf(view, hit.column);
     if (!entry.canPickUp) return NONE;

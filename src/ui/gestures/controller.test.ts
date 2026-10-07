@@ -12,6 +12,9 @@ import type { Gate } from './gate';
 // `style.transform`, and `animate()` returning a fake Animation that finishes in virtual time
 // (`finish()` queues `onfinish` once on the virtual clock, as real WAAPI fires it later); prefs mocked (motion, as in motion.test.ts);
 // `duration` from ../motion wrapped to log its kinds and answer `durations.override` per kind.
+// Entry 11: the board also holds the view's scrim and sheet, the sheet's `[data-view-scroll]`
+// area (settable `scrollHeight`/`clientHeight`) and a mirror inside it; a `{ capture: true }`
+// listener (the click swallower) is kept apart from the controller's and runs first.
 const navCalls: string[] = [];
 // Entry 9: gate enter/leave, animation finish and elementFromPoint calls, in order.
 const order: string[] = [];
@@ -99,7 +102,10 @@ class FakeEl {
   readonly captures = new Set<number>();
   readonly log: string[] = [];
   listeners = new Map<string, Listener>();
+  readonly captureListeners = new Map<string, Listener>();
   root: FakeEl | null = null;
+  scrollHeight = 0;
+  clientHeight = 0;
   readonly classes = new Set<string>();
   readonly props = new Map<string, string>();
   readonly classList = {
@@ -187,14 +193,24 @@ class FakeEl {
     this.root?.fire('lostpointercapture', { pointerId: id, target: this });
   }
   addEventListener(type: string, fn: Listener, options: unknown): void {
+    if ((options as { capture?: boolean }).capture === true) {
+      expect(options).toEqual({ capture: true });
+      this.captureListeners.set(type, fn);
+      return;
+    }
     expect(options).toEqual({ passive: false });
     this.listeners.set(type, fn);
   }
-  removeEventListener(type: string, fn: Listener): void {
-    if (this.listeners.get(type) === fn) this.listeners.delete(type);
+  removeEventListener(type: string, fn: Listener, options?: unknown): void {
+    const map =
+      (options as { capture?: boolean } | undefined)?.capture === true
+        ? this.captureListeners
+        : this.listeners;
+    if (map.get(type) === fn) map.delete(type);
   }
   fire(type: string, init: Partial<FakeEvent>): FakeEvent {
     const event = makeEvent(init);
+    this.captureListeners.get(type)?.(event);
     this.listeners.get(type)?.(event);
     return event;
   }
@@ -280,6 +296,12 @@ function board() {
   const trayMirror = el('div', { 'data-mirror-of': '1' }, tray);
   const trayMirrorFace = el('div', {}, trayMirror);
   const leftover = el('div', { 'data-band': 'leftover' }, root);
+  // Entry 11: the WordCell view (rendered in the DOM only while a peek or view is open).
+  const scrim = el('div', { 'data-view-scrim': '' }, root);
+  const sheet = el('div', { 'data-view-sheet': '' }, root);
+  const sheetTitle = el('h2', {}, sheet);
+  const viewScroll = el('div', { 'data-view-scroll': '' }, sheet);
+  const sheetMirror = el('div', { 'data-mirror-of': '2' }, viewScroll);
   const outside = new FakeEl('div');
   return {
     root,
@@ -307,6 +329,11 @@ function board() {
     trayMirror,
     trayMirrorFace,
     leftover,
+    scrim,
+    sheet,
+    sheetTitle,
+    viewScroll,
+    sheetMirror,
     outside,
   };
 }
@@ -638,6 +665,7 @@ describe('AD-12 press ends', () => {
     expect(t.counts).toEqual({ enter: 1, leave: 1 });
     expect(t.b.card1.log).toEqual(['set 1', 'release 1']);
     expect(t.b.root.listeners.size).toBe(0);
+    expect(t.b.root.captureListeners.size).toBe(0);
   });
 });
 
@@ -701,8 +729,8 @@ describe('AD-12 contextmenu', () => {
 });
 
 describe('AD-12 peek on end', () => {
-  it('AD-12 cancel(), cancel({ byBack: true }), pointercancel and lostpointercapture close an open peek with no nav call', async () => {
-    const enders: ((t: Awaited<ReturnType<typeof setup>>) => void)[] = [
+  it('AD-12 peek on end: cancel(), cancel({ byBack: true }), pointercancel, lostpointercapture, a same-id pointerdown and detach close the peek, never sticky, no nav call', async () => {
+    const enders: ((t: Awaited<ReturnType<typeof setup>>, detach: () => void) => void)[] = [
       (t) => t.controller.cancel(),
       (t) => t.controller.cancel({ byBack: true }),
       (t) => t.fire('pointercancel'),
@@ -710,34 +738,287 @@ describe('AD-12 peek on end', () => {
         t.b.cellCard.captures.clear();
         t.fire('lostpointercapture', { target: t.b.cellCard });
       },
+      (t) => t.down(t.b.leftover),
+      (_t, detach) => detach(),
     ];
     for (const ender of enders) {
       const t = await setup();
-      t.detach();
+      const detach = t.detach();
+      // An overflowing scroll area: only a pointerup could turn the peek sticky.
+      t.b.viewScroll.scrollHeight = 900;
+      t.b.viewScroll.clientHeight = 300;
       t.down(t.b.cellCard);
-      t.overlays.openPeek(3);
-      ender(t);
+      t.advance(400);
+      expect(t.overlays.peek).toBe(3);
+      ender(t, detach);
       expect(t.overlays.peek).toBeNull();
+      expect(t.overlays.viewCell).toBeNull();
+      expect(t.overlays.depth).toBe(0);
       expect(navCalls).toEqual([]);
-      expect(t.active()).toBe(0);
     }
   });
 
-  it('AD-12 pointerup leaves the peek to the handlers; a stale pointercancel or lostpointercapture after cancel() leaves a peek open', async () => {
+  it('AD-12 a stale pointercancel or lostpointercapture after cancel() leaves a peek open', async () => {
     const t = await setup();
     t.detach();
-    t.down(t.b.cellCard);
-    t.overlays.openPeek(3);
-    t.fire('pointerup', { target: t.b.cellCard });
-    expect(t.overlays.peek).toBe(3);
-    t.overlays.closePeek();
     t.down(t.b.cellCard);
     t.controller.cancel();
     t.overlays.openPeek(3);
     t.fire('lostpointercapture', { target: t.b.cellCard });
     t.fire('pointercancel');
     expect(t.overlays.peek).toBe(3);
-    expect(t.counts).toEqual({ enter: 2, leave: 2 });
+    expect(t.counts).toEqual({ enter: 1, leave: 1 });
+  });
+});
+
+describe('AD-12 entry 11 long-press peek', () => {
+  it('AD-12 Q-21 a non-empty WordCell long-press opens the peek at 400 ms with no nav call; an empty one opens none', async () => {
+    const t = await setup();
+    t.detach();
+    t.down(t.b.cellCard);
+    t.advance(399);
+    expect(t.overlays.peek).toBeNull();
+    t.advance(1);
+    expect(t.overlays.peek).toBe(3);
+    expect(navCalls).toEqual([]);
+    t.fire('pointerup', { target: t.b.cellCard });
+    t.down(t.b.cell4);
+    t.advance(400);
+    expect(t.overlays.peek).toBeNull();
+    t.fire('pointerup', { target: t.b.cell4 });
+    expect(t.overlays.viewCell).toBeNull();
+    expect(navCalls).toEqual([]);
+  });
+
+  it('AD-13 a long-press up without overflow closes the peek: no entry, no nav call', async () => {
+    const t = await setup();
+    t.detach();
+    t.b.viewScroll.scrollHeight = 300;
+    t.b.viewScroll.clientHeight = 300;
+    t.down(t.b.cellCard);
+    t.advance(400);
+    t.fire('pointerup', { target: t.b.cellCard });
+    expect(t.overlays.peek).toBeNull();
+    expect(t.overlays.viewCell).toBeNull();
+    expect(navCalls).toEqual([]);
+    expect(t.active()).toBe(0);
+  });
+
+  it('AD-13 a long-press up with overflow turns the peek sticky: one push, above a kept selection', async () => {
+    const t = await setup();
+    t.detach();
+    t.tap(t.b.card1);
+    t.b.viewScroll.scrollHeight = 301;
+    t.b.viewScroll.clientHeight = 300;
+    t.down(t.b.cellCard);
+    t.advance(400);
+    t.fire('pointerup', { target: t.b.cellCard });
+    expect(t.overlays.peek).toBeNull();
+    expect(t.overlays.viewCell).toBe(3);
+    expect(t.overlays.top).toBe('wordcellView');
+    expect(t.overlays.depth).toBe(2);
+    expect(t.overlays.selection).toEqual({ column: 1, count: 2 });
+    expect(navCalls).toEqual(['push', 'push']);
+  });
+
+  it('AD-12 a missing [data-view-scroll] at a long-press release throws (rule 6)', async () => {
+    const t = await setup();
+    t.detach();
+    delete t.b.viewScroll.attrs['data-view-scroll'];
+    t.down(t.b.cellCard);
+    t.advance(400);
+    expect(() => t.fire('pointerup', { target: t.b.cellCard })).toThrow(
+      /^AD-12 peek release without a rendered \[data-view-scroll\]/,
+    );
+  });
+
+  it('AD-12 a WordCell drag opens nothing, keeps the selection and lifts no tail (R-12)', async () => {
+    const t = await setup();
+    t.detach();
+    t.tap(t.b.card1);
+    t.down(t.b.cellCard, { clientX: 100, clientY: 100 });
+    t.fire('pointermove', { clientX: 100, clientY: 120 });
+    t.advance(1000);
+    t.fire('pointerup', { target: t.b.cellCard });
+    expect(t.overlays.peek).toBeNull();
+    expect(t.overlays.viewCell).toBeNull();
+    expect(t.overlays.selection).toEqual({ column: 1, count: 2 });
+    expect(t.b.root.classes.size).toBe(0);
+    for (const wrapper of [t.b.card1, t.b.card1b, t.b.card2]) {
+      expect(wrapper.classes.size).toBe(0);
+    }
+    expect(navCalls).toEqual(['push']);
+  });
+});
+
+describe('AD-12 entry 11 sticky view', () => {
+  it('AD-13 a non-empty WordCell tap with nothing selected opens the view (one push); an empty one opens nothing', async () => {
+    const t = await setup();
+    t.detach();
+    t.tap(t.b.cell4);
+    expect(t.overlays.viewCell).toBeNull();
+    t.tap(t.b.cellCard);
+    expect(t.overlays.viewCell).toBe(3);
+    expect(navCalls).toEqual(['push']);
+  });
+
+  it('AD-13 a still press on the sheet then lift closes the view (one pop)', async () => {
+    const t = await setup();
+    t.detach();
+    t.tap(t.b.cellCard);
+    t.down(t.b.sheetMirror);
+    expect(t.b.sheetMirror.log).toEqual([]);
+    t.advance(1000);
+    t.fire('pointerup', { target: t.b.sheetMirror });
+    expect(t.overlays.viewCell).toBeNull();
+    expect(navCalls).toEqual(['push', 'pop']);
+    expect(t.active()).toBe(0);
+  });
+
+  it('AD-13 a scrim tap closes only the view; the selection under it is kept', async () => {
+    const t = await setup();
+    t.detach();
+    t.tap(t.b.card1);
+    t.overlays.openView(3);
+    t.tap(t.b.scrim);
+    expect(t.overlays.viewCell).toBeNull();
+    expect(t.overlays.selection).toEqual({ column: 1, count: 2 });
+    expect(t.overlays.top).toBe('tailSelection');
+    expect(navCalls).toEqual(['push', 'push', 'pop']);
+    expect(t.b.scrim.log).toEqual([]);
+  });
+
+  it('AD-12 a scrim or sheet drag ≥ 8 px keeps the view, a pan’s pointercancel too', async () => {
+    const t = await setup();
+    t.detach();
+    t.tap(t.b.cellCard);
+    for (const el of [t.b.scrim, t.b.sheet]) {
+      t.down(el, { clientX: 100, clientY: 100 });
+      t.fire('pointermove', { clientX: 100, clientY: 120 });
+      t.fire('pointerup', { target: el });
+      t.down(el, { clientX: 100, clientY: 100 });
+      t.fire('pointercancel');
+    }
+    expect(t.overlays.viewCell).toBe(3);
+    expect(navCalls).toEqual(['push']);
+    expect(t.active()).toBe(0);
+  });
+
+  it('AD-12 the closing tap’s trailing click is swallowed, then a later click is handled', async () => {
+    const t = await setup();
+    t.detach();
+    t.tap(t.b.cellCard);
+    t.tap(t.b.scrim);
+    const trailing = t.fire('click', { target: t.b.undo, detail: 1 });
+    expect(trailing.stopPropagation).toHaveBeenCalledOnce();
+    expect(trailing.preventDefault).toHaveBeenCalledOnce();
+    const later = t.fire('click', { target: t.b.undo, detail: 1 });
+    expect(later.stopPropagation).not.toHaveBeenCalled();
+    expect(later.preventDefault).not.toHaveBeenCalled();
+    expect(t.b.root.captureListeners.size).toBe(0);
+  });
+
+  it('AD-12 the next pointerdown (any id or button) disarms it', async () => {
+    for (const init of [{}, { pointerId: 7 }, { button: 2 }]) {
+      const t = await setup();
+      t.detach();
+      t.tap(t.b.cellCard);
+      t.tap(t.b.sheet);
+      expect(t.b.root.captureListeners.size).toBe(1);
+      t.down(t.b.leftover, init);
+      expect(t.b.root.captureListeners.size).toBe(0);
+      const click = t.fire('click', { target: t.b.undo, detail: 1 });
+      expect(click.preventDefault).not.toHaveBeenCalled();
+    }
+  });
+
+  it('AD-12 the 300 ms expiry armed at pointerup disarms it', async () => {
+    const t = await setup();
+    t.detach();
+    t.tap(t.b.cellCard);
+    t.tap(t.b.scrim);
+    t.advance(299);
+    expect(t.b.root.captureListeners.size).toBe(1);
+    t.advance(1);
+    expect(t.b.root.captureListeners.size).toBe(0);
+  });
+
+  it('AD-12 detach disarms it', async () => {
+    const t = await setup();
+    const detach = t.detach();
+    t.tap(t.b.cellCard);
+    t.tap(t.b.scrim);
+    detach();
+    expect(t.b.root.captureListeners.size).toBe(0);
+    expect(t.advance(1000)).toBe(0);
+  });
+});
+
+describe('AD-13 entry 11 view above a selection', () => {
+  // The plan's I/O row "Under view + selection" (F24): wordcellView above tailSelection.
+  async function stickyAboveSelection() {
+    const t = await setup();
+    t.detach();
+    t.tap(t.b.card1);
+    t.b.viewScroll.scrollHeight = 900;
+    t.b.viewScroll.clientHeight = 300;
+    t.down(t.b.cellCard);
+    t.advance(400);
+    t.fire('pointerup', { target: t.b.cellCard });
+    expect(t.overlays.top).toBe('wordcellView');
+    navCalls.length = 0;
+    return t;
+  }
+
+  it('AD-13 a peek turned sticky above a selection, then cancel(), cancel({ byBack: true }) and the before-hide cancel(): no throw, selection and view kept, depth 2, no nav call', async () => {
+    const t = await stickyAboveSelection();
+    const beforeHide = [() => t.controller.cancel(), vi.fn()];
+    expect(() => {
+      t.controller.cancel();
+      t.controller.cancel({ byBack: true });
+      for (const fn of beforeHide) fn();
+    }).not.toThrow();
+    // A press held on the sheet when hidden ends with the view kept too.
+    t.down(t.b.sheet);
+    expect(() => {
+      for (const fn of beforeHide) fn();
+    }).not.toThrow();
+    expect(t.overlays.selection).toEqual({ column: 1, count: 2 });
+    expect(t.overlays.viewCell).toBe(3);
+    expect(t.overlays.depth).toBe(2);
+    expect(navCalls).toEqual([]);
+  });
+
+  it('AD-13 the first closedByBack(1) closes the view, closedByBack(0) clears the selection', async () => {
+    const t = await stickyAboveSelection();
+    t.controller.cancel({ byBack: true });
+    t.overlays.closedByBack(1);
+    expect(t.overlays.viewCell).toBeNull();
+    expect(t.overlays.selection).toEqual({ column: 1, count: 2 });
+    t.controller.cancel({ byBack: true });
+    t.overlays.closedByBack(0);
+    expect(t.overlays.selection).toBeNull();
+    expect(t.overlays.depth).toBe(0);
+    expect(navCalls).toEqual([]);
+  });
+
+  it('AD-13 back while a peek is held above a selection closes the peek (no sticky); closedByBack(0) clears the selection', async () => {
+    const t = await setup();
+    t.detach();
+    t.tap(t.b.card1);
+    t.b.viewScroll.scrollHeight = 900;
+    t.b.viewScroll.clientHeight = 300;
+    t.down(t.b.cellCard);
+    t.advance(400);
+    navCalls.length = 0;
+    t.controller.cancel({ byBack: true });
+    expect(t.overlays.peek).toBeNull();
+    expect(t.overlays.viewCell).toBeNull();
+    t.overlays.closedByBack(0);
+    expect(t.overlays.selection).toBeNull();
+    t.fire('pointerup', { target: t.b.cellCard });
+    expect(t.overlays.viewCell).toBeNull();
+    expect(navCalls).toEqual([]);
   });
 });
 
@@ -917,13 +1198,17 @@ describe('AD-12 entry 7 tap actions', () => {
   });
 
   // Entry 9: a pick-up drag with a selection open replaces it (AD-13 entry 9 selection replacement).
-  it('AD-12 a non-empty WordCell long-press changes nothing; an empty-WordCell long-press deselects on release', async () => {
+  // Entry 11: the non-empty long-press opens a peek, closed on release (no overflow).
+  it('AD-12 a non-empty WordCell long-press peeks and closes on release with the selection kept; an empty-WordCell long-press deselects on release', async () => {
     const t = await setup();
     t.detach();
     t.tap(t.b.card1);
     t.down(t.b.cellCard);
     t.advance(400);
+    expect(t.overlays.peek).toBe(3);
     t.fire('pointerup', { target: t.b.cellCard });
+    expect(t.overlays.peek).toBeNull();
+    expect(t.overlays.viewCell).toBeNull();
     expect(t.overlays.selection).toEqual({ column: 1, count: 2 });
     expect(navCalls).toEqual(['push']);
     t.down(t.b.cell4);

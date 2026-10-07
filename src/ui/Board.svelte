@@ -18,12 +18,17 @@ import TopBar from './TopBar.svelte';
 import Tray from './Tray.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import WordCellRow from './WordCellRow.svelte';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import WordCellView from './WordCellView.svelte';
 
 // AD-11: the Board iterates the live layout's band order and lays every band out from its getters
 // (w, metrics, wide, heights, bandOrder, the gate-latched bannerShown; build-notes CAP-1, CAP-3,
 // F20). The bars and the banner are content-sized; every other band takes its `bands()` height.
 // DESIGN.md Scrolling: `--wc-pan` is the non-card regions' touch-action (`pan-x pan-y` when wide);
 // the Board itself and its units set no touch-action (they compute `auto`).
+// Entry 11 (SPEC CAP-9): the `--wc-*` properties sit on `.board-root`, which holds `.board` (bars
+// and banner inside) then the WordCell view (sheet and scrim), inside the controller's attach
+// root; while the sticky view is open `.board` alone is `inert`, never during a held peek.
 let { view, layout }: { view: GameView; layout: Layout } = $props();
 
 const w = $derived(layout.w);
@@ -58,7 +63,7 @@ function row(unit: Unit, band: BandId): number {
 {/snippet}
 
 <div
-  class="board"
+  class="board-root"
   style:--wc-w="{w}px"
   style:--wc-H="{metrics.H}px"
   style:--wc-strip="{metrics.strip}px"
@@ -67,6 +72,7 @@ function row(unit: Unit, band: BandId): number {
   style:--wc-pan={layout.wide ? 'pan-x pan-y' : 'pan-y'}
   style:--wc-select-lift="{SELECTION_LIFT_PX}px"
 >
+<div class="board" inert={overlays.viewCell !== null}>
   <h1 class="sr-only">WordCell</h1>
   {#each layout.bandOrder as unit, u (u)}
     {#if gridUnit(unit)}
@@ -103,8 +109,11 @@ function row(unit: Unit, band: BandId): number {
     {/if}
   {/each}
 </div>
+<WordCellView {view} />
+</div>
 
 <style>
+  .board-root { width: 100%; }
   .board {
     display: flex; flex-direction: column; align-items: safe center;
     width: 100%; min-height: 100dvh;

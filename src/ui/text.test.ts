@@ -40,3 +40,17 @@ describe('AD-17 score text', () => {
     expect(text.score(-530)).toBe('Score \u2212530');
   });
 });
+
+describe('AD-13 F27 WordCell view text', () => {
+  it('AD-13 F27 view title at 7 cards', () => {
+    expect(text.viewTitle(6, 7)).toBe('WordCell 6 \u00b7 7 cards');
+  });
+
+  it('AD-13 F27 view title at 1 card', () => {
+    expect(text.viewTitle(6, 1)).toBe('WordCell 6 \u00b7 1 card');
+  });
+
+  it('AD-13 F27 viewTop reads top', () => {
+    expect(text.viewTop).toBe('top');
+  });
+});

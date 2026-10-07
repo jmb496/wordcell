@@ -173,7 +173,7 @@ test.describe('android', () => {
     expect(await storedText(page)).toBe(before);
   });
 
-  test('R-14 with nothing selected, taps on empty space, placeholder, foot pad and WordCells are inert', async ({
+  test('R-14 with nothing selected, taps on empty space, placeholder, foot pad and an empty WordCell are inert', async ({
     page,
   }) => {
     await openFixture(page, 'session-idle-empty-column');
@@ -184,7 +184,6 @@ test.describe('android', () => {
       await centre(foot(page, 3)),
       await footCorner(page, 1),
       await centre(page.getByTestId('wordcell-3')),
-      await centre(page.getByTestId('wordcell-7')),
     ];
     for (const p of points) {
       await tapAt(page, p);
@@ -354,10 +353,33 @@ test.describe('android', () => {
     await held[0]?.continue();
   });
 
-  test('R-14 a non-empty WordCell long-press keeps the selection', async ({ page }) => {
+  // Entry 11 (R-65, Q-21): the held peek shows above the lifted selection, then closes on release.
+  test('R-14 a non-empty WordCell long-press peeks while held and keeps the selection', async ({
+    page,
+  }) => {
     await openFixture(page, 'session-idle-empty-column');
     await select(page, 2, 6);
-    await longPress(page, await centre(page.getByTestId('wordcell-7')), 600);
+    const face = await centre(cards(page, 2).nth(6).locator('.face'));
+    const hold = await touchHold(page, await centre(page.getByTestId('wordcell-7')));
+    try {
+      await page.waitForTimeout(450);
+      const sheet = page.locator('[data-view-sheet]');
+      await expect(sheet).toBeVisible();
+      await expect(sheet).toHaveAttribute('data-mode', 'peek');
+      const overflow = await page
+        .locator('[data-view-scroll]')
+        .evaluate((el) => el.scrollHeight > el.clientHeight);
+      expect(overflow).toBe(false);
+      const atFace = await page.evaluate(({ x, y }) => {
+        const el = document.elementFromPoint(x, y);
+        if (el === null) throw new Error('nothing at the lifted face');
+        return el.closest('[data-view-scrim]') !== null || el.closest('[data-view-sheet]') !== null;
+      }, face);
+      expect(atFace).toBe(true);
+    } finally {
+      await hold.end();
+    }
+    await expect(page.locator('[data-view-sheet]')).toHaveCount(0);
     await animationFrames(page, 2);
     await expectSelection(page, { column: 2, count: 1 }, 1);
   });

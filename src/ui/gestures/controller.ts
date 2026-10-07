@@ -56,6 +56,15 @@
 // crossing; `refreshHover` skips while any crossed press is held and repaints at every end of one.
 // The desktop k preview (`hoverAction` kind `k`) is `wc-hover-tail` with `--wc-hover-from` and
 // `--wc-hover-len` (the remainder length, so the outline never covers S ghosts); no `wc-grab`.
+// Entry 11 (SPEC CAP-9, R-65, Q-21, F14, F24; AD-12, AD-13): a non-empty WordCell press whose
+// long-press fires opens the peek (`overlays.openPeek`, no entry); its `pointerup` reads the
+// rendered `[data-view-scroll]` under the root and keeps it as the sticky view
+// (`peekToSticky()`, one entry) iff it overflows, else `closePeek()`; every other end closes it.
+// A non-empty WordCell tap with nothing selected opens the sticky view in Idle and Game over
+// (`openView`, intent.ts). The view's scrim and sheet resolve before `data-place`, uncaptured (the
+// sheet pans): a tap closes the view (`close('wordcellView')`, never a deselect) and arms the
+// trailing-click swallower (click-swallow.ts) on the root; a drag does nothing. Every pointerdown
+// and detach disarm the swallower.
 import { game } from '../../shell/game.svelte';
 import { prefs } from '../../shell/prefs.svelte';
 import { SELECTION_LIFT_PX } from '../layout/geometry';
@@ -69,6 +78,7 @@ import {
   type PressTarget,
   start,
 } from './classify';
+import { createClickSwallower } from './click-swallow';
 import { columnTargets } from './drop-target';
 import type { Gate } from './gate';
 import { destinationTap, type Hit, type HoverAction, hoverAction, tapAction } from './intent';
@@ -174,13 +184,17 @@ function attribute(el: Element, name: string): number {
 }
 
 // AD-3: WordCell emptiness comes from the GameView at pointerdown, never the DOM.
-function wordcellTarget(cellEl: Element): PressTarget {
+function wordcellPress(cellEl: Element, capture: Element): Resolved {
   const view = game.view;
   if (view === undefined) throw new Error('AD-12 WordCell press without a GameView');
   const n = attribute(cellEl, 'data-wordcell');
   const cell = view.cells.find((c) => c.cell === n);
   if (cell === undefined) throw new Error(`AD-12 WordCell press on unknown cell ${n}`);
-  return cell.cards.length === 0 ? 'emptyWordcell' : 'wordcell';
+  return {
+    target: cell.cards.length === 0 ? 'emptyWordcell' : 'wordcell',
+    capture,
+    hit: { kind: 'wordcell', cell: n },
+  };
 }
 
 // The column number of the `[data-column]` an element sits in.
@@ -195,6 +209,13 @@ function columnOf(el: Element): number {
 function resolve(root: HTMLElement, hit: Element | null, selected: boolean): Resolved | null {
   if (hit === null || !root.contains(hit)) return { target: 'other', capture: null, hit: OUTSIDE };
   if (hit.closest('button:enabled') !== null) return null;
+  // Entry 11: the view's scrim and sheet (mirrors included), uncaptured so the sheet pans.
+  if (hit.closest('[data-view-scrim]') !== null) {
+    return { target: 'other', capture: null, hit: { kind: 'scrim' } };
+  }
+  if (hit.closest('[data-view-sheet]') !== null) {
+    return { target: 'other', capture: null, hit: { kind: 'sheet' } };
+  }
   const card = hit.closest('[data-place]');
   if (card !== null) {
     const place = card.getAttribute('data-place');
@@ -208,7 +229,7 @@ function resolve(root: HTMLElement, hit: Element | null, selected: boolean): Res
     if (place === 'cell') {
       const cellEl = card.closest('[data-wordcell]');
       if (cellEl === null) throw new Error('AD-12 cell card outside [data-wordcell]');
-      return { target: wordcellTarget(cellEl), capture: card, hit: { kind: 'wordcell' } };
+      return wordcellPress(cellEl, card);
     }
     if (place === 'tray' || place === 'strip') {
       return { target: 'other', capture: card, hit: { kind: 'tile' } };
@@ -221,7 +242,7 @@ function resolve(root: HTMLElement, hit: Element | null, selected: boolean): Res
   }
   const cellEl = hit.closest('[data-wordcell]');
   if (cellEl !== null) {
-    return { target: wordcellTarget(cellEl), capture: cellEl, hit: { kind: 'wordcell' } };
+    return wordcellPress(cellEl, cellEl);
   }
   const foot = hit.closest('[data-foot]');
   const columnEl = foot ?? hit.closest('[data-column]');
@@ -246,6 +267,8 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
   let hovered: HTMLElement | null = null;
   /** The running fly-back, if any. */
   let flying: Flight | null = null;
+  /** Entry 11: swallows the trailing click of a tap that closed the sticky view. */
+  const swallower = createClickSwallower(deps);
 
   function stopTimer(p: Press<H>): void {
     if (p.timer === null) return;
@@ -262,12 +285,8 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       p.captured.releasePointerCapture(p.pointerId);
     }
     const kind = reason.kind;
-    if (
-      (kind === 'cancel' || kind === 'pointercancel' || kind === 'lostCapture') &&
-      overlays.peek !== null
-    ) {
-      overlays.closePeek();
-    }
+    // Entry 11 (AD-12 peek on end): only a pointerup may turn the peek sticky (pointerup).
+    if (kind !== 'up' && overlays.peek !== null) overlays.closePeek();
     if ((kind === 'cancel' || kind === 'lostCapture') && p.captured !== null) {
       menuSlot = p.pointerId;
     }
@@ -497,6 +516,21 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     const next = classify(p.state, { type: 'timer' });
     if (typeof next === 'string') throw new Error(`AD-12 timer classified as ${next}`);
     p.state = next;
+    // Entry 11 (Q-21): a non-empty WordCell's long-press opens the peek, in every phase.
+    if (next.kind === 'longPress' && next.target === 'wordcell') {
+      if (p.hit.kind !== 'wordcell') throw new Error(`AD-12 long-press on a ${p.hit.kind} hit`);
+      overlays.openPeek(p.hit.cell);
+    }
+  }
+
+  // F14: at a long-press release the peek stays as the sticky view iff the rendered sheet's scroll
+  // area overflows.
+  function releasePeek(): void {
+    if (root === null) throw new Error('AD-12 peek release without a root');
+    const area = root.querySelector('[data-view-scroll]');
+    if (area === null) throw new Error('AD-12 peek release without a rendered [data-view-scroll]');
+    if (area.scrollHeight > area.clientHeight) overlays.peekToSticky();
+    else overlays.closePeek();
   }
 
   function own(event: PointerEvent): boolean {
@@ -504,6 +538,8 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
   }
 
   function pointerdown(event: PointerEvent): void {
+    // Entry 11: a new press means the closing tap's trailing click is not coming.
+    swallower.disarm();
     // A same-id pointerdown: that pointer was released, so its slot is spent.
     if (event.pointerId === menuSlot) menuSlot = null;
     if (event.button !== 0 || root === null) return;
@@ -587,6 +623,9 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       case 'tapDestinationCard':
         game.dispatch({ type: 'tapDestinationCard', card: action.card });
         return;
+      case 'openView':
+        overlays.openView(action.cell);
+        return;
       case 'none':
         return;
     }
@@ -599,6 +638,18 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     const outcome = classify(p.state, { type: 'up' });
     const drag = p.drag;
     end({ kind: 'up' });
+    if (outcome === 'longPress' && overlays.peek !== null) {
+      releasePeek();
+      return;
+    }
+    // Entry 11: a sheet or scrim tap only closes the view (never a deselect); a drag does nothing.
+    if (p.hit.kind === 'sheet' || p.hit.kind === 'scrim') {
+      if (outcome !== 'tap') return;
+      if (root === null) throw new Error('AD-12 view tap without a root');
+      overlays.close('wordcellView');
+      swallower.arm(root);
+      return;
+    }
     if (outcome === 'tap') perform(p.hit);
     if (drag === null) {
       if (outcome !== 'drag') return;
@@ -747,6 +798,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       if (!attached) throw new Error('AD-12 detach() called twice');
       attached = false;
       cancel();
+      swallower.disarm();
       for (const type of LISTENED) {
         next.removeEventListener(type, handlers[type] as EventListener);
       }

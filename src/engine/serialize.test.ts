@@ -58,6 +58,9 @@ import validComposingDraft2Letters from '../../fixtures/session-composing-draft-
   type: 'json',
 };
 import validGaveUp from '../../fixtures/session-gave-up.json' with { type: 'json' };
+import validGaveUpAfterCommit from '../../fixtures/session-gave-up-after-commit.json' with {
+  type: 'json',
+};
 import validIdleEmptyColumn from '../../fixtures/session-idle-empty-column.json' with {
   type: 'json',
 };
@@ -281,9 +284,10 @@ type ValidName =
   | 'below-committed-last'
   | 'won'
   | 'gave-up'
-  | 'idle-empty-column';
+  | 'idle-empty-column'
+  | 'gave-up-after-commit';
 
-/** The ten CAP-9 round-trip fixtures (generator record: the plan's Implementation Notes). */
+/** The eleven CAP-9 round-trip fixtures (generator record: the plan's Implementation Notes). */
 const VALID: readonly (readonly [ValidName, unknown])[] = [
   ['idle-fresh', validIdleFresh],
   ['composing', validComposing],
@@ -295,6 +299,7 @@ const VALID: readonly (readonly [ValidName, unknown])[] = [
   ['won', validWon],
   ['gave-up', validGaveUp],
   ['idle-empty-column', validIdleEmptyColumn],
+  ['gave-up-after-commit', validGaveUpAfterCommit],
 ];
 
 // --- rejection table ------------------------------------------------------------------------
@@ -819,6 +824,14 @@ describe('defining properties (§2, CAP-9)', () => {
       expect(s.activeMs).toBeGreaterThan(0);
     },
     'idle-empty-column': (s) => {
+      expect(s.cursor.phase).toBe('idle');
+      expect(s.cursor.index).toBe(s.moves.length);
+      const v = view(s, EN);
+      expect(v.columns[0]?.cards).toStrictEqual([]);
+      expect(v.cells.find((c) => c.cell === 7)?.cards).toHaveLength(7);
+    },
+    'gave-up-after-commit': (s) => {
+      expect(s.gaveUp).toBe(true);
       expect(s.cursor.phase).toBe('idle');
       expect(s.cursor.index).toBe(s.moves.length);
       const v = view(s, EN);
@@ -1651,6 +1664,11 @@ const REBUILDS: readonly (readonly [string, unknown, () => Session])[] = [
     'session-idle-empty-column',
     validIdleEmptyColumn,
     () => play(createSession(1), [drop(1, 7, 1), VALIDATE, CONFIRM], ['ldxomiw']),
+  ],
+  [
+    'session-gave-up-after-commit',
+    validGaveUpAfterCommit,
+    () => play(createSession(1), [drop(1, 7, 1), VALIDATE, CONFIRM, GIVE_UP], ['ldxomiw']),
   ],
 ];
 

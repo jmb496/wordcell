@@ -8,7 +8,10 @@ import { text } from './text';
 // `pointer-events: none`. Geometry comes from the Board's CSS variables; a tray or strip tile is
 // one tile pitch (tileWidth + 4) wide and card (H) or compact (44 px) tall (DESIGN.md Tile).
 // AD-14: a live card carries data-card-id, data-testid and data-place; a `mirror` (ghost, used
-// WordCell face, D-block tray copy) carries only data-mirror-of.
+// WordCell face, D-block tray copy, WordCell view copy) carries only data-mirror-of.
+// Entry 11 (DESIGN.md WordCell view, AD-14): a `view` mirror (place `view`) is a full-height card
+// in the sheet's flow, `pan-y` so a swipe scrolls the sheet, never hatched or dimmed (a used
+// cell's top is a normal card there); `topTag` adds the `top` pill.
 let {
   id,
   face,
@@ -21,12 +24,13 @@ let {
   segment,
   lifted = false,
   remainderTop = false,
+  topTag = false,
 }: {
   id: CardId;
   face: Face;
   /** Where the element sits; a live card also exposes it as data-place. */
-  place: 'column' | 'cell' | 'tray' | 'strip';
-  mirror?: 'ghost' | 'used' | 'block';
+  place: 'column' | 'cell' | 'tray' | 'strip' | 'view';
+  mirror?: 'ghost' | 'used' | 'block' | 'view';
   full?: boolean;
   hidden?: boolean;
   /** A live D card in its column in Composing (DESIGN.md Card, in destination block). */
@@ -38,6 +42,8 @@ let {
   lifted?: boolean;
   /** Entry 7: the source column's lowest card outside the selected tail (R-21 drop-self hover). */
   remainderTop?: boolean;
+  /** Entry 11: the view's top card, tagged `top` (DESIGN.md WordCell view). */
+  topTag?: boolean;
 } = $props();
 
 // DESIGN.md Card: `QU` is set as `Qu` with the ×2 badge (Q-06).
@@ -46,6 +52,13 @@ const glyph = $derived(qu ? 'Qu' : face.letter);
 const ghost = $derived(mirror === 'ghost');
 const block = $derived(mirror === 'block');
 const lock = $derived(destination || (block && segment?.start === true));
+// AD-14: only the WordCell view's copies sit in the view, and they are always mirrors.
+const inView = $derived.by(() => {
+  if ((place === 'view') !== (mirror === 'view')) {
+    throw new Error(`AD-14 card ${id}: place ${place} with mirror ${mirror ?? 'none'}`);
+  }
+  return place === 'view';
+});
 </script>
 
 <div
@@ -63,6 +76,7 @@ const lock = $derived(destination || (block && segment?.start === true));
   class:end={segment?.end}
   class:lifted
   class:remainder-top={remainderTop}
+  class:view={inView}
   style:--tile-w={tile ? `${tile.width}px` : undefined}
   data-card-id={mirror ? undefined : id}
   data-testid={mirror ? undefined : `card-${id}`}
@@ -82,6 +96,7 @@ const lock = $derived(destination || (block && segment?.start === true));
       {#if qu}<span class="badge">{text.quBadge}</span>{/if}
     {/if}
   </div>
+  {#if topTag}<span class="top-tag">{text.viewTop}</span>{/if}
 </div>
 
 <style>
@@ -92,6 +107,15 @@ const lock = $derived(destination || (block && segment?.start === true));
   .card.full { height: var(--wc-H); }
   .card.cell { position: absolute; top: 0; left: 0; }
   .card.hidden { visibility: hidden; }
+  /* Entry 11: a WordCell view mirror, in the sheet's flow; the sheet pans under it. */
+  .card.view { position: relative; touch-action: pan-y; }
+  /* DESIGN.md WordCell view `top` tag: an 11 px pill at the face's foot. */
+  .top-tag {
+    position: absolute; left: 50%; bottom: 3px; transform: translateX(-50%);
+    box-sizing: border-box; height: 14px; padding: 0 6px; border-radius: 9999px;
+    background: var(--wc-surface-raised); color: var(--wc-ink-primary);
+    font: 700 11px/14px system-ui, "Roboto", sans-serif; pointer-events: none;
+  }
   .face {
     position: relative; box-sizing: border-box; width: var(--wc-w); height: var(--wc-H); margin: 0 2px;
     background: var(--wc-card-face); border: 1px solid var(--wc-card-edge); border-radius: 6px;

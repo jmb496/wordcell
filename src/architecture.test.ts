@@ -1929,7 +1929,7 @@ describe('AD-1 engine tsconfig', () => {
 // --- AD-17 valid fixtures -------------------------------------------------------------------
 
 describe('AD-17 valid session fixtures', () => {
-  it('AD-17 the valid fixtures/session-*.json files are exactly the ten rebuilt ones', () => {
+  it('AD-17 the valid fixtures/session-*.json files are exactly the eleven rebuilt ones', () => {
     // Own copy of serialize.test.ts's VALID names (tests never import each other); serialize.test.ts
     // ties REBUILDS to VALID, so a new valid fixture fails here until both lists there name it.
     const names = readdirSync(posix.join(ROOT, 'fixtures'))
@@ -1939,6 +1939,7 @@ describe('AD-17 valid session fixtures', () => {
       'session-below-committed-last.json',
       'session-composing-draft-2-letters.json',
       'session-composing.json',
+      'session-gave-up-after-commit.json',
       'session-gave-up.json',
       'session-idle-empty-column.json',
       'session-idle-fresh.json',

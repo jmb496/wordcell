@@ -31,6 +31,11 @@ function view(o: Overrides = {}): GameView {
       col(3, []),
       ...[4, 5, 6, 7, 8].map((c) => col(c, [c * 10])),
     ],
+    // Entry 11: cell 3 holds one card, cell 4 none.
+    cells: [
+      { cell: 3, cards: [90] },
+      { cell: 4, cards: [] },
+    ],
   } as unknown as GameView;
 }
 
@@ -63,7 +68,7 @@ describe('AD-12 tapAction with nothing selected', () => {
     });
   });
 
-  it('AD-12 canPickUp false, empty space, placeholder, foot, WordCell, tile and outside are inert', () => {
+  it('AD-12 canPickUp false, empty space, placeholder, foot, tile and outside are inert', () => {
     expect(tapAction(card(1, 12), view({ canPickUp: false }), null, undefined)).toEqual({
       kind: 'none',
     });
@@ -71,11 +76,35 @@ describe('AD-12 tapAction with nothing selected', () => {
       space(1),
       space(3),
       space(2, true),
-      { kind: 'wordcell' },
       { kind: 'tile' },
       { kind: 'outside' },
     ] as Hit[]) {
       expect(tapAction(hit, view(), null, undefined)).toEqual({ kind: 'none' });
+    }
+  });
+
+  // Entry 11 (R-65, R-75; R-33, R-39 inert): the plan's I/O rows Tap opens / Tap inert.
+  it('AD-12 a non-empty WordCell opens the view in Idle and Game over; empty, Composing and Place are inert', () => {
+    const cell3: Hit = { kind: 'wordcell', cell: 3 };
+    const cell4: Hit = { kind: 'wordcell', cell: 4 };
+    const open = { kind: 'openView', cell: 3 };
+    for (const v of [view(), view({ status: 'won' }), view({ status: 'gaveUp' })]) {
+      expect(tapAction(cell3, v, null, undefined)).toEqual(open);
+      expect(tapAction(cell4, v, null, undefined)).toEqual({ kind: 'none' });
+    }
+    for (const v of [view({ phase: 'composing' }), view({ phase: 'place' })]) {
+      expect(tapAction(cell3, v, null, undefined)).toEqual({ kind: 'none' });
+      expect(tapAction(cell4, v, null, undefined)).toEqual({ kind: 'none' });
+    }
+    expect(() => tapAction({ kind: 'wordcell', cell: 5 }, view(), null, undefined)).toThrow(
+      /^AD-12 WordCell 5/,
+    );
+  });
+
+  it('AD-12 the view sheet and scrim never reach tapAction (the controller handles them)', () => {
+    for (const hit of [{ kind: 'sheet' }, { kind: 'scrim' }] as Hit[]) {
+      expect(() => tapAction(hit, view(), null, undefined)).toThrow(/^AD-12 tapAction on the view/);
+      expect(() => tapAction(hit, view(), SEL, 'wordcellView')).toThrow(/^AD-12/);
     }
   });
 
@@ -125,7 +154,7 @@ describe('AD-12 tapAction with a tail selected', () => {
   });
 
   it('AD-12 a WordCell deselects; F25 a tile deselects like outside, only when tailSelection is the top entry', () => {
-    expect(tapAction({ kind: 'wordcell' }, view(), SEL, 'tailSelection')).toEqual({
+    expect(tapAction({ kind: 'wordcell', cell: 3 }, view(), SEL, 'tailSelection')).toEqual({
       kind: 'deselect',
     });
     expect(tapAction({ kind: 'tile' }, view(), SEL, 'tailSelection')).toEqual({
@@ -196,7 +225,11 @@ describe('AD-12 hoverAction', () => {
   });
 
   it('AD-12 WordCells, tiles and outside give nothing', () => {
-    for (const hit of [{ kind: 'wordcell' }, { kind: 'tile' }, { kind: 'outside' }] as Hit[]) {
+    for (const hit of [
+      { kind: 'wordcell', cell: 3 },
+      { kind: 'tile' },
+      { kind: 'outside' },
+    ] as Hit[]) {
       expect(hoverAction(hit, view(), null)).toBeNull();
       expect(hoverAction(hit, view(), SEL)).toBeNull();
     }
@@ -266,7 +299,9 @@ describe('AD-12 entry 10 Composing tapAction', () => {
     expect(tapAction(card(1, 11), K1, SEL, 'tailSelection')).toEqual(tapDest(11));
     expect(tapAction(space(2), K1, SEL, 'tailSelection')).toEqual({ kind: 'none' });
     expect(tapAction(card(2, 21), K1, SEL, 'tailSelection')).toEqual({ kind: 'none' });
-    expect(tapAction({ kind: 'wordcell' }, K1, SEL, 'tailSelection')).toEqual({ kind: 'deselect' });
+    expect(tapAction({ kind: 'wordcell', cell: 3 }, K1, SEL, 'tailSelection')).toEqual({
+      kind: 'deselect',
+    });
     expect(tapAction({ kind: 'outside' }, K1, null, undefined)).toEqual({ kind: 'none' });
   });
 
@@ -302,7 +337,7 @@ describe('AD-12 entry 10 destinationTap', () => {
     expect(destinationTap(card(1, 13), SELF)).toBeNull();
     expect(destinationTap(card(2, 20), K1)).toBeNull();
     expect(destinationTap(space(1), K1)).toBeNull();
-    expect(destinationTap({ kind: 'wordcell' }, K1)).toBeNull();
+    expect(destinationTap({ kind: 'wordcell', cell: 3 }, K1)).toBeNull();
     expect(destinationTap(card(1, 12), composing([[12, 3]], { status: 'won' }))).toBeNull();
     expect(destinationTap(card(1, 12), composing([[12, 3]], { phase: 'place' }))).toBeNull();
     expect(destinationTap(card(1, 12), view())).toBeNull();
@@ -356,7 +391,7 @@ describe('AD-12 entry 10 hoverAction k preview', () => {
       [space(1), K1],
       [space(1, true), K1],
       [space(2), K1],
-      [{ kind: 'wordcell' }, K1],
+      [{ kind: 'wordcell', cell: 3 }, K1],
       [{ kind: 'tile' }, K1],
       [{ kind: 'outside' }, K1],
     ] as [Hit, GameView][]) {
