@@ -1,6 +1,6 @@
 # Review log — story-refactor-sweep.md (ticket 4.13)
 
-State: pass 5: done
+State: pass 6: done
 
 - Mode: docs, thorough, max 7, budget 1500 words
 - Pre-loop: HEAD 149fa80; pass 0 copy story-refactor-sweep.review-log.passes/pass0.md, 226 words
@@ -144,3 +144,20 @@ Words (docs): 2074 (9.2x pass 0; majors +69, minors −1)  |  Snapshot: story-re
 - screenshot fallback vs tickets.toml verify — precedent already cited; no edit
 
 Fixer: all 6 majors and 6 minors applied; classify outcomes and the controller same-id/no-pick-up paths checked against the code; "re-saved unchanged" marked unverified.
+
+## Pass 6 — 2026-10-07
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 2 (both D17, one fix), minor 7 sent (word-neutral), decision-needed 0 new (D7 still open)  |  Dropped in triage: 1 (screenshot vs tickets.toml verify again; precedent already cited)
+Words (docs): 2073 (9.2x pass 0)  |  Snapshot: story-refactor-sweep.review-log.passes/pass6.md, fix diff pass6.fix.diff
+### Applied (fixer items)
+- [major] D17 needs an exported classify type change the Interface forbids → 1
+- [major] D17 leaves the tail-selection outcome open (step 6 deselect vs keep) → 1
+- [minor] 2–8 (split grouping label and AGENTS.md lines, D6 edge rule, D1 except split, Flakes wording, D18 active-press, D20 Out additions, D19 test name)
+### Default applied (technical)
+- D17 → Out, epic 7 device pass (unreachable without pointermove; 4-8 log marked it out of scope; not handed to 4.13)
+- split → three files (tree scan; other AD-1; AD-2/AD-12/AD-17)
+### Decision needed (functionality / UX / gameplay)
+- none new (D7 remains open)
+### Dropped
+- tickets.toml verify vs screenshot fallback — already cited (4.10–4.12 precedent)
+
+Fixer: major and all 7 minors applied, net −1 word; describe blocks and the drag.spec.ts whole-column test checked.
