@@ -1,6 +1,6 @@
 # Review log — story-wordcell-peek-and-sticky-view.md (ticket 4.11)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget default (2.5x pass 0). Pass 0: HEAD 9581f2a, copy story-wordcell-peek-and-sticky-view.passes/pass0.md, 409 words. Intent includes tickets.toml entry 11 fields interface, tests, owns, unknown (not copied at pull; fixer adds them to the Description in pass 1); copy at story-wordcell-peek-and-sticky-view.passes/intent-tickets-toml-11.md.
 
@@ -62,3 +62,28 @@ Words (docs): 1232 (3.01x pass 0)  |  Snapshot: story-wordcell-peek-and-sticky-v
 - duplicate Undo/Redo enablement and swallower-target reports
 ### Fixer outcome
 - all 9 items applied (no conflicts; DESIGN.md sheet sizing detail cut to the reference, -9 words); no commands or tool claims added; fix diff story-wordcell-peek-and-sticky-view.passes/pass2.fix.diff
+
+## Pass 3 — 2026-10-07
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 3, minor 11 (1 word-neutral sent to the fixer, 10 deferred over budget), decision-needed 0  |  Dropped in triage: 3 (duplicates of the focus-test and inert-placement majors)
+Words (docs): 1321 (3.23x pass 0)  |  Snapshot: story-wordcell-peek-and-sticky-view.passes/pass3.md
+### Applied
+- [major] Description — where WordCellView mounts and where `inert` goes are unspecified; copying App.svelte's `<main use:pointerRoot inert=…>` pattern makes the view inert and hides sheet/scrim presses and the swallower from the controller → fixer item 1 (default applied)
+- [major] AC — the desktop "focused Undo plus Enter" case passes without `inert` (the opening click moves focus) → fixer item 2
+- [major] Description/AC — existing tests assert the old inert behaviour this ticket changes: e2e/tap.spec.ts:176 (taps wordcell-7), controller.test.ts:920, intent.test.ts:66; tap.spec.ts:357 should be extended, not duplicated → fixer item 3
+- [minor, no words] AC — "text.test.ts F27 titles" names no AD id (UI Vitest names start with AD-n) → fixer item 4
+### Default applied (technical)
+- WordCellView renders inside Board.svelte within `<main use:pointerRoot>`, a sibling of TopBar, the banner, ActionBar and `.board`; while the sticky view is open `inert` goes on those siblings, never on `<main>` or an ancestor of the view
+### Decision needed (functionality / UX / gameplay)
+- none
+### Deferred minors (over budget; for the build plan)
+- the scrim sits above lifted faces (z-index 3) and the drag layer (5): assert elementFromPoint at a lifted face returns scrim/sheet in the held-peek-with-selection case
+- the swipe and sheet-tap steps run on the session-won view left open by the peek turned sticky, at the plan's short viewport
+- Card.svelte changes (a `view` mirror kind: unhatched, `touch-action: pan-y`, a `top` tag) belong in the Interface
+- swallow only clicks with detail ≥ 1; a keyboard click (detail 0) passes and does not disarm
+- Esc closing the view is epic 6 (F15); do not add keydown handling
+- the 'AD-12 peek on end' case covers each EndReason kind (sameId, detach, up without overflow)
+- split the Description and AC into bullets at the existing semicolons (no words added)
+### Dropped
+- repeat reports of the focus-test and inert-placement majors (merged)
+### Fixer outcome
+- all 4 items applied (no conflicts; line refs checked against the code); no commands or tool claims added; fix diff story-wordcell-peek-and-sticky-view.passes/pass3.fix.diff
