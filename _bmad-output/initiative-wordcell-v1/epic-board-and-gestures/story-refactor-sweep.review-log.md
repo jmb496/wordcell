@@ -1,6 +1,6 @@
 # Review log — story-refactor-sweep.md (ticket 4.13)
 
-State: pass 4: done
+State: pass 5: done
 
 - Mode: docs, thorough, max 7, budget 1500 words
 - Pre-loop: HEAD 149fa80; pass 0 copy story-refactor-sweep.review-log.passes/pass0.md, 226 words
@@ -120,3 +120,27 @@ Words (docs): 2006 (8.9x pass 0; majors +86, minors and cuts −1)  |  Snapshot:
 - none
 
 Fixer: 6 majors applied; minors 7–13, 15, 16 applied word-neutral; 14 (D17 cleanup wording) skipped for words. No commands added.
+
+## Pass 5 — 2026-10-07
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 6, minor 6 sent (word-neutral only), decision-needed 0 new (D7 still open)  |  Dropped in triage: 2 (no-edit minors: 5 s threshold vs tickets.toml, screenshot deviation already cited)
+Words (docs): 2074 (9.2x pass 0; majors +69, minors −1)  |  Snapshot: story-refactor-sweep.review-log.passes/pass5.md, fix diff pass5.fix.diff
+### Applied (fixer items)
+- [major] split has no grouping rule (18 files possible) → 1
+- [major] D17 contradicts SPEC CAP-8 destination-card drag-as-tap → 2
+- [major] D15 vs AC on a non-green screenshot run → 3
+- [major] D18 recovery outcome undefined → 4
+- [major] D1 runs must follow src edits too; no exit for an unfixable D1/D4 → 5
+- [major] D20 reachable outcome contradicts F24 / CAP-6 → 6
+- [minor] 7–12 (word-neutral only)
+### Default applied (technical)
+- split — at most about four files (tree scan; other AD-1; TS-API checks)
+- D17 — pending release ≥ 8 px classifies as 'drag' latched at release
+- D18 — same-id end path, then the new press proceeds
+- D20 — reachable path → record repro, owner stop (rule 7)
+### Decision needed (functionality / UX / gameplay)
+- none new (D7 remains open)
+### Dropped
+- 5.00 s threshold stricter than tickets.toml "exceeds" — ticket follows epic Done when 5; no edit
+- screenshot fallback vs tickets.toml verify — precedent already cited; no edit
+
+Fixer: all 6 majors and 6 minors applied; classify outcomes and the controller same-id/no-pick-up paths checked against the code; "re-saved unchanged" marked unverified.
