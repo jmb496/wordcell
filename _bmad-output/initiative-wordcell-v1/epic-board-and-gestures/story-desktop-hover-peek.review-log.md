@@ -1,6 +1,6 @@
 # Review log — story-desktop-hover-peek.md (ticket 4.12)
 
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 7c21189, copy story-desktop-hover-peek.passes/pass0.md, 265 words. Intent includes tickets.toml entry 12 fields interface, tests, owns (not copied at pull; fixer adds them to the Description in pass 1); copy at story-desktop-hover-peek.passes/intent-tickets-toml-12.md.
 
@@ -76,3 +76,24 @@ Words (docs): 1582 (5.97x pass 0; budget 1500 exceeded by the majors' tests, min
 - none
 ### Fixer outcome
 - all 15 items applied (no conflicts); z-index values checked in src (bars 2, lift 3 Card.svelte:188, drag layer 5 Column.svelte:211); hoverFine is only a local in layout.svelte.ts, so the ticket says the build exposes it as a getter; ?bands= permutation checked against parseBandsParam; e2e/wordcell-view.spec.ts desktop describe exists; unverified: cell 8 overhang of the board column (from the width formula, not measured in a browser); cuts for word neutrality: Notes line, two parentheticals, a duplicate never-intersects clause; fix diff story-desktop-hover-peek.passes/pass3.fix.diff
+
+## Pass 4 — 2026-10-07
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 3, minor 12, decision-needed 0  |  Dropped in triage: 2 (measurement locators left to the plan; viewport-overflow note restates the spec)
+Words (docs): 1629 (6.15x pass 0; over the 1500 budget by the majors' additions, minors net −6 words)  |  Snapshot: story-desktop-hover-peek.passes/pass4.md
+### Applied
+- [major] AC — centring is untestable: every 7-card hover peek (7w + 56) is wider than twice any cell's room, so cell 6 always takes the "if clamped" branch (three lenses; pass 3 item 4 unresolved) → fixer item 1
+- [major] "Starts a drag" — "a non-primary-button pointerdown … cancels nothing" contradicts build-notes CAP-9 "any pointerdown cancels the timer" (pass 3 item 8 over-applied) → fixer item 2
+- [major] "Starts a drag" — closeHoverPeek() at the threshold crossing is a store write mid-drag for a pick-up drag, against AD-12 "no Svelte state changes until release" → fixer item 3
+### Default applied (technical)
+- AC — pure exported placement helper x = clamp(cellCentre − width/2, colLeft, colRight − width) with Vitest unclamped, left- and right-clamped; e2e cell 6 left edge = column left, cell 8 right edge = column right, within 1 px → item 1
+- "Starts a drag" — close at the crossing only for an inert (WordCell) drag; a pick-up drag (another pointer) closes it in its end path → item 3
+- Timer — suppressed cell found geometrically (the [data-wordcell] whose rect contains the last mouse point), not elementFromPoint → item 5
+### Minors
+- entry into the cell whose hover peek is open does not arm (item 4); geometric suppression (item 5); cancel-first closes on every key command, a superset of EXPERIENCE.md's set (item 6); remaining hover tests named AD-12 (item 7); re-placed on window resize too (item 8); mirrors reuse Card place="view" mirror="view" full (item 9); AD-13 hover-then-hold pinned to session-won cell 6, asserted before mouse.up (item 10); hoverFine re-checked at fire (item 11); cut the first paragraph's restated press clause (item 12)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- AC measurement locators for the board column and the label — plan detail
+- viewport overflow in short scrolled windows — as specified (DESIGN.md clamps to the board only)
+### Fixer outcome
+- all 12 items applied (no conflicts); first paragraph cut to pointers (Timer, Layout, press handling below); Card place/mirror pairing checked in Card.svelte:57–58 and WordCellView.svelte; overlays openHoverPeek throw checked; item 7 shortened to "else AD-12", item 10 relies on the Locator paragraph's definition, item 11 omits the stays-until-leave note (stated elsewhere); fix diff story-desktop-hover-peek.passes/pass4.fix.diff
