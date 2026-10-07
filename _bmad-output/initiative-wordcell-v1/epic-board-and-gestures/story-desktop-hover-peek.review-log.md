@@ -1,6 +1,6 @@
 # Review log — story-desktop-hover-peek.md (ticket 4.12)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 7c21189, copy story-desktop-hover-peek.passes/pass0.md, 265 words. Intent includes tickets.toml entry 12 fields interface, tests, owns (not copied at pull; fixer adds them to the Description in pass 1); copy at story-desktop-hover-peek.passes/intent-tickets-toml-12.md.
 
@@ -52,3 +52,27 @@ Words (docs): 1407 (5.31x pass 0; budget 1500, nearly reached)  |  Snapshot: sto
 - none
 ### Fixer outcome
 - all 17 items applied (no conflicts); width formula refined to min(count,7)·(w + 4) − 4 + 32 px from WordCellView.svelte slots; fixture counts already verified in pass 1; no commands added; fix diff story-desktop-hover-peek.passes/pass2.fix.diff
+
+## Pass 3 — 2026-10-07
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 6, minor 11, decision-needed 0  |  Dropped in triage: 0 (sticky-bars contradiction merged across all four lenses; transition wording and page.clock across two)
+Words (docs): 1582 (5.97x pass 0; budget 1500 exceeded by the majors' tests, minors kept word-neutral by cuts)  |  Snapshot: story-desktop-hover-peek.passes/pass3.md
+### Applied
+- [major] Layout — "may extend under the sticky bars" contradicts DESIGN.md Layer order and the ticket's own "above selection/lift" → fixer item 1
+- [major] AC — the two no-reopen checks never move the mouse within the cell, so they pass without the boundary-pointerover rule → fixer item 2
+- [major] AC — "opens exactly once" is unobservable (a second openHoverPeek throws, overlays.svelte.ts:146); restate as timing from first entry under page.clock → fixer item 3
+- [major] AC — "centred, then clamped into the board column" untested (cell 6 is central; cell 8 overhangs) → fixer item 4
+- [major] Description/Timer — (hover: hover) and (pointer: fine) gate has no source in the controller (hover filters only pointerType, controller.ts:756) and no test → fixer item 5
+- [major] AC — Timer rules untested: detach, entry during fly-back, non-primary press, touch threshold crossing, fire-time empty re-check → fixer item 6
+### Default applied (technical)
+- Layout — draws over the sticky bars; .board-root position: relative, HoverPeek z-index 4 (lift 3, drag layer 5) → item 1
+- Timer — arms only when pointerType is mouse and layout's hoverFine is true, read through ControllerDeps → item 5
+- Timer — non-primary-button pointerdowns are not presses (controller.ts:546 button-0 filter) → item 8
+- AC — page.clock installed before load in every 300/400/600 ms boundary test → item 9
+### Minors
+- transition deferred not dropped (item 7); non-primary not a press (item 8); page.clock (item 9); threshold test stays inside cell 6, checked before mouse.up (item 10); suppressed cell = the [data-wordcell] under the last mouse point (item 11); ?bands= with leftover below wordcells (item 12); height measured after render (item 13); spec file e2e/wordcell-view.spec.ts desktop describe (item 14); References add spine AD-12..AD-14 and rule-coverage rows (item 15)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+### Fixer outcome
+- all 15 items applied (no conflicts); z-index values checked in src (bars 2, lift 3 Card.svelte:188, drag layer 5 Column.svelte:211); hoverFine is only a local in layout.svelte.ts, so the ticket says the build exposes it as a getter; ?bands= permutation checked against parseBandsParam; e2e/wordcell-view.spec.ts desktop describe exists; unverified: cell 8 overhang of the board column (from the width formula, not measured in a browser); cuts for word neutrality: Notes line, two parentheticals, a duplicate never-intersects clause; fix diff story-desktop-hover-peek.passes/pass3.fix.diff
