@@ -804,25 +804,11 @@ describe('AD-12 entry 11 long-press peek', () => {
     expect(t.active()).toBe(0);
   });
 
-  it('AD-13 a long-press up with a 1 px rounding excess closes the peek: no entry, no nav call', async () => {
-    const t = await setup();
-    t.detach();
-    t.b.viewScroll.scrollHeight = 301;
-    t.b.viewScroll.clientHeight = 300;
-    t.down(t.b.cellCard);
-    t.advance(400);
-    t.fire('pointerup', { target: t.b.cellCard });
-    expect(t.overlays.peek).toBeNull();
-    expect(t.overlays.viewCell).toBeNull();
-    expect(navCalls).toEqual([]);
-    expect(t.active()).toBe(0);
-  });
-
   it('AD-13 a long-press up with overflow turns the peek sticky: one push, above a kept selection', async () => {
     const t = await setup();
     t.detach();
     t.tap(t.b.card1);
-    t.b.viewScroll.scrollHeight = 302;
+    t.b.viewScroll.scrollHeight = 301;
     t.b.viewScroll.clientHeight = 300;
     t.down(t.b.cellCard);
     t.advance(400);
@@ -910,8 +896,10 @@ describe('AD-12 entry 11 sticky view', () => {
       t.down(el, { clientX: 100, clientY: 100 });
       t.fire('pointermove', { clientX: 100, clientY: 120 });
       t.fire('pointerup', { target: el });
+      expect(t.b.root.captureListeners.size).toBe(0);
       t.down(el, { clientX: 100, clientY: 100 });
       t.fire('pointercancel');
+      expect(t.b.root.captureListeners.size).toBe(0);
     }
     expect(t.overlays.viewCell).toBe(3);
     expect(navCalls).toEqual(['push']);

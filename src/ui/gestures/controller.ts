@@ -529,7 +529,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     if (root === null) throw new Error('AD-12 peek release without a root');
     const area = root.querySelector('[data-view-scroll]');
     if (area === null) throw new Error('AD-12 peek release without a rendered [data-view-scroll]');
-    if (area.scrollHeight - area.clientHeight > 1) overlays.peekToSticky();
+    if (area.scrollHeight > area.clientHeight) overlays.peekToSticky();
     else overlays.closePeek();
   }
 
@@ -638,7 +638,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     const outcome = classify(p.state, { type: 'up' });
     const drag = p.drag;
     end({ kind: 'up' });
-    if (outcome === 'longPress' && overlays.peek !== null) {
+    if (outcome === 'longPress') {
       releasePeek();
       return;
     }

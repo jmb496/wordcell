@@ -4,7 +4,7 @@ import { expectLeaves, wc } from './helpers/dialogs';
 import { animationFrames } from './helpers/lifecycle';
 import { booted } from './helpers/restore';
 import { fixture, seedStorage } from './helpers/seed';
-import { longPress, touchDrag, touchHold } from './helpers/touch';
+import { touchDrag, touchHold } from './helpers/touch';
 
 // Epic 4 entry 11: the WordCell long-press peek and sticky view (SPEC CAP-9, F14, F24, F27;
 // rule-coverage R-12, R-33, R-39, R-65, R-75, Q-21, AD-11, AD-12, AD-13 rows). Fixtures:
@@ -260,6 +260,7 @@ test.describe('android', () => {
       await expect(mirrors(page)).toHaveCount(count);
       const last = mirrors(page).last();
       await expect(last).toContainText('top');
+      await expect(sheet(page).locator('.top-tag')).toHaveCount(1);
       const face = await last
         .locator(':scope > .face')
         .evaluate((el) => [getComputedStyle(el).opacity, getComputedStyle(el).backgroundImage]);
@@ -336,7 +337,14 @@ test.describe('android', () => {
       const unchanged = await stash(page);
       await tapAt(page, await centre(cell(page, 3)));
       await expectNoView(page);
-      await longPress(page, await centre(cell(page, 3)), 600);
+      const hold = await touchHold(page, await centre(cell(page, 3)));
+      try {
+        await page.waitForTimeout(450);
+        await expect(sheet(page)).toHaveCount(0);
+        await expect(scrim(page)).toHaveCount(0);
+      } finally {
+        await hold.end();
+      }
       await expectNoView(page);
       expect(await wcOf(page)).toBe(0);
       await unchanged();
@@ -356,6 +364,7 @@ test.describe('android', () => {
       await openSticky(page, n, count);
       await expect(mirrors(page)).toHaveCount(count);
       await expect(mirrors(page).last()).toContainText('top');
+      await expect(sheet(page).locator('.top-tag')).toHaveCount(1);
       await page.goBack();
       await expectNoView(page);
       await expect.poll(() => wcOf(page)).toBe(0);

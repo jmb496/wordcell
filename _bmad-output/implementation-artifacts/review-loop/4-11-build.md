@@ -1,5 +1,5 @@
 # Review loop — ticket 4.11 build (code mode, 69bf8b2..f97c288)
-State: pass 1: done
+State: pass 2: done
 
 Target: `_bmad-output/implementation-artifacts/review-loop/4-11-build.passes/pass0.diff` (git diff 69bf8b2..f97c288)
 Intent: `_bmad-output/initiative-wordcell-v1/epic-board-and-gestures/story-wordcell-peek-and-sticky-view-plan.md`
@@ -24,3 +24,23 @@ Snapshot: tree 58a6231e43eff80ed6413789b65ffaebe55d3aff  |  Fix: items 1–5 app
 - WordCellView.svelte .scrim — desktop mouse-wheel over the scrim scrolls the board behind the sticky view
 ### Dropped
 - intent: `npm run test:screens` never run (Docker unreachable from this WSL2 distro) — environment limit, already disclosed in the plan's Verification and Residual risks; not fixable by the loop; the screenshot gate stays with CI/owner before done
+
+## Pass 2 — 2026-10-07
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 3, minor 5, decision-needed 0  |  Dropped in triage: 2 (duplicates of the 1 px revert)
+Snapshot: tree 4f6fa30c029289c0c724662f615e94129423b9b5  |  Fix: items 1–7 applied (item 1: the new 1 px case deleted, an equal-heights case already existed; item 3: only `.title` converted, the `top` tag is part of the card face and stays px; item 4: fixer traced every press end, no legitimate longPress release without a peek). Fixer: e2e/wordcell-view.spec.ts 17 passed / 17 skipped. Orchestrator: npm test 46 files, 1987 passed; lint clean (169 files); check 0 errors, 0 warnings.
+Majors rose 1 → 3, but not from unclear refs: one is a regression introduced by pass 1 (the refs, SPEC F14 and the ticket, are explicit), the other two are pre-existing defects the pass-1 lenses missed (DESIGN A-D9 and the ticket's P4 case are explicit). The diverging rule's premise (refs unclear) does not hold, and stopping would leave the pass-1 regression committed, so the loop continues.
+### Applied
+- [major] src/ui/gestures/controller.ts releasePeek + plan Always line + controller.test.ts '1 px rounding excess' — pass-1 tolerance `scrollHeight - clientHeight > 1` contradicts SPEC F14 / CAP-9 and the ticket (`scrollHeight > clientHeight`); plan triage l.134 had already rejected it → fixer item 1 (revert to strict `>`; unit cases: equal heights close, 1 px excess turns sticky); supersedes pass-1 item 2 (my triage error: F14 pins the condition). Also resolves fix-diff minor (e2e `overflows` helper mismatch) and edge minor (plan l.134 contradiction)
+- [major] e2e/wordcell-view.spec.ts 'R-65 R-75 a tap and a long-press on an empty WordCell open nothing' — the long-press half asserts only after release, so a peek opened during the hold passes → fixer item 2 (assert no sheet/scrim while held)
+- [major] src/ui/WordCellView.svelte `.title` — 20px/28px fixed px; DESIGN.md Text size / A-D9 requires rem in sheets → fixer item 3 (1.25rem/1.75rem like BlockingMessage; check other sheet text)
+- [minor] controller.ts pointerup `outcome === 'longPress' && overlays.peek !== null` — guard hides an impossible state (rule 6) → fixer item 4
+- [minor] e2e/wordcell-view.spec.ts `top` tag checked only on the last mirror → fixer item 5 (count 1)
+- [minor] controller.test.ts 'AD-12 a scrim or sheet drag ≥ 8 px keeps the view…' — swallower not asserted unarmed → fixer item 6
+- [minor] plan triage note on click-swallow "reaches its handler" misstates the test's evidence (`cancelBubble`) → fixer item 7
+### Default applied (technical)
+- none new
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- fix diff minor: e2e `overflows` helper uses strict `>` — moot after the revert (item 1)
+- edge minor: plan l.134 contradicts the tolerance — moot after the revert (item 1)

@@ -70,7 +70,7 @@ function cellOf(n: number): CellView {
   }
   .title {
     flex: none; margin: 0; padding: 16px 16px 8px;
-    font: 600 20px/28px system-ui, "Roboto", sans-serif; color: var(--wc-ink-primary);
+    font: 600 1.25rem/1.75rem system-ui, "Roboto", sans-serif; color: var(--wc-ink-primary);
   }
   .scroll {
     flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
