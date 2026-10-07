@@ -453,6 +453,12 @@ async function setup() {
   let hit: FakeEl | null = null;
   // Entry 12: hoverFine off by default, so the setTimer call counts above stay long-press only.
   const media = { hoverFine: false };
+  const hoverFineWatchers = new Set<() => void>();
+  // A hoverFine media change: the new value, then every watcher (layout.watchHoverFine).
+  const flipHoverFine = (matches: boolean) => {
+    media.hoverFine = matches;
+    for (const callback of hoverFineWatchers) callback();
+  };
   const controller = createController(gate, {
     elementFromPoint: () => {
       order.push('point');
@@ -461,6 +467,12 @@ async function setup() {
     setTimer,
     clearTimer,
     hoverFine: () => media.hoverFine,
+    watchHoverFine: (callback) => {
+      hoverFineWatchers.add(callback);
+      return () => {
+        hoverFineWatchers.delete(callback);
+      };
+    },
   });
   const detach = () => controller.attach(b.root as unknown as HTMLElement);
   // A pointerdown whose resolution reads `target` from elementFromPoint; event.target is another
@@ -502,6 +514,7 @@ async function setup() {
     clearTimer,
     advance,
     media,
+    flipHoverFine,
   };
 }
 
@@ -2564,6 +2577,19 @@ describe('AD-12 entry 12 desktop hover peek', () => {
     expect(t.overlays.hoverPeek).toBe(4);
   });
 
+  it('AD-12 an entry into another cell with no pointerout from the open one closes it and arms the new one', async () => {
+    const t = await setup();
+    t.detach();
+    (cells()[1] as { cards: number[] }).cards = [9];
+    open3(t);
+    t.hover(t.b.cell4, { relatedTarget: null, clientX: 75, clientY: 480 });
+    expect(t.overlays.hoverPeek).toBeNull();
+    t.advance(399);
+    expect(t.overlays.hoverPeek).toBeNull();
+    t.advance(1);
+    expect(t.overlays.hoverPeek).toBe(4);
+  });
+
   it('AD-12 cancel() and detach clear a pending hover timer and close an open hover peek', async () => {
     for (const ender of ['cancel', 'detach'] as const) {
       const t = await setup();
@@ -2630,6 +2656,9 @@ describe('AD-12 entry 12 desktop hover peek', () => {
     t.detach();
     open3(t);
     t.controller.cancel();
+    // The last mouse point moves into no cell with no pointerout: a suppress() at the touch end
+    // would clear the slot.
+    t.fire('pointermove', { ...mouse, clientX: 25, clientY: 300 });
     t.down(t.b.leftover);
     t.fire('pointerup');
     enter3(t, { relatedTarget: null });
@@ -2772,5 +2801,25 @@ describe('AD-12 entry 12 desktop hover peek', () => {
     t.media.hoverFine = true;
     t.advance(1000);
     expect(t.overlays.hoverPeek).toBeNull();
+  });
+
+  it('AD-12 a hoverFine change to false closes an open hover peek with no refreshHover() call; detach unwatches', async () => {
+    const t = await setup();
+    const detach = t.detach();
+    open3(t);
+    t.flipHoverFine(false);
+    expect(t.overlays.hoverPeek).toBeNull();
+    t.flipHoverFine(true);
+    leave3(t);
+    enter3(t);
+    t.flipHoverFine(false);
+    expect(t.clearTimer).toHaveBeenCalledWith(t.setTimer.mock.results[1]?.value);
+    t.media.hoverFine = true;
+    t.advance(1000);
+    expect(t.overlays.hoverPeek).toBeNull();
+    detach();
+    t.overlays.openHoverPeek(3);
+    t.flipHoverFine(false);
+    expect(t.overlays.hoverPeek).toBe(3);
   });
 });

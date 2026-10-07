@@ -58,6 +58,8 @@ export type Layout = {
   readonly bannerShown: boolean;
   /** Entry 12 (CAP-9): live `(hover: hover) and (pointer: fine)`, set at the media `change`. */
   readonly hoverFine: boolean;
+  /** Entry 12: calls `callback` after every hoverFine media `change`; returns the unwatch. */
+  watchHoverFine(callback: () => void): () => void;
 };
 
 const HOVER_FINE = '(hover: hover) and (pointer: fine)';
@@ -133,6 +135,7 @@ export function createLayout<E extends ProbeElement>(gate: Gate, deps: LayoutDep
   let bannerShown = $state(banner0);
   // Entry 12: follows the media query at once (the hover peek's watcher), unlike w (gate idle task).
   let hoverFine = $state(hoverFine0);
+  const hoverFineWatchers = new Set<() => void>();
 
   // `last`: the inputs of the last w computation (A-D11); `applied`: the last band layout's.
   let last = { innerWidth: win.innerWidth, innerHeight: win.innerHeight, hoverFine: hoverFine0 };
@@ -194,6 +197,7 @@ export function createLayout<E extends ProbeElement>(gate: Gate, deps: LayoutDep
   media.addEventListener('change', () => {
     hoverFine = media.matches;
     schedule();
+    for (const callback of hoverFineWatchers) callback();
   });
   deps.watchBanner(schedule);
   win.addEventListener('scroll', () => gate.scroll(), { passive: true });
@@ -220,6 +224,12 @@ export function createLayout<E extends ProbeElement>(gate: Gate, deps: LayoutDep
     },
     get hoverFine() {
       return hoverFine;
+    },
+    watchHoverFine(callback) {
+      hoverFineWatchers.add(callback);
+      return () => {
+        hoverFineWatchers.delete(callback);
+      };
     },
   };
 }

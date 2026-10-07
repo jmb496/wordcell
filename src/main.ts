@@ -131,6 +131,7 @@ async function boot(): Promise<void> {
     setTimer: (callback, ms) => setTimeout(callback, ms),
     clearTimer: (handle) => clearTimeout(handle),
     hoverFine: () => layout.hoverFine,
+    watchHoverFine: (callback) => layout.watchHoverFine(callback),
   });
   game.registerBeforeHide(() => controller.cancel());
   game.registerBeforeHide(() => gate.scrollReset());

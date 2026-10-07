@@ -77,7 +77,9 @@
 // crossing closes it there. Suppression is one `[data-wordcell]` slot: the cell whose rect holds
 // the last mouse point, set at every mouse press end, fly-back settle and cancel(), so boundary
 // pointerovers into it never arm until a pointerout leaves it. cancel() (idle too), detach and
-// `refreshHover()` with `hoverFine` false clear the timer and close the hover peek.
+// `refreshHover()` with `hoverFine` false clear the timer and close the hover peek; while attached,
+// `deps.watchHoverFine` runs `refreshHover()` at every hoverFine change. An entry into another cell
+// closes an open hover peek first (a removed node sends no pointerout).
 import { flushSync } from 'svelte';
 import { game } from '../../shell/game.svelte';
 import { prefs } from '../../shell/prefs.svelte';
@@ -104,6 +106,8 @@ export type ControllerDeps<H> = {
   clearTimer(handle: H): void;
   /** Entry 12: live `(hover: hover) and (pointer: fine)` (layout.hoverFine). */
   hoverFine(): boolean;
+  /** Entry 12: calls `callback` at every hoverFine change (layout.watchHoverFine); returns the unwatch. */
+  watchHoverFine(callback: () => void): () => void;
 };
 
 export type CancelOptions = { readonly byBack?: boolean };
@@ -839,9 +843,11 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
   function hoverEnter(event: PointerEvent): void {
     const cellEl = cellOf(event.target);
     if (cellEl === null || !outside(cellEl, event.relatedTarget)) return;
+    const n = attribute(cellEl, 'data-wordcell');
+    // Entering another cell closes its hover peek even with no pointerout from it.
+    if (overlays.hoverPeek !== null && overlays.hoverPeek !== n) overlays.closeHoverPeek();
     if (!deps.hoverFine() || press !== null || flying !== null || event.buttons !== 0) return;
     if (cellEl === suppressed) return;
-    const n = attribute(cellEl, 'data-wordcell');
     if (overlays.hoverPeek === n || cellCards(n) === 0) return;
     stopHoverTimer();
     hoverTimer = { handle: deps.setTimer(() => onHoverTimer(n), LONG_PRESS_MS), cellEl };
@@ -917,10 +923,12 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     for (const type of LISTENED) {
       next.addEventListener(type, handlers[type] as EventListener, { passive: false });
     }
+    const unwatch = deps.watchHoverFine(refreshHover);
     let attached = true;
     return () => {
       if (!attached) throw new Error('AD-12 detach() called twice');
       attached = false;
+      unwatch();
       cancel();
       swallower.disarm();
       for (const type of LISTENED) {

@@ -225,6 +225,17 @@ describe('AD-11 live layout', () => {
     expect(t.layout.hoverFine).toBe(false);
   });
 
+  it('AD-11 watchHoverFine runs its callback after every media change, with hoverFine already set, until unwatched', () => {
+    const t = setup({ ...PIXEL_7, innerHeight: 915 });
+    const seen: boolean[] = [];
+    const unwatch = t.layout.watchHoverFine(() => seen.push(t.layout.hoverFine));
+    t.flipMedia(true);
+    t.flipMedia(false);
+    unwatch();
+    t.flipMedia(true);
+    expect(seen).toEqual([true, false]);
+  });
+
   it('AD-11 a hoverFine flip and flip-back before idle changes nothing', () => {
     const t = setup({ ...PIXEL_7, innerHeight: 915 });
     const heights = t.layout.heights;

@@ -31,11 +31,9 @@ const board = $derived(game.view);
 
 // Entry 7 (SPEC CAP-6): one reaction recomputes the desktop hover classes at the last pointer
 // point whenever the selection or the GameView changes (tap, drop, Undo, Redo, Reload, back).
-// Entry 12: it is also the hoverFine watcher; refreshHover() closes the hover peek once false.
 $effect(() => {
   void overlays.selection;
   void game.view;
-  void layout.hoverFine;
   controller.refreshHover();
 });
 

@@ -542,6 +542,13 @@ async function box(
   return b;
 }
 
+// Ticket Layout: the content-sized width min(count, 7)·(w + 4) − 4 + 32, w a rendered face's width.
+async function expectPeekWidth(page: Page, count: number): Promise<void> {
+  const w = (await box(peekMirrors(page).first().locator('.face'))).width;
+  const peek = await box(hoverPeek(page));
+  expect(Math.abs(peek.width - (Math.min(count, 7) * (w + 4) - 4 + 32))).toBeLessThanOrEqual(1);
+}
+
 // The board column: the WordCell unit's track spans it (--wc-board wide).
 const boardColumn = (page: Page) => box(page.locator('.track[data-band="wordcells"]'));
 
@@ -639,6 +646,15 @@ test.describe('desktop', () => {
     await expect(hoverPeek(page).locator('.top-tag')).toHaveCount(1);
     await expect(hoverPeek(page)).toContainText('+10 older cards');
     await expect(hoverPeek(page).locator('[data-card-id], [data-testid]')).toHaveCount(0);
+    await expectPeekWidth(page, 14);
+    const tops = await peekMirrors(page).evaluateAll((els) =>
+      els.map((el) => Math.round(el.getBoundingClientRect().top)),
+    );
+    expect([...new Set(tops)]).toHaveLength(2);
+    expect(tops.filter((top) => top === tops[0])).toHaveLength(7);
+    const older = await box(hoverPeek(page).locator('.older'));
+    const first = await box(peekMirrors(page).first());
+    expect(older.y + older.height).toBeLessThanOrEqual(first.y);
     await expect(scrim(page)).toHaveCount(0);
     await expect(sheet(page)).toHaveCount(0);
     const peek = await box(hoverPeek(page));
@@ -669,6 +685,7 @@ test.describe('desktop', () => {
       ),
     ).toEqual(cards);
     await expect(hoverPeek(page)).not.toContainText('older');
+    await expectPeekWidth(page, 7);
     const peek = await box(hoverPeek(page));
     const anchor = await box(label(page, 8));
     const column = await boardColumn(page);
@@ -897,6 +914,12 @@ test.describe('desktop', () => {
     await page.clock.runFor(600);
     await expect(hoverPeek(page)).toHaveCount(0);
     await expectNoViewPaused(page);
+    // R-75: viewing a WordCell stays available in Game over.
+    expect(await cellCards(page, 7)).toHaveLength(7);
+    await hoverCell(page, 7);
+    await page.clock.runFor(400);
+    await expect(hoverPeek(page)).toBeVisible();
+    await expect(peekMirrors(page)).toHaveCount(7);
     await unchanged();
   });
 
