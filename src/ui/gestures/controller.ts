@@ -529,7 +529,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     if (root === null) throw new Error('AD-12 peek release without a root');
     const area = root.querySelector('[data-view-scroll]');
     if (area === null) throw new Error('AD-12 peek release without a rendered [data-view-scroll]');
-    if (area.scrollHeight > area.clientHeight) overlays.peekToSticky();
+    if (area.scrollHeight - area.clientHeight > 1) overlays.peekToSticky();
     else overlays.closePeek();
   }
 

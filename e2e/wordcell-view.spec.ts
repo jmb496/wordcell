@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
+import { EN, view } from '../src/engine/index';
 import { expectLeaves, wc } from './helpers/dialogs';
 import { animationFrames } from './helpers/lifecycle';
 import { booted } from './helpers/restore';
@@ -48,10 +49,6 @@ const wcOf = async (page: Page) => (await wc(page))?.wc;
 
 const overflows = (page: Page) =>
   scrollArea(page).evaluate((el) => el.scrollHeight > el.clientHeight);
-
-// The WordCell's card count from the DOM: its live cards plus a used top's mirror.
-const cellCount = (page: Page, n: number) =>
-  cell(page, n).locator('[data-place="cell"], [data-mirror-of]').count();
 
 // The non-empty WordCells, in cell order.
 function filledCells(page: Page): Promise<number[]> {
@@ -237,23 +234,24 @@ test.describe('android', () => {
     await unchanged();
   });
 
-  test('R-65 R-33 the used cell’s peek in Place shows its cards bottom first, the top unhatched and tagged top, titled with cards.length', async ({
+  test('R-65 the used cell’s peek in Place shows its cards bottom first, the top unhatched and tagged top, titled with cards.length', async ({
     page,
   }) => {
     await openFixture(page, 'session-place-free-letter-redo-tail');
-    const used = Number(
-      await page.locator('[data-wordcell]:has(.used)').getAttribute('data-wordcell'),
-    );
-    const count = await cellCount(page, used);
-    // WordCellRow renders the cell bottom → top: live cards, then a used top's mirror.
-    const order = await page
-      .locator(`[data-wordcell="${used}"]`)
-      .evaluate((el) =>
-        [...el.querySelectorAll('[data-place="cell"], [data-mirror-of]')].map(
-          (c) => c.getAttribute('data-card-id') ?? c.getAttribute('data-mirror-of'),
-        ),
-      );
-    expect(order).toHaveLength(count);
+    // The expected cards come from engine data: `view()` over the store's Session (AD-17 hook).
+    const session = await page.evaluate(() => {
+      const current = window.__wordcell?.current();
+      if (current?.kind !== 'active') throw new Error(`store is ${current?.kind}`);
+      return current.session;
+    });
+    const usedCells = view(session, EN).cells.filter((c) => c.used);
+    expect(usedCells).toHaveLength(1);
+    const used = usedCells[0].cell;
+    const order = usedCells[0].cards.map(String);
+    const count = order.length;
+    expect(
+      Number(await page.locator('[data-wordcell]:has(.used)').getAttribute('data-wordcell')),
+    ).toBe(used);
     const unchanged = await stash(page);
     await holdPeek(page, used, async () => {
       await expect(sheet(page)).toHaveAccessibleName(
