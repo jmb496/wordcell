@@ -1,6 +1,6 @@
 # Review log — story-refactor-sweep.md (ticket 4.13)
 
-State: pass 3: done
+State: pass 4: done
 
 - Mode: docs, thorough, max 7, budget 1500 words
 - Pre-loop: HEAD 149fa80; pass 0 copy story-refactor-sweep.review-log.passes/pass0.md, 226 words
@@ -97,3 +97,26 @@ Words (docs): 1921 (8.5x pass 0; over budget: majors +239, minors −1)  |  Snap
 - none
 
 Fixer: all 8 majors and 8 minors applied (minors net −1 word); SELF, tsconfig entries and the 15/18 AD-1 describe count checked against the repo; the watch-run proxy clause was cut in favour of a working-tree copy and `touch` (design statement).
+
+## Pass 4 — 2026-10-07
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 6, minor 10 (word-neutral only), decision-needed 0 new (D7 still open)  |  Dropped in triage: 0 (about 26 raw merged)
+Words (docs): 2006 (8.9x pass 0; majors +86, minors and cuts −1)  |  Snapshot: story-refactor-sweep.review-log.passes/pass4.md, fix diff pass4.fix.diff
+### Applied (fixer items)
+- [major] AC "unedited except imports" fails a split build → 1
+- [major] screenshot gate: green with no baseline change; fallback holder = epic merge gate → 2
+- [major] split one-third cap unmeetable (tree scan 790 ms ≈ 48 %, measured) → 3
+- [major] D18 recovery always-true for an uncaptured press → 4
+- [major] D1 vs Flakes still contradict; run counting → 5
+- [major] median location (/mnt/d) vs watch copy → 6
+- [minor] 7–16 (word-neutral only)
+### Default applied (technical)
+- split — by describe blocks, tree scan alone, per-file times recorded
+- D18 — uncaptured press keeps same-id recovery, Out → epic 7
+- screenshot fallback — epic merge gate (Done when 1, 6), open item at mark-done
+- median — /mnt/d checkout
+### Decision needed (functionality / UX / gameplay)
+- none new (D7 remains open)
+### Dropped
+- none
+
+Fixer: 6 majors applied; minors 7–13, 15, 16 applied word-neutral; 14 (D17 cleanup wording) skipped for words. No commands added.
