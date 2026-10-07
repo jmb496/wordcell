@@ -1,5 +1,5 @@
 # Review loop — ticket 4.11 build (code mode, 69bf8b2..f97c288)
-State: pass 3: done
+State: pass 4: done (result written)
 
 Target: `_bmad-output/implementation-artifacts/review-loop/4-11-build.passes/pass0.diff` (git diff 69bf8b2..f97c288)
 Intent: `_bmad-output/initiative-wordcell-v1/epic-board-and-gestures/story-wordcell-peek-and-sticky-view-plan.md`
@@ -63,3 +63,30 @@ Snapshot: tree 2794145c4f2dce345d40b875767709cbe3a9ef55  |  Fix: items 1–5 app
 - WordCellView.svelte .sheet — below ~320 px viewport (board `wide`), the fixed sheet is wider than the viewport and cannot pan, so edge cards clip (R-65 "every card viewable"); candidate default `max-width: 100vw`, but it reflows the sheet's cards-per-row below 360 px, so it is left for the owner/epic 7 device pass
 ### Dropped
 - none
+
+## Pass 4 — 2026-10-07
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 1, minor 2, decision-needed 0  |  Dropped in triage: 0
+Snapshot: tree 2794145c4f2dce345d40b875767709cbe3a9ef55 (no fix pass; stopping rule met)
+### Applied
+- none (passes 3 and 4 each yielded at most one major: converged; the pass-4 major is recorded as open, not fixed)
+### Open major
+- plan `status: 'built'` / Auto Run Result Verification — the recorded complete `npm run test:all` run predates passes 2–3, which changed shipped code (controller.ts same-id `flushSync()`, pointerup branch, WordCellView `.title` rem, Card.svelte `.top-tag`); AGENTS.md gate needs a green test:all on the current tree recorded in the plan
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Result — converged after 4 passes
+open major: the plan's `status: 'built'` Verification line records a complete `npm run test:all` from the pass-1 state, not the final tree. The orchestrator then ran a complete `npm run test:all` on the final tree (041af96, tree 2794145): exit 0; lint clean, check 0 errors, unit 46 files / 1988 passed, build within size budget, dist 14 passed, e2e 349 passed, pwa 12 passed. The gate is met, but the plan's Verification line still needs that run recorded (a plan edit, outside the loop's no-unreviewed-fix rule).
+Majors per pass: 1, 3, 1, 1. Technical defaults applied: 3 (strict F14 overflow restored after a pass-1 regression; `flushSync()` before hit-testing after a same-id peek close; `.top-tag` 11px/1). Decision-needed: none.
+Final state (orchestrator run at 041af96): `npm test` 46 files, 1988 passed; `npm run lint` clean (169 files); `npm run check` 0 errors, 0 warnings.
+Not run: `npm run test:screens` (Docker unreachable from this WSL2 distro); the screenshot gate stays with CI/owner before done.
+
+Unapplied minors (for the next build or loop):
+1. src/ui/gestures/controller.ts contextmenu — a still long touch (≥ 400 ms) on the scrim/sheet is not `preventDefault`ed, so whether it closes the view (tap) or keeps it (pointercancel) is browser-defined (UX-adjacent).
+2. src/ui/WordCellView.svelte .scrim — desktop mouse-wheel over the scrim scrolls the board behind the sticky view (UX-adjacent).
+3. src/ui/WordCellView.svelte .sheet — below ~320 px viewport (board `wide`) the fixed sheet is wider than the viewport and cannot pan, so edge cards clip (R-65); candidate `max-width: 100vw`, left for the owner/epic 7 device pass.
+4. e2e/tap.spec.ts 'R-14 a non-empty WordCell long-press peeks while held and keeps the selection' — the only P4 proof of R-65's "peek in Idle with a tail selected" lacks R-65/Q-21 in its name and the Session/storage/Undo-Redo unchanged and wc-while-held checks.
+5. e2e/wordcell-view.spec.ts 'R-65 a 20 px scrim drag keeps the sticky view' — does not assert the drag starts on the scrim (elementFromPoint has `data-view-scrim`).
