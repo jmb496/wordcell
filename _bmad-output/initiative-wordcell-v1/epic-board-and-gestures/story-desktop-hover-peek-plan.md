@@ -3,7 +3,7 @@ title: 'Desktop hover peek'
 type: 'feature'
 ticket: '12'
 created: '2026-10-07'
-status: 'built'
+status: done
 baseline_revision: 'fa088cd76b05c30e8e930f873a7e309a003ee47b'
 route: 'full'
 route_source: 'auto'
