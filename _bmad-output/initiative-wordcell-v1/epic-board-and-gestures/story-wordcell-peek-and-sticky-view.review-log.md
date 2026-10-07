@@ -1,6 +1,6 @@
 # Review log — story-wordcell-peek-and-sticky-view.md (ticket 4.11)
 
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7, budget default (2.5x pass 0). Pass 0: HEAD 9581f2a, copy story-wordcell-peek-and-sticky-view.passes/pass0.md, 409 words. Intent includes tickets.toml entry 11 fields interface, tests, owns, unknown (not copied at pull; fixer adds them to the Description in pass 1); copy at story-wordcell-peek-and-sticky-view.passes/intent-tickets-toml-11.md.
 
@@ -28,3 +28,37 @@ Words (docs): 1156 (2.83x pass 0, over the 2.5x budget: from pass 2 a minor goes
 - duplicate reports of the same missing-AC cases, the peek title and the ValidName/PROPERTIES gap across lenses (kept the clearest wording)
 ### Fixer outcome
 - all 16 items applied (no conflicts); no commands or tool claims added; fix diff story-wordcell-peek-and-sticky-view.passes/pass1.fix.diff
+
+## Pass 2 — 2026-10-07
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 7, minor 11 (2 word-neutral sent to the fixer, 9 deferred over budget), decision-needed 0  |  Dropped in triage: 2 (duplicates)
+Words (docs): 1232 (3.01x pass 0)  |  Snapshot: story-wordcell-peek-and-sticky-view.passes/pass2.md
+### Applied
+- [major] Description/AC — cancel() and the hide flush under a peek turned sticky above a selection must keep the view too (entry depth unchanged, no nav call), else closing the view first silences the hazard untested → fixer item 1
+- [major] AC — R-65 "the view does not enter the move history": Undo/Redo enablement unchanged not asserted (rule-coverage R-65 row) → fixer item 2
+- [major] Description — swallower target and suppression unspecified; a wrong guess (preventDefault only, listener on the scrim) fails the gating scrim-over-Undo case → fixer item 3 (default applied)
+- [major] Description — "cannot reach their handlers" holds for pointer presses only; keyboard activation of a focused Undo/Redo/Reload behind a sticky view above a selection throws in deselect() → fixer item 4 (default applied)
+- [major] AC — scrim tap over Undo proven on android only; the mouse path needs desktop (epic AC: desktop for mouse behaviour) → fixer item 5
+- [major] AC — the singular F27 title is unreachable in play and untested; text.ts title needs UI Vitest cases → fixer item 6
+- [major] Description — a press ended by a same-id pointerdown leaves the peek open (controller end() closes it only for cancel/pointercancel/lostCapture); next long-press throws → fixer item 7
+- [minor, no words] AC — "four board baselines" are eight files (four phases × android, desktop) → fixer item 8
+- [minor, no words] AC — "pinned … e.g. 412 × ~320" pins nothing → fixer item 9
+### Default applied (technical)
+- swallower: armed on the controller's attach root, capture phase, stopPropagation + preventDefault on the swallowed click; the controller's detach disarms it
+- keyboard under the sticky view: the content outside WordCellView is `inert` while the sticky view is open
+### Decision needed (functionality / UX / gameplay)
+- none
+### Deferred minors (over budget; for the build plan)
+- how the controller recognises sheet/scrim presses (plain data attributes, checked before data-place resolution)
+- sheet locator: role="dialog" named by its F27 title; scrim hit by coordinates
+- a missing scroll area at a long-press release throws (rule 6), never silently closes
+- the short overflow viewport: scroll the WordCell row into view before the hold
+- assertion surface for "tagged top" (visible tag text) and "unhatched" (absence of the used-state class)
+- overscroll on the sheet root and the title, wheel over the scrim
+- intent.ts Hit wordcell gains its cell and a view action; Hit gains sheet/scrim kinds
+- double tap on a WordCell: second tap closes the view (no Dialog-style guard)
+- UI Vitest case drives the controller release path with a fake scroll area; cancel() is the before-hide hook, also cancel({ byBack: true })
+- AD-13 "peek turned sticky above a kept selection" is P4 + S in rule-coverage; no Idle fixture overflows, so the plan records S only and close-out notes it
+### Dropped
+- duplicate Undo/Redo enablement and swallower-target reports
+### Fixer outcome
+- all 9 items applied (no conflicts; DESIGN.md sheet sizing detail cut to the reference, -9 words); no commands or tool claims added; fix diff story-wordcell-peek-and-sticky-view.passes/pass2.fix.diff
