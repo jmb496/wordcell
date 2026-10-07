@@ -1,6 +1,6 @@
 # Review log — story-desktop-hover-peek.md (ticket 4.12)
 
-State: pass 5: done
+State: pass 6: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD 7c21189, copy story-desktop-hover-peek.passes/pass0.md, 265 words. Intent includes tickets.toml entry 12 fields interface, tests, owns (not copied at pull; fixer adds them to the Description in pass 1); copy at story-desktop-hover-peek.passes/intent-tickets-toml-12.md.
 
@@ -116,3 +116,31 @@ Words (docs): 1636 (6.17x pass 0; over budget by the major's 8 words, minors net
 - hidden until first placement, .board-root-relative coordinates — plan detail
 ### Fixer outcome
 - all 13 items applied, room made by tightening the Description pointers, layer-order and scroll sentences and the Verify summary (no rule or test dropped); checked in src: LONG_PRESS_MS = 400 (classify.ts), .count pointer-events none, track() mouse-only lastPoint, blocking.spec.ts install/pauseAt/runFor; unverified: the controller-added hide class name (left to the build) and the event.buttons check (the controller does not read buttons today); fix diff story-desktop-hover-peek.passes/pass5.fix.diff
+
+## Pass 6 — 2026-10-07
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 0, minor 17, decision-needed 0  |  Dropped in triage: 1 (stretch: a click before 400 ms suppresses the cell, as specified by build-notes)
+Words (docs): 1636 (no fix pass)  |  Snapshot: story-desktop-hover-peek.passes/pass5.md
+### Applied
+- none (converged)
+### Reclassified
+- hoverFine-change close has no mechanism or test (adversarial: major) → minor: a device losing hover while hovering a cell is an unlikely corner case with obvious handling (the plan names the watcher, e.g. App.svelte's refreshHover reaction reading layout.hoverFine, and adds one Vitest)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- a click before the 400 ms fire suppresses that cell until re-entry — follows build-notes "any pointerdown cancels the timer"; as specified
+
+## Result — converged after 6 passes
+
+Majors per pass: 7, 6, 6, 3, 1, 0. No open major. No decision-needed items.
+
+Unapplied minors (for the build plan):
+- "Starts a drag": a pick-up drag calls closeHoverPeek() at its end on any path (pointerup, pointercancel, lostpointercapture, cancel()), not only "at release"; every inert drag (WordCell, inert column or S-ghost in Composing/Game over) closes at the crossing, per build-notes CAP-9.
+- Timer: name the hoverFine watcher (e.g. App.svelte's refreshHover reaction reads layout.hoverFine) and add an AD-12 Vitest that an open hover peek closes when hoverFine flips false; the getter is the live media-query value, path src/ui/layout/layout.svelte.ts.
+- Timer: cancel() closes the hover peek and sets suppression even when no press is held (controller.ts cancel() returns early when idle today).
+- Timer: suppression is a single slot (replaced by each press end, fly-back end or cancel(); none when the last mouse point is in no cell); an entry's relatedTarget "outside (or null)".
+- AC: one Vitest for a mouse pointerover with buttons ≠ 0 and no controller press → no arm.
+- AC: vertical placement checks with 1 px tolerance (above: bottom ≤ label top + 1; below: top ≥ cell bottom − 1).
+- Layout: derive placement reactively from layout metrics and the card count instead of the enumerated re-place triggers; the root renders only while the hover-peek state is set (so the hide class cannot outlive a close).
+- Layout: the content-sized width and view-sheet surface are a technical default (not stated by DESIGN.md View sheet); the below branch overriding DESIGN.md "clamped inside the board" applies only to dev ?bands= orders — list both for the build-notes close-out DESIGN.md edits.
+- Description: "above them only above 14 cards" → "above them only when the cell holds more than 14 cards".
+- AC: the plan verifies session-won cell 7 (21) and cell 8 (7) counts from the replayed fixture (pass 1 probe reported 24/21/7).
