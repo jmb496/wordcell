@@ -17,3 +17,6 @@ The last ticket of the epic, 4.13 (Refactor sweep), went through 7 rounds of rev
 How to resume: put your answer in row D7 of `_bmad-output/initiative-wordcell-v1/epic-board-and-gestures/story-refactor-sweep.md` (replace "Owner decision pending"), commit, and rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-board-and-gestures`. It goes straight to the build.
 
 Close-out docs so far: none from owner decisions. If you choose the fix, ARCHITECTURE-SPINE.md AD-12 (drop targeting by "whole hit rect") changes at the retrospective. The 4.12 build notes also list two DESIGN.md wording edits made by technical default (hover peek width and its below-the-row placement in the dev band-order mode).
+
+## Resolved
+Owner, 2026-10-07: D7 fix now (SPEC F34); D7 cell updated, AD-12 close-out note in build-notes.md. Rerun the driver: it goes to the build.

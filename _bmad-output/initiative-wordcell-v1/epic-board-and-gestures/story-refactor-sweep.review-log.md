@@ -178,3 +178,6 @@ Unapplied minors (for the build's plan):
 - missing residuals: 4.9 Android pointercancel-before-back (epic 7), 4.3 ghost-fill owner glance and D-block seam (pass 3)
 - D14: a building home rather than the retrospective (pass 4)
 - word budget: 2073 vs 1500; procedure detail (re-measure method, D1 counting) can move to the plan
+
+## Owner decision — D7 (2026-10-07)
+Fix now (the proposed default): only the visible part of each column is a drop target; recorded as SPEC.md F34, ticket D7 cell, build-notes.md spine close-out (AD-12).
