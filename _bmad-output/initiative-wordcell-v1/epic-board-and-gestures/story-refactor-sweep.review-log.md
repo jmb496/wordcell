@@ -1,6 +1,6 @@
 # Review log — story-refactor-sweep.md (ticket 4.13)
 
-State: pass 2: done
+State: pass 3: done
 
 - Mode: docs, thorough, max 7, budget 1500 words
 - Pre-loop: HEAD 149fa80; pass 0 copy story-refactor-sweep.review-log.passes/pass0.md, 226 words
@@ -68,3 +68,32 @@ Words (docs): 1683 (7.4x pass 0; over the 1500 budget, so later minors only if w
 - none
 
 Fixer: all 17 applied (new rows D16–D20; D7 disposition marked owner decision pending); citations and tsconfig entries checked; no new runnable commands.
+
+## Pass 3 — 2026-10-07
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 8, minor 8 sent (word-neutral only) + others left, decision-needed 0 new (D7 still open)  |  Dropped in triage: 0 (about 33 raw merged)
+Words (docs): 1921 (8.5x pass 0; over budget: majors +239, minors −1)  |  Snapshot: story-refactor-sweep.review-log.passes/pass3.md, fix diff pass3.fix.diff
+### Applied (fixer items)
+- [major] D17 rule catches presses whose long-press fired → 1
+- [major] D18 new-pointerId recovery contradicts CAP-4 one-pointer rule → 2
+- [major] D7 pending: no rule for a build without the owner answer → 3
+- [major] D1 vs Flakes contradiction; unbounded reset → 4
+- [major] D20 no outcome if reachable; 4-7 deselect carry missing → 5
+- [major] split: shared scanner code has no home → 6
+- [major] "before any other speed-up" vs CAP-10 → 7
+- [major] D9 production edits and either/or defaults unstated; 4-1 minor 3 → 8
+- [minor] 9–16 (word-neutral only: clone procedure cut, Description guard wording, R7 helpers, D12 → epic 5, D15 wording, D6 edge, D1 sources, Out-row carry-forward)
+### Default applied (technical)
+- D18 — recover only a provably dead press; else owner stop
+- D20 — if reachable: no throw, F28 restore, deselect skipped under a view
+- split — shared code in one root module (e.g. src/architecture-scan.ts), balanced AD-1 split
+- D9 — first-named log default; 4-1 minor 3 folded into the 4.4 sub-pixel tolerance item
+### Decision needed (functionality / UX / gameplay)
+- none new (D7 from pass 2 remains open)
+### Unapplied minors (over budget, not word-neutral)
+- R6 loaded()/load() guard messages: say whether the snapshot helper takes caller messages (adversarial)
+- missing residual rows: 4.6 plan main.ts registration test gap, 4.9 Android pointercancel-before-back (epic 7), 4.3 ghost fill owner glance and D-block seam (ref alignment)
+- re-measure: whether the watch file is re-chosen after a split (edge-case)
+### Dropped
+- none
+
+Fixer: all 8 majors and 8 minors applied (minors net −1 word); SELF, tsconfig entries and the 15/18 AD-1 describe count checked against the repo; the watch-run proxy clause was cut in favour of a working-tree copy and `touch` (design statement).
