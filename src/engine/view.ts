@@ -72,6 +72,8 @@ export interface DraftView {
   readonly k: number;
   readonly side: DestinationSide;
   readonly arrangement: readonly CardId[];
+  /** R-30 word order (D before M on the left, D reversed after M on the right). */
+  readonly wordCards: readonly CardId[];
   /** Move order (D8). */
   readonly freeLetters: readonly WordCellNumber[];
   /** R-30 word, R-37 lowercase spelling. */
@@ -145,6 +147,7 @@ function draftData(position: Position, draft: Move, lang: LangData) {
     remainder,
     source: sourceCards(position, draft),
     destination,
+    cards,
     spelling,
     count: wordLetterCount(cards, lang),
   };
@@ -236,6 +239,7 @@ export function viewFrom(start: Start, session: Session, lang: LangData): GameVi
       k,
       side: draft.destinationSide,
       arrangement: [...draft.arrangement],
+      wordCards: [...data.cards],
       freeLetters: [...draft.freeLetters],
       word: data.spelling,
       letterCount: count,

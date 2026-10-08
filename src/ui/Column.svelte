@@ -30,6 +30,8 @@ import { text } from './text';
 // `wc-selection-suppressed` on App's `<main>`; under it the old selection's lift, outline, `Here`
 // and every foot's source/target paint are cancelled (visual properties only: hit rects and the
 // foot row's `touch-action` stay, AD-11, AD-12); dragged faces are never affected.
+// Epic 5 entry 1 (A9 4.3-m3, AD-14): cards are keyed by id plus mirror kind, so a live ↔ ghost
+// switch remounts the node instead of moving `data-card-id` onto a mirror.
 let {
   column,
   faces,
@@ -51,6 +53,8 @@ let {
 const last = $derived(column.cards.length - 1);
 const inSource = (id: number) => draft?.source.includes(id) === true;
 const inDestination = (id: number) => draft?.destination.includes(id) === true;
+/** S slots in Composing and Place, D slots in Place (DESIGN.md Card ghost). */
+const isGhost = (id: number) => inSource(id) || (phase === 'place' && inDestination(id));
 const placeholder = $derived(
   column.cards.length === 0 ||
     (phase === 'composing' &&
@@ -79,8 +83,8 @@ const liftStart = $derived(column.cards.length - count);
     style:--wc-lift={source ? 'var(--wc-select-lift)' : '0px'}
   >
     <div class="placeholder" class:shown={placeholder} data-placeholder></div>
-    {#each column.cards as id, i (id)}
-      {@const ghost = inSource(id) || (phase === 'place' && inDestination(id))}
+    {#each column.cards as id, i (`${id}-${isGhost(id) ? 'ghost' : 'live'}`)}
+      {@const ghost = isGhost(id)}
       <Card
         {id}
         face={faces[id] as Face}

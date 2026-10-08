@@ -225,6 +225,7 @@ describe('GameView fields', () => {
       k: 1,
       side: 'left',
       arrangement: [48],
+      wordCards: [0, 48],
       freeLetters: [],
       word: 'aw',
       letterCount: 2,
@@ -238,6 +239,7 @@ describe('GameView fields', () => {
       k: 1,
       side: 'left',
       arrangement: [48, 28],
+      wordCards: [26, 48, 28],
       freeLetters: [3],
       word: 'mwn',
       letterCount: 3,
@@ -253,6 +255,38 @@ describe('GameView fields', () => {
     expect(v(play(left, [FLIP])).draft?.word).toBe('watajequ');
     expect(v(MIDDLE).draft?.word).toBe('jataw');
     expect(v(MIDDLE_RIGHT).draft?.word).toBe('wataj');
+  });
+
+  it('R-30 R-36 R-37 wordCards: D then M on the left, M then D reversed on the right; QU is one card of 2 letters spelt qu', () => {
+    const left = v(play(K1, [setK(6)])).draft;
+    expect(left?.wordCards).toStrictEqual([35, 8, 21, 2, 42, 0, 48]);
+    expect(left?.word).toBe('quejataw');
+    expect(left?.letterCount).toBe(8);
+    expect(left?.wordCards.map((card) => LANG.letters[card]).join('')).toBe('QUEJATAW');
+    const right = v(play(K1, [setK(6), FLIP])).draft;
+    expect(right?.wordCards).toStrictEqual([48, 0, 42, 2, 21, 8, 35]);
+    expect(right?.word).toBe('watajequ');
+    expect(right?.letterCount).toBe(8);
+    expect(v(MIDDLE_RIGHT).draft?.wordCards).toStrictEqual([48, 0, 42, 2, 21]);
+  });
+
+  it('R-30 wordCards at k = 0 is the arrangement', () => {
+    for (const session of [K0_SELF, K0_EMPTY]) {
+      const draft = v(session).draft;
+      expect(draft?.k).toBe(0);
+      expect(draft?.wordCards).toStrictEqual(draft?.arrangement);
+    }
+  });
+
+  it('R-30 Place keeps wordCards in word order after setPlacementOrder to a non-word order', () => {
+    const place = play(FRESH, [drop(3, 5, 3), VALIDATE], ['quejata']);
+    const wordOrder = [35, 8, 21, 2, 42, 0];
+    expect(v(place).draft?.wordCards).toStrictEqual(wordOrder);
+    const order = [8, 21, 2, 42, 0, 35];
+    const reordered = v(play(place, [{ type: 'setPlacementOrder', order }]));
+    expect(reordered.place?.placementOrder).toStrictEqual(order);
+    expect(reordered.draft?.wordCards).toStrictEqual(wordOrder);
+    expect(reordered.draft?.word).toBe('quejata');
   });
 
   it('AD-3 every word string is lowercase with QU as "qu"', () => {

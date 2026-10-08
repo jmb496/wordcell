@@ -70,3 +70,16 @@ export function sameSession(page: Page): Promise<boolean> {
     return current.session === window.__pointerSession;
   });
 }
+
+// The tray band's live cards and mirrors in DOM order, a mirror as `<id>m` (AD-14).
+export function trayIds(page: Page): Promise<string[]> {
+  return page
+    .locator('[data-band="tray"] :is([data-card-id], [data-mirror-of])')
+    .evaluateAll((els) =>
+      els.map((el) =>
+        el.hasAttribute('data-mirror-of')
+          ? `${el.getAttribute('data-mirror-of')}m`
+          : (el.getAttribute('data-card-id') ?? ''),
+      ),
+    );
+}

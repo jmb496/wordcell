@@ -62,3 +62,23 @@ describe('AD-13 F27 WordCell view text', () => {
     expect(text.olderCards(10)).toBe('+10 older cards');
   });
 });
+
+describe('AD-3 tray text', () => {
+  it('AD-3 letters(1) reads 1 letter', () => {
+    expect(text.letters(1)).toBe('1 letter');
+  });
+
+  it('AD-3 letters(5) reads 5 letters', () => {
+    expect(text.letters(5)).toBe('5 letters');
+  });
+
+  it('AD-3 the invalid-word split rejoins with one space to invalidWord', () => {
+    expect(text.invalidWordSuffix).toBe("isn't in the word list.");
+    for (const word of ['tan', 'quit']) {
+      const [upper, suffix] = text.invalidWordParts(word);
+      expect(upper).toBe(word.toUpperCase());
+      expect(suffix).toBe(text.invalidWordSuffix);
+      expect(`${upper} ${suffix}`).toBe(text.invalidWord(word));
+    }
+  });
+});

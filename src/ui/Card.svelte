@@ -25,6 +25,7 @@ let {
   lifted = false,
   remainderTop = false,
   topTag = false,
+  tag,
 }: {
   id: CardId;
   face: Face;
@@ -44,6 +45,8 @@ let {
   remainderTop?: boolean;
   /** Entry 11: the view's top card, tagged `top` (DESIGN.md WordCell view). */
   topTag?: boolean;
+  /** Epic 5 entry 1: a free-letter tile's origin WordCell, in the bottom band, left (DESIGN.md Tile). */
+  tag?: number;
 } = $props();
 
 // DESIGN.md Card: `QU` is set as `Qu` with the ×2 badge (Q-06).
@@ -77,6 +80,7 @@ const inView = $derived.by(() => {
   class:lifted
   class:remainder-top={remainderTop}
   class:view={inView}
+  class:tagged={tag !== undefined}
   style:--tile-w={tile ? `${tile.width}px` : undefined}
   data-card-id={mirror ? undefined : id}
   data-testid={mirror ? undefined : `card-${id}`}
@@ -94,6 +98,7 @@ const inView = $derived.by(() => {
       {/if}
       <span class="glyph" class:qu>{glyph}</span>
       {#if qu}<span class="badge">{text.quBadge}</span>{/if}
+      {#if tag !== undefined}<span class="tag">{tag}</span>{/if}
     {/if}
   </div>
   {#if topTag}<span class="top-tag">{text.viewTop}</span>{/if}
@@ -142,6 +147,15 @@ const inView = $derived.by(() => {
     font: 700 11px/1 system-ui, "Roboto", sans-serif;
   }
 
+  /* DESIGN.md Tile: a free-letter origin tag (card-badge, 11 px) in the bottom band, left; the
+     flourish is omitted on a tagged tile. */
+  .tag {
+    position: absolute; left: 4px; top: 72%; height: 28%;
+    display: flex; align-items: center;
+    font: 700 11px/1 system-ui, "Roboto", sans-serif; color: var(--wc-card-ink);
+  }
+  .tagged .face::after { content: none; }
+
   /* DESIGN.md Tile: a card face tileWidth wide in a tile-pitch wrapper (F26 hit rect). */
   .card.tile { width: calc(var(--tile-w) + 4px); height: var(--wc-H); }
   .tile .face { width: var(--tile-w); }
@@ -164,6 +178,10 @@ const inView = $derived.by(() => {
   .lock .shackle { fill: none; stroke: var(--wc-destination); stroke-width: 1.5; }
   .destination .badge,
   .block .badge { top: 0; right: 0; }
+  /* A9 4.3-m4: a block face that is not a segment end is widened past its tile (overlap, no right
+     border), so its badge sits 5 px in from the face edge: right edge at wrapper x + tileWidth on
+     every block tile, as on the end tile (face to x + tileWidth + 2, 2 px border). */
+  .block:not(.end) .badge { right: 5px; }
   /* DESIGN.md Destination block: the D tiles joined over the 4 px gap, one outline per row
      segment; inner edges drop their side border and radius. */
   .block .face { width: calc(var(--tile-w) + 4px); margin: 0; border-radius: 0; }

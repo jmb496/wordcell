@@ -7,7 +7,8 @@ import Card from './Card.svelte';
 // in the `cellsRow` track under column n − 2 (A-D7), outside its label (F25). Every cell card is
 // a live Card (AD-14) in DOM order bottom → top, stacked; only the top one is visible, except a
 // `used` cell's top card, which is live in the tray or strip and drawn here as a used mirror
-// (R-33). States come from `CellView` and `view.place` (AD-3).
+// (R-33). States come from `CellView` and `view.place` (AD-3). Cards are keyed by id plus mirror
+// kind (A9 4.3-m3, AD-14), so a live ↔ used switch remounts the node.
 let {
   cells,
   faces,
@@ -50,7 +51,7 @@ const inPlace = $derived(place !== undefined);
     style:grid-column={cell.cell - 2}
     style:grid-row={cellsRow}
   >
-    {#each cell.cards as id, i (id)}
+    {#each cell.cards as id, i (`${id}-${i === top && cell.used ? 'used' : 'live'}`)}
       <Card
         {id}
         face={faces[id] as Face}

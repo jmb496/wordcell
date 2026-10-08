@@ -12,6 +12,7 @@ import {
   openFixture,
   sameSession,
   stashSession,
+  trayIds,
 } from './helpers/board';
 import { button, expectLeaves, hitAt, wc } from './helpers/dialogs';
 import { buildRoot } from './helpers/dist-test';
@@ -424,6 +425,15 @@ test.describe('board helpers', () => {
     expect(other.url()).toBe('about:blank');
     await expect(stashSession(other)).rejects.toThrow('store is undefined');
     await expect(sameSession(other)).rejects.toThrow('store is undefined');
+  });
+
+  test("AD-17 trayIds lists the tray band's live tiles and mirrors (`<id>m`) in DOM order; empty in Idle", async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-composing');
+    expect(await trayIds(page)).toEqual(['42', '0', '28m']);
+    await page.getByTestId('undo').click();
+    await expect.poll(() => trayIds(page)).toEqual([]);
   });
 });
 

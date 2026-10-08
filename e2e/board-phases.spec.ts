@@ -1,9 +1,9 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
-import { openFixture } from './helpers/board';
+import { openFixture, trayIds } from './helpers/board';
 import { tokenColor } from './helpers/style';
 
-// Epic 4 entry 3: every GameView board state rendered (AD-14 live vs mirror, F2 static tray,
-// R-22, R-30, R-33, R-42, R-73). Expected values are literals from view() over the fixtures
+// Epic 4 entry 3: every GameView board state rendered (AD-14 live vs mirror, tray tile order,
+// R-22, R-30, R-33, R-42, R-73; the tray's word line, tags and count are e2e/tray.spec.ts). Expected values are literals from view() over the fixtures
 // (seed 1), computed at planning (the ticket plan's I/O matrix); never edited to pass.
 
 test.beforeEach(() => {
@@ -32,19 +32,6 @@ async function expectSession(page: Page, cursor: Cursor): Promise<void> {
   await expect.poll(async () => (await read()).current.cursor).toEqual(cursor);
   const { stored, current } = await read();
   expect(stored).toEqual(current);
-}
-
-// Tray order: the live cards and mirrors inside the tray band in DOM order, a mirror as `<id>m`.
-function trayOrder(page: Page): Promise<string[]> {
-  return page
-    .locator('[data-band="tray"] :is([data-card-id], [data-mirror-of])')
-    .evaluateAll((els) =>
-      els.map((el) =>
-        el.hasAttribute('data-mirror-of')
-          ? `${el.getAttribute('data-mirror-of')}m`
-          : (el.getAttribute('data-card-id') ?? ''),
-      ),
-    );
 }
 
 function mirrorsIn(page: Page, scope: string): Promise<number[]> {
@@ -252,7 +239,7 @@ for (const state of STATES) {
       );
     }
 
-    expect(await trayOrder(page)).toEqual(state.tray);
+    expect(await trayIds(page)).toEqual(state.tray);
     const xs = await page
       .locator('[data-band="tray"] :is([data-card-id], [data-mirror-of])')
       .evaluateAll((els) => els.map((el) => el.getBoundingClientRect().left));
@@ -270,7 +257,7 @@ test('AD-14 (R-30) k = 2 right: the tray holds live 26 then D mirrors 1, 27; car
     booted: false,
   });
   await expectSession(page, { index: 2, phase: 'composing' });
-  expect(await trayOrder(page)).toEqual(['26', '1m', '27m']);
+  expect(await trayIds(page)).toEqual(['26', '1m', '27m']);
   const fill = await tokenColor(page, '--wc-destination-fill');
   for (const id of [27, 1]) {
     const card = page.getByTestId('column-6').getByTestId(`card-${id}`);
@@ -391,7 +378,7 @@ test('R-22 column 1 placeholder: shown when empty, hidden under Place ghosts, sh
   await expectSession(page, { index: 0, phase: 'place' });
   expect(await mirrorsIn(page, '[data-testid="column-1"]')).toEqual([24, 6, 49, 30, 25, 20, 48]);
   await expect(placeholder).toBeHidden();
-  expect(await trayOrder(page)).toEqual(COLUMN_1);
+  expect(await trayIds(page)).toEqual(COLUMN_1);
 
   await page.getByTestId('undo').click();
   await expectSession(page, { index: 0, phase: 'composing' });
@@ -399,7 +386,7 @@ test('R-22 column 1 placeholder: shown when empty, hidden under Place ghosts, sh
   await expect(placeholder).toBeVisible();
   const firstGhost = column1.locator('[data-mirror-of]').first();
   expect((await box(placeholder)).top).toBe((await box(firstGhost)).top);
-  expect(await trayOrder(page)).toEqual(COLUMN_1);
+  expect(await trayIds(page)).toEqual(COLUMN_1);
   for (const id of COLUMN_1) {
     await expect(page.getByTestId(`card-${id}`)).toHaveAttribute('data-place', 'tray');
   }
@@ -419,7 +406,7 @@ test('R-73 (UI) a reload re-renders session-composing: ghosts, destination style
     'background-color',
     await tokenColor(page, '--wc-destination-fill'),
   );
-  expect(await trayOrder(page)).toEqual(['42', '0', '28m']);
+  expect(await trayIds(page)).toEqual(['42', '0', '28m']);
   // Ghosts draw no glyph; the lock marks the live D card and the D-block mirror only.
   await expect(page.locator('[data-testid="column-3"] [data-mirror-of] .glyph')).toHaveCount(0);
   await expect(card28.locator('svg.lock')).toHaveCount(1);
@@ -434,7 +421,7 @@ async function expectRedoTailPlace(page: Page): Promise<void> {
   expect(await mirrorsIn(page, '[data-testid="column-4"]')).toEqual([32]);
   expect(await mirrorsIn(page, '[data-testid="column-6"]')).toEqual([9]);
   await expectUsedCell3(page);
-  expect(await trayOrder(page)).toEqual(['9', '32', '28']);
+  expect(await trayIds(page)).toEqual(['9', '32', '28']);
   await expectTarget(page, 3);
 }
 
@@ -454,7 +441,7 @@ test('R-73 (UI) a reload re-renders session-place-free-letter-redo-tail, and its
   expect(await mirrorsIn(page, '[data-testid="column-4"]')).toEqual([32]);
   await expect(page.getByTestId('column-6').getByTestId('card-9')).toHaveClass(/\bdestination\b/);
   await expectUsedCell3(page);
-  expect(await trayOrder(page)).toEqual(['32', '28', '9m']);
+  expect(await trayIds(page)).toEqual(['32', '28', '9m']);
 });
 
 test('R-70/R-71 Undo, Undo, Redo from session-place-free-letter-redo-tail re-renders moves[1] Composing with cell 3 used', async ({
@@ -467,14 +454,14 @@ test('R-70/R-71 Undo, Undo, Redo from session-place-free-letter-redo-tail re-ren
   await expectSession(page, { index: 1, phase: 'composing' });
   await expectUsedCell3(page);
   await expect(page.getByTestId('card-28')).toHaveAttribute('data-place', 'tray');
-  expect(await trayOrder(page)).toEqual(['32', '28', '9m']);
+  expect(await trayIds(page)).toEqual(['32', '28', '9m']);
 });
 
 for (const [width, w] of [
   [412, 46],
   [360, 40],
 ] as const) {
-  test(`AD-11 (F2) the static tray at ${width} × 839: reserved band, clipped tile area, tiles and ghosts touch-action none`, async ({
+  test(`AD-11 (F2) the tray band at ${width} × 839: reserved band, clipped tile area, tiles and ghosts touch-action none`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height: 839 });

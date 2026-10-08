@@ -1276,6 +1276,7 @@ describe('AD-1 engine tsconfig', () => {
 const IMPORT_META = /(?<![\w$])import\s*\.\s*meta(?![\w$])/;
 const LAYOUT_PURE = [
   'src/ui/layout/bands.ts',
+  'src/ui/layout/fit.ts',
   'src/ui/layout/geometry.ts',
   'src/ui/layout/tray.ts',
 ];
@@ -1313,7 +1314,7 @@ describe('AD-11 layout modules are pure', () => {
     });
   }
 
-  it('AD-11 src/ui/layout/bands.ts, geometry.ts and tray.ts pass the purity scan', () => {
+  it('AD-11 src/ui/layout/bands.ts, fit.ts, geometry.ts and tray.ts pass the purity scan', () => {
     const violations = LAYOUT_PURE.flatMap((p) =>
       layoutPurityViolations(p, readFileSync(posix.join(ROOT, p), 'utf8')).map((v) => `${p}: ${v}`),
     );

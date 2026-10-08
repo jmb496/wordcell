@@ -1,5 +1,7 @@
 // Every EXPERIENCE.md message-catalogue string lives here (AGENTS.md Conventions); later entries
 // add theirs. Words are uppercased at render, `QU` stays `QU`, the minus sign is U+2212.
+const INVALID_WORD_SUFFIX = "isn't in the word list.";
+
 export const text = Object.freeze({
   validate: 'Validate',
   needLetters: 'Need 3+ letters',
@@ -7,8 +9,14 @@ export const text = Object.freeze({
   loadingWords: 'Loading words\u2026',
   wordListUnavailable: 'Word list unavailable',
   wordListFailed: "Word list didn't load.",
-  // R-38 invalid word: takes the engine spelling (lowercase, `qu` for QU) and uppercases it.
-  invalidWord: (word: string) => `${word.toUpperCase()} isn't in the word list.`,
+  // R-38 invalid word: takes the engine spelling (lowercase, `qu` for QU) and uppercases it. The
+  // tray draws it as word + one space + suffix so only the word ellipsizes (DESIGN.md
+  // Invalid-word message); `invalidWord` is that one literal.
+  invalidWordSuffix: INVALID_WORD_SUFFIX,
+  invalidWordParts: (word: string) => [word.toUpperCase(), INVALID_WORD_SUFFIX] as const,
+  invalidWord: (word: string) => `${word.toUpperCase()} ${INVALID_WORD_SUFFIX}`,
+  // DESIGN.md Tray band: the Composing letter count (R-36 letters, `QU` = 2).
+  letters: (n: number) => (n === 1 ? '1 letter' : `${n} letters`),
   confirm: 'Confirm',
   newGame: 'New game',
   undo: 'Undo',
