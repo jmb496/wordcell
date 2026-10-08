@@ -1,5 +1,5 @@
 # Review log — story-place-strip-compact-tray-and-session-place-compact.md (ticket 5.2)
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7. Pass 0: 411 words (`.passes/pass0.md`), HEAD f0a0cc3. Intent fields from tickets.toml entry 2 (unknown, interface, tests, owns, consumers): `.passes/intent.md`.
 
@@ -30,3 +30,29 @@ Fixer: all 12 applied; facts checked against fixtures/ and src (redo-tail placem
 - none
 ### Dropped
 - none
+
+## Pass 2 — 2026-10-08
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 5, minor 6, decision-needed 0  |  Dropped in triage: 1 (+ duplicates merged)
+Words (docs): 1018 (2.48 x pass 0)  |  Snapshot: .passes/pass2.md, fix diff .passes/pass2.fix.diff
+Fixer: all 11 applied; item 2 formula corrected by the fixer to |arrangement| + destinationCount ≥ 8 (block must reach index 7; checked against trayOrder); card 9 confirmed as the redo-tail D card; no runnable command added. Document now at its growth budget: further minors only when word-neutral.
+### Applied
+- [major] Description/AC/Notes — PROPERTIES and AC bullet 2 pin the QU condition on session-place-compact, contradicting the `qu` fallback; fallback has no PROPERTIES entry → fixer item 1
+- [major] Description — "tray indices 6 and 7" is UI trayOrder, not expressible in the engine PROPERTIES test (AD-1), and over-narrow (forces k = 2, 8 tiles) → fixer item 2
+- [major] Description — `↩` render handed to entry 5, but SPEC CAP-1 puts the render in CAP-1 (only the P5 moves); entry 5 never says it renders it → fixer item 3
+- [major] AC — 5.1 interim tests e2e/tray.spec.ts:140 (compact no-tag) and :203 (Place empty rows) assert the opposite of 5.2; not named for rewrite → fixer item 4
+- [major] AC — Place D cards as normal tiles (no lock/outline) and no word-line underline untested → fixer item 5
+- [minor] Description — "no `trayGrowth`" (pass-1 fixer claimed no TRAY_ROWS exists; it does, src/ui/layout/layout.svelte.ts:67) → item 6
+- [minor] `(+n, ±0, −n)` parenthetical attached to letters(n) instead of delta → item 7
+- [minor] "eleven" → new count; new names appended at the end of VALID → item 8
+- [minor] corner-position assertion method default (mark's box centre in the named quadrant of the tile face) → item 9
+- [minor] meta literal per fixture recorded in the plan → item 10
+- [minor] "the Place variants, proven on the row break" unclear → item 11
+### Default applied (technical)
+- Only fallback is `session-composing-compact-block.json`; session-place-compact always carries the QU free letter from a cell ≠ 3
+- Block-crossing property in Session terms (side right: |arrangement| ≤ 6 < |arrangement| + k; side left: k ≥ 8)
+- `↩` slot rendered here as a Card.svelte prop nothing sets yet; entry 5 wires and asserts it
+- Corner marks asserted by bounding-box quadrant; no px literals (epic 4 F11)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- R-33 (UI) test-name cites a sentence it does not prove — stretch; matches the 5.1 precedent and the tickets.toml tests field
