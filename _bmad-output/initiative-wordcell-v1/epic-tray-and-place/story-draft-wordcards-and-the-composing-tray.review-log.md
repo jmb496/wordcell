@@ -1,5 +1,5 @@
 # Review log — story-draft-wordcards-and-the-composing-tray.md (ticket 5.1)
-State: pass 5: done
+State: pass 6: done (converged)
 
 Mode: docs, thorough, max 7. Pass 0: 371 words (`.passes/pass0.md`). Intent fields from tickets.toml entry 1 (unknown, interface, tests, owns, consumers): `.passes/intent.md`.
 
@@ -148,3 +148,30 @@ Fixer: major and all minors 2–10 applied (minors net −2 words)
 - 52-element count also in the two-Redo k = 2 state
 - tag locator scoped to the free-letter tile
 - clip past 14 px (unreachable on a 360 px board)
+
+## Pass 6 — 2026-10-08
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 12, decision-needed 0  |  Dropped in triage: 2 (×2 badge end-tile check demoted to minor: verify precision under the pass-4 bar; 4.3-m3 remount test demoted to minor: A9 minor carried by the plan)
+Words (docs): 1082 (2.92 x pass 0), unchanged  |  Snapshot: .passes/pass5.md (no fix pass)
+### Open (not fixed; stopping rule)
+- [major] Invalid line — Svelte 5 trims the literal space inside the `white-space: pre` span (verified by compiling with the repo's svelte), so the flex line renders "TANisn't in the word list." while the whitespace-normalising R-38 locator still passes; fix: the span holds `{' '}` with no markup whitespace between the three spans, so textContent equals `invalidWord(w)` exactly
+### Decision needed (functionality / UX / gameplay)
+- none
+
+## Result — converged after 6 passes
+open major: Invalid line — the space span must hold `{' '}` (Svelte 5 trims a literal space at tag edges) with no markup whitespace between word, space and suffix spans; otherwise the visible gap vanishes and textContent gets two spaces.
+
+Majors per pass: 10, 7, 5, 2, 1, 1. Words 371 → 1082 (2.92 x, over budget from pass 2; growth from majors).
+
+### Unapplied minors (for the build's plan or a later loop)
+- ×2 badge check: require `QU` on a non-end tile of a k ≥ 2 block (the as-built end tile already passes)
+- A9 4.3-m3: an AD-14 Playwright case that a live ↔ mirror switch remounts (e.g. handle to column 3's `[data-mirror-of="0"]` detached after Undo)
+- src/ui/layout/fit.ts added to the AD-11 purity scan list in src/architecture-ad1.test.ts
+- R-32 outline: assert the border colour `--wc-destination` on start and end mirrors, not only the classes
+- text.ts exports the word formatter too (e.g. `invalidWordParts(w)` → `[W, suffix]`), so uppercasing stays in text.ts
+- ×2 badge browser check also records the `QU` D-card underline as one unit
+- R-30 wordCards V case for k = 0
+- Interface: Card.svelte (tag prop, badge fix), Column/WordCellRow keys listed as changed modules
+- fit measure restores the element's class and inline font size (finally)
+- Notes' 20 px claim recorded for both android and desktop screenshot projects
+- Consumers: plan lists the e2e specs and helpers reading data-card-id/data-mirror-of (intent's consumers field)
+- From earlier passes: tray ids read from data-card-id or data-mirror-of in DOM order as literal sequences; dictionary.spec `.word-line` scope, ✕ preceding sibling, error colour kept; 52-element count in the two-Redo k = 2 state; tag locator scoped to the free-letter tile; view.test.ts AD-3 toStrictEqual literals gain `wordCards`; trayOrder ids = `draft.wordCards` check
