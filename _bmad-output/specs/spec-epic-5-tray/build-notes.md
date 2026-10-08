@@ -22,15 +22,17 @@ the contract; these notes fix what they leave open. `[ASSUMPTION]` marks inferen
 ## Epic file close-out edits
 
 - `epic-tray-and-place.md` Boundaries: add the two test-only files outside `src/ui/`
-  (`src/shell/game.svelte.test.ts`, `src/engine/serialize.test.ts`'s fixture list) and the
-  AD-3 `draft.wordCards` engine change (`src/engine/view.ts`, its tests; SPEC Constraints).
+  (`src/shell/game.svelte.test.ts`, `src/engine/serialize.test.ts`'s fixture list).
 - Structural Seed: `src/ui/flip.ts`; the `gestures/` modules CAP-3 splits out and the tile modules
   (build-notes Component tree); the shared class-name module.
 - Proposed epics row 5: record what moved to epic 6 (the pending-end-sheet half of the guard, F8).
 - AD-17 Speed: the epic 5 warm median on the Linux filesystem (CAP-12).
 
-## Epic file edit (due before CAP-5 is ticketed)
+## Epic file edits (due before CAP-1 and CAP-5 are ticketed)
 
+- Boundaries (due before CAP-1 is ticketed, not at close-out; SPEC Constraints AD-14 and One
+  engine change): "No engine change" → add the AD-3 `draft.wordCards` engine change
+  (`src/engine/view.ts`, its tests).
 - Done when 4 (due before CAP-5 is ticketed, not at close-out; SPEC Constraints AD-14): "mirrors
   never animate" → "mirrors take no part in the FLIP glide (the D-block parting shift excepted,
   AD-14)".
@@ -136,7 +138,8 @@ src/ui/
   up per render from `cells`; no stored map (AD-3). The CAP-1 P5 pins it with a free letter from
   a cell other than 3 (`session-place-compact`'s `QU`).
 - Fixture `session-place-compact` (Assumptions): 8–14 strip tiles whose `QU` card is a free
-  letter from a cell other than 3 (else a second, Composing fixture with a compact `QU` free
+  letter from a cell other than 3, its Composing after one Undo with a D block crossing the row
+  break (else a second, Composing fixture with a compact `QU` free
   letter from a cell other than 3), scripted under the epic 3 regeneration rule, added to `serialize.test.ts`'s
   valid-fixture list (S14).
 - Meta format and letter count strings in `text.ts` (F11): `letters(n)`, `placeMeta(n, cell,
@@ -253,7 +256,8 @@ src/ui/
   commit placed stays visible for its flight (today non-top cell cards are `visibility: hidden`,
   `WordCellRow.svelte:59`) and takes the hidden state on landing if it is not the top (AD-14,
   DESIGN.md WordCell); the target cell's previous cards keep their pre-commit visibility until
-  the first flying card lands (or the animation is finished), and when the target is the free
+  the first flying card lands (under reduced motion, the fade's end; or the animation is
+  finished), and when the target is the free
   letter's own cell its used-state mirror stays drawn until then too, so the cell never looks empty; the
   P5 asserts visibility per flying card, not only `getAnimations()`.
 - Landing glides (F17, moved here from CAP-5/CAP-6, which keep only the no-edit `flyBack`): a
@@ -290,7 +294,10 @@ src/ui/
   not cancel a focused button's default activation); the window is defined by events and the
   backstop, not by task order (Android queues a tap's `click` as its own task), so a long press,
   pan or `pointercancel` with no click cannot strand it, and with no input it uninstalls at
-  settle, so New game works after an untouched win. Undo is recognised by
+  settle, so New game works after an untouched win. `act()` passes no event, so the triggering
+  gesture is known only from F8's open-gesture tracker, never from the button handler; a key held
+  while the app is hidden or the window loses focus cannot strand the guard (F8 hide and `blur`
+  close). Undo is recognised by
   `[data-testid="undo"]` (the key aliases are epic 6).
 - The second Confirm tap's `pointerdown` settles the animation and its `click` would land on
   `New game`; the guard consumes it, so `current().session.seed` is unchanged and the stored

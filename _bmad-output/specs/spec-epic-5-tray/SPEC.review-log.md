@@ -1,6 +1,6 @@
 # Review log — spec-epic-5-tray SPEC.md (run 2)
 
-State: pass 3: done
+State: pass 4: done
 
 Target: `_bmad-output/specs/spec-epic-5-tray/SPEC.md` (docs mode, thorough, max 7). Second run after run 1 (`SPEC.review-log-run1.md`) diverged at pass 3; its upstream gaps were fixed in 972c4e2.
 Pre-loop: HEAD 972c4e2; copies `SPEC.review-log.passes/pass0.{SPEC,build-notes,rule-coverage}.md`; SPEC.md 5805 words (build-notes 3235, rule-coverage 2270). Growth budget ~14 500 words (2.5x).
@@ -73,5 +73,26 @@ Words (docs): SPEC 7473 (1.29 x pass 0)  |  Snapshot: SPEC.review-log.passes/pas
 - F5 — back mid-drag tested as leaving the app (`page.goBack()`)
 ### Decision needed (functionality / UX / gameplay)
 - none new (OQ-6 open)
+### Dropped
+- none
+
+## Pass 4 — 2026-10-08
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 5, minor 15 (+2 folded into majors), decision-needed 1  |  Dropped in triage: 0 (late-pass bar applied; merged: guard trigger tracking + stuck guard → 1; overflow press ×2; mirrors-row ×2; reduced-motion fade reclassified major → minor: EXPERIENCE.md Motion and the epic 4 fly-back define the fade, only the "lands" moment was open)
+Majors 5 → 5: neither rising nor ≤ 1; fix pass runs.
+Findings handed to the fixer: `SPEC.review-log.passes/p4-findings.md`
+Words (docs): SPEC 7990 (1.38 x pass 0)  |  Snapshot: SPEC.review-log.passes/pass4.*.md; fix diff pass4.fix.diff
+### Applied
+- [major] CAP-5/rule-coverage AD-12 — back mid-drag asserts the Session equal apart from `activeMs`, read via `storageState()` or `goForward()` → item 1
+- [major] F8 — always-installed open-gesture tracker in `motion.ts`; hide and `blur` close consumed gestures; Undo pass-through keeps the triggering key consumed → item 2
+- [major] CAP-9 — a press on the overflow row is a tray-background tap; overflow row counts as a row for gaps and parting → item 3
+- [major] Constraints/build-notes — epic Boundaries "No engine change" edit due before CAP-1; Constraints name it → item 4
+- [major] rule-coverage AD-14 row — mirrors take no part in the FLIP glide (D-block parting excepted) → item 5
+- [minor] items 6–16 (reduced-motion "lands", fallback fixture, R-73 headings, CAP-6 acceptance, F3 free letter, double-tap outcome assertion, `session-idle-fresh`, D block across a row break, meta Vitest, F1 plain selection on cancel/hide, R-80 row)
+### Default applied (technical)
+- F8 — open-gesture tracker; hide/`blur` close consumed gestures
+- CAP-9 — overflow-row presses resolve as tray-background taps
+- F1 — plain tile selection kept on `pointercancel` and hide/show (epic 4 F24 analogy)
+### Decision needed (functionality / UX / gameplay)
+- F8/CAP-10/Done when 5 (OQ-7) — with reduced motion or Fast speed, a quick double tap on a winning Confirm can land on New game after the short win animation; block it for a minimum window whatever the speed? — proposed default: yes, guard at least 300 ms after the win
 ### Dropped
 - none
