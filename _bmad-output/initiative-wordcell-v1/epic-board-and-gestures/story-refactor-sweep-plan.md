@@ -3,7 +3,7 @@ title: 'Refactor sweep'
 type: 'refactor'
 ticket: '13'
 created: '2026-10-07'
-status: 'in-review'
+status: blocked
 baseline_revision: '3014424bc706e31eb5f9249b0c5e52aa49754a2b'
 route: 'full'
 route_source: 'auto'
@@ -84,6 +84,8 @@ deferred:
     location: >-
       AGENTS.md:38
     severity: medium
+blocked_at: "2026-10-07"
+blocked_reason: "Owner stop (AD-17 / epic Done when 5): warm unit median 5.62 s after the architecture-test split (5.36 s before); controller.test.ts (3.5-4.0 s) is the critical path, which the split cannot shorten. Owner to decide: accept, allow another speed-up, or change the measurement location (Linux filesystem: 3.14 s)."
 ---
 
 <intent-contract>
