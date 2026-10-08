@@ -104,7 +104,8 @@ the pending-draft line and the live region.
 | Reset history confirm | **Delete the score history?** `This can't be undone.` [Keep it] [Delete history] | Confirm dialog, danger button. Opened from the History notice, Delete history closes both the dialog and the notice (popping both entries in order); Keep it returns to the notice. |
 | No finished games (R-84) | `Finish or give up a game to see statistics here.` | Statistics panel, under the tiles. |
 | Win outcome | `Every column cleared.` | End sheet title. |
-| Hover peek, more than 14 cards (R-65) | `+n older cards` | Hover peek, a line above the first row. |
+| Hover peek, more than 14 cards (R-65) | `+n older cards`; for one, `+1 older card` | Hover peek, a line above the first row. |
+| WordCell view and peek title (R-65) | `WordCell 6 · 7 cards`; for one card, `WordCell 6 · 1 card` | View sheet title (peek and sticky view). |
 | Give-up outcome (R-81) | `Game given up.` and `12 letters left: −120`; for one letter, `1 letter left: −10` (a lone `QU` is 2 letters, plural) | End sheet title and penalty line. |
 
 Version numbers in messages are the stored value as read; the example numbers above are
@@ -132,7 +133,7 @@ Behavioural. Visual specs live in `DESIGN.md` → Components.
 
 | Component | Behavioural rules |
 |---|---|
-| **Column** | Hit rect = the whole slot: every card strip, the empty space below the bottom card, the placeholder slot, and the foot pad. That rect is used for tap drops and for overlap targeting alike. Columns hold at most 7 cards and never grow, and w changes only between gestures (DESIGN.md A-D11), so hit rects never move under a finger. The dictionary-failed banner is not an exception: it shows and hides only when no gesture is in progress (DESIGN.md A-D11). The one exception during play is a word longer than two compact rows (14 tiles), which grows the tray band (Tray band). The columns and the tray shift up into the leftover band above the columns while it lasts; the WordCell row, the gap and the action bar keep their screen position. Once the leftover is used up, the document grows at the top and the shell adjusts `scrollTop` so the WordCell row does not move; the columns scroll partly under the sticky top bar and can be scrolled back from the pan-y regions (DESIGN.md A-D4). Target cells stay reachable in Place. The change applies only after the edit completes, and hit rects are recomputed before the next gesture. Overlap targeting always uses the current on-screen rects. |
+| **Column** | Hit rect = the whole slot: every card strip, the empty space below the bottom card, the placeholder slot, and the foot pad. That rect is used for tap drops and, clipped to the part visible between the sticky bars (Drop targeting step 2), for overlap targeting. Columns hold at most 7 cards and never grow, and w changes only between gestures (DESIGN.md A-D11), so hit rects never move under a finger. The dictionary-failed banner is not an exception: it shows and hides only when no gesture is in progress (DESIGN.md A-D11). The one exception during play is a word longer than two compact rows (14 tiles), which grows the tray band (Tray band). The columns and the tray shift up into the leftover band above the columns while it lasts; the WordCell row, the gap and the action bar keep their screen position. Once the leftover is used up, the document grows at the top and the shell adjusts `scrollTop` so the WordCell row does not move; the columns scroll partly under the sticky top bar and can be scrolled back from the pan-y regions (DESIGN.md A-D4). Target cells stay reachable in Place. The change applies only after the edit completes, and hit rects are recomputed before the next gesture. Overlap targeting always uses the current on-screen rects. |
 | **Card in a column** | Tap and drag per the phase matrix. Tapping any strip selects from that card (R-10). |
 | **Foot pad** | Only active while a tail is selected (by tap or key): a tap drops on that column. The source column's pad is labelled `Here` and is the discoverable way to drop on the source column (spec §7.1). |
 | **WordCell** | Tap, long-press and drag per the phase matrix. The count badge appears at 2+ cards so the player knows there is something to view. An empty WordCell never opens a view: tap, long-press, `Space`, `Enter` and hover on it are no-ops in Idle and Game over (a tap with a tail selected still deselects, R-14). A long-press (≥ 400 ms) on an empty WordCell is treated as a tap on release. In Composing a tap on it is the R-33 no-op. In Place a tap, `Enter` or its digit key on an empty legal cell sets the target (R-40). |
@@ -217,12 +218,14 @@ column card, a WordCell top card or a tray or strip tile is inert in every phase
   timer is cancelled.
 - **One pointer at a time.** A second pointer during a gesture is ignored.
 - **`pointercancel`** (incoming call, app hidden, system gesture) ends a column drag like a
-  release over no column (tail returns, no command) and a tile drag with no change. A WordCell
-  drag inserts nothing; a peek closes.
+  release over no column (tail returns, no command) and a tile drag with no change; a column
+  drag that replaced a tap-selection also restores that selection (Drop targeting step 6), and a
+  following back clears it by the normal back rule. A WordCell drag inserts nothing; a peek
+  closes.
 - **Commands during a drag.** An Undo, Redo or menu command, and any key command or
   overlay-opening key, arriving during a drag first cancels the drag as for `pointercancel`, then
   acts. A back (`popstate`) arriving during a drag also cancels it as for `pointercancel`; then
-  the normal back rule applies (the cancel has already ended any selection).
+  the normal back rule applies (the back closes any tail selection).
 - **Animations never block input.** A new gesture or button press completes any running animation
   at once and acts on the settled state (the winning animation is the exception, see Motion).
 
@@ -231,7 +234,9 @@ column card, a WordCell top card or a tray or strip tile is inert in every phase
 1. The **dragged rect** is the rendered rect of the tail's top card (the card that was grabbed,
    R-10), after its drag transform.
 2. Each column's **hit rect** is its whole slot (Component Patterns → Column), including an empty
-   column's placeholder slot and the source column.
+   column's placeholder slot and the source column, clipped to the part visible between the
+   sticky top bar (and the dictionary banner when shown) and the action bar, so a column hidden
+   under a bar is never a target (epic 4 SPEC F34).
 3. On every `pointermove`, compute overlap area ÷ dragged-rect area for each column. The target is
    the column with the largest ratio, provided it is **at least 25 %**. [ASSUMPTION A-E6] As a
    consequence (informative, not a separate rule), between two adjacent columns the larger overlap
@@ -247,8 +252,11 @@ column card, a WordCell top card or a tray or strip tile is inert in every phase
    column, which is exactly the column shown, so what the player sees is what happens. Release with
    no highlighted column (no target, or the source column before the drag has left it): the tail
    flies back, no engine command, no history change (R-14, Q-34). A drag that left the source
-   column and returned drops on the source column. A drag that replaced a tap-selection and ends
-   with no command ends with nothing selected, and the selection's history entry is popped.
+   column and returned drops on the source column. A drag that replaced a tap-selection and is
+   released with no command ends with nothing selected, and the selection's history entry is
+   popped; one interrupted by the platform (`pointercancel`, e.g. an Android edge-swipe back)
+   flies back and restores the earlier selection: lift, outline, foot states and history entry
+   (epic 4 SPEC F24, F28).
 7. WordCells, the tray and the bars are never drop targets for a tail.
 
 The drop dispatches the engine's drop command; the draft starts per R-23 (k = 1 or 0, side left,

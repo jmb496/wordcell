@@ -423,7 +423,8 @@ board at H = 53 and scrolls vertically.
 Depth is tonal, not shadowed, with two exceptions that mimic physical cards:
 
 - **A lifted card or tail** (drag, or tap-selected) gets a soft shadow `0 6px 16px #0008` and
-  rises 8 px (tap-selected) or follows the finger (drag). The lifted cards draw above their
+  rises 8 px (tap-selected) or follows the finger (drag; a dragged tap-selected stack keeps its
+  8 px rise). The lifted cards draw above their
   neighbours; a whole-column lift may overlap the band directly above the columns (the leftover
   band, or the top bar or dictionary-failed banner when no leftover remains) by up to 8 px, which
   is allowed; the lifted cards draw over those bars.
@@ -457,8 +458,9 @@ pills (`{rounded.full}`); among badges only the error dot is a circle. The 44 ×
   the 1 px teal outline of the tail a click would re-select, and hovering the selected top card
   shows nothing; in Composing, hovering a destination-column card draws a 1 px teal outline around
   the D that a click would set; otherwise no hover); *selected* (teal 2 px outline,
-  lifted 8 px); *dragging* (the tail follows the finger, lifted with the shadow; its former places
-  in the column show as ghosts); *drop target* (the target column's bottom card or placeholder gets
+  lifted 8 px); *dragging* (the tail follows the finger, lifted with the shadow; a selected stack keeps its
+  8 px lift, so it neither jumps at pickup nor snaps after a cancelled fly-back, epic 4 SPEC
+  F32, F33; its former places in the column show as ghosts); *drop target* (the target column's bottom card or placeholder gets
   a teal 3 px outline and a 12 % teal wash; on the source column with a partial tail, the lowest
   card not in the tail, the future top of D (R-21), takes it; only when the whole column is lifted
   does the source column's top slot show the placeholder under the ghosts, and the placeholder
@@ -490,7 +492,9 @@ pills (`{rounded.full}`); among badges only the error dot is a circle. The 44 ×
   empty except when a tail is tap-selected, when the source column's whole foot pad (slot width × 44) fills with `{colors.surface-raised}` with `Here` in
   ui-label, centred, no horizontal padding (this `Here` pad remains the tap route for a self-drop,
   R-14, Q-34); the other feet show an 8 % teal wash plus a 1 px
-  dashed `{colors.outline}` border (a shape cue).
+  dashed `{colors.outline}` border (a shape cue). On `desktop` hover with a whole column
+  tap-selected, hovering that column's empty space or `Here` pad lights the `Here` pad with the
+  drop-target teal 3 px outline and 12 % wash (epic 4 SPEC F31).
 - **WordCell.** Number label above; below it either an empty outline or the top card. When the
   cell holds 2 or more cards a count badge (e.g. `4`) sits inside the cell's card rect,
   bottom-right, inset 2 px: a 16 px tall pill, `{typography.card-badge}`, ink-primary on
@@ -516,7 +520,10 @@ pills (`{rounded.full}`); among badges only the error dot is a circle. The 44 ×
   max height is 80 % of the viewport height; beyond that it scrolls vertically inside. The *hover
   peek* (desktop, under `(hover: hover) and (pointer: fine)` only) is anchored directly above the
   hovered cell, over the tray band and the columns, with no scrim, above the cards in the layer order, clamped
-  inside the board and never covering the cell. It shows cards at card size, 7 per row, at most
+  inside the board and never covering the cell; with no room above the cell (only with dev
+  `?bands=` orders) it goes below the cell and may leave the board vertically. It sits on the
+  view sheet's surface (`{colors.surface}`, `{rounded.lg}`, 16 px padding, no title),
+  content-sized: `min(n, 7)·(w + 4) − 4 + 32` px wide for n shown cards. It shows cards at card size, 7 per row, at most
   two rows: the top 14 cards (the most recent), oldest of them first, the top card last and tagged `top`. When
   the cell holds more than 14 cards, a ui-label `+n older cards` line (n = card count − 14) sits
   above the first row. The full view is

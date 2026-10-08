@@ -12,32 +12,33 @@ Spine edits are batched at close-out as in epic 3, so the R1 AD-13 record (retro
   (AD-16 order). It throws before `launch()` resolves or on a second call. The hook runs for every
   `popstate` nav did not start whose `launch` is current and whose `wc` is a number, before the
   Forward check and the close callback; never for nav's own pops or Forward corrections, stale
-  launches or a missing `wc`. A back arriving before registration runs no hook.
+  launches or a missing `wc`. A back arriving before registration runs no hook. Folded at the epic 4 retrospective, C11.
 - AD-9/AD-17: the gesture-cancel half of the hide assertion lands (epic 3 build-notes "Not folded"
-  note, retrospective S2, C-E4b): name the Playwright test that proves it.
+  note, retrospective S2, C-E4b): `e2e/drag-interruptions.spec.ts` "AD-9 AD-16 AD-17 hidePage
+  mid-touchHold drag cancels it first…" proves it. Folded at the epic 4 retrospective, C13, C14.
 - AD-12 (R2, F9): the cancel-first list widens to every App-owned dialog, notice,
   dictionary-banner and Session-rejected New game action, matching AGENTS.md's "(opening it and
   its items)"; all go through one UI helper that epic 6's menu and `keys.ts` reuse. Halted's
-  Reload is exempt in both mounts (standalone, inside App on halt).
+  Reload is exempt in both mounts (standalone, inside App on halt). Folded at the epic 4 retrospective, C7.
 - AD-11 (F20): `bannerShown` is the gate-latched copy of `dictionary.showBanner` (`failed`, or the
   Q-42 kept banner during a service-worker retry), not `state === 'failed'`. The spine bug is
-  reported in SPEC Open Questions (Q-42 wins per AGENTS.md Policy).
+  reported in SPEC Open Questions (Q-42 wins per AGENTS.md Policy). Folded at the epic 4 retrospective, C1.
 - AD-11: `cardWidth`'s first argument is the available viewport width (`clientWidth`, excluding a
-  classic scrollbar), kept stable by `scrollbar-gutter: stable` (CAP-1).
+  classic scrollbar), kept stable by `scrollbar-gutter: stable` (CAP-1). Folded at the epic 4 retrospective, C2.
 - AD-13 (F16): the two-plain-overlay reload case is proven in epic 6 (menu plus confirm dialog);
-  epic 4 proves the one-overlay case with a tail selection and with the sticky view.
+  epic 4 proves the one-overlay case with a tail selection and with the sticky view. Folded at the epic 4 retrospective, C12.
 - Proposed epics rows 4/5 (F1, F2, F17): epic 4 renders every `GameView` board state, a static tray
   (live tiles, no gestures) and the Composing column gestures; epic 5 keeps the tray interactions,
   the WordCell commands in Composing and Place, the placement strip, FLIP and tray growth wiring. Owner-accepted 2026-10-01 (F29): fold the move into Proposed epics; epic 4 is
-  merged and deployed on its own like epics 1–3, after the owner's go-ahead.
+  merged and deployed on its own like epics 1–3, after the owner's go-ahead. Folded at the epic 4 retrospective, C19.
 - AD-12 (F13): cancel-on-back flies the tail back as for `pointercancel` (EXPERIENCE.md); cancel
   from `act()` and before-hide settles it at once, since a button press acts on the settled state.
   A real `pointercancel` ending a selection-replacing drag keeps the old selection (F24), unlike a
   release over nothing. Owner-confirmed 2026-10-01 (F28): amend AD-12 to say a drag interrupted by
   the platform (e.g. an Android edge-swipe back) that had replaced a tap-selected tail restores the
-  earlier selection.
+  earlier selection. Folded at the epic 4 retrospective, C8, C9.
 - AD-12 (F26): "full slot pitch applies only to tile tap hit rects" reads as tile drags vs tile
-  taps; column cards and WordCells also hit-test on the full slot pitch (DESIGN.md Hit rects).
+  taps; column cards and WordCells also hit-test on the full slot pitch (DESIGN.md Hit rects). Folded at the epic 4 retrospective, C4.
 - AD-12 (F32): the drag transform keeps a tap-selected card's 8 px selection lift (DESIGN.md
   lift) for the whole drag, and a cancelled drag's fly-back lands on the lifted slot, so a
   selected card neither jumps at pickup nor snaps at settle. Owner answer 2026-10-05.
@@ -45,39 +46,41 @@ Spine edits are batched at close-out as in epic 3, so the R1 AD-13 record (retro
   (both motion settings); the lift is kept only for a dragged stack inside the selection.
   The spine's AD-11/AD-12 text should name `SELECTION_LIFT_PX` (`src/ui/layout/geometry.ts`, fed
   to CSS as Board's `--wc-select-lift`) as the single owner of DESIGN.md's 8 px selection lift
-  (AD-11 lists only two `geometry.ts` entry points today).
+  (AD-11 lists only two `geometry.ts` entry points today). Folded at the epic 4 retrospective, C3, C10.
 - AD-12 (F34): drop targeting by card overlap uses each column's hit rect clipped to the visible
   band between the sticky top bar (plus the dictionary banner when shown) and the action bar, not
-  the "whole hit rect", so a column hidden under a bar is never a target. Owner answer 2026-10-07.
-- AD-17 Touch (F10): `touch.ts` adds the stepwise held-touch API beside `touchDrag` and `longPress`.
+  the "whole hit rect", so a column hidden under a bar is never a target. Owner answer 2026-10-07. Folded at the epic 4 retrospective, C5.
+- AD-17 Touch (F10): `touch.ts` adds the stepwise held-touch API beside `touchDrag` and `longPress`. Folded at the epic 4 retrospective, C15.
 - AD-17 Speed: record the epic 4 warm median and, if it was done, the `architecture.test.ts` split.
   F35 (owner, 2026-10-07): 5.62 s on `/mnt/d` after the split (3.14 s on the Linux filesystem) is
   accepted for now; the retrospective decides whether the 5 s budget, or where it is measured, changes.
+  F38 (owner, 2026-10-08): the 5 s warm median on the dev checkout stays; `controller.test.ts` is
+  split before the epic 4 merge. Folded at the epic 4 retrospective, C16, C17.
 
 ## EXPERIENCE.md close-out edits (owner answers 2026-10-01; EXPERIENCE.md is not edited by this epic)
 
 - Message catalogue (F27): add the WordCell view and peek title `WordCell 6 · 7 cards`, singular
   `WordCell 6 · 1 card`, and the `desktop` hover peek line `+1 older card` / `+n older cards`, as
-  they stand in `src/ui/text.ts`.
+  they stand in `src/ui/text.ts`. Folded at the epic 4 retrospective, C20.
 - Drop targeting by overlap step 6 (F24, F28): a drag that replaced a tap-selection and is
   interrupted by the platform (real `pointercancel`/`lostpointercapture`, e.g. an Android
   edge-swipe back) flies back and restores the earlier selection (lift, outline, foot states and
-  history entry kept); a release over nothing still leaves nothing selected.
+  history entry kept); a release over nothing still leaves nothing selected. Folded at the epic 4 retrospective, C21.
 - Pointer thresholds, the `pointercancel` line (F24, F28): the same restore for a column drag that
   replaced a tap-selection; a following back then clears the restored selection by the normal
-  back rule.
+  back rule. Folded at the epic 4 retrospective, C22.
 
 ## DESIGN.md close-out edits (owner answer 2026-10-02; DESIGN.md is not edited by this epic)
 
 - Column slot / drop-target highlight (F31): on `desktop`, with a whole column tap-selected,
   hovering that column's empty space or Here pad lights the Here pad with the usual teal
-  drop-target outline and wash.
+  drop-target outline and wash. Folded at the epic 4 retrospective, C24.
 - Hover peek surface (ticket 12, F19): the view sheet's surface (`{colors.surface}`,
   `{rounded.lg}`, 16 px padding, no title), content-sized width `min(n, 7)·(w + 4) − 4 + 32` px
-  for n shown cards (a technical default; DESIGN.md View sheet does not state it).
+  for n shown cards (a technical default; DESIGN.md View sheet does not state it). Folded at the epic 4 retrospective, C26.
 - Hover peek placement (ticket 12, F19): with no room above the anchor box it goes below the
   cell and may leave the board vertically, overriding "clamped inside the board"; this occurs
-  only with dev `?bands=` orders.
+  only with dev `?bands=` orders. Folded at the epic 4 retrospective, C26.
 
 ## As-built facts that bite (a887379)
 
@@ -127,8 +130,10 @@ src/ui/
   HoverPeek.svelte      # desktop hover peek
   ActionBar.svelte      # primary-action
   act.ts                # F9 helper: cancel() first, then the handler
-  layout/ bands.ts, geometry.ts, layout.svelte.ts
-  gestures/ controller.ts, gate.ts, targeting.ts
+  hover-peek.ts         # hover peek cards, width and placement (pure)
+  layout/ bands.ts, geometry.ts, layout.svelte.ts, tray.ts
+  gestures/ controller.ts, classify.ts, intent.ts, targeting.ts, drop-target.ts, gate.ts,
+            click-swallow.ts
 ```
 
 Components receive `GameView` slices and UI state as props; none imports the engine at runtime.
@@ -137,8 +142,8 @@ Components receive `GameView` slices and UI state as props; none imports the eng
 
 - Bar sizing (owner decision 2026-10-02, Jared, Option A): The top and action bars are
   content-sized: 44 px and 60 px of content plus `env(safe-area-inset-*)` padding, which entry 2
-  ships; every other band but the banner takes its height from `bands()`. Once entry 4 feeds real
-  insets, `bands()` bar heights equal the rendered bars.
+  ships; every other band but the banner takes its height from `bands()`. Entry 4 feeds real
+  insets; `bands()` bar heights equal the rendered bars.
 - `BAND_ORDER` (F22) [ASSUMPTION ids]: seven units `[['topBar'], ['banner'], ['leftover'],
   ['columns', 'footRow'], ['trayGap', 'tray'], ['labels', 'wordcells'], ['actionGap',
   'actionBar']]`, the eleven AD-11 bands (foot row with its columns, DESIGN.md, so the column hit
@@ -209,7 +214,7 @@ Components receive `GameView` slices and UI state as props; none imports the eng
   writing only when the clamped target differs from the current value, and the `scroll` event of
   that one write does not mark the gate scroll-busy (the ignore flag clears in the next
   `requestAnimationFrame` whether or not a `scroll` fired).
-- Insets probe: an absolutely positioned, invisible element with `padding: env(safe-area-inset-*)`,
+- Insets probe: a fixed-position, invisible element with `padding: env(safe-area-inset-*)`,
   read with `getComputedStyle`.
 - `main.ts` creates one gate before the controller, passes it to `createController(gate)` and the
   layout module, and registers its scroll reset with `registerBeforeHide`.
@@ -240,7 +245,8 @@ Components receive `GameView` slices and UI state as props; none imports the eng
 ## CAP-4 Pointer controller core and cancel wiring
 
 - `createController(gate)` (the shared gate, CAP-3) returns `{ cancel, attach(root) }` [ASSUMPTION]; `attach` runs from a
-  Svelte action on App's active-branch root, which spans the viewport, on every mount and returns
+  Svelte action on App's active-branch root, which spans the viewport except the desktop
+  `scrollbar-gutter` strip (F30), on every mount and returns
   a detach that calls `cancel()` first (F8); listeners on that root for `pointerdown` (`button !== 0` ignored), then
   `setPointerCapture` only for a press resolved to a column, a WordCell or a tile;
   `pointermove`, `pointerup`, `pointercancel`, `lostpointercapture` on it; presses on enabled
@@ -327,13 +333,14 @@ Components receive `GameView` slices and UI state as props; none imports the eng
   `<button>` is unverified: the ticket checks and, if not, wraps disabled controls' hit area
   [ASSUMPTION].
 - Desktop hover under `(hover: hover) and (pointer: fine)` only, via CSS and the controller's
-  `pointerover`; outlines are classes on the column cards, never Svelte state per move.
+  `pointerover`; outlines are classes on the column (`[data-column]`), set by `pointerover` and
+  `refreshHover()`, never Svelte state per move.
 
 ## CAP-7 Drag and targeting
 
 - Dragged rect: the grabbed card's face `getBoundingClientRect()` after its transform (F26); candidates: every
-  registered column hit rect, read live each `pointermove`, unclipped rendered rects per AD-12
-  (sticky bars do not clip them).
+  registered column hit rect, read live each `pointermove`, rendered rects clipped vertically to
+  the visible band between the sticky bars (F34).
 - `Column.svelte` always renders the placeholder in the top slot (hidden when not empty); on a
   whole-column drag over its source the controller reveals and outlines it by DOM class.
 - `hasLeftSource` becomes true at the first post-threshold `pointermove` where `raw !== sourceId`.

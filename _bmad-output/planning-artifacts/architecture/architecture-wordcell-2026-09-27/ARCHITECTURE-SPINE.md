@@ -7,7 +7,7 @@ paradigm: 'functional core / imperative shell, event-sourced'
 scope: 'WordCell v1: pure rules engine, event-sourced Session, app shell services, Svelte UI, PWA packaging, CI and deploy'
 status: final
 created: '2026-09-27'
-updated: '2026-10-01'
+updated: '2026-10-08'
 binds: ['spec R-01…R-85, §2, Q-01…Q-44', 'brief §6, §7, §9', 'DESIGN.md', 'EXPERIENCE.md']
 sources:
   - _bmad-output/planning-artifacts/briefs/brief-wordcell-2026-09-26/brief.md
@@ -39,6 +39,10 @@ and Scaffold deltas describe the engine as built in epic 2; no decision changed.
 Amended 2026-10-01 (epic 3 retrospective C1–C10, owner-approved): AD-4, AD-7, AD-8 (Q-42), AD-9,
 AD-13, AD-15, AD-16, AD-17, Scaffold deltas and Proposed epics describe the app shell as built in
 epic 3 and fold the epic 3 `build-notes.md` spine notes; no AD reopened.
+Amended 2026-10-08 (epic 4 retrospective C1–C19, owner-approved; owner answers in the epic 4
+SPEC F13, F24, F28, F32–F38): AD-1, AD-9, AD-11, AD-12, AD-13, AD-17, Structural Seed, Scaffold
+deltas, the Capability map and Proposed epics describe the board and gestures as built in epic 4
+and fold the epic 4 `build-notes.md` spine notes; no AD reopened.
 
 ## Design Paradigm
 
@@ -76,7 +80,9 @@ flowchart LR
   1. `src/engine/tsconfig.json` type-checks engine sources (tests excluded) with
      `lib: ["ES2023"]` and `types: []`, so any DOM or Node global is a type error;
      `npm run check` runs it.
-  2. `src/architecture.test.ts` (Vitest) scans every file under `src/**` except itself: it reads
+  2. The architecture tests (Vitest; split at epic 4 into `src/architecture-tree-scan.test.ts`,
+     `src/architecture-ad1.test.ts` and `src/architecture-ad2-ad12-ad17.test.ts`, sharing the
+     scanner in `src/architecture-scan.ts`) scan every file under `src/**` except those four: it reads
      import specifiers, then strips comments, regex literals and string literals (of a template
      literal only its literal parts, keeping `${ }` expressions; fixture case
      `` `${Date.now()}` ``), then matches syntax, not substrings:
@@ -409,8 +415,9 @@ sequenceDiagram
   playing. The timer display is `activeMs + peek(now)` while status = playing and `activeMs`
   otherwise, updated by a UI interval only while Show timer is on and status = playing, and
   re-rendered on every dispatch and on leaving playing, so the frozen value equals the recorded
-  duration. Ticks never dispatch or write. Playwright: `hidePage` mid-`touchDrag` returns the
-  tail and dispatches no command; R-76: a page loaded hidden does not grow `activeMs` until
+  duration. Ticks never dispatch or write. Playwright: `hidePage` mid-`touchHold` drag returns the
+  tail, writes `wordcell:session` once and dispatches no command (`e2e/drag-interruptions.spec.ts`
+  "AD-9 AD-16 AD-17 hidePage mid-touchHold drag cancels it first…"); R-76: a page loaded hidden does not grow `activeMs` until
   `showPage`.
 
 ### AD-10 — Preferences and motion
@@ -446,13 +453,22 @@ sequenceDiagram
     it (DESIGN.md A-D4, exhausted leftover); otherwise the whole growth pushes away from the
     anchor, with a `scrollTop` delta only when the growing band is above it. `Board.svelte` renders by iterating `BAND_ORDER`; geometry, growth and anchoring
     are computed from positions in it, never from named neighbours. In dev builds the query
-    parameter `?bands=<comma list>` overrides the order; production ignores it.
-  - `src/ui/layout/geometry.ts` is pure and has two entry points: `cardWidth(innerWidth,
-    innerHeight, insets, hoverFine)` (the DESIGN.md width and height rules) and
-    `bands(w, bandOrder, trayRows, bannerShown, innerHeight, insets)` (band heights, leftover use
-    and the absolute `ANCHOR_BAND` offset; the layout module computes the scroll delta that keeps
-    it fixed from its previous result). The layout module reads `insets` from a
-    probe element styled with `env(safe-area-inset-*)`. Vitest covers the DESIGN.md reference
+    parameter `?bands=<comma list>` overrides the order (parsed by `bands.ts` `parseBandsParam`);
+    production ignores it.
+  - `src/ui/layout/geometry.ts` is pure. It exports `cardWidth(clientWidth, innerHeight, insets,
+    hoverFine)` (the DESIGN.md width and height rules; `clientWidth` is
+    `document.documentElement.clientWidth`, which excludes a classic scrollbar and stays stable
+    under `html { scrollbar-gutter: stable }`; `innerWidth` is used only in the w-recompute
+    predicate), `bands(w, bandOrder, trayRows, bannerShown, innerHeight, insets)` (band heights,
+    leftover use and the absolute `ANCHOR_BAND` offset), `cardMetrics`, `availableWidth`,
+    `trayGrowth`, `anchorScroll` (the scroll delta that keeps the anchor fixed against the
+    previous `bands()` result), `shouldRecomputeWidth` (the w-recompute predicate) and
+    `SELECTION_LIFT_PX`, the single owner of DESIGN.md's 8 px selection lift (fed to CSS as
+    Board's `--wc-select-lift` and used by the AD-12 drag transform; epic 4 SPEC F32, F33); `src/ui/layout/tray.ts`
+    holds the static tray's tile layout and order. The top and action bars are content-sized: 44 px
+    and 60 px plus `env(safe-area-inset-top/bottom)` padding, and `bands()` returns those sums,
+    equal to the rendered bars (epic 4 SPEC F36). The layout module reads `insets` from a
+    fixed-position, invisible probe element styled with `env(safe-area-inset-*)`. Vitest covers the DESIGN.md reference
     numbers (412 × 915, 412 × 839, 360 × 750, 1080p) and 412 × 915 with 24 / 24 insets, and tray growth in one fallback order (WordCells and tray
     above the columns).
   - **w recompute** runs only on `resize`/`orientationchange`, not for an innerHeight-only change
@@ -466,7 +482,8 @@ sequenceDiagram
     `scroll` event until `scrollend`, until hide/pagehide, or until 150 ms pass without a
     `scroll` event (a backstop in all browsers) `[ASSUMPTION A-A9]`; a Playwright case asserts a banner shown
     during a scroll is applied after it ends. `bannerShown` is a gate-latched copy of
-    `dictionary.state === 'failed'` (the Validate label reads the live state). The layout module
+    `dictionary.showBanner` (`failed`, or the Q-42 banner kept during a service-worker retry;
+    epic 4 SPEC F20); the Validate label reads the live state. The layout module
     applies the anchor `scrollTop` delta in the same frame; a Playwright test asserts the
     WordCell row's bounding box is unchanged after tray growth.
   - Viewport meta `viewport-fit=cover`; height from `window.innerHeight`. The page may scroll:
@@ -481,16 +498,27 @@ sequenceDiagram
 - **Prevents:** a DnD library; reactive churn per `pointermove`; drops decided on stale or wrong
   rects; more than one command per gesture; a drag surviving a command or a back.
 - **Rule:** One pointer controller handles every drag and tap (8 px threshold A-E5, 400 ms
-  long-press, one pointer, `pointercancel` = release over nothing), using `setPointerCapture`,
+  long-press, one pointer; `pointercancel` and `lostpointercapture` end a drag with no command
+  and fly it back, as a release over nothing, epic 4 SPEC F13, F24, F28), using `setPointerCapture`,
   and during a drag writes `transform` directly to the dragged elements; no Svelte state changes
   until release. Drop targets register with `use:dropTarget={{ kind, id }}` on the element whose
   rect is the **whole hit rect** (a column's full slot including strips, empty space,
-  placeholder and foot pad; the tray band). Tile, strip-tile and free-letter drags have the
+  placeholder and foot pad; the tray band). For column drops each hit rect is clipped vertically
+  to the visible band, from the lower of the top bar's and a shown banner's bottom to the action
+  bar's top, so a column under a bar is never a target and a release there flies back (epic 4
+  SPEC F34); with a dev `?bands=` order that moves a bar off its edge every drag flies back (dev
+  only). Tile, strip-tile and free-letter drags have the
   tray band as their single drop target (accepted when it overlaps ≥ 25 % of the dragged rect's
   area) and take the insertion index from a separate pure `insertionIndex(dragged, gapRects)` in
   `targeting.ts` (nearest gap to the dragged centre, across wrapped rows nearest by distance;
-  Vitest); full slot pitch applies only to tile tap hit rects. The
-  dragged rect is the grabbed card's rendered rect after its transform. On every `pointermove`
+  Vitest). Tile drags use the tray band; tile taps, column cards and WordCells hit-test on the
+  full slot pitch: the live element is a slot wrapper `w + 4` wide carrying `data-card-id` (AD-14)
+  with a `pointer-events: none` face, so the selection lift moves only the face (DESIGN.md Hit
+  rects, epic 4 SPEC F26). The dragged rect is the grabbed card's face rect after its transform;
+  a dragged stack inside a tap selection keeps the 8 px lift (`SELECTION_LIFT_PX`, AD-11) in its
+  transform, a stack dragged from above the selection is drawn evenly, and a restoring fly-back
+  lands on the lifted slot with the lift, outline and `Here` returning at its start under both
+  motion settings, while a back that clears the selection lands the faces unlifted (F32, F33). On every `pointermove`
   the controller reads live `getBoundingClientRect()`s and, for a column drop, calls the pure `pickTarget(dragged,
   candidates, sourceId, hasLeftSource)` in `targeting.ts`, which returns `{ raw, highlighted }`: `raw` = the EXPERIENCE.md Drop targeting steps 3–4 result (largest ratio
   ≥ 25 %, column tie-break, or null, A-E6) before source suppression; `highlighted` = `raw` with the
@@ -498,10 +526,17 @@ sequenceDiagram
   `raw !== sourceId` after the threshold (including `raw === null`), never from `highlighted`
   (Q-34; Vitest covers both, and a drag below 25 % on the source column only). A drag's release drops on `highlighted`, and on nothing when it is null; release dispatches at most one command, or none. A drag started on a destination-column card in
   Composing dispatches `tapDestinationCard` for the press card at `pointerup` (R-39). A drag that
-  replaced a tap-selection and ends with no command leaves nothing selected and closes the
-  selection entry via `overlays.close` (except when ended as the before-back hook, AD-13). The controller
-  exposes `cancel()` (as `pointercancel`); every Undo, Redo, menu, key command and back calls it
-  first (AD-13), and so does the store's hide/pagehide handler before its flush, via `registerBeforeHide` (AD-9; it dispatches nothing there). Tail and tile selections are UI state, never persisted (R-14).
+  replaced a tap-selection: released over nothing or ended by a plain `cancel()`, it leaves
+  nothing selected and closes the selection entry via `overlays.close`; ended by the platform
+  (`pointercancel`/`lostpointercapture`, e.g. an Android edge-swipe back) it flies back and
+  restores the earlier selection, its classes and entry (F24, F28); ended as the before-back hook
+  (`cancel({ byBack: true })`, AD-13) it flies back without deselecting, then `closedByBack`
+  clears the selection. `cancel()` from `act()` or before-hide settles the gesture at once with no
+  fly-back, finishing any running one (F13). The controller exposes `cancel()`; every App-owned
+  button (Undo, Redo, the menu and its items, dialogs, notices, the dictionary banner, the
+  Session-rejected New game) goes through `act()` (`src/ui/act.ts`), which calls it first, as do
+  key commands and back (AD-13); Halted's Reload is exempt (F9). The store's hide/pagehide handler
+  calls it before its flush, via `registerBeforeHide` (AD-9; it dispatches nothing there). Tail and tile selections are UI state, never persisted (R-14).
 
 ### AD-13 — Overlays have one owner; the History API has one adapter
 
@@ -519,8 +554,12 @@ sequenceDiagram
     for its expanded state; `closedByBack` on it sets `collapsed`, never `hidden`.
   - `nav.ts` is the mechanical adapter and the only History API user (AD-1). It imports nothing
     from `src/ui/` and holds no id stack, only the launch id and depth arithmetic: at boot
-    `overlays` registers a close callback (`closedByBack(depth)`) and a depth getter, as the
-    gesture controller registers the before-back hook (its `cancel`). History states are
+    `overlays` registers a close callback (`closedByBack(depth)`) and a depth getter. The gesture
+    controller's before-back hook (`cancel({ byBack: true })`) is registered separately through
+    `nav.registerBeforeBack(fn)`, called once by `main.ts` after the controller exists (AD-16);
+    it throws before `launch()` resolves or on a second call, runs only for a current-launch
+    `popstate` nav did not start with a numeric `wc`, before the Forward check and the close
+    callback, and a back arriving before registration runs no hook (epic 4 SPEC F7). History states are
     `{ wc: depth, launch }`, `launch` a per-launch random id. Launch (boot awaits it before
     the next step): if `history.state?.wc` is a positive `d`, `history.go(-d)` to rewind to the base entry and await
     that rewind's own `popstate`, which is exempt from the stale-launch rule (if none arrives
@@ -547,8 +586,9 @@ sequenceDiagram
     <new> }`, then back leaves the app. In epic 3 the only overlays (the History notice and its
     Reset confirm) exist only while the history is unreadable, so boot re-pushes the notice after
     any reload: the epic 3 reload cases assert `{ wc: 1, launch: <new> }`, back → Board at
-    `wc: 0`, back → the app is left, and no old-launch entry is reached; the literal plain-overlay
-    outcomes above are re-proven with the epic 4/6 overlays.
+    `wc: 0`, back → the app is left, and no old-launch entry is reached. Epic 4 re-proves the
+    one-overlay case with a tail selection and with the sticky view; the two-plain-overlay case
+    is proven in epic 6 (menu plus confirm, epic 4 SPEC F16).
   - Push depth and stale-launch edges (as built in epic 3, ticket 3.8; refinements, no decision
     changed). `nav` keeps the current entry's `wc` as it knows it: set from `state.wc` on every
     current-launch `popstate` with a numeric `wc` (own pop settled, Forward, back), +1 per push
@@ -690,9 +730,14 @@ sequenceDiagram
     cases (AD-8), which load it once per file. The 5 s figure is the median of three `npm test`
     runs after a discarded warm-up, on the dev machine, with Vitest's `fsModuleCache` warm; a cold
     first run (7.2–7.8 s at epic 3) and CI are outside the budget. The 1 s watch gate applies to
-    the slowest engine test file; `src/architecture.test.ts` (1.5 s at epic 3) is informational.
-    Both are re-measured at each epic's refactor sweep; if the warm median exceeds 5 s, the next
-    lever is splitting `src/architecture.test.ts` together with its exemption.
+    the slowest engine test file; the architecture tests (1.5 s at epic 3; split at epic 4 into
+    the three `src/architecture-*.test.ts` files plus `src/architecture-scan.ts`, AD-1) are
+    informational. Both are re-measured at each epic's refactor sweep; if the warm median exceeds
+    5 s, the next lever is splitting the critical-path test file. Epic 4 measured 5.62 s on the
+    `/mnt/d` dev checkout (3.14 s on the Linux filesystem), critical path
+    `src/ui/gestures/controller.test.ts`, accepted for that sweep (epic 4 SPEC F35); the owner then
+    kept the 5 s budget, measured warm on the dev checkout, and had `controller.test.ts` split
+    into a shared harness module and several files before the epic 4 merge (F38).
   - **Seeding.** `fixtures/*.json` (repo root) are serialised Sessions and histories shared
     by Vitest repro cases and Playwright: valid ones, plus the rejecting `session-invalid-*` and
     `history-invalid-*` files, one per parser check (the check codes in `src/engine/errors.ts`),
@@ -727,7 +772,8 @@ sequenceDiagram
     `document.visibilityState` and dispatch `visibilitychange`, exercising the store's real
     listener; `pageHide(page)` / `pageShow(page, { persisted })` dispatch `pagehide` /
     `pageshow`. A case asserts that `hidePage` alone produces exactly one `wordcell:session`
-    write, the gesture cancel, and resume only when visible.
+    write, the gesture cancel, and resume only when visible (`e2e/drag-interruptions.spec.ts`
+    "AD-9 AD-16 AD-17 hidePage mid-touchHold drag cancels it first…").
   - **Restore boundaries** (brief §6.2), as fixtures, each under "hidden then reloaded" and
     "reloaded without a hide": Place with a free letter, a non-default placement order and a
     redo tail; `gaveUp`; a finish recorded then undone (the record stays removed); non-default
@@ -736,7 +782,9 @@ sequenceDiagram
     events), then a new page in the same context; assert the Session as written by the last
     dispatch.
   - **Touch.** `e2e/helpers/touch.ts` exports `touchDrag(page, from, to, { steps })` and
-    `longPress(page, target, ms)` on CDP `Input.dispatchTouchEvent` (Chromium projects only);
+    `longPress(page, target, ms)` on CDP `Input.dispatchTouchEvent` (Chromium projects only), and
+    the stepwise held touch `touchHold(page, from)` → `{ moveTo(point), end() }` on one CDP
+    session (epic 4 SPEC F10);
     desktop tests use `page.mouse`.
   - **Projects.** Three configs (Playwright's `webServer` is config-global):
     `playwright.config.ts` has `android` (Pixel 7) and `desktop` against the dev server and
@@ -878,12 +926,16 @@ src/
   engine/            # pure core (AD-1): deal, session, replay, commands, view, scoring,
                      # history, serialize, lang/en.ts, index.ts (the only public surface)
   shell/             # game.svelte.ts, history.svelte.ts, storage.ts, dictionary.svelte.ts,
-                     # clock.ts, prefs.svelte.ts, nav.ts, sw.ts, seed.ts, test-hook.ts
-  ui/                # components; overlays.svelte.ts; layout/ (bands.ts, geometry.ts);
-                     # gestures/ (controller, gate.ts, targeting.ts); motion.ts; keys.ts;
-                     # text.ts; assets/ (font, OFL.txt)
+                     # clock.ts, prefs.svelte.ts, nav.ts, sw.ts, seed.ts, test-hook.ts,
+                     # stored-key.ts
+  ui/                # components; overlays.svelte.ts; layout/ (bands.ts, geometry.ts,
+                     # layout.svelte.ts, tray.ts); gestures/ (controller.ts, classify.ts,
+                     # intent.ts, targeting.ts, drop-target.ts, gate.ts, click-swallow.ts);
+                     # act.ts; hover-peek.ts; motion.ts; keys.ts; text.ts;
+                     # assets/ (font, OFL.txt)
   main.ts            # boot order (AD-16), global error handler (AD-15)
-  architecture.test.ts
+  architecture-tree-scan.test.ts, architecture-ad1.test.ts,
+  architecture-ad2-ad12-ad17.test.ts, architecture-scan.ts   # AD-1
 fixtures/            # serialised Sessions and histories shared by Vitest and Playwright
 scripts/             # build-dictionary.mjs, size-budget.mjs, build-font.py, build-icons.mjs
 data/                # enable1.txt, README.md (provenance, checksums)
@@ -922,7 +974,8 @@ Changes the first epic makes to commit `785c0f6`:
   moved from `build` to a `prebuild` hook, `postbuild`, `build:test` with a `prebuild:test`
   hook, `test:e2e:pwa`, `test:e2e:dist`, `test:screens` (and `test:screens:run`), `test:all` per
   AD-17, `check` gains `tsc -p src/engine/tsconfig.json`, `tsconfig.arch.json`
-  (`src/architecture.test.ts`) and `tsconfig.e2e.json` (`playwright*.config.ts`, `playwright.base.ts`, `e2e/**`),
+  (`src/architecture.test.ts`; since epic 4 the three `src/architecture-*.test.ts` files and
+  `src/architecture-scan.ts`) and `tsconfig.e2e.json` (`playwright*.config.ts`, `playwright.base.ts`, `e2e/**`),
   `wrangler` (AD-1, AD-8, AD-17, AD-18);
   `playwright.config.ts`: `testIgnore` for `*.screens.spec.ts`; new `playwright.pwa.config.ts`
   and `playwright.screens.config.ts` (AD-17).
@@ -953,7 +1006,7 @@ Changes the first epic makes to commit `785c0f6`:
 | Drag, tap, overlap targeting, R-14, Q-34 | `ui/gestures/` | AD-12 |
 | Overlays, back handling | `ui/overlays.svelte.ts`, `shell/nav.ts` | AD-13 |
 | PWA, offline, install, manifest | `vite.config.ts`, `shell/sw.ts`, `scripts/build-icons.mjs` | AD-16 |
-| Engine purity, brief §6.5 | `src/engine/tsconfig.json`, `architecture.test.ts` | AD-1 |
+| Engine purity, brief §6.5 | `src/engine/tsconfig.json`, `architecture-*.test.ts`, `architecture-scan.ts` | AD-1 |
 | Test seams, brief §6.2–§6.4 | `e2e/helpers/`, `fixtures/`, `shell/test-hook.ts` | AD-17 |
 | Size budget, CI, deploy, brief §6.7–§6.8 | `scripts/`, `.github/`, `wrangler.jsonc` | AD-18 |
 
@@ -968,8 +1021,8 @@ the per-ticket loop of `docs/development-methodology.md`.
 | 1 | Scaffold hardening, CI and deploy | Scaffold deltas; engine tsconfig, `architecture.test.ts`, Biome overrides (AD-1); dictionary generation and `?url` wiring (AD-8 build part); font subset, manifest and icons (AD-16, AD-18); size script (AD-18); test hook module with its gating (`DEV` / `VITE_TEST_HOOKS`), seed/touch/lifecycle helpers, `pwa` project, screenshot container (AD-17); `ci.yml`, `deploy.yml`, `wrangler.jsonc`, `_headers`, `.assetsignore` | — |
 | 2 | Rules engine | Deal freeze and golden test (AD-5); Session types, replay and validation; commands and the command table (AD-2); view (AD-3); scoring and bands; history record, reconcile, `isRecorded`, statistics (AD-6); serialise/parse with rejection reasons (AD-7); `LangData` and the R-81 penalty (Scaffold deltas). Every engine sentence of spec §2–§6 tested | 1 |
 | 3 | App shell services | Game store states, dispatch and feedback (AD-4); history store (AD-6); storage (AD-7); dictionary load and retry (AD-8); clock and lifecycle (AD-9); seed; prefs and motion (AD-10); nav adapter and the overlays core (AD-13); fatal surface (AD-15); Session-rejected message, History notice and its Reset confirm (moved from rows 6 and 4, epic 3 spec E2, E3); boot order minus SW (AD-16); test-hook store accessors (`loaded()`, `current()`, `dictionaryState()`) and restore-boundary Playwright tests (AD-17) on a minimal board | 2 |
-| 4 | Board and gestures | Layout definition, geometry, gate and anchoring (AD-11); cards, columns, WordCells, top bar, action bar; pointer controller and targeting (AD-12); overlays store: tail selection and end-sheet states on the epic 3 core (AD-13); tap-select and foot pads; WordCell view (peek, sticky, hover); drop → Composing | 3 |
-| 5 | Tray and Place | Tray band, tiles, destination block, D-block controls; free letters (tap and drag); arrange and tap-swap; Validate states and invalid-word line; placement strip; Confirm; FLIP and fly-to-cell (AD-14); tray growth | 4 |
+| 4 | Board and gestures | Layout definition, geometry, gate and anchoring (AD-11); cards, columns, WordCells, top bar, action bar; pointer controller and targeting (AD-12); overlays store: tail selection and end-sheet states on the epic 3 core (AD-13); tap-select and foot pads; WordCell view (peek, sticky, hover); drop → Composing; every `GameView` board state, a static tray (live tiles, no gestures) and the Composing column gestures (epic 4 SPEC F1, F2, F17, moved from row 5; merged and deployed on its own, F29) | 3 |
+| 5 | Tray and Place | Tray interactions (tiles, destination block, D-block controls); free letters (tap and drag); arrange and tap-swap; Validate states and invalid-word line; placement strip; Confirm; FLIP and fly-to-cell (AD-14); tray growth | 4 |
 | 6 | Game surfaces and keyboard | Menu sheet, confirm dialogs, end sheet, Statistics, Preferences, How to play, the history-unreadable end-sheet block, Statistics message and menu dot, pending-draft line, keyboard map, screen-reader labels and live region; `__APP_VERSION__` injection and menu footer (Consistency Conventions) | 5 |
 | 7 | PWA and release | SW registration, update policy, offline test (AD-16, AD-17); `requestPersistence()`; test-hook `swState()` and `precacheComplete()` (AD-17); device checks (brief §6.2 force-stop, §6.3 ten qualifying games, relaunch into Game over → Android back collapses the end sheet, A-A11) | 3 (SW), 5 (offline test), 6 (release checks) |
 

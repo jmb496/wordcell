@@ -134,7 +134,7 @@ holds the how, the component tree and the spine close-out edits.
     ends the press at once, so another pointer's `pointerdown` starts a new gesture, and only the
     cancelled `pointerId`'s own remaining events are ignored until its
     `pointerup`/`pointercancel`; it attaches through a Svelte action on App's active-branch (Board)
-    root, which spans the viewport, each time that root mounts and detaches on its unmount (halt,
+    root, which spans the viewport except the desktop `scrollbar-gutter` strip (F30), each time that root mounts and detaches on its unmount (halt,
     rejected) after a `cancel()` (a halt mid-drag), and captures only presses resolved to a column, a WordCell or a tile, never on enabled buttons (F25); it resolves a press by `data-place` (F23): `column` → column
     press, `cell` → its WordCell press, `tray`/`strip` → inert in epic 4 (no dispatch, no
     selection change); a press on a non-card part of a column (empty space, placeholder, foot
@@ -327,7 +327,7 @@ holds the how, the component tree and the spine close-out edits.
   per gesture; UI-level no-ops are the controller not dispatching, gated by a `GameView` flag.
 - Hand-rolled gestures (rule 4, AD-12): Pointer Events with `setPointerCapture`, no DnD library,
   `transform` written directly during a drag, Svelte state only at release, drop by overlap of
-  the grabbed card's rendered rect with whole hit rects.
+  the grabbed card's rendered rect with whole hit rects clipped to the visible band (F34).
 - Hit rects never move under a finger: w and band changes run only through the gate (AD-11).
 - No code assumes which band sits above which; `BAND_ORDER` is the only order (AD-11).
 - Single owners (AGENTS.md Conventions): overlay open state, the long-press peek and the hover
@@ -398,7 +398,7 @@ below (F27–F29). The spine bug report stands as a report, its default per AGEN
 - Spine bug report (AGENTS.md Policy): AD-11's `bannerShown` as a latched copy of
   `dictionary.state === 'failed'` vs Q-42's banner kept during a service-worker retry. Not answered
   2026-10-01; Q-42 is spec text and wins, so the default applies: latch `dictionary.showBanner`
-  (F20), correction folded into AD-11 at close-out.
+  (F20), correction folded into AD-11 at the epic 4 retrospective (C1).
 - The WordCell view and peek title and the hover peek's older-cards line (CAP-9): accepted as
   proposed (F27).
 - A drag interrupted by the platform (e.g. an Android edge-swipe back) that had replaced a
@@ -430,12 +430,12 @@ Rationale in `build-notes.md`.
 | F17 | Composing column gestures. | Epic 4; D-block controls epic 5. |
 | F18 | R6 helper shape. | `src/shell/stored-key.ts`, which never imports `./storage`: `rejectReason`, last-text tracker whose `isStale(currentText)` takes the store's own `read(KEY)`, the `loaded()` launch snapshot fed by the store, halted/booting write guard; no behaviour or message change. |
 | F19 | Hover peek when no room above (dev fallback orders). | Below the cell, never covering it. |
-| F20 | AD-11 `bannerShown` vs Q-42's kept banner. | Latch `dictionary.showBanner`. Reported to the owner (Open Questions); spine close-out edit. |
+| F20 | AD-11 `bannerShown` vs Q-42's kept banner. | Latch `dictionary.showBanner`. Reported to the owner (Open Questions); folded into spine AD-11 at the retrospective (C1). |
 | F21 | innerHeight-only change under 80 px (w fixed). | AD-11's rule: leftover = max(0, innerHeight − height-rule sum − banner) absorbs it; the layout module applies the absolute anchor offset's delta clamped to the document's scroll range, so at `scrollTop` 0 a leftover shrink applies none, and past exhaustion the document becomes scrollable by the shortfall with `scrollTop` unchanged; a w recompute applies the same clamped anchor-offset delta. |
 | F22 | `BAND_ORDER` shape. | Ordered units of AD-11 band ids; `?bands=` names units (absent or empty: the default order; repeated: the first value); a non-permutation throws (AD-15); stickiness follows the top bar, banner and action-bar units wherever they sit (dev only). |
 | F23 | Press resolution. | By `data-place`: `column`, `cell`; `tray`/`strip` inert in epic 4. |
 | F24 | One `cancel` for hide, Undo and back. | `cancel({ byBack })` deselects only when the gesture it ends is a drag that replaced a selection, and `byBack` skips even that (`closedByBack` clears it); a release over nothing ending such a drag deselects (`overlays.deselect()`, entry popped), while a real `pointercancel`/`lostpointercapture` flies it back and restores the old selection's classes, selection and entry kept as with `byBack` (an Android edge-swipe may send `pointercancel` then back; `unverified`, epic 7); so hide during such a drag returns the tail and leaves nothing selected, its entry popped through nav's queue (`wc` 0 after `showPage`), while hide keeps a plain tap-selection; Undo, Redo, the banner `Reload` and the outside tap deselect in their own handlers. |
-| F25 | Outside-tap deselect. | The controller listens on App's active-branch root spanning the viewport (F8) (side margins, bars and banner included); presses on enabled buttons are never classified or captured (their `act()` handlers run), disabled controls fall through to this path. On the controller's `tap` classification for pointer input (`click` only for non-pointer activation, never both for one gesture), never on `pointerdown`; excludes `[data-wordcell]` (the controller handles WordCells; the cell-number labels sit outside it and take this path), the open view sheet and scrim (classified per CAP-9), and long-presses; `deselect()` with nothing selected is a no-op with no `nav` call. |
+| F25 | Outside-tap deselect. | The controller listens on App's active-branch root spanning the viewport except the desktop `scrollbar-gutter` strip (F8, F30) (side margins, bars and banner included); presses on enabled buttons are never classified or captured (their `act()` handlers run), disabled controls fall through to this path. On the controller's `tap` classification for pointer input (`click` only for non-pointer activation, never both for one gesture), never on `pointerdown`; excludes `[data-wordcell]` (the controller handles WordCells; the cell-number labels sit outside it and take this path), the open view sheet and scrim (classified per CAP-9), and long-presses; `deselect()` with nothing selected is a no-op with no `nav` call. |
 | F26 | Hit rects (DESIGN.md Hit rects) vs the drawn card. | Each live card and WordCell element is a slot wrapper spanning its full slot pitch (w + 4 wide; strip or H tall) with the drawn face inside; the wrapper carries `data-card-id`, `data-testid` and `data-place` (AD-14's one live element), the face none and is `pointer-events: none`, so hit-testing and `elementFromPoint` see only wrappers. The 8 px selection lift moves only the face, so hit areas never move under a finger; a drag's `transform` moves the faces (the wrappers stay to draw the ghosts, CAP-7), and overlap uses the grabbed face's rect. |
 | F27 | WordCell view and peek title; hover peek older-cards line. | Owner, 2026-10-01: `WordCell 6 · 7 cards`, singular `WordCell 6 · 1 card`; `desktop` hover peek line `+1 older card` / `+n older cards`; all in `src/ui/text.ts`; EXPERIENCE.md's message catalogue gains them at close-out (`build-notes.md`). |
 | F28 | A platform-interrupted drag (e.g. Android edge-swipe back) that had replaced a tap-selected tail. | Owner, 2026-10-01: restores the earlier selection, as F24 states (real `pointercancel`/`lostpointercapture` → fly-back, old selection, classes and entry kept; a following back clears it via `closedByBack`). EXPERIENCE.md Drop targeting step 6, its Pointer thresholds line and spine AD-12 are amended at close-out (`build-notes.md`). |
