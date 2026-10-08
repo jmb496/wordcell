@@ -61,7 +61,9 @@ function refit(): void {
   size = fitSize((px) => measure(el, px), box, max);
 }
 
-// Text change: the word, the rejected word (and with it the max) or the text element.
+// Text change: the word, the rejected word (and with it the max) or the text element. `wordKey` is
+// the intended word trigger; the effect also re-runs when `game.feedback` is replaced (it reads
+// `rejectedWord` through it), which is incidental.
 $effect(() => {
   void [wordKey, rejectedWord, max, textEl];
   refit();

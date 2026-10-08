@@ -1,5 +1,5 @@
 # Review loop — ticket 5.1 build (code mode, 64ea5a4..443cbe5)
-State: pass 2: done
+State: pass 3: done
 
 Target: `_bmad-output/implementation-artifacts/review-loop/5-1-build.passes/pass0.diff` (git diff 64ea5a4..443cbe5; build commit 443cbe5)
 Intent: `_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-draft-wordcards-and-the-composing-tray-plan.md`
@@ -40,6 +40,23 @@ Fixer: items 1-6 applied in e2e/tray.spec.ts only (shared `lineGeometry`/`fitted
 - [minor] e2e — no check that `wc-measuring` is removed after refit → fixer item 6
 ### Default applied (technical)
 - 360 px case — rename to a no-overflow check unless a real width forces a shrink
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Pass 3 — 2026-10-08
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 1, minor 4, decision-needed 0  |  Dropped in triage: 0
+Snapshot: tree 60866295dadb1f25c042a359b6d15496c471de74 (fix diff `5-1-build.passes/pass3.fix.diff`)
+Fixer: items 1-5 applied (word span `overflow-x: hidden`, `text-overflow: ellipsis`, right ≤ space left; mutation clip/visible each fail; WordLine comment + plan Implementation Notes line on the redundant trigger; inline `COMPACT_SCRATCH` Session (no session-place-compact fixture exists) → 9 compact tiles, `card-28` in tray, 0 `.tag`; k = 2 faces overlap 1 ± 0.5 px with inner borders 0; badge 18 × 12 at face top + border-top). Fixer runs: tray+dictionary android 37 passed; tray --repeat-each=3 69 passed. Orchestrator check: `npm test` 2075 passed; lint clean; check 0 errors.
+### Applied
+- [major] e2e/tray.spec.ts 'AD-11 (R-38) below the 14 px width only the word span ellipsizes…' — `word.scrollWidth > clientWidth` holds with `overflow: visible` and ignores `text-overflow`, so the ellipsis is unproven (pass-2 item 1 half resolved); assert the word span's computed `overflow`/`text-overflow` and that its right edge ≤ the space span's left edge → fixer item 1
+- [minor] WordLine.svelte refit effect — `wordKey` is the intended trigger but redundant with the `game.feedback` re-read; comment it and note in the plan that tests cannot tell them apart → fixer item 2
+- [minor] e2e/tray.spec.ts — card-mode-only origin tag has no compact negative case; session-place-compact after one Undo, `.tag` count 0 → fixer item 3
+- [minor] e2e/tray.spec.ts R-32 k = 2 — joined edge to edge not proven; start face right ≈ end face left, inner border widths 0 → fixer item 4
+- [minor] e2e/tray.spec.ts BADGE_VARIANTS — badge 18 × 12 at the face top unpinned; assert size and top → fixer item 5
+### Default applied (technical)
+- wordKey — keep as the explicit trigger, document the redundancy (no component change)
 ### Decision needed (functionality / UX / gameplay)
 - none
 ### Dropped

@@ -115,6 +115,7 @@ Seed 1 literals (card → letter from `src/engine/lang/en.ts` deck order).
 - Badge (A9 4.3-m4): `.block:not(.end) .badge { right: 5px }`.
 - e2e: `trayIds` in `e2e/helpers/board.ts` (+ helpers.spec case), board-phases imports it (header comment and the AD-11 (F2) test name no longer say "static"); new `e2e/tray.spec.ts`; `e2e/dictionary.spec.ts` unchanged and green.
 - ×2 badge scratch Session (Design Notes), browser check: android tileWidth 46, `35` mirror (class `block`, a middle tile) wrapper x 64, badge right 110 = 64 + 46, badge 18 × 12; desktop tileWidth 44, wrapper x 512.5, badge right 556.5 = 512.5 + 44. Word line `LQUEJATA`, `L`, `QU` (one span), `E` underlined.
+- WordLine refit `$effect`: `wordKey` is the intended text-change trigger, but the effect also re-runs whenever `game.feedback` is replaced (every changing dispatch), so tests cannot distinguish the two triggers (dropping `wordKey` would go undetected).
 - Word-line computed font size on session-composing (`TAN`) and the scratch Session: 20px on android and on desktop.
 - Screenshots: the first `--update-snapshots` run rewrote nothing (the composing change is under `maxDiffPixelRatio: 0.01`), so `--update-snapshots=all -g composing` regenerated `board-composing-android-linux.png` and `board-composing-desktop-linux.png` (the only renders that changed); idle, place and game-over unchanged. Then plain `npm run test:screens`: 8 passed.
 - Verification: `npm run test:all` green (unit 2075, e2e dev 384 passed / 340 skipped, dist-smoke 14, pwa 12); `npm run test:screens` green.

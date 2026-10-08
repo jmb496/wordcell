@@ -102,6 +102,59 @@ test('R-33 (UI) a free letter from cell 3: word ONE with E underlined, tag 3 on 
   await expect(used).toHaveClass(/\bused\b/);
 });
 
+// A compact-mode Composing scratch Session (no fixture holds one): session-place committed to
+// cell 3 (top 28 N), then S = column 4's tail 14 16 17 18 32, the free letter 28 from cell 3 and
+// D = 27 1 9 (k = 3) on the right: 9 tiles, more than one android row.
+const COMPACT_SCRATCH = {
+  version: 1,
+  seed: 1,
+  moves: [
+    {
+      sourceColumn: 3,
+      sourceCount: 2,
+      destinationColumn: 6,
+      destinationCount: 1,
+      destinationSide: 'right',
+      freeLetters: [],
+      arrangement: [42, 0],
+      reached: 'committed',
+      targetCell: 3,
+      placementOrder: [42, 0, 28],
+    },
+    {
+      sourceColumn: 4,
+      sourceCount: 5,
+      destinationColumn: 6,
+      destinationCount: 3,
+      destinationSide: 'right',
+      freeLetters: [3],
+      arrangement: [14, 16, 17, 18, 32, 28],
+      reached: 'composing',
+    },
+  ],
+  cursor: { index: 1, phase: 'composing' },
+  gaveUp: false,
+  activeMs: 0,
+};
+
+test('R-33 (UI) compact mode: a free letter from cell 3 carries no origin tag (card mode only)', async ({
+  page,
+}) => {
+  await seedStorage(page, { session: JSON.stringify(COMPACT_SCRATCH) });
+  await page.goto('/');
+  await expectComposing(page, {
+    word: 'GHHIONEAN',
+    letters: ['G', 'H', 'H', 'I', 'O', 'N', 'E', 'A', 'N'],
+    underlined: [9, 1, 27],
+    ids: ['14', '16', '17', '18', '32', '28', '9m', '1m', '27m'],
+    count: '9 letters',
+  });
+  await expect(tray(page).locator('.tiles.compact')).toHaveCount(1);
+  await expect(tray(page).getByTestId('card-28')).toHaveAttribute('data-place', 'tray');
+  await expect(tray(page).locator('.tag')).toHaveCount(0);
+  await expect(page.locator('[data-card-id]')).toHaveCount(52);
+});
+
 test('R-32 (UI) k = 2: word MAN with A and N underlined, one blue block outline and one lock in the tray', async ({
   page,
 }) => {
@@ -126,6 +179,21 @@ test('R-32 (UI) k = 2: word MAN with A and N underlined, one blue block outline 
     );
   }
   await expect(tray(page).locator('.lock')).toHaveCount(1);
+  // Joined edge to edge (Card.svelte `.block`): the start face drops its right border and overlaps
+  // the end face, which drops its left border, by 1 px (no seam).
+  const join = await tray(page).evaluate((el) => {
+    const start = el.querySelector('[data-mirror-of="1"] .face');
+    const end = el.querySelector('[data-mirror-of="27"] .face');
+    if (start === null || end === null) throw new Error('block faces missing');
+    return {
+      overlap: start.getBoundingClientRect().right - end.getBoundingClientRect().left,
+      startRight: getComputedStyle(start).borderRightWidth,
+      endLeft: getComputedStyle(end).borderLeftWidth,
+    };
+  });
+  expect(Math.abs(join.overlap - 1)).toBeLessThanOrEqual(0.5);
+  expect(join.startRight).toBe('0px');
+  expect(join.endLeft).toBe('0px');
 });
 
 for (const [fixture, ids] of [
@@ -339,9 +407,22 @@ test('AD-11 (R-38) below the 14 px width only the word span ellipsizes; the suff
   await expect.poll(() => fontSize(page, '.invalid .text')).toBe(14);
   const word = await text.evaluate((el) => {
     const span = el.querySelector('.word') as HTMLElement;
-    return { scrollWidth: span.scrollWidth, clientWidth: span.clientWidth };
+    const space = el.querySelector('.space') as HTMLElement;
+    const style = getComputedStyle(span);
+    return {
+      scrollWidth: span.scrollWidth,
+      clientWidth: span.clientWidth,
+      overflowX: style.overflowX,
+      textOverflow: style.textOverflow,
+      right: span.getBoundingClientRect().right,
+      spaceLeft: space.getBoundingClientRect().left,
+    };
   });
   expect(word.scrollWidth).toBeGreaterThan(word.clientWidth);
+  // The overflow is clipped with an ellipsis and never paints over the space or suffix.
+  expect(word.overflowX).toBe('hidden');
+  expect(word.textOverflow).toBe('ellipsis');
+  expect(word.right).toBeLessThanOrEqual(word.spaceLeft + 0.5);
   expect(await suffixOverflow(page)).toBeLessThanOrEqual(0.5);
   const suffix = await text.evaluate((el) => {
     const span = el.querySelector('.suffix') as HTMLElement;
@@ -521,17 +602,30 @@ for (const variant of BADGE_VARIANTS) {
     const geometry = await tray(page).evaluate((el) => {
       const live = el.querySelector('[data-card-id] .face');
       const wrapper = el.querySelector('[data-mirror-of="35"]');
+      const face = wrapper?.querySelector('.face');
       const badge = wrapper?.querySelector('.badge');
-      if (live == null || wrapper == null || badge == null) throw new Error('scratch tray missing');
+      if (live == null || wrapper == null || face == null || badge == null)
+        throw new Error('scratch tray missing');
+      const b = badge.getBoundingClientRect();
       return {
         tileWidth: live.getBoundingClientRect().width,
         left: wrapper.getBoundingClientRect().left,
-        right: badge.getBoundingClientRect().right,
+        right: b.right,
+        width: b.width,
+        height: b.height,
+        top: b.top,
+        // `.block .badge { top: 0 }` is the face's padding edge: its border-box top + top border.
+        faceTop:
+          face.getBoundingClientRect().top +
+          Number.parseFloat(getComputedStyle(face).borderTopWidth),
       };
     });
     expect(Math.abs(geometry.right - (geometry.left + geometry.tileWidth))).toBeLessThanOrEqual(
       0.5,
     );
+    expect(Math.abs(geometry.width - 18)).toBeLessThanOrEqual(0.5);
+    expect(Math.abs(geometry.height - 12)).toBeLessThanOrEqual(0.5);
+    expect(Math.abs(geometry.top - geometry.faceTop)).toBeLessThanOrEqual(0.5);
     const qu = tray(page).locator('.word-text [data-word-card="35"]');
     await expect(qu).toHaveCount(1);
     await expect(qu).toHaveText('QU');
