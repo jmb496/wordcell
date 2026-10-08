@@ -1,5 +1,5 @@
 # Review log — story-draft-wordcards-and-the-composing-tray.md (ticket 5.1)
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7. Pass 0: 371 words (`.passes/pass0.md`). Intent fields from tickets.toml entry 1 (unknown, interface, tests, owns, consumers): `.passes/intent.md`.
 
@@ -98,3 +98,26 @@ Fixer: all 5 majors and minors 6–14 applied (minors net word-neutral); `--upda
 - none
 ### Dropped
 - clip-at-end stretch (no fixture or likely draft exceeds the box at 14 px)
+
+## Pass 4 — 2026-10-08
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 2, minor 10, decision-needed 0  |  Dropped in triage: 3 (duplicates of the space contradiction; two stretch minors)
+Words (docs): 1072 (2.89 x pass 0, over budget; growth from majors)  |  Snapshot: .passes/pass4.md, fix diff .passes/pass4.fix.diff
+Fixer: both majors and minors 4, 7, 8 applied (net word-neutral); 3, 5, 6, 9 skipped (budget)
+### Applied
+- [major] Invalid line — pass 3's "gap is CSS, never a leading space" contradicts word + suffix === invalidWord(w) and the R-38 exact-text locator (textContent loses the space) → fixer item 1
+- [major] Fit probe — an unnamed "max-content probe" invites a cloned text node, a second exact-text match that breaks the R-38 strict locator and doubles screen-reader text → fixer item 2
+- [minor] invalid-line measure includes the word–suffix spacing; ✕ glyph fixed 16 px → folded into item 2
+- [minor] R-33 (UI) P5 also asserts cell 3 is a `used` mirror, or the plan marks the tag check supplementary → item 3
+- [minor] outline observable: one `.block.start` and one `.block.end` among tray-band mirrors → item 4
+- [minor] Consumers: drag-interruptions, layout specs and e2e/helpers/board.ts → item 5
+- [minor] Notes keep the intent's unknown, resolved by the plan's container run → item 6
+- [minor] ×2 badge: right edge at the grid cell's x + tileWidth → item 7
+- [minor] R-30 P5: tray DOM ids in order equal `draft.wordCards` → item 8
+- [minor] Interface: Card.svelte gains the origin-tag prop → item 9
+### Default applied (technical)
+- Space → suffix without a leading space, `invalidWord` = `${W} ${suffix}`, a space text node between word and suffix spans inside one non-flex text element (✕ outside); S test word + ' ' + suffix === invalidWord(w)
+- Probe → measure the line's own element under a temporary measuring class, never clone the text into the DOM
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- compact-mode tag gap until entry 2 (intermediate build not shipped); "computed size" vs F11 (range is text-independent); unverified parenthetical wording
