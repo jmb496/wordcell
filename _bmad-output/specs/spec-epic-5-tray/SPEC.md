@@ -255,7 +255,9 @@ S + F + the D mirrors; in Place, the strip tiles (CAP-1 mode, CAP-6 caret, CAP-9
     as epic 4's fly-back fade: faces at the settled rect fading opacity 0 → 1; the previous cards
     and the used-state mirror switch then); mirrors never take part in the FLIP glide;
     New game, Replay and restore never animate; each animation is gate-counted (AD-11); a new
-    press or an `act()` button completes every running animation and acts on the settled state;
+    press or an `act()` button completes every running animation and acts on the settled state
+    (`flip.finishAll()` joins the controller's `pointerdown` and `cancel()`, which today call only
+    `finishFlight()`, F6);
     on a drag release `flip.capture()` runs before the controller clears the drag and parting
     transforms (F7);
     UI Vitest `AD-14` for the command + result → kind table (`drop`, `tapDestinationCard`,
@@ -265,7 +267,7 @@ S + F + the D mirrors; in Place, the strip tiles (CAP-1 mode, CAP-6 caret, CAP-9
     case, each asserting the 120 ms opacity fade),
     the coordinate frame (a same-band card with a band shift, e.g. `+` 14 → 15 with the block on
     the left; a band change, including one at 412 × 780 (anchor delta 6 px)),
-    the finish-all path and a dropped face whose first keyframe starts at its released position;
+    the finish-all path (the gate idle at every dispatch) and a dropped face whose first keyframe starts at its released position;
     P5, with Animation
     speed Slow seeded (`prefs-non-default`, 320 ms base), `getAnimations()` read inside the same
     `page.evaluate` that clicks or keys an `act()` button (Validate, Flip, `−`/`+`, Undo, Redo,
@@ -292,9 +294,11 @@ S + F + the D mirrors; in Place, the strip tiles (CAP-1 mode, CAP-6 caret, CAP-9
     amended 2026-10-08, F24): `flip.capture()` first calls `gate.scrollReset()` (epic 4's
     `src/ui/gestures/gate.ts`), and every dispatch path ends any gesture and finishes running
     animations first (`act()` and key commands → `cancel()`, the controller's `pointerdown`; a
-    release dispatches after the controller's `gate.leave()`), so the gate is idle at every move;
+    release dispatches after the controller's `gate.leave()`), so the gate is idle at every move
+    (a move is every dispatch, AD-11);
     a move's re-layout that finds the gate busy throws (rule 6, AD-15); there is no interim tray
-    render. The Tray's tile mode and row count come from the same row count as the band, so both
+    render. The anchor `scrollTop` write's effect on a running fling on Android is unverified on
+    device and goes to the epic 7 device checks. The Tray's tile mode and row count come from the same row count as the band, so both
     switch together; UI Vitest `AD-11` for a 14 → 15 `+` dispatched within 150 ms of a `scroll`
     (page scroll no longer busy; the 15th tile, the band height and the hit rects change in the
     move's update and the glide starts at once); P5 at 412 × 839 (leftover absorbs the growth) and at 412 × 780 (leftover
@@ -323,7 +327,7 @@ S + F + the D mirrors; in Place, the strip tiles (CAP-1 mode, CAP-6 caret, CAP-9
     `seed`, `moves`, `cursor` equal those read right after the Confirm write); separately, an
     untouched win settles, then a New game tap starts a new game (a new seed in `current()` and
     the stored Session); the double tap again under emulated reduced motion and at Fast speed
-    (`prefs-fast.json` [ASSUMPTION name], scripted), second tap within 300 ms of the first → same
+    (`prefs-fast.json` [ASSUMPTION name], scripted), second tap within 300 ms of the guard install (F8) → same
     seed, no New-game Session (F23); `desktop`: Enter twice on a focused
     Confirm, the faces' `getAnimations()` running before the second Enter → same seed, no
     New-game Session; `desktop`: Enter held on a focused Confirm (repeated `keyboard.down('Enter')`
@@ -376,7 +380,7 @@ S + F + the D mirrors; in Place, the strip tiles (CAP-1 mode, CAP-6 caret, CAP-9
   owner-authorised AD-3 amendment (2026-10-08) supersedes epic Boundaries "No engine change" for
   `draft.wordCards` until its edit lands (build-notes, due before CAP-1 is ticketed).
 - Hit rects never move under a finger: band re-layout waits for an active gesture or page
-  scroll, a move's tray growth only for a gesture (AD-11, F24);
+  scroll; a move's re-layout never waits, and a gate still busy at a move is a bug (AD-11, F24);
   a selected tile's lift moves only its face (AD-11, F2).
 - Single owners (AGENTS.md Conventions): tile selection in `overlays.svelte.ts`; WAAPI durations
   only from `motion.ts`, CSS transitions on `--wc-base-ms`; player strings only in `text.ts`;
@@ -535,7 +539,7 @@ F17, F19, F20, F22 and F23 record the owner's answers and F24 the owner's AD-11 
 | F21 | OQ-5: a fast double tap on a Validate that succeeds. | Answered by reference, not an owner question: EXPERIENCE.md "ignored until the result renders"; a fast double tap validates then confirms; the P5 test is CAP-2's. |
 | F22 | OQ-6: destination letters on Validate and on Undo back to Composing. | Owner: as AD-14 implies, the D faces glide from and to their destination column; the tray-block copies (mirrors) disappear and reappear at once (CAP-8). |
 | F23 | OQ-7: winning guard window. | Owner: the guard lasts at least 300 ms after the win at any speed, reduced motion and Fast included (F8); the double-tap test also runs under reduced motion and at Fast (CAP-10). Spine AD-14 and EXPERIENCE.md Motion amended. |
-| F24 | Spine AD-11: a move during page scroll. | Owner-approved amendment: every move clears page-scroll busy first (as `gate.scrollReset` does on hide), so its re-layout and glide are never scroll-deferred; only an active gesture defers, and no dispatch path reaches a move with one active (CAP-9). The change to epic 4's gate wiring is CAP-9's task. DESIGN.md Tray band amended. |
+| F24 | Spine AD-11: a move during page scroll. | Owner-approved amendment: every move (every dispatch, AD-11) clears page-scroll busy first (as `gate.scrollReset` does on hide), so its re-layout and glide are never scroll-deferred; only an active gesture defers, and no dispatch path reaches a move with one active (CAP-9). The change to epic 4's gate wiring is CAP-9's task. DESIGN.md Tray band amended. |
 
 ## Upstream amendments (done 2026-10-08, owner-authorised)
 

@@ -262,8 +262,9 @@ src/ui/
 - FLIP moves the `.face` inside each live wrapper; the wrapper (identity, hit rect) stays at its
   settled rect, so a press mid-animation hit-tests the settled layout.
 - Every animation registers with the gate (`enter`/`leave`) and with one running set that
-  `finishAll()` completes; the controller's
-  `pointerdown` and `cancel()` call it (F6).
+  `finishAll()` completes; `flip.finishAll()` becomes part of the controller's `pointerdown`
+  and `cancel()` (F6), which today call only `finishFlight()` (`controller.ts:446`); a UI Vitest
+  `AD-14` asserts the gate is idle at every dispatch.
 - Fly-to-cell targets the cell's live element stack; stagger bottom card first. Each card the
   commit placed stays visible for its flight (today non-top cell cards are `visibility: hidden`,
   `WordCellRow.svelte:59`) and takes the hidden state on landing if it is not the top (AD-14,
@@ -289,7 +290,9 @@ src/ui/
   no gesture is active at a dispatch: `act()` and key commands call `cancel()`, and the
   controller's `end()` leaves the gate (`gate.leave()`, `controller.ts:369`) before the release
   dispatch (`controller.ts:762`); a move's re-layout that finds the gate busy is a bug and
-  throws. The Tray's tile mode and row count read the band's row count, so both switch together.
+  throws. A move is every dispatch (AD-11), failed Validates and no-op dispatches included.
+  The anchor `scrollTop` write's effect on a running fling on Android is unverified on device and
+  goes to the epic 7 device checks. The Tray's tile mode and row count read the band's row count, so both switch together.
   Mid-drag the row change waits for release.
 - Fixtures: script `session-composing-long.json` [ASSUMPTION name] with 14 tray tiles and
   `canIncK` (one `+` → 15, three rows), and a valid Place Session with a three-row strip, under

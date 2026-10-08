@@ -479,11 +479,13 @@ sequenceDiagram
     an innerHeight-only change under 80 px (w held fixed, anchor rule applied), and
     never changes w (A-D4). Both are deferred by `src/ui/gestures/gate.ts` (active gestures,
     running animations, page scroll), except that a tray-row change caused by a move is applied
-    in the same update as the move when no gesture is active: every move (a dispatch that
-    changes the view) first clears the page-scroll busy state (as `gate.scrollReset` does on
-    hide), the move's own AD-14 animation is not busy for it, and FLIP measures after that
-    re-layout, then plays; while a gesture defers the re-layout, it defers that move's FLIP play
-    too, so the final layout is never painted before the glide (amended 2026-10-08, epic 5 SPEC). The pointer controller increments the gate at
+    in the same update as the move. A move is every dispatch (`flip.capture()` runs before each,
+    so a failed Validate or a no-op dispatch counts too); every move first clears the page-scroll
+    busy state (as `gate.scrollReset` does on hide), and banner or width work this releases runs
+    in the next frame (accepted); the move's own AD-14 animation is not busy for it, and FLIP
+    measures after that re-layout, then plays. No dispatch path reaches a move while a gesture is
+    active; a busy gate at a move's re-layout throws (AD-15) (amended 2026-10-08, epic 5 SPEC
+    F24). The pointer controller increments the gate at
     `pointerdown` **before** completing running animations; pending work runs in the next
     `requestAnimationFrame` in which the gate is idle. Page scroll is busy from the first
     `scroll` event until `scrollend`, until hide/pagehide, until a move, or until 150 ms pass without a
@@ -1094,7 +1096,7 @@ traceability.
 | A-A6 | One production environment on `workers.dev`, deploy from the tested `dist/` artifact on green `main`, no preview deploys (`wrangler.jsonc` `preview_urls: false`). | AD-18 |
 | A-A7 | App icons are committed PNGs rendered from committed SVG sources by a Playwright script; no image dependency is added. | AD-16 |
 | A-A8 | Screenshot baselines live in the Playwright 1.63 noble container, so WSL2 and CI render identically; local screenshot runs need Docker in WSL2. | AD-17 |
-| A-A9 | Page scroll counts as ended at `scrollend`, at hide/pagehide, or 150 ms after the last `scroll` event, whichever comes first (the 150 ms rule is a backstop in all browsers). | AD-11 |
+| A-A9 | Page scroll counts as ended at `scrollend`, at hide/pagehide, at a move, or 150 ms after the last `scroll` event, whichever comes first (the 150 ms rule is a backstop in all browsers). | AD-11 |
 | A-A10 | The boot font check blocks mount with a 30 s timeout, like the dictionary fetch; a timeout throws to the AD-15 fatal surface. | AD-15 |
 | A-A11 | Boot-time pushes (no user activation) are honoured by Android back; Chrome's history-manipulation intervention does not mark them skippable. An epic 7 device check verifies it (relaunch into Game over, Android back collapses the sheet); if it fails it becomes a spec §9 question. | AD-16, AD-13 |
 | A-A12 | A dictionary fetch that has not settled after 30 s is aborted and treated as `failed`. | AD-8 |

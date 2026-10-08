@@ -391,7 +391,7 @@ where it was released; reduced motion uses the 120 ms fade below (owner, 2026-10
 SPEC F17).
 
 `prefers-reduced-motion: reduce` replaces the timed animations in the table above with a 120 ms
-opacity fade, whatever the preference. Finger tracking during a drag stays; tile parting snaps. The invalid-word line has no shake. An Undo during the winning animation (the button or
+opacity fade, whatever the preference. Finger tracking during a drag stays; tile parting snaps. The invalid-word line has no shake. An Undo during the winning guard window (the animation and the 300 ms minimum after the win, epic 5 SPEC F8) (the button or
 any of its key aliases) completes it and then undoes; the end sheet does not open. Every other
 pointer or key input during the winning commit animation, and for at least 300 ms after the win whatever the speed, only completes it and is consumed; the settled state is Game over with
 the end sheet expanded.
