@@ -1,6 +1,6 @@
 # Review log — spec-epic-5-tray SPEC.md
 
-State: pass 2: done
+State: pass 3: review (diverging; no fix)
 
 Target: `_bmad-output/specs/spec-epic-5-tray/SPEC.md` (docs mode, thorough, max 7); fixer may edit companions `build-notes.md`, `rule-coverage.md`.
 Pass 0: HEAD 4b02f6e; copies `SPEC.review-log.passes/pass0.{SPEC,build-notes,rule-coverage}.md`; words SPEC 3851, build-notes 2021, rule-coverage 2041 (budget ~2.5x per file).
@@ -89,3 +89,35 @@ Words (docs): SPEC 5228 (1.36x)  |  Snapshot: SPEC.review-log.passes/pass2.*.md,
 - none new
 ### Dropped
 - none
+
+## Pass 3 — 2026-10-08
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 8, minor 16, decision-needed 0  |  Dropped in triage: 0 (duplicates merged; key auto-repeat reclassified major → minor)
+Majors rose 6 → 8: stopping rule **diverging**; no fix pass run. Findings recorded for an upstream fix.
+### Open majors (not fixed)
+- CAP-9/F7/build-notes CAP-8–9 — `flip.play` timing: "right after the re-layout frame" is circular for commits (re-layout deferred until the fly settles), undefined when no row change is queued, and late when the gate is busy (final layout painted, then jumps back) — upstream: AD-11 gate × AD-14 FLIP ordering
+- CAP-8/OQ-1 — FLIP filter "container or index changed" leaves Flip, a k change (block left) and card↔compact switches without motion; contradicts OQ-1's default — upstream: AD-14 (which moves animate; band-relative rect)
+- CAP-6/build-notes CAP-5–6 — free-letter parting with room has no geometry (no origin slot); with side right the shifted M tile lands on a D mirror that "never moves" — upstream: DESIGN.md Tray band × AD-14 mirrors
+- CAP-8/F6 — fly-to-cell on hidden faces: non-top cell cards render `visibility: hidden` (`WordCellRow.svelte:59`, `Card.svelte:109`), so only the new top visibly flies; P5 `getAnimations()` passes anyway — upstream: AD-14 / DESIGN.md WordCell stack
+- build-notes CAP-1 word line (iterate tray order and `faces`) vs Constraints AD-3 "no component computes the word" — upstream: AD-3 (GameView may need D-span data)
+- Success signal/Assumption 3 — "tap a legal target" needs L ≥ 4 (a retarget); the assumption allows a 3-letter word — spec fix
+- rule-coverage R-33 / CAP-5 — free-letter tile dragged out of the tray (not removed) is assigned to CAP-5 but its P5 does not require a free-letter tile — spec fix
+- CAP-1/Assumption 4 — `session-place-compact` need not make the `QU` card a free letter, so the compact `QU` `↩` case is unreachable — spec fix
+### Unapplied minors
+- build-notes: new "Epic file close-out edits" heading swallowed three spine bullets (Structural Seed, Proposed epics row 5, AD-17 Speed)
+- build-notes component tree `flip.ts` still `play(kind)`; F6 "after the DOM update"
+- CAP-4 inert drag from a legal non-current Place cell: kept or cleared?; generalise to every no-dispatch drag start (column cards, background, top bar)
+- CAP-10 guard install timing: install on `finished: 'won'` at dispatch, not when `flip.play` starts
+- CAP-10 Enter auto-repeat keydowns before keyup not consumed
+- CAP-10 Undo pressed then slid off: win stands (record)
+- CAP-6 caret "tile count exceeds the current rows" → `perRow` × rows
+- CAP-9 deferred row change reads the latest tile count; only the newest pending change applies (Undo mid-fly)
+- CAP-9 list omits a free-letter drag-insert
+- F2 4 px lift leaves the face's top 4 px outside the hit rect (accept and record)
+- CAP-4 "document-level tap path" → the controller's `<main>` root
+- CAP-2 "secondary circles" → "secondary buttons" (DESIGN.md)
+- F4 cite AGENTS.md rule 4 (overlap targets clipped to the visible band); close-out as wording fold, not owner decision
+- R-73 reload row: tile selection and invalid-word line not restored (EXPERIENCE.md State Patterns)
+- CAP-4/CAP-5 Elevation shadow and lift/drag layers (DESIGN.md Elevation & Depth)
+
+## Result — diverging at pass 3 (fix AD-11 × AD-14 FLIP/gate ordering and animated set, DESIGN.md Tray band free-letter parting with mirrors, AD-3 word-line data; then re-run)
+Majors per pass: 18, 6, 8. Pass 3 fixes not applied; 8 open majors and 16 unapplied minors above. Decision needed: OQ-1…OQ-5 (OQ-5 proposed by review).
