@@ -547,6 +547,19 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     return { top, bottom: barRect('actionBar').top };
   }
 
+  // F37: the targeting rule (≥ 25 % overlap) against the source column's unclipped hit rect.
+  function overSource(
+    drag: Drag,
+    dragged: Rect,
+    rects: readonly { readonly id: number; readonly whole: Rect }[],
+  ): boolean {
+    const source = rects.find(({ id }) => id === drag.source);
+    if (source === undefined) throw new Error(`AD-12 column ${drag.source} not registered`);
+    return (
+      pickTarget(dragged, [{ id: drag.source, rect: source.whole }], drag.source, true).raw !== null
+    );
+  }
+
   // AD-12 one drag move: transform, measure, pick, highlight (DOM only, F12).
   function dragMove(drag: Drag, x: number, y: number): void {
     drag.dx = x - drag.x;
@@ -556,13 +569,20 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     if (grabbed === undefined) throw new Error('AD-12 drag without a face');
     const targets = columnTargets();
     const band = visibleBand();
+    const dragged = grabbed.getBoundingClientRect();
+    const rects = targets.map(({ id, el }) => ({ id, whole: el.getBoundingClientRect() }));
     const { raw, highlighted } = pickTarget(
-      grabbed.getBoundingClientRect(),
-      targets.map(({ id, el }) => ({ id, rect: clip(el.getBoundingClientRect(), band) })),
+      dragged,
+      rects.map(({ id, whole }) => ({ id, rect: clip(whole, band) })),
       drag.source,
       drag.hasLeftSource,
     );
-    if (raw !== drag.source) drag.hasLeftSource = true;
+    // Q-34, F37: the drag leaves its source when `raw` is another column, or nothing while the
+    // face also misses the source's unclipped hit rect: over the source but under a sticky bar
+    // (F34 `raw` null) is not leaving it.
+    if (raw !== drag.source && (raw !== null || !overSource(drag, dragged, rects))) {
+      drag.hasLeftSource = true;
+    }
     if (highlighted === drag.highlighted) return;
     drag.target?.classList.remove(DRAG_TARGET);
     drag.highlighted = highlighted;

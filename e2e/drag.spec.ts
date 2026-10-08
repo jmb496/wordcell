@@ -11,6 +11,7 @@ import {
 } from './helpers/board';
 import { expectNoResidue } from './helpers/drag';
 import { animationFrames } from './helpers/lifecycle';
+import { waitForDictionary } from './helpers/restore';
 import { tokenColor } from './helpers/style';
 import { type TouchHold, touchHold } from './helpers/touch';
 
@@ -233,7 +234,8 @@ test.describe('android', () => {
     await stashSession(page);
     await animationFrames(page, 3);
     expect(await sameSession(page), 'one Session change per drop').toBe(true);
-    // Static tray: the locked D mirror (column 3's bottom card) first, then the S tile.
+    // Static tray: the locked mirror of column 3's bottom card (A, card 0) first, then the dragged
+    // tile (W, card 48).
     expect(await trayOrder(page)).toEqual([`${bottom3Id}m`, `${draggedId}`]);
     const mirror = page.locator(`[data-band="tray"] [data-mirror-of="${bottom3Id}"]`);
     await expect(mirror.locator('.lock')).toHaveCount(1);
@@ -638,6 +640,62 @@ test.describe('android, scrolled board', () => {
       const face = await box(faceOf(dragged));
       // The face lies wholly under the bar, yet overlaps column 3's unclipped rect fully.
       expect(face.y + face.h).toBeLessThanOrEqual(barBottom);
+      expect(ratio(face, col3)).toBeGreaterThanOrEqual(0.25);
+      expect(await targets(page)).toEqual([]);
+      expect(await sameSession(page)).toBe(true);
+    } finally {
+      await hold.end();
+    }
+    await animationFrames(page, 2);
+    expect(await targets(page)).toEqual([]);
+    await expect.poll(() => faceAnimations(page)).toEqual([await idOf(dragged)]);
+    await expectFlownBack(dragged, rest);
+    expect(await storedText(page)).toBe(before);
+    expect(await sameSession(page)).toBe(true);
+    await expectNoResidue(page);
+  });
+
+  test('AD-12 F34 with the dictionary banner shown, a tail held over the banner never lights the column under it; the release flies back and the stored Session is byte-identical', async ({
+    page,
+  }) => {
+    // AD-8: the word list request fails, so the banner shows under the top bar.
+    await page.route('**/en*.txt', (route) =>
+      /\/en[^/?]*\.txt$/.test(route.request().url()) ? route.abort() : route.continue(),
+    );
+    await recordFaceAnimations(page);
+    await openFixture(page, 'session-idle-fresh');
+    await waitForDictionary(page, 'failed');
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
+    await animationFrames(page, 2);
+    const before = await stashSession(page);
+    const banner = await box(page.locator('[data-band="banner"]'));
+    expect(banner.h).toBeGreaterThan(0);
+    const bannerBottom = banner.y + banner.h;
+    // Premise: column 3's hit rect starts under the banner.
+    const col3 = await box(column(page, 3));
+    expect(col3.y).toBeLessThan(banner.y);
+    const dragged = cards(page, 1).last();
+    const rest = await box(faceOf(dragged));
+    const from = await centre(dragged);
+    // Up inside column 1 until the face's bottom is 4 px above the banner's bottom, then across to
+    // column 3's centre over the banner.
+    const up = plus(from, 0, bannerBottom - 4 - (rest.y + rest.h));
+    const across = { x: from.x + (col3.x + col3.w / 2 - (rest.x + rest.w / 2)), y: up.y };
+    const vertical = path(from, up, 6);
+    const horizontal = path(up, across, 6);
+    const hold = await holdThrough(page, from, [...vertical, ...horizontal], async (i) => {
+      await expectDragging(dragged);
+      expect(await targets(page)).not.toContain(3);
+      if (i < vertical.length) return;
+      expect(await targets(page)).toEqual([]);
+    });
+    try {
+      const face = await box(faceOf(dragged));
+      // The face lies over the banner, wholly above its bottom, yet overlaps column 3's unclipped
+      // rect fully.
+      expect(face.y + face.h).toBeLessThanOrEqual(bannerBottom);
+      expect(face.y + face.h).toBeGreaterThan(banner.y);
       expect(ratio(face, col3)).toBeGreaterThanOrEqual(0.25);
       expect(await targets(page)).toEqual([]);
       expect(await sameSession(page)).toBe(true);

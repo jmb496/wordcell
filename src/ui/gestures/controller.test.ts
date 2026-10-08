@@ -1988,6 +1988,25 @@ describe('AD-12 F34 drop targets clipped to the visible band', () => {
     expect(navCalls).toEqual([drop(1, 1, 3)]);
   });
 
+  it('AD-12 F37 a press on a face mostly under the top bar has not left its source: a nudge and a release back over its visible part fly back with no dispatch (Q-34)', async () => {
+    const t = await setup();
+    t.detach();
+    // card1b's face rests at y 20 … 80; the bar covers y 20 … 68 of it (80 %).
+    bar(t.b.topBar, 0, 68);
+    t.down(t.b.card1b, { clientX: 25, clientY: 50 });
+    // A 9 px nudge up: face y 11 … 71, 3 / 60 visible (no target), still over the source's rect.
+    t.fire('pointermove', { clientX: 25, clientY: 41 });
+    expect(t.b.card1.classes.has('wc-drag-target')).toBe(false);
+    // Face y 50 … 110: 42 / 60 over the source column's visible part.
+    t.fire('pointermove', { clientX: 25, clientY: 80 });
+    expect(t.b.card1.classes.has('wc-drag-target')).toBe(false);
+    t.fire('pointerup');
+    expect(navCalls).toEqual([]);
+    expect(t.b.face1b.animations).toHaveLength(1);
+    t.advance(180);
+    expect(t.active()).toBe(0);
+  });
+
   it('AD-12 F34 a missing bar during a drag throws (rule 6)', async () => {
     const t = await setup();
     t.detach();

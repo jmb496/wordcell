@@ -132,7 +132,7 @@ async function expectDrop(page: Page, d: Omit<Draft, 'phase' | 'destinationCount
 test.describe('android', () => {
   test.beforeEach(onAndroid);
 
-  test('R-14 a tap-select dispatches nothing: Session reference and storage unchanged, wc 1', async ({
+  test('R-14 Q-18 a tap-select dispatches nothing: Session reference and storage unchanged, wc 1', async ({
     page,
   }) => {
     await openFixture(page, 'session-idle-fresh');

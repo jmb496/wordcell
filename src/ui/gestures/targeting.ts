@@ -3,8 +3,8 @@
 // registered column hit rect (the source included). `raw` is the column with the largest overlap
 // ratio (intersection area ÷ dragged area) of at least 25 % (inclusive); equal ratios go to the
 // horizontally nearest centre, then the lower column number. `highlighted` suppresses the source
-// until the drag has left it (Q-34); the controller owns `hasLeftSource` (set once `raw` is not the
-// source, `null` included).
+// until the drag has left it (Q-34); the controller owns `hasLeftSource` (set once `raw` is another
+// column, or `null` while the face also misses the source's unclipped hit rect, F37).
 
 export type Rect = {
   readonly left: number;
