@@ -1,5 +1,5 @@
 # Review log — story-draft-wordcards-and-the-composing-tray.md (ticket 5.1)
-State: pass 1: done
+State: pass 2: review (reviewers running)
 
 Mode: docs, thorough, max 7. Pass 0: 371 words (`.passes/pass0.md`). Intent fields from tickets.toml entry 1 (unknown, interface, tests, owns, consumers): `.passes/intent.md`.
 
