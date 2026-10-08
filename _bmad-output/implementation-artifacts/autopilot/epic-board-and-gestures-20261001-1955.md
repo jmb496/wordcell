@@ -192,3 +192,19 @@ Close-out docs: none (owner decisions). The build notes list two technical-defau
 Stop rule 1. The ticket review of 4.13 (Refactor sweep) converged after 7 passes (majors 15, 9, 8, 6, 6, 2, 0) and pinned down the sweep's scope as an inventory of deferred items (D1…). One item needs the owner: D7. When the board is scrolled so columns sit under the sticky top bar (or the banner, or the action bar), a card dragged over a bar can highlight, and drop onto, a column the player cannot see. Proposed default: fix it now, so only the visible part of each column counts as a drop target (controller Vitest, android Playwright case), with an AD-12 wording note for the retrospective, since AD-12 / rule 4 say "whole hit rect". The alternative is to accept it for v1 and note it at the retrospective. Resume: write the answer into D7's cell of the ticket (replacing "Owner decision pending"), commit, rerun the driver; the review log has its `## Result`, so the next session goes straight to the build. Unapplied minors for the build are listed in the review log's Result.
 
 Tokens: 8.8M input-equivalent (ticket review 97%, other 2%, orchestrator 1%); orchestrator peak context 55k
+
+## 4.13 Refactor sweep — stopped
+What it adds: the closing clean-up of the epic. The three saved-data stores now share one helper for their repeated checks (no change in messages or behaviour), the score-history tests have their own file, the leftover review items D1–D20 are handled or recorded, and (owner decision D7) a card dragged over the top bar, banner or action bar no longer lands on a column hidden underneath; it flies back instead.
+Ticket review: 7 passes, converged (majors 15, 9, 8, 6, 6, 2, 0); D7 answered by the owner on 2026-10-07 (fix now, SPEC F34)
+Build: blocked: owner stop on the unit-test speed budget (all work done and verified); commits 921c0c5, f717fac
+Code review: not run yet
+Tests: test:all passing (build's run, 2026-10-07 20:52; unit 2055, e2e 371, pwa 12, dist 14); test:screens green in Docker, no picture change
+Ref to fix upstream: none
+Tokens: 10.6M input-equivalent (build 97%, other 2%, orchestrator 1%); orchestrator peak context 54k
+Worth knowing: the speed budget for the quick unit tests is 5 s; on this Windows-drive checkout the measured median is 5.62 s (3.14 s on the Linux filesystem). The ticket allowed one speed-up (splitting the architecture test), which was done but cannot help: one gesture test file (controller.test.ts, 3.5–4.0 s) is the slowest path on its own. AGENTS.md and ARCHITECTURE-SPINE.md still name the old `src/architecture.test.ts`, now split into four files; the plan lists the lines for the project-context refresh. The screenshot suite ran this time (Docker reachable) and is green.
+Close-out docs:
+ARCHITECTURE-SPINE.md AD-12 (drop targeting by "whole hit rect") ← D7: only the visible band of a column is a drop target (owner, 2026-10-07; SPEC F34)
+
+## Stopped — owner decision at ticket 4.13 build
+
+Stop rule 2. The build is complete and test:all is green, but the plan is `blocked` on the ticket's own owner stop: the warm unit-test median is 5.62 s against the 5 s budget (AD-17) after the permitted architecture-test split. Options: accept it (or measure on the Linux filesystem, where it is 3.14 s), or allow another speed-up (split controller.test.ts, or Vitest `isolate: false`). Resume: record the answer in the ticket's Notes (and the plan), set the plan to `built` if accepting, or ask for the speed-up work; then rerun the driver; it goes to the code review (Step C).
