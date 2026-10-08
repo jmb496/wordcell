@@ -194,3 +194,4 @@ Owner answers 2026-10-08 (all the proposed defaults; recorded in SPEC.md F37–F
 2. Fix F1 before the epic 4 merge, with A2 and A3. F37.
 3. A sticky view may open over a kept selection; in epic 6, Undo, Redo, the menu and key commands first close the view, then act (A7). F39.
 4. F4 accepted for now; revisit with the epic 5 tray work. F40.
+5. Follow-up 2026-10-08 (F41): the A4 split made the `/mnt/d` median worse (5.30 → 5.98 s), so it was reverted; the 5 s budget is measured on a Linux-filesystem checkout from now on (G4).

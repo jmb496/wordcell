@@ -54,8 +54,9 @@ Spine edits are batched at close-out as in epic 3, so the R1 AD-13 record (retro
 - AD-17 Speed: record the epic 4 warm median and, if it was done, the `architecture.test.ts` split.
   F35 (owner, 2026-10-07): 5.62 s on `/mnt/d` after the split (3.14 s on the Linux filesystem) is
   accepted for now; the retrospective decides whether the 5 s budget, or where it is measured, changes.
-  F38 (owner, 2026-10-08): the 5 s warm median on the dev checkout stays; `controller.test.ts` is
-  split before the epic 4 merge. Folded at the epic 4 retrospective, C16, C17.
+  F38 (owner, 2026-10-08): the 5 s budget stays; F41 (owner, 2026-10-08): the trial split of
+  `controller.test.ts` (5.30 → 5.98 s on `/mnt/d`) is reverted and the budget is measured on a
+  Linux-filesystem checkout. Folded at the epic 4 retrospective, C16, C17.
 
 ## EXPERIENCE.md close-out edits (owner answers 2026-10-01; EXPERIENCE.md is not edited by this epic)
 

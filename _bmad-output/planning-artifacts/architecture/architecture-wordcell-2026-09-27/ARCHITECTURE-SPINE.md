@@ -523,7 +523,9 @@ sequenceDiagram
   candidates, sourceId, hasLeftSource)` in `targeting.ts`, which returns `{ raw, highlighted }`: `raw` = the EXPERIENCE.md Drop targeting steps 3–4 result (largest ratio
   ≥ 25 %, column tie-break, or null, A-E6) before source suppression; `highlighted` = `raw` with the
   source column suppressed until `hasLeftSource`. The controller sets `hasLeftSource` when
-  `raw !== sourceId` after the threshold (including `raw === null`), never from `highlighted`
+  `raw` is another column after the threshold, or when `raw === null` and the dragged face also
+  misses the source's unclipped hit rect by the same ≥ 25 % rule (so a face hidden under a bar
+  has not left its source, F37), never from `highlighted`
   (Q-34; Vitest covers both, and a drag below 25 % on the source column only). A drag's release drops on `highlighted`, and on nothing when it is null; release dispatches at most one command, or none. A drag started on a destination-column card in
   Composing dispatches `tapDestinationCard` for the press card at `pointerup` (R-39). A drag that
   replaced a tap-selection: released over nothing or ended by a plain `cancel()`, it leaves
@@ -733,11 +735,13 @@ sequenceDiagram
     the slowest engine test file; the architecture tests (1.5 s at epic 3; split at epic 4 into
     the three `src/architecture-*.test.ts` files plus `src/architecture-scan.ts`, AD-1) are
     informational. Both are re-measured at each epic's refactor sweep; if the warm median exceeds
-    5 s, the next lever is splitting the critical-path test file. Epic 4 measured 5.62 s on the
+    5 s, profile first: more files add worker start-up and do not help a CPU-bound run. Epic 4 measured 5.62 s on the
     `/mnt/d` dev checkout (3.14 s on the Linux filesystem), critical path
-    `src/ui/gestures/controller.test.ts`, accepted for that sweep (epic 4 SPEC F35); the owner then
-    kept the 5 s budget, measured warm on the dev checkout, and had `controller.test.ts` split
-    into a shared harness module and several files before the epic 4 merge (F38).
+    `src/ui/gestures/controller.test.ts`, accepted for that sweep (epic 4 SPEC F35). A trial split of
+    `controller.test.ts` into five files made the `/mnt/d` median worse (5.30 → 5.98 s: the drvfs
+    suite is bound by total CPU, and each file adds worker start-up), so it was reverted, and from
+    epic 4 the 5 s budget is measured warm on a checkout on the Linux filesystem (e.g.
+    `~/wordcell-watch`; 2.30 s at the epic 4 close), not on `/mnt/d` (owner, 2026-10-08, epic 4 SPEC F38, F41).
   - **Seeding.** `fixtures/*.json` (repo root) are serialised Sessions and histories shared
     by Vitest repro cases and Playwright: valid ones, plus the rejecting `session-invalid-*` and
     `history-invalid-*` files, one per parser check (the check codes in `src/engine/errors.ts`),

@@ -12,7 +12,7 @@ risk: high
 
 ## Description
 
-Replaces the epic 3 minimal board with the first playable surface: the real Board laid out by the DESIGN.md height rule from one band-order definition (AD-11), cards, columns, WordCells, the top bar, banner and action bar, and a static tray (F2); the live layout with its gesture gate and WordCell-row anchoring; the hand-rolled pointer controller with overlap targeting and cancel-first wiring (AD-12, AD-9, AD-16); tail selection, the end-sheet states and the view/peek state in the overlays store (AD-13); tap-select, foot pads, tap-drop and drag-drop into Composing; the Composing/Place/Game-over column behaviour; and the WordCell view (long-press peek, sticky view, desktop hover peek). It also closes the epic 3 retrospective's epic 4 carry-ins R1, R2/C-E4b, C-E4a, R6, R7 and the AD-17 unit-suite re-measure. The epic spec `spec-epic-4-board` owns the capabilities (CAP-1…CAP-10), constraints, non-goals and decisions F1–F40; `rule-coverage.md` maps every (UI) sentence and spine behaviour to its capability and test kind, and `build-notes.md` holds the how, the component tree and the close-out edits.
+Replaces the epic 3 minimal board with the first playable surface: the real Board laid out by the DESIGN.md height rule from one band-order definition (AD-11), cards, columns, WordCells, the top bar, banner and action bar, and a static tray (F2); the live layout with its gesture gate and WordCell-row anchoring; the hand-rolled pointer controller with overlap targeting and cancel-first wiring (AD-12, AD-9, AD-16); tail selection, the end-sheet states and the view/peek state in the overlays store (AD-13); tap-select, foot pads, tap-drop and drag-drop into Composing; the Composing/Place/Game-over column behaviour; and the WordCell view (long-press peek, sticky view, desktop hover peek). It also closes the epic 3 retrospective's epic 4 carry-ins R1, R2/C-E4b, C-E4a, R6, R7 and the AD-17 unit-suite re-measure. The epic spec `spec-epic-4-board` owns the capabilities (CAP-1…CAP-10), constraints, non-goals and decisions F1–F41; `rule-coverage.md` maps every (UI) sentence and spine behaviour to its capability and test kind, and `build-notes.md` holds the how, the component tree and the close-out edits.
 
 ## Outcome
 
@@ -37,7 +37,7 @@ The spec's capabilities replace this section: `_bmad-output/specs/spec-epic-4-bo
 
 ## References
 
-- spec — _bmad-output/specs/spec-epic-4-board/SPEC.md, Capabilities, Constraints, Non-goals, Decisions F1–F40
+- spec — _bmad-output/specs/spec-epic-4-board/SPEC.md, Capabilities, Constraints, Non-goals, Decisions F1–F41
 - spec — _bmad-output/specs/spec-epic-4-board/rule-coverage.md, every table
 - spec — _bmad-output/specs/spec-epic-4-board/build-notes.md, Spine and EXPERIENCE.md close-out edits, As-built facts, Component tree, per-CAP notes
 - spec — _bmad-output/specs/spec-epic-4-board/SPEC.review-log.md, Pass 7 and Result (unapplied minor carried by entry 4)
