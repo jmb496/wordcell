@@ -1,5 +1,5 @@
 # Review log — story-draft-wordcards-and-the-composing-tray.md (ticket 5.1)
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7. Pass 0: 371 words (`.passes/pass0.md`). Intent fields from tickets.toml entry 1 (unknown, interface, tests, owns, consumers): `.passes/intent.md`.
 
@@ -68,3 +68,33 @@ Fixer: all 7 majors applied; minors 8, 10, 12, 13, 15, 16 applied word-neutral; 
 ### Dropped
 - k = 0 no block drawn: trayOrder emits no mirrors, obvious handling
 - duplicates of items 1, 2, 4, 5, 7 across lenses
+
+## Pass 3 — 2026-10-08
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 5, minor 12, decision-needed 0  |  Dropped in triage: 2 (duplicates merged; ×2 badge procedure demoted to minor: pass 2 gave a criterion, procedure detail belongs in the plan, over budget)
+Words (docs): 1041 (2.81 x pass 0, over budget; growth from majors)  |  Snapshot: .passes/pass3.md, fix diff .passes/pass3.fix.diff
+Fixer: all 5 majors and minors 6–14 applied (minors net word-neutral); `--update-snapshots` command marked unverified in the ticket
+### Applied
+- [major] Notes hand-off — R-36/R-37/R-30 `QU` P5 supp. (entry 2) and R-30 side-left word line after Flip (entry 3) have no owner in tickets.toml → fixer item 1
+- [major] Invalid line measure — as-built word span clips, so a natural scrollWidth reads "fits" and the line never shrinks to 14 px → fixer item 2
+- [major] Tag lookup throw — stated rule with no test; entry 4 must keep the string unchanged → fixer item 3
+- [major] R-32 (UI) P5 — session-composing k = 1 passes trivially; board-phases already reaches a k = 2 Composing block → fixer item 4
+- [major] Invalid line split — a leading space in a nowrap flex item collapses ("TANisn't…") while textContent still matches; baselines would bake it in → fixer item 5
+- [minor] ×2 badge: box = face's tile-width span; state reached by a seed or scratch Session named in the plan → item 6
+- [minor] lock located by `.lock` class (mirrors are aria-hidden) → item 7
+- [minor] fit helper path `src/ui/tray/fit.ts`; fitSize S cases named AD-11 → item 8
+- [minor] Tray switch on `view.place`, then `view.draft`, else empty → item 9
+- [minor] invalidWord composed from the exported suffix (one literal); split invariant word + suffix === invalidWord(w) → item 10
+- [minor] `--update-snapshots` command marked unverified in the ticket → item 11
+- [minor] Consumers: e2e/board-phases.spec.ts (tray mirrors, svg.lock, F2 static-tray tests) → item 12
+- [minor] word line details cite DESIGN.md Typography (letter-spaced, `QU` underlined as one unit) → item 13
+- [minor] Notes open question states an answer; reword as a note → item 14
+- [minor] view.test.ts AD-3 toStrictEqual literals gain wordCards — plan detail, not applied (adds words)
+### Default applied (technical)
+- Hand-off → this ticket's build appends the lines to tickets.toml entries 2 and 3 tests, named in the plan
+- Invalid-line measure → unclipped natural width of the whole line content (probe), box = line width minus ✕ glyph and gap; fits means ≤
+- R-32 P5 → k = 2 Composing (session-place-free-letter-redo-tail after Undo, as board-phases reaches it)
+- Split gap → CSS gap, never a leading space in the suffix
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- clip-at-end stretch (no fixture or likely draft exceeds the box at 14 px)
