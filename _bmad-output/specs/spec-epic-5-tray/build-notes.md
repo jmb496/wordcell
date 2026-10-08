@@ -3,46 +3,37 @@
 How-level guidance per capability. The spec rules, the spine ADs, DESIGN.md and EXPERIENCE.md are
 the contract; these notes fix what they leave open. `[ASSUMPTION]` marks inferences.
 
-## Spine close-out edits (for the owner to fold in at the retrospective; the spine is not edited by this epic)
+## Spine close-out edits (for the owner to fold in at the retrospective; the 2026-10-08 AD-3, AD-11 and AD-14 amendments are already made, SPEC Upstream amendments)
 
 - AD-12 (F4): the tray band's drop rect is clipped to the visible band like the columns.
 - AD-12 (F2): `data-place` `tray`/`strip` presses are tile presses; a D-block mirror press is a
   no-op that keeps a tile selection; the selected-tile 4 px lift moves only the face.
 - AD-12 (F5): tile and free-letter drags end like column drags (platform cancel and back fly back,
   `act()` and hide settle at once).
-- AD-14 (F6, F7): FLIP lives in `src/ui/flip.ts` and moves faces, never wrappers, and only of
-  cards whose container or index changed; the kind comes from the dispatching command and its
+- AD-14 (F6, F7): FLIP lives in `src/ui/flip.ts` and moves faces, never wrappers; the kind comes from the dispatching command and its
   `DispatchResult`; the controller's `pointerdown` and `cancel()` finish every running animation.
 - AD-14 (F8): name the epic 5 winning-guard tests; the guard consumes the rest of the settling
   gesture (bounded: `pointerup`/`pointercancel` plus a same- or next-task `click`; a key's
   `keyup` and `click`), uninstalls at settle by any path, and lets Undo through; the
   pending-open cancel, menu case and Undo key aliases land in epic 6.
 - AD-11 (F10): `layout.svelte.ts` takes tray rows from `trayLayout`; `TRAY_ROWS` is gone.
-- AD-11 (CAP-9): edit ordering: FLIP captures rects before dispatch, the tray-row change queues
-  through `gate.whenIdle`, `flip.play` runs right after that re-layout frame; a commit defers the
-  row change until its fly-to-cell settles (A-D4).
 
 ## Epic file close-out edits
 
 - `epic-tray-and-place.md` Boundaries: add the two test-only files outside `src/ui/`
-  (`src/shell/game.svelte.test.ts`, `src/engine/serialize.test.ts`'s fixture list; SPEC
-  Constraints).
+  (`src/shell/game.svelte.test.ts`, `src/engine/serialize.test.ts`'s fixture list) and the
+  AD-3 `draft.wordCards` engine change (`src/engine/view.ts`, its tests; SPEC Constraints).
 - Structural Seed: `src/ui/flip.ts`; the `gestures/` modules CAP-3 splits out and the tile modules
   (build-notes Component tree); the shared class-name module.
 - Proposed epics row 5: record what moved to epic 6 (the pending-end-sheet half of the guard, F8).
 - AD-17 Speed: the epic 5 warm median on the Linux filesystem (CAP-12).
 
-## EXPERIENCE.md and DESIGN.md close-out edits (EXPERIENCE.md and DESIGN.md are not edited by this epic)
+## EXPERIENCE.md and DESIGN.md close-out edits (beyond the 2026-10-08 amendments already made, SPEC Upstream amendments)
 
-- EXPERIENCE.md Motion: the owner's OQ-1 answer as rows (tray → strip, Flip, k change, tap-add,
-  removal, tap-swap, free-letter return, tile released under 25 % or with no order change, the
-  dragged tile landing in its new gap, a dragged free letter landing in its gap).
 - EXPERIENCE.md Arrange M (F16): the caret shows only when a free-letter drop would overflow the
   current rows; a reorder drag always parts (DESIGN.md Tray band).
-- EXPERIENCE.md Movable tile: the owner's OQ-2 answer (a drag and an existing tile selection).
 - EXPERIENCE.md message catalogue (F11): letter count `5 letters` / `1 letter`; Place meta
   `6 letters → cell 6 · +30` (`±0`, U+2212).
-- DESIGN.md (OQ-3): only if the owner changes F40's highlight.
 
 ## As-built facts that bite (f62a89a)
 
@@ -94,7 +85,7 @@ src/ui/
   tray/WordLine.svelte     # word (D underline) or invalid line, shrink 20 → 14 px
   tray/TileRows.svelte     # tiles, block segments, parting gap, caret
   tray/ControlRow.svelte   # −/k/+, Flip or the empty caption; letter count or Place meta
-  flip.ts                  # F6: capture(), play(kind), finishAll(); gate-counted
+  flip.ts                  # F6: capture(), play(command, result), finishAll(); gate-counted
   motion.ts                # + the AD-14 winning guard
   overlays.svelte.ts       # + tile selection (F1)
   layout/tray.ts           # + gap rects for insertionIndex
@@ -113,16 +104,20 @@ src/ui/
 
 - Split the tray into word line, tile rows and control row components; the band height stays
   `heights.tray` from `bands()`.
-- Word line: render `draft.word` per card so D letters can be underlined (Composing only; Place
-  has no D underline) (iterate tray order and
-  `faces`, uppercase, `QU` as `QU`); shrink with a measured `font-size` between 20 and 14 px in a
+- Engine first (AD-3, amended 2026-10-08): add `wordCards: readonly CardId[]` to `DraftView` in
+  `src/engine/view.ts` from the `cards` that `word()` already returns in `draftData` (R-30 order,
+  D reversed on the right); no new exported name (`DraftView` is already in AD-2's list); `R-30`
+  tests in `view.test.ts` (side left, side right, a `QU` card, Place keeps word order).
+- Word line: iterate `draft.wordCards` through `faces` (uppercase, `QU` as `QU`), underlining
+  ids in `draft.destination` (Composing only; Place has no D underline); never iterate tray
+  order to build the word (AD-3); shrink with a measured `font-size` between 20 and 14 px in a
   fixed-width box, never a text-dependent px assertion in e2e (epic 4 F11).
 - Tags: free-letter origin tag from `draft.freeLetters` (cell numbers): the card of cell c is
   `cells[c].cards.at(-1)` (fact: `CellView.cards` is bottom → top and the draft leaves the cell
   stack in place, `view.ts:194-205`; `freeCards` takes the same top, `rules.ts:144-152`). Looked
   up per render from `cells`; no stored map (AD-3).
-- Fixture `session-place-compact` (Assumptions): ≥ 8 strip tiles with a `QU` card and a free
-  letter, scripted under the epic 3 regeneration rule, added to `serialize.test.ts`'s
+- Fixture `session-place-compact` (Assumptions): ≥ 8 strip tiles whose `QU` card is a free
+  letter (else a second, Composing fixture with a compact `QU` free letter), scripted under the epic 3 regeneration rule, added to `serialize.test.ts`'s
   valid-fixture list (S14).
 - Meta format and letter count strings in `text.ts` (F11): `letters(n)`, `placeMeta(n, cell,
   delta)` with `+n`, `±0`, `−n`.
@@ -167,7 +162,8 @@ src/ui/
   between the origin and gap i takes the resting rect of its neighbour slot one pitch over in
   reading order; a tile crossing a row break gets the face transform to the first/last slot of
   the adjacent row; offsets come from the resting slot rects (a pure function, Vitest across a
-  row break); D-block mirrors never move; the gap or caret draws at the row-break rect that won;
+  row break); in a reorder the D block is never between origin and gap, so its mirrors stay; the
+  gap or caret draws at the row-break rect that won;
   under 25 % every tile returns to rest with the origin slot open.
 - `insertionIndex` gap rects (F3): `{ index, rect }[]` computed from the resting tile slot rects
   (not the parted ones) so the target does not oscillate; one rect per gap centred before tile i,
@@ -179,6 +175,11 @@ src/ui/
   dispatch only on a change.
 - In Place every strip tile (S, F and D) is movable; the gaps are 0…n of `placementOrder`.
 - A reorder drag always parts the tiles, never the caret (F16).
+- Free-letter parting with room (DESIGN.md Tray band parting geometry, AD-14, 2026-10-08): no
+  origin slot, so none collapses; every tile after gap i, the D-block mirrors included (side
+  right), shifts one tile pitch toward the far end in reading order, across a row break to the
+  next row's first slot; the same pure offset function, Vitest with the block on either side.
+  Mirrors carry this parting transform only, never a FLIP glide; it snaps under reduced motion.
 
 ## CAP-6 Free letters
 
@@ -200,34 +201,37 @@ src/ui/
 - Capture before the view changes, play after the re-layout: each dispatching caller
   (`ActionBar.svelte`, `TopBar.svelte` (Undo/Redo), the controller, the tray) calls
   `flip.capture()` (rects only) before `game.dispatch` and `flip.play(command, result)` after the
-  re-layout frame (CAP-9). The kind comes from the command plus the `DispatchResult` and the
+  move's update, which already holds any tray-row re-layout (CAP-9). The kind comes from the command plus the `DispatchResult` and the
   resulting view phase, never from comparing views (a drop and its Redo, a Validate and its Redo,
   have the same view change) and never decided before dispatch (that would re-derive a phase
   rule, AD-3): Undo/Redo → `undoRedo`, a Redo whose result is a commit → `flyToCell`; the win
   per `finished`; a UI Vitest `AD-14` covers the command + result → kind table, including the
   reduced-motion fly-to-cell (120 ms fade on every card at once, no stagger). Presentation only,
   no legality (AD-3).
-- Only cards whose container (`data-place` column, cell, tray, strip) or index within it changed
-  animate; a pure band shift (tray growth moving every column card by the band delta) applies
-  without motion.
+- Animated set (AD-14, amended 2026-10-08): every live card whose rect relative to its band's
+  rect changed (container or index, Flip, a k change with the block left, card ↔ compact tile);
+  compare band-relative rects so a pure band shift (tray growth moving every column card by the
+  band delta) applies without motion.
 - FLIP moves the `.face` inside each live wrapper; the wrapper (identity, hit rect) stays at its
   settled rect, so a press mid-animation hit-tests the settled layout.
 - Every animation registers with the gate (`enter`/`leave`) and with one running set that
   `finishAll()` completes; the controller's `pointerdown` and `cancel()` call it (F6).
-- Fly-to-cell targets the cell's live element stack; stagger bottom card first.
+- Fly-to-cell targets the cell's live element stack; stagger bottom card first. Each card the
+  commit placed stays visible for its flight (today non-top cell cards are `visibility: hidden`,
+  `WordCellRow.svelte:59`) and takes the hidden state on landing if it is not the top (AD-14,
+  DESIGN.md WordCell); the P5 asserts visibility per flying card, not only `getAnimations()`.
 - New game/Replay and restore never animate.
 
 ## CAP-9 Tray growth
 
 - Feed `trayLayout(count).rows` (the tile count, SPEC Capabilities) to the layout module as a
-  reactive input. Keep AD-11: the re-layout is queued by `gate.whenIdle(relayout)`
-  (`layout.svelte.ts`) and runs in the next rAF in which the gate is idle; once FLIP runs the gate
-  is busy. Order per edit: `flip.capture()` before dispatch → the row change queues through
-  `whenIdle` → `flip.play` right after that re-layout frame, so FLIP targets the final rects.
-  Mid-drag the row change waits for release. Every commit (Confirm, or a Redo that commits)
-  defers it until its fly-to-cell settles (A-D4); a fly finished by a press applies it when that
-  gesture ends (hit rects never move under a finger). Record the ordering as the AD-11 close-out
-  edit above.
+  reactive input. AD-11 (amended 2026-10-08): a move's row change is applied in the same update
+  as the move (with the anchor `scrollTop` delta), and the move's own animation is not busy for
+  it. Order per edit: `flip.capture()` before dispatch → dispatch and re-layout in one update →
+  `flip.play` measures the final rects, then plays; commits included (no wait for the fly). While
+  a gesture or page scroll is active, the re-layout queues through `gate.whenIdle` and the move's
+  `flip.play` waits with it, so the final layout is never painted before the glide. Mid-drag the
+  row change waits for release.
 - Fixtures: script `session-composing-long.json` [ASSUMPTION name] with 14 tray tiles and
   `canIncK` (one `+` → 15, three rows), and a valid Place Session with a three-row strip, under
   the epic 3 regeneration rule; add both to `serialize.test.ts`'s valid-fixture list.

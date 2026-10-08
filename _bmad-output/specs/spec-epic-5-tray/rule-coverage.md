@@ -31,13 +31,13 @@ outcome by `current()` and the stored `wordcell:session`, not by pixels alone.
 | R-32 destination cards are never reordered or interleaved with M | 5, 6 | V + P5 supp. | `insertionIndex` S cases; P5 drag past the block lands at the M end. |
 | R-33 (UI) choosing a WordCell marks it used (visual deactivation) | 1, 6 | P5 | After tap-add and after drag-insert: the cell's face is a mirror with the used hatch; during a drag the cell shows the dashed ghost and takes the used state only on a successful drop. |
 | R-33 a tap on a used or empty WordCell in Composing is a no-op | 6 | V + P5 supp. | Stored Session byte-identical; a tile selection kept. |
-| R-33 a free letter is removed only by the remove-free-letter command from its tile | 4 | V + P5 | Second tap on a selected free-letter tile (`↩` shown) removes it; a free-letter tile dragged out of the tray is not removed (CAP-5). |
+| R-33 a free letter is removed only by the remove-free-letter command from its tile | 4, 5 | V + P5 | Second tap on a selected free-letter tile (`↩` shown) removes it; a free-letter tile (not a source tile) dragged out of the tray and released there is not removed and its WordCell stays used (CAP-5 P5). |
 | R-33 add-free-letter takes an optional insertion index, default append; removal keeps the rest of M in order (Q-31) | 4, 6 | V + P5 supp. | Tap appends at the right end of M; drag inserts at the gap; removal from the middle keeps the order. |
 | R-34 M may be arranged in any order and interleave freely (Q-03) | 4, 5 | V + P5 supp. | Tap-swap and drag-reorder of S and free-letter tiles. |
 | R-35 all of S must be in the word | 4 | V + P5 supp. | A second tap on a selected source tile only deselects; no source tile has `↩`. |
 | R-36 letter count ≥ 3, `QU` = 2 (Q-06) | 1, 2 | V + P5 supp. | Control-row `n letters`; Validate label `Need 3+ letters` on `session-composing-draft-2-letters`. |
 | R-37 word string, `QU` → "qu" | 1 | V + P5 supp. | Word line shows `QU` uppercase (catalogue rule). |
-| R-38 Validate only on tap; inactive until structural checks pass; invalid word shows a message and stays; a failed Validate changes nothing and keeps redo data | 2 | V + P5 | Labels per precedence; invalid line text `… isn't in the word list.` cleared by the next edit, Undo, Redo or a successful Validate; each click at most one `validate` dispatch (F15); a double tap's outcome per OQ-5. Epic 3's dictionary-state rows stay green. |
+| R-38 Validate only on tap; inactive until structural checks pass; invalid word shows a message and stays; a failed Validate changes nothing and keeps redo data | 2 | V + P5 | Labels per precedence; invalid line text `… isn't in the word list.` cleared by the next edit, Undo, Redo or a successful Validate; each click at most one `validate` dispatch (F15); a double tap's outcome per F21. Epic 3's dictionary-state rows stay green. |
 | R-39 (UI) in Composing, cards in columns other than the destination column are inert | — | P4 | Kept green; tile gestures add no column behaviour. |
 
 ## §4 Phase D–E and Commit — Place
@@ -78,14 +78,14 @@ outcome by `current()` and the stored `wordcell:session`, not by pixels alone.
 | --- | --- | --- |
 | AD-3 tray, strip and controls read only `GameView` flags and data (no derived k bounds, word or delta) | 1, 2 | S (architecture scan unchanged) + code review |
 | AD-4 tile selection ends on a `changed` dispatch and on any enabled-control press before its dispatch (a failed Validate included); a tap on a disabled control (`−` at k = 1) clears it through the controller tap path | 2, 4 | S + P5 |
-| AD-11 tray rows from the tile count after completed edits, never mid-drag; WordCell row bounding box unchanged after growth to three compact rows (`+`) and back (`−`); a commit's row change (Confirm or Redo) only after its fly settles; with leftover exhausted the document grows at the top with a matching `scrollTop` delta | 9 | S + P5 |
+| AD-11 tray rows from the tile count after completed edits, never mid-drag; WordCell row bounding box unchanged after growth to three compact rows (`+`) and back (`−`); every move's row change (a commit by Confirm or Redo included) in the same update as the move, its FLIP after it; with leftover exhausted the document grows at the top with a matching `scrollTop` delta | 9 | S + P5 |
 | AD-12 tile press resolution (`tray`/`strip`, block mirror), full-pitch tile hit rect with the lift on the face only; a drag from an inert target acts on the tile selection as its tap | 4 | S + P5 |
 | AD-12 tray band single target at ≥ 25 %, clipped to the visible band (F4); `insertionIndex` nearest gap, wrapped rows by distance, never inside or beyond the block | 5, 6 | S + P5 |
 | AD-12 tile and free-letter drag cancel paths (F5): `hidePage`, back, `pointercancel`, `act()` mid-drag dispatch nothing | 5, 6 | S + P5 |
 | AD-12 `cancel()` first in `−`, `+`, Flip, Validate and Confirm (`act()`) | 2 | S |
 | AD-13 tile selection pushes no entry; back with a tile selected follows the bare-Board rule; `resetForNewSession` clears it | 4 | S + P5 |
 | AD-14 one live element per card in every phase and during every animation; faces animate, wrappers and mirrors never | 1, 8 | P5 |
-| AD-14 FLIP kinds from the dispatching command and its `DispatchResult`: snap on drop, `undoRedo`, `flyToCell` with 30 ms stagger bottom first; only cards whose container or index changed; durations from `motion.ts`; reduced motion 120 ms fade (fly-to-cell: all at once, no stagger) | 8 | S + P5 (`getAnimations()` on faces; `page.emulateMedia({ reducedMotion: 'reduce' })`) |
+| AD-14 FLIP kinds from the dispatching command and its `DispatchResult`: snap on drop, `undoRedo`, `flyToCell` with 30 ms stagger bottom first, each flying card visible; every card whose band-relative position changed, none on a pure band shift; durations from `motion.ts`; reduced motion 120 ms fade (fly-to-cell: all at once, no stagger) | 8 | S + P5 (`getAnimations()` on faces; `page.emulateMedia({ reducedMotion: 'reduce' })`) |
 | AD-14 input during an animation completes it and acts on the settled state | 8 | S + P5 |
 | AD-14 winning guard: WordCell tap → no view (win by Confirm and by Redo); double-tap Confirm → same seed, no New-game Session written (`desktop`: Enter twice); an untouched win settles and New game dispatches; Undo completes then undoes; the guard always uninstalls (long press, `pointercancel`, natural settle) | 10 | P5 + S (the menu tap and end-sheet expanded halves P6) |
 | AD-10 parting 0.5 × base, snaps under reduced motion | 5 | S |

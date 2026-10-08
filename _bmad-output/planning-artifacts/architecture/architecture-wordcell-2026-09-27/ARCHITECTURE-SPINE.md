@@ -171,7 +171,9 @@ flowchart LR
   `Enter`/`Space` and the hover preview all read it; a card absent from it is inert: no
   dispatch, no hover preview); per cell `used`, `canAddFreeLetter`,
   `canSetTarget` (phase = place and `isLegalTarget` and cell ≠ target), `isLegalTarget`; the draft (S, D, k, side, `arrangement`, free letters, word
-  string, letter count, structural check result with its reason); Place data (legal targets,
+  string, `wordCards` (the word's `CardId`s in R-30 word order, so the word line maps cards to
+  faces and marks D cards by the draft's D list without computing the word; amended 2026-10-08,
+  epic 5 SPEC), letter count, structural check result with its reason); Place data (legal targets,
   target, placement order, score delta per EXPERIENCE.md Word line); `liveScore` (R-80 over committed WordCells), `displayScore` (top bar: `liveScore`
   while playing, the final score after R-81 when status ≠ playing), final score, penalty, `lettersLeft` and band (all absent while status = playing), longest word, word count, pending-draft word (present only while status = playing and phase = Idle); and `canUndo`,
   `canRedo`, `canGiveUp`, `canValidate` (structural), `canConfirm`, `canFlip`, `canDecK`,
@@ -476,7 +478,11 @@ sequenceDiagram
     computation (Vitest: two 60 px shrinks together trigger a recompute). **Band re-layout** runs on banner show/hide, tray-row changes and
     an innerHeight-only change under 80 px (w held fixed, anchor rule applied), and
     never changes w (A-D4). Both are deferred by `src/ui/gestures/gate.ts` (active gestures,
-    running animations, page scroll): the pointer controller increments the gate at
+    running animations, page scroll), except that a tray-row change caused by a move is applied
+    in the same update as the move when no gesture is active and the page is not scrolling: the
+    move's own AD-14 animation is not busy for it, and FLIP measures after that re-layout, then
+    plays; while a gesture or page scroll defers the re-layout, it defers that move's FLIP play
+    too, so the final layout is never painted before the glide (amended 2026-10-08, epic 5 SPEC). The pointer controller increments the gate at
     `pointerdown` **before** completing running animations; pending work runs in the next
     `requestAnimationFrame` in which the gate is idle. Page scroll is busy from the first
     `scroll` event until `scrollend`, until hide/pagehide, or until 150 ms pass without a
@@ -632,17 +638,24 @@ sequenceDiagram
   locators; animations holding game state hostage.
 - **Rule:** A card has exactly one **live** element, keyed by `CardId`, carrying
   `data-card-id`, `data-testid="card-<CardId>"` and `data-place="column|cell|tray|strip"`
-  wherever it is; it is the FLIP identity. In Composing and Place the live
+  wherever it is; it is the FLIP identity. Every live card whose position relative to its band changed between
+  two views animates (a container or index change, Flip, a k change with the block on the left, a
+  card ↔ compact tile switch); a pure band shift (tray growth moving a band) gets no motion
+  (amended 2026-10-08, epic 5 SPEC). In Composing and Place the live
   element of an S, D-in-strip or free-letter card is its tray or strip tile; a D card in
   Composing is live in its column and its tray-block copy is a mirror; in Place the destination
   column's copy of each D card is a mirror. A used WordCell's face in Composing and Place is a
   mirror; the live element is the tray or strip tile. A non-top WordCell card
-  has a (possibly hidden) live element in its cell stack; WordCell view and peek copies are
+  has a (possibly hidden) live element in its cell stack; a card committed by the move in flight
+  stays visible during its fly-to-cell and is hidden on landing if it is not the top
+  (amended 2026-10-08); WordCell view and peek copies are
   mirrors. A **mirror** is any non-live copy of a card and takes its look from the DESIGN.md
   state for its place: S slots in the source column, *ghost*; a used WordCell's face, *used this
   word* (40 % opacity with the hatch); the D tray-block copy in Composing, the destination block;
   WordCell view and peek copies, normal cards. Mirrors carry
-  `data-mirror-of`, no `data-card-id` or `data-testid`, and never animate. The store updates the
+  `data-mirror-of`, no `data-card-id` or `data-testid`, and never animate: they take no part in
+  the FLIP glide, but a D-block mirror carries the tray's drag parting shift (snapped under
+  reduced motion; DESIGN.md Tray band, amended 2026-10-08). The store updates the
   Session on dispatch; animations run from the previous to the next view and are presentation
   only. Input during an animation completes it and acts on the settled state (EXPERIENCE.md
   Motion, including the winning-commit exception, implemented by deferring the end sheet).

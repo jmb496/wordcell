@@ -384,6 +384,12 @@ One preference, **Animation speed** (spec §7.10): Fast, **Normal (default)**, S
 | Fly-to-cell on Confirm, or on a Redo that commits | 2 × base, 30 ms stagger per card, bottom card first |
 | Overlays and sheets | 1 × base |
 
+Every other card move of a word (tray → strip on Validate, Flip, a k change, tap-add, removal,
+tap-swap, a drag release with or without an edit) glides at 1 × base; a tile or free letter
+released with no edit glides back like the tail fly-back; on an edit the dragged one glides from
+where it was released; reduced motion uses the 120 ms fade below (owner, 2026-10-08, epic 5
+SPEC F17).
+
 `prefers-reduced-motion: reduce` replaces the timed animations in the table above with a 120 ms
 opacity fade, whatever the preference. Finger tracking during a drag stays; tile parting snaps. The invalid-word line has no shake. An Undo during the winning animation (the button or
 any of its key aliases) completes it and then undoes; the end sheet does not open. Every other

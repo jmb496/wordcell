@@ -340,7 +340,8 @@ Spacing scale 4 / 8 / 12 / 16 / 24 / 32 px. Every interactive target is at least
     compact height 44 px (same width, no bottom band, the ×2 badge stays, glyph 22 px, `Qu`
     18 px) and the tiles wrap. Tile mode and band height follow the tile count after any completed
     edit (drop, tap-add, removal, k change, Undo, Redo, Confirm, session restore), never during a
-    drag. After Confirm the change applies once the fly-to-cell animation settles. The band grows only
+    drag. A move's change applies in the same update as the move, before its animation plays, and
+    waits only for an active gesture or page scroll (AD-11, amended 2026-10-08). The band grows only
     for words longer than 14 tiles; how the extra height is found is below. Tile rows are
     top-aligned in the tile area, with no gaps beyond the 4 px tile gap.
   - During a free-letter or tile drag over the tray, the insertion point is previewed. The layout
@@ -350,6 +351,11 @@ Spacing scale 4 / 8 / 12 / 16 / 24 / 32 px. Every interactive target is at least
     full, no tile moves and a 3 px `{colors.accent-teal}` insertion caret, tile height, marks the
     insertion point between tiles. This holds at any row count. Mode and band height switch after
     release.
+  - Parting geometry (owner-approved 2026-10-08, epic 5 SPEC). A free-letter drag with room has
+    no origin slot, so none collapses: every tile after the insertion gap, the destination
+    block's copies included (AD-14 mirrors carry this shift, never the FLIP glide), shifts one
+    tile pitch toward the far end in reading order, across a row break to the next row's first
+    slot. Parting snaps under reduced motion (EXPERIENCE.md Motion).
   - Reserved height = word line 24 + max(H, 2 × 44 + 4) + control row 44 + padding 8 top and
     8 bottom. That is 176 px for any H ≤ 92.
   - At 412 px (board 400, inner width 384, tile 46): 7 tiles per row, 14 in two compact rows. At
@@ -499,7 +505,9 @@ pills (`{rounded.full}`); among badges only the error dot is a circle. The 44 ×
 - **WordCell.** Number label above; below it either an empty outline or the top card. When the
   cell holds 2 or more cards a count badge (e.g. `4`) sits inside the cell's card rect,
   bottom-right, inset 2 px: a 16 px tall pill, `{typography.card-badge}`, ink-primary on
-  surface-raised. It keeps counting the used or dragged top card until commit (R-61). It is drawn
+  surface-raised. It keeps counting the used or dragged top card until commit (R-61). Only the top card is
+  shown; a card committed by the move in flight stays visible during its fly-to-cell and is
+  hidden on landing if it is no longer the top (AD-14, 2026-10-08). It is drawn
   below a lifted tail. States: *available*; *used this word* (its used top card shown at 40 % opacity with
   a hatch of 1 px `{colors.outline}` lines at 45° every 6 px, R-33; the card beneath is not revealed until commit, R-61);
   *legal target* in Place (teal 2 px ring); *selected target* (teal 3 px ring and a check chip at the cell's top-left, a 14 px teal circle
