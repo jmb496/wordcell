@@ -172,8 +172,8 @@ async function frames(page: Page, count: number): Promise<void> {
   for (let i = 0; i < count; i++) await page.clock.runFor(16);
 }
 
-// Path 1 (plan Design Notes): a foot-pad touchHold pan at 412 × 600, nothing selected. Steps of
-// 3 px past the touch slop, then ±3 px every 51 ms of page time (35 ms, the move, one frame) while
+// Path 1 (plan Design Notes): a foot-pad touchHold pan at 412 × 600, nothing selected. A 21 px
+// move past the touch slop and three 3 px steps, then ±3 px every 51 ms of page time (35 ms, the move, one frame) while
 // the word list fails, each step checking that scrollY changed and no banner was inserted.
 // Deterministic (ticket 4.13 D1): the page clock is installed and paused before load (as
 // e2e/blocking.spec.ts), and each move's scroll event, dispatched in a real frame, is awaited
@@ -209,14 +209,24 @@ async function panThroughFailure(page: Page): Promise<TouchHold> {
     }));
   };
   try {
+    // One move crosses the touch slop, then 3 px moves, each settled before the next: one move
+    // is one scroll event, so `last` is never an intermediate position. (Several unsettled moves
+    // can land over several frames; settling on the first left the rest to land during the first
+    // ±3 px step, which then read the same scrollY: the 4.13 / 5.2 flake.)
+    y -= 21;
     const start = await scrollCount();
-    for (let i = 0; i < 10; i++) {
-      y -= 3;
-      await hold.moveTo({ x, y });
-      await page.clock.runFor(30);
-    }
+    await hold.moveTo({ x, y });
     let last = await settle(start);
     expect(last.y, 'the foot-pad pan scrolls the page').toBeGreaterThan(0);
+    for (let i = 0; i < 3; i++) {
+      await page.clock.runFor(30);
+      y -= 3;
+      const count = await scrollCount();
+      await hold.moveTo({ x, y });
+      const next = await settle(count);
+      expect(next.y, 'the foot-pad pan keeps scrolling').toBeGreaterThan(last.y);
+      last = next;
+    }
     let dir = 1;
     const step = async () => {
       await page.clock.runFor(35);
