@@ -1,0 +1,293 @@
+# Epic 5 — Tray and Place. Table order is the build order (SPEC CAP-1 → CAP-12; CAP-1, CAP-5 and CAP-8 split (CAP-8 into entries 10, 16 and 11); the Success signal in entry 17).
+# Requirement source: _bmad-output/specs/spec-epic-5-tray/ (SPEC.md, rule-coverage.md, build-notes.md).
+# Build precondition for every entry: clean tree on epic-5-tray.
+# One lane through src/ui/Tray.svelte (and tray/), src/ui/gestures/, src/ui/flip.ts and motion.ts; entry 6 (pure targeting/layout functions only) may run beside entry 5. The autopilot runs table order.
+# Extra keys (B10): interface = export and signature delta; tests = sentence → test ids; owns = rules or shared setup this entry owns for the epic;
+# consumers = retrospective L1: the shared rule inputs this entry changes and the rule's other consumers its ticket review must list.
+# Every UI entry's check includes npm run test:screens in the Playwright container (retrospective L3); baselines regenerate there only where a fixture render changes.
+
+[[entry]]
+id = 1
+type = "story"
+title = "Draft wordCards and the Composing tray"
+description = "Tracer bullet engine → GameView → tray: adds the AD-3 `draft.wordCards` view field in src/engine/view.ts (from the cards `word()` already returns, no new exported name, AD-2's list unchanged, R-02 literals untouched) with R-30 engine tests, then replaces the F2 static tray with Tray.svelte switching by phase over tray/WordLine.svelte, tray/TileRows.svelte and tray/ControlRow.svelte (build-notes Component tree): in Composing the word line from `draft.wordCards` through `faces` (uppercase, `QU` as `QU`, D cards underlined blue, measured shrink 20 → 14 px), the invalid-word line replacing it while `feedback.rejectedWord` is set (shrink, then ellipsize the word part), tiles in `trayOrder` with the destination block joined edge to edge under one blue outline and lock per row segment, free-letter tiles with their origin-cell tag found by the `cells` entry's `cell` field (a miss throws; never indexed by cell number), the letter count `5 letters` / `1 letter` from `draft.letterCount` via text.ts `letters(n)`, an empty control-row left slot (entry 3 fills it), empty word line, tiles and control row in Idle and Game over, `{#each}` keyed `${id}-${mirror}` in Tray, Column and WordCellRow (A9 4.3-m3) and the ×2 badge keeping its 18 × 12 px corner on block tiles (A9 4.3-m4)."
+verify = "npm run test:all and npm run test:screens are green with engine Vitest R-30 wordCards cases (side left, side right, a QU card, Place keeps word order) and UI Vitest AD-3 letters(n) cases, and Playwright on android shows the word line text, D underline, tile order, free-letter tag and letter count on session-composing and on session-place-free-letter-redo-tail after one Undo, the invalid-word line after a failed Validate, empty tray rows on session-idle-fresh and session-won, and exactly 52 data-card-id elements in each."
+covers = ["CAP-1"]
+after = ["4.13"]
+hitl = false
+risk = "medium"
+unknown = "Whether the measured 20 → 14 px word-line shrink stays stable across the four screenshot fixtures; e2e never asserts a text-dependent px size (epic 4 F11)."
+interface = "DraftView gains wordCards: readonly CardId[] (src/engine/view.ts); new src/ui/tray/WordLine.svelte, TileRows.svelte, ControlRow.svelte; Tray.svelte becomes the phase switch; text.ts gains letters(n)."
+tests = "R-30 wordCards order side left/right, QU, Place keeps word order (V); R-30 word line and tile order on session-composing (P5 supp.); R-32 (UI) blue outline and lock per row segment (P5 part, card mode); R-33 (UI) free-letter origin tag (P5 part); R-36 letter count, QU = 2 (P5 supp.); R-37 word line shows QU uppercase (P5 supp.); R-38 invalid-word line shown (P5 part; clearing is entry 3); AD-14 52 live elements in every phase (P5); AD-3 letters(n) (S)."
+owns = "draft.wordCards and its R-30 tests, the Tray component split (WordLine, TileRows, ControlRow), the free-letter tag lookup (folded into entry 4's lookup helper), A9 4.3-m3 and 4.3-m4."
+consumers = "`{#each}` keys change in Column.svelte and WordCellRow.svelte: list the e2e locators and FLIP identity (AD-14) that read data-card-id/data-mirror-of there."
+references = ["spec — _bmad-output/specs/spec-epic-5-tray/build-notes.md, As-built facts that bite, Component tree and modules, CAP-1", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/DESIGN.md, Components (Tray band, Tile, Invalid-word message)", "architecture — _bmad-output/planning-artifacts/architecture/architecture-wordcell-2026-09-27/ARCHITECTURE-SPINE.md, AD-3"]
+
+[[entry]]
+id = 2
+type = "story"
+title = "Place strip, compact tray and session-place-compact"
+description = "Completes CAP-1 for Place and compact mode: the Place word line holding the validated word in word order (no D underline, unchanged by strip reorders), the strip in `placementOrder` with D cards as normal tiles, the `bottom` tag on the first tile and the `top` tag and orange `★` on the last, the free-letter origin tag top-left on full-height tiles (A-D10), the meta `6 letters → cell 6 · +30` from `place.scoreDelta` via text.ts `placeMeta(n, cell, delta)` (`+n`, `±0`, U+2212 `−n`), compact 44 px rows once the tile count exceeds one row with the strip corner map (`▼`/`★` top-left, ×2 top-right, origin tag bottom-left) and the Composing compact marks (tag top-left, `↩` slot in the ×2 corner, bottom-right on a `QU` tile), a D block crossing a row break drawn as outlined segments with one lock each; scripts the valid fixture session-place-compact.json (8–14 strip tiles, its `QU` card a free letter from a cell other than 3, its Composing after one Undo with a D block crossing the row break; else a second Composing fixture for the missing condition, SPEC Assumptions) under the epic 3 regeneration rule, adds it to src/engine/serialize.test.ts (VALID and REBUILDS) and to src/architecture-ad2-ad12-ad17.test.ts's valid session-fixture list (its count + 1 per new fixture), and checks the compact tray and strip in a browser (S14, epic 4 D19)."
+verify = "npm run test:all and npm run test:screens are green (board baselines regenerated in the container, a compact-strip screenshot added) with UI Vitest AD-3 placeMeta cases (+n, ±0, U+2212 −n, n = 1), and Playwright on android shows the Place word line, bottom/top tags, ★ and meta on session-place and session-place-free-letter-redo-tail, the compact corner map and a QU free-letter origin tag from a cell other than 3 on session-place-compact, and after one Undo the Composing compact marks with the D block as two outlined segments with two locks."
+covers = ["CAP-1"]
+after = [1]
+hitl = false
+risk = "medium"
+unknown = "Whether one scripted Session meets both session-place-compact conditions (QU free letter from a cell other than 3, D block crossing the row break after one Undo); if not, the ticket scripts the second fixture SPEC Assumptions allows and names it."
+interface = "text.ts gains placeMeta(n, cell, delta); TileRows.svelte and ControlRow.svelte gain the Place and compact variants; new fixtures/session-place-compact.json (and the fallback Composing fixture if needed)."
+tests = "R-50 (UI) bottom/top tags and ★, compact corner map on session-place-compact (P5); R-80 Place meta preview (P5 supp.); R-32 (UI) two outlined segments with two locks across the row break (P5 part); R-33 (UI) origin tag from a cell other than 3 (P5 part); R-51 strip in placementOrder (P5 supp. part); AD-3 placeMeta (S); AD-14 52 live elements on session-place-compact (P5)."
+owns = "session-place-compact.json (and any fallback), the compact tile and strip marks, placeMeta, S14."
+references = ["spec — _bmad-output/specs/spec-epic-5-tray/build-notes.md, CAP-1 (Fixture session-place-compact), Sweep inventory S14", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/DESIGN.md, Components (Placement strip, Tile)"]
+consumers = "Adds the epic's first new valid fixture: list the AD-17 valid-fixture test in src/architecture-ad2-ad12-ad17.test.ts and serialize.test.ts VALID/REBUILDS (entries 9 and 12 change them too) and the board screenshot baselines."
+
+[[entry]]
+id = 3
+type = "story"
+title = "D-block controls, Validate and Confirm states"
+description = "Fills the control row and the primary button (CAP-2): `−`/`+` as 44 × 44 secondary circles with k between them dispatching `setDestinationCount` k ∓ 1 and disabled from `canDecK`/`canIncK`, `⇄ Flip` dispatching `flip` while `canFlip` (accessible names `−`, `+`, `Flip` with the glyph aria-hidden, F9), on k = 0 the caption `Empty column: no cards join the word` in their place (single line, ellipsizing before the letter count), each a native button wrapped in `act()`; Validate per EXPERIENCE.md Validate (enabled iff `canValidate` and the dictionary is loaded, label precedence `Word list unavailable` > `Loading words…` > `Need 3+ letters`), one `validate` dispatch per click with no flag (F15, `flushSync`), the invalid-word line cleared by the next edit, Undo, Redo or a successful Validate with draft and Redo unchanged (R-38, R-71), Confirm enabled throughout Place, the primary label shrinking to the ui-label size before it ellipsizes (A9 4.2-m1); the tray strings in text.ts (F11); and the private `tapAt` copies in e2e/column-phases.spec.ts, drag-interruptions.spec.ts, tap.spec.ts and wordcell-view.spec.ts moved into e2e/helpers/ with a helpers.spec.ts case, each spec importing it (the tapAt part of sweep row S1; entry 14 moves the rest)."
+verify = "npm run test:all and npm run test:screens are green with UI Vitest AD-12 cancel-first spies for −, +, Flip, Validate and Confirm, and Playwright on android shows −/+ and Flip each saved before the next action, a coordinate tap on a disabled − at k = 1 and on a disabled + at the column's size each leaving wordcell:session byte-identical, the invalid-word line cleared by a k change, by Undo and by Redo with the draft and Redo unchanged, the k = 0 caption with no −/+/Flip after a drop on column 1 of session-idle-empty-column, the Validate labels including Need 3+ letters on session-composing-draft-2-letters, one click = one validate, and on session-composing after the dictionary loads a double tap on primary-action committing at cell 3 with the storage-spy writes showing the Place write then the commit write (F21)."
+covers = ["CAP-2"]
+after = [2]
+hitl = false
+risk = "medium"
+unknown = "Whether flushSync() inside the act()-wrapped click renders the Place result before a fast second click on Android; the F21 double-tap test is the guard."
+interface = "ControlRow.svelte gains the D-block buttons and the empty-column caption; ActionBar.svelte gains the label shrink; text.ts gains the tray control strings; new e2e helper tapAt in e2e/helpers/ (the four private copies removed)."
+tests = "R-30 Flip toggles the side (P5 supp.); R-31 −/+ within bounds, a bound press is a no-op (P5 supp.); R-31 empty column: no −/+/Flip, caption (P5 supp.); R-36 Need 3+ letters (P5 supp.); R-38 Validate only on tap, labels, invalid line kept until the next edit/Undo/Redo/successful Validate, draft and Redo unchanged, one dispatch per click, double tap per F21 (P5); R-73 (UI) each k, flip and Validate saved before the next action (P5 part); AD-12 cancel() first in −, +, Flip, Validate, Confirm (S)."
+owns = "The D-block controls, Validate and Confirm states, the label shrink (A9 4.2-m1), the shared tapAt e2e helper every later disabled-control test uses."
+consumers = "act() is shared by every App-owned button: the AD-12 act() scan in src/architecture-ad2-ad12-ad17.test.ts and the existing Undo/Redo/banner/dialog handlers."
+references = ["spec — _bmad-output/specs/spec-epic-5-tray/build-notes.md, CAP-2", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/EXPERIENCE.md, Component Patterns (D-block controls, Validate, Confirm)"]
+
+[[entry]]
+id = 4
+type = "story"
+title = "Controller seams"
+description = "Behaviour-neutral split of src/ui/gestures/controller.ts along its seams before tile gestures land (retrospective A6, F14): the controller keeps the press machine; the visible band and clip move to gestures/visible-band.ts, the desktop hover-peek timer and suppress logic to gestures/hover-peek-timer.ts (src/ui/hover-peek.ts stays the render helpers; the cell-keyed timer and half-open suppress rects and their AD-12 Vitests kept, S17) and the fly-back to gestures/fly-back.ts, each behind the existing `deps` pattern; one gestures/lookup.ts helper taking the caller's message replaces every cell/column lookup with its own throw (controller.ts, intent.ts, HoverPeek.svelte, WordCellView.svelte and entry 1's tray tag lookup) with every throw string unchanged; one gestures/classes.ts exports the class names controller.ts, Column.svelte and HoverPeek.svelte share; and the per-ticket \"Entry N\" header paragraphs in controller.ts and the other src/ui files become one behaviour summary per module; controller.test.ts stays one file, its harness moved only (F41)."
+verify = "npm run test:all and npm run test:screens are green with no screenshot baseline change, every existing test passing with at most import and harness-path edits, and the plan recording the Linux-filesystem warm unit-suite median before and after the split."
+covers = ["CAP-3"]
+after = [3]
+hitl = false
+risk = "medium"
+unknown = "Whether moving the hover-peek and fly-back code behind deps multiplies vi.resetModules() setups in controller.test.ts and slows the unit suite; the before/after median decides."
+interface = "New src/ui/gestures/visible-band.ts, hover-peek-timer.ts, fly-back.ts, lookup.ts, classes.ts; createController's public shape ({ cancel, attach }) unchanged."
+tests = "Existing suites unchanged in assertions; no new rule coverage; AD-17 unit median recorded before and after."
+owns = "The gestures/ module split, the lookup helper and the shared class-name module every later gesture entry uses; S17."
+consumers = "The visible-band clip feeds epic 4 pickTarget and the drop-target registration (and entry 7's tray-band target); the class names are hard-coded in e2e specs (drag, tap, column-phases, wordcell-view): list both in the ticket review."
+references = ["spec — _bmad-output/specs/spec-epic-5-tray/build-notes.md, As-built facts that bite (controller.ts line map, controller.test.ts), CAP-3, Sweep inventory S17"]
+
+[[entry]]
+id = 5
+type = "story"
+title = "Tile tap: selection, swap and removal"
+description = "Adds the tile selection (F1) to overlays.svelte.ts beside the tail selection (no history entry, cleared by resetForNewSession) and resolves `data-place` `tray`/`strip` presses as tile presses and a D-block mirror press as a block press (F2, superseding epic 4 F23's inert tiles, each tile hit-testing on its full pitch with the 4 px lift on the face only), with a pure `tileTap(hit, view, tileSelection)` in gestures/tile.ts: a tap on a movable (S or free letter) or strip tile selects it (teal outline, face lifted), a tap on another swaps the two with one `arrange` / `setPlacementOrder` and ends the selection, a second tap on a selected source or strip tile deselects and on a selected Composing free-letter tile (showing `↩`) dispatches `removeFreeLetter` (Q-31); taps on the destination block, a used or empty WordCell in Composing and a not-legal WordCell in Place keep it, every other tap clears it, `act()` clears it after `cancel()` and before its handler, and the controller's root tap path (epic 4 F25) clears it on disabled controls, labels, the tray band background and the top bar; a drag crossing 8 px from a target with no drag behaviour and ending in `pointerup` acts as that target's tap (a legal non-current Place cell: no dispatch, cleared) while one ended by `pointercancel`/`lostpointercapture` keeps it; back ignores it (bare-Board rule)."
+verify = "npm run test:all and npm run test:screens are green with UI Vitest AD-12 tileTap intent cases, an inert-target drag case and a ≥ 8 px move then pointercancel on the tray background keeping the selection, and Playwright on android shows on session-composing, session-place and session-place-free-letter-redo-tail after one Undo each select/swap/deselect/remove path by current() and the stored Session, a swap of cards 38 and 37 (both R) as an edit at Composing (session-won + two Undos) and at Place (session-won + one Undo: Redo disabled, stored reached place), three tile edits then one Undo returning to Idle, back with a tile selected leaving the app (bare-Board rule), a disabled − tap at k = 1 and +, Validate and Undo pressed with a tile selected clearing it, ↩ on the compact QU free letter of session-place-compact after one Undo, and a reload in Composing with a free letter after a tap-swap showing the same tray and tags with nothing selected."
+covers = ["CAP-4"]
+after = [4]
+hitl = false
+risk = "high"
+unknown = "Whether one clear-rules function can serve both the controller tap path and act() without act() learning the tap target; build-notes CAP-4 suggests act() calls overlays.clearTile() after cancel()."
+interface = "overlays.svelte.ts gains the tile selection (tileSelection, selectTile, clearTile); new src/ui/gestures/tile.ts (tileTap); act.ts clears the tile selection after cancel(); controller resolves tray/strip/block presses; intent.ts no longer treats a tile as outside."
+tests = "R-32 (UI) a block-tile tap dispatches nothing, selection kept (P5 part); R-33 removal only by the remove command from its tile (P5); R-33/Q-31 removal keeps the rest of M in order (P5 supp.); R-34 tap-swap of S and free letters (P5 supp.); R-35 second tap on a source tile only deselects, no ↩ (P5 supp.); R-51 strip tap-swap (P5 supp.); R-71 a swap of identical letters is an edit, Redo disabled at Composing and Place (P5 supp.); R-72 three tile edits then one Undo → Idle (P5 supp.); R-73 (UI) tap edits saved before the next action, reload in Composing after a tap-swap (P5); AD-4 tile selection ends on a changed dispatch and on an enabled-control press (S + P5); AD-12 tile press resolution, full-pitch hit rect, inert-target drag as its tap, pointercancel keeps it (S + P5); AD-13 tile selection pushes no entry, back follows the bare-Board rule, resetForNewSession clears it (S + P5)."
+owns = "The tile selection state and its clear rules (F1, F13), tile press resolution (F2), gestures/tile.ts, and act()'s tile-selection clear."
+consumers = "Changing the F25 outside-tap classification (intent.ts:131, controller.ts:794) and act(): list the tail-selection deselect paths, the scrim click swallower and every act()-wrapped button."
+references = ["spec — _bmad-output/specs/spec-epic-5-tray/build-notes.md, CAP-4", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/EXPERIENCE.md, Component Patterns (Movable tile, Destination block)"]
+
+[[entry]]
+id = 6
+type = "story"
+title = "insertionIndex, gap rects and parting offsets"
+description = "Builds the pure functions entries 7 and 8 drive: `insertionIndex(dragged, gapRects)` in gestures/targeting.ts per F3 (`gapRects` `{ index, rect }[]`, one rect centred in each gap at tile height plus a second rect for a row-break index, start and end gaps a half-gap outside a row's tiles, Euclidean distance from the dragged face's centre to the nearest rect of each index, ties to the lower index; Composing gaps 0…|M| only, never inside or beyond the destination block; Place every strip card movable, gaps 0…n), the gap-rect builder in layout/tray.ts from resting slot rects, the reorder rule (gap i over the sequence including the dragged tile j: insert at i when i ≤ j, else i − 1; a free-letter gap is the index in M), and one pure parting-offset function for a reorder (origin slot collapses, tiles between origin and gap shift one slot pitch in reading order across a row break, D-block mirrors never move) and for a free-letter insert with room (no origin slot, every tile after the gap shifts, the D-block mirrors included when the block is on the right, with segment ends and locks from their parted slots)."
+verify = "npm run test:all and npm run test:screens are green (no baseline change) with UI Vitest AD-12 insertionIndex cases (single row, two compact rows, block at either end, ends of M, ties, a drag right by one past the neighbour's centre, a drag to the far end, the Place strip with D cards movable) and parting-offset cases (reorder across a row break, a drag right by two, a free-letter insert with the block on the right across a row break with the mirrors' segment ends and locks)."
+covers = ["CAP-5", "CAP-6"]
+after = [4]
+hitl = false
+risk = "medium"
+unknown = "Whether nearest-gap without hysteresis oscillates when the dragged centre sits between two gap rects ([ASSUMPTION] build-notes CAP-5: not needed); the resting rects keep the targets fixed."
+interface = "targeting.ts gains insertionIndex(dragged, gapRects) and the reorder helper; layout/tray.ts gains gapRects(...) and partingOffsets(...)."
+tests = "AD-12 insertionIndex nearest gap, wrapped rows by distance, never inside or beyond the block (S); R-32 destination cards never reordered or interleaved (S under the V row); AD-12 parting offsets across a row break and drag right by two (S); AD-12 free-letter parting offsets with the block on the right across a row break (S, CAP-6)."
+owns = "insertionIndex, the gap rects, the reorder rule and the parting-offset function; entries 7 and 8 call them and never re-derive a gap or offset."
+consumers = "targeting.ts also holds epic 4 pickTarget: list its controller and drop-target callers; layout/tray.ts trayLayout/trayOrder feed Tray.svelte and layout.svelte.ts."
+references = ["spec — _bmad-output/specs/spec-epic-5-tray/build-notes.md, CAP-5 (insertionIndex gap rects, Parting, Reorder result, Free-letter parting with room)", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/DESIGN.md, Layout & Spacing (Tray band parting geometry)"]
+
+[[entry]]
+id = 7
+type = "story"
+title = "Tile drag in the tray and the strip"
+description = "Adds the tile drag to the controller (CAP-5) on entries 5 and 6: a tile press crossing 8 px clears the tile selection (F18) and drags the tile by `transform` on its face with no Svelte state until release; the tray band, clipped to the visible band (F4), is the single drop target accepted at ≥ 25 % of the dragged face's area; while accepted the other movable tiles part to the `insertionIndex` gap over `duration('parting')` (snap under reduced motion) by face transforms only, nothing drawn at the gap, and under 25 % every tile rests with the origin slot open; release over an accepted gap dispatches one `arrange` / `setPlacementOrder` iff the order changes by card, otherwise the tile flies back by the epic 4 `flyBack` with no edit (never a removal; the landing glide on an edit is entry 10's); a D-block mirror drag moves nothing and keeps a tile selection; platform cancel flies back, a back mid-drag leaves the app (bare-Board rule) and hide or `act()` settles the drag at once with no dispatch (F5)."
+verify = "npm run test:all and npm run test:screens are green with UI Vitest AD-10 parting duration and reduced-motion snap and AD-12 a tile drag cancelled by pointercancel with a tile selected ending with nothing selected, and Playwright on android shows drag-reorder in the tray (session-composing) and the strip (session-place), the tray band's drop rect clipped to the visible band under a sticky bar (F4), a release under 25 % leaving the stored Session byte-identical, a free-letter tile dragged out and released there not removed with its cell still used, a block-mirror drag with no dispatch and the selection kept, a tile dragged past the block landing at the M end, a strip drag released over its own gap leaving Redo enabled on session-won + one Undo, hidePage mid-drag dispatching nothing, and page.goBack() mid-drag leaving the app with the Session equal to the pre-drag one apart from activeMs read after page.goForward()."
+covers = ["CAP-5"]
+after = [5, 6]
+hitl = false
+risk = "high"
+unknown = "Whether page.goForward() restores the app after a back mid-drag on Playwright 1.63 (default) or the storageState() read is needed (alternative, unverified)."
+interface = "Controller tile-drag path in gestures/tile.ts or the controller (tray-band drop target, parting WAAPI, release dispatch); no new exports beyond entries 5 and 6."
+tests = "R-32 (UI) block drag moves nothing, gaps never inside or beyond the block (P5 part); R-32 drag past the block lands at the M end (P5 supp.); R-33 a dragged-out free letter is not removed (P5); R-34 drag-reorder (P5 supp.); R-51 strip drag reorder (P5 supp.); R-71 a no-change drag is not an edit, Redo stays enabled (P5 supp.); R-73 (UI) a reorder saved before the next action (P5 part); AD-12 tray band single target ≥ 25 %, clipped (P5); AD-12 F5 cancel paths: hidePage, back, pointercancel, act() mid-drag (S + P5); AD-12 F18 drag clears the tile selection (S); AD-10 parting 0.5 × base, snap under reduced motion (S)."
+owns = "The tile drag, the tray band as a drop target, the parting animation and the F5/F18 tile-drag ends."
+consumers = "The visible-band clip (entry 4's visible-band.ts) now also feeds the tray band: list epic 4 pickTarget/drop-target as its other consumers; gate enter/leave from the new drag: list layout re-layout, the banner latch and w recompute."
+references = ["spec — _bmad-output/specs/spec-epic-5-tray/build-notes.md, CAP-5", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/EXPERIENCE.md, Component Patterns (Movable tile), Motion"]
+
+[[entry]]
+id = 8
+type = "story"
+title = "Free letters by tap and by drag"
+description = "Adds free letters from WordCells (CAP-6) to the controller's WordCell press path in Composing: a tap on a cell with `canAddFreeLetter` dispatches `addFreeLetter { cell }` (appended), a tap on a used or empty cell dispatches nothing and keeps a tile selection, and a press crossing 8 px before the 400 ms long-press drags the top card's live face, clears any tile selection (F18) and leaves a 1 px dashed ghost in the cell (card beneath not revealed, R-61), inserting at the entry 6 gap in M with `addFreeLetter { cell, index }` when released over the tray band at ≥ 25 % (the cell takes the used state only then); while accepted the tiles after the gap part with the D-block mirrors shifting too when the block is on the right (the one AD-14 mirror-motion exception), and a 3 px teal caret marks the gap instead while the layout is full (tile count after the drop > `perRow` × the rendered rows) or when the gap moves no tile (end of M with the block left or k = 0); a release outside the tray band or under 25 % dispatches nothing, used/empty-cell drags and every WordCell drag outside Composing are inert, and a long-press peek with a tile selected keeps it."
+verify = "npm run test:all and npm run test:screens are green, and Playwright on android shows on session-idle-empty-column after a drop a tap-add appending cell 7's top with the cell used, a drag-insert at an inner gap, the caret at the end gap of M with the block on the left and in a full layout, tap and drag on a used or empty cell leaving the stored Session byte-identical with a tile selection kept, a long-press peek with a tile selected keeping it, the dashed ghost in the cell during the drag, a drag-insert on session-composing (block on the right) with the D-block mirrors shifted while parted, tap-add and drag-insert each saved before the next action, hidePage mid-drag and page.goBack() mid-drag dispatching nothing (Session equal apart from activeMs, read after page.goForward()), and a free-letter drag released outside the tray band and one under 25 % leaving the stored Session byte-identical with the cell not used (epic Done when 3)."
+covers = ["CAP-6"]
+after = [7]
+hitl = false
+risk = "high"
+unknown = "Whether the caret's full-layout case is reachable at 412 px on existing fixtures; if not, this entry scripts session-composing-long.json (14 tray tiles with canIncK, entry 12's fixture) early, adds it to the fixture lists, and entry 12 reuses it."
+interface = "Controller WordCell press path gains free-letter tap and drag; WordCellRow.svelte gains the dashed ghost class; TileRows.svelte gains the caret; no new exports."
+tests = "R-33 (UI) choosing a WordCell marks it used, after tap-add and drag-insert, ghost during the drag (P5); R-33 a tap on a used or empty WordCell is a no-op (P5 supp.); R-33/Q-31 tap appends, drag inserts at the gap (P5 supp.); R-32 never inside or beyond the block (P5 supp.); R-73 (UI) tap-add and drag-insert saved before the next action (P5 part); R-65 (UI) a long-press peek in Composing with a tile selected keeps it (P5); AD-12 tray band ≥ 25 % and free-letter cancel paths (P5); AD-14 D-block mirrors carry the parting shift only (P5 part)."
+owns = "Free-letter tap and drag, the WordCell drag ghost, the caret (F16), and the D-block mirror parting exception in the DOM."
+consumers = "The WordCell press path also serves the long-press peek, sticky view and hover peek (epic 4 CAP-9) and entry 9's target tap: list them; the parting-offset function from entry 6 is shared with entry 7."
+references = ["spec — _bmad-output/specs/spec-epic-5-tray/build-notes.md, CAP-5 (Free-letter parting with room), CAP-6", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/DESIGN.md, Layout & Spacing (Tray band)"]
+
+[[entry]]
+id = 9
+type = "story"
+title = "Place target, order and Confirm"
+description = "Completes the move (CAP-7) in Place legal cells ringed, not-legal faded, the stored target pre-selected; a tap on a cell with `canSetTarget` dispatches `setTarget` keeping `placementOrder` (R-51), a long-press ≥ 400 ms on an empty WordCell acts as a tap on release on the cell where it started (the timer wins once fired, the 8 px drag before it; Composing: no dispatch, selection kept), a used cell stays a legal target (R-41, Q-02), a not-legal or current-target tap dispatches nothing (the current-target tap clears the tile selection, F13), WordCells otherwise respond only to viewing (R-39); Confirm commits (R-60, R-61, R-52, R-62 into Game over with no end sheet); scripts the valid free-letter fixture whose free letter comes from a cell ≤ L that is not the stored target and holds exactly 2 cards (count badge 2 before Confirm, 2 → 1 after, S15), added to serialize.test.ts and the AD-17 valid-fixture list."
+verify = "npm run test:all and npm run test:screens are green, and Playwright on android shows on session-place, session-place-free-letter-redo-tail and session-won + one Undo the ring/fade/pre-selection, retargets keeping the order, the empty-cell long-press (also released after moving past 8 px after 400 ms) and current-target tap, R-41 and R-61 as two tests on the scripted fixture with the badge 2 → 1, Confirm into the free letter's own cell leaving the strip's last card on top, Confirm on session-won + one Undo entering Game over, a long-press peek on a non-empty Place cell still opening, and a reload in Place on the scripted free-letter fixture after a retarget and strip reorder showing the same strip, tags and target with the free letter's cell still the used-hatch mirror and nothing selected."
+covers = ["CAP-7"]
+after = [8]
+hitl = false
+risk = "high"
+unknown = "Whether one scripted Place fixture meets every condition (free letter from a cell ≤ L, not the stored target, holding exactly 2 cards) under the epic 3 regeneration rule."
+interface = "Controller WordCell press path gains the Place target tap and empty-cell long-press tap; WordCellRow.svelte legal/not-legal states wired to canSetTarget; new scripted free-letter Place fixture [ASSUMPTION name chosen by the ticket]."
+tests = "R-39 (UI) Place WordCells inert except target and viewing, a WordCell drag and a not-legal tap dispatch nothing (P5); R-40 legal ≤ L ringed, not-legal no-op (P5 supp.); R-41 used cell a legal target (P5 supp.); R-42 (UI) pre-selected after Validate, retarget, reload (P5); R-51 retarget keeps the order (P5 supp.); R-52 new top is the strip's last card (P5 supp.); R-60 Confirm commits atomically (P5 supp.); R-61 next card exposed after commit, badge 2 → 1 (P5 supp.); R-62 every column empty → Game over (P5 supp.); R-80 score change equals the preview (P5 supp.); R-73 (UI) commit saved before the next action, reload in Place (P5); R-65 (UI) viewing in Place, long-press peek on a non-empty cell (P5 part)."
+owns = "The Place target and Confirm flow, the scripted free-letter fixture and S15."
+consumers = "The empty-WordCell long-press now taps on release: list the long-press peek (non-empty cells) and the winning-guard long-press uninstall (entry 13)."
+references = ["spec — _bmad-output/specs/spec-epic-5-tray/build-notes.md, CAP-7, Sweep inventory S15", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/EXPERIENCE.md, Place, Flows 1–3"]
+
+[[entry]]
+id = 17
+type = "story"
+title = "Success signal: a whole move by taps and by drag"
+description = "Proves epic Done when 2 and 3 (SPEC Success signal) on entries 1–9: picks from the generated list a 4+ letter dictionary word with at least two legal target cells that uses cell 7's top as a free letter and is playable by taps from session-idle-empty-column (else scripts a valid fixture under the epic 3 regeneration rule, adds it to the fixture lists and flags it for the owner at close-out, SPEC Assumptions), then plays it on android by taps only (tap-select, tap-drop, tap-add, tap-swap, Validate, tap a legal target other than the pre-selected one, tap-swap the strip, Confirm) and again with the drop, the free-letter add and both reorders by drag."
+verify = "npm run test:all and npm run test:screens are green, and Playwright on android shows the tap-only move committing the word to the chosen cell in the chosen order with the score changing by the previewed delta and the stored Session equal to current().session after every step, and the drag version ending with moves and cursor equal to the tap version's (activeMs aside)."
+covers = ["CAP-7"]
+after = [9]
+hitl = false
+risk = "medium"
+unknown = "Whether such a word exists from session-idle-empty-column (SPEC Assumptions); a scripted fallback start fixture changes the Success signal's named start and goes to the owner at close-out."
+interface = "No source change expected; a new e2e spec, plus a scripted fixture only if no word qualifies."
+tests = "Success signal tap-only and drag (P5, epic Done when 2 and 3); R-73 (UI) every step saved before the next (P5 part); R-80 score change equals the preview (P5 supp. part)."
+owns = "The epic's Success-signal tests and any fallback start fixture."
+
+[[entry]]
+id = 10
+type = "story"
+title = "FLIP module and button-driven glides"
+description = "Adds src/ui/flip.ts (F6): `capture()` records the rects of the `.face` inside each live element before a dispatch and `play(command, result)` animates the faces after the move's update from previous to next rect, wrappers never transformed (a press mid-animation hit-tests the settled layout), every live card whose band-relative position changed animating (container or index, Flip, a k change with the block left, card ↔ compact tile by translate only), none on a pure band shift, a card changing band inverting from its captured viewport rect, mirrors never in the glide, durations only from motion.ts with the 120 ms reduced-motion fade, each animation gate-counted, New game, Replay and restore never animating; the kind from the command and its DispatchResult (F7): drop → `snap`, Undo/Redo → `undoRedo`, `setTarget` → empty set, the F17 moves (Validate, Flip, k change, tap-add, removal, tap-swap, a release with an edit gliding from its released point) → `snap`, a no-edit release → `flyBack`; the act()-wrapped callers (ActionBar, TopBar, ControlRow) call capture before and play after `game.dispatch` (entry 16 wires the controller's callers); on Validate and on Undo to Composing the D faces glide from and to the column while their block copies appear or vanish at once (F22); `confirm` and a committing Redo map to `flyToCell` with play left to entry 11."
+verify = "npm run test:all and npm run test:screens are green with UI Vitest AD-14 command + result → kind table (drop, tapDestinationCard, setDestinationCount, flip, arrange, addFreeLetter, removeFreeLetter, validate, setPlacementOrder, setTarget, confirm, undo, redo), reduced-motion snap (flip) and undoRedo fades, the coordinate frame (+ 14 → 15 with the block left; a band change at 412 × 780) the gate idle at every dispatch, and a dropped face whose first keyframe starts at its released position (pure play input), and Playwright on android with prefs-non-default (Slow) shows running getAnimations() on the moving faces, none on wrappers or mirrors, read in the page.evaluate that clicks the button, for Validate (52 data-card-id during the glide, D faces gliding from the column while the block copies vanish at once), Flip, a k change with the block left (after Flip), and Undo from Place to Composing (D faces gliding back to the column, the block copies reappearing at once) and from Composing to Idle with the tray and strip contents after each step."
+covers = ["CAP-8"]
+after = [9]
+hitl = false
+risk = "high"
+unknown = "Whether a capture before dispatch gives the previous rects without a second render (SPEC Assumptions) and whether WAAPI on faces composes with the controller's drag transforms at release without a jump."
+interface = "New src/ui/flip.ts (capture(), play(command, result), finishAll()); ActionBar, TopBar and ControlRow wrap dispatch in capture/play."
+tests = "R-70 Undo Place → Composing keeps the arrangement and Composing → Idle returns the cards, animated (P5 supp.); AD-14 F22 D faces from and to the column (P5); AD-14 one live element during a Validate glide, faces animate, wrappers and mirrors never (P5); AD-14 FLIP kinds, band-relative set, no motion on a pure band shift, reduced-motion fade (S + P5)."
+owns = "flip.ts, the kind table and the animated set; every later dispatching caller uses capture/play."
+consumers = "The gate's busy sources gain FLIP animations: list layout re-layout, the banner latch, w recompute and the controller's gate enter/leave; ActionBar/TopBar/ControlRow handlers change inside act(): list the AD-12 act() scan."
+references = ["spec — _bmad-output/specs/spec-epic-5-tray/build-notes.md, CAP-8", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/EXPERIENCE.md, Motion", "architecture — _bmad-output/planning-artifacts/architecture/architecture-wordcell-2026-09-27/ARCHITECTURE-SPINE.md, AD-10, AD-14"]
+
+[[entry]]
+id = 16
+type = "story"
+title = "FLIP for controller-driven moves"
+description = "Wires entry 10's flip.ts into the pointer controller: every controller dispatch (drop, tapDestinationCard, tile tap-swap and removal, tap-add, setTarget, tile and free-letter releases) calls `flip.capture()` before and `flip.play(command, result)` after `game.dispatch`, on a drag release before `clearDrag` removes the drag and parting transforms (F7, build-notes CAP-8: `controller.ts` end() clears before the drop dispatch today), so a tile or free letter released with an edit glides from its released position by `snap` and one released with no edit returns by `flyBack` (F17); `flip.finishAll()` joins the controller's `pointerdown` and `cancel()` beside `finishFlight()` (F6), so a press or an act() button during any animation completes it and acts on the settled state."
+verify = "npm run test:all and npm run test:screens are green with UI Vitest AD-14 capture-before-clearDrag order and finishAll on pointerdown and cancel(), and Playwright on android with prefs-non-default (Slow) shows running getAnimations() on the moving faces (none on wrappers or mirrors) read in a page.evaluate right after the touch end for a drop (snap), tap-add, removal, tap-swap, a tile and a free letter released with an edit (first keyframe at the released point) and with no edit (flyBack), and a press during a glide acting on the settled layout."
+covers = ["CAP-8"]
+after = [10]
+hitl = false
+risk = "high"
+unknown = "Whether WAAPI on faces composes with the controller's drag transforms at release without a visible jump."
+interface = "Controller dispatch paths wrapped in flip.capture()/flip.play(); controller pointerdown and cancel() call flip.finishAll(); no new exports."
+tests = "AD-14 FLIP kinds for controller-driven moves, release glides from the released point, flyBack on no edit (S + P5); AD-14 input during an animation completes it and acts on the settled state (S + P5)."
+owns = "The controller's FLIP wiring and the finishAll press path."
+consumers = "The controller's pointerdown and cancel() gain finishAll(): list act(), before-hide, before-back, the epic 4 fly-back finish and the hover-peek timer."
+references = ["spec — _bmad-output/specs/spec-epic-5-tray/build-notes.md, CAP-8 (Capture before the view changes, Landing glides)"]
+
+[[entry]]
+id = 11
+type = "story"
+title = "Fly-to-cell on commit"
+description = "Plays `flyToCell` for a Confirm and a committing Redo (F7): 2 × base, 30 ms `stagger()` bottom card first, each committed card visible in flight (today non-top cell cards are `visibility: hidden`, WordCellRow.svelte:59) and taking the hidden state on landing if not the top, the target cell's previous cards keeping their pre-commit visibility (and the free letter's own-cell used-state mirror staying drawn when that cell is the target) until the first flying card lands or the animation is finished; under reduced motion every card fades in at once over 120 ms with no stagger and the switch happens at the fade's end; Undo pressed mid-flight finishes it and acts on the settled layout."
+verify = "npm run test:all and npm run test:screens are green with UI Vitest AD-14 reduced-motion fly-to-cell (120 ms opacity fade, no stagger) and stagger order, and Playwright on android with prefs-non-default (Slow) shows Confirm on session-place running getAnimations() on each committed face with every flying card not visibility: hidden during its flight and exactly 52 data-card-id elements in the same evaluate, the target's previous top still shown until the first card lands, Confirm into the free letter's own cell on session-place-free-letter-redo-tail keeping its used mirror until then, Undo mid-fly-to-cell acting on the settled layout, a Redo of a commit flying the same way, and one Confirm under emulated reduced motion fading with no stagger."
+covers = ["CAP-8"]
+after = [16]
+hitl = false
+risk = "medium"
+unknown = "Whether holding the previous cards' visibility until the first landing needs a flip.ts landing callback or can key off the first animation's finished promise."
+interface = "flip.ts flyToCell playback and a landing hook; WordCellRow.svelte visibility driven by the in-flight set; no new exports."
+tests = "AD-14 flyToCell 30 ms stagger bottom first, each flying card visible, 52 live elements during fly-to-cell (P5); AD-14 reduced-motion fly-to-cell fade, all at once (S + P5); AD-14 Undo mid-fly-to-cell acts on the settled layout (P5); R-60 commit lands bottom → top (P5 supp. part)."
+owns = "Fly-to-cell playback and the in-flight visibility rules (AD-14, DESIGN.md WordCell)."
+references = ["spec — _bmad-output/specs/spec-epic-5-tray/build-notes.md, CAP-8 (Fly-to-cell)", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/DESIGN.md, Components (WordCell)"]
+consumers = "Changing the non-top visibility in WordCellRow.svelte:59: list the long-press peek, sticky view and hover peek mirrors and the R-61 used-hatch mirror."
+
+[[entry]]
+id = 12
+type = "story"
+title = "Tray growth wiring"
+description = "Feeds `trayLayout(tile count).rows` (D-block mirrors counted) into layout.svelte.ts in place of `TRAY_ROWS = 1` (F10) after every completed edit (drop, free-letter add, removal, k change, Undo, Redo, a commit, restore), never during a drag, with the Tray's tile mode and row count read from the same row count; per AD-11 (amended, F24) `flip.capture()` first calls `gate.scrollReset()`, the band re-layout (w fixed) and its anchor `scrollTop` delta apply in the same update as the move, `flip.play` measures after it, and a move's re-layout that finds the gate busy throws (rule 6); scripts session-composing-long.json [ASSUMPTION name] (or reuses it if entry 8 scripted it) (14 tray tiles with `canIncK`, one `+` → 15, three compact rows) and a valid Place Session whose strip spans three compact rows, both added to serialize.test.ts and the AD-17 valid-fixture list."
+verify = "npm run test:all and npm run test:screens are green with UI Vitest AD-11 row count → bands() and a 14 → 15 + dispatched within 150 ms of a scroll (busy cleared, the 15th tile, band height and hit rects change in the move's update, glide starts at once), and Playwright on android at 412 × 839 and 412 × 780 shows the WordCell row's bounding box unchanged after growth to three compact rows by + on the long Composing fixture and back by −, the document scrolling by the shortfall at 780, and on the three-row Place fixture Confirm, Undo and Redo each changing the rows with the move, the WordCell row unchanged and the flying cards visible."
+covers = ["CAP-9"]
+after = [11]
+hitl = false
+risk = "high"
+unknown = "The anchor scrollTop write's effect on a running fling on Android is unverified and goes to the epic 7 device checks; whether both long-word Sessions are scriptable from session-won's moves (SPEC Assumptions)."
+interface = "layout.svelte.ts takes trayRows from trayLayout (TRAY_ROWS removed); flip.capture() calls gate.scrollReset(); Tray.svelte reads the band's row count; new fixtures/session-composing-long.json and a three-row Place fixture."
+tests = "AD-11 tray rows from the tile count after completed edits, never mid-drag; WordCell row box unchanged after growth to three rows and back; every move's row change in the same update, FLIP after it; leftover exhausted → scrollTop delta; a move during page scroll clears busy and glides at once (S + P5); AD-14 flying cards visible during a three-row commit (P5)."
+owns = "The tray-row wiring, the F24 scroll-busy clear on every move and the two long-word fixtures."
+consumers = "The tray-row input to bands() changes the anchor offset and every band height: list the column and WordCell hit rects, the banner latch, the w-recompute predicate and pickTarget/insertionIndex rects; gate.scrollReset() is also called by the before-hide hook in main.ts."
+references = ["spec — _bmad-output/specs/spec-epic-5-tray/build-notes.md, CAP-9", "architecture — _bmad-output/planning-artifacts/architecture/architecture-wordcell-2026-09-27/ARCHITECTURE-SPINE.md, AD-11", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/DESIGN.md, Layout & Spacing (Tray band, A-D4)"]
+
+[[entry]]
+id = 13
+type = "story"
+title = "Winning-animation input guard"
+description = "Lands the AD-14 winning guard in motion.ts exactly as SPEC F8 states it: installed when a Confirm or Redo dispatch returns `finished` `won` (both motion settings), capture-phase document listeners for pointerdown, pointerup, pointercancel, click, keydown and keyup consuming with preventDefault + stopPropagation, an always-installed open-gesture tracker (pointerIds, keys by code) marking open gestures consumed at install, the first new gesture completing the animation and being consumed, the 300 ms minimum after install at any speed (F23), the backstop of `duration('snap')` after the last consumed gesture's end, uninstall by a pointerdown or keydown after settle in the backstop window, Undo inside `[data-testid=\"undo\"]` completing, uninstalling and passing through, hide and window blur clearing every tracked gesture (registered in src/main.ts through `game.registerBeforeHide` beside `controller.cancel` and `gate.scrollReset`), and the hover-peek timer cleared at install (the install hooks the flip.play result path entry 12 last changed) and never started while installed; scripts prefs-fast.json [ASSUMPTION name]."
+verify = "npm run test:all and npm run test:screens are green with UI Vitest AD-14 guard cases (long-press, pointercancel and natural-settle uninstalls, both endings, keydown after settle passing through, the triggering key's repeats and keyup consumed, a key held through hide or blur, the reduced-motion win, the 300 ms minimum under reduced motion and at Fast, the injected hover timer), and Playwright on android from session-won + one Undo with prefs-non-default shows a cell 6 tap during the Confirm animation opening no view and after settle opening it, a double tap on primary-action leaving the same seed and no New-game Session (also under reduced motion and with prefs-fast), an untouched win then New game starting a new seed, Undo mid-animation returning to Place, the Redo win's cell-6 tap, and on desktop Enter twice and Enter held at Slow and Normal speed leaving the same seed."
+covers = ["CAP-10"]
+after = [12]
+hitl = false
+risk = "high"
+unknown = "Whether Playwright's repeated keyboard.down('Enter') with repeat: true reproduces a held key's auto-repeat on a focused button closely enough for the held-Enter case."
+interface = "motion.ts gains the winning guard and the open-gesture tracker (install(won), hideClear); main.ts registers the hide-clear with game.registerBeforeHide; gestures/hover-peek-timer.ts honours the guard; new fixtures/prefs-fast.json."
+tests = "AD-14 winning guard (F8): WordCell tap → no view during Confirm and Redo wins, double-tap Confirm → same seed (Slow, reduced motion, Fast), desktop Enter twice and held, untouched win then New game, Undo completes then undoes (P5); every uninstall path, 300 ms minimum, no hover-peek timer while installed (S); R-62 Confirm → Game over (P5 supp. part)."
+owns = "The winning guard, the open-gesture tracker and prefs-fast.json; epic 6 adds the pending end-sheet cancel, the menu case and the Undo key aliases."
+consumers = "The guard's capture-phase listeners sit ahead of the controller's pointerdown and every act() button; the hide path gains a third registerBeforeHide callback: list the controller, the scrim click swallower, the hover-peek timer and the AD-9 hide flush."
+references = ["spec — _bmad-output/specs/spec-epic-5-tray/build-notes.md, CAP-10", "architecture — _bmad-output/planning-artifacts/architecture/architecture-wordcell-2026-09-27/ARCHITECTURE-SPINE.md, AD-9, AD-14"]
+
+[[entry]]
+id = 14
+type = "story"
+title = "Refactor sweep: code"
+description = "Closing code cleanup (CAP-11, retrospective A5, A9, C-UI1, C-E56, L2) from the build-notes Sweep inventory rows marked code for this CAP and the review findings deferred during the epic: S1 the copied e2e helpers moved (minus `tapAt`, already moved by entry 3) into e2e/helpers/ with helpers.spec.ts cases; S2 `visibleBand()` with a dev `?bands=` order that moves a bar off its edge (recorded, fix optional); S3 pin `rejectReason`'s `'version' in` in game.svelte.test.ts; S4 a helper test for `openFixture` `{ booted: false }`; S5 the layout.spec banner-during-scroll pan step under load; S6 one shared card style for Dialog.svelte and BlockingMessage.svelte (C-UI1); S7 every CSS transition the epic added reading `--wc-base-ms` and honouring `--wc-reduced` (C-E56); S18 4.12-m3 … m6 confirmed at HEAD and recorded; each applied or recorded with a reason."
+verify = "npm run test:all and npm run test:screens are green with every existing test passing unedited except imports and moved helpers, and the plan mapping every S1–S7 and S18 row and every deferred finding to a change or a recorded reason."
+covers = ["CAP-11"]
+after = [13, 17]
+hitl = false
+risk = "low"
+unknown = "Scope beyond S1–S7 and S18 is unknown until the earlier builds' deferred findings are read."
+interface = "New or extended e2e/helpers/ modules; a shared card style for Dialog/BlockingMessage; no src export change."
+tests = "Existing suites; helpers.spec.ts cases for the moved helpers and openFixture { booted: false }; no new rule coverage."
+owns = "The code rows of the Sweep inventory (S1–S7, S18) and the epic's deferred code minors."
+consumers = "The moved e2e helpers are imported by every dev-server spec: list each spec the move touches; S6's shared card style changes the History notice, Reset confirm, Halted and rejected-root surfaces and their screenshots."
+references = ["spec — _bmad-output/specs/spec-epic-5-tray/build-notes.md, CAP-11 / CAP-12 Sweep inventory", "retro — _bmad-output/initiative-wordcell-v1/epic-board-and-gestures/epic-board-and-gestures-retrospective.md, Action items A5, A9; Process L2"]
+
+[[entry]]
+id = 15
+type = "story"
+title = "Refactor sweep: paperwork and budget"
+description = "Closing records (CAP-12, retrospective A9, AD-17, L2): the build-notes Sweep inventory rows marked paperwork (S8 4.13-OM banner-during-scroll failure and five green runs in story-refactor-sweep-plan.md, S9 4.13-m1 plan updates, S10 4.9f-m5 ticket 4.9 Notes wording, S11 4.11-OM final tree in the 4.11 plan's test:all line, S16 4.12-OM confirmed at HEAD and recorded), S12 the AD-17 warm-cache median of three npm test runs after a discarded warm-up on a Linux-filesystem checkout plus the slowest engine file's watch re-run (over 5 s or 1 s: per-file timings and a stop for the owner before built), S13 the build-notes close-out edit lists completed for the retrospective, including the AGENTS.md Where-things-are additions (flip.ts, tray/, the gestures/ modules) for a bmad-project-context refresh, and the epic Done when 1 audit mapping every P5 row of rule-coverage.md to its passing android (and desktop where named) test."
+verify = "npm run test:all and npm run test:screens are green, and the plan records the warm median and watch re-run (or the owner stop) and maps S8–S13 and S16 each to its applied edit and every rule-coverage.md P5 row to a passing test name."
+covers = ["CAP-12"]
+after = [14]
+hitl = false
+risk = "low"
+unknown = "Whether the unit median stays under 5 s after the epic's new UI Vitest cases (controller.test.ts is the critical path, F41)."
+interface = "No code change; plan and ticket-record edits only."
+tests = "AD-17 unit budget re-measure recorded in the plan; no new rule coverage."
+owns = "The paperwork rows of the Sweep inventory, the AD-17 re-measure, and the close-out edit list for the retrospective."
+references = ["spec — _bmad-output/specs/spec-epic-5-tray/build-notes.md, Spine close-out edits, Epic file close-out edits, EXPERIENCE.md and DESIGN.md close-out edits, CAP-11 / CAP-12 Sweep inventory"]
