@@ -94,7 +94,7 @@ S + F + the D mirrors; in Place, the strip tiles (CAP-1 mode, CAP-6 caret, CAP-9
     `e2e/drag-interruptions.spec.ts`, `e2e/tap.spec.ts` and `e2e/wordcell-view.spec.ts` into
     `e2e/helpers/` with a `helpers.spec.ts` test, each spec importing it) or `click({ force: true })`.
 
-- **CAP-3** Controller seams (retrospective A6, F9; no behaviour change)
+- **CAP-3** Controller seams (retrospective A6, F14; no behaviour change)
   - **intent:** The pointer controller is split along its seams before tile gestures are added,
     so new gesture code lands in focused modules.
   - **success:** `src/ui/gestures/controller.ts` keeps the press machine; the visible band and
