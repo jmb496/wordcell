@@ -1,6 +1,6 @@
 # Review log — spec-epic-5-tray SPEC.md (run 2)
 
-State: pass 5: done
+State: pass 6: done
 
 Target: `_bmad-output/specs/spec-epic-5-tray/SPEC.md` (docs mode, thorough, max 7). Second run after run 1 (`SPEC.review-log-run1.md`) diverged at pass 3; its upstream gaps were fixed in 972c4e2.
 Pre-loop: HEAD 972c4e2; copies `SPEC.review-log.passes/pass0.{SPEC,build-notes,rule-coverage}.md`; SPEC.md 5805 words (build-notes 3235, rule-coverage 2270). Growth budget ~14 500 words (2.5x).
@@ -114,3 +114,20 @@ Words (docs): SPEC 8274 (1.43 x pass 0)  |  Snapshot: SPEC.review-log.passes/pas
 - none new (OQ-6, OQ-7 open)
 ### Dropped
 - none; left to ticket plans: parted faces' return duration (CAP-5), the R-41/R-61 fixture's start phase and word (CAP-7), the Playwright held-Enter mechanism (CAP-10)
+
+## Pass 6 — 2026-10-08
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 2, minor 13, decision-needed 0  |  Dropped in triage: 0 (merged: anchor-delta in document coordinates ×2, R-42 row ×2; multi-row overflow over WordCells reclassified major → minor: the window is the ~150 ms scroll-busy deferral)
+Majors 3 → 2.
+Findings handed to the fixer: `SPEC.review-log.passes/p6-findings.md`
+Words (docs): SPEC 8485 (1.46 x pass 0)  |  Snapshot: SPEC.review-log.passes/pass6.*.md; fix diff pass6.fix.diff
+### Applied
+- [major] CAP-8 — band-changing cards start from the on-screen rect before the re-layout; the anchor `scrollTop` delta never counts as motion; 412 × 780 band-change Vitest → item 1
+- [major] CAP-4/F1 — an inert-target drag acts on the selection only when it ends in `pointerup`; `pointercancel` keeps it → item 2
+- [minor] items 3–15 (overflow clipped to the band, R-42 reload fixture, R-65 peek P5 owner, Boundaries edit due before CAP-10/CAP-11, OQ-6/OQ-7 gate CAP-8/CAP-10 tickets, hover-peek module split, lookup helper keeps messages, Idle word line, wrapper pitch both ways, dictionary-loaded precondition, Playwright repeat mechanism (checked in 1.63 source), k change with block left, F3 start-gap rect)
+### Default applied (technical)
+- CAP-8 — FLIP start rect excludes the anchor delta
+- CAP-4 — inert-target drag acts at `pointerup` only
+### Decision needed (functionality / UX / gameplay)
+- none new (OQ-6, OQ-7 open)
+### Dropped
+- none

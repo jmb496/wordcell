@@ -8,7 +8,8 @@ the contract; these notes fix what they leave open. `[ASSUMPTION]` marks inferen
 - AD-12 (F4): the tray band's drop rect is clipped to the visible band like the columns.
 - AD-12 (F2): `data-place` `tray`/`strip` presses are tile presses; a D-block mirror press is a
   no-op that keeps a tile selection; the selected-tile 4 px lift moves only the face; tile
-  wrappers are tile width + 4 wide (DESIGN.md Tray band).
+  wrappers span the full pitch both ways (tile width + 4 wide, tile height + 4 between rows, as
+  epic 4 F26; DESIGN.md Tray band).
 - AD-12 (F5): tile and free-letter drags end like column drags (platform cancel flies back,
   the tile selection cleared at the 8 px threshold and never restored (F18); a back leaves the app per the bare-Board rule and hide, like `act()`, settles at once).
 - AD-14 (F6, F7): FLIP lives in `src/ui/flip.ts` and moves faces, never wrappers; the kind comes from the dispatching command and its
@@ -21,9 +22,6 @@ the contract; these notes fix what they leave open. `[ASSUMPTION]` marks inferen
 
 ## Epic file close-out edits
 
-- `epic-tray-and-place.md` Boundaries: add the two test-only files outside `src/ui/`
-  (`src/shell/game.svelte.test.ts`, `src/engine/serialize.test.ts`'s fixture list) and
-  `src/main.ts`: the winning-guard hide registration (SPEC F8).
 - Structural Seed: `src/ui/flip.ts`; the `gestures/` modules CAP-3 splits out and the tile modules
   (build-notes Component tree); the shared class-name module.
 - Proposed epics row 5: record what moved to epic 6 (the pending-end-sheet half of the guard, F8).
@@ -31,11 +29,15 @@ the contract; these notes fix what they leave open. `[ASSUMPTION]` marks inferen
 - Done when 3: "gives the same Session" → "gives the same Session apart from `activeMs`" (SPEC
   Success signal).
 
-## Epic file edits (due before CAP-1 and CAP-5 are ticketed)
+## Epic file edits (due before CAP-1, CAP-5, CAP-10 and CAP-11 are ticketed)
 
 - Boundaries (due before CAP-1 is ticketed, not at close-out; SPEC Constraints AD-14 and One
   engine change): "No engine change" → add the AD-3 `draft.wordCards` engine change
   (`src/engine/view.ts`, its tests).
+- Boundaries (due before CAP-10 and CAP-11 are ticketed, not at close-out): add the two
+  test-only files outside `src/ui/` (`src/shell/game.svelte.test.ts`,
+  `src/engine/serialize.test.ts`'s fixture list) and `src/main.ts`: the winning-guard hide
+  registration (SPEC F8).
 - Done when 4 (due before CAP-5 is ticketed, not at close-out; SPEC Constraints AD-14): "mirrors
   never animate" → "mirrors take no part in the FLIP glide (the D-block parting shift excepted,
   AD-14)".
@@ -112,9 +114,10 @@ src/ui/
   gestures/
     controller.ts          # press machine only (CAP-3)
     visible-band.ts        # clip, bars, visible band (CAP-3)
-    hover-peek-timer.ts    # desktop hover peek (CAP-3)
+    hover-peek-timer.ts    # desktop hover-peek timer and suppress, out of controller.ts (CAP-3;
+                           # src/ui/hover-peek.ts stays as the render helpers)
     fly-back.ts            # fly-back and settle (CAP-3)
-    lookup.ts              # one cell/column lookup (CAP-3)
+    lookup.ts              # one cell/column lookup, caller's throw message (CAP-3)
     classes.ts             # shared class names (CAP-3)
     tile.ts                # tile tap intent and tile/free-letter drag (CAP-4–6)
     targeting.ts           # + insertionIndex (F3)
@@ -178,8 +181,9 @@ src/ui/
 - Clear rules (F1, F13) in one function used by the controller's tap path and by `act()`; the
   controller's root tap path (epic 4 F25) covers disabled controls, labels, the tray band background
   and the top bar (no `click` reaches `act()` there).
-- A drag crossing 8 px from an inert target resolves, for the tile selection, as that target's
-  tap (no dispatch).
+- A drag crossing 8 px from an inert target and ending in `pointerup` resolves, for the tile
+  selection, as that target's tap (no dispatch); one ended by `pointercancel`/
+  `lostpointercapture` keeps the selection however far it moved (F1).
 
 ## CAP-5 Tile drag
 
@@ -197,8 +201,9 @@ src/ui/
   under 25 % every tile returns to rest with the origin slot open.
 - `insertionIndex` gap rects (F3): `{ index, rect }[]` computed from the resting tile slot rects
   (not the parted ones) so the target does not oscillate; one rect per gap centred before tile i,
-  tile height, a second rect for a row-break index; a row's end gap one half-gap after its last
-  tile (no second rect without a next row); Euclidean distance from the dragged face's
+  tile height, a second rect for a row-break index; a row's start gap one half-gap before its
+  first tile; a row's end gap one half-gap after its last tile (no second rect without a next
+  row); Euclidean distance from the dragged face's
   centre; ties to the lower index; [ASSUMPTION] hysteresis is not needed beyond "nearest gap".
 - Reorder result: gap i counts over the sequence including the dragged tile (index j); remove the
   dragged id, insert at i when i ≤ j, else at i − 1; compare by card with the current order;
@@ -251,9 +256,11 @@ src/ui/
   compare band-relative rects so a pure band shift (tray growth moving every column card by the
   band delta) applies without motion. Coordinate frame (SPEC CAP-8): a card that stays in its band
   inverts from the band-relative delta (the band's own shift jumps); a card that changes band
-  inverts from document-coordinate rects (viewport rect plus scroll offset), so a scroll between
-  capture and a deferred play (CAP-9) adds no distance; the deferred play compares in the same
-  coordinates in the frame after the re-layout.
+  inverts from its on-screen rect just before the re-layout (same-update path: the captured
+  viewport rect; deferred play, CAP-9: the captured viewport rect shifted only by the player's
+  scroll between capture and play, never by the re-layout's own anchor `scrollTop` delta) to its
+  viewport rect after the re-layout and the anchor delta, so neither the player's scroll nor the
+  anchor delta adds distance.
 - FLIP moves the `.face` inside each live wrapper; the wrapper (identity, hit rect) stays at its
   settled rect, so a press mid-animation hit-tests the settled layout.
 - Every animation registers with the gate (`enter`/`leave`) and with one running set that
@@ -283,7 +290,7 @@ src/ui/
   invert step (faces held at their captured rects) is applied in the move's own update and only
   the play waits; when the gate idles it re-measures after the re-layout and plays from the
   captured rects. The Tray's tile mode and row count read the same gate-latched row count as the
-  band, so both switch together; the interim render of extra tiles is SPEC CAP-9's overflow rows (with their blocking element).
+  band, so both switch together; the interim render of extra tiles is SPEC CAP-9's overflow rows (with their blocking element), both clipped to the tray band's rect.
   Mid-drag the row change waits for release.
 - As-built: the controller's `end()` leaves the gate (`gate.leave()`, `controller.ts:369`) before
   the release dispatch (`controller.ts:762`), so release moves take the same-update path; the
