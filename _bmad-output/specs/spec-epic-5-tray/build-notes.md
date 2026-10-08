@@ -7,16 +7,16 @@ the contract; these notes fix what they leave open. `[ASSUMPTION]` marks inferen
 
 - AD-12 (F4): the tray band's drop rect is clipped to the visible band like the columns.
 - AD-12 (F2): `data-place` `tray`/`strip` presses are tile presses; a D-block mirror press is a
-  no-op that keeps a tile selection; the selected-tile 4 px lift moves only the face.
+  no-op that keeps a tile selection; the selected-tile 4 px lift moves only the face; tile
+  wrappers are tile width + 4 wide (DESIGN.md Tray band).
 - AD-12 (F5): tile and free-letter drags end like column drags (platform cancel and back fly back,
   `act()` and hide settle at once).
 - AD-14 (F6, F7): FLIP lives in `src/ui/flip.ts` and moves faces, never wrappers; the kind comes from the dispatching command and its
   `DispatchResult`; the controller's `pointerdown` and `cancel()` finish every running animation.
-- AD-14 (F8): name the epic 5 winning-guard tests; the guard consumes the rest of the settling
-  gesture (up to and including its first `click`; a key's repeats, `keyup` and `click`; any
-  other pointer meanwhile), uninstalls at the next `pointerdown` after that or at a `motion.ts`
-  backstop (1 × base), and at settle by any path, and lets Undo through; the
-  pending-open cancel, menu case and Undo key aliases land in epic 6.
+- AD-14 (F8): name the epic 5 winning-guard tests; fold in the guard as SPEC F8 states it,
+  including its listener set (`pointerdown`, `pointerup`, `pointercancel`, `click`, `keydown`,
+  `keyup`; the spine names three types); the pending-open cancel, menu case and Undo key aliases
+  land in epic 6.
 - AD-11 (F10): `layout.svelte.ts` takes tray rows from `trayLayout`; `TRAY_ROWS` is gone.
 
 ## Epic file close-out edits
@@ -26,22 +26,23 @@ the contract; these notes fix what they leave open. `[ASSUMPTION]` marks inferen
   AD-3 `draft.wordCards` engine change (`src/engine/view.ts`, its tests; SPEC Constraints).
 - Structural Seed: `src/ui/flip.ts`; the `gestures/` modules CAP-3 splits out and the tile modules
   (build-notes Component tree); the shared class-name module.
-- Done when 4: "mirrors never animate" → "mirrors take no part in the FLIP glide (the D-block
-  parting shift excepted, AD-14)".
+- Done when 4 (due before CAP-5 is ticketed, not at close-out; SPEC Constraints AD-14): "mirrors
+  never animate" → "mirrors take no part in the FLIP glide (the D-block parting shift excepted,
+  AD-14)".
 - Proposed epics row 5: record what moved to epic 6 (the pending-end-sheet half of the guard, F8).
 - AD-17 Speed: the epic 5 warm median on the Linux filesystem (CAP-12).
 
 ## EXPERIENCE.md and DESIGN.md close-out edits (beyond the 2026-10-08 amendments already made, SPEC Upstream amendments)
 
 - EXPERIENCE.md Arrange M (F16): the caret shows only when a free-letter drop would overflow the
-  current rows; a reorder drag always parts (DESIGN.md Tray band).
+  current rows or its gap would move no tile (SPEC CAP-6); a reorder drag always parts (DESIGN.md Tray band).
 - EXPERIENCE.md Movable tile (F18): a tile, strip-tile or free-letter drag clears the tile
   selection at the 8 px threshold, and every end (release, `pointercancel`,
   `lostpointercapture`, back, `act()`, hide) leaves nothing selected.
 - EXPERIENCE.md message catalogue (F11): letter count `5 letters` / `1 letter`; Place meta
   `6 letters → cell 6 · +30` (`±0`, U+2212).
 
-## AGENTS.md close-out edit (managed block, through `bmad-project-context`)
+## AGENTS.md edit (managed block, through `bmad-project-context`; due before CAP-5 is ticketed, not at close-out; SPEC Constraints AD-14)
 
 - Known pitfalls, "Mirrors … never animate": mirrors take no part in the FLIP glide; the D-block
   parting shift is the one AD-14 exception (CAP-6).
@@ -181,8 +182,8 @@ src/ui/
   row break, and a drag right by two); in a reorder the D block is never between origin and gap,
   so its mirrors stay; the parting opening is the gap's only mark (nothing is drawn at the gap
   rect; gap rects are hit-test only, since the collapsed origin slot shifts the visible opening
-  by half a pitch from the resting gap rect for a drag right by two or more); the caret (CAP-6,
-  full layout) draws at the gap rect that won;
+  by half a pitch from the resting gap rect for a drag right by two or more); the caret (CAP-6:
+  full layout, or a free-letter gap that moves no tile) draws at the gap rect that won;
   under 25 % every tile returns to rest with the origin slot open.
 - `insertionIndex` gap rects (F3): `{ index, rect }[]` computed from the resting tile slot rects
   (not the parted ones) so the target does not oscillate; one rect per gap centred before tile i,
@@ -197,7 +198,8 @@ src/ui/
 - Free-letter parting with room (DESIGN.md Tray band parting geometry, AD-14, 2026-10-08): no
   origin slot, so none collapses; every tile after gap i, the D-block mirrors included (side
   right), shifts one tile pitch toward the far end in reading order, across a row break to the
-  next row's first slot; the same pure offset function, Vitest with the block on either side.
+  next row's first slot; the same pure offset function, Vitest with the block on either side,
+  including the block on the right across a row break (segment ends and locks per SPEC CAP-6).
   Mirrors carry this parting transform only, never a FLIP glide; it snaps under reduced motion.
 
 ## CAP-6 Free letters
@@ -205,8 +207,8 @@ src/ui/
 - A WordCell press in Composing on a cell with `canAddFreeLetter`: tap → `addFreeLetter { cell }`;
   threshold crossing before 400 ms → free-letter drag of the top card's live element; the cell
   shows a ghost (controller class on the cell wrapper, DOM only).
-- Full-layout caret: "full" = tile count (SPEC Capabilities) after the drop > perRow × current
-  rows (card mode holds one row), from `trayLayout`.
+- Caret: when "full" and when a gap moves no tile per SPEC CAP-6 (the rendered rows are the
+  gate-latched count, CAP-9; card mode holds one row); `perRow` from `trayLayout`.
 - The index passed is the gap in M (0…|M|), not the tray position; translate around the D block.
 
 ## CAP-7 Place
@@ -227,8 +229,8 @@ src/ui/
   glides from where it was released). The kind comes from the command plus the `DispatchResult` and the
   resulting view phase, never from comparing views (a drop and its Redo, a Validate and its Redo,
   have the same view change) and never decided before dispatch (that would re-derive a phase
-  rule, AD-3): Undo/Redo → `undoRedo`; a Redo whose resulting view phase is Idle or Game over is a
-  commit → `flyToCell`; `finished: 'won'` only installs the CAP-10 guard (both motion settings,
+  rule, AD-3): Undo/Redo → `undoRedo`; a Redo whose resulting view phase is `idle` is a
+  commit → `flyToCell`; `setTarget` → no card motion (empty animated set); `finished: 'won'` only installs the CAP-10 guard (both motion settings,
   the reduced-motion fade included), the kind stays `flyToCell`; a UI Vitest `AD-14` covers the command + result → kind table, including the
   reduced-motion fly-to-cell (120 ms fade on every card at once, no stagger). Presentation only,
   no legality (AD-3).
@@ -241,7 +243,8 @@ src/ui/
 - FLIP moves the `.face` inside each live wrapper; the wrapper (identity, hit rect) stays at its
   settled rect, so a press mid-animation hit-tests the settled layout.
 - Every animation registers with the gate (`enter`/`leave`) and with one running set that
-  `finishAll()` completes; the controller's `pointerdown` and `cancel()` call it (F6).
+  `finishAll()` completes (a gate-deferred play included, SPEC CAP-8); the controller's
+  `pointerdown` and `cancel()` call it (F6).
 - Fly-to-cell targets the cell's live element stack; stagger bottom card first. Each card the
   commit placed stays visible for its flight (today non-top cell cards are `visibility: hidden`,
   `WordCellRow.svelte:59`) and takes the hidden state on landing if it is not the top (AD-14,
@@ -264,7 +267,8 @@ src/ui/
   invert step (faces held at their captured rects) is applied in the move's own update and only
   the play waits; when the gate idles it re-measures after the re-layout and plays from the
   captured rects. The Tray's tile mode and row count read the same gate-latched row count as the
-  band, so both switch together. Mid-drag the row change waits for release.
+  band, so both switch together; the interim render of extra tiles is SPEC CAP-9's overflow row.
+  Mid-drag the row change waits for release.
 - As-built: the controller's `end()` leaves the gate (`gate.leave()`, `controller.ts:369`) before
   the release dispatch (`controller.ts:762`), so release moves take the same-update path; the
   deferred path is reached by a move dispatched while page scroll is busy (e.g. an Undo tap within
@@ -275,19 +279,14 @@ src/ui/
 
 ## CAP-10 Winning guard
 
-- `motion.ts` installs the capture listener when the Confirm or Redo dispatch returns `finished`
-  `won` (not when `flip.play` starts, which may wait for the gate, CAP-9). A consumed event gets `preventDefault` +
-  `stopPropagation` (stopping keydown propagation alone does not cancel a focused button's
-  default activation). After the completing event the guard consumes events up to and including
-  that gesture's first `click` (for a key: its auto-repeat `keydown`s, its `keyup` and the
-  synthesized `click`) and any other pointer's events meanwhile; it uninstalls at the next
-  `pointerdown` after that, or when a backstop from `motion.ts` (1 × base after the gesture's
-  `pointerup`/`pointercancel`/`keyup`) expires, whichever comes first, so a long press, pan or
-  `pointercancel` with no click cannot strand it (the window is defined by events, not by task
-  order: Android queues a tap's `click` as its own task). With no input it uninstalls when the animation settles by any
-  path (natural end, `finishAll`, hide), so New game works after an untouched win. While the guard is installed the desktop hover-peek timer does not start. Undo is recognised by `[data-testid="undo"]`: the guard completes the animation,
-  uninstalls and does not stop the event, so the button's own `act()` undoes (the key aliases are
-  epic 6).
+- The guard's rule is SPEC F8 (stated once there). Notes: it installs on the dispatch result,
+  not when `flip.play` starts, because the play may wait for the gate (CAP-9); a consumed event
+  needs `preventDefault` as well as `stopPropagation` (stopping keydown propagation alone does
+  not cancel a focused button's default activation); the window is defined by events and the
+  backstop, not by task order (Android queues a tap's `click` as its own task), so a long press,
+  pan or `pointercancel` with no click cannot strand it, and with no input it uninstalls at
+  settle, so New game works after an untouched win. Undo is recognised by
+  `[data-testid="undo"]` (the key aliases are epic 6).
 - The second Confirm tap's `pointerdown` settles the animation and its `click` would land on
   `New game`; the guard consumes it, so `current().session.seed` is unchanged and the stored
   `seed`, `moves` and `cursor` equal those of the `wordcell:session` value read right after the
@@ -312,7 +311,7 @@ src/ui/
 | S12 | AD-17 re-measure on the Linux filesystem; slowest engine file's watch re-run | paperwork | 12 |
 | S13 | The close-out edit lists above complete for the retrospective | paperwork | 12 |
 | S14 | Epic 4 D19 (compact half): compact tray and strip (8+ tiles, two rows, `QU` compact tile) checked in a browser on `session-place-compact` | code | 1 |
-| S15 | Epic 4 D14: WordCell count badge at 2 cards (shown) and 1 card (none), on CAP-7's scripted free-letter fixture, whose free letter's cell holds exactly 2 cards before the move: one Confirm into a different cell shows 2 → 1 (the R-61 test; the R-41 retarget is a separate test on the same fixture) | code | 7 |
+| S15 | Epic 4 D14: WordCell count badge at 2 cards (shown) and 1 card (none), on CAP-7's scripted free-letter fixture, whose free letter's cell holds exactly 2 cards before the move: the badge reads 2 after the add and before Confirm, one Confirm into a different cell shows 2 → 1 (the R-61 test; the R-41 retarget is a separate test on the same fixture) | code | 7 |
 | S16 | 4.12-OM (`review-loop/4-12-build.md` Result open major): hover-peek plan names App.svelte as the hoverFine watcher. Applied by ticket 4.13 D5 (`story-refactor-sweep-plan.md` l.219, 253); confirm at HEAD and record | paperwork | 12 |
 | S17 | 4.12-m1, m2 (`4-12-build.md` Pass 2 Unapplied minors, `controller.ts` hover peek): timer keyed by cell number, half-open `suppress()` rects. Applied by 4.13 D6 (`controller.ts:311, 883` at f62a89a, two `AD-12` Vitests); CAP-3's hover-peek move keeps both and their Vitests | code | 3 |
 | S18 | 4.12-m3 … m6 (same log): 399 ms still-open assert, two-sided 1 px gaps, plan R-65 sentence list, `?bands=` test renamed `AD-12`. Applied by 4.13 D6 sharpenings 1–4 (`story-refactor-sweep-plan.md` l.216, 219); confirm at HEAD and record | code | 11 |
