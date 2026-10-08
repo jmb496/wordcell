@@ -195,3 +195,4 @@ Owner answers 2026-10-08 (all the proposed defaults; recorded in SPEC.md F37–F
 3. A sticky view may open over a kept selection; in epic 6, Undo, Redo, the menu and key commands first close the view, then act (A7). F39.
 4. F4 accepted for now; revisit with the epic 5 tray work. F40.
 5. Follow-up 2026-10-08 (F41): the A4 split made the `/mnt/d` median worse (5.30 → 5.98 s), so it was reverted; the 5 s budget is measured on a Linux-filesystem checkout from now on (G4).
+6. Close-out status 2026-10-08: C1–C38 applied (b48f437, 1d40a4b, 4be57ec); G1–G4 applied through `bmad-project-context` with the owner's approval (G2 without `e2e/helpers/board.ts`: no rule to state); A1–A3 and C38 built and code-reviewed (90de645, 54dabda, review log `review-loop/4-retro-f37.md`); A4 superseded by F41.
