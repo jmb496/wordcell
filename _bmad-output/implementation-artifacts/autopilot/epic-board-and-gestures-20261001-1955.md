@@ -208,3 +208,31 @@ ARCHITECTURE-SPINE.md AD-12 (drop targeting by "whole hit rect") ← D7: only th
 ## Stopped — owner decision at ticket 4.13 build
 
 Stop rule 2. The build is complete and test:all is green, but the plan is `blocked` on the ticket's own owner stop: the warm unit-test median is 5.62 s against the 5 s budget (AD-17) after the permitted architecture-test split. Options: accept it (or measure on the Linux filesystem, where it is 3.14 s), or allow another speed-up (split controller.test.ts, or Vitest `isolate: false`). Resume: record the answer in the ticket's Notes (and the plan), set the plan to `built` if accepting, or ask for the speed-up work; then rerun the driver; it goes to the code review (Step C).
+
+## 4.13 Refactor sweep — done
+What it adds: the closing clean-up of the epic. The three saved-data stores share one helper for their repeated checks (no change in messages or behaviour), the score-history tests have their own file, the leftover review items D1–D20 are handled or recorded, and (owner decision D7) a card dragged over the top bar, banner or action bar no longer lands on a column hidden underneath; it flies back instead.
+Ticket review: 7 passes, converged (majors 15, 9, 8, 6, 6, 2, 0); D7 answered by the owner on 2026-10-07 (fix now, SPEC F34)
+Build: built after the owner accepted the 5.62 s unit-test median for now (2026-10-07, SPEC F35); commits 921c0c5, f717fac
+Code review: thorough (the build left one medium item deferred), 2 passes, converged (majors 1, 1); fixes in ef96eac, log 7d36692
+Tests: all passing (test:all, 2026-10-07 21:44 New York, first run; unit 2058, e2e 371, pwa 12, dist 14)
+Ref to fix upstream: none
+Tokens: build session 10.6M; this session 3.9M input-equivalent (code review 96%, orchestrator 2%, other 2%); orchestrator peak context 57k
+Worth knowing: the code review's one open item is paperwork. The plan's D1 notes (the "banner during a scroll" layout test, which this ticket made steadier) do not yet record that the test failed once more under load during the review, at 21:25. Five clean runs followed, and this final full run passed too. The ticket says a second failure means stopping for the owner, so if it fails again, look at it then. Five small leftovers are listed in `review-loop/4-13-build.md` § Result: plan text not updated for the review's fixes; with the dev-only `?bands=` order, a moved bar can make every drag fly back; a stricter test for one stored-data check; a helper test for the new `booted` option; and making that layout test's scroll step deterministic. AGENTS.md and the spine still name the old `src/architecture.test.ts`, which is now four files; the plan lists the lines for a project-context refresh.
+Close-out docs:
+- ARCHITECTURE-SPINE.md AD-12 (drop targeting by "whole hit rect") ← D7: only the visible band of a column is a drop target (owner, 2026-10-07; SPEC F34)
+- ARCHITECTURE-SPINE.md AD-17 unit budget (5 s) ← F35: 5.62 s median on the /mnt/d checkout accepted for now (owner, 2026-10-07; SPEC F35)
+
+## Run complete
+All 13 tickets of epic-board-and-gestures are done. Next: run `/bmad-retrospective`, apply its owner-approved doc fixes (including the Close-out docs below), then mark the epic container done with `bmad-preview-ticketing`.
+
+Close-out docs:
+- build-notes.md CAP-1 / CAP-3, DESIGN.md bar section, spine AD-11 bands() ← bars are content-sized, 44/60 px plus safe-area padding (owner, 2026-10-02; 4.2)
+- SPEC.md § F30 / F25 "spanning the viewport" ← controller root excludes the desktop scrollbar gutter (owner, 2026-10-02; 4.6)
+- DESIGN.md § Column slot / drop-target highlight ← F31: desktop whole-column selection lights the Here pad (owner, 2026-10-02; 4.7)
+- build-notes CAP-6 "hover classes on cards" ← on the column (`[data-column]`) (technical wording; 4.7)
+- ARCHITECTURE-SPINE.md § AD-12 drag transform and fly-back (and AD-11 `SELECTION_LIFT_PX`) ← F32/F33: lift persists through drag and fly-back (owner, 2026-10-05; 4.9)
+- DESIGN.md § selection lift ← F32 (owner, 2026-10-05; 4.9)
+- DESIGN.md hover peek ← content-sized width on the view-sheet surface; below-the-row placement only for dev ?bands= orders (technical defaults; 4.12)
+- ARCHITECTURE-SPINE.md AD-12 "whole hit rect" ← D7 visible-band drop targets (owner, 2026-10-07; SPEC F34; 4.13)
+- ARCHITECTURE-SPINE.md AD-17 unit budget ← F35 5.62 s accepted for now (owner, 2026-10-07; 4.13)
+- AGENTS.md Where things are / spine ← `src/architecture.test.ts` split into four files; stored-key.ts, layout/, gestures/, act.ts (project-context refresh; 4.13 plan)
