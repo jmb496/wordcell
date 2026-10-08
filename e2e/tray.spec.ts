@@ -1,5 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
-import { openFixture, type Step, trayIds } from './helpers/board';
+import { cards, centre, openFixture, type Step, trayIds } from './helpers/board';
+import { animationFrames } from './helpers/lifecycle';
 import { waitForDictionary } from './helpers/restore';
 import { seedStorage } from './helpers/seed';
 import { tokenColor } from './helpers/style';
@@ -13,6 +14,8 @@ test.beforeEach(() => {
 });
 
 const LIST = '**/en*.txt';
+// R-30 word on session-composing after the R-31 tap raising k to 2.
+const K2_WORD = 'TANE';
 const tray = (page: Page) => page.locator('[data-band="tray"]');
 
 // The word line's letters in DOM order: card id, text and whether it is underlined.
@@ -226,35 +229,65 @@ const suffixOverflow = (page: Page) =>
       return suffix.getBoundingClientRect().right - line.getBoundingClientRect().right;
     });
 
-// The invalid line's measured geometry: the text's x offset in the line (✕ glyph and gap), the
-// line's width, and the text's natural nowrap width at 14 and 16 px on a detached clone.
-const invalidGeometry = (page: Page) =>
+// The word line's measured geometry, either branch: the text's x offset in the line (the invalid
+// line's ✕ glyph and gap; 0 for the word line), the line's width, and the text's natural nowrap
+// width at each px 14…20 (`natural[px]`) on a detached clone under `wc-measuring`; for the invalid
+// line also its space and suffix spans' natural widths at 14 px.
+const lineGeometry = (page: Page) =>
   tray(page)
     .locator('.word-line .line')
     .evaluate((line) => {
-      const invalid = line.querySelector('.invalid');
-      const live = line.querySelector('.invalid .text');
-      if (invalid === null || live === null) throw new Error('invalid line missing');
-      const natural = (px: number): number => {
-        const probe = invalid.cloneNode(true) as HTMLElement;
+      const host = line.querySelector('.invalid') ?? line.querySelector('.word-text');
+      const live = line.querySelector('.text');
+      if (host === null || live === null) throw new Error('word line text missing');
+      const probeAt = (px: number) => {
+        const probe = host.cloneNode(true) as HTMLElement;
         probe.style.cssText = 'position:absolute;left:0;top:0;width:max-content;visibility:hidden';
-        const text = probe.querySelector('.text') as HTMLElement;
+        const text = (probe.matches('.text') ? probe : probe.querySelector('.text')) as HTMLElement;
         text.classList.add('wc-measuring');
         text.style.fontSize = `${px}px`;
         document.body.append(probe);
         try {
-          return text.getBoundingClientRect().width;
+          const width = (selector: string) =>
+            probe.querySelector(selector)?.getBoundingClientRect().width ?? 0;
+          return {
+            text: text.getBoundingClientRect().width,
+            space: width('.space'),
+            suffix: width('.suffix'),
+          };
         } finally {
           probe.remove();
         }
       };
+      const natural: number[] = [];
+      for (let px = 14; px <= 20; px++) natural[px] = probeAt(px).text;
+      const at14 = probeAt(14);
       return {
         offset: live.getBoundingClientRect().left - line.getBoundingClientRect().left,
         lineWidth: line.clientWidth,
-        at14: natural(14),
-        at16: natural(16),
+        natural,
+        space14: at14.space,
+        suffix14: at14.suffix,
       };
     });
+
+type LineGeometry = Awaited<ReturnType<typeof lineGeometry>>;
+
+// The invalid line's geometry with its natural widths at 14 and 16 px.
+const invalidGeometry = async (page: Page) => {
+  const g = await lineGeometry(page);
+  return { ...g, at14: g.natural[14] as number, at16: g.natural[16] as number };
+};
+
+// AD-11 Fit from in-browser measurements: the largest integer px in 14…max whose natural width
+// fits the line minus the offset, else 14 (never a literal text-dependent size, epic 4 F11).
+function fitted(g: LineGeometry, max: number): number {
+  for (let px = max; px > 14; px--)
+    if ((g.natural[px] as number) <= g.lineWidth - g.offset) return px;
+  return 14;
+}
+
+const measuring = (page: Page) => tray(page).locator('.wc-measuring');
 
 test('AD-11 a narrowed word line shrinks below 20 px and not below 14 px', async ({ page }) => {
   await openFixture(page, 'session-composing');
@@ -262,49 +295,139 @@ test('AD-11 a narrowed word line shrinks below 20 px and not below 14 px', async
   await narrow(page, 30);
   await expect.poll(() => fontSize(page, '.word-text')).toBeLessThan(20);
   expect(await fontSize(page, '.word-text')).toBeGreaterThanOrEqual(14);
+  // The size is the largest that fits the measured natural widths.
+  expect(await fontSize(page, '.word-text')).toBe(fitted(await lineGeometry(page), 20));
+  await expect(measuring(page)).toHaveCount(0);
 });
 
-test('AD-11 (R-38) a narrowed invalid line shrinks below 16 px and not below 14 px; the suffix is never truncated', async ({
-  page,
-}) => {
+// Stubs the word list without TAN, then Validates session-composing: the R-38 invalid line.
+async function invalidTan(page: Page): Promise<void> {
   await page.route(LIST, (route) => route.fulfill({ status: 200, body: 'cat\ndog\n' }));
   await openFixture(page, 'session-composing');
   await waitForDictionary(page, 'ready');
   await page.getByTestId('primary-action').click();
+  await expect(tray(page).locator('.invalid .text')).toBeVisible();
+}
+
+test('AD-11 (R-38) a narrowed invalid line shrinks below 16 px and not below 14 px; the suffix is never truncated', async ({
+  page,
+}) => {
+  await invalidTan(page);
   const text = tray(page).locator('.invalid .text');
-  await expect(text).toBeVisible();
   // A width where the line fits at 14 px but not at 16 px, from the measured natural widths.
   const g = await invalidGeometry(page);
   expect(g.at16 - g.at14).toBeGreaterThan(4);
   await narrow(page, Math.round(g.offset + (g.at14 + g.at16) / 2));
   await expect.poll(() => fontSize(page, '.invalid .text')).toBeLessThan(16);
   expect(await fontSize(page, '.invalid .text')).toBeGreaterThanOrEqual(14);
+  expect(await fontSize(page, '.invalid .text')).toBe(fitted(await lineGeometry(page), 16));
   expect(await suffixOverflow(page)).toBeLessThanOrEqual(0.5);
   expect(await text.evaluate((el) => el.textContent)).toBe("TAN isn't in the word list.");
+  await expect(measuring(page)).toHaveCount(0);
 });
 
-// No fixture word or invalid line overflows the band at the 360 px minimum (DESIGN.md A-D3), so
-// the shrink is asserted only when the measured 16 px width exceeds the narrower box.
-test('AD-11 (R-38) a viewport narrowed to 360 px refits the invalid line: 14…16 px, the suffix whole in the line', async ({
+test('AD-11 (R-38) below the 14 px width only the word span ellipsizes; the suffix is never truncated', async ({
   page,
 }) => {
-  await page.route(LIST, (route) => route.fulfill({ status: 200, body: 'cat\ndog\n' }));
+  await invalidTan(page);
+  const text = tray(page).locator('.invalid .text');
+  // The ✕ glyph and gap, the space and the suffix at 14 px, plus 8 px of word: below the 14 px width.
+  const g = await invalidGeometry(page);
+  const width = Math.round(g.offset + g.space14 + g.suffix14 + 8);
+  expect(width).toBeLessThan(g.offset + g.at14);
+  await narrow(page, width);
+  await expect.poll(() => fontSize(page, '.invalid .text')).toBe(14);
+  const word = await text.evaluate((el) => {
+    const span = el.querySelector('.word') as HTMLElement;
+    return { scrollWidth: span.scrollWidth, clientWidth: span.clientWidth };
+  });
+  expect(word.scrollWidth).toBeGreaterThan(word.clientWidth);
+  expect(await suffixOverflow(page)).toBeLessThanOrEqual(0.5);
+  const suffix = await text.evaluate((el) => {
+    const span = el.querySelector('.suffix') as HTMLElement;
+    return { scrollWidth: span.scrollWidth, clientWidth: span.clientWidth };
+  });
+  expect(suffix.scrollWidth).toBeLessThanOrEqual(suffix.clientWidth);
+  expect(await text.evaluate((el) => el.textContent)).toBe("TAN isn't in the word list.");
+  await expect(measuring(page)).toHaveCount(0);
+});
+
+// R-31: on session-composing the card above the top of D (column 6 index 4) raises k to 2.
+const raiseK = async (page: Page) => {
+  const dest = cards(page, 6);
+  const p = await centre(dest.nth(4));
+  await page.touchscreen.tap(p.x, p.y);
+};
+
+test('AD-11 (R-31) a longer word while the line stays mounted re-measures: below 20 px, not below 14 px', async ({
+  page,
+}) => {
   await openFixture(page, 'session-composing');
-  await waitForDictionary(page, 'ready');
-  await page.getByTestId('primary-action').click();
-  await expect(tray(page).locator('.invalid .text')).toBeVisible();
-  const before = await invalidGeometry(page);
-  await page.setViewportSize({ width: 360, height: 750 });
+  const line = tray(page).locator('.word-text');
+  await expect(line).toHaveText('TAN');
+  // TAN fits at 20 px with 2 px to spare; a fourth letter does not.
+  const before = await lineGeometry(page);
+  await narrow(page, Math.ceil((before.natural[20] as number) + 2));
+  await animationFrames(page, 2);
+  expect(await fontSize(page, '.word-text')).toBe(20);
+  await raiseK(page);
+  await expect(line).toHaveText(K2_WORD);
+  await expect.poll(() => fontSize(page, '.word-text')).toBeLessThan(20);
+  expect(await fontSize(page, '.word-text')).toBeGreaterThanOrEqual(14);
+  expect(await fontSize(page, '.word-text')).toBe(fitted(await lineGeometry(page), 20));
+  await expect(measuring(page)).toHaveCount(0);
+});
+
+test('AD-11 (R-38 R-31) invalid → word: a destination tap clears the invalid line and the new word refits to its 20 px max', async ({
+  page,
+}) => {
+  await invalidTan(page);
+  await expect.poll(() => fontSize(page, '.invalid .text')).toBeLessThanOrEqual(16);
+  await raiseK(page);
+  const line = tray(page).locator('.word-line .word-text');
+  await expect(line).toHaveText(K2_WORD);
+  await expect(tray(page).locator('.word-line .invalid')).toHaveCount(0);
+  const g = await lineGeometry(page);
+  expect(g.natural[20]).toBeLessThanOrEqual(g.lineWidth);
+  await expect.poll(() => fontSize(page, '.word-text')).toBe(fitted(g, 20));
+  expect(fitted(g, 20)).toBe(20);
+  const overflow = await line.evaluate((el) => el.scrollWidth - el.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+  await expect(measuring(page)).toHaveCount(0);
+});
+
+// The resize itself forces the shrink: the slot is `calc(100% - N px)`, N chosen from the line
+// widths measured at both viewports so that the line fits at 16 px before and only between 14 and
+// 16 px at 360 px (DESIGN.md A-D3 minimum).
+test('AD-11 (R-38) a viewport narrowed to 360 px refits the invalid line below 16 px: the suffix whole in the line', async ({
+  page,
+}) => {
+  await invalidTan(page);
+  const viewport = page.viewportSize();
+  if (viewport === null) throw new Error('no viewport');
+  const wide = await invalidGeometry(page);
+  await page.setViewportSize({ width: 360, height: viewport.height });
   await expect
     .poll(async () => (await invalidGeometry(page)).lineWidth)
-    .toBeLessThan(before.lineWidth);
-  const g = await invalidGeometry(page);
-  await expect
-    .poll(async () => (await fontSize(page, '.invalid .text')) < 16)
-    .toBe(g.at16 > g.lineWidth - g.offset);
+    .toBeLessThan(wide.lineWidth);
+  const at360 = (await invalidGeometry(page)).lineWidth;
+  await page.setViewportSize(viewport);
+  await expect.poll(async () => (await invalidGeometry(page)).lineWidth).toBe(wide.lineWidth);
+  const mid = (wide.at14 + wide.at16) / 2;
+  const n = Math.round(at360 - wide.offset - mid);
+  expect(wide.lineWidth - n - wide.offset).toBeGreaterThan(wide.at16 + 1);
+  await tray(page)
+    .locator('.word-line')
+    .evaluate((el, px) => {
+      (el as HTMLElement).style.width = `calc(100% - ${px}px)`;
+    }, n);
+  await expect.poll(() => fontSize(page, '.invalid .text')).toBe(16);
+  await page.setViewportSize({ width: 360, height: viewport.height });
+  await expect.poll(() => fontSize(page, '.invalid .text')).toBeLessThan(16);
   expect(await fontSize(page, '.invalid .text')).toBeGreaterThanOrEqual(14);
-  expect(await fontSize(page, '.invalid .text')).toBeLessThanOrEqual(16);
+  expect(await fontSize(page, '.invalid .text')).toBe(fitted(await lineGeometry(page), 16));
   expect(await suffixOverflow(page)).toBeLessThanOrEqual(0.5);
+  await expect(measuring(page)).toHaveCount(0);
 });
 
 test("AD-14 an Undo from Composing to Idle remounts cell 3's top: the used-mirror handle is detached and card-28 is live in wordcell-3", async ({
@@ -327,7 +450,7 @@ test("AD-14 an Undo from Composing to Idle remounts cell 3's top: the used-mirro
 });
 
 // The plan's Design Notes ×2 badge scratch Session: block 23m 35m 8m puts QU on a middle tile.
-// Column 3 of seed 1 is 23 L, 35 QU, 8 E, 21 J, 2 A, 42 T, 0 A (bottom → top).
+// Column 3 of seed 1 is 23 L, 35 QU, 8 E, 21 J, 2 A, 42 T, 0 A (top → bottom).
 const BADGE_SCRATCH = {
   version: 1,
   seed: 1,

@@ -1,5 +1,5 @@
 # Review loop — ticket 5.1 build (code mode, 64ea5a4..443cbe5)
-State: pass 1: done
+State: pass 2: done
 
 Target: `_bmad-output/implementation-artifacts/review-loop/5-1-build.passes/pass0.diff` (git diff 64ea5a4..443cbe5; build commit 443cbe5)
 Intent: `_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-draft-wordcards-and-the-composing-tray-plan.md`
@@ -26,3 +26,21 @@ Fixer: items 1-6 applied in e2e/tray.spec.ts and WordLine.svelte (narrow width d
 ### Dropped
 - intent: tickets.toml hand-off for entries 2 and 3 not made — not a code defect; the build workflow forbids ticket-file writes and the plan's frontmatter `deferred` records the exact text for the orchestrator (left to the caller)
 - intent: BADGE_SCRATCH inline instead of fixtures/*.json — the plan's Design Notes sanction it ("not a fixture, seeded in the browser check only"); it is seeded through `seedStorage`
+
+## Pass 2 — 2026-10-08
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 2, minor 4, decision-needed 0  |  Dropped in triage: 0 (+2 duplicates merged)
+Snapshot: tree e4204a95b3accdae18a6d0df783d37b708699fcc (fix diff `5-1-build.passes/pass2.fix.diff`)
+Fixer: items 1-6 applied in e2e/tray.spec.ts only (shared `lineGeometry`/`fitted`/`measuring`/`raiseK` helpers; 14 px ellipsis case; mounted word → TANE and invalid → word refit cases; 360 px case now forces the shrink unconditionally; exact `fitted` size; no leftover `.wc-measuring`). Mutation: removing the effect fails (a), (b) and R-38; dropping `wordKey` alone stays green because `rejectedWord` reads `game.feedback`, which the store replaces on every changing dispatch (behaviour correct, trigger redundant). Fixer runs: tray+dictionary android 36 passed; tray --repeat-each=3 66 passed. Orchestrator check: `npm test` 2075 passed; lint clean; check 0 errors.
+### Applied
+- [major] e2e/tray.spec.ts invalid line — no case narrows below the 14 px full width, so the story's "at 14 px only the word span ellipsizes; the suffix is never truncated" is untested (a shrinkable suffix or missing `min-width: 0` would pass) → fixer item 1
+- [major] WordLine.svelte refit effect / e2e — no test re-measures on text change while mounted (new word via tapDestinationCard; invalid → word switch back to max 20 after feedback clears); dropping `wordKey`/`textEl` from the effect stays green (verification gap + edge cases, merged) → fixer item 2
+- [minor] e2e/tray.spec.ts BADGE_SCRATCH comment — column 3 order is top → bottom, not bottom → top → fixer item 3
+- [minor] e2e/tray.spec.ts 360 px viewport case — cannot fail with a broken refit when nothing needs to shrink; force a shrink or rename to a no-overflow check (fix diff + verification gap, merged) → fixer item 4
+- [minor] e2e narrowed cases — ranges only; assert the size equals the largest px whose measured natural width fits (derived, F11-safe) → fixer item 5
+- [minor] e2e — no check that `wc-measuring` is removed after refit → fixer item 6
+### Default applied (technical)
+- 360 px case — rename to a no-overflow check unless a real width forces a shrink
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
