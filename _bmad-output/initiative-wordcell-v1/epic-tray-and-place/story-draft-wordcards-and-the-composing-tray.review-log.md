@@ -1,5 +1,5 @@
 # Review log — story-draft-wordcards-and-the-composing-tray.md (ticket 5.1)
-State: pass 4: done
+State: pass 5: done
 
 Mode: docs, thorough, max 7. Pass 0: 371 words (`.passes/pass0.md`). Intent fields from tickets.toml entry 1 (unknown, interface, tests, owns, consumers): `.passes/intent.md`.
 
@@ -121,3 +121,30 @@ Fixer: both majors and minors 4, 7, 8 applied (net word-neutral); 3, 5, 6, 9 ski
 - none
 ### Dropped
 - compact-mode tag gap until entry 2 (intermediate build not shipped); "computed size" vs F11 (range is text-independent); unverified parenthetical wording
+
+## Pass 5 — 2026-10-08
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 14, decision-needed 0  |  Dropped in triage: 5 (major duplicated across three lenses; plan-detail minors left to the plan)
+Words (docs): 1082 (2.92 x pass 0, over budget)  |  Snapshot: .passes/pass5.md, fix diff .passes/pass5.fix.diff
+Fixer: major and all minors 2–10 applied (minors net −2 words)
+### Applied
+- [major] Invalid line — pass 4's "one non-flex element" leaves no way for only the word span to ellipsize while the suffix stays whole (DESIGN.md Invalid-word message) → fixer item 1
+- [minor] Fit: for the invalid line, measure the text element (✕ outside) → folded into item 1
+- [minor] R-37 V case named for the `qu` spelling; uppercase stays in the P5 supp. hand-off → item 2
+- [minor] split check token `W` (w uppercased) matches the Description → item 3
+- [minor] tag sits on the tray tile whose id is the cell's top card, not the WordCell row → item 4
+- [minor] fit helper path `src/ui/layout/fit.ts` (AD-11's mapped path) → item 5
+- [minor] AC ×2 badge in the Description's frame (right edge at grid cell x + tileWidth) → item 6
+- [minor] Idle checks use session-idle-pending-draft (draft in Session, empty tray) → item 7
+- [minor] R-33 (UI) P5 names cell 3 as a used mirror plus tag 3 → item 8
+- [minor] Consumers: every e2e spec and helper reading data-card-id/data-mirror-of, listed in the plan → item 9
+- [minor] References add SPEC.md CAP-1/Constraints and rule-coverage.md → item 10
+### Default applied (technical)
+- Invalid line → flex text element: word span (min-width 0, ellipsis), a `white-space: pre` span holding one space, suffix span flex: none; textContent stays the full sentence
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped (left to the plan)
+- tray ids read from data-card-id or data-mirror-of in DOM order, as literal id sequences (test hook exposes no GameView)
+- dictionary.spec.ts `.word-line` scope, ✕ preceding sibling, error colour
+- 52-element count also in the two-Redo k = 2 state
+- tag locator scoped to the free-letter tile
+- clip past 14 px (unreachable on a 360 px board)
