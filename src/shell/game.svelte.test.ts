@@ -1196,4 +1196,10 @@ describe('game store R6 guard messages', () => {
     const { game } = await setup();
     expect(() => game.loaded()).toThrow(/^AD-17 loaded\(\) while booting$/);
   });
+
+  it('AD-17 loaded() after a halt before load() throws "AD-17 loaded() while halted"', async () => {
+    const { game } = await setup();
+    game.halt('fatal', 'boom');
+    expect(() => game.loaded()).toThrow(/^AD-17 loaded\(\) while halted$/);
+  });
 });

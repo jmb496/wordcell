@@ -212,7 +212,7 @@ for (const state of STATES) {
   test(`AD-14 one live element per card, mirrors and tray order on ${state.title}`, async ({
     page,
   }) => {
-    await openFixture(page, state.fixture, { steps: state.steps });
+    await openFixture(page, state.fixture, { steps: state.steps, booted: false });
     await expectSession(page, state.cursor);
     const trayPlace = { idle: null, composing: 'tray', place: 'strip' }[state.cursor.phase];
 
@@ -265,7 +265,10 @@ for (const state of STATES) {
 test('AD-14 (R-30) k = 2 right: the tray holds live 26 then D mirrors 1, 27; cards 27 and 1 live in column 6 in destination style', async ({
   page,
 }) => {
-  await openFixture(page, 'session-place-free-letter-redo-tail', { steps: ['redo', 'redo'] });
+  await openFixture(page, 'session-place-free-letter-redo-tail', {
+    steps: ['redo', 'redo'],
+    booted: false,
+  });
   await expectSession(page, { index: 2, phase: 'composing' });
   expect(await trayOrder(page)).toEqual(['26', '1m', '27m']);
   const fill = await tokenColor(page, '--wc-destination-fill');
@@ -317,7 +320,7 @@ async function expectNotLegal(page: Page, cells: readonly number[]): Promise<voi
 test('R-42 (UI) on session-place the selected target 3 shows its ring and check at full opacity, cells 4–10 not legal', async ({
   page,
 }) => {
-  await openFixture(page, 'session-place');
+  await openFixture(page, 'session-place', { booted: false });
   await expectSession(page, { index: 0, phase: 'place' });
   await expectTarget(page, 3);
   await expectNotLegal(page, [4, 5, 6, 7, 8, 9, 10]);
@@ -326,7 +329,7 @@ test('R-42 (UI) on session-place the selected target 3 shows its ring and check 
 test('R-42 (UI) after one Undo on session-idle-empty-column wordcell-7 is selected, 3–6 legal, 8–10 not legal', async ({
   page,
 }) => {
-  await openFixture(page, 'session-idle-empty-column', { steps: ['undo'] });
+  await openFixture(page, 'session-idle-empty-column', { steps: ['undo'], booted: false });
   await expectSession(page, { index: 0, phase: 'place' });
   await expectTarget(page, 7);
   for (const cell of [3, 4, 5, 6]) {
@@ -358,7 +361,7 @@ async function expectUsedCell3(page: Page): Promise<void> {
 test('R-33 (UI) wordcell-3 shows the used face mirror in Place (with the selected target) and after one Undo into Composing', async ({
   page,
 }) => {
-  await openFixture(page, 'session-place-free-letter-redo-tail');
+  await openFixture(page, 'session-place-free-letter-redo-tail', { booted: false });
   await expectSession(page, { index: 1, phase: 'place' });
   await expectUsedCell3(page);
   await expectTarget(page, 3);
@@ -373,7 +376,7 @@ test('R-33 (UI) wordcell-3 shows the used face mirror in Place (with the selecte
 test('R-22 column 1 placeholder: shown when empty, hidden under Place ghosts, shown under the S ghosts of a whole-column self-drop', async ({
   page,
 }) => {
-  await openFixture(page, 'session-idle-empty-column');
+  await openFixture(page, 'session-idle-empty-column', { booted: false });
   await expectSession(page, { index: 1, phase: 'idle' });
   const column1 = page.getByTestId('column-1');
   const placeholder = column1.locator('.placeholder');
@@ -405,7 +408,7 @@ test('R-22 column 1 placeholder: shown when empty, hidden under Place ghosts, sh
 test('R-73 (UI) a reload re-renders session-composing: ghosts, destination style, tray order', async ({
   page,
 }) => {
-  await openFixture(page, 'session-composing');
+  await openFixture(page, 'session-composing', { booted: false });
   await page.reload();
   await expect(page.locator('[data-card-id]')).toHaveCount(52);
   await expectSession(page, { index: 0, phase: 'composing' });
@@ -438,7 +441,7 @@ async function expectRedoTailPlace(page: Page): Promise<void> {
 test('R-73 (UI) a reload re-renders session-place-free-letter-redo-tail, and its Composing after an Undo', async ({
   page,
 }) => {
-  await openFixture(page, 'session-place-free-letter-redo-tail');
+  await openFixture(page, 'session-place-free-letter-redo-tail', { booted: false });
   await page.reload();
   await expect(page.locator('[data-card-id]')).toHaveCount(52);
   await expectRedoTailPlace(page);
@@ -459,6 +462,7 @@ test('R-70/R-71 Undo, Undo, Redo from session-place-free-letter-redo-tail re-ren
 }) => {
   await openFixture(page, 'session-place-free-letter-redo-tail', {
     steps: ['undo', 'undo', 'redo'],
+    booted: false,
   });
   await expectSession(page, { index: 1, phase: 'composing' });
   await expectUsedCell3(page);
@@ -474,7 +478,7 @@ for (const [width, w] of [
     page,
   }) => {
     await page.setViewportSize({ width, height: 839 });
-    await openFixture(page, 'session-composing');
+    await openFixture(page, 'session-composing', { booted: false });
     await expectSession(page, { index: 0, phase: 'composing' });
     expect((await box(page.getByTestId('card-24').locator('.face'))).width).toBe(w);
     const tray = await box(page.locator('[data-band="tray"]'));

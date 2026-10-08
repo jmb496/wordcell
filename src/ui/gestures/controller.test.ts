@@ -1910,6 +1910,24 @@ describe('AD-12 F34 drop targets clipped to the visible band', () => {
     expect(navCalls).toEqual([]);
   });
 
+  it('AD-12 F34 the source column is clipped too: after leaving, a return over the top bar does not target it', async () => {
+    const t = await setup();
+    t.detach();
+    bar(t.b.topBar, 0, 100);
+    t.down(t.b.card1b, { clientX: 25, clientY: 50 });
+    // Face y 200 … 260 over column 3, below the bar: the drag leaves the source.
+    moveTo(t, 230);
+    expect(lit(t)).toBe(true);
+    // Face y 40 … 100 back over column 1: all of it under the bar.
+    t.fire('pointermove', { clientX: 25, clientY: 70 });
+    expect(lit(t)).toBe(false);
+    expect(t.b.card1.classes.has('wc-drag-target')).toBe(false);
+    t.fire('pointerup');
+    expect(navCalls).toEqual([]);
+    t.advance(180);
+    expect(t.active()).toBe(0);
+  });
+
   it('AD-12 F34 a column under the action bar is never lit', async () => {
     const t = await setup();
     t.detach();

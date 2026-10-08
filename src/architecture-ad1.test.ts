@@ -1320,3 +1320,12 @@ describe('AD-11 layout modules are pure', () => {
     expect(violations).toEqual([]);
   });
 });
+
+describe('AD-7 F18 stored-key helpers', () => {
+  it('AD-7 F18 src/shell/stored-key.ts imports no shell module', () => {
+    const path = 'src/shell/stored-key.ts';
+    const source = readFileSync(posix.join(ROOT, path), 'utf8');
+    const sf = ts.createSourceFile(path, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+    expect(collectImports(sf).imports).toEqual([]);
+  });
+});

@@ -407,11 +407,12 @@ test.describe('board helpers', () => {
     await expect(centre(hidden)).rejects.toThrow('element has no box');
   });
 
-  test('AD-17 stashSession returns the stored text and sameSession holds until the Session changes; both reject a non-active store', async ({
+  test('AD-17 stashSession returns the stored text and sameSession holds until the Session changes; sameSession rejects before a stash; both reject without an active store', async ({
     page,
     context,
   }) => {
     await openFixture(page, 'session-idle-empty-column');
+    await expect(sameSession(page)).rejects.toThrow('no stashed session');
     expect(await stashSession(page)).toBe(
       await page.evaluate(() => localStorage.getItem('wordcell:session')),
     );
@@ -420,12 +421,9 @@ test.describe('board helpers', () => {
     await expect.poll(() => sameSession(page)).toBe(false);
 
     const other = await context.newPage();
-    await seedStorage(other, { session: fixture('session-invalid-array.json') });
-    await other.goto('/');
-    await booted(other);
-    expect(await other.evaluate(() => window.__wordcell?.current().kind)).toBe('rejected');
-    await expect(stashSession(other)).rejects.toThrow('store is rejected');
-    await expect(sameSession(other)).rejects.toThrow('store is rejected');
+    expect(other.url()).toBe('about:blank');
+    await expect(stashSession(other)).rejects.toThrow('store is undefined');
+    await expect(sameSession(other)).rejects.toThrow('store is undefined');
   });
 });
 

@@ -6,15 +6,17 @@
 /** A failed parse result without `ok` (distributive: each failure keeps its own fields). */
 export type RejectReasonOf<R> = R extends { readonly ok: false } ? Omit<R, 'ok'> : never;
 
+/** The failed parse result shape every stored-key parser returns (AD-7, AD-10). */
+type ParseFailure =
+  | { readonly ok: false; readonly reason: 'version-unreadable' }
+  | { readonly ok: false; readonly reason: string; readonly version: number };
+
 /** Strips `ok` from a failed parse result; `version` only when the version was readable. */
-export function rejectReason<F extends { readonly ok: false; readonly reason: string }>(
-  parsed: F,
-): RejectReasonOf<F> {
-  const failed = parsed as F & { readonly version: number };
+export function rejectReason<F extends ParseFailure>(parsed: F): RejectReasonOf<F> {
   return (
-    failed.reason === 'version-unreadable'
-      ? { reason: failed.reason }
-      : { reason: failed.reason, version: failed.version }
+    'version' in parsed
+      ? { reason: parsed.reason, version: parsed.version }
+      : { reason: parsed.reason }
   ) as RejectReasonOf<F>;
 }
 

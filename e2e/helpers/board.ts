@@ -66,6 +66,7 @@ export function sameSession(page: Page): Promise<boolean> {
   return page.evaluate(() => {
     const current = window.__wordcell?.current();
     if (current?.kind !== 'active') throw new Error(`store is ${current?.kind}`);
+    if (window.__pointerSession === undefined) throw new Error('no stashed session');
     return current.session === window.__pointerSession;
   });
 }

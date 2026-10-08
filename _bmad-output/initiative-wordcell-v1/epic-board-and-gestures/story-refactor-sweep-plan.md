@@ -157,7 +157,7 @@ deferred:
 - [x] This plan -- Implementation Notes: every change mapped to its row; per-row status ("already resolved by 4.x", "unreachable because…", skip reasons); helper leftovers; timings; AGENTS.md Where-things-are additions for a bmad-project-context refresh (`src/shell/stored-key.ts`; `src/ui/layout/`; `src/ui/gestures/`; `src/ui/act.ts`; the split files and `src/architecture-scan.ts` if split, with the AGENTS.md lines 38, 48, 71, 81, 84 and spine lines 79, 693-695, 886, 925, 956, 968 that name `src/architecture.test.ts`); any owner stop.
 
 **Acceptance Criteria:**
-- Given the refactored stores, when `npm test` runs, then every pre-existing shell test passes unedited except imports and R7's location, and `game.svelte.test.ts` contains only the five game-store describes.
+- Given the refactored stores, when `npm test` runs, then every pre-existing shell test passes unedited except imports and R7's location, and `game.svelte.test.ts` contains game-store describes only.
 - Given a scrolled android board with column n under the top bar, when a held tail is over the bar and released, then column n never lights and the stored Session is byte-identical (Playwright `android`, named `AD-12 F34 …`).
 - Given the full suite under load, when `npm run test:e2e` runs five consecutive times after the last src/ or e2e/ edit, then all five are green per the D1 counting rule (Design Notes §D1), recorded with dates.
 - Given all in-scope changes, when the unit suite is re-measured, then the plan records the median, the watch re-run and both methods, and the median is under 5.00 s or the owner stop is recorded.
@@ -181,7 +181,7 @@ No other owner stop: D1/D4 green in every run, no test failed twice (no test fai
 - Review fix: three new tests pin the messages now passed through stored-key.ts that no existing test asserted exactly: `AD-4 a second load() after a halt before load throws "AD-4 load() called twice"` and `AD-17 loaded() before load() throws "AD-17 loaded() while booting"` (`game.svelte.test.ts`, describe `game store R6 guard messages`), `AD-17 history loaded() before load() throws "AD-17 history loaded() before load()"` (`history.svelte.test.ts`, describe `score history store R6 guard messages`).
 
 ### R7 — `src/shell/history.svelte.test.ts` (new)
-- `describe('score history store')` moved byte-identical (checked with `diff`); `game.svelte.test.ts` now holds only the five game-store describes (86 tests; history file 30).
+- `describe('score history store')` moved byte-identical (checked with `diff`); `game.svelte.test.ts` now holds game-store describes only (89 tests; history file 31).
 - Copied (shared) into the history file: `KEY`, `HISTORY`, `PREFS`, `EMPTY`, `DEFAULT_PREFS`, `UNDO`, `REDO`, `Options`, `FakeStorage`, `fakeStorage`, `fakeStyle`, `setup`, `active`, `sessionOf`, the shared `afterEach`; fixtures `gaveUp`, `invalidNull`, `place`, `won`; `type Command`, `type Session`. `setup` copied whole: the block calls `setup({ seed: 7 })`, so the seed branch stays (Code Map said it "may" drop it); its unused return fields (`clock`, `time`, `queries`) and `loadPrefs` stay so the copy matches.
 - Moved (history-only): fixtures `historyNull`, `historyRecordsNotArray`, `historyVersionUnknown`, `threeRecords`; engine `parseHistory`, `serializeHistory`, `statistics`.
 - Leftovers deleted from the copy: `FAIL_SETS`, `NO_OP`, `VALIDATE`, `freshShape`, `parsed` (and the game-only imports). Nothing left unused in `game.svelte.test.ts` (`HISTORY` stays: `fakeStorage` uses it).
@@ -247,6 +247,7 @@ No other owner stop: D1/D4 green in every run, no test failed twice (no test fai
 - `npm run test:all` on the final tree (2026-10-07 20:21–20:24): exit 0 — lint clean (178 files), check 0 errors, unit 50 files / 2051 passed, build within the size budget, dist 14 passed, e2e 371 passed, pwa 12 passed.
 - **D15** `npm run test:screens` (Docker 29.8.0, container `mcr.microsoft.com/playwright:v1.63.0-noble`, 2026-10-07): 8 passed, no baseline change. Run after the controller and store changes; later edits touched only non-screenshot specs, test files and tsconfigs.
 - `git diff --stat`: no ticket file, AGENTS.md, spine, EXPERIENCE.md, DESIGN.md, build-notes.md or `src/engine/` change; R-02 golden deal untouched.
+- The build-notes.md F35 bullet and the ticket Notes F35 entry record the owner's answer and are not build edits.
 
 ### Inventory status
 - D1 In, fixed (above). D2 In, fixed. D3 In, not asserted at HEAD; added. D4 In, fixed. D5 In, plan edited. D6 In, fixed + sharpenings 1–4. D7 In, built (production + Vitests + android Playwright). D8 In, helper module. D9 In, every listed item done; 4-1 m3 resolved by 4.4 (ticket); the 4-9-f32 ticket-Notes item Out of scope. D10–D14, D17 Out (frontmatter `deferred`). D15 In, green. D16 In, already resolved by 4.11, asserted (above). D18 In, unreachable (above); uncaptured part Out. D19 negative case In, added; compact tray Out. D20 In part unreachable (above); the rest Out (frontmatter `deferred`).

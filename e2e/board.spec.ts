@@ -18,7 +18,7 @@ test('AD-17 F11 geometry: faces 46 × 61, slot 50, board 400, strip 44, no docum
   page,
 }) => {
   test.skip(test.info().project.name !== 'android', 'AD-17 Pixel 7 geometry runs on android');
-  await openFixture(page, 'session-idle-fresh');
+  await openFixture(page, 'session-idle-fresh', { booted: false });
   const face = await box(page, '[data-testid="card-24"] .face');
   expect({ width: face.width, height: face.height }).toEqual({ width: 46, height: 61 });
   for (let n = 1; n <= 8; n++) {
@@ -79,7 +79,7 @@ test("AD-17 F11 WordCell slots: 50 × 61 under column n − 2 in the wordcells b
   page,
 }) => {
   test.skip(test.info().project.name !== 'android', 'AD-17 Pixel 7 geometry runs on android');
-  await openFixture(page, 'session-place-free-letter-redo-tail');
+  await openFixture(page, 'session-place-free-letter-redo-tail', { booted: false });
   const band = await box(page, '[data-band="wordcells"]');
   for (let n = 3; n <= 10; n++) {
     const cell = await box(page, `[data-testid="wordcell-${n}"]`);
@@ -122,13 +122,13 @@ for (const [name, expected] of [
   ['session-gave-up', 'Score \u2212530'],
 ] as const) {
   test(`R-82 (UI) the top bar shows ${expected} on ${name}`, async ({ page }) => {
-    await openFixture(page, name);
+    await openFixture(page, name, { booted: false });
     await expect(score(page)).toHaveText(expected);
   });
 }
 
 test('R-82 (UI) the live score follows a Redo across a commit', async ({ page }) => {
-  await openFixture(page, 'session-place-free-letter-redo-tail');
+  await openFixture(page, 'session-place-free-letter-redo-tail', { booted: false });
   await expect(score(page)).toHaveText('Score 9');
   const redo = page.getByRole('button', { name: 'Redo', exact: true });
   for (const expected of ['Score 15', 'Score 15', 'Score 15', 'Score 24']) {
@@ -149,7 +149,7 @@ for (const [name, canUndo] of [
   test(`R-70/R-71 Undo ${canUndo ? 'enabled' : 'disabled'} and Redo disabled on ${name}`, async ({
     page,
   }) => {
-    await openFixture(page, name);
+    await openFixture(page, name, { booted: false });
     if (canUndo) await expect(undo(page)).toBeEnabled();
     else await expect(undo(page)).toBeDisabled();
     await expect(redo(page)).toBeDisabled();
@@ -159,7 +159,7 @@ for (const [name, canUndo] of [
 test('R-70/R-71 Undo and Redo enabled on a redo tail, Redo disabled at its end', async ({
   page,
 }) => {
-  await openFixture(page, 'session-place-free-letter-redo-tail');
+  await openFixture(page, 'session-place-free-letter-redo-tail', { booted: false });
   await expect(undo(page)).toBeEnabled();
   await expect(redo(page)).toBeEnabled();
   for (let i = 0; i < 4; i++) {
@@ -172,7 +172,7 @@ test('R-70/R-71 Undo and Redo enabled on a redo tail, Redo disabled at its end',
 
 for (const name of ['session-idle-fresh', 'session-won', 'session-gave-up']) {
   test(`AD-14 one live element per card on ${name}`, async ({ page }) => {
-    await openFixture(page, name);
+    await openFixture(page, name, { booted: false });
     const ids = await page
       .locator('[data-card-id]')
       .evaluateAll((els) => els.map((el) => Number(el.getAttribute('data-card-id'))));
@@ -205,7 +205,7 @@ async function footTopsMatch(page: Page): Promise<void> {
 test('AD-17 board render rules on session-idle-fresh: no placeholder, foot pads in the foot row', async ({
   page,
 }) => {
-  await openFixture(page, 'session-idle-fresh');
+  await openFixture(page, 'session-idle-fresh', { booted: false });
   await expect(page.locator('.placeholder:visible')).toHaveCount(0);
   await footTopsMatch(page);
   // AD-14 render rules: the data-* ids equal n.
@@ -232,7 +232,7 @@ test('AD-17 board render rules on session-won: count badges, placeholders, foot 
   page,
 }) => {
   const desktop = test.info().project.name === 'desktop';
-  await openFixture(page, 'session-won');
+  await openFixture(page, 'session-won', { booted: false });
   for (const [cell, count] of [
     [6, '24'],
     [7, '21'],
@@ -257,7 +257,7 @@ test('AD-17 board render rules on session-won: count badges, placeholders, foot 
 });
 
 test('AD-11 bands render in BAND_ORDER (default)', async ({ page }) => {
-  await openFixture(page, 'session-idle-fresh');
+  await openFixture(page, 'session-idle-fresh', { booted: false });
   const order = await page
     .locator('[data-band]')
     .evaluateAll((els) => els.map((el) => el.getAttribute('data-band')));
