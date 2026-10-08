@@ -16,7 +16,7 @@ Naming: an R-id where the sentence has one; `Q-nn …` for a §9 answer with no 
 `AD-n …` for spine behaviour with no rule id (AGENTS.md Conventions). Every P5 test seeds a
 fixture through `seedStorage` (`session-composing`, `session-composing-draft-2-letters`,
 `session-place`, `session-place-free-letter-redo-tail`, `session-idle-empty-column`,
-`session-idle-fresh`, `session-won`, plus CAP-9's scripted long-word fixture) and asserts the
+`session-idle-fresh`, `session-won`, plus the scripted `session-place-compact` (CAP-1), CAP-7's free-letter fixture and CAP-9's long-word fixture) and asserts the
 outcome by `current()` and the stored `wordcell:session`, not by pixels alone.
 
 ## §4 Phase C — Composing the word
@@ -25,7 +25,7 @@ outcome by `current()` and the stored `wordcell:session`, not by pixels alone.
 | --- | --- | --- | --- |
 | R-30 word = D_left + M + D_right; side left/right, D reversed by card on the right | 1, 2 | V + P5 supp. | Word line and tile order on `session-composing` (side right) and after `⇄ Flip`; a `QU` card keeps its letter order. |
 | R-30 Flip toggles the side | 2 | V + P5 supp. | `flip` dispatched once; stored `destinationSide` changes; on k = 0 no Flip is rendered. |
-| R-31 plus/minus change k within 1 … n; a press at a bound is a no-op and not an edit | 2 | V + P5 supp. | `−` disabled at k = 1, `+` at the column's size; stored Session reference unchanged at a bound. |
+| R-31 plus/minus change k within 1 … n; a press at a bound is a no-op and not an edit | 2 | V + P5 supp. | `−` disabled at k = 1, `+` at the column's size; stored `wordcell:session` byte-identical at a bound. |
 | R-31 on an empty column both controls are inert; flip inert | 2 | V + P5 supp. | k = 0 (drop on column 1 of `session-idle-empty-column`): caption `Empty column: no cards join the word`, no `−`/`+`/Flip buttons. |
 | R-32 (UI) destination cards shown as a fixed block with a cannot-rearrange indication | 1, 4, 5 | P5 | Blue outline and lock per row segment; a tap on a block tile dispatches nothing and keeps a tile selection; a drag from it moves nothing; tile drags never offer a gap inside or beyond it. |
 | R-32 destination cards are never reordered or interleaved with M | 5, 6 | V + P5 supp. | `insertionIndex` S cases; P5 drag past the block lands at the M end. |
@@ -37,7 +37,7 @@ outcome by `current()` and the stored `wordcell:session`, not by pixels alone.
 | R-35 all of S must be in the word | 4 | V + P5 supp. | A second tap on a selected source tile only deselects; no source tile has `↩`. |
 | R-36 letter count ≥ 3, `QU` = 2 (Q-06) | 1, 2 | V + P5 supp. | Control-row `n letters`; Validate label `Need 3+ letters` on `session-composing-draft-2-letters`. |
 | R-37 word string, `QU` → "qu" | 1 | V + P5 supp. | Word line shows `QU` uppercase (catalogue rule). |
-| R-38 Validate only on tap; inactive until structural checks pass; invalid word shows a message and stays; a failed Validate changes nothing and keeps redo data | 2 | V + P5 | Labels per precedence; invalid line text `… isn't in the word list.` cleared by the next edit, Undo, Redo or a successful Validate; one dispatch per tap (F15). Epic 3's dictionary-state rows stay green. |
+| R-38 Validate only on tap; inactive until structural checks pass; invalid word shows a message and stays; a failed Validate changes nothing and keeps redo data | 2 | V + P5 | Labels per precedence; invalid line text `… isn't in the word list.` cleared by the next edit, Undo, Redo or a successful Validate; each click at most one `validate` dispatch (F15); a double tap's outcome per OQ-5. Epic 3's dictionary-state rows stay green. |
 | R-39 (UI) in Composing, cards in columns other than the destination column are inert | — | P4 | Kept green; tile gestures add no column behaviour. |
 
 ## §4 Phase D–E and Commit — Place
@@ -46,13 +46,13 @@ outcome by `current()` and the stored `wordcell:session`, not by pixels alone.
 | --- | --- | --- | --- |
 | R-39 (UI) in Place all columns and WordCells are inert except target selection (R-40) and viewing (R-65) | 7 | P5 | Column inertness P4; P5 adds the WordCell target tap and proves a WordCell drag and a not-legal tap dispatch nothing. |
 | R-40 legal targets are WordCells numbered ≤ L | 7 | V + P5 supp. | Legal cells ringed, others faded; a not-legal tap is a no-op. |
-| R-41 a cell whose top was used as a free letter is still a legal target (Q-02) | 7 | V + P5 supp. | `session-place-free-letter-redo-tail`: tap the used cell → target set. |
-| R-42 (UI) the Place screen pre-selects the stored target | 7 | P4 + P5 | P4 renders the ring and check chip; P5 re-proves it after Validate and after a retarget plus reload. |
-| R-50 (UI) the UI shows which card lands on the bottom and which becomes the new top | 1 | P5 | `bottom` tag on the first strip tile, `top` tag and `★` on the last, the compact corner map (`▼`/`★`) at three compact rows. |
-| R-51 default order is word order; reorder before confirming; changing the target does not reset the order | 4, 5, 7 | V + P5 supp. | Strip tap-swap and drag; retarget keeps `placementOrder`. |
-| R-52 the new top card becomes that cell's free letter | 7 | V + P5 supp. | After Confirm the target cell's top is the strip's last card; in the next move it can be tap-added. |
+| R-41 a cell whose top was used as a free letter is still a legal target (Q-02) | 7 | V + P5 supp. | CAP-7's scripted fixture (free letter from a cell ≤ L that is not the stored target): tap the used cell → target set. |
+| R-42 (UI) the Place screen pre-selects the stored target | 7 | P4 + P5 | P4 renders the ring and check chip; P5 re-proves it after Validate and, on `session-won` + one Undo (legal 3–6, target 6), after a retarget plus reload. |
+| R-50 (UI) the UI shows which card lands on the bottom and which becomes the new top | 1 | P5 | `bottom` tag on the first strip tile, `top` tag and `★` on the last, the compact corner map (`▼`/`★`, ×2, origin tag) on `session-place-compact` (two compact rows). |
+| R-51 default order is word order; reorder before confirming; changing the target does not reset the order | 4, 5, 7 | V + P5 supp. | Strip tap-swap and drag; retarget on `session-won` + one Undo keeps `placementOrder`. |
+| R-52 the new top card becomes that cell's free letter | 7 | V + P5 supp. | After Confirm the target cell's top is the strip's last card, also when the target is the free letter's cell (`session-place-free-letter-redo-tail`); in the next move it can be tap-added. |
 | R-60 confirm commits atomically | 7 | V + P5 supp. | One `confirm` dispatch; columns, cells and cursor per R-60 in `current().session` and storage. |
-| R-61 a free letter's cell exposes its next card after commit | 7 | V + P5 supp. | The used cell shows the card beneath only after Confirm. |
+| R-61 a free letter's cell exposes its next card after commit | 7 | V + P5 supp. | CAP-7's scripted fixture (free letter's cell ≠ target): the used cell shows the card beneath only after Confirm. |
 | R-62 every column empty → won | 7, 10 | V + P5 supp. | From `session-won` + one Undo, Confirm → Game over (`New game` primary); the end sheet is P6. |
 
 ## §5 Undo, redo, session
@@ -60,7 +60,7 @@ outcome by `current()` and the stored `wordcell:session`, not by pixels alone.
 | Sentence | CAP | Kind | Notes |
 | --- | --- | --- | --- |
 | R-70 Undo from Place → Composing keeps the arrangement; from Composing → Idle returns the cards | 8 | V + P5 supp. | The cards animate back (`undoRedo`); tray and strip contents after each step. |
-| R-71 every draft edit discards redo data; a swap of identical letters is an edit; a no-change drag or swap is not | 4, 5 | V + P5 supp. | Redo disabled after an edit at Composing; enabled after a no-change drag. |
+| R-71 every draft edit discards redo data; a swap of identical letters is an edit; a no-change drag or swap is not | 4, 5 | V + P5 supp. | Redo disabled after an edit at Composing (incl. a swap of the two `R` cards on `session-won` + two Undos); enabled after a no-change drag. |
 | R-72 actions within a phase are not undo steps | 4 | V + P5 supp. | After three tile edits one Undo returns to Idle. |
 | R-73 (UI) saved after every change: each draft edit (arrange, add/remove free letter, k, flip), Validate, retarget, reorder, Confirm | 2, 4–7 | P5 | Stored Session equals `current().session` before the next action, per command kind. |
 | R-73 (UI) the player returns to the exact phase they left | 1, 7 | P5 | Reload in Composing with a free letter and a non-default arrangement, and in Place with a retarget and a non-default order: the same tray, strip, tags and target (EXPERIENCE.md Flow 5). |
@@ -84,10 +84,10 @@ outcome by `current()` and the stored `wordcell:session`, not by pixels alone.
 | AD-12 tile and free-letter drag cancel paths (F5): `hidePage`, back, `pointercancel`, `act()` mid-drag dispatch nothing | 5, 6 | S + P5 |
 | AD-12 `cancel()` first in `−`, `+`, Flip, Validate and Confirm (`act()`) | 2 | S |
 | AD-13 tile selection pushes no entry; back with a tile selected follows the bare-Board rule; `resetForNewSession` clears it | 4 | S + P5 |
-| AD-14 one live element per card in every phase and during every animation; mirrors never animate | 1, 8 | P5 |
-| AD-14 FLIP kinds: snap on drop, `undoRedo`, `flyToCell` with 30 ms stagger bottom first; durations from `motion.ts`; reduced motion 120 ms fade | 8 | S + P5 (`getAnimations()` on faces; `page.emulateMedia({ reducedMotion: 'reduce' })`) |
+| AD-14 one live element per card in every phase and during every animation; faces animate, wrappers and mirrors never | 1, 8 | P5 |
+| AD-14 FLIP kinds from the dispatching command: snap on drop, `undoRedo`, `flyToCell` with 30 ms stagger bottom first; durations from `motion.ts`; reduced motion 120 ms fade | 8 | S + P5 (`getAnimations()` on faces; `page.emulateMedia({ reducedMotion: 'reduce' })`) |
 | AD-14 input during an animation completes it and acts on the settled state | 8 | S + P5 |
-| AD-14 winning guard: WordCell tap → no view; double-tap Confirm → same seed, no new Session written; Undo completes then undoes | 10 | P5 (the menu tap and end-sheet expanded halves P6) |
+| AD-14 winning guard: WordCell tap → no view (win by Confirm and by Redo); double-tap Confirm → same seed, no New-game Session written; Undo completes then undoes | 10 | P5 (the menu tap and end-sheet expanded halves P6) |
 | AD-10 parting 0.5 × base, snaps under reduced motion | 5 | S |
 | AD-17 unit budget re-measured on the Linux filesystem at the sweep | 12 | recorded in the plan |
 
