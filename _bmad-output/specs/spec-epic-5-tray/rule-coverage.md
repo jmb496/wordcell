@@ -16,7 +16,7 @@ Naming: an R-id where the sentence has one; `Q-nn …` for a §9 answer with no 
 `AD-n …` for spine behaviour with no rule id (AGENTS.md Conventions). Every P5 test seeds a
 fixture through `seedStorage` (`session-composing`, `session-composing-draft-2-letters`,
 `session-place`, `session-place-free-letter-redo-tail`, `session-idle-empty-column`,
-`session-idle-fresh`, `session-won`, plus the scripted `session-place-compact` (CAP-1), CAP-7's free-letter fixture and CAP-9's long-word fixture) and asserts the
+`session-idle-fresh`, `session-won`, plus the scripted `session-place-compact` (CAP-1), CAP-7's free-letter fixture and CAP-9's two long-word fixtures) and asserts the
 outcome by `current()` and the stored `wordcell:session`, not by pixels alone.
 
 ## §4 Phase C — Composing the word
@@ -60,7 +60,7 @@ outcome by `current()` and the stored `wordcell:session`, not by pixels alone.
 | Sentence | CAP | Kind | Notes |
 | --- | --- | --- | --- |
 | R-70 Undo from Place → Composing keeps the arrangement; from Composing → Idle returns the cards | 8 | V + P5 supp. | The cards animate back (`undoRedo`); tray and strip contents after each step. |
-| R-71 every draft edit discards redo data; a swap of identical letters is an edit; a no-change drag or swap is not | 4, 5 | V + P5 supp. | Redo disabled after an edit at Composing (incl. a swap of the two `R` cards on `session-won` + two Undos); enabled after a no-change drag. |
+| R-71 every draft edit discards redo data; a swap of identical letters is an edit; a no-change drag or swap is not | 4, 5 | V + P5 supp. | Redo disabled after an edit at Composing (incl. a swap of the two `R` cards on `session-won` + two Undos) and at Place (`session-won` + one Undo, tap-swap strip cards 38 and 37 → Redo disabled, stored `reached` `place`); enabled after a no-change drag. |
 | R-72 actions within a phase are not undo steps | 4 | V + P5 supp. | After three tile edits one Undo returns to Idle. |
 | R-73 (UI) saved after every change: each draft edit (arrange, add/remove free letter, k, flip), Validate, retarget, reorder, Confirm | 2, 4–7 | P5 | Stored Session equals `current().session` before the next action, per command kind. |
 | R-73 (UI) the player returns to the exact phase they left | 1, 7 | P5 | Reload in Composing with a free letter and a non-default arrangement, and in Place with a retarget and a non-default order: the same tray, strip, tags and target (EXPERIENCE.md Flow 5). |
@@ -77,17 +77,17 @@ outcome by `current()` and the stored `wordcell:session`, not by pixels alone.
 | Behaviour | CAP | Kind |
 | --- | --- | --- |
 | AD-3 tray, strip and controls read only `GameView` flags and data (no derived k bounds, word or delta) | 1, 2 | S (architecture scan unchanged) + code review |
-| AD-4 tile selection ends on a `changed` dispatch and on any enabled-control press before its dispatch (a failed Validate included) | 2, 4 | S + P5 |
-| AD-11 tray rows from the tile count after completed edits, never mid-drag; WordCell row bounding box unchanged after growth to three compact rows and back; with leftover exhausted the document grows at the top with a matching `scrollTop` delta | 9 | S + P5 |
-| AD-12 tile press resolution (`tray`/`strip`, block mirror), full-pitch tile hit rect with the lift on the face only | 4 | S + P5 |
+| AD-4 tile selection ends on a `changed` dispatch and on any enabled-control press before its dispatch (a failed Validate included); a tap on a disabled control (`−` at k = 1) clears it through the controller tap path | 2, 4 | S + P5 |
+| AD-11 tray rows from the tile count after completed edits, never mid-drag; WordCell row bounding box unchanged after growth to three compact rows (`+`) and back (`−`); a commit's row change (Confirm or Redo) only after its fly settles; with leftover exhausted the document grows at the top with a matching `scrollTop` delta | 9 | S + P5 |
+| AD-12 tile press resolution (`tray`/`strip`, block mirror), full-pitch tile hit rect with the lift on the face only; a drag from an inert target acts on the tile selection as its tap | 4 | S + P5 |
 | AD-12 tray band single target at ≥ 25 %, clipped to the visible band (F4); `insertionIndex` nearest gap, wrapped rows by distance, never inside or beyond the block | 5, 6 | S + P5 |
 | AD-12 tile and free-letter drag cancel paths (F5): `hidePage`, back, `pointercancel`, `act()` mid-drag dispatch nothing | 5, 6 | S + P5 |
 | AD-12 `cancel()` first in `−`, `+`, Flip, Validate and Confirm (`act()`) | 2 | S |
 | AD-13 tile selection pushes no entry; back with a tile selected follows the bare-Board rule; `resetForNewSession` clears it | 4 | S + P5 |
 | AD-14 one live element per card in every phase and during every animation; faces animate, wrappers and mirrors never | 1, 8 | P5 |
-| AD-14 FLIP kinds from the dispatching command: snap on drop, `undoRedo`, `flyToCell` with 30 ms stagger bottom first; durations from `motion.ts`; reduced motion 120 ms fade | 8 | S + P5 (`getAnimations()` on faces; `page.emulateMedia({ reducedMotion: 'reduce' })`) |
+| AD-14 FLIP kinds from the dispatching command and its `DispatchResult`: snap on drop, `undoRedo`, `flyToCell` with 30 ms stagger bottom first; only cards whose container or index changed; durations from `motion.ts`; reduced motion 120 ms fade (fly-to-cell: all at once, no stagger) | 8 | S + P5 (`getAnimations()` on faces; `page.emulateMedia({ reducedMotion: 'reduce' })`) |
 | AD-14 input during an animation completes it and acts on the settled state | 8 | S + P5 |
-| AD-14 winning guard: WordCell tap → no view (win by Confirm and by Redo); double-tap Confirm → same seed, no New-game Session written; Undo completes then undoes | 10 | P5 (the menu tap and end-sheet expanded halves P6) |
+| AD-14 winning guard: WordCell tap → no view (win by Confirm and by Redo); double-tap Confirm → same seed, no New-game Session written (`desktop`: Enter twice); an untouched win settles and New game dispatches; Undo completes then undoes; the guard always uninstalls (long press, `pointercancel`, natural settle) | 10 | P5 + S (the menu tap and end-sheet expanded halves P6) |
 | AD-10 parting 0.5 × base, snaps under reduced motion | 5 | S |
 | AD-17 unit budget re-measured on the Linux filesystem at the sweep | 12 | recorded in the plan |
 

@@ -1,6 +1,6 @@
 # Review log — spec-epic-5-tray SPEC.md
 
-State: pass 1: done
+State: pass 2: done
 
 Target: `_bmad-output/specs/spec-epic-5-tray/SPEC.md` (docs mode, thorough, max 7); fixer may edit companions `build-notes.md`, `rule-coverage.md`.
 Pass 0: HEAD 4b02f6e; copies `SPEC.review-log.passes/pass0.{SPEC,build-notes,rule-coverage}.md`; words SPEC 3851, build-notes 2021, rule-coverage 2041 (budget ~2.5x per file).
@@ -53,3 +53,39 @@ Words (docs): SPEC 4731 (1.23x), build-notes/rule-coverage see wc  |  Snapshot: 
 ### Dropped
 - adversarial "re-resolve press with elementFromPoint mid-animation" — folded into fixer 2 (faces animate, wrappers stay settled)
 - builder "reorder release under 25 % uses flyBack" — merged into fixer 12
+
+## Pass 2 — 2026-10-08
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 6, minor 15, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+### Applied
+- [major] CAP-10/F8/build-notes CAP-10 — guard uninstall: natural settle lost in pass 1; a gesture with no click strands it; Enter/Space on focused `primary-action` bypasses it → fixer 1
+- [major] F7/CAP-8 — Redo-commit `flyToCell` cannot be known before dispatch without re-deriving a rule (AD-3); TopBar.svelte (Undo/Redo caller) missing → fixer 2
+- [major] CAP-9 vs AD-11 — "applied in the same update before flip.play" contradicts the gate (re-layout deferred to an idle rAF); Redo-commit and press-finished fly-to-cell deferral → fixer 3
+- [major] CAP-8/CAP-9 — band shift would FLIP-animate every column card; unspecified → fixer 4
+- [major] CAP-5/build-notes CAP-5 — parting rendering undefined (origin slot, row-break crossing, under 25 %) → fixer 5
+- [major] build-notes Sweep — retrospective A9's 4.12 Result items missing; "accepted and not carried" ids unsourced → fixer 6
+- [minor] CAP-7 "clears it" antecedent → fixer 7
+- [minor] S15/CAP-7 fixture needs a 2-card free-letter cell for the D14 badge → fixer 8
+- [minor] F3 end-gap rect; tie on a drag right by one → fixer 9
+- [minor] R-71 Place half (strip same-letter swap drops redo) → fixer 10
+- [minor] inert drag (block, used/empty cell, Place WordCell) and an existing tile selection → fixer 11
+- [minor] OQ-1 list: a dragged free letter landing in its gap → fixer 12
+- [minor] CAP-10 P5 timing: Slow speed and assert running animations before the second tap → fixer 13
+- [minor] CAP-10 "committed won Session" comparison → fixer 14
+- [minor] one tile-count definition (D mirrors counted) for CAP-1/6/9 → fixer 15
+- [minor] CAP-9 P5 names the live edit crossing three rows and back → fixer 16
+- [minor] reduced-motion fly-to-cell: no stagger → fixer 17
+- [minor] taps on disabled controls/labels/band background clear a tile selection (controller path) + P5 → fixer 18
+- [minor] CAP-1 Place word line no D underline; invalid line shrink 14 px then ellipsize → fixer 19
+- [minor] Boundaries close-out amendment for the two test-only files → fixer 20
+Fixer: all 20 applied; finding 6 found 4.12 items already fixed by 4.13 → confirm-and-record rows S16–S18; finding 16 reshaped fixtures (14-tile Composing + three-row Place); dropped the `$effect.pre` Assumption (contradicted the gate order). No commands added.
+Words (docs): SPEC 5228 (1.36x)  |  Snapshot: SPEC.review-log.passes/pass2.*.md, fix diff pass2.fix.diff
+### Default applied (technical)
+- guard: preventDefault+stopPropagation; consume to same pointer's pointerup/pointercancel and a click in that or the next task, key's keyup; uninstall on any settle path
+- FLIP kind: capture takes rects; play picks kind from command + DispatchResult/resulting phase
+- tray re-layout: keep AD-11 gate; FLIP plays after the gate's re-layout frame; commits defer until fly settles
+- band shift: no motion; FLIP only for cards whose container/index changed
+- parting: sortable-list (origin collapses, shift one pitch, row-break by transform, D mirrors still)
+### Decision needed (functionality / UX / gameplay)
+- none new
+### Dropped
+- none
