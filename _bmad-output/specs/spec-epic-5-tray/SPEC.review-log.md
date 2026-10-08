@@ -1,6 +1,6 @@
 # Review log — spec-epic-5-tray SPEC.md (run 2)
 
-State: pass 4: done
+State: pass 5: done
 
 Target: `_bmad-output/specs/spec-epic-5-tray/SPEC.md` (docs mode, thorough, max 7). Second run after run 1 (`SPEC.review-log-run1.md`) diverged at pass 3; its upstream gaps were fixed in 972c4e2.
 Pre-loop: HEAD 972c4e2; copies `SPEC.review-log.passes/pass0.{SPEC,build-notes,rule-coverage}.md`; SPEC.md 5805 words (build-notes 3235, rule-coverage 2270). Growth budget ~14 500 words (2.5x).
@@ -96,3 +96,21 @@ Words (docs): SPEC 7990 (1.38 x pass 0)  |  Snapshot: SPEC.review-log.passes/pas
 - F8/CAP-10/Done when 5 (OQ-7) — with reduced motion or Fast speed, a quick double tap on a winning Confirm can land on New game after the short win animation; block it for a minimum window whatever the speed? — proposed default: yes, guard at least 300 ms after the win
 ### Dropped
 - none
+
+## Pass 5 — 2026-10-08
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 3, minor 15 (+3 left to ticket plans), decision-needed 0  |  Dropped in triage: 0 (merged: overflow row 0-row/multi-row + pointer-events conflict ×3 → 1; band-shift invert + scroll-deferred viewport rects → 1 FLIP coordinate-frame major; main.ts hide registration folded into the tracker major)
+Majors 5 → 3.
+Findings handed to the fixer: `SPEC.review-log.passes/p5-findings.md`
+Words (docs): SPEC 8274 (1.43 x pass 0)  |  Snapshot: SPEC.review-log.passes/pass5.*.md; fix diff pass5.fix.diff
+### Applied
+- [major] F8 — hide and `blur` clear every tracked gesture; `main.ts` registers the hide-clear via `registerBeforeHide` (AD-9) → item 1
+- [major] CAP-9 — overflow rows wrap at `perRow` (from the tile area top at 0 latched rows), a transparent blocker resolves presses as tray-background taps → item 2
+- [major] CAP-8 — FLIP coordinate frame: band-relative within a band, document coordinates across bands and for deferred plays → item 3
+- [minor] items 4–18 (F8 completing gesture consumed, pending hover timer cleared, strip-tile swap, F17/CAP-5 no-edit release, F3 nearest rect, AD-12 close-out no restore, Done when 3 close-out, Place reload fixture, reduced-motion kinds, 52 live elements mid-animation, R-80 relabel, `goForward()` default, fixture fallback, R-71 state, line 67)
+### Default applied (technical)
+- CAP-9 — overflow rows and blocking element
+- CAP-8 — FLIP coordinate frames
+### Decision needed (functionality / UX / gameplay)
+- none new (OQ-6, OQ-7 open)
+### Dropped
+- none; left to ticket plans: parted faces' return duration (CAP-5), the R-41/R-61 fixture's start phase and word (CAP-7), the Playwright held-Enter mechanism (CAP-10)
