@@ -675,6 +675,8 @@ test.describe('android, scrolled board', () => {
     // Premise: column 3's hit rect starts under the banner.
     const col3 = await box(column(page, 3));
     expect(col3.y).toBeLessThan(banner.y);
+    const top = await box(page.locator('[data-band="topBar"]'));
+    const actionBar = await box(page.locator('[data-band="actionBar"]'));
     const dragged = cards(page, 1).last();
     const rest = await box(faceOf(dragged));
     const from = await centre(dragged);
@@ -697,6 +699,12 @@ test.describe('android, scrolled board', () => {
       expect(face.y + face.h).toBeLessThanOrEqual(bannerBottom);
       expect(face.y + face.h).toBeGreaterThan(banner.y);
       expect(ratio(face, col3)).toBeGreaterThanOrEqual(0.25);
+      // Premise: were the banner ignored, column 3 clipped to the band between the bars would take
+      // ≥ 25 % of the face, so only the banner's clipping keeps it unlit.
+      const bandTop = Math.max(col3.y, top.y + top.h);
+      const bandBottom = Math.min(col3.y + col3.h, actionBar.y);
+      const col3InBars = { x: col3.x, y: bandTop, w: col3.w, h: bandBottom - bandTop };
+      expect(ratio(face, col3InBars)).toBeGreaterThanOrEqual(0.25);
       expect(await targets(page)).toEqual([]);
       expect(await sameSession(page)).toBe(true);
     } finally {
@@ -705,6 +713,55 @@ test.describe('android, scrolled board', () => {
     await animationFrames(page, 2);
     expect(await targets(page)).toEqual([]);
     await expect.poll(() => faceAnimations(page)).toEqual([await idOf(dragged)]);
+    await expectFlownBack(dragged, rest);
+    expect(await storedText(page)).toBe(before);
+    expect(await sameSession(page)).toBe(true);
+    await expectNoResidue(page);
+  });
+
+  test("R-14 Q-34 AD-12 F37 a tail pressed mostly under the top bar, nudged and released back over its column's visible part, flies back: nothing lit and the stored Session byte-identical", async ({
+    page,
+  }) => {
+    await recordFaceAnimations(page);
+    await openFixture(page, 'session-idle-fresh');
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
+    await animationFrames(page, 2);
+    const before = await stashSession(page);
+    const bar = await box(page.locator('[data-band="topBar"]'));
+    const barBottom = bar.y + bar.h;
+    const col1 = await box(column(page, 1));
+    const col1Visible = { ...col1, y: barBottom, h: col1.y + col1.h - barBottom };
+    // Column 1's third card: its face mostly under the bar, with a sliver between the bar and the
+    // next card's face to press.
+    const dragged = cards(page, 1).nth(2);
+    const rest = await box(faceOf(dragged));
+    const next = await box(faceOf(cards(page, 1).nth(3)));
+    expect(barBottom - rest.y).toBeGreaterThan(rest.h / 2);
+    expect(next.y).toBeGreaterThan(barBottom);
+    const from = { x: rest.x + rest.w / 2, y: (barBottom + next.y) / 2 };
+    // A nudge up until 10 % of the face is below the bar (`raw` null), then back down until 70 %
+    // of it lies over column 1's visible part (`raw` the source).
+    const nudge = plus(from, 0, barBottom + 0.1 * rest.h - (rest.y + rest.h));
+    // The nudge must cross the 8 px drag threshold (DRAG_PX, classify.ts) while `raw` is null.
+    expect(from.y - nudge.y).toBeGreaterThanOrEqual(8);
+    const back = plus(from, 0, barBottom + 0.7 * rest.h - (rest.y + rest.h));
+    const down = path(nudge, back, 6);
+    const hold = await holdThrough(page, from, [...path(from, nudge, 3), ...down], async () => {
+      expect(await targets(page)).toEqual([]);
+    });
+    try {
+      await expectDragging(dragged);
+      const face = await box(faceOf(dragged));
+      expect(ratio(face, col1Visible)).toBeGreaterThanOrEqual(0.25);
+      expect(await targets(page)).toEqual([]);
+      expect(await sameSession(page)).toBe(true);
+    } finally {
+      await hold.end();
+    }
+    await animationFrames(page, 2);
+    expect(await targets(page)).toEqual([]);
+    await expect.poll(() => faceAnimations(page)).toContain(await idOf(dragged));
     await expectFlownBack(dragged, rest);
     expect(await storedText(page)).toBe(before);
     expect(await sameSession(page)).toBe(true);

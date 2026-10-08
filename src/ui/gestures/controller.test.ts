@@ -1988,17 +1988,73 @@ describe('AD-12 F34 drop targets clipped to the visible band', () => {
     expect(navCalls).toEqual([drop(1, 1, 3)]);
   });
 
-  it('AD-12 F37 a press on a face mostly under the top bar has not left its source: a nudge and a release back over its visible part fly back with no dispatch (Q-34)', async () => {
+  // card1b's face rests at y 20 … 80; each bar covers 48 / 60 of it (80 %), leaving a 12 px
+  // sliver to press. The nudge leaves 3 / 60 visible (no target), still over the source's rect;
+  // the return puts at least 25 % of the face over the source column's visible part.
+  it.each([
+    {
+      // Bar y 0 … 68; press y 74; nudge face y 11 … 71; return face y 50 … 110 (42 / 60).
+      name: 'top bar',
+      hide: (t: T) => bar(t.b.topBar, 0, 68),
+      press: 74,
+      nudge: 65,
+      back: 104,
+    },
+    {
+      // Bar from y 32; press y 26; nudge face y 29 … 89; return face y −10 … 50 (32 / 60).
+      name: 'action bar',
+      hide: (t: T) => bar(t.b.actionBar, 32, 1260),
+      press: 26,
+      nudge: 35,
+      back: -4,
+    },
+  ])(
+    'AD-12 F37 a press on a face mostly under the $name has not left its source: a nudge and a release back over its visible part fly back with no dispatch (Q-34)',
+    async ({ hide, press, nudge, back }) => {
+      const t = await setup();
+      t.detach();
+      hide(t);
+      t.down(t.b.card1b, { clientX: 25, clientY: press });
+      t.fire('pointermove', { clientX: 25, clientY: nudge });
+      expect(t.b.card1.classes.has('wc-drag-target')).toBe(false);
+      t.fire('pointermove', { clientX: 25, clientY: back });
+      expect(t.b.card1.classes.has('wc-drag-target')).toBe(false);
+      t.fire('pointerup');
+      expect(navCalls).toEqual([]);
+      expect(t.b.face1b.animations).toHaveLength(1);
+      t.advance(180);
+      expect(t.active()).toBe(0);
+    },
+  );
+
+  it('AD-12 F37 a face wholly under the top bar over another column has left its source: back over its visible part lights the source and the release self-drops (Q-34)', async () => {
     const t = await setup();
     t.detach();
-    // card1b's face rests at y 20 … 80; the bar covers y 20 … 68 of it (80 %).
     bar(t.b.topBar, 0, 68);
-    t.down(t.b.card1b, { clientX: 25, clientY: 50 });
-    // A 9 px nudge up: face y 11 … 71, 3 / 60 visible (no target), still over the source's rect.
-    t.fire('pointermove', { clientX: 25, clientY: 41 });
+    t.down(t.b.card1b, { clientX: 25, clientY: 74 });
+    // Face x 100 … 150, y 0 … 60 over column 3, all of it under the bar (`raw` null), missing
+    // the source's unclipped rect: the drag has left.
+    moveTo(t, 54);
+    expect(lit(t)).toBe(false);
+    // Face y 50 … 110 back over column 1: 42 / 60 over its visible part.
+    t.fire('pointermove', { clientX: 25, clientY: 104 });
+    expect(t.b.card1.classes.has('wc-drag-target')).toBe(true);
+    t.fire('pointerup');
+    expect(navCalls).toEqual([drop(1, 1, 1)]);
+  });
+
+  it('AD-12 F37 a face under the top bar 40 % over its source and 60 % over column 2 has not left its source (Q-34)', async () => {
+    const t = await setup();
+    t.detach();
+    bar(t.b.topBar, 0, 68);
+    t.down(t.b.card1b, { clientX: 25, clientY: 74 });
+    // Face x 30 … 80, y 0 … 60, all of it under the bar (`raw` null): 20 / 50 over column 1's
+    // unclipped rect (40 %), so not left; only the source is tested, column 2's 60 % is ignored.
+    t.fire('pointermove', { clientX: 55, clientY: 54 });
     expect(t.b.card1.classes.has('wc-drag-target')).toBe(false);
-    // Face y 50 … 110: 42 / 60 over the source column's visible part.
-    t.fire('pointermove', { clientX: 25, clientY: 80 });
+    expect(t.b.card2.classes.has('wc-drag-target')).toBe(false);
+    // Face x 0 … 50, y 50 … 110: 42 / 60 over column 1's visible part.
+    t.fire('pointermove', { clientX: 25, clientY: 104 });
     expect(t.b.card1.classes.has('wc-drag-target')).toBe(false);
     t.fire('pointerup');
     expect(navCalls).toEqual([]);
