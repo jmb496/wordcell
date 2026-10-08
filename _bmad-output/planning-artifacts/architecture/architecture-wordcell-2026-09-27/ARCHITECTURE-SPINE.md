@@ -479,13 +479,14 @@ sequenceDiagram
     an innerHeight-only change under 80 px (w held fixed, anchor rule applied), and
     never changes w (A-D4). Both are deferred by `src/ui/gestures/gate.ts` (active gestures,
     running animations, page scroll), except that a tray-row change caused by a move is applied
-    in the same update as the move when no gesture is active and the page is not scrolling: the
-    move's own AD-14 animation is not busy for it, and FLIP measures after that re-layout, then
-    plays; while a gesture or page scroll defers the re-layout, it defers that move's FLIP play
+    in the same update as the move when no gesture is active: every move (a dispatch that
+    changes the view) first clears the page-scroll busy state (as `gate.scrollReset` does on
+    hide), the move's own AD-14 animation is not busy for it, and FLIP measures after that
+    re-layout, then plays; while a gesture defers the re-layout, it defers that move's FLIP play
     too, so the final layout is never painted before the glide (amended 2026-10-08, epic 5 SPEC). The pointer controller increments the gate at
     `pointerdown` **before** completing running animations; pending work runs in the next
     `requestAnimationFrame` in which the gate is idle. Page scroll is busy from the first
-    `scroll` event until `scrollend`, until hide/pagehide, or until 150 ms pass without a
+    `scroll` event until `scrollend`, until hide/pagehide, until a move, or until 150 ms pass without a
     `scroll` event (a backstop in all browsers) `[ASSUMPTION A-A9]`; a Playwright case asserts a banner shown
     during a scroll is applied after it ends. `bannerShown` is a gate-latched copy of
     `dictionary.showBanner` (`failed`, or the Q-42 banner kept during a service-worker retry;
@@ -659,7 +660,8 @@ sequenceDiagram
   Session on dispatch; animations run from the previous to the next view and are presentation
   only. Input during an animation completes it and acts on the settled state (EXPERIENCE.md
   Motion, including the winning-commit exception, implemented by deferring the end sheet).
-  While the winning commit animation is pending, `src/ui/motion.ts` installs one capture-phase
+  While the winning commit animation is pending, and for at least 300 ms after the win at any
+  speed (reduced motion and Fast included; amended 2026-10-08, epic 5 SPEC F23), `src/ui/motion.ts` installs one capture-phase
   `pointerdown`/`click`/`keydown` listener on `document` that completes it and stops the event
   (so native buttons are covered too: primary action, menu, Redo, banner Reload, end-sheet
   actions), except Undo (button or key aliases), which completes it, cancels the pending open,

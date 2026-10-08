@@ -146,3 +146,8 @@ Words (docs): SPEC 8485 (1.46 x pass 0); no fix pass (cap).
 ## Result — capped at 7 passes (open majors: CAP-9 overflow-row clip hides held faces during a scroll-deferred play)
 Majors per pass: 10, 9, 5, 5, 3, 2, 1. Decision needed (owner): OQ-6 (destination letters glide from the column on Validate/Undo), OQ-7 (minimum winning-guard window under reduced motion / Fast). Unapplied minors: 3 (above, the held-Enter item excluded).
 Note for upstream: most late majors (passes 2–7) came from the AD-11 page-scroll deferral of a move's re-layout and glide (interim overflow rows, held faces, coordinate frames). If the architect resets scroll-busy at every dispatch (as `gate.scrollReset` already does on hide), that path and its CAP-9 machinery could go; this is a spine AD-11 change and needs the owner's say (AGENTS.md rule 7).
+
+## Owner answers — 2026-10-08
+- OQ-6 → F22 (D letters glide from/to the column; tray-block copies at once). OQ-7 → F23 (guard ≥ 300 ms after the win at any speed; double tap also under reduced motion and Fast; spine AD-14, EXPERIENCE.md Motion amended).
+- Spine AD-11 amended (F24): every move clears page-scroll busy first; the scroll-deferred play, overflow rows and blocking element are gone from CAP-8/CAP-9, which closes the open major. Code change: CAP-9 (`flip.capture()` calls `gate.scrollReset()`). DESIGN.md Tray band amended.
+- Unapplied minors: the pass-7 CAP-9 wording is obsolete (path removed); the CAP-5 and CAP-7 items stay with the ticket plans.

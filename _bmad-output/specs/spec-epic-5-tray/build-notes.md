@@ -223,7 +223,7 @@ src/ui/
   threshold crossing before 400 ms → free-letter drag of the top card's live element; the cell
   shows a ghost (controller class on the cell wrapper, DOM only).
 - Caret: when "full" and when a gap moves no tile per SPEC CAP-6 (the rendered rows are the
-  gate-latched count, CAP-9; card mode holds one row); `perRow` from `trayLayout`.
+  rendered row count, CAP-9; card mode holds one row); `perRow` from `trayLayout`.
 - The index passed is the gap in M (0…|M|), not the tray position; translate around the D block.
 
 ## CAP-7 Place
@@ -256,15 +256,13 @@ src/ui/
   compare band-relative rects so a pure band shift (tray growth moving every column card by the
   band delta) applies without motion. Coordinate frame (SPEC CAP-8): a card that stays in its band
   inverts from the band-relative delta (the band's own shift jumps); a card that changes band
-  inverts from its on-screen rect just before the re-layout (same-update path: the captured
-  viewport rect; deferred play, CAP-9: the captured viewport rect shifted only by the player's
-  scroll between capture and play, never by the re-layout's own anchor `scrollTop` delta) to its
-  viewport rect after the re-layout and the anchor delta, so neither the player's scroll nor the
-  anchor delta adds distance.
+  inverts from its on-screen rect just before the re-layout (the captured viewport rect, never
+  shifted by the re-layout's own anchor `scrollTop` delta) to its viewport rect after the
+  re-layout and the anchor delta, so the anchor delta adds no distance.
 - FLIP moves the `.face` inside each live wrapper; the wrapper (identity, hit rect) stays at its
   settled rect, so a press mid-animation hit-tests the settled layout.
 - Every animation registers with the gate (`enter`/`leave`) and with one running set that
-  `finishAll()` completes (a gate-deferred play included, SPEC CAP-8); the controller's
+  `finishAll()` completes; the controller's
   `pointerdown` and `cancel()` call it (F6).
 - Fly-to-cell targets the cell's live element stack; stagger bottom card first. Each card the
   commit placed stays visible for its flight (today non-top cell cards are `visibility: hidden`,
@@ -284,18 +282,15 @@ src/ui/
   reactive input. AD-11 (amended 2026-10-08): a move's row change is applied in the same update
   as the move (with the anchor `scrollTop` delta), and the move's own animation is not busy for
   it. Order per edit: `flip.capture()` before dispatch → dispatch and re-layout in one update →
-  `flip.play` measures the final rects, then plays; commits included (no wait for the fly). While
-  a gesture or page scroll is active, the re-layout queues through `gate.whenIdle` and the move's
-  `flip.play` waits with it, so the final layout is never painted before the glide: `flip.play`'s
-  invert step (faces held at their captured rects) is applied in the move's own update and only
-  the play waits; when the gate idles it re-measures after the re-layout and plays from the
-  captured rects. The Tray's tile mode and row count read the same gate-latched row count as the
-  band, so both switch together; the interim render of extra tiles is SPEC CAP-9's overflow rows (with their blocking element), both clipped to the tray band's rect.
+  `flip.play` measures the final rects, then plays; commits included (no wait for the fly).
+  AD-11 (F24): `flip.capture()` calls `gate.scrollReset()` first, so a move made while the page
+  is still scrolling (e.g. an Undo tap within 150 ms of a scroll) re-lays out and glides at once;
+  the scroll's later `scroll` events make the gate busy again only for non-move work. As-built,
+  no gesture is active at a dispatch: `act()` and key commands call `cancel()`, and the
+  controller's `end()` leaves the gate (`gate.leave()`, `controller.ts:369`) before the release
+  dispatch (`controller.ts:762`); a move's re-layout that finds the gate busy is a bug and
+  throws. The Tray's tile mode and row count read the band's row count, so both switch together.
   Mid-drag the row change waits for release.
-- As-built: the controller's `end()` leaves the gate (`gate.leave()`, `controller.ts:369`) before
-  the release dispatch (`controller.ts:762`), so release moves take the same-update path; the
-  deferred path is reached by a move dispatched while page scroll is busy (e.g. an Undo tap within
-  150 ms of a scroll), pinned by one UI Vitest `AD-11`.
 - Fixtures: script `session-composing-long.json` [ASSUMPTION name] with 14 tray tiles and
   `canIncK` (one `+` → 15, three rows), and a valid Place Session with a three-row strip, under
   the epic 3 regeneration rule; add both to `serialize.test.ts`'s valid-fixture list.
@@ -303,12 +298,12 @@ src/ui/
 ## CAP-10 Winning guard
 
 - The guard's rule is SPEC F8 (stated once there). Notes: it installs on the dispatch result,
-  not when `flip.play` starts, because the play may wait for the gate (CAP-9); a consumed event
+  not when `flip.play` starts; a consumed event
   needs `preventDefault` as well as `stopPropagation` (stopping keydown propagation alone does
   not cancel a focused button's default activation); the window is defined by events and the
   backstop, not by task order (Android queues a tap's `click` as its own task), so a long press,
   pan or `pointercancel` with no click cannot strand it, and with no input it uninstalls at
-  settle, so New game works after an untouched win. `act()` passes no event, so the triggering
+  settle (or 300 ms after the win if later, F23), so New game works after an untouched win. `act()` passes no event, so the triggering
   gesture is known only from F8's open-gesture tracker, never from the button handler; a key held
   while the app is hidden or the window loses focus, including one held before the win, cannot
   strand the guard (F8: hide and `blur` clear every gesture the tracker holds, consumed or not;

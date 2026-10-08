@@ -341,7 +341,7 @@ Spacing scale 4 / 8 / 12 / 16 / 24 / 32 px. Every interactive target is at least
     18 px) and the tiles wrap. Tile mode and band height follow the tile count after any completed
     edit (drop, tap-add, removal, k change, Undo, Redo, Confirm, session restore), never during a
     drag. A move's change applies in the same update as the move, before its animation plays, and
-    waits only for an active gesture or page scroll (AD-11, amended 2026-10-08). The band grows only
+    waits only for an active gesture (AD-11, amended 2026-10-08). The band grows only
     for words longer than 14 tiles; how the extra height is found is below. Tile rows are
     top-aligned in the tile area, with no gaps beyond the 4 px tile gap.
   - During a free-letter or tile drag over the tray, the insertion point is previewed. The layout
