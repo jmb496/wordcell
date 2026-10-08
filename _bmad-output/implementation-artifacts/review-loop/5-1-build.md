@@ -1,5 +1,5 @@
 # Review loop — ticket 5.1 build (code mode, 64ea5a4..443cbe5)
-State: pass 3: done
+State: pass 4: done (result written)
 
 Target: `_bmad-output/implementation-artifacts/review-loop/5-1-build.passes/pass0.diff` (git diff 64ea5a4..443cbe5; build commit 443cbe5)
 Intent: `_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-draft-wordcards-and-the-composing-tray-plan.md`
@@ -61,3 +61,25 @@ Fixer: items 1-5 applied (word span `overflow-x: hidden`, `text-overflow: ellips
 - none
 ### Dropped
 - none
+
+## Pass 4 — 2026-10-08
+Reviewers: fix diff, edge cases, verification gap, intent alignment (late-pass bar)  |  Findings: major 1, minor 5, decision-needed 0  |  Dropped in triage: 0
+Snapshot: none (no fix pass; tree 60866295dadb1f25c042a359b6d15496c471de74 unchanged, committed as 2cd48be)
+### Open (not fixed: stopping rule)
+- [major] src/ui/tray/WordLine.svelte refit() — `box = line.clientWidth - …` is the rounded integer width while `measure` returns fractional `getBoundingClientRect().width`; when clientWidth rounds up, `fitSize` accepts a size up to 0.5 px too wide, so the invalid line can ellipsize its word at a size meant to fit (word line clips trailing spacing). Proposed fix: take the box from `line.getBoundingClientRect().width` (no padding/border on `.line`) or `Math.floor` it
+### Unapplied minors
+- e2e/tray.spec.ts COMPACT_SCRATCH comment — D listed `27 1 9`, column order top → bottom is `9 1 27`
+- plan Implementation Notes Screenshots — `--update-snapshots=all -g composing` deviates from the story's Verify command; add a Plan Change Log entry with the reason (1 % tolerance)
+- e2e/tray.spec.ts R-32 k = 2 — one blue outline proved via `border-top-color` only; also assert bottom, outer left (start) and outer right (end) colours
+- src/ui/Column.svelte `isGhost` key — Place D ghost ↔ live remount unproven; add AD-14 case on session-place + Undo with a column-6 `[data-mirror-of="28"]` handle detached
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Result — converged after 4 passes
+open major: src/ui/tray/WordLine.svelte refit() fits against the integer `clientWidth` (rounded up on fractional widths) instead of the fractional line width; fix with `getBoundingClientRect().width` or `Math.floor`.
+Majors per pass: 2, 2, 1, 1. Technical defaults applied: 5. Decision needed: none.
+Final state (tree 60866295, HEAD 2cd48be): `npm test` 52 files, 2075 passed; lint clean (186 files); check 0 errors; fixer runs of `e2e/tray.spec.ts` + `e2e/dictionary.spec.ts` android 37 passed, tray --repeat-each=3 69 passed. `npm run test:all` not run by the loop.
+Unapplied minors: the four listed under Pass 4.
+Caller note (dropped in pass 1, not a code defect): the tickets.toml hand-off to entries 2 and 3 in the plan frontmatter `deferred` is still to apply.
