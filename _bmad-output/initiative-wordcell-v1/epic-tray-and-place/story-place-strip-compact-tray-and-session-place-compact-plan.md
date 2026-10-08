@@ -3,7 +3,7 @@ title: 'Place strip, compact tray and session-place-compact'
 type: 'feature'
 ticket: '2'
 created: '2026-10-08'
-status: 'built'
+status: done
 route: 'full'
 route_source: 'auto'
 baseline_revision: '6e66d95c0f6633d83c5637bb9e55bb0f10f8f54c'

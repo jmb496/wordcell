@@ -1,15 +1,18 @@
 outcome: done
-ticket: 5.1
+ticket: 5.2
 reason: done
-next: 5.2
-updated: 2026-10-08T18:52:04Z
-summary: Ticket 5.1 (the Composing tray showing the word, tiles and letter count) is built, reviewed, fully tested and marked done.
+next: 5.3
+updated: 2026-10-08T22:40:00Z
+summary: Ticket 5.2 (the Place strip with its marks and score line, and the compact two-row tray) is built, reviewed, fully tested and marked done.
 
 ## Report
 
-Ticket 5.1 is done. After the earlier pause for the usage limit, the ticket review picked up where it left off and finished after 6 passes. The build, a 4-pass code review and the full test suite all passed. Nothing needs your decision.
+Ticket 5.2 is done. The build had paused at the usage limit. It picked up where it stopped and finished. The code review found no major problems on the first pass, and the full test suite passed. Nothing needs your decision.
 
-One small item goes to the refactor sweep (5.14): the word line can sometimes cut a word short with "…" at a size that would just fit, because it measures the tray width rounded up to a whole pixel.
+Worth knowing:
+- One small paperwork edit goes to the retrospective: the epic's Boundaries list should also name the valid-fixture list in the architecture test.
+- Two minor test-strength items go to the refactor sweep (5.14).
+- One unrelated layout test failed once under load during the build, then passed on every rerun.
 
 Close-out docs: none so far.
 
@@ -17,4 +20,4 @@ Digest: _bmad-output/implementation-artifacts/autopilot/epic-tray-and-place-2026
 
 ## Resume
 
-Run `.claude/skills/epic-autopilot/scripts/loop.sh epic-tray-and-place` to continue with ticket 5.2.
+Run `.claude/skills/epic-autopilot/scripts/loop.sh epic-tray-and-place` to continue with ticket 5.3.
