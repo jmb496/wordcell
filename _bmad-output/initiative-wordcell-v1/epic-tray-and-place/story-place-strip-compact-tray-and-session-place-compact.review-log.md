@@ -1,5 +1,5 @@
 # Review log — story-place-strip-compact-tray-and-session-place-compact.md (ticket 5.2)
-State: pass 3: done
+State: pass 4: done (converged)
 
 Mode: docs, thorough, max 7. Pass 0: 411 words (`.passes/pass0.md`), HEAD f0a0cc3. Intent fields from tickets.toml entry 2 (unknown, interface, tests, owns, consumers): `.passes/intent.md`.
 
@@ -84,3 +84,31 @@ Fixer: all 7 applied; cuts to stay in budget (Composing-marks list kept in the A
 - corner quadrants on the `.face` box
 ### Dropped
 - none
+
+## Pass 4 — 2026-10-08
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 0, minor 13, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1030 (2.51 x pass 0), unchanged  |  Snapshot: .passes/pass3.md (no fix pass)
+### Applied
+- none (zero majors: converged)
+### Decision needed (functionality / UX / gameplay)
+- none
+
+## Result — converged after 4 passes
+Majors per pass: 8, 5, 2, 0. Decision-needed: none. Technical defaults applied: 15 (see each pass). Words 411 → 1030.
+
+### Unapplied minors (for the build's plan)
+- Block condition: the `left` branch (`destinationCount` ≥ 8) is unreachable (k ≤ 7, R-31/R-37); only `right` matters
+- Interface: Tray.svelte (word line, tags, ControlRow gated on `composing`) is the main changed file; ControlRow gains only a Place variant
+- R-51 test: the redo-tail strip is reordered, so it proves strip = placementOrder; name it R-50/AD-3 or add the session-place default-order case
+- placeMeta cases: write the argument as ASCII `-1` (U+2212 only in the expected string); give n and cell for the +1 case; assert full strings
+- QU origin tag text equals its `freeLetters` cell in Place and Composing (pins the `cell`-field lookup, build-notes CAP-1)
+- Assert the Place word line on session-place-compact too (QU uppercase in Place)
+- A-D10 top-left tag only exercised on the last tile (card 28)
+- Bottom-band marks: check below the band line, not just the bottom quadrant; detect "no outline" via block/lock absence
+- PROPERTIES: read the QU cell from the Move's `freeLetters`, not view `cells`
+- New words go in the rebuild's own word list (FIXTURE_WORDS only via fromSeed1)
+- ×2 top-right already exists from 5.1 (Card.svelte); the new compact work is the origin tag and the strip map
+- COMPACT_SCRATCH in e2e/tray.spec.ts already meets the block condition (6 live + 3 D); start the fixture script from it
+- Epic Boundaries do not list src/architecture-ad2-ad12-ad17.test.ts or serialize.test.ts beyond the fixture list; cite epic Notes fixture ownership and record a Boundaries close-out edit
+- (from pass 3) build-notes CAP-1 and rule-coverage R-32 describe only the QU-direction fallback; ticket's block fallback is valid under SPEC Assumptions: close-out edit of both companions
+- (from pass 3) single fixture tried first; JSON import and REBUILDS generator; fixture words in generated/dictionary/en.txt; compact map asserts no `bottom`/`top` words; quadrants on the `.face` box
