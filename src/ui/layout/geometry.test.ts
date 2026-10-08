@@ -28,7 +28,11 @@ function layout(c: Case): BandLayout {
   const insets = c.insets ?? NO_INSETS;
   const w = c.w ?? cardWidth(c.clientWidth ?? 412, c.innerHeight, insets, false);
   const order = c.order ? parseBandsParam(new URLSearchParams(`?bands=${c.order}`)) : BAND_ORDER;
-  return bands(w, order, c.trayRows ?? 1, c.bannerShown ?? false, c.innerHeight, insets);
+  const l = bands(w, order, c.trayRows ?? 1, c.bannerShown ?? false, c.innerHeight, insets);
+  // The closed-form `total` equals the sum of the band heights in every case.
+  const heightSum = Object.values(l.heights).reduce((a, b) => a + b, 0);
+  expect(l.total).toBeCloseTo(heightSum, 9);
+  return l;
 }
 
 const sum = (l: BandLayout) => l.total - l.heights.leftover;
@@ -83,6 +87,11 @@ describe('geometry', () => {
     expect(l.heights.leftover).toBe(129);
     expect(cardWidth(412, 782, insets, false)).toBe(44);
     expect(cardWidth(412, 782, NO_INSETS, false)).toBe(46);
+  });
+
+  it('AD-11 cardWidth exact fit with fractional insets: 412 × 734.3 with {0.1, 0.2} is 44', () => {
+    expect(cardWidth(412, 734.3, { top: 0.1, bottom: 0.2 }, false)).toBe(44);
+    expect(cardWidth(412, 734.29, { top: 0.1, bottom: 0.2 }, false)).toBe(43);
   });
 
   it('AD-11 bands heights at 412 × 839 and 412 × 915 with 24/24 insets', () => {
@@ -222,6 +231,7 @@ describe('geometry', () => {
     expect(three.anchorOffset).toBe(161);
     expect(one.total).toBe(839);
     expect(three.total).toBe(887);
+    expect(three.heights.tray).toBe(224);
     expect(anchorScroll(one, three, 0, 839)).toBe(0);
   });
 
@@ -312,7 +322,24 @@ describe('geometry', () => {
     expect(after.heights.leftover).toBe(0);
     expect(before.anchorOffset).toBe(651);
     expect(after.anchorOffset).toBe(701);
+    expect(after.total).toBe(830);
     expect(anchorScroll(before, after, 0, 780)).toBe(50);
+    expect(rangeMin(after, 780)).toBe(0);
+    expect(rangeMax(after, 780)).toBe(50);
+  });
+
+  it('AD-11 banner exactly absorbed at the boundary: 412 × 782', () => {
+    expect(cardWidth(412, 782, NO_INSETS, false)).toBe(46);
+    const before = layout({ innerHeight: 782 });
+    const after = layout({ innerHeight: 782, bannerShown: true });
+    expect(before.heights.leftover).toBe(44);
+    expect(after.heights.leftover).toBe(0);
+    expect(before.total).toBe(782);
+    expect(after.total).toBe(782);
+    expect(before.anchorOffset).toBe(653);
+    expect(after.anchorOffset).toBe(653);
+    expect(anchorScroll(before, after, 0, 782)).toBe(0);
+    expect(rangeMax(after, 782)).toBe(0);
   });
 
   it('AD-11 w-recompute predicate', () => {
@@ -364,5 +391,29 @@ describe('geometry', () => {
 
     expect(anchorScroll(at710, at780, 28, 780)).toBe(0);
     expect(at780.anchorOffset - at710.anchorOffset).toBe(42);
+  });
+
+  it('AD-11 F21 innerHeight-only change with the slack below the anchor', () => {
+    const order = 'topBar,banner,columns,wordcells,tray,leftover,actionBar';
+    const at839 = layout({ w: 46, innerHeight: 839, order });
+    const at779 = layout({ w: 46, innerHeight: 779, order });
+    expect(at839.heights.leftover).toBe(101);
+    expect(at779.heights.leftover).toBe(41);
+    expect(at839.anchorOffset).toBe(429);
+    expect(at779.anchorOffset).toBe(429);
+    expect(anchorScroll(at839, at779, 0, 779)).toBe(0);
+    expect(rangeMax(at779, 779)).toBe(0);
+
+    const at780 = layout({ w: 46, innerHeight: 780, order });
+    const at710 = layout({ w: 46, innerHeight: 710, order });
+    expect(at780.heights.leftover).toBe(42);
+    expect(at710.heights.leftover).toBe(0);
+    expect(at780.anchorOffset).toBe(429);
+    expect(at710.anchorOffset).toBe(429);
+    expect(at710.total).toBe(738);
+    expect(anchorScroll(at780, at710, 0, 710)).toBe(0);
+    expect(rangeMax(at780, 780)).toBe(0);
+    expect(rangeMin(at710, 710)).toBe(0);
+    expect(rangeMax(at710, 710)).toBe(28);
   });
 });

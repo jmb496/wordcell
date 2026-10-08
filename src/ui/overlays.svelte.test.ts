@@ -601,20 +601,25 @@ describe('AD-13 overlays epic 4: selection, views and end sheet', () => {
     expect(() => overlays.openDeferred(token)).toThrow(AD13);
     expect(overlays.hoverPeek).toBe(4);
     overlays.deselect();
-    // a modal on top of a view
+    // a modal on top of a view: the stack is [wordcellView, historyNotice], the view not on top
     overlays.openView(6);
-    overlays.closedByBack(0);
     overlays.open('historyNotice');
+    expect(calls).toEqual(['push', 'push', 'pop', 'pop', 'push', 'push']);
     expect(() => overlays.openDeferred(token)).toThrow(AD13);
+    expect(overlays.viewCell).toBe(6);
+    expect(overlays.depth).toBe(2);
+    expect(overlays.top).toBe('historyNotice');
+    expect(overlays.endSheet).toBe('hidden');
+    expect(calls).toEqual(['push', 'push', 'pop', 'pop', 'push', 'push']);
     overlays.close('historyNotice');
-    expect(calls).toEqual(['push', 'push', 'pop', 'pop', 'push', 'push', 'pop']);
+    overlays.close('wordcellView');
     // the token is still live
     overlays.openDeferred(token);
     expect(overlays.endSheet).toBe('expanded');
-    expect(calls).toEqual(['push', 'push', 'pop', 'pop', 'push', 'push', 'pop', 'push']);
+    expect(calls).toEqual(['push', 'push', 'pop', 'pop', 'push', 'push', 'pop', 'pop', 'push']);
   });
 
-  it('AD-13 resetForNewSession from a selection plus a sticky view, a hover peek and a live token pops top-down, hides the sheet and clears all; the old token stays dead, a fresh one opens', async () => {
+  it('AD-13 resetForNewSession from a selection plus a sticky view and a live token pops top-down, hides the sheet and clears all; the old token stays dead, a fresh one opens', async () => {
     const overlays = await load();
     overlays.select(2, 2);
     overlays.openView(9);

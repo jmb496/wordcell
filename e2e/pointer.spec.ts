@@ -1,42 +1,11 @@
-import { expect, type Locator, type Page, test } from '@playwright/test';
+import { expect, type Locator, test } from '@playwright/test';
+import { centre, openFixture, sameSession, stashSession } from './helpers/board';
 import { animationFrames } from './helpers/lifecycle';
-import { booted, openBoard } from './helpers/restore';
-import { fixture, seedStorage } from './helpers/seed';
+import { openBoard } from './helpers/restore';
 import { touchDrag, touchHold } from './helpers/touch';
 
 // Epic 4 entry 6: the pointer controller's DOM wiring (AD-12, AD-11 contextmenu; SPEC CAP-4,
 // rule-coverage AD-11 and AD-12 rows) and the F25 probe that its root spans the viewport.
-
-async function openFixture(page: Page, name: string): Promise<void> {
-  await seedStorage(page, { session: fixture(`${name}.json`) });
-  await page.goto('/');
-  await expect(page.locator('[data-card-id]')).toHaveCount(52);
-  await booted(page);
-}
-
-async function centre(locator: Locator): Promise<{ x: number; y: number }> {
-  const box = await locator.boundingBox();
-  if (box === null) throw new Error('element has no box');
-  return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
-}
-
-// Stashes the store's Session reference and returns the stored wordcell:session text.
-function stashSession(page: Page): Promise<string | null> {
-  return page.evaluate(() => {
-    const current = window.__wordcell?.current();
-    if (current?.kind !== 'active') throw new Error(`store is ${current?.kind}`);
-    window.__pointerSession = current.session;
-    return localStorage.getItem('wordcell:session');
-  });
-}
-
-function sameSession(page: Page): Promise<boolean> {
-  return page.evaluate(() => {
-    const current = window.__wordcell?.current();
-    if (current?.kind !== 'active') throw new Error(`store is ${current?.kind}`);
-    return current.session === window.__pointerSession;
-  });
-}
 
 // Dispatches a cancelable, bubbling contextmenu (no pointerId) at `locator`; true if prevented.
 function contextmenuPrevented(locator: Locator): Promise<boolean> {
@@ -117,7 +86,8 @@ test('AD-12 the controller root spans the viewport', async ({ page }) => {
   }, desktop);
   expect(r.left).toBeLessThanOrEqual(0);
   expect(r.right).toBeGreaterThanOrEqual(r.width);
-  // The only uncovered strip is the `scrollbar-gutter: stable` gutter (no page pointer events).
+  // The only uncovered strip is the `scrollbar-gutter: stable` gutter: it is outside the root, so
+  // its events do not reach the controller.
   expect(r.innerWidth - r.width).toBeLessThanOrEqual(desktop ? 20 : 0);
   expect(r.top).toBeLessThanOrEqual(0);
   expect(r.bottom).toBeGreaterThanOrEqual(r.height);

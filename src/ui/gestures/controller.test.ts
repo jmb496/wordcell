@@ -293,7 +293,15 @@ function board() {
     f.classes.add('face');
     return f;
   };
-  const topBar = el('div', { 'data-band': 'topBar' }, root);
+  // Entry 13 (F34): the sticky bars bound the visible band; by default the top bar ends at y 0,
+  // the banner (always rendered, empty) has no height and the action bar starts at y 1200, so
+  // nothing is clipped.
+  const topBar = at(el('div', { 'data-band': 'topBar' }, root), {
+    left: 0,
+    top: -44,
+    right: 400,
+    bottom: 0,
+  });
   const undo = el('button', {}, topBar);
   const undoIcon = el('svg', {}, undo);
   const redoDisabled = el('button', {}, topBar, true);
@@ -333,6 +341,18 @@ function board() {
   const trayMirror = el('div', { 'data-mirror-of': '1' }, tray);
   const trayMirrorFace = el('div', {}, trayMirror);
   const leftover = el('div', { 'data-band': 'leftover' }, root);
+  const banner = at(el('div', { 'data-band': 'banner' }, root), {
+    left: 0,
+    top: 0,
+    right: 400,
+    bottom: 0,
+  });
+  const actionBar = at(el('div', { 'data-band': 'actionBar' }, root), {
+    left: 0,
+    top: 1200,
+    right: 400,
+    bottom: 1260,
+  });
   // Entry 11: the WordCell view (rendered in the DOM only while a peek or view is open).
   const scrim = el('div', { 'data-view-scrim': '' }, root);
   const sheet = el('div', { 'data-view-sheet': '' }, root);
@@ -366,6 +386,9 @@ function board() {
     trayMirror,
     trayMirrorFace,
     leftover,
+    topBar,
+    banner,
+    actionBar,
     scrim,
     sheet,
     sheetTitle,
@@ -606,6 +629,57 @@ describe('AD-12 press targets', () => {
   });
 });
 
+describe('AD-12 resolved press target', () => {
+  it('AD-12 each resolved target kind shows by its outcome: a column-card tap selects, a non-empty WordCell long-press peeks, an empty one opens nothing, an other tap deselects', async () => {
+    const t = await setup();
+    t.detach();
+    // column → a tap selects the tail.
+    t.tap(t.b.card1b);
+    expect(t.overlays.selection).toEqual({ column: 1, count: 1 });
+    // wordcell → the long-press opens the peek; the release (no overflow) closes it, selection kept.
+    t.down(t.b.cellCard);
+    t.advance(400);
+    expect(t.overlays.peek).toBe(3);
+    t.fire('pointerup');
+    expect(t.overlays.peek).toBeNull();
+    expect(t.overlays.selection).toEqual({ column: 1, count: 1 });
+    // emptyWordcell → the long-press opens nothing (its release is a tap, which deselects).
+    t.down(t.b.cell4);
+    t.advance(400);
+    expect(t.overlays.peek).toBeNull();
+    t.fire('pointerup');
+    expect(t.overlays.selection).toBeNull();
+    // other → a tap clears the selection.
+    t.tap(t.b.card2);
+    t.tap(t.b.leftover);
+    expect(t.overlays.selection).toBeNull();
+    expect(navCalls).toEqual(['push', 'pop', 'push', 'pop']);
+  });
+
+  it('AD-12 WordCell emptiness comes from the GameView, not the DOM: a cardless cell element that is non-empty in the GameView peeks', async () => {
+    const t = await setup();
+    t.detach();
+    const view = shared.view as { cells: { cell: number; cards: number[] }[] };
+    (view.cells[1] as { cards: number[] }).cards = [9];
+    t.down(t.b.cell4);
+    t.advance(400);
+    expect(t.overlays.peek).toBe(4);
+    t.fire('pointerup');
+  });
+
+  it('AD-12 a WordCell press on a cell missing from the GameView, or with no GameView, throws', async () => {
+    const t = await setup();
+    t.detach();
+    const view = shared.view as { cells: { cell: number; cards: number[] }[] };
+    view.cells = view.cells.filter((c) => c.cell !== 4);
+    expect(() => t.down(t.b.cell4)).toThrow(/^AD-12 WordCell press on unknown cell 4$/);
+    const u = await setup();
+    u.detach();
+    shared.view = undefined;
+    expect(() => u.down(u.b.cellCard)).toThrow(/^AD-12 WordCell press without a GameView$/);
+  });
+});
+
 describe('AD-12 press ends', () => {
   it('AD-12 pointerup, pointercancel, cancel() and cancel({ byBack: true }) each end once, then a lostpointercapture changes nothing', async () => {
     const enders: ((t: Awaited<ReturnType<typeof setup>>) => void)[] = [
@@ -703,6 +777,35 @@ describe('AD-12 press ends', () => {
     expect(t.b.card2.log).toEqual(['set 1']);
   });
 
+  it('AD-12 CAP-4 a same-id pointerdown with button !== 0 during a live press ends it (sameId) before the button check returns', async () => {
+    const t = await setup();
+    t.detach();
+    t.down(t.b.card1);
+    t.down(t.b.card2, { button: 2 });
+    expect(t.counts).toEqual({ enter: 1, leave: 1 });
+    expect(t.b.card1.log).toEqual(['set 1', 'release 1']);
+    expect(t.b.card2.log).toEqual([]);
+    expect(t.active()).toBe(0);
+    expect(navCalls).toEqual([]);
+  });
+
+  // Ticket 4.13 D18: documents current behaviour. A captured element that loses capture without a
+  // lostpointercapture at the root (disconnected: the browser fires it at the document) is not
+  // reachable in the app: captured elements are keyed and nothing replaces them during a held press.
+  it('AD-12 CAP-4 a captured press whose capture vanished with no lostpointercapture keeps ignoring a new pointerId until its own end', async () => {
+    const t = await setup();
+    t.detach();
+    t.down(t.b.card1, { pointerId: 1 });
+    t.b.card1.captures.clear();
+    t.down(t.b.card2, { pointerId: 2 });
+    expect(t.counts).toEqual({ enter: 1, leave: 0 });
+    expect(t.b.card2.log).toEqual([]);
+    t.fire('pointerup', { pointerId: 1 });
+    expect(t.counts).toEqual({ enter: 1, leave: 1 });
+    t.down(t.b.card2, { pointerId: 2 });
+    expect(t.b.card2.log).toEqual(['set 2']);
+  });
+
   it('AD-12 cancel() when the element no longer holds capture does not release it and does not throw', async () => {
     const t = await setup();
     t.detach();
@@ -779,7 +882,22 @@ describe('AD-12 contextmenu', () => {
     t.down(t.b.card1);
     t.controller.cancel();
     t.down(t.b.foot1);
+    expect(t.fire('contextmenu').preventDefault).not.toHaveBeenCalled();
     t.fire('pointerup');
+    expect(t.fire('contextmenu').preventDefault).not.toHaveBeenCalled();
+    expect(t.counts).toEqual({ enter: 2, leave: 2 });
+  });
+});
+
+describe('AD-12 contextmenu slot, pointercancel-ended', () => {
+  it('AD-12 the slot clears on that pointer’s next uncaptured press, ended by pointercancel', async () => {
+    const t = await setup();
+    t.detach();
+    t.down(t.b.card1);
+    t.controller.cancel();
+    t.down(t.b.foot1);
+    expect(t.fire('contextmenu').preventDefault).not.toHaveBeenCalled();
+    t.fire('pointercancel');
     expect(t.fire('contextmenu').preventDefault).not.toHaveBeenCalled();
     expect(t.counts).toEqual({ enter: 2, leave: 2 });
   });
@@ -1341,7 +1459,7 @@ describe('AD-12 entry 7 tap actions', () => {
     expect(t.overlays.selection).toEqual({ column: 2, count: 1 });
   });
 
-  it('AD-12 F25 a click with detail 0 resolving outside deselects; detail 1 and a column target do nothing', async () => {
+  it('AD-12 F25 a click with detail 0 resolving outside or on a tray tile deselects; detail 1 and a column target do nothing', async () => {
     const t = await setup();
     t.detach();
     t.tap(t.b.card1);
@@ -1351,7 +1469,12 @@ describe('AD-12 entry 7 tap actions', () => {
     expect(t.overlays.selection).toEqual({ column: 1, count: 2 });
     t.fire('click', { target: t.b.leftover, detail: 0 });
     expect(t.overlays.selection).toBeNull();
-    expect(navCalls).toEqual(['push', 'pop']);
+    t.tap(t.b.card1);
+    t.fire('click', { target: t.b.tile, detail: 1 });
+    expect(t.overlays.selection).toEqual({ column: 1, count: 2 });
+    t.fire('click', { target: t.b.tile, detail: 0 });
+    expect(t.overlays.selection).toBeNull();
+    expect(navCalls).toEqual(['push', 'pop', 'push', 'pop']);
   });
 });
 
@@ -1605,6 +1728,7 @@ describe('AD-12 entry 8 drag', () => {
       const [a] = t.b.face1b.animations;
       expect(a?.keyframes[0]).toEqual({ transform: 'translate(100px, 0px)' });
       expect(a?.options.duration).toBe(180);
+      expect(durations.kinds).toEqual(['flyBack']);
       expect(t.b.face1b.style.transform).toBe('');
       expect(t.active()).toBe(1);
       t.advance(180);
@@ -1759,6 +1883,102 @@ describe('AD-12 entry 8 drag', () => {
   });
 });
 
+describe('AD-12 F34 drop targets clipped to the visible band', () => {
+  type T = Awaited<ReturnType<typeof setup>>;
+  const drop = (source: number, count: number, destination: number) =>
+    `dispatch ${JSON.stringify({ type: 'drop', sourceColumn: source, sourceCount: count, destinationColumn: destination })}`;
+  // card1b's face rests at y 20 … 80; a press at (25, 50) moved to (125, y) puts it over column 3
+  // with its top at y − 30.
+  const moveTo = (t: T, y: number) => t.fire('pointermove', { clientX: 125, clientY: y });
+  const lit = (t: T) => t.b.placeholder3.classes.has('wc-drag-target');
+  const bar = (el: FakeEl, top: number, bottom: number) => {
+    el.rect = { left: 0, top, right: 400, bottom };
+  };
+
+  it('AD-12 F34 a column wholly under the top bar is never lit; the release flies back with no dispatch', async () => {
+    const t = await setup();
+    t.detach();
+    bar(t.b.topBar, 0, 100);
+    t.down(t.b.card1b, { clientX: 25, clientY: 50 });
+    // Face y 40 … 100 over column 3: all of it under the bar.
+    moveTo(t, 70);
+    expect(lit(t)).toBe(false);
+    t.fire('pointerup');
+    expect(t.b.face1b.animations).toHaveLength(1);
+    t.advance(180);
+    expect(t.active()).toBe(0);
+    expect(navCalls).toEqual([]);
+  });
+
+  it('AD-12 F34 a column under the action bar is never lit', async () => {
+    const t = await setup();
+    t.detach();
+    bar(t.b.actionBar, 300, 360);
+    t.down(t.b.card1b, { clientX: 25, clientY: 50 });
+    // Face y 310 … 370 over column 3 (y 0 … 400): all of it under the action bar.
+    moveTo(t, 340);
+    expect(lit(t)).toBe(false);
+    // Face y 260 … 320: 40 / 60 in the visible part.
+    moveTo(t, 290);
+    expect(lit(t)).toBe(true);
+    t.controller.cancel();
+  });
+
+  it('AD-12 F34 a partly hidden column lights at ≥ 25 % overlap with its visible part, not its whole rect', async () => {
+    const t = await setup();
+    t.detach();
+    bar(t.b.topBar, 0, 100);
+    t.down(t.b.card1b, { clientX: 25, clientY: 50 });
+    // Face y 50 … 110: 10 / 60 visible overlap (< 25 %), though wholly inside the unclipped rect.
+    moveTo(t, 80);
+    expect(lit(t)).toBe(false);
+    // Face y 85 … 145: 45 / 60 visible overlap.
+    moveTo(t, 115);
+    expect(lit(t)).toBe(true);
+    t.fire('pointerup');
+    expect(navCalls).toEqual([drop(1, 1, 3)]);
+  });
+
+  it('AD-12 F34 a shown banner moves the band top to its bottom', async () => {
+    const t = await setup();
+    t.detach();
+    bar(t.b.topBar, 0, 44);
+    bar(t.b.banner, 44, 44);
+    t.down(t.b.card1b, { clientX: 25, clientY: 50 });
+    // Face y 50 … 110: below the top bar, so lit while the banner is empty.
+    moveTo(t, 80);
+    expect(lit(t)).toBe(true);
+    bar(t.b.banner, 44, 100);
+    moveTo(t, 81);
+    expect(lit(t)).toBe(false);
+    t.fire('pointerup');
+    expect(navCalls).toEqual([]);
+    t.advance(180);
+    expect(t.active()).toBe(0);
+  });
+
+  it('AD-12 F34 a hidden (zero-height) banner below the top bar clips nothing', async () => {
+    const t = await setup();
+    t.detach();
+    // A dev `?bands=` order can place the always-rendered banner wrapper lower on the page.
+    bar(t.b.banner, 200, 200);
+    t.down(t.b.card1b, { clientX: 25, clientY: 50 });
+    // Face y 50 … 110 over column 3, above the hidden banner.
+    moveTo(t, 80);
+    expect(lit(t)).toBe(true);
+    t.fire('pointerup');
+    expect(navCalls).toEqual([drop(1, 1, 3)]);
+  });
+
+  it('AD-12 F34 a missing bar during a drag throws (rule 6)', async () => {
+    const t = await setup();
+    t.detach();
+    delete t.b.actionBar.attrs['data-band'];
+    t.down(t.b.card1b, { clientX: 25, clientY: 50 });
+    expect(() => moveTo(t, 70)).toThrow(/^AD-12 drag without \[data-band="actionBar"\]$/);
+  });
+});
+
 describe('AD-13 entry 9 selection replacement', () => {
   type T = Awaited<ReturnType<typeof setup>>;
   const SUPPRESSED = 'wc-selection-suppressed';
@@ -1785,6 +2005,9 @@ describe('AD-13 entry 9 selection replacement', () => {
     t.down(t.b.card1b, { clientX: 25, clientY: 50 });
     move(t, x, y);
     expect(suppressed(t)).toBe(true);
+    // F12: the overlays store is untouched mid-drag.
+    expect(t.overlays.selection).toEqual({ column: selection[0], count: selection[1] });
+    expect(navCalls).toEqual([]);
     return { ...t, detachFn };
   }
 
@@ -1808,10 +2031,10 @@ describe('AD-13 entry 9 selection replacement', () => {
       end: (t) => t.fire('pointerup'),
     },
     {
-      // Column 4 registers no drop target in the fixture: nothing is highlighted over it.
-      name: 'release over a non-target column',
+      // The face (y 390 … 450) overlaps registered column 2 (y 0 … 400) by 10 / 60, below MIN_RATIO.
+      name: 'release over a registered column below the overlap minimum',
       selection: [2, 1],
-      to: [175, 50],
+      to: [75, 420],
       end: (t) => t.fire('pointerup'),
     },
   ];
@@ -2141,6 +2364,24 @@ describe('AD-12 F32 a dragged selected card keeps its lift', () => {
       expect(t.overlays.selection).toEqual({ column: 1, count: 2 });
     },
   );
+
+  it('AD-12 F33 a dragged stack that is a proper subset of a two-card selection keeps the lift and flies back to its lifted slot', async () => {
+    const t = await liftedDrag('card1b', false, 2);
+    expect(t.b.face1b.style.transform).toBe('translate(0px, 22px)');
+    expect(t.b.face1.style.transform).toBe('');
+    move(t, 125, 50);
+    expect(t.b.face1b.style.transform).toBe('translate(100px, -8px)');
+    t.fire('pointercancel');
+    expect(keyframes(t.b.face1b)).toEqual([
+      [{ transform: 'translate(100px, -8px)' }, { transform: 'translate(0px, -8px)' }],
+    ]);
+    expect(keyframes(t.b.face1)).toEqual([]);
+    expect(t.b.root.classes.has(SUPPRESSED)).toBe(false);
+    t.advance(180);
+    expect(t.active()).toBe(0);
+    expect(t.overlays.selection).toEqual({ column: 1, count: 2 });
+    expect(navCalls).toEqual([]);
+  });
 
   it('AD-12 F32 a drag cancelled by a back that closes the selection flies the lifted face to its unlifted slot', async () => {
     const t = await liftedDrag('card1b');
@@ -2680,6 +2921,40 @@ describe('AD-12 entry 12 desktop hover peek', () => {
       expect(t.overlays.hoverPeek).toBeNull();
       expect(t.active()).toBe(0);
     }
+  });
+
+  it('AD-12 the hover timer is keyed by cell number: a pointerout from a replaced cell node, or an entry into an empty cell, stops it', async () => {
+    const t = await setup();
+    t.detach();
+    t.media.hoverFine = true;
+    enter3(t);
+    // Svelte replaced cell 3's node: the pointerout comes from the new one.
+    const replaced = new FakeEl('div', { 'data-wordcell': '3' }, t.b.root);
+    t.b.root.fire('pointerout', { ...mouse, target: replaced, relatedTarget: t.b.leftover });
+    expect(t.clearTimer).toHaveBeenCalledWith(t.setTimer.mock.results[0]?.value);
+    t.advance(1000);
+    expect(t.overlays.hoverPeek).toBeNull();
+    // A removed node sends no pointerout: the entry into empty cell 4 stops the pending timer.
+    enter3(t);
+    t.hover(t.b.cell4, { relatedTarget: null, clientX: 75, clientY: 480 });
+    expect(t.clearTimer).toHaveBeenCalledWith(t.setTimer.mock.results[1]?.value);
+    t.advance(1000);
+    expect(t.overlays.hoverPeek).toBeNull();
+  });
+
+  it('AD-12 the suppression slot uses half-open rects: a last point on the shared 3/4 edge suppresses cell 4, not cell 3', async () => {
+    const t = await setup();
+    t.detach();
+    t.media.hoverFine = true;
+    (cells()[1] as { cards: number[] }).cards = [9];
+    t.fire('pointermove', { ...mouse, clientX: 50, clientY: 480 });
+    t.controller.cancel();
+    t.hover(t.b.cell4, { relatedTarget: null, clientX: 50, clientY: 480 });
+    expect(hoverTimers(t)).toBe(0);
+    enter3(t, { relatedTarget: null });
+    expect(hoverTimers(t)).toBe(1);
+    t.advance(400);
+    expect(t.overlays.hoverPeek).toBe(3);
   });
 
   it('AD-12 a non-primary press leaves an open hover peek open', async () => {

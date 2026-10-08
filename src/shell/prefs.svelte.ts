@@ -8,6 +8,13 @@
 // only inside functions (import cycle with the game store).
 import { game } from './game.svelte';
 import { PREFS_KEY, read, write } from './storage';
+import {
+  assertWritable,
+  launchSnapshot,
+  type RejectReasonOf,
+  rejectReason,
+  trackLastText,
+} from './stored-key';
 
 export type AnimationSpeed = 'fast' | 'normal' | 'slow';
 
@@ -27,9 +34,7 @@ export type ParsePrefsResult =
     };
 
 /** AD-10: a failed `parsePrefs` result without `ok`. */
-export type PrefsRejectReason =
-  | { readonly reason: 'version-unreadable' }
-  | { readonly reason: 'version-unknown' | 'contents-unreadable'; readonly version: number };
+export type PrefsRejectReason = RejectReasonOf<ParsePrefsResult>;
 
 /** AD-17 `loaded().prefs`: stored shape, `null` when absent. */
 export type LoadedPrefs = Prefs | null | { readonly rejected: PrefsRejectReason };
@@ -83,14 +88,8 @@ let value = $state.raw<Prefs>(DEFAULTS);
 let reduced = $state(false);
 const motion: Motion = $derived({ baseMs: BASE_MS[value.animationSpeed], reduced });
 // Q-38: the last `wordcell:prefs` text this store read or successfully wrote (`null` when absent).
-let lastText: string | null = null;
-let launch: LoadedPrefs | undefined;
-
-function rejectReason(parsed: Exclude<ParsePrefsResult, { ok: true }>): PrefsRejectReason {
-  return parsed.reason === 'version-unreadable'
-    ? { reason: parsed.reason }
-    : { reason: parsed.reason, version: parsed.version };
-}
+const lastText = trackLastText();
+const launch = launchSnapshot<LoadedPrefs>();
 
 // AD-10: the CSS mirror of `motion` on the root element.
 function mirror(): void {
@@ -100,18 +99,18 @@ function mirror(): void {
 }
 
 function load(): void {
-  if (launch !== undefined) throw new Error('AD-10 load() called twice');
+  launch.assertUnset('AD-10 load() called twice');
   const text = read(PREFS_KEY);
-  lastText = text;
+  lastText.remember(text);
   if (text === null) {
-    launch = null;
+    launch.set(null);
   } else {
     const result = parsePrefs(text);
     if (result.ok) {
-      launch = result.prefs;
+      launch.set(result.prefs);
       value = result.prefs;
     } else {
-      launch = { rejected: rejectReason(result) };
+      launch.set({ rejected: rejectReason(result) });
     }
   }
   const query = matchMedia('(prefers-reduced-motion: reduce)');
@@ -130,13 +129,12 @@ function set(
   animationSpeed: AnimationSpeed,
   showTimer: boolean,
 ): void {
-  const kind = game.state.kind;
-  if (kind === 'halted' || kind === 'booting') throw new Error(`AD-15 ${setter}() while ${kind}`);
+  assertWritable(game.state.kind, setter);
   if (animationSpeed === value.animationSpeed && showTimer === value.showTimer) return;
   const next: Prefs = { version: 1, animationSpeed, showTimer };
   const text = JSON.stringify(next);
   write(PREFS_KEY, text);
-  lastText = text;
+  lastText.remember(text);
   value = next;
   mirror();
 }
@@ -151,12 +149,11 @@ function setShowTimer(showTimer: boolean): void {
 
 /** Q-38: whether `wordcell:prefs` differs from the text this store last read or wrote. */
 function isStale(): boolean {
-  return read(PREFS_KEY) !== lastText;
+  return lastText.isStale(read(PREFS_KEY));
 }
 
 function loaded(): LoadedPrefs {
-  if (launch === undefined) throw new Error('AD-17 prefs loaded() before load()');
-  return launch;
+  return launch.get(() => 'AD-17 prefs loaded() before load()');
 }
 
 export const prefs = {

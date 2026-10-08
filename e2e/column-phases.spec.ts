@@ -1,8 +1,16 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
+import {
+  box,
+  cards,
+  centre,
+  column,
+  foot,
+  openFixture,
+  sameSession,
+  stashSession,
+} from './helpers/board';
 import { dragResidue, expectNoResidue } from './helpers/drag';
 import { animationFrames, hidePage } from './helpers/lifecycle';
-import { booted } from './helpers/restore';
-import { fixture, seedStorage } from './helpers/seed';
 import { armStorageSpy, storageWrites } from './helpers/storage-spy';
 import { type TouchHold, touchHold } from './helpers/touch';
 
@@ -14,37 +22,15 @@ import { type TouchHold, touchHold } from './helpers/touch';
 // whole-column self-drop.
 
 type Point = { x: number; y: number };
-type Box = { x: number; y: number; w: number; h: number };
 
 const onAndroid = () =>
   test.skip(test.info().project.name !== 'android', 'touch flows run on android');
 const onDesktop = () =>
   test.skip(test.info().project.name !== 'desktop', 'mouse hover flows run on desktop');
 
-async function openFixture(page: Page, name: string): Promise<void> {
-  await seedStorage(page, { session: fixture(`${name}.json`) });
-  await page.goto('/');
-  await expect(page.locator('[data-card-id]')).toHaveCount(52);
-  await booted(page);
-}
-
-const column = (page: Page, n: number) => page.getByTestId(`column-${n}`);
-const cards = (page: Page, n: number) => column(page, n).locator('[data-place="column"]');
 const ghosts = (page: Page, n: number) => column(page, n).locator('[data-mirror-of]');
-const foot = (page: Page, n: number) => page.getByTestId(`foot-${n}`);
 const placeholder = (page: Page, n: number) => column(page, n).locator('[data-placeholder]');
 const faceOf = (card: Locator) => card.locator(':scope > .face');
-
-async function box(locator: Locator): Promise<Box> {
-  const b = await locator.boundingBox();
-  if (b === null) throw new Error('element has no box');
-  return { x: b.x, y: b.y, w: b.width, h: b.height };
-}
-
-async function centre(locator: Locator): Promise<Point> {
-  const b = await box(locator);
-  return { x: b.x + b.w / 2, y: b.y + b.h / 2 };
-}
 
 const plus = (p: Point, dx: number, dy: number): Point => ({ x: p.x + dx, y: p.y + dy });
 
@@ -106,24 +92,6 @@ function selection(page: Page): Promise<number | null> {
     const outlines = document.querySelectorAll('[data-selection-outline]').length;
     const lifted = document.querySelectorAll('.lifted').length;
     return outlines === 0 && lifted === 0 ? null : outlines + lifted;
-  });
-}
-
-// Stashes the store's Session reference; returns the stored wordcell:session text.
-function stashSession(page: Page): Promise<string | null> {
-  return page.evaluate(() => {
-    const current = window.__wordcell?.current();
-    if (current?.kind !== 'active') throw new Error(`store is ${current?.kind}`);
-    window.__pointerSession = current.session;
-    return localStorage.getItem('wordcell:session');
-  });
-}
-
-function sameSession(page: Page): Promise<boolean> {
-  return page.evaluate(() => {
-    const current = window.__wordcell?.current();
-    if (current?.kind !== 'active') throw new Error(`store is ${current?.kind}`);
-    return current.session === window.__pointerSession;
   });
 }
 

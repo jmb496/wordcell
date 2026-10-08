@@ -59,8 +59,15 @@ describe('bands', () => {
     ['a trailing comma', 'topBar,banner,leftover,columns,tray,wordcells,actionBar,'],
   ]) {
     it(`AD-11 ?bands= throws for ${why}`, () => {
-      expect(() => parse(`?bands=${list}`)).toThrow(Error);
       expect(() => parse(`?bands=${list}`)).toThrow(list);
+      let thrown: unknown;
+      try {
+        parse(`?bands=${list}`);
+      } catch (err) {
+        thrown = err;
+      }
+      // A plain Error, not a subclass.
+      expect((thrown as Error).constructor).toBe(Error);
     });
   }
 });

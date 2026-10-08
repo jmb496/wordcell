@@ -28,9 +28,9 @@ deferred:
     evidence: 'review-log Unapplied minors (stretch)'
     severity: low
   - summary: >-
-      A press whose end is lost (captured or implicit-capture element removed mid-press, so lostpointercapture fires at document, or the root turned inert) is recovered only by a same-id pointerdown; a touch press (new pointerId each touch) would leave the controller and gate stuck. Also: an uncaptured mouse press (board background, non-card column part, foot pad) released over the desktop `scrollbar-gutter: stable` strip sends its pointerup to <html>, not the root, so the press and gate stay busy until the next click (same-id pointerdown recovers).
+      A press whose end is lost (captured or implicit-capture element removed mid-press, so lostpointercapture fires at document, or the root turned inert) is recovered only by a same-id pointerdown; a touch press (new pointerId each touch) would leave the controller and gate stuck. Also: an uncaptured mouse press (board background, non-card column part, foot pad) released over the desktop `scrollbar-gutter: stable` strip: the gutter is outside the root, so its events (the pointerup included) do not reach the controller, and the press and gate stay busy until the next click (same-id pointerdown recovers).
     evidence: |-
-      Blind hunter and edge-case hunter; not reachable in entry 6 (no command or re-render runs during a press: buttons cancel first, layout waits on the gate, hide cancels). Settle when entries 8-11 re-render cards during a press: hold a press, remove its captured element, then touch with a new pointerId.
+      Blind hunter and edge-case hunter. The removed-element / new-pointerId case is not reachable in entry 6 (no command or re-render runs during a press: buttons cancel first, layout waits on the gate, hide cancels); settle it when entries 8-11 re-render cards during a press: hold a press, remove its captured element, then touch with a new pointerId. The desktop gutter case is reachable in entry 6 (mouse only; the next click recovers through same-id pointerdown).
     location: >-
       src/ui/gestures/controller.ts pointerdown / lostpointercapture
     severity: medium (unverified)
@@ -42,6 +42,13 @@ deferred:
       src/main.ts
     severity: low
   - summary: >-
+      The controller attached to a root mounted after boot (the `active` `<main use:pointerRoot>` mounted by New game from the §2 rejected root) has no case in e2e/pointer.spec.ts.
+    evidence: |-
+      4-6-build.md Unapplied minor 5 (default: record as entry 7/9 coverage). Covered in entry 7 (ticket 4.7) by e2e/blocking.spec.ts '§2 AD-13 New game from a rejected Session, then a tap selects' (android: a tap on the freshly mounted root selects, so the controller attached to it). Recorded by ticket 4.13 D9.
+    location: >-
+      src/ui/App.svelte pointerRoot; e2e/blocking.spec.ts
+    severity: low
+  - summary: >-
       e2e/layout.spec.ts 'AD-11 banner during a scroll applied after it ends' / '… after a hide' fail intermittently under parallel load (scrollY unchanged between steps; banner inserted mid-pan when scroll gaps pass 150 ms); pre-existing at baseline 33015bf.
     evidence: |-
       With layout+lifecycle specs, android, --repeat-each 4: baseline 4/16 failures, this change 2/16; 6/6 pass run alone; test:all passed.
@@ -49,7 +56,7 @@ deferred:
       e2e/layout.spec.ts:250, :272
     severity: medium
   - summary: >-
-      Deviation from the ticket Notes probe ("rect covers the viewport"), for the owner: on desktop the root's box stops at the `scrollbar-gutter: stable` strip (≤ 20 px, receives no page pointer events), so 'AD-12 the controller root spans the viewport' bounds desktop by the root's box right edge plus ≤ 20 px of gutter; android is exact.
+      Deviation from the ticket Notes probe ("rect covers the viewport"), for the owner: on desktop the root's box stops at the `scrollbar-gutter: stable` strip (≤ 20 px; the gutter is outside the root, so its events do not reach the controller), so 'AD-12 the controller root spans the viewport' bounds desktop by the root's box right edge plus ≤ 20 px of gutter; android is exact.
     evidence: |-
       This Chromium reports documentElement.clientWidth 1280 while main/body/html end at 1265 (Implementation Notes, Notes probe).
     location: >-
@@ -135,11 +142,13 @@ deferred:
 
 - Warm unit median (3 runs after a discarded warm-up): 4.65 / 4.74 / 4.75 s → 4.74 s (under the AD-17 5 s budget, little headroom).
 - `npm run test:all` green; `e2e/layout.spec.ts` scroll tests pass unchanged with the controller attached.
-- Notes probe (`AD-12 the controller root spans the viewport`): passes on android (main = 412 × 839 viewport). On desktop this Chromium reports `documentElement.clientWidth` 1280 although `scrollbar-gutter: stable` reserves 15 px (main/body/html right edge 1265), so the desktop bound is the root element's box right edge, plus an assertion that the uncovered strip is at most 20 px (the scrollbar gutter, where presses hit the scrollbar, not the page).
+- Notes probe (`AD-12 the controller root spans the viewport`): passes on android (main = 412 × 839 viewport). On desktop this Chromium reports `documentElement.clientWidth` 1280 although `scrollbar-gutter: stable` reserves 15 px (main/body/html right edge 1265), so the desktop bound is the root element's box right edge, plus an assertion that the uncovered strip is at most 20 px (the scrollbar gutter; it is outside the root, so its events do not reach the controller).
 - `__pointerSession` (the stashed Session reference for the tray-tile test) is declared in `e2e/globals.d.ts` beside `__wordcellStorageWrites`.
 - The controller resolves an enabled-button hit before anything else only for hits inside the root; a null or out-of-root hit is an uncaptured `other` press (I/O matrix).
 
 ## Plan Change Log
+
+- 2026-10-07 (ticket 4.13 D9, 4-6-build.md minors 1 and 5): one gutter wording in the lost-end and deviation `deferred` entries, Implementation Notes and Verification (the gutter is outside the root, its events do not reach the controller); the lost-end entry states the desktop gutter case is reachable in entry 6 (mouse; the next click recovers). Added the `deferred` entry recording "controller attached to a root mounted after boot" as entry 7 coverage.
 
 ## Review Triage Log
 
@@ -213,6 +222,6 @@ deferred:
 
 **Follow-up review:** false (no high or medium patched).
 
-**Verification.** `npm run lint`, `npm run check` clean; `npm test` 1851 passed, warm 4.59-4.74 s; `npm run test:all` exit 0 (dist-smoke 14, dev e2e 254 passed, pwa 12 passed). Notes probe passed on android exactly and on desktop against the root's box (the scrollbar gutter strip receives no page pointer events).
+**Verification.** `npm run lint`, `npm run check` clean; `npm test` 1851 passed, warm 4.59-4.74 s; `npm run test:all` exit 0 (dist-smoke 14, dev e2e 254 passed, pwa 12 passed). Notes probe passed on android exactly and on desktop against the root's box (the scrollbar gutter strip is outside the root; its events do not reach the controller).
 
 **Residual risks.** Unit suite close to the 5 s budget; the layout banner-during-scroll tests are flaky under parallel load (pre-existing, baseline fails more often); the review-log items are resolved per the Design Notes, the three stretch/later items recorded in `deferred`.

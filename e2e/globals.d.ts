@@ -55,7 +55,8 @@ declare global {
     >;
     // e2e/helpers/storage-spy.ts: localStorage writes in order (removeItem as a null value).
     __wordcellStorageWrites?: { key: string; value: string | null }[];
-    // e2e/pointer.spec.ts: the store's Session reference, stashed to assert it is unchanged.
+    // e2e/helpers/board.ts stashSession: the store's Session reference, stashed to assert it is
+    // unchanged.
     __pointerSession?: unknown;
   }
 }

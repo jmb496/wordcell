@@ -1,7 +1,7 @@
 import { expect, type Page, type Request, type Route, test } from '@playwright/test';
+import { openFixture } from './helpers/board';
 import { animationFrames, hidePage, showPage } from './helpers/lifecycle';
 import { waitForDictionary } from './helpers/restore';
-import { fixture, seedStorage } from './helpers/seed';
 import { type TouchHold, touchHold } from './helpers/touch';
 
 // Epic 4 entry 4: the live layout, the AD-11 gate latch and the DESIGN.md Scrolling regions.
@@ -30,12 +30,6 @@ async function holdList(page: Page): Promise<{ fail(): Promise<void> }> {
   };
 }
 
-async function openFixture(page: Page, name: string): Promise<void> {
-  await seedStorage(page, { session: fixture(`${name}.json`) });
-  await page.goto('/');
-  await expect(page.locator('[data-card-id]')).toHaveCount(52);
-}
-
 const banner = (page: Page) => page.locator('[data-band="banner"] > *');
 
 function rect(page: Page, selector: string) {
@@ -53,7 +47,7 @@ test.describe('AD-11 banner at 412 × 915', () => {
   test('AD-11 banner takes leftover first', async ({ page }) => {
     onAndroid();
     const list = await holdList(page);
-    await openFixture(page, 'session-idle-fresh');
+    await openFixture(page, 'session-idle-fresh', { booted: false });
     expect((await rect(page, '[data-band="leftover"]')).height).toBe(177);
     const face = page.locator('[data-testid="column-1"] [data-card-id] > .face').first();
     expect((await face.boundingBox())?.width).toBe(46);
@@ -83,7 +77,7 @@ test.describe('AD-11 banner at 412 × 780', () => {
   }) => {
     onAndroid();
     const list = await holdList(page);
-    await openFixture(page, 'session-idle-fresh');
+    await openFixture(page, 'session-idle-fresh', { booted: false });
     expect((await rect(page, '[data-band="leftover"]')).height).toBe(42);
     const before = await rect(page, '[data-band="wordcells"]');
     // Recorded in the MutationObserver callback for the banner's insertion: the relayout inserts
@@ -172,47 +166,65 @@ function tickOf(ticks: number[], t: number): number {
   return i;
 }
 
+// One frame of the paused page clock (4.13 D1): the page's requestAnimationFrame, timers and
+// performance.now() are the clock's, so frames and the gate's 150 ms timer advance only here.
+async function frames(page: Page, count: number): Promise<void> {
+  for (let i = 0; i < count; i++) await page.clock.runFor(16);
+}
+
 // Path 1 (plan Design Notes): a foot-pad touchHold pan at 412 × 600, nothing selected. Steps of
-// 3 px past the touch slop, then ±3 px about every 50 ms (the pause before each move, so a pan
-// returns right after its last scroll) while the word list fails, each step checking that scrollY
-// changed and no banner was inserted. Returns the held pan.
+// 3 px past the touch slop, then ±3 px every 51 ms of page time (35 ms, the move, one frame) while
+// the word list fails, each step checking that scrollY changed and no banner was inserted.
+// Deterministic (ticket 4.13 D1): the page clock is installed and paused before load (as
+// e2e/blocking.spec.ts), and each move's scroll event, dispatched in a real frame, is awaited
+// before page time advances, so every recorded timestamp is page time. Returns the held pan.
 async function panThroughFailure(page: Page): Promise<TouchHold> {
+  await page.clock.install({ time: 0 });
+  await page.clock.pauseAt(1000);
   const list = await holdList(page);
-  await openFixture(page, 'session-idle-fresh');
+  await openFixture(page, 'session-idle-fresh', { booted: false });
   await installRecorders(page);
   const foot = await rect(page, '[data-testid="foot-1"]');
   const x = foot.left + foot.width / 2;
   let y = foot.top + foot.height / 2;
   const hold = await touchHold(page, { x, y });
-  // scrollY and the banner state one frame after a move.
-  const settle = () =>
-    page.evaluate(
-      () =>
-        new Promise<{ y: number; inserted: boolean; state: string | undefined }>((resolve) =>
-          requestAnimationFrame(() =>
-            resolve({
-              y: window.scrollY,
-              inserted: (window as unknown as { __rec: Recorded }).__rec.inserted !== null,
-              state: window.__wordcell?.dictionaryState(),
-            }),
-          ),
-        ),
-    );
+  const scrollCount = () =>
+    page.evaluate(() => (window as unknown as { __rec: Recorded }).__rec.scrolls.length);
+  // Waits for a scroll event after `count` events at the current scrollY, then one frame; returns
+  // scrollY and the banner state.
+  const settle = async (count: number) => {
+    await expect
+      .poll(() =>
+        page.evaluate((n) => {
+          const { scrolls } = (window as unknown as { __rec: Recorded }).__rec;
+          return scrolls.length > n && scrolls.at(-1)?.y === window.scrollY;
+        }, count),
+      )
+      .toBe(true);
+    await frames(page, 1);
+    return page.evaluate(() => ({
+      y: window.scrollY,
+      inserted: (window as unknown as { __rec: Recorded }).__rec.inserted !== null,
+      state: window.__wordcell?.dictionaryState(),
+    }));
+  };
   try {
+    const start = await scrollCount();
     for (let i = 0; i < 10; i++) {
       y -= 3;
       await hold.moveTo({ x, y });
-      await page.waitForTimeout(30);
+      await page.clock.runFor(30);
     }
-    let last = await settle();
+    let last = await settle(start);
     expect(last.y, 'the foot-pad pan scrolls the page').toBeGreaterThan(0);
     let dir = 1;
     const step = async () => {
-      await page.waitForTimeout(35);
+      await page.clock.runFor(35);
       y += 3 * dir;
       dir = -dir;
+      const count = await scrollCount();
       await hold.moveTo({ x, y });
-      const next = await settle();
+      const next = await settle(count);
       expect(next.y, 'scrollY changes between steps').not.toBe(last.y);
       expect(next.inserted, 'no banner while the pan continues').toBe(false);
       last = next;
@@ -222,8 +234,8 @@ async function panThroughFailure(page: Page): Promise<TouchHold> {
       if (i > 100) throw new Error('the word list never failed');
       await step();
     }
-    const until = Date.now() + 300;
-    while (Date.now() < until) await step();
+    // 300 ms of page time: six 51 ms steps.
+    for (let i = 0; i < 6; i++) await step();
     const rec = await recorded(page);
     expect(rec.scrollends, 'no scrollend before release').toEqual([]);
     const gaps = rec.scrolls.slice(1).map((s, i) => s.t - (rec.scrolls[i] as { t: number }).t);
@@ -252,8 +264,10 @@ test.describe('AD-11 banner during a scroll at 412 × 600', () => {
     const hold = await panThroughFailure(page);
     try {
       // Finger kept down, no moves (a held pan fires no scrollend): the 150 ms quiet point (A-A9).
+      await page.clock.runFor(150);
+      await frames(page, 1);
       await expect.poll(async () => (await recorded(page)).inserted).not.toBeNull();
-      await animationFrames(page, 2);
+      await frames(page, 2);
       const rec = await recorded(page);
       const inserted = rec.inserted as number;
       const lastScroll = lastScrollBefore(rec, inserted);
@@ -280,10 +294,10 @@ test.describe('AD-11 banner during a scroll at 412 × 600', () => {
       const page = attempt === 0 ? first : await context.newPage();
       const hold = await panThroughFailure(page);
       try {
-        await animationFrames(page, 1);
+        await frames(page, 1);
         await hidePage(page);
         await showPage(page);
-        await animationFrames(page, 2);
+        await frames(page, 2);
         const rec = await recorded(page);
         const hidden = rec.visibility[0];
         if (hidden === undefined) throw new Error('no visibilitychange recorded');
@@ -386,7 +400,7 @@ test('AD-11 touch-action and user-select regions (computed style)', async ({ pag
     isList(route.request()) ? route.fulfill({ status: 500, body: '' }) : route.continue(),
   );
   if (test.info().project.name === 'android') {
-    await openFixture(page, 'session-composing');
+    await openFixture(page, 'session-composing', { booted: false });
     await waitForDictionary(page, 'failed');
     await expect(banner(page)).toHaveCount(1);
     await expectRegions(page, 'pan-y');
@@ -395,13 +409,18 @@ test('AD-11 touch-action and user-select regions (computed style)', async ({ pag
     }
     // Count badges on a fixture with stacked WordCells.
     const won = await context.newPage();
-    await openFixture(won, 'session-won');
+    await openFixture(won, 'session-won', { booted: false });
     await expectTouchAction(won, '[data-wordcell] .count', 'none');
     await expectNoSelect(won, '[data-wordcell] .count');
     return;
   }
+  // 4-4 m2: a non-wide desktop board keys --wc-pan on `wide`, not hoverFine: pan-y.
+  const narrow = await context.newPage();
+  await narrow.setViewportSize({ width: 1280, height: 720 });
+  await openFixture(narrow, 'session-composing', { booted: false });
+  await expectTouchAction(narrow, '[data-band="leftover"]', 'pan-y');
   await page.setViewportSize({ width: 370, height: 750 });
-  await openFixture(page, 'session-composing');
+  await openFixture(page, 'session-composing', { booted: false });
   await waitForDictionary(page, 'failed');
   await expect(banner(page)).toHaveCount(1);
   const clientWidth = await page.evaluate(() => document.documentElement.clientWidth);

@@ -1,8 +1,16 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
+import {
+  box,
+  cards,
+  centre,
+  column,
+  foot,
+  openFixture,
+  sameSession,
+  stashSession,
+} from './helpers/board';
 import { expectNoResidue } from './helpers/drag';
 import { animationFrames } from './helpers/lifecycle';
-import { booted } from './helpers/restore';
-import { fixture, seedStorage } from './helpers/seed';
 import { tokenColor } from './helpers/style';
 import { type TouchHold, touchHold } from './helpers/touch';
 
@@ -20,29 +28,8 @@ const onAndroid = () =>
 const onDesktop = () =>
   test.skip(test.info().project.name !== 'desktop', 'mouse drag flows run on desktop');
 
-async function openFixture(page: Page, name: string): Promise<void> {
-  await seedStorage(page, { session: fixture(`${name}.json`) });
-  await page.goto('/');
-  await expect(page.locator('[data-card-id]')).toHaveCount(52);
-  await booted(page);
-}
-
-const column = (page: Page, n: number) => page.getByTestId(`column-${n}`);
-const cards = (page: Page, n: number) => column(page, n).locator('[data-place="column"]');
-const foot = (page: Page, n: number) => page.getByTestId(`foot-${n}`);
 const placeholder = (page: Page, n: number) => column(page, n).locator('[data-placeholder]');
 const faceOf = (card: Locator) => card.locator(':scope > .face');
-
-async function box(locator: Locator): Promise<Box> {
-  const b = await locator.boundingBox();
-  if (b === null) throw new Error('element has no box');
-  return { x: b.x, y: b.y, w: b.width, h: b.height };
-}
-
-async function centre(locator: Locator): Promise<Point> {
-  const b = await box(locator);
-  return { x: b.x + b.w / 2, y: b.y + b.h / 2 };
-}
 
 const idOf = async (card: Locator) => Number(await card.getAttribute('data-card-id'));
 
@@ -51,24 +38,6 @@ function ratio(a: Box, b: Box): number {
   const w = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
   const h = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
   return w > 0 && h > 0 ? (w * h) / (a.w * a.h) : 0;
-}
-
-// Stashes the store's Session reference; returns the stored wordcell:session text.
-function stashSession(page: Page): Promise<string | null> {
-  return page.evaluate(() => {
-    const current = window.__wordcell?.current();
-    if (current?.kind !== 'active') throw new Error(`store is ${current?.kind}`);
-    window.__pointerSession = current.session;
-    return localStorage.getItem('wordcell:session');
-  });
-}
-
-function sameSession(page: Page): Promise<boolean> {
-  return page.evaluate(() => {
-    const current = window.__wordcell?.current();
-    if (current?.kind !== 'active') throw new Error(`store is ${current?.kind}`);
-    return current.session === window.__pointerSession;
-  });
 }
 
 // The Session's move count and cursor index.
@@ -425,7 +394,9 @@ test.describe('android', () => {
       { sourceColumn: 5, sourceCount: 6, destinationColumn: 2 },
       1,
     );
-    expect(got.arrangement.slice(0, 6)).toEqual(ids);
+    expect(got.arrangement).toEqual(ids);
+    // D19: the emptied source column shows its ghosts, no placeholder.
+    expect(await css(placeholder(page, 5), 'visibility')).toBe('hidden');
     const tray = (await trayOrder(page)).filter((t) => !t.endsWith('m')).map(Number);
     expect(tray).toEqual(ids);
     await expectNoResidue(page);
@@ -531,7 +502,7 @@ test.describe('android', () => {
     expect(await sameSession(page)).toBe(true);
   });
 
-  test('Q-34 a sub-25 % drag over the source only highlights nothing and flies back', async ({
+  test('R-14 Q-34 a sub-25 % drag over the source only highlights nothing and flies back', async ({
     page,
   }) => {
     await recordFaceAnimations(page);
@@ -578,6 +549,9 @@ test.describe('android', () => {
     const slot = await box(column(page, 1));
     const hold = await holdThrough(page, from, [plus(from, 0, 10), plus(from, 4, 14)], async () => {
       expect(await targets(page)).toEqual([]);
+      // A drag from the first move (≥ 8 px) whose raw target is the source (≥ 25 %).
+      await expectDragging(pressed);
+      expect(ratio(await box(faceOf(pressed)), slot)).toBeGreaterThanOrEqual(0.25);
     });
     try {
       for (const p of [plus(from, slot.w, 10), plus(from, 0, 0)]) {
@@ -605,6 +579,9 @@ test.describe('android', () => {
     const hold = await holdThrough(page, from, [plus(from, 0, 10)], async () => {
       expect(await targets(page)).toEqual([]);
       expect(await css(placeholder(page, 5), 'visibility')).toBe('hidden');
+      // A drag from the first move (≥ 8 px) whose raw target is the source (≥ 25 %).
+      await expectDragging(cards(page, 5).first());
+      expect(ratio(await box(faceOf(cards(page, 5).first())), slot)).toBeGreaterThanOrEqual(0.25);
     });
     try {
       for (const p of [plus(from, slot.w, 10), plus(from, 0, 0)]) {
@@ -618,6 +595,61 @@ test.describe('android', () => {
       await hold.end();
     }
     await expectDrop(page, { sourceColumn: 5, sourceCount: 6, destinationColumn: 5 }, 0);
+    await expectNoResidue(page);
+  });
+});
+
+// Ticket 4.13 D7 (SPEC F34, AD-12): 412 × 600 (w 40, scroll range 122, build-notes CAP-3), the
+// board scrolled to its end so the columns' tops lie under the sticky top bar.
+test.describe('android, scrolled board', () => {
+  test.use({ viewport: { width: 412, height: 600 } });
+  test.beforeEach(onAndroid);
+
+  test('AD-12 F34 a tail held over the top bar never lights the column under it; the release flies back and the stored Session is byte-identical', async ({
+    page,
+  }) => {
+    await recordFaceAnimations(page);
+    await openFixture(page, 'session-idle-fresh');
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(100);
+    await animationFrames(page, 2);
+    const before = await stashSession(page);
+    const bar = await box(page.locator('[data-band="topBar"]'));
+    const barBottom = bar.y + bar.h;
+    // Premise: column 3's hit rect starts under the top bar.
+    const col3 = await box(column(page, 3));
+    expect(col3.y).toBeLessThan(0);
+    const dragged = cards(page, 1).last();
+    const rest = await box(faceOf(dragged));
+    const from = await centre(dragged);
+    // Up inside column 1 until the face's bottom is 4 px above the bar's bottom, then across to
+    // column 3's centre over the bar.
+    const up = plus(from, 0, barBottom - 4 - (rest.y + rest.h));
+    const across = { x: from.x + (col3.x + col3.w / 2 - (rest.x + rest.w / 2)), y: up.y };
+    const vertical = path(from, up, 6);
+    const horizontal = path(up, across, 6);
+    const hold = await holdThrough(page, from, [...vertical, ...horizontal], async (i) => {
+      await expectDragging(dragged);
+      expect(await targets(page)).not.toContain(3);
+      if (i < vertical.length) return;
+      expect(await targets(page)).toEqual([]);
+    });
+    try {
+      const face = await box(faceOf(dragged));
+      // The face lies wholly under the bar, yet overlaps column 3's unclipped rect fully.
+      expect(face.y + face.h).toBeLessThanOrEqual(barBottom);
+      expect(ratio(face, col3)).toBeGreaterThanOrEqual(0.25);
+      expect(await targets(page)).toEqual([]);
+      expect(await sameSession(page)).toBe(true);
+    } finally {
+      await hold.end();
+    }
+    await animationFrames(page, 2);
+    expect(await targets(page)).toEqual([]);
+    await expect.poll(() => faceAnimations(page)).toEqual([await idOf(dragged)]);
+    await expectFlownBack(dragged, rest);
+    expect(await storedText(page)).toBe(before);
+    expect(await sameSession(page)).toBe(true);
     await expectNoResidue(page);
   });
 });

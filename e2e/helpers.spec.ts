@@ -3,6 +3,16 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { expect, type Page, test } from '@playwright/test';
 import { expectAnotherWindow, expectOnlyButton, kind, stored } from './helpers/blocking';
+import {
+  box,
+  cards,
+  centre,
+  column,
+  foot,
+  openFixture,
+  sameSession,
+  stashSession,
+} from './helpers/board';
 import { button, expectLeaves, hitAt, wc } from './helpers/dialogs';
 import { buildRoot } from './helpers/dist-test';
 import { dragResidue, expectNoResidue } from './helpers/drag';
@@ -328,6 +338,94 @@ test.describe('board, dictionary and style helpers', () => {
     const before = await children();
     expect(await tokenColor(page, '--probe')).toBe('rgb(255, 128, 0)');
     expect(await children()).toBe(before);
+  });
+});
+
+test.describe('board helpers', () => {
+  test('AD-17 openFixture seeds the session and prefs fixtures, waits for the booted board and clicks steps; a missing fixture rejects before navigating', async ({
+    page,
+    context,
+  }) => {
+    const seeded = JSON.parse(fixture('session-idle-empty-column.json')) as {
+      cursor: { index: number };
+    };
+    await openFixture(page, 'session-idle-empty-column', {
+      prefs: 'prefs-non-default',
+      steps: ['undo'],
+    });
+    await expect(page.locator('[data-card-id]')).toHaveCount(52);
+    const current = await page.evaluate(() => window.__wordcell?.current());
+    if (current?.kind !== 'active') throw new Error(`store is ${current?.kind}`);
+    expect(current.session.cursor.index).toBe(seeded.cursor.index - 1);
+    expect(await page.evaluate(() => localStorage.getItem('wordcell:prefs'))).toBe(
+      fixture('prefs-non-default.json'),
+    );
+
+    const other = await context.newPage();
+    await expect(openFixture(other, 'session-no-such-fixture')).rejects.toThrow(/ENOENT/);
+    expect(other.url()).toBe('about:blank');
+  });
+
+  test('AD-17 column, cards and foot locate column n, its live cards (no mirrors) and foot pad n; none past 8', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-composing');
+    for (let n = 1; n <= 8; n++) {
+      await expect(column(page, n)).toHaveCount(1);
+      await expect(foot(page, n)).toHaveCount(1);
+    }
+    // Column 3: five live cards above two S ghosts (column-phases.spec.ts).
+    await expect(cards(page, 3)).toHaveCount(5);
+    await expect(column(page, 3).locator('[data-mirror-of]')).toHaveCount(2);
+    for (const card of await cards(page, 3).all()) {
+      expect(await card.getAttribute('data-place')).toBe('column');
+    }
+    await expect(column(page, 9)).toHaveCount(0);
+    await expect(cards(page, 9)).toHaveCount(0);
+    await expect(foot(page, 0)).toHaveCount(0);
+  });
+
+  test('AD-17 box and centre read a bounding box as x, y, w, h and its centre; an element without a box rejects', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-idle-fresh');
+    const raw = await column(page, 2).boundingBox();
+    if (raw === null) throw new Error('column 2 has no box');
+    expect(await box(column(page, 2))).toEqual({ x: raw.x, y: raw.y, w: raw.width, h: raw.height });
+    expect(await centre(column(page, 2))).toEqual({
+      x: raw.x + raw.width / 2,
+      y: raw.y + raw.height / 2,
+    });
+    await page.evaluate(() => {
+      const probe = document.createElement('div');
+      probe.id = 'no-box-probe';
+      probe.style.display = 'none';
+      document.body.append(probe);
+    });
+    const hidden = page.locator('#no-box-probe');
+    await expect(box(hidden)).rejects.toThrow('element has no box');
+    await expect(centre(hidden)).rejects.toThrow('element has no box');
+  });
+
+  test('AD-17 stashSession returns the stored text and sameSession holds until the Session changes; both reject a non-active store', async ({
+    page,
+    context,
+  }) => {
+    await openFixture(page, 'session-idle-empty-column');
+    expect(await stashSession(page)).toBe(
+      await page.evaluate(() => localStorage.getItem('wordcell:session')),
+    );
+    expect(await sameSession(page)).toBe(true);
+    await page.getByTestId('undo').click();
+    await expect.poll(() => sameSession(page)).toBe(false);
+
+    const other = await context.newPage();
+    await seedStorage(other, { session: fixture('session-invalid-array.json') });
+    await other.goto('/');
+    await booted(other);
+    expect(await other.evaluate(() => window.__wordcell?.current().kind)).toBe('rejected');
+    await expect(stashSession(other)).rejects.toThrow('store is rejected');
+    await expect(sameSession(other)).rejects.toThrow('store is rejected');
   });
 });
 

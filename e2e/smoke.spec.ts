@@ -90,5 +90,13 @@ test('R-03 the dealt layout renders top → bottom in every column', async ({ pa
       .locator('[data-card-id] .glyph')
       .evaluateAll((els) => els.map((el) => (el.textContent ?? '').toUpperCase()));
     expect(glyphs, `column ${column}`).toEqual(letters);
+    // DOM order is visual order: card wrapper tops strictly increase down the column.
+    const tops = await page
+      .getByTestId(`column-${column}`)
+      .locator('[data-card-id]')
+      .evaluateAll((els) => els.map((el) => el.getBoundingClientRect().top));
+    for (let i = 1; i < tops.length; i++) {
+      expect(tops[i], `column ${column} card ${i}`).toBeGreaterThan(tops[i - 1] as number);
+    }
   }
 });

@@ -58,6 +58,19 @@ describe('AD-12 pickTarget', () => {
     expect(pickTarget(dragged(30), [...columns].reverse(), 4, true).raw).toBe(1);
   });
 
+  it('AD-12 equal ratios compare horizontal centre distance only, not 2-D distance', () => {
+    // Dragged 30..70 × 0..40, centre (50, 20). Column 2 (x 40..70, y 20..2000; centre x 55, y 1010):
+    // 30 × 20 in (37.5 %), horizontally 5 away but vertically 990. Column 1 (x 15..45, y −100..140;
+    // centre x 30, y 20): 15 × 40 in (37.5 %), horizontally 20 away, vertically level. Horizontal
+    // distance picks 2; a 2-D centre distance or the lower id would pick 1.
+    const skewed: Candidate[] = [
+      { id: 1, rect: { left: 15, top: -100, right: 45, bottom: 140 } },
+      { id: 2, rect: { left: 40, top: 20, right: 70, bottom: 2000 } },
+    ];
+    expect(pickTarget(dragged(30), skewed, 4, true).raw).toBe(2);
+    expect(pickTarget(dragged(30), [...skewed].reverse(), 4, true).raw).toBe(2);
+  });
+
   it('AD-12 source largest and hasLeftSource false → raw = source, highlighted null', () => {
     expect(pickTarget(dragged(55), columns, 2, false)).toEqual({ raw: 2, highlighted: null });
   });

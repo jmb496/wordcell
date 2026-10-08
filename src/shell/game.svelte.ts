@@ -32,13 +32,10 @@ import { type CurrentHistory, type LoadedHistory, scoreHistory } from './history
 import { type LoadedPrefs, type Prefs, prefs } from './prefs.svelte';
 import { newSeed } from './seed';
 import { isLocalArea, read, SESSION_KEY, write } from './storage';
+import { launchSnapshot, type RejectReasonOf, rejectReason, trackLastText } from './stored-key';
 
 /** AD-4: a failed `parseSession` result without `ok`. */
-export type RejectReason = ParseSessionResult extends infer R
-  ? R extends { readonly ok: false }
-    ? Omit<R, 'ok'>
-    : never
-  : never;
+export type RejectReason = RejectReasonOf<ParseSessionResult>;
 
 export type GameState =
   | { readonly kind: 'booting' }
@@ -84,10 +81,10 @@ let state = $state.raw<GameState>({ kind: 'booting' });
 let halted = $state.raw<{ cause: 'fatal'; text: string } | { cause: 'another-window' } | undefined>(
   undefined,
 );
-let launch: Pick<Loaded, 'session'> | undefined;
+const launch = launchSnapshot<Pick<Loaded, 'session'>>();
 let feedback = $state.raw<Feedback>({});
 // Q-38: the last `wordcell:session` text this store read or successfully wrote (`null` when absent).
-let sessionText: string | null = null;
+const sessionText = trackLastText();
 let registered = false;
 const beforeHide: (() => void)[] = [];
 let visibleResolvers: (() => void)[] = [];
@@ -96,25 +93,19 @@ const currentView: GameView | undefined = $derived(
   state.kind === 'active' ? view(state.session, EN) : undefined,
 );
 
-function rejectReason(parsed: Exclude<ParseSessionResult, { ok: true }>): RejectReason {
-  return parsed.reason === 'version-unreadable'
-    ? { reason: parsed.reason }
-    : { reason: parsed.reason, version: parsed.version };
-}
-
 function load(): void {
   if (state.kind === 'halted') {
     // Q-38: halted during boot; record the launch result (AD-17 `loaded()`) and write nothing.
-    if (launch !== undefined) throw new Error('AD-4 load() called twice');
+    launch.assertUnset('AD-4 load() called twice');
     const stored = read(SESSION_KEY);
     scoreHistory.load();
-    sessionText = stored;
+    sessionText.remember(stored);
     if (stored === null) {
-      launch = { session: null };
+      launch.set({ session: null });
       return;
     }
     const result = parseSession(stored, EN);
-    launch = { session: result.ok ? result.session : { rejected: rejectReason(result) } };
+    launch.set({ session: result.ok ? result.session : { rejected: rejectReason(result) } });
     return;
   }
   if (state.kind !== 'booting') throw new Error(`AD-4 load() while ${state.kind}`);
@@ -125,20 +116,20 @@ function load(): void {
     const session = createSession(newSeed());
     const written = serializeSession(session);
     write(SESSION_KEY, written);
-    sessionText = written;
-    launch = { session: null };
+    sessionText.remember(written);
+    launch.set({ session: null });
     state = { kind: 'active', session };
     return;
   }
-  sessionText = text;
+  sessionText.remember(text);
   const parsed = parseSession(text, EN);
   if (parsed.ok) {
-    launch = { session: parsed.session };
+    launch.set({ session: parsed.session });
     state = { kind: 'active', session: parsed.session };
     return;
   }
   const reason = rejectReason(parsed);
-  launch = { session: { rejected: reason } };
+  launch.set({ session: { rejected: reason } });
   state = { kind: 'rejected', reason };
 }
 
@@ -172,7 +163,7 @@ function dispatch(command: Command): DispatchResult {
       rollback?.();
       throw error;
     }
-    sessionText = text;
+    sessionText.remember(text);
     state = { kind: 'active', session: result.session };
   }
   if (result.rejectedWord !== undefined) feedback = { rejectedWord: result.rejectedWord };
@@ -194,7 +185,7 @@ function fresh(seed: number): void {
   feedback = {};
   const text = serializeSession(session);
   write(SESSION_KEY, text);
-  sessionText = text;
+  sessionText.remember(text);
 }
 
 /** R-74: a fresh random deal, from `active` or `rejected`. */
@@ -227,7 +218,7 @@ function halt(cause: HaltCause, text?: string): void {
 
 /** Q-38: whether `wordcell:session` differs from the text this store last read or wrote. */
 function isStale(): boolean {
-  return read(SESSION_KEY) !== sessionText;
+  return sessionText.isStale(read(SESSION_KEY));
 }
 
 // Q-38 bfcache: every key owner's check, ORed.
@@ -252,7 +243,7 @@ function flush(): void {
   const accrued = accrue(state.session, ms, EN);
   const text = serializeSession(accrued);
   write(SESSION_KEY, text);
-  sessionText = text;
+  sessionText.remember(text);
   if (accrued !== state.session) state = { kind: 'active', session: accrued };
 }
 
@@ -295,8 +286,8 @@ function whenVisible(): Promise<void> {
 }
 
 function loaded(): Loaded {
-  if (launch === undefined) throw new Error(`AD-17 loaded() while ${state.kind}`);
-  return { session: launch.session, history: scoreHistory.loaded(), prefs: prefs.loaded() };
+  const { session } = launch.get(() => `AD-17 loaded() while ${state.kind}`);
+  return { session, history: scoreHistory.loaded(), prefs: prefs.loaded() };
 }
 
 function current(): Current {

@@ -100,6 +100,8 @@ deferred: []
 
 ## Plan Change Log
 
+- 2026-10-07 (ticket 4.13 D9, 4-8-build.md unapplied minors): the sub-25 % Q-34 Playwright case is named `R-14 Q-34 …` (rule-coverage R-14 row) in the case list; the Residual-risks fly-back line says a cancelled fly-back throws `AD-12 fly-back animation cancelled` (since the review loop's pass 2 item 9).
+
 ## Review Triage Log
 
 ### 2026-10-02 — Review pass
@@ -185,7 +187,7 @@ deferred: []
 - `R-10 R-11 R-23 a whole-column drag from column 5's top card onto column 2`: mid-drag every column-5 wrapper has `wc-drag-ghost` (computed `::before` border-style dashed), the dragged face's background colour equals `--wc-card-face`, no `[data-mirror-of]`, 52 `[data-card-id]`; while held over the top bar, one `page.evaluate` sets the face's `pointer-events: auto`, asserts `elementsFromPoint` first hit is the face or inside it, restores; release over column 2 → `drop(5, 6, 2)`, k = 1, side left, tray S order = column 5's ids top to bottom.
 - `R-14 a drag released over the WordCell row flies back` + the guard: tail = column 1's bottom 2 cards; init-script records two `animate` calls (resolution above); storage byte-identical, reference unchanged; after the animations finish no `wc-drag-*` class; one face animation per tail face (the logged card ids equal the two tail cards); faces back on their pre-drag boxes ±1 px.
 - `Q-34 R-14 a 20 px drag down from column 4's bottom card …`: no highlight at any step, fly-back, byte-identical; drag latched (inline transform, `wc-drag-ghost`) from the threshold crossing, with the face ≥ 25 % over column 4; one face animation per tail face (the fly-back); faces back on their pre-drag boxes ±1 px.
-- `Q-34 a sub-25 % drag over the source only`: column 4's bottom card moved straight up until its face's overlap with column 4's box is in (0, 25 %) and none with another column (computed from boxes), released: no highlight at any step, byte-identical; drag latched (inline transform, `wc-drag-ghost`) from the threshold crossing; one face animation per tail face (the fly-back); faces back on their pre-drag boxes ±1 px.
+- `R-14 Q-34 a sub-25 % drag over the source only highlights nothing and flies back`: column 4's bottom card moved straight up until its face's overlap with column 4's box is in (0, 25 %) and none with another column (computed from boxes), released: no highlight at any step, byte-identical; drag latched (inline transform, `wc-drag-ghost`) from the threshold crossing; one face animation per tail face (the fly-back); faces back on their pre-drag boxes ±1 px.
 - `R-10 R-14 R-20 R-21 leave and return on column 1's third card from the bottom`: no highlight before leaving; after leaving and returning, the 4th card from the bottom has `wc-drag-target`; release → `drop(1, 3, 1)`, k = 1, D = that card.
 - `R-14 R-20 R-22 whole-column self-drop`: column 5's top card off column 5 and back: before leaving, placeholder hidden and nothing highlighted; after returning the placeholder is visible with `wc-drag-target`; release → `drop(5, 6, 5)`, k = 0.
 - Desktop (`page.mouse`, live rects): the Success-signal drop; the 20 px Q-34 cancel; hover: hovering column 4's bottom card shows `wc-hover-tail`/`wc-grab`, mid-drag no `[data-column]` carries a hover class, after a fly-back released over that card they return without a further mouse move.
@@ -229,5 +231,5 @@ deferred: []
 **Residual risks.**
 - Warm unit median 4.93 s leaves little headroom under the 5 s AD-17 budget for entries 9–10.
 - The `layout.spec.ts` scroll-gap flake recurs under 8-worker load (pre-existing, not this ticket's code).
-- A fly-back cancelled by anything other than `cancel()` would not settle (`onfinish` only); unreachable today, relevant when epic 5 adds animations.
+- A fly-back animation cancelled by anything other than `cancel()` (whose `finish()` never cancels) now throws `AD-12 fly-back animation cancelled` from its `oncancel` to the AD-15 handler (rule 6) instead of leaving the gate held; unreachable today, relevant when epic 5 adds animations.
 - A layout change mid-drag with no pointer move (resize, relayout, banner) leaves the transform and highlight stale until the next move; the release drops on the last-shown highlight as EXPERIENCE.md Drop targeting step 6 specifies; accepted, no resize listener.

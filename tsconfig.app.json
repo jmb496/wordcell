@@ -18,5 +18,10 @@
     "moduleDetection": "force"
   },
   "include": ["src/**/*.ts", "src/**/*.js", "src/**/*.svelte"],
-  "exclude": ["src/architecture.test.ts"]
+  "exclude": [
+    "src/architecture-scan.ts",
+    "src/architecture-tree-scan.test.ts",
+    "src/architecture-ad1.test.ts",
+    "src/architecture-ad2-ad12-ad17.test.ts"
+  ]
 }

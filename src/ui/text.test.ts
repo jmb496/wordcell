@@ -27,16 +27,16 @@ describe('AD-8 dictionary text', () => {
   });
 });
 
-describe('AD-17 score text', () => {
-  it('AD-17 score(0) reads Score 0', () => {
+describe('AD-3 score text', () => {
+  it('AD-3 score(0) reads Score 0', () => {
     expect(text.score(0)).toBe('Score 0');
   });
 
-  it('AD-17 score(355) reads Score 355', () => {
+  it('AD-3 score(355) reads Score 355', () => {
     expect(text.score(355)).toBe('Score 355');
   });
 
-  it('AD-17 score(-530) reads Score \u2212530 with U+2212', () => {
+  it('AD-3 score(-530) reads Score \u2212530 with U+2212', () => {
     expect(text.score(-530)).toBe('Score \u2212530');
   });
 });

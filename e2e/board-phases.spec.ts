@@ -1,5 +1,5 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
-import { fixture, seedStorage } from './helpers/seed';
+import { openFixture } from './helpers/board';
 import { tokenColor } from './helpers/style';
 
 // Epic 4 entry 3: every GameView board state rendered (AD-14 live vs mirror, F2 static tray,
@@ -12,14 +12,6 @@ test.beforeEach(() => {
 
 type Step = 'undo' | 'redo';
 type Cursor = { index: number; phase: 'idle' | 'composing' | 'place' };
-
-async function openFixture(page: Page, name: string, steps: readonly Step[] = []): Promise<void> {
-  await seedStorage(page, { session: fixture(`${name}.json`) });
-  await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'WordCell' })).toBeVisible();
-  await expect(page.locator('[data-card-id]')).toHaveCount(52);
-  for (const step of steps) await page.getByTestId(step).click();
-}
 
 function box(locator: Locator) {
   return locator.evaluate((el) => {
@@ -78,12 +70,15 @@ type State = {
   steps?: Step[];
   cursor: Cursor;
   mirrors: number[];
+  // Ghost mirrors per column in DOM order (4-3 m2; plan I/O matrix); columns not listed hold none.
+  ghosts: Record<number, number[]>;
   tray: string[];
 };
 
 const PLACE_TAN = ['42', '0', '28'];
 const COLUMN_1 = ['24', '6', '49', '30', '25', '20', '48'];
 const COLUMN_1_GHOSTS = [6, 20, 24, 25, 30, 48, 49];
+const COLUMN_1_GHOSTS_ORDER = [24, 6, 49, 30, 25, 20, 48];
 
 const STATES: State[] = [
   {
@@ -91,6 +86,7 @@ const STATES: State[] = [
     fixture: 'session-idle-fresh',
     cursor: { index: 0, phase: 'idle' },
     mirrors: [],
+    ghosts: {},
     tray: [],
   },
   {
@@ -98,6 +94,7 @@ const STATES: State[] = [
     fixture: 'session-idle-pending-draft',
     cursor: { index: 0, phase: 'idle' },
     mirrors: [],
+    ghosts: {},
     tray: [],
   },
   {
@@ -105,6 +102,7 @@ const STATES: State[] = [
     fixture: 'session-composing',
     cursor: { index: 0, phase: 'composing' },
     mirrors: [0, 28, 42],
+    ghosts: { 3: [42, 0] },
     tray: ['42', '0', '28m'],
   },
   {
@@ -112,6 +110,7 @@ const STATES: State[] = [
     fixture: 'session-composing-draft-2-letters',
     cursor: { index: 0, phase: 'composing' },
     mirrors: [0, 28],
+    ghosts: { 3: [0] },
     tray: ['0', '28m'],
   },
   {
@@ -119,6 +118,7 @@ const STATES: State[] = [
     fixture: 'session-place',
     cursor: { index: 0, phase: 'place' },
     mirrors: [0, 28, 42],
+    ghosts: { 3: [42, 0], 6: [28] },
     tray: PLACE_TAN,
   },
   {
@@ -126,6 +126,7 @@ const STATES: State[] = [
     fixture: 'session-below-committed-last',
     cursor: { index: 0, phase: 'place' },
     mirrors: [0, 28, 42],
+    ghosts: { 3: [42, 0], 6: [28] },
     tray: PLACE_TAN,
   },
   {
@@ -133,6 +134,7 @@ const STATES: State[] = [
     fixture: 'session-place-free-letter-redo-tail',
     cursor: { index: 1, phase: 'place' },
     mirrors: [9, 28, 32],
+    ghosts: { 4: [32], 6: [9] },
     tray: ['9', '32', '28'],
   },
   {
@@ -141,6 +143,7 @@ const STATES: State[] = [
     steps: ['undo'],
     cursor: { index: 1, phase: 'composing' },
     mirrors: [9, 28, 32],
+    ghosts: { 4: [32] },
     tray: ['32', '28', '9m'],
   },
   {
@@ -149,6 +152,7 @@ const STATES: State[] = [
     steps: ['undo', 'undo', 'redo'],
     cursor: { index: 1, phase: 'composing' },
     mirrors: [9, 28, 32],
+    ghosts: { 4: [32] },
     tray: ['32', '28', '9m'],
   },
   {
@@ -157,6 +161,7 @@ const STATES: State[] = [
     steps: ['redo', 'redo'],
     cursor: { index: 2, phase: 'composing' },
     mirrors: [1, 26, 27],
+    ghosts: { 2: [26] },
     tray: ['26', '1m', '27m'],
   },
   {
@@ -164,6 +169,7 @@ const STATES: State[] = [
     fixture: 'session-won',
     cursor: { index: 8, phase: 'idle' },
     mirrors: [],
+    ghosts: {},
     tray: [],
   },
   {
@@ -171,6 +177,7 @@ const STATES: State[] = [
     fixture: 'session-gave-up',
     cursor: { index: 0, phase: 'idle' },
     mirrors: [],
+    ghosts: {},
     tray: [],
   },
   {
@@ -178,6 +185,7 @@ const STATES: State[] = [
     fixture: 'session-idle-empty-column',
     cursor: { index: 1, phase: 'idle' },
     mirrors: [],
+    ghosts: {},
     tray: [],
   },
   {
@@ -186,6 +194,7 @@ const STATES: State[] = [
     steps: ['undo'],
     cursor: { index: 0, phase: 'place' },
     mirrors: COLUMN_1_GHOSTS,
+    ghosts: { 1: COLUMN_1_GHOSTS_ORDER },
     tray: COLUMN_1,
   },
   {
@@ -194,6 +203,7 @@ const STATES: State[] = [
     steps: ['undo', 'undo'],
     cursor: { index: 0, phase: 'composing' },
     mirrors: COLUMN_1_GHOSTS,
+    ghosts: { 1: COLUMN_1_GHOSTS_ORDER },
     tray: COLUMN_1,
   },
 ];
@@ -202,7 +212,7 @@ for (const state of STATES) {
   test(`AD-14 one live element per card, mirrors and tray order on ${state.title}`, async ({
     page,
   }) => {
-    await openFixture(page, state.fixture, state.steps);
+    await openFixture(page, state.fixture, { steps: state.steps });
     await expectSession(page, state.cursor);
     const trayPlace = { idle: null, composing: 'tray', place: 'strip' }[state.cursor.phase];
 
@@ -236,6 +246,11 @@ for (const state of STATES) {
     expect(dom.column.length + dom.cell.length + dom.tray.length).toBe(52);
     expect(dom.mirrors.map((m) => m.id).toSorted((a, b) => a - b)).toEqual(state.mirrors);
     expect(dom.mirrors.every((m) => m.bare)).toBe(true);
+    for (let n = 1; n <= 8; n++) {
+      expect(await mirrorsIn(page, `[data-testid="column-${n}"]`), `column-${n} ghosts`).toEqual(
+        state.ghosts[n] ?? [],
+      );
+    }
 
     expect(await trayOrder(page)).toEqual(state.tray);
     const xs = await page
@@ -250,7 +265,7 @@ for (const state of STATES) {
 test('AD-14 (R-30) k = 2 right: the tray holds live 26 then D mirrors 1, 27; cards 27 and 1 live in column 6 in destination style', async ({
   page,
 }) => {
-  await openFixture(page, 'session-place-free-letter-redo-tail', ['redo', 'redo']);
+  await openFixture(page, 'session-place-free-letter-redo-tail', { steps: ['redo', 'redo'] });
   await expectSession(page, { index: 2, phase: 'composing' });
   expect(await trayOrder(page)).toEqual(['26', '1m', '27m']);
   const fill = await tokenColor(page, '--wc-destination-fill');
@@ -274,12 +289,21 @@ test('AD-14 (R-30) k = 2 right: the tray holds live 26 then D mirrors 1, 27; car
   await expect(tray.locator('[data-mirror-of="27"] svg.lock')).toHaveCount(0);
 });
 
+// The WordCell's computed ring (its ::after border).
+const ring = (page: Page, cell: number) =>
+  page.getByTestId(`wordcell-${cell}`).evaluate((el) => {
+    const style = getComputedStyle(el, '::after');
+    return { color: style.borderTopColor, width: style.borderTopWidth };
+  });
+
 async function expectTarget(page: Page, cell: number): Promise<void> {
   const target = page.getByTestId(`wordcell-${cell}`);
   await expect(target).toHaveClass(/\btarget\b/);
   await expect(target).not.toHaveClass(/\bdim\b/);
   await expect(target.locator('.check')).toBeVisible();
   expect(await effectiveOpacity(target.locator('.check'))).toBe(1);
+  const teal = await tokenColor(page, '--wc-accent-teal');
+  expect(await ring(page, cell)).toEqual({ color: teal, width: '3px' });
 }
 
 async function expectNotLegal(page: Page, cells: readonly number[]): Promise<void> {
@@ -302,7 +326,7 @@ test('R-42 (UI) on session-place the selected target 3 shows its ring and check 
 test('R-42 (UI) after one Undo on session-idle-empty-column wordcell-7 is selected, 3–6 legal, 8–10 not legal', async ({
   page,
 }) => {
-  await openFixture(page, 'session-idle-empty-column', ['undo']);
+  await openFixture(page, 'session-idle-empty-column', { steps: ['undo'] });
   await expectSession(page, { index: 0, phase: 'place' });
   await expectTarget(page, 7);
   for (const cell of [3, 4, 5, 6]) {
@@ -311,14 +335,11 @@ test('R-42 (UI) after one Undo on session-idle-empty-column wordcell-7 is select
     await expect(wordcell).not.toHaveClass(/\bdim\b/);
   }
   await expectNotLegal(page, [8, 9, 10]);
-  const ring = (cell: number) =>
-    page.getByTestId(`wordcell-${cell}`).evaluate((el) => {
-      const style = getComputedStyle(el, '::after');
-      return { color: style.borderTopColor, width: style.borderTopWidth };
-    });
   const teal = await tokenColor(page, '--wc-accent-teal');
-  expect(await ring(3)).toEqual({ color: teal, width: '2px' });
-  expect(await ring(7)).toEqual({ color: teal, width: '3px' });
+  for (const cell of [3, 4, 5, 6]) {
+    expect(await ring(page, cell), `wordcell-${cell}`).toEqual({ color: teal, width: '2px' });
+  }
+  expect(await ring(page, 7)).toEqual({ color: teal, width: '3px' });
 });
 
 async function expectUsedCell3(page: Page): Promise<void> {
@@ -436,7 +457,9 @@ test('R-73 (UI) a reload re-renders session-place-free-letter-redo-tail, and its
 test('R-70/R-71 Undo, Undo, Redo from session-place-free-letter-redo-tail re-renders moves[1] Composing with cell 3 used', async ({
   page,
 }) => {
-  await openFixture(page, 'session-place-free-letter-redo-tail', ['undo', 'undo', 'redo']);
+  await openFixture(page, 'session-place-free-letter-redo-tail', {
+    steps: ['undo', 'undo', 'redo'],
+  });
   await expectSession(page, { index: 1, phase: 'composing' });
   await expectUsedCell3(page);
   await expect(page.getByTestId('card-28')).toHaveAttribute('data-place', 'tray');

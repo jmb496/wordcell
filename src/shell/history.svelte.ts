@@ -19,13 +19,16 @@ import {
 } from '../engine/index';
 import { game } from './game.svelte';
 import { HISTORY_KEY, read, remove, write } from './storage';
+import {
+  assertWritable,
+  launchSnapshot,
+  type RejectReasonOf,
+  rejectReason,
+  trackLastText,
+} from './stored-key';
 
 /** AD-6: a failed `parseHistory` result without `ok`. */
-export type HistoryRejectReason = ParseHistoryResult extends infer R
-  ? R extends { readonly ok: false }
-    ? Omit<R, 'ok'>
-    : never
-  : never;
+export type HistoryRejectReason = RejectReasonOf<ParseHistoryResult>;
 
 export type HistoryState =
   | { readonly status: 'ok'; readonly records: readonly GameRecord[] }
@@ -42,8 +45,8 @@ const EMPTY: ScoreHistory = { version: HISTORY_VERSION, records: [] };
 
 let state = $state.raw<HistoryState>({ status: 'ok', records: EMPTY.records });
 // Q-38: the last `wordcell:history` text this store read or successfully wrote (`null` when absent).
-let lastText: string | null = null;
-let launch: LoadedHistory | undefined;
+const lastText = trackLastText();
+const launch = launchSnapshot<LoadedHistory>();
 
 const currentStatistics: Statistics | undefined = $derived(
   state.status === 'ok' ? statistics(state.records) : undefined,
@@ -55,29 +58,23 @@ const currentRecorded: boolean = $derived(
     : false,
 );
 
-function rejectReason(parsed: Exclude<ParseHistoryResult, { ok: true }>): HistoryRejectReason {
-  return parsed.reason === 'version-unreadable'
-    ? { reason: parsed.reason }
-    : { reason: parsed.reason, version: parsed.version };
-}
-
 function load(): void {
-  if (launch !== undefined) throw new Error('AD-6 load() called twice');
+  launch.assertUnset('AD-6 load() called twice');
   const text = read(HISTORY_KEY);
-  lastText = text;
+  lastText.remember(text);
   if (text === null) {
-    launch = null;
+    launch.set(null);
     state = { status: 'ok', records: EMPTY.records };
     return;
   }
   const result = parseHistory(text);
   if (result.ok) {
-    launch = JSON.parse(text) as ScoreHistory;
+    launch.set(JSON.parse(text) as ScoreHistory);
     state = { status: 'ok', records: result.history.records };
     return;
   }
   const reason = rejectReason(result);
-  launch = { rejected: reason };
+  launch.set({ rejected: reason });
   state = { status: 'unreadable', reason };
 }
 
@@ -90,39 +87,37 @@ function reconcile(accrued: Session, after: Session): (() => void) | undefined {
   if (state.status !== 'ok') return undefined;
   const next = reconcileHistory(state.records, accrued, after, EN);
   if (next === state.records) return undefined;
-  const prevText = lastText;
+  const prevText = lastText.text();
   const prevState = state;
   const text = serializeHistory({ version: HISTORY_VERSION, records: next });
   write(HISTORY_KEY, text);
-  lastText = text;
+  lastText.remember(text);
   state = { status: 'ok', records: next };
   // Q-39: bytes first, then memory; a throwing restore propagates as-is (rule 6).
   return () => {
     if (prevText === null) remove(HISTORY_KEY);
     else write(HISTORY_KEY, prevText);
     state = prevState;
-    lastText = prevText;
+    lastText.remember(prevText);
   };
 }
 
 /** AD-6 Delete history: writes an empty history, from `active` or `rejected` only. */
 function reset(): void {
-  const kind = game.state.kind;
-  if (kind === 'halted' || kind === 'booting') throw new Error(`AD-15 reset() while ${kind}`);
+  assertWritable(game.state.kind, 'reset');
   const text = serializeHistory(EMPTY);
   write(HISTORY_KEY, text);
-  lastText = text;
+  lastText.remember(text);
   state = { status: 'ok', records: EMPTY.records };
 }
 
 /** Q-38: whether `wordcell:history` differs from the text this store last read or wrote. */
 function isStale(): boolean {
-  return read(HISTORY_KEY) !== lastText;
+  return lastText.isStale(read(HISTORY_KEY));
 }
 
 function loaded(): LoadedHistory {
-  if (launch === undefined) throw new Error('AD-17 history loaded() before load()');
-  return launch;
+  return launch.get(() => 'AD-17 history loaded() before load()');
 }
 
 function current(): CurrentHistory {

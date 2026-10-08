@@ -47,17 +47,17 @@ deferred: []
 | Pick-up drag | crossing | add `wc-hover-peek-hidden` to `[data-hover-peek]` (DOM); `closeHoverPeek()` in `end()` on every path, before fly-back/clearDrag and before pointerup's drop dispatch | — |
 | Suppression | mouse press end, fly-back settle, `cancel()` (idle too) | slot = `[data-wordcell]` whose rect contains `lastPoint`, else null | — |
 | cancel()/detach | press or no press | clear timer, `closeHoverPeek()`, set suppression; then end any press | — |
-| hoverFine → false | App reaction → `refreshHover()` | clear timer, `closeHoverPeek()` | — |
+| hoverFine → false | media `change` → `layout.watchHoverFine` callback (the controller subscribes `refreshHover` in `attach`, unwatches on detach) → `refreshHover()` | clear timer, `closeHoverPeek()` | — |
 
 </intent-contract>
 
 ## Code Map
 
-- `src/ui/gestures/controller.ts` -- `ControllerDeps` (l.88) gains `hoverFine(): boolean`. `Press` gains `mouse: boolean` (from `event.pointerType`). `pointerover`/`pointerout` (l.761/765) feed the hover timer beside `track`/`refreshHover`. `pointerdown` (l.541) clears the timer first, before the button-0 filter. `pointermove` crossing (l.600) closes or hides. `end()` (l.280): pick-up close plus mouse-press suppression. `settle()` (l.390) suppresses. `cancel()` (l.788) no longer returns early when idle. `refreshHover()` (l.739) closes when `!deps.hoverFine()`; it must not read `overlays.hoverPeek`, or the App effect would track it. Detach resets suppression. Update the header comment with an "Entry 12" paragraph.
+- `src/ui/gestures/controller.ts` -- `ControllerDeps` (l.88) gains `hoverFine(): boolean` and `watchHoverFine(callback): () => void` (the hoverFine watcher: `attach` subscribes `refreshHover`, detach unwatches). `Press` gains `mouse: boolean` (from `event.pointerType`). `pointerover`/`pointerout` (l.761/765) feed the hover timer beside `track`/`refreshHover`. `pointerdown` (l.541) clears the timer first, before the button-0 filter. `pointermove` crossing (l.600) closes or hides. `end()` (l.280): pick-up close plus mouse-press suppression. `settle()` (l.390) suppresses. `cancel()` (l.788) no longer returns early when idle. `refreshHover()` (l.739) closes when `!deps.hoverFine()`; it must not read `overlays.hoverPeek`, or App's selection/GameView effect would track it. Detach resets suppression. Update the header comment with an "Entry 12" paragraph.
 - `src/ui/gestures/controller.test.ts` -- harness `setup()` (l.357): add `hoverFine` (mutable, default **false**, so the existing `setTimer` call-count tests stay valid). The cells (`b.cell3` non-empty, `b.cell4` empty) need `getBoundingClientRect` and a root `querySelectorAll('[data-wordcell]')` if `FakeEl` lacks them. The existing `hover()` helper fires mouse pointerover; extend it with `relatedTarget`/`buttons`.
-- `src/ui/layout/layout.svelte.ts` -- `Layout` gains `readonly hoverFine: boolean`: a `$state(media.matches)` set synchronously in the `change` listener (the listener also still calls `schedule()`). `layout.svelte.test.ts` uses the fake `matchMedia`.
-- `src/main.ts` (l.123–136) -- create `layout` before `controller` (beforeHide registration order unchanged) and pass `hoverFine: () => layout.hoverFine`. Fix the order comment.
-- `src/ui/App.svelte` -- the existing refreshHover `$effect` also reads `void layout.hoverFine` (the named hoverFine watcher).
+- `src/ui/layout/layout.svelte.ts` -- `Layout` gains `readonly hoverFine: boolean`: a `$state(media.matches)` set synchronously in the `change` listener (the listener also still calls `schedule()`), and `watchHoverFine(callback)`, which the `change` listener calls after setting `hoverFine`; returns the unwatch. `layout.svelte.test.ts` uses the fake `matchMedia`.
+- `src/main.ts` (l.123–136) -- create `layout` before `controller` (beforeHide registration order unchanged) and pass `hoverFine: () => layout.hoverFine` and `watchHoverFine: (callback) => layout.watchHoverFine(callback)`. Fix the order comment.
+- `src/ui/App.svelte` -- unchanged: its refreshHover `$effect` reads only `overlays.selection` and `game.view`; it is not the hoverFine watcher (the controller's `watchHoverFine` is).
 - `src/ui/hover-peek.ts` (new) + `hover-peek.test.ts` -- `HOVER_PEEK_MAX = 14`, `PER_ROW = 7`. `hoverPeekCards(cards) → { shown, older }`. `hoverPeekWidth(count, slot) = min(count,7)·slot − 4 + 32`. `placeHoverPeek({ cell, slot, width, height, labelTop, cellBottom, boardTop }) → { x, y, below }`: x is column-relative, `clamp((cell − 2.5)·slot − width/2, 0, 8·slot − width)`; below iff `height > labelTop − boardTop`; y = `labelTop − height` above, else `cellBottom`.
 - `src/ui/HoverPeek.svelte` (new) -- props `view`, `layout`. `{#if overlays.hoverPeek !== null}` root `div.hover-peek` with `data-hover-peek`, `aria-hidden="true"`, `pointer-events: none`, `position: absolute`, `z-index: 4`, surface `var(--wc-surface)`, radius 20px (as `.sheet`), 16 px padding, `box-sizing: border-box`, width from `hoverPeekWidth`. Optional `ui-label` line `text.olderCards(older)`. A flex-wrap grid (`margin: 0 -2px; row-gap: 4px`, as WordCellView) of `Card place="view" mirror="view" full topTag={last}`. `:global(.wc-hover-peek-hidden)` → `visibility: hidden`. Horizontal: `left: calc(max(0px, (100% - var(--wc-board)) / 2) + {x}px)` (board column inside `.board-root`, `safe center`). Vertical: a `$effect` reads `layout.w`, `layout.metrics`, `layout.heights`, `layout.bannerShown`, the cell and its count, then measures the root height, `[data-wordcell-label=n]` top, `[data-wordcell=n]` bottom and `.board` top relative to `.board-root`, calls `placeHoverPeek` and writes `y` state. `visibility: hidden` until the first placement.
 - `src/ui/Board.svelte` -- `.board-root { position: relative }`; render `<HoverPeek {view} {layout} />` after `<WordCellView>`.
@@ -75,7 +75,7 @@ deferred: []
 - [x] `src/ui/layout/layout.svelte.ts`, `layout.svelte.test.ts` -- `hoverFine` getter. Test (AD-11): it follows a media `change` immediately, before the gate's idle task.
 - [x] `src/ui/gestures/controller.ts` -- the timer, suppression, crossing and end behaviour in the matrix. `cancel()` order: `finishFlight()` (its settle suppresses), clear timer, `closeHoverPeek()`, suppress, then `end` if pressed.
 - [x] `src/ui/gestures/controller.test.ts` -- AD-12 cases: every controller Vitest in the ticket AC, plus mouse pointerover with `buttons ≠ 0` and no press → no arm; an open hover peek closes when `hoverFine` flips false and `refreshHover()` runs; `cancel()` with no press closes it and suppresses (a later boundary pointerover into that cell does not arm; pointerout then re-entry arms); suppression is a single slot (a later press end over no cell clears it); an inert WordCell drag closes it at the crossing; a pick-up drag adds the hide class at the crossing and closes it in `end()` on pointerup (before the drop dispatch), pointercancel, lostpointercapture and `cancel()`; a relatedTarget-null entry arms.
-- [x] `src/main.ts`, `src/ui/App.svelte` -- the hoverFine dep and the watcher.
+- [x] `src/main.ts` -- the `hoverFine` and `watchHoverFine` deps. The watcher is controller-owned (`attach` subscribes `deps.watchHoverFine(refreshHover)`, detach unwatches); tests: AD-12 controller `AD-12 a hoverFine change to false closes an open hover peek with no refreshHover() call; detach unwatches` and AD-11 layout `AD-11 watchHoverFine runs its callback after every media change, with hoverFine already set, until unwatched`.
 - [x] `src/ui/WordCellRow.svelte`, `src/ui/HoverPeek.svelte`, `src/ui/Board.svelte` -- render and placement.
 - [x] `e2e/wordcell-view.spec.ts` -- every desktop P4 case in the ticket AC and Verify, with the 1 px tolerances of Design Notes item 6.
 - [x] `build-notes.md` -- the two close-out bullets.
@@ -101,6 +101,8 @@ deferred: []
   checkout both with and without this change (already over the 5 s budget before it).
 
 ## Plan Change Log
+
+- 2026-10-07 (ticket 4.13 D5, D6): the hoverFine watcher is the controller-owned `ControllerDeps.watchHoverFine` / `layout.watchHoverFine` (subscribed in `attach`, unwatched on detach) since the 4.12 build review loop pass 1 (4-12-build.md), not App.svelte's refreshHover `$effect`; the matrix, Code Map, Tasks, Design Notes item 2 and Auto Run Result now say so and cite its two Vitests. Added the R-65 sentence → test list (Design Notes); the `?bands=` placement test is named AD-12. The Review Triage Log is left as written at the time.
 
 ## Review Triage Log
 
@@ -139,7 +141,7 @@ deferred: []
 
 **Review-log minors, resolved.**
 1. Pick-up drag: `closeHoverPeek()` runs in `end()` whenever `p.drag !== null`, so it covers pointerup, pointercancel, lostpointercapture, cancel() and same-id. Any crossing that does not start a pick-up (WordCell, inert column, S ghost in Composing/Game over, a drag-as-tap or a tile) closes at the crossing (build-notes CAP-9 "closes … when the press starts a drag").
-2. Watcher: `layout.hoverFine` is `$state` that the media `change` listener updates. App's refreshHover `$effect` reads it, and `refreshHover()` closes the hover peek when `deps.hoverFine()` is false. Vitest as in the Tasks list.
+2. Watcher: `layout.hoverFine` is `$state` that the media `change` listener updates; the listener then runs every `layout.watchHoverFine` callback. The controller subscribes `refreshHover` through `ControllerDeps.watchHoverFine` in `attach` and unwatches on detach, and `refreshHover()` closes the hover peek when `deps.hoverFine()` is false. App.svelte plays no part. Vitests: `AD-12 a hoverFine change to false closes an open hover peek with no refreshHover() call; detach unwatches` (controller.test.ts) and `AD-11 watchHoverFine runs its callback after every media change, with hoverFine already set, until unwatched` (layout.svelte.test.ts).
 3. `cancel()` works when idle (Tasks).
 4. Suppression is a single `Element | null` slot, replaced by each mouse press end, fly-back settle and `cancel()`; it is null when the point is in no cell or `lastPoint` is null. Touch press ends leave it, because `lastPoint` is mouse-only (ticket: "any mouse press end"). An entry's relatedTarget is outside the cell or null.
 5. The `buttons ≠ 0` Vitest is in the Tasks list.
@@ -148,6 +150,11 @@ deferred: []
 8. Two bullets go into build-notes §DESIGN.md close-out edits. (a) Hover peek surface: view-sheet surface, `{rounded.lg}`, 16 px padding, content-sized width `min(n,7)·(w+4) − 4 + 32` (a technical default; DESIGN.md View sheet does not state it). (b) The below branch, which may leave the board vertically (overriding "clamped inside the board"), occurs only with dev `?bands=` orders.
 9. The Description wording ("only when the cell holds more than 14 cards") is used in this plan. The ticket file is not edited (build-auto never writes tickets).
 10. Counts were verified by replaying the fixtures (Vitest probe, 2026-10-07): session-won cells 6/7/8 = 24/21/7; session-idle-empty-column cell 7 = 7; session-gave-up-after-commit cell 3 = 0, cell 7 = 7; session-place-free-letter-redo-tail cell 3 = 3, `used`. The e2e asserts the counts through the `GameView` or mirror counts.
+
+**R-65 sentence → test (hover peek, `desktop` P4 in `e2e/wordcell-view.spec.ts`).** Ticket 4.13 D6. The long-press peek and sticky view tests in the same file cover R-65 on `android`; this list is the hover gesture (§7.9 "On desktop, hovering the cell for the same delay opens the same overlay").
+- "The player may view every card of any WordCell at any time (Q-21), via the view gesture chosen by the UX step": `R-65 hover 400 ms on session-won cell 6 shows its last 14 cards oldest first, top tagged, +10 older cards, above the anchor at the column’s left edge, no scrim; leave closes it` (Game over); `R-65 hover 400 ms on session-won cell 8 (7 cards) shows 7 mirrors and no older line, its right edge on the column’s right edge`; `R-65 hovering session-idle-empty-column’s cell 7 for 400 ms opens its hover peek` (Idle); `R-65 the used cell 3’s hover peek shows an unhatched mirror tagged top; one live element per card; a do-nothing click keeps it open` (Place); `R-65 R-75 session-gave-up-after-commit’s empty cell 3 hovered 600 ms opens nothing` (an empty cell has no cards to view). The `(§7.9 proposes long-press; the Playwright test binds to the gesture UX confirms)` parenthesis is process (exempt). Placement only, no R-65 sentence: `AD-12 with the WordCell row under the top bar (?bands=), no room above: the hover peek sits below the cell`.
+- "Viewing changes nothing: only the top card is usable (R-33)": `R-65 a click on the cell while the hover peek is open does its phase action (Game over: the sticky view), hover peek gone`; `R-65 the hover peek takes no clicks: pointer-events none; elementFromPoint at its centre is outside it`; `R-65 the used cell 3’s hover peek shows an unhatched mirror tagged top; one live element per card; a do-nothing click keeps it open`. Every R-65 test above also asserts `current().session` and storage unchanged (`stash`/`unchanged`).
+- "the view does not enter the move history": `R-65 opening and closing a hover peek leaves Undo/Redo enablement and window.history.length unchanged`.
 
 `?bands=topBar,banner,wordcells,leftover,columns,tray,actionBar`: the room above is only the top bar plus the banner, so any 7-card hover peek goes below. Assert `anchor top − board top < height` first.
 
@@ -164,9 +171,9 @@ deferred: []
   - `src/ui/gestures/controller.ts`: hover timer, suppression, crossing and end closes, idle `cancel()`.
   - `src/ui/HoverPeek.svelte` (new): render and placement.
   - `src/ui/hover-peek.ts` (new): pure slice, width and placement helpers.
-  - `src/ui/layout/layout.svelte.ts`: live `hoverFine` getter.
-  - `src/main.ts`: layout created before the controller; `hoverFine` dep.
-  - `src/ui/App.svelte`: the refreshHover reaction reads `layout.hoverFine`, making it the hoverFine watcher.
+  - `src/ui/layout/layout.svelte.ts`: live `hoverFine` getter and `watchHoverFine`.
+  - `src/main.ts`: layout created before the controller; `hoverFine` and `watchHoverFine` deps.
+  - The hoverFine watcher is the controller's `ControllerDeps.watchHoverFine` subscription (attach/detach), not App.svelte (unchanged).
   - `src/ui/Board.svelte`: `.board-root` `position: relative`; renders HoverPeek.
   - `src/ui/WordCellRow.svelte`: `data-wordcell-label`.
   - `src/ui/text.ts`: `olderCards`.
@@ -180,5 +187,5 @@ deferred: []
 - **Verification:** `npm run test:all` green twice: before review (2018 unit, 364 e2e, 14 dist, 12 pwa) and after the patches (exit 0: lint, check, 2020 unit in 47 files, build within budget, 14 dist, 364 e2e, 12 pwa). The new desktop cases ran (not skipped). `npm run test:screens` not run: Docker is unreachable from this WSL2 distro. The baselines are expected unchanged (no hover in any baseline; `.board-root` gains only `position: relative`).
 - **Residual risks:**
   - The screenshot baselines are unverified until `test:screens` runs in the container.
-  - The App-level hoverFine watcher and the live re-placement while open are covered only at unit level (rejected as rare desktop corner cases).
+  - The hoverFine watcher (controller-owned `watchHoverFine`) and the live re-placement while open are covered only at unit level: the watcher by the AD-12 controller and AD-11 layout Vitests named in Design Notes item 2; a media flip mid-hover is not driven end to end (rejected as a rare desktop corner case).
   - The warm unit suite measured about 5.5 s on this checkout before and after this change; this predates the change and is for entry 13's AD-17 re-measure.

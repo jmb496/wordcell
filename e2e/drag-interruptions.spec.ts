@@ -1,9 +1,8 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
+import { box, cards, centre, foot, openFixture, sameSession, stashSession } from './helpers/board';
 import { wc } from './helpers/dialogs';
 import { dragResidue, expectNoResidue } from './helpers/drag';
 import { animationFrames, hidePage, showPage } from './helpers/lifecycle';
-import { booted } from './helpers/restore';
-import { fixture, seedStorage } from './helpers/seed';
 import { armStorageSpy, storageWrites } from './helpers/storage-spy';
 import { tokenColor } from './helpers/style';
 import { type TouchHold, touchHold } from './helpers/touch';
@@ -26,33 +25,9 @@ const onAndroid = () =>
 const onDesktop = () =>
   test.skip(test.info().project.name !== 'desktop', 'mouse drag flows run on desktop');
 
-async function openFixture(page: Page, name: string, prefs?: string): Promise<void> {
-  await seedStorage(page, {
-    session: fixture(`${name}.json`),
-    ...(prefs === undefined ? {} : { prefs: fixture(`${prefs}.json`) }),
-  });
-  await page.goto('/');
-  await expect(page.locator('[data-card-id]')).toHaveCount(52);
-  await booted(page);
-}
-
-const column = (page: Page, n: number) => page.getByTestId(`column-${n}`);
-const cards = (page: Page, n: number) => column(page, n).locator('[data-place="column"]');
-const foot = (page: Page, n: number) => page.getByTestId(`foot-${n}`);
 const faceOf = (card: Locator) => card.locator(':scope > .face');
 const outline = (page: Page) => page.locator('[data-selection-outline]');
 const here = (page: Page, n: number) => foot(page, n).locator('.here');
-
-async function box(locator: Locator): Promise<Box> {
-  const b = await locator.boundingBox();
-  if (b === null) throw new Error('element has no box');
-  return { x: b.x, y: b.y, w: b.width, h: b.height };
-}
-
-async function centre(locator: Locator): Promise<Point> {
-  const b = await box(locator);
-  return { x: b.x + b.w / 2, y: b.y + b.h / 2 };
-}
 
 const idOf = async (card: Locator) => Number(await card.getAttribute('data-card-id'));
 const plus = (p: Point, dx: number, dy: number): Point => ({ x: p.x + dx, y: p.y + dy });
@@ -115,23 +90,6 @@ async function select(page: Page, n: number, i: number): Promise<void> {
   await tapAt(page, await centre(cards(page, n).nth(i)));
   const count = await cards(page, n).count();
   await expectSelection(page, { column: n, count: count - i }, 1);
-}
-
-// Stashes the store's Session reference.
-async function stashSession(page: Page): Promise<void> {
-  await page.evaluate(() => {
-    const current = window.__wordcell?.current();
-    if (current?.kind !== 'active') throw new Error(`store is ${current?.kind}`);
-    window.__pointerSession = current.session;
-  });
-}
-
-function sameSession(page: Page): Promise<boolean> {
-  return page.evaluate(() => {
-    const current = window.__wordcell?.current();
-    if (current?.kind !== 'active') throw new Error(`store is ${current?.kind}`);
-    return current.session === window.__pointerSession;
-  });
 }
 
 // The store's Session without `activeMs` (a hide flush accrues time into a new reference).
@@ -403,6 +361,21 @@ test.describe('android', () => {
     }
     await expect(here(page, 1)).toHaveCount(1);
     await expect(here(page, 1)).toBeVisible();
+    // 4-9 pre-drag baseline for the mid-drag "none" checks: shadows, outline and foot states.
+    for (const i of [4, 5]) {
+      expect(await css(faceOf(cards(page, 1).nth(i)), 'box-shadow'), `card ${i}`).not.toBe('none');
+    }
+    expect(await css(outline(page), 'display')).not.toBe('none');
+    expect(await css(foot(page, 1), 'background-color')).not.toBe('rgba(0, 0, 0, 0)');
+    const feetBefore = await page.locator('.foot.target').evaluateAll((els) =>
+      els.map((el) => {
+        const s = getComputedStyle(el);
+        return [s.backgroundColor, s.backgroundImage, s.borderTopColor];
+      }),
+    );
+    expect(feetBefore).toHaveLength(7);
+    for (const f of feetBefore)
+      expect(f).not.toEqual(['rgba(0, 0, 0, 0)', 'none', 'rgba(0, 0, 0, 0)']);
     const bottomId = await idOf(bottom);
     const from = await centre(bottom);
     const cell = await centre(page.getByTestId('wordcell-6'));
@@ -468,7 +441,7 @@ test.describe('android', () => {
   });
 
   test('AD-12 F13 Undo during a fly-back acts on the settled layout', async ({ page }) => {
-    await openFixture(page, 'session-idle-empty-column', 'prefs-non-default');
+    await openFixture(page, 'session-idle-empty-column', { prefs: 'prefs-non-default' });
     const index = await cursorIndex(page);
     const dragged = cards(page, 2).last();
     const draggedId = await idOf(dragged);
@@ -564,6 +537,27 @@ test.describe('android', () => {
       a.pause();
       a.currentTime = ms * f;
     }, fraction);
+  // cancelCaptured, then pauseNear for the faces of `cards` at `indexes`, all in one page task:
+  // the controller starts the fly-back synchronously inside the pointercancel dispatch (4.13 D4).
+  const cancelAndPauseNear = (cards: Locator, indexes: number[], fraction: number) =>
+    cards.evaluateAll(
+      (els, { indexes, f }) => {
+        const id = (window as unknown as { __pointerId: number }).__pointerId;
+        const el = [...document.querySelectorAll('*')].find((e) => e.hasPointerCapture(id));
+        if (el === undefined) throw new Error(`no element holds pointer ${id}`);
+        el.dispatchEvent(new PointerEvent('pointercancel', { pointerId: id, bubbles: true }));
+        for (const i of indexes) {
+          const face = els[i]?.querySelector(':scope > .face');
+          if (face === null || face === undefined) throw new Error(`no face at card ${i}`);
+          const [a] = face.getAnimations();
+          if (a === undefined) throw new Error(`no running animation on card ${i}`);
+          const ms = Number(a.effect?.getTiming().duration);
+          a.pause();
+          a.currentTime = ms * f;
+        }
+      },
+      { indexes, f: fraction },
+    );
   const finishAll = (face: Locator) =>
     face.evaluate((el) => {
       for (const a of el.getAnimations()) a.finish();
@@ -711,10 +705,46 @@ test.describe('android', () => {
     const hold = await holdThrough(page, from, [plus(from, 0, 12), plus(from, 0, 40)]);
     try {
       expect(await suppressed(page)).toBe(true);
-      await cancelCaptured(page);
-      // Just before the fly-back's end each face is already on its resting slot.
+      // Just before the fly-back's end each face is already on its resting slot. The cancel and
+      // the three pauses run in one task, so none finishes before it is read (4.13 D4).
+      await cancelAndPauseNear(cards(page, 1), [4, 5, 6], 0.999);
       for (const [k, face] of faces.entries()) {
-        await pauseNear(face, 0.999);
+        expect((await box(face)).y, `card ${k + 4}`).toBeCloseTo((rests[k] as Box).y, 0);
+      }
+      for (const [k, face] of faces.entries()) {
+        await finishAll(face);
+        await expectFlownBack(face, rests[k] as Box);
+      }
+      await expectSelection(page, { column: 1, count: 2 }, 1);
+      for (const face of faces.slice(1)) expect(await css(face, 'transform')).toBe(keptTransform);
+      expect(await css(faces[0] as Locator, 'transform')).toBe('none');
+    } finally {
+      await hold.end();
+    }
+    await animationFrames(page, 2);
+    await expectNoResidue(page);
+    await expectSelection(page, { column: 1, count: 2 }, 1);
+  });
+
+  test('AD-12 F33 under reduced motion a pointercancel of a drag from above the selection fades each face on its resting slot: selected faces lifted, no snap at settle', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await openFixture(page, 'session-idle-fresh');
+    await trackPointerId(page);
+    const faces = [4, 5, 6].map((i) => faceOf(cards(page, 1).nth(i)));
+    const unlifted = await box(faces[0] as Locator);
+    await select(page, 1, 5);
+    const keptTransform = await css(faces[1] as Locator, 'transform');
+    expect(keptTransform).not.toBe('none');
+    const rests = [unlifted, await box(faces[1] as Locator), await box(faces[2] as Locator)];
+    const from = await centre(cards(page, 1).nth(4));
+    const hold = await holdThrough(page, from, [plus(from, 0, 12), plus(from, 0, 40)]);
+    try {
+      expect(await suppressed(page)).toBe(true);
+      // Mid-fade each face is already on its resting slot (4-9-f32: per-face slot, reduced).
+      await cancelAndPauseNear(cards(page, 1), [4, 5, 6], 0.5);
+      for (const [k, face] of faces.entries()) {
         expect((await box(face)).y, `card ${k + 4}`).toBeCloseTo((rests[k] as Box).y, 0);
       }
       for (const [k, face] of faces.entries()) {

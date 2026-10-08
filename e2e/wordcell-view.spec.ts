@@ -1,5 +1,6 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
 import { EN, view } from '../src/engine/index';
+import { centre, openFixture } from './helpers/board';
 import { expectLeaves, wc } from './helpers/dialogs';
 import { animationFrames } from './helpers/lifecycle';
 import { booted } from './helpers/restore';
@@ -21,24 +22,11 @@ const onAndroid = () =>
 const onDesktop = () =>
   test.skip(test.info().project.name !== 'desktop', 'mouse flows run on desktop');
 
-async function openFixture(page: Page, name: string): Promise<void> {
-  await seedStorage(page, { session: fixture(`${name}.json`) });
-  await page.goto('/');
-  await expect(page.locator('[data-card-id]')).toHaveCount(52);
-  await booted(page);
-}
-
 const cell = (page: Page, n: number) => page.getByTestId(`wordcell-${n}`);
 const sheet = (page: Page) => page.locator('[data-view-sheet]');
 const scrim = (page: Page) => page.locator('[data-view-scrim]');
 const scrollArea = (page: Page) => page.locator('[data-view-scroll]');
 const mirrors = (page: Page) => sheet(page).locator('[data-mirror-of]');
-
-async function centre(locator: Locator): Promise<Point> {
-  const b = await locator.boundingBox();
-  if (b === null) throw new Error('element has no box');
-  return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
-}
 
 async function tapAt(page: Page, p: Point): Promise<void> {
   if (test.info().project.name === 'android') await page.touchscreen.tap(p.x, p.y);
@@ -464,6 +452,13 @@ test.describe('android', () => {
     const s = await sheet(page).boundingBox();
     if (s === null) throw new Error('sheet has no box');
     const from = { x: s.x + s.width / 2, y: Math.max(10, s.y / 2) };
+    // 4-11 m5: the drag starts on the scrim.
+    expect(
+      await page.evaluate(
+        ({ x, y }) => document.elementFromPoint(x, y)?.hasAttribute('data-view-scrim') ?? false,
+        from,
+      ),
+    ).toBe(true);
     await touchDrag(page, from, { x: from.x, y: from.y + 20 });
     await animationFrames(page, 2);
     await page.waitForTimeout(350);
@@ -660,7 +655,7 @@ test.describe('desktop', () => {
     const peek = await box(hoverPeek(page));
     const anchor = await box(label(page, 6));
     const column = await boardColumn(page);
-    expect(peek.y + peek.height).toBeLessThanOrEqual(anchor.y + 1);
+    expect(Math.abs(peek.y + peek.height - anchor.y)).toBeLessThanOrEqual(1);
     expect(Math.abs(peek.x - column.x)).toBeLessThanOrEqual(1);
     expect(peek.x + peek.width).toBeLessThanOrEqual(column.x + column.width + 1);
     await moveAway(page);
@@ -689,13 +684,13 @@ test.describe('desktop', () => {
     const peek = await box(hoverPeek(page));
     const anchor = await box(label(page, 8));
     const column = await boardColumn(page);
-    expect(peek.y + peek.height).toBeLessThanOrEqual(anchor.y + 1);
+    expect(Math.abs(peek.y + peek.height - anchor.y)).toBeLessThanOrEqual(1);
     expect(Math.abs(peek.x + peek.width - (column.x + column.width))).toBeLessThanOrEqual(1);
     expect(peek.x).toBeGreaterThanOrEqual(column.x - 1);
     await unchanged();
   });
 
-  test('R-65 with the WordCell row under the top bar (?bands=), no room above: the hover peek sits below the cell', async ({
+  test('AD-12 with the WordCell row under the top bar (?bands=), no room above: the hover peek sits below the cell', async ({
     page,
   }) => {
     await openPaused(
@@ -712,7 +707,7 @@ test.describe('desktop', () => {
     const board = await box(page.locator('.board'));
     expect(anchor.y - board.y).toBeLessThan(peek.height);
     const c = await box(cell(page, 8));
-    expect(peek.y).toBeGreaterThanOrEqual(c.y + c.height - 1);
+    expect(Math.abs(peek.y - (c.y + c.height))).toBeLessThanOrEqual(1);
     await unchanged();
   });
 
@@ -964,7 +959,11 @@ test.describe('desktop', () => {
     await page.clock.runFor(400);
     await expect(hoverPeek(page)).toBeVisible();
     await page.mouse.down();
-    await page.clock.runFor(400);
+    // At 399 ms the long press has not fired: the hover peek is still open, no sheet.
+    await page.clock.runFor(399);
+    await expect(hoverPeek(page)).toBeVisible();
+    await expect(sheet(page)).toHaveCount(0);
+    await page.clock.runFor(1);
     await expect(sheet(page)).toBeVisible();
     await expect(sheet(page)).toHaveAttribute('data-mode', 'peek');
     await expect(hoverPeek(page)).toHaveCount(0);

@@ -38,10 +38,10 @@
 // (pointercancel, lostpointercapture, cancel({ byBack: true })) at its start under both motion
 // settings (F32, F33), keeping the selection with no nav call (back's `closedByBack` clears it);
 // a release with no highlight and a plain cancel() (before-hide, act(), detach) deselect once, a
-// drop deselects in `pointerup` before its dispatch, and a same-id pointerdown restores. A button-0 pointerdown with
-// no active press during a fly-back enters the gate, finishes the flight, then resolves (F13); the
-// settle's refreshHover() may repaint the mouse hover before the press resolves, and a drag that
-// then starts clears it again.
+// drop deselects in `pointerup` before its dispatch, and a same-id pointerdown restores. A
+// button-0 pointerdown with no active press during a fly-back enters the gate, finishes the
+// flight, then resolves (F13); the settle's refreshHover() may repaint the mouse hover before the
+// press resolves, and a drag that then starts clears it again.
 // F32 (AD-12): a dragged stack inside the selection (its top wrapper is `lifted`, F33) keeps the
 // selection lift in the drag transform, `translate(pointer − press point − lift)`; any other stack
 // has lift 0. A restoring fly-back (every fly-back but a release with no highlight, which
@@ -80,6 +80,14 @@
 // `refreshHover()` with `hoverFine` false clear the timer and close the hover peek; while attached,
 // `deps.watchHoverFine` runs `refreshHover()` at every hoverFine change. An entry into another cell
 // closes an open hover peek first (a removed node sends no pointerout).
+// Entry 13 (ticket 4.13): drop targeting measures each registered column rect clipped vertically
+// to the visible band (SPEC F34, AD-12): from the lower of the top bar's and a shown banner's
+// bottom to the action bar's top, read once per drag move; a column wholly under a bar is a
+// zero-area candidate, so a tail held over a bar lights nothing and its release flies back. A
+// same-id pointerdown ends the lost press before the button check (any button, CAP-4). The F25
+// non-pointer `click` treats a tray tile like outside. The hover-peek timer is keyed by cell
+// number (a replaced cell node's pointerout still stops it) and any real cell entry stops it
+// before its no-arm returns; the suppression slot uses half-open rects (a shared edge goes right).
 import { flushSync } from 'svelte';
 import { game } from '../../shell/game.svelte';
 import { prefs } from '../../shell/prefs.svelte';
@@ -98,7 +106,7 @@ import { createClickSwallower } from './click-swallow';
 import { columnTargets } from './drop-target';
 import type { Gate } from './gate';
 import { destinationTap, type Hit, type HoverAction, hoverAction, tapAction } from './intent';
-import { pickTarget } from './targeting';
+import { pickTarget, type Rect } from './targeting';
 
 export type ControllerDeps<H> = {
   elementFromPoint(x: number, y: number): Element | null;
@@ -196,6 +204,13 @@ const SUPPRESSED = 'wc-selection-suppressed';
 const HOVER_PEEK_HIDDEN = 'wc-hover-peek-hidden';
 const OUTSIDE: Hit = { kind: 'outside' };
 
+// Entry 13 (F34): a column rect clipped vertically to the visible band; an empty clip is zero-area.
+function clip(r: Rect, band: { readonly top: number; readonly bottom: number }): Rect {
+  const top = Math.max(r.top, band.top);
+  const bottom = Math.max(top, Math.min(r.bottom, band.bottom));
+  return { left: r.left, top, right: r.right, bottom };
+}
+
 function translate(dx: number, dy: number): string {
   return `translate(${dx}px, ${dy}px)`;
 }
@@ -292,8 +307,8 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
   let flying: Flight | null = null;
   /** Entry 11: swallows the trailing click of a tap that closed the sticky view. */
   const swallower = createClickSwallower(deps);
-  /** Entry 12: the one pending hover-peek timer and the cell element it was armed for. */
-  let hoverTimer: { readonly handle: H; readonly cellEl: Element } | null = null;
+  /** Entry 12: the one pending hover-peek timer and the cell number it was armed for (entry 13). */
+  let hoverTimer: { readonly handle: H; readonly cell: number } | null = null;
   /** Entry 12: the `[data-wordcell]` whose pointerovers never arm until a pointerout leaves it. */
   let suppressed: Element | null = null;
 
@@ -516,6 +531,22 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     return last === undefined ? placeholderIn(columnEl) : cardIn(columnEl, last);
   }
 
+  function barRect(band: 'topBar' | 'banner' | 'actionBar'): Rect {
+    if (root === null) throw new Error('AD-12 drag without a root');
+    const el = root.querySelector(`[data-band="${band}"]`);
+    if (el === null) throw new Error(`AD-12 drag without [data-band="${band}"]`);
+    return el.getBoundingClientRect();
+  }
+
+  // Entry 13 (F34): the visible band between the sticky bars; the banner wrapper is always
+  // rendered and counts only while it has height (shown).
+  function visibleBand(): { readonly top: number; readonly bottom: number } {
+    const topBar = barRect('topBar');
+    const banner = barRect('banner');
+    const top = banner.bottom > banner.top ? Math.max(topBar.bottom, banner.bottom) : topBar.bottom;
+    return { top, bottom: barRect('actionBar').top };
+  }
+
   // AD-12 one drag move: transform, measure, pick, highlight (DOM only, F12).
   function dragMove(drag: Drag, x: number, y: number): void {
     drag.dx = x - drag.x;
@@ -524,9 +555,10 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     const grabbed = drag.faces[0];
     if (grabbed === undefined) throw new Error('AD-12 drag without a face');
     const targets = columnTargets();
+    const band = visibleBand();
     const { raw, highlighted } = pickTarget(
       grabbed.getBoundingClientRect(),
-      targets.map(({ id, el }) => ({ id, rect: el.getBoundingClientRect() })),
+      targets.map(({ id, el }) => ({ id, rect: clip(el.getBoundingClientRect(), band) })),
       drag.source,
       drag.hasLeftSource,
     );
@@ -576,16 +608,17 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     swallower.disarm();
     // A same-id pointerdown: that pointer was released, so its slot is spent.
     if (event.pointerId === menuSlot) menuSlot = null;
-    if (event.button !== 0 || root === null) return;
-    if (press !== null) {
-      if (event.pointerId !== press.pointerId) return;
-      // A same-id pointerdown: the old press's end was lost.
+    if (root === null) return;
+    // A same-id pointerdown, of any button (entry 13, CAP-4): the old press's end was lost.
+    if (press !== null && event.pointerId === press.pointerId) {
       const peeked = overlays.peek !== null;
       end({ kind: 'sameId' });
       // That end closed the peek; flush so its scrim and sheet leave the DOM before
       // elementFromPoint, else this press resolves against the stale view.
       if (peeked) flushSync();
     }
+    // Only the active press's own pointer acts on it; another pointer is untouched (CAP-4).
+    if (event.button !== 0 || press !== null) return;
     // F13: a press during a fly-back acts on the settled layout; the gate never idles between.
     const inFlight = flying !== null;
     if (inFlight) {
@@ -738,7 +771,10 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
   function click(event: MouseEvent): void {
     if (event.detail !== 0 || root === null) return;
     const resolved = resolve(root, event.target as Element | null, overlays.selection !== null);
-    if (resolved === null || resolved.hit.kind !== 'outside') return;
+    // Entry 13: a tray tile counts as outside, as `tapAction` treats it.
+    if (resolved === null || (resolved.hit.kind !== 'outside' && resolved.hit.kind !== 'tile')) {
+      return;
+    }
     perform(resolved.hit);
   }
 
@@ -823,7 +859,8 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     if (root === null || pt === null) return;
     for (const el of root.querySelectorAll('[data-wordcell]')) {
       const r = el.getBoundingClientRect();
-      if (pt.x >= r.left && pt.x <= r.right && pt.y >= r.top && pt.y <= r.bottom) {
+      // Entry 13: half-open, so a shared edge belongs to the right or lower cell.
+      if (pt.x >= r.left && pt.x < r.right && pt.y >= r.top && pt.y < r.bottom) {
         suppressed = el;
         return;
       }
@@ -844,13 +881,14 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     const cellEl = cellOf(event.target);
     if (cellEl === null || !outside(cellEl, event.relatedTarget)) return;
     const n = attribute(cellEl, 'data-wordcell');
+    // Entry 13: a cell entry stops any pending timer before the no-arm returns.
+    stopHoverTimer();
     // Entering another cell closes its hover peek even with no pointerout from it.
     if (overlays.hoverPeek !== null && overlays.hoverPeek !== n) overlays.closeHoverPeek();
     if (!deps.hoverFine() || press !== null || flying !== null || event.buttons !== 0) return;
     if (cellEl === suppressed) return;
     if (overlays.hoverPeek === n || cellCards(n) === 0) return;
-    stopHoverTimer();
-    hoverTimer = { handle: deps.setTimer(() => onHoverTimer(n), LONG_PRESS_MS), cellEl };
+    hoverTimer = { handle: deps.setTimer(() => onHoverTimer(n), LONG_PRESS_MS), cell: n };
   }
 
   function onHoverTimer(n: number): void {
@@ -871,7 +909,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
   function hoverLeave(event: PointerEvent): void {
     const cellEl = cellOf(event.target);
     if (cellEl === null || !outside(cellEl, event.relatedTarget)) return;
-    if (hoverTimer?.cellEl === cellEl) stopHoverTimer();
+    if (hoverTimer?.cell === attribute(cellEl, 'data-wordcell')) stopHoverTimer();
     overlays.closeHoverPeek();
     if (suppressed === cellEl) suppressed = null;
   }

@@ -1,8 +1,17 @@
 import { expect, type Locator, type Page, type Request, type Route, test } from '@playwright/test';
+import {
+  box,
+  cards,
+  centre,
+  column,
+  foot,
+  openFixture,
+  sameSession,
+  stashSession,
+} from './helpers/board';
 import { expectLeaves, wc } from './helpers/dialogs';
 import { animationFrames } from './helpers/lifecycle';
 import { booted, waitForDictionary } from './helpers/restore';
-import { fixture, seedStorage } from './helpers/seed';
 import { tokenColor } from './helpers/style';
 import { longPress, touchHold } from './helpers/touch';
 
@@ -21,28 +30,6 @@ const onAndroid = () =>
   test.skip(test.info().project.name !== 'android', 'touch tap flows run on android');
 const onDesktop = () =>
   test.skip(test.info().project.name !== 'desktop', 'mouse hover flows run on desktop');
-
-async function openFixture(page: Page, name: string): Promise<void> {
-  await seedStorage(page, { session: fixture(`${name}.json`) });
-  await page.goto('/');
-  await expect(page.locator('[data-card-id]')).toHaveCount(52);
-  await booted(page);
-}
-
-const column = (page: Page, n: number) => page.getByTestId(`column-${n}`);
-const cards = (page: Page, n: number) => column(page, n).locator('[data-place="column"]');
-const foot = (page: Page, n: number) => page.getByTestId(`foot-${n}`);
-
-async function box(locator: Locator): Promise<{ x: number; y: number; w: number; h: number }> {
-  const b = await locator.boundingBox();
-  if (b === null) throw new Error('element has no box');
-  return { x: b.x, y: b.y, w: b.width, h: b.height };
-}
-
-async function centre(locator: Locator): Promise<Point> {
-  const b = await box(locator);
-  return { x: b.x + b.w / 2, y: b.y + b.h / 2 };
-}
 
 // A point in column n's empty space: 6 px above its foot pad, below its bottom card.
 async function space(page: Page, n: number): Promise<Point> {
@@ -99,24 +86,6 @@ async function select(page: Page, n: number, i: number): Promise<void> {
   await tapAt(page, await cardAt(page, n, i));
   const count = await cards(page, n).count();
   await expectSelection(page, { column: n, count: count - i }, 1);
-}
-
-// Stashes the store's Session reference; returns the stored wordcell:session text.
-function stashSession(page: Page): Promise<string | null> {
-  return page.evaluate(() => {
-    const current = window.__wordcell?.current();
-    if (current?.kind !== 'active') throw new Error(`store is ${current?.kind}`);
-    window.__pointerSession = current.session;
-    return localStorage.getItem('wordcell:session');
-  });
-}
-
-function sameSession(page: Page): Promise<boolean> {
-  return page.evaluate(() => {
-    const current = window.__wordcell?.current();
-    if (current?.kind !== 'active') throw new Error(`store is ${current?.kind}`);
-    return current.session === window.__pointerSession;
-  });
 }
 
 const storedText = (page: Page) => page.evaluate(() => localStorage.getItem('wordcell:session'));
@@ -354,11 +323,18 @@ test.describe('android', () => {
   });
 
   // Entry 11 (R-65, Q-21): the held peek shows above the lifted selection, then closes on release.
-  test('R-14 a non-empty WordCell long-press peeks while held and keeps the selection', async ({
+  test('R-14 R-65 Q-21 a non-empty WordCell long-press peeks while held and keeps the selection; Session, storage and Undo/Redo unchanged', async ({
     page,
   }) => {
     await openFixture(page, 'session-idle-empty-column');
     await select(page, 2, 6);
+    // R-65 viewing changes nothing: the Session reference, the stored text, Undo/Redo enablement.
+    const stored = await stashSession(page);
+    const controls = async () => [
+      await page.getByTestId('undo').isEnabled(),
+      await page.getByTestId('redo').isEnabled(),
+    ];
+    const controlsBefore = await controls();
     const face = await centre(cards(page, 2).nth(6).locator('.face'));
     const hold = await touchHold(page, await centre(page.getByTestId('wordcell-7')));
     try {
@@ -376,12 +352,19 @@ test.describe('android', () => {
         return el.closest('[data-view-scrim]') !== null || el.closest('[data-view-sheet]') !== null;
       }, face);
       expect(atFace).toBe(true);
+      // A held peek pushes no history entry: only the selection's.
+      expect(await wcOf(page)).toBe(1);
+      expect(await controls()).toEqual(controlsBefore);
+      expect(await sameSession(page)).toBe(true);
     } finally {
       await hold.end();
     }
     await expect(page.locator('[data-view-sheet]')).toHaveCount(0);
     await animationFrames(page, 2);
     await expectSelection(page, { column: 2, count: 1 }, 1);
+    expect(await sameSession(page)).toBe(true);
+    expect(await storedText(page)).toBe(stored);
+    expect(await controls()).toEqual(controlsBefore);
   });
 
   test('R-14 AD-13 Undo with a selection clears it (entry popped), then undoes', async ({
@@ -507,6 +490,45 @@ test.describe('android', () => {
     const bar = await zOf(page.locator('[data-band="topBar"]'));
     expect(await zOf(cards(page, 1).nth(4).locator('.face'))).toBeGreaterThan(bar);
     expect(await zOf(page.locator('[data-selection-outline]'))).toBeGreaterThan(bar);
+    // 4-7 stacking: those z-indexes compete with the bars' only if no ancestor below `.board`
+    // creates a stacking context.
+    const contexts = (locator: Locator) =>
+      locator.evaluate((el) => {
+        const found: string[] = [];
+        for (let a = el.parentElement; a !== null && !a.classList.contains('board'); ) {
+          const s = getComputedStyle(a);
+          const parent = a.parentElement;
+          const display = parent === null ? '' : getComputedStyle(parent).display;
+          const item = display.includes('flex') || display.includes('grid');
+          if (
+            (s.position !== 'static' && s.zIndex !== 'auto') ||
+            s.position === 'fixed' ||
+            s.position === 'sticky' ||
+            (item && s.zIndex !== 'auto') ||
+            Number(s.opacity) < 1 ||
+            s.transform !== 'none' ||
+            s.translate !== 'none' ||
+            s.scale !== 'none' ||
+            s.rotate !== 'none' ||
+            s.filter !== 'none' ||
+            s.backdropFilter !== 'none' ||
+            s.perspective !== 'none' ||
+            s.clipPath !== 'none' ||
+            s.maskImage !== 'none' ||
+            s.mixBlendMode !== 'normal' ||
+            s.isolation === 'isolate' ||
+            /transform|opacity|filter|perspective|z-index/.test(s.willChange) ||
+            /paint|layout|strict|content/.test(s.contain) ||
+            s.containerType !== 'normal'
+          ) {
+            found.push(`${a.tagName}.${a.className}`);
+          }
+          a = parent;
+        }
+        return found;
+      });
+    expect(await contexts(cards(page, 1).nth(4).locator('.face'))).toEqual([]);
+    expect(await contexts(page.locator('[data-selection-outline]'))).toEqual([]);
 
     // F26: elementFromPoint at each card's original slot still answers that card's wrapper.
     const hits = await cards(page, 1).evaluateAll((els) =>

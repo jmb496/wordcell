@@ -1,15 +1,9 @@
 import { expect, type Page, test } from '@playwright/test';
+import { openFixture } from './helpers/board';
 import { fixture, seedStorage } from './helpers/seed';
 
 // Epic 4 entry 2: the Board over BAND_ORDER (AD-11), its cards (AD-14, F26) and the bars.
 // Expected values are literals from view(parseSession(<fixture>), EN).
-
-async function openFixture(page: Page, name: string): Promise<void> {
-  await seedStorage(page, { session: fixture(`${name}.json`) });
-  await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'WordCell' })).toBeVisible();
-  await expect(page.locator('[data-card-id]')).toHaveCount(52);
-}
 
 function box(page: Page, selector: string) {
   return page.locator(selector).evaluate((el) => {
@@ -48,6 +42,77 @@ test('AD-17 F11 geometry: faces 46 × 61, slot 50, board 400, strip 44, no docum
     innerHeight: window.innerHeight,
   }));
   expect(sizes).toEqual({ bands: 839, scrollHeight: 839, innerHeight: 839 });
+  // CAP-1 / AD-12 hit rect: column-n spans the columns track down to the foot row's bottom.
+  const columns = await box(page, '[data-band="columns"]');
+  const footRow = await box(page, '[data-band="footRow"]');
+  for (let n = 1; n <= 8; n++) {
+    const c = await box(page, `[data-testid="column-${n}"]`);
+    expect(c.top, `column-${n} top`).toBeCloseTo(columns.top, 3);
+    expect(c.top + c.height, `column-${n} bottom`).toBeCloseTo(footRow.top + footRow.height, 3);
+  }
+  // DESIGN.md bars: top bar 44, action bar 60, both sticky; bars and tray as wide as the board;
+  // the visually hidden h1 is 1 × 1.
+  const bars = await page.evaluate(() =>
+    ['topBar', 'actionBar'].map((id) => {
+      const el = document.querySelector(`[data-band="${id}"]`);
+      if (el === null) throw new Error(`no ${id}`);
+      return {
+        id,
+        height: el.getBoundingClientRect().height,
+        position: getComputedStyle(el).position,
+      };
+    }),
+  );
+  expect(bars).toEqual([
+    { id: 'topBar', height: 44, position: 'sticky' },
+    { id: 'actionBar', height: 60, position: 'sticky' },
+  ]);
+  for (const id of ['topBar', 'tray', 'actionBar']) {
+    const b = await box(page, `[data-band="${id}"]`);
+    expect({ left: b.left, width: b.width }, id).toEqual({ left: first.left, width: 400 });
+  }
+  const h1 = await box(page, 'h1');
+  expect({ width: h1.width, height: h1.height }).toEqual({ width: 1, height: 1 });
+});
+
+test("AD-17 F11 WordCell slots: 50 × 61 under column n − 2 in the wordcells band; a cell's cards share one box", async ({
+  page,
+}) => {
+  test.skip(test.info().project.name !== 'android', 'AD-17 Pixel 7 geometry runs on android');
+  await openFixture(page, 'session-place-free-letter-redo-tail');
+  const band = await box(page, '[data-band="wordcells"]');
+  for (let n = 3; n <= 10; n++) {
+    const cell = await box(page, `[data-testid="wordcell-${n}"]`);
+    const col = await box(page, `[data-testid="column-${n - 2}"]`);
+    expect({ width: cell.width, height: cell.height }, `wordcell-${n}`).toEqual({
+      width: 50,
+      height: 61,
+    });
+    expect(cell.left, `wordcell-${n} left`).toBeCloseTo(col.left, 3);
+    expect(cell.top, `wordcell-${n} top`).toBeCloseTo(band.top, 3);
+  }
+  // Every card element of a cell (live or mirror) stacks on one box.
+  const stacks = await page.locator('[data-wordcell]').evaluateAll((cells) =>
+    cells.map((cell) => {
+      const els = [...cell.querySelectorAll(':scope > :is([data-card-id], [data-mirror-of])')];
+      const rects = els.map((el) => {
+        const r = el.getBoundingClientRect();
+        return `${r.left},${r.top},${r.width},${r.height}`;
+      });
+      return {
+        cell: cell.getAttribute('data-wordcell'),
+        ids: els.map(
+          (el) => el.getAttribute('data-card-id') ?? `${el.getAttribute('data-mirror-of')}m`,
+        ),
+        boxes: new Set(rects).size,
+      };
+    }),
+  );
+  // Cell 3 holds 42 and 0 live with 28 on top as a used mirror; every other cell is empty.
+  expect(stacks).toEqual([
+    { cell: '3', ids: ['42', '0', '28m'], boxes: 1 },
+    ...[4, 5, 6, 7, 8, 9, 10].map((n) => ({ cell: String(n), ids: [], boxes: 0 })),
+  ]);
 });
 
 for (const [name, expected] of [
@@ -70,6 +135,7 @@ test('R-82 (UI) the live score follows a Redo across a commit', async ({ page })
     await redo.click();
     await expect(score(page)).toHaveText(expected);
   }
+  await expect(redo).toBeDisabled();
 });
 
 const undo = (page: Page) => page.getByRole('button', { name: 'Undo', exact: true });
@@ -142,6 +208,14 @@ test('AD-17 board render rules on session-idle-fresh: no placeholder, foot pads 
   await openFixture(page, 'session-idle-fresh');
   await expect(page.locator('.placeholder:visible')).toHaveCount(0);
   await footTopsMatch(page);
+  // AD-14 render rules: the data-* ids equal n.
+  for (let n = 1; n <= 8; n++) {
+    await expect(page.getByTestId(`column-${n}`)).toHaveAttribute('data-column', String(n));
+    await expect(page.getByTestId(`foot-${n}`)).toHaveAttribute('data-foot', String(n));
+  }
+  for (let n = 3; n <= 10; n++) {
+    await expect(page.getByTestId(`wordcell-${n}`)).toHaveAttribute('data-wordcell', String(n));
+  }
   // Q-06 the QU card (column 3, second from the top) carries the ×2 badge outside its glyph.
   const qu = page.getByTestId('column-3').locator('[data-card-id]').nth(1);
   await expect(qu.locator('.badge')).toHaveText('\u00d72');
