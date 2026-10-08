@@ -172,9 +172,11 @@ async function frames(page: Page, count: number): Promise<void> {
   for (let i = 0; i < count; i++) await page.clock.runFor(16);
 }
 
-// Path 1 (plan Design Notes): a foot-pad touchHold pan at 412 × 600, nothing selected. A 21 px
-// move past the touch slop and three 3 px steps, then ±3 px every 51 ms of page time (35 ms, the move, one frame) while
-// the word list fails, each step checking that scrollY changed and no banner was inserted.
+// Path 1 (plan Design Notes): a foot-pad touchHold pan at 412 × 600, nothing selected. One 21 px
+// move across the touch slop (in one move for determinism, the 5.2 flake fix b94b7b2, not the
+// plan's 3 px steps), then three 3 px steps, each settled before the next, then ±3 px every 51 ms
+// of page time (35 ms, the move, one frame) while the word list fails, each step checking that
+// scrollY changed and no banner was inserted.
 // Deterministic (ticket 4.13 D1): the page clock is installed and paused before load (as
 // e2e/blocking.spec.ts), and each move's scroll event, dispatched in a real frame, is awaited
 // before page time advances, so every recorded timestamp is page time. Returns the held pan.
@@ -190,15 +192,20 @@ async function panThroughFailure(page: Page): Promise<TouchHold> {
   const hold = await touchHold(page, { x, y });
   const scrollCount = () =>
     page.evaluate(() => (window as unknown as { __rec: Recorded }).__rec.scrolls.length);
-  // Waits for a scroll event after `count` events at the current scrollY, then one frame; returns
-  // scrollY and the banner state.
-  const settle = async (count: number) => {
+  // Waits until the latest scroll event after `count` events is at the current scrollY and scrollY
+  // has moved `sign`-wards from `from` by at least `min` px (a move split over frames does not
+  // settle early), then one frame; returns scrollY and the banner state.
+  const settle = async (count: number, from: number, sign: 1 | -1, min: number) => {
     await expect
       .poll(() =>
-        page.evaluate((n) => {
-          const { scrolls } = (window as unknown as { __rec: Recorded }).__rec;
-          return scrolls.length > n && scrolls.at(-1)?.y === window.scrollY;
-        }, count),
+        page.evaluate(
+          ([n, y0, s, m]) => {
+            const { scrolls } = (window as unknown as { __rec: Recorded }).__rec;
+            const y = window.scrollY;
+            return scrolls.length > n && scrolls.at(-1)?.y === y && s * (y - y0) >= m;
+          },
+          [count, from, sign, min] as const,
+        ),
       )
       .toBe(true);
     await frames(page, 1);
@@ -212,18 +219,19 @@ async function panThroughFailure(page: Page): Promise<TouchHold> {
     // One move crosses the touch slop, then 3 px moves, each settled before the next: one move
     // is one scroll event, so `last` is never an intermediate position. (Several unsettled moves
     // can land over several frames; settling on the first left the rest to land during the first
-    // ±3 px step, which then read the same scrollY: the 4.13 / 5.2 flake.)
+    // ±3 px step, which then read the same scrollY: the 4.13 / 5.2 flake.) 21 px = Chromium's
+    // 15 px touch slop + 6 px of scroll (scrollY 6).
     y -= 21;
     const start = await scrollCount();
     await hold.moveTo({ x, y });
-    let last = await settle(start);
+    let last = await settle(start, 0, 1, 2);
     expect(last.y, 'the foot-pad pan scrolls the page').toBeGreaterThan(0);
     for (let i = 0; i < 3; i++) {
       await page.clock.runFor(30);
       y -= 3;
       const count = await scrollCount();
       await hold.moveTo({ x, y });
-      const next = await settle(count);
+      const next = await settle(count, last.y, 1, 2);
       expect(next.y, 'the foot-pad pan keeps scrolling').toBeGreaterThan(last.y);
       last = next;
     }
@@ -231,10 +239,11 @@ async function panThroughFailure(page: Page): Promise<TouchHold> {
     const step = async () => {
       await page.clock.runFor(35);
       y += 3 * dir;
-      dir = -dir;
       const count = await scrollCount();
       await hold.moveTo({ x, y });
-      const next = await settle(count);
+      // Finger down (+y) scrolls up (−scrollY).
+      const next = await settle(count, last.y, dir === 1 ? -1 : 1, 2);
+      dir = -dir;
       expect(next.y, 'scrollY changes between steps').not.toBe(last.y);
       expect(next.inserted, 'no banner while the pan continues').toBe(false);
       last = next;
