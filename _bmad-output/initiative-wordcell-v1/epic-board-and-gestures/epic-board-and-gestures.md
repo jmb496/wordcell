@@ -4,6 +4,7 @@ title: "Board and gestures"
 parent: initiative-wordcell-v1
 covers: []
 after: [epic-app-shell]
+status: done
 assignee: ""
 risk: high
 ---
