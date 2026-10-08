@@ -1,6 +1,6 @@
 # Review log — spec-epic-5-tray SPEC.md (run 2)
 
-State: pass 6: done
+State: pass 7: done
 
 Target: `_bmad-output/specs/spec-epic-5-tray/SPEC.md` (docs mode, thorough, max 7). Second run after run 1 (`SPEC.review-log-run1.md`) diverged at pass 3; its upstream gaps were fixed in 972c4e2.
 Pre-loop: HEAD 972c4e2; copies `SPEC.review-log.passes/pass0.{SPEC,build-notes,rule-coverage}.md`; SPEC.md 5805 words (build-notes 3235, rule-coverage 2270). Growth budget ~14 500 words (2.5x).
@@ -131,3 +131,18 @@ Words (docs): SPEC 8485 (1.46 x pass 0)  |  Snapshot: SPEC.review-log.passes/pas
 - none new (OQ-6, OQ-7 open)
 ### Dropped
 - none
+
+## Pass 7 — 2026-10-08 (verify-only)
+Reviewers: fix diff (pass6.fix.diff only)  |  Findings: major 1, minor 1, decision-needed 0  |  Dropped in triage: 0 (the 14 → 15 `+` example in the major is wrong: the new D card stays live in its column and its tray copy is a mirror; the 0 → n Undo case holds)
+Words (docs): SPEC 8485 (1.46 x pass 0); no fix pass (cap).
+### Open major (not fixed)
+- CAP-9 / build-notes CAP-9 — pass-6 item 3 clips the overflow rows to the tray band's rect, but during a scroll-deferred play the faces of band-changing cards (e.g. a 0 → n Undo from Idle into Place) are held at their captured rects outside the band, so the clip hides them until the gate idles — proposed fix: clip only the blocking element to the band; never clip a face held at its captured rect
+### Unapplied minors
+- CAP-9 "plays from the captured rects" → "… in CAP-8's coordinate frame" (pass 7)
+- CAP-5 parted faces' return duration (left to the ticket plan, pass 5)
+- CAP-7 R-41/R-61 scripted fixture's starting phase and validated word (left to the ticket plan, pass 5)
+- CAP-10 Playwright held-Enter mechanism — later applied in pass 6 item 13; nothing left
+
+## Result — capped at 7 passes (open majors: CAP-9 overflow-row clip hides held faces during a scroll-deferred play)
+Majors per pass: 10, 9, 5, 5, 3, 2, 1. Decision needed (owner): OQ-6 (destination letters glide from the column on Validate/Undo), OQ-7 (minimum winning-guard window under reduced motion / Fast). Unapplied minors: 3 (above, the held-Enter item excluded).
+Note for upstream: most late majors (passes 2–7) came from the AD-11 page-scroll deferral of a move's re-layout and glide (interim overflow rows, held faces, coordinate frames). If the architect resets scroll-busy at every dispatch (as `gate.scrollReset` already does on hide), that path and its CAP-9 machinery could go; this is a spine AD-11 change and needs the owner's say (AGENTS.md rule 7).
