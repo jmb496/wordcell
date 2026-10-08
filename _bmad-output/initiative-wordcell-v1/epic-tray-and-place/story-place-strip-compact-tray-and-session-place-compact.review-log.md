@@ -1,5 +1,5 @@
 # Review log — story-place-strip-compact-tray-and-session-place-compact.md (ticket 5.2)
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7. Pass 0: 411 words (`.passes/pass0.md`), HEAD f0a0cc3. Intent fields from tickets.toml entry 2 (unknown, interface, tests, owns, consumers): `.passes/intent.md`.
 
@@ -56,3 +56,31 @@ Fixer: all 11 applied; item 2 formula corrected by the fixer to |arrangement| + 
 - none
 ### Dropped
 - R-33 (UI) test-name cites a sentence it does not prove — stretch; matches the 5.1 precedent and the tickets.toml tests field
+
+## Pass 3 — 2026-10-08
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 2, minor 7 (to fixer), minor 7 (left for the plan, over-budget additions)  |  Dropped in triage: 0 (+ duplicates merged)
+Words (docs): 1030 (2.51 x pass 0)  |  Snapshot: .passes/pass3.md, fix diff .passes/pass3.fix.diff
+Fixer: all 7 applied; cuts to stay in budget (Composing-marks list kept in the AC only, Notes shortened); text.ts checked (only viewTop)
+### Applied
+- [major] Description — fallback `PROPERTIES` entry has no tile bound; >14 tiles needs three rows (CAP-9) → fixer item 1
+- [major] AC — placeMeta cases cannot catch swapped `n`/`cell` (only 6, 6 named; both card-mode fixtures have 3 letters → cell 3) → fixer item 2
+- [minor] "the Composing draft" → "the cursor's Move" (condition read from the Place fixture's move) → item 3
+- [minor] "their `trayIds` strip-order assertions" → "their tray-order assertions" (the compact test uses expectComposing ids) → item 4
+- [minor] Interface: text.ts also gains the strip `bottom`/`top` tags (SPEC F11) → item 5
+- [minor] compact strip: no lock or outline on D cards in Place compact → item 6
+- [minor] AC: fallback fixture (if made) also gets the 52 live-element check → item 7
+### Default applied (technical)
+- Fallback PROPERTIES pins Composing, 8–14 tiles and the block condition
+- placeMeta case `placeMeta(4, 3, −1)` → `4 letters → cell 3 · −1` replaces the bare −1 case
+### Decision needed (functionality / UX / gameplay)
+- none
+### Left for the plan (minor, no ticket words)
+- build-notes CAP-1 and rule-coverage R-32 describe only the QU-direction fallback; the ticket's block-direction fallback is valid under SPEC Assumptions (either direction); plan records a close-out edit of both companions
+- single-fixture script tried first; plan records why before using the fallback
+- serialize.test.ts JSON import and REBUILDS generator script for the new fixture
+- fixture words also in generated/dictionary/en.txt (later entries re-Validate)
+- placeMeta Vitest asserts full strings
+- compact map asserts no `bottom`/`top` words (DESIGN.md "Nothing else")
+- corner quadrants on the `.face` box
+### Dropped
+- none
