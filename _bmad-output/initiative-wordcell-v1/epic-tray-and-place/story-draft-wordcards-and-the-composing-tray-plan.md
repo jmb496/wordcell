@@ -3,7 +3,7 @@ title: 'Draft wordCards and the Composing tray'
 type: 'feature'
 ticket: '1'
 created: '2026-10-08'
-status: 'built'
+status: done
 route: 'full'
 route_source: 'auto'
 baseline_revision: '64ea5a4dd3cfb482d24156ef0909ba61d8acb6ac'
