@@ -244,8 +244,10 @@ column card, a WordCell top card or a tray or strip tile is inert in every phase
 4. **Tie-break**: equal ratios go to the column whose centre is horizontally nearest the dragged
    rect's centre; still equal, the lower column number.
 5. **Leaving the source column** (R-14, Q-34). The drag has *left* the source column once the
-   live target is another column or no column at some `pointermove` after the drag threshold was
-   crossed. Until then the source column is never highlighted, even when it is the live target.
+   live target is another column, or no column while the dragged face also misses the source's
+   whole (unclipped) hit rect by the step 3 ≥ 25 % rule, at some `pointermove` after the drag
+   threshold was crossed; a face over its source but hidden under a sticky bar has not left it
+   (epic 4 SPEC F37). Until then the source column is never highlighted, even when it is the live target.
    After the drag has left, the source column is highlighted like any other column when the
    target returns to it.
 6. The target is highlighted live (DESIGN.md drop-target state). Release drops on the highlighted
