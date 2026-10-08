@@ -9,8 +9,8 @@ the contract; these notes fix what they leave open. `[ASSUMPTION]` marks inferen
 - AD-12 (F2): `data-place` `tray`/`strip` presses are tile presses; a D-block mirror press is a
   no-op that keeps a tile selection; the selected-tile 4 px lift moves only the face; tile
   wrappers are tile width + 4 wide (DESIGN.md Tray band).
-- AD-12 (F5): tile and free-letter drags end like column drags (platform cancel and back fly back,
-  `act()` and hide settle at once).
+- AD-12 (F5): tile and free-letter drags end like column drags (platform cancel flies back;
+  a back leaves the app per the bare-Board rule and hide, like `act()`, settles at once).
 - AD-14 (F6, F7): FLIP lives in `src/ui/flip.ts` and moves faces, never wrappers; the kind comes from the dispatching command and its
   `DispatchResult`; the controller's `pointerdown` and `cancel()` finish every running animation.
 - AD-14 (F8): name the epic 5 winning-guard tests; fold in the guard as SPEC F8 states it,
@@ -26,11 +26,14 @@ the contract; these notes fix what they leave open. `[ASSUMPTION]` marks inferen
   AD-3 `draft.wordCards` engine change (`src/engine/view.ts`, its tests; SPEC Constraints).
 - Structural Seed: `src/ui/flip.ts`; the `gestures/` modules CAP-3 splits out and the tile modules
   (build-notes Component tree); the shared class-name module.
+- Proposed epics row 5: record what moved to epic 6 (the pending-end-sheet half of the guard, F8).
+- AD-17 Speed: the epic 5 warm median on the Linux filesystem (CAP-12).
+
+## Epic file edit (due before CAP-5 is ticketed)
+
 - Done when 4 (due before CAP-5 is ticketed, not at close-out; SPEC Constraints AD-14): "mirrors
   never animate" → "mirrors take no part in the FLIP glide (the D-block parting shift excepted,
   AD-14)".
-- Proposed epics row 5: record what moved to epic 6 (the pending-end-sheet half of the guard, F8).
-- AD-17 Speed: the epic 5 warm median on the Linux filesystem (CAP-12).
 
 ## EXPERIENCE.md and DESIGN.md close-out edits (beyond the 2026-10-08 amendments already made, SPEC Upstream amendments)
 
@@ -131,9 +134,10 @@ src/ui/
   (fact: `CellView.cards` is bottom → top and the draft leaves the cell
   stack in place, `view.ts:194-205`; `freeCards` takes the same top, `rules.ts:144-152`). Looked
   up per render from `cells`; no stored map (AD-3). The CAP-1 P5 pins it with a free letter from
-  a cell other than 3.
-- Fixture `session-place-compact` (Assumptions): ≥ 8 strip tiles whose `QU` card is a free
-  letter (else a second, Composing fixture with a compact `QU` free letter), scripted under the epic 3 regeneration rule, added to `serialize.test.ts`'s
+  a cell other than 3 (`session-place-compact`'s `QU`).
+- Fixture `session-place-compact` (Assumptions): 8–14 strip tiles whose `QU` card is a free
+  letter from a cell other than 3 (else a second, Composing fixture with a compact `QU` free
+  letter from a cell other than 3), scripted under the epic 3 regeneration rule, added to `serialize.test.ts`'s
   valid-fixture list (S14).
 - Meta format and letter count strings in `text.ts` (F11): `letters(n)`, `placeMeta(n, cell,
   delta)` with `+n`, `±0`, `−n`.
@@ -166,7 +170,7 @@ src/ui/
   from CAP-2, which only wraps the buttons in `act()`); do it in one place (e.g. `act()` calls
   `overlays.clearTile()` after `cancel()`) so every button inherits it.
 - Clear rules (F1, F13) in one function used by the controller's tap path and by `act()`; the
-  controller's document-level tap path covers disabled controls, labels, the tray band background
+  controller's root tap path (epic 4 F25) covers disabled controls, labels, the tray band background
   and the top bar (no `click` reaches `act()` there).
 - A drag crossing 8 px from an inert target resolves, for the tile selection, as that target's
   tap (no dispatch).
@@ -249,7 +253,8 @@ src/ui/
   commit placed stays visible for its flight (today non-top cell cards are `visibility: hidden`,
   `WordCellRow.svelte:59`) and takes the hidden state on landing if it is not the top (AD-14,
   DESIGN.md WordCell); the target cell's previous cards keep their pre-commit visibility until
-  the first flying card lands (or the animation is finished), so the cell never looks empty; the
+  the first flying card lands (or the animation is finished), and when the target is the free
+  letter's own cell its used-state mirror stays drawn until then too, so the cell never looks empty; the
   P5 asserts visibility per flying card, not only `getAnimations()`.
 - Landing glides (F17, moved here from CAP-5/CAP-6, which keep only the no-edit `flyBack`): a
   tile or free letter released with an edit glides from its released position by `snap`.
@@ -310,7 +315,7 @@ src/ui/
 | S11 | 4.11-OM: ticket 4.11 plan names the final tree for its `test:all` line | paperwork | 12 |
 | S12 | AD-17 re-measure on the Linux filesystem; slowest engine file's watch re-run | paperwork | 12 |
 | S13 | The close-out edit lists above complete for the retrospective | paperwork | 12 |
-| S14 | Epic 4 D19 (compact half): compact tray and strip (8+ tiles, two rows, `QU` compact tile) checked in a browser on `session-place-compact` | code | 1 |
+| S14 | Epic 4 D19 (compact half): compact tray and strip (8–14 tiles, two rows, `QU` compact tile) checked in a browser on `session-place-compact` | code | 1 |
 | S15 | Epic 4 D14: WordCell count badge at 2 cards (shown) and 1 card (none), on CAP-7's scripted free-letter fixture, whose free letter's cell holds exactly 2 cards before the move: the badge reads 2 after the add and before Confirm, one Confirm into a different cell shows 2 → 1 (the R-61 test; the R-41 retarget is a separate test on the same fixture) | code | 7 |
 | S16 | 4.12-OM (`review-loop/4-12-build.md` Result open major): hover-peek plan names App.svelte as the hoverFine watcher. Applied by ticket 4.13 D5 (`story-refactor-sweep-plan.md` l.219, 253); confirm at HEAD and record | paperwork | 12 |
 | S17 | 4.12-m1, m2 (`4-12-build.md` Pass 2 Unapplied minors, `controller.ts` hover peek): timer keyed by cell number, half-open `suppress()` rects. Applied by 4.13 D6 (`controller.ts:311, 883` at f62a89a, two `AD-12` Vitests); CAP-3's hover-peek move keeps both and their Vitests | code | 3 |

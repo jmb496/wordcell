@@ -1,6 +1,6 @@
 # Review log — spec-epic-5-tray SPEC.md (run 2)
 
-State: pass 2: done
+State: pass 3: done
 
 Target: `_bmad-output/specs/spec-epic-5-tray/SPEC.md` (docs mode, thorough, max 7). Second run after run 1 (`SPEC.review-log-run1.md`) diverged at pass 3; its upstream gaps were fixed in 972c4e2.
 Pre-loop: HEAD 972c4e2; copies `SPEC.review-log.passes/pass0.{SPEC,build-notes,rule-coverage}.md`; SPEC.md 5805 words (build-notes 3235, rule-coverage 2270). Growth budget ~14 500 words (2.5x).
@@ -52,6 +52,25 @@ Words (docs): SPEC 7091 (1.22 x pass 0)  |  Snapshot: SPEC.review-log.passes/pas
 - F8 — backstop `duration('snap')`, counted from install if the triggering gesture already ended
 - CAP-9 — interim overflow row at latched size
 - CAP-2 — double-tap P5 on `session-composing`
+### Decision needed (functionality / UX / gameplay)
+- none new (OQ-6 open)
+### Dropped
+- none
+
+## Pass 3 — 2026-10-08
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 5, minor 13, decision-needed 0  |  Dropped in triage: 0 (merged: overflow row ×3, New game "dispatches" ×2, backstop wording folded into the guard major; free-letter own-cell flight reclassified major → minor)
+Findings handed to the fixer: `SPEC.review-log.passes/p3-findings.md`
+Words (docs): SPEC 7473 (1.29 x pass 0)  |  Snapshot: SPEC.review-log.passes/pass3.*.md; fix diff pass3.fix.diff
+### Applied
+- [major] F8 — the triggering gesture's remaining events are consumed but never complete the animation; keydown after settle in the backstop window passes through → item 1
+- [major] CAP-9 — interim overflow row drawn below the last latched row over the control row, no hit rect; post-`finishAll` reflow is a settled jump → item 2
+- [major] F5/CAP-5 — back mid-drag in Composing/Place follows the bare-Board rule (leaves the app); hide flush settles the drag; P5 via `page.goBack()` → item 3
+- [major] CAP-8 P5 — controller-classified presses (taps and drags) read after touch end; same-evaluate click only for `act()` buttons → item 4
+- [major] CAP-1 P5 — origin tag from a cell other than 3 seeded by `session-place-compact`'s `QU` free letter → item 5
+- [minor] items 6–18 (own-cell used mirror in flight, build-notes heading, four `tapAt` copies, F17–F21 preambles, New game wording, R-73 reload split to CAP-4/CAP-7, busy-at-dispatch invariant, caret wording, R-32 P5 items, 8–14 tiles, OQ-6 default in CAP-8, root tap path, `↩` assertion moved to CAP-4)
+### Default applied (technical)
+- CAP-9 — overflow row geometry during deferral
+- F5 — back mid-drag tested as leaving the app (`page.goBack()`)
 ### Decision needed (functionality / UX / gameplay)
 - none new (OQ-6 open)
 ### Dropped
