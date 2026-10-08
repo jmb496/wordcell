@@ -459,8 +459,9 @@ pills (`{rounded.full}`); among badges only the error dot is a circle. The 44 ×
   shows nothing; in Composing, hovering a destination-column card draws a 1 px teal outline around
   the D that a click would set; otherwise no hover); *selected* (teal 2 px outline,
   lifted 8 px); *dragging* (the tail follows the finger, lifted with the shadow; a selected stack keeps its
-  8 px lift, so it neither jumps at pickup nor snaps after a cancelled fly-back, epic 4 SPEC
-  F32, F33; its former places in the column show as ghosts); *drop target* (the target column's bottom card or placeholder gets
+  8 px lift, so it neither jumps at pickup nor snaps when a platform cancel (e.g. an Android
+  edge-swipe back) flies it back and restores the selection; a release over nothing deselects
+  (EXPERIENCE.md Drop targeting step 6), epic 4 SPEC F32, F33; its former places in the column show as ghosts); *drop target* (the target column's bottom card or placeholder gets
   a teal 3 px outline and a 12 % teal wash; on the source column with a partial tail, the lowest
   card not in the tail, the future top of D (R-21), takes it; only when the whole column is lifted
   does the source column's top slot show the placeholder under the ghosts, and the placeholder
