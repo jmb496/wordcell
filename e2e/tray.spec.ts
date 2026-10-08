@@ -158,6 +158,10 @@ test('R-38 (UI) a failed Validate replaces the word line with the invalid line: 
     return suffix.left - word.right;
   });
   expect(gap).toBeGreaterThan(2);
+  // The word → invalid switch refits to the invalid max: 14…16 px, the suffix whole in the line.
+  await expect.poll(() => fontSize(page, '.invalid .text')).toBeLessThanOrEqual(16);
+  expect(await fontSize(page, '.invalid .text')).toBeGreaterThanOrEqual(14);
+  expect(await suffixOverflow(page)).toBeLessThanOrEqual(0.5);
 });
 
 for (const fixture of ['session-idle-pending-draft', 'session-won', 'session-gave-up']) {
@@ -212,6 +216,46 @@ const fontSize = (page: Page, selector: string) =>
     .locator(selector)
     .evaluate((el) => Number.parseFloat(getComputedStyle(el).fontSize));
 
+// How far the invalid line's suffix ends past the word line's (WordLine root's) right edge.
+const suffixOverflow = (page: Page) =>
+  tray(page)
+    .locator('.word-line .line')
+    .evaluate((line) => {
+      const suffix = line.querySelector('.suffix');
+      if (suffix === null) throw new Error('invalid line suffix missing');
+      return suffix.getBoundingClientRect().right - line.getBoundingClientRect().right;
+    });
+
+// The invalid line's measured geometry: the text's x offset in the line (✕ glyph and gap), the
+// line's width, and the text's natural nowrap width at 14 and 16 px on a detached clone.
+const invalidGeometry = (page: Page) =>
+  tray(page)
+    .locator('.word-line .line')
+    .evaluate((line) => {
+      const invalid = line.querySelector('.invalid');
+      const live = line.querySelector('.invalid .text');
+      if (invalid === null || live === null) throw new Error('invalid line missing');
+      const natural = (px: number): number => {
+        const probe = invalid.cloneNode(true) as HTMLElement;
+        probe.style.cssText = 'position:absolute;left:0;top:0;width:max-content;visibility:hidden';
+        const text = probe.querySelector('.text') as HTMLElement;
+        text.classList.add('wc-measuring');
+        text.style.fontSize = `${px}px`;
+        document.body.append(probe);
+        try {
+          return text.getBoundingClientRect().width;
+        } finally {
+          probe.remove();
+        }
+      };
+      return {
+        offset: live.getBoundingClientRect().left - line.getBoundingClientRect().left,
+        lineWidth: line.clientWidth,
+        at14: natural(14),
+        at16: natural(16),
+      };
+    });
+
 test('AD-11 a narrowed word line shrinks below 20 px and not below 14 px', async ({ page }) => {
   await openFixture(page, 'session-composing');
   await expect(tray(page).locator('.word-text')).toHaveText('TAN');
@@ -229,14 +273,38 @@ test('AD-11 (R-38) a narrowed invalid line shrinks below 16 px and not below 14 
   await page.getByTestId('primary-action').click();
   const text = tray(page).locator('.invalid .text');
   await expect(text).toBeVisible();
-  await narrow(page, 120);
+  // A width where the line fits at 14 px but not at 16 px, from the measured natural widths.
+  const g = await invalidGeometry(page);
+  expect(g.at16 - g.at14).toBeGreaterThan(4);
+  await narrow(page, Math.round(g.offset + (g.at14 + g.at16) / 2));
   await expect.poll(() => fontSize(page, '.invalid .text')).toBeLessThan(16);
   expect(await fontSize(page, '.invalid .text')).toBeGreaterThanOrEqual(14);
-  const suffix = await text
-    .locator('.suffix')
-    .evaluate((el) => ({ scroll: el.scrollWidth, client: el.clientWidth }));
-  expect(suffix.scroll).toBeLessThanOrEqual(suffix.client);
+  expect(await suffixOverflow(page)).toBeLessThanOrEqual(0.5);
   expect(await text.evaluate((el) => el.textContent)).toBe("TAN isn't in the word list.");
+});
+
+// No fixture word or invalid line overflows the band at the 360 px minimum (DESIGN.md A-D3), so
+// the shrink is asserted only when the measured 16 px width exceeds the narrower box.
+test('AD-11 (R-38) a viewport narrowed to 360 px refits the invalid line: 14…16 px, the suffix whole in the line', async ({
+  page,
+}) => {
+  await page.route(LIST, (route) => route.fulfill({ status: 200, body: 'cat\ndog\n' }));
+  await openFixture(page, 'session-composing');
+  await waitForDictionary(page, 'ready');
+  await page.getByTestId('primary-action').click();
+  await expect(tray(page).locator('.invalid .text')).toBeVisible();
+  const before = await invalidGeometry(page);
+  await page.setViewportSize({ width: 360, height: 750 });
+  await expect
+    .poll(async () => (await invalidGeometry(page)).lineWidth)
+    .toBeLessThan(before.lineWidth);
+  const g = await invalidGeometry(page);
+  await expect
+    .poll(async () => (await fontSize(page, '.invalid .text')) < 16)
+    .toBe(g.at16 > g.lineWidth - g.offset);
+  expect(await fontSize(page, '.invalid .text')).toBeGreaterThanOrEqual(14);
+  expect(await fontSize(page, '.invalid .text')).toBeLessThanOrEqual(16);
+  expect(await suffixOverflow(page)).toBeLessThanOrEqual(0.5);
 });
 
 test("AD-14 an Undo from Composing to Idle remounts cell 3's top: the used-mirror handle is detached and card-28 is live in wordcell-3", async ({
@@ -259,6 +327,7 @@ test("AD-14 an Undo from Composing to Idle remounts cell 3's top: the used-mirro
 });
 
 // The plan's Design Notes ×2 badge scratch Session: block 23m 35m 8m puts QU on a middle tile.
+// Column 3 of seed 1 is 23 L, 35 QU, 8 E, 21 J, 2 A, 42 T, 0 A (bottom → top).
 const BADGE_SCRATCH = {
   version: 1,
   seed: 1,
@@ -279,30 +348,70 @@ const BADGE_SCRATCH = {
   activeMs: 0,
 };
 
-test('AD-14 (Q-06) the ×2 badge on a middle block tile ends at its wrapper x + tileWidth; QU is one underlined unit', async ({
-  page,
-}) => {
-  await seedStorage(page, { session: JSON.stringify(BADGE_SCRATCH) });
-  await page.goto('/');
-  await expect(page.locator('[data-card-id]')).toHaveCount(52);
-  await expect(tray(page).locator('.word-text')).toHaveText('LQUEJATA');
-  const mirror = tray(page).locator('[data-mirror-of="35"]');
-  await expect(mirror).toHaveClass(/\bblock\b/);
-  await expect(mirror).not.toHaveClass(/\bend\b/);
-  const geometry = await tray(page).evaluate((el) => {
-    const live = el.querySelector('[data-card-id] .face');
-    const wrapper = el.querySelector('[data-mirror-of="35"]');
-    const badge = wrapper?.querySelector('.badge');
-    if (live == null || wrapper == null || badge == null) throw new Error('scratch tray missing');
-    return {
-      tileWidth: live.getBoundingClientRect().width,
-      left: wrapper.getBoundingClientRect().left,
-      right: badge.getBoundingClientRect().right,
+// BADGE_SCRATCH variants placing QU on each block tile position (R-30 tray order, R-31 k).
+const BADGE_VARIANTS = [
+  { tile: 'middle', move: {}, word: 'LQUEJATA', count: '8 letters', start: false, end: false },
+  {
+    tile: 'first',
+    move: { destinationCount: 2 },
+    word: 'QUEJATA',
+    count: '7 letters',
+    start: true,
+    end: false,
+  },
+  {
+    tile: 'last',
+    move: { destinationCount: 2, destinationSide: 'right' },
+    word: 'JATAEQU',
+    count: '7 letters',
+    start: false,
+    end: true,
+  },
+  {
+    tile: 'single (k = 1)',
+    move: { sourceCount: 5, destinationCount: 1, arrangement: [8, 21, 2, 42, 0] },
+    word: 'QUEJATA',
+    count: '7 letters',
+    start: true,
+    end: true,
+  },
+] as const;
+
+for (const variant of BADGE_VARIANTS) {
+  test(`AD-14 (Q-06) the ×2 badge on a ${variant.tile} block tile ends at its wrapper x + tileWidth; QU is one underlined unit`, async ({
+    page,
+  }) => {
+    const session = {
+      ...BADGE_SCRATCH,
+      moves: [{ ...BADGE_SCRATCH.moves[0], ...variant.move }],
     };
+    await seedStorage(page, { session: JSON.stringify(session) });
+    await page.goto('/');
+    await expect(page.locator('[data-card-id]')).toHaveCount(52);
+    await expect(tray(page).locator('.word-text')).toHaveText(variant.word);
+    // R-36: QU counts 2.
+    await expect(tray(page).locator('.controls .count')).toHaveText(variant.count);
+    const mirror = tray(page).locator('[data-mirror-of="35"]');
+    await expect(mirror).toHaveClass(/\bblock\b/);
+    await expect(mirror).toHaveClass(variant.start ? /\bstart\b/ : /^(?!.*\bstart\b)/);
+    await expect(mirror).toHaveClass(variant.end ? /\bend\b/ : /^(?!.*\bend\b)/);
+    const geometry = await tray(page).evaluate((el) => {
+      const live = el.querySelector('[data-card-id] .face');
+      const wrapper = el.querySelector('[data-mirror-of="35"]');
+      const badge = wrapper?.querySelector('.badge');
+      if (live == null || wrapper == null || badge == null) throw new Error('scratch tray missing');
+      return {
+        tileWidth: live.getBoundingClientRect().width,
+        left: wrapper.getBoundingClientRect().left,
+        right: badge.getBoundingClientRect().right,
+      };
+    });
+    expect(Math.abs(geometry.right - (geometry.left + geometry.tileWidth))).toBeLessThanOrEqual(
+      0.5,
+    );
+    const qu = tray(page).locator('.word-text [data-word-card="35"]');
+    await expect(qu).toHaveCount(1);
+    await expect(qu).toHaveText('QU');
+    await expect(qu).toHaveClass(/\bd\b/);
   });
-  expect(Math.abs(geometry.right - (geometry.left + geometry.tileWidth))).toBeLessThanOrEqual(0.5);
-  const qu = tray(page).locator('.word-text [data-word-card="35"]');
-  await expect(qu).toHaveCount(1);
-  await expect(qu).toHaveText('QU');
-  await expect(qu).toHaveClass(/\bd\b/);
-});
+}

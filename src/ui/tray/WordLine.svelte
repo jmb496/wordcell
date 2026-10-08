@@ -37,6 +37,8 @@ const parts = $derived(
   rejectedWord === undefined ? undefined : text.invalidWordParts(rejectedWord),
 );
 const max = $derived(invalid ? INVALID_MAX : WORD_MAX);
+/** The rendered word's cards as a string: `view()` rebuilds `wordCards` on every dispatch. */
+const wordKey = $derived(wordCards.join(','));
 let size = $state(WORD_MAX);
 
 /** The text element's nowrap, unclipped width at `px`; restores its class and size after. */
@@ -61,7 +63,7 @@ function refit(): void {
 
 // Text change: the word, the rejected word (and with it the max) or the text element.
 $effect(() => {
-  void [wordCards, rejectedWord, max, textEl];
+  void [wordKey, rejectedWord, max, textEl];
   refit();
 });
 
