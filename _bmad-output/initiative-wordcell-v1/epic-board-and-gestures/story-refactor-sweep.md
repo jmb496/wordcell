@@ -63,3 +63,7 @@ Verify: npm run test:all green; the R6 fold and R7 move leave every existing tes
 - parent — _bmad-output/initiative-wordcell-v1/epic-board-and-gestures/epic-board-and-gestures.md
 - spec — _bmad-output/specs/spec-epic-4-board/build-notes.md, CAP-10
 - retro — _bmad-output/initiative-wordcell-v1/epic-app-shell/epic-app-shell-retrospective.md, Action items R6, R7
+
+## Notes
+
+- Owner, 2026-10-07 (SPEC F35): the AD-17 unit-suite median of 5.62 s on the `/mnt/d` checkout (3.14 s on the Linux filesystem) is accepted for now after the architecture-test split; no further speed-up in this ticket; the retrospective decides whether the 5 s budget stays.

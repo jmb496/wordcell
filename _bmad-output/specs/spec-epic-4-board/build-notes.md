@@ -51,6 +51,8 @@ Spine edits are batched at close-out as in epic 3, so the R1 AD-13 record (retro
   the "whole hit rect", so a column hidden under a bar is never a target. Owner answer 2026-10-07.
 - AD-17 Touch (F10): `touch.ts` adds the stepwise held-touch API beside `touchDrag` and `longPress`.
 - AD-17 Speed: record the epic 4 warm median and, if it was done, the `architecture.test.ts` split.
+  F35 (owner, 2026-10-07): 5.62 s on `/mnt/d` after the split (3.14 s on the Linux filesystem) is
+  accepted for now; the retrospective decides whether the 5 s budget, or where it is measured, changes.
 
 ## EXPERIENCE.md close-out edits (owner answers 2026-10-01; EXPERIENCE.md is not edited by this epic)
 

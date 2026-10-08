@@ -3,7 +3,7 @@ title: 'Refactor sweep'
 type: 'refactor'
 ticket: '13'
 created: '2026-10-07'
-status: blocked
+status: built
 baseline_revision: '3014424bc706e31eb5f9249b0c5e52aa49754a2b'
 route: 'full'
 route_source: 'auto'
@@ -84,8 +84,6 @@ deferred:
     location: >-
       AGENTS.md:38
     severity: medium
-blocked_at: "2026-10-07"
-blocked_reason: "Owner stop (AD-17 / epic Done when 5): warm unit median 5.62 s after the architecture-test split (5.36 s before); controller.test.ts (3.5-4.0 s) is the critical path, which the split cannot shorten. Owner to decide: accept, allow another speed-up, or change the measurement location (Linux filesystem: 3.14 s)."
 ---
 
 <intent-contract>
@@ -167,6 +165,8 @@ blocked_reason: "Owner stop (AD-17 / epic Done when 5): warm unit median 5.62 s 
 - Given the inventory, when the plan is read, then each row D1–D20 has a status line and every diff hunk maps to a row, R6, R7 or the split.
 
 ## Implementation Notes
+
+**Owner answer 2026-10-07 (SPEC F35):** the 5.62 s median is accepted for now; plan moved to `built`; the 5 s budget is for the retrospective.
 
 **Owner stop (AD-17 Speed, CAP-10):** the warm unit median is 5.36 s before the split and 5.47 s after it (≥ 5.00 s both times); the split is done and kept, the plan is not moved to `built`. Every other task is finished. The critical path is `src/ui/gestures/controller.test.ts` (one file, 3.5–4.0 s), which the only permitted speed-up (the architecture split) cannot shorten. Evidence below (§Timings). For comparison only: the same tree on the Linux filesystem (`~/wordcell-watch`) ran the full suite in 3.14 s cold / 2.38 s in watch.
 

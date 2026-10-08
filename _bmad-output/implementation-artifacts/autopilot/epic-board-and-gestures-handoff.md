@@ -25,3 +25,6 @@ Close-out docs so far:
 - The 4.12 build notes also list two DESIGN.md wording edits made by technical default (hover peek width, and its below-the-row placement in the dev band-order mode).
 
 Digest: `_bmad-output/implementation-artifacts/autopilot/epic-board-and-gestures-20261001-1955.md`
+
+## Resolved
+Owner, 2026-10-07: accept the 5.62 s unit median for now (SPEC F35); ticket Notes and plan updated, plan status `built`. Rerun the driver: it goes to the code review.
