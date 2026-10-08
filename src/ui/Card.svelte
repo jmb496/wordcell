@@ -12,6 +12,9 @@ import { text } from './text';
 // Entry 11 (DESIGN.md WordCell view, AD-14): a `view` mirror (place `view`) is a full-height card
 // in the sheet's flow, `pan-y` so a swipe scrolls the sheet, never hatched or dimmed (a used
 // cell's top is a normal card there); `topTag` adds the `top` pill.
+// Epic 5 entry 2 (DESIGN.md Tile, Placement strip): tile corner marks by mode (card, compact) and
+// place (`tray`, `strip`): the origin `tag`, the strip `position` mark (`bottom`/`top` + `★` in the
+// card-mode bottom band; `▼`/`★` top-left on compact) and the `↩` `returnSlot` (Composing only).
 let {
   id,
   face,
@@ -26,6 +29,8 @@ let {
   remainderTop = false,
   topTag = false,
   tag,
+  position,
+  returnSlot = false,
 }: {
   id: CardId;
   face: Face;
@@ -45,8 +50,12 @@ let {
   remainderTop?: boolean;
   /** Entry 11: the view's top card, tagged `top` (DESIGN.md WordCell view). */
   topTag?: boolean;
-  /** Epic 5 entry 1: a free-letter tile's origin WordCell, in the bottom band, left (DESIGN.md Tile). */
+  /** Epic 5 entry 1: a free-letter tile's origin WordCell (corner per mode and place, DESIGN.md Tile). */
   tag?: number;
+  /** Epic 5 entry 2: a strip tile's position mark, first (`bottom`) or last (`top`, R-50). */
+  position?: 'bottom' | 'top';
+  /** Epic 5 entry 2: the `↩` return glyph of a selected free-letter tile (Composing; set by entry 5). */
+  returnSlot?: boolean;
 } = $props();
 
 // DESIGN.md Card: `QU` is set as `Qu` with the ×2 badge (Q-06).
@@ -55,6 +64,18 @@ const glyph = $derived(qu ? 'Qu' : face.letter);
 const ghost = $derived(mirror === 'ghost');
 const block = $derived(mirror === 'block');
 const lock = $derived(destination || (block && segment?.start === true));
+// DESIGN.md Tile corner map (`.face`-relative): card-mode tray marks sit in the bottom band; a
+// strip moves the origin tag top-left (A-D10); compact tiles have no band and use the corners.
+const compact = $derived(tile?.mode === 'compact');
+const inStrip = $derived(place === 'strip');
+const tagCorner = $derived(compact ? (inStrip ? 'bl' : 'tl') : inStrip ? 'tl' : 'band-l');
+const returnCorner = $derived(compact ? (qu ? 'br' : 'tr') : 'band-r');
+const showReturn = $derived(returnSlot && !inStrip);
+const strippedPosition = $derived(inStrip ? position : undefined);
+// The flourish yields only to a bottom-band mark (card mode).
+const bandMark = $derived(
+  !compact && (inStrip ? strippedPosition !== undefined : tag !== undefined || showReturn),
+);
 // AD-14: only the WordCell view's copies sit in the view, and they are always mirrors.
 const inView = $derived.by(() => {
   if ((place === 'view') !== (mirror === 'view')) {
@@ -80,7 +101,7 @@ const inView = $derived.by(() => {
   class:lifted
   class:remainder-top={remainderTop}
   class:view={inView}
-  class:tagged={tag !== undefined}
+  class:band-marked={bandMark}
   style:--tile-w={tile ? `${tile.width}px` : undefined}
   data-card-id={mirror ? undefined : id}
   data-testid={mirror ? undefined : `card-${id}`}
@@ -98,7 +119,16 @@ const inView = $derived.by(() => {
       {/if}
       <span class="glyph" class:qu>{glyph}</span>
       {#if qu}<span class="badge">{text.quBadge}</span>{/if}
-      {#if tag !== undefined}<span class="tag">{tag}</span>{/if}
+      {#if tag !== undefined}<span class="tag mark {tagCorner}">{tag}</span>{/if}
+      {#if strippedPosition !== undefined}
+        {#if compact}
+          {#if strippedPosition === 'top'}<span class="star mark tl">{text.star}</span>{:else}<span class="bottom-mark mark tl">{text.stripBottomMark}</span>{/if}
+        {:else}
+          <span class="position mark band-l">{strippedPosition === 'top' ? text.stripTop : text.stripBottom}</span>
+          {#if strippedPosition === 'top'}<span class="star mark band-r">{text.star}</span>{/if}
+        {/if}
+      {/if}
+      {#if showReturn}<span class="return mark {returnCorner}">{text.returnGlyph}</span>{/if}
     {/if}
   </div>
   {#if topTag}<span class="top-tag">{text.viewTop}</span>{/if}
@@ -147,14 +177,22 @@ const inView = $derived.by(() => {
     font: 700 11px/1 system-ui, "Roboto", sans-serif;
   }
 
-  /* DESIGN.md Tile: a free-letter origin tag (card-badge, 11 px) in the bottom band, left; the
-     flourish is omitted on a tagged tile. */
-  .tag {
-    position: absolute; left: 4px; top: 72%; height: 28%;
-    display: flex; align-items: center;
+  /* DESIGN.md Tile, Placement strip: tile marks (card-badge, 11 px 700) at a corner of the face
+     or in the card-mode bottom band (left or right); the flourish is omitted when the bottom band
+     holds a mark. The ★ is orange. */
+  .mark {
+    position: absolute; z-index: 1; display: flex; align-items: center; height: 12px;
     font: 700 11px/1 system-ui, "Roboto", sans-serif; color: var(--wc-card-ink);
   }
-  .tagged .face::after { content: none; }
+  .mark.band-l, .mark.band-r { top: 72%; height: 28%; }
+  .mark.band-l { left: 4px; }
+  .mark.band-r { right: 4px; }
+  .mark.tl { top: 2px; left: 3px; }
+  .mark.tr { top: 1px; right: 3px; }
+  .mark.bl { bottom: 2px; left: 3px; }
+  .mark.br { bottom: 2px; right: 3px; }
+  .star { color: var(--wc-accent-orange); }
+  .band-marked .face::after { content: none; }
 
   /* DESIGN.md Tile: a card face tileWidth wide in a tile-pitch wrapper (F26 hit rect). */
   .card.tile { width: calc(var(--tile-w) + 4px); height: var(--wc-H); }

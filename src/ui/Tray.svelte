@@ -11,13 +11,13 @@ import { originCard } from './tray/tags';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import WordLine from './tray/WordLine.svelte';
 
-// Epic 5 entry 1 tray band (DESIGN.md Tray band): the reserved band (height from `bands()`) with
-// the word line, the tile rows and the control row, switching on `view.place`, then
-// `view.draft`, else empty (AD-3). Composing: the word line (or the R-38 invalid line while
+// Epic 5 tray band (DESIGN.md Tray band, Placement strip): the reserved band (height from
+// `bands()`) with the word line, the tile rows and the control row, switching on `view.place`,
+// then `view.draft`, else empty (AD-3). Composing: the word line (or the R-38 invalid line while
 // `feedback.rejectedWord` is set), tiles in R-30 tray order with the D-block mirrors at the
-// `side` end and free-letter origin tags, and the letter count. Place: the F2 strip as built
-// (live tiles in `placementOrder`; entry 2 adds the word line, tags and meta). Idle and Game over:
-// all three rows empty.
+// `side` end and free-letter origin tags, and the letter count. Place: the word line in word
+// order (`draft.wordCards`, no D underline, R-51), the strip in `placementOrder` with origin tags
+// and the `bottom`/`top` marks, and the meta (R-80). Idle and Game over: all three rows empty.
 let {
   view,
   w,
@@ -25,7 +25,10 @@ let {
   height,
 }: { view: GameView; w: number; innerWidth: number; height: number } = $props();
 
-const composing = $derived(view.place === undefined ? view.draft : undefined);
+// The draft in Composing and Place (`view.draft` is set in both); `place` only in Place.
+const draft = $derived(view.draft);
+const place = $derived(view.place);
+const NO_DESTINATION: readonly CardId[] = [];
 const tiles: TrayTile[] = $derived.by(() => {
   if (view.place !== undefined)
     return view.place.placementOrder.map((id) => ({ id, mirror: false }));
@@ -34,31 +37,36 @@ const tiles: TrayTile[] = $derived.by(() => {
 });
 // Free-letter origin tags, looked up per render from `cells` (AD-3; no stored map).
 const tags: ReadonlyMap<CardId, number> = $derived(
-  new Map(composing?.freeLetters.map((cell) => [originCard(view.cells, cell), cell]) ?? []),
+  new Map(draft?.freeLetters.map((cell) => [originCard(view.cells, cell), cell]) ?? []),
 );
 </script>
 
 <div class="tray" data-band="tray" style:height="{height}px">
   <div class="word-line">
-    {#if composing !== undefined}
+    {#if draft !== undefined}
       <WordLine
         faces={view.faces}
-        wordCards={composing.wordCards}
-        destination={composing.destination}
-        rejectedWord={game.feedback.rejectedWord}
+        wordCards={draft.wordCards}
+        destination={place === undefined ? draft.destination : NO_DESTINATION}
+        rejectedWord={place === undefined ? game.feedback.rejectedWord : undefined}
       />
     {/if}
   </div>
   <TileRows
     {tiles}
     faces={view.faces}
-    strip={view.place !== undefined}
+    strip={place !== undefined}
     {tags}
     {w}
     {innerWidth}
   />
   <div class="controls">
-    {#if composing !== undefined}<ControlRow letterCount={composing.letterCount} />{/if}
+    {#if draft !== undefined}
+      <ControlRow
+        letterCount={draft.letterCount}
+        meta={place === undefined ? undefined : { target: place.target, scoreDelta: place.scoreDelta }}
+      />
+    {/if}
   </div>
 </div>
 

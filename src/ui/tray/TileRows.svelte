@@ -4,12 +4,13 @@ import type { CardId, Face } from '../../engine/index';
 import Card from '../Card.svelte';
 import { type TrayTile, trayLayout } from '../layout/tray';
 
-// Epic 5 entry 1 tile rows (DESIGN.md Tray band, Tile; moved from the F2 static tray): a CSS grid
-// of tile-pitch `Card`s sized by `trayLayout`. Composing: live S and free-letter tiles (place
-// `tray`) with the D-block mirrors joined per row segment (one outline and one lock each); a
-// free-letter tile carries its origin-cell `tag` in card mode only (compact marks are entry 2).
-// Place: live strip tiles (place `strip`). The tile area keeps the reserved height and clips
-// (F2). Keys stay `${id}-${mirror}` (AD-14: a live ↔ mirror switch remounts).
+// Epic 5 tile rows (DESIGN.md Tray band, Tile, Placement strip): a CSS grid of tile-pitch `Card`s
+// sized by `trayLayout`, card or compact mode. Composing: live S and free-letter tiles (place
+// `tray`) with the D-block mirrors joined per row segment (one outline and one lock each). Place:
+// live strip tiles (place `strip`) in `placementOrder`, the first marked `bottom` and the last
+// `top` (R-50). A free-letter tile carries its origin-cell `tag` in both phases and modes; Card
+// places every mark. The tile area keeps the reserved height and clips (F2). Keys stay
+// `${id}-${mirror}` (AD-14: a live ↔ mirror switch remounts).
 let {
   tiles,
   faces,
@@ -21,7 +22,7 @@ let {
   tiles: readonly TrayTile[];
   faces: readonly Face[];
   strip: boolean;
-  /** Free-letter origin cell per live tile (Composing). */
+  /** Free-letter origin cell per live tile (Composing and Place). */
   tags: ReadonlyMap<CardId, number>;
   w: number;
   innerWidth: number;
@@ -36,6 +37,13 @@ function segment(i: number): { start: boolean; end: boolean } {
     start: i % sizing.perRow === 0 || tiles[i - 1]?.mirror !== true,
     end: (i + 1) % sizing.perRow === 0 || tiles[i + 1]?.mirror !== true,
   };
+}
+
+// R-50: the strip's first tile is its bottom, the last its top.
+function stripPosition(i: number): 'bottom' | 'top' | undefined {
+  if (i === 0) return 'bottom';
+  if (i === tiles.length - 1) return 'top';
+  return undefined;
 }
 </script>
 
@@ -53,7 +61,8 @@ function segment(i: number): { start: boolean; end: boolean } {
       mirror={tile.mirror ? 'block' : undefined}
       tile={{ mode: sizing.mode, width: sizing.tileWidth }}
       segment={tile.mirror ? segment(i) : undefined}
-      tag={!tile.mirror && sizing.mode === 'card' ? tags.get(tile.id) : undefined}
+      tag={tile.mirror ? undefined : tags.get(tile.id)}
+      position={strip ? stripPosition(i) : undefined}
     />
   {/each}
 </div>

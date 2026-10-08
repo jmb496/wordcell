@@ -207,6 +207,7 @@ import invalidTypeTargetCell from '../../fixtures/session-invalid-type-target-ce
   type: 'json',
 };
 import validPlace from '../../fixtures/session-place.json' with { type: 'json' };
+import validPlaceCompact from '../../fixtures/session-place-compact.json' with { type: 'json' };
 import validPlaceFreeLetterRedoTail from '../../fixtures/session-place-free-letter-redo-tail.json' with {
   type: 'json',
 };
@@ -285,9 +286,10 @@ type ValidName =
   | 'won'
   | 'gave-up'
   | 'idle-empty-column'
-  | 'gave-up-after-commit';
+  | 'gave-up-after-commit'
+  | 'place-compact';
 
-/** The eleven CAP-9 round-trip fixtures (generator record: the plan's Implementation Notes). */
+/** The twelve CAP-9 round-trip fixtures (generator record: the plan's Implementation Notes). */
 const VALID: readonly (readonly [ValidName, unknown])[] = [
   ['idle-fresh', validIdleFresh],
   ['composing', validComposing],
@@ -300,6 +302,7 @@ const VALID: readonly (readonly [ValidName, unknown])[] = [
   ['gave-up', validGaveUp],
   ['idle-empty-column', validIdleEmptyColumn],
   ['gave-up-after-commit', validGaveUpAfterCommit],
+  ['place-compact', validPlaceCompact],
 ];
 
 // --- rejection table ------------------------------------------------------------------------
@@ -837,6 +840,28 @@ describe('defining properties (§2, CAP-9)', () => {
       const v = view(s, EN);
       expect(v.columns[0]?.cards).toStrictEqual([]);
       expect(v.cells.find((c) => c.cell === 7)?.cards).toHaveLength(7);
+    },
+    // Epic 5 entry 2: a compact strip whose QU card 35 is a free letter from a cell other than 3,
+    // its Composing after one Undo with a D block crossing the row break (7 tiles per row, the
+    // `right` branch only: `left` needs k >= 8).
+    'place-compact': (s) => {
+      expect(s.cursor.phase).toBe('place');
+      expect(s.moves.length).toBe(s.cursor.index + 1);
+      const move = s.moves[s.cursor.index];
+      const v = view(s, EN);
+      const strip = v.place?.placementOrder ?? [];
+      expect(strip.length).toBeGreaterThanOrEqual(8);
+      expect(strip.length).toBeLessThanOrEqual(14);
+      const quCell = move.freeLetters.find(
+        (cell) => v.cells.find((c) => c.cell === cell)?.cards.at(-1) === 35,
+      );
+      expect(quCell).toBeDefined();
+      expect(quCell).not.toBe(3);
+      expect(v.faces[35]?.letter).toBe('QU');
+      expect(v.draft?.source).not.toContain(35);
+      expect(move.destinationSide).toBe('right');
+      expect(move.arrangement.length).toBeLessThanOrEqual(6);
+      expect(move.arrangement.length + move.destinationCount).toBeGreaterThanOrEqual(8);
     },
   };
 
@@ -1669,6 +1694,28 @@ const REBUILDS: readonly (readonly [string, unknown, () => Session])[] = [
     'session-gave-up-after-commit',
     validGaveUpAfterCommit,
     () => play(createSession(1), [drop(1, 7, 1), VALIDATE, CONFIRM, GIVE_UP], ['ldxomiw']),
+  ],
+  [
+    'session-place-compact',
+    validPlaceCompact,
+    () =>
+      play(
+        createSession(191),
+        [
+          drop(2, 2, 6),
+          { type: 'arrange', arrangement: [20, 28] },
+          VALIDATE,
+          { type: 'setPlacementOrder', order: [20, 28, 35] },
+          CONFIRM, // QUIN → cell 4, 35 on top
+          drop(4, 4, 3),
+          { type: 'setDestinationCount', k: 3 },
+          FLIP,
+          { type: 'addFreeLetter', cell: 4 },
+          { type: 'arrange', arrangement: [35, 1, 38, 44, 11] },
+          VALIDATE, // QUARTERED, target 9
+        ],
+        ['quin', 'quartered'],
+      ),
   ],
 ];
 

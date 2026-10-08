@@ -1,6 +1,7 @@
 // Every EXPERIENCE.md message-catalogue string lives here (AGENTS.md Conventions); later entries
 // add theirs. Words are uppercased at render, `QU` stays `QU`, the minus sign is U+2212.
 const INVALID_WORD_SUFFIX = "isn't in the word list.";
+const letters = (n: number): string => (n === 1 ? '1 letter' : `${n} letters`);
 
 export const text = Object.freeze({
   validate: 'Validate',
@@ -16,7 +17,20 @@ export const text = Object.freeze({
   invalidWordParts: (word: string) => [word.toUpperCase(), INVALID_WORD_SUFFIX] as const,
   invalidWord: (word: string) => `${word.toUpperCase()} ${INVALID_WORD_SUFFIX}`,
   // DESIGN.md Tray band: the Composing letter count (R-36 letters, `QU` = 2).
-  letters: (n: number) => (n === 1 ? '1 letter' : `${n} letters`),
+  letters,
+  // DESIGN.md Placement strip: the Place meta (R-80), the letter count (R-36), the target cell
+  // (U+2192) and the net score change (U+00B7; `+n`, `±0`, U+2212 `−n`).
+  placeMeta: (n: number, cell: number, delta: number) =>
+    `${letters(n)} \u2192 cell ${cell} \u00b7 ${
+      delta > 0 ? `+${delta}` : delta === 0 ? '\u00b10' : `\u2212${-delta}`
+    }`,
+  // DESIGN.md Placement strip position marks (R-50, R-52): the first tile's `bottom` tag (compact:
+  // `▼`), the last tile's `top` tag and orange star; DESIGN.md Tile: the free-letter return glyph.
+  stripBottom: 'bottom',
+  stripTop: 'top',
+  stripBottomMark: '\u25bc',
+  star: '\u2605',
+  returnGlyph: '\u21a9',
   confirm: 'Confirm',
   newGame: 'New game',
   undo: 'Undo',

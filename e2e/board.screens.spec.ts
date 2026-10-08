@@ -8,6 +8,7 @@ for (const [phase, name] of [
   ['idle', 'session-idle-fresh'],
   ['composing', 'session-composing'],
   ['place', 'session-place-free-letter-redo-tail'],
+  ['place-compact', 'session-place-compact'],
   ['game-over', 'session-gave-up'],
 ] as const) {
   test(`AD-17 board screenshot ${phase}`, async ({ page }) => {

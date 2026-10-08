@@ -82,3 +82,21 @@ describe('AD-3 tray text', () => {
     }
   });
 });
+
+describe('AD-3 Place meta text', () => {
+  it('AD-3 placeMeta(6, 6, 30) reads 6 letters → cell 6 · +30', () => {
+    expect(text.placeMeta(6, 6, 30)).toBe('6 letters → cell 6 · +30');
+  });
+
+  it('AD-3 placeMeta(4, 3, 0) reads ±0', () => {
+    expect(text.placeMeta(4, 3, 0)).toBe('4 letters → cell 3 · ±0');
+  });
+
+  it('AD-3 placeMeta(4, 3, -1) reads −1 with U+2212', () => {
+    expect(text.placeMeta(4, 3, -1)).toBe('4 letters → cell 3 · −1');
+  });
+
+  it('AD-3 placeMeta(1, 3, 1) reads 1 letter and +1', () => {
+    expect(text.placeMeta(1, 3, 1)).toBe('1 letter → cell 3 · +1');
+  });
+});

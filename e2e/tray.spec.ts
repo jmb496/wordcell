@@ -5,9 +5,10 @@ import { waitForDictionary } from './helpers/restore';
 import { seedStorage } from './helpers/seed';
 import { tokenColor } from './helpers/style';
 
-// Epic 5 entry 1: the Composing tray (DESIGN.md Tray band, Tile, Invalid-word message). Expected
-// values are literals from view() over the fixtures (seed 1; the plan's I/O matrix), never edited
-// to pass. Card → letter from src/engine/lang/en.ts.
+// Epic 5 entries 1–2: the Composing tray and the Place strip (DESIGN.md Tray band, Tile,
+// Placement strip, Invalid-word message). Expected values are literals from view() over the
+// fixtures (seed 1; seed 191 for session-place-compact; the plans' I/O matrices), never edited to
+// pass. Card → letter from src/engine/lang/en.ts.
 
 test.beforeEach(() => {
   test.skip(test.info().project.name !== 'android', 'tray rendering runs on android');
@@ -55,6 +56,58 @@ async function expectComposing(
   await expect(tray(page).locator('.controls .left *')).toHaveCount(0);
 }
 
+// A tile mark's place on its card's `.face` box (epic 4 F11: quadrants, no px literals): the
+// mark's bounding-box centre and left/right edges as fractions of the face's width and height.
+async function markAt(
+  page: Page,
+  id: number,
+  selector: string,
+): Promise<{ x: number; y: number; left: number; right: number }> {
+  const mark = tray(page).getByTestId(`card-${id}`).locator(selector);
+  await expect(mark).toHaveCount(1);
+  return mark.evaluate((el) => {
+    const face = el.closest('.face');
+    if (face === null) throw new Error('mark outside a face');
+    const f = face.getBoundingClientRect();
+    const m = el.getBoundingClientRect();
+    return {
+      x: (m.left + m.width / 2 - f.left) / f.width,
+      y: (m.top + m.height / 2 - f.top) / f.height,
+      left: (m.left - f.left) / f.width,
+      right: (m.right - f.left) / f.width,
+    };
+  });
+}
+
+type Corner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+
+async function expectCorner(page: Page, id: number, selector: string, corner: Corner) {
+  const at = await markAt(page, id, selector);
+  if (corner.startsWith('top')) expect(at.y).toBeLessThan(0.5);
+  else expect(at.y).toBeGreaterThan(0.5);
+  if (corner.endsWith('left')) expect(at.x).toBeLessThan(0.5);
+  else expect(at.x).toBeGreaterThan(0.5);
+}
+
+// DESIGN.md Card: the bottom band is the face below its 72 % line. A band word such as `bottom`
+// is nearly face-wide, so its side is read from the edge it is anchored to (its outer quarter),
+// and it stays inside the face.
+async function expectBand(page: Page, id: number, selector: string, side: 'left' | 'right') {
+  const at = await markAt(page, id, selector);
+  expect(at.y).toBeGreaterThan(0.72);
+  expect(at.left).toBeGreaterThanOrEqual(0);
+  expect(at.right).toBeLessThanOrEqual(1);
+  if (side === 'left') expect(at.left).toBeLessThan(0.25);
+  else expect(at.right).toBeGreaterThan(0.75);
+}
+
+// DESIGN.md Card: the flourish (`.face::after`) is drawn unless the bottom band holds a mark.
+const flourish = (page: Page, id: number) =>
+  tray(page)
+    .getByTestId(`card-${id}`)
+    .locator('.face')
+    .evaluate((el) => getComputedStyle(el, '::after').content);
+
 async function expectEmptyRows(page: Page, tiles: boolean): Promise<void> {
   await expect(page.locator('[data-card-id]')).toHaveCount(52);
   await expect(tray(page).locator('.word-line *')).toHaveCount(0);
@@ -97,6 +150,9 @@ test('R-33 (UI) a free letter from cell 3: word ONE with E underlined, tag 3 on 
   });
   await expect(page.getByTestId('card-28').locator('.tag')).toHaveText('3');
   await expect(tray(page).locator('.tag')).toHaveCount(1);
+  // Card mode, tray: the tag in the bottom band, left, and no flourish on card 28.
+  await expectBand(page, 28, '.tag', 'left');
+  expect(await flourish(page, 28)).toBe('none');
   const used = page.getByTestId('wordcell-3').locator('[data-mirror-of="28"]');
   await expect(used).toHaveCount(1);
   await expect(used).toHaveClass(/\bused\b/);
@@ -137,9 +193,7 @@ const COMPACT_SCRATCH = {
   activeMs: 0,
 };
 
-test('R-33 (UI) compact mode: a free letter from cell 3 carries no origin tag (card mode only)', async ({
-  page,
-}) => {
+test("R-33 (UI) compact mode: a free letter's origin tag sits top-left", async ({ page }) => {
   await seedStorage(page, { session: JSON.stringify(COMPACT_SCRATCH) });
   await page.goto('/');
   await expectComposing(page, {
@@ -151,7 +205,9 @@ test('R-33 (UI) compact mode: a free letter from cell 3 carries no origin tag (c
   });
   await expect(tray(page).locator('.tiles.compact')).toHaveCount(1);
   await expect(tray(page).getByTestId('card-28')).toHaveAttribute('data-place', 'tray');
-  await expect(tray(page).locator('.tag')).toHaveCount(0);
+  await expect(tray(page).locator('.tag')).toHaveCount(1);
+  await expect(tray(page).getByTestId('card-28').locator('.tag')).toHaveText('3');
+  await expectCorner(page, 28, '.tag', 'top-left');
   await expect(page.locator('[data-card-id]')).toHaveCount(52);
 });
 
@@ -196,18 +252,196 @@ test('R-32 (UI) k = 2: word MAN with A and N underlined, one blue block outline 
   expect(join.endLeft).toBe('0px');
 });
 
-for (const [fixture, ids] of [
-  ['session-place', ['42', '0', '28']],
-  ['session-place-free-letter-redo-tail', ['9', '32', '28']],
-] as const) {
-  test(`AD-14 (R-30) Place on ${fixture}: the strip as built, no word line, tag or count`, async ({
+// Place matrix rows (plan I/O matrix): word line, strip, the free-letter tag and the meta.
+const PLACE_ROWS = [
+  {
+    fixture: 'session-place',
+    word: 'TAN',
+    letters: ['T', 'A', 'N'],
+    ids: ['42', '0', '28'],
+    tag: undefined,
+    meta: '3 letters \u2192 cell 3 \u00b7 +9',
+  },
+  {
+    fixture: 'session-place-free-letter-redo-tail',
+    word: 'ONE',
+    letters: ['O', 'N', 'E'],
+    ids: ['9', '32', '28'],
+    tag: '3',
+    meta: '3 letters \u2192 cell 3 \u00b7 +6',
+  },
+] as const;
+
+// The Place tray's word line letters with no D underline, and the strip as `ids`.
+async function expectPlace(
+  page: Page,
+  row: { word: string; letters: readonly string[]; ids: readonly string[]; meta: string },
+): Promise<void> {
+  await expect(page.locator('[data-card-id]')).toHaveCount(52);
+  await expect(tray(page).locator('.word-line .word-text')).toHaveText(row.word);
+  const letters = await wordLetters(page);
+  expect(letters.map((l) => l.text)).toEqual(row.letters);
+  expect(letters.filter((l) => l.underlined)).toEqual([]);
+  await expect(tray(page).locator('.word-line .d')).toHaveCount(0);
+  expect(await trayIds(page)).toEqual(row.ids);
+  await expect(tray(page).locator('[data-place="strip"]')).toHaveCount(row.ids.length);
+  await expect(tray(page).locator('.controls .meta')).toHaveText(row.meta);
+  await expect(tray(page).locator('.controls .count')).toHaveCount(0);
+  await expect(tray(page).locator('.controls .left *')).toHaveCount(0);
+  // D cards are normal strip tiles: no mirror, no lock, no block outline.
+  await expect(tray(page).locator('[data-mirror-of]')).toHaveCount(0);
+  await expect(tray(page).locator('.lock')).toHaveCount(0);
+  await expect(tray(page).locator('.block')).toHaveCount(0);
+}
+
+for (const row of PLACE_ROWS) {
+  test(`R-50 R-80 (UI) Place on ${row.fixture}: word line ${row.word}, bottom on the first tile, top and the orange star in the last tile's bottom band, meta`, async ({
     page,
   }) => {
-    await openFixture(page, fixture);
-    await expectEmptyRows(page, true);
-    expect(await trayIds(page)).toEqual(ids);
+    await openFixture(page, row.fixture);
+    await expectPlace(page, row);
+    const first = Number(row.ids[0]);
+    const last = Number(row.ids.at(-1));
+    await expect(tray(page).locator('.tiles.compact')).toHaveCount(0);
+    await expect(tray(page).locator('.position')).toHaveCount(2);
+    await expect(tray(page).getByTestId(`card-${first}`).locator('.position')).toHaveText('bottom');
+    await expectBand(page, first, '.position', 'left');
+    await expect(tray(page).getByTestId(`card-${last}`).locator('.position')).toHaveText('top');
+    await expectBand(page, last, '.position', 'left');
+    await expect(tray(page).locator('.star')).toHaveCount(1);
+    await expect(tray(page).getByTestId(`card-${last}`).locator('.star')).toHaveText('\u2605');
+    await expectBand(page, last, '.star', 'right');
+    // The band marks replace the flourish on the end tiles; the unmarked middle tile keeps it.
+    expect(await flourish(page, first)).toBe('none');
+    expect(await flourish(page, last)).toBe('none');
+    expect(await flourish(page, Number(row.ids[1]))).not.toBe('none');
+    // `top` and the star share the band without overlapping.
+    const top = await markAt(page, last, '.position');
+    const star = await markAt(page, last, '.star');
+    expect(top.right).toBeLessThanOrEqual(star.left);
+    await expect(tray(page).locator('.star')).toHaveCSS(
+      'color',
+      await tokenColor(page, '--wc-accent-orange'),
+    );
+    if (row.tag === undefined) {
+      await expect(tray(page).locator('.tag')).toHaveCount(0);
+    } else {
+      // A-D10: on a full-height strip tile the origin tag moves to the top-left corner.
+      await expect(tray(page).locator('.tag')).toHaveCount(1);
+      await expect(tray(page).getByTestId(`card-${last}`).locator('.tag')).toHaveText(row.tag);
+      await expectCorner(page, last, '.tag', 'top-left');
+    }
   });
 }
+
+test('R-51 (UI) session-place: the strip in its default placementOrder equals the word order', async ({
+  page,
+}) => {
+  const row = PLACE_ROWS[0];
+  await openFixture(page, row.fixture);
+  await expectPlace(page, row);
+  const letters = await wordLetters(page);
+  expect(letters.map((l) => `${l.id}`)).toEqual([...row.ids]);
+});
+
+test('R-50 AD-3 (UI) session-place-free-letter-redo-tail: the strip follows placementOrder while the word line reads ONE in word order', async ({
+  page,
+}) => {
+  const row = PLACE_ROWS[1];
+  await openFixture(page, row.fixture);
+  await expectPlace(page, row);
+  const letters = await wordLetters(page);
+  // R-30 word order [32, 28, 9]; the strip is placementOrder [9, 32, 28] (fixtures/).
+  expect(letters.map((l) => l.id)).toEqual([32, 28, 9]);
+  expect(await trayIds(page)).not.toEqual(letters.map((l) => `${l.id}`));
+  // D card 9 is a normal strip tile.
+  await expect(tray(page).getByTestId('card-9')).toHaveAttribute('data-place', 'strip');
+  await expect(tray(page).getByTestId('card-9')).not.toHaveClass(/\b(block|destination)\b/);
+});
+
+const COMPACT_STRIP = ['35', '1', '38', '44', '11', '36', '9', '7'];
+const QUARTERED = ['QU', 'A', 'R', 'T', 'E', 'R', 'E', 'D'];
+
+// The tray-relative top of each live tile or mirror, in tray order.
+const tileTops = (page: Page) =>
+  tray(page)
+    .locator('.tiles > *')
+    .evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().top)));
+
+test('R-50 R-33 R-80 (UI) AD-14 session-place-compact: compact strip over two rows with the corner map, QU tag 4, word line QUARTERED and meta', async ({
+  page,
+}) => {
+  await openFixture(page, 'session-place-compact');
+  await expectPlace(page, {
+    word: 'QUARTERED',
+    letters: QUARTERED,
+    ids: COMPACT_STRIP,
+    meta: '9 letters \u2192 cell 9 \u00b7 +73',
+  });
+  await expect(tray(page).locator('.tiles.compact')).toHaveCount(1);
+  // Two rows of 7 + 1 (DESIGN.md Tray band at 412 px).
+  const tops = await tileTops(page);
+  expect(new Set(tops.slice(0, 7)).size).toBe(1);
+  expect(tops[7]).toBeGreaterThan(tops[0] as number);
+  // QU card 35, the first tile: ▼ top-left, ×2 top-right, origin tag 4 bottom-left.
+  await expect(tray(page).getByTestId('card-35').locator('.bottom-mark')).toHaveText('\u25bc');
+  await expectCorner(page, 35, '.bottom-mark', 'top-left');
+  await expectCorner(page, 35, '.badge', 'top-right');
+  await expect(tray(page).locator('.tag')).toHaveCount(1);
+  await expect(tray(page).getByTestId('card-35').locator('.tag')).toHaveText('4');
+  await expectCorner(page, 35, '.tag', 'bottom-left');
+  // The last tile, 7: the orange ★ top-left.
+  await expect(tray(page).locator('.star')).toHaveCount(1);
+  await expect(tray(page).getByTestId('card-7').locator('.star')).toHaveText('\u2605');
+  await expectCorner(page, 7, '.star', 'top-left');
+  await expect(tray(page).locator('.star')).toHaveCSS(
+    'color',
+    await tokenColor(page, '--wc-accent-orange'),
+  );
+  // Compact glyphs replace the `bottom`/`top` words.
+  await expect(tray(page).locator('.position')).toHaveCount(0);
+  expect(await tray(page).locator('.tiles').textContent()).not.toMatch(/bottom|top/);
+  await expect(page.locator('[data-card-id]')).toHaveCount(52);
+});
+
+test('R-32 R-33 R-30 R-36 R-37 (UI) AD-14 session-place-compact after one Undo: compact Composing marks, QU tag 4 top-left, the D block in two segments across the row break', async ({
+  page,
+}) => {
+  await openFixture(page, 'session-place-compact', { steps: ['undo'] });
+  await expectComposing(page, {
+    word: 'QUARTERED',
+    letters: QUARTERED,
+    underlined: [36, 9, 7],
+    ids: ['35', '1', '38', '44', '11', '36m', '9m', '7m'],
+    count: '9 letters',
+  });
+  await expect(tray(page).locator('.tiles.compact')).toHaveCount(1);
+  // QU one unit in the word line (R-37), from free letter 35 of cell 4.
+  const qu = tray(page).locator('.word-text [data-word-card="35"]');
+  await expect(qu).toHaveCount(1);
+  await expect(qu).toHaveText('QU');
+  await expect(tray(page).getByTestId('card-35')).toHaveAttribute('data-place', 'tray');
+  await expect(tray(page).locator('.tag')).toHaveCount(1);
+  await expect(tray(page).getByTestId('card-35').locator('.tag')).toHaveText('4');
+  await expectCorner(page, 35, '.tag', 'top-left');
+  await expectCorner(page, 35, '.badge', 'top-right');
+  await expect(tray(page).locator('.star, .bottom-mark, .position')).toHaveCount(0);
+  // R-32: block 36m 9m on row 1 (tray indices 5–6), 7m alone on row 2; one outline and lock each.
+  const tops = await tileTops(page);
+  expect(tops[5]).toBe(tops[0]);
+  expect(tops[6]).toBe(tops[0]);
+  expect(tops[7]).toBeGreaterThan(tops[0] as number);
+  await expect(tray(page).locator('.block')).toHaveCount(3);
+  await expect(tray(page).locator('.block.start')).toHaveCount(2);
+  await expect(tray(page).locator('.block.end')).toHaveCount(2);
+  await expect(tray(page).locator('[data-mirror-of="36"]')).toHaveClass(/\bstart\b/);
+  await expect(tray(page).locator('[data-mirror-of="9"]')).toHaveClass(/\bend\b/);
+  await expect(tray(page).locator('[data-mirror-of="7"]')).toHaveClass(
+    /\bstart\b.*\bend\b|\bend\b.*\bstart\b/,
+  );
+  await expect(tray(page).locator('.lock')).toHaveCount(2);
+  await expect(page.locator('[data-card-id]')).toHaveCount(52);
+});
 
 test('R-38 (UI) a failed Validate replaces the word line with the invalid line: textContent invalidWord(tan), a space before the suffix', async ({
   page,
