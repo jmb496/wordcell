@@ -1,6 +1,6 @@
 # Review log — story-insertionindex-gap-rects-and-parting-offsets.md (ticket 5.6)
 
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7. Pass 0: HEAD 88f7549, .passes/pass0.md, 376 words (budget 2.5x ≈ 940).
 Intent extras (tickets.toml entry 6, not copied into the ticket; fixer adds them to Description in pass 1): interface, tests, owns, consumers.
@@ -78,5 +78,30 @@ Words (docs): 1023 (2.72 x pass 0)  |  Snapshot: .passes/pass3.md  |  Fixer: all
 - "rendered rows" = `trayLayout(tileCount).rows` TileRows renders (pre-CAP-9)
 - parted segment ends/locks mid-drag applied by entry 8 without Svelte state (rule 3), e.g. controller-toggled classes
 - reorder out-of-range i/j throws (from pass 2)
+### Dropped
+- none
+
+## Pass 4 — 2026-10-09
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 3, minor 6 accepted (+5 to plan), decision-needed 0  |  Dropped in triage: 0 (+ duplicates merged; 1 major reclassified minor)
+Words (docs): 1035 (2.75 x pass 0)  |  Snapshot: .passes/pass4.md  |  Fixer: all 8 applied; minors net zero (cut redundant Slot-rects sentence and the Notes tie clause, restated in insertionIndex and AC)
+### Applied
+- [major] Slot rects — "tile 0's live wrapper" does not exist with the block on the left (position 0 is a D mirror, AD-14) → fixer item 1 (default applied: the wrapper at tray position 0, live or mirror)
+- [major] gapRects — "boundary gap gets rects only on M's side" / "row-break pair only between two movable tiles" contradicts F3 (a row-break index gets both rects; the start-of-row rect beside the first mirror is neither inside nor beyond the block) and drops the visible opening of a free-letter insert with the block on the right → 2
+- [major] insertionIndex returns only `number`, but CAP-6's caret draws at the winning rect and a row-break index has two; entry 8 would re-derive (Owns) → 3 (default applied: return the winning `{ index, rect }`)
+- [minor] AC — slotRects has no case (reclassified from major: verify precision, pass-4 bar) → 4
+- [minor] AC — prefix the gapRects and reorder lines with AD-12 (AGENTS.md test names) → 5
+- [minor] AC — "matching TileRows `segment(i)`" is circular after extraction → literals from today's `segment(i)` → 6
+- [minor] Slot rects — "(a free-letter insert's slot n included)" false when full → "slot n only with room" → 7
+- [minor] partingOffsets `origin` (run index) clashes with slotRects `origin` (point) → rename `from` → 8
+### Default applied (technical)
+- items 1, 3 as above; item 2 follows F3
+### Decision needed (functionality / UX / gameplay)
+- none
+### Unapplied minors (over budget; for the plan)
+- "a drag to the far end" expectation (gap |M| / n, dragged tile last)
+- reorder-mode partingOffsets at gaps j and j + 1: all zero
+- the origin's slot entry coincides with a neighbour's parted slot in a reorder (only free-letter results feed `mirrorBySlot`)
+- throws for an inconsistent run (first + count > tileCount) or out-of-range gap/from
+- the segmentEnds at-rest case could be named AD-11 (layout/tray.ts)
 ### Dropped
 - none
