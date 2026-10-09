@@ -1,5 +1,5 @@
 # Review log — story-controller-seams.md (ticket 5.4)
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 251 words (`.passes/pass0.md`), HEAD e261011. Intent fields from tickets.toml entry 4 (interface, tests, owns, consumers, unknown, verify, references): `.passes/intent.md`.
 
@@ -63,3 +63,24 @@ Fixer: all 15 items applied; wording tightened to pay (settle order now carried 
 - none
 ### Dropped
 - none
+
+## Pass 4 — 2026-10-08
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 2, minor 13 applied + 3 for the plan, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1433 (5.71 x pass 0; budget 1500)  |  Snapshot: .passes/pass4.md
+Fixer: all 14 items applied; CellView/ColumnView confirmed in engine/index.ts exports; stay-list lines grepped; no commands added.
+### Applied
+- [major] AC median gate — "Only after < 5 s and `vi.resetModules()` once per setup block `built`" reads inverted; no step at ≥ 5 s (AD-17 Speed: profile first) or when before is already ≥ 5 s (merged across three lenses) → fixer item 1
+- [major] Headers — pass-3 definition "first comment block in `<script>`" hits the `// biome-ignore` import directive in every in-scope .svelte file, so real headers would get no summary → fixer item 2
+- [minor] fixer items 3–15 (tag → ids covering the tagged sentence, line-map claim false (controller.ts unchanged since f62a89a; ticket cites throw lines), cellIn by-field test case, `pressHeld()` = `press !== null`, other sites call `found` directly, fly-back exposes flyBack/finishFlight/running and settle private, epic 5 CAP via tickets.toml `covers`, epic-qualify rule only for tags/headers/summaries, controller.ts exports `type Drag`, reset() only nulls `suppressed`, stay list 455/461/483/537 + intent.ts 74, cellIn/columnIn param types)
+### Default applied (technical)
+- AC gate: built requires after < 5 s and one `vi.resetModules()` in setup(); ≥ 5 s → profile first (AD-17) before any test-file change; before already ≥ 5 s → recorded and flagged for the owner
+- header = first non-`biome-ignore` comment block
+- cellIn/columnIn take `readonly CellView[]`/`readonly ColumnView[]` (import type from engine/index.ts), `n: number`
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+### Unapplied minors (for the build plan)
+- main.ts:119 "(entry 12)" and controller.test.ts describe names keep entry refs (out of scope here) → note for the CAP-12 paperwork sweep
+- spine Structure tree (ARCHITECTURE-SPINE.md gestures/ list) lacks the five new modules → CAP-12 paperwork sweep
+- `found` messages at 557/592 become eager template literals per pointermove — negligible, behaviour same
