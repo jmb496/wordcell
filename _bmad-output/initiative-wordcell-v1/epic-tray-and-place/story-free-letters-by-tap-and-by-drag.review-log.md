@@ -1,6 +1,6 @@
 # Review log — story-free-letters-by-tap-and-by-drag.md (ticket 5.8)
 
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7. Pass 0: HEAD 968b3e7, .passes/pass0.md, 476 words (budget 2.5x ≈ 1200).
 Intent extras (tickets.toml entry 8, not copied into the ticket; fixer adds interface, tests, owns, consumers to Description in pass 1; unknown is already in Notes).
@@ -41,3 +41,35 @@ Fixer: all 19 applied; Description and Verify split into bullets as entry 7; Not
 - Hover peek — as the tile drag: hidden at the crossing, closed at end → default taken
 ### Decision needed (functionality / UX / gameplay)
 - none
+
+## Pass 2 — 2026-10-09
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 7, minor 11, decision-needed 0  |  Dropped in triage: 1 (F4 clip mapping: plan-only, no ticket change) (+ ~8 duplicates merged)
+Words (docs): 1430 (3.00 x pass 0; growth from majors, minors net zero)  |  Snapshot: .passes/pass2.md, fix diff .passes/pass2.fix.diff
+Fixer: all 17 applied; `+` named as e.g. (enablement on the fixture not stated); Flip moved to the android bullet opening; no commands added or run.
+### Applied
+- [major] Description/Interface — Card.svelte renders the lock by `{#if lock}` (Card.svelte:79,130) and `start`/`end` are Svelte class directives, so DOM class writes cannot give a parted segment start its lock; Card.svelte missing from Interface → fixer item 1
+- [major] AC — UI Vitest lists the pure parting/segment test entry 6 already built (tray.test.ts:381,406); the controller's parted segment/lock DOM writes are untested and the "else the Vitest above" fallback points at the pure test → 2
+- [major] AC Full layout — k = 0 route with no gap named: the end-gap caret (gap moves no tile) passes without exercising "full" → 3
+- [major] AC Ends — an App button (`act()`) mid-drag dispatches its own command, so "Session byte-identical" is impossible (entry 7 e2e/tile-drag.spec.ts:546 precedent) → 4
+- [major] AC Block right — R-32 outcomes hold only for a block within one row (SPEC F25 nearest gap, may land mid-M), and the same bullet invites a row-break layout → 5
+- [major] AC — long-press peek case never asserts the peek opened (rule-coverage R-65: peek stays available) → 6
+- [major] Description/AC — hover peek hidden at the crossing and closed at end is stated, desktop-only, untested → 7
+- [minor] AC — "storing the index" → the stored arrangement holds cell 7's top at that position in M → 8
+- [minor] AC — end gap of M: caret at, and a release into, the end gap (appends) → 9
+- [minor] Description — "full" rows: the rows `TileRows` renders (= `trayLayout` rows once CAP-9) → 10
+- [minor] Interface — reuse `DRAG_GHOST` for the cell ghost; new constants for caret and parted segments → 11
+- [minor] Description — dragged cell face takes `DRAG_LAYER` as the tile drag → 12
+- [minor] AC — hidePage comparator: the pre-drag Session stored bar `activeMs` (as entry 7) → 13
+- [minor] AC — tap-add with a tile selected first, nothing selected after → 14
+- [minor] AC — mid-drag ghost: badge still counts, card beneath not shown → 15
+- [minor] AC — `⇄ Flip as needed` covers both block sides; end-gap caret with tiles untransformed → 16
+- [minor] Description — "Consumers (list in the ticket review)" → "Consumers:" → 17
+### Default applied (technical)
+- Parted segments — Card.svelte renders the lock svg on every block mirror, shown by CSS (resting `.start` or a controller parted-start class); controller toggles classes.ts parted classes (`wc-part-start`/`wc-part-end`) overriding `.start`/`.end`, never Svelte's own → default taken
+- Tests — controller UI Vitest `AD-12`: block-right free-letter drag across a row break writes parted segment/lock classes and restores them; entry 6 tray.test.ts keeps the pure offsets → default taken
+- act() mid-drag — App button settles the drag at once and stores only its own command, cell 7 not used, nothing selected → default taken
+- Hover peek — one desktop Playwright case (hover cell 7, drag its top: peek hidden mid-drag, closed after, drop lands) → default taken
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- F4 clip of the tray band for the free-letter drag: covered through entry 7's shared `trayTarget()` clip test; belongs in the plan's sentence → test mapping, no ticket text
