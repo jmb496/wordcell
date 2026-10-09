@@ -249,6 +249,22 @@ src/ui/
 - Caret: when "full" and when a gap moves no tile per SPEC CAP-6 (the rendered rows are the
   rendered row count, CAP-9; card mode holds one row); `perRow` from `trayLayout`.
 - The index passed is the gap in M (0…|M|), not the tray position; translate around the D block.
+- As built (ticket 5.8): the tap goes through intent.ts `tapAction` (`addFreeLetter` action in
+  Composing, after `tileTap`'s clear); the drag's pure entry point is tile.ts
+  `freeLetterRun(view, cell)` → `{ card, tray, first, count, tileCount, release(gap) }` (`tray` is
+  layout/tray.ts `trayOrder`, mirrors included; `release` gives `addFreeLetter { cell, index }`
+  and throws outside 0…|M|). The drag is a third controller `Drag` variant (`freeLetter`): the
+  ghost is `wc-drag-ghost` on the `[data-wordcell]` (WordCellRow.svelte draws it as `::before` at
+  the card rect), the face takes `wc-drag-layer`, `.tiles` `wc-drag-tiles`; slots are measured once
+  (tile count + 1 with room, else the tile count; full = tile count + 1 > perRow × rows of
+  `trayLayout(tile count)`). The caret is one `<span class="wc-caret">` TileRows renders last in
+  `.tiles` in Composing (`.tiles` is `position: relative`), shown by `wc-caret-shown` and placed by
+  `transform` at the winning gap rect minus `.tiles`' start rect (+0.5 px x). While parted every
+  mirror takes `wc-parted` plus `wc-part-start`/`wc-part-end` from `segmentEnds` over the parted
+  `mirrorBySlot`; Card.svelte renders the lock on every block mirror and its segment CSS reads only
+  those classes under `wc-parted` (`.start`/`.end` otherwise; resting computed styles unchanged).
+  Returns: the parting set's `home()` snaps a mirror (transform cleared, no `animate`) under reduced
+  motion; live faces keep entry 7's fade.
 
 ## CAP-7 Place
 

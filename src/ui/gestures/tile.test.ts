@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { GameView } from '../../engine/index';
 import type { Hit } from './intent';
-import { tileRun, tileTap } from './tile';
+import { freeLetterRun, tileRun, tileTap } from './tile';
 
 // AD-12 tile tap intent (epic 5 SPEC CAP-4, the plan's I/O matrix): hand-built GameView slices.
 // Composing: arrangement [10, 11, 12, 13] (S 10, 11; free letters 12 from cell 4 and 13 from cell
@@ -249,5 +249,58 @@ describe('AD-12 tileRun', () => {
     expect(() => tileRun(PLACE, 99)).toThrow(/^AD-12 tileRun on card 99, not a live tile in place/);
     expect(() => tileRun(IDLE, 10)).toThrow(/^AD-12 tileRun on tile 10 outside a draft/);
     expect(() => tileRun(WON, 10)).toThrow(/^AD-12 tileRun on tile 10 outside a draft/);
+  });
+});
+
+// Epic 5 SPEC CAP-6 (F3; build-notes CAP-6): the free-letter drag run of available cell 5 (top 32)
+// over Composing M [10, 11, 12] with the block of k on either side.
+describe('AD-12 freeLetterRun', () => {
+  it('AD-12 block on the right: M from tray position 0, the mirrors after it (D reversed), over |M| + k positions', () => {
+    const run = freeLetterRun(composing(2, 'right'), 5);
+    expect(run).toMatchObject({ card: 32, first: 0, count: 3, tileCount: 5 });
+    expect(run.tray).toEqual([
+      { id: 10, mirror: false },
+      { id: 11, mirror: false },
+      { id: 12, mirror: false },
+      { id: 21, mirror: true },
+      { id: 20, mirror: true },
+    ]);
+  });
+
+  it('AD-12 block on the left: M from tray position k, the mirrors before it', () => {
+    const run = freeLetterRun(composing(2, 'left'), 5);
+    expect(run).toMatchObject({ card: 32, first: 2, count: 3, tileCount: 5 });
+    expect(run.tray.map((t) => t.mirror)).toEqual([true, true, false, false, false]);
+  });
+
+  it('AD-12 k = 0: M alone, from 0', () => {
+    const run = freeLetterRun(composing(0, 'left'), 5);
+    expect(run).toMatchObject({ first: 0, count: 3, tileCount: 3 });
+    expect(run.tray.every((t) => !t.mirror)).toBe(true);
+  });
+
+  it('AD-12 Q-31 release(g) is one addFreeLetter at gap g of M, 0 and |M| included; a gap outside 0…|M| throws', () => {
+    const run = freeLetterRun(composing(1, 'left'), 5);
+    expect(run.release(0)).toEqual({ type: 'addFreeLetter', cell: 5, index: 0 });
+    expect(run.release(3)).toEqual({ type: 'addFreeLetter', cell: 5, index: 3 });
+    for (const gap of [-1, 4, 1.5]) {
+      expect(() => run.release(gap)).toThrow(/^AD-12 freeLetterRun release at gap/);
+    }
+  });
+
+  it('AD-12 outside Composing, or on a used, empty or missing cell, throws', () => {
+    expect(() => freeLetterRun(PLACE, 5)).toThrow(
+      /^AD-12 freeLetterRun on cell 5 outside Composing/,
+    );
+    expect(() => freeLetterRun(IDLE, 3)).toThrow(/outside Composing/);
+    expect(() => freeLetterRun(WON, 3)).toThrow(/outside Composing/);
+    const view = composing(1, 'right');
+    expect(() => freeLetterRun(view, 3)).toThrow(
+      /^AD-12 freeLetterRun on cell 3 without canAddFreeLetter/,
+    );
+    expect(() => freeLetterRun(view, 6)).toThrow(
+      /^AD-12 freeLetterRun on cell 6 without canAddFreeLetter/,
+    );
+    expect(() => freeLetterRun(view, 9)).toThrow(/^AD-12 WordCell 9 is not in the GameView/);
   });
 });

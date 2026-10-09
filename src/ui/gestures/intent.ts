@@ -7,11 +7,13 @@
 // `tapDestinationCard`, `null` or absent → nothing); every other column part, S ghosts included
 // (they resolve as `space`), is inert, with or without a selection. With nothing selected (epic 4
 // SPEC CAP-9, R-65, R-75, epic 4 SPEC F14) a non-empty WordCell tap opens the sticky view in Idle
-// and Game over (`openView`), nothing in Composing and Place; the view sheet and its scrim are
-// `Hit`s the controller handles itself, never `tapAction`'s, and so are tray/strip tiles and
-// D-block mirrors (epic 5 SPEC CAP-4, F2: tile.ts `tileTap` only); `hoverAction` gives nothing for
-// them.
-import type { CardId, ColumnView, GameView } from '../../engine/index';
+// and Game over (`openView`), nothing in Place. In Composing (epic 5 SPEC CAP-6, R-33, Q-31) a
+// WordCell tap, whatever the selection, adds the cell's top card as a free letter (`addFreeLetter`,
+// appended) when it has `canAddFreeLetter`, else does nothing (used or empty). The view sheet and
+// its scrim are `Hit`s the controller handles itself, never `tapAction`'s, and so are tray/strip
+// tiles and D-block mirrors (epic 5 SPEC CAP-4, F2: tile.ts `tileTap` only); `hoverAction` gives
+// nothing for them.
+import type { CardId, ColumnView, GameView, WordCellNumber } from '../../engine/index';
 import type { OverlayId, TailSelection } from '../overlays.svelte';
 import { cellIn, columnIn } from './lookup';
 
@@ -44,6 +46,8 @@ export type TapAction =
   | { readonly kind: 'deselect' }
   | { readonly kind: 'tapDestinationCard'; readonly card: CardId }
   | { readonly kind: 'openView'; readonly cell: number }
+  /** Epic 5 SPEC CAP-6: a tap on an available Composing WordCell (Q-31: appended). */
+  | { readonly kind: 'addFreeLetter'; readonly cell: WordCellNumber }
   | { readonly kind: 'none' };
 
 export type HoverAction =
@@ -121,6 +125,10 @@ export function tapAction(
   }
   if (hit.kind === 'tile' || hit.kind === 'block') {
     throw new Error(`AD-12 tapAction on a tray ${hit.kind}`);
+  }
+  if (composing(view) && hit.kind === 'wordcell') {
+    const cell = cellIn(view.cells, hit.cell, `AD-12 WordCell ${hit.cell} is not in the GameView`);
+    return cell.canAddFreeLetter ? { kind: 'addFreeLetter', cell: cell.cell } : NONE;
   }
   if (selection === null) {
     if (hit.kind === 'wordcell') return viewTap(hit.cell, view);

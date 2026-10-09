@@ -238,7 +238,7 @@ test.describe('android', () => {
     // tile (W, card 48).
     expect(await trayOrder(page)).toEqual([`${bottom3Id}m`, `${draggedId}`]);
     const mirror = page.locator(`[data-band="tray"] [data-mirror-of="${bottom3Id}"]`);
-    await expect(mirror.locator('.lock')).toHaveCount(1);
+    await expect(mirror.locator('.lock:visible')).toHaveCount(1);
     await expectNoResidue(page);
   });
 

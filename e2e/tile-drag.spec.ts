@@ -11,9 +11,10 @@ import { type TouchHold, touchHold } from './helpers/touch';
 // Epic 5 entry 7 (SPEC CAP-5): the tile drag in the tray and the strip on android. Faces are held
 // on the named gap's rect from layout/tray.ts (`slotRects` over `trayLayout(tileCount, w,
 // trayInnerWidth)` with `origin` = tray position 0's wrapper top-left + 2 px x, `w` and the inner
-// width read from the rendered tray, never `window.innerWidth`). Every edit release asserts the
-// stored wordcell:session equals the store's Session (R-73 (UI)) and then one zero `dragResidue`
-// read; a no-edit live-tile drag first asserts the held face (`wc-drag-layer`, inline transform).
+// width read from the rendered tray, never `window.innerWidth`; the tile count excludes entry 8's
+// caret). Every edit release asserts the stored wordcell:session equals the store's Session (R-73
+// (UI)) and then one zero `dragResidue` read; a no-edit live-tile drag first asserts the held face
+// (`wc-drag-layer`, inline transform).
 // Expected values are literals from view() over the fixtures (seed 1; seed 191 for
 // session-place-compact), never edited to pass. Helpers are local copies (S1 consolidation is
 // entry 14's): `game`/`storedGame` from e2e/drag-interruptions.spec.ts, `expectSaved`,
@@ -154,7 +155,8 @@ async function geometry(page: Page): Promise<Geometry> {
       inner: band.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight),
       x: r.left + 2,
       y: r.top,
-      count: tiles.children.length,
+      // Entry 8: `.tiles` ends with the caret, not a tray position.
+      count: tiles.querySelectorAll(':scope > :not(.wc-caret)').length,
     };
   });
   const sizing = trayLayout(m.count, m.w, m.inner);
@@ -619,7 +621,7 @@ test('AD-12 F5 F18 pointercancel mid-drag (tile 42 selected first) flies back: S
 // Every tray face (mirrors included) on its resting slot within 0.5 px.
 async function expectAtRest(page: Page, g: Geometry): Promise<void> {
   const faces = await page.evaluate(() =>
-    [...document.querySelectorAll('[data-band="tray"] .tiles > *')].map((w) => {
+    [...document.querySelectorAll('[data-band="tray"] .tiles > :not(.wc-caret)')].map((w) => {
       const f = w.querySelector(':scope > .face');
       if (f === null) throw new Error('tile without a face');
       const r = f.getBoundingClientRect();

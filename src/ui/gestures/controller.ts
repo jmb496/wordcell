@@ -105,18 +105,51 @@
 // while any parting or return animation runs; a superseded face animation is read for its current
 // offset (face rect − slot), cancelled unsettled and replaced; a new press and cancel() finish
 // every return with the flight; any other cancel of one throws (rule 6).
+// Free letter (epic 5 SPEC CAP-6, F5, F16, F18; R-33, Q-31; AD-10, AD-12, AD-14): in Composing a tap
+// on a WordCell with `canAddFreeLetter` clears the tile selection (`tileTap`), then dispatches one
+// `addFreeLetter { cell }` (appended, intent.ts); a used or empty cell's tap and drag, and every
+// WordCell drag outside Composing, move nothing. An available cell's press crossing the threshold
+// before the long-press (which wins once it fires) drags its top card's live face (tile.ts
+// `freeLetterRun`): the F18 clear runs at the crossing, the cell takes `wc-drag-ghost` (badge
+// unchanged, cards beneath hidden), `.tiles` `wc-drag-tiles`, the face `wc-drag-layer`. The
+// resting slots (one more than the tile count when the layout has room) and the gap rects over M
+// come from layout/tray.ts as for the tile drag; each move writes `translate(pointer − press
+// point)`, accepts the clipped tray band at ≥ 25 % and picks `insertionIndex`. On an acceptance or
+// gap change: a gap that moves a tile while the layout has room parts every tray position from it
+// on, D-block mirrors included (the AD-14 exception), to `partingOffsets` over
+// `duration('parting')` (at once under reduced motion), each mirror marked `wc-parted` with
+// `wc-part-start`/`wc-part-end` from `segmentEnds` over the parted slots; a full layout (tile count
+// + 1 > perRow × the rendered rows) or a gap moving no tile (M's end with the block on the left or
+// k = 0) shows the caret (`wc-caret-shown`, transformed in `.tiles` coordinates onto the winning
+// gap rect) with every face back at rest; unaccepted, nothing shows. A pointerup whose last move
+// was accepted finishes the parting, clears the drag (ghost, layer, caret, parted classes, every
+// transform), leaves the gate, then dispatches one `addFreeLetter { cell, index }` (the gap in M)
+// and repaints hover (no landing glide); any other pointerup, pointercancel, lostpointercapture and
+// cancel({ byBack: true }) hide the caret and parted classes at once and fly the face back to the
+// cell while the tray faces return (a mirror's shift cleared at once, never faded, under reduced
+// motion), the ghost clearing at the settle; cancel(), a same-id pointerdown and detach settle at
+// once.
 // Seams (epic 5 SPEC CAP-3, epic 5 SPEC F14): the visible band, the fly-back and the hover-peek
 // timer are factories built here from this controller's deps plus getters for its state; lookups
 // throw through lookup.ts and the DOM class names come from classes.ts.
 import { flushSync } from 'svelte';
-import type { CardId, Command } from '../../engine/index';
+import type { CardId, Command, GameView } from '../../engine/index';
 import { game } from '../../shell/game.svelte';
 import { prefs } from '../../shell/prefs.svelte';
 import { SELECTION_LIFT_PX } from '../layout/geometry';
-import { gapRects, partingOffsets, slotRects, trayLayout } from '../layout/tray';
+import {
+  gapRects,
+  type Parted,
+  partingOffsets,
+  segmentEnds,
+  slotRects,
+  trayLayout,
+} from '../layout/tray';
 import { duration } from '../motion';
 import { overlays } from '../overlays.svelte';
 import {
+  CARET,
+  CARET_SHOWN,
   DRAG_GHOST,
   DRAG_LAYER,
   DRAG_TARGET,
@@ -128,6 +161,9 @@ import {
   HOVER_FROM,
   HOVER_LEN,
   HOVER_TAIL,
+  PART_END,
+  PART_START,
+  PARTED,
   SUPPRESSED,
 } from './classes';
 import {
@@ -146,7 +182,7 @@ import { createHoverPeekTimer } from './hover-peek-timer';
 import { destinationTap, type Hit, type HoverAction, hoverAction, tapAction } from './intent';
 import { attribute, cellIn, columnIn, found } from './lookup';
 import { type GapRect, insertionIndex, pickTarget, type Rect } from './targeting';
-import { type TileAction, tileRun, tileTap } from './tile';
+import { freeLetterRun, type TileAction, tileRun, tileTap } from './tile';
 import { clip, createVisibleBand } from './visible-band';
 
 export type ControllerDeps<H> = {
@@ -249,7 +285,48 @@ type TileDrag = {
   gap: number | null;
 };
 
-type Drag = ColumnDrag | TileDrag;
+/**
+ * Epic 5 SPEC CAP-6: an available Composing WordCell press that crossed the threshold before the
+ * long-press.
+ */
+type FreeLetterDrag = {
+  readonly kind: 'freeLetter';
+  /** The `[data-wordcell]` carrying `DRAG_GHOST`. */
+  readonly cellEl: Element;
+  /** The top card's wrapper (never moved) and face (the fly-back's fields). */
+  readonly wrappers: readonly [HTMLElement];
+  readonly faces: readonly [HTMLElement];
+  /** The pointerdown point. */
+  readonly x: number;
+  readonly y: number;
+  /** A cell card has no lift. */
+  readonly lift: number;
+  /** The last pointer offset from the press point written on the face. */
+  dx: number;
+  dy: number;
+  /** The `.tiles` element carrying `DRAG_TILES`, and its caret. */
+  readonly tiles: HTMLElement;
+  readonly caret: HTMLElement;
+  /** `.tiles`' rect at the start (the caret's coordinate origin). */
+  readonly tilesRect: Rect;
+  readonly run: ReturnType<typeof freeLetterRun>;
+  /** Every tray position's wrapper and face in tray order, mirrors included. */
+  readonly trayWrappers: readonly HTMLElement[];
+  readonly trayFaces: readonly HTMLElement[];
+  readonly mirror: readonly boolean[];
+  /** The resting slot rects: tile count + 1 with room, else the tile count. */
+  readonly slots: readonly Rect[];
+  readonly gaps: readonly GapRect[];
+  /** Tile count + 1 > perRow × the rendered rows (the caret replaces the parting). */
+  readonly full: boolean;
+  readonly perRow: number;
+  /** The last move's tray acceptance, gap (null unaccepted) and winning gap rect. */
+  accepted: boolean;
+  gap: number | null;
+  rect: Rect | null;
+};
+
+type Drag = ColumnDrag | TileDrag | FreeLetterDrag;
 
 type Offset = { readonly dx: number; readonly dy: number };
 
@@ -337,14 +414,19 @@ function createParting(gate: Gate) {
 
   /**
    * A face off rest returns over `ms`; under reduced motion its transform clears and it fades in
-   * (fly-back.ts).
+   * (fly-back.ts), except a D-block mirror (`mirror`), whose parting shift clears at once with no
+   * animation (AD-14: a mirror never fades).
    */
-  function home(face: HTMLElement, slot: Rect, ms: number, reduced: boolean): void {
+  function home(face: HTMLElement, slot: Rect, ms: number, reduced: boolean, mirror = false): void {
     if (heading(face, REST)) return;
     const animating = running.has(face);
     const current = take(face, slot);
     if (!animating && near(current, REST)) return;
     face.style.transform = '';
+    if (reduced && mirror) {
+      settle();
+      return;
+    }
     track(
       face,
       reduced
@@ -546,16 +628,22 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       // drop.
       overlays.closeHoverPeek();
     }
-    if (drag?.kind === 'tile') {
-      // Epic 5 SPEC CAP-5, F5: an edit release and every non-flying end settle at once; the
-      // fly-back lands unlifted, the parted faces return beside it.
+    if (drag?.kind === 'tile' || drag?.kind === 'freeLetter') {
+      // Epic 5 SPEC CAP-5, CAP-6, F5: an edit release and every non-flying end settle at once; the
+      // fly-back lands unlifted, the parted faces return beside it (a free letter's caret and
+      // parted classes go at once).
       flies =
         kind === 'up'
-          ? tileCommand(drag) === null
+          ? releaseCommand(drag) === null
           : kind === 'pointercancel' ||
             kind === 'lostCapture' ||
             (reason.kind === 'cancel' && reason.byBack);
-      if (flies) {
+      if (flies && drag.kind === 'freeLetter') {
+        hideCaret(drag);
+        unpart(drag);
+        flight.flyBack(drag, false);
+        returnTray(drag);
+      } else if (flies && drag.kind === 'tile') {
         flight.flyBack(drag, false);
         returnRun(drag);
       } else {
@@ -603,8 +691,20 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
   }
 
   // Removes every drag class and the inline transform from the tail; for a tile drag, from the
-  // dragged face, `.tiles` and every parted face.
+  // dragged face, `.tiles` and every parted face; for a free-letter drag also the cell's ghost, the
+  // caret and the parted classes.
   function clearDrag(drag: Drag): void {
+    if (drag.kind === 'freeLetter') {
+      for (const face of drag.trayFaces) face.style.transform = '';
+      const face = drag.faces[0];
+      face.style.transform = '';
+      face.classList.remove(DRAG_LAYER);
+      drag.cellEl.classList.remove(DRAG_GHOST);
+      drag.tiles.classList.remove(DRAG_TILES);
+      hideCaret(drag);
+      unpart(drag);
+      return;
+    }
     if (drag.kind === 'tile') {
       for (const face of drag.runFaces) face.style.transform = '';
       drag.faces[0].classList.remove(DRAG_LAYER);
@@ -689,11 +789,93 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     };
   }
 
+  // Epic 5 SPEC CAP-6: the threshold-crossing move of an available Composing WordCell press.
+  function startFreeLetterDrag(p: Press<H>, view: GameView, cell: number): FreeLetterDrag {
+    const run = freeLetterRun(view, cell);
+    const captured = found(p.captured, 'AD-12 WordCell press without a capture');
+    const cellEl = found(
+      captured.closest('[data-wordcell]'),
+      'AD-12 WordCell press outside [data-wordcell]',
+    );
+    const wrapper = found(
+      cellEl.querySelector(`[data-card-id="${run.card}"]`) as HTMLElement | null,
+      `AD-12 card ${run.card} not rendered in WordCell ${cell}`,
+    );
+    const face = faceIn(wrapper);
+    const tiles = found(
+      trayTarget().querySelector('.tiles') as HTMLElement | null,
+      'AD-12 tray band without .tiles',
+    );
+    const caret = found(
+      tiles.querySelector(`.${CARET}`) as HTMLElement | null,
+      'AD-12 .tiles without the caret',
+    );
+    // `slotRects`' origin: tray position 0's wrapper top-left + 2 px x, measured once.
+    const head = found(tiles.children[0], 'AD-12 .tiles without a tile').getBoundingClientRect();
+    const sizing = trayLayout(run.tileCount, deps.w(), deps.trayInnerWidth());
+    const full = run.tileCount + 1 > sizing.perRow * sizing.rows;
+    const slots = slotRects(
+      sizing,
+      { x: head.left + 2, y: head.top },
+      full ? run.tileCount : run.tileCount + 1,
+    );
+    const gaps = gapRects(slots, sizing.perRow, run.tileCount, run.first, run.count);
+    const trayWrappers = run.tray.map(({ id, mirror }) =>
+      found(
+        tiles.querySelector(
+          mirror ? `[data-mirror-of="${id}"]` : `[data-card-id="${id}"]`,
+        ) as HTMLElement | null,
+        `AD-12 tray ${mirror ? 'mirror' : 'tile'} ${id} not in .tiles`,
+      ),
+    );
+    clearHover();
+    cellEl.classList.add(DRAG_GHOST);
+    tiles.classList.add(DRAG_TILES);
+    face.classList.add(DRAG_LAYER);
+    return {
+      kind: 'freeLetter',
+      cellEl,
+      wrappers: [wrapper],
+      faces: [face],
+      x: p.state.x,
+      y: p.state.y,
+      lift: 0,
+      dx: 0,
+      dy: 0,
+      tiles,
+      caret,
+      tilesRect: tiles.getBoundingClientRect(),
+      run,
+      trayWrappers,
+      trayFaces: trayWrappers.map(faceIn),
+      mirror: run.tray.map((t) => t.mirror),
+      slots,
+      gaps,
+      full,
+      perRow: sizing.perRow,
+      accepted: false,
+      gap: null,
+      rect: null,
+    };
+  }
+
   // SPEC CAP-7: the threshold-crossing move of a column-card press; null when the press is not a
   // pick-up (another kind of press, or the column cannot be picked up: the drag is inert).
   function startDrag(p: Press<H>): Drag | null {
     const hit = p.hit;
     if (hit.kind === 'tile') return startTileDrag(p, hit.card);
+    if (hit.kind === 'wordcell') {
+      // Epic 5 SPEC CAP-6: only an available Composing cell drags; any other WordCell drag is inert.
+      const view = game.view;
+      if (view === undefined) throw new Error('AD-12 WordCell drag without a GameView');
+      if (view.status !== 'playing' || view.phase !== 'composing') return null;
+      const cell = cellIn(
+        view.cells,
+        hit.cell,
+        `AD-12 WordCell ${hit.cell} is not in the GameView`,
+      );
+      return cell.canAddFreeLetter ? startFreeLetterDrag(p, view, hit.cell) : null;
+    }
     if (hit.kind !== 'card' || p.captured === null) return null;
     const entry = viewColumn(hit.column);
     if (!entry.canPickUp) return null;
@@ -763,9 +945,107 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     );
   }
 
-  // Epic 5 SPEC CAP-5: the tile drag's command at release, from the last move's acceptance and gap.
-  function tileCommand(drag: TileDrag): Command | null {
+  // Epic 5 SPEC CAP-5, CAP-6: a tile or free-letter drag's command at release, from the last move's
+  // acceptance and gap.
+  function releaseCommand(drag: TileDrag | FreeLetterDrag): Command | null {
     return drag.accepted && drag.gap !== null ? drag.run.release(drag.gap) : null;
+  }
+
+  // Epic 5 SPEC CAP-5, F4: the tray band, clipped to the visible band, as `pickTarget`'s sole
+  // candidate (≥ 25 %).
+  function overTray(dragged: Rect): boolean {
+    const trayRect = clip(trayTarget().getBoundingClientRect(), band.visibleBand());
+    return pickTarget(dragged, [{ id: TRAY, rect: trayRect }], TRAY, true).raw !== null;
+  }
+
+  // Epic 5 SPEC CAP-6, F16: the caret on the winning gap rect, 3 px centred in its 4 px.
+  function showCaret(drag: FreeLetterDrag, rect: Rect): void {
+    drag.caret.style.transform = translate(
+      rect.left - drag.tilesRect.left + 0.5,
+      rect.top - drag.tilesRect.top,
+    );
+    drag.caret.classList.add(CARET_SHOWN);
+  }
+
+  function hideCaret(drag: FreeLetterDrag): void {
+    drag.caret.classList.remove(CARET_SHOWN);
+    drag.caret.style.transform = '';
+  }
+
+  // Epic 5 SPEC CAP-6: each mirror's segment ends from the parted slots (`segmentEnds` over the
+  // parted `mirrorBySlot`), under the parted marker.
+  function markParted(drag: FreeLetterDrag, offsets: readonly Parted[]): void {
+    const bySlot = drag.slots.map(() => false);
+    for (const [p, o] of offsets.entries()) bySlot[o.slot] = drag.mirror[p] === true;
+    for (const [p, wrapper] of drag.trayWrappers.entries()) {
+      if (drag.mirror[p] !== true) continue;
+      const { start, end } = segmentEnds((offsets[p] as Parted).slot, drag.perRow, bySlot);
+      wrapper.classList.add(PARTED);
+      if (start) wrapper.classList.add(PART_START);
+      else wrapper.classList.remove(PART_START);
+      if (end) wrapper.classList.add(PART_END);
+      else wrapper.classList.remove(PART_END);
+    }
+  }
+
+  function unpart(drag: FreeLetterDrag): void {
+    for (const [p, wrapper] of drag.trayWrappers.entries()) {
+      if (drag.mirror[p] === true) wrapper.classList.remove(PARTED, PART_START, PART_END);
+    }
+  }
+
+  // Epic 5 SPEC CAP-6: with room, a gap that moves a tile parts every tray position from it on
+  // (mirrors included); a full layout or a gap moving no tile shows the caret, every face at rest.
+  function partTray(drag: FreeLetterDrag): void {
+    const { run, gap } = drag;
+    const moves = gap !== null && !drag.full && run.first + gap < run.tileCount;
+    const offsets = moves
+      ? partingOffsets(drag.slots, run.tileCount, run.first, run.count, gap)
+      : null;
+    const ms = duration('parting');
+    for (const [p, face] of drag.trayFaces.entries()) {
+      const o = offsets === null ? REST : (offsets[p] as Parted);
+      parting.part(face, drag.slots[p] as Rect, { dx: o.dx, dy: o.dy }, ms);
+    }
+    if (offsets === null) unpart(drag);
+    else markParted(drag, offsets);
+    if (drag.rect !== null && !moves) showCaret(drag, drag.rect);
+    else hideCaret(drag);
+  }
+
+  // Epic 5 SPEC CAP-6: every tray face returns to rest beside the fly-back (mirrors snap under
+  // reduced motion, AD-14).
+  function returnTray(drag: FreeLetterDrag): void {
+    const ms = duration('flyBack');
+    const reduced = prefs.motion.reduced;
+    for (const [p, face] of drag.trayFaces.entries()) {
+      parting.home(face, drag.slots[p] as Rect, ms, reduced, drag.mirror[p] === true);
+    }
+  }
+
+  // Epic 5 SPEC CAP-6 one free-letter drag move: transform, accept the clipped tray band, pick the
+  // gap, part or show the caret on a change (DOM only); a caret follows its gap's winning rect.
+  function freeLetterMove(drag: FreeLetterDrag, x: number, y: number): void {
+    drag.dx = x - drag.x;
+    drag.dy = y - drag.y;
+    const face = drag.faces[0];
+    face.style.transform = translate(drag.dx, drag.dy);
+    const dragged = face.getBoundingClientRect();
+    const accepted = overTray(dragged);
+    const pick = accepted ? insertionIndex(dragged, drag.gaps) : null;
+    const gap = pick === null ? null : pick.index;
+    const rect = pick === null ? null : pick.rect;
+    if (accepted === drag.accepted && gap === drag.gap) {
+      if (rect !== null && rect !== drag.rect && drag.caret.classList.contains(CARET_SHOWN)) {
+        drag.rect = rect;
+        showCaret(drag, rect);
+      }
+      return;
+    }
+    drag.accepted = accepted;
+    drag.gap = gap;
+    drag.rect = rect;
+    partTray(drag);
   }
 
   // Epic 5 SPEC CAP-5: the other run faces part to the gap (rest when unaccepted).
@@ -802,8 +1082,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     const face = drag.faces[0];
     face.style.transform = translate(drag.dx, drag.dy - drag.lift);
     const dragged = face.getBoundingClientRect();
-    const trayRect = clip(trayTarget().getBoundingClientRect(), band.visibleBand());
-    const accepted = pickTarget(dragged, [{ id: TRAY, rect: trayRect }], TRAY, true).raw !== null;
+    const accepted = overTray(dragged);
     const gap = accepted ? insertionIndex(dragged, drag.gaps).index : null;
     if (accepted === drag.accepted && gap === drag.gap) return;
     drag.accepted = accepted;
@@ -815,6 +1094,10 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
   function dragMove(drag: Drag, x: number, y: number): void {
     if (drag.kind === 'tile') {
       tileMove(drag, x, y);
+      return;
+    }
+    if (drag.kind === 'freeLetter') {
+      freeLetterMove(drag, x, y);
       return;
     }
     drag.dx = x - drag.x;
@@ -947,8 +1230,9 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       if (p.hit.kind === 'card' || p.hit.kind === 'space') clearHover();
       // Epic 5 SPEC CAP-5: a live tile press starts its drag (lift measured) before the F18 clear.
       p.drag = startDrag(p);
-      // Epic 5 SPEC F18: a live tile press clears the tile selection at the threshold.
-      if (p.hit.kind === 'tile') overlays.clearTile();
+      // Epic 5 SPEC F18: a live tile press and a free-letter drag clear the tile selection at the
+      // threshold.
+      if (p.hit.kind === 'tile' || p.drag?.kind === 'freeLetter') overlays.clearTile();
       // Epic 4 SPEC F19: a pick-up hides the hover peek (DOM only, AD-12); any other drag closes
       // it.
       if (p.drag !== null) hover.hideHoverPeek();
@@ -1024,6 +1308,9 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       case 'openView':
         overlays.openView(action.cell);
         return;
+      case 'addFreeLetter':
+        game.dispatch({ type: 'addFreeLetter', cell: action.cell });
+        return;
       case 'none':
         return;
     }
@@ -1070,10 +1357,10 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       refreshHover();
       return;
     }
-    if (drag.kind === 'tile') {
-      // Epic 5 SPEC CAP-5: the one command of a tile drag, on the last move's acceptance and gap;
-      // a release with none flew back (hover repaints at its settle).
-      const command = tileCommand(drag);
+    if (drag.kind === 'tile' || drag.kind === 'freeLetter') {
+      // Epic 5 SPEC CAP-5, CAP-6: the one command of a tile or free-letter drag, on the last
+      // move's acceptance and gap; a release with none flew back (hover repaints at its settle).
+      const command = releaseCommand(drag);
       if (command === null) return;
       game.dispatch(command);
       refreshHover();
@@ -1213,10 +1500,12 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
   function cancel(options: CancelOptions = {}): void {
     if (root === null) return;
     // Epic 4 SPEC F19: the settle suppresses; idle or not, the hover peek closes and the cell under
-    // the last mouse point is suppressed. Epic 5 SPEC CAP-5: a tile drag's returns finish too; an
-    // active tile drag's parting is end()'s (finished, or by back returned from its current offset).
+    // the last mouse point is suppressed. Epic 5 SPEC CAP-5, CAP-6: a tile or free-letter drag's
+    // returns finish too; an active one's parting is end()'s (finished, or by back returned from
+    // its current offset).
     flight.finishFlight();
-    if (press?.drag?.kind !== 'tile') parting.finishAll();
+    const kind = press?.drag?.kind;
+    if (kind !== 'tile' && kind !== 'freeLetter') parting.finishAll();
     hover.closeHover();
     hover.suppress();
     if (press === null) return;

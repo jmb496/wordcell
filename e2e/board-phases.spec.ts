@@ -275,8 +275,8 @@ test('AD-14 (R-30) k = 2 right: the tray holds live 26 then D mirrors 1, 27; car
   expect(await mirrorsIn(page, '[data-testid="column-2"]')).toEqual([26]);
   // One lock per D-block row segment, at its start (mirror 1); none on mirror 27.
   const tray = page.locator('[data-band="tray"]');
-  await expect(tray.locator('[data-mirror-of="1"] svg.lock')).toHaveCount(1);
-  await expect(tray.locator('[data-mirror-of="27"] svg.lock')).toHaveCount(0);
+  await expect(tray.locator('[data-mirror-of="1"] svg.lock:visible')).toHaveCount(1);
+  await expect(tray.locator('[data-mirror-of="27"] svg.lock:visible')).toHaveCount(0);
 });
 
 // The WordCell's computed ring (its ::after border).
@@ -409,11 +409,11 @@ test('R-73 (UI) a reload re-renders session-composing: ghosts, destination style
   expect(await trayIds(page)).toEqual(['42', '0', '28m']);
   // Ghosts draw no glyph; the lock marks the live D card and the D-block mirror only.
   await expect(page.locator('[data-testid="column-3"] [data-mirror-of] .glyph')).toHaveCount(0);
-  await expect(card28.locator('svg.lock')).toHaveCount(1);
+  await expect(card28.locator('svg.lock:visible')).toHaveCount(1);
   const tray = page.locator('[data-band="tray"]');
-  await expect(tray.locator('[data-mirror-of="28"] svg.lock')).toHaveCount(1);
+  await expect(tray.locator('[data-mirror-of="28"] svg.lock:visible')).toHaveCount(1);
   for (const id of [42, 0])
-    await expect(tray.getByTestId(`card-${id}`).locator('svg.lock')).toHaveCount(0);
+    await expect(tray.getByTestId(`card-${id}`).locator('svg.lock:visible')).toHaveCount(0);
 });
 
 async function expectRedoTailPlace(page: Page): Promise<void> {

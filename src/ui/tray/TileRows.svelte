@@ -18,7 +18,10 @@ import { overlays } from '../overlays.svelte';
 // `selected` (and shows `↩` when it is a free letter; Card hides it in the strip). Keys stay
 // `${id}-${mirror}` (AD-14: a live ↔ mirror switch remounts). During a tile drag (epic 5 SPEC
 // CAP-5) the controller's `wc-drag-tiles` lifts the clip and the dragged face's `wc-drag-layer`
-// raises it as Column's does (literals from gestures/classes.ts).
+// raises it as Column's does (literals from gestures/classes.ts). In Composing the last child is
+// the free-letter drag's one caret (epic 5 SPEC CAP-6, F16; DESIGN.md Tray band: 3 px teal, tile
+// height), hidden until the controller adds `wc-caret-shown` and positions it by `transform` in
+// `.tiles` coordinates; it stays last so `.tiles` child 0 is tray position 0.
 let {
   tiles,
   faces,
@@ -80,13 +83,17 @@ function stripPosition(i: number): 'bottom' | 'top' | undefined {
       returnSlot={!tile.mirror && overlays.tileSelection === tile.id && tags.has(tile.id)}
     />
   {/each}
+  {#if !strip && tiles.length > 0}
+    <span class="wc-caret" aria-hidden="true" style:height="{sizing.tileHeight}px"></span>
+  {/if}
 </div>
 
 <style>
   /* DESIGN.md Tray band: tile area max(H, 92), rows top-aligned, 4 px row gap in compact mode. */
   .tiles {
-    flex: none; display: grid; grid-auto-rows: max-content; align-content: start;
-    overflow: hidden; box-sizing: content-box; padding-top: 6px; margin-top: -6px;
+    position: relative; flex: none; display: grid; grid-auto-rows: max-content;
+    align-content: start; overflow: hidden; box-sizing: content-box; padding-top: 6px;
+    margin-top: -6px;
   }
   .tiles.compact { row-gap: 4px; }
   /* Epic 5 SPEC CAP-5: mid tile drag the area stops clipping, and the dragged face takes the drag
@@ -94,4 +101,10 @@ function stripPosition(i: number): 'bottom' | 'top' | undefined {
      with the lift shadow, as Column.svelte's. */
   .tiles:global(.wc-drag-tiles) { overflow: visible; }
   .tiles :global(.face.wc-drag-layer) { z-index: 5; box-shadow: 0 6px 16px #0008; }
+  /* Epic 5 SPEC CAP-6, F16: the caret, above the tiles' marks (1), out of the grid flow. */
+  .wc-caret {
+    position: absolute; top: 0; left: 0; z-index: 2; display: none; width: 3px;
+    background: var(--wc-accent-teal); pointer-events: none;
+  }
+  .wc-caret:global(.wc-caret-shown) { display: block; }
 </style>

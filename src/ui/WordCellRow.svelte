@@ -8,7 +8,10 @@ import Card from './Card.svelte';
 // a live Card (AD-14) in DOM order bottom → top, stacked; only the top one is visible, except a
 // `used` cell's top card, which is live in the tray or strip and drawn here as a used mirror
 // (R-33). States come from `CellView` and `view.place` (AD-3). Cards are keyed by id plus mirror
-// kind (A9 4.3-m3, AD-14), so a live ↔ used switch remounts the node.
+// kind (A9 4.3-m3, AD-14), so a live ↔ used switch remounts the node. During a free-letter drag
+// (epic 5 SPEC CAP-6, R-61) the controller's `wc-drag-ghost` on the cell draws the 1 px dashed
+// ghost at the card rect and the dragged top face takes `wc-drag-layer` as Column's does (literals
+// from gestures/classes.ts); the count badge keeps counting the dragged card.
 let {
   cells,
   faces,
@@ -101,6 +104,16 @@ const inPlace = $derived(place !== undefined);
     pointer-events: none; touch-action: none; user-select: none; -webkit-user-select: none;
     -webkit-touch-callout: none;
   }
+  /* DESIGN.md WordCell, Card states dragging and ghost (epic 5 SPEC CAP-6): mid free-letter drag
+     the card rect shows a ghost (the cards beneath stay hidden, R-61) and the dragged face rises to
+     the drag layer (above the sticky bars 2, the lift 3 and the hover peek's reserved 4, below any
+     scrim) with the lift shadow. */
+  .wordcell:global(.wc-drag-ghost)::before {
+    content: ''; position: absolute; top: 0; left: 2px; box-sizing: border-box;
+    width: var(--wc-w); height: var(--wc-H); border: 1px dashed var(--wc-outline);
+    border-radius: 6px; pointer-events: none;
+  }
+  .wordcell :global(.face.wc-drag-layer) { z-index: 5; box-shadow: 0 6px 16px #0008; }
   .check {
     position: absolute; top: 2px; left: 4px; width: 14px; height: 14px; border-radius: 50%;
     background: var(--wc-accent-teal); pointer-events: none;

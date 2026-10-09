@@ -7,8 +7,9 @@
 // tile) or removes (a second tap on a selected Composing free letter: `removeFreeLetter` for the
 // `draft.freeLetters` cell whose top card it is, tags.ts `originCard`). Keep: block, scrim and sheet
 // hits, a Composing WordCell without `canAddFreeLetter` (used or empty), a Place WordCell that is not
-// a legal target. Clear: every other hit (columns, outside, an available Composing cell and the
-// current or another legal Place cell until tickets 8/9 dispatch there). A tile hit outside
+// a legal target. Clear: every other hit (columns, outside, an available Composing cell, which
+// intent.ts then adds as a free letter, epic 5 SPEC CAP-6, and the current or another legal Place
+// cell until ticket 9 dispatches there). A tile hit outside
 // Composing and Place, a tile that is not live in the phase, or a selection that is not a live tile
 // of the current phase throws (rule 6).
 // Tile drag run (epic 5 SPEC CAP-5, F3, F25; build-notes CAP-5), pure: `tileRun` gives a dragged
@@ -17,7 +18,14 @@
 // tile's run index `from`, and `release(gap)`: targeting.ts `reorder` compared by card, one
 // `arrange` / `setPlacementOrder` iff the order changes, else null. A card that is not a live tile
 // of the phase, or a view outside Composing and Place, throws (rule 6).
+// Free-letter drag run (epic 5 SPEC CAP-6, F3; build-notes CAP-6), pure: `freeLetterRun` gives an
+// available Composing cell's top card, the R-30 tray order (layout/tray.ts `trayOrder`, mirrors
+// included), M's first tray position (k with the block on the left, else 0), |M| and the tile count
+// |M| + k, and `release(gap)`: one `addFreeLetter { cell, index: gap }` with the gap in M (0…|M|),
+// never a tray position. Outside Composing, a cell without `canAddFreeLetter` or a gap outside
+// 0…|M| throws (rule 6).
 import type { CardId, Command, GameView, WordCellNumber } from '../../engine/index';
+import { type TrayTile, trayOrder } from '../layout/tray';
 import { originCard } from '../tray/tags';
 import type { Hit } from './intent';
 import { cellIn, found } from './lookup';
@@ -151,6 +159,48 @@ export function tileRun(view: GameView, card: CardId): TileRun {
     release(gap: number): Command | null {
       const next = reorder(tiles.order, from, gap);
       return next.every((id, i) => id === tiles.order[i]) ? null : orderCommand(tiles, next);
+    },
+  };
+}
+
+type FreeLetterRun = {
+  /** The cell's top card (the dragged live element). */
+  readonly card: CardId;
+  /** Every tray position in R-30 order, D-block mirrors included. */
+  readonly tray: readonly TrayTile[];
+  /** M's first tray position. */
+  readonly first: number;
+  /** |M|. */
+  readonly count: number;
+  /** |M| + k. */
+  readonly tileCount: number;
+  /** The insert for a release at gap `gap` in M (0…count). */
+  release(gap: number): Command;
+};
+
+/** Epic 5 SPEC CAP-6: the free-letter drag run of available Composing cell `cell`. */
+export function freeLetterRun(view: GameView, cell: number): FreeLetterRun {
+  if (view.status !== 'playing' || view.phase !== 'composing') {
+    throw new Error(`AD-12 freeLetterRun on cell ${cell} outside Composing`);
+  }
+  const draft = found(view.draft, 'AD-12 Composing without a draft view');
+  const entry = cellIn(view.cells, cell, `AD-12 WordCell ${cell} is not in the GameView`);
+  if (!entry.canAddFreeLetter) {
+    throw new Error(`AD-12 freeLetterRun on cell ${cell} without canAddFreeLetter`);
+  }
+  const card = found(entry.cards.at(-1), `AD-12 freeLetterRun on empty cell ${cell}`);
+  const count = draft.arrangement.length;
+  return {
+    card,
+    tray: trayOrder(draft),
+    first: draft.side === 'left' ? draft.k : 0,
+    count,
+    tileCount: count + draft.k,
+    release(gap: number): Command {
+      if (!Number.isInteger(gap) || gap < 0 || gap > count) {
+        throw new Error(`AD-12 freeLetterRun release at gap ${gap} outside 0…${count}`);
+      }
+      return { type: 'addFreeLetter', cell: entry.cell, index: gap };
     },
   };
 }

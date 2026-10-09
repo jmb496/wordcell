@@ -239,7 +239,7 @@ test('R-32 (UI) k = 2: word MAN with A and N underlined, one blue block outline 
       blue,
     );
   }
-  await expect(tray(page).locator('.lock')).toHaveCount(1);
+  await expect(tray(page).locator('.lock:visible')).toHaveCount(1);
   // Joined edge to edge (Card.svelte `.block`): the start face drops its right border and overlaps
   // the end face, which drops its left border, by 1 px (no seam).
   const join = await tray(page).evaluate((el) => {
@@ -295,7 +295,7 @@ async function expectPlace(
   await expect(tray(page).locator('.controls .left *')).toHaveCount(0);
   // D cards are normal strip tiles: no mirror, no lock, no block outline.
   await expect(tray(page).locator('[data-mirror-of]')).toHaveCount(0);
-  await expect(tray(page).locator('.lock')).toHaveCount(0);
+  await expect(tray(page).locator('.lock:visible')).toHaveCount(0);
   await expect(tray(page).locator('.block')).toHaveCount(0);
 }
 
@@ -370,7 +370,7 @@ const QUARTERED = ['QU', 'A', 'R', 'T', 'E', 'R', 'E', 'D'];
 // The tray-relative top of each live tile or mirror, in tray order.
 const tileTops = (page: Page) =>
   tray(page)
-    .locator('.tiles > *')
+    .locator('.tiles > :not(.wc-caret)')
     .evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().top)));
 
 test('R-50 R-33 R-80 (UI) AD-14 session-place-compact: compact strip over two rows with the corner map, QU tag 4, word line QUARTERED and meta', async ({
@@ -444,7 +444,7 @@ test('R-32 R-33 R-30 R-36 R-37 (UI) AD-14 session-place-compact after one Undo: 
   await expect(tray(page).locator('[data-mirror-of="7"]')).toHaveClass(
     /\bstart\b.*\bend\b|\bend\b.*\bstart\b/,
   );
-  await expect(tray(page).locator('.lock')).toHaveCount(2);
+  await expect(tray(page).locator('.lock:visible')).toHaveCount(2);
   await expect(page.locator('[data-card-id]')).toHaveCount(52);
 });
 

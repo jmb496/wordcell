@@ -19,6 +19,10 @@ import type { Gate } from './gate';
 // have `.face` children with rects on the resting slots (w 40, tray inner width 384 from deps:
 // tileWidth 44, H 53, perRow 8, origin (10, 640)); a fake Animation can be cancelled (`cancel()`
 // clears it, as WAAPI's cancel: no later finish).
+// Entry 5.8: cell 3's card has a `.face` (x 2 … 42, y 450 … 503); `.tiles` has a rect (x 8 … 392, y
+// 634 … 800: its 6 px raised clip above the slots) and ends with the caret (`wc-caret`); the tray
+// mirror is `data-mirror-of="5"` (tileView's destination) with a `.face` on slot 2; `setup()`'s
+// tray inner width is settable (`tray.innerWidth`, read at drag start).
 const navCalls: string[] = [];
 // Entry 9: gate enter/leave, animation finish and elementFromPoint calls, in order.
 const order: string[] = [];
@@ -338,6 +342,8 @@ function board() {
     bottom: 510,
   });
   const cellCard = el('div', { 'data-place': 'cell', 'data-card-id': '2' }, cell3);
+  const cellFace = at(el('div', {}, cellCard), { left: 2, top: 450, right: 42, bottom: 503 });
+  cellFace.classes.add('face');
   const badge = el('span', {}, cell3);
   const cell4 = at(el('div', { 'data-wordcell': '4' }, root), {
     left: 50,
@@ -363,7 +369,7 @@ function board() {
     right: 400,
     bottom: 800,
   });
-  const tiles = el('div', {}, tray);
+  const tiles = at(el('div', {}, tray), { left: 8, top: 634, right: 392, bottom: 800 });
   tiles.classes.add('tiles');
   const slotAt = (p: number): Rect => ({
     left: 10 + 48 * p,
@@ -382,8 +388,12 @@ function board() {
   // Epic 5 CAP-4: a second tray tile, a strip tile (Place) and the gap above the action bar.
   const [tile2, tile2Face] = tileAt({ 'data-place': 'tray', 'data-card-id': '4' }, 1);
   const [stripTile, stripFace] = tileAt({ 'data-place': 'strip', 'data-card-id': '6' }, 2);
-  const trayMirror = at(el('div', { 'data-mirror-of': '1' }, tiles), slotAt(2));
-  const trayMirrorFace = el('div', {}, trayMirror);
+  const trayMirror = at(el('div', { 'data-mirror-of': '5' }, tiles), slotAt(2));
+  const trayMirrorFace = at(el('div', {}, trayMirror), slotAt(2));
+  trayMirrorFace.classes.add('face');
+  // Entry 5.8: TileRows' caret, the last child of `.tiles`.
+  const caret = el('span', {}, tiles);
+  caret.classes.add('wc-caret');
   const actionGap = el('div', { 'data-band': 'actionGap' }, root);
   const leftover = el('div', { 'data-band': 'leftover' }, root);
   const banner = at(el('div', { 'data-band': 'banner' }, root), {
@@ -425,6 +435,7 @@ function board() {
     placeholder3,
     cell3,
     cellCard,
+    cellFace,
     badge,
     cell4,
     cell5,
@@ -440,6 +451,7 @@ function board() {
     actionGap,
     trayMirror,
     trayMirrorFace,
+    caret,
     leftover,
     topBar,
     banner,
@@ -525,6 +537,8 @@ async function setup() {
   };
 
   const b = board();
+  // Entry 5.8: the tray inner width the controller reads at drag start.
+  const trayWidth = { innerWidth: 384 };
   for (const [id, column] of [b.column1, b.column2, b.column3].entries()) {
     dropTarget(column as unknown as Element, { kind: 'column', id: id + 1 });
   }
@@ -553,7 +567,7 @@ async function setup() {
       };
     },
     w: () => 40,
-    trayInnerWidth: () => 384,
+    trayInnerWidth: () => trayWidth.innerWidth,
   });
   const detach = () => controller.attach(b.root as unknown as HTMLElement);
   // A pointerdown whose resolution reads `target` from elementFromPoint; event.target is another
@@ -596,6 +610,7 @@ async function setup() {
     advance,
     media,
     flipHoverFine,
+    trayWidth,
   };
 }
 
@@ -3396,7 +3411,8 @@ describe('AD-12 epic 5 tile tap', () => {
     expect(t.overlays.tileSelection).toBeNull();
   });
 
-  it('AD-12 R-32 a block tap, an empty or long-pressed empty Composing WordCell keep; an available cell, outside, the action gap and a disabled button clear', async () => {
+  // Entry 5.8 supersedes the available-cell half: that tap now clears, then adds the free letter.
+  it('AD-12 R-32 a block tap, an empty or long-pressed empty Composing WordCell keep; outside, the action gap and a disabled button clear; an available cell clears, then dispatches addFreeLetter', async () => {
     const t = await ready();
     t.tap(t.b.trayMirrorFace);
     t.tap(t.b.cell4);
@@ -3405,12 +3421,19 @@ describe('AD-12 epic 5 tile tap', () => {
     t.fire('pointerup');
     expect(t.overlays.tileSelection).toBe(3);
     t.overlays.clearTile();
-    for (const el of [t.b.cellCard, t.b.tray, t.b.actionGap, t.b.redoDisabled, t.b.leftover]) {
+    for (const el of [t.b.tray, t.b.actionGap, t.b.redoDisabled, t.b.leftover]) {
       t.overlays.selectTile(3);
       t.tap(el);
       expect(t.overlays.tileSelection).toBeNull();
     }
     expect(navCalls).toEqual([]);
+    t.overlays.selectTile(3);
+    const seen: (number | null)[] = [];
+    shared.onDispatch = () => seen.push(t.overlays.tileSelection);
+    t.tap(t.b.cellCard);
+    expect(navCalls).toEqual([dispatched({ type: 'addFreeLetter', cell: 3 })]);
+    expect(seen).toEqual([null]);
+    expect(t.overlays.tileSelection).toBeNull();
   });
 
   it('AD-12 F13 Place: a not-legal WordCell keeps; the current target and a legal non-current cell clear, dispatching nothing', async () => {
@@ -3457,16 +3480,26 @@ describe('AD-12 epic 5 tile tap', () => {
     expect(navCalls).toEqual([]);
   });
 
-  it('AD-12 F1 a crossed captured non-tile press ended by lostpointercapture keeps; an available cell dragged and released clears', async () => {
+  // Entry 5.8 supersedes the available-cell half: that crossing is a free-letter drag, clearing
+  // at the threshold (F18), flying back with no dispatch when released outside the tray band.
+  it('AD-12 F1 a crossed captured non-tile press ended by lostpointercapture keeps; an available cell crossing is a free-letter drag: F18 clear at the threshold, a release off the tray flies back with no dispatch', async () => {
     const t = await ready();
     crossed(t, t.b.card2);
     t.fire('lostpointercapture', { target: t.b.card2 });
     expect(t.active()).toBe(0);
     expect(t.overlays.tileSelection).toBe(3);
     crossed(t, t.b.cellCard);
+    expect(t.overlays.tileSelection).toBeNull();
+    expect(t.b.cellFace.style.transform).toBe('translate(10px, 0px)');
     t.fire('pointerup');
+    expect(t.b.cellFace.animations.at(-1)?.keyframes).toEqual([
+      { transform: 'translate(10px, 0px)' },
+      { transform: 'translate(0px, 0px)' },
+    ]);
     expect(t.overlays.tileSelection).toBeNull();
     expect(navCalls).toEqual([]);
+    t.advance(180);
+    expect(t.active()).toBe(0);
   });
 
   // Entry 5.7 keeps this test's threshold half; its ends are the tile drag's (describe below).
@@ -4087,5 +4120,487 @@ describe('AD-12 epic 5 tile drag', () => {
     expect(navCalls).toEqual([]);
     expect(t.overlays.tileSelection).toBe(3);
     expect(t.active()).toBe(0);
+  });
+});
+
+// Epic 5 SPEC CAP-6 (F5, F16, F18; AD-10, AD-12, AD-14): the free-letter drag on tileView() from
+// available cell 3 (top card 2, face x 2 … 42, y 450 … 503, centre (22, 476.5)). Every press is at
+// (100, 100), so `centreOn(x, y)` writes translate(x − 22, y − 476.5) on the face. Tray [3, 4, 5m]
+// (block of one on the right), slots x 10 + 48p, y 640 … 693, one extra slot (room); gap-rect
+// centres x 8, 56, 104, y 666.5; `.tiles` at (8, 634), so a caret on a row-0 gap rect at x reads
+// translate(x − 7.5px, 6px).
+describe('AD-12 epic 5 free-letter drag', () => {
+  type T = Awaited<ReturnType<typeof setup>>;
+  const dispatched = (command: Record<string, unknown>) => `dispatch ${JSON.stringify(command)}`;
+  const GAP_Y = 666.5;
+  const press = (t: T, el?: FakeEl, init: Partial<FakeEvent> = {}) =>
+    t.down(el ?? t.b.cellCard, { clientX: 100, clientY: 100, ...init });
+  const move = (t: T, dx: number, dy: number, init: Partial<FakeEvent> = {}) =>
+    t.fire('pointermove', { clientX: 100 + dx, clientY: 100 + dy, ...init });
+  const centreOn = (t: T, x: number, y: number) => move(t, x - 22, y - 476.5);
+  const ready = async (selected: number | null = 3) => {
+    const t = await setup();
+    t.detach();
+    tileView();
+    if (selected !== null) t.overlays.selectTile(selected);
+    navCalls.length = 0;
+    return t;
+  };
+  const draft = () =>
+    (shared.view as { draft: Record<string, unknown> }).draft as {
+      arrangement: number[];
+      destination: number[];
+      k: number;
+      side: string;
+    };
+  const trayFaces = (t: T) => [t.b.tileFace, t.b.tile2Face, t.b.trayMirrorFace];
+  const transforms = (t: T) => trayFaces(t).map((f) => f.style.transform);
+  const shown = (t: T) => t.b.caret.classes.has('wc-caret-shown');
+  const partedClasses = (el: FakeEl) =>
+    ['wc-parted', 'wc-part-start', 'wc-part-end'].filter((c) => el.classes.has(c));
+  const last = (f: FakeEl) => {
+    const a = f.animations.at(-1);
+    if (a === undefined) throw new Error('no animation');
+    return a;
+  };
+  // Nothing of the drag left on the DOM: no transform, ghost, layer, clip, caret or parted class.
+  const clean = (t: T) =>
+    [...transforms(t), t.b.cellFace.style.transform, t.b.caret.style.transform].every(
+      (x) => x === '',
+    ) &&
+    !t.b.cellFace.classes.has('wc-drag-layer') &&
+    !t.b.cell3.classes.has('wc-drag-ghost') &&
+    !t.b.tiles.classes.has('wc-drag-tiles') &&
+    !shown(t) &&
+    partedClasses(t.b.trayMirror).length === 0;
+  // Tray order [5m, 3, 4]: the block on the left (M from tray position 1).
+  const blockLeft = (t: T) => {
+    draft().side = 'left';
+    const kids = t.b.tiles.children;
+    kids.splice(kids.indexOf(t.b.trayMirror), 1);
+    kids.unshift(t.b.trayMirror);
+    t.b.trayMirror.rect = { ...t.b.slotAt(0), left: 8, right: 56 };
+    t.b.trayMirrorFace.rect = t.b.slotAt(0);
+    for (const [wrapper, face, p] of [
+      [t.b.tile, t.b.tileFace, 1],
+      [t.b.tile2, t.b.tile2Face, 2],
+    ] as const) {
+      const r = t.b.slotAt(p);
+      wrapper.rect = { ...r, left: r.left - 2, right: r.right + 2 };
+      face.rect = r;
+    }
+  };
+  // Replaces `.tiles`' children with `order` (tray order) on compact perRow-4 slots (x 10 + 48 (p
+  // mod 4), y 640 + 48 ⌊p / 4⌋, 44 × 44; tray inner width 188), then the caret; returns the faces.
+  const compactTiles = (t: T, order: readonly { id: number; mirror: boolean }[]) => {
+    t.trayWidth.innerWidth = 188;
+    const kids = t.b.tiles.children;
+    kids.length = 0;
+    const out: { wrapper: FakeEl; face: FakeEl }[] = [];
+    for (const [p, { id, mirror }] of order.entries()) {
+      const left = 10 + 48 * (p % 4);
+      const top = 640 + 48 * Math.floor(p / 4);
+      const s = { left, top, right: left + 44, bottom: top + 44 };
+      const wrapper = new FakeEl(
+        'div',
+        mirror ? { 'data-mirror-of': `${id}` } : { 'data-place': 'tray', 'data-card-id': `${id}` },
+        t.b.tiles,
+      );
+      wrapper.root = t.b.root;
+      wrapper.rect = { ...s, left: s.left - 2, right: s.right + 2 };
+      const face = new FakeEl('div', {}, wrapper);
+      face.root = t.b.root;
+      face.rect = s;
+      face.classes.add('face');
+      out.push({ wrapper, face });
+    }
+    kids.push(t.b.caret);
+    return out;
+  };
+
+  it('AD-12 R-33 Q-31 F18 an available cell dragged onto gap 1: ghost, layer, F18 clear at the threshold, the tiles and the mirror after the gap part; the release dispatches one addFreeLetter { cell, index } with the drag cleared and the gate idle', async () => {
+    const t = await ready(3);
+    let at: { active: number; clean: boolean } | null = null;
+    shared.onDispatch = () => {
+      at = { active: t.active(), clean: clean(t) };
+    };
+    press(t);
+    move(t, 6, 0);
+    expect(t.overlays.tileSelection).toBe(3);
+    move(t, 10, 0);
+    expect(t.overlays.tileSelection).toBeNull();
+    expect(t.b.cell3.classes.has('wc-drag-ghost')).toBe(true);
+    expect(t.b.cellFace.classes.has('wc-drag-layer')).toBe(true);
+    expect(t.b.tiles.classes.has('wc-drag-tiles')).toBe(true);
+    // The wrapper (hit rect) never moves; the cell's badge is untouched.
+    expect(t.b.cellCard.style.transform).toBe('');
+    expect(t.b.badge.classes.size).toBe(0);
+    centreOn(t, 56, GAP_Y);
+    expect(t.b.cellFace.style.transform).toBe('translate(34px, 190px)');
+    expect(transforms(t)).toEqual(['', 'translate(48px, 0px)', 'translate(48px, 0px)']);
+    expect(partedClasses(t.b.trayMirror)).toEqual(['wc-parted', 'wc-part-start', 'wc-part-end']);
+    expect(shown(t)).toBe(false);
+    t.fire('pointerup');
+    expect(navCalls).toEqual([dispatched({ type: 'addFreeLetter', cell: 3, index: 1 })]);
+    expect(at).toEqual({ active: 0, clean: true });
+    // No landing glide (entry 16).
+    expect(t.b.cellFace.animations).toHaveLength(0);
+    expect(clean(t)).toBe(true);
+    // Gap 0 parts every tray position; gap 2 (M's end, block right) parts the mirror alone.
+    for (const [x, index, expected] of [
+      [8, 0, ['translate(48px, 0px)', 'translate(48px, 0px)', 'translate(48px, 0px)']],
+      [104, 2, ['', '', 'translate(48px, 0px)']],
+    ] as const) {
+      const r = await ready(null);
+      press(r);
+      centreOn(r, x, GAP_Y);
+      expect(transforms(r)).toEqual(expected);
+      expect(shown(r)).toBe(false);
+      r.fire('pointerup');
+      expect(navCalls).toEqual([dispatched({ type: 'addFreeLetter', cell: 3, index })]);
+      expect(clean(r)).toBe(true);
+    }
+  });
+
+  it('AD-10 AD-14 the tray faces part over duration(parting), the mirror carrying the same parting shift', async () => {
+    const t = await ready(null);
+    press(t);
+    centreOn(t, 8, GAP_Y);
+    expect(durations.kinds).toContain('parting');
+    for (const face of trayFaces(t)) {
+      expect(last(face).keyframes).toEqual([
+        { transform: 'translate(0px, 0px)' },
+        { transform: 'translate(48px, 0px)' },
+      ]);
+      expect(last(face).options).toEqual({ duration: 90, easing: 'ease-out' });
+    }
+    expect(t.active()).toBe(2);
+    t.advance(90);
+    expect(t.active()).toBe(1);
+    // Under 25 %: back to rest over duration(parting), the parted classes off at once.
+    centreOn(t, 8, 586.5);
+    expect(partedClasses(t.b.trayMirror)).toEqual([]);
+    expect(transforms(t)).toEqual(['', '', '']);
+    expect(last(t.b.trayMirrorFace).keyframes).toEqual([
+      { transform: 'translate(48px, 0px)' },
+      { transform: 'translate(0px, 0px)' },
+    ]);
+    expect(last(t.b.trayMirrorFace).options.duration).toBe(90);
+    t.fire('pointerup');
+    t.advance(180);
+    expect(clean(t)).toBe(true);
+    expect(t.active()).toBe(0);
+  });
+
+  it('AD-14 under reduced motion no animate call reaches a mirror face, parted then released outside, or ended parted by pointercancel or cancel({ byBack: true }); live faces fade', async () => {
+    const t = await ready(null);
+    motion.value = { baseMs: 180, reduced: true };
+    press(t);
+    centreOn(t, 56, GAP_Y);
+    expect(t.b.trayMirrorFace.style.transform).toBe('translate(48px, 0px)');
+    centreOn(t, 56, 300);
+    expect(t.b.trayMirrorFace.style.transform).toBe('');
+    t.fire('pointerup');
+    expect(navCalls).toEqual([]);
+    expect(last(t.b.cellFace).keyframes).toEqual([{ opacity: 0 }, { opacity: 1 }]);
+    t.advance(120);
+    expect(clean(t)).toBe(true);
+    expect(t.b.trayMirrorFace.animations).toHaveLength(0);
+    for (const ender of [
+      (r: T) => r.fire('pointercancel'),
+      (r: T) => r.controller.cancel({ byBack: true }),
+    ]) {
+      const r = await ready(null);
+      motion.value = { baseMs: 180, reduced: true };
+      press(r);
+      centreOn(r, 56, GAP_Y);
+      expect(transforms(r)).toEqual(['', 'translate(48px, 0px)', 'translate(48px, 0px)']);
+      ender(r);
+      // The mirror's shift cleared at once; the live tile and the dragged face fade (fly-back.ts).
+      expect(r.b.trayMirrorFace.style.transform).toBe('');
+      expect(r.b.trayMirrorFace.animations).toHaveLength(0);
+      expect(last(r.b.tile2Face).keyframes).toEqual([{ opacity: 0 }, { opacity: 1 }]);
+      expect(last(r.b.cellFace).keyframes).toEqual([{ opacity: 0 }, { opacity: 1 }]);
+      expect(partedClasses(r.b.trayMirror)).toEqual([]);
+      r.advance(120);
+      expect(r.active()).toBe(0);
+      expect(clean(r)).toBe(true);
+      expect(navCalls).toEqual([]);
+    }
+  });
+
+  it('AD-12 F16 a full layout shows the caret at the inner gap with no face transformed; under 25 % it hides; a release on the caret inserts there', async () => {
+    const t = await ready(null);
+    // perRow 3 (inner 140): 3 tiles fill the one card-mode row.
+    t.trayWidth.innerWidth = 140;
+    press(t);
+    centreOn(t, 56, GAP_Y);
+    expect(shown(t)).toBe(true);
+    expect(t.b.caret.style.transform).toBe('translate(46.5px, 6px)');
+    expect(transforms(t)).toEqual(['', '', '']);
+    expect(partedClasses(t.b.trayMirror)).toEqual([]);
+    centreOn(t, 56, 586.5);
+    expect(shown(t)).toBe(false);
+    centreOn(t, 56, GAP_Y);
+    expect(shown(t)).toBe(true);
+    t.fire('pointerup');
+    expect(navCalls).toEqual([dispatched({ type: 'addFreeLetter', cell: 3, index: 1 })]);
+    expect(clean(t)).toBe(true);
+    expect(t.active()).toBe(0);
+  });
+
+  it('AD-12 F16 the caret marks the end gap of M with the block on the left and with k = 0, no face transformed; a parting gap hides it; the release inserts at the end', async () => {
+    const t = await ready(null);
+    blockLeft(t);
+    press(t);
+    centreOn(t, 56, GAP_Y);
+    // Gap 0 of M (after the mirror) moves both tiles: parting, no caret, the mirror at rest.
+    expect(shown(t)).toBe(false);
+    expect(transforms(t)).toEqual(['translate(48px, 0px)', 'translate(48px, 0px)', '']);
+    expect(partedClasses(t.b.trayMirror)).toEqual(['wc-parted', 'wc-part-start', 'wc-part-end']);
+    centreOn(t, 152, GAP_Y);
+    expect(shown(t)).toBe(true);
+    expect(t.b.caret.style.transform).toBe('translate(142.5px, 6px)');
+    expect(transforms(t)).toEqual(['', '', '']);
+    expect(partedClasses(t.b.trayMirror)).toEqual([]);
+    t.fire('pointerup');
+    expect(navCalls).toEqual([dispatched({ type: 'addFreeLetter', cell: 3, index: 2 })]);
+    expect(clean(t)).toBe(true);
+    // k = 0: tray [3, 4], the end gap after slot 1.
+    const z = await ready(null);
+    Object.assign(draft(), { destination: [], k: 0 });
+    z.b.tiles.children.splice(z.b.tiles.children.indexOf(z.b.trayMirror), 1);
+    press(z);
+    centreOn(z, 104, GAP_Y);
+    expect(shown(z)).toBe(true);
+    expect(z.b.caret.style.transform).toBe('translate(94.5px, 6px)');
+    expect([z.b.tileFace, z.b.tile2Face].map((f) => f.style.transform)).toEqual(['', '']);
+    z.fire('pointerup');
+    expect(navCalls).toEqual([dispatched({ type: 'addFreeLetter', cell: 3, index: 2 })]);
+  });
+
+  it('AD-12 F16 the caret takes the winning rect of a row-break gap and follows it to the other row’s rect', async () => {
+    const t = await ready(null);
+    // Full: M [20 … 26] and one mirror (27) on 4 + 4 compact slots.
+    Object.assign(draft(), { arrangement: [20, 21, 22, 23, 24, 25, 26], destination: [27], k: 1 });
+    compactTiles(t, [
+      ...[20, 21, 22, 23, 24, 25, 26].map((id) => ({ id, mirror: false })),
+      { id: 27, mirror: true },
+    ]);
+    press(t);
+    // Gap 4: the start-of-row-1 rect (x 6 … 10, y 688 … 732) wins.
+    centreOn(t, 8, 710);
+    expect(shown(t)).toBe(true);
+    expect(t.b.caret.style.transform).toBe('translate(-1.5px, 54px)');
+    // Still gap 4: the end-of-row-0 rect (x 198 … 202, y 640 … 684) now wins.
+    centreOn(t, 200, 662);
+    expect(t.b.caret.style.transform).toBe('translate(190.5px, 6px)');
+    t.fire('pointerup');
+    expect(navCalls).toEqual([dispatched({ type: 'addFreeLetter', cell: 3, index: 4 })]);
+    expect(shown(t)).toBe(false);
+  });
+
+  it('AD-12 a block-right free-letter drag, the block wrapping at rest and at a different break when parted, writes the parted marker and segment classes from the parted slots (the resting row-start mirror lacking wc-part-start) and restores them at the end', async () => {
+    // perRow 4, M [3, 4], k 3 on the right: tray [3, 4, 8m, 7m, 5m], resting segments [2–3][4];
+    // gap 0 parts every position one slot: [3][4–5].
+    const ends = async (ender: (t: T) => void) => {
+      const t = await ready(null);
+      Object.assign(draft(), { destination: [5, 7, 8], k: 3 });
+      const els = compactTiles(t, [
+        { id: 3, mirror: false },
+        { id: 4, mirror: false },
+        { id: 8, mirror: true },
+        { id: 7, mirror: true },
+        { id: 5, mirror: true },
+      ]);
+      const mirrors = els.slice(2).map((e) => e.wrapper);
+      press(t);
+      centreOn(t, 8, 662);
+      expect(els.map((e) => e.face.style.transform)).toEqual([
+        'translate(48px, 0px)',
+        'translate(48px, 0px)',
+        'translate(48px, 0px)',
+        'translate(-144px, 48px)',
+        'translate(48px, 0px)',
+      ]);
+      expect(mirrors.map(partedClasses)).toEqual([
+        ['wc-parted', 'wc-part-start', 'wc-part-end'],
+        ['wc-parted', 'wc-part-start'],
+        ['wc-parted', 'wc-part-end'],
+      ]);
+      // Never Svelte's own segment classes.
+      expect(mirrors.some((m) => m.classes.has('start') || m.classes.has('end'))).toBe(false);
+      ender(t);
+      expect(mirrors.map(partedClasses)).toEqual([[], [], []]);
+      t.advance(200);
+      expect(els.every((e) => e.face.style.transform === '')).toBe(true);
+      expect(t.active()).toBe(0);
+    };
+    await ends((t) => {
+      t.fire('pointerup');
+      expect(navCalls).toEqual([dispatched({ type: 'addFreeLetter', cell: 3, index: 0 })]);
+    });
+    await ends((t) => {
+      centreOn(t, 8, 300);
+      expect(navCalls).toEqual([]);
+      t.fire('pointerup');
+    });
+  });
+
+  it('AD-12 F5 F18 a free-letter drag ended by pointercancel, lostpointercapture or cancel({ byBack: true }) flies the face back with the returns, dispatches nothing, hides caret and parted classes at once, clears the ghost at the settle and leaves nothing selected', async () => {
+    const enders: [string, (t: T) => void][] = [
+      ['pointercancel', (t) => t.fire('pointercancel')],
+      ['lostpointercapture', (t) => t.fire('lostpointercapture', { target: t.b.cellCard })],
+      ['cancel byBack', (t) => t.controller.cancel({ byBack: true })],
+    ];
+    for (const [name, ender] of enders) {
+      const t = await ready(3);
+      press(t);
+      centreOn(t, 56, GAP_Y);
+      t.advance(90);
+      expect(t.overlays.tileSelection, name).toBeNull();
+      ender(t);
+      expect(navCalls, name).toEqual([]);
+      expect(partedClasses(t.b.trayMirror), name).toEqual([]);
+      expect(shown(t), name).toBe(false);
+      expect(last(t.b.cellFace).keyframes, name).toEqual([
+        { transform: 'translate(34px, 190px)' },
+        { transform: 'translate(0px, 0px)' },
+      ]);
+      for (const face of [t.b.tile2Face, t.b.trayMirrorFace]) {
+        expect(last(face).keyframes, name).toEqual([
+          { transform: 'translate(48px, 0px)' },
+          { transform: 'translate(0px, 0px)' },
+        ]);
+        expect(last(face).options.duration, name).toBe(180);
+      }
+      // The ghost and the layer stay until the fly-back settles.
+      expect(t.b.cell3.classes.has('wc-drag-ghost'), name).toBe(true);
+      expect(t.active(), name).toBe(2);
+      t.advance(180);
+      expect(t.active(), name).toBe(0);
+      expect(clean(t), name).toBe(true);
+      expect(t.overlays.tileSelection, name).toBeNull();
+    }
+  });
+
+  it('AD-12 an under-25 % or out-of-band release flies back with no dispatch, every tray face at rest', async () => {
+    const t = await ready(null);
+    press(t);
+    centreOn(t, 56, GAP_Y);
+    centreOn(t, 56, 586.5);
+    expect(shown(t)).toBe(false);
+    expect(transforms(t)).toEqual(['', '', '']);
+    t.fire('pointerup');
+    expect(navCalls).toEqual([]);
+    expect(last(t.b.cellFace).keyframes[0]).toEqual({ transform: 'translate(34px, 110px)' });
+    t.advance(180);
+    expect(clean(t)).toBe(true);
+    expect(t.active()).toBe(0);
+  });
+
+  it('AD-12 F5 cancel() (act()), a same-id pointerdown and detach settle a parted free-letter drag at once: no dispatch, gate idle, nothing selected', async () => {
+    const { act, setController } = await import('../act');
+    const a = await ready(3);
+    setController(a.controller);
+    press(a);
+    centreOn(a, 56, GAP_Y);
+    act(() => undefined)();
+    expect(clean(a)).toBe(true);
+    expect(a.active()).toBe(0);
+    expect(a.overlays.tileSelection).toBeNull();
+    // The held pointer's later moves and release do nothing.
+    centreOn(a, 8, GAP_Y);
+    a.fire('pointerup');
+    expect(navCalls).toEqual([]);
+    expect(clean(a)).toBe(true);
+    const s = await ready(null);
+    press(s);
+    centreOn(s, 56, GAP_Y);
+    press(s, s.b.leftover);
+    expect(clean(s)).toBe(true);
+    expect(s.active()).toBe(1);
+    s.fire('pointerup');
+    expect(s.active()).toBe(0);
+    expect(navCalls).toEqual([]);
+    const d = await setup();
+    const off = d.detach();
+    tileView();
+    press(d);
+    centreOn(d, 56, GAP_Y);
+    off();
+    expect(clean(d)).toBe(true);
+    expect(d.active()).toBe(0);
+    expect(navCalls).toEqual([]);
+  });
+
+  it('AD-12 R-65 a long-press peek first: later moves into the band start no drag and the release dispatches nothing, the tile selection kept', async () => {
+    const t = await ready(3);
+    press(t);
+    t.advance(400);
+    expect(t.overlays.peek).toBe(3);
+    centreOn(t, 56, GAP_Y);
+    expect(t.b.cellFace.style.transform).toBe('');
+    expect(t.b.cell3.classes.has('wc-drag-ghost')).toBe(false);
+    t.fire('pointerup');
+    expect(navCalls).toEqual([]);
+    expect(t.overlays.tileSelection).toBe(3);
+    expect(clean(t)).toBe(true);
+  });
+
+  it('AD-12 R-33 used and empty Composing cells, and every WordCell drag in Place and Idle, are inert: nothing moves, nothing dispatched', async () => {
+    const t = await ready(3);
+    const cells = (shared.view as { cells: { canAddFreeLetter: boolean; used: boolean }[] }).cells;
+    // Cell 3 used (as after a tap-add); cell 4 empty.
+    Object.assign(cells[0] as object, { canAddFreeLetter: false, used: true });
+    for (const el of [t.b.cellCard, t.b.cell4]) {
+      press(t, el);
+      centreOn(t, 56, GAP_Y);
+      expect(clean(t)).toBe(true);
+      t.fire('pointerup');
+      expect(t.overlays.tileSelection).toBe(3);
+    }
+    expect(navCalls).toEqual([]);
+    const p = await setup();
+    p.detach();
+    tileView('place');
+    navCalls.length = 0;
+    press(p);
+    centreOn(p, 56, GAP_Y);
+    expect(p.b.cellFace.style.transform).toBe('');
+    p.fire('pointerup');
+    expect(navCalls).toEqual([]);
+    expect(p.b.cell3.classes.has('wc-drag-ghost')).toBe(false);
+    const i = await setup();
+    i.detach();
+    navCalls.length = 0;
+    press(i);
+    centreOn(i, 56, GAP_Y);
+    expect(i.b.cellFace.style.transform).toBe('');
+    expect(i.b.cell3.classes.has('wc-drag-ghost')).toBe(false);
+    i.fire('pointerup');
+    expect(navCalls).toEqual([]);
+  });
+
+  it('AD-12 a mouse free-letter drag hides the hover peek at its threshold and closes it at its end', async () => {
+    const mouse = { pointerType: 'mouse' };
+    const t = await ready(null);
+    t.media.hoverFine = true;
+    t.overlays.openHoverPeek(3);
+    press(t, t.b.cellCard, mouse);
+    move(t, 10, 0, mouse);
+    expect(t.b.hoverPeek.classes.has('wc-hover-peek-hidden')).toBe(true);
+    expect(t.overlays.hoverPeek).toBe(3);
+    centreOn(t, 56, GAP_Y);
+    t.fire('pointerup', mouse);
+    expect(t.overlays.hoverPeek).toBeNull();
+    expect(navCalls).toEqual([dispatched({ type: 'addFreeLetter', cell: 3, index: 1 })]);
+  });
+
+  it('AD-12 a DOM that does not match the view throws at the crossing (rule 6)', async () => {
+    const t = await ready(null);
+    t.b.tiles.children.splice(t.b.tiles.children.indexOf(t.b.trayMirror), 1);
+    press(t);
+    expect(() => move(t, 10, 0)).toThrow(/^AD-12 tray mirror 5 not in \.tiles/);
   });
 });

@@ -76,7 +76,8 @@ const qu = $derived(face.letter === 'QU');
 const glyph = $derived(qu ? 'Qu' : face.letter);
 const ghost = $derived(mirror === 'ghost');
 const block = $derived(mirror === 'block');
-const lock = $derived(destination || (block && segment?.start === true));
+// Epic 5 SPEC CAP-6: every block mirror renders the lock; CSS shows it on a segment start only.
+const lock = $derived(destination || block);
 // DESIGN.md Tile corner map (`.face`-relative): card-mode tray marks sit in the bottom band; a
 // strip moves the origin tag top-left (A-D10); compact tiles have no band and use the corners.
 const compact = $derived(tile?.mode === 'compact');
@@ -235,31 +236,66 @@ const inView = $derived.by(() => {
   .destination .face,
   .block .face { background: var(--wc-destination-fill); border: 2px solid var(--wc-destination); }
   .lock { position: absolute; top: 0; left: 0; z-index: 1; }
+  /* Epic 5 SPEC CAP-6: a block mirror's lock shows on its row segment's start: `.start` at rest,
+     `wc-part-start` while the controller marks it `wc-parted` (a free-letter parting moves the
+     segment ends; gestures/classes.ts). */
+  .block:not(:global(.wc-parted)):not(.start) .lock,
+  .block:global(.wc-parted):not(:global(.wc-part-start)) .lock { display: none; }
   .lock rect { fill: var(--wc-destination); }
   .lock .shackle { fill: none; stroke: var(--wc-destination); stroke-width: 1.5; }
   .destination .badge,
   .block .badge { top: 0; right: 0; }
+  /* Epic 5 SPEC CAP-6: every segment-end rule below reads `.start`/`.end` at rest and only
+     `wc-part-start`/`wc-part-end` under the controller's `wc-parted` (gestures/classes.ts); each
+     :is() pair is one end test (start, not start, end, not end), so the resting look is unchanged. */
   /* A9 4.3-m4: a block face that is not a segment end is widened past its tile (overlap, no right
      border), so its badge sits 5 px in from the face edge: right edge at wrapper x + tileWidth on
      every block tile, as on the end tile (face to x + tileWidth + 2, 2 px border). */
-  .block:not(.end) .badge { right: 5px; }
+  .block:is(
+      :not(:global(.wc-parted)):not(.end),
+      :global(.wc-parted):not(:global(.wc-part-end))
+    )
+    .badge { right: 5px; }
   /* DESIGN.md Destination block: the D tiles joined over the 4 px gap, one outline per row
      segment; inner edges drop their side border and radius. */
   .block .face { width: calc(var(--tile-w) + 4px); margin: 0; border-radius: 0; }
-  .block.start .face {
+  .block:is(.start:not(:global(.wc-parted)), :global(.wc-parted.wc-part-start)) .face {
     width: calc(var(--tile-w) + 2px); margin-left: 2px; border-top-left-radius: 6px;
     border-bottom-left-radius: 6px;
   }
-  .block.end .face {
+  .block:is(.end:not(:global(.wc-parted)), :global(.wc-parted.wc-part-end)) .face {
     width: calc(var(--tile-w) + 2px); margin-right: 2px; border-top-right-radius: 6px;
     border-bottom-right-radius: 6px;
   }
-  .block.start.end .face { width: var(--tile-w); }
-  .block:not(.start) .face { border-left: none; }
-  .block:not(.end) .face { border-right: none; }
+  .block:is(.start:not(:global(.wc-parted)), :global(.wc-parted.wc-part-start)):is(
+      .end:not(:global(.wc-parted)),
+      :global(.wc-parted.wc-part-end)
+    )
+    .face { width: var(--tile-w); }
+  .block:is(
+      :not(:global(.wc-parted)):not(.start),
+      :global(.wc-parted):not(:global(.wc-part-start))
+    )
+    .face { border-left: none; }
+  .block:is(
+      :not(:global(.wc-parted)):not(.end),
+      :global(.wc-parted):not(:global(.wc-part-end))
+    )
+    .face { border-right: none; }
   /* Overlap the next block tile by 1 px so fractional device pixels leave no seam. */
-  .block:not(.start):not(.end) .face { width: calc(var(--tile-w) + 5px); }
-  .block.start:not(.end) .face { width: calc(var(--tile-w) + 3px); }
+  .block:is(
+      :not(:global(.wc-parted)):not(.start),
+      :global(.wc-parted):not(:global(.wc-part-start))
+    ):is(
+      :not(:global(.wc-parted)):not(.end),
+      :global(.wc-parted):not(:global(.wc-part-end))
+    )
+    .face { width: calc(var(--tile-w) + 5px); }
+  .block:is(.start:not(:global(.wc-parted)), :global(.wc-parted.wc-part-start)):is(
+      :not(:global(.wc-parted)):not(.end),
+      :global(.wc-parted):not(:global(.wc-part-end))
+    )
+    .face { width: calc(var(--tile-w) + 3px); }
 
   /* DESIGN.md Elevation & Depth: a tap-selected card's face rises `--wc-select-lift` (Board, from
      SELECTION_LIFT_PX) with the soft shadow, above the sticky bars (z-index 2); the wrapper (hit

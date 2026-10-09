@@ -186,9 +186,10 @@ export function partingOffsets(
 
 /**
  * The D-block row segment ends of `TileRows.svelte` (a segment starts at the block's first tile or
- * a row start, and ends likewise). Entry 8 builds `mirrorBySlot` by mapping each mirror's
- * free-letter `partingOffsets` slot (a mapping, not a re-derivation); in reorder mode the origin's
- * slot can equal a neighbour's parted slot, so only free-letter results (or rest) feed it.
+ * a row start, and ends likewise). The free-letter drag (controller.ts, epic 5 SPEC CAP-6) builds
+ * `mirrorBySlot` by mapping each mirror's free-letter `partingOffsets` slot (a mapping, not a
+ * re-derivation) for its parted segment classes; in reorder mode the origin's slot can equal a
+ * neighbour's parted slot, so only free-letter results (or rest) feed it.
  */
 export function segmentEnds(
   slot: number,

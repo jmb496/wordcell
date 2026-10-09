@@ -298,14 +298,49 @@ describe('AD-12 entry 10 Composing tapAction', () => {
     }
   });
 
-  it('AD-12 the branch ignores a selection; WordCells and outside keep today’s paths', () => {
+  // Entry 5.8 supersedes the WordCell half (a Composing WordCell tap was a deselect with a
+  // selection): the free-letter branch below ignores a selection too.
+  it('AD-12 the branch ignores a selection; WordCells take the free-letter branch, outside keeps today’s path', () => {
     expect(tapAction(card(1, 11), K1, SEL, 'tailSelection')).toEqual(tapDest(11));
     expect(tapAction(space(2), K1, SEL, 'tailSelection')).toEqual({ kind: 'none' });
     expect(tapAction(card(2, 21), K1, SEL, 'tailSelection')).toEqual({ kind: 'none' });
     expect(tapAction({ kind: 'wordcell', cell: 3 }, K1, SEL, 'tailSelection')).toEqual({
-      kind: 'deselect',
+      kind: 'none',
     });
     expect(tapAction({ kind: 'outside' }, K1, null, undefined)).toEqual({ kind: 'none' });
+  });
+
+  // Epic 5 SPEC CAP-6 (R-33, Q-31): cell 3 available, cell 4 empty, cell 5 used.
+  it('AD-12 R-33 a Composing WordCell tap adds the free letter iff canAddFreeLetter (with or without a selection); used and empty cells are inert', () => {
+    const cells = [
+      { cell: 3, cards: [90], canAddFreeLetter: true },
+      { cell: 4, cards: [], canAddFreeLetter: false },
+      { cell: 5, cards: [91], canAddFreeLetter: false, used: true },
+    ];
+    const v = { ...K1, cells } as unknown as GameView;
+    for (const [selection, top] of [
+      [null, undefined],
+      [SEL, 'tailSelection'],
+    ] as const) {
+      expect(tapAction({ kind: 'wordcell', cell: 3 }, v, selection, top)).toEqual({
+        kind: 'addFreeLetter',
+        cell: 3,
+      });
+      for (const cell of [4, 5]) {
+        expect(tapAction({ kind: 'wordcell', cell }, v, selection, top)).toEqual({ kind: 'none' });
+      }
+    }
+    // Place and Idle keep their paths (R-65 view tap, deselect with a selection): no free letter.
+    const place = { ...v, phase: 'place' } as unknown as GameView;
+    const idle = { ...v, phase: 'idle' } as unknown as GameView;
+    const cell3: Hit = { kind: 'wordcell', cell: 3 };
+    expect(tapAction(cell3, place, null, undefined)).toEqual({ kind: 'none' });
+    expect(tapAction(cell3, place, SEL, 'tailSelection')).toEqual({ kind: 'deselect' });
+    expect(tapAction(cell3, idle, null, undefined)).toEqual({ kind: 'openView', cell: 3 });
+    expect(tapAction(cell3, idle, SEL, 'tailSelection')).toEqual({ kind: 'deselect' });
+    expect(() => tapAction({ kind: 'wordcell', cell: 9 }, v, null, undefined)).toThrow(
+      /^AD-12 WordCell 9/,
+    );
   });
 
   it('AD-12 an empty destination (k = 0, kIfTapped empty) is inert', () => {
