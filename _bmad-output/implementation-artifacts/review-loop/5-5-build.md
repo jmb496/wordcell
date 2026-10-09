@@ -1,5 +1,5 @@
 # Review loop — ticket 5.5 build (code mode, d2adfce..7866052)
-State: pass 3: done
+State: pass 4: done
 
 Target: `_bmad-output/implementation-artifacts/review-loop/5-5-build.passes/pass0.diff` (git diff d2adfce..7866052)
 Intent: `_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-tile-tap-selection-swap-and-removal-plan.md`
@@ -58,3 +58,23 @@ Fixer: all 8 applied; item 1 test 'AD-12 CAP-8 a crossed mouse tile press releas
 - none
 ### Dropped
 - none
+
+## Pass 4 — 2026-10-09
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 0, minor 3, decision-needed 0  |  Dropped in triage: 2 (duplicates merged)
+Snapshot: tree 45648dc7810e93fe9b38e4821c4bb08560b9967d (no fix pass; pass 3 state, HEAD 2ce828c)
+### Applied
+- none (zero majors: stopping rule met before the fix step)
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- intent-alignment and verification-gap stale-doc findings — duplicates of the fix-diff stale-doc minor (merged as unapplied minor 1)
+
+## Result — converged after 4 passes
+Majors per pass: 2, 2, 2, 0. Final state (orchestrator run at the pass 3 tree, committed as 2ce828c): `npm test` 54 files, 2127 passed; `npm run lint` clean (196 files); `npm run check` 0 errors, 0 warnings. `test:all` and `test:screens` were not re-run by this loop (fixers ran the touched Playwright specs on android: tile-tap, board-phases, tray, 72 passed).
+
+Unapplied minors (for the next build or loop):
+1. Plan Code Map Card.svelte bullet (`::before { inset:-2px 0 }`), Design Notes p6 "above row 1 the 2 px half-gap also belongs to row 1", Review Triage Log "the `::before` is symmetric CSS", and build-notes.md CAP-4 "Raised clip (as built)" ("`::before` (inset −2 px 0)") still describe the pre-pass-3 hit rect; update them to the `gapAbove`/`gapBelow` mechanism (2 px only toward a row gap, from TileRows `gaps(i)`) and note the change in the Plan Change Log.
+2. src/ui/tray/TileRows.svelte `gaps(i)` — under a short last compact row, a second-to-last-row tile with no tile below owns only the upper 2 px of the gap; the lower 2 px resolve as tray background (clear). Default: keep the spec-literal midline split and say so in the TileRows comment (alternative: `bottom: -4px` when `i + perRow >= tiles.length`).
+3. e2e/tile-tap.spec.ts:435-454 compact full pitch — only row 1's lower half-gap is tapped; add a tap 1 px above row 2's `[data-mirror-of="7"]` slot with tile 1 selected (block → kept) and 1 px above tile 1's slot with nothing selected (outer edge → outside, nothing selected) to pin the pass-3 restriction.
