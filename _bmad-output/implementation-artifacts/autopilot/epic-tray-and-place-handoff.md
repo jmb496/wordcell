@@ -1,13 +1,13 @@
 outcome: done
-ticket: 5.4
+ticket: 5.5
 reason: done
-next: 5.5
-updated: 2026-10-09T03:23:30Z
-summary: Ticket 5.4 (Controller seams) is done: the tap-and-drag code was split into smaller files with no change in behaviour, and every test passes.
+next: 5.6
+updated: 2026-10-09T07:18:48Z
+summary: Ticket 5.5 (Tile tap) is done: letters in the tray can be selected, swapped and returned by tapping, and every test passes.
 
 ## Report
 
-Ticket 5.4 "Controller seams" is done. It changes nothing in the game; it splits the tap-and-drag handling into smaller files so the next tickets (tile tapping and dragging) have clean places to go. The ticket review took 6 passes and needed nothing from you; the build passed every check, including the screenshots with no change; the code review found no major problems and left 5 small items for later tickets (see the digest). Unit tests got about 7 % slower (2.17 s to 2.33 s), well within the 5 s budget.
+Ticket 5.5 "Tile tap: selection, swap and removal" is done. Tapping a letter in the word tray now selects it, tapping another swaps them, tapping it again puts it down, and on a borrowed free letter the second tap sends it back to its column. The ticket review took 6 passes and needed nothing from you; the build passed every check including the screenshots with no change; the code review took 4 passes and fixed a few technical issues (mainly exactly where a tap on a tile counts). One paperwork leftover and two noted risks are in the digest for later tickets.
 
 Close-out docs: none so far for this ticket.
 
@@ -15,4 +15,4 @@ Digest: _bmad-output/implementation-artifacts/autopilot/epic-tray-and-place-2026
 
 ## Resume
 
-Run `.claude/skills/epic-autopilot/scripts/loop.sh epic-tray-and-place`; the next session starts ticket 5.5 (Tile tap: selection, swap and removal). 5.6 is also ready.
+Run `.claude/skills/epic-autopilot/scripts/loop.sh epic-tray-and-place`; the next session starts ticket 5.6 (insertionIndex, gap rects and parting offsets).

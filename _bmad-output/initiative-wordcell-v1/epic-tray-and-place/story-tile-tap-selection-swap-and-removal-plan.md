@@ -3,7 +3,7 @@ title: 'Tile tap: selection, swap and removal'
 type: 'feature'
 ticket: '5'
 created: '2026-10-09'
-status: 'built'
+status: done
 baseline_revision: 'd2adfce555ff5266ca1d9a8311999b7a434d8f29'
 route: 'full'
 route_source: 'auto'

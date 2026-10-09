@@ -59,3 +59,14 @@ Ref to fix upstream: none
 Tokens: 11.9M input-equivalent (ticket review 61%, build 24%, code review 11%, other 2%, orchestrator 2%); orchestrator peak context 64k
 Worth knowing: the unit suite went from 2.17 s to 2.33 s (+7 %, well inside the 5 s budget). The code review left 5 minor items in review log 5-4-build.md for later tickets: a card element missing its id would quietly read as card 0 instead of failing (best fixed in 5.5, which touches that code); no test proves detaching clears the hover-peek memory (for the 5.14 sweep); one comment cites the wrong epic 4 document; some paperwork leftovers (the spine's folder list lacks the five new files, a stale "(entry 12)" tag in main.ts, one wrong build-notes label) are noted only in the plan, for the 5.15 sweep; one badly wrapped comment line.
 Close-out docs: none
+
+## 5.5 Tile tap: selection, swap and removal — done
+What it adds: the player can now tap letters in the word tray. One tap picks a letter up (it lifts and gets a teal outline), a tap on another letter swaps the two, a second tap puts it back down, and on a borrowed free letter a second tap returns it to its column (shown by a `↩`). Pressing any button, or tapping elsewhere, drops the selection; the back button ignores it.
+Ticket review: 6 passes, converged; nothing needed your input (one open item passed to the build: lift the tile area's clipping edge only at the top so the raised letter shows without unclipping the hidden extra rows; the build did that)
+Build: built; commits 7866052
+Code review: thorough (ticket risk high), 4 passes, converged; fixes in 2c4a109, 2ce828c and the earlier pass commit (hit area of tiles near row gaps, test and controller fixes), log d67ff2a
+Tests: all passing (test:all; the build also ran test:screens green with no screenshot change)
+Ref to fix upstream: none
+Tokens: 19.9M input-equivalent (ticket review 43%, code review 31%, build 23%, other 2%, orchestrator 1%); orchestrator peak context 62k
+Worth knowing: unit suite 2.43 s (budget 5 s). The code review left one paperwork item: the plan and build-notes CAP-4 still describe the tile's old hit-area trick, not the final per-row-gap version (for the 5.15 sweep). The build flags two risks: if a later feature (epic 6 keyboard commands) changes the game phase without a button, the next tile tap with a stale selection will throw an error rather than quietly clearing; and no test fixture has a third row of compact tiles, so that row's clipping is only checked indirectly.
+Close-out docs: none
