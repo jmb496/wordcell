@@ -8,6 +8,7 @@ import {
   openFixture,
   sameSession,
   stashSession,
+  tapAt,
 } from './helpers/board';
 import { dragResidue, expectNoResidue } from './helpers/drag';
 import { animationFrames, hidePage } from './helpers/lifecycle';
@@ -56,11 +57,6 @@ async function points(locator: Locator): Promise<Point[]> {
   const out: Point[] = [];
   for (const el of await locator.all()) out.push(await centre(el));
   return out;
-}
-
-async function tapAt(page: Page, p: Point): Promise<void> {
-  if (test.info().project.name === 'android') await page.touchscreen.tap(p.x, p.y);
-  else await page.mouse.click(p.x, p.y);
 }
 
 // One held touch moved to each point in turn, a frame after each move.

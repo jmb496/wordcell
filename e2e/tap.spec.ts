@@ -8,6 +8,7 @@ import {
   openFixture,
   sameSession,
   stashSession,
+  tapAt,
 } from './helpers/board';
 import { expectLeaves, wc } from './helpers/dialogs';
 import { animationFrames } from './helpers/lifecycle';
@@ -50,11 +51,6 @@ async function footCorner(page: Page, n: number): Promise<Point> {
 }
 
 const cardAt = (page: Page, n: number, i: number) => centre(cards(page, n).nth(i));
-
-async function tapAt(page: Page, p: Point): Promise<void> {
-  if (test.info().project.name === 'android') await page.touchscreen.tap(p.x, p.y);
-  else await page.mouse.click(p.x, p.y);
-}
 
 // The rendered selection: the outline's column and its lifted cards.
 function selection(page: Page): Promise<Selection> {

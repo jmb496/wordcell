@@ -15,9 +15,10 @@ import WordLine from './tray/WordLine.svelte';
 // `bands()`) with the word line, the tile rows and the control row, switching on `view.place`,
 // then `view.draft`, else empty (AD-3). Composing: the word line (or the R-38 invalid line while
 // `feedback.rejectedWord` is set), tiles in R-30 tray order with the D-block mirrors at the
-// `side` end and free-letter origin tags, and the letter count. Place: the word line in word
-// order (`draft.wordCards`, no D underline, R-51), the strip in `placementOrder` with origin tags
-// and the `bottom`/`top` marks, and the meta (R-80). Idle and Game over: all three rows empty.
+// `side` end and free-letter origin tags, the D-block controls (or the k = 0 caption) and the
+// letter count. Place: the word line in word order (`draft.wordCards`, no D underline, R-51), the
+// strip in `placementOrder` with origin tags and the `bottom`/`top` marks, and the meta (R-80),
+// no controls. Idle and Game over: all three rows empty.
 let {
   view,
   w,
@@ -65,6 +66,9 @@ const tags: ReadonlyMap<CardId, number> = $derived(
       <ControlRow
         letterCount={draft.letterCount}
         meta={place === undefined ? undefined : { target: place.target, scoreDelta: place.scoreDelta }}
+        controls={place === undefined
+          ? { k: draft.k, canDecK: view.canDecK, canIncK: view.canIncK, canFlip: view.canFlip }
+          : undefined}
       />
     {/if}
   </div>

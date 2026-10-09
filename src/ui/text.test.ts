@@ -100,3 +100,16 @@ describe('AD-3 Place meta text', () => {
     expect(text.placeMeta(1, 3, 1)).toBe('1 letter → cell 3 · +1');
   });
 });
+
+describe('AD-3 D-block control text', () => {
+  it('AD-3 minus is U+2212, plus is +, the Flip glyph is U+21C4', () => {
+    expect(text.minus).toBe('\u2212');
+    expect(text.plus).toBe('+');
+    expect(text.flipGlyph).toBe('\u21c4');
+    expect(text.flip).toBe('Flip');
+  });
+
+  it('AD-3 the k = 0 caption reads Empty column: no cards join the word', () => {
+    expect(text.emptyColumn).toBe('Empty column: no cards join the word');
+  });
+});

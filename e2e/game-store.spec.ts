@@ -141,6 +141,7 @@ type Row = [
   label: string,
   enabled: boolean,
   reason: boolean,
+  ids?: string,
 ];
 const LABELS: Row[] = [
   ['session-idle-fresh.json', 'held', 'Loading words…', false, true],
@@ -151,7 +152,7 @@ const LABELS: Row[] = [
   ['session-idle-pending-draft.json', 'ready', 'Validate', false, false],
   ['session-composing-draft-2-letters.json', 'held', 'Loading words…', false, true],
   ['session-composing-draft-2-letters.json', 'failing', 'Word list unavailable', false, true],
-  ['session-composing-draft-2-letters.json', 'ready', 'Need 3+ letters', false, true],
+  ['session-composing-draft-2-letters.json', 'ready', 'Need 3+ letters', false, true, 'R-36 R-38'],
   ['session-composing.json', 'held', 'Loading words…', false, true],
   ['session-composing.json', 'failing', 'Word list unavailable', false, true],
   ['session-composing.json', 'ready', 'Validate', true, false],
@@ -164,8 +165,8 @@ const LABELS: Row[] = [
   ['session-won.json', 'failing', 'New game', true, false],
 ];
 
-for (const [name, dictionary, label, enabled, reason] of LABELS) {
-  test(`R-38 AD-3 primary-action on ${name} with the word list ${dictionary} reads ${label}, ${enabled ? 'enabled' : 'disabled'}`, async ({
+for (const [name, dictionary, label, enabled, reason, ids] of LABELS) {
+  test(`${ids ?? 'R-38'} AD-3 primary-action on ${name} with the word list ${dictionary} reads ${label}, ${enabled ? 'enabled' : 'disabled'}`, async ({
     page,
   }) => {
     await routeDictionary(page, dictionary);

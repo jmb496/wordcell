@@ -31,6 +31,13 @@ export const text = Object.freeze({
   stripBottomMark: '\u25bc',
   star: '\u2605',
   returnGlyph: '\u21a9',
+  // DESIGN.md D-block controls (R-30, R-31; F9, F11): `−` (U+2212) and `+` around k, `⇄ Flip` (the
+  // glyph aria-hidden), and the k = 0 caption that replaces them.
+  minus: '\u2212',
+  plus: '+',
+  flipGlyph: '\u21c4',
+  flip: 'Flip',
+  emptyColumn: 'Empty column: no cards join the word',
   confirm: 'Confirm',
   newGame: 'New game',
   undo: 'Undo',

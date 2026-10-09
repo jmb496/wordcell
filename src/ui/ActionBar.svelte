@@ -1,17 +1,32 @@
 <script lang="ts">
+import { flushSync, onMount } from 'svelte';
 import type { GameView } from '../engine/index';
 import { dictionary } from '../shell/dictionary.svelte';
 import { game } from '../shell/game.svelte';
 import { act } from './act';
+import { fitSize } from './layout/fit';
 import { newGame } from './new-game';
 import { text } from './text';
 
 // DESIGN.md Action bar: sticky, 60 px of content plus the bottom safe-area inset (owner Option A),
-// 4 px side padding, the 48 px primary action (epic 3's labels, enablement and New game).
+// 4 px side padding, the 48 px primary action (epic 3's labels, enablement and New game). The
+// label (button-label, 16 px) shrinks to the ui-label size (14 px) to fit the button's fractional
+// content width before it ellipsizes (A9 4.2-m1), measured on the label span itself under a
+// temporary inline font size, re-measured on mount, label change, button width change and
+// `document.fonts.ready` (as WordLine).
 let { view }: { view: GameView } = $props();
 
+const LABEL_MAX = 16;
+
+let button: HTMLButtonElement | null | undefined;
+let labelEl: HTMLSpanElement | null | undefined = $state();
+let size = $state(LABEL_MAX);
+
+// F15/F21: each click dispatches one `validate`; flushSync renders the result (Place, Confirm)
+// before the click handler returns, so a second tap lands on Confirm. No re-entrancy flag.
 function validate(): void {
   game.dispatch({ type: 'validate' });
+  flushSync();
 }
 
 function confirm(): void {
@@ -54,6 +69,47 @@ const primary = $derived.by(
     };
   },
 );
+
+/** The label span's nowrap width at `px`; restores its inline font size after. */
+function measure(el: HTMLElement, px: number): number {
+  const previous = el.style.fontSize;
+  el.style.fontSize = `${px}px`;
+  try {
+    return el.getBoundingClientRect().width;
+  } finally {
+    el.style.fontSize = previous;
+  }
+}
+
+function refit(): void {
+  const el = labelEl;
+  if (button == null || el == null) return;
+  const style = getComputedStyle(button);
+  const box =
+    button.getBoundingClientRect().width -
+    Number.parseFloat(style.paddingLeft) -
+    Number.parseFloat(style.paddingRight);
+  size = fitSize((px) => measure(el, px), box, LABEL_MAX);
+}
+
+// Label change (and the span's mount).
+$effect(() => {
+  void [primary.label, labelEl];
+  refit();
+});
+
+onMount(() => {
+  let mounted = true;
+  const observer = new ResizeObserver(() => refit());
+  if (button != null) observer.observe(button);
+  void document.fonts.ready.then(() => {
+    if (mounted) refit();
+  });
+  return () => {
+    mounted = false;
+    observer.disconnect();
+  };
+});
 </script>
 
 <div class="action-bar" data-band="actionBar">
@@ -64,7 +120,8 @@ const primary = $derived.by(
     data-testid="primary-action"
     disabled={primary.onclick === undefined}
     onclick={primary.onclick}
-  >{primary.label}</button>
+    bind:this={button}
+  ><span class="primary-label" bind:this={labelEl} style:font-size="{size}px">{primary.label}</span></button>
 </div>
 
 <style>

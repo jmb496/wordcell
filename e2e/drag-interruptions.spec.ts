@@ -1,5 +1,14 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
-import { box, cards, centre, foot, openFixture, sameSession, stashSession } from './helpers/board';
+import {
+  box,
+  cards,
+  centre,
+  foot,
+  openFixture,
+  sameSession,
+  stashSession,
+  tapAt,
+} from './helpers/board';
 import { wc } from './helpers/dialogs';
 import { dragResidue, expectNoResidue } from './helpers/drag';
 import { animationFrames, hidePage, showPage } from './helpers/lifecycle';
@@ -53,11 +62,6 @@ async function holdThrough(page: Page, from: Point, points: Point[]): Promise<To
     throw error;
   }
   return hold;
-}
-
-async function tapAt(page: Page, p: Point): Promise<void> {
-  if (test.info().project.name === 'android') await page.touchscreen.tap(p.x, p.y);
-  else await page.mouse.click(p.x, p.y);
 }
 
 // The rendered selection: the outline's column and its lifted cards (e2e/tap.spec.ts).

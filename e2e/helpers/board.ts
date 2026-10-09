@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page } from '@playwright/test';
+import { expect, type Locator, type Page, test } from '@playwright/test';
 import { booted as waitBooted } from './restore';
 import { fixture, seedStorage } from './seed';
 
@@ -49,6 +49,13 @@ export async function box(locator: Locator): Promise<Box> {
 export async function centre(locator: Locator): Promise<Point> {
   const b = await box(locator);
   return { x: b.x + b.w / 2, y: b.y + b.h / 2 };
+}
+
+// One tap at `p` (viewport CSS px): a touchscreen tap on android, a mouse click elsewhere. Works on
+// disabled controls (a coordinate tap, no actionability wait).
+export async function tapAt(page: Page, p: Point): Promise<void> {
+  if (test.info().project.name === 'android') await page.touchscreen.tap(p.x, p.y);
+  else await page.mouse.click(p.x, p.y);
 }
 
 // Stashes the store's Session reference; returns the stored wordcell:session text.

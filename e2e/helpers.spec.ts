@@ -12,6 +12,7 @@ import {
   openFixture,
   sameSession,
   stashSession,
+  tapAt,
   trayIds,
 } from './helpers/board';
 import { button, expectLeaves, hitAt, wc } from './helpers/dialogs';
@@ -406,6 +407,38 @@ test.describe('board helpers', () => {
     const hidden = page.locator('#no-box-probe');
     await expect(box(hidden)).rejects.toThrow('element has no box');
     await expect(centre(hidden)).rejects.toThrow('element has no box');
+  });
+
+  test('AD-17 tapAt taps once at a point: one click there, its target the element under it', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-idle-fresh');
+    await page.evaluate(() => {
+      const probe = document.createElement('button');
+      probe.id = 'tap-probe';
+      probe.type = 'button';
+      probe.textContent = 'probe';
+      Object.assign(probe.style, {
+        position: 'fixed',
+        left: '40px',
+        top: '200px',
+        width: '80px',
+        height: '44px',
+        zIndex: '1000',
+      });
+      const clicks: string[] = [];
+      (window as unknown as { __tapClicks: string[] }).__tapClicks = clicks;
+      document.addEventListener(
+        'click',
+        (event) => clicks.push(event.target instanceof Element ? event.target.id : ''),
+        true,
+      );
+      document.body.append(probe);
+    });
+    await tapAt(page, await centre(page.locator('#tap-probe')));
+    expect(
+      await page.evaluate(() => (window as unknown as { __tapClicks: string[] }).__tapClicks),
+    ).toEqual(['tap-probe']);
   });
 
   test('AD-17 stashSession returns the stored text and sameSession holds until the Session changes; sameSession rejects before a stash; both reject without an active store', async ({

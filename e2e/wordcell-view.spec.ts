@@ -1,6 +1,6 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
 import { EN, view } from '../src/engine/index';
-import { centre, openFixture } from './helpers/board';
+import { centre, openFixture, tapAt } from './helpers/board';
 import { expectLeaves, wc } from './helpers/dialogs';
 import { animationFrames } from './helpers/lifecycle';
 import { booted } from './helpers/restore';
@@ -27,11 +27,6 @@ const sheet = (page: Page) => page.locator('[data-view-sheet]');
 const scrim = (page: Page) => page.locator('[data-view-scrim]');
 const scrollArea = (page: Page) => page.locator('[data-view-scroll]');
 const mirrors = (page: Page) => sheet(page).locator('[data-mirror-of]');
-
-async function tapAt(page: Page, p: Point): Promise<void> {
-  if (test.info().project.name === 'android') await page.touchscreen.tap(p.x, p.y);
-  else await page.mouse.click(p.x, p.y);
-}
 
 const wcOf = async (page: Page) => (await wc(page))?.wc;
 

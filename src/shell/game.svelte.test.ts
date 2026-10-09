@@ -622,6 +622,15 @@ describe('game store feedback', () => {
     expectCleared(game.feedback);
   });
 
+  it('AD-4 feedback.rejectedWord is cleared on a changed dispatch (Redo)', async () => {
+    const { game } = await active(JSON.stringify(place));
+    expect(game.dispatch(UNDO).changed).toBe(true);
+    expect(game.dispatch(VALIDATE)).toEqual({ changed: false, rejectedWord: 'tan' });
+    expect(game.feedback).toEqual({ rejectedWord: 'tan' });
+    expect(game.dispatch(REDO).changed).toBe(true);
+    expectCleared(game.feedback);
+  });
+
   it('AD-4 feedback.rejectedWord is cleared on newGame()', async () => {
     const { game } = await rejectedValidate();
     game.newGame();

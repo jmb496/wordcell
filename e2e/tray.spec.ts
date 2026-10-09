@@ -52,8 +52,13 @@ async function expectComposing(
   // R-30: tray order equals the word line's card order (draft.wordCards).
   expect(letters.map((l) => `${l.id}`)).toEqual(expected.ids.map((id) => id.replace('m', '')));
   await expect(tray(page).locator('.controls .count')).toHaveText(expected.count);
-  await expect(tray(page).locator('.controls .left')).toBeEmpty();
-  await expect(tray(page).locator('.controls .left *')).toHaveCount(0);
+  // R-31 D-block controls (entry 3): `−` k `+` and Flip, k the destination count.
+  const left = tray(page).locator('.controls .left');
+  await expect(left.getByRole('button', { name: '\u2212', exact: true })).toHaveCount(1);
+  await expect(left.locator('.k')).toHaveText(`${expected.underlined.length}`);
+  await expect(left.getByRole('button', { name: '+', exact: true })).toHaveCount(1);
+  await expect(left.getByRole('button', { name: 'Flip', exact: true })).toHaveCount(1);
+  await expect(left.locator('.caption')).toHaveCount(0);
 }
 
 // A tile mark's place on its card's `.face` box (epic 4 F11: quadrants, no px literals): the
