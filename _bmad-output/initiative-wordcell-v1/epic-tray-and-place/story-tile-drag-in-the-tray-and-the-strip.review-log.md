@@ -1,6 +1,6 @@
 # Review log — story-tile-drag-in-the-tray-and-the-strip.md (ticket 5.7)
 
-State: pass 4: done
+State: pass 5: done
 
 Mode: docs, thorough, max 7. Pass 0: HEAD 94c59e9, .passes/pass0.md, 441 words (budget 2.5x ≈ 1100).
 Intent extras (tickets.toml entry 7, not copied into the ticket; fixer adds them to Description in pass 1): interface, tests, owns, consumers.
@@ -137,3 +137,31 @@ Fixer: all 10 applied; item 1 verified by running the real gapRects/partingOffse
 - "Single target": hold the tile over a column first and assert no `wc-drag-target`
 - drop-target.test.ts: one tray registration read by the accessor, a second throws
 - Reorder cases: centre the held face on the named gap's `gapRects` rect, from the rendered tray
+
+## Pass 5 — 2026-10-09
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late bar)  |  Findings: major 2, minor 16 (7 to the fixer, 9 unapplied or accepted), decision-needed 0  |  Dropped in triage: 0 (+ ~5 duplicates merged)
+Words (docs): 1703 (3.86 x pass 0)  |  Snapshot: .passes/pass5.md, fix diff .passes/pass5.fix.diff
+Fixer: all 9 applied; +20 words from the majors, minors net negative; used-cell check cites board-phases.spec.ts `expectUsedCell3` (a local function).
+### Applied
+- [major] AC — the edit-release cases (R-34, R-51, R-34 free letter, k = 2 mid-block, past-block, cross-row) and the App-button case never check residue; a leftover inline parting transform on a kept node renders a tile a slot off → end each with `expectNoResidue` → fixer item 1
+- [major] AC R-33 — pass 4's rewording dropped "its cell still used" (rule-coverage R-33 row; tickets.toml entry 7 verify) → restore cell 3 still shown used → 2
+- [minor] Geometry — tray inner width: Board's `metrics.board − 16` moved to one getter Board reads → 3
+- [minor] AC — the mid-drag premise parenthetical moves to the "Verify:" line so it binds every bullet → 4
+- [minor] Interface — "the drag-layer class" (DRAG_LAYER already exists) → "the `.tiles` clip class" → 5
+- [minor] AC back case — `expectLeaves` lives in e2e/helpers/dialogs.ts and does the back itself → 6
+- [minor] Parting — "pointerdown" → a new press's pointerdown (button 0, no active press, as the fly-back finish) → 7
+- [minor] Notes — "a third compact row" → "compact rows past the second" (R-37 up to 22 tiles) → 8
+- [minor] AC hidePage — "no dispatch" is unobservable as byte-identical (the hide flush rewrites activeMs) → stored Session equal to the pre-drag one bar `activeMs` → 9
+### Default applied (technical)
+- Edit-case residue — `expectNoResidue` after each edit release (valid at once: no glide until entry 16) and after the App-button case → default taken
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped / accepted
+- Interface intent text condensed in pass 4 (parenthetical cut, "5–6") — accepted: each part has its own bullet
+### Unapplied minors (over budget, for the plan)
+- Hover Vitest also asserts the peek closes at the drag's end and hover repaints at an edit release's end
+- Lift no-jump Vitest: a selected tile's first drag transform is translate(dx, dy − 4)
+- k = 2 hold: no inline transform on any mirror
+- tile.ts stays pure; the DOM/WAAPI path lives in the controller (tile.ts at most a pure release helper)
+- F4 "parts nothing" read once animations finish or under reduced motion
+- R-32 block on the left covered by entry 6's Vitest
