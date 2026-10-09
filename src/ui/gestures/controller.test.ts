@@ -3609,7 +3609,7 @@ describe('AD-12 epic 5 tile drag', () => {
     return t;
   };
 
-  it('AD-12 R-34 a tile released over an accepted gap dispatches one arrange, the drag and parting cleared and the gate idle at the dispatch, then repaints hover', async () => {
+  it('AD-12 R-34 a tile released over an accepted gap dispatches one arrange, the drag and parting cleared and the gate idle at the dispatch', async () => {
     const t = await ready();
     let at: { active: number; clean: boolean } | null = null;
     shared.onDispatch = () => {
@@ -3802,12 +3802,15 @@ describe('AD-12 epic 5 tile drag', () => {
     const first = last(t.b.tileFace);
     const kept = last(t.b.tile2Face);
     t.advance(30);
+    // Tile 3 mid-flight at slot + 16 px (its rect plus the inline end translate(48px)).
+    t.b.tileFace.rect = { ...t.b.slotAt(0), left: -22, right: 22 };
     move(t, -72);
+    t.b.tileFace.rect = t.b.slotAt(0);
     // Tile 3 back toward rest from its current offset; tile 4 stays parted.
     expect(first.cancel).toHaveBeenCalled();
     expect(first.onfinish).toBeNull();
     expect(last(t.b.tileFace).keyframes).toEqual([
-      { transform: 'translate(48px, 0px)' },
+      { transform: 'translate(16px, 0px)' },
       { transform: 'translate(0px, 0px)' },
     ]);
     expect(t.b.tileFace.style.transform).toBe('');
@@ -3863,6 +3866,27 @@ describe('AD-12 epic 5 tile drag', () => {
     }
   });
 
+  it('AD-12 cancel({ byBack: true }) during a running parting returns the parted face from its current offset, not its parting target; no dispatch, the gate idles once the returns settle', async () => {
+    const t = await partedLeft();
+    const parted = last(t.b.tileFace);
+    t.advance(30);
+    // Tile 3 mid-flight at slot + 16 px (its rect plus the inline end translate(48px)).
+    t.b.tileFace.rect = { ...t.b.slotAt(0), left: -22, right: 22 };
+    t.controller.cancel({ byBack: true });
+    t.b.tileFace.rect = t.b.slotAt(0);
+    expect(parted.finish).not.toHaveBeenCalled();
+    expect(parted.cancel).toHaveBeenCalled();
+    expect(last(t.b.tileFace).keyframes).toEqual([
+      { transform: 'translate(16px, 0px)' },
+      { transform: 'translate(0px, 0px)' },
+    ]);
+    expect(navCalls).toEqual([]);
+    expect(t.active()).toBe(2);
+    t.advance(180);
+    expect(t.active()).toBe(0);
+    expect(clean(t)).toBe(true);
+  });
+
   it('AD-11 AD-12 mid-drag (parted) cancel() clears every transform, class and animation at once, gate idle, no dispatch, nothing selected', async () => {
     const t = await partedLeft(3);
     const parted = last(t.b.tileFace);
@@ -3877,7 +3901,7 @@ describe('AD-12 epic 5 tile drag', () => {
     expect(t.active()).toBe(0);
   });
 
-  it('AD-12 a same-id pointerdown and detach settle a tile drag at once', async () => {
+  it('AD-12 a same-id pointerdown settles a tile drag at once', async () => {
     const t = await partedLeft();
     press(t, t.b.leftover);
     expect(clean(t)).toBe(true);

@@ -1213,9 +1213,10 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
   function cancel(options: CancelOptions = {}): void {
     if (root === null) return;
     // Epic 4 SPEC F19: the settle suppresses; idle or not, the hover peek closes and the cell under
-    // the last mouse point is suppressed. Epic 5 SPEC CAP-5: a tile drag's returns finish too.
+    // the last mouse point is suppressed. Epic 5 SPEC CAP-5: a tile drag's returns finish too; an
+    // active tile drag's parting is end()'s (finished, or by back returned from its current offset).
     flight.finishFlight();
-    parting.finishAll();
+    if (press?.drag?.kind !== 'tile') parting.finishAll();
     hover.closeHover();
     hover.suppress();
     if (press === null) return;

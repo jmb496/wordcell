@@ -95,10 +95,10 @@ baseline_revision: '2318fac075c76d2ae7a76e2af00477b634d6bc5c'
 |---|---|
 | R-32 (UI) a block-mirror drag moves nothing; gaps never inside or beyond the block | P5 `R-32 (UI) a block-mirror drag …` (selection kept, no dispatch, no tray face transformed while held); P5 `R-32 (UI) after + (k = 2) tile 42 held over mid-block parts tile 0 one slot left …` (no mirror transformed); V entry 6's `gapRects` block cases (unchanged) |
 | R-32 drag past the block lands at the M end | P5 `R-32 tile 42 released right of the block (one row, F25) stores [0, 42]`; the k = 2 case |
-| R-33 a dragged-out free letter is not removed | P5 `R-33 … free-letter tile 28 released over WordCell 3: Session byte-identical, cell 3 used` |
-| R-34 drag-reorder | P5 `R-34 R-73 (UI) tile 0 to gap 0 on session-composing stores [0, 42]`, `R-34 … tile 28 to gap 0 stores [28, 32]`, `R-34 R-32 after Flip tile 0 to gap 0 …` |
-| R-51 strip drag reorder | P5 `R-51 R-73 (UI) tile 28 to gap 0 on session-place stores [28, 42, 0]`, the session-place-compact geometry case `[1, 38, 44, 11, 36, 9, 7, 35]` |
-| R-71 a no-change drag is not an edit | P5 `R-71 on session-won + one Undo strip tile 38 released over its own gap 2 leaves Redo enabled` |
+| R-33 a dragged-out free letter is not removed | (P5 supplementary; R-id coverage is the engine Vitest `src/engine/commands.test.ts`, `src/engine/view.test.ts`) P5 `R-33 … free-letter tile 28 released over WordCell 3: Session byte-identical, cell 3 used` |
+| R-34 drag-reorder | (P5 supplementary; R-id coverage is the engine Vitest `src/engine/commands.test.ts`) P5 `R-34 R-73 (UI) tile 0 to gap 0 on session-composing stores [0, 42]`, `R-34 … tile 28 to gap 0 stores [28, 32]`, `R-34 R-32 after Flip tile 0 to gap 0 …` |
+| R-51 strip drag reorder | (P5 supplementary; R-id coverage is the engine Vitest `src/engine/commands.test.ts`) P5 `R-51 R-73 (UI) tile 28 to gap 0 on session-place stores [28, 42, 0]`, the session-place-compact geometry case `[1, 38, 44, 11, 36, 9, 7, 35]` |
+| R-71 a no-change drag is not an edit | (P5 supplementary; R-id coverage is the engine Vitest `src/engine/commands.test.ts`) P5 `R-71 on session-won + one Undo strip tile 38 released over its own gap 2 leaves Redo enabled` |
 | R-73 (UI) a reorder saved before the next action | `expectSaved` after every edit release above |
 | AD-12 tray band single target ≥ 25 %, clipped (F4) | P5 under-25 % case, F4 clip case, the hold-over-a-column case; V exactly-25 % inclusive, sole candidate |
 | AD-12 F5 cancel paths | P5 hidePage, back, pointercancel, App button; V `pointercancel`/`lostpointercapture`/`cancel({ byBack })`/`cancel()` |
