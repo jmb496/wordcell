@@ -1,6 +1,6 @@
 # Review log — story-tile-tap-selection-swap-and-removal.md (ticket 5.5)
 
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7. Pass 0: HEAD 2778b08, .passes/pass0.md, 466 words (budget 2.5x ≈ 1165).
 Intent extras (tickets.toml entry 5, not copied into the ticket; fixer adds them to Description in pass 1): interface, tests, owns, consumers, unknown, risk.
@@ -97,3 +97,29 @@ Fixer: all 12 applied; no commands; offsets: Interface/Owns shortened ("all of t
 ### Dropped / left to the plan (over budget, fix would add words)
 - F2 carve-out note on keyboard/AT tile activation (key-command epic's)
 - the row-2 lifted strip vs the row-1 half-gap note (covered by item 3)
+
+## Pass 4 — 2026-10-09
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 5, minor 13, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+Words (docs): 1193 (2.56 x pass 0)  |  Snapshot: .passes/pass4.md, fix diff .passes/pass4.fix.diff
+Fixer: all applied, net −1 word; Owns shortened to "all of the above (F1, F13 clear rules)".
+### Applied
+- [major] Drag — pass 3 cut "Epic 4's destination-column drag-as-tap is unchanged", so "dispatching nothing" now reverses R-39 (controller.ts:679-683) → 1
+- [major] AC R-71 Composing — the non-word swap before the 38/37 swap already drops the redo tail, so the Redo/no-tail checks prove nothing → 38/37 swap first on a fresh load (Redo enabled before, disabled after) → 2
+- [major] AC — "Validate: … selection cleared" has no selection (the swap ended it): select a tile before the failed Validate → 3
+- [major] Press resolution — pass 3's "any visible part of the selected face hits its tile" violates AD-12 / DESIGN.md Hit rects (slot pitch, `pointer-events: none` face) → delete; AC presses in the selected tile's own half-gap → 4
+- [major] Look — "note regenerated screenshot baselines" lets an unattended build re-baseline a regression → existing baselines unchanged → 5
+- [minor] Drag — "non-tile controller target" → "non-tile, non-button target" (word-neutral) → 1
+- [minor] AC Full pitch — a CSS outline is outside boundingBox: "face box expanded by the 2 px outline" → 6
+- [minor] AC Keep — "a used or empty" → "a used and an empty" WordCell → 7
+### Default applied (technical)
+- baselines → existing ones stay unchanged (none has a selected tile)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Left to the plan (over budget, fix would add words)
+- epic 6 key commands (cancel(), not act()) must also clear the tile selection on a phase change
+- a non-pointer click (detail 0) on an outside region leaves the tile selection alone (F2 path)
+- tile lift uses the DESIGN.md Tile look only (outline + 4 px), no lifted-card shadow
+- a long-press peek then ≥ 8 px move is a peek (keeps), not a drag-as-tap
+- a tile press under 8 px ended by pointercancel keeps (F1)
+- the build-notes CAP-4 close-out edit is part of this ticket's plan
+- "the gap above the action bar" is EXPERIENCE.md Phase matrix's region; the plan names its element
