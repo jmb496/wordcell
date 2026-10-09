@@ -92,7 +92,7 @@ const ret = (page: Page, id: number) => tile(page, id).locator('.return');
 
 // --- select, swap, deselect, remove ------------------------------------------------------------
 
-test('R-33 R-34 R-35 R-73 (UI) Composing on session-composing: select, swap and deselect source tiles', async ({
+test('R-34 R-35 R-73 (UI) Composing on session-composing: select, swap and deselect source tiles', async ({
   page,
 }) => {
   await open(page, 'session-composing');
@@ -139,9 +139,7 @@ test('R-33 R-34 R-35 Q-31 R-73 (UI) Composing on session-place-free-letter-redo-
   );
 });
 
-test('R-34 R-35 R-51 R-73 (UI) strip on session-place: select, swap and deselect', async ({
-  page,
-}) => {
+test('R-51 R-35 R-73 (UI) strip on session-place: select, swap and deselect', async ({ page }) => {
   await open(page, 'session-place');
   await select(page, 42);
   await expect(ret(page, 42)).toHaveCount(0);
@@ -232,7 +230,7 @@ test('R-71 R-38 R-73 (UI) Composing on session-won + two Undos: swapping R 38 an
   expect(move.reached).toBe('composing');
 });
 
-test('R-71 R-34 R-73 (UI) Place on session-won + one Undo: swapping R 38 and R 37 in the strip is an edit', async ({
+test('R-71 R-51 R-73 (UI) Place on session-won + one Undo: swapping R 38 and R 37 in the strip is an edit', async ({
   page,
 }) => {
   await open(page, 'session-won', ['undo']);
@@ -280,7 +278,7 @@ test('R-32 (UI) a tap on a D-block tile keeps the tile selection and the stored 
   expect(await stored(page, SESSION)).toBe(before);
 });
 
-test('R-33 (UI) in Composing a used and an empty WordCell keep the tile selection (session-place-free-letter-redo-tail + one Undo)', async ({
+test('R-33 F13 in Composing a used and an empty WordCell keep the tile selection (session-place-free-letter-redo-tail + one Undo)', async ({
   page,
 }) => {
   await open(page, 'session-place-free-letter-redo-tail', ['undo']);
@@ -304,7 +302,7 @@ test('R-40 in Place a not-legal WordCell keeps the tile selection (session-place
   expect(await stored(page, SESSION)).toBe(before);
 });
 
-test('AD-9 (UI) F1 a hide and show without reload keep the tile selection', async ({ page }) => {
+test('AD-9 F1 a hide and show without reload keep the tile selection', async ({ page }) => {
   await open(page, 'session-composing');
   await select(page, 42);
   await hidePage(page);
@@ -325,7 +323,7 @@ test('AD-12 F13 a tap on the current target cell clears the tile selection and d
   expect(await stored(page, SESSION)).toBe(before);
 });
 
-test('R-33 R-31 (UI) taps on the tray band background, the letter count, the top bar, an inert column card and the disabled − clear the tile selection with no edit (session-composing)', async ({
+test('AD-12 F1 R-31 taps on the tray band background, the letter count, the top bar, an inert column card and the disabled − clear the tile selection with no edit (session-composing)', async ({
   page,
 }) => {
   await open(page, 'session-composing');
@@ -351,7 +349,7 @@ test('R-33 R-31 (UI) taps on the tray band background, the letter count, the top
   }
 });
 
-test('R-31 R-38 AD-4 (UI) an enabled control (+, −, Validate) clears the tile selection before it acts (session-composing)', async ({
+test('AD-4 R-31 R-38 an enabled control (+, −, Validate) clears the tile selection before it acts (session-composing)', async ({
   page,
 }) => {
   await open(page, 'session-composing');
@@ -374,7 +372,7 @@ test('R-31 R-38 AD-4 (UI) an enabled control (+, −, Validate) clears the tile 
   await expectSelected(page, null);
 });
 
-test('R-70 AD-4 (UI) Undo with a strip tile selected clears it: Composing with nothing selected (session-place-free-letter-redo-tail)', async ({
+test('AD-4 R-70 Undo with a strip tile selected clears it: Composing with nothing selected (session-place-free-letter-redo-tail)', async ({
   page,
 }) => {
   await open(page, 'session-place-free-letter-redo-tail');
@@ -416,7 +414,7 @@ async function expectLook(page: Page, wrapper: Locator, slot: Rect): Promise<voi
   expect(inside(outlined, await box(tray(page)))).toBe(true);
 }
 
-test('AD-12 (UI) F2 full pitch in card mode: a tap 1 px right of a face selects its tile; the lift moves the face only, fully visible (session-composing)', async ({
+test('AD-12 F2 full pitch in card mode: a tap 1 px right of a face selects its tile; the lift moves the face only, fully visible (session-composing)', async ({
   page,
 }) => {
   await open(page, 'session-composing');
@@ -429,7 +427,7 @@ test('AD-12 (UI) F2 full pitch in card mode: a tap 1 px right of a face selects 
   await expectLook(page, wrapper, slot);
 });
 
-test('AD-12 (UI) F2 full pitch in a compact tray: a tap 1 px below a row-1 face selects its tile; the selected face stays fully visible (session-place-compact + one Undo)', async ({
+test('AD-12 F2 full pitch in a compact tray: a tap 1 px below a row-1 face selects its tile; the selected face stays fully visible (session-place-compact + one Undo)', async ({
   page,
 }) => {
   await open(page, 'session-place-compact', ['undo']);
@@ -452,7 +450,7 @@ test('AD-12 (UI) F2 full pitch in a compact tray: a tap 1 px below a row-1 face 
 
 // --- back and reload ------------------------------------------------------------------------------
 
-test('AD-13 (UI) back with a tile selected leaves the app (no history entry)', async ({ page }) => {
+test('AD-13 back with a tile selected leaves the app (no history entry)', async ({ page }) => {
   await open(page, 'session-composing');
   await select(page, 42);
   await expectLeaves(page);

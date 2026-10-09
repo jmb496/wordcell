@@ -3380,6 +3380,15 @@ describe('AD-12 epic 5 tile tap', () => {
     expect(navCalls).toEqual([]);
   });
 
+  it('AD-12 F1 Place: a legal non-current cell dragged ≥ 8 px and released by pointerup clears, dispatching nothing', async () => {
+    const t = await ready('place', 6);
+    crossed(t, t.b.cell5);
+    expect(t.overlays.tileSelection).toBe(6);
+    t.fire('pointerup');
+    expect(t.overlays.tileSelection).toBeNull();
+    expect(navCalls).toEqual([]);
+  });
+
   it('AD-12 D-block mirror press or drag keeps, whatever its end', async () => {
     const t = await ready();
     crossed(t, t.b.trayMirrorFace);

@@ -1,5 +1,5 @@
 # Review loop — ticket 5.5 build (code mode, d2adfce..7866052)
-State: pass 1: done
+State: pass 2: done
 
 Target: `_bmad-output/implementation-artifacts/review-loop/5-5-build.passes/pass0.diff` (git diff d2adfce..7866052)
 Intent: `_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-tile-tap-selection-swap-and-removal-plan.md`
@@ -23,3 +23,18 @@ Fixer: all 5 applied; item 1 uses freeLetters [7, 4] (cell 7 top 13) and was sho
 ### Dropped
 - edge-case half-gap finding — duplicate of verification-gap minor 3 (merged)
 - intent-alignment hide/show rename — duplicate of verification-gap major 2 (merged)
+
+## Pass 2 — 2026-10-09
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 2, minor 1, decision-needed 0  |  Dropped in triage: 0
+Snapshot: tree dc2209c430d831ce24ba9d7bbce604b50e036a6f (fix diff 5-5-build.passes/pass2.fix.diff)
+Fixer: all 3 applied; plan gained a Sentence → test section after Acceptance Criteria (table + exempt list by owning ticket); name scan also dropped R-33 from the session-composing swap test, R-34 → R-51 on the two strip tests, and (UI) from AD-led names; new controller case 'AD-12 F1 Place: a legal non-current cell dragged ≥ 8 px …'. Orchestrator re-run: `npm test` 54 files, 2126 passed; lint clean (196 files); check 0 errors; fixer ran e2e/tile-tap.spec.ts android 20 passed.
+### Applied
+- [major] story-tile-tap-selection-swap-and-removal-plan.md — no sentence → test mapping or exempt-sentence list (AGENTS.md Conventions); add a table of the rule-coverage.md rows this ticket owns with the exact test per sentence and the exempt (other-ticket) sentences → fixer item 1
+- [major] e2e/tile-tap.spec.ts:283, :328 — names still claim ids the tests do not cover (`R-33 (UI)` for the untagged used/empty no-op sentence; `R-33 R-31 (UI)` on outside-tap clears with no WordCell tap and R-31 has no (UI) tag) → fixer item 2
+- [minor] controller.test.ts 'AD-12 epic 5 tile tap' — SPEC CAP-4's drag from a legal non-current Place cell (dispatches nothing, clears) has no controller case → fixer item 3
+### Default applied (technical)
+- plan mapping — table form like story-controller-seams-plan.md's sentence → test section
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
