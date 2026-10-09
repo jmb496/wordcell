@@ -1,6 +1,6 @@
 # Review log — story-tile-drag-in-the-tray-and-the-strip.md (ticket 5.7)
 
-State: pass 6: done
+State: done (converged)
 
 Mode: docs, thorough, max 7. Pass 0: HEAD 94c59e9, .passes/pass0.md, 441 words (budget 2.5x ≈ 1100).
 Intent extras (tickets.toml entry 7, not copied into the ticket; fixer adds them to Description in pass 1): interface, tests, owns, consumers.
@@ -194,3 +194,23 @@ Fixer: all 9 applied; +44 words from the majors, minors net −1; Flip order che
 - Tray accessor throws on none as well as on a second registration; entry 5 tile Vitests register a tray target in the harness
 - Test names: drag-layer and geometry cases tagged AD-12
 - Consumers (L1, in the ticket review): fly-back.ts's epic 4 column-drag fly-back; the tray-width getter's Tray/TileRows `trayLayout`
+
+## Pass 7 — 2026-10-09 (verify-only)
+Reviewers: fix diff (pass 6 diff only)  |  Findings: major 0, minor 3, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1746 (3.96 x pass 0)  |  Snapshot: .passes/pass6.md (no fix pass)
+### Applied
+- none (verify-only)
+### Decision needed (functionality / UX / gameplay)
+- none
+
+## Result — converged after 7 passes
+Majors per pass: 14, 8, 5, 4, 2, 2, 0. Decision-needed: none. Technical defaults applied: 27 (see each pass's Default applied). Words 441 → 1746 (3.96x; over the 2.5x budget, the entry 7 intent lines ≈ 230 words of it).
+
+### Unapplied minors (for the build's plan)
+- Pass 7: under-25 % case "leaves no other face inline-transformed" (the held face keeps its transform); hover sentence: supersede controller.test.ts:3449 and :3430's end half, keep :3430's threshold clear; locate Flip by its accessible name "Flip" (e2e/tray-controls.spec.ts:20), not "⇄ Flip".
+- Pass 6 cut "D-block mirrors never move in a reorder" from Geometry; the rule still follows from "every other movable face" and the Flip case's mirror check; restate SPEC CAP-5 "D-block mirrors never move" in the plan.
+- Pass 6: App-button case via `+` on session-composing (k 2, [42, 0]); edit releases read `dragResidue` once without polling; hover repaint after the edit dispatch; a new press during a return finishes it first; tray accessor throws on none or a second registration, entry 5 tile Vitests register a tray target; AD-12 tags on the drag-layer and geometry cases; Consumers (L1) in the ticket review: fly-back.ts's epic 4 column-drag fly-back, the tray-width getter's Tray/TileRows `trayLayout`.
+- Pass 5: hover Vitest also asserts the peek closes at the end and hover repaints at an edit release's end; lift no-jump Vitest (translate(dx, dy − 4)); k = 2 hold: no inline transform on any mirror; tile.ts stays pure (DOM/WAAPI path in the controller); F4 "parts nothing" read once settled or under reduced motion; block-left `gapRects` cases stay entry 6's Vitest.
+- Pass 4: exactly-25 % inclusive tray acceptance Vitest; R-71 and session-place under-25 % cases name the tile and gap j, Redo enabled before the drag; hold over a column first and assert no `wc-drag-target`; drop-target.test.ts tray registration cases; centre held faces on the named gap's `gapRects` rect.
+- Pass 3: release finish settles the parting gate count synchronously (as `finishFlight`); same-id pointerdown and detach snap at once; strip marks travel with their faces and update at release; concrete F4 viewport/scroll, premise-asserted.
+- Pass 2: re-measure `origin` per move for a desktop wheel scroll mid-drag.
