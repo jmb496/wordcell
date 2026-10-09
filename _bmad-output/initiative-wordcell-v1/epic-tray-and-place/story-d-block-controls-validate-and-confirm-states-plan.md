@@ -3,7 +3,7 @@ title: 'D-block controls, Validate and Confirm states'
 type: 'feature'
 ticket: '3'
 created: '2026-10-08'
-status: 'built'
+status: done
 route: 'full'
 route_source: 'auto'
 baseline_revision: '50caa60afe067fc49f50c086e0c0c5ec95931984'

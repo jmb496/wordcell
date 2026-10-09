@@ -37,3 +37,14 @@ Paused: usage limit at step B, reset 18:00 EDT, resumed at 18:01 EDT
 Tokens: 2.8M input-equivalent (build 57%, code review 33%, other 5%, orchestrator 5%); orchestrator peak context 55k
 Worth knowing: one fixture met every condition, so no second fallback fixture was needed. A small paperwork edit is carried to the retro: the epic's Boundaries list should also name the AD-17 valid-fixture list in src/architecture-ad2-ad12-ad17.test.ts (plan `deferred`). The code review left two minor test-strength items for the refactor sweep (5.14): the compact tests named R-33 don't check the used-cell mark, and the wrapped locked block is checked by class counts instead of visible borders (review log 5-2-build.md). During the build one unrelated layout test (e2e/layout.spec.ts:286, banner while scrolling) failed once under load and passed on reruns.
 Close-out docs: none
+
+## 5.3 D-block controls, Validate and Confirm states — done
+What it adds: while composing a word, the row under the tray now has working − and + buttons (how many cards of the chosen column join the word) and a Flip button, each saved at once; on an empty column a short caption replaces them. The big button reads Validate (or "Need 3+ letters", "Loading words…", "Word list unavailable" when it can't be pressed), checks the word only when tapped, and becomes Confirm while placing; an "invalid word" line goes away on the next edit, Undo or Redo. Long button labels shrink a little before they get cut off. A shared test helper for tapping at a screen point replaces four private copies.
+Ticket review: 5 passes, converged; nothing needed your input (one open test-strength item passed to the build, which resolved it in the plan)
+Build: built; commits 7768632
+Code review: thorough (risk medium), 1 pass, converged; 0 fixes applied (8 minor items left)
+Tests: all passing (test:all; the build also ran test:screens green, regenerating only the two board-composing screenshots)
+Ref to fix upstream: none
+Tokens: 10.6M input-equivalent (ticket review 61%, build 26%, code review 9%, orchestrator 2%, other 2%); orchestrator peak context 60k
+Worth knowing: the code review left 8 minor items for the refactor sweep (5.14), listed in review log 5-3-build.md: the "…" at the shrunk label size draws in the larger font; two leftover null checks on an always-present button; two `+` presses in the new tests use a mouse click instead of the tap helper; three test names carry the wrong rule id; one k = 0 width check can never fail; no Playwright Flip on a QU column (R-30); two stale lines in the plan. Nothing deferred by the build.
+Close-out docs: none
