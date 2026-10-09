@@ -3,14 +3,19 @@ import type { CardId, Face } from '../../engine/index';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Card from '../Card.svelte';
 import { type TrayTile, trayLayout } from '../layout/tray';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import { overlays } from '../overlays.svelte';
 
 // Epic 5 tile rows (DESIGN.md Tray band, Tile, Placement strip): a CSS grid of tile-pitch `Card`s
 // sized by `trayLayout`, card or compact mode. Composing: live S and free-letter tiles (place
 // `tray`) with the D-block mirrors joined per row segment (one outline and one lock each). Place:
 // live strip tiles (place `strip`) in `placementOrder`, the first marked `bottom` and the last
 // `top` (R-50). A free-letter tile carries its origin-cell `tag` in both phases and modes; Card
-// places every mark. The tile area keeps the reserved height and clips (F2). Keys stay
-// `${id}-${mirror}` (AD-14: a live ↔ mirror switch remounts).
+// places every mark. The tile area keeps the reserved height and clips (F2); its clip's top edge
+// alone is raised 6 px (the 4 px selected-tile lift + its 2 px outline, epic 5 SPEC CAP-4) by a
+// padding-top the negative margin cancels, so rows and the bottom edge stay put. The live tile that
+// is `overlays.tileSelection` is `selected` (and shows `↩` when it is a free letter; Card hides it
+// in the strip). Keys stay `${id}-${mirror}` (AD-14: a live ↔ mirror switch remounts).
 let {
   tiles,
   faces,
@@ -63,6 +68,8 @@ function stripPosition(i: number): 'bottom' | 'top' | undefined {
       segment={tile.mirror ? segment(i) : undefined}
       tag={tile.mirror ? undefined : tags.get(tile.id)}
       position={strip ? stripPosition(i) : undefined}
+      selected={!tile.mirror && overlays.tileSelection === tile.id}
+      returnSlot={!tile.mirror && overlays.tileSelection === tile.id && tags.has(tile.id)}
     />
   {/each}
 </div>
@@ -71,7 +78,7 @@ function stripPosition(i: number): 'bottom' | 'top' | undefined {
   /* DESIGN.md Tray band: tile area max(H, 92), rows top-aligned, 4 px row gap in compact mode. */
   .tiles {
     flex: none; display: grid; grid-auto-rows: max-content; align-content: start;
-    overflow: hidden;
+    overflow: hidden; box-sizing: content-box; padding-top: 6px; margin-top: -6px;
   }
   .tiles.compact { row-gap: 4px; }
 </style>

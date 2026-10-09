@@ -8,6 +8,10 @@
 // `resetForNewSession()` (New game, AD-4) kills the deferred end-sheet token, closes every entry
 // top-down and clears the rest. Invalid-state calls throw `AD-13 …` (rule 6); only CAP-5's named
 // no-ops are no-ops. DispatchResult finished/unfinished stays unwired until epic 6 (CAP-5).
+// Tile selection (epic 5 SPEC CAP-4, F1): one tray or strip tile `CardId` beside the tail selection,
+// with no entry (back ignores it, nav is never called); `selectTile` throws while a tile or tail
+// selection is set, `clearTile` is a no-op with none; `resetForNewSession()` clears it.
+import type { CardId } from '../engine/index';
 import { nav } from '../shell/nav';
 
 export type OverlayId =
@@ -28,6 +32,7 @@ let endSheet = $state<EndSheetState>('hidden');
 let peek = $state<number | null>(null);
 let viewCell = $state<number | null>(null);
 let hoverPeek = $state<number | null>(null);
+let tileSelection = $state<CardId | null>(null);
 let liveToken: number | null = null;
 let lastToken = 0;
 
@@ -200,6 +205,18 @@ function openDeferred(token: number): void {
   push('endSheet');
 }
 
+function selectTile(card: CardId): void {
+  if (!isInt(card, 0, 51)) throw new Error(`AD-13 selectTile(${card}): card out of range`);
+  if (tileSelection !== null)
+    throw new Error(`AD-13 selectTile(${card}) while tile ${tileSelection} is selected`);
+  if (selection !== null) throw new Error(`AD-13 selectTile(${card}) while a tail is selected`);
+  tileSelection = card;
+}
+
+function clearTile(): void {
+  tileSelection = null;
+}
+
 function resetForNewSession(): void {
   cancelEndSheetOpen();
   for (let top = stack.at(-1); top !== undefined; top = stack.at(-1)) close(top);
@@ -208,6 +225,7 @@ function resetForNewSession(): void {
   viewCell = null;
   peek = null;
   hoverPeek = null;
+  tileSelection = null;
 }
 
 export const overlays = {
@@ -235,6 +253,9 @@ export const overlays = {
   get hoverPeek(): number | null {
     return hoverPeek;
   },
+  get tileSelection(): CardId | null {
+    return tileSelection;
+  },
   open,
   close,
   closedByBack,
@@ -253,4 +274,6 @@ export const overlays = {
   deferEndSheetOpen,
   openDeferred,
   cancelEndSheetOpen,
+  selectTile,
+  clearTile,
 };

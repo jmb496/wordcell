@@ -170,20 +170,32 @@ src/ui/
 
 ## CAP-4 Tile tap
 
-- Tile press: the controller classifies as for column cards (8 px, no long-press on tiles); a tap
-  calls a pure `tileTap(hit, view, tileSelection)` → `select | deselect | swap | remove | none`.
+- Tile press: the controller classifies as for column cards (8 px, no long-press on tiles); a tray
+  or strip card resolves to a `tile` hit carrying its CardId, a tray-band mirror to a `block` hit
+  (F2). Every released tap calls the pure `tileTap(hit, view, tileSelection)` in
+  `src/ui/gestures/tile.ts`, total over `Hit`, → `select | deselect | swap | remove | keep |
+  clear` (as built, ticket 5.5: six-way, no `none`); a selection that is not a live tile of the
+  current phase throws (rule 6).
 - Swap commands: `arrange` with the two CardIds exchanged in `draft.arrangement`;
   `setPlacementOrder` with them exchanged in `place.placementOrder`; the engine's no-op-by-value
-  never fires for a real swap of two different cards.
-- A tile selection is cleared inside `act()`'s handler path before the dispatch (AD-4; moved here
-  from CAP-2, which only wraps the buttons in `act()`); do it in one place (e.g. `act()` calls
-  `overlays.clearTile()` after `cancel()`) so every button inherits it.
-- Clear rules (F1, F13) in one function used by the controller's tap path and by `act()`; the
-  controller's root tap path (epic 4 F25) covers disabled controls, labels, the tray band background
-  and the top bar (no `click` reaches `act()` there).
-- A drag crossing 8 px from an inert target and ending in `pointerup` resolves, for the tile
-  selection, as that target's tap (no dispatch); one ended by `pointercancel`/
-  `lostpointercapture` keeps the selection however far it moved (F1).
+  never fires for a real swap of two different cards. The controller clears the selection before
+  the swap or `removeFreeLetter` dispatch, and before `tapAction` runs for a non-tile tap.
+- `act()` clears the tile selection unconditionally after `cancel()`, before its handler (AD-4);
+  target-dependent keep/clear lives only in `tileTap` (as built, ticket 5.5; replaces the earlier
+  "one clear-rules function used by the controller and act()"). The controller's root tap path
+  (epic 4 F25) covers disabled controls, labels, the tray band background and the top bar (no
+  `click` reaches `act()` there); the non-pointer `click()` maps a tile or block hit to outside and
+  never calls `tileTap`. `cancel()` never clears it (AD-9 hide flush).
+- A drag crossing 8 px from an inert target and ending in `pointerup` applies `tileTap`'s keep or
+  clear (no dispatch beyond R-39's unchanged destination-card drag-as-tap); one ended by
+  `pointercancel`/`lostpointercapture` keeps the selection however far it moved (F1). F18: a live
+  tile press clears the selection at the 8 px threshold crossing and does nothing at any end; a
+  block press or drag keeps.
+- Raised clip (as built): `.tiles` keeps `overflow: hidden`; `padding-top: 6px; margin-top: -6px`
+  (content-box, the inline height stays the area) raises only the clip's top edge by the 4 px lift
+  + 2 px outline into the word line's transparent bottom; rows, the area bottom and the clipping of
+  compact rows past the second (until CAP-9) are unchanged. A compact tile's `::before` (inset
+  −2 px 0) gives each tile its half of the 4 px row gap.
 
 ## CAP-5 Tile drag
 

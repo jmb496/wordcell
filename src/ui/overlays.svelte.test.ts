@@ -723,3 +723,54 @@ describe('AD-13 overlays epic 4: selection, views and end sheet', () => {
     expect(overlays.hoverPeek).toBeNull();
   });
 });
+
+// Epic 5 SPEC CAP-4, F1: the tile selection beside the tail selection, with no history entry.
+describe('AD-13 overlays epic 5: tile selection', () => {
+  it('AD-13 selectTile sets the tile selection and clearTile clears it, with no nav call and no entry', async () => {
+    const overlays = await load();
+    expect(overlays.tileSelection).toBeNull();
+    overlays.selectTile(0);
+    expect(overlays.tileSelection).toBe(0);
+    expect(overlays.depth).toBe(0);
+    overlays.clearTile();
+    expect(overlays.tileSelection).toBeNull();
+    overlays.clearTile();
+    expect(overlays.tileSelection).toBeNull();
+    overlays.selectTile(51);
+    expect(overlays.tileSelection).toBe(51);
+    expect(overlays.depth).toBe(0);
+    expect(calls).toEqual([]);
+  });
+
+  it('AD-13 back ignores the tile selection: closedByBack(0) keeps it and calls no nav', async () => {
+    const overlays = await load();
+    overlays.selectTile(7);
+    overlays.closedByBack(0);
+    expect(overlays.tileSelection).toBe(7);
+    expect(calls).toEqual([]);
+  });
+
+  it('AD-13 resetForNewSession clears the tile selection', async () => {
+    const overlays = await load();
+    overlays.selectTile(12);
+    overlays.resetForNewSession();
+    expect(overlays.tileSelection).toBeNull();
+    expect(calls).toEqual([]);
+  });
+
+  it('AD-13 selectTile throws for a card outside 0–51, while a tile is selected and while a tail is selected, changing nothing', async () => {
+    const overlays = await load();
+    for (const bad of [-1, 52, 1.5, Number.NaN]) {
+      expect(() => overlays.selectTile(bad)).toThrow(/^AD-13 selectTile\(.*\): card out of range/);
+    }
+    expect(overlays.tileSelection).toBeNull();
+    overlays.selectTile(3);
+    expect(() => overlays.selectTile(4)).toThrow(/^AD-13 selectTile\(4\) while tile 3 is selected/);
+    expect(overlays.tileSelection).toBe(3);
+    overlays.clearTile();
+    overlays.select(1, 2);
+    expect(() => overlays.selectTile(4)).toThrow(/^AD-13 selectTile\(4\) while a tail is selected/);
+    expect(overlays.tileSelection).toBeNull();
+    expect(calls).toEqual(['push']);
+  });
+});

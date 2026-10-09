@@ -68,18 +68,24 @@ describe('AD-12 tapAction with nothing selected', () => {
     });
   });
 
-  it('AD-12 canPickUp false, empty space, placeholder, foot, tile and outside are inert', () => {
+  it('AD-12 canPickUp false, empty space, placeholder, foot and outside are inert', () => {
     expect(tapAction(card(1, 12), view({ canPickUp: false }), null, undefined)).toEqual({
       kind: 'none',
     });
-    for (const hit of [
-      space(1),
-      space(3),
-      space(2, true),
-      { kind: 'tile' },
-      { kind: 'outside' },
-    ] as Hit[]) {
+    for (const hit of [space(1), space(3), space(2, true), { kind: 'outside' }] as Hit[]) {
       expect(tapAction(hit, view(), null, undefined)).toEqual({ kind: 'none' });
+    }
+  });
+
+  // Epic 5 SPEC F2: tray/strip tiles and D-block mirrors go to tile.ts `tileTap` only.
+  it('AD-12 a tile or block hit throws, with or without a selection, in every phase', () => {
+    for (const hit of [{ kind: 'tile', card: 3 }, { kind: 'block' }] as Hit[]) {
+      for (const v of [view(), view({ phase: 'composing' }), view({ phase: 'place' })]) {
+        expect(() => tapAction(hit, v, null, undefined)).toThrow(
+          new RegExp(`^AD-12 tapAction on a tray ${hit.kind}`),
+        );
+        expect(() => tapAction(hit, v, SEL, 'tailSelection')).toThrow(/^AD-12 tapAction on a tray/);
+      }
     }
   });
 
@@ -153,14 +159,10 @@ describe('AD-12 tapAction with a tail selected', () => {
     expect(tapAction(card(1, 13), view(), SEL, 'tailSelection')).toEqual({ kind: 'none' });
   });
 
-  it('AD-12 a WordCell deselects; F25 a tile deselects like outside, only when tailSelection is the top entry', () => {
+  it('AD-12 a WordCell deselects', () => {
     expect(tapAction({ kind: 'wordcell', cell: 3 }, view(), SEL, 'tailSelection')).toEqual({
       kind: 'deselect',
     });
-    expect(tapAction({ kind: 'tile' }, view(), SEL, 'tailSelection')).toEqual({
-      kind: 'deselect',
-    });
-    expect(tapAction({ kind: 'tile' }, view(), SEL, 'wordcellView')).toEqual({ kind: 'none' });
   });
 
   it('AD-12 F25 outside deselects only when tailSelection is the top entry', () => {
@@ -224,10 +226,11 @@ describe('AD-12 hoverAction', () => {
     expect(hoverAction(card(1, 13), view(), SEL)).toBeNull();
   });
 
-  it('AD-12 WordCells, tiles and outside give nothing', () => {
+  it('AD-12 WordCells, tiles, D-block mirrors and outside give nothing', () => {
     for (const hit of [
       { kind: 'wordcell', cell: 3 },
-      { kind: 'tile' },
+      { kind: 'tile', card: 3 },
+      { kind: 'block' },
       { kind: 'outside' },
     ] as Hit[]) {
       expect(hoverAction(hit, view(), null)).toBeNull();
@@ -295,7 +298,7 @@ describe('AD-12 entry 10 Composing tapAction', () => {
     }
   });
 
-  it('AD-12 the branch ignores a selection; WordCells, tiles and outside keep today’s paths', () => {
+  it('AD-12 the branch ignores a selection; WordCells and outside keep today’s paths', () => {
     expect(tapAction(card(1, 11), K1, SEL, 'tailSelection')).toEqual(tapDest(11));
     expect(tapAction(space(2), K1, SEL, 'tailSelection')).toEqual({ kind: 'none' });
     expect(tapAction(card(2, 21), K1, SEL, 'tailSelection')).toEqual({ kind: 'none' });
@@ -392,7 +395,8 @@ describe('AD-12 entry 10 hoverAction k preview', () => {
       [space(1, true), K1],
       [space(2), K1],
       [{ kind: 'wordcell', cell: 3 }, K1],
-      [{ kind: 'tile' }, K1],
+      [{ kind: 'tile', card: 3 }, K1],
+      [{ kind: 'block' }, K1],
       [{ kind: 'outside' }, K1],
     ] as [Hit, GameView][]) {
       expect(hoverAction(hit, v, null)).toBeNull();

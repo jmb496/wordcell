@@ -2,7 +2,8 @@
 // active press per root, fed to the pure `classify`. A button-0 pointerdown with no active press,
 // not on an enabled button (epic 4 SPEC F25), enters the gate and resolves a `PressTarget` and a
 // `Hit` (intent.ts) from `elementFromPoint` at the press point, never `event.target` (epic 4 SPEC
-// F13): a card by `data-place` (epic 4 SPEC F23), a tray-band mirror as a tile, a WordCell part by
+// F13): a card by `data-place` (a tray/strip card as a `tile` hit with its CardId, epic 5 SPEC F2),
+// a tray-band mirror as a `block` hit, a WordCell part by
 // `[data-wordcell]`, a non-card column part by `[data-column]`/`[data-foot]` (uncaptured with
 // nothing selected, so a pan cancels it; with a tail selected captured on its `[data-foot]` or
 // `[data-column]`), anything else uncaptured. Every other pointerId is untouched (no
@@ -16,10 +17,19 @@
 // captured press or detach.
 // Taps (epic 4 SPEC CAP-6, epic 4 SPEC F25, epic 4 SPEC F26, epic 4 SPEC F31): only `classify`'s
 // final `tap` acts, after `end()`: select, deselect, or deselect then one `drop`. A `click` acts
-// only for non-pointer activation (`detail === 0`) resolving outside or on a tray tile, which
-// `tapAction` treats as outside (epic 4 SPEC F25). Mouse hover (`pointerType === 'mouse'`) toggles
-// `wc-hover-tail` (+ `--wc-hover-from`), `wc-grab`, `wc-drop` and `wc-drop-self` on at most one
-// `[data-column]`, recomputed at the last point by `pointerover` and `refreshHover()` (App's
+// only for non-pointer activation (`detail === 0`) resolving outside, or on a tile or block hit,
+// mapped to outside (epic 4 SPEC F25, epic 5 SPEC F2), never touching the tile selection. Tile
+// selection (epic 5 SPEC CAP-4, F1, F13, F18): every released tap first applies tile.ts `tileTap`
+// (select, deselect, swap or remove, else keep or clear), clearing before any dispatch; a swap
+// dispatches one `arrange`/`setPlacementOrder` and a removal one `removeFreeLetter`; only non-tile,
+// non-block taps then go on to `tapAction`. A non-tile, non-block press that crossed the threshold
+// with no pick-up drag and ends in pointerup applies `tileTap`'s keep or clear the same way (before
+// R-39's drag-as-tap dispatch); a live tile press clears the tile selection at its threshold
+// crossing and does nothing at any end (no tile drag until CAP-5); a block press keeps. Every other
+// end (pointercancel, lostpointercapture, a same-id pointerdown, cancel()) and a long-press peek
+// keep it; cancel() never clears it (AD-9 hide flush). Mouse hover (`pointerType === 'mouse'`)
+// toggles `wc-hover-tail` (+ `--wc-hover-from`), `wc-grab`, `wc-drop` and `wc-drop-self` on at most
+// one `[data-column]`, recomputed at the last point by `pointerover` and `refreshHover()` (App's
 // reaction to the selection and the GameView).
 // Drag (epic 4 SPEC CAP-7, AD-12, epic 4 SPEC F12, epic 4 SPEC F13, epic 4 SPEC F26): a column-card
 // press whose column `canPickUp` turns into a drag at the threshold-crossing move (the first drag
@@ -50,14 +60,14 @@
 // deselects) and a back that closes the tail selection is restoring, so no face jumps at the
 // threshold or snaps at settle.
 // Composing (epic 4 SPEC CAP-8, R-31, R-39, epic 4 SPEC CAP-4): a destination-column card whose
-// `kIfTapped` is a number dispatches `tapDestinationCard` on a tap (`perform`) and, as a
-// drag-as-tap, at the pointerup of a press that crossed the threshold (the card never moves: no
-// pick-up), reading `game.view` at pointerup wherever released; pointercancel, lostpointercapture
-// and cancel() dispatch nothing. A column press that crosses the threshold without a pick-up drag
-// clears the hover at the crossing; `refreshHover` skips while any crossed press is held and
-// repaints at every end of one. The desktop k preview (`hoverAction` kind `k`) is `wc-hover-tail`
-// with `--wc-hover-from` and `--wc-hover-len` (the remainder length, so the outline never covers S
-// ghosts); no `wc-grab`.
+// `kIfTapped` is a number dispatches `tapDestinationCard` on a tap (`perform`, after the tile
+// selection clears) and, as a drag-as-tap, at the pointerup of a press that crossed the threshold
+// (the card never moves: no pick-up), reading `game.view` at pointerup wherever released;
+// pointercancel, lostpointercapture and cancel() dispatch nothing. A column press that crosses the
+// threshold without a pick-up drag clears the hover at the crossing; `refreshHover` skips while any
+// crossed press is held and repaints at every end of one. The desktop k preview (`hoverAction` kind
+// `k`) is `wc-hover-tail` with `--wc-hover-from` and `--wc-hover-len` (the remainder length, so the
+// outline never covers S ghosts); no `wc-grab`.
 // Peek and view (epic 4 SPEC CAP-9, R-65, Q-21, epic 4 SPEC F14, epic 4 SPEC F24; AD-12, AD-13): a
 // non-empty WordCell press whose long-press fires opens the peek (`overlays.openPeek`, no entry);
 // its `pointerup` reads the rendered `[data-view-scroll]` under the root and keeps it as the sticky
@@ -111,6 +121,7 @@ import { createHoverPeekTimer } from './hover-peek-timer';
 import { destinationTap, type Hit, type HoverAction, hoverAction, tapAction } from './intent';
 import { attribute, cellIn, columnIn, found } from './lookup';
 import { pickTarget, type Rect } from './targeting';
+import { type TileAction, tileTap } from './tile';
 import { clip, createVisibleBand } from './visible-band';
 
 export type ControllerDeps<H> = {
@@ -259,13 +270,17 @@ function resolve(root: HTMLElement, hit: Element | null, selected: boolean): Res
       return wordcellPress(cellEl, card);
     }
     if (place === 'tray' || place === 'strip') {
-      return { target: 'other', capture: card, hit: { kind: 'tile' } };
+      return {
+        target: 'other',
+        capture: card,
+        hit: { kind: 'tile', card: attribute(card, 'data-card-id') },
+      };
     }
     throw new Error(`AD-12 unknown data-place ${place}`);
   }
   const mirror = hit.closest('[data-mirror-of]');
   if (mirror !== null && hit.closest('[data-band="tray"]') !== null) {
-    return { target: 'other', capture: mirror, hit: { kind: 'tile' } };
+    return { target: 'other', capture: mirror, hit: { kind: 'block' } };
   }
   const cellEl = hit.closest('[data-wordcell]');
   if (cellEl !== null) {
@@ -613,6 +628,8 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     // any column press clears the hover there, picked up or not.
     if (crossing) {
       if (p.hit.kind === 'card' || p.hit.kind === 'space') clearHover();
+      // Epic 5 SPEC F18: a live tile press clears the tile selection at the threshold.
+      if (p.hit.kind === 'tile') overlays.clearTile();
       p.drag = startDrag(p);
       // Epic 4 SPEC F19: a pick-up hides the hover peek (DOM only, AD-12); any other drag closes
       // it.
@@ -620,6 +637,46 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       else overlays.closeHoverPeek();
     }
     if (p.drag !== null) dragMove(p.drag, event.clientX, event.clientY);
+  }
+
+  // Epic 5 SPEC CAP-4: the tile selection's part of a released tap or drag-as-tap, from the
+  // GameView at release (AD-3); clears before any dispatch (F1).
+  function tileAction(hit: Hit): TileAction {
+    const view = game.view;
+    if (view === undefined) throw new Error('AD-12 tile tap without a GameView');
+    return tileTap(hit, view, overlays.tileSelection);
+  }
+
+  function applyTile(action: TileAction): void {
+    switch (action.kind) {
+      case 'select':
+        overlays.selectTile(action.card);
+        return;
+      case 'deselect':
+      case 'clear':
+        overlays.clearTile();
+        return;
+      case 'swap':
+        overlays.clearTile();
+        game.dispatch(action.command);
+        return;
+      case 'remove':
+        overlays.clearTile();
+        game.dispatch({ type: 'removeFreeLetter', cell: action.cell });
+        return;
+      case 'keep':
+        return;
+    }
+  }
+
+  // A drag-as-tap only keeps or clears (a select, swap or removal needs a tile hit, never one
+  // here).
+  function applyTileDrag(hit: Hit): void {
+    const action = tileAction(hit);
+    if (action.kind !== 'keep' && action.kind !== 'clear') {
+      throw new Error(`AD-12 drag-as-tap gave tile action ${action.kind}`);
+    }
+    applyTile(action);
   }
 
   // SPEC CAP-6: the tap's action, at tap time from the GameView (AD-3) and the selection.
@@ -673,9 +730,15 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       swallower.arm(root);
       return;
     }
-    if (outcome === 'tap') perform(p.hit);
+    const tray = p.hit.kind === 'tile' || p.hit.kind === 'block';
+    if (outcome === 'tap') {
+      applyTile(tileAction(p.hit));
+      if (!tray) perform(p.hit);
+    }
     if (drag === null) {
-      if (outcome !== 'drag') return;
+      // Epic 5 SPEC F18, F2: a tile or block press that crossed the threshold does nothing here.
+      if (outcome !== 'drag' || tray) return;
+      applyTileDrag(p.hit);
       // R-39: a drag-as-tap reads the GameView now (AD-3), wherever released.
       const view = game.view;
       if (view === undefined) throw new Error('AD-12 drag-as-tap without a GameView');
@@ -719,11 +782,11 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
   function click(event: MouseEvent): void {
     if (event.detail !== 0 || root === null) return;
     const resolved = resolve(root, event.target as Element | null, overlays.selection !== null);
-    // Epic 4 SPEC F25: a tray tile counts as outside, as `tapAction` treats it.
-    if (resolved === null || (resolved.hit.kind !== 'outside' && resolved.hit.kind !== 'tile')) {
-      return;
-    }
-    perform(resolved.hit);
+    if (resolved === null) return;
+    // Epic 4 SPEC F25, epic 5 SPEC F2: a tile or block counts as outside; never `tileTap`.
+    const kind = resolved.hit.kind;
+    if (kind !== 'outside' && kind !== 'tile' && kind !== 'block') return;
+    perform(OUTSIDE);
   }
 
   function clearHover(): void {

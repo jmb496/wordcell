@@ -31,6 +31,7 @@ let {
   tag,
   position,
   returnSlot = false,
+  selected = false,
 }: {
   id: CardId;
   face: Face;
@@ -62,6 +63,11 @@ let {
    * CAP-4).
    */
   returnSlot?: boolean;
+  /**
+   * Epic 5 SPEC CAP-4: the tap-selected live tile (DESIGN.md Tile: teal 2 px outline, face lifted
+   * 4 px, slot unchanged; distinct from the column `lifted` look, no shadow).
+   */
+  selected?: boolean;
 } = $props();
 
 // DESIGN.md Card: `QU` is set as `Qu` with the ×2 badge (Q-06).
@@ -105,6 +111,7 @@ const inView = $derived.by(() => {
   class:start={segment?.start}
   class:end={segment?.end}
   class:lifted
+  class:selected
   class:remainder-top={remainderTop}
   class:view={inView}
   class:band-marked={bandMark}
@@ -207,6 +214,10 @@ const inView = $derived.by(() => {
   .card.tile.compact { height: 44px; }
   .compact .face { height: 44px; }
   .compact .face::after { content: none; }
+  /* Epic 5 SPEC F2: a compact tile's hit rect owns half of each 4 px row gap (2 px above and below
+     the wrapper; the horizontal half-gaps are already inside the pitch-wide wrapper). */
+  .card.tile.compact { position: relative; }
+  .card.tile.compact::before { content: ''; position: absolute; inset: -2px 0; }
   .compact .glyph { top: 0; height: 100%; font-size: 22px; }
   .compact .glyph.qu { top: 0; height: 100%; font-size: 18px; }
 
@@ -248,6 +259,12 @@ const inView = $derived.by(() => {
      SELECTION_LIFT_PX) with the soft shadow, above the sticky bars (z-index 2); the wrapper (hit
      rect) never moves (F26). */
   .lifted .face { transform: translateY(calc(-1 * var(--wc-select-lift))); box-shadow: 0 6px 16px #0008; z-index: 3; }
+
+  /* DESIGN.md Tile, tap-selected tile (epic 5 SPEC CAP-4, F2): the face rises 4 px with a 2 px teal
+     outline and no shadow; the wrapper (hit rect, slot) never moves. */
+  .card.tile.selected .face {
+    transform: translateY(-4px); outline: 2px solid var(--wc-accent-teal); z-index: 3;
+  }
 
   /* DESIGN.md WordCell used this word (R-33): the top card at 40 % with a 45° hatch. */
   .used .face {

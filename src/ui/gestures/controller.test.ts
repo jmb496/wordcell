@@ -334,12 +334,23 @@ function board() {
     right: 100,
     bottom: 510,
   });
+  // Epic 5 CAP-4: cell 5 (tileView: a legal non-current Place target), x 100 … 150.
+  const cell5 = at(el('div', { 'data-wordcell': '5' }, root), {
+    left: 100,
+    top: 450,
+    right: 150,
+    bottom: 510,
+  });
   // Entry 12: the hover peek root (rendered only while open in the app; always here).
   const hoverPeek = el('div', { 'data-hover-peek': '' }, root);
   const tray = el('div', { 'data-band': 'tray' }, root);
   const tile = el('div', { 'data-place': 'tray', 'data-card-id': '3' }, tray);
+  // Epic 5 CAP-4: a second tray tile, a strip tile (Place) and the gap above the action bar.
+  const tile2 = el('div', { 'data-place': 'tray', 'data-card-id': '4' }, tray);
+  const stripTile = el('div', { 'data-place': 'strip', 'data-card-id': '6' }, tray);
   const trayMirror = el('div', { 'data-mirror-of': '1' }, tray);
   const trayMirrorFace = el('div', {}, trayMirror);
+  const actionGap = el('div', { 'data-band': 'actionGap' }, root);
   const leftover = el('div', { 'data-band': 'leftover' }, root);
   const banner = at(el('div', { 'data-band': 'banner' }, root), {
     left: 0,
@@ -382,7 +393,12 @@ function board() {
     cellCard,
     badge,
     cell4,
+    cell5,
     tile,
+    tile2,
+    stripTile,
+    tray,
+    actionGap,
     trayMirror,
     trayMirrorFace,
     leftover,
@@ -541,6 +557,53 @@ async function setup() {
   };
 }
 
+// Epic 5 CAP-4: a Composing view whose live tray tiles are 3 (S) and 4 (a free letter from cell 5,
+// whose top it is); column 1 is the destination (card 0 → k 2, card 5 the top of D → null); cell 3
+// is available, cell 4 empty. Place: the strip [3, 4, 6] at target 3 (cell 3 current, cell 5
+// legal, cell 4 not legal).
+function tileView(phase: 'composing' | 'place' = 'composing'): void {
+  const composing = phase === 'composing';
+  const col = (column: number, cards: number[]) => ({
+    column,
+    cards,
+    canPickUp: false,
+    canDropOn: false,
+    ...(composing && column === 1
+      ? {
+          kIfTapped: new Map([
+            [0, 2],
+            [5, null],
+          ]),
+        }
+      : {}),
+  });
+  const cell = (n: number, cards: number[], flags: Record<string, boolean>) => ({
+    cell: n,
+    cards,
+    used: false,
+    canAddFreeLetter: false,
+    canSetTarget: false,
+    isLegalTarget: false,
+    ...flags,
+  });
+  shared.view = {
+    status: 'playing',
+    phase,
+    columns: [col(1, [0, 5]), col(2, [1]), ...[3, 4, 5, 6, 7, 8].map((c) => col(c, []))],
+    cells: [
+      cell(3, [2], composing ? { canAddFreeLetter: true } : { isLegalTarget: true }),
+      cell(4, [], {}),
+      cell(
+        5,
+        [4],
+        composing ? { used: true } : { used: true, isLegalTarget: true, canSetTarget: true },
+      ),
+    ],
+    draft: { arrangement: [3, 4], freeLetters: [5], destination: [5] },
+    ...(composing ? {} : { place: { placementOrder: [3, 4, 6], target: 3 } }),
+  };
+}
+
 describe('AD-12 one pointer', () => {
   it('AD-12 a button !== 0 pointerdown, a second pointer and an enabled button never enter the gate; the second pointer is untouched', async () => {
     const t = await setup();
@@ -593,6 +656,7 @@ describe('AD-12 press targets', () => {
   it('AD-12 column card, WordCell card, WordCell part, empty WordCell, tray tile and tray mirror are captured on their card, WordCell or mirror element', async () => {
     const t = await setup();
     t.detach();
+    tileView();
     const cases: [hit: FakeEl, captured: FakeEl][] = [
       [t.b.card1, t.b.card1],
       [t.b.cellCard, t.b.cellCard],
@@ -607,6 +671,7 @@ describe('AD-12 press targets', () => {
       expect(captured.log).toEqual(['set 1']);
       expect(t.active()).toBe(1);
       t.fire('pointerup', { target: captured });
+      t.overlays.clearTile();
       expect(captured.log).toEqual(['set 1', 'release 1']);
       expect(t.active()).toBe(0);
     }
@@ -1238,6 +1303,7 @@ describe('AD-12 long-press timer', () => {
   it('AD-12 setTimer(…, 400) only for WordCell presses', async () => {
     const t = await setup();
     t.detach();
+    tileView();
     for (const el of [t.b.card1, t.b.foot1, t.b.tile, t.b.leftover]) {
       t.down(el);
       t.fire('pointerup');
@@ -2583,6 +2649,7 @@ describe('AD-12 entry 10 Composing columns', () => {
         { cell: 3, cards: [2] },
         { cell: 4, cards: [] },
       ],
+      draft: { arrangement: [3], freeLetters: [], destination: [5] },
     };
   };
   const dragClasses = (t: T): string[] => {
@@ -3189,5 +3256,240 @@ describe('AD-12 entry 12 desktop hover peek', () => {
     t.overlays.openHoverPeek(3);
     t.flipHoverFine(false);
     expect(t.overlays.hoverPeek).toBe(3);
+  });
+});
+
+// Epic 5 SPEC CAP-4 (F1, F2, F13, F18): the tile selection through the controller, on tileView().
+describe('AD-12 epic 5 tile tap', () => {
+  type T = Awaited<ReturnType<typeof setup>>;
+  const dispatched = (command: Record<string, unknown>) => `dispatch ${JSON.stringify(command)}`;
+  const move = (t: T, x: number, y: number) => t.fire('pointermove', { clientX: x, clientY: y });
+  // A press on `el` at (100, 100) moved 10 px (past the threshold).
+  const crossed = (t: T, el: FakeEl) => {
+    t.down(el, { clientX: 100, clientY: 100 });
+    move(t, 110, 100);
+  };
+  const ready = async (phase: 'composing' | 'place' = 'composing', selected: number | null = 3) => {
+    const t = await setup();
+    t.detach();
+    tileView(phase);
+    if (selected !== null) t.overlays.selectTile(selected);
+    navCalls.length = 0;
+    return t;
+  };
+
+  it('AD-12 F2 a tray tile, a strip tile and a hit inside the pitch outside the face resolve to their tile; a mirror to the block', async () => {
+    const t = await ready('composing', null);
+    // elementFromPoint answers the slot wrapper for any point of its pitch (a half-gap included).
+    t.tap(t.b.tile);
+    expect(t.overlays.tileSelection).toBe(3);
+    t.tap(t.b.trayMirrorFace);
+    expect(t.overlays.tileSelection).toBe(3);
+    t.tap(t.b.tile);
+    expect(t.overlays.tileSelection).toBeNull();
+    t.tap(t.b.tile2);
+    expect(t.overlays.tileSelection).toBe(4);
+    const p = await ready('place', null);
+    p.tap(p.b.stripTile);
+    expect(p.overlays.tileSelection).toBe(6);
+    // The selected tile's own wrapper (its half-gap) resolves to it: a second tap deselects (R-35).
+    p.tap(p.b.stripTile);
+    expect(p.overlays.tileSelection).toBeNull();
+    expect(navCalls).toEqual([]);
+  });
+
+  it('AD-12 a swap dispatches one arrange or setPlacementOrder with the selection already cleared', async () => {
+    const t = await ready();
+    const seen: (number | null)[] = [];
+    shared.onDispatch = () => seen.push(t.overlays.tileSelection);
+    t.tap(t.b.tile2);
+    expect(navCalls).toEqual([dispatched({ type: 'arrange', arrangement: [4, 3] })]);
+    expect(seen).toEqual([null]);
+    expect(t.overlays.tileSelection).toBeNull();
+    const p = await ready('place', 6);
+    p.tap(p.b.tile);
+    expect(navCalls).toEqual([dispatched({ type: 'setPlacementOrder', order: [6, 4, 3] })]);
+    expect(p.overlays.tileSelection).toBeNull();
+  });
+
+  it('AD-12 Q-31 a second tap on a selected Composing free letter dispatches removeFreeLetter and ends the selection; on an S tile only deselects', async () => {
+    const t = await ready('composing', 4);
+    const seen: (number | null)[] = [];
+    shared.onDispatch = () => seen.push(t.overlays.tileSelection);
+    t.tap(t.b.tile2);
+    expect(navCalls).toEqual([dispatched({ type: 'removeFreeLetter', cell: 5 })]);
+    expect(seen).toEqual([null]);
+    expect(t.overlays.tileSelection).toBeNull();
+    navCalls.length = 0;
+    t.overlays.selectTile(3);
+    t.tap(t.b.tile);
+    expect(t.overlays.tileSelection).toBeNull();
+    expect(navCalls).toEqual([]);
+  });
+
+  it('AD-12 a column-card tap in Composing clears the selection and still dispatches tapDestinationCard', async () => {
+    const t = await ready();
+    const seen: (number | null)[] = [];
+    shared.onDispatch = () => seen.push(t.overlays.tileSelection);
+    t.tap(t.b.card1);
+    expect(navCalls).toEqual([dispatched({ type: 'tapDestinationCard', card: 0 })]);
+    expect(seen).toEqual([null]);
+    t.overlays.selectTile(3);
+    t.tap(t.b.card2);
+    expect(t.overlays.tileSelection).toBeNull();
+    expect(navCalls).toHaveLength(1);
+  });
+
+  it('AD-12 R-39 a destination-card drag-as-tap clears the tile selection before its one tapDestinationCard', async () => {
+    const t = await ready();
+    const seen: (number | null)[] = [];
+    shared.onDispatch = () => seen.push(t.overlays.tileSelection);
+    crossed(t, t.b.card1);
+    t.fire('pointerup');
+    expect(navCalls).toEqual([dispatched({ type: 'tapDestinationCard', card: 0 })]);
+    expect(seen).toEqual([null]);
+    expect(t.overlays.tileSelection).toBeNull();
+  });
+
+  it('AD-12 R-32 a block tap, an empty or long-pressed empty Composing WordCell keep; an available cell, outside, the action gap and a disabled button clear', async () => {
+    const t = await ready();
+    t.tap(t.b.trayMirrorFace);
+    t.tap(t.b.cell4);
+    t.down(t.b.cell4);
+    t.advance(400);
+    t.fire('pointerup');
+    expect(t.overlays.tileSelection).toBe(3);
+    t.overlays.clearTile();
+    for (const el of [t.b.cellCard, t.b.tray, t.b.actionGap, t.b.redoDisabled, t.b.leftover]) {
+      t.overlays.selectTile(3);
+      t.tap(el);
+      expect(t.overlays.tileSelection).toBeNull();
+    }
+    expect(navCalls).toEqual([]);
+  });
+
+  it('AD-12 F13 Place: a not-legal WordCell keeps; the current target and a legal non-current cell clear, dispatching nothing', async () => {
+    const t = await ready('place', 6);
+    t.tap(t.b.cell4);
+    expect(t.overlays.tileSelection).toBe(6);
+    t.tap(t.b.cellCard);
+    expect(t.overlays.tileSelection).toBeNull();
+    t.overlays.selectTile(6);
+    t.tap(t.b.cell5);
+    expect(t.overlays.tileSelection).toBeNull();
+    expect(navCalls).toEqual([]);
+  });
+
+  it('AD-12 D-block mirror press or drag keeps, whatever its end', async () => {
+    const t = await ready();
+    crossed(t, t.b.trayMirrorFace);
+    t.fire('pointerup');
+    expect(t.overlays.tileSelection).toBe(3);
+    crossed(t, t.b.trayMirrorFace);
+    t.fire('pointercancel');
+    expect(t.overlays.tileSelection).toBe(3);
+    expect(navCalls).toEqual([]);
+  });
+
+  it('AD-12 F1 a ≥ 8 px move on the tray background ended by pointerup clears; by pointercancel keeps', async () => {
+    const t = await ready();
+    crossed(t, t.b.tray);
+    t.fire('pointercancel');
+    expect(t.overlays.tileSelection).toBe(3);
+    crossed(t, t.b.tray);
+    expect(t.overlays.tileSelection).toBe(3);
+    t.fire('pointerup');
+    expect(t.overlays.tileSelection).toBeNull();
+    expect(navCalls).toEqual([]);
+  });
+
+  it('AD-12 F1 a crossed captured non-tile press ended by lostpointercapture keeps; an available cell dragged and released clears', async () => {
+    const t = await ready();
+    crossed(t, t.b.card2);
+    t.fire('lostpointercapture', { target: t.b.card2 });
+    expect(t.active()).toBe(0);
+    expect(t.overlays.tileSelection).toBe(3);
+    crossed(t, t.b.cellCard);
+    t.fire('pointerup');
+    expect(t.overlays.tileSelection).toBeNull();
+    expect(navCalls).toEqual([]);
+  });
+
+  it('AD-12 F18 a ≥ 8 px press on any live tile clears at the threshold and dispatches nothing, ended by pointerup or pointercancel', async () => {
+    for (const end of ['pointerup', 'pointercancel']) {
+      for (const which of ['tile', 'tile2'] as const) {
+        const t = await ready();
+        crossed(t, t.b[which]);
+        expect(t.overlays.tileSelection).toBeNull();
+        t.fire(end);
+        expect(t.overlays.tileSelection).toBeNull();
+        expect(navCalls).toEqual([]);
+        expect(t.active()).toBe(0);
+      }
+    }
+    const p = await ready('place', 6);
+    crossed(p, p.b.stripTile);
+    expect(p.overlays.tileSelection).toBeNull();
+    p.fire('pointerup');
+    expect(navCalls).toEqual([]);
+  });
+
+  it('AD-12 F1 a tile press under 8 px ended by pointercancel keeps', async () => {
+    const t = await ready();
+    t.down(t.b.tile2, { clientX: 100, clientY: 100 });
+    move(t, 104, 104);
+    t.fire('pointercancel');
+    expect(t.overlays.tileSelection).toBe(3);
+    expect(navCalls).toEqual([]);
+  });
+
+  it('AD-12 AD-9 a same-id pointerdown, cancel({ byBack: true }) and cancel() (the before-hide path) keep', async () => {
+    const t = await ready();
+    t.down(t.b.leftover);
+    t.down(t.b.tray);
+    t.fire('pointercancel');
+    expect(t.overlays.tileSelection).toBe(3);
+    t.down(t.b.leftover);
+    t.controller.cancel({ byBack: true });
+    expect(t.overlays.tileSelection).toBe(3);
+    crossed(t, t.b.tray);
+    t.controller.cancel();
+    expect(t.overlays.tileSelection).toBe(3);
+    t.controller.cancel();
+    expect(t.overlays.tileSelection).toBe(3);
+    expect(t.active()).toBe(0);
+    expect(navCalls).toEqual([]);
+  });
+
+  it('AD-12 F13 a long-press peek keeps the selection, also with a ≥ 8 px move after it fires', async () => {
+    const t = await ready();
+    t.down(t.b.cellCard, { clientX: 100, clientY: 100 });
+    t.advance(400);
+    expect(t.overlays.peek).toBe(3);
+    t.fire('pointerup');
+    expect(t.overlays.peek).toBeNull();
+    expect(t.overlays.tileSelection).toBe(3);
+    t.down(t.b.cellCard, { clientX: 100, clientY: 100 });
+    t.advance(400);
+    move(t, 130, 100);
+    t.fire('pointerup');
+    expect(t.overlays.tileSelection).toBe(3);
+    expect(navCalls).toEqual([]);
+  });
+
+  it('AD-12 F2 a non-pointer click (detail 0) on outside or on a tile leaves the tile selection alone', async () => {
+    const t = await ready();
+    for (const target of [t.b.leftover, t.b.tile, t.b.tile2, t.b.trayMirror, t.b.tray]) {
+      t.fire('click', { target, detail: 0 });
+      expect(t.overlays.tileSelection).toBe(3);
+    }
+    expect(navCalls).toEqual([]);
+  });
+
+  it('AD-12 a stale tile selection throws at the next tap', async () => {
+    const t = await ready('composing', 6);
+    expect(() => t.tap(t.b.leftover)).toThrow(
+      /^AD-12 tileTap with tile 6 selected, not a live tile/,
+    );
   });
 });

@@ -8,7 +8,9 @@
 // (they resolve as `space`), is inert, with or without a selection. With nothing selected (epic 4
 // SPEC CAP-9, R-65, R-75, epic 4 SPEC F14) a non-empty WordCell tap opens the sticky view in Idle
 // and Game over (`openView`), nothing in Composing and Place; the view sheet and its scrim are
-// `Hit`s the controller handles itself, never `tapAction`'s.
+// `Hit`s the controller handles itself, never `tapAction`'s, and so are tray/strip tiles and
+// D-block mirrors (epic 5 SPEC CAP-4, F2: tile.ts `tileTap` only); `hoverAction` gives nothing for
+// them.
 import type { CardId, ColumnView, GameView } from '../../engine/index';
 import type { OverlayId, TailSelection } from '../overlays.svelte';
 import { cellIn, columnIn } from './lookup';
@@ -24,8 +26,10 @@ export type Hit =
   | { readonly kind: 'sheet' }
   /** The WordCell view's scrim (R-65; handled by the controller before `tapAction`). */
   | { readonly kind: 'scrim' }
-  /** A tray or strip tile or a tray mirror (no selection change of its own, F23; outside for F25). */
-  | { readonly kind: 'tile' }
+  /** A live tray or strip tile (`data-place` `tray`/`strip`, epic 5 SPEC F2; tile.ts only). */
+  | { readonly kind: 'tile'; readonly card: CardId }
+  /** A D-block mirror in the tray band (epic 5 SPEC F2: keeps a tile selection; tile.ts only). */
+  | { readonly kind: 'block' }
   /** Everything else (F25 outside regions, disabled controls, outside the root). */
   | { readonly kind: 'outside' };
 
@@ -115,6 +119,9 @@ export function tapAction(
   if (hit.kind === 'sheet' || hit.kind === 'scrim') {
     throw new Error(`AD-12 tapAction on the view ${hit.kind}`);
   }
+  if (hit.kind === 'tile' || hit.kind === 'block') {
+    throw new Error(`AD-12 tapAction on a tray ${hit.kind}`);
+  }
   if (selection === null) {
     if (hit.kind === 'wordcell') return viewTap(hit.cell, view);
     if (hit.kind !== 'card') return NONE;
@@ -125,9 +132,8 @@ export function tapAction(
   switch (hit.kind) {
     case 'wordcell':
       return { kind: 'deselect' };
-    // F25: the tray band and its tiles are outside regions.
+    // F25: outside regions.
     case 'outside':
-    case 'tile':
       return top === 'tailSelection' ? { kind: 'deselect' } : NONE;
     case 'card':
     case 'space': {
@@ -164,6 +170,7 @@ export function hoverAction(
     };
   }
   if (view.status !== 'playing' || view.phase !== 'idle') return null;
+  // Epic 5 SPEC F12: no hover on tiles or D-block mirrors.
   if (hit.kind !== 'card' && hit.kind !== 'space') return null;
   const entry = columnOf(view, hit.column);
   if (selection === null) {

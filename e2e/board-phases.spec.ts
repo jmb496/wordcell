@@ -474,9 +474,17 @@ for (const [width, w] of [
     expect(tray.bottom).toBe(labels.top);
     const tiles = page.locator('[data-band="tray"] .tiles');
     await expect(tiles).toHaveCSS('overflow', 'hidden');
+    // Epic 5 SPEC CAP-4: the clip's top edge alone rises 6 px (selected-tile lift + outline): the
+    // clip box is 92 + 6 tall, its bottom where the 92 px area ends, the first row 6 px below its
+    // top (rows unmoved).
     const area = await box(tiles);
-    expect(area.height).toBe(92);
+    expect(area.height).toBe(98);
     expect(area.bottom).toBeLessThanOrEqual(labels.top);
+    const wordLine = await box(page.locator('[data-band="tray"] .word-line'));
+    expect(area.top).toBe(wordLine.bottom - 6);
+    expect(area.bottom).toBe(wordLine.bottom + 92);
+    const firstRow = await box(page.locator('[data-band="tray"]').getByTestId('card-42'));
+    expect(firstRow.top).toBe(area.top + 6);
     for (const element of [
       page.locator('[data-band="tray"]').getByTestId('card-42'),
       page.getByTestId('column-3').locator('[data-mirror-of="42"]'),
