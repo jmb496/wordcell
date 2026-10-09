@@ -1,5 +1,5 @@
 # Review log — story-controller-seams.md (ticket 5.4)
-State: pass 5: done
+State: pass 6: done (converged)
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 251 words (`.passes/pass0.md`), HEAD e261011. Intent fields from tickets.toml entry 4 (interface, tests, owns, consumers, unknown, verify, references): `.passes/intent.md`.
 
@@ -104,3 +104,32 @@ Fixer: all 8 items applied (2 merged the 207 example into the parenthetical rule
 - classes.ts identifiers: keep existing constant names, add HOVER_TAIL/GRAB/DROP/DROP_SELF, compose HOVER_CLASSES from them
 - onSettle lazy closure: settle never runs before both factories exist (flyBack reachable only from end() after attach)
 - "ControllerDeps unchanged" means same members and signatures (its JSDoc Entry tags are rewritten)
+
+## Pass 6 — 2026-10-08
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 1, minor 12, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1492 (5.94 x pass 0; budget 1500)  |  Snapshot: .passes/pass5.md (no fix pass)
+### Open (not fixed: stopping rule, second consecutive pass with at most one major)
+- [major] Lookup "(tests pin them with anchored regexes)" — false: only 2 of the 14 lookup messages are asserted (`WordCell press on unknown` in controller.test.ts, `origin tag` in tags.test.ts; grep confirmed), so "every throw string unchanged" has no gating check → proposed fix: replace the parenthetical with "(few are test-pinned; the plan diffs the sorted message literals of every touched file before and after)"
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Result — converged after 6 passes
+open major: Lookup — the claim that tests pin every lookup throw string is false (2 of 14 pinned); the build plan should diff the sorted throw-message literals of every touched file before and after.
+Majors per pass: 8, 4, 4, 2, 1, 1. Words 251 → 1492 (budget 1500). Technical defaults applied: about 20 (see each pass). Decision-needed: none.
+
+### Unapplied minors (for the build plan)
+- AC median gate: state the "before ≥ 5 s" waiver first so its precedence over "at ≥ 5 s stop for the owner" is explicit
+- Lookup bullet: "every throw not in the site list…" starts lowercase after a full stop
+- harness parenthetical: vi.mock matches resolved ids, not specifiers; the harness also mocks `svelte` and `shell/nav`; may be cut to "harness edits limited to import paths"
+- Headers: an id inside an "Epic 5 entry" paragraph is epic 5; any other bare CAP/F id in src/ui headers is epic 4 (e.g. Board.svelte:26-27, Column.svelte:11-13)
+- AC: the Headers grep (`grep -rniE 'entry [0-9]' src/ui --exclude='*.test.ts'`) should return nothing after the build
+- median checkout: ~/wordcell-watch is not a git checkout; use e.g. `git worktree add` on ext4 at the before hash, `npm ci`, then apply the build tree
+- new modules may `import type` from controller.ts (e.g. `ControllerDeps<H>` in hover-peek-timer.ts); no runtime import
+- the plan lists each rewritten Entry tag and its ids so code review can check the "cover" judgement
+- Consumers: "entry 7's tray-band target" means epic 5 entry 7 (CAP-5)
+- lookup.ts header names `attribute()` as the shared attribute parser (no extra test)
+- stop-for-owner at ≥ 5 s uses the methodology's blocked/owner-input plan status
+- References omit epic 4 SPEC F34/F37, Q-34, AD-12, AD-17 (kept as tickets.toml mirror; budget full)
+- from pass 4/5: main.ts and controller.test.ts entry refs and the spine gestures/ tree → CAP-12 sweep; build-notes line-map mislabel of 597–618 → CAP-12; overSource departure from build-notes noted in plan review; classes.ts identifiers (keep existing, add HOVER_TAIL/GRAB/DROP/DROP_SELF, compose HOVER_CLASSES); onSettle lazy closure invariant; "ControllerDeps unchanged" = same members and signatures; found messages at 557/592 built eagerly (negligible)
