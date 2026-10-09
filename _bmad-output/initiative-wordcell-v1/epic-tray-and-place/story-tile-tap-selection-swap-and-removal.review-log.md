@@ -1,6 +1,6 @@
 # Review log — story-tile-tap-selection-swap-and-removal.md (ticket 5.5)
 
-State: pass 4: done
+State: pass 5: done
 
 Mode: docs, thorough, max 7. Pass 0: HEAD 2778b08, .passes/pass0.md, 466 words (budget 2.5x ≈ 1165).
 Intent extras (tickets.toml entry 5, not copied into the ticket; fixer adds them to Description in pass 1): interface, tests, owns, consumers, unknown, risk.
@@ -123,3 +123,24 @@ Fixer: all applied, net −1 word; Owns shortened to "all of the above (F1, F13 
 - a tile press under 8 px ended by pointercancel keeps (F1)
 - the build-notes CAP-4 close-out edit is part of this ticket's plan
 - "the gap above the action bar" is EXPERIENCE.md Phase matrix's region; the plan names its element
+
+## Pass 5 — 2026-10-09
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 1, minor 13, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1191 (2.56 x pass 0)  |  Snapshot: .passes/pass5.md, fix diff .passes/pass5.fix.diff
+Fixer: all 7 applied, net −2 words; cuts: "(rule 2)", ", ending the selection" (Clear covers it).
+### Applied
+- [major] Look vs AC Full pitch — a row-1 face rests flush with the top of `.tiles` (top-aligned, compact area exactly H+4+H), so "face box inside the tile area's rect" needs rows moved, which breaks "existing baselines unchanged" → AC: not clipped, inside the tray band's rect; Look: resting tile positions unchanged → 1
+- [minor] Drag — "non-tile, non-button" leaves a disabled-control drag undefined → "non-tile, non-enabled-button" → 2
+- [minor] UI Vitest "(R-32)" tag breaks the AD-n naming rule for UI Vitest (AGENTS.md) → cut → 3
+- [minor] R-71 "Then at Composing" → reorder after the Composing case → 4
+- [minor] "(remove only there)" vs the R-33/Q-31 removal on session-place-compact → word-neutral reword → 5
+- [minor] F18 Vitest "on another tile" → "on any tile" → 6
+- [minor] Drag "only R-39's … dispatches" → "R-39's … also dispatches" → 7
+### Decision needed (functionality / UX / gameplay)
+- none
+### Left to the plan (over budget, fix would add words)
+- R-35 second tap: stored Session byte-identical
+- R-33/Q-31: wordcell-4 shows card 35 live again (no used mirror); the tray leaves compact mode at 7 tiles
+- disabled − press by coordinate tap or click({ force: true }) (SPEC CAP-4, CAP-2 helper)
+- Interface omits Card.svelte (`selected`) and TileRows.svelte (clip mechanism): plan file list
+- Consumers list lives in the plan's impact section
