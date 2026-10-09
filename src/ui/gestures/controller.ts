@@ -103,7 +103,7 @@
 // over `duration('flyBack')` (the fade under reduced motion), hover repainting at the fly-back's
 // settle; cancel() and a same-id pointerdown settle at once. The parting set holds one gate count
 // while any parting or return animation runs; a superseded face animation is read for its current
-// offset (face rect − slot), cancelled unsettled and replaced; a new press and cancel() finish
+// offset (its rendered transform), cancelled unsettled and replaced; a new press and cancel() finish
 // every return with the flight; any other cancel of one throws (rule 6).
 // Free letter (epic 5 SPEC CAP-6, F5, F16, F18; R-33, Q-31; AD-10, AD-12, AD-14): in Composing a tap
 // on a WordCell with `canAddFreeLetter` clears the tile selection (`tileTap`), then dispatches one
@@ -340,8 +340,9 @@ function near(a: Offset, b: Offset): boolean {
 // Epic 5 SPEC CAP-5 the parting set (AD-10, AD-11, F6, F24): every running parting or return
 // animation by face with its target offset, under one gate count from the first start until the
 // last finish or `finishAll()` (synchronous, as `finishFlight`). A face already heading to the new
-// target keeps its animation; otherwise its current offset is its rect (a running animation's
-// effect included) minus its resting slot, and a superseded animation is read, cancelled unsettled
+// target keeps its animation; otherwise its current offset is its rendered transform (computed
+// style: a running animation's effect included, layout margins never counted, so a D-block mirror
+// face drawn 2 px off its slot reads rest), and a superseded animation is read, cancelled unsettled
 // (its handlers cleared first) and replaced; the end transform is written inline (`''` at rest).
 // Any other cancel throws (rule 6).
 function createParting(gate: Gate) {
@@ -376,10 +377,10 @@ function createParting(gate: Gate) {
     return entry !== undefined && near(entry.target, target);
   }
 
-  // The face's current offset from `slot`; a running animation is then cancelled unsettled.
-  function take(face: HTMLElement, slot: Rect): Offset {
-    const r = face.getBoundingClientRect();
-    const current = { dx: r.left - slot.left, dy: r.top - slot.top };
+  // The face's current rendered offset; a running animation is then cancelled unsettled.
+  function take(face: HTMLElement): Offset {
+    const m = new DOMMatrixReadOnly(getComputedStyle(face).transform);
+    const current = { dx: m.m41, dy: m.m42 };
     const animation = running.get(face)?.animation;
     if (animation !== undefined) {
       running.delete(face);
@@ -391,10 +392,10 @@ function createParting(gate: Gate) {
   }
 
   /** Moves `face` from its current offset to `target` over `ms` (0: written at once). */
-  function part(face: HTMLElement, slot: Rect, target: Offset, ms: number): void {
+  function part(face: HTMLElement, target: Offset, ms: number): void {
     if (heading(face, target)) return;
     const animating = running.has(face);
-    const current = take(face, slot);
+    const current = take(face);
     if (!animating && near(current, target)) return;
     const end = near(target, REST) ? '' : translate(target.dx, target.dy);
     face.style.transform = end;
@@ -417,10 +418,10 @@ function createParting(gate: Gate) {
    * (fly-back.ts), except a D-block mirror (`mirror`), whose parting shift clears at once with no
    * animation (AD-14: a mirror never fades).
    */
-  function home(face: HTMLElement, slot: Rect, ms: number, reduced: boolean, mirror = false): void {
+  function home(face: HTMLElement, ms: number, reduced: boolean, mirror = false): void {
     if (heading(face, REST)) return;
     const animating = running.has(face);
-    const current = take(face, slot);
+    const current = take(face);
     if (!animating && near(current, REST)) return;
     face.style.transform = '';
     if (reduced && mirror) {
@@ -1005,7 +1006,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     const ms = duration('parting');
     for (const [p, face] of drag.trayFaces.entries()) {
       const o = offsets === null ? REST : (offsets[p] as Parted);
-      parting.part(face, drag.slots[p] as Rect, { dx: o.dx, dy: o.dy }, ms);
+      parting.part(face, { dx: o.dx, dy: o.dy }, ms);
     }
     if (offsets === null) unpart(drag);
     else markParted(drag, offsets);
@@ -1019,7 +1020,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     const ms = duration('flyBack');
     const reduced = prefs.motion.reduced;
     for (const [p, face] of drag.trayFaces.entries()) {
-      parting.home(face, drag.slots[p] as Rect, ms, reduced, drag.mirror[p] === true);
+      parting.home(face, ms, reduced, drag.mirror[p] === true);
     }
   }
 
@@ -1060,7 +1061,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       if (r === run.from) continue;
       const p = run.first + r;
       const o = offsets === null ? REST : (offsets[p] as Offset);
-      parting.part(face, slots[p] as Rect, { dx: o.dx, dy: o.dy }, ms);
+      parting.part(face, { dx: o.dx, dy: o.dy }, ms);
     }
   }
 
@@ -1070,7 +1071,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     const reduced = prefs.motion.reduced;
     for (const [r, face] of drag.runFaces.entries()) {
       if (r === drag.run.from) continue;
-      parting.home(face, drag.slots[drag.run.first + r] as Rect, ms, reduced);
+      parting.home(face, ms, reduced);
     }
   }
 

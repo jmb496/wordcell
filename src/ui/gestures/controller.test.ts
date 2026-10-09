@@ -23,6 +23,10 @@ import type { Gate } from './gate';
 // 634 … 800: its 6 px raised clip above the slots) and ends with the caret (`wc-caret`); the tray
 // mirror is `data-mirror-of="5"` (tileView's destination) with a `.face` on slot 2; `setup()`'s
 // tray inner width is settable (`tray.innerWidth`, read at drag start).
+// Entry 5.8 review: the parting reads a face's rendered offset from `getComputedStyle(face)
+// .transform` through `DOMMatrixReadOnly` (both stubbed by setup()); the fake computed transform is
+// a test-set `rendered` (a running animation's mid-flight effect) or else the inline transform, so
+// a face's rect (layout margins) never counts as an offset.
 const navCalls: string[] = [];
 // Entry 9: gate enter/leave, animation finish and elementFromPoint calls, in order.
 const order: string[] = [];
@@ -154,6 +158,8 @@ class FakeEl {
   readonly children: FakeEl[] = [];
   readonly animations: FakeAnimation[] = [];
   rect: Rect | null = null;
+  /** Entry 5.8 review: the computed transform when a test models a mid-flight animation. */
+  rendered: string | null = null;
   constructor(
     readonly tag: string,
     readonly attrs: Record<string, string> = {},
@@ -188,6 +194,11 @@ class FakeEl {
     const dy = m === null ? 0 : Number(m[2]);
     const r = this.rect;
     return { left: r.left + dx, top: r.top + dy, right: r.right + dx, bottom: r.bottom + dy };
+  }
+  /** `getComputedStyle(this).transform`: `rendered`, else the inline transform (`none` if empty). */
+  computedTransform(): string {
+    if (this.rendered !== null) return this.rendered;
+    return this.style.transform === '' ? 'none' : this.style.transform;
   }
   animate(keyframes: Record<string, unknown>[], options: { duration: number; easing?: string }) {
     const animation = new FakeAnimation(keyframes, options, this);
@@ -250,6 +261,23 @@ class FakeEl {
     this.captureListeners.get(type)?.(event);
     this.listeners.get(type)?.(event);
     return event;
+  }
+}
+
+// `new DOMMatrixReadOnly(transform)` over the fake computed transforms: `none` or one translate.
+class FakeMatrix {
+  readonly m41: number;
+  readonly m42: number;
+  constructor(transform: string) {
+    if (transform === 'none') {
+      this.m41 = 0;
+      this.m42 = 0;
+      return;
+    }
+    const m = /^translate\((-?[\d.]+)px, (-?[\d.]+)px\)$/.exec(transform);
+    if (m === null) throw new Error(`fake matrix ${transform}`);
+    this.m41 = Number(m[1]);
+    this.m42 = Number(m[2]);
   }
 }
 
@@ -492,6 +520,8 @@ async function setup() {
   motion.value = { baseMs: 180, reduced: false };
   durations.kinds.length = 0;
   durations.override = {};
+  vi.stubGlobal('getComputedStyle', (el: FakeEl) => ({ transform: el.computedTransform() }));
+  vi.stubGlobal('DOMMatrixReadOnly', FakeMatrix);
   const { overlays } = await import('../overlays.svelte');
   const { createController } = await import('./controller');
   const { dropTarget } = await import('./drop-target');
@@ -3835,10 +3865,10 @@ describe('AD-12 epic 5 tile drag', () => {
     const first = last(t.b.tileFace);
     const kept = last(t.b.tile2Face);
     t.advance(30);
-    // Tile 3 mid-flight at slot + 16 px (its rect plus the inline end translate(48px)).
-    t.b.tileFace.rect = { ...t.b.slotAt(0), left: -22, right: 22 };
+    // Tile 3 mid-flight at slot + 16 px (its computed transform; the inline end is translate(48px)).
+    t.b.tileFace.rendered = 'translate(16px, 0px)';
     move(t, -72);
-    t.b.tileFace.rect = t.b.slotAt(0);
+    t.b.tileFace.rendered = null;
     // Tile 3 back toward rest from its current offset; tile 4 stays parted.
     expect(first.cancel).toHaveBeenCalled();
     expect(first.onfinish).toBeNull();
@@ -3903,10 +3933,10 @@ describe('AD-12 epic 5 tile drag', () => {
     const t = await partedLeft();
     const parted = last(t.b.tileFace);
     t.advance(30);
-    // Tile 3 mid-flight at slot + 16 px (its rect plus the inline end translate(48px)).
-    t.b.tileFace.rect = { ...t.b.slotAt(0), left: -22, right: 22 };
+    // Tile 3 mid-flight at slot + 16 px (its computed transform; the inline end is translate(48px)).
+    t.b.tileFace.rendered = 'translate(16px, 0px)';
     t.controller.cancel({ byBack: true });
-    t.b.tileFace.rect = t.b.slotAt(0);
+    t.b.tileFace.rendered = null;
     expect(parted.finish).not.toHaveBeenCalled();
     expect(parted.cancel).toHaveBeenCalled();
     expect(last(t.b.tileFace).keyframes).toEqual([
@@ -4163,6 +4193,9 @@ describe('AD-12 epic 5 free-letter drag', () => {
     if (a === undefined) throw new Error('no animation');
     return a;
   };
+  // AD-14: every animation on a mirror face is the parting transform only (no opacity key).
+  const transformOnly = (f: FakeEl) =>
+    f.animations.every((a) => a.keyframes.every((k) => Object.keys(k).join() === 'transform'));
   // Nothing of the drag left on the DOM: no transform, ghost, layer, clip, caret or parted class.
   const clean = (t: T) =>
     [...transforms(t), t.b.cellFace.style.transform, t.b.caret.style.transform].every(
@@ -4286,6 +4319,7 @@ describe('AD-12 epic 5 free-letter drag', () => {
       { transform: 'translate(0px, 0px)' },
     ]);
     expect(last(t.b.trayMirrorFace).options.duration).toBe(90);
+    expect(transformOnly(t.b.trayMirrorFace)).toBe(true);
     t.fire('pointerup');
     t.advance(180);
     expect(clean(t)).toBe(true);
@@ -4329,6 +4363,85 @@ describe('AD-12 epic 5 free-letter drag', () => {
     }
   });
 
+  it('AD-14 AD-12 a k = 2 block whose non-start mirror face rests 2 px left of its slot: a mirror that does not move (block left at a gap and at the caret, a never-accepted fly-back) gets no animate call; a moved mirror parts from translate(0px, 0px)', async () => {
+    // Destination [5, 7], k 2: tray [3, 4, 7m, 5m] on the right, [5m, 7m, 3, 4] on the left, on
+    // the card-mode slots; the segment start mirror's face rests on its slot, the other's 2 px left
+    // of it (Card.svelte: a block face has no margin, only a segment start gets margin-left 2px).
+    const cardTiles = (t: T, side: 'left' | 'right') => {
+      Object.assign(draft(), { destination: [5, 7], k: 2, side });
+      const live = [3, 4].map((id) => ({ id, mirror: false, start: false }));
+      const block = [
+        { id: 5, mirror: true, start: side === 'left' },
+        { id: 7, mirror: true, start: side === 'right' },
+      ];
+      const order = side === 'left' ? [...block, ...live] : [...live, ...block.reverse()];
+      const kids = t.b.tiles.children;
+      kids.length = 0;
+      const out: FakeEl[] = [];
+      for (const [p, { id, mirror, start }] of order.entries()) {
+        const s = t.b.slotAt(p);
+        const wrapper = new FakeEl(
+          'div',
+          mirror ? { 'data-mirror-of': `${id}` } : { 'data-place': 'tray', 'data-card-id': `${id}` },
+          t.b.tiles,
+        );
+        wrapper.root = t.b.root;
+        wrapper.rect = { ...s, left: s.left - 2, right: s.right + 2 };
+        const face = new FakeEl('div', {}, wrapper);
+        face.root = t.b.root;
+        face.rect = mirror && !start ? { ...s, left: s.left - 2, right: s.right - 2 } : s;
+        face.classes.add('face');
+        out.push(face);
+      }
+      kids.push(t.b.caret);
+      return out;
+    };
+    // Block right, never accepted: the fly-back returns nothing.
+    const n = await ready(null);
+    const [n3, n4, n7, n5] = cardTiles(n, 'right') as [FakeEl, FakeEl, FakeEl, FakeEl];
+    press(n);
+    centreOn(n, 56, 300);
+    n.fire('pointerup');
+    n.advance(180);
+    expect(navCalls).toEqual([]);
+    for (const face of [n3, n4, n7, n5]) expect(face.animations).toHaveLength(0);
+    // Block right at M's end gap: both mirrors part from rest.
+    const r = await ready(null);
+    const [r3, r4, r7, r5] = cardTiles(r, 'right') as [FakeEl, FakeEl, FakeEl, FakeEl];
+    press(r);
+    centreOn(r, 104, GAP_Y);
+    for (const face of [r7, r5]) {
+      expect(face.animations.map((a) => a.keyframes)).toEqual([
+        [{ transform: 'translate(0px, 0px)' }, { transform: 'translate(48px, 0px)' }],
+      ]);
+    }
+    expect([r3, r4].every((f) => f.animations.length === 0)).toBe(true);
+    r.fire('pointercancel');
+    r.advance(180);
+    expect(r.active()).toBe(0);
+    // Block left: gap 0 of M parts the tiles only; the caret at M's end and a fly-back move no
+    // mirror.
+    const l = await ready(null);
+    const [l5, l7, l3, l4] = cardTiles(l, 'left') as [FakeEl, FakeEl, FakeEl, FakeEl];
+    press(l);
+    centreOn(l, 104, GAP_Y);
+    expect([l3, l4].map((f) => f.style.transform)).toEqual([
+      'translate(48px, 0px)',
+      'translate(48px, 0px)',
+    ]);
+    expect([l5, l7].map((f) => f.animations.length)).toEqual([0, 0]);
+    centreOn(l, 200, GAP_Y);
+    expect(shown(l)).toBe(true);
+    expect([l5, l7].map((f) => f.animations.length)).toEqual([0, 0]);
+    centreOn(l, 56, 300);
+    l.fire('pointerup');
+    l.advance(180);
+    expect(navCalls).toEqual([]);
+    expect([l5, l7].map((f) => f.animations.length)).toEqual([0, 0]);
+    expect([l5, l7, l3, l4].every((f) => f.style.transform === '')).toBe(true);
+    expect(l.active()).toBe(0);
+  });
+
   it('AD-12 F16 a full layout shows the caret at the inner gap with no face transformed; under 25 % it hides; a release on the caret inserts there', async () => {
     const t = await ready(null);
     // perRow 3 (inner 140): 3 tiles fill the one card-mode row.
@@ -4362,6 +4475,14 @@ describe('AD-12 epic 5 free-letter drag', () => {
     expect(shown(t)).toBe(true);
     expect(t.b.caret.style.transform).toBe('translate(142.5px, 6px)');
     expect(transforms(t)).toEqual(['', '', '']);
+    // The parted tiles return to rest over duration(parting).
+    for (const face of [t.b.tileFace, t.b.tile2Face]) {
+      expect(last(face).keyframes).toEqual([
+        { transform: 'translate(48px, 0px)' },
+        { transform: 'translate(0px, 0px)' },
+      ]);
+      expect(last(face).options.duration).toBe(90);
+    }
     expect(partedClasses(t.b.trayMirror)).toEqual([]);
     t.fire('pointerup');
     expect(navCalls).toEqual([dispatched({ type: 'addFreeLetter', cell: 3, index: 2 })]);
@@ -4474,6 +4595,7 @@ describe('AD-12 epic 5 free-letter drag', () => {
         ]);
         expect(last(face).options.duration, name).toBe(180);
       }
+      expect(transformOnly(t.b.trayMirrorFace), name).toBe(true);
       // The ghost and the layer stay until the fly-back settles.
       expect(t.b.cell3.classes.has('wc-drag-ghost'), name).toBe(true);
       expect(t.active(), name).toBe(2);
@@ -4481,6 +4603,18 @@ describe('AD-12 epic 5 free-letter drag', () => {
       expect(t.active(), name).toBe(0);
       expect(clean(t), name).toBe(true);
       expect(t.overlays.tileSelection, name).toBeNull();
+      // F16: with the caret shown (full layout), the ender itself hides it, before any settle.
+      const c = await ready(3);
+      c.trayWidth.innerWidth = 140;
+      press(c);
+      centreOn(c, 56, GAP_Y);
+      expect(shown(c), name).toBe(true);
+      ender(c);
+      expect(shown(c), name).toBe(false);
+      expect(c.b.caret.style.transform, name).toBe('');
+      expect(navCalls, name).toEqual([]);
+      c.advance(180);
+      expect(clean(c), name).toBe(true);
     }
   });
 
@@ -4532,6 +4666,35 @@ describe('AD-12 epic 5 free-letter drag', () => {
     expect(clean(d)).toBe(true);
     expect(d.active()).toBe(0);
     expect(navCalls).toEqual([]);
+    // F16: each with the caret shown (full layout) hides it at once.
+    const settlers: [string, (t: T, detach: () => void) => Promise<void> | void][] = [
+      [
+        'act',
+        async (t) => {
+          // setup() reset the modules: this setup's act.
+          const fresh = await import('../act');
+          fresh.setController(t.controller);
+          fresh.act(() => undefined)();
+        },
+      ],
+      ['same-id pointerdown', (t) => press(t, t.b.leftover)],
+      ['detach', (_t, detach) => detach()],
+    ];
+    for (const [name, settle] of settlers) {
+      const c = await setup();
+      const detach = c.detach();
+      tileView();
+      navCalls.length = 0;
+      c.trayWidth.innerWidth = 140;
+      press(c);
+      centreOn(c, 56, GAP_Y);
+      expect(shown(c), name).toBe(true);
+      await settle(c, detach);
+      expect(shown(c), name).toBe(false);
+      expect(c.b.caret.style.transform, name).toBe('');
+      expect(clean(c), name).toBe(true);
+      expect(navCalls, name).toEqual([]);
+    }
   });
 
   it('AD-12 R-65 a long-press peek first: later moves into the band start no drag and the release dispatches nothing, the tile selection kept', async () => {
