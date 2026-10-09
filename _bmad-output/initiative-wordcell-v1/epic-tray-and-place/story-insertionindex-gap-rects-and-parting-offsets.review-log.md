@@ -1,6 +1,6 @@
 # Review log — story-insertionindex-gap-rects-and-parting-offsets.md (ticket 5.6)
 
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7. Pass 0: HEAD 88f7549, .passes/pass0.md, 376 words (budget 2.5x ≈ 940).
 Intent extras (tickets.toml entry 6, not copied into the ticket; fixer adds them to Description in pass 1): interface, tests, owns, consumers.
@@ -32,3 +32,25 @@ Words (docs): 938 (2.49 x pass 0)  |  Snapshot: .passes/pass1.md  |  Fixer: all 
 - none
 ### Dropped
 - none (duplicates merged)
+
+## Pass 2 — 2026-10-09
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 5, minor 4, decision-needed 0  |  Dropped in triage: 4 (+ duplicates merged)
+Words (docs): 960 (2.55 x pass 0)  |  Snapshot: .passes/pass2.md  |  Fixer: all 8 applied; to stay in budget it trimmed Consumers (call-site detail), Owns ("all six") and Notes wording
+### Applied
+- [major] partingOffsets — index space of `gap`/`origin` (run vs tray position) and the origin position's own entry unspecified → fixer item 1 (default applied: run indices, function adds `first`; origin position zero)
+- [major] Interface — `slots` overloaded (count vs rect array), untyped `origin`/`mirrorBySlot`; no-room throw not expressible in the function's inputs → 2 (default applied: `slotCount`, typed params, throw when tileCount + 1 > slots.length)
+- [major] Slot rects — tile height not in `TrayLayout` (card mode H vs compact 44) → 3 (default applied: TrayLayout gains `tileHeight`)
+- [major] Slot rects — measuring `.tiles` box puts every rect 6 px high (TileRows padding-top 6 / margin-top −6) → 4 (default applied: origin = slot 0's resting rect)
+- [major] AC — gapRects rules (row-break pair, none after last row, M meeting the block at a row break) and the named `AD-12 destination cards never reordered or interleaved` test have no case → 5 (Tests (S) names folded into the AC lines to stay in budget)
+- [minor] "end gap of M with the block on the left, or k = 0" misreads as any gap at k = 0 → 6
+- [minor] cut "even with |M| = 0" (M never empty: R-30, R-35) → 7
+- [minor] cut misplaced free-letter sentence from the reorder bullet → 8
+### Default applied (technical)
+- items 1–4 as above
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- fix-diff major "gap 0 rect with count = 0": M is never empty in Composing (R-30, R-35); Place strip never empty — clause cut instead (item 7)
+- fix-diff minor cut ", supplementary": AGENTS.md makes UI Vitest never R-id coverage; the ticket wording follows AGENTS.md (rule-coverage's "V" column naming `insertionIndex` S cases is the spec's own tension, not the ticket's)
+- adversarial minor reorder out-of-range i/j throws: over budget and adds words; left to the plan (unapplied minor)
+- adversarial stretch: origin stale on mid-drag scroll — epic 4 hit rects make the same fixed-at-drag-start assumption (AD-12)
