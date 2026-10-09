@@ -1,5 +1,5 @@
 # Review loop — ticket 5.7 build (code mode, 2318fac..ae9d19a)
-State: pass 1: done
+State: pass 2: done
 
 Target: `_bmad-output/implementation-artifacts/review-loop/5-7-build.passes/pass0.diff` (git diff 2318fac..ae9d19a)
 Intent: `_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-tile-drag-in-the-tray-and-the-strip-plan.md`
@@ -22,3 +22,25 @@ Fixer: all 5 applied; item 1 face rect shifted to slot + 16 px mid-flight, keyfr
 - none
 ### Dropped
 - none
+
+## Pass 2 — 2026-10-09
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 1, minor 3, decision-needed 0  |  Dropped in triage: 0
+Snapshot: tree b4e3b554eab149d1e31edc77d08108cebb1f149b (unchanged; stopping rule met, no fix pass)
+### Open (not fixed; stopping rule: two consecutive passes with at most one major)
+- [major] plan Sentence → test, R-33 row — pass 1 item 5 marked R-33 "P5 supplementary; R-id coverage is the engine Vitest", but the ticket Tests line gives R-33 as P5 coverage (not "supp.") and the engine R-33 tests (commands.test.ts addFreeLetter cases, view.test.ts canAddFreeLetter) do not cover "a dragged-out free letter is not removed"; restore the R-33 row to plain P5 coverage, keep the supplementary label on R-34/R-51/R-71 only
+### Default applied (technical)
+- none this pass (no fix pass)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Result — converged after 2 passes
+open major: plan Sentence → test R-33 row wrongly marked P5 supplementary (pass 1 fix); restore it to P5 coverage per the ticket Tests line.
+
+Final state (tree b4e3b55, HEAD bf7c654): `npm test` 54 files, 2204 passed; `npm run lint` clean (197 files); `npm run check` 0 errors.
+
+Unapplied minors:
+- build-notes.md CAP-5 "As built (ticket 5.7)" — record that `cancel()` finishes an earlier drag's returns while an active tile drag's parting is settled by `end()` (finished on plain `cancel()`, returned from its current offset on `cancel({ byBack: true })`), the pass-1 exception to SPEC F6's "cancel() finish[es] every running animation".
+- plan Sentence → test — mark the "R-32 drag past the block lands at the M end" row P5 supplementary (ticket: "P5 supp."), and label the R-32 (UI) row's entry-6 `gapRects` Vitest cases as supporting, not coverage.
+- e2e/tile-drag.spec.ts:691 'AD-12 R-51 on session-place-compact …' — the plan counts it for R-51; lead the name with R-51 (e.g. 'R-51 AD-12 on session-place-compact …') or drop it from the R-51 row.
