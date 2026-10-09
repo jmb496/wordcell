@@ -25,6 +25,13 @@ deferred:
     location: >-
       src/ui/Card.svelte block segment rules
     severity: medium
+  - summary: >-
+      With ≥ 15 tiles, DRAG_TILES lifts the .tiles clip at the crossing, so the clipped third row shows for the whole drag and can receive a parted tile (clipping accepted until CAP-9); settle with entry 12.
+    evidence: |-
+      Ticket 5.8 review pass 1 (code review); no fixture reaches ≥ 15 tiles before entry 12's long Composing fixture.
+    location: >-
+      src/ui/gestures/controller.ts free-letter crossing (DRAG_TILES)
+    severity: low
 baseline_revision: '875266ca67f5a3cda292ca9a07bb5e545b2d9a4e'
 ---
 

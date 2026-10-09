@@ -1,5 +1,5 @@
 # Review loop — ticket 5.8 build (code mode, 875266c..44eda8b)
-State: pass 1: fix (fixer running)
+State: pass 1: done
 
 Target: `_bmad-output/implementation-artifacts/review-loop/5-8-build.passes/pass0.diff` (git diff 875266c..44eda8b)
 Intent: `_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-free-letters-by-tap-and-by-drag-plan.md`
@@ -27,3 +27,8 @@ Reviewers: correctness, edge cases, verification gap, intent alignment  |  Findi
 - (duplicate) edge-case reviewer's back-test finding merged into item 4
 
 Owner answer (2026-10-09): the pass-1 decision-needed item takes the proposed default, keep as built (SPEC F26).
+
+### Fix (pass 1)
+Fixer (WIP 8d40dff, resumed and finished 2026-10-09): items 1–8 applied and verified. 1: `take()` reads the computed transform (8d40dff; Chromium probe: a paused WAAPI mid-flight reads `matrix(1, 0, 0, 1, 24, 0)`), k = 2 mirror Vitest present. 2: Vitest caret-shown variants for every ender (8d40dff), plus 3 Playwright caret-shown ends (pointercancel, Flip, hidePage); each `hideCaret` deletion fails a test; back has no browser variant (page leaves to about:blank; Vitest covers it). 3: Playwright AD-14 k = 2 parted-class CSS test on the redo-tail fixture. 4–7: back asserts, full animation asserts, reduced-motion return by pointercancel, name says reduced motion. 8: plan deferred entry for entry 12.
+Checks (orchestrator): `npm test` 54 files / 2225 tests pass; lint pass; check 0 errors. Fixer: free-letter.spec android 22 passed 1 skipped, desktop 1 passed.
+Snapshot: tree ebf3a5ae05b8ef99a191a22c86e13276b212c28e | fix diff `5-8-build.passes/pass1.fix.diff` (tree 0 → tree 1, includes 8d40dff) | full diff `5-8-build.passes/pass1.diff` (875266c → tree 1)

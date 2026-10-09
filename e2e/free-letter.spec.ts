@@ -494,7 +494,7 @@ test.describe('android', () => {
 
   // --- the destination block (R-32, AD-14) -------------------------------------------------------
 
-  test('AD-14 R-33 Q-31 block right (after Flip): cell 7’s top held at gap 0 parts tiles 42, 0 and the D-block mirror one slot step, 52 live cards mid-drag and after; the mirror at rest after release; stored [48, 42, 0]', async ({
+  test('AD-14 R-33 Q-31 under reduced motion, block right (after Flip): cell 7’s top held at gap 0 parts tiles 42, 0 and the D-block mirror one slot step, 52 live cards mid-drag and after; the mirror at rest after release; stored [48, 42, 0]', async ({
     page,
   }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -529,36 +529,80 @@ test.describe('android', () => {
     await expect(tray(page).locator('[data-mirror-of="32"]')).not.toHaveClass(/\bwc-parted\b/);
   });
 
-  test('AD-14 F5 under reduced motion, block right (after Flip): the D-block mirror parted at gap 0, then the free letter moved outside the band and released, the mirror has no inline transform and no animation right after the release; Session byte-identical, cell 7 unused', async ({
+  test('AD-14 F5 under reduced motion, block right (after Flip): the D-block mirror parted at gap 0, then the drag ended by pointercancel while parted, the mirror has no inline transform and no animation right after the end; Session byte-identical, cell 7 unused', async ({
     page,
   }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await open(page, BLOCK, { flip: true });
+    await trackPointerId(page);
     expect(await trayIds(page)).toEqual(['42', '0', '32m']);
     const before = await stored(page, SESSION);
     const g = await geometry(page);
     const mirrorFace = tray(page).locator('[data-mirror-of="32"] > .face');
-    const band = await box(tray(page));
     const gap0 = gapCentre(g, 0, 2, 0);
-    const { hold, at } = await holdTop(page, [gap0]);
+    const { hold } = await holdTop(page, [gap0]);
     try {
       await expectHeld(page);
       expect((await transformed(page)).sort()).toEqual(['0', '32m', '42']);
-      await moveFace(page, hold, at, { x: at.x, y: band.y - 120 });
-      await expectHeld(page);
+      // Ended while parted: the return reaches home()'s reduced-motion mirror snap (AD-14).
+      await cancelCaptured(page);
+      expect(
+        await mirrorFace.evaluate((el) => ({
+          transform: (el as HTMLElement).style.transform,
+          animations: el.getAnimations().length,
+        })),
+      ).toEqual({ transform: '', animations: 0 });
     } finally {
       await hold.end();
     }
-    expect(
-      await mirrorFace.evaluate((el) => ({
-        transform: (el as HTMLElement).style.transform,
-        animations: el.getAnimations().length,
-      })),
-    ).toEqual({ transform: '', animations: 0 });
     await expectNoResidue(page);
     await expectNoTrayResidue(page);
     expect(await stored(page, SESSION)).toBe(before);
     await expectUnused(page);
+  });
+
+  test('AD-14 a k = 2 block (redo-tail fixture, block right) under wc-parted: each mirror’s lock and segment ends follow wc-part-start / wc-part-end and ignore its resting .start / .end', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-place-free-letter-redo-tail', { steps: ['redo', 'redo'] });
+    expect(await trayIds(page)).toEqual(['26', '1m', '27m']);
+    await expect(tray(page).locator('[data-mirror-of="1"]')).toHaveClass(/\bstart\b/);
+    await expect(tray(page).locator('[data-mirror-of="27"]')).toHaveClass(/\bend\b/);
+    // Each mirror's lock display and its face's segment-end styles (left, then right).
+    const ends = () =>
+      tray(page).evaluate((band) =>
+        [1, 27].map((id) => {
+          const w = band.querySelector(`[data-mirror-of="${id}"]`);
+          const lock = w?.querySelector('.lock');
+          const face = w?.querySelector(':scope > .face');
+          if (lock === null || lock === undefined || face === null || face === undefined) {
+            throw new Error(`mirror ${id} incomplete`);
+          }
+          const f = getComputedStyle(face);
+          return {
+            lock: getComputedStyle(lock).display !== 'none',
+            left: `${f.marginLeft} ${f.borderLeftWidth} ${f.borderTopLeftRadius}`,
+            right: `${f.marginRight} ${f.borderRightWidth} ${f.borderTopRightRadius}`,
+          };
+        }),
+      );
+    // A closed segment edge (2 px margin, 2 px border, 6 px radius) or a joined one.
+    const closed = '2px 2px 6px';
+    const joined = '0px 0px 0px';
+    // At rest: 1 is the segment start (lock), 27 its end.
+    expect(await ends()).toEqual([
+      { lock: true, left: closed, right: joined },
+      { lock: false, left: joined, right: closed },
+    ]);
+    // Parted with the ends swapped (1 an end, 27 a start): the parted classes win over .start/.end.
+    await tray(page).evaluate((band) => {
+      band.querySelector('[data-mirror-of="1"]')?.classList.add('wc-parted', 'wc-part-end');
+      band.querySelector('[data-mirror-of="27"]')?.classList.add('wc-parted', 'wc-part-start');
+    });
+    expect(await ends()).toEqual([
+      { lock: false, left: joined, right: closed },
+      { lock: true, left: closed, right: joined },
+    ]);
   });
 
   for (const [where, offset] of [
@@ -778,6 +822,31 @@ test.describe('android', () => {
     await expectNoTrayResidue(page);
   });
 
+  // F16: each in-page end above with the caret shown (the end gap of M, block left) hides it at once
+  // (back leaves the page; the controller Vitest pins its caret-shown byBack end).
+  for (const end of ['pointercancel', 'an enabled App button (Flip)', 'hidePage'] as const) {
+    test(`AD-12 F5 F16 ${end} mid-drag with the caret shown at the end gap of M hides it at once: no caret transform, no parted class; cell 7 unused`, async ({
+      page,
+    }) => {
+      await open(page, BLOCK);
+      await trackPointerId(page);
+      const g = await geometry(page);
+      const endGap = gapRect(g, 1, 2, 2);
+      const { hold } = await holdTop(page, [mid(endGap)]);
+      try {
+        await expectHeld(page);
+        await expectCaretAt(page, endGap);
+        if (end === 'pointercancel') await cancelCaptured(page);
+        else if (end === 'hidePage') await hidePage(page);
+        else await flipButton(page).dispatchEvent('click');
+        await expectNoTrayResidue(page);
+      } finally {
+        await hold.end();
+      }
+      await expectUnused(page);
+    });
+  }
+
   test('AD-12 F5 back mid-drag leaves the app; the stored Session equals the pre-drag one bar activeMs, read after a restoring goForward', async ({
     page,
   }) => {
@@ -795,6 +864,8 @@ test.describe('android', () => {
     await expect(page.getByRole('heading', { name: 'WordCell' })).toBeVisible();
     await expect(page.locator('[data-card-id]')).toHaveCount(52);
     expect(await storedGame(page)).toBe(before);
+    await expectSelected(page, null);
+    await expectUnused(page);
   });
 });
 

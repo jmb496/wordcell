@@ -4382,7 +4382,9 @@ describe('AD-12 epic 5 free-letter drag', () => {
         const s = t.b.slotAt(p);
         const wrapper = new FakeEl(
           'div',
-          mirror ? { 'data-mirror-of': `${id}` } : { 'data-place': 'tray', 'data-card-id': `${id}` },
+          mirror
+            ? { 'data-mirror-of': `${id}` }
+            : { 'data-place': 'tray', 'data-card-id': `${id}` },
           t.b.tiles,
         );
         wrapper.root = t.b.root;
@@ -4475,14 +4477,23 @@ describe('AD-12 epic 5 free-letter drag', () => {
     expect(shown(t)).toBe(true);
     expect(t.b.caret.style.transform).toBe('translate(142.5px, 6px)');
     expect(transforms(t)).toEqual(['', '', '']);
-    // The parted tiles return to rest over duration(parting).
+    // The parted tiles return to rest over duration(parting), their parting cancelled unsettled;
+    // the mirror never moves.
     for (const face of [t.b.tileFace, t.b.tile2Face]) {
-      expect(last(face).keyframes).toEqual([
-        { transform: 'translate(48px, 0px)' },
-        { transform: 'translate(0px, 0px)' },
+      expect(face.animations.map((a) => [a.keyframes, a.options, a.cancelled])).toEqual([
+        [
+          [{ transform: 'translate(0px, 0px)' }, { transform: 'translate(48px, 0px)' }],
+          { duration: 90, easing: 'ease-out' },
+          true,
+        ],
+        [
+          [{ transform: 'translate(48px, 0px)' }, { transform: 'translate(0px, 0px)' }],
+          { duration: 90, easing: 'ease-out' },
+          false,
+        ],
       ]);
-      expect(last(face).options.duration).toBe(90);
     }
+    expect(t.b.trayMirrorFace.animations).toHaveLength(0);
     expect(partedClasses(t.b.trayMirror)).toEqual([]);
     t.fire('pointerup');
     expect(navCalls).toEqual([dispatched({ type: 'addFreeLetter', cell: 3, index: 2 })]);
@@ -4588,13 +4599,23 @@ describe('AD-12 epic 5 free-letter drag', () => {
         { transform: 'translate(34px, 190px)' },
         { transform: 'translate(0px, 0px)' },
       ]);
+      // Every animation of the parted faces: the parting, then the return over duration(flyBack).
       for (const face of [t.b.tile2Face, t.b.trayMirrorFace]) {
-        expect(last(face).keyframes, name).toEqual([
-          { transform: 'translate(48px, 0px)' },
-          { transform: 'translate(0px, 0px)' },
+        expect(
+          face.animations.map((a) => [a.keyframes, a.options]),
+          name,
+        ).toEqual([
+          [
+            [{ transform: 'translate(0px, 0px)' }, { transform: 'translate(48px, 0px)' }],
+            { duration: 90, easing: 'ease-out' },
+          ],
+          [
+            [{ transform: 'translate(48px, 0px)' }, { transform: 'translate(0px, 0px)' }],
+            { duration: 180, easing: 'ease-out' },
+          ],
         ]);
-        expect(last(face).options.duration, name).toBe(180);
       }
+      expect(t.b.tileFace.animations, name).toHaveLength(0);
       expect(transformOnly(t.b.trayMirrorFace), name).toBe(true);
       // The ghost and the layer stay until the fly-back settles.
       expect(t.b.cell3.classes.has('wc-drag-ghost'), name).toBe(true);

@@ -234,8 +234,8 @@ src/ui/
   calls live in `controller.ts` (an unexported section: per-face running animation map, one gate
   count while any parting or return animation runs, `finishAll()` settling it synchronously), so
   tile.ts stays pure. A face's current offset is read from its computed transform (a running
-  animation's effect included; ticket 5.8 review: layout margins never count); a superseded animation is read, cancelled
-  with its handlers cleared and replaced. Return animations (no-edit release, any fly-back end)
+  animation's effect included; ticket 5.8 review: layout margins never count); a superseded
+  animation is read, cancelled with its handlers cleared and replaced. Return animations (no-edit release, any fly-back end)
   run only on faces off rest (or still animating), over `duration('flyBack')`, the fade under
   reduced motion. The tray band registers through `use:dropTarget={{ kind: 'tray' }}` and is read
   by `trayTarget()`; `.tiles` takes `wc-drag-tiles` (`classes.ts` `DRAG_TILES`) to lift its clip;
