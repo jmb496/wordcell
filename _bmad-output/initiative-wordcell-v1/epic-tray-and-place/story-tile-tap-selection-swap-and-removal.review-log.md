@@ -1,6 +1,6 @@
 # Review log — story-tile-tap-selection-swap-and-removal.md (ticket 5.5)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7. Pass 0: HEAD 2778b08, .passes/pass0.md, 466 words (budget 2.5x ≈ 1165).
 Intent extras (tickets.toml entry 5, not copied into the ticket; fixer adds them to Description in pass 1): interface, tests, owns, consumers, unknown, risk.
@@ -70,3 +70,30 @@ Fixer: all 16 applied; no commands; trimmed DESIGN.md Tile parenthetical (cites 
 - none
 ### Dropped
 - none
+
+## Pass 3 — 2026-10-09
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 6, minor 12, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+Words (docs): 1194 (2.56 x pass 0, 29 over budget)  |  Snapshot: .passes/pass3.md, fix diff .passes/pass3.fix.diff
+Fixer: all 12 applied; no commands; offsets: Interface/Owns shortened ("all of the above, incl. the clear rules"), R-39 drag-as-tap folded into Clear, Notes lines merged; item 11 not word-neutral.
+### Applied
+- [major] AC R-33/Q-31 — `↩` shown on the selected compact QU free letter is never asserted (SPEC CAP-4 P5 moved from CAP-1; ticket 2 deferred it here); the swap ends the selection, so select 35 again → 1
+- [major] AC — no inert-target drag that clears: tray-background ≥ 8 px ended by pointerup clears, by pointercancel keeps → 2
+- [major] Press resolution — a press on the selected tile's lifted face where it covers the row gap / a neighbour's half-gap is unspecified → default: any visible part of the selected face resolves to it → 3
+- [major] AC — Look (lifted face and outline fully visible under `overflow: hidden`) untested → bounding-box check → 4
+- [major] AC R-71 — invalid-line clear belongs to the identical-letter swap (SPEC CAP-4), pass 2 item 9 attached it to a generic swap → move it → 5
+- [major] Keep vs Drag — "a press ended by pointercancel keeps" contradicts the F18 tile clear → "a non-tile press" → 6
+- [minor] Clear — restore the changed-clear mechanism word-neutrally (controller clears after a changed swap/removeFreeLetter/tapDestinationCard) → 7
+- [minor] F2 carve-out — tapAction's Hit has neither `tile` nor `block`; pointerup sends them to tileTap only → 8
+- [minor] full pitch covers block-mirror slots and row-end half-gaps → 9
+- [minor] Drag — "non-tile controller target" (an enabled button dragged off fires no click: kept, as epic 4) → 10
+- [minor] AC — interim available-Composing-cell / legal non-current Place cell `clear` among the tileTap intent cases → 11
+- [minor] Notes — close-out note also replaces build-notes' "one clear-rules function" line → 12
+### Default applied (technical)
+- lifted-face press → resolves to the selected tile
+- stale tileSelection in tileTap → throws (rule 6), plan-level, no ticket words
+- phase-change clear → no watcher; act() and changed-result clears cover it, plan-level
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped / left to the plan (over budget, fix would add words)
+- F2 carve-out note on keyboard/AT tile activation (key-command epic's)
+- the row-2 lifted strip vs the row-1 half-gap note (covered by item 3)
