@@ -1,6 +1,6 @@
 # Review log — story-tile-drag-in-the-tray-and-the-strip.md (ticket 5.7)
 
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7. Pass 0: HEAD 94c59e9, .passes/pass0.md, 441 words (budget 2.5x ≈ 1100).
 Intent extras (tickets.toml entry 7, not copied into the ticket; fixer adds them to Description in pass 1): interface, tests, owns, consumers.
@@ -106,3 +106,34 @@ Fixer: all 12 applied; +91 words from the majors, minors word-neutral; orders ch
 - Strip marks (bottom/top, ★, origin tags) travel with their faces mid-drag and update at release
 - F4 setup: concrete viewport/scroll (e.g. 412 × 600, scrollY 0, band bottom under the action bar), premise-asserted
 - Re-measure `origin` per move for a desktop wheel scroll mid-drag (from pass 2)
+
+## Pass 4 — 2026-10-09
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late bar)  |  Findings: major 4, minor 12 (7 to the fixer, 5 unapplied), decision-needed 0  |  Dropped in triage: 1 (+ ~3 duplicates merged); 2 reviewer majors downgraded to minor under the late bar
+Words (docs): 1683 (3.82 x pass 0)  |  Snapshot: .passes/pass4.md, fix diff .passes/pass4.fix.diff
+Fixer: all 10 applied; item 1 verified by running the real gapRects/partingOffsets/reorder on the fixture order (gap 8: tile 7 to slot 6; reorder → [1, 38, 44, 11, 36, 9, 7, 35]); the mid-drag premise scoped to live-tile drags (the block-mirror drag moves no face); +86 words, mostly majors.
+### Applied
+- [major] AC Geometry — the pass 3 wrapped-row case (tile 35 → gap 7) parts only row 1 (partingOffsets: position 7 keeps its slot), undoing pass 1's "parting across a row break", entry 6's deferred check → gap 8, tile 7 to row 1's last slot, [1, 38, 44, 11, 36, 9, 7, 35] → fixer item 1
+- [major] AC UI Vitest — `cancel({ byBack: true })` tile-drag fly-back untested (Tests line: back S + P5; P5 goBack reaches the hide flush's plain `cancel()`); cancel() snap vs byBack fly-back indistinguishable → 2
+- [major] Parting — rest not defined as inline transform removed; an inline `translate(0px, 0px)` beats `.card.tile.selected .face` (Card.svelte:271), losing a later selection's lift; no-edit P5 cases check no residue → 3
+- [major] Hover — new desktop hover behaviour has no test though it supersedes controller.test.ts:3449; "closes the hover peek at its threshold" contradicts the pick-up drag (hides at the threshold, closes at end, controller.ts:82-83, 636-637) → 4
+- [minor, downgraded] AC no-edit P5 cases pass without a wired drag → assert the drag premise mid-drag (dragged face `wc-drag-layer` + inline transform) → 5
+- [minor, downgraded] Interface exceptions vs the gestures/tile.ts option and the tray-inner-width getter → 6
+- [minor] Drop target — acceptance through `pickTarget` (area/intersection are private) → 7
+- [minor] AC block-mirror — "no inline transform on any tray face" (the selected tile keeps its CSS lift) → 8
+- [minor] Description — "otherwise" → "any other release flies the tile back" → 9
+- [minor] AC R-33 — release over its own WordCell (cell 3), stored Session byte-identical → 10
+### Default applied (technical)
+- Cross-row case — session-place-compact tile 35 held on row 2 past tile 7 (gap 8), release [1, 38, 44, 11, 36, 9, 7, 35] (checked with `reorder` and `partingOffsets`) → default taken
+- byBack Vitest — mid-drag (parted) `cancel()` clears every transform at once; `cancel({ byBack: true })` starts the fly-back and parting return with nothing selected; neither dispatches → default taken
+- Rest — rest means the inline transform removed (`''`, as fly-back.ts); pointercancel and under-25 % P5 cases end with `expectNoResidue` → default taken
+- Hover — hides the hover peek at the threshold (DOM only), closes it at the end, hover classes cleared and recomputed at the end or the fly-back's settle; a UI Vitest AD-12 replaces controller.test.ts:3449 → default taken
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- "its start-of-row-2 rect" for gap 7 (fix diff minor) — moot with gap 8
+### Unapplied minors (over budget, for the plan)
+- Exactly-25 % inclusive acceptance Vitest for the tray (`MIN_RATIO` inclusive)
+- R-71 own-gap case: name the tile and gap j; assert Redo enabled before the drag; same for the session-place under-25 % case
+- "Single target": hold the tile over a column first and assert no `wc-drag-target`
+- drop-target.test.ts: one tray registration read by the accessor, a second throws
+- Reorder cases: centre the held face on the named gap's `gapRects` rect, from the rendered tray
