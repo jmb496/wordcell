@@ -2,7 +2,7 @@
 import type { CardId, Face } from '../../engine/index';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Card from '../Card.svelte';
-import { type TrayTile, trayLayout } from '../layout/tray';
+import { segmentEnds, type TrayTile, trayLayout } from '../layout/tray';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { overlays } from '../overlays.svelte';
 
@@ -36,13 +36,12 @@ let {
 
 const sizing = $derived(trayLayout(tiles.length, w, innerWidth));
 const pitch = $derived(sizing.tileWidth + 4);
+const mirrors = $derived(tiles.map((t) => t.mirror));
 
-// A D-block row segment starts at the block's first tile or a row start, and ends likewise.
+// A D-block row segment starts at the block's first tile or a row start, and ends likewise
+// (`segmentEnds`).
 function segment(i: number): { start: boolean; end: boolean } {
-  return {
-    start: i % sizing.perRow === 0 || tiles[i - 1]?.mirror !== true,
-    end: (i + 1) % sizing.perRow === 0 || tiles[i + 1]?.mirror !== true,
-  };
+  return segmentEnds(i, sizing.perRow, mirrors);
 }
 
 // Epic 5 SPEC F2: which sides of tile i face a row gap (a row above it, a row below it).
