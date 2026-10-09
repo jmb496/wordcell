@@ -1,5 +1,5 @@
 # Review log — story-d-block-controls-validate-and-confirm-states.md (ticket 5.3)
-State: pass 4: done
+State: pass 5: done (converged)
 
 Mode: docs, thorough, max 7. Pass 0: 409 words (`.passes/pass0.md`), HEAD 019f2fa. Intent fields from tickets.toml entry 3 (interface, tests, owns, consumers): `.passes/intent.md`.
 
@@ -83,3 +83,26 @@ Fixer: all 9 items applied; redundant parentheticals cut to pay; no commands add
 - none
 ### Unapplied minors (for the build plan)
 - k = 0 source column fixed and the letter count read from text.letters (QU = 2); Flip `disabled={!canFlip}` never true while rendered (drop or keep the binding); a failing Validate dispatched twice per click is unobservable (one shared handler); caption narrowing width measured in-page; k rendered as its own element read by textContent; Flip as a 44 px secondary pill (DESIGN.md ref)
+
+## Pass 5 — 2026-10-08
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 1, minor 14, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1029 (2.52 x pass 0)  |  Snapshot: .passes/pass4.md (no fix pass)
+### Open (not fixed; stopping rule: passes 4 and 5 each ≤ 1 major)
+- [major] AC bullets 1 and 6 — the R-73 (UI) "Validate saved before the next action" check has no content comparison: bullet 1's compared steps are `+`, Flip, Flip, `−`, and bullet 6 only counts one wordcell:session write and the phase → proposed fix: bullet 6 "exactly one wordcell:session write after it, equal to `current().session`, phase place and no halt"
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- 44 × 44 / Flip size assertion classed minor (late-pass bar; the regenerated baseline and DESIGN.md ref carry it) → plan
+
+## Result — converged after 5 passes
+open major: AC bullet 6 (R-73 (UI) Validate save) asserts a write count and phase but not that the stored Session equals `current().session`; the build plan should add that equality.
+
+### Unapplied minors (for the build plan)
+- Redo shell Vitest sibling must fail Validate from a Place session after one Undo (rejectedValidate() seeds session-composing, which has no redo tail)
+- label shrink: the below-14 overflow check is on primary-action (not the span), well past rounding (e.g. 10 px under the 14 px width); expect exactly 15 px at a width between the natural 15/16 px widths; test the label-change re-measure trigger
+- `−`/`+` 44 × 44 and Flip 44 px secondary pill: one bounding-box assertion (SPEC Constraints, EXPERIENCE.md Accessibility)
+- Notes: the synchronous two-click case is the only reproducible race; Confirm has no flushSync (outside F15)
+- Verify: "no `tapAt` definition outside e2e/helpers/" (not only `function tapAt`); cite the e2e/tray.spec.ts R-38 test by name, not line 449
+- k = 0: name the source column and the `foot-1`/`column-1` locator; "ellipsizing so the letter count stays whole"
+- LABELS R-36: add an optional id column to `Row` for the name prefix
+- from pass 3/4: caption and k typography (ui-label, ink-secondary); label span inline inheriting line-height; one button node across Validate → Confirm; ≤ 0.5 px rect tolerance; act() scan matches only onclick-style attributes; letter count from text.letters (QU = 2); Flip `disabled={!canFlip}` never true while rendered; a failing Validate dispatched twice is unobservable; caption narrowing measured in-page; k as its own element
