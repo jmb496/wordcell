@@ -1,6 +1,6 @@
 # Review log — story-free-letters-by-tap-and-by-drag.md (ticket 5.8)
 
-State: pass 4: done
+State: done (converged)
 
 Mode: docs, thorough, max 7. Pass 0: HEAD 968b3e7, .passes/pass0.md, 476 words (budget 2.5x ≈ 1200).
 Intent extras (tickets.toml entry 8, not copied into the ticket; fixer adds interface, tests, owns, consumers to Description in pass 1; unknown is already in Notes).
@@ -125,4 +125,37 @@ Fixer: all 9 applied; `:visible` marked `unverified` in the ticket; parted class
 - Free-letter drag lifts the `.tiles` clip (`DRAG_TILES`) as the tile drag, so edge carets are not clipped ("as entry 7's tile drag" covers it)
 - Full-layout route as "perRow card-mode tiles (7 at 412 px)"
 - Done when 4: how P5 tells the parting transform from other motion (one pitch while parted, none after)
+- hidePage / back cases: also assert nothing selected and cell 7 unused (F18)
+
+## Pass 5 — 2026-10-09
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 14, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1431 (3.01 x pass 0, unchanged; no fix pass)  |  Snapshot: .passes/pass4.md
+### Open major (not fixed: second consecutive pass with ≤ 1 major)
+- [major] Description "Ends and motion" ("parted tiles and mirrors return", "as entry 7's tile drag") — entry 7's return path `home()` (controller.ts:342-351) clears the transform and fades opacity 0 → 1 under reduced motion; reused for the D-block mirrors that gives a mirror an opacity animation, against AD-14 / build-notes CAP-5 / AGENTS.md pitfall (mirrors carry only the parting shift, snapped under reduced motion). Fix in the build: mirrors return snapped (no fade) under reduced motion; the controller `AD-12` Vitest asserts no `animate` call reaches a mirror face under reduced motion.
+### Reclassified
+- [major → minor] existing controller Vitests pinned to the old available-cell behaviour (controller.test.ts:3399 available-cell tap asserts no dispatch; :3460 available-cell crossing as drag-as-tap; tile.ts:10-11 header "until tickets 8/9") — the ticket states the new behaviour explicitly and the code already marks these as superseded by ticket 8, so rewriting them is obvious handling; to the plan
+### Decision needed (functionality / UX / gameplay)
+- none
+
+## Result — converged after 5 passes
+Majors per pass: 12, 7, 3, 1, 1. Open major: D-block mirrors' return under reduced motion must snap with no fade (entry 7's `home()` fades; AD-14), see Pass 5. Decision needed: none. Technical defaults applied: 15 (see each pass). Words 476 → 1431 (≈ 228 of them the required entry-8 intent lines).
+
+### Unapplied minors (for the build's plan)
+- Controller Vitests controller.test.ts:3399 and :3460 and the tile.ts:10-11 header move to the new available-cell behaviour (tap-add dispatches `addFreeLetter`; the crossing starts a free-letter drag, F18 clear)
+- Mirror segments: "when parting stops" means when the mirrors return to rest (not when the parting animation finishes)
+- UI Vitest: the asserted mirror is the one starting the resting second row (the block's first mirror stays a start)
+- R-32: "released inside the band" means accepted, ≥ 25 %
+- android bullet: the drop is ≥ 2 cards onto a non-empty column (block left needs k ≥ 1; an inner gap needs |M| ≥ 2)
+- Block right / Done when 4: a short tail (layout with room) so the mirrors part rather than the caret
+- "full": `trayLayout(current count).rows`, the count before the drop
+- Caret: place it in `.tiles` coordinates (gap rects are viewport rects); the free-letter drag adds `DRAG_TILES` as the tile drag, so edge and third-row carets/parting are not clipped
+- Caret hidden at a parting gap / under 25 % / outside the band: add an assertion (e.g. full-layout case's under-25 % move)
+- Desktop bullet: "as above" = the block-left drop
+- Used/empty-cell tap half already covered by e2e/tile-tap.spec.ts:286; the new case is the drag half
+- Long-press then moved into the tray band and released: no dispatch, cell 7 unused
+- Ends: same-id pointerdown and detach settle at once (as entry 7)
+- Caret at a row-break gap's winning rect: no test case
+- References: name SPEC CAP-6/F5/F16/F18 and DESIGN.md WordCell
+- Full-layout route as "perRow card-mode tiles (7 at 412 px)"
+- Done when 4: P5 tells the parting transform from other motion (one pitch while parted, none after)
 - hidePage / back cases: also assert nothing selected and cell 7 unused (F18)
