@@ -43,3 +43,4 @@ Verify: npm run test:all and npm run test:screens are green (no baseline change)
 ## Notes
 
 - Settled ([ASSUMPTION] build-notes CAP-5): no hysteresis; resting rects fix the targets.
+- Owner decision (2026-10-09, SPEC F25): a tile dropped past a destination block that wraps onto the next row keeps F3's nearest-gap rule, no special case; 5.7's "past the block" case uses a one-row block; the wrapped case is judged in hand at 5.7.

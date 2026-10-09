@@ -540,6 +540,7 @@ F17, F19, F20, F22 and F23 record the owner's answers and F24 the owner's AD-11 
 | F22 | OQ-6: destination letters on Validate and on Undo back to Composing. | Owner: as AD-14 implies, the D faces glide from and to their destination column; the tray-block copies (mirrors) disappear and reappear at once (CAP-8). |
 | F23 | OQ-7: winning guard window. | Owner: the guard lasts at least 300 ms after the win at any speed, reduced motion and Fast included (F8); the double-tap test also runs under reduced motion and at Fast (CAP-10). Spine AD-14 and EXPERIENCE.md Motion amended. |
 | F24 | Spine AD-11: a move during page scroll. | Owner-approved amendment: every move (every dispatch, AD-11) clears page-scroll busy first (as `gate.scrollReset` does on hide), so its re-layout and glide are never scroll-deferred; only an active gesture defers, and no dispatch path reaches a move with one active (CAP-9). The change to epic 4's gate wiring is CAP-9's task. DESIGN.md Tray band amended. |
+| F25 | Ticket 5.6 code review: a tile dropped past a destination block that wraps onto the next tray row. | Owner (2026-10-09): keep F3's nearest-gap rule, no special case; the drop may land mid-M. CAP-5's "a tile dragged past the block landing at the M end" applies to a block within one row (entry 7's Playwright case); the owner judges the wrapped case in hand once entry 7 wires the drag. |
 
 ## Upstream amendments (done 2026-10-08, owner-authorised)
 

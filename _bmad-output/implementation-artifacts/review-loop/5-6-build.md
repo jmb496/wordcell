@@ -40,3 +40,5 @@ Unapplied minors:
 - plan Auto Run Result / Implementation Notes — "2173 unit" and "test:all exit 0 after patches" predate the pass 1 tests (now 2175; pass 1 re-ran npm test, lint, check only); re-run test:all/test:screens and update, or note the scope of the re-run.
 - tickets.toml entry 7 verify geometry clause — `n` undefined and the mid-drag comparison unspecified; write it as face p (nothing selected, no lift) = `slotRects(trayLayout(n, w, inner), origin, perRow × rows)[p]` at rest, and mid-drag each non-dragged face p = `slotRects[partingOffsets(...)[p].slot]` once parting settles, dragged face excluded, compared to whole pixels.
 - plan owner note / entry 7 verify — say the "past the block" Playwright case uses a block within one row (ties to the decision-needed item above).
+
+Owner answer (2026-10-09): the pass-2 decision-needed item takes the proposed default, keep F3's nearest-gap rule (SPEC F25).

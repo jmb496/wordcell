@@ -25,3 +25,7 @@ Digest: _bmad-output/implementation-artifacts/autopilot/epic-tray-and-place-2026
 ## Resume
 
 Record your answer in the ticket's Notes (and the spec memlog if it changes F3), commit, and rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-tray-and-place`. The next session resumes 5.6 at verification (Step D).
+
+## Resolved
+
+2026-10-09: Option A, keep the nearest-gap rule (SPEC F25, ticket 5.6 Notes). No close-out doc edit.
