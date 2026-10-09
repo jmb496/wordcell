@@ -403,6 +403,30 @@ describe('AD-12 parting offsets', () => {
     ]);
   });
 
+  it('AD-12 free-letter parting offsets, block right still across a row break when parted: two segments, two locks', () => {
+    // |M| 5 at positions 0…4, the D block (3 mirrors) at 5…7; 8 tiles compact, 14 slots; gap 2.
+    const parted = partingOffsets(slotsFor(8), 8, 0, 5, 2);
+    expect(parted).toEqual([
+      { slot: 0, dx: 0, dy: 0 },
+      { slot: 1, dx: 0, dy: 0 },
+      { slot: 3, dx: 50, dy: 0 },
+      { slot: 4, dx: 50, dy: 0 },
+      { slot: 5, dx: 50, dy: 0 },
+      { slot: 6, dx: 50, dy: 0 },
+      { slot: 7, dx: -300, dy: 48 },
+      { slot: 8, dx: 50, dy: 0 },
+    ]);
+    const mirrorBySlot: boolean[] = [];
+    for (const p of [5, 6, 7]) mirrorBySlot[(parted[p] as { slot: number }).slot] = true;
+    const ends = [6, 7, 8].map((slot) => segmentEnds(slot, 7, mirrorBySlot));
+    // Slot 6 ends row 0, slots 7…8 start row 1 (lock = start: two locks, on slots 6 and 7).
+    expect(ends).toEqual([
+      { start: true, end: true },
+      { start: true, end: false },
+      { start: false, end: true },
+    ]);
+  });
+
   it('AD-12 free-letter parting offsets, block left: mirrors unmoved, only M tiles from first + gap shift', () => {
     // k 3 (mirrors 0…2), |M| 6 at 3…8; 9 tiles compact; gap 2 → positions 5…8 shift.
     expect(partingOffsets(slotsFor(9), 9, 3, 6, 2)).toEqual([

@@ -150,6 +150,13 @@ describe('AD-12 insertionIndex', () => {
     expect(gaps.every((g) => g.index <= 6)).toBe(true);
   });
 
+  it('AD-12 insertionIndex block right across a row break: over mirror slot 7 (row 1 start) → gap 0, not gap |M|', () => {
+    // 9 tiles compact, M at 0…5, mirrors at 6…8; mirror slot 7 centre (25, 70). Gaps 0 (0, 22) and
+    // 1 (50, 22) tie as nearest; the lower index wins.
+    const gaps = gapsFor(9, 0, 6);
+    expect(insertionIndex(face(25, 70), gaps).index).toBe(0);
+  });
+
   it('AD-12 insertionIndex k = 0 and the ends of M', () => {
     const gaps = gapsFor(5);
     expect(insertionIndex(face(-200, 30.5, 61), gaps).index).toBe(0);

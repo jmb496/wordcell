@@ -19,7 +19,7 @@ deferred:
   - summary: >-
       slotRects/gapRects geometry (4 px gap, column pitch, row pitch tileHeight + 4, + 2 px origin) is checked only against its own constants, never against the rendered TileRows/Card tile rects.
     evidence: |-
-      verification-gap and blind lenses: tray.test.ts and targeting.test.ts build rects from trayLayout/slotRects and assert literals from the same constants; TileRows keeps its own `+ 4` pitch and `row-gap: 4px`; no test compares slotRects with getBoundingClientRect. The functions have no caller until entry 7, whose Playwright drag spec should assert resting and parted tile positions match slotRects.
+      verification-gap and blind lenses: tray.test.ts and targeting.test.ts build rects from trayLayout/slotRects and assert literals from the same constants; TileRows keeps its own `+ 4` pitch and `row-gap: 4px`; no test compares slotRects with getBoundingClientRect. The functions have no caller until entry 7; entry 7's verify in tickets.toml now records the check (Playwright on android: tile faces match slotRects at rest on session-composing and session-place-compact and in a parted position mid-drag).
     location: >-
       src/ui/layout/tray.ts slotRects
     severity: low
@@ -161,6 +161,6 @@ Review-log minors resolved:
 
 **Verification:** `npm run test:all` exit 0 after patches (2173 unit, dist, dev e2e, pwa); `npm run test:screens` 10 passed, no baseline change; unit median 2.48 s on an ext4 worktree (< 5 s).
 
-**For the owner (non-blocking, UX):** F3's nearest-centre rule means a tile dragged over the far end of a D block that fills a row (block left) can target the start of the next row rather than gap 0 of M (pinned by a test). This follows the confirmed spec; judge it in hand once entry 7 wires the drag.
+**For the owner (non-blocking, UX):** F3's nearest-centre rule means a tile dragged over a D block that crosses a row break can target the M gap nearest on screen rather than the block's own end of M (block left: the start of the next row, not gap 0; block right: gap 0, not gap |M|; both pinned by tests). This follows the confirmed spec; judge it in hand once entry 7 wires the drag.
 
 **Residual risk:** geometry not yet checked against the rendered tray (deferred to entry 7); `gapRects` takes `perRow` and `tileCount` beyond the ticket's three-argument sketch (technical, Design Notes).
