@@ -48,3 +48,14 @@ Ref to fix upstream: none
 Tokens: 10.6M input-equivalent (ticket review 61%, build 26%, code review 9%, orchestrator 2%, other 2%); orchestrator peak context 60k
 Worth knowing: the code review left 8 minor items for the refactor sweep (5.14), listed in review log 5-3-build.md: the "…" at the shrunk label size draws in the larger font; two leftover null checks on an always-present button; two `+` presses in the new tests use a mouse click instead of the tap helper; three test names carry the wrong rule id; one k = 0 width check can never fail; no Playwright Flip on a QU column (R-30); two stale lines in the plan. Nothing deferred by the build.
 Close-out docs: none
+
+## 5.4 Controller seams — done
+What it adds: nothing the player sees. The big file that handles taps and drags is split into smaller pieces (the visible-area clip, the desktop hover-peek timer, the card fly-back, one shared "find this cell or column" helper, and one list of shared style names), and the old per-ticket comment headers became one short summary per file, so the tile gestures of the next tickets have clean places to go.
+Ticket review: 6 passes, converged; nothing needed your input (one open item passed to the build: prove every error message stayed the same, which the build did with a before/after diff of all 82 messages)
+Build: built; commits 603c476
+Code review: thorough (risk medium), 1 pass, converged; 0 fixes applied (5 minor items left)
+Tests: all passing (test:all; the build also ran test:screens green with no screenshot change)
+Ref to fix upstream: none
+Tokens: 11.9M input-equivalent (ticket review 61%, build 24%, code review 11%, other 2%, orchestrator 2%); orchestrator peak context 64k
+Worth knowing: the unit suite went from 2.17 s to 2.33 s (+7 %, well inside the 5 s budget). The code review left 5 minor items in review log 5-4-build.md for later tickets: a card element missing its id would quietly read as card 0 instead of failing (best fixed in 5.5, which touches that code); no test proves detaching clears the hover-peek memory (for the 5.14 sweep); one comment cites the wrong epic 4 document; some paperwork leftovers (the spine's folder list lacks the five new files, a stale "(entry 12)" tag in main.ts, one wrong build-notes label) are noted only in the plan, for the 5.15 sweep; one badly wrapped comment line.
+Close-out docs: none

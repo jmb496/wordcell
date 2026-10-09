@@ -3,7 +3,7 @@ title: 'Controller seams'
 type: 'refactor'
 ticket: '4'
 created: '2026-10-08'
-status: 'built'
+status: done
 baseline_revision: '9c3ea732baba320db6b2fc11892d178136d18866'
 route: 'full'
 route_source: 'auto'
