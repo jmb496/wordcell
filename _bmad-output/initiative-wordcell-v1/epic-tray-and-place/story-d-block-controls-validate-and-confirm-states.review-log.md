@@ -1,5 +1,5 @@
 # Review log — story-d-block-controls-validate-and-confirm-states.md (ticket 5.3)
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7. Pass 0: 409 words (`.passes/pass0.md`), HEAD 019f2fa. Intent fields from tickets.toml entry 3 (interface, tests, owns, consumers): `.passes/intent.md`.
 
@@ -29,3 +29,23 @@ Fixer: all 23 items applied (AD-12 scan already covers every non-exempt .svelte 
 ### Dropped
 - "Close the Notes open question" — it is the tickets.toml `unknown`, kept; only a stop-and-report line added (minor 14)
 - plain-.ts handler module for per-button spies — superseded by item 2's default
+
+## Pass 2 — 2026-10-08
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 7, minor 10, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1027 (2.51 x pass 0)  |  Snapshot: .passes/pass2.md
+Fixer: all 17 items applied; Tests and Consumers lines shortened to make room; no commands added.
+### Applied
+- [major] Description ¶2, AC stub bullet — a failed Validate is a dispatch that accrues `activeMs` and writes (game.svelte.ts:139-154), so "byte-identical" fails → fixer item 1 (default applied: equal apart from `activeMs`, masked like column-phases.spec.ts)
+- [major] AC stub bullet — Undo (→ Idle) and Redo (→ Place) clears pass vacuously since the line renders only in Composing → fixer item 2 (default applied: return to Composing and assert no invalid line)
+- [major] AC bullet 1 — Flip then Validate validates the side-left non-word NTA, so "Validate saved" cannot be met → fixer item 3 (sequence stated)
+- [major] Notes/AC F21 — two awaited Playwright taps flush between them, so the double tap cannot catch a missing flushSync → fixer item 4 (default applied: add a two-synchronous-click case)
+- [major] AC label shrink — widths for the [14,16) and ellipsis cases undefined while px literals are forbidden → fixer item 5 (default applied: measure the label's natural widths)
+- [major] Description ¶2 — "re-measured as the word line does" copies the open S19 integer-clientWidth defect → fixer item 6 (default applied: fractional content width)
+- [major] Tests line/AC — intent's R-38 "Validate only on tap" dropped → fixer item 7
+- [minor] fixer items 8–17 (R-40→R-42 cite, label span, F21 no halt + key filter, ControlRow props, k locator, dictionary `ready`, act.test.ts in Verify, single-click fixture, k = 0 one path, caption ellipsis forcing)
+### Default applied (technical)
+- see the majors above
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
