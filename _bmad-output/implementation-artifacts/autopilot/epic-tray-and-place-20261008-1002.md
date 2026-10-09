@@ -102,3 +102,13 @@ Close-out docs: none
 
 ## Owner hand check — 2026-10-09
 After 5.7, the owner tried the F25 wrapped case on the phone (a tile dropped past a long word's letters that wrap onto a second tray row): works as wanted, no change. Also confirmed the same day: a tile dragged past the far end of a full row landing at the start of the next row (from 5.6) works as wanted. Both hand checks done.
+
+## Stopped — decision needed and code review session ended early (ticket 5.8, Step C)
+5.8 "Free letters by tap and by drag" is built but not done.
+Ticket review: 5 passes, converged (majors 12, 7, 3, 1, 1); nothing needed your input. Its one open item (the D-block mirrors must snap home under reduced motion, no fade) was handed to the build, and the build resolved it.
+Build: built; commit 44eda8b. Deferred: the browser check of the parted-block outline across a row break waits for entry 12's long Composing fixture.
+Code review: thorough (risk high). Pass 1 found 3 majors and 5 minors and one decision for the owner, then the session ended while its fixer was running (it did not wait for its own fixer). The fixer's partial, unverified edits are in WIP commit 8d40dff. A scratch probe test it left (`src/zz-probe-tmp.test.ts`, asserting `'x'`) was deleted.
+Decision needed (desktop only): clicking a WordCell to add its letter while that cell's hover preview is open leaves the preview open, now showing the cell as used, until the mouse leaves the cell. Proposed default: keep as built.
+Environment: the owner's `npm run dev --host` (started 11:06 EDT for the phone check) still holds port 5173. Playwright reuses it, so the build could not run `test:all` as one command (each part ran green separately), and Step D needs the port free.
+Tokens: 22.3M input-equivalent (ticket review 43%, build 38%, code review 16%, orchestrator 2%, other 1%); orchestrator peak context 82k
+Resume: answer the decision (record it in the ticket's Notes), stop the dev server on port 5173, then rerun loop.sh. The next session resumes the code review at pass 1's fix step.
