@@ -1,6 +1,6 @@
 # Review log — story-tile-drag-in-the-tray-and-the-strip.md (ticket 5.7)
 
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7. Pass 0: HEAD 94c59e9, .passes/pass0.md, 441 words (budget 2.5x ≈ 1100).
 Intent extras (tickets.toml entry 7, not copied into the ticket; fixer adds them to Description in pass 1): interface, tests, owns, consumers.
@@ -40,3 +40,37 @@ Fixer: all 18 applied; added the drag-layer classes.ts class to the Interface ex
 - none
 ### Dropped
 - none (duplicates merged)
+
+## Pass 2 — 2026-10-09
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 8, minor 9, decision-needed 0  |  Dropped in triage: 0 (+ ~12 duplicates merged)
+Words (docs): 1506 (3.41 x pass 0)  |  Snapshot: .passes/pass2.md, fix diff .passes/pass2.fix.diff
+Fixer: all 16 applied; minors 11, 14, 15 a few words over neutral; no commands added.
+### Applied
+- [major] Description lift — "as epic 4's `lift`" points at `.lifted`/`SELECTION_LIFT_PX` (8 px, controller.ts:454); a tile's lift is F2's 4 px `.selected` CSS → fixer item 1
+- [major] Drag layer — "every drag end removes both" would unclip a flying-back face; `clearDrag` removes them (at the fly-back's settle) → 2
+- [major] Geometry — `innerWidth` is the tray inner width (Board.svelte:61 `metrics.board − 16`), not `window.innerWidth`; controller source unnamed; tileCount includes mirrors → 3
+- [major] AC — `elementFromPoint` can never return a face (`.face { pointer-events: none }`, Card.svelte:174) → computed-style checks → 4
+- [major] Parting — parted faces returning on a no-edit release at 0.5 × base contradicts EXPERIENCE.md Motion F17 line (release card moves 1 × base) → 5
+- [major] AC — tray and strip drag-reorder name no drag and no expected order (equality passes with no dispatch) → 6
+- [major] AC — k = 2 block case names no tile; tile 0 gives no parting and no edit → tile 42, [0, 42] → 7
+- [major] Parting — superseded running parting animation: gate leak / fly-back cancel throw → 8
+- [minor] Release bullet scoped to an edit → 9
+- [minor] F4 clip bullet: share of the face's area → 10
+- [minor] Notes third row: clipped at rest, shown over the control row while a drag lifts the clip → 11
+- [minor] `cancel({ byBack: true })` counts as a platform cancel → 12
+- [minor] Parting "every other movable face" → 13
+- [minor] hidePage case asserts the settle (nothing selected, no residue) → 14
+- [minor] under-25 % release names session-place → 15
+- [minor] Consumers "list in the ticket review" (epic file L1) → 16
+### Default applied (technical)
+- Lift — measured at drag start (rest slot top minus the face's measured top: 4 px when selected, else 0), no new constant; fly-back non-restoring → default taken
+- Clip/layer removal — in `clearDrag` → default taken
+- Tray sizing — controller deps getter for `w` and the tray inner width, Board's `metrics.board − 16` expression in one place → default taken
+- Drag-layer proof — computed z-index 5 and shadow on the dragged face, `.tiles` overflow visible, face over the action bar (epic 4 drag-interruptions.spec.ts pattern) → default taken
+- Release return — parted faces return with the dragged face's `flyBack` (1 × base, its reduced-motion treatment); `duration('parting')` only while held → default taken (per EXPERIENCE.md Motion)
+- Reorder fixtures — session-composing tile 0 to gap 0 → [0, 42]; session-place tile 28 to gap 0 → [28, 42, 0] → default taken
+- Superseded parting — one gate count for the parting set while any runs; a superseded face animation is read, cancelled without settling and replaced; Vitest: two gap changes within one parting duration then release → gate idle → default taken
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none; unapplied (over budget, adds words): re-measure `origin` per move for a desktop wheel scroll mid-drag (adversarial minor) → for the plan
