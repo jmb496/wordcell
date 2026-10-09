@@ -1,6 +1,6 @@
 # Review log — story-insertionindex-gap-rects-and-parting-offsets.md (ticket 5.6)
 
-State: pass 4: done
+State: pass 5: done (converged)
 
 Mode: docs, thorough, max 7. Pass 0: HEAD 88f7549, .passes/pass0.md, 376 words (budget 2.5x ≈ 940).
 Intent extras (tickets.toml entry 6, not copied into the ticket; fixer adds them to Description in pass 1): interface, tests, owns, consumers.
@@ -105,3 +105,27 @@ Words (docs): 1035 (2.75 x pass 0)  |  Snapshot: .passes/pass4.md  |  Fixer: all
 - the segmentEnds at-rest case could be named AD-11 (layout/tray.ts)
 ### Dropped
 - none
+
+## Pass 5 — 2026-10-09
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 0, minor 13 (after merging duplicates: 11), decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1035 (2.75 x pass 0), no fix  |  Snapshot: .passes/pass4.md (unchanged)
+### Applied
+- none (converged)
+### Decision needed (functionality / UX / gameplay)
+- none
+
+## Result — converged after 5 passes
+Majors per pass: 9, 5, 3, 3, 0. Decision-needed: none. Words 376 → 1035 (over the ~940 budget; growth came from majors).
+Unapplied minors (for the build plan), pass 5:
+- insertionIndex: tie between one index's two row-break rects → the earlier rect in `gapRects` order (end of row r)
+- insertionIndex returns the `gapRects` element itself (same reference)
+- block-side insertionIndex cases fed real slotRects/gapRects output, not hand-built rects
+- parting: one drag-right and one drag-left case each crossing a row break (crossing tile → adjacent row's last/first slot)
+- Place strip: one gapRects, one reorder and one partingOffsets case with a D card in the run
+- "Covers every rendered row" → "every rendered row the run occupies" (k ≥ perRow leaves mirror-only rows)
+- gap rect top-aligned with its row's slots
+- free-letter shift = tray positions from first + gap on
+- caller builds `mirrorBySlot` from partingOffsets slot indices (a mapping, not a re-derivation)
+- origin and the dragged face rect in the same (viewport) frame
+- interim before CAP-9: a clipped third row's gap rects can win out of sight (known interim)
+Earlier unapplied minors: see the pass 3 and pass 4 "Unapplied minors" lists (perRow arg to gapRects, tileHeight in trayLayout tests, parameter/return types, rendered-rows meaning, mid-drag segment class mechanism for entry 8, reorder/run out-of-range throws, far-end expectation, reorder gaps j/j+1 all-zero parting, origin slot collision, AD-11 naming for segmentEnds at rest).
