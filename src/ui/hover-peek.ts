@@ -1,5 +1,6 @@
-// Entry 12 (SPEC CAP-9, F19, F27; DESIGN.md View sheet): the desktop hover peek's pure helpers.
-// HoverPeek.svelte calls them; they read no DOM.
+// The desktop hover peek's pure helpers (epic 4 SPEC CAP-9, epic 4 SPEC F19, epic 4 SPEC F27;
+// DESIGN.md View sheet): HoverPeek.svelte calls them; they read no DOM. The timer that opens the
+// peek is gestures/hover-peek-timer.ts.
 
 /** F19: the hover peek shows at most the top 14 cards, 7 per row. */
 export const HOVER_PEEK_MAX = 14;

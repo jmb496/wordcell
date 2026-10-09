@@ -29,7 +29,7 @@ function pointerRoot(node: HTMLElement): { destroy: () => void } {
 
 const board = $derived(game.view);
 
-// Entry 7 (SPEC CAP-6): one reaction recomputes the desktop hover classes at the last pointer
+// Epic 4 SPEC CAP-6: one reaction recomputes the desktop hover classes at the last pointer
 // point whenever the selection or the GameView changes (tap, drop, Undo, Redo, Reload, back).
 $effect(() => {
   void overlays.selection;

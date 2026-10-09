@@ -3,25 +3,25 @@
 import type { CellView, Face, GameView } from '../engine/index';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Card from './Card.svelte';
+import { cellIn } from './gestures/lookup';
 import { overlays } from './overlays.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { text } from './text';
 
-// Entry 11 (SPEC CAP-9, R-65, F14, F27; DESIGN.md WordCell view, Elevation & Depth): the long-press
-// peek and the sticky view render this one sheet over a full-viewport scrim, from the overlays
-// store (`peek ?? viewCell`); `peekToSticky` changes only `data-mode`. The sheet lists
-// `CellView.cards` bottom first, the top last and tagged `top`, as `view` mirrors (AD-14). The
-// controller reads `[data-view-scroll]` at a long-press release (overflow → sticky) and classifies
-// presses on `[data-view-scrim]` and `[data-view-sheet]` itself: neither carries a click handler.
-// No transition (SPEC Non-goals), so the release-time overflow read sees the settled sheet.
+// The WordCell view (epic 4 SPEC CAP-9, R-65, epic 4 SPEC F14, epic 4 SPEC F27; DESIGN.md WordCell
+// view, Elevation & Depth): the long-press peek and the sticky view render this one sheet over a
+// full-viewport scrim, from the overlays store (`peek ?? viewCell`); `peekToSticky` changes only
+// `data-mode`. The sheet lists `CellView.cards` bottom first, the top last and tagged `top`, as
+// `view` mirrors (AD-14). The controller reads `[data-view-scroll]` at a long-press release
+// (overflow → sticky) and classifies presses on `[data-view-scrim]` and `[data-view-sheet]` itself:
+// neither carries a click handler. No transition (epic 4 SPEC Non-goals), so the release-time
+// overflow read sees the settled sheet.
 let { view }: { view: GameView } = $props();
 
 const open = $derived(overlays.peek ?? overlays.viewCell);
 
 function cellOf(n: number): CellView {
-  const cell = view.cells.find((c) => c.cell === n);
-  if (cell === undefined) throw new Error(`AD-13 WordCell view of unknown cell ${n}`);
-  return cell;
+  return cellIn(view.cells, n, `AD-13 WordCell view of unknown cell ${n}`);
 }
 </script>
 

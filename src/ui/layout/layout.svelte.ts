@@ -56,9 +56,14 @@ export type Layout = {
   readonly heights: Record<BandId, number>;
   readonly bandOrder: readonly Unit[];
   readonly bannerShown: boolean;
-  /** Entry 12 (CAP-9): live `(hover: hover) and (pointer: fine)`, set at the media `change`. */
+  /**
+   * Epic 4 SPEC CAP-9, epic 4 SPEC F19: live `(hover: hover) and (pointer: fine)`, set at the media
+   * `change`.
+   */
   readonly hoverFine: boolean;
-  /** Entry 12: calls `callback` after every hoverFine media `change`; returns the unwatch. */
+  /**
+   * Epic 4 SPEC F19: calls `callback` after every hoverFine media `change`; returns the unwatch.
+   */
   watchHoverFine(callback: () => void): () => void;
 };
 
@@ -133,7 +138,8 @@ export function createLayout<E extends ProbeElement>(gate: Gate, deps: LayoutDep
   let wide = $state(first.wide);
   let heights = $state.raw(result0.heights);
   let bannerShown = $state(banner0);
-  // Entry 12: follows the media query at once (the hover peek's watcher), unlike w (gate idle task).
+  // Epic 4 SPEC F19: follows the media query at once (the hover peek's watcher), unlike w (gate
+  // idle task).
   let hoverFine = $state(hoverFine0);
   const hoverFineWatchers = new Set<() => void>();
 

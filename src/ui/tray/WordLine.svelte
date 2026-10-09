@@ -4,7 +4,7 @@ import type { CardId, Face } from '../../engine/index';
 import { fitSize } from '../layout/fit';
 import { text } from '../text';
 
-// Epic 5 entry 1 word line (DESIGN.md Typography word line, Tray band, Invalid-word message):
+// Word line (epic 5 SPEC CAP-1; DESIGN.md Typography word line, Tray band, Invalid-word message):
 // in Composing the R-30 word from `draft.wordCards` through `faces` (AD-3: never tray order),
 // uppercase, letter-spaced serif, D letters underlined in destination blue, a `QU` card one unit;
 // while `rejectedWord` is set the R-38 invalid line replaces it. Fit: the line's font size is the

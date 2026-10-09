@@ -9,29 +9,30 @@ import type { TailSelection } from './overlays.svelte';
 import { text } from './text';
 
 // AD-12 column hit rect: the whole slot, a grid item spanning its unit's rows (subgrid), with the
-// fanned cards in the `cardsRow` track and the foot pad in the `footRow` track (build-notes CAP-1,
-// CAP-4). The placeholder is always rendered in the top slot and shown only when the column is
-// empty, or in Composing under the S ghosts when the emptied source is the destination (DESIGN.md
-// Column slot, Card ghost). Ghosts and destination style come from membership in `draft.source` /
-// `draft.destination` (AD-3, AD-14): S slots are ghosts in Composing and Place, D slots are live
-// in destination style in Composing and ghosts in Place.
-// Entry 7 (SPEC CAP-6, DESIGN.md Column slot, Card states, Elevation & Depth): a tap-selected tail
-// lifts its faces (F26) inside one teal outline; the source foot shows `Here` on surface-raised,
-// the other feet the wash and dashed border, and every foot is `touch-action: none` (AD-11 row).
-// Desktop hover classes are toggled on the column element by the controller (never Svelte state);
-// this component's CSS maps them to the right child.
-// Entry 8 (SPEC CAP-7, DESIGN.md Card states dragging / drop target / ghost, Layer order): the whole
-// slot registers as a drop target; during a drag the controller adds `wc-drag-ghost` to the tail's
-// slot wrappers (a dashed ghost drawn by `::before`, the face keeping its fill), `wc-drag-layer` to
-// their faces (above the bars, the lift and the hover peek, below the scrim) and `wc-drag-target` to
-// the target's bottom card, placeholder (revealed) or the card above a partial tail, in every media
-// context. Svelte toggles its own class directives with `classList`, so these survive re-renders.
-// Entry 9 (SPEC CAP-4, CAP-7, F12, F24): while a drag replaces a selection the controller puts
-// `wc-selection-suppressed` on App's `<main>`; under it the old selection's lift, outline, `Here`
-// and every foot's source/target paint are cancelled (visual properties only: hit rects and the
-// foot row's `touch-action` stay, AD-11, AD-12); dragged faces are never affected.
-// Epic 5 entry 1 (A9 4.3-m3, AD-14): cards are keyed by id plus mirror kind, so a live ↔ ghost
-// switch remounts the node instead of moving `data-card-id` onto a mirror.
+// fanned cards in the `cardsRow` track and the foot pad in the `footRow` track
+// (epic 4 build-notes CAP-1, epic 4 build-notes CAP-4). The placeholder is always rendered in the
+// top slot and shown only when the column is empty, or in Composing under the S ghosts when the
+// emptied source is the destination (DESIGN.md Column slot, Card ghost). Ghosts and destination
+// style come from membership in `draft.source` / `draft.destination` (AD-3, AD-14): S slots are
+// ghosts in Composing and Place, D slots are live in destination style in Composing and ghosts in
+// Place. Cards are keyed by id plus mirror kind, so a live ↔ ghost switch remounts the node instead
+// of moving `data-card-id` onto a mirror (epic 5 SPEC CAP-1, A9 4.3-m3, AD-14).
+// Selection (epic 4 SPEC CAP-6; DESIGN.md Column slot, Card states, Elevation & Depth): a
+// tap-selected tail lifts its faces (epic 4 SPEC F26) inside one teal outline; the source foot
+// shows `Here` on surface-raised, the other feet the wash and dashed border, and every foot is
+// `touch-action: none` (AD-11 row). Desktop hover classes are toggled on the column element by the
+// controller (never Svelte state); this component's CSS maps them to the right child.
+// Drag (epic 4 SPEC CAP-7; DESIGN.md Card states dragging / drop target / ghost, Layer order): the
+// whole slot registers as a drop target; during a drag the controller adds `wc-drag-ghost` to the
+// tail's slot wrappers (a dashed ghost drawn by `::before`, the face keeping its fill),
+// `wc-drag-layer` to their faces (above the bars, the lift and the hover peek, below the scrim) and
+// `wc-drag-target` to the target's bottom card, placeholder (revealed) or the card above a partial
+// tail, in every media context. Svelte toggles its own class directives with `classList`, so these
+// survive re-renders. While a drag replaces a selection (epic 4 SPEC CAP-4, epic 4 SPEC CAP-7,
+// epic 4 SPEC F12, epic 4 SPEC F24) the controller puts `wc-selection-suppressed` on App's
+// `<main>`; under it the old selection's lift, outline, `Here` and every foot's source/target paint
+// are cancelled (visual properties only: hit rects and the foot row's `touch-action` stay, AD-11,
+// AD-12); dragged faces are never affected.
 let {
   column,
   faces,
@@ -125,8 +126,11 @@ const liftStart = $derived(column.cards.length - count);
 </div>
 
 <style>
+  /* The controller's class names and `--wc-hover-*` properties below are literals of
+     gestures/classes.ts (CSS cannot import it): change both together. */
   /* DESIGN.md Scrolling: the column background and its foot pad pan (cards set none); the hit
-     rect is unchanged (AD-12). The foot row is none while a tail is selected (entry 7). */
+     rect is unchanged (AD-12). The foot row is none while a tail is selected (epic 4 SPEC
+     CAP-6). */
   .column {
     grid-row: 1 / -1; display: grid; grid-template-rows: subgrid; min-width: 0;
     touch-action: var(--wc-pan);
@@ -164,9 +168,9 @@ const liftStart = $derived(column.cards.length - count);
   }
 
   /* DESIGN.md Card states, hover (desktop only): classes the controller sets on the column. The
-     tail outline runs from `--wc-hover-from` to the bottom card, following any lift. Entry 10 k
-     preview (SPEC CAP-8): `--wc-hover-len` (the remainder length) ends it at the remainder's bottom
-     card, never over a self-drop's S ghosts. */
+     tail outline runs from `--wc-hover-from` to the bottom card, following any lift. The k
+     preview (epic 4 SPEC CAP-8): `--wc-hover-len` (the remainder length) ends it at the
+     remainder's bottom card, never over a self-drop's S ghosts. */
   .hover-outline {
     display: none; position: absolute; left: 2px; width: var(--wc-w); z-index: 3;
     pointer-events: none; box-sizing: border-box; border-radius: 6px;
@@ -194,17 +198,18 @@ const liftStart = $derived(column.cards.length - count);
     .column:global(.wc-drop-self) .foot.whole { outline-offset: -3px; }
   }
 
-  /* DESIGN.md Card states, dragging and ghost (entry 8): the old slot draws a ghost the size and
-     inset of Card's ghost face; the dragged face keeps its fill, raised to the drag layer (above
-     the sticky bars 2, the lift 3 and the hover peek's reserved 4, below any scrim) with the lift
-     shadow. Every media context. */
+  /* DESIGN.md Card states, dragging and ghost (epic 4 SPEC CAP-7): the old slot draws a ghost the
+     size and inset of Card's ghost face; the dragged face keeps its fill, raised to the drag layer
+     (above the sticky bars 2, the lift 3 and the hover peek's reserved 4, below any scrim) with the
+     lift shadow. Every media context. */
   .cards :global(.card.wc-drag-ghost) { position: relative; }
   .cards :global(.card.wc-drag-ghost)::before {
     content: ''; position: absolute; top: 0; left: 2px; box-sizing: border-box;
     width: var(--wc-w); height: var(--wc-H); border: 1px dashed var(--wc-outline);
     border-radius: 6px; pointer-events: none;
   }
-  /* Entry 9: a selection being replaced by a drag shows no lift, outline, `Here` or foot state. */
+  /* Epic 4 SPEC F24: a selection being replaced by a drag shows no lift, outline, `Here` or foot
+     state. */
   :global(main.wc-selection-suppressed) .cards :global(.card.lifted) > :global(.face:not(.wc-drag-layer)) {
     transform: none; box-shadow: none; z-index: auto;
   }

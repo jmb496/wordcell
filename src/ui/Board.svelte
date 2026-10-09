@@ -24,14 +24,15 @@ import WordCellRow from './WordCellRow.svelte';
 import WordCellView from './WordCellView.svelte';
 
 // AD-11: the Board iterates the live layout's band order and lays every band out from its getters
-// (w, metrics, wide, heights, bandOrder, the gate-latched bannerShown; build-notes CAP-1, CAP-3,
-// F20). The bars and the banner are content-sized; every other band takes its `bands()` height.
-// DESIGN.md Scrolling: `--wc-pan` is the non-card regions' touch-action (`pan-x pan-y` when wide);
-// the Board itself and its units set no touch-action (they compute `auto`).
-// Entry 11 (SPEC CAP-9): the `--wc-*` properties sit on `.board-root`, which holds `.board` (bars
-// and banner inside) then the WordCell view (sheet and scrim), inside the controller's attach
-// root; while the sticky view is open `.board` alone is `inert`, never during a held peek.
-// Entry 12 (F19): `.board-root` is the hover peek's containing block (`position: relative`).
+// (w, metrics, wide, heights, bandOrder, the gate-latched bannerShown; epic 4 build-notes CAP-1,
+// epic 4 build-notes CAP-3, epic 4 build-notes F20). The bars and the banner are content-sized;
+// every other band takes its `bands()` height. DESIGN.md Scrolling: `--wc-pan` is the non-card
+// regions' touch-action (`pan-x pan-y` when wide); the Board itself and its units set no
+// touch-action (they compute `auto`). The `--wc-*` properties sit on `.board-root` (epic 4 SPEC
+// CAP-9), which holds `.board` (bars and banner inside) then the WordCell view (sheet and scrim),
+// inside the controller's attach root; while the sticky view is open `.board` alone is `inert`,
+// never during a held peek. `.board-root` is the hover peek's containing block (`position:
+// relative`, epic 4 SPEC F19).
 let { view, layout }: { view: GameView; layout: Layout } = $props();
 
 const w = $derived(layout.w);

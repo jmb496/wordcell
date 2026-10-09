@@ -3,6 +3,7 @@
 import type { CellView, Face, GameView } from '../engine/index';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Card from './Card.svelte';
+import { cellIn } from './gestures/lookup';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { hoverPeekCards, hoverPeekWidth, placeHoverPeek } from './hover-peek';
 import type { Layout } from './layout/layout.svelte';
@@ -10,25 +11,23 @@ import { overlays } from './overlays.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { text } from './text';
 
-// Entry 12 (SPEC CAP-9, F19, F27; DESIGN.md View sheet, Layer order): the desktop hover peek,
-// rendered while `overlays.hoverPeek` is set. The view sheet's surface with no title, no scrim
-// and no transition; the top 14 of `CellView.cards` as `view` mirrors (AD-14), oldest first, the
-// top tagged; the older-cards line above them only above 14 cards. `aria-hidden` (the sticky view
-// is the accessible path, R-65) and `pointer-events: none` (it takes no clicks). Positioned in
-// `.board-root` (its containing block): x is board-column-relative (`placeHoverPeek`) plus the
-// column's left edge in CSS (`.board` centres its column with `safe center`); y comes from an
-// effect that measures the rendered root, the cell's label and the cell and re-places on every
+// The desktop hover peek (epic 4 SPEC CAP-9, epic 4 SPEC F19, epic 4 SPEC F27; DESIGN.md View
+// sheet, Layer order), rendered while `overlays.hoverPeek` is set. The view sheet's surface with no
+// title, no scrim and no transition; the top 14 of `CellView.cards` as `view` mirrors (AD-14),
+// oldest first, the top tagged; the older-cards line above them only above 14 cards. `aria-hidden`
+// (the sticky view is the accessible path, R-65) and `pointer-events: none` (it takes no clicks).
+// Positioned in `.board-root` (its containing block): x is board-column-relative (`placeHoverPeek`)
+// plus the column's left edge in CSS (`.board` centres its column with `safe center`); y comes from
+// an effect that measures the rendered root, the cell's label and the cell and re-places on every
 // layout change while open. The controller hides it with `wc-hover-peek-hidden` during a pick-up
-// drag (DOM only, AD-12).
+// drag (DOM only, AD-12; gestures/hover-peek-timer.ts).
 let { view, layout }: { view: GameView; layout: Layout } = $props();
 
 let root: HTMLElement | null = $state(null);
 let placed: { x: number; y: number } | null = $state(null);
 
 function cellOf(n: number): CellView {
-  const cell = view.cells.find((c) => c.cell === n);
-  if (cell === undefined) throw new Error(`AD-13 hover peek of unknown cell ${n}`);
-  return cell;
+  return cellIn(view.cells, n, `AD-13 hover peek of unknown cell ${n}`);
 }
 
 function rectIn(base: Element, selector: string): DOMRect {
@@ -95,6 +94,7 @@ $effect(() => {
 {/if}
 
 <style>
+  /* `wc-hover-peek-hidden` below is a literal of gestures/classes.ts (CSS cannot import it). */
   /* DESIGN.md layer order: above the sticky bars (z 2) and lifted faces (z 3), below the drag
      layer (z 5). */
   .hover-peek {

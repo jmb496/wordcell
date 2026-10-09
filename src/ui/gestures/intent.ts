@@ -1,15 +1,17 @@
-// AD-12 tap and hover intent (SPEC CAP-6, R-14 tap half, Q-18, F25, F31), pure: the controller
-// resolves a `Hit` at pointerdown and asks, at a released tap or a mouse hover, what it means for
-// the `GameView` (AD-3) and the tail selection (AD-13). Column membership and the card index come
-// from the view, never the DOM. `drop` implies deselect-first in the controller.
-// Entry 10 (SPEC CAP-8, R-31, R-39): in Composing only the destination column acts, keyed on its
-// `kIfTapped` (a number → `tapDestinationCard`, `null` or absent → nothing); every other column
-// part, S ghosts included (they resolve as `space`), is inert, with or without a selection.
-// Entry 11 (SPEC CAP-9, R-65, R-75, F14): with nothing selected a non-empty WordCell tap opens the
-// sticky view in Idle and Game over (`openView`), nothing in Composing and Place; the view sheet
-// and its scrim are `Hit`s the controller handles itself, never `tapAction`'s.
+// AD-12 tap and hover intent (epic 4 SPEC CAP-6, R-14 tap half, Q-18, epic 4 SPEC F25, epic 4 SPEC
+// F31), pure: the controller resolves a `Hit` at pointerdown and asks, at a released tap or a mouse
+// hover, what it means for the `GameView` (AD-3) and the tail selection (AD-13). Column membership
+// and the card index come from the view, never the DOM; a missing column or cell throws through
+// lookup.ts. `drop` implies deselect-first in the controller. In Composing (epic 4 SPEC CAP-8,
+// R-31, R-39) only the destination column acts, keyed on its `kIfTapped` (a number →
+// `tapDestinationCard`, `null` or absent → nothing); every other column part, S ghosts included
+// (they resolve as `space`), is inert, with or without a selection. With nothing selected (epic 4
+// SPEC CAP-9, R-65, R-75, epic 4 SPEC F14) a non-empty WordCell tap opens the sticky view in Idle
+// and Game over (`openView`), nothing in Composing and Place; the view sheet and its scrim are
+// `Hit`s the controller handles itself, never `tapAction`'s.
 import type { CardId, ColumnView, GameView } from '../../engine/index';
 import type { OverlayId, TailSelection } from '../overlays.svelte';
+import { cellIn, columnIn } from './lookup';
 
 export type Hit =
   /** A live column card (`data-place="column"`) in the `[data-column]` it sits in. */
@@ -18,9 +20,9 @@ export type Hit =
   | { readonly kind: 'space'; readonly column: number; readonly foot: boolean }
   /** Any part of a `[data-wordcell]`, cell 3–10. */
   | { readonly kind: 'wordcell'; readonly cell: number }
-  /** The WordCell view sheet (entry 11; handled by the controller before `tapAction`). */
+  /** The WordCell view sheet (R-65; handled by the controller before `tapAction`). */
   | { readonly kind: 'sheet' }
-  /** The WordCell view's scrim (entry 11; handled by the controller before `tapAction`). */
+  /** The WordCell view's scrim (R-65; handled by the controller before `tapAction`). */
   | { readonly kind: 'scrim' }
   /** A tray or strip tile or a tray mirror (no selection change of its own, F23; outside for F25). */
   | { readonly kind: 'tile' }
@@ -53,7 +55,7 @@ export type HoverAction =
   /** The drop-target highlight on the source column (partial: remainder top; whole: Here, F31). */
   | { readonly column: number; readonly kind: 'dropSelf' }
   /**
-   * Entry 10 k preview: the would-be D from card index `from` down to the remainder's bottom card
+   * R-31 k preview: the would-be D from card index `from` down to the remainder's bottom card
    * (index `length` − 1; `length` = `kIfTapped.size`, never the S ghosts of a self-drop).
    */
   | { readonly column: number; readonly kind: 'k'; readonly from: number; readonly length: number };
@@ -61,11 +63,7 @@ export type HoverAction =
 const NONE: TapAction = { kind: 'none' };
 
 function columnOf(view: GameView, column: number): ColumnView {
-  const entry = view.columns[column - 1];
-  if (entry === undefined || entry.column !== column) {
-    throw new Error(`AD-12 column ${column} is not in the GameView`);
-  }
-  return entry;
+  return columnIn(view.columns, column, `AD-12 column ${column} is not in the GameView`);
 }
 
 // The tail count from the pressed card to the bottom (R-10).
@@ -79,7 +77,7 @@ function composing(view: GameView): boolean {
   return view.status === 'playing' && view.phase === 'composing';
 }
 
-// Entry 10 (R-31): a Composing destination-card hit with a numeric `kIfTapped`, else null.
+// R-31: a Composing destination-card hit with a numeric `kIfTapped`, else null.
 function destinationHit(
   hit: Hit,
   view: GameView,
@@ -91,7 +89,7 @@ function destinationHit(
   return { column: hit.column, card: hit.card, value, size: kIfTapped.size };
 }
 
-/** Entry 10 (R-31): the card a Composing destination-column press sets k from, else null. */
+/** R-31: the card a Composing destination-column press sets k from, else null. */
 export function destinationTap(hit: Hit, view: GameView): CardId | null {
   return destinationHit(hit, view)?.card ?? null;
 }
@@ -100,8 +98,7 @@ export function destinationTap(hit: Hit, view: GameView): CardId | null {
 // the cell holds a card (AD-3: emptiness from the GameView).
 function viewTap(n: number, view: GameView): TapAction {
   if (view.status === 'playing' && view.phase !== 'idle') return NONE;
-  const cell = view.cells.find((c) => c.cell === n);
-  if (cell === undefined) throw new Error(`AD-12 WordCell ${n} is not in the GameView`);
+  const cell = cellIn(view.cells, n, `AD-12 WordCell ${n} is not in the GameView`);
   return cell.cards.length === 0 ? NONE : { kind: 'openView', cell: n };
 }
 

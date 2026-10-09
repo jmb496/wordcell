@@ -9,11 +9,11 @@ import { text } from './text';
 // one tile pitch (tileWidth + 4) wide and card (H) or compact (44 px) tall (DESIGN.md Tile).
 // AD-14: a live card carries data-card-id, data-testid and data-place; a `mirror` (ghost, used
 // WordCell face, D-block tray copy, WordCell view copy) carries only data-mirror-of.
-// Entry 11 (DESIGN.md WordCell view, AD-14): a `view` mirror (place `view`) is a full-height card
-// in the sheet's flow, `pan-y` so a swipe scrolls the sheet, never hatched or dimmed (a used
-// cell's top is a normal card there); `topTag` adds the `top` pill.
-// Epic 5 entry 2 (DESIGN.md Tile, Placement strip): tile corner marks by mode (card, compact) and
-// place (`tray`, `strip`): the origin `tag`, the strip `position` mark (`bottom`/`top` + `★` in the
+// A `view` mirror (place `view`, epic 4 SPEC CAP-9, R-65; DESIGN.md WordCell view, AD-14) is a
+// full-height card in the sheet's flow, `pan-y` so a swipe scrolls the sheet, never hatched or
+// dimmed (a used cell's top is a normal card there); `topTag` adds the `top` pill. Tile corner
+// marks (epic 5 SPEC CAP-1; DESIGN.md Tile, Placement strip) go by mode (card, compact) and place
+// (`tray`, `strip`): the origin `tag`, the strip `position` mark (`bottom`/`top` + `★` in the
 // card-mode bottom band; `▼`/`★` top-left on compact) and the `↩` `returnSlot` (Composing only).
 let {
   id,
@@ -44,17 +44,23 @@ let {
   tile?: { mode: 'card' | 'compact'; width: number };
   /** A `block` mirror's place in its row segment: outline ends and the lock at the start. */
   segment?: { start: boolean; end: boolean };
-  /** Entry 7: in the tap-selected tail; only the face rises (F26). */
+  /** In the tap-selected tail; only the face rises (epic 4 SPEC F26). */
   lifted?: boolean;
-  /** Entry 7: the source column's lowest card outside the selected tail (R-21 drop-self hover). */
+  /** The source column's lowest card outside the selected tail (R-21 drop-self hover). */
   remainderTop?: boolean;
-  /** Entry 11: the view's top card, tagged `top` (DESIGN.md WordCell view). */
+  /** R-65: the view's top card, tagged `top` (DESIGN.md WordCell view). */
   topTag?: boolean;
-  /** Epic 5 entry 1: a free-letter tile's origin WordCell (corner per mode and place, DESIGN.md Tile). */
+  /**
+   * Epic 5 SPEC CAP-1: a free-letter tile's origin WordCell (corner per mode and place, DESIGN.md
+   * Tile).
+   */
   tag?: number;
-  /** Epic 5 entry 2: a strip tile's position mark, first (`bottom`) or last (`top`, R-50). */
+  /** Epic 5 SPEC CAP-1: a strip tile's position mark, first (`bottom`) or last (`top`, R-50). */
   position?: 'bottom' | 'top';
-  /** Epic 5 entry 2: the `↩` return glyph of a selected free-letter tile (Composing; set by entry 5). */
+  /**
+   * Epic 5 SPEC CAP-1: the `↩` return glyph of a selected free-letter tile (Composing; epic 5 SPEC
+   * CAP-4).
+   */
   returnSlot?: boolean;
 } = $props();
 
@@ -142,7 +148,7 @@ const inView = $derived.by(() => {
   .card.full { height: var(--wc-H); }
   .card.cell { position: absolute; top: 0; left: 0; }
   .card.hidden { visibility: hidden; }
-  /* Entry 11: a WordCell view mirror, in the sheet's flow; the sheet pans under it. */
+  /* R-65: a WordCell view mirror, in the sheet's flow; the sheet pans under it. */
   .card.view { position: relative; touch-action: pan-y; }
   /* DESIGN.md WordCell view `top` tag: an 11 px pill at the face's foot. */
   .top-tag {

@@ -1,99 +1,100 @@
-// AD-12 pointer controller core (SPEC CAP-4, build-notes CAP-4): one active press per root, fed to
-// the pure `classify`. A button-0 pointerdown with no active press, not on an enabled button (F25),
-// enters the gate and resolves from `elementFromPoint` at the press point, never `event.target`
-// (F13): a card by `data-place` (F23), a tray-band mirror as a tile, a WordCell part by
+// AD-12 pointer controller (epic 4 SPEC CAP-4, epic 4 build-notes CAP-4): the press machine, one
+// active press per root, fed to the pure `classify`. A button-0 pointerdown with no active press,
+// not on an enabled button (epic 4 SPEC F25), enters the gate and resolves a `PressTarget` and a
+// `Hit` (intent.ts) from `elementFromPoint` at the press point, never `event.target` (epic 4 SPEC
+// F13): a card by `data-place` (epic 4 SPEC F23), a tray-band mirror as a tile, a WordCell part by
 // `[data-wordcell]`, a non-card column part by `[data-column]`/`[data-foot]` (uncaptured with
-// nothing selected, so a pan cancels it), anything else uncaptured. Every other pointerId is
-// untouched (no preventDefault or stopPropagation). One `end` path for pointerup, pointercancel,
+// nothing selected, so a pan cancels it; with a tail selected captured on its `[data-foot]` or
+// `[data-column]`), anything else uncaptured. Every other pointerId is untouched (no
+// preventDefault or stopPropagation). A same-id pointerdown, of any button (epic 4 SPEC CAP-4),
+// ends the lost press before the button check. One `end` path for pointerup, pointercancel,
 // lostpointercapture (captured element only), cancel(), a same-id pointerdown and detach: timer
 // cleared, press cleared before capture is released, a peek closed
 // (cancel/pointercancel/lostpointercapture, AD-13), then one `gate.leave()`. `contextmenu` is
-// preventDefaulted for a press it captured (SPEC CAP-4, rule-coverage AD-11) and, after
+// preventDefaulted for a press it captured (epic 4 SPEC CAP-4, rule-coverage AD-11) and, after
 // cancel()/lostpointercapture of one, until that pointerId's pointerup/pointercancel, the next
 // captured press or detach.
-// Entry 7 (SPEC CAP-6, F25, F26, F31): the pointerdown also resolves a `Hit` (intent.ts); with a
-// tail selected a non-card column press is captured on its `[data-foot]` or `[data-column]`. Only
-// `classify`'s final `tap` acts, after `end()`: select, deselect, or deselect then one `drop`. A
-// `click` acts only for non-pointer activation (`detail === 0`) resolving outside (F25). Mouse
-// hover (`pointerType === 'mouse'`) toggles `wc-hover-tail` (+ `--wc-hover-from`), `wc-grab`,
-// `wc-drop` and `wc-drop-self` on at most one `[data-column]`, recomputed at the last point by
-// `pointerover` and `refreshHover()` (App's reaction to the selection and the GameView).
-// Entry 8 (SPEC CAP-7, AD-12, F12, F13, F26): a column-card press whose column `canPickUp` turns
-// into a drag at the threshold-crossing move (the first drag move): the tail (pressed card to the
-// bottom, R-10) gets `wc-drag-ghost` on its slot wrappers and `wc-drag-layer` on its faces; each
-// drag move writes `translate(pointer − press point)` (F32: minus a selected face's lift) on the
-// faces, measures the grabbed face against every registered drop target (`drop-target.ts`) with
-// `pickTarget` and moves
-// `wc-drag-target` to the highlighted column's target element, all by DOM only (no Svelte state,
-// store call or dispatch before release). Release drops on the last highlight (deselect first),
-// else flies back; pointercancel, lostpointercapture and cancel({ byBack: true }) fly back from the
-// last transform; any other end snaps back at once. The fly-back (WAAPI over
-// `duration('flyBack')`, a fade under reduced motion) is gate-counted and settles on its faces'
-// `onfinish`, or at once from cancel(), a new press or a new drag. Hover classes are cleared during
-// a drag or fly-back and recomputed after.
-// Entry 9 (SPEC CAP-4, CAP-7, F12, F13, F24, F28; AD-9, AD-13): a pick-up drag that starts with a
-// selection open is *replacing*: at its threshold crossing `wc-selection-suppressed` goes on the
-// attach root (CSS hides the old selection's lift, outline, `Here` and foot states; the overlays
-// store is untouched mid-drag). Every end removes it at `end()`: a restoring fly-back
-// (pointercancel, lostpointercapture, cancel({ byBack: true })) at its start under both motion
-// settings (F32, F33), keeping the selection with no nav call (back's `closedByBack` clears it);
-// a release with no highlight and a plain cancel() (before-hide, act(), detach) deselect once, a
-// drop deselects in `pointerup` before its dispatch, and a same-id pointerdown restores. A
-// button-0 pointerdown with no active press during a fly-back enters the gate, finishes the
-// flight, then resolves (F13); the settle's refreshHover() may repaint the mouse hover before the
-// press resolves, and a drag that then starts clears it again.
-// F32 (AD-12): a dragged stack inside the selection (its top wrapper is `lifted`, F33) keeps the
-// selection lift in the drag transform, `translate(pointer − press point − lift)`; any other stack
-// has lift 0. A restoring fly-back (every fly-back but a release with no highlight, which
-// deselects, and a back that closes the tail selection) lands each face on its resting slot
-// (lifted if its wrapper is `lifted`, else unlifted), so no face jumps at the threshold or snaps at
-// settle; the others land on `translate(0px, 0px)`.
-// Entry 10 (SPEC CAP-8, R-31, R-39, CAP-4): in Composing a destination-column card whose
-// `kIfTapped` is a number dispatches `tapDestinationCard` on a tap (`perform`) and, as a drag-as-tap,
-// at the pointerup of a press that crossed the threshold (the card never moves: no pick-up), reading
-// `game.view` at pointerup wherever released; pointercancel, lostpointercapture and cancel() dispatch
-// nothing. A column press that crosses the threshold without a pick-up drag clears the hover at the
-// crossing; `refreshHover` skips while any crossed press is held and repaints at every end of one.
-// The desktop k preview (`hoverAction` kind `k`) is `wc-hover-tail` with `--wc-hover-from` and
-// `--wc-hover-len` (the remainder length, so the outline never covers S ghosts); no `wc-grab`.
-// Entry 11 (SPEC CAP-9, R-65, Q-21, F14, F24; AD-12, AD-13): a non-empty WordCell press whose
-// long-press fires opens the peek (`overlays.openPeek`, no entry); its `pointerup` reads the
-// rendered `[data-view-scroll]` under the root and keeps it as the sticky view
-// (`peekToSticky()`, one entry) iff it overflows, else `closePeek()`; every other end closes it.
-// A non-empty WordCell tap with nothing selected opens the sticky view in Idle and Game over
+// Taps (epic 4 SPEC CAP-6, epic 4 SPEC F25, epic 4 SPEC F26, epic 4 SPEC F31): only `classify`'s
+// final `tap` acts, after `end()`: select, deselect, or deselect then one `drop`. A `click` acts
+// only for non-pointer activation (`detail === 0`) resolving outside or on a tray tile, which
+// `tapAction` treats as outside (epic 4 SPEC F25). Mouse hover (`pointerType === 'mouse'`) toggles
+// `wc-hover-tail` (+ `--wc-hover-from`), `wc-grab`, `wc-drop` and `wc-drop-self` on at most one
+// `[data-column]`, recomputed at the last point by `pointerover` and `refreshHover()` (App's
+// reaction to the selection and the GameView).
+// Drag (epic 4 SPEC CAP-7, AD-12, epic 4 SPEC F12, epic 4 SPEC F13, epic 4 SPEC F26): a column-card
+// press whose column `canPickUp` turns into a drag at the threshold-crossing move (the first drag
+// move): the tail (pressed card to the bottom, R-10) gets `wc-drag-ghost` on its slot wrappers and
+// `wc-drag-layer` on its faces; each drag move writes `translate(pointer − press point)` (epic 4
+// SPEC F32: minus a selected face's lift) on the faces, measures the grabbed face against every
+// registered drop target (`drop-target.ts`), each clipped to the visible band (visible-band.ts,
+// epic 4 SPEC F34), with `pickTarget` and moves `wc-drag-target` to the highlighted column's target
+// element, all by DOM only (no Svelte state, store call or dispatch before release). Release drops
+// on the last highlight (deselect first), else flies back (fly-back.ts); pointercancel,
+// lostpointercapture and cancel({ byBack: true }) fly back from the last transform; any other end
+// snaps back at once. Hover classes are cleared during a drag or fly-back and recomputed after.
+// Replacing drag (epic 4 SPEC CAP-4, epic 4 SPEC CAP-7, epic 4 SPEC F12, epic 4 SPEC F13, epic 4
+// SPEC F24, epic 4 SPEC F28; AD-9, AD-13): a pick-up drag that starts with a selection open is
+// *replacing*: at its threshold crossing `wc-selection-suppressed` goes on the attach root (CSS
+// hides the old selection's lift, outline, `Here` and foot states; the overlays store is untouched
+// mid-drag). Every end removes it at `end()`: a restoring fly-back (pointercancel,
+// lostpointercapture, cancel({ byBack: true })) at its start under both motion settings (epic 4
+// SPEC F32, epic 4 SPEC F33), keeping the selection with no nav call (back's `closedByBack` clears
+// it); a release with no highlight and a plain cancel() (before-hide, act(), detach) deselect once,
+// a drop deselects in `pointerup` before its dispatch, and a same-id pointerdown restores. A
+// button-0 pointerdown with no active press during a fly-back enters the gate, finishes the flight,
+// then resolves (epic 4 SPEC F13); the settle's refreshHover() may repaint the mouse hover before
+// the press resolves, and a drag that then starts clears it again.
+// Lift (epic 4 SPEC F32, epic 4 SPEC F33; AD-12): a dragged stack inside the selection (its top
+// wrapper is `lifted`) keeps the selection lift in the drag transform, `translate(pointer − press
+// point − lift)`; any other stack has lift 0. Every fly-back but a release with no highlight (which
+// deselects) and a back that closes the tail selection is restoring, so no face jumps at the
+// threshold or snaps at settle.
+// Composing (epic 4 SPEC CAP-8, R-31, R-39, epic 4 SPEC CAP-4): a destination-column card whose
+// `kIfTapped` is a number dispatches `tapDestinationCard` on a tap (`perform`) and, as a
+// drag-as-tap, at the pointerup of a press that crossed the threshold (the card never moves: no
+// pick-up), reading `game.view` at pointerup wherever released; pointercancel, lostpointercapture
+// and cancel() dispatch nothing. A column press that crosses the threshold without a pick-up drag
+// clears the hover at the crossing; `refreshHover` skips while any crossed press is held and
+// repaints at every end of one. The desktop k preview (`hoverAction` kind `k`) is `wc-hover-tail`
+// with `--wc-hover-from` and `--wc-hover-len` (the remainder length, so the outline never covers S
+// ghosts); no `wc-grab`.
+// Peek and view (epic 4 SPEC CAP-9, R-65, Q-21, epic 4 SPEC F14, epic 4 SPEC F24; AD-12, AD-13): a
+// non-empty WordCell press whose long-press fires opens the peek (`overlays.openPeek`, no entry);
+// its `pointerup` reads the rendered `[data-view-scroll]` under the root and keeps it as the sticky
+// view (`peekToSticky()`, one entry) iff it overflows, else `closePeek()`; every other end closes
+// it. A non-empty WordCell tap with nothing selected opens the sticky view in Idle and Game over
 // (`openView`, intent.ts). The view's scrim and sheet resolve before `data-place`, uncaptured (the
 // sheet pans): a tap closes the view (`close('wordcellView')`, never a deselect) and arms the
 // trailing-click swallower (click-swallow.ts) on the root; a drag does nothing. Every pointerdown
 // and detach disarm the swallower.
-// Entry 12 (SPEC CAP-9, F19; AD-12, AD-13): the desktop hover peek. A mouse `pointerover` entering
-// a `[data-wordcell]` (relatedTarget outside it or null) arms one LONG_PRESS_MS timer (a single
-// slot) while `deps.hoverFine()`, with no press held, no fly-back, `buttons` 0, the cell not
-// suppressed, its hover peek not open and the cell non-empty in the GameView (AD-3); at fire it
-// re-checks `hoverFine` and emptiness and calls `overlays.openHoverPeek` (the store gates peek,
-// view and modal tops). A mouse `pointerout` leaving the cell clears its timer, closes the hover
-// peek and lifts its suppression. Every pointerdown (any type or button) first clears the timer. A
-// threshold crossing that starts a pick-up drag hides `[data-hover-peek]` with
-// `wc-hover-peek-hidden` (DOM only) and `end()` closes it before the fly-back or the drop; any other
-// crossing closes it there. Suppression is one `[data-wordcell]` slot: the cell whose rect holds
-// the last mouse point, set at every mouse press end, fly-back settle and cancel(), so boundary
-// pointerovers into it never arm until a pointerout leaves it. cancel() (idle too), detach and
-// `refreshHover()` with `hoverFine` false clear the timer and close the hover peek; while attached,
-// `deps.watchHoverFine` runs `refreshHover()` at every hoverFine change. An entry into another cell
-// closes an open hover peek first (a removed node sends no pointerout).
-// Entry 13 (ticket 4.13): drop targeting measures each registered column rect clipped vertically
-// to the visible band (SPEC F34, AD-12): from the lower of the top bar's and a shown banner's
-// bottom to the action bar's top, read once per drag move; a column wholly under a bar is a
-// zero-area candidate, so a tail held over a bar lights nothing and its release flies back. A
-// same-id pointerdown ends the lost press before the button check (any button, CAP-4). The F25
-// non-pointer `click` treats a tray tile like outside. The hover-peek timer is keyed by cell
-// number (a replaced cell node's pointerout still stops it) and any real cell entry stops it
-// before its no-arm returns; the suppression slot uses half-open rects (a shared edge goes right).
+// Hover peek (epic 4 SPEC CAP-9, epic 4 SPEC F19; AD-12, AD-13): the timer and its suppression slot
+// live in hover-peek-timer.ts, fed by `pointerover`/`pointerout`. Every pointerdown (any type or
+// button) first clears the timer. A threshold crossing that starts a pick-up drag hides the hover
+// peek (DOM only) and `end()` closes it before the fly-back or the drop; any other crossing closes
+// it there. Every mouse press end, fly-back settle and cancel() set the suppression slot to the
+// cell under the last mouse point. cancel() (idle too), detach and `refreshHover()` with
+// `hoverFine` false clear the timer and close the hover peek; while attached,
+// `deps.watchHoverFine` runs `refreshHover()` at every hoverFine change.
+// Seams (epic 5 SPEC CAP-3, epic 5 SPEC F14): the visible band, the fly-back and the hover-peek
+// timer are factories built here from this controller's deps plus getters for its state; lookups
+// throw through lookup.ts and the DOM class names come from classes.ts.
 import { flushSync } from 'svelte';
 import { game } from '../../shell/game.svelte';
-import { prefs } from '../../shell/prefs.svelte';
 import { SELECTION_LIFT_PX } from '../layout/geometry';
-import { duration } from '../motion';
 import { overlays } from '../overlays.svelte';
+import {
+  DRAG_GHOST,
+  DRAG_LAYER,
+  DRAG_TARGET,
+  DROP,
+  DROP_SELF,
+  GRAB,
+  HOVER_CLASSES,
+  HOVER_FROM,
+  HOVER_LEN,
+  HOVER_TAIL,
+  SUPPRESSED,
+} from './classes';
 import {
   classify,
   LONG_PRESS_MS,
@@ -104,17 +105,24 @@ import {
 } from './classify';
 import { createClickSwallower } from './click-swallow';
 import { columnTargets } from './drop-target';
+import { createFlyBack, translate } from './fly-back';
 import type { Gate } from './gate';
+import { createHoverPeekTimer } from './hover-peek-timer';
 import { destinationTap, type Hit, type HoverAction, hoverAction, tapAction } from './intent';
+import { attribute, cellIn, columnIn, found } from './lookup';
 import { pickTarget, type Rect } from './targeting';
+import { clip, createVisibleBand } from './visible-band';
 
 export type ControllerDeps<H> = {
   elementFromPoint(x: number, y: number): Element | null;
   setTimer(callback: () => void, ms: number): H;
   clearTimer(handle: H): void;
-  /** Entry 12: live `(hover: hover) and (pointer: fine)` (layout.hoverFine). */
+  /** Epic 4 SPEC F19: live `(hover: hover) and (pointer: fine)` (layout.hoverFine). */
   hoverFine(): boolean;
-  /** Entry 12: calls `callback` at every hoverFine change (layout.watchHoverFine); returns the unwatch. */
+  /**
+   * Epic 4 SPEC F19: calls `callback` at every hoverFine change (layout.watchHoverFine); returns
+   * the unwatch.
+   */
   watchHoverFine(callback: () => void): () => void;
 };
 
@@ -125,7 +133,10 @@ export type Controller = {
   cancel(options?: CancelOptions): void;
   /** F8: attaches the listeners to the active-branch root; returns the detach. */
   attach(root: HTMLElement): () => void;
-  /** Recomputes the mouse hover classes at the last pointer point (App's reaction, entry 7). */
+  /**
+   * Recomputes the mouse hover classes at the last pointer point (App's reaction, epic 4 SPEC
+   * CAP-6).
+   */
   refreshHover(): void;
 };
 
@@ -134,8 +145,11 @@ type EndReason =
   // `byBack`: a drag flies back (F13) instead of snapping.
   | { readonly kind: 'cancel'; readonly byBack: boolean };
 
-/** Entry 8: a press that crossed the threshold on a column card whose column `canPickUp`. */
-type Drag = {
+/**
+ * Epic 4 SPEC CAP-7: a press that crossed the threshold on a column card whose column
+ * `canPickUp`.
+ */
+export type Drag = {
   readonly source: number;
   /** The source `[data-column]` element. */
   readonly sourceEl: Element;
@@ -157,12 +171,12 @@ type Drag = {
   highlighted: number | null;
   /** The element carrying `wc-drag-target`. */
   target: Element | null;
-  /** Entry 9: started with a selection open; the root carries `SUPPRESSED` until its end. */
+  /**
+   * Epic 4 SPEC F24, epic 4 SPEC F28: started with a selection open; the root carries `SUPPRESSED`
+   * until its end.
+   */
   readonly replacing: boolean;
 };
-
-/** A running fly-back (F13). */
-type Flight = { readonly drag: Drag; readonly animations: Animation[]; settled: boolean };
 
 type Press<H> = {
   readonly pointerId: number;
@@ -172,7 +186,7 @@ type Press<H> = {
   state: PressState;
   timer: { readonly handle: H } | null;
   drag: Drag | null;
-  /** Entry 12: `pointerType === 'mouse'` (a mouse press end sets the suppression). */
+  /** Epic 4 SPEC F19: `pointerType === 'mouse'` (a mouse press end sets the suppression). */
   readonly mouse: boolean;
 };
 
@@ -194,40 +208,14 @@ const LISTENED = [
   'pointerout',
 ] as const;
 
-const HOVER_CLASSES = ['wc-hover-tail', 'wc-grab', 'wc-drop', 'wc-drop-self'] as const;
-const HOVER_FROM = '--wc-hover-from';
-const HOVER_LEN = '--wc-hover-len';
-const DRAG_GHOST = 'wc-drag-ghost';
-const DRAG_LAYER = 'wc-drag-layer';
-const DRAG_TARGET = 'wc-drag-target';
-const SUPPRESSED = 'wc-selection-suppressed';
-const HOVER_PEEK_HIDDEN = 'wc-hover-peek-hidden';
 const OUTSIDE: Hit = { kind: 'outside' };
-
-// Entry 13 (F34): a column rect clipped vertically to the visible band; an empty clip is zero-area.
-function clip(r: Rect, band: { readonly top: number; readonly bottom: number }): Rect {
-  const top = Math.max(r.top, band.top);
-  const bottom = Math.max(top, Math.min(r.bottom, band.bottom));
-  return { left: r.left, top, right: r.right, bottom };
-}
-
-function translate(dx: number, dy: number): string {
-  return `translate(${dx}px, ${dy}px)`;
-}
-
-function attribute(el: Element, name: string): number {
-  const value = Number(el.getAttribute(name));
-  if (!Number.isInteger(value)) throw new Error(`AD-12 ${name} is not an integer`);
-  return value;
-}
 
 // AD-3: WordCell emptiness comes from the GameView at pointerdown, never the DOM.
 function wordcellPress(cellEl: Element, capture: Element): Resolved {
   const view = game.view;
   if (view === undefined) throw new Error('AD-12 WordCell press without a GameView');
   const n = attribute(cellEl, 'data-wordcell');
-  const cell = view.cells.find((c) => c.cell === n);
-  if (cell === undefined) throw new Error(`AD-12 WordCell press on unknown cell ${n}`);
+  const cell = cellIn(view.cells, n, `AD-12 WordCell press on unknown cell ${n}`);
   return {
     target: cell.cards.length === 0 ? 'emptyWordcell' : 'wordcell',
     capture,
@@ -237,17 +225,16 @@ function wordcellPress(cellEl: Element, capture: Element): Resolved {
 
 // The column number of the `[data-column]` an element sits in.
 function columnOf(el: Element): number {
-  const columnEl = el.closest('[data-column]');
-  if (columnEl === null) throw new Error('AD-12 column part outside [data-column]');
+  const columnEl = found(el.closest('[data-column]'), 'AD-12 column part outside [data-column]');
   return attribute(columnEl, 'data-column');
 }
 
 // F23 press resolution, build-notes CAP-4. `null` = an enabled button: not a press at all (F25).
-// `selected`: with a tail selected, non-card column presses are captured (entry 7).
+// `selected`: with a tail selected, non-card column presses are captured (epic 4 SPEC CAP-6).
 function resolve(root: HTMLElement, hit: Element | null, selected: boolean): Resolved | null {
   if (hit === null || !root.contains(hit)) return { target: 'other', capture: null, hit: OUTSIDE };
   if (hit.closest('button:enabled') !== null) return null;
-  // Entry 11: the view's scrim and sheet (mirrors included), uncaptured so the sheet pans.
+  // R-65: the view's scrim and sheet (mirrors included), uncaptured so the sheet pans.
   if (hit.closest('[data-view-scrim]') !== null) {
     return { target: 'other', capture: null, hit: { kind: 'scrim' } };
   }
@@ -265,8 +252,10 @@ function resolve(root: HTMLElement, hit: Element | null, selected: boolean): Res
       };
     }
     if (place === 'cell') {
-      const cellEl = card.closest('[data-wordcell]');
-      if (cellEl === null) throw new Error('AD-12 cell card outside [data-wordcell]');
+      const cellEl = found(
+        card.closest('[data-wordcell]'),
+        'AD-12 cell card outside [data-wordcell]',
+      );
       return wordcellPress(cellEl, card);
     }
     if (place === 'tray' || place === 'strip') {
@@ -303,14 +292,29 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
   let lastPoint: { readonly x: number; readonly y: number } | null = null;
   /** The `[data-column]` element carrying the hover classes. */
   let hovered: HTMLElement | null = null;
-  /** The running fly-back, if any. */
-  let flying: Flight | null = null;
-  /** Entry 11: swallows the trailing click of a tap that closed the sticky view. */
+  /** R-65: swallows the trailing click of a tap that closed the sticky view. */
   const swallower = createClickSwallower(deps);
-  /** Entry 12: the one pending hover-peek timer and the cell number it was armed for (entry 13). */
-  let hoverTimer: { readonly handle: H; readonly cell: number } | null = null;
-  /** Entry 12: the `[data-wordcell]` whose pointerovers never arm until a pointerout leaves it. */
-  let suppressed: Element | null = null;
+  /**
+   * Epic 4 SPEC F13: the fly-back; its settle suppresses and repaints the hover (`hover` resolved
+   * lazily).
+   */
+  const flight = createFlyBack({
+    gate,
+    clearDrag,
+    onSettle: () => {
+      hover.suppress();
+      refreshHover();
+    },
+  });
+  /** Epic 4 SPEC F19: the desktop hover-peek timer and its suppression slot. */
+  const hover = createHoverPeekTimer(deps, {
+    root: () => root,
+    lastPoint: () => lastPoint,
+    pressHeld: () => press !== null,
+    flying: flight.running,
+  });
+  /** Epic 4 SPEC F34: the visible band between the sticky bars. */
+  const band = createVisibleBand(() => root);
 
   function stopTimer(p: Press<H>): void {
     if (p.timer === null) return;
@@ -326,10 +330,10 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     if (p.captured?.hasPointerCapture(p.pointerId) === true) {
       p.captured.releasePointerCapture(p.pointerId);
     }
-    // Entry 12: any mouse press end suppresses the cell under the last mouse point.
-    if (p.mouse) suppress();
+    // Epic 4 SPEC F19: any mouse press end suppresses the cell under the last mouse point.
+    if (p.mouse) hover.suppress();
     const kind = reason.kind;
-    // Entry 11 (AD-12 peek on end): only a pointerup may turn the peek sticky (pointerup).
+    // Q-21 (AD-12 peek on end): only a pointerup may turn the peek sticky (pointerup).
     if (kind !== 'up' && overlays.peek !== null) overlays.closePeek();
     if ((kind === 'cancel' || kind === 'lostCapture') && p.captured !== null) {
       menuSlot = p.pointerId;
@@ -337,7 +341,8 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     const drag = p.drag;
     let flies = false;
     if (drag !== null) {
-      // Entry 12: a pick-up drag closes the hover peek at release, before the fly-back or drop.
+      // Epic 4 SPEC F19: a pick-up drag closes the hover peek at release, before the fly-back or
+      // drop.
       overlays.closeHoverPeek();
       drag.target?.classList.remove(DRAG_TARGET);
       drag.target = null;
@@ -352,10 +357,10 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       const closesSelection =
         reason.kind === 'cancel' && reason.byBack && overlays.top === 'tailSelection';
       // The fly-back enters the gate before the press leaves it (F13).
-      if (flies) flyBack(drag, kind !== 'up' && !closesSelection);
+      if (flies) flight.flyBack(drag, kind !== 'up' && !closesSelection);
       else clearDrag(drag);
-      // Entry 9 (F24/F28, F33): every end removes the class here, a restoring fly-back at its start;
-      // a release with no highlight and a plain cancel() deselect.
+      // Epic 4 SPEC F24, epic 4 SPEC F28, epic 4 SPEC F33: every end removes the class here, a
+      // restoring fly-back at its start; a release with no highlight and a plain cancel() deselect.
       if (drag.replacing) {
         unsuppress();
         if (
@@ -367,8 +372,8 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       }
     }
     gate.leave();
-    // A drop and a drag-as-tap refresh after their dispatch (pointerup); entry 10: a crossed press
-    // with no pick-up drag repaints at every other end.
+    // A drop and a drag-as-tap refresh after their dispatch (pointerup); epic 4 SPEC CAP-8: a
+    // crossed press with no pick-up drag repaints at every other end.
     if (kind !== 'up' && (drag !== null ? !flies : p.state.kind === 'drag')) refreshHover();
   }
 
@@ -386,70 +391,6 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     for (const wrapper of drag.wrappers) wrapper.classList.remove(DRAG_GHOST);
   }
 
-  // F13: WAAPI on the faces from the last written transform back to the slot (F32/F33: when
-  // `restoring`, each face's resting slot, lifted if its wrapper is `lifted`); under reduced motion
-  // the transform clears at once (Card's `.lifted .face` rests a kept selection's faces lifted) and
-  // the faces fade in. Gate-counted until settled.
-  function flyBack(drag: Drag, restoring: boolean): void {
-    if (flying !== null) throw new Error('AD-12 fly-back while one is running');
-    gate.enter();
-    const ms = duration('flyBack');
-    const reduced = prefs.motion.reduced;
-    const flight: Flight = { drag, animations: [], settled: false };
-    flying = flight;
-    let remaining = drag.faces.length;
-    const done = (): void => {
-      remaining -= 1;
-      if (remaining === 0) settle(flight);
-    };
-    for (const [i, face] of drag.faces.entries()) {
-      let animation: Animation;
-      if (reduced) {
-        face.style.transform = '';
-        animation = face.animate([{ opacity: 0 }, { opacity: 1 }], { duration: ms });
-      } else {
-        const rest =
-          restoring && drag.wrappers[i]?.classList.contains('lifted') === true
-            ? -SELECTION_LIFT_PX
-            : 0;
-        animation = face.animate(
-          [
-            { transform: translate(drag.dx, drag.dy - drag.lift) },
-            { transform: translate(0, rest) },
-          ],
-          { duration: ms, easing: 'ease-out' },
-        );
-        face.style.transform = '';
-      }
-      animation.onfinish = done;
-      // Rule 6: a cancelled fly-back would never settle (gate held, drag classes on); finishFlight's
-      // finish() never cancels.
-      animation.oncancel = () => {
-        throw new Error('AD-12 fly-back animation cancelled');
-      };
-      flight.animations.push(animation);
-    }
-  }
-
-  // Idempotent: the last face's onfinish, or finishFlight().
-  function settle(flight: Flight): void {
-    if (flight.settled) return;
-    flight.settled = true;
-    if (flying === flight) flying = null;
-    clearDrag(flight.drag);
-    gate.leave();
-    suppress();
-    refreshHover();
-  }
-
-  // F13: completes a running fly-back at once; its settle runs synchronously.
-  function finishFlight(): void {
-    const flight = flying;
-    if (flight === null) return;
-    for (const animation of flight.animations) animation.finish();
-    settle(flight);
-  }
-
   function cardIn(columnEl: Element, id: number): HTMLElement {
     const el = columnEl.querySelector(`[data-card-id="${id}"]`);
     if (el === null) throw new Error(`AD-12 card ${id} not rendered in its column`);
@@ -465,11 +406,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
   function viewColumn(column: number) {
     const view = game.view;
     if (view === undefined) throw new Error('AD-12 drag without a GameView');
-    const entry = view.columns[column - 1];
-    if (entry === undefined || entry.column !== column) {
-      throw new Error(`AD-12 column ${column} is not in the GameView`);
-    }
-    return entry;
+    return columnIn(view.columns, column, `AD-12 column ${column} is not in the GameView`);
   }
 
   // SPEC CAP-7: the threshold-crossing move of a column-card press; null when the press is not a
@@ -481,9 +418,11 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     if (!entry.canPickUp) return null;
     const start = entry.cards.indexOf(hit.card);
     if (start < 0) throw new Error(`AD-12 card ${hit.card} is not in column ${hit.column}`);
-    const sourceEl = p.captured.closest('[data-column]');
-    if (sourceEl === null) throw new Error('AD-12 column card outside [data-column]');
-    finishFlight();
+    const sourceEl = found(
+      p.captured.closest('[data-column]'),
+      'AD-12 column card outside [data-column]',
+    );
+    flight.finishFlight();
     clearHover();
     const replacing = overlays.selection !== null;
     if (replacing) {
@@ -531,30 +470,16 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     return last === undefined ? placeholderIn(columnEl) : cardIn(columnEl, last);
   }
 
-  function barRect(band: 'topBar' | 'banner' | 'actionBar'): Rect {
-    if (root === null) throw new Error('AD-12 drag without a root');
-    const el = root.querySelector(`[data-band="${band}"]`);
-    if (el === null) throw new Error(`AD-12 drag without [data-band="${band}"]`);
-    return el.getBoundingClientRect();
-  }
-
-  // Entry 13 (F34): the visible band between the sticky bars; the banner wrapper is always
-  // rendered and counts only while it has height (shown).
-  function visibleBand(): { readonly top: number; readonly bottom: number } {
-    const topBar = barRect('topBar');
-    const banner = barRect('banner');
-    const top = banner.bottom > banner.top ? Math.max(topBar.bottom, banner.bottom) : topBar.bottom;
-    return { top, bottom: barRect('actionBar').top };
-  }
-
   // F37: the targeting rule (≥ 25 % overlap) against the source column's unclipped hit rect.
   function overSource(
     drag: Drag,
     dragged: Rect,
     rects: readonly { readonly id: number; readonly whole: Rect }[],
   ): boolean {
-    const source = rects.find(({ id }) => id === drag.source);
-    if (source === undefined) throw new Error(`AD-12 column ${drag.source} not registered`);
+    const source = found(
+      rects.find(({ id }) => id === drag.source),
+      `AD-12 column ${drag.source} not registered`,
+    );
     return (
       pickTarget(dragged, [{ id: drag.source, rect: source.whole }], drag.source, true).raw !== null
     );
@@ -568,12 +493,12 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     const grabbed = drag.faces[0];
     if (grabbed === undefined) throw new Error('AD-12 drag without a face');
     const targets = columnTargets();
-    const band = visibleBand();
+    const visible = band.visibleBand();
     const dragged = grabbed.getBoundingClientRect();
     const rects = targets.map(({ id, el }) => ({ id, whole: el.getBoundingClientRect() }));
     const { raw, highlighted } = pickTarget(
       dragged,
-      rects.map(({ id, whole }) => ({ id, rect: clip(whole, band) })),
+      rects.map(({ id, whole }) => ({ id, rect: clip(whole, visible) })),
       drag.source,
       drag.hasLeftSource,
     );
@@ -588,8 +513,10 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     drag.highlighted = highlighted;
     drag.target = null;
     if (highlighted === null) return;
-    const columnEl = targets.find((t) => t.id === highlighted)?.el;
-    if (columnEl === undefined) throw new Error(`AD-12 column ${highlighted} not registered`);
+    const columnEl = found(
+      targets.find((t) => t.id === highlighted)?.el,
+      `AD-12 column ${highlighted} not registered`,
+    );
     drag.target = targetElement(drag, highlighted, columnEl);
     drag.target.classList.add(DRAG_TARGET);
   }
@@ -600,7 +527,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     const next = classify(p.state, { type: 'timer' });
     if (typeof next === 'string') throw new Error(`AD-12 timer classified as ${next}`);
     p.state = next;
-    // Entry 11 (Q-21): a non-empty WordCell's long-press opens the peek, in every phase.
+    // Q-21: a non-empty WordCell's long-press opens the peek, in every phase.
     if (next.kind === 'longPress' && next.target === 'wordcell') {
       if (p.hit.kind !== 'wordcell') throw new Error(`AD-12 long-press on a ${p.hit.kind} hit`);
       overlays.openPeek(p.hit.cell);
@@ -622,14 +549,14 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
   }
 
   function pointerdown(event: PointerEvent): void {
-    // Entry 12: any pointerdown, of any type or button, cancels a pending hover-peek timer.
-    stopHoverTimer();
-    // Entry 11: a new press means the closing tap's trailing click is not coming.
+    // Epic 4 SPEC F19: any pointerdown, of any type or button, cancels a pending hover-peek timer.
+    hover.stopHoverTimer();
+    // R-65: a new press means the closing tap's trailing click is not coming.
     swallower.disarm();
     // A same-id pointerdown: that pointer was released, so its slot is spent.
     if (event.pointerId === menuSlot) menuSlot = null;
     if (root === null) return;
-    // A same-id pointerdown, of any button (entry 13, CAP-4): the old press's end was lost.
+    // A same-id pointerdown, of any button (epic 4 SPEC CAP-4): the old press's end was lost.
     if (press !== null && event.pointerId === press.pointerId) {
       const peeked = overlays.peek !== null;
       end({ kind: 'sameId' });
@@ -640,10 +567,10 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     // Only the active press's own pointer acts on it; another pointer is untouched (CAP-4).
     if (event.button !== 0 || press !== null) return;
     // F13: a press during a fly-back acts on the settled layout; the gate never idles between.
-    const inFlight = flying !== null;
+    const inFlight = flight.running();
     if (inFlight) {
       gate.enter();
-      finishFlight();
+      flight.finishFlight();
     }
     const resolved = resolve(
       root,
@@ -682,13 +609,14 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     const crossing = next.kind === 'drag' && p.state.kind !== 'drag';
     if (crossing) stopTimer(p);
     p.state = next;
-    // The threshold-crossing move is the first drag move (SPEC CAP-7); entry 10: any column press
-    // clears the hover there, picked up or not.
+    // The threshold-crossing move is the first drag move (epic 4 SPEC CAP-7); epic 4 SPEC CAP-8:
+    // any column press clears the hover there, picked up or not.
     if (crossing) {
       if (p.hit.kind === 'card' || p.hit.kind === 'space') clearHover();
       p.drag = startDrag(p);
-      // Entry 12: a pick-up hides the hover peek (DOM only, AD-12); any other drag closes it.
-      if (p.drag !== null) hideHoverPeek();
+      // Epic 4 SPEC F19: a pick-up hides the hover peek (DOM only, AD-12); any other drag closes
+      // it.
+      if (p.drag !== null) hover.hideHoverPeek();
       else overlays.closeHoverPeek();
     }
     if (p.drag !== null) dragMove(p.drag, event.clientX, event.clientY);
@@ -737,7 +665,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       releasePeek();
       return;
     }
-    // Entry 11: a sheet or scrim tap only closes the view (never a deselect); a drag does nothing.
+    // R-65: a sheet or scrim tap only closes the view (never a deselect); a drag does nothing.
     if (p.hit.kind === 'sheet' || p.hit.kind === 'scrim') {
       if (outcome !== 'tap') return;
       if (root === null) throw new Error('AD-12 view tap without a root');
@@ -748,7 +676,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     if (outcome === 'tap') perform(p.hit);
     if (drag === null) {
       if (outcome !== 'drag') return;
-      // Entry 10 (R-39): a drag-as-tap reads the GameView now (AD-3), wherever released.
+      // R-39: a drag-as-tap reads the GameView now (AD-3), wherever released.
       const view = game.view;
       if (view === undefined) throw new Error('AD-12 drag-as-tap without a GameView');
       const card = destinationTap(p.hit, view);
@@ -791,7 +719,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
   function click(event: MouseEvent): void {
     if (event.detail !== 0 || root === null) return;
     const resolved = resolve(root, event.target as Element | null, overlays.selection !== null);
-    // Entry 13: a tray tile counts as outside, as `tapAction` treats it.
+    // Epic 4 SPEC F25: a tray tile counts as outside, as `tapAction` treats it.
     if (resolved === null || (resolved.hit.kind !== 'outside' && resolved.hit.kind !== 'tile')) {
       return;
     }
@@ -810,18 +738,18 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     hovered = columnEl;
     switch (action.kind) {
       case 'tail':
-        columnEl.classList.add('wc-hover-tail');
+        columnEl.classList.add(HOVER_TAIL);
         columnEl.style.setProperty(HOVER_FROM, String(action.from));
-        if (action.grab) columnEl.classList.add('wc-grab');
+        if (action.grab) columnEl.classList.add(GRAB);
         return;
       case 'drop':
-        columnEl.classList.add('wc-drop');
+        columnEl.classList.add(DROP);
         return;
       case 'dropSelf':
-        columnEl.classList.add('wc-drop-self');
+        columnEl.classList.add(DROP_SELF);
         return;
       case 'k':
-        columnEl.classList.add('wc-hover-tail');
+        columnEl.classList.add(HOVER_TAIL);
         columnEl.style.setProperty(HOVER_FROM, String(action.from));
         columnEl.style.setProperty(HOVER_LEN, String(action.length));
         return;
@@ -830,12 +758,13 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
 
   // DESIGN.md Card states, hover: at most one `[data-column]` carries the classes (old cleared).
   function refreshHover(): void {
-    // Entry 12: a hoverFine change to false closes the hover peek (never reads overlays.hoverPeek,
-    // so App's reaction does not track it).
-    if (!deps.hoverFine()) closeHover();
+    // Epic 4 SPEC F19: a hoverFine change to false closes the hover peek (never reads
+    // overlays.hoverPeek, so App's reaction does not track it).
+    if (!deps.hoverFine()) hover.closeHover();
     clearHover();
-    // Entry 8: no hover during a drag or a fly-back; entry 10: nor while any crossed press is held.
-    if (flying !== null || (press !== null && press.state.kind === 'drag')) return;
+    // Epic 4 SPEC CAP-7: no hover during a drag or a fly-back; epic 4 SPEC CAP-8: nor while any
+    // crossed press is held.
+    if (flight.running() || (press !== null && press.state.kind === 'drag')) return;
     const view = game.view;
     if (root === null || lastPoint === null || view === undefined) return;
     const el = deps.elementFromPoint(lastPoint.x, lastPoint.y);
@@ -843,8 +772,10 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     if (el === null || resolved === null) return;
     const action = hoverAction(resolved.hit, view, overlays.selection);
     if (action === null) return;
-    const columnEl = el.closest('[data-column]') as HTMLElement | null;
-    if (columnEl === null) throw new Error('AD-12 hover column outside [data-column]');
+    const columnEl = found(
+      el.closest('[data-column]') as HTMLElement | null,
+      'AD-12 hover column outside [data-column]',
+    );
     showHover(columnEl, action);
   }
 
@@ -854,95 +785,15 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     return true;
   }
 
-  function stopHoverTimer(): void {
-    if (hoverTimer === null) return;
-    deps.clearTimer(hoverTimer.handle);
-    hoverTimer = null;
-  }
-
-  // Entry 12: clears the timer and closes the hover peek.
-  function closeHover(): void {
-    stopHoverTimer();
-    overlays.closeHoverPeek();
-  }
-
-  function hideHoverPeek(): void {
-    if (root === null) throw new Error('AD-12 hover peek hide without a root');
-    root.querySelector('[data-hover-peek]')?.classList.add(HOVER_PEEK_HIDDEN);
-  }
-
-  // Entry 12: the suppression slot becomes the `[data-wordcell]` whose rect holds the last mouse
-  // point (geometric: a scrim may still cover it), else null.
-  function suppress(): void {
-    suppressed = null;
-    const pt = lastPoint;
-    if (root === null || pt === null) return;
-    for (const el of root.querySelectorAll('[data-wordcell]')) {
-      const r = el.getBoundingClientRect();
-      // Entry 13: half-open, so a shared edge belongs to the right or lower cell.
-      if (pt.x >= r.left && pt.x < r.right && pt.y >= r.top && pt.y < r.bottom) {
-        suppressed = el;
-        return;
-      }
-    }
-  }
-
-  // The `[data-wordcell]` a boundary event's target lies in, if any.
-  function cellOf(target: EventTarget | null): Element | null {
-    return target === null ? null : (target as Element).closest('[data-wordcell]');
-  }
-
-  // True when `to` lies outside `cellEl` (null: the pointer came from or went to nothing).
-  function outside(cellEl: Element, to: EventTarget | null): boolean {
-    return to === null || !cellEl.contains(to as Node);
-  }
-
-  function hoverEnter(event: PointerEvent): void {
-    const cellEl = cellOf(event.target);
-    if (cellEl === null || !outside(cellEl, event.relatedTarget)) return;
-    const n = attribute(cellEl, 'data-wordcell');
-    // Entry 13: a cell entry stops any pending timer before the no-arm returns.
-    stopHoverTimer();
-    // Entering another cell closes its hover peek even with no pointerout from it.
-    if (overlays.hoverPeek !== null && overlays.hoverPeek !== n) overlays.closeHoverPeek();
-    if (!deps.hoverFine() || press !== null || flying !== null || event.buttons !== 0) return;
-    if (cellEl === suppressed) return;
-    if (overlays.hoverPeek === n || cellCards(n) === 0) return;
-    hoverTimer = { handle: deps.setTimer(() => onHoverTimer(n), LONG_PRESS_MS), cell: n };
-  }
-
-  function onHoverTimer(n: number): void {
-    hoverTimer = null;
-    if (!deps.hoverFine() || cellCards(n) === 0) return;
-    overlays.openHoverPeek(n);
-  }
-
-  // AD-3: a WordCell's card count from the GameView.
-  function cellCards(n: number): number {
-    const view = game.view;
-    if (view === undefined) throw new Error('AD-12 hover peek without a GameView');
-    const cell = view.cells.find((c) => c.cell === n);
-    if (cell === undefined) throw new Error(`AD-12 hover peek on unknown cell ${n}`);
-    return cell.cards.length;
-  }
-
-  function hoverLeave(event: PointerEvent): void {
-    const cellEl = cellOf(event.target);
-    if (cellEl === null || !outside(cellEl, event.relatedTarget)) return;
-    if (hoverTimer?.cell === attribute(cellEl, 'data-wordcell')) stopHoverTimer();
-    overlays.closeHoverPeek();
-    if (suppressed === cellEl) suppressed = null;
-  }
-
   function pointerover(event: PointerEvent): void {
     if (!track(event)) return;
     refreshHover();
-    hoverEnter(event);
+    hover.hoverEnter(event);
   }
 
   function pointerout(event: PointerEvent): void {
     if (event.pointerType !== 'mouse' || root === null) return;
-    hoverLeave(event);
+    hover.hoverLeave(event);
     const to = event.relatedTarget as Node | null;
     if (to !== null && root.contains(to)) return;
     lastPoint = null;
@@ -966,11 +817,11 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
 
   function cancel(options: CancelOptions = {}): void {
     if (root === null) return;
-    // Entry 12: the settle suppresses; idle or not, the hover peek closes and the cell under the
-    // last mouse point is suppressed.
-    finishFlight();
-    closeHover();
-    suppress();
+    // Epic 4 SPEC F19: the settle suppresses; idle or not, the hover peek closes and the cell under
+    // the last mouse point is suppressed.
+    flight.finishFlight();
+    hover.closeHover();
+    hover.suppress();
     if (press === null) return;
     end({ kind: 'cancel', byBack: options.byBack === true });
   }
@@ -994,7 +845,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       }
       menuSlot = null;
       lastPoint = null;
-      suppressed = null;
+      hover.reset();
       clearHover();
       root = null;
     };
