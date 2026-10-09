@@ -1,5 +1,5 @@
 # Review log — story-d-block-controls-validate-and-confirm-states.md (ticket 5.3)
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7. Pass 0: 409 words (`.passes/pass0.md`), HEAD 019f2fa. Intent fields from tickets.toml entry 3 (interface, tests, owns, consumers): `.passes/intent.md`.
 
@@ -67,3 +67,19 @@ Fixer: all 10 items applied, stub bullet trimmed to stay in budget; no commands 
 - helpers.spec.ts android-only — no change needed (desktop branch exercised by importing desktop specs)
 ### Unapplied minors (over budget, adding words; for the build plan)
 - caption / k count typography (ui-label, ink-secondary) and Flip size (44 px secondary pill); label span inline, inheriting line-height so other baselines stay identical; one button node across Validate → Confirm (no keyed block); ≤ 0.5 px rect tolerance for the shrink checks; act() scan matches only onclick-style attributes; invalid-line text already covered by e2e/tray.spec.ts:446
+
+## Pass 4 — 2026-10-08
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 1, minor 9 applied + 6 for the plan, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1029 (2.52 x pass 0)  |  Snapshot: .passes/pass4.md
+Fixer: all 9 items applied; redundant parentheticals cut to pay; no commands added.
+### Applied
+- [major] AC stub bullet — the pass-3 trim dropped "each from a fresh failure", so the Undo/Redo round trip runs after `+` already cleared the line and passes trivially (undoes pass-2 item 2); current() exposes no feedback (merged with ref-alignment's "Undo clear of a visible line untested") → fixer item 1 (default applied: each round trip starts from a fresh failure; the per-dispatch clear is the shell Vitest `AD-4 feedback.rejectedWord is cleared on a changed dispatch (Undo)` plus a Redo sibling)
+- [minor] fixer items 2–9 (reordered Flip at k = 2 so D reversal shows, masked storage check on the redo-tail case, 14 px size only (weight 600 kept), exact-name −/+ locators, R-36 in the LABELS row name, writes counted after the click, button width vs content width, ellipsis as scrollWidth > clientWidth with an inline span)
+### Default applied (technical)
+- adversarial "ellipsis check passes trivially" classed minor (assertion precision, late-pass bar), applied as a reword
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+### Unapplied minors (for the build plan)
+- k = 0 source column fixed and the letter count read from text.letters (QU = 2); Flip `disabled={!canFlip}` never true while rendered (drop or keep the binding); a failing Validate dispatched twice per click is unobservable (one shared handler); caption narrowing width measured in-page; k rendered as its own element read by textContent; Flip as a 44 px secondary pill (DESIGN.md ref)
