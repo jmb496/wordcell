@@ -1,5 +1,5 @@
 # Review log — story-d-block-controls-validate-and-confirm-states.md (ticket 5.3)
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7. Pass 0: 409 words (`.passes/pass0.md`), HEAD 019f2fa. Intent fields from tickets.toml entry 3 (interface, tests, owns, consumers): `.passes/intent.md`.
 
@@ -49,3 +49,21 @@ Fixer: all 17 items applied; Tests and Consumers lines shortened to make room; n
 - none
 ### Dropped
 - none
+
+## Pass 3 — 2026-10-08
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 3, minor 13, decision-needed 0  |  Dropped in triage: 1
+Words (docs): 1020 (2.49 x pass 0)  |  Snapshot: .passes/pass3.md
+Fixer: all 10 items applied, stub bullet trimmed to stay in budget; no commands added.
+### Applied
+- [major] AC stub bullet — pass-2 item 2 unresolved: each Undo/Redo round trip ends in a second changed dispatch, so neither clear is tested alone (the hook exposes no feedback) → fixer item 1 (default applied: Undo/Redo clear through the same changed-dispatch reset the `+` case proves; round trips only check no stale line)
+- [major] AC bullet 1 — R-73 Validate save never checked ("before the next" with Validate last) → fixer item 2
+- [major] AC bullet 1 — the R-38/Q-07 "phase stays composing" check is vacuous unless the list is ready during the edits → fixer item 3
+- [minor] fixer items 4–10 (stub body cat/dog, Confirm cite EXPERIENCE.md, button as the shrink-check element, + bound as column 6's card count, cut "(Place) and", successful-Validate unreachable reason, Need 3+ letters / Confirm labels already in e2e/game-store.spec.ts LABELS)
+### Default applied (technical)
+- Undo/Redo clear coverage → shell changed-dispatch reset, proven by the `+` case
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- helpers.spec.ts android-only — no change needed (desktop branch exercised by importing desktop specs)
+### Unapplied minors (over budget, adding words; for the build plan)
+- caption / k count typography (ui-label, ink-secondary) and Flip size (44 px secondary pill); label span inline, inheriting line-height so other baselines stay identical; one button node across Validate → Confirm (no keyed block); ≤ 0.5 px rect tolerance for the shrink checks; act() scan matches only onclick-style attributes; invalid-line text already covered by e2e/tray.spec.ts:446
