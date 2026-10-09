@@ -1,5 +1,5 @@
 # Review loop — ticket 5.6 build (code mode, c80a447..779458b)
-State: pass 1: done
+State: pass 2: done
 
 Target: `_bmad-output/implementation-artifacts/review-loop/5-6-build.passes/pass0.diff` (git diff c80a447..779458b)
 Intent: `_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-insertionindex-gap-rects-and-parting-offsets-plan.md`
@@ -20,3 +20,23 @@ Fixer: all 3 applied; tickets.toml entry 7 verify gained the slotRects-vs-render
 - none (the nearest-centre outcome follows confirmed F3; it stays a non-blocking owner note in the plan)
 ### Dropped
 - none
+
+## Pass 2 — 2026-10-09
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 1, minor 4, decision-needed 1  |  Dropped in triage: 1 (duplicate merged)
+Snapshot: tree 5d7269506618f72369f5cdb4028c8e7153131947 (unchanged; stopping rule met, no fix pass)
+### Open (not fixed; stopping rule: two consecutive passes with at most one major)
+- [major] src/ui/gestures/targeting.test.ts 'AD-12 insertionIndex' — no case discriminates F3's Euclidean metric: every cross-row case gives the same winner under Manhattan or Chebyshev, so `|dx| + |dy|` would pass; add 'AD-12 insertionIndex uses Euclidean distance' with one gap centre offset (30, 0) and another (20, 20) from the face centre, expecting the diagonal one (`toBe`)
+### Default applied (technical)
+- none this pass (no fix pass)
+### Decision needed (functionality / UX / gameplay)
+- targeting.test.ts block right across a row break; SPEC CAP-5 success line 169 vs F3 — when the word's destination block wraps onto the next row, a tile dragged past the block onto that row lands at the nearest gap of the word (e.g. its middle), not at the end of the word; SPEC CAP-5 expects "a tile dragged past the block landing at the M end" — proposed default: keep F3's nearest-centre rule; entry 7's "past the block" Playwright case uses a block within one row; the owner judges the wrapped case in hand once entry 7 wires the drag
+### Dropped
+- intent-alignment plan verification-record minor — duplicate of the fix-diff minor on the stale 2173 count (merged)
+
+## Result — converged after 2 passes
+open major: targeting.test.ts has no insertionIndex case that distinguishes Euclidean from Manhattan/Chebyshev distance (F3); add the (30, 0) vs (20, 20) case.
+
+Unapplied minors:
+- plan Auto Run Result / Implementation Notes — "2173 unit" and "test:all exit 0 after patches" predate the pass 1 tests (now 2175; pass 1 re-ran npm test, lint, check only); re-run test:all/test:screens and update, or note the scope of the re-run.
+- tickets.toml entry 7 verify geometry clause — `n` undefined and the mid-drag comparison unspecified; write it as face p (nothing selected, no lift) = `slotRects(trayLayout(n, w, inner), origin, perRow × rows)[p]` at rest, and mid-drag each non-dragged face p = `slotRects[partingOffsets(...)[p].slot]` once parting settles, dragged face excluded, compared to whole pixels.
+- plan owner note / entry 7 verify — say the "past the block" Playwright case uses a block within one row (ties to the decision-needed item above).
