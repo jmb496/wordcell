@@ -1,6 +1,6 @@
 # Review log — story-tile-drag-in-the-tray-and-the-strip.md (ticket 5.7)
 
-State: pass 5: done
+State: pass 6: done
 
 Mode: docs, thorough, max 7. Pass 0: HEAD 94c59e9, .passes/pass0.md, 441 words (budget 2.5x ≈ 1100).
 Intent extras (tickets.toml entry 7, not copied into the ticket; fixer adds them to Description in pass 1): interface, tests, owns, consumers.
@@ -165,3 +165,32 @@ Fixer: all 9 applied; +20 words from the majors, minors net negative; used-cell 
 - tile.ts stays pure; the DOM/WAAPI path lives in the controller (tile.ts at most a pure release helper)
 - F4 "parts nothing" read once animations finish or under reduced motion
 - R-32 block on the left covered by entry 6's Vitest
+
+## Pass 6 — 2026-10-09
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late bar)  |  Findings: major 2, minor 16 (8 to the fixer, 8 unapplied), decision-needed 0  |  Dropped in triage: 0 (+ ~2 duplicates merged); 1 reviewer major downgraded (evidence precision of an existing case, late bar)
+Words (docs): 1746 (3.96 x pass 0)  |  Snapshot: .passes/pass6.md, fix diff .passes/pass6.fix.diff
+Fixer: all 9 applied; +44 words from the majors, minors net −1; Flip order checked with `reorder`; cut "D-block mirrors never move in a reorder" as covered by the run wording (for pass 7 to verify).
+### Applied
+- [major] AC — no Composing case has the block on the left (both fixtures `destinationSide: "right"`), so the controller's `first` = k derivation ships untested; a wrong `first` makes `reorder` throw (app halts) → session-composing after Flip (D, 42, 0), tile 0 to gap 0 → [0, 42], no inline transform on the mirror while held → fixer item 1
+- [major] AC UI Vitest — the parting set's gate count is checked only at an edit release; a leak after a no-edit release, platform cancel or `cancel()` would freeze or throw the next re-layout (AD-11) → extend the AD-11 Vitest → 2
+- [minor, downgraded] AC under-25 % case — hold over gap 0 first (tiles parted), move under 25 %, parted faces back at rest before the release → 3
+- [minor] Parting — `cancel()` "finishes" parting (leaving the parted end transform inline) vs "clears at once" → cancel() clears parting; pointerdown/cancel() finish return animations → 4
+- [minor] Hover clause — "superseding entry 5's crossed-tile-press tests" could delete controller.test.ts:3430's threshold-clear check → keep it → 5
+- [minor] Block-mirror drag — "no inline transform on any tray face" read while held past 8 px → 6
+- [minor] Past-block — "released right of the block inside the band, storing [0, 42]" → 7
+- [minor] Geometry — `reorder(order, …)`: name the run (M or `placementOrder`, never the tray order with mirrors) → 8
+- [minor] Geometry / Interface — the tray-inner-width getter is a Layout member Board and the controller deps both read (not a module export) → 9
+- [minor] Notes/AC — (none further)
+### Default applied (technical)
+- Block-left case — Flip on session-composing (tray-controls.spec.ts precedent) → default taken
+- Gate Vitest — idle at the edit dispatch, idle once a no-edit release's and a pointercancel's fly-back and returns settle, idle at once after a mid-drag `cancel()` (harness `t.active()`) → default taken
+### Decision needed (functionality / UX / gameplay)
+- none
+### Unapplied minors (over budget, for the plan)
+- App-button case: use `+` on session-composing, stored k 2 with arrangement [42, 0]
+- Edit releases: read `dragResidue` once without polling right after release (at rest at once)
+- Hover repaint on an edit release after the dispatch, as epic 4's drop
+- A new press during a return finishes it before the press resolves (Vitest)
+- Tray accessor throws on none as well as on a second registration; entry 5 tile Vitests register a tray target in the harness
+- Test names: drag-layer and geometry cases tagged AD-12
+- Consumers (L1, in the ticket review): fly-back.ts's epic 4 column-drag fly-back; the tray-width getter's Tray/TileRows `trayLayout`
