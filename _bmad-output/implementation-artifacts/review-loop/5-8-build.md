@@ -25,3 +25,5 @@ Reviewers: correctness, edge cases, verification gap, intent alignment  |  Findi
 ### Dropped
 - plan Verification — `npm run test:all` never green as one command: environment (a stale owner-started `vite --host` on port 5173 that Playwright reuses); every step ran green separately; recorded for the owner, not a code defect
 - (duplicate) edge-case reviewer's back-test finding merged into item 4
+
+Owner answer (2026-10-09): the pass-1 decision-needed item takes the proposed default, keep as built (SPEC F26).

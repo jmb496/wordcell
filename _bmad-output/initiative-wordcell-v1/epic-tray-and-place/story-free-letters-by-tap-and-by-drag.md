@@ -45,3 +45,4 @@ Verify: npm run test:all and npm run test:screens are green with the following:
 ## Notes
 
 - Open question settled: the 7-tile k = 0 route on session-idle-empty-column fills the layout at 412 px (perRow 7); session-composing-long.json stays entry 12's.
+- Owner decision (2026-10-09, SPEC F26): on desktop, a click-add on a WordCell whose hover peek is open keeps the peek open, updated to show the cell used, until the pointer leaves; no close-on-click.

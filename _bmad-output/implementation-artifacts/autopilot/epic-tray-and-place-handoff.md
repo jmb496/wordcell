@@ -20,3 +20,7 @@ summary: Ticket 5.8 (adding free letters from WordCells by tap and by drag) is b
 **Close-out docs:** none so far. If you choose to close the preview on click, that changes EXPERIENCE.md (hover peek / Composing), to be applied at the retro.
 
 Digest: `_bmad-output/implementation-artifacts/autopilot/epic-tray-and-place-20261008-1002.md`
+
+## Resolved
+
+2026-10-09: keep as built, the hover peek stays open after a click-add (SPEC F26, ticket 5.8 Notes). No close-out doc edit. The owner stopped the dev server; port 5173 is free.
