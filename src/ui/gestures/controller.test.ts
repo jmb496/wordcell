@@ -3477,6 +3477,29 @@ describe('AD-12 epic 5 tile tap', () => {
     expect(navCalls).toEqual([]);
   });
 
+  it('AD-12 AD-13 F13 a peek turned sticky keeps the selection; a scrim tap and back close the view and keep it', async () => {
+    const t = await ready();
+    t.b.viewScroll.scrollHeight = 900;
+    t.b.viewScroll.clientHeight = 300;
+    const sticky = () => {
+      t.down(t.b.cellCard);
+      t.advance(400);
+      t.fire('pointerup', { target: t.b.cellCard });
+      expect(t.overlays.top).toBe('wordcellView');
+      expect(t.overlays.tileSelection).toBe(3);
+    };
+    sticky();
+    t.tap(t.b.scrim);
+    expect(t.overlays.viewCell).toBeNull();
+    expect(t.overlays.tileSelection).toBe(3);
+    sticky();
+    t.controller.cancel({ byBack: true });
+    t.overlays.closedByBack(t.overlays.depth - 1);
+    expect(t.overlays.viewCell).toBeNull();
+    expect(t.overlays.depth).toBe(0);
+    expect(t.overlays.tileSelection).toBe(3);
+  });
+
   it('AD-12 F2 a non-pointer click (detail 0) on outside or on a tile leaves the tile selection alone', async () => {
     const t = await ready();
     for (const target of [t.b.leftover, t.b.tile, t.b.tile2, t.b.trayMirror, t.b.tray]) {

@@ -4,9 +4,10 @@ import type { Hit } from './intent';
 import { tileTap } from './tile';
 
 // AD-12 tile tap intent (epic 5 SPEC CAP-4, the plan's I/O matrix): hand-built GameView slices.
-// Composing: arrangement [10, 11, 12] (S 10, 11; free letter 12 from cell 4, whose top it is), D
-// block mirrors elsewhere; cell 3 used, cell 4 the free letter's cell (used), cell 5 available, cell
-// 6 empty. Place: placementOrder [20, 10, 11, 12], target 5, legal 3–5, cell 6 not legal.
+// Composing: arrangement [10, 11, 12, 13] (S 10, 11; free letters 12 from cell 4 and 13 from cell
+// 7, whose tops they are, cell 7 listed first), D block mirrors elsewhere; cell 3 used, cells 4 and
+// 7 the free letters' cells (used), cell 5 available, cell 6 empty. Place: placementOrder
+// [20, 10, 11, 12, 13], target 5, legal 3–5 and 7, cell 6 not legal.
 type CellSlice = {
   cell: number;
   cards: number[];
@@ -27,8 +28,8 @@ function cells(list: CellSlice[]) {
 }
 
 const DRAFT = {
-  arrangement: [10, 11, 12],
-  freeLetters: [4],
+  arrangement: [10, 11, 12, 13],
+  freeLetters: [7, 4],
   destination: [20],
 };
 
@@ -41,6 +42,7 @@ const COMPOSING = {
     { cell: 4, cards: [31, 12], used: true },
     { cell: 5, cards: [32], canAddFreeLetter: true },
     { cell: 6, cards: [] },
+    { cell: 7, cards: [33, 13], used: true },
   ]),
 } as unknown as GameView;
 
@@ -48,12 +50,13 @@ const PLACE = {
   status: 'playing',
   phase: 'place',
   draft: DRAFT,
-  place: { placementOrder: [20, 10, 11, 12], target: 5, legalTargets: [3, 4, 5] },
+  place: { placementOrder: [20, 10, 11, 12, 13], target: 5, legalTargets: [3, 4, 5, 7] },
   cells: cells([
     { cell: 3, cards: [30], used: true, isLegalTarget: true, canSetTarget: true },
     { cell: 4, cards: [31, 12], used: true, isLegalTarget: true, canSetTarget: true },
     { cell: 5, cards: [32], isLegalTarget: true },
     { cell: 6, cards: [] },
+    { cell: 7, cards: [33, 13], used: true, isLegalTarget: true, canSetTarget: true },
   ]),
 } as unknown as GameView;
 
@@ -82,15 +85,15 @@ describe('AD-12 tileTap on tiles', () => {
   it('AD-12 another live tile swaps the two: one arrange in Composing, one setPlacementOrder in Place', () => {
     expect(tileTap(tile(12), COMPOSING, 10)).toEqual({
       kind: 'swap',
-      command: { type: 'arrange', arrangement: [12, 11, 10] },
+      command: { type: 'arrange', arrangement: [12, 11, 10, 13] },
     });
     expect(tileTap(tile(11), COMPOSING, 12)).toEqual({
       kind: 'swap',
-      command: { type: 'arrange', arrangement: [10, 12, 11] },
+      command: { type: 'arrange', arrangement: [10, 12, 11, 13] },
     });
     expect(tileTap(tile(12), PLACE, 20)).toEqual({
       kind: 'swap',
-      command: { type: 'setPlacementOrder', order: [12, 10, 11, 20] },
+      command: { type: 'setPlacementOrder', order: [12, 10, 11, 20, 13] },
     });
   });
 
@@ -103,6 +106,7 @@ describe('AD-12 tileTap on tiles', () => {
 
   it('AD-12 Q-31 a second tap on a selected Composing free letter removes it from its cell', () => {
     expect(tileTap(tile(12), COMPOSING, 12)).toEqual({ kind: 'remove', cell: 4 });
+    expect(tileTap(tile(13), COMPOSING, 13)).toEqual({ kind: 'remove', cell: 7 });
   });
 
   it('AD-12 a tile that is not live in the phase, or a tile hit outside a draft, throws', () => {
