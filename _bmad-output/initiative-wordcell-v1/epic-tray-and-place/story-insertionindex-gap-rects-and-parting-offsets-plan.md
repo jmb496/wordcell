@@ -3,7 +3,7 @@ title: 'insertionIndex, gap rects and parting offsets'
 type: 'feature'
 ticket: '6'
 created: '2026-10-09'
-status: 'built'
+status: done
 baseline_revision: 'c80a4478073d472be3b58db5cbcad3633fb25a86'
 route: 'full'
 route_source: 'auto'

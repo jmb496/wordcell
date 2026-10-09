@@ -71,17 +71,20 @@ Tokens: 19.9M input-equivalent (ticket review 43%, code review 31%, build 23%, o
 Worth knowing: unit suite 2.43 s (budget 5 s). The code review left one paperwork item: the plan and build-notes CAP-4 still describe the tile's old hit-area trick, not the final per-row-gap version (for the 5.15 sweep). The build flags two risks: if a later feature (epic 6 keyboard commands) changes the game phase without a button, the next tile tap with a stale selection will throw an error rather than quietly clearing; and no test fixture has a third row of compact tiles, so that row's clipping is only checked indirectly.
 Close-out docs: none
 
-## 5.6 insertionIndex, gap rects and parting offsets — stopped
+## 5.6 insertionIndex, gap rects and parting offsets — done
 What it adds: the behind-the-scenes maths for dragging letters in the tray: which gap a dragged letter would drop into, where those gaps sit on screen, and how the other letters slide aside to make room. Nothing is wired to a real drag yet (that is ticket 5.7).
 Ticket review: 5 passes, converged (majors 9, 5, 3, 3, 0); nothing needed your input. Resumed after the earlier session's usage limit (reset 4am New York).
 Build: built; commit 779458b
-Code review: thorough (risk medium), 2 passes, converged (majors 1, 1); test fixes in WIP commit c01ca58; one question for you (below)
-Tests: test:all not yet run (Step D waits on your answer)
+Code review: thorough (risk medium), 2 passes, converged (majors 1, 1); test fixes in WIP commit c01ca58; one question for you, answered 2026-10-09: Option A, keep the nearest-gap rule (SPEC F25, ticket Notes, 7608342)
+Tests: all passing (test:all, run in the resumed session after your answer)
 Ref to fix upstream: none
-Tokens: 6.9M input-equivalent (ticket review 38%, code review 30%, build 25%, other 4%, orchestrator 3%); orchestrator peak context 61k
+Tokens: 6.9M input-equivalent (ticket review 38%, code review 30%, build 25%, other 4%, orchestrator 3%); orchestrator peak context 61k; resume session: 0.1M input-equivalent (orchestrator 60%, other 40%); orchestrator peak context 50k
 Worth knowing: open item for the refactor sweep: no test yet tells straight-line distance apart from other distance measures for the nearest gap (add a diagonal case). Build note: when the word's letters fill a whole tray row on the left, a tile dragged over their far end can land at the start of the next row instead of the front of the word (follows the spec, pinned by a test; judge it in hand at 5.7).
-Close-out docs: none yet
+Close-out docs: none (the answer keeps SPEC F3 as written; recorded as SPEC F25)
 
 ## Stopped — decision needed (ticket 5.6, Step C)
 Question: when the word's destination letters wrap onto a second tray row, a tile dropped just past them on that second row lands at the nearest gap, which can be in the middle of the word, not at its end as the spec's CAP-5 success line ("a tile dragged past the block landing at the M end") expects. Proposed default: keep the nearest-gap rule (F3) with no special case; 5.7's "past the block" check uses a word that fits on one row; judge the wrapped case in hand at 5.7.
 Resume: record the answer (ticket Notes / spec memlog), commit, rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-tray-and-place`; the next session resumes 5.6 at Step D (code review log has its Result).
+
+## Resumed — 2026-10-09T10:03Z
+Owner answered the 5.6 question (Option A). Step D: test:all passed; 5.6 marked done.
