@@ -1,5 +1,5 @@
 # Review log — story-controller-seams.md (ticket 5.4)
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 251 words (`.passes/pass0.md`), HEAD e261011. Intent fields from tickets.toml entry 4 (interface, tests, owns, consumers, unknown, verify, references): `.passes/intent.md`.
 
@@ -28,3 +28,21 @@ Fixer: all 14 items applied; e2e/helpers/drag.ts has no class literals, left out
 - none
 ### Dropped
 - none
+
+## Pass 2 — 2026-10-08
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 4, minor 10, decision-needed 0  |  Dropped in triage: 1
+Words (docs): 1169 (4.66 x pass 0; budget 1500)  |  Snapshot: .passes/pass2.md
+Fixer: all items applied; Drag/clearDrag stay in controller.ts (fly-back imports the type only); overlays noted as the real module, not mocked; grep run for the Headers list.
+### Applied
+- [major] Interface vs Headers — "App.svelte untouched" while Headers rewrites its Entry 7 comment (App.svelte:32) → fixer item 1
+- [major] Seams — pass-1 item 5 only half resolved: settle → clearDrag, gate.leave, suppress, refreshHover crosses modules; hoverEnter reads `flying`; `attribute()`, `Drag`, `clearDrag`, detach's `suppressed = null` have no home → fixer item 2 (default applied)
+- [major] Headers — pattern misses "Epic 5 entry N" (layout/fit.ts, tray/WordLine.svelte), Card.svelte forward ref "set by entry 5", no mapping for inline tags, inline-only files → fixer item 3 (default applied)
+- [major] AC median — method differs from AD-17 Speed (discarded warm-up + median of three); "~5 %" gate within WSL noise → fixer item 4 (default applied)
+- [minor] fixer items 5–13 (lookup list authoritative + 269 left, `found` nullish only, harness: no new vi.mock + overlays real, Consumers e2e/helpers/drag.ts prefix and controller.test.ts class order, clip wording vs drop-target.ts, `found` is the one helper, `lifted` stays Card literal + var() refs, before/after commits, pointerdown/detach statement order)
+### Default applied (technical)
+- fly-back.ts takes `{ gate, clearDrag?, onSettle }`-style hooks; onSettle = suppress then refreshHover; hover-peek-timer takes isFlying/pressHeld/root/lastPoint hooks and exposes reset(); `attribute()` to lookup.ts; no new module imports controller.ts
+- median: AD-17 method; hard gate < 5 s + one vi.resetModules() per setup; > 10 % rise after one re-run → per-file timings in the plan and fix before built
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- Notes "Open question" relabel — it is the tickets.toml `unknown`, kept as the prior tickets do; it already points to the AC rule
