@@ -1,5 +1,5 @@
 # Review log — story-controller-seams.md (ticket 5.4)
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 251 words (`.passes/pass0.md`), HEAD e261011. Intent fields from tickets.toml entry 4 (interface, tests, owns, consumers, unknown, verify, references): `.passes/intent.md`.
 
@@ -46,3 +46,20 @@ Fixer: all items applied; Drag/clearDrag stay in controller.ts (fly-back imports
 - none
 ### Dropped
 - Notes "Open question" relabel — it is the tickets.toml `unknown`, kept as the prior tickets do; it already points to the AC rule
+
+## Pass 3 — 2026-10-08
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 4, minor 13, decision-needed 0  |  Dropped in triage: 0 (merged at the same per-area grain as pass 2)
+Words (docs): 1309 (5.22 x pass 0; budget 1500)  |  Snapshot: .passes/pass3.md
+Fixer: all 15 items applied; wording tightened to pay (settle order now carried by the onSettle wiring); Notes reworded to the AC median rule; no commands added.
+### Applied
+- [major] Lookup — pass-2 item 5 left controller.ts:269 (`cell card outside [data-wordcell]`) out, contradicting SPEC CAP-3 "every cell/column lookup"; 241/847 of the same shape are in → fixer item 1
+- [major] Headers — epic 4 and epic 5 SPECs reuse CAP-n/F-n ids; bare ids from the tag rewrite become ambiguous → fixer item 2 (default applied: epic-qualified ids, existing form "epic 4 SPEC F34")
+- [major] Lookup — `found`'s nullish-only rule (CardId 0) has no test, and "no new test files" forbids one → fixer item 3 (default applied: one AD-12 lookup.test.ts)
+- [major] AC median rule — the plan cannot record its own commit's hash, and the > 10 % branch has no exit when the split itself costs (module state already forbidden, harness and tests frozen) → fixer item 4 (default applied: after measured on the finished tree applied to the Linux checkout; only the 5 s gate blocks, a > 10 % rise is recorded and flagged for the owner in the plan's review)
+- [minor] fixer items 5–16 (translate home, hover-peek-timer API, factory construction order, line-map shift wording, opening classes wording + SPEC CAP-3 deviation note, header definition, HOVER_CLASSES + literals, cellIn by field, visible-band owns clip/barRect/visibleBand and overSource stays, tags without a same-file paragraph, HoverPeek has no var(), new modules' headers keep moved ids and accepted trade-offs)
+### Default applied (technical)
+- see the majors above; translate → exported from fly-back.ts
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
