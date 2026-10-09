@@ -1,6 +1,6 @@
 # Review log — story-tile-drag-in-the-tray-and-the-strip.md (ticket 5.7)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7. Pass 0: HEAD 94c59e9, .passes/pass0.md, 441 words (budget 2.5x ≈ 1100).
 Intent extras (tickets.toml entry 7, not copied into the ticket; fixer adds them to Description in pass 1): interface, tests, owns, consumers.
@@ -74,3 +74,35 @@ Fixer: all 16 applied; minors 11, 14, 15 a few words over neutral; no commands a
 - none
 ### Dropped
 - none; unapplied (over budget, adds words): re-measure `origin` per move for a desktop wheel scroll mid-drag (adversarial minor) → for the plan
+
+## Pass 3 — 2026-10-09
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 5, minor 13 (8 to the fixer, 5 unapplied), decision-needed 0  |  Dropped in triage: 1 (+ ~5 duplicates merged)
+Words (docs): 1597 (3.62 x pass 0)  |  Snapshot: .passes/pass3.md, fix diff .passes/pass3.fix.diff
+Fixer: all 12 applied; +91 words from the majors, minors word-neutral; orders checked against fixtures and `reorder`; no commands added.
+### Applied
+- [major] AC session-composing — past-block case can follow the k = 2 case that already stored [0, 42] (vacuous) → fresh session-composing → fixer item 1
+- [major] AC — rule-coverage R-34 row asks drag-reorder of free-letter tiles; none (fixture arrangement [32, 28], 28 free from cell 3) → 2
+- [major] AC Geometry — rule-coverage AD-12 row "wrapped rows by distance" (S + P5) has no P5 with a named gap and stored order → session-place-compact tile 35 → gap 7 → [1, 38, 44, 11, 36, 9, 35, 7] → 3
+- [major] Description — desktop hover classes / k-hover / hover peek during a tile drag unspecified; entry 5 tests (controller.test.ts:3430, :3449) and header pin the interim → 4
+- [major] Parting — "return with the dragged face's flyBack" reads as joining fly-back.ts's single-offset flight (throws when busy); return animations not finished by pointerdown/cancel() → 5
+- [minor] Parting "or a platform cancel" → "or any fly-back end" → 6
+- [minor] AC hidePage "as the Undo case does" contradicts "no dispatch"; select a tile first in hidePage and pointercancel cases → 7
+- [minor] Drag layer class gets the `wc-drag-` prefix so `expectNoResidue` (e2e/helpers/drag.ts:8) covers it → 8
+- [minor] AC Geometry "(mirrors included)" holds only for a one-tile block (Card.svelte:248-262) → 9
+- [minor] AC block drag "no transform to any mirror" → "to any tray face" (R-32 (UI) moves nothing) → 10
+- [minor] Drop target — `columnTargets()` still returns columns only; one tray registration (a second throws) → 11
+- [minor] Lift measured before the F18 clear → 12
+### Default applied (technical)
+- Hover — a tile drag clears hover classes and closes the hover peek at its threshold and recomputes hover at its end or the fly-back's settle, as the column drag; supersedes entry 5's "tile press does nothing at any end" test, the pointerup k-hover repaint test for a crossed tile press, and the header sentence → default taken
+- Return — the parted faces return by their own WAAPI animation from their current transform to rest with `duration('flyBack')` and the fly-back's reduced-motion treatment; `drag.faces` stays the dragged face; pointerdown and cancel() finish parting and return animations → default taken
+- Wrapped-row case — session-place-compact (Place, 7 + 1 at 412), tile 35 held left of tile 7 on row 2 (gap 7), parted faces per partingOffsets for gap 7, stored placementOrder [1, 38, 44, 11, 36, 9, 35, 7] → default taken
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- Cut `cancel({ byBack: true })` as unreachable (adversarial) — a mid-drag Forward popstate reaches it through nav's registerBeforeBack (main.ts:140); keep
+### Unapplied minors (over budget, for the plan)
+- Release: finish settles the parting gate count synchronously (as `finishFlight`); the AD-11 Vitest forces it
+- Same-id pointerdown and detach ends: snap at once as epic 4's other ends
+- Strip marks (bottom/top, ★, origin tags) travel with their faces mid-drag and update at release
+- F4 setup: concrete viewport/scroll (e.g. 412 × 600, scrollY 0, band bottom under the action bar), premise-asserted
+- Re-measure `origin` per move for a desktop wheel scroll mid-drag (from pass 2)
