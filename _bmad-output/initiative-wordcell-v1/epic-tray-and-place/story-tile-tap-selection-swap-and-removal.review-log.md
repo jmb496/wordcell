@@ -1,6 +1,6 @@
 # Review log — story-tile-tap-selection-swap-and-removal.md (ticket 5.5)
 
-State: pass 5: done
+State: done (converged)
 
 Mode: docs, thorough, max 7. Pass 0: HEAD 2778b08, .passes/pass0.md, 466 words (budget 2.5x ≈ 1165).
 Intent extras (tickets.toml entry 5, not copied into the ticket; fixer adds them to Description in pass 1): interface, tests, owns, consumers, unknown, risk.
@@ -144,3 +144,23 @@ Fixer: all 7 applied, net −2 words; cuts: "(rule 2)", ", ending the selection"
 - disabled − press by coordinate tap or click({ force: true }) (SPEC CAP-4, CAP-2 helper)
 - Interface omits Card.svelte (`selected`) and TileRows.svelte (clip mechanism): plan file list
 - Consumers list lives in the plan's impact section
+
+## Pass 6 — 2026-10-09
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 1, minor 15, decision-needed 0  |  Dropped in triage: 0 (1 major reclassed minor)
+Words (docs): 1191 (2.56 x pass 0)  |  Snapshot: .passes/pass5.md (no fix pass)
+### Open (not fixed: stopping rule, second consecutive pass with at most one major)
+- [major] Look — "lift the clip, not the rows" reads as removing `.tiles { overflow: hidden }` (TileRows.svelte:74), but that clip also hides compact rows past the second until CAP-9 grows the tray (their wrappers would catch −/+/Validate presses), and the gating e2e/board-phases.spec.ts:464-476 `AD-11 (F2) … clipped tile area` asserts `overflow: hidden` → proposed fix: "raise only the clip's top edge by the lift + outline (e.g. a clip-path/inset or padding-compensated clip); overflow rows stay clipped, rows unmoved; the AD-11 (F2) clip assertion stays green or is updated in step"
+### Reclassed
+- edge-case: long-press peek keep has no P5 → minor: SPEC/rule-coverage R-65 (UI) assign "a long-press peek with a tile selected" to CAP-6 P5 (ticket 8); a UI Vitest case is the plan's option
+### Decision needed (functionality / UX / gameplay)
+- none
+
+## Result — converged after 6 passes
+open major: Look — "lift the clip, not the rows" is ambiguous; removing `.tiles` overflow: hidden would unclip compact overflow rows (pre-CAP-9) and break the AD-11 (F2) clip assertion in e2e/board-phases.spec.ts:464-476; the plan must raise only the clip's top edge, keep overflow rows clipped and rows unmoved.
+Majors per pass: 13, 9, 6, 5, 1, 1. Words 466 → 1191 (budget ~1165). Technical defaults applied: about 15 (see each pass). Decision-needed: none.
+
+### Unapplied minors (for the build plan)
+- pass 6: "(remove there too)" → "(and remove)"; F18 Vitest "any tile" → "any live tile"; drop "or `tapDestinationCard`" from the changed-clear clause (column taps clear whatever the result); Press resolution: horizontal half-gaps are already inside each slot wrapper, only the compact row gap needs an owner; pitch/half-gap hits are geometry — UI Vitest stubs elementFromPoint, so P5 Full pitch is the evidence; Undo-with-selection case needs a fixture where tiles survive (e.g. session-place-free-letter-redo-tail at load, Place → Composing) or rely on the Vitest act() case; lostpointercapture keep case beside pointercancel; every non-pointerup end of a non-tile press (sameId, back cancel) keeps; hover over tile/block hits stays null (hoverAction); hide/show P5 keep step optional (hidePage helper); R-71 non-word swap uses cards other than 38/37 (e.g. 41 and 46); empty-cell long-press is a tap for tileTap (classify.ts); a check that the selected face is 4 px up with a 2 px teal outline; `↩` placement on a card-mode free letter (card 28, bottom band right); long-press peek keep (CAP-6 P5, optional UI Vitest)
+- pass 5: R-35 second tap leaves the stored Session byte-identical; after the R-33/Q-31 removal wordcell-4 shows card 35 live again and the tray leaves compact mode; disabled − pressed by coordinate tap or click({ force: true }); Interface omits Card.svelte and TileRows.svelte (plan file list); Consumers list in the plan's impact section
+- pass 4: epic 6 key commands must also clear on a phase change; non-pointer click on outside leaves the tile selection alone; no lifted-card shadow on tiles; a long-press peek then ≥ 8 px move stays a peek; a tile press under 8 px ended by pointercancel keeps; build-notes CAP-4 close-out edit in this ticket's plan; name the "gap above the action bar" element
+- pass 3: stale tileSelection → tileTap throws (rule 6); no phase-change watcher; keyboard/AT tile activation is the key-command epic's
