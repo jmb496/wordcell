@@ -1,6 +1,6 @@
 # Review log — story-free-letters-by-tap-and-by-drag.md (ticket 5.8)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7. Pass 0: HEAD 968b3e7, .passes/pass0.md, 476 words (budget 2.5x ≈ 1200).
 Intent extras (tickets.toml entry 8, not copied into the ticket; fixer adds interface, tests, owns, consumers to Description in pass 1; unknown is already in Notes).
@@ -73,3 +73,32 @@ Fixer: all 17 applied; `+` named as e.g. (enablement on the fixture not stated);
 - none
 ### Dropped
 - F4 clip of the tray band for the free-letter drag: covered through entry 7's shared `trayTarget()` clip test; belongs in the plan's sentence → test mapping, no ticket text
+
+## Pass 3 — 2026-10-09
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 3, minor 11, decision-needed 0  |  Dropped in triage: 1 (+ ~5 duplicates merged)
+Words (docs): 1426 (3.00 x pass 0)  |  Snapshot: .passes/pass3.md, fix diff .passes/pass3.fix.diff
+Fixer: all 11 applied; `svg.lock:visible` and `wc-parted` `unverified` (design statements; drag.spec.ts:241 uses `.lock`, keep its selector plus `:visible`); "card mode 1" dropped (trayLayout returns 1 row in card mode).
+### Applied
+- [major] Description Mirror segments — `wc-part-start`/`wc-part-end` alone cannot unmark a resting `.start` that is no start once parted (block wrapping at rest, break moves): need one parted marker under which CSS ignores `.start`/`.end`; Vitest must use a block wrapping at rest at a different break → fixer item 1
+- [major] Description Mirror segments — lock svg on every block mirror breaks existing lock-node count assertions (e2e/board-phases.spec.ts:278-279,412-416, drag.spec.ts:241) so test:all cannot go green as written → 2
+- [major] Description "full" — pass 2's "rows `TileRows` renders (`trayLayout`'s once CAP-9 lands)" invites the visible-rows reading (15–20 tiles: caret vs parting); TileRows already renders `trayLayout(tiles.length).rows` → 3
+- [minor] Description ghost clause — "badge still counting it" ambiguous → 4
+- [minor] AC Full layout / Notes — perRow 7 at 412 px settles the route; cut the session-composing-long.json fallback, Notes settled → 5
+- [minor] Description — "dispatch nothing" → inert (EXPERIENCE.md Phase matrix) → 6
+- [minor] Description — drop the Place parenthetical in the Composing sentence; tile selection follows `tileTap` as built (F13) → 7
+- [minor] Caret — hides at a parting gap too; parted tiles return to rest over `parting` when the caret takes over → 8
+- [minor] Interface — WordCellRow.svelte styles `DRAG_GHOST` and `DRAG_LAYER` (as Column.svelte) → 9
+- [minor] AC Desktop — "the insert stored"; "In Composing (as above)" → 10
+- [minor] AC Block right — cut the row-break conditional; the controller Vitest is the coverage (SPEC CAP-6) → 11
+### Default applied (technical)
+- Parted segments — one classes.ts marker (e.g. `wc-parted`) on every block mirror while parted; under it CSS reads only `wc-part-start`/`wc-part-end`; Vitest: block wrapping at rest, wrapping at a different break when parted, the resting start loses its lock → default taken
+- Lock nodes — existing lock-count assertions switch to visible-lock counts (`svg.lock:visible`) with the same expected numbers → default taken
+- Full — `perRow` × `trayLayout(tileCount).rows` (the grid rows TileRows renders; card mode 1; a third row clips until CAP-9) → default taken
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- Ghost on the top card's wrapper instead of the cell wrapper: build-notes CAP-6 already says "controller class on the cell wrapper"; the builder follows the ref
+### Not applied (over budget, to the plan's sentence → test mapping)
+- References: name SPEC CAP-6/F5/F16/F18 and DESIGN.md WordCell
+- Caret at a row-break gap's winning rect: no test case
+- Long-press then moved into the tray band and released: no test case
