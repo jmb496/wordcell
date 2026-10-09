@@ -11,11 +11,12 @@ import { overlays } from '../overlays.svelte';
 // `tray`) with the D-block mirrors joined per row segment (one outline and one lock each). Place:
 // live strip tiles (place `strip`) in `placementOrder`, the first marked `bottom` and the last
 // `top` (R-50). A free-letter tile carries its origin-cell `tag` in both phases and modes; Card
-// places every mark. The tile area keeps the reserved height and clips (F2); its clip's top edge
-// alone is raised 6 px (the 4 px selected-tile lift + its 2 px outline, epic 5 SPEC CAP-4) by a
-// padding-top the negative margin cancels, so rows and the bottom edge stay put. The live tile that
-// is `overlays.tileSelection` is `selected` (and shows `↩` when it is a free letter; Card hides it
-// in the strip). Keys stay `${id}-${mirror}` (AD-14: a live ↔ mirror switch remounts).
+// places every mark and, from `gaps`, the compact hit rect's row-gap halves (F2). The tile area
+// keeps the reserved height and clips (F2); its clip's top edge alone is raised 6 px (the 4 px
+// selected-tile lift + its 2 px outline, epic 5 SPEC CAP-4) by a padding-top the negative margin
+// cancels, so rows and the bottom edge stay put. The live tile that is `overlays.tileSelection` is
+// `selected` (and shows `↩` when it is a free letter; Card hides it in the strip). Keys stay
+// `${id}-${mirror}` (AD-14: a live ↔ mirror switch remounts).
 let {
   tiles,
   faces,
@@ -44,6 +45,12 @@ function segment(i: number): { start: boolean; end: boolean } {
   };
 }
 
+// Epic 5 SPEC F2: which sides of tile i face a row gap (a row above it, a row below it).
+function gaps(i: number): { gapAbove: boolean; gapBelow: boolean } {
+  const row = Math.floor(i / sizing.perRow);
+  return { gapAbove: row > 0, gapBelow: row < Math.ceil(tiles.length / sizing.perRow) - 1 };
+}
+
 // R-50: the strip's first tile is its bottom, the last its top.
 function stripPosition(i: number): 'bottom' | 'top' | undefined {
   if (i === 0) return 'bottom';
@@ -64,7 +71,7 @@ function stripPosition(i: number): 'bottom' | 'top' | undefined {
       face={faces[tile.id] as Face}
       place={strip ? 'strip' : 'tray'}
       mirror={tile.mirror ? 'block' : undefined}
-      tile={{ mode: sizing.mode, width: sizing.tileWidth }}
+      tile={{ mode: sizing.mode, width: sizing.tileWidth, ...gaps(i) }}
       segment={tile.mirror ? segment(i) : undefined}
       tag={tile.mirror ? undefined : tags.get(tile.id)}
       position={strip ? stripPosition(i) : undefined}

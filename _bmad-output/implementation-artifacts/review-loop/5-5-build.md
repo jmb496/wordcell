@@ -1,5 +1,5 @@
 # Review loop — ticket 5.5 build (code mode, d2adfce..7866052)
-State: pass 2: done
+State: pass 3: done
 
 Target: `_bmad-output/implementation-artifacts/review-loop/5-5-build.passes/pass0.diff` (git diff d2adfce..7866052)
 Intent: `_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-tile-tap-selection-swap-and-removal-plan.md`
@@ -34,6 +34,26 @@ Fixer: all 3 applied; plan gained a Sentence → test section after Acceptance C
 - [minor] controller.test.ts 'AD-12 epic 5 tile tap' — SPEC CAP-4's drag from a legal non-current Place cell (dispatches nothing, clears) has no controller case → fixer item 3
 ### Default applied (technical)
 - plan mapping — table form like story-controller-seams-plan.md's sentence → test section
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Pass 3 — 2026-10-09
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 2, minor 6, decision-needed 0  |  Dropped in triage: 0
+Snapshot: tree 45648dc7810e93fe9b38e4821c4bb08560b9967d (fix diff 5-5-build.passes/pass3.fix.diff)
+Fixer: all 8 applied; item 1 test 'AD-12 CAP-8 a crossed mouse tile press released over a Composing destination card repaints the k hover at pointerup' fails without the fix; item 3 test renamed 'AD-12 CAP-4 a selected strip free-letter tile …'; item 8 via Card `tile.gapAbove/gapBelow` from TileRows `gaps(i)` (pseudo-element only). Orchestrator re-run: `npm test` 54 files, 2127 passed; lint clean; check 0 errors; fixer ran tile-tap, board-phases, tray specs android 72 passed.
+### Applied
+- [major] src/ui/gestures/controller.ts pointerup `if (outcome !== 'drag' || tray) return;` — a tile/block press that crossed the threshold and ends in pointerup returns before `refreshHover()`, breaking epic 4 SPEC CAP-8's "repaints at every end of one" (verified: `end()` skips `up`, and before this diff the path reached `refreshHover()`); call it in the tray branch and add a controller test → fixer item 1
+- [major] e2e/tile-tap.spec.ts:128-131, :179-180 — no test asserts that an unselected Composing free letter shows no `↩`, so `returnSlot={tags.has(id)}` would pass → fixer item 2
+- [minor] plan Sentence → test R-35 row — strip free-letter test cited as R-35 (source tiles) → fixer item 3
+- [minor] plan Exempt R-65 entry — "V here" names no test; cite the two controller peek cases → fixer item 4
+- [minor] plan R-71 row — no-change swap clause unaddressed; note it is unreachable (second tap deselects) → fixer item 5
+- [minor] controller.test.ts F25 detail-0 click — no block-mirror click with a tail selected (carve-out unproven for block) → fixer item 6
+- [minor] plan AD-12 row — drag-as-tap/pointercancel clauses mapped to P5 tests that do not drag; map them to the V cases → fixer item 7
+- [minor] Card.svelte `.card.tile.compact::before { inset: -2px 0 }` — extends 2 px on the outer edges too (row 1 into the word line, last row into the tray background), while the ticket splits only the row gaps → fixer item 8
+### Default applied (technical)
+- Card.svelte compact half-gap — restrict the 2 px extension to sides that face a row gap
 ### Decision needed (functionality / UX / gameplay)
 - none
 ### Dropped

@@ -42,7 +42,8 @@ let {
   hidden?: boolean;
   /** A live D card in its column in Composing (DESIGN.md Card, in destination block). */
   destination?: boolean;
-  tile?: { mode: 'card' | 'compact'; width: number };
+  /** `gapAbove`/`gapBelow`: a compact row gap faces that side (epic 5 SPEC F2 hit rect). */
+  tile?: { mode: 'card' | 'compact'; width: number; gapAbove: boolean; gapBelow: boolean };
   /** A `block` mirror's place in its row segment: outline ends and the lock at the start. */
   segment?: { start: boolean; end: boolean };
   /** In the tap-selected tail; only the face rises (epic 4 SPEC F26). */
@@ -103,6 +104,8 @@ const inView = $derived.by(() => {
   class:cell={place === 'cell'}
   class:tile={tile !== undefined}
   class:compact={tile?.mode === 'compact'}
+  class:gap-above={tile?.gapAbove}
+  class:gap-below={tile?.gapBelow}
   class:hidden
   class:destination
   class:ghost
@@ -214,10 +217,13 @@ const inView = $derived.by(() => {
   .card.tile.compact { height: 44px; }
   .compact .face { height: 44px; }
   .compact .face::after { content: none; }
-  /* Epic 5 SPEC F2: a compact tile's hit rect owns half of each 4 px row gap (2 px above and below
-     the wrapper; the horizontal half-gaps are already inside the pitch-wide wrapper). */
+  /* Epic 5 SPEC F2: a compact tile's hit rect owns half of each 4 px row gap it faces (2 px above
+     a row after the first, 2 px below a row before the last; never past the tile area's outer
+     rows); the horizontal half-gaps are already inside the pitch-wide wrapper. */
   .card.tile.compact { position: relative; }
-  .card.tile.compact::before { content: ''; position: absolute; inset: -2px 0; }
+  .card.tile.compact::before { content: ''; position: absolute; inset: 0; }
+  .card.tile.compact.gap-above::before { top: -2px; }
+  .card.tile.compact.gap-below::before { bottom: -2px; }
   .compact .glyph { top: 0; height: 100%; font-size: 22px; }
   .compact .glyph.qu { top: 0; height: 100%; font-size: 18px; }
 

@@ -1525,7 +1525,7 @@ describe('AD-12 entry 7 tap actions', () => {
     expect(t.overlays.selection).toEqual({ column: 2, count: 1 });
   });
 
-  it('AD-12 F25 a click with detail 0 resolving outside or on a tray tile deselects; detail 1 and a column target do nothing', async () => {
+  it('AD-12 F25 a click with detail 0 resolving outside, on a tray tile or on a block deselects; detail 1 and a column target do nothing', async () => {
     const t = await setup();
     t.detach();
     t.tap(t.b.card1);
@@ -1540,7 +1540,10 @@ describe('AD-12 entry 7 tap actions', () => {
     expect(t.overlays.selection).toEqual({ column: 1, count: 2 });
     t.fire('click', { target: t.b.tile, detail: 0 });
     expect(t.overlays.selection).toBeNull();
-    expect(navCalls).toEqual(['push', 'pop', 'push', 'pop']);
+    t.tap(t.b.card1);
+    t.fire('click', { target: t.b.trayMirror, detail: 0 });
+    expect(t.overlays.selection).toBeNull();
+    expect(navCalls).toEqual(['push', 'pop', 'push', 'pop', 'push', 'pop']);
   });
 });
 
@@ -3440,6 +3443,19 @@ describe('AD-12 epic 5 tile tap', () => {
     crossed(p, p.b.stripTile);
     expect(p.overlays.tileSelection).toBeNull();
     p.fire('pointerup');
+    expect(navCalls).toEqual([]);
+  });
+
+  it('AD-12 CAP-8 a crossed mouse tile press released over a Composing destination card repaints the k hover at pointerup', async () => {
+    const t = await ready();
+    const mouse = { pointerType: 'mouse' };
+    t.down(t.b.tile, { clientX: 100, clientY: 100, ...mouse });
+    t.fire('pointermove', { clientX: 110, clientY: 100, ...mouse });
+    t.hover(t.b.card1);
+    t.controller.refreshHover();
+    expect(t.b.column1.classes.size).toBe(0);
+    t.fire('pointerup', mouse);
+    expect([...t.b.column1.classes]).toEqual(['wc-hover-tail']);
     expect(navCalls).toEqual([]);
   });
 

@@ -387,8 +387,8 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       }
     }
     gate.leave();
-    // A drop and a drag-as-tap refresh after their dispatch (pointerup); epic 4 SPEC CAP-8: a
-    // crossed press with no pick-up drag repaints at every other end.
+    // A drop, a drag-as-tap and a crossed tile or block press refresh at pointerup; epic 4 SPEC
+    // CAP-8: a crossed press with no pick-up drag repaints at every other end.
     if (kind !== 'up' && (drag !== null ? !flies : p.state.kind === 'drag')) refreshHover();
   }
 
@@ -736,8 +736,13 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       if (!tray) perform(p.hit);
     }
     if (drag === null) {
-      // Epic 5 SPEC F18, F2: a tile or block press that crossed the threshold does nothing here.
-      if (outcome !== 'drag' || tray) return;
+      // Epic 5 SPEC F18, F2: a tile or block press that crossed the threshold does nothing here
+      // but repaint the hover (epic 4 SPEC CAP-8).
+      if (tray) {
+        if (outcome === 'drag') refreshHover();
+        return;
+      }
+      if (outcome !== 'drag') return;
       applyTileDrag(p.hit);
       // R-39: a drag-as-tap reads the GameView now (AD-3), wherever released.
       const view = game.view;

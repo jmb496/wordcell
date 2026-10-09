@@ -115,16 +115,20 @@ test('R-33 R-34 R-35 Q-31 R-73 (UI) Composing on session-place-free-letter-redo-
 }) => {
   await open(page, 'session-place-free-letter-redo-tail', ['undo']);
   expect(await trayIds(page)).toEqual(['32', '28', '9m']);
+  // DESIGN.md Tile: an unselected free letter shows no `↩`.
+  await expect(ret(page, 28)).toHaveCount(0);
   await select(page, 32);
   await expect(ret(page, 32)).toHaveCount(0);
   await tapTile(page, 28);
   await expectSelected(page, null);
   expect((await storedMove(page)).arrangement).toEqual([28, 32]);
+  await expect(ret(page, 28)).toHaveCount(0);
   await select(page, 32);
   const before = await stored(page, SESSION);
   await tapTile(page, 32);
   await expectSelected(page, null);
   expect(await stored(page, SESSION)).toBe(before);
+  await expect(ret(page, 28)).toHaveCount(0);
   // Free letter 28 from cell 3 (card mode): selected, `↩` in the bottom band, right.
   await select(page, 28);
   await expect(tile(page, 28).locator('.return.band-r')).toHaveText('↩');
@@ -154,7 +158,7 @@ test('R-51 R-35 R-73 (UI) strip on session-place: select, swap and deselect', as
   expect(await stored(page, SESSION)).toBe(before);
 });
 
-test('R-35 a selected strip free-letter tile (28 from cell 3, session-place-free-letter-redo-tail) shows no ↩ and a second tap only deselects', async ({
+test('AD-12 CAP-4 a selected strip free-letter tile (28 from cell 3, session-place-free-letter-redo-tail) shows no ↩ and a second tap only deselects', async ({
   page,
 }) => {
   await open(page, 'session-place-free-letter-redo-tail');
@@ -176,6 +180,7 @@ test('R-33 Q-31 R-73 (UI) compact QU free letter on session-place-compact + one 
   await tapTile(page, 38);
   await expectSelected(page, null);
   expect((await storedMove(page)).arrangement).toEqual([38, 1, 35, 44, 11]);
+  await expect(ret(page, 35)).toHaveCount(0);
   await select(page, 35);
   await expect(tile(page, 35).locator('.return.br')).toHaveText('↩');
   await tapTile(page, 35);
