@@ -101,4 +101,4 @@ Worth knowing: one open item for the refactor sweep (5.14): in the build plan's 
 Close-out docs: none
 
 ## Owner hand check — 2026-10-09
-After 5.7, the owner tried the F25 wrapped case on the phone (a tile dropped past a long word's letters that wrap onto a second tray row): works as wanted, no change. Still untried: a tile dragged past the far end of a full row landing at the start of the next row (from 5.6).
+After 5.7, the owner tried the F25 wrapped case on the phone (a tile dropped past a long word's letters that wrap onto a second tray row): works as wanted, no change. Also confirmed the same day: a tile dragged past the far end of a full row landing at the start of the next row (from 5.6) works as wanted. Both hand checks done.
