@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { GameView } from '../../engine/index';
 import type { Hit } from './intent';
-import { tileTap } from './tile';
+import { tileRun, tileTap } from './tile';
 
 // AD-12 tile tap intent (epic 5 SPEC CAP-4, the plan's I/O matrix): hand-built GameView slices.
 // Composing: arrangement [10, 11, 12, 13] (S 10, 11; free letters 12 from cell 4 and 13 from cell
@@ -185,5 +185,69 @@ describe('AD-12 tileTap stale selection', () => {
       expect(() => tileTap(hit, IDLE, 10)).toThrow(/^AD-12 tileTap with tile 10 selected/);
     }
     expect(() => tileTap(OUTSIDE, PLACE, 99)).toThrow(/^AD-12 tileTap with tile 99 selected/);
+  });
+});
+
+// Epic 5 SPEC CAP-5 (F3, F25): the tile drag run. Composing M [10, 11, 12] with the block of k on
+// either side; Place [20, 10, 11, 12, 13].
+const composing = (k: number, side: 'left' | 'right') =>
+  ({
+    ...COMPOSING,
+    draft: {
+      ...DRAFT,
+      arrangement: [10, 11, 12],
+      destination: [20, 21].slice(0, k),
+      k,
+      side,
+    },
+  }) as unknown as GameView;
+
+describe('AD-12 tileRun', () => {
+  it('AD-12 Composing: the run is M from k with the block on the left, else from 0, over |M| + k tray positions', () => {
+    const right = tileRun(composing(1, 'right'), 11);
+    expect(right).toMatchObject({ order: [10, 11, 12], first: 0, count: 3, tileCount: 4, from: 1 });
+    const left = tileRun(composing(2, 'left'), 12);
+    expect(left).toMatchObject({ order: [10, 11, 12], first: 2, count: 3, tileCount: 5, from: 2 });
+    const empty = tileRun(composing(0, 'right'), 10);
+    expect(empty).toMatchObject({ first: 0, count: 3, tileCount: 3, from: 0 });
+    expect(tileRun(composing(0, 'left'), 10)).toMatchObject({ first: 0, tileCount: 3 });
+  });
+
+  it('AD-12 Place: the run is placementOrder from 0 over n positions, D cards movable', () => {
+    expect(tileRun(PLACE, 20)).toMatchObject({
+      order: [20, 10, 11, 12, 13],
+      first: 0,
+      count: 5,
+      tileCount: 5,
+      from: 0,
+    });
+  });
+
+  it('AD-12 release dispatches iff the order changes by card: own gap j and j + 1 give null', () => {
+    const run = tileRun(composing(1, 'right'), 11);
+    expect(run.release(1)).toBeNull();
+    expect(run.release(2)).toBeNull();
+    expect(run.release(0)).toEqual({ type: 'arrange', arrangement: [11, 10, 12] });
+    expect(run.release(3)).toEqual({ type: 'arrange', arrangement: [10, 12, 11] });
+    const strip = tileRun(PLACE, 12);
+    expect(strip.release(3)).toBeNull();
+    expect(strip.release(4)).toBeNull();
+    expect(strip.release(0)).toEqual({ type: 'setPlacementOrder', order: [12, 20, 10, 11, 13] });
+    expect(strip.release(5)).toEqual({ type: 'setPlacementOrder', order: [20, 10, 11, 13, 12] });
+  });
+
+  it('AD-12 R-32 a gap past a block on the right ends at the end of M', () => {
+    // The last gap of the run is M's end, never inside or beyond the block (F3).
+    const run = tileRun(composing(2, 'right'), 10);
+    expect(run.release(run.count)).toEqual({ type: 'arrange', arrangement: [11, 12, 10] });
+  });
+
+  it('AD-12 a card that is not a live tile of the phase, or a view outside a draft, throws', () => {
+    expect(() => tileRun(composing(1, 'right'), 20)).toThrow(
+      /^AD-12 tileRun on card 20, not a live tile in composing/,
+    );
+    expect(() => tileRun(PLACE, 99)).toThrow(/^AD-12 tileRun on card 99, not a live tile in place/);
+    expect(() => tileRun(IDLE, 10)).toThrow(/^AD-12 tileRun on tile 10 outside a draft/);
+    expect(() => tileRun(WON, 10)).toThrow(/^AD-12 tileRun on tile 10 outside a draft/);
   });
 });

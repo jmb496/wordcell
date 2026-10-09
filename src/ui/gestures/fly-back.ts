@@ -7,51 +7,61 @@
 // through `finishFlight()` (cancel(), a new press, a new drag). The settle clears the drag classes
 // and transform (`clearDrag`), leaves the gate, then calls `onSettle` (the controller's suppress
 // and hover repaint). A cancelled animation would never settle and throws (rule 6). `translate()`
-// is the one transform writer the drag moves share.
+// is the one transform writer the drag moves share. Generic over the drag type: it reads only the
+// faces, wrappers, last offset and lift, and hands the controller's own drag back to `clearDrag`
+// (a column tail, or a tile drag's one face, epic 5 SPEC CAP-5).
 import { prefs } from '../../shell/prefs.svelte';
 import { SELECTION_LIFT_PX } from '../layout/geometry';
 import { duration } from '../motion';
-import type { Drag } from './controller';
 import type { Gate } from './gate';
 
 export function translate(dx: number, dy: number): string {
   return `translate(${dx}px, ${dy}px)`;
 }
 
-/** A running fly-back (F13). */
-type Flight = { readonly drag: Drag; readonly animations: Animation[]; settled: boolean };
+/** The drag fields a fly-back reads. */
+type Flown = {
+  readonly faces: readonly HTMLElement[];
+  readonly wrappers: readonly HTMLElement[];
+  readonly dx: number;
+  readonly dy: number;
+  readonly lift: number;
+};
 
-export type FlyBackDeps = {
+/** A running fly-back (F13). */
+type Flight<D> = { readonly drag: D; readonly animations: Animation[]; settled: boolean };
+
+export type FlyBackDeps<D extends Flown> = {
   readonly gate: Gate;
   /** Removes every drag class and the inline transform from the tail. */
-  clearDrag(drag: Drag): void;
+  clearDrag(drag: D): void;
   /** Runs at the end of every settle, after the gate leave. */
   onSettle(): void;
 };
 
-export type FlyBack = {
-  flyBack(drag: Drag, restoring: boolean): void;
+export type FlyBack<D extends Flown> = {
+  flyBack(drag: D, restoring: boolean): void;
   /** Epic 4 SPEC F13: completes a running fly-back at once; its settle runs synchronously. */
   finishFlight(): void;
   /** True while a fly-back runs. */
   running(): boolean;
 };
 
-export function createFlyBack(deps: FlyBackDeps): FlyBack {
+export function createFlyBack<D extends Flown>(deps: FlyBackDeps<D>): FlyBack<D> {
   const { gate, clearDrag } = deps;
   /** The running fly-back, if any. */
-  let flying: Flight | null = null;
+  let flying: Flight<D> | null = null;
 
   // F13: WAAPI on the faces from the last written transform back to the slot (F32/F33: when
   // `restoring`, each face's resting slot, lifted if its wrapper is `lifted`); under reduced motion
   // the transform clears at once (Card's `.lifted .face` rests a kept selection's faces lifted) and
   // the faces fade in. Gate-counted until settled.
-  function flyBack(drag: Drag, restoring: boolean): void {
+  function flyBack(drag: D, restoring: boolean): void {
     if (flying !== null) throw new Error('AD-12 fly-back while one is running');
     gate.enter();
     const ms = duration('flyBack');
     const reduced = prefs.motion.reduced;
-    const flight: Flight = { drag, animations: [], settled: false };
+    const flight: Flight<D> = { drag, animations: [], settled: false };
     flying = flight;
     let remaining = drag.faces.length;
     const done = (): void => {
@@ -88,7 +98,7 @@ export function createFlyBack(deps: FlyBackDeps): FlyBack {
   }
 
   // Idempotent: the last face's onfinish, or finishFlight().
-  function settle(flight: Flight): void {
+  function settle(flight: Flight<D>): void {
     if (flight.settled) return;
     flight.settled = true;
     if (flying === flight) flying = null;

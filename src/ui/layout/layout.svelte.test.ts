@@ -155,6 +155,7 @@ describe('AD-11 live layout', () => {
     const t = setup({ ...PIXEL_7, innerHeight: 915 });
     expect(t.layout.w).toBe(46);
     expect(t.layout.metrics).toEqual({ H: 61, strip: 44, slot: 50, board: 400 });
+    expect(t.layout.trayInnerWidth).toBe(384);
     expect(t.layout.wide).toBe(false);
     expect(t.layout.heights.leftover).toBe(177);
     expect(t.layout.heights.banner).toBe(0);
@@ -207,6 +208,7 @@ describe('AD-11 live layout', () => {
     t.frame();
     expect(t.layout.w).toBe(43);
     expect(t.layout.metrics.board).toBe(376);
+    expect(t.layout.trayInnerWidth).toBe(360);
     expect(t.layout.heights.leftover).toBe(185);
     expect(t.calls).toEqual([]);
   });

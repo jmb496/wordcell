@@ -11,10 +11,17 @@
 // current or another legal Place cell until tickets 8/9 dispatch there). A tile hit outside
 // Composing and Place, a tile that is not live in the phase, or a selection that is not a live tile
 // of the current phase throws (rule 6).
+// Tile drag run (epic 5 SPEC CAP-5, F3, F25; build-notes CAP-5), pure: `tileRun` gives a dragged
+// live tile's movable run in tray positions (Composing: `draft.arrangement` from `first` = k with
+// the block on the left, else 0, over |M| + k tiles; Place: `placementOrder` from 0 over n), the
+// tile's run index `from`, and `release(gap)`: targeting.ts `reorder` compared by card, one
+// `arrange` / `setPlacementOrder` iff the order changes, else null. A card that is not a live tile
+// of the phase, or a view outside Composing and Place, throws (rule 6).
 import type { CardId, Command, GameView, WordCellNumber } from '../../engine/index';
 import { originCard } from '../tray/tags';
 import type { Hit } from './intent';
 import { cellIn, found } from './lookup';
+import { reorder } from './targeting';
 
 export type TileAction =
   | { readonly kind: 'select'; readonly card: CardId }
@@ -54,6 +61,13 @@ function freeLetterCell(view: GameView, card: CardId): WordCellNumber | null {
   return draft.freeLetters.find((cell) => originCard(view.cells, cell) === card) ?? null;
 }
 
+// The one command shape of a tray or strip reorder (swap or drag).
+function orderCommand(tiles: Tiles, order: readonly CardId[]): Command {
+  return tiles.phase === 'place'
+    ? { type: 'setPlacementOrder', order }
+    : { type: 'arrange', arrangement: order };
+}
+
 function tileHit(card: CardId, view: GameView, tiles: Tiles, selection: CardId | null): TileAction {
   if (!tiles.order.includes(card)) {
     throw new Error(`AD-12 tileTap on card ${card}, not a live tile in ${tiles.phase}`);
@@ -64,14 +78,7 @@ function tileHit(card: CardId, view: GameView, tiles: Tiles, selection: CardId |
     const cell = freeLetterCell(view, card);
     return cell === null ? { kind: 'deselect' } : { kind: 'remove', cell };
   }
-  const order = exchanged(tiles.order, selection, card);
-  return {
-    kind: 'swap',
-    command:
-      tiles.phase === 'place'
-        ? { type: 'setPlacementOrder', order }
-        : { type: 'arrange', arrangement: order },
-  };
+  return { kind: 'swap', command: orderCommand(tiles, exchanged(tiles.order, selection, card)) };
 }
 
 // F13: WordCell taps by phase (AD-3 flags from the GameView).
@@ -105,4 +112,45 @@ export function tileTap(hit: Hit, view: GameView, selection: CardId | null): Til
     case 'outside':
       return CLEAR;
   }
+}
+
+type TileRun = {
+  /** The movable run, M or `placementOrder` (no mirrors). */
+  readonly order: readonly CardId[];
+  /** The run's first tray position. */
+  readonly first: number;
+  readonly count: number;
+  /** Every tray position, D-block mirrors included. */
+  readonly tileCount: number;
+  /** The dragged tile's run index (j). */
+  readonly from: number;
+  /** The reorder command for a release at gap `gap` (0…count), or null when the order is kept. */
+  release(gap: number): Command | null;
+};
+
+/** Epic 5 SPEC CAP-5: the movable run of the dragged live tile `card`. */
+export function tileRun(view: GameView, card: CardId): TileRun {
+  const tiles = liveTiles(view);
+  if (tiles === null) throw new Error(`AD-12 tileRun on tile ${card} outside a draft`);
+  const from = tiles.order.indexOf(card);
+  if (from < 0) throw new Error(`AD-12 tileRun on card ${card}, not a live tile in ${tiles.phase}`);
+  const count = tiles.order.length;
+  let first = 0;
+  let tileCount = count;
+  if (tiles.phase === 'composing') {
+    const draft = found(view.draft, 'AD-12 Composing without a draft view');
+    first = draft.side === 'left' ? draft.k : 0;
+    tileCount = count + draft.k;
+  }
+  return {
+    order: tiles.order,
+    first,
+    count,
+    tileCount,
+    from,
+    release(gap: number): Command | null {
+      const next = reorder(tiles.order, from, gap);
+      return next.every((id, i) => id === tiles.order[i]) ? null : orderCommand(tiles, next);
+    },
+  };
 }

@@ -15,6 +15,10 @@ import type { Gate } from './gate';
 // Entry 11: the board also holds the view's scrim and sheet, the sheet's `[data-view-scroll]`
 // area (settable `scrollHeight`/`clientHeight`) and a mirror inside it; a `{ capture: true }`
 // listener (the click swallower) is kept apart from the controller's and runs first.
+// Entry 5.7: the tray band (registered `kind: 'tray'`) holds a `.tiles` element whose tile wrappers
+// have `.face` children with rects on the resting slots (w 40, tray inner width 384 from deps:
+// tileWidth 44, H 53, perRow 8, origin (10, 640)); a fake Animation can be cancelled (`cancel()`
+// clears it, as WAAPI's cancel: no later finish).
 const navCalls: string[] = [];
 // Entry 9: gate enter/leave, animation finish and elementFromPoint calls, in order.
 const order: string[] = [];
@@ -69,11 +73,18 @@ class FakeAnimation {
   /** Never called by the fake; a test fires it to simulate a cancelled animation. */
   oncancel: (() => void) | null = null;
   finished = false;
+  cancelled = false;
   readonly finish = vi.fn(() => {
+    if (this.cancelled) return;
     order.push('finish');
     if (this.finished) return;
     this.finished = true;
     clock.add(() => this.onfinish?.(), 0);
+  });
+  /** Entry 5.7: WAAPI's cancel; its `cancel` event is the test's to fire (`oncancel`). */
+  readonly cancel = vi.fn(() => {
+    order.push('cancel');
+    this.cancelled = true;
   });
   constructor(
     readonly keyframes: Record<string, unknown>[],
@@ -343,12 +354,35 @@ function board() {
   });
   // Entry 12: the hover peek root (rendered only while open in the app; always here).
   const hoverPeek = el('div', { 'data-hover-peek': '' }, root);
-  const tray = el('div', { 'data-band': 'tray' }, root);
-  const tile = el('div', { 'data-place': 'tray', 'data-card-id': '3' }, tray);
+  // Entry 5.7: the tray band x 0 … 400, y 600 … 800; its `.tiles` holds tray positions 0, 1, 2
+  // (tile 3, tile 4, then strip tile 6 in Place or the mirror in Composing) on slots x 10 + 48p,
+  // y 640 … 693 (wrapper 2 px wider each side).
+  const tray = at(el('div', { 'data-band': 'tray' }, root), {
+    left: 0,
+    top: 600,
+    right: 400,
+    bottom: 800,
+  });
+  const tiles = el('div', {}, tray);
+  tiles.classes.add('tiles');
+  const slotAt = (p: number): Rect => ({
+    left: 10 + 48 * p,
+    top: 640,
+    right: 54 + 48 * p,
+    bottom: 693,
+  });
+  const tileAt = (attrs: Record<string, string>, p: number) => {
+    const s = slotAt(p);
+    const wrapper = at(el('div', attrs, tiles), { ...s, left: s.left - 2, right: s.right + 2 });
+    const f = at(el('div', {}, wrapper), s);
+    f.classes.add('face');
+    return [wrapper, f] as const;
+  };
+  const [tile, tileFace] = tileAt({ 'data-place': 'tray', 'data-card-id': '3' }, 0);
   // Epic 5 CAP-4: a second tray tile, a strip tile (Place) and the gap above the action bar.
-  const tile2 = el('div', { 'data-place': 'tray', 'data-card-id': '4' }, tray);
-  const stripTile = el('div', { 'data-place': 'strip', 'data-card-id': '6' }, tray);
-  const trayMirror = el('div', { 'data-mirror-of': '1' }, tray);
+  const [tile2, tile2Face] = tileAt({ 'data-place': 'tray', 'data-card-id': '4' }, 1);
+  const [stripTile, stripFace] = tileAt({ 'data-place': 'strip', 'data-card-id': '6' }, 2);
+  const trayMirror = at(el('div', { 'data-mirror-of': '1' }, tiles), slotAt(2));
   const trayMirrorFace = el('div', {}, trayMirror);
   const actionGap = el('div', { 'data-band': 'actionGap' }, root);
   const leftover = el('div', { 'data-band': 'leftover' }, root);
@@ -397,6 +431,11 @@ function board() {
     tile,
     tile2,
     stripTile,
+    tileFace,
+    tile2Face,
+    stripFace,
+    tiles,
+    slotAt,
     tray,
     actionGap,
     trayMirror,
@@ -489,6 +528,7 @@ async function setup() {
   for (const [id, column] of [b.column1, b.column2, b.column3].entries()) {
     dropTarget(column as unknown as Element, { kind: 'column', id: id + 1 });
   }
+  dropTarget(b.tray as unknown as Element, { kind: 'tray' });
   let hit: FakeEl | null = null;
   // Entry 12: hoverFine off by default, so the setTimer call counts above stay long-press only.
   const media = { hoverFine: false };
@@ -512,6 +552,8 @@ async function setup() {
         hoverFineWatchers.delete(callback);
       };
     },
+    w: () => 40,
+    trayInnerWidth: () => 384,
   });
   const detach = () => controller.attach(b.root as unknown as HTMLElement);
   // A pointerdown whose resolution reads `target` from elementFromPoint; event.target is another
@@ -599,7 +641,7 @@ function tileView(phase: 'composing' | 'place' = 'composing'): void {
         composing ? { used: true } : { used: true, isLegalTarget: true, canSetTarget: true },
       ),
     ],
-    draft: { arrangement: [3, 4], freeLetters: [5], destination: [5] },
+    draft: { arrangement: [3, 4], freeLetters: [5], destination: [5], k: 1, side: 'right' },
     ...(composing ? {} : { place: { placementOrder: [3, 4, 6], target: 3 } }),
   };
 }
@@ -3427,35 +3469,17 @@ describe('AD-12 epic 5 tile tap', () => {
     expect(navCalls).toEqual([]);
   });
 
-  it('AD-12 F18 a ≥ 8 px press on any live tile clears at the threshold and dispatches nothing, ended by pointerup or pointercancel', async () => {
-    for (const end of ['pointerup', 'pointercancel']) {
-      for (const which of ['tile', 'tile2'] as const) {
-        const t = await ready();
-        crossed(t, t.b[which]);
-        expect(t.overlays.tileSelection).toBeNull();
-        t.fire(end);
-        expect(t.overlays.tileSelection).toBeNull();
-        expect(navCalls).toEqual([]);
-        expect(t.active()).toBe(0);
-      }
+  // Entry 5.7 keeps this test's threshold half; its ends are the tile drag's (describe below).
+  it('AD-12 F18 a ≥ 8 px press on any live tile clears the tile selection at the threshold', async () => {
+    for (const which of ['tile', 'tile2'] as const) {
+      const t = await ready();
+      crossed(t, t.b[which]);
+      expect(t.overlays.tileSelection).toBeNull();
+      expect(navCalls).toEqual([]);
     }
     const p = await ready('place', 6);
     crossed(p, p.b.stripTile);
     expect(p.overlays.tileSelection).toBeNull();
-    p.fire('pointerup');
-    expect(navCalls).toEqual([]);
-  });
-
-  it('AD-12 CAP-8 a crossed mouse tile press released over a Composing destination card repaints the k hover at pointerup', async () => {
-    const t = await ready();
-    const mouse = { pointerType: 'mouse' };
-    t.down(t.b.tile, { clientX: 100, clientY: 100, ...mouse });
-    t.fire('pointermove', { clientX: 110, clientY: 100, ...mouse });
-    t.hover(t.b.card1);
-    t.controller.refreshHover();
-    expect(t.b.column1.classes.size).toBe(0);
-    t.fire('pointerup', mouse);
-    expect([...t.b.column1.classes]).toEqual(['wc-hover-tail']);
     expect(navCalls).toEqual([]);
   });
 
@@ -3539,5 +3563,505 @@ describe('AD-12 epic 5 tile tap', () => {
     expect(() => t.tap(t.b.leftover)).toThrow(
       /^AD-12 tileTap with tile 6 selected, not a live tile/,
     );
+  });
+});
+
+// Epic 5 SPEC CAP-5 (F2, F4, F5, F18; AD-10, AD-11): the tile drag on tileView(). Every press is at
+// (100, 100), so a move to (100 + dx, 100 + dy) writes translate(dx, dy − lift) on the face. Resting
+// face centres: tile 3 x 32, tile 4 x 80, strip tile 6 x 128 (y 666.5); gap-rect centres x 8, 56,
+// 104 (and 152 in Place), y 666.5. Composing run [3, 4] (block of one on the right), Place [3, 4, 6].
+describe('AD-12 epic 5 tile drag', () => {
+  type T = Awaited<ReturnType<typeof setup>>;
+  const dispatched = (command: Record<string, unknown>) => `dispatch ${JSON.stringify(command)}`;
+  const move = (t: T, dx: number, dy = 0, init: Partial<FakeEvent> = {}) =>
+    t.fire('pointermove', { clientX: 100 + dx, clientY: 100 + dy, ...init });
+  const press = (t: T, el: FakeEl, init: Partial<FakeEvent> = {}) =>
+    t.down(el, { clientX: 100, clientY: 100, ...init });
+  const ready = async (
+    phase: 'composing' | 'place' = 'composing',
+    selected: number | null = null,
+  ) => {
+    const t = await setup();
+    t.detach();
+    tileView(phase);
+    if (selected !== null) t.overlays.selectTile(selected);
+    navCalls.length = 0;
+    return t;
+  };
+  const faces = (t: T) => [t.b.tileFace, t.b.tile2Face, t.b.stripFace];
+  const transforms = (t: T) => faces(t).map((f) => f.style.transform);
+  const last = (f: FakeEl) => {
+    const a = f.animations.at(-1);
+    if (a === undefined) throw new Error('no animation');
+    return a;
+  };
+  // Nothing of the drag left on the DOM: no transform, layer or clip class.
+  const clean = (t: T) =>
+    transforms(t).every((x) => x === '') &&
+    faces(t).every((f) => !f.classes.has('wc-drag-layer')) &&
+    !t.b.tiles.classes.has('wc-drag-tiles');
+  // Tile 4 dragged left onto gap 0 (Composing): tile 3 parts one slot right.
+  const partedLeft = async (selected: number | null = null) => {
+    const t = await ready('composing', selected);
+    press(t, t.b.tile2);
+    move(t, -72);
+    expect(t.b.tileFace.style.transform).toBe('translate(48px, 0px)');
+    return t;
+  };
+
+  it('AD-12 R-34 a tile released over an accepted gap dispatches one arrange, the drag and parting cleared and the gate idle at the dispatch, then repaints hover', async () => {
+    const t = await ready();
+    let at: { active: number; clean: boolean } | null = null;
+    shared.onDispatch = () => {
+      at = { active: t.active(), clean: clean(t) };
+    };
+    press(t, t.b.tile2);
+    move(t, -72);
+    expect(t.b.tile2Face.style.transform).toBe('translate(-72px, 0px)');
+    expect(t.b.tile2Face.classes.has('wc-drag-layer')).toBe(true);
+    expect(t.b.tiles.classes.has('wc-drag-tiles')).toBe(true);
+    expect(t.b.tileFace.style.transform).toBe('translate(48px, 0px)');
+    t.fire('pointerup');
+    expect(navCalls).toEqual([dispatched({ type: 'arrange', arrangement: [4, 3] })]);
+    expect(at).toEqual({ active: 0, clean: true });
+    expect(last(t.b.tileFace).finish).toHaveBeenCalled();
+    // No landing glide (entry 16): no fly-back on the dragged face.
+    expect(t.b.tile2Face.animations).toHaveLength(0);
+    // A drag right by two: tile 3 onto gap 2 parts tile 4 one slot left.
+    const r = await ready();
+    press(r, r.b.tile);
+    move(r, 72);
+    expect(r.b.tile2Face.style.transform).toBe('translate(-48px, 0px)');
+    r.fire('pointerup');
+    expect(navCalls).toEqual([dispatched({ type: 'arrange', arrangement: [4, 3] })]);
+    expect(clean(r)).toBe(true);
+  });
+
+  it('AD-12 R-51 a strip tile released over gap 0 dispatches one setPlacementOrder', async () => {
+    const t = await ready('place');
+    press(t, t.b.stripTile);
+    move(t, -120);
+    expect(transforms(t)).toEqual([
+      'translate(48px, 0px)',
+      'translate(48px, 0px)',
+      'translate(-120px, 0px)',
+    ]);
+    t.fire('pointerup');
+    expect(navCalls).toEqual([dispatched({ type: 'setPlacementOrder', order: [6, 3, 4] })]);
+    expect(clean(t)).toBe(true);
+    expect(t.active()).toBe(0);
+  });
+
+  it('AD-12 R-71 a release over the own gap dispatches nothing: the tile flies back, the face already heading home keeps its animation', async () => {
+    const t = await ready();
+    press(t, t.b.tile2);
+    move(t, -72);
+    move(t, 10);
+    // Tile 3 already heads home (parting to rest): the release keeps that animation.
+    const home = last(t.b.tileFace);
+    const count = t.b.tileFace.animations.length;
+    t.fire('pointerup');
+    expect(navCalls).toEqual([]);
+    expect(t.b.tileFace.animations).toHaveLength(count);
+    expect(home.cancel).not.toHaveBeenCalled();
+    const fly = last(t.b.tile2Face);
+    expect(fly.keyframes).toEqual([
+      { transform: 'translate(10px, 0px)' },
+      { transform: 'translate(0px, 0px)' },
+    ]);
+    expect(fly.options.duration).toBe(180);
+    expect(home.keyframes.at(-1)).toEqual({ transform: 'translate(0px, 0px)' });
+    expect(durations.kinds.filter((k) => k === 'flyBack')).toHaveLength(2);
+    expect(t.active()).toBeGreaterThan(0);
+    expect(t.b.tile2Face.classes.has('wc-drag-layer')).toBe(true);
+    t.advance(180);
+    expect(t.active()).toBe(0);
+    expect(clean(t)).toBe(true);
+    expect(navCalls).toEqual([]);
+  });
+
+  it('AD-12 F4 tray acceptance is pickTarget with the clipped band as sole candidate, exactly 25 % inclusive; under 25 % every other face rests and the release flies back', async () => {
+    const t = await ready();
+    // Tile 3 right onto gap 2 (face x 82 … 126, inside the band's width).
+    press(t, t.b.tile);
+    // Face top 560.25: 13.25 of its 53 px over the band (y 600) is exactly 25 %.
+    move(t, 72, -79.75);
+    expect(t.b.tile2Face.style.transform).toBe('translate(-48px, 0px)');
+    move(t, 72, -80);
+    expect(t.b.tile2Face.style.transform).toBe('');
+    expect(last(t.b.tile2Face).keyframes).toEqual([
+      { transform: 'translate(-48px, 0px)' },
+      { transform: 'translate(0px, 0px)' },
+    ]);
+    // Over a column (y 0 … 400) and outside the band: no column lights (the tray is the only
+    // candidate).
+    move(t, 72, -600);
+    for (const el of [t.b.column1, t.b.card1, t.b.placeholder1, t.b.placeholder3]) {
+      expect(el.classes.has('wc-drag-target')).toBe(false);
+    }
+    t.fire('pointerup');
+    expect(navCalls).toEqual([]);
+    expect(last(t.b.tileFace).keyframes[0]).toEqual({ transform: 'translate(72px, -600px)' });
+    t.advance(180);
+    expect(clean(t)).toBe(true);
+    expect(t.active()).toBe(0);
+    // F4: the band clipped by the action bar (top 700): 13.25 px over the visible part is 25 %,
+    // 12.25 px is not, though both lie wholly over the unclipped band.
+    const c = await ready();
+    c.b.actionBar.rect = { left: 0, top: 700, right: 400, bottom: 760 };
+    press(c, c.b.tile);
+    move(c, 72, 46.75);
+    expect(c.b.tile2Face.style.transform).toBe('translate(-48px, 0px)');
+    move(c, 72, 47.75);
+    expect(c.b.tile2Face.style.transform).toBe('');
+    c.fire('pointerup');
+    expect(navCalls).toEqual([]);
+  });
+
+  it('AD-12 a pointerup with no new move acts on the last move’s acceptance and gap', async () => {
+    const t = await ready();
+    press(t, t.b.tile2);
+    move(t, -72);
+    // The face is moved under 25 % without a pointermove (e.g. the band shifted): still gap 0.
+    t.b.tray.rect = { left: 0, top: 2000, right: 400, bottom: 2200 };
+    t.fire('pointerup', { clientX: 100, clientY: 100 });
+    expect(navCalls).toEqual([dispatched({ type: 'arrange', arrangement: [4, 3] })]);
+    const u = await ready();
+    press(u, u.b.tile2);
+    move(u, -72, -200);
+    u.fire('pointerup', { clientX: 28, clientY: 100 });
+    expect(navCalls).toEqual([]);
+  });
+
+  it('AD-12 F2 a selected tile drags from its lifted face with no jump and flies back unlifted, restoring no selection', async () => {
+    const t = await ready('composing', 3);
+    // The selected face rests 4 px above its slot (Card's selected lift).
+    t.b.tileFace.rect = { left: 10, top: 636, right: 54, bottom: 689 };
+    press(t, t.b.tile);
+    move(t, 10);
+    expect(t.b.tileFace.style.transform).toBe('translate(10px, -4px)');
+    expect(t.overlays.tileSelection).toBeNull();
+    t.b.tileFace.rect = t.b.slotAt(0);
+    t.fire('pointercancel');
+    expect(last(t.b.tileFace).keyframes).toEqual([
+      { transform: 'translate(10px, -4px)' },
+      { transform: 'translate(0px, 0px)' },
+    ]);
+    t.advance(180);
+    expect(t.overlays.tileSelection).toBeNull();
+    expect(clean(t)).toBe(true);
+  });
+
+  it('AD-10 the parted faces animate over duration(parting); under reduced motion they are written at once with no running animation', async () => {
+    const t = await ready();
+    press(t, t.b.tile2);
+    move(t, -72);
+    expect(durations.kinds).toContain('parting');
+    const a = last(t.b.tileFace);
+    expect(a.keyframes).toEqual([
+      { transform: 'translate(0px, 0px)' },
+      { transform: 'translate(48px, 0px)' },
+    ]);
+    expect(a.options).toEqual({ duration: 90, easing: 'ease-out' });
+    expect(t.b.tileFace.style.transform).toBe('translate(48px, 0px)');
+    expect(t.active()).toBe(2);
+    t.advance(90);
+    expect(t.active()).toBe(1);
+    // D-block mirrors never move.
+    expect(t.b.trayMirrorFace.animations).toHaveLength(0);
+    expect(t.b.trayMirrorFace.style.transform).toBe('');
+    const r = await ready();
+    motion.value = { baseMs: 180, reduced: true };
+    press(r, r.b.tile2);
+    move(r, -72);
+    expect(r.b.tileFace.style.transform).toBe('translate(48px, 0px)');
+    expect(r.b.tileFace.animations).toHaveLength(0);
+    expect(r.active()).toBe(1);
+    move(r, 10);
+    expect(r.b.tileFace.style.transform).toBe('');
+    expect(r.b.tileFace.animations).toHaveLength(0);
+    move(r, -72);
+    // A no-edit end under reduced motion: the parted face clears and fades in (the fly-back's).
+    r.controller.cancel({ byBack: true });
+    expect(r.b.tileFace.style.transform).toBe('');
+    expect(last(r.b.tileFace).keyframes).toEqual([{ opacity: 0 }, { opacity: 1 }]);
+    expect(last(r.b.tileFace).options.duration).toBe(120);
+    r.advance(120);
+    expect(r.active()).toBe(0);
+    expect(clean(r)).toBe(true);
+  });
+
+  it('AD-11 AD-12 two gap changes within one parting duration: each supersedes the running animation from its current offset; the gate is idle at the release dispatch', async () => {
+    const t = await ready('place');
+    let atDispatch: number | null = null;
+    shared.onDispatch = () => {
+      atDispatch = t.active();
+    };
+    press(t, t.b.stripTile);
+    move(t, -120);
+    const first = last(t.b.tileFace);
+    const kept = last(t.b.tile2Face);
+    t.advance(30);
+    move(t, -72);
+    // Tile 3 back toward rest from its current offset; tile 4 stays parted.
+    expect(first.cancel).toHaveBeenCalled();
+    expect(first.onfinish).toBeNull();
+    expect(last(t.b.tileFace).keyframes).toEqual([
+      { transform: 'translate(48px, 0px)' },
+      { transform: 'translate(0px, 0px)' },
+    ]);
+    expect(t.b.tileFace.style.transform).toBe('');
+    expect(t.b.tile2Face.style.transform).toBe('translate(48px, 0px)');
+    // Tile 4's animation already ends on its offset: kept, not restarted.
+    expect(kept.cancel).not.toHaveBeenCalled();
+    expect(t.b.tile2Face.animations).toEqual([kept]);
+    t.advance(30);
+    move(t, -120);
+    expect(last(t.b.tileFace).keyframes).toEqual([
+      { transform: 'translate(0px, 0px)' },
+      { transform: 'translate(48px, 0px)' },
+    ]);
+    expect(t.active()).toBe(2);
+    move(t, -72);
+    t.fire('pointerup');
+    expect(navCalls).toEqual([dispatched({ type: 'setPlacementOrder', order: [3, 6, 4] })]);
+    expect(atDispatch).toBe(0);
+    expect(clean(t)).toBe(true);
+    t.advance(200);
+    expect(t.active()).toBe(0);
+  });
+
+  it('AD-12 a parting animation cancelled by anything but the controller throws (rule 6)', async () => {
+    const t = await partedLeft();
+    expect(() => last(t.b.tileFace).oncancel?.()).toThrow(/^AD-12 parting animation cancelled/);
+  });
+
+  it('AD-12 F5 F18 pointercancel, lostpointercapture and cancel({ byBack: true }) with a tile selected fly back with the returns, dispatch nothing and end with nothing selected; the gate idles once they settle', async () => {
+    const enders: [string, (t: T) => void][] = [
+      ['pointercancel', (t) => t.fire('pointercancel')],
+      ['lostpointercapture', (t) => t.fire('lostpointercapture', { target: t.b.tile2 })],
+      ['cancel byBack', (t) => t.controller.cancel({ byBack: true })],
+    ];
+    for (const [name, ender] of enders) {
+      const t = await partedLeft(3);
+      expect(t.overlays.tileSelection, name).toBeNull();
+      ender(t);
+      expect(navCalls, name).toEqual([]);
+      expect(last(t.b.tile2Face).keyframes, name).toEqual([
+        { transform: 'translate(-72px, 0px)' },
+        { transform: 'translate(0px, 0px)' },
+      ]);
+      expect(last(t.b.tileFace).keyframes, name).toEqual([
+        { transform: 'translate(48px, 0px)' },
+        { transform: 'translate(0px, 0px)' },
+      ]);
+      expect(t.active(), name).toBe(2);
+      t.advance(180);
+      expect(t.active(), name).toBe(0);
+      expect(clean(t), name).toBe(true);
+      expect(t.overlays.tileSelection, name).toBeNull();
+    }
+  });
+
+  it('AD-11 AD-12 mid-drag (parted) cancel() clears every transform, class and animation at once, gate idle, no dispatch, nothing selected', async () => {
+    const t = await partedLeft(3);
+    const parted = last(t.b.tileFace);
+    t.controller.cancel();
+    expect(clean(t)).toBe(true);
+    expect(parted.finish).toHaveBeenCalled();
+    expect(t.b.tile2Face.animations).toHaveLength(0);
+    expect(t.active()).toBe(0);
+    expect(navCalls).toEqual([]);
+    expect(t.overlays.tileSelection).toBeNull();
+    t.advance(200);
+    expect(t.active()).toBe(0);
+  });
+
+  it('AD-12 a same-id pointerdown and detach settle a tile drag at once', async () => {
+    const t = await partedLeft();
+    press(t, t.b.leftover);
+    expect(clean(t)).toBe(true);
+    expect(t.active()).toBe(1);
+    t.fire('pointerup');
+    expect(t.active()).toBe(0);
+    expect(navCalls).toEqual([]);
+  });
+
+  it('AD-12 detach mid-drag settles at once', async () => {
+    const t = await setup();
+    const off = t.detach();
+    tileView();
+    press(t, t.b.tile2);
+    move(t, -72);
+    off();
+    expect(clean(t)).toBe(true);
+    expect(t.active()).toBe(0);
+  });
+
+  it('AD-11 AD-12 a button-0 pointerdown during the fly-back and returns finishes both first; the gate never idles between', async () => {
+    const t = await partedLeft();
+    move(t, 10);
+    t.fire('pointerup');
+    expect(navCalls).toEqual([]);
+    const before = t.active();
+    expect(before).toBe(2);
+    const from = order.length;
+    press(t, t.b.leftover);
+    let count = before;
+    let min = before;
+    for (const entry of order.slice(from)) {
+      if (entry === 'enter') count += 1;
+      if (entry === 'leave') count -= 1;
+      min = Math.min(min, count);
+    }
+    expect(min).toBeGreaterThan(0);
+    expect(order.slice(from)[0]).toBe('enter');
+    expect(clean(t)).toBe(true);
+    expect(t.active()).toBe(1);
+    t.fire('pointerup');
+    expect(t.active()).toBe(0);
+  });
+
+  it('AD-12 an App button pressed mid-drag settles it at once and dispatches only its own command', async () => {
+    const t = await partedLeft(3);
+    const { act, setController } = await import('../act');
+    const { game } = await import('../../shell/game.svelte');
+    setController(t.controller);
+    let at: { active: number; clean: boolean } | null = null;
+    shared.onDispatch = () => {
+      at = { active: t.active(), clean: clean(t) };
+    };
+    act(() => game.dispatch({ type: 'undo' }))();
+    expect(navCalls).toEqual([dispatched({ type: 'undo' })]);
+    expect(at).toEqual({ active: 0, clean: true });
+    expect(t.overlays.tileSelection).toBeNull();
+    // The held pointer's later moves and release do nothing.
+    move(t, -72);
+    t.fire('pointerup');
+    expect(navCalls).toHaveLength(1);
+    expect(clean(t)).toBe(true);
+  });
+
+  it('AD-12 a mouse tile drag clears hover and hides the hover peek at its threshold, closes the peek at its end, and repaints hover only at the fly-back’s settle (or after an edit dispatch)', async () => {
+    const mouse = { pointerType: 'mouse' };
+    const t = await ready();
+    t.media.hoverFine = true;
+    t.hover(t.b.card1);
+    expect([...t.b.column1.classes]).toEqual(['wc-hover-tail']);
+    t.overlays.openHoverPeek(3);
+    press(t, t.b.tile, mouse);
+    move(t, 10, 0, mouse);
+    expect(t.b.column1.classes.size).toBe(0);
+    expect(t.b.hoverPeek.classes.has('wc-hover-peek-hidden')).toBe(true);
+    expect(t.overlays.hoverPeek).toBe(3);
+    t.hover(t.b.card1);
+    t.controller.refreshHover();
+    expect(t.b.column1.classes.size).toBe(0);
+    t.fire('pointerup', mouse);
+    expect(navCalls).toEqual([]);
+    expect(t.overlays.hoverPeek).toBeNull();
+    expect(t.b.column1.classes.size).toBe(0);
+    t.advance(180);
+    expect([...t.b.column1.classes]).toEqual(['wc-hover-tail']);
+    // An edit release repaints after its dispatch.
+    const e = await ready();
+    e.media.hoverFine = true;
+    let atDispatch: number | null = null;
+    shared.onDispatch = () => {
+      atDispatch = e.b.column1.classes.size;
+    };
+    press(e, e.b.tile2, mouse);
+    move(e, -72, 0, mouse);
+    e.point(e.b.card1);
+    e.fire('pointerup', mouse);
+    expect(navCalls).toEqual([dispatched({ type: 'arrange', arrangement: [4, 3] })]);
+    expect(atDispatch).toBe(0);
+    expect([...e.b.column1.classes]).toEqual(['wc-hover-tail']);
+  });
+
+  it('AD-12 R-32 with the block on the left (run from tray position 1) the other run face parts from and returns to its own slot', async () => {
+    const t = await ready();
+    // Tray order: the mirror at position 0, tile 3 at 1, tile 4 at 2.
+    const view = shared.view as { draft: { side: string } };
+    view.draft.side = 'left';
+    const kids = t.b.tiles.children;
+    kids.splice(kids.indexOf(t.b.trayMirror), 1);
+    kids.unshift(t.b.trayMirror);
+    t.b.trayMirror.rect = { ...t.b.slotAt(0), left: 8, right: 56 };
+    for (const [wrapper, face, p] of [
+      [t.b.tile, t.b.tileFace, 1],
+      [t.b.tile2, t.b.tile2Face, 2],
+    ] as const) {
+      const r = t.b.slotAt(p);
+      wrapper.rect = { ...r, left: r.left - 2, right: r.right + 2 };
+      face.rect = r;
+    }
+    press(t, t.b.tile2);
+    // Tile 4's centre (x 128) onto gap 0 (x 54 … 58, between the mirror and tile 3).
+    move(t, -72);
+    expect(t.b.tileFace.style.transform).toBe('translate(48px, 0px)');
+    expect(last(t.b.tileFace).keyframes).toEqual([
+      { transform: 'translate(0px, 0px)' },
+      { transform: 'translate(48px, 0px)' },
+    ]);
+    expect(t.b.trayMirrorFace.animations).toHaveLength(0);
+    t.fire('pointercancel');
+    expect(last(t.b.tileFace).keyframes).toEqual([
+      { transform: 'translate(48px, 0px)' },
+      { transform: 'translate(0px, 0px)' },
+    ]);
+    t.advance(180);
+    expect(clean(t)).toBe(true);
+    expect(t.active()).toBe(0);
+    // An edit release from the same state: arrange [4, 3].
+    const e = await ready();
+    (shared.view as { draft: { side: string } }).draft.side = 'left';
+    e.b.tiles.children.splice(e.b.tiles.children.indexOf(e.b.trayMirror), 1);
+    e.b.tiles.children.unshift(e.b.trayMirror);
+    e.b.trayMirror.rect = { ...e.b.slotAt(0), left: 8, right: 56 };
+    e.b.tileFace.rect = e.b.slotAt(1);
+    e.b.tile2Face.rect = e.b.slotAt(2);
+    press(e, e.b.tile2);
+    move(e, -72);
+    e.fire('pointerup');
+    expect(navCalls).toEqual([dispatched({ type: 'arrange', arrangement: [4, 3] })]);
+  });
+
+  it('AD-12 a plain cancel() while a no-edit release’s fly-back and returns run finishes them at once, with or without a press: gate idle, no residue', async () => {
+    for (const withPress of [false, true]) {
+      const t = await ready();
+      press(t, t.b.tile2);
+      move(t, -72);
+      // Back over the own gap: tile 3 heads home; the release flies tile 4 back.
+      move(t, 10);
+      const home = last(t.b.tileFace);
+      t.fire('pointerup');
+      const fly = last(t.b.tile2Face);
+      expect(t.active()).toBe(2);
+      if (withPress) press(t, t.b.leftover);
+      t.controller.cancel();
+      expect(home.finish).toHaveBeenCalled();
+      expect(fly.finish).toHaveBeenCalled();
+      expect(t.active()).toBe(0);
+      expect(clean(t)).toBe(true);
+      expect(navCalls).toEqual([]);
+      t.advance(1000);
+      expect(t.active()).toBe(0);
+    }
+  });
+
+  it('AD-12 R-32 a block-mirror drag moves nothing and keeps the tile selection', async () => {
+    const t = await ready('composing', 3);
+    press(t, t.b.trayMirrorFace);
+    move(t, -72);
+    move(t, -120);
+    expect(t.overlays.tileSelection).toBe(3);
+    expect(clean(t)).toBe(true);
+    expect(faces(t).every((f) => f.animations.length === 0)).toBe(true);
+    expect(t.b.trayMirrorFace.style.transform).toBe('');
+    t.fire('pointerup');
+    expect(navCalls).toEqual([]);
+    expect(t.overlays.tileSelection).toBe(3);
+    expect(t.active()).toBe(0);
   });
 });

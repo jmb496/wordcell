@@ -228,6 +228,18 @@ src/ui/
   next row's first slot; the same pure offset function, Vitest with the block on either side,
   including the block on the right across a row break (segment ends and locks per SPEC CAP-6).
   Mirrors carry this parting transform only, never a FLIP glide; it snaps under reduced motion.
+- As built (ticket 5.7): the tile.ts entry point is `tileRun(view, card)` → `{ order, first,
+  count, tileCount, from, release(gap) }` (pure; `release` is `reorder` compared by card → one
+  `arrange` / `setPlacementOrder`, else null). The drag itself, the parting set and its WAAPI
+  calls live in `controller.ts` (an unexported section: per-face running animation map, one gate
+  count while any parting or return animation runs, `finishAll()` settling it synchronously), so
+  tile.ts stays pure. A face's current offset is read as its `getBoundingClientRect()` minus its
+  resting slot (a running animation's effect included); a superseded animation is read, cancelled
+  with its handlers cleared and replaced. Return animations (no-edit release, any fly-back end)
+  run only on faces off rest (or still animating), over `duration('flyBack')`, the fade under
+  reduced motion. The tray band registers through `use:dropTarget={{ kind: 'tray' }}` and is read
+  by `trayTarget()`; `.tiles` takes `wc-drag-tiles` (`classes.ts` `DRAG_TILES`) to lift its clip;
+  `Layout.trayInnerWidth` and the controller deps `w()` / `trayInnerWidth()` feed `trayLayout`.
 
 ## CAP-6 Free letters
 

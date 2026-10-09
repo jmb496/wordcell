@@ -16,7 +16,9 @@ import { overlays } from '../overlays.svelte';
 // selected-tile lift + its 2 px outline, epic 5 SPEC CAP-4) by a padding-top the negative margin
 // cancels, so rows and the bottom edge stay put. The live tile that is `overlays.tileSelection` is
 // `selected` (and shows `↩` when it is a free letter; Card hides it in the strip). Keys stay
-// `${id}-${mirror}` (AD-14: a live ↔ mirror switch remounts).
+// `${id}-${mirror}` (AD-14: a live ↔ mirror switch remounts). During a tile drag (epic 5 SPEC
+// CAP-5) the controller's `wc-drag-tiles` lifts the clip and the dragged face's `wc-drag-layer`
+// raises it as Column's does (literals from gestures/classes.ts).
 let {
   tiles,
   faces,
@@ -87,4 +89,9 @@ function stripPosition(i: number): 'bottom' | 'top' | undefined {
     overflow: hidden; box-sizing: content-box; padding-top: 6px; margin-top: -6px;
   }
   .tiles.compact { row-gap: 4px; }
+  /* Epic 5 SPEC CAP-5: mid tile drag the area stops clipping, and the dragged face takes the drag
+     layer (above the sticky bars 2, the lift 3 and the hover peek's reserved 4, below any scrim)
+     with the lift shadow, as Column.svelte's. */
+  .tiles:global(.wc-drag-tiles) { overflow: visible; }
+  .tiles :global(.face.wc-drag-layer) { z-index: 5; box-shadow: 0 6px 16px #0008; }
 </style>

@@ -58,7 +58,7 @@ function row(unit: Unit, band: BandId): number {
   {:else if id === 'banner'}
     <div class="banner" data-band="banner">{#if layout.bannerShown}<DictionaryBanner />{/if}</div>
   {:else if id === 'tray'}
-    <Tray {view} {w} innerWidth={metrics.board - 16} height={heights.tray} />
+    <Tray {view} {w} innerWidth={layout.trayInnerWidth} height={heights.tray} />
   {:else if id === 'actionBar'}
     <ActionBar {view} />
   {:else}

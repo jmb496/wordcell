@@ -52,6 +52,8 @@ export type LayoutDeps<E extends ProbeElement = ProbeElement> = {
 export type Layout = {
   readonly w: number;
   readonly metrics: CardMetrics;
+  /** DESIGN.md Tray band: the tray's inner width, `metrics.board` minus its padding 8 + 8. */
+  readonly trayInnerWidth: number;
   readonly wide: boolean;
   readonly heights: Record<BandId, number>;
   readonly bandOrder: readonly Unit[];
@@ -215,6 +217,9 @@ export function createLayout<E extends ProbeElement>(gate: Gate, deps: LayoutDep
     },
     get metrics() {
       return metrics;
+    },
+    get trayInnerWidth() {
+      return metrics.board - 16;
     },
     get wide() {
       return wide;

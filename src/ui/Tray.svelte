@@ -2,6 +2,8 @@
 import type { CardId, GameView } from '../engine/index';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { game } from '../shell/game.svelte';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import { dropTarget } from './gestures/drop-target';
 import { type TrayTile, trayOrder } from './layout/tray';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import ControlRow from './tray/ControlRow.svelte';
@@ -18,7 +20,8 @@ import WordLine from './tray/WordLine.svelte';
 // `side` end and free-letter origin tags, the D-block controls (or the k = 0 caption) and the
 // letter count. Place: the word line in word order (`draft.wordCards`, no D underline, R-51), the
 // strip in `placementOrder` with origin tags and the `bottom`/`top` marks, and the meta (R-80),
-// no controls. Idle and Game over: all three rows empty.
+// no controls. Idle and Game over: all three rows empty. The band is the tile drag's one drop target
+// (AD-12 `use:dropTarget`, epic 5 SPEC CAP-5).
 let {
   view,
   w,
@@ -42,7 +45,7 @@ const tags: ReadonlyMap<CardId, number> = $derived(
 );
 </script>
 
-<div class="tray" data-band="tray" style:height="{height}px">
+<div class="tray" data-band="tray" style:height="{height}px" use:dropTarget={{ kind: 'tray' }}>
   <div class="word-line">
     {#if draft !== undefined}
       <WordLine
