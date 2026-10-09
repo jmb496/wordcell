@@ -316,6 +316,41 @@ function transformed(page: Page): Promise<string[]> {
   );
 }
 
+// A block mirror's segment-end look (Card.svelte): its lock display, its face width past the tile
+// width, each face edge (margin, border width, radius), and its badge's `right` (null without one).
+type BlockEnds = {
+  lock: boolean;
+  width: number;
+  left: string;
+  right: string;
+  badge: string | null;
+};
+
+// A closed segment edge (2 px margin, 2 px border, 6 px radius) or a joined one.
+const CLOSED = '2px 2px 6px';
+const JOINED = '0px 0px 0px';
+
+function blockEnds(page: Page, id: number): Promise<BlockEnds> {
+  return tray(page).evaluate((band, id) => {
+    const w = band.querySelector(`[data-mirror-of="${id}"]`);
+    const lock = w?.querySelector('.lock');
+    const face = w?.querySelector(':scope > .face');
+    if (w === null || w === undefined || lock === null || lock === undefined) {
+      throw new Error(`mirror ${id} incomplete`);
+    }
+    if (face === null || face === undefined) throw new Error(`mirror ${id} without a face`);
+    const f = getComputedStyle(face);
+    const badge = face.querySelector('.badge');
+    return {
+      lock: getComputedStyle(lock).display !== 'none',
+      width: parseFloat(f.width) - parseFloat(getComputedStyle(w).getPropertyValue('--tile-w')),
+      left: `${f.marginLeft} ${f.borderLeftWidth} ${f.borderTopLeftRadius}`,
+      right: `${f.marginRight} ${f.borderRightWidth} ${f.borderTopRightRadius}`,
+      badge: badge === null ? null : getComputedStyle(badge).right,
+    };
+  }, id);
+}
+
 // The held face: on the drag layer with an inline transform, the cell showing its ghost.
 async function expectHeld(page: Page): Promise<void> {
   await expect(cellTopFace(page)).toHaveClass(/\bwc-drag-layer\b/);
@@ -516,6 +551,14 @@ test.describe('android', () => {
       );
       await expect(tray(page).locator('[data-mirror-of="32"]')).toHaveClass(/\bwc-parted\b/);
       await expect(tray(page).locator('[data-mirror-of="32"] .lock:visible')).toHaveCount(1);
+      // The parted single mirror is both segment ends: tile-wide face, both edges closed.
+      expect(await blockEnds(page, 32)).toEqual({
+        lock: true,
+        width: 0,
+        left: CLOSED,
+        right: CLOSED,
+        badge: null,
+      });
       expect(await mirrorFace.evaluate((el) => el.getAnimations().length)).toBe(0);
       await expect(page.locator('[data-card-id]')).toHaveCount(52);
     } finally {
@@ -568,31 +611,22 @@ test.describe('android', () => {
     expect(await trayIds(page)).toEqual(['26', '1m', '27m']);
     await expect(tray(page).locator('[data-mirror-of="1"]')).toHaveClass(/\bstart\b/);
     await expect(tray(page).locator('[data-mirror-of="27"]')).toHaveClass(/\bend\b/);
-    // Each mirror's lock display and its face's segment-end styles (left, then right).
-    const ends = () =>
-      tray(page).evaluate((band) =>
-        [1, 27].map((id) => {
-          const w = band.querySelector(`[data-mirror-of="${id}"]`);
-          const lock = w?.querySelector('.lock');
-          const face = w?.querySelector(':scope > .face');
-          if (lock === null || lock === undefined || face === null || face === undefined) {
-            throw new Error(`mirror ${id} incomplete`);
-          }
-          const f = getComputedStyle(face);
-          return {
-            lock: getComputedStyle(lock).display !== 'none',
-            left: `${f.marginLeft} ${f.borderLeftWidth} ${f.borderTopLeftRadius}`,
-            right: `${f.marginRight} ${f.borderRightWidth} ${f.borderTopRightRadius}`,
-          };
-        }),
-      );
-    // A closed segment edge (2 px margin, 2 px border, 6 px radius) or a joined one.
-    const closed = '2px 2px 6px';
-    const joined = '0px 0px 0px';
+    // Neither mirror is QU: give each face a probe badge in Card.svelte's scope so its block badge
+    // rules apply.
+    await tray(page).evaluate((band) => {
+      for (const face of band.querySelectorAll('[data-mirror-of] > .face')) {
+        const scope = [...face.classList].find((c) => c.startsWith('svelte-'));
+        if (scope === undefined) throw new Error('face without a Svelte scope class');
+        const badge = document.createElement('span');
+        badge.className = `badge ${scope}`;
+        face.append(badge);
+      }
+    });
+    const ends = async () => [await blockEnds(page, 1), await blockEnds(page, 27)];
     // At rest: 1 is the segment start (lock), 27 its end.
     expect(await ends()).toEqual([
-      { lock: true, left: closed, right: joined },
-      { lock: false, left: joined, right: closed },
+      { lock: true, width: 3, left: CLOSED, right: JOINED, badge: '5px' },
+      { lock: false, width: 2, left: JOINED, right: CLOSED, badge: '0px' },
     ]);
     // Parted with the ends swapped (1 an end, 27 a start): the parted classes win over .start/.end.
     await tray(page).evaluate((band) => {
@@ -600,8 +634,17 @@ test.describe('android', () => {
       band.querySelector('[data-mirror-of="27"]')?.classList.add('wc-parted', 'wc-part-start');
     });
     expect(await ends()).toEqual([
-      { lock: false, left: joined, right: closed },
-      { lock: true, left: closed, right: joined },
+      { lock: false, width: 2, left: JOINED, right: CLOSED, badge: '0px' },
+      { lock: true, width: 3, left: CLOSED, right: JOINED, badge: '5px' },
+    ]);
+    // Parted as neither end (1, a segment middle) and as both ends (27).
+    await tray(page).evaluate((band) => {
+      band.querySelector('[data-mirror-of="1"]')?.classList.remove('wc-part-end');
+      band.querySelector('[data-mirror-of="27"]')?.classList.add('wc-part-end');
+    });
+    expect(await ends()).toEqual([
+      { lock: false, width: 5, left: JOINED, right: JOINED, badge: '5px' },
+      { lock: true, width: 0, left: CLOSED, right: CLOSED, badge: '0px' },
     ]);
   });
 
@@ -847,10 +890,11 @@ test.describe('android', () => {
     });
   }
 
-  test('AD-12 F5 back mid-drag leaves the app; the stored Session equals the pre-drag one bar activeMs, read after a restoring goForward', async ({
+  test('AD-12 F5 back mid-drag (tile 42 selected first) leaves the app; the stored Session equals the pre-drag one bar activeMs, read after a restoring goForward: nothing selected, cell 7 unused', async ({
     page,
   }) => {
     await open(page, BLOCK);
+    await select(page, 42);
     const before = await game(page);
     const g = await geometry(page);
     const { hold } = await holdTop(page, [gapCentre(g, 1, 2, 1)]);

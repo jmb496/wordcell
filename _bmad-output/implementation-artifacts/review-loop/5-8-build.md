@@ -1,5 +1,5 @@
 # Review loop — ticket 5.8 build (code mode, 875266c..44eda8b)
-State: pass 1: done
+State: pass 2: done
 
 Target: `_bmad-output/implementation-artifacts/review-loop/5-8-build.passes/pass0.diff` (git diff 875266c..44eda8b)
 Intent: `_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-free-letters-by-tap-and-by-drag-plan.md`
@@ -32,3 +32,24 @@ Owner answer (2026-10-09): the pass-1 decision-needed item takes the proposed de
 Fixer (WIP 8d40dff, resumed and finished 2026-10-09): items 1–8 applied and verified. 1: `take()` reads the computed transform (8d40dff; Chromium probe: a paused WAAPI mid-flight reads `matrix(1, 0, 0, 1, 24, 0)`), k = 2 mirror Vitest present. 2: Vitest caret-shown variants for every ender (8d40dff), plus 3 Playwright caret-shown ends (pointercancel, Flip, hidePage); each `hideCaret` deletion fails a test; back has no browser variant (page leaves to about:blank; Vitest covers it). 3: Playwright AD-14 k = 2 parted-class CSS test on the redo-tail fixture. 4–7: back asserts, full animation asserts, reduced-motion return by pointercancel, name says reduced motion. 8: plan deferred entry for entry 12.
 Checks (orchestrator): `npm test` 54 files / 2225 tests pass; lint pass; check 0 errors. Fixer: free-letter.spec android 22 passed 1 skipped, desktop 1 passed.
 Snapshot: tree ebf3a5ae05b8ef99a191a22c86e13276b212c28e | fix diff `5-8-build.passes/pass1.fix.diff` (tree 0 → tree 1, includes 8d40dff) | full diff `5-8-build.passes/pass1.diff` (875266c → tree 1)
+
+## Pass 2 — 2026-10-09
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 1, minor 6, decision-needed 0  |  Dropped in triage: 1 (duplicate)
+### Applied
+- [major] controller.ts startFreeLetterDrag `full = run.tileCount + 1 > perRow × rows` — no test on the exact boundary (tile count + 1 = perRow × rows: parts, no caret); `>=` passes the suite; add a Vitest boundary case → fixer item 1
+- [minor] e2e/free-letter.spec.ts back mid-drag test — `expectSelected(page, null)` cannot fail: no tile selected first, unlike its siblings → fixer item 2
+- [minor] e2e/free-letter.spec.ts k = 2 parted-class CSS test and the k = 1 block-right P5 — face width and badge `right` rules under `wc-parted` (and a mirror both part-start and part-end) are not read → fixer item 3
+- [minor] plan l. 146 — still says the reduced-motion mirror P5 is "moved outside and released"; add the 4 new Playwright tests to the AD-12/AD-14 verification rows → fixer item 4
+- [minor] plan frontmatter deferred[0], l. 157 and Auto Run Result residual risk — still say the parted CSS is browser-checked only with a one-mirror block; narrow to the row-break case still open (entry 12) → fixer item 5
+- [minor] controller.test.ts free-letter describe — every drag presses the top card; none presses the `[data-wordcell]` element outside it (the ticket's "any press the controller resolves as the WordCell's hit") → fixer item 6
+### Default applied (technical)
+- full boundary — Vitest case on the compact perRow-4 harness (inner 188) with 3 tiles: parts, caret hidden, release dispatches `addFreeLetter`
+- parted CSS widths — computed face width and badge `right` added to the existing k = 2 test's tuple
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- (duplicate) edge-case reviewer's full-boundary finding merged into item 1
+### Fix (pass 2)
+Fixer: items 1–6 applied (tests and plan only; no production change). 1: Vitest `AD-12 F16 a layout with room for exactly one more tile …` (inner 188, perRow 4, 3 tiles); fails with `>=`. 2: back test selects tile 42 first, renamed. 3: `blockEnds()` helper reads lock, face width − `--tile-w`, edges and badge `right` (probe badge span on non-QU mirrors); k = 2 test adds middle and start-and-end mirror class writes; k = 1 block-right P5 asserts the single parted mirror closed both sides. 4–5: plan review record, AD-12/AD-14 rows, deferred[0] and residual risk narrowed to the row-break case (entry 12). 6: Vitest press on `[data-wordcell]` outside the top card.
+Checks (orchestrator): `npm test` 54 files / 2227 tests pass; lint pass; check 0 errors. Fixer: free-letter.spec android 22 passed 1 skipped, desktop 1 passed.
+Snapshot: tree 46b443ad991eb6e2513615da4dc488b095cc9a11 | fix diff `5-8-build.passes/pass2.fix.diff` | full diff `5-8-build.passes/pass2.diff`

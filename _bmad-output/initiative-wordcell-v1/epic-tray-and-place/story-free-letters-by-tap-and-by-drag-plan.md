@@ -19,9 +19,9 @@ context:
 warnings: ['oversized']
 deferred:
   - summary: >-
-      The parted D-block segment CSS (Card.svelte wc-parted / wc-part-start / wc-part-end rules) is never rendered in a browser with a multi-mirror block whose segment ends move across a row break.
+      No real free-letter drag parts a multi-mirror D block across a row break in a browser; the class-driven segment CSS itself (Card.svelte wc-parted / wc-part-start / wc-part-end rules) is browser-checked by the k = 2 P5 `AD-14 a k = 2 block (redo-tail fixture, block right) under wc-parted …`.
     evidence: |-
-      Controller Vitest asserts only class writes on a fake DOM; the one P5 parted case has a single mirror (start and end in both states). No fixture holds a Composing block across a row break with an available WordCell (session-place-compact + Undo has none). Settle with entry 12's long Composing fixture: part across the row break and assert .lock:visible per mirror and the start/end border widths.
+      Controller Vitest asserts only class writes on a fake DOM; the k = 2 P5 writes the parted classes by hand on a one-row block (lock, face width, edges, badge offset), and the one real-drag P5 parted case has a single mirror (start and end in both states). No fixture holds a Composing block across a row break with an available WordCell (session-place-compact + Undo has none). Settle with entry 12's long Composing fixture: part across the row break with a real drag and assert .lock:visible per mirror and the start/end border widths.
     location: >-
       src/ui/Card.svelte block segment rules
     severity: medium
@@ -110,8 +110,8 @@ baseline_revision: '875266ca67f5a3cda292ca9a07bb5e545b2d9a4e'
 | R-32 never inside or beyond the block | P5 supp. `R-32 … released over or past the block (one row, F25) lands at the M end; block left over the block lands first in M` |
 | R-73 (UI) saved before the next action | `expectSaved` after the tap-add and every drag-insert |
 | R-65 (UI) long-press peek in Composing keeps a tile selection | P5 `R-65 (UI) …` (peek shown, Session byte-identical, cell 7 unused, tile selected) |
-| AD-12 ≥ 25 % tray band, cancel paths, F18 | P5 outside-band, under-25 %, pointercancel, App button, hidePage, back, long-press-then-move; S cancel paths, F18 threshold |
-| AD-14 mirrors carry the parting shift only; Done when 4 | P5 block-right case (mirrors one pitch while parted, none after; 52 `[data-card-id]` mid-drag and after); S reduced-motion no-animate |
+| AD-12 ≥ 25 % tray band, cancel paths, F18 | P5 outside-band, under-25 %, pointercancel, App button, hidePage, back, long-press-then-move, the three caret-shown ends (`AD-12 F5 F16 {pointercancel, an enabled App button (Flip), hidePage} mid-drag with the caret shown …`); S cancel paths, F18 threshold |
+| AD-14 mirrors carry the parting shift only; Done when 4 | P5 block-right case (mirrors one pitch while parted, none after; 52 `[data-card-id]` mid-drag and after); P5 `AD-14 a k = 2 block (redo-tail fixture, block right) under wc-parted …` (parted-class CSS: lock, face width, edges, badge offset); S reduced-motion no-animate |
 
 Exempt here: landing glides and FLIP (entries 10/16); tray growth (entry 12); Place target taps (entry 9).
 
@@ -143,7 +143,7 @@ Exempt here: landing glides and FLIP (entries 10/16); tray growth (entry 12); Pl
   - `[low]` `[patch]` (blind) e2e/tray.spec.ts `tileTops` reads `.tiles > *`, now including the caret — selector excludes `.wc-caret`.
   - `[low]` `[reject]` (blind) the ghost's rect, colour, radius and removal after settle are not asserted — the P5 checks the 1 px dashed `::before`, hidden cards beneath and the badge; `expectNoResidue` sees `wc-drag-ghost` removed; the rect is fixed CSS copied from Column.svelte's ghost. Adding assertions fixes no observed defect.
   - `[medium]` `[defer]` (blind) the parted segment CSS (`:is()`/`:global(.wc-parted)` rewrite) is never rendered with a multi-mirror block whose segment ends move — real gap; the ticket assigns the row-break case to the controller Vitest (review-log pass 3) and no fixture reaches a Composing block across a row break with an available cell (entry 12's long fixture). The sub-claim that the added specificity beats `selected`/`lifted`/`wc-drag-layer` rules is false: those classes never land on a `.block` mirror.
-  - `[low]` `[patch]` (blind) the reduced-motion mirror return (open major, AD-14 snap path) has no browser case — android P5 added: block right, parted at gap 0, moved outside and released under reduced motion; the mirror face has no transform and no animation, Session byte-identical.
+  - `[low]` `[patch]` (blind) the reduced-motion mirror return (open major, AD-14 snap path) has no browser case — android P5 added: block right, parted at gap 0, then ended by pointercancel while parted under reduced motion (reaching `home()`'s reduced-motion mirror snap); the mirror face has no transform and no animation, Session byte-identical.
   - `[low]` `[reject]` (blind) `npm run test:all` not run as one command; no deferred item or pitfall for the stale-server trap — every step ran green (orchestrator re-run, see Verification); the stale server is an environment fact (a dev server outside this build), recorded in Implementation Notes; fixes would edit the plan or agent-context files.
   - `[low]` `[patch]` (blind) R-65 P5's `waitForTimeout(500)` is redundant with the following `toBeVisible()` — removed.
   - `[false]` `[reject]` (blind) `freeLetterMove` reads `CARET_SHOWN` from the DOM and leaves `drag.rect` stale while parting — `moves` depends only on `gap` and the fixed `full`, so the caret can only appear through `partTray` on a gap/acceptance change, which writes the current rect first; no stale rect is ever shown.
@@ -154,7 +154,7 @@ Exempt here: landing glides and FLIP (entries 10/16); tray growth (entry 12); Pl
   - `[medium]` `[defer]` (verification-gap) Card.svelte parted CSS never checked in a browser with a segment end that moves — same entry as the blind parted-CSS row (filed disposition defer; needs entry 12's fixture).
   - `[false]` `[reject]` (verification-gap other) the diff includes `playwright.verify-5180.config.ts` — as the blind row: the orchestrator's temporary copy, deleted.
   - `[low]` `[reject]` (verification-gap other) `test:all` green only step by step — every step passed; the one-command run is blocked by a stale dev server outside this build on port 5173 (environment).
-  - `[medium]` `[defer]` (intent) mirror segment rendering exercised in the browser only with a one-mirror block — same entry as the parted-CSS rows.
+  - `[medium]` `[defer]` (intent) mirror segment rendering under a real free-letter drag exercised in the browser only with a one-mirror block — same entry as the parted-CSS rows; the class-driven CSS is browser-checked on a k = 2 block by P5 `AD-14 a k = 2 block (redo-tail fixture, block right) under wc-parted …`; open: a real drag parting a block across a row break (entry 12's long fixture).
   - `[low]` `[reject]` (intent) parted classes come off at the return's start, so a multi-segment block's outline follows the resting ends during the return — the ticket's review log settles "when parting stops" as the mirrors returning to rest, not the animation's end; the effect lasts one `flyBack` duration on a wrapped block only.
   - `[low]` `[reject]` (intent) "full" with a clipped third row untested — needs ≥ 15 tiles (entry 12's fixture); the formula is the ticket's and Vitest-covered for one row.
   - `[low]` `[reject]` (intent) caret at a row-break winning rect Vitest only — as the plan's review-log item records; a P5 needs a full multi-row layout.
@@ -217,13 +217,13 @@ Exempt here: landing glides and FLIP (entries 10/16); tray growth (entry 12); Pl
 - Tests: `controller.test.ts` (harness, two superseded tests, 14-case free-letter describe), `tile.test.ts`, `intent.test.ts`; new `e2e/free-letter.spec.ts` (17 android + 1 desktop); `:visible` lock selectors in `board-phases`, `drag`, `tray` specs; caret-aware selectors in `tile-drag` and `tray` specs.
 - `_bmad-output/specs/spec-epic-5-tray/build-notes.md` — CAP-6 as built.
 
-**Review findings.** 30 findings (high 0, medium 3, low 19, false 8, maybe-false 0). Patched (7 entries, all low): free-letter residue helper (caret and parted classes) in every e2e end/edit check; reduced-motion mirror return P5; Place no-dispatch and no-ghost assertions in the inert Vitest; exact Place/Idle actions in intent.test.ts; caret-aware `tileTops`; R-65 sleep removed; tile-drag.spec.ts comment rewrapped. Deferred (1 entry, medium): the parted segment CSS is never rendered in a browser with a block whose segment ends move (needs entry 12's long Composing fixture). Rejected: 22 rows, each with its reason in the Review Triage Log (8 false claims; lows that are ticket-scoped (Vitest-only row-break caret and segments, settled "when parting stops"), environment (the stale port-5173 server), or test additions for no observed defect).
+**Review findings.** 30 findings (high 0, medium 3, low 19, false 8, maybe-false 0). Patched (7 entries, all low): free-letter residue helper (caret and parted classes) in every e2e end/edit check; reduced-motion mirror return P5; Place no-dispatch and no-ghost assertions in the inert Vitest; exact Place/Idle actions in intent.test.ts; caret-aware `tileTops`; R-65 sleep removed; tile-drag.spec.ts comment rewrapped. Deferred (1 entry, medium): no real free-letter drag parts a block across a row break in a browser (needs entry 12's long Composing fixture); the class-driven parted segment CSS is browser-checked by the k = 2 P5. Rejected: 22 rows, each with its reason in the Review Triage Log (8 false claims; lows that are ticket-scoped (Vitest-only row-break caret and segments, settled "when parting stops"), environment (the stale port-5173 server), or test additions for no observed defect).
 
 **Follow-up review recommendation:** false. Patched by verdict: high 0, medium 0, low 7.
 
 **Verification.** See Implementation Notes (orchestrator bullet): every `test:all` step green after the patches (unit 2224, e2e 474, pwa 12, dist 14, build in budget); `npm run test:screens` 10 passed, no baseline changed; unit warm median 2.78 s on the Linux filesystem (implementer).
 
 **Residual risks.**
-- Parted segment CSS on a multi-row block is unverified in a browser (deferred, entry 12's fixture).
+- A real free-letter drag parting a block across a row break is unverified in a browser (deferred, entry 12's fixture); the parted segment CSS itself is browser-checked by the k = 2 P5.
 - `npm run test:all` as one command fails locally while the stale `vite --host` process holds port 5173 (Playwright reuses it); stop that process and the command runs as is.
 - A full layout with a clipping third row (≥ 15 tiles) and the caret at a row-break gap are Vitest-only until entry 12's fixture.

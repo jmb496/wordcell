@@ -4295,6 +4295,19 @@ describe('AD-12 epic 5 free-letter drag', () => {
     }
   });
 
+  it('AD-12 R-33 a press on the available cell’s [data-wordcell] element outside its top card drags that top card: ghost, the top face moving with the pointer, one addFreeLetter { cell: 3, index: 1 }', async () => {
+    const t = await ready(null);
+    press(t, t.b.cell3);
+    centreOn(t, 56, GAP_Y);
+    expect(t.b.cell3.classes.has('wc-drag-ghost')).toBe(true);
+    expect(t.b.cellFace.classes.has('wc-drag-layer')).toBe(true);
+    expect(t.b.cellFace.style.transform).toBe('translate(34px, 190px)');
+    expect(transforms(t)).toEqual(['', 'translate(48px, 0px)', 'translate(48px, 0px)']);
+    t.fire('pointerup');
+    expect(navCalls).toEqual([dispatched({ type: 'addFreeLetter', cell: 3, index: 1 })]);
+    expect(clean(t)).toBe(true);
+  });
+
   it('AD-10 AD-14 the tray faces part over duration(parting), the mirror carrying the same parting shift', async () => {
     const t = await ready(null);
     press(t);
@@ -4462,6 +4475,20 @@ describe('AD-12 epic 5 free-letter drag', () => {
     expect(navCalls).toEqual([dispatched({ type: 'addFreeLetter', cell: 3, index: 1 })]);
     expect(clean(t)).toBe(true);
     expect(t.active()).toBe(0);
+  });
+
+  it('AD-12 F16 a layout with room for exactly one more tile (tile count + 1 = perRow × rows) parts at the inner gap with the caret hidden; the release inserts there', async () => {
+    const t = await ready(null);
+    // perRow 4 (inner 188): 3 tiles + 1 fill the one card-mode row.
+    t.trayWidth.innerWidth = 188;
+    press(t);
+    centreOn(t, 56, GAP_Y);
+    expect(shown(t)).toBe(false);
+    expect(transforms(t)).toEqual(['', 'translate(48px, 0px)', 'translate(48px, 0px)']);
+    expect(partedClasses(t.b.trayMirror)).toEqual(['wc-parted', 'wc-part-start', 'wc-part-end']);
+    t.fire('pointerup');
+    expect(navCalls).toEqual([dispatched({ type: 'addFreeLetter', cell: 3, index: 1 })]);
+    expect(clean(t)).toBe(true);
   });
 
   it('AD-12 F16 the caret marks the end gap of M with the block on the left and with k = 0, no face transformed; a parting gap hides it; the release inserts at the end', async () => {
