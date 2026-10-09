@@ -1,6 +1,6 @@
 # Review log — story-free-letters-by-tap-and-by-drag.md (ticket 5.8)
 
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7. Pass 0: HEAD 968b3e7, .passes/pass0.md, 476 words (budget 2.5x ≈ 1200).
 Intent extras (tickets.toml entry 8, not copied into the ticket; fixer adds interface, tests, owns, consumers to Description in pass 1; unknown is already in Notes).
@@ -102,3 +102,27 @@ Fixer: all 11 applied; `svg.lock:visible` and `wc-parted` `unverified` (design s
 - References: name SPEC CAP-6/F5/F16/F18 and DESIGN.md WordCell
 - Caret at a row-break gap's winning rect: no test case
 - Long-press then moved into the tray band and released: no test case
+
+## Pass 4 — 2026-10-09
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 12, decision-needed 0  |  Dropped in triage: 0 (+ 4 duplicates merged)
+Words (docs): 1431 (3.01 x pass 0)  |  Snapshot: .passes/pass4.md, fix diff .passes/pass4.fix.diff
+Fixer: all 9 applied; `:visible` marked `unverified` in the ticket; parted classes off "when parting stops and at every end".
+### Applied
+- [major] Description Mirror segments — lock-count list omits e2e/tray.spec.ts:242,447 (`.lock` toHaveCount 1 and 2 on 2- and 3-mirror blocks), so test:all fails with every-mirror lock nodes; selector not marked unverified in the ticket → fixer item 1
+- [minor] AC UI Vitest — controller Vitest runs in node without CSS: assert class state (resting start without `wc-part-start` under the marker), not lock visibility → 2
+- [minor] Mirror segments — parted marker/classes come off whenever the mirrors return to rest (under 25 %, outside the band), not only at ends → 3
+- [minor] Ends — caret hides at the end itself (Caret bullet), only the ghost clears at the settle → 4
+- [minor] Ends — `cancel({ byBack })` unreached in Composing (F5: back leaves the app); cut → 5
+- [minor] Ends — App button must be enabled (`+` disabled at k = 0; SPEC CAP-4) → 6
+- [minor] AC Full layout — "the caret at that gap"; cut "(a third row clips until CAP-9)" (8 tiles = 2 rows) → 7
+- [minor] AC — end-gap caret cases need room (a short tail), distinct from the full-layout route → 8
+- [minor] AC R-32 — "over or past the block" inside the band (≥ 25 %) → 9
+### Default applied (technical)
+- Lock counts — every existing e2e tray lock-count assertion (board-phases, drag, tray specs) adds `:visible` to its own lock selector, same numbers (`unverified`) → default taken
+### Decision needed (functionality / UX / gameplay)
+- none
+### Not applied (over budget, to the plan)
+- Free-letter drag lifts the `.tiles` clip (`DRAG_TILES`) as the tile drag, so edge carets are not clipped ("as entry 7's tile drag" covers it)
+- Full-layout route as "perRow card-mode tiles (7 at 412 px)"
+- Done when 4: how P5 tells the parting transform from other motion (one pitch while parted, none after)
+- hidePage / back cases: also assert nothing selected and cell 7 unused (F18)
