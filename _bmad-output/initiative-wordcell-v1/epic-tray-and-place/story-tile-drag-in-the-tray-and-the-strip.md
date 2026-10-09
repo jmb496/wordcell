@@ -47,3 +47,4 @@ Verify: npm run test:all and npm run test:screens are green with the following, 
 
 - The build result flags the wrapped-block drop (F3's nearest gap may land mid-M) for the owner to judge by hand (F25).
 - Until CAP-9, compact rows past the second are clipped at rest, show over the control row mid-drag (clip lifted) and stay targetable (interim; no fixture reaches them).
+- Owner hand check (2026-10-09, SPEC F25): a tile dropped past a long word's destination letters that wrap onto a second tray row behaves as wanted on the phone; no change.

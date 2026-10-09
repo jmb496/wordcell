@@ -15,7 +15,7 @@ Ticket 5.7, "Tile drag in the tray and the strip", is done. You can now drag a l
 - Tests: `npm run test:all` all passing.
 - Close-out docs: none from this ticket. No earlier ticket in this run left any either (5.6's answer kept the spec as written).
 
-Worth trying on the phone: the 5.6 edge case. A tile dragged past the far end of a full left-hand row of word letters lands at the start of the next row.
+Owner hand check (2026-10-09): the F25 wrapped-word drop works as wanted. Still worth trying on the phone: the 5.6 edge case. A tile dragged past the far end of a full left-hand row of word letters lands at the start of the next row.
 
 Digest: _bmad-output/implementation-artifacts/autopilot/epic-tray-and-place-20261008-1002.md
 

@@ -99,3 +99,6 @@ Ref to fix upstream: none
 Tokens: 27.7M input-equivalent (ticket review 53%, build 27%, code review 18%, other 1%, orchestrator 1%); orchestrator peak context 69k
 Worth knowing: one open item for the refactor sweep (5.14): in the build plan's test table, the row for "a free letter dragged out of the tray is not removed" (R-33) should say the browser test is the coverage, not an extra. Pass 1 of the code review mislabelled it; the code and the test are fine. The ticket was long (1746 words, nearly 4x its stub) because the tickets.toml fields were folded in. From 5.6: the edge case where a tile dragged past the end of a full left-hand row lands at the start of the next row can now be tried on the phone.
 Close-out docs: none
+
+## Owner hand check — 2026-10-09
+After 5.7, the owner tried the F25 wrapped case on the phone (a tile dropped past a long word's letters that wrap onto a second tray row): works as wanted, no change. Still untried: a tile dragged past the far end of a full row landing at the start of the next row (from 5.6).
