@@ -1,5 +1,5 @@
 # Review log — story-controller-seams.md (ticket 5.4)
-State: pass 4: done
+State: pass 5: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 251 words (`.passes/pass0.md`), HEAD e261011. Intent fields from tickets.toml entry 4 (interface, tests, owns, consumers, unknown, verify, references): `.passes/intent.md`.
 
@@ -84,3 +84,23 @@ Fixer: all 14 items applied; CellView/ColumnView confirmed in engine/index.ts ex
 - main.ts:119 "(entry 12)" and controller.test.ts describe names keep entry refs (out of scope here) → note for the CAP-12 paperwork sweep
 - spine Structure tree (ARCHITECTURE-SPINE.md gestures/ list) lacks the five new modules → CAP-12 paperwork sweep
 - `found` messages at 557/592 become eager template literals per pointermove — negligible, behaviour same
+
+## Pass 5 — 2026-10-08
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 1, minor 9 applied + 5 for the plan, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1492 (5.94 x pass 0; budget 1500)  |  Snapshot: .passes/pass5.md
+Fixer: all 8 items applied (2 merged the 207 example into the parenthetical rule); no commands added.
+### Applied
+- [major] AC median gate — pass-4 rewrite leaves the ≥ 5 s branch open ("profile first before any test-file change" implies test edits, no outcome after profiling) and "if before is already ≥ 5 s … instead" has no clear object (merged across three lenses) → fixer item 1 (default applied)
+- [minor] fixer items 2–10 (`Entry N (…)` parenthetical is part of the tag and a dropped tag's remaining ids are epic-qualified, "at HEAD" for the controller.ts header source, stay list as examples and "keep their own throws" (537 moves to visible-band.ts), columnIn missing-index case, cellIn test with an out-of-order array, epic 5 SPEC F14 / epic 4 SPEC F37, harness import wording (mocked vs fresh), line-number convention "lines at HEAD")
+### Default applied (technical)
+- gate: at ≥ 5 s the plan records an AD-17 Speed profile and stops for the owner (no test-file change beyond import paths); before already ≥ 5 s → the 5 s gate is waived (recorded and flagged for the owner) and only the 10 % rule applies
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+### Unapplied minors (for the build plan)
+- build-notes line map labels 597–618 (touch long-press peek) as "hover peek" → CAP-12 paperwork sweep
+- the ticket keeps `overSource` (551–561) in controller.ts though build-notes' visible-band range includes it → note the departure in the plan review
+- classes.ts identifiers: keep existing constant names, add HOVER_TAIL/GRAB/DROP/DROP_SELF, compose HOVER_CLASSES from them
+- onSettle lazy closure: settle never runs before both factories exist (flyBack reachable only from end() after attach)
+- "ControllerDeps unchanged" means same members and signatures (its JSDoc Entry tags are rewritten)
