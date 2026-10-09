@@ -3,7 +3,7 @@ title: 'Tile drag in the tray and the strip'
 type: 'feature'
 ticket: 7
 created: '2026-10-09'
-status: 'built'
+status: done
 route: 'full'
 route_source: 'auto'
 review: 'thorough'

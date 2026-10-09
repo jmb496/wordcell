@@ -88,3 +88,14 @@ Resume: record the answer (ticket Notes / spec memlog), commit, rerun `.claude/s
 
 ## Resumed — 2026-10-09T10:03Z
 Owner answered the 5.6 question (Option A). Step D: test:all passed; 5.6 marked done.
+
+## 5.7 Tile drag in the tray and the strip — done
+What it adds: you can now drag a letter tile within the tray (while composing) or along the placement strip (on the Place screen) to change the order; the other tiles slide aside to show where it will land. A drag that changes nothing, or is dropped mostly outside the tray, slides the tile back and doesn't count as a move. Leaving the app or pressing back mid-drag cancels the drag cleanly.
+Ticket review: 7 passes, converged (majors 14, 8, 5, 4, 2, 2, 0); nothing needed your input
+Build: built; commit ae9d19a
+Code review: thorough (risk high), 2 passes, converged (majors 1, 1); fixes in WIP commit bf7c654, log a39738e
+Tests: all passing (test:all: 2204 unit, 455 + 12 browser tests)
+Ref to fix upstream: none
+Tokens: 27.7M input-equivalent (ticket review 53%, build 27%, code review 18%, other 1%, orchestrator 1%); orchestrator peak context 69k
+Worth knowing: one open item for the refactor sweep (5.14): in the build plan's test table, the row for "a free letter dragged out of the tray is not removed" (R-33) should say the browser test is the coverage, not an extra. Pass 1 of the code review mislabelled it; the code and the test are fine. The ticket was long (1746 words, nearly 4x its stub) because the tickets.toml fields were folded in. From 5.6: the edge case where a tile dragged past the end of a full left-hand row lands at the start of the next row can now be tried on the phone.
+Close-out docs: none
