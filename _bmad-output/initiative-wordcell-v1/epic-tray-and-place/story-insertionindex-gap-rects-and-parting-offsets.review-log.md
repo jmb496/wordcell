@@ -1,6 +1,6 @@
 # Review log — story-insertionindex-gap-rects-and-parting-offsets.md (ticket 5.6)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7. Pass 0: HEAD 88f7549, .passes/pass0.md, 376 words (budget 2.5x ≈ 940).
 Intent extras (tickets.toml entry 6, not copied into the ticket; fixer adds them to Description in pass 1): interface, tests, owns, consumers.
@@ -54,3 +54,29 @@ Words (docs): 960 (2.55 x pass 0)  |  Snapshot: .passes/pass2.md  |  Fixer: all 
 - fix-diff minor cut ", supplementary": AGENTS.md makes UI Vitest never R-id coverage; the ticket wording follows AGENTS.md (rule-coverage's "V" column naming `insertionIndex` S cases is the spec's own tension, not the ticket's)
 - adversarial minor reorder out-of-range i/j throws: over budget and adds words; left to the plan (unapplied minor)
 - adversarial stretch: origin stale on mid-drag scroll — epic 4 hit rects make the same fixed-at-drag-start assumption (AD-12)
+
+## Pass 3 — 2026-10-09
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 3, minor 6 accepted (+6 to plan), decision-needed 0  |  Dropped in triage: 0 (+ duplicates merged)
+Words (docs): 1023 (2.72 x pass 0)  |  Snapshot: .passes/pass3.md  |  Fixer: all 8 applied; majors added the words, minors net zero; trimmed Consumers, two "each", "entry 7"
+### Applied
+- [major] Slot rects — origin "tile 0's rect" ambiguous: pitch-wide live wrapper vs face (2 px inset, face may be lifted 4 px / dragged) → fixer item 1 (default applied: wrapper top-left + 2 px x; slot rect is tileWidth × tileHeight, unlifted face)
+- [major] AC — reorder's two main branches (i ≤ j insert at i; i > j + 1 at i − 1) and drag-left reorder parting (tiles i…j−1 one forward) untested → 2
+- [major] AC — segmentEnds extraction's "no visible change" unchecked for a multi-tile block and a block split by a row break (screens fixture has k 1) → 3
+- [minor] partingOffsets — "M tiles" excludes the Place strip → "run tiles" → 4
+- [minor] partingOffsets — origin's parted slot index unstated → "keeps its own slot, zero offsets" → 5
+- [minor] gapRects — "sit a half-gap outside" → "centre a half-gap outside" → 6
+- [minor] AC destination-cards line — scope to Composing (D cards move in Place) → 7
+- [minor] AC — "a gap that moves no tile" → "a free-letter gap that moves no tile" → 8
+### Default applied (technical)
+- item 1 slot-rect frame as above
+### Decision needed (functionality / UX / gameplay)
+- none
+### Unapplied minors (over budget; for the plan)
+- gapRects signature gains `perRow` (row breaks otherwise inferred from slot y)
+- trayLayout tests extend toEqual cases with `tileHeight` (tray.test.ts)
+- gapRects/partingOffsets parameter and return types (`readonly Rect[]`, `{ index; rect }[]`, `{ slot; dx; dy }[]`)
+- "rendered rows" = `trayLayout(tileCount).rows` TileRows renders (pre-CAP-9)
+- parted segment ends/locks mid-drag applied by entry 8 without Svelte state (rule 3), e.g. controller-toggled classes
+- reorder out-of-range i/j throws (from pass 2)
+### Dropped
+- none
