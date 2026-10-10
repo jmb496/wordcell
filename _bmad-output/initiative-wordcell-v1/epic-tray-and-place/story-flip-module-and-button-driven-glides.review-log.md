@@ -1,6 +1,6 @@
 # Review log — story-flip-module-and-button-driven-glides.md (ticket 5.10)
 
-State: pass 5: done
+State: pass 6: done
 
 Mode: docs, thorough, max 7, budget 1500 words (2.5x pass 0 plus the tickets.toml entry 10 fields unknown, interface, tests, owns, consumers that pass 1 adds to the Description). Pass 0: HEAD acf8115, .passes/pass0.md, 471 words.
 
@@ -153,3 +153,29 @@ Fixer: all 10 applied; decision-needed item left untouched (no open-questions ta
 - kind function return type for the empty set (MotionKind | null) — plan-level
 - pointerdown early return for a non-primary button/second press before inFlight — acts on nothing; plan notes it
 - desktop column hover outline (z 3) over a z 1 glide — cosmetic; plan notes it
+
+## Pass 6 — 2026-10-10
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 2, minor 9, decision-needed 0 (pass 5's still open)  |  Dropped in triage: 3 (plan-level)
+Words (docs): 1500 (3.18 x pass 0; budget 1500)  |  Snapshot: .passes/pass6.md, fix diff .passes/pass6.fix.diff
+Fixer: all 11 applied (Card.svelte facts checked); "(never a fade)" dropped as implied by "translate"; References drops the trailing build-notes CAP-8; ¶1 split into four paragraphs with existing words; decision-needed item untouched.
+Triage note: the adversarial reviewer's two layering majors (same-band glides start under block mirrors that appear at once later in DOM order, e.g. Flip left → right; `.mark`/`.lock` at z-index 1 in a non-isolated `.face` paint through moving faces) share one rule, a gliding face paints above every static card, and one fix, so they count as one major (verified: Card.svelte `.block .face` opaque destination fill, `.mark`/`.lock` z-index 1, `.face` no z-index; tray.ts block order).
+### Applied
+- [major] AC finish-all "every Description rule-6 case throws" — only three throws carry a "rule 6" label, so read literally the gating list drops the one-sided/duplicate CardId, unmapped data-place, install, null-root and no-view throws → fixer item 1
+- [major] Description glide layer — only band changers take `wc-glide`, so same-band glides start under the block mirrors that appear at once (Flip left → right, Undo Place → Composing); and other cards' z-1 marks/locks paint through every moving face → fixer item 2
+- [minor] duplicate CardId check only on play's side; capture's map collapses duplicates → fixer item 3
+- [minor] finish-all Vitest — the first glide's async `onfinish` arriving during the second glide must leave the second's gate count and classes alone → fixer item 4
+- [minor] References — F6/F7/F22/OQ-6 live in SPEC.md, not build-notes.md → fixer item 5
+- [minor] AC Undo Place → Composing — "computed overflow" checks nothing (D wrappers outside `.tiles`) → fixer item 6
+- [minor] Interface `running()` undefined → "(an animation unsettled)" → fixer item 7
+- [minor] "(a press mid-animation hit-tests the settled layout)" redundant now that pointerdown finishes glides → cut (frees words) → fixer item 8
+- [minor] AC (b) different sizes with equal top-lefts → none → fixer item 9
+- [minor] AC Flip step — read the moving S faces' computed z-index 1 (covers item 2 in the existing evaluate) → fixer item 10
+- [minor] Description ¶1 one ~600-word paragraph — split with existing words if possible → fixer item 11
+### Default applied (technical)
+- glide layer → every moving face takes `wc-glide` (z-index 1); only a band-changing translate also lifts the tile-area clip; Card.svelte `.face` gets `isolation: isolate` so marks stay inside their face
+### Decision needed (functionality / UX / gameplay)
+- (pass 5's free-letter Undo item remains open)
+### Dropped
+- TopBar column-tail deselect lift before Undo/Redo untested — plan adds a createFlip fake case or names it
+- second-load `+` with the block right moves no live face — the Flip → `+` step proves the wiring; plan note
+- duplicate of item 2 from the Flip-direction stretch — folded into item 10
