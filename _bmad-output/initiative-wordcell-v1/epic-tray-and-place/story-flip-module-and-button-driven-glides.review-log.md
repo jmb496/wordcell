@@ -1,6 +1,6 @@
 # Review log — story-flip-module-and-button-driven-glides.md (ticket 5.10)
 
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1500 words (2.5x pass 0 plus the tickets.toml entry 10 fields unknown, interface, tests, owns, consumers that pass 1 adds to the Description). Pass 0: HEAD acf8115, .passes/pass0.md, 471 words.
 
@@ -103,3 +103,28 @@ Fixer: all 15 applied; source facts checked (`.tiles` overflow hidden / wc-drag-
 ### Dropped
 - cancel() root guard before finishFlight — unreachable; placement is the plan's
 - e2e specs reading faces right after act() clicks — plan greps and lists them; ticket at budget
+
+## Pass 4 — 2026-10-10
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 3, minor 3, decision-needed 0  |  Dropped in triage: 6 (adversarial stretch items accepted for the plan, see Dropped)
+Words (docs): 1500 (3.18 x pass 0; budget 1500)  |  Snapshot: .passes/pass4.md, fix diff .passes/pass4.fix.diff
+Fixer: all 5 applied; cuts to stay at budget (scrollReset parenthetical, giveUp-caller note, "cards land at once", near() citation, controller.test.ts-style fakes, shorter New game sentence and entry-16 Note); no requirement dropped.
+Triage note: the elementFromPoint check (fix diff, adversarial), the hidden start of the Undo glide out of the tray (edge, ref) and `wc-drag-layer` breaking DESIGN.md's layer order (ref) are three defects in the one pass 3 sentence (fixer item 1 of pass 3) and are fixed by one rewrite, so they count as one major.
+### Applied
+- [major] Description clip-lift sentence / AC Validate + Undo steps — pass 3's mechanism: `wc-drag-layer` gives every gliding tray face the drag shadow and z 5 above the sticky bars (DESIGN.md Elevation & Depth layer order: cards → sticky bars → … → drag layer); it covers only glides into the tray, so the Undo Place → Composing D faces start under the tray (F22); and the P5 `elementFromPoint` check can never pass (`.face` has `pointer-events: none`, Card.svelte:175) → fixer item 1
+- [major] AC finish-all Vitest — removal of the clip lift and glide layer at the last settle untested (a leak keeps the F2 clip lifted) → fixer item 2
+- [major] Tests line vs AC — "(S + P5)" for no motion on a pure band shift (P5 deferred to entry 12) and durations (no P5 reads a duration; rule-coverage S + P5) → fixer item 3
+- [minor] Description "call capture before" → "just before" (TopBar's deselect first) → fixer item 4
+- [minor] createFlip deps — `duration` injected (the AC spies on it) → fixer item 5
+- [minor] Description — "a glide into the tray band" reads as every tray glide; band changers only (subsumed by item 1)
+### Default applied (technical)
+- glide layer → band-changing faces only, both directions: the tile area takes `wc-drag-tiles` (unclipped) and each band-changing face a glide class at z-index 1 (above cards, below the sticky bars' 2, no shadow); P5 asserts the computed overflow and z-index at animation time 0
+- durations P5 → each running animation's duration 320 (Slow) in the P5 evaluates
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- drag-shadow asymmetry Validate vs Undo — moot after item 1 (no shadow)
+- lifting the clip under TRAY_ROWS = 1 shows a wide word's overflow rows during a band-changer glide until entry 12 — interim, for the plan to note
+- New game/Replay/restore untested — exempt by construction, the plan lists it
+- reverse-glide paint order accepted — superseded by item 1
+- entry 16's toml still lists finishAll — recorded in Notes; trimmed when entry 16 is pulled
+- dropped-word budget note — n/a
