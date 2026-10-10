@@ -126,3 +126,14 @@ Ref to fix upstream: none
 Tokens: 22.3M input-equivalent for the first session (see the stop entry above); resume session 6.3M input-equivalent (code review 97%, orchestrator 2%, other 1%); orchestrator peak context 57k
 Worth knowing: one browser check is deferred to 5.12 (entry 12's long Composing fixture): a real free-letter drag that parts a multi-tile word block across a tray row break. The CSS itself is already checked on a one-row block. One paperwork leftover: two triage rows in the plan still use older wording (for the 5.15 sweep). The unit suite runs in 2.0 s of test time (6.0 s total on /mnt/d, budget measured on the Linux filesystem).
 Close-out docs: none (the answer keeps EXPERIENCE.md as written; recorded as SPEC F26)
+
+## 5.9 Place target, order and Confirm — done
+What it adds: on the Place screen the player can now pick which WordCell the word goes into (legal cells ringed, others faded, the current choice pre-selected) by tapping it, or by a long-press on an empty cell, without losing the letter order they set; Confirm then commits the word into that cell, and an emptied board goes straight to Game over. A new test game covers a free letter taken from a cell holding exactly two cards.
+Ticket review: 4 passes, converged (majors 11, 4, 1, 1); nothing needed your input. Its one open item (a desktop click on a legal cell while the hover preview is open) was handed to the build: the preview stays open and the click sets the target, as SPEC F26 already decided for the Composing click.
+Build: built; commit bd90124
+Code review: thorough (risk high), 1 pass, converged (majors 0); 0 fixes applied (4 minor test-precision notes listed in the log, not fixed)
+Tests: all passing (test:all as one command: 2237 unit, 494 + 14 + 12 browser tests, build 513,537 / 600,000 bytes); the build also ran test:screens (10 passed, no baseline changed)
+Ref to fix upstream: none
+Tokens: 14.5M input-equivalent (ticket review 55%, build 34%, code review 9%, orchestrator 2%, other 1%); orchestrator peak context 68k
+Worth knowing: the four minor review notes are about test precision only (one test checks an impossible state, one test-name clause can never fail, the save check retries until it matches, and the drag tests rely on real timing and check only the final target); candidates for the 5.14 sweep. Unit suite warm median 2.91 s on the Linux filesystem.
+Close-out docs: none

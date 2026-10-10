@@ -3,7 +3,7 @@ title: 'Place target, order and Confirm'
 type: 'feature'
 ticket: 9
 created: '2026-10-09'
-status: 'built'
+status: done
 route: 'full'
 route_source: 'auto'
 review: 'thorough'
