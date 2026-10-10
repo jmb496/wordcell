@@ -8,10 +8,10 @@
 // `draft.freeLetters` cell whose top card it is, tags.ts `originCard`). Keep: block, scrim and sheet
 // hits, a Composing WordCell without `canAddFreeLetter` (used or empty), a Place WordCell that is not
 // a legal target. Clear: every other hit (columns, outside, an available Composing cell, which
-// intent.ts then adds as a free letter, epic 5 SPEC CAP-6, and the current or another legal Place
-// cell until ticket 9 dispatches there). A tile hit outside
-// Composing and Place, a tile that is not live in the phase, or a selection that is not a live tile
-// of the current phase throws (rule 6).
+// intent.ts then adds as a free letter (epic 5 SPEC CAP-6), the current Place target, which then
+// dispatches nothing (F13), and another legal Place cell, which intent.ts then sets as the target
+// (epic 5 SPEC CAP-7)). A tile hit outside Composing and Place, a tile that is not live in the
+// phase, or a selection that is not a live tile of the current phase throws (rule 6).
 // Tile drag run (epic 5 SPEC CAP-5, F3, F25; build-notes CAP-5), pure: `tileRun` gives a dragged
 // live tile's movable run in tray positions (Composing: `draft.arrangement` from `first` = k with
 // the block on the left, else 0, over |M| + k tiles; Place: `placementOrder` from 0 over n), the

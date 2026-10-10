@@ -73,10 +73,13 @@
 // its `pointerup` reads the rendered `[data-view-scroll]` under the root and keeps it as the sticky
 // view (`peekToSticky()`, one entry) iff it overflows, else `closePeek()`; every other end closes
 // it. A non-empty WordCell tap with nothing selected opens the sticky view in Idle and Game over
-// (`openView`, intent.ts). The view's scrim and sheet resolve before `data-place`, uncaptured (the
-// sheet pans): a tap closes the view (`close('wordcellView')`, never a deselect) and arms the
-// trailing-click swallower (click-swallow.ts) on the root; a drag does nothing. Every pointerdown
-// and detach disarm the swallower.
+// (`openView`, intent.ts). In Place (epic 5 SPEC CAP-7, F13; R-39, R-40, R-41) a tap (or an empty
+// cell's long-press released by `pointerup`, classify.ts) on a `canSetTarget` cell clears the tile
+// selection, then dispatches one `setTarget { cell }`; every other Place WordCell tap, drag and
+// cancelled long-press dispatches nothing. The view's scrim and sheet resolve before `data-place`,
+// uncaptured (the sheet pans): a tap closes the view (`close('wordcellView')`, never a deselect)
+// and arms the trailing-click swallower (click-swallow.ts) on the root; a drag does nothing. Every
+// pointerdown and detach disarm the swallower.
 // Hover peek (epic 4 SPEC CAP-9, epic 4 SPEC F19; AD-12, AD-13): the timer and its suppression slot
 // live in hover-peek-timer.ts, fed by `pointerover`/`pointerout`. Every pointerdown (any type or
 // button) first clears the timer. A threshold crossing that starts a pick-up drag hides the hover
@@ -1311,6 +1314,9 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
         return;
       case 'addFreeLetter':
         game.dispatch({ type: 'addFreeLetter', cell: action.cell });
+        return;
+      case 'setTarget':
+        game.dispatch({ type: 'setTarget', cell: action.cell });
         return;
       case 'none':
         return;

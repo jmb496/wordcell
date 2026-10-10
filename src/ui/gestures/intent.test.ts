@@ -89,8 +89,9 @@ describe('AD-12 tapAction with nothing selected', () => {
     }
   });
 
-  // Entry 11 (R-65, R-75; R-33, R-39 inert): the plan's I/O rows Tap opens / Tap inert.
-  it('AD-12 a non-empty WordCell opens the view in Idle and Game over; empty, Composing and Place are inert', () => {
+  // Entry 11 (R-65, R-75; R-33, R-39 inert): the plan's I/O rows Tap opens / Tap inert. Ticket 5.9
+  // supersedes the Place half (Place WordCells were inert): epic 5 SPEC CAP-7, F13, R-40, R-41.
+  it('AD-12 a non-empty WordCell opens the view in Idle and Game over; empty and Composing are inert; Place gives setTarget on a canSetTarget cell only', () => {
     const cell3: Hit = { kind: 'wordcell', cell: 3 };
     const cell4: Hit = { kind: 'wordcell', cell: 4 };
     const open = { kind: 'openView', cell: 3 };
@@ -98,10 +99,33 @@ describe('AD-12 tapAction with nothing selected', () => {
       expect(tapAction(cell3, v, null, undefined)).toEqual(open);
       expect(tapAction(cell4, v, null, undefined)).toEqual({ kind: 'none' });
     }
-    for (const v of [view({ phase: 'composing' }), view({ phase: 'place' })]) {
-      expect(tapAction(cell3, v, null, undefined)).toEqual({ kind: 'none' });
-      expect(tapAction(cell4, v, null, undefined)).toEqual({ kind: 'none' });
-    }
+    const composing = view({ phase: 'composing' });
+    expect(tapAction(cell3, composing, null, undefined)).toEqual({ kind: 'none' });
+    expect(tapAction(cell4, composing, null, undefined)).toEqual({ kind: 'none' });
+    // Place: cell 3 the current target (legal, canSetTarget false), cell 4 legal and empty, cell 5
+    // legal and used (R-41), cell 6 not legal.
+    const place = {
+      ...view({ phase: 'place' }),
+      place: { target: 3, placementOrder: [10, 11, 12], scoreDelta: 0 },
+      cells: [
+        { cell: 3, cards: [90], isLegalTarget: true, canSetTarget: false },
+        { cell: 4, cards: [], isLegalTarget: true, canSetTarget: true },
+        { cell: 5, cards: [91], isLegalTarget: true, canSetTarget: true, used: true },
+        { cell: 6, cards: [92], isLegalTarget: false, canSetTarget: false },
+      ],
+    } as unknown as GameView;
+    expect(tapAction(cell4, place, null, undefined)).toEqual({ kind: 'setTarget', cell: 4 });
+    expect(tapAction({ kind: 'wordcell', cell: 5 }, place, null, undefined)).toEqual({
+      kind: 'setTarget',
+      cell: 5,
+    });
+    expect(tapAction(cell3, place, null, undefined)).toEqual({ kind: 'none' });
+    expect(tapAction({ kind: 'wordcell', cell: 6 }, place, null, undefined)).toEqual({
+      kind: 'none',
+    });
+    expect(() => tapAction({ kind: 'wordcell', cell: 7 }, place, null, undefined)).toThrow(
+      /^AD-12 WordCell 7/,
+    );
     expect(() => tapAction({ kind: 'wordcell', cell: 5 }, view(), null, undefined)).toThrow(
       /^AD-12 WordCell 5/,
     );
@@ -330,12 +354,13 @@ describe('AD-12 entry 10 Composing tapAction', () => {
         expect(tapAction({ kind: 'wordcell', cell }, v, selection, top)).toEqual({ kind: 'none' });
       }
     }
-    // Place and Idle keep their paths (R-65 view tap, deselect with a selection): no free letter.
+    // Place and Idle keep their paths (Place: the setTarget branch, which ignores a selection, ticket
+    // 5.9; Idle: R-65 view tap, deselect with a selection): no free letter.
     const place = { ...v, phase: 'place' } as unknown as GameView;
     const idle = { ...v, phase: 'idle' } as unknown as GameView;
     const cell3: Hit = { kind: 'wordcell', cell: 3 };
     expect(tapAction(cell3, place, null, undefined)).toEqual({ kind: 'none' });
-    expect(tapAction(cell3, place, SEL, 'tailSelection')).toEqual({ kind: 'deselect' });
+    expect(tapAction(cell3, place, SEL, 'tailSelection')).toEqual({ kind: 'none' });
     expect(tapAction(cell3, idle, null, undefined)).toEqual({ kind: 'openView', cell: 3 });
     expect(tapAction(cell3, idle, SEL, 'tailSelection')).toEqual({ kind: 'deselect' });
     expect(() => tapAction({ kind: 'wordcell', cell: 9 }, v, null, undefined)).toThrow(

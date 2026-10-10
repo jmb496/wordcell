@@ -386,6 +386,13 @@ function board() {
     right: 150,
     bottom: 510,
   });
+  // Ticket 5.9: cell 6 (tileView('place'): an empty legal non-current target), x 150 … 200.
+  const cell6 = at(el('div', { 'data-wordcell': '6' }, root), {
+    left: 150,
+    top: 450,
+    right: 200,
+    bottom: 510,
+  });
   // Entry 12: the hover peek root (rendered only while open in the app; always here).
   const hoverPeek = el('div', { 'data-hover-peek': '' }, root);
   // Entry 5.7: the tray band x 0 … 400, y 600 … 800; its `.tiles` holds tray positions 0, 1, 2
@@ -467,6 +474,7 @@ function board() {
     badge,
     cell4,
     cell5,
+    cell6,
     tile,
     tile2,
     stripTile,
@@ -647,7 +655,7 @@ async function setup() {
 // Epic 5 CAP-4: a Composing view whose live tray tiles are 3 (S) and 4 (a free letter from cell 5,
 // whose top it is); column 1 is the destination (card 0 → k 2, card 5 the top of D → null); cell 3
 // is available, cell 4 empty. Place: the strip [3, 4, 6] at target 3 (cell 3 current, cell 5
-// legal, cell 4 not legal).
+// legal, cell 4 not legal; ticket 5.9: cell 6 empty, legal, not current).
 function tileView(phase: 'composing' | 'place' = 'composing'): void {
   const composing = phase === 'composing';
   const col = (column: number, cards: number[]) => ({
@@ -685,6 +693,7 @@ function tileView(phase: 'composing' | 'place' = 'composing'): void {
         [4],
         composing ? { used: true } : { used: true, isLegalTarget: true, canSetTarget: true },
       ),
+      ...(composing ? [] : [cell(6, [], { isLegalTarget: true, canSetTarget: true })]),
     ],
     draft: { arrangement: [3, 4], freeLetters: [5], destination: [5], k: 1, side: 'right' },
     ...(composing ? {} : { place: { placementOrder: [3, 4, 6], target: 3 } }),
@@ -3466,16 +3475,21 @@ describe('AD-12 epic 5 tile tap', () => {
     expect(t.overlays.tileSelection).toBeNull();
   });
 
-  it('AD-12 F13 Place: a not-legal WordCell keeps; the current target and a legal non-current cell clear, dispatching nothing', async () => {
+  // Ticket 5.9 supersedes the legal non-current half (it dispatched nothing): epic 5 SPEC CAP-7.
+  it('AD-12 F13 Place: a not-legal WordCell keeps; the current target clears with no dispatch; a legal non-current cell clears, then dispatches one setTarget', async () => {
     const t = await ready('place', 6);
     t.tap(t.b.cell4);
     expect(t.overlays.tileSelection).toBe(6);
     t.tap(t.b.cellCard);
     expect(t.overlays.tileSelection).toBeNull();
+    expect(navCalls).toEqual([]);
     t.overlays.selectTile(6);
+    const seen: (number | null)[] = [];
+    shared.onDispatch = () => seen.push(t.overlays.tileSelection);
     t.tap(t.b.cell5);
     expect(t.overlays.tileSelection).toBeNull();
-    expect(navCalls).toEqual([]);
+    expect(navCalls).toEqual([dispatched({ type: 'setTarget', cell: 5 })]);
+    expect(seen).toEqual([null]);
   });
 
   it('AD-12 F1 Place: a legal non-current cell dragged ≥ 8 px and released by pointerup clears, dispatching nothing', async () => {
@@ -3626,6 +3640,173 @@ describe('AD-12 epic 5 tile tap', () => {
     expect(() => t.tap(t.b.leftover)).toThrow(
       /^AD-12 tileTap with tile 6 selected, not a live tile/,
     );
+  });
+});
+
+// Ticket 5.9 (epic 5 SPEC CAP-7, F1, F13, F14; R-39, R-40, R-41, R-42, R-51, R-65): the Place
+// target through the WordCell press path on tileView('place'): cell 3 the current target, cell 4
+// not legal and empty, cell 5 legal and non-empty (used), cell 6 legal and empty. Strip tile 6 is
+// selected before each case unless a case says otherwise.
+describe('AD-12 epic 5 Place target', () => {
+  type T = Awaited<ReturnType<typeof setup>>;
+  const dispatched = (command: Record<string, unknown>) => `dispatch ${JSON.stringify(command)}`;
+  const dispatches = () => navCalls.filter((c) => c.startsWith('dispatch'));
+  const ready = async (selected: number | null = 6) => {
+    const t = await setup();
+    t.detach();
+    tileView('place');
+    if (selected !== null) t.overlays.selectTile(selected);
+    navCalls.length = 0;
+    return t;
+  };
+  // A press on `el` at (100, 100), held until the long-press timer fires.
+  const hold = (t: T, el: FakeEl) => {
+    t.down(el, { clientX: 100, clientY: 100 });
+    t.advance(400);
+  };
+  // The tile selection at each dispatch.
+  const watch = (t: T) => {
+    const seen: (number | null)[] = [];
+    shared.onDispatch = () => seen.push(t.overlays.tileSelection);
+    return seen;
+  };
+
+  it('AD-12 R-51 a tap on a canSetTarget cell clears the tile selection, then dispatches one setTarget', async () => {
+    for (const [el, cell] of [
+      ['cell5', 5],
+      ['cell6', 6],
+    ] as const) {
+      const t = await ready();
+      const seen = watch(t);
+      t.tap(t.b[el]);
+      expect(navCalls).toEqual([dispatched({ type: 'setTarget', cell })]);
+      expect(seen).toEqual([null]);
+      expect(t.overlays.tileSelection).toBeNull();
+    }
+    // With nothing selected, the same one dispatch.
+    const t = await ready(null);
+    t.tap(t.b.cell6);
+    expect(navCalls).toEqual([dispatched({ type: 'setTarget', cell: 6 })]);
+  });
+
+  it('AD-12 F13 R-40 a current-target tap clears with no dispatch; a not-legal tap keeps with no dispatch and opens no view', async () => {
+    const t = await ready();
+    t.tap(t.b.cellCard);
+    expect(t.overlays.tileSelection).toBeNull();
+    t.overlays.selectTile(6);
+    t.tap(t.b.cell4);
+    expect(t.overlays.tileSelection).toBe(6);
+    expect(t.overlays.viewCell).toBeNull();
+    expect(t.overlays.peek).toBeNull();
+    expect(navCalls).toEqual([]);
+  });
+
+  it('AD-12 an empty legal non-current cell long-pressed and released in place, or after moving past 8 px over another cell, is a tap on it: clear, one setTarget', async () => {
+    const t = await ready();
+    const seen = watch(t);
+    hold(t, t.b.cell6);
+    expect(t.overlays.peek).toBeNull();
+    expect(t.overlays.tileSelection).toBe(6);
+    t.fire('pointerup', { target: t.b.cell6 });
+    expect(navCalls).toEqual([dispatched({ type: 'setTarget', cell: 6 })]);
+    expect(seen).toEqual([null]);
+    expect(t.overlays.tileSelection).toBeNull();
+    expect(t.active()).toBe(0);
+    const m = await ready();
+    const seenMoved = watch(m);
+    hold(m, m.b.cell6);
+    // Released over cell 5, 50 px away: the timer won, so the press stays the tap on cell 6.
+    m.fire('pointermove', { clientX: 150, clientY: 100 });
+    m.point(m.b.cell5);
+    expect(m.b.cell6.classes.has('wc-drag-ghost')).toBe(false);
+    m.fire('pointerup', { clientX: 150, clientY: 100, target: m.b.cell5 });
+    expect(navCalls).toEqual([dispatched({ type: 'setTarget', cell: 6 })]);
+    expect(seenMoved).toEqual([null]);
+    expect(m.overlays.tileSelection).toBeNull();
+  });
+
+  it('AD-12 F13 an empty not-legal cell long-press keeps with no dispatch; an empty current-target long-press clears with no dispatch', async () => {
+    const t = await ready();
+    hold(t, t.b.cell4);
+    t.fire('pointerup', { target: t.b.cell4 });
+    expect(t.overlays.tileSelection).toBe(6);
+    expect(t.overlays.viewCell).toBeNull();
+    expect(navCalls).toEqual([]);
+    // Variant: cell 6 the current target, cell 3 legal non-current.
+    const v = await ready();
+    const view = shared.view as {
+      place: { target: number };
+      cells: { cell: number; canSetTarget: boolean }[];
+    };
+    view.place.target = 6;
+    for (const c of view.cells) {
+      if (c.cell === 3) c.canSetTarget = true;
+      if (c.cell === 6) c.canSetTarget = false;
+    }
+    hold(v, v.b.cell6);
+    v.fire('pointerup', { target: v.b.cell6 });
+    expect(v.overlays.tileSelection).toBeNull();
+    expect(navCalls).toEqual([]);
+  });
+
+  it('AD-12 F1 an empty legal non-current cell long-press ended by pointercancel or lostpointercapture dispatches nothing and keeps the tile selection', async () => {
+    const t = await ready();
+    hold(t, t.b.cell6);
+    t.fire('pointercancel');
+    expect(t.active()).toBe(0);
+    expect(t.overlays.tileSelection).toBe(6);
+    expect(navCalls).toEqual([]);
+    const l = await ready();
+    hold(l, l.b.cell6);
+    l.b.cell6.captures.clear();
+    l.fire('lostpointercapture', { target: l.b.cell6 });
+    expect(l.active()).toBe(0);
+    expect(l.overlays.tileSelection).toBe(6);
+    // A later pointerup of the ended press does nothing.
+    l.fire('pointerup', { target: l.b.cell6 });
+    expect(l.overlays.tileSelection).toBe(6);
+    expect(navCalls).toEqual([]);
+  });
+
+  it('AD-12 F14 R-65 a non-empty legal non-current cell long-press opens the peek; its release closes it (no overflow) or keeps it sticky (overflow); no dispatch, the tile selection kept', async () => {
+    const t = await ready();
+    hold(t, t.b.cell5);
+    expect(t.overlays.peek).toBe(5);
+    t.fire('pointerup', { target: t.b.cell5 });
+    expect(t.overlays.peek).toBeNull();
+    expect(t.overlays.viewCell).toBeNull();
+    expect(t.overlays.tileSelection).toBe(6);
+    expect(navCalls).toEqual([]);
+    const s = await ready();
+    s.b.viewScroll.scrollHeight = 900;
+    s.b.viewScroll.clientHeight = 300;
+    hold(s, s.b.cell5);
+    s.fire('pointerup', { target: s.b.cell5 });
+    expect(s.overlays.viewCell).toBe(5);
+    expect(s.overlays.tileSelection).toBe(6);
+    expect(dispatches()).toEqual([]);
+  });
+
+  it('AD-12 F1 R-39 a WordCell drag (≥ 8 px before 400 ms) dispatches nothing: pointerup from a legal cell clears, from a not-legal cell keeps; pointercancel keeps', async () => {
+    const drag = (t: T, el: FakeEl) => {
+      t.down(el, { clientX: 100, clientY: 100 });
+      t.fire('pointermove', { clientX: 110, clientY: 100 });
+      t.advance(400);
+    };
+    const t = await ready();
+    drag(t, t.b.cell6);
+    expect(t.b.cell6.classes.has('wc-drag-ghost')).toBe(false);
+    t.fire('pointerup', { target: t.b.cell6 });
+    expect(t.overlays.tileSelection).toBeNull();
+    t.overlays.selectTile(6);
+    drag(t, t.b.cell4);
+    t.fire('pointerup', { target: t.b.cell4 });
+    expect(t.overlays.tileSelection).toBe(6);
+    drag(t, t.b.cell5);
+    t.fire('pointercancel');
+    expect(t.overlays.tileSelection).toBe(6);
+    expect(t.overlays.peek).toBeNull();
+    expect(navCalls).toEqual([]);
   });
 });
 

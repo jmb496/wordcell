@@ -7,12 +7,14 @@
 // `tapDestinationCard`, `null` or absent → nothing); every other column part, S ghosts included
 // (they resolve as `space`), is inert, with or without a selection. With nothing selected (epic 4
 // SPEC CAP-9, R-65, R-75, epic 4 SPEC F14) a non-empty WordCell tap opens the sticky view in Idle
-// and Game over (`openView`), nothing in Place. In Composing (epic 5 SPEC CAP-6, R-33, Q-31) a
-// WordCell tap, whatever the selection, adds the cell's top card as a free letter (`addFreeLetter`,
-// appended) when it has `canAddFreeLetter`, else does nothing (used or empty). The view sheet and
-// its scrim are `Hit`s the controller handles itself, never `tapAction`'s, and so are tray/strip
-// tiles and D-block mirrors (epic 5 SPEC CAP-4, F2: tile.ts `tileTap` only); `hoverAction` gives
-// nothing for them.
+// and Game over (`openView`). In Composing (epic 5 SPEC CAP-6, R-33, Q-31) a WordCell tap, whatever
+// the selection, adds the cell's top card as a free letter (`addFreeLetter`, appended) when it has
+// `canAddFreeLetter`, else does nothing (used or empty). In Place (epic 5 SPEC CAP-7, R-39, R-40,
+// R-41, R-51) a WordCell tap sets the target (`setTarget`) when the cell has `canSetTarget` (legal,
+// not the current target), else does nothing (a Place view never has a tail selection). The view
+// sheet and its scrim are `Hit`s the controller handles itself, never `tapAction`'s, and so are
+// tray/strip tiles and D-block mirrors (epic 5 SPEC CAP-4, F2: tile.ts `tileTap` only);
+// `hoverAction` gives nothing for them.
 import type { CardId, ColumnView, GameView, WordCellNumber } from '../../engine/index';
 import type { OverlayId, TailSelection } from '../overlays.svelte';
 import { cellIn, columnIn } from './lookup';
@@ -48,6 +50,8 @@ export type TapAction =
   | { readonly kind: 'openView'; readonly cell: number }
   /** Epic 5 SPEC CAP-6: a tap on an available Composing WordCell (Q-31: appended). */
   | { readonly kind: 'addFreeLetter'; readonly cell: WordCellNumber }
+  /** Epic 5 SPEC CAP-7: a tap on a Place WordCell with `canSetTarget` (R-40, R-41, R-51). */
+  | { readonly kind: 'setTarget'; readonly cell: WordCellNumber }
   | { readonly kind: 'none' };
 
 export type HoverAction =
@@ -83,6 +87,10 @@ function tailFrom(entry: ColumnView, card: CardId): { index: number; count: numb
 
 function composing(view: GameView): boolean {
   return view.status === 'playing' && view.phase === 'composing';
+}
+
+function place(view: GameView): boolean {
+  return view.status === 'playing' && view.phase === 'place';
 }
 
 // R-31: a Composing destination-card hit with a numeric `kIfTapped`, else null.
@@ -129,6 +137,11 @@ export function tapAction(
   if (composing(view) && hit.kind === 'wordcell') {
     const cell = cellIn(view.cells, hit.cell, `AD-12 WordCell ${hit.cell} is not in the GameView`);
     return cell.canAddFreeLetter ? { kind: 'addFreeLetter', cell: cell.cell } : NONE;
+  }
+  // Epic 5 SPEC CAP-7, F13: `canSetTarget` is false on the current target and a not-legal cell.
+  if (place(view) && hit.kind === 'wordcell') {
+    const cell = cellIn(view.cells, hit.cell, `AD-12 WordCell ${hit.cell} is not in the GameView`);
+    return cell.canSetTarget ? { kind: 'setTarget', cell: cell.cell } : NONE;
   }
   if (selection === null) {
     if (hit.kind === 'wordcell') return viewTap(hit.cell, view);

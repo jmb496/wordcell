@@ -939,7 +939,7 @@ test.describe('desktop', () => {
     expect(face).toEqual(['1', 'none']);
     await expect(page.locator('[data-card-id]')).toHaveCount(52);
     for (const id of cards) await expect(page.locator(`[data-card-id="${id}"]`)).toHaveCount(1);
-    // Place: a WordCell click does nothing (CAP-9), so the hover peek stays.
+    // Place: a click on the current target 3 does nothing (F13), so the hover peek stays.
     await page.mouse.down();
     await page.mouse.up();
     await expect(hoverPeek(page)).toBeVisible();

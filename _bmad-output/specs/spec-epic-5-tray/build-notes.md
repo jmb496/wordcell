@@ -271,6 +271,16 @@ src/ui/
 - Target tap through the WordCell press path: `canSetTarget` → `setTarget { cell }`; otherwise no
   dispatch (F13 decides the tile selection).
 - Confirm stays in `ActionBar.svelte`; the commit's fly-to-cell is CAP-8.
+- As built (ticket 5.9): intent.ts `tapAction` gains the Place case `{ kind: 'setTarget', cell }`
+  when the cell has `canSetTarget` (else `none`; it ignores a selection, since Place has no tail
+  selection); the controller's `perform` dispatches it after `tileTap`'s clear, and the empty-cell
+  long-press reaches it as a tap (classify.ts, unchanged). S15 done: the valid fixture
+  `session-place-free-letter-two-cards` (seed 191) is session-place-compact's commands, then
+  `confirm` (QUARTERED → cell 9, cell 4 left [20, 28]), `drop(4, 3, 8)`, `addFreeLetter { cell: 4 }`
+  (28), `arrange [32, 45, 28, 42]`, `validate` (MOUNT, words `quin`, `quartered`, `mount`): Place
+  at cursor 2, strip [26, 32, 45, 28, 42], target 5, legal 3–5, delta +21 (+16 into cell 4); one
+  Confirm into 5 leaves cell 4 [20] with no badge; into 4 gives [20, 26, 32, 45, 28, 42].
+  P5 in `e2e/place.spec.ts`.
 
 ## CAP-8 FLIP and fly-to-cell
 

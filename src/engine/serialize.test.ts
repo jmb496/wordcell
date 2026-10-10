@@ -211,6 +211,9 @@ import validPlaceCompact from '../../fixtures/session-place-compact.json' with {
 import validPlaceFreeLetterRedoTail from '../../fixtures/session-place-free-letter-redo-tail.json' with {
   type: 'json',
 };
+import validPlaceFreeLetterTwoCards from '../../fixtures/session-place-free-letter-two-cards.json' with {
+  type: 'json',
+};
 import validWon from '../../fixtures/session-won.json' with { type: 'json' };
 import { EngineError } from './errors';
 import {
@@ -287,9 +290,10 @@ type ValidName =
   | 'gave-up'
   | 'idle-empty-column'
   | 'gave-up-after-commit'
-  | 'place-compact';
+  | 'place-compact'
+  | 'place-free-letter-two-cards';
 
-/** The twelve CAP-9 round-trip fixtures (generator record: the plan's Implementation Notes). */
+/** The thirteen CAP-9 round-trip fixtures (generator record: the plan's Implementation Notes). */
 const VALID: readonly (readonly [ValidName, unknown])[] = [
   ['idle-fresh', validIdleFresh],
   ['composing', validComposing],
@@ -303,6 +307,7 @@ const VALID: readonly (readonly [ValidName, unknown])[] = [
   ['idle-empty-column', validIdleEmptyColumn],
   ['gave-up-after-commit', validGaveUpAfterCommit],
   ['place-compact', validPlaceCompact],
+  ['place-free-letter-two-cards', validPlaceFreeLetterTwoCards],
 ];
 
 // --- rejection table ------------------------------------------------------------------------
@@ -862,6 +867,21 @@ describe('defining properties (§2, CAP-9)', () => {
       expect(move.destinationSide).toBe('right');
       expect(move.arrangement.length).toBeLessThanOrEqual(6);
       expect(move.arrangement.length + move.destinationCount).toBeGreaterThanOrEqual(8);
+    },
+    // Epic 5 SPEC CAP-7 (S15; R-41, R-61): one free letter from a cell c ≤ L that is not the stored
+    // target and holds exactly 2 cards, a legal target.
+    'place-free-letter-two-cards': (s) => {
+      expect(s.cursor.phase).toBe('place');
+      expect(s.moves.length).toBe(s.cursor.index + 1);
+      const move = s.moves[s.cursor.index];
+      expect(move.freeLetters).toHaveLength(1);
+      const c = move.freeLetters[0] as number;
+      const v = view(s, EN);
+      expect(c).toBeLessThanOrEqual(v.draft?.letterCount ?? 0);
+      expect(c).not.toBe(move.targetCell);
+      const cell = v.cells.find((entry) => entry.cell === c);
+      expect(cell?.cards).toHaveLength(2);
+      expect(cell?.isLegalTarget).toBe(true);
     },
   };
 
@@ -1654,6 +1674,21 @@ const FIXTURE_MAN: readonly Command[] = [
 const fromSeed1 = (commands: readonly Command[]): Session =>
   play(createSession(1), commands, FIXTURE_WORDS);
 
+// Seed 191 (epic 5 entry 2): QUIN → cell 4 (35 on top), then QUARTERED validated (target 9).
+const PLACE_COMPACT: readonly Command[] = [
+  drop(2, 2, 6),
+  { type: 'arrange', arrangement: [20, 28] },
+  VALIDATE,
+  { type: 'setPlacementOrder', order: [20, 28, 35] },
+  CONFIRM, // QUIN → cell 4, 35 on top
+  drop(4, 4, 3),
+  { type: 'setDestinationCount', k: 3 },
+  FLIP,
+  { type: 'addFreeLetter', cell: 4 },
+  { type: 'arrange', arrangement: [35, 1, 38, 44, 11] },
+  VALIDATE, // QUARTERED, target 9
+];
+
 const REBUILDS: readonly (readonly [string, unknown, () => Session])[] = [
   ['session-idle-fresh', validIdleFresh, () => deepFreeze(createSession(1))],
   ['session-composing', validComposing, () => fromSeed1(FIXTURE_TAN)],
@@ -1698,23 +1733,23 @@ const REBUILDS: readonly (readonly [string, unknown, () => Session])[] = [
   [
     'session-place-compact',
     validPlaceCompact,
+    () => play(createSession(191), PLACE_COMPACT, ['quin', 'quartered']),
+  ],
+  [
+    'session-place-free-letter-two-cards',
+    validPlaceFreeLetterTwoCards,
     () =>
       play(
         createSession(191),
         [
-          drop(2, 2, 6),
-          { type: 'arrange', arrangement: [20, 28] },
-          VALIDATE,
-          { type: 'setPlacementOrder', order: [20, 28, 35] },
-          CONFIRM, // QUIN → cell 4, 35 on top
-          drop(4, 4, 3),
-          { type: 'setDestinationCount', k: 3 },
-          FLIP,
-          { type: 'addFreeLetter', cell: 4 },
-          { type: 'arrange', arrangement: [35, 1, 38, 44, 11] },
-          VALIDATE, // QUARTERED, target 9
+          ...PLACE_COMPACT,
+          CONFIRM, // QUARTERED → cell 9; cell 4 left [20, 28] (I N)
+          drop(4, 3, 8), // O T U on column 8, k 1 (D = 26 M), side left
+          { type: 'addFreeLetter', cell: 4 }, // 28 N; cell 4 still holds 2 cards
+          { type: 'arrange', arrangement: [32, 45, 28, 42] },
+          VALIDATE, // MOUNT, target 5; legal 3–5
         ],
-        ['quin', 'quartered'],
+        ['quin', 'quartered', 'mount'],
       ),
   ],
 ];
