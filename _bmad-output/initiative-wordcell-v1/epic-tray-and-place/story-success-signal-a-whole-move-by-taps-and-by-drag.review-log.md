@@ -1,6 +1,6 @@
 # Review log — story-success-signal-a-whole-move-by-taps-and-by-drag.md (ticket 5.17)
 
-State: pass 2: done
+State: done (converged after 3 passes)
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD abe3bbc, .passes/pass0.md, 254 words.
 Intent extras (tickets.toml entry 17, not copied into the ticket; fixer adds them to Description in pass 1): interface, tests, owns.
@@ -56,3 +56,30 @@ Fixer: all 12 applied; per-step literals re-checked by esbuild replay (deltas 9/
 - none
 ### Dropped
 - none (duplicates merged: entry-13 ×2, waitForDictionary ×2, persist-nothing ×3, +9 ×2, DOM order ×2, version/seed ×2)
+
+## Pass 3 — 2026-10-09
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 0, minor 12, decision-needed 0  |  Dropped in triage: 1 (+ 7 duplicates merged)
+Words (docs): 860 (3.39 x pass 0; budget 1500)  |  Snapshot: .passes/pass2.md (no fix pass)
+### Applied
+- none (converged; minors listed under Result)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- adversarial [major]: "`holdTile` does not exist in e2e/tile-drag.spec.ts" — disproved: `async function holdTile(` at e2e/tile-drag.spec.ts:219 (multi-line signature), used at 285, 303, …
+
+## Result — converged after 3 passes
+
+Majors per pass: 6, 2, 0. No decision-needed items. Technical defaults applied: 6. Words 254 → 860 (budget 1500). The literals (ANEW move, deltas +9/+5, score 49 → 54, cell 3 [28, 1, 9, 48], cursor { index: 2, phase: 'idle' }) were confirmed by engine replay in passes 1, 2 and 3.
+
+Unapplied minors (for the build's plan):
+- AC R-80 bullet — scope it "tap-only test" (only that test's name carries R-80; bullets 1 and 3 say "both tests").
+- AC bullet 1 — "(ANEW, bottom → top)" glosses [28, 1, 9, 48], which reads N A E W bottom → top; ANEW is the word order.
+- AC R-73 bullet — the meta deltas +9/+5 are DOM reads (`metaDelta`), not stored values; label them so.
+- AC R-73 bullet — "holds with no write" is a note, not an assertion (no `stash` spy needed).
+- AC R-73 drop poll — add `destinationColumn` 1 and `destinationCount` 0 (arrangement holds only M).
+- References reuse — tile-drag.spec.ts and free-letter.spec.ts both define `geometry`/`gapCentre`/`moveFace`: use tile-drag.spec.ts's `geometry`/`gapCentre`/`holdTile`/`moveFace` for tray and strip reorders and free-letter.spec.ts's geometry and `holdTop` for W's end-gap insert, renaming one pair locally.
+- References reuse — add e2e/tap.spec.ts (R-14 R-22 placeholder tap) and e2e/drag.spec.ts (R-22 R-23 k = 0 empty-column drag, `holdThrough`/`path`) for the drop.
+- Description — name tap points: card 1 selects the tail, column 1's `.placeholder` receives the drop, card 48 tap-adds.
+- Description, drag version — run the steps in the tap order (drag drop, drag add, tray drag, Validate, retarget tap, strip drag, Confirm).
+- Notes guard — trigger is Validate rejecting ANEW in the test (`rejectedWord`); the fallback re-derives every AC literal by engine replay, recorded in the plan.
+- AC bullet 1 (stretch) — optionally poll column 6 → [31, 34, 27] after Confirm.
