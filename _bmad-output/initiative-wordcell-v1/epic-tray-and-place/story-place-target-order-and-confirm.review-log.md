@@ -1,6 +1,6 @@
 # Review log — story-place-target-order-and-confirm.md (ticket 5.9)
 
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7. Pass 0: HEAD 77336d8, .passes/pass0.md, 366 words (budget 2.5x ≈ 915).
 Intent extras (tickets.toml entry 9, not copied into the ticket; fixer adds them to Description in pass 1): interface, tests, owns, consumers.
@@ -35,3 +35,29 @@ Fixer: all 18 applied; no runnable commands added; "twelve" → "thirteen" in se
 - none
 ### Dropped
 - QU boundary of L on session-place-compact (stretch; engine-tested R-40, not in the ticket's tests field)
+
+## Pass 2 — 2026-10-09
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 4, minor 9, decision-needed 0  |  Dropped in triage: 0 (+ ~10 duplicates merged)
+Words (docs): 1300 (3.55 x pass 0)  |  Snapshot: .passes/pass2.md, fix diff .passes/pass2.fix.diff
+Fixer: all 13 applied; R-60/R-52 literals verified by a temporary engine run (cell 3 → [42, 0, 9, 32, 28], cursor {2, idle}, 2 moves), file deleted; storage spy exports `armStorageSpy`/`storageWrites`; no commands added.
+### Applied
+- [major] AC bullet 2 — session-won + one Undo steps chained: target state before each case unknown, "drag from cell 4" follows the tap that makes 4 the target, in-place long-press names no cell/result → fixer item 1
+- [major] AC bullet 2 — "Redo disabled after the first retarget" cannot fail (the preceding tap-swap is already a Place edit, R-71) → 2
+- [major] AC bullet 4 — columns and cells are not in a Session (rule 2; current() exposes no view); "one confirm dispatch" has no observable → 3
+- [major] AC bullet 4 — R-52 on the redo-tail fixture: the strip's last card 28 is already cell 3's top (the free letter), so the top check cannot fail → 4
+- [minor] Description — `FIXTURE_WORDS` is seed-1 only (serialize.test.ts:1632); place-compact route passes an inline list; JSON import missing → 5
+- [minor] Description — CAP-4 drag clears only when ending in pointerup → 6
+- [minor] AC bullet 1 — session-composing Validate has L = 3, "highest legal … others ringed" not testable there → 7
+- [minor] Description/AC — PROPERTIES "≥ 2 legal cells" redundant; R-80 retarget case unnamed → 8
+- [minor] AC — `displayScore` not exposed by the AD-17 hook; read the DOM (no shell change) → 9
+- [minor] Description — Consumers line garbled → 10
+- [minor] Description/AC — badge "after the free letter is added" reads as a test action → 11
+- [minor] Description — cancelled long-press keeps a tile selection (F1) → 12
+- [minor] AC bullet 4 — name the drop reaching the next Composing (FIXTURE_MAN `drop(2, 1, 6)`) → 13
+### Default applied (technical)
+- AC — dispatch proxy → one `wordcell:session` write (storage spy) and `cursor.index` + 1
+- AC — R-80 cases → R-61 test Confirms into the stored target; R-41 test retargets to c then Confirms into c
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
