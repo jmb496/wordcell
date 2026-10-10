@@ -45,5 +45,6 @@ Verify: npm run test:all and npm run test:screens are green with:
 
 ## Notes
 
+- Owner (2026-10-10, SPEC F27): Undo of a free-letter add is the plain glide; the WordCell looks empty until the letter lands (no used mirror held).
 - Open question: Whether a capture before dispatch gives the previous rects without a second render (SPEC Assumptions); the D-face first-rect P5 assertion answers it. Face WAAPI composing with release drag transforms without a jump is entry 16's; here only the first-keyframe Vitest.
 - tickets.toml handoffs, when pulled: entry 12 gains the pure-band-shift P5 (no running animation on column faces after `+` 14 → 15); entry 16 drops `finishAll` in `pointerdown` and `cancel()` and keeps the release capture/play and the press-path P5.

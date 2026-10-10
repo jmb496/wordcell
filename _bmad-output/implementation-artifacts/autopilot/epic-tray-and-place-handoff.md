@@ -19,3 +19,7 @@ summary: Ticket 5.10 (button-driven glide animations) finished its ticket review
 **How to resume.** Record your answer in the ticket's Notes (`_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-flip-module-and-button-driven-glides.md`) and commit it, then rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-tray-and-place`. The next session sees the finished ticket review and goes straight to the build.
 
 Digest: `_bmad-output/implementation-artifacts/autopilot/epic-tray-and-place-20261008-1002.md`
+
+## Resolved
+
+2026-10-10: Jared chose Option A, the plain glide (SPEC F27, ticket Notes). No close-out doc change. Next session goes straight to the 5.10 build.

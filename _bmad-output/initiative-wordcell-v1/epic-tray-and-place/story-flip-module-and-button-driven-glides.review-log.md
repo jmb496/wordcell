@@ -189,3 +189,6 @@ Majors per pass: 10, 9, 4, 3, 2, 2, 0. Words 471 → 1500 (budget 1500, includin
 Decision needed (owner): Undo gliding a free letter back to its own WordCell leaves that cell looking empty for the glide (1 × base, 320 ms at Slow) — proposed default: the plain glide; alternative: keep the used mirror drawn until the glide settles, as fly-to-cell does (pass 5).
 Handoffs recorded in the ticket's Notes for tickets.toml: entry 16 drops `finishAll` in `pointerdown`/`cancel()` (now here); entry 12 gains the pure-band-shift P5.
 Unapplied minors: none. Plan-level items (see the Dropped lists): the kind function's empty-set return type; pointerdown's early return before inFlight; desktop hover outline over a z-1 glide; lifting the clip under TRAY_ROWS = 1 shows a wide word's overflow rows during a band-changer glide until entry 12; New game/Replay/restore exempt by construction; TopBar tail-deselect lift test; the second-load `+` with the block right moves no live face; e2e specs reading faces right after act() clicks must be listed; the epic file's Decision (CAP-8 split) and tickets.toml entry 16 need the finishAll move folded in at close-out.
+
+## Owner decision — 2026-10-10
+Free-letter Undo glide (pass 5): owner chose the proposed default, the plain glide (SPEC F27). Recorded in the ticket's Notes.
