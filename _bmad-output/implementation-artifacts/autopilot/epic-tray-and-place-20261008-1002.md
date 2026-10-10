@@ -169,3 +169,14 @@ Close-out docs: none yet (depends on your answer; if you pick the alternative, E
 
 ## Resumed — 2026-10-10T10:13Z
 Jared chose the plain glide for the free-letter Undo (SPEC F27, ticket Notes, 2026-10-10). The 5.10 ticket review is complete (7 passes, converged); going straight to the build.
+
+## 5.10 FLIP module and button-driven glides — done
+What it adds: cards now glide smoothly to their new place after a button press (Validate, Undo, Redo, Flip, and the word-length − and + buttons) instead of jumping. With reduced motion turned on they fade instead. A tap or a button press during a glide finishes it first and then acts on the settled board. When Undo sends a free letter back to its WordCell, it glides home into a cell that looks empty until it lands (your choice, SPEC F27).
+Ticket review: 7 passes, converged (majors 10, 9, 4, 3, 2, 2, 0); one question for you (how the WordCell looks during a free letter's Undo glide), answered 2026-10-10 with the plain glide
+Build: built; commit 70b4bb1
+Code review: thorough (risk high), 3 passes, converged (majors 2, 2, 0); 4 fixes applied (WIP commits 1eb19b4, 7c4555f)
+Tests: all passing (test:all as one command: 2288 unit, 14 + 500 + 12 browser tests, build 515,024 / 600,000 bytes); the build also ran test:screens (no baseline changed)
+Ref to fix upstream: none
+Tokens: 16.2M input-equivalent for this session (code review 50%, build 47%, orchestrator 2%, other 1%); orchestrator peak context 67k; the ticket review's 14.6M is in the stop entry above
+Worth knowing: the code review also brought the planning notes for later tickets in line with this one. Pressing during a glide now finishes the glide here, in 5.10, instead of in 5.16, and 5.12 gains a check that growing the tray does not move the columns. Two low/medium items are deferred: the reduced-motion fade and a press, back or hide during a glide are checked only by unit tests, not in the browser. 5.16 tests the press in the browser; back and hide during a glide are covered only by unit tests (review minor 5). Seven minor test-precision notes in the code review log are left for the 5.14 sweep. Unit suite warm median 2.87 s.
+Close-out docs: none (your 2026-10-10 answer is already recorded in SPEC F27 and changes no other owner doc)

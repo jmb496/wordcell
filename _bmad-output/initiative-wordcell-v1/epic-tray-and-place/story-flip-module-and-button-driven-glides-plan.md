@@ -3,7 +3,7 @@ title: 'FLIP module and button-driven glides'
 type: 'feature'
 ticket: 10
 created: '2026-10-10'
-status: 'built'
+status: done
 baseline_revision: '033770be87f3fb51d8fb1f9dad4cd9257b7209df'
 route: 'full'
 route_source: 'auto'

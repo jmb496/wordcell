@@ -1,25 +1,20 @@
-outcome: stopped
+outcome: done
 ticket: 5.10
-reason: rule 1 — ticket review raised a decision for the owner (how a WordCell looks while Undo glides a free letter back into it)
-next: 5.10
-updated: 2026-10-10T09:35:09Z
-summary: Ticket 5.10 (button-driven glide animations) finished its ticket review cleanly, but one visual question needs Jared's answer before it is built.
+reason: done
+next: 5.16
+updated: 2026-10-10T11:59:28Z
+summary: Ticket 5.10 (cards glide after button presses) is built, reviewed, fully tested and marked done; 5.16 is next.
 
 ## Report
 
-**What happened.** I pulled ticket 5.10 (the glide animation that slides cards smoothly to their new place after Validate, Flip, changing the word length, or Undo/Redo) and hardened it with the ticket review loop. It took 7 rounds and ended clean with no open problems. One question is about how the game looks, so it is yours to answer, and the run stopped before building.
+**What happened.** After you chose the plain glide for a free letter's Undo, this session built ticket 5.10. Cards now glide smoothly to their new place after Validate, Undo, Redo, Flip and the − and + buttons, and they fade instead when reduced motion is on. The code review took 3 rounds, applied 4 technical fixes and ended clean. Every test suite passes (2288 unit tests, 526 browser tests, build size 515,024 of 600,000 bytes). The ticket is marked done.
 
-**The question.** When you add a free letter from a WordCell to the tray and then press Undo, the letter glides back home into its WordCell. During that glide, which is about 180 ms at Normal speed and 320 ms at Slow, what should the WordCell look like?
+**Nothing for you to decide.** The code review also updated the plans for later tickets: finishing a glide when you press is now part of 5.10 (it was planned for 5.16), and 5.12 gains a check that growing the tray does not move the columns.
 
-- **Option A (proposed default): plain glide.** The cell looks empty while the letter flies back, then the letter lands in it. This is simpler to build.
-- **Option B: keep the cell's "used" look until the letter lands.** This matches what you already chose for Confirm's fly-to-cell animation. It is more consistent, but this ticket has to do extra work to keep the cell's look in place during the glide.
+**Worth knowing.** Two parts are checked only by unit tests, not in the browser: the reduced-motion fade, and pressing, going back or hiding the app during a glide. Ticket 5.16 will test the press in the browser. Seven small test-precision notes are left for the 5.14 cleanup sweep.
 
-**Close-out docs.** None yet. If you choose B, EXPERIENCE.md § Motion and the epic 5 SPEC build-notes CAP-8 may need a line at the retro.
+**Close-out docs.** None this ticket. Your 2026-10-10 answer is already in SPEC F27.
 
-**How to resume.** Record your answer in the ticket's Notes (`_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-flip-module-and-button-driven-glides.md`) and commit it, then rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-tray-and-place`. The next session sees the finished ticket review and goes straight to the build.
+**How to resume.** The driver continues on its own with 5.16 (FLIP for moves made by dragging and tapping cards). To run it by hand: `.claude/skills/epic-autopilot/scripts/loop.sh epic-tray-and-place`.
 
 Digest: `_bmad-output/implementation-artifacts/autopilot/epic-tray-and-place-20261008-1002.md`
-
-## Resolved
-
-2026-10-10: Jared chose Option A, the plain glide (SPEC F27, ticket Notes). No close-out doc change. Next session goes straight to the 5.10 build.
