@@ -176,8 +176,11 @@ function measure(root: HTMLElement): Measure {
   const placed = new Map<CardId, Placed>();
   const faces = new Map<CardId, HTMLElement>();
   for (const wrapper of root.querySelectorAll<HTMLElement>('[data-card-id]')) {
-    const id = Number(wrapper.getAttribute('data-card-id')) as CardId;
-    if (!Number.isInteger(id)) throw new Error('AD-14 FLIP data-card-id is not an integer');
+    const raw = wrapper.getAttribute('data-card-id');
+    const id = Number(raw) as CardId;
+    if (raw === null || !/^\d+$/.test(raw) || id > 51) {
+      throw new Error(`AD-14 FLIP data-card-id ${raw} is not a CardId 0–51`);
+    }
     const place = wrapper.getAttribute('data-place');
     const band = found(BAND_OF_PLACE.get(place), `AD-14 FLIP card ${id} has data-place ${place}`);
     if (placed.has(id)) throw new Error(`AD-14 FLIP card ${id} is live twice`);

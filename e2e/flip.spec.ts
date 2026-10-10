@@ -37,6 +37,7 @@ type Read = {
   mirrorAnimations: number;
   tilesOverflow: string;
   blockMirrors: string[];
+  wordcellMirrors: string[];
 };
 
 // The button: a data-testid, or a tray control by its text.
@@ -103,6 +104,9 @@ function clickAndRead(page: Page, button: Button): Promise<Read> {
       blockMirrors: [...document.querySelectorAll('[data-band="tray"] [data-mirror-of]')].map(
         (m) => m.getAttribute('data-mirror-of') ?? '',
       ),
+      wordcellMirrors: [
+        ...document.querySelectorAll('[data-band="wordcells"] [data-mirror-of]'),
+      ].map((m) => m.getAttribute('data-mirror-of') ?? ''),
     };
   }, button);
 }
@@ -243,6 +247,8 @@ test('AD-14 F27 Undo Composing → Idle on session-place-free-letter-two-cards +
   expectGlides(read, [28, 32, 42, 45], before);
   expect(face(read, 28).place).toBe('cell');
   expect(face(read, 28).zIndex).toBe('1');
+  // F27 (owner): no used mirror of 28 is held in the WordCell band while the letter flies home.
+  expect(read.wordcellMirrors.filter((m) => m === '28')).toHaveLength(0);
   for (const id of [32, 42, 45]) expect(face(read, id).place).toBe('column');
   expect(read.tilesOverflow).toBe('visible');
   await glidesSettled(page);

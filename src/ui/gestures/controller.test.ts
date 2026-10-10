@@ -2536,6 +2536,16 @@ describe('AD-13 entry 9 selection replacement', () => {
     expect(t.active()).toBe(0);
   });
 
+  it('AD-14 cancel() while attached with only glidesRunning() true (no fly-back, no press) calls finishGlides() alone', async () => {
+    const t = await setup();
+    t.detach();
+    t.glides.running = true;
+    order.length = 0;
+    t.controller.cancel();
+    expect(order).toEqual(['finishGlides']);
+    expect(t.active()).toBe(0);
+  });
+
   it('AD-14 a primary pointerdown with only glidesRunning() true enters the gate, then calls finishGlides(), and enters once', async () => {
     const t = await setup();
     t.detach();

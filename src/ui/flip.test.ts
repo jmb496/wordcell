@@ -102,14 +102,20 @@ const BANDS: Record<BandKey, Box> = {
 
 class FakeRoot {
   readonly tiles = { classList: new FakeClassList() };
-  /** The faces of the current scene by CardId (a re-render makes new nodes per scene). */
+  /**
+   * The faces of the current scene by CardId (a re-render makes new nodes per scene; `keep` reuses
+   * each CardId's face node with its new rect, as Svelte's keyed each does within a band).
+   */
   faces = new Map<number, FakeFace>();
   wrappers: FakeWrapper[] = [];
   bands: Record<BandKey, Box> = BANDS;
-  show(scene: Scene): void {
+  show(scene: Scene, options: { keep?: boolean } = {}): void {
+    const previous = this.faces;
     this.faces = new Map();
     this.wrappers = scene.cards.map((card) => {
-      const face = new FakeFace(card.rect);
+      const kept = options.keep === true ? previous.get(card.id) : undefined;
+      const face = kept ?? new FakeFace(card.rect);
+      face.rect = card.rect;
       this.faces.set(card.id, face);
       return new FakeWrapper({ 'data-card-id': String(card.id), 'data-place': card.place }, face);
     });
@@ -338,6 +344,48 @@ describe('AD-14 FLIP kind table', () => {
       expect(t.root.tiles.classList.contains('wc-drag-tiles')).toBe(false);
     }
   });
+
+  it('AD-14 under reduced motion a band-changing undo fades the band changer and the same-band mover, no wc-glide, no wc-drag-tiles', () => {
+    const t = setup({ reduced: true });
+    t.root.show(START);
+    move(t, BAND_CHANGE, undo);
+    expect(t.duration.mock.calls).toEqual([['undoRedo']]);
+    // 7 changes band (column → strip); 4 moves one slot within the tray band; 3 stays.
+    for (const id of [7, 4]) {
+      const face = t.root.face(id);
+      expect(face.animations).toHaveLength(1);
+      expect(face.animations[0]?.keyframes).toEqual([{ opacity: 0 }, { opacity: 1 }]);
+      expect(face.animations[0]?.options.duration).toBe(120);
+      expect(face.classList.contains('wc-glide')).toBe(false);
+    }
+    expect(t.root.face(3).animations).toEqual([]);
+    expect(t.root.tiles.classList.contains('wc-drag-tiles')).toBe(false);
+  });
+
+  it('AD-14 the kind reads the phase after the move (F7): a redo captured in place that ends idle animates nothing; one captured idle that ends composing animates as undoRedo', () => {
+    // Committing redo: phase place at capture, idle after the move → flyToCell.
+    let t = setup({ phase: 'place' });
+    t.root.show(START);
+    t.flip.capture();
+    t.state.phase = 'idle';
+    t.root.show(BAND_CHANGE);
+    t.flip.play({ type: 'redo' }, CHANGED);
+    expect([...t.root.faces.values()].flatMap((f) => f.animations)).toEqual([]);
+    expect(t.counts.enter).toBe(0);
+    expect(t.duration).not.toHaveBeenCalled();
+    // Non-committing redo: phase idle at capture, composing after the move → undoRedo.
+    t = setup({ phase: 'idle' });
+    t.root.show(START);
+    t.flip.capture();
+    t.state.phase = 'composing';
+    t.root.show(BAND_CHANGE);
+    t.flip.play({ type: 'redo' }, CHANGED);
+    expect(t.duration.mock.calls).toEqual([['undoRedo']]);
+    for (const id of [7, 4]) {
+      expect(t.root.face(id).animations[0]?.options.duration).toBe(DURATIONS.undoRedo);
+    }
+    expect(t.active()).toBe(2);
+  });
 });
 
 describe('AD-14 FLIP coordinate frame (planGlides)', () => {
@@ -487,6 +535,26 @@ describe('AD-14 FLIP finish-all path', () => {
     expect(t.flip.running()).toBe(true);
     expect(t.root.face(7).classList.contains('wc-glide')).toBe(true);
     expect(t.root.tiles.classList.contains('wc-drag-tiles')).toBe(true);
+  });
+
+  it('AD-14 two same-band glides on the same face nodes: the first glide late onfinish leaves the second glide class, running() and gate count untouched', () => {
+    const t = setup();
+    t.root.show(START);
+    move(t, SAME_BAND);
+    const face3 = t.root.face(3);
+    const first = face3.animations[0];
+    expect(t.active()).toBe(2);
+    // A second Flip during the first glide: the same face nodes swap back.
+    t.flip.capture();
+    t.root.show(START, { keep: true });
+    t.flip.play(flipCommand, CHANGED);
+    expect(t.root.face(3)).toBe(face3);
+    expect(face3.animations).toHaveLength(2);
+    expect(t.active()).toBe(2);
+    first?.onfinish?.();
+    expect(face3.classList.contains('wc-glide')).toBe(true);
+    expect(t.flip.running()).toBe(true);
+    expect(t.active()).toBe(2);
   });
 
   it('AD-14 wc-glide and wc-drag-tiles stay until the last settle by onfinish', () => {
@@ -658,6 +726,19 @@ describe('AD-14 FLIP throws', () => {
     t.root.show(START);
     t.root.wrappers.push(new FakeWrapper({ 'data-card-id': '11' }, new FakeFace(box(0, 0))));
     expect(() => t.flip.capture()).toThrow(/^AD-14 FLIP card 11 has data-place null/);
+  });
+
+  it('AD-14 a data-card-id that is not a CardId 0–51 throws', () => {
+    for (const raw of ['', '52', '-1', '3.5', 'x']) {
+      const t = setup();
+      t.root.show(START);
+      t.root.wrappers.push(
+        new FakeWrapper({ 'data-card-id': raw, 'data-place': 'tray' }, new FakeFace(box(0, 0))),
+      );
+      expect(() => t.flip.capture(), `"${raw}"`).toThrow(
+        /^AD-14 FLIP data-card-id .* is not a CardId 0–51/,
+      );
+    }
   });
 
   it('AD-14 a cancel event throws', () => {
