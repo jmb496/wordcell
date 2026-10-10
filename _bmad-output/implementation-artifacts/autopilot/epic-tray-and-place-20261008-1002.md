@@ -137,3 +137,9 @@ Ref to fix upstream: none
 Tokens: 14.5M input-equivalent (ticket review 55%, build 34%, code review 9%, orchestrator 2%, other 1%); orchestrator peak context 68k
 Worth knowing: the four minor review notes are about test precision only (one test checks an impossible state, one test-name clause can never fail, the save check retries until it matches, and the drag tests rely on real timing and check only the final target); candidates for the 5.14 sweep. Unit suite warm median 2.91 s on the Linux filesystem.
 Close-out docs: none
+
+## Stopped — usage limit
+
+- Ticket 5.17 (Success signal: a whole move by taps and by drag), step: build (bmad-build-auto exited 1 at 22:54 on 2026-10-09).
+- Reset: 00:10 EDT Sat 2026-10-10; rerun `loop.sh epic-tray-and-place` after it (+3 min).
+- Uncommitted: `_bmad-output/specs/spec-epic-5-tray/build-notes.md` (modified), `_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-success-signal-a-whole-move-by-taps-and-by-drag-plan.md` (new), `e2e/success-signal.spec.ts` (new).
