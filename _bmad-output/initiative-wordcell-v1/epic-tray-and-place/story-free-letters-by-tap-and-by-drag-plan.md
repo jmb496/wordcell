@@ -3,7 +3,7 @@ title: 'Free letters by tap and by drag'
 type: 'feature'
 ticket: 8
 created: '2026-10-09'
-status: 'built'
+status: done
 route: 'full'
 route_source: 'auto'
 review: 'thorough'

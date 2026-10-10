@@ -112,3 +112,17 @@ Decision needed (desktop only): clicking a WordCell to add its letter while that
 Environment: the owner's `npm run dev --host` (started 11:06 EDT for the phone check) still holds port 5173. Playwright reuses it, so the build could not run `test:all` as one command (each part ran green separately), and Step D needs the port free.
 Tokens: 22.3M input-equivalent (ticket review 43%, build 38%, code review 16%, orchestrator 2%, other 1%); orchestrator peak context 82k
 Resume: answer the decision (record it in the ticket's Notes), stop the dev server on port 5173, then rerun loop.sh. The next session resumes the code review at pass 1's fix step.
+
+## Resumed — 2026-10-09T23:15Z
+Owner answered the 5.8 question (keep as built, SPEC F26) and freed port 5173. Step C resumed at pass 1's fix step.
+
+## 5.8 Free letters by tap and by drag — done
+What it adds: the player can tap a WordCell to add its top letter to the end of the word, or drag it into the tray to drop it at a chosen spot. While dragging, the other tiles slide aside (or a teal caret marks the spot when the tray is full) and the cell shows a dashed outline.
+Ticket review: 5 passes, converged (majors 12, 7, 3, 1, 1); nothing needed your input (its one open item, reduced-motion snap-home for the mirrors, was resolved by the build)
+Build: built; commit 44eda8b
+Code review: thorough (risk high), 4 passes, converged (majors 3, 1, 1, 0); one question for you, answered 2026-10-09: keep as built (SPEC F26); fixes in 8d40dff (partial, earlier session), 67bab55, e356f0b, 1382c32, 7a0dd5b
+Tests: all passing (test:all as one command: 2227 unit, 478 + 12 browser tests, build 513,501 / 600,000 bytes)
+Ref to fix upstream: none
+Tokens: 22.3M input-equivalent for the first session (see the stop entry above); resume session 6.3M input-equivalent (code review 97%, orchestrator 2%, other 1%); orchestrator peak context 57k
+Worth knowing: one browser check is deferred to 5.12 (entry 12's long Composing fixture): a real free-letter drag that parts a multi-tile word block across a tray row break. The CSS itself is already checked on a one-row block. One paperwork leftover: two triage rows in the plan still use older wording (for the 5.15 sweep). The unit suite runs in 2.0 s of test time (6.0 s total on /mnt/d, budget measured on the Linux filesystem).
+Close-out docs: none (the answer keeps EXPERIENCE.md as written; recorded as SPEC F26)
