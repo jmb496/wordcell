@@ -166,3 +166,6 @@ Build: not started.
 Tokens: 14.6M input-equivalent (ticket review 98%, orchestrator 1%, other 1%); orchestrator peak context 55k
 Worth knowing: the question is about what a WordCell looks like while Undo sends a free letter back into it. Proposed default: a plain glide, with the cell looking empty for the glide (about 180 ms at Normal, 320 ms at Slow). Alternative: the cell keeps its used look until the letter lands, the way Confirm's fly-to-cell does, which means more work in this ticket.
 Close-out docs: none yet (depends on your answer; if you pick the alternative, EXPERIENCE.md § Motion and the epic 5 SPEC/build-notes CAP-8 may need a line).
+
+## Resumed — 2026-10-10T10:13Z
+Jared chose the plain glide for the free-letter Undo (SPEC F27, ticket Notes, 2026-10-10). The 5.10 ticket review is complete (7 passes, converged); going straight to the build.
