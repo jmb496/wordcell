@@ -1,6 +1,6 @@
 # Review log — story-success-signal-a-whole-move-by-taps-and-by-drag.md (ticket 5.17)
 
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: HEAD abe3bbc, .passes/pass0.md, 254 words.
 Intent extras (tickets.toml entry 17, not copied into the ticket; fixer adds them to Description in pass 1): interface, tests, owns.
@@ -30,3 +30,29 @@ Fixer: all 11 applied; literals re-checked by a read-only esbuild bundle of src/
 ### Dropped
 - adversarial: score preview +16/+12 — wrong, R-80 Place delta subtracts the free letter's cell score (view.ts:259): +9/+5
 - adversarial: "add criterion that the post-add arrangement is not the word" — subsumed by naming the move (item 2)
+
+## Pass 2 — 2026-10-09
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 2, minor 11, decision-needed 0  |  Dropped in triage: 0 (+ 8 duplicates merged)
+Words (docs): 860 (3.39 x pass 0; budget 1500)  |  Snapshot: .passes/pass2.md, fix diff .passes/pass2.fix.diff
+Fixer: all 12 applied; per-step literals re-checked by esbuild replay (deltas 9/5, score 49 → 54, cell 3 [28, 1, 9, 48]); cited e2e names grepped (tile-drag.spec.ts has `holdTile`, not `holdTop`); no commands added.
+### Applied
+- [major] AC R-73 — `expectSaved` alone passes when a tap misses (stored = current trivially): each dispatching step first polls its stored literal (drop → arrangement [1, 9, 28] composing; add → [1, 9, 28, 48], freeLetters [7]; arrange → [1, 28, 9, 48]; validate → place, targetCell 4, meta +9; setTarget → 3, +5; setPlacementOrder → [28, 1, 9, 48]; confirm → cursor { 2, idle }), then `expectSaved`; validate's target 4 proves the retarget is real (SPEC "other than the pre-selected one") → fixer item 1
+- [major] AC — Done when 2's "lands in the chosen cell in the chosen order" has no DOM assertion (last bullet limits to current()/storage): poll a local `cellIds(page, 3)` → [28, 1, 9, 48], card-48 on top, in both tests; expect.poll covers DOM reads too → 2
+- [minor] AC — entry 13 is the winning guard, not FLIP: "entries 10, 16 and 11" → 3
+- [minor] AC R-73 — Done when 2 says after every step: run `expectSaved` after the selecting taps too (holds without a write), in both tests → 4
+- [minor] Description — SPEC Success signal's "every P5 row covered" clause is entry 15's Done when 1 audit → 5
+- [minor] Description — `waitForDictionary(page, 'ready')` before Validate (place.spec.ts precedent) → 6
+- [minor] AC literal — `version` 1, `seed` 1, `gaveUp` false (the fixture's); the fixture's first move copied verbatim → 7
+- [minor] AC R-80 — drop `view.ts:259` line ref (cite R-80); +9 now asserted in item 1 → 8
+- [minor] References/AC — drag geometry and hold/move helpers as local copies from e2e/free-letter.spec.ts and e2e/tile-drag.spec.ts; "no new helper" → "no new e2e/helpers module" → 9 (default applied)
+- [minor] Description — pin drag gestures: tray tile 28 into the gap before 9; strip tile 28 into gap 0 → 10 (default applied)
+- [minor] Description — defect scope "(src/ui/, e2e/)" narrower than epic Boundaries: add src/main.ts wiring → 11
+- [minor] Notes guard — renaming the start edits SPEC.md/epic (outside Boundaries): record the rename for close-out in the plan, flagged for the owner, instead of editing them → 12 (default applied)
+### Default applied (technical)
+- drag helpers → local copies, no new e2e/helpers module
+- drag gestures → tray 28 before 9, strip 28 to gap 0
+- fallback rename → recorded in the plan for owner close-out, SPEC/epic untouched
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none (duplicates merged: entry-13 ×2, waitForDictionary ×2, persist-nothing ×3, +9 ×2, DOM order ×2, version/seed ×2)
