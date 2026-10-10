@@ -4,6 +4,7 @@ import {
   cards,
   centre,
   foot,
+  glidesSettled,
   openFixture,
   sameSession,
   stashSession,
@@ -35,6 +36,29 @@ const onDesktop = () =>
   test.skip(test.info().project.name !== 'desktop', 'mouse drag flows run on desktop');
 
 const faceOf = (card: Locator) => card.locator(':scope > .face');
+
+// Ticket 5.10 (epic 5 SPEC CAP-8): right after an Undo the drag's residue is gone at once; the
+// only `wc-drag-*` class allowed is `wc-drag-tiles` on the tray's `.tiles`, and only while a face
+// carries `wc-glide` (the Undo's own FLIP glide lifting the clip); it too is gone once the glide
+// settles.
+async function expectDragGoneUnderGlide(page: Page): Promise<void> {
+  const read = await page.evaluate(() => {
+    const tiles = document.querySelector('[data-band="tray"] .tiles');
+    const exempt = (el: Element, c: string) => el === tiles && c === 'wc-drag-tiles';
+    return {
+      gliding: document.querySelectorAll('.face.wc-glide').length,
+      lifted: tiles?.classList.contains('wc-drag-tiles') === true,
+      other: [...document.querySelectorAll('*')].filter((el) =>
+        [...el.classList].some((c) => c.startsWith('wc-drag-') && !exempt(el, c)),
+      ).length,
+    };
+  });
+  expect(read.other).toBe(0);
+  if (read.lifted) expect(read.gliding).toBeGreaterThan(0);
+  expect((await dragResidue(page)).transforms).toBe(0);
+  await glidesSettled(page);
+  expect(await dragResidue(page)).toEqual({ classes: 0, transforms: 0 });
+}
 const outline = (page: Page) => page.locator('[data-selection-outline]');
 const here = (page: Page, n: number) => foot(page, n).locator('.here');
 
@@ -430,7 +454,7 @@ test.describe('android', () => {
     try {
       expect(await targets(page)).toEqual([3]);
       await page.getByTestId('undo').dispatchEvent('click');
-      expect(await dragResidue(page)).toEqual({ classes: 0, transforms: 0 });
+      await expectDragGoneUnderGlide(page);
       await expect.poll(() => cursorIndex(page)).toBe(index - 1);
       await stashSession(page);
       await hold.moveTo(plus(to, 0, 10));
@@ -786,7 +810,7 @@ test.describe('desktop', () => {
       }
       expect(await targets(page)).toEqual([3]);
       await page.getByTestId('undo').dispatchEvent('click');
-      expect(await dragResidue(page)).toEqual({ classes: 0, transforms: 0 });
+      await expectDragGoneUnderGlide(page);
       await expect.poll(() => cursorIndex(page)).toBe(index - 1);
       await stashSession(page);
       await page.mouse.move(to.x, to.y + 10);

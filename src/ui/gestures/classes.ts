@@ -1,11 +1,13 @@
 // AD-12 class names and custom properties the pointer controller and its modules write on the DOM
 // (epic 5 SPEC CAP-3): the desktop hover classes and the k preview's custom properties on one
 // `[data-column]`, the drag ghost, layer and target classes, the tile drag's `.tiles` clip lift
-// (epic 5 SPEC CAP-5), the free-letter drag's caret, its shown state and the D-block mirrors' parted
-// marker and parted segment ends (epic 5 SPEC CAP-6, F16), the root's selection suppression and the
-// hover peek's hide class. The single TypeScript source of these names; Column.svelte,
-// TileRows.svelte, WordCellRow.svelte, Card.svelte and HoverPeek.svelte CSS cannot import
-// TypeScript and keep the literals, pointing here by comment. `lifted` stays a Card-owned literal.
+// (epic 5 SPEC CAP-5), the free-letter drag's caret, its shown state and the D-block mirrors'
+// parted marker and parted segment ends (epic 5 SPEC CAP-6, F16), the FLIP glide's face class
+// (epic 5 SPEC CAP-8, AD-14; flip.ts also lifts the `.tiles` clip with `DRAG_TILES`), the root's
+// selection suppression and the hover peek's hide class. The single TypeScript source of these
+// names; Column.svelte, TileRows.svelte, WordCellRow.svelte, Card.svelte and HoverPeek.svelte CSS
+// cannot import TypeScript and keep the literals, pointing here by comment. `lifted` stays a
+// Card-owned literal.
 
 export const HOVER_TAIL = 'wc-hover-tail';
 export const GRAB = 'wc-grab';
@@ -25,5 +27,7 @@ export const CARET_SHOWN = 'wc-caret-shown';
 export const PARTED = 'wc-parted';
 export const PART_START = 'wc-part-start';
 export const PART_END = 'wc-part-end';
+/** Epic 5 SPEC CAP-8, AD-14: a face translating in a FLIP glide (flip.ts; z-index 1, no shadow). */
+export const GLIDE = 'wc-glide';
 export const SUPPRESSED = 'wc-selection-suppressed';
 export const HOVER_PEEK_HIDDEN = 'wc-hover-peek-hidden';

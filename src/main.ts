@@ -6,11 +6,13 @@ import { nav } from './shell/nav';
 import { prefs } from './shell/prefs.svelte';
 import App from './ui/App.svelte';
 import { setController } from './ui/act';
+import { createFlip, setFlip } from './ui/flip';
 import { createController } from './ui/gestures/controller';
 import { createGate } from './ui/gestures/gate';
 import Halted from './ui/Halted.svelte';
 import { openHistoryNotice } from './ui/history-notice.svelte';
 import { browserLayoutDeps, createLayout } from './ui/layout/layout.svelte';
+import { duration } from './ui/motion';
 import { overlays } from './ui/overlays.svelte';
 // Imported before boot so the `@font-face` the font check loads is registered.
 import './ui/app.css';
@@ -116,16 +118,26 @@ async function boot(): Promise<void> {
     return;
   }
   // AD-11: the one gate; then the live layout (a `?bands=` non-permutation throws here to AD-15
-  // in dev), before the controller, which reads its hoverFine (entry 12); then the pointer
-  // controller (AD-12, F8; also on the rejected root, where it stays detached), its cancel
-  // registered in the hide flush before the gate's scroll reset (AD-9, callbacks run in
-  // registration order) and as nav's before-back hook (AD-13 R1/F7), and set once for act() (F9).
+  // in dev), before the controller, which reads its hoverFine (entry 12); then the one FLIP
+  // module (AD-14, epic 5 SPEC F6), gate-counted, installed for the act()-wrapped callers and
+  // handed to the controller as finishGlides/glidesRunning; then the pointer controller (AD-12,
+  // F8; also on the rejected root, where it stays detached), its cancel registered in the hide
+  // flush before the gate's scroll reset (AD-9, callbacks run in registration order) and as nav's
+  // before-back hook (AD-13 R1/F7), and set once for act() (F9).
   const gate = createGate({
     raf: (callback) => requestAnimationFrame(() => callback()),
     setTimer: (callback, ms) => setTimeout(callback, ms),
     clearTimer: (handle) => clearTimeout(handle),
   });
   const layout = createLayout(gate, browserLayoutDeps());
+  const flip = createFlip({
+    gate,
+    root: () => target.querySelector('main'),
+    reduced: () => prefs.motion.reduced,
+    phase: () => game.view?.phase,
+    duration,
+  });
+  setFlip(flip);
   const controller = createController(gate, {
     elementFromPoint: (x, y) => document.elementFromPoint(x, y),
     setTimer: (callback, ms) => setTimeout(callback, ms),
@@ -134,6 +146,8 @@ async function boot(): Promise<void> {
     watchHoverFine: (callback) => layout.watchHoverFine(callback),
     w: () => layout.w,
     trayInnerWidth: () => layout.trayInnerWidth,
+    finishGlides: () => flip.finishAll(),
+    glidesRunning: () => flip.running(),
   });
   game.registerBeforeHide(() => controller.cancel());
   game.registerBeforeHide(() => gate.scrollReset());

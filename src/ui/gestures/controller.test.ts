@@ -577,6 +577,8 @@ async function setup() {
   const b = board();
   // Entry 5.8: the tray inner width the controller reads at drag start.
   const trayWidth = { innerWidth: 384 };
+  // Ticket 5.10: what the fake `glidesRunning()` answers.
+  const glides = { running: false };
   for (const [id, column] of [b.column1, b.column2, b.column3].entries()) {
     dropTarget(column as unknown as Element, { kind: 'column', id: id + 1 });
   }
@@ -606,6 +608,9 @@ async function setup() {
     },
     w: () => 40,
     trayInnerWidth: () => trayWidth.innerWidth,
+    // Ticket 5.10 (epic 5 SPEC F6): flip.ts's finishAll/running, faked.
+    finishGlides: () => order.push('finishGlides'),
+    glidesRunning: () => glides.running,
   });
   const detach = () => controller.attach(b.root as unknown as HTMLElement);
   // A pointerdown whose resolution reads `target` from elementFromPoint; event.target is another
@@ -649,6 +654,7 @@ async function setup() {
     media,
     flipHoverFine,
     trayWidth,
+    glides,
   };
 }
 
@@ -2493,7 +2499,7 @@ describe('AD-13 entry 9 selection replacement', () => {
     order.length = 0;
     // event.target is another element (t.down's default); resolution reads elementFromPoint.
     t.down(t.b.card2);
-    expect(order).toEqual(['enter', 'finish', 'leave', 'point']);
+    expect(order).toEqual(['enter', 'finish', 'leave', 'finishGlides', 'point']);
     expect(t.b.card2.log).toEqual(['set 1']);
     expect(t.b.leftover.log).toEqual([]);
     expect(dragResidue(t)).toBe(0);
@@ -2510,10 +2516,35 @@ describe('AD-13 entry 9 selection replacement', () => {
     t.fire('pointerup');
     order.length = 0;
     t.down(t.b.undoIcon);
-    expect(order).toEqual(['enter', 'finish', 'leave', 'point', 'leave']);
+    expect(order).toEqual(['enter', 'finish', 'leave', 'finishGlides', 'point', 'leave']);
     expect(t.active()).toBe(0);
     expect(dragResidue(t)).toBe(0);
     t.advance(1000);
+    expect(t.active()).toBe(0);
+  });
+
+  // Ticket 5.10 (epic 5 SPEC F6, AD-14): FLIP glides finish beside the fly-back.
+  it('AD-14 cancel() while attached calls finishGlides() right after the fly-back finish and its settle', async () => {
+    const t = await setup();
+    t.detach();
+    t.down(t.b.card1b, { clientX: 25, clientY: 50 });
+    move(t, 25, 1050);
+    t.fire('pointerup');
+    order.length = 0;
+    t.controller.cancel();
+    expect(order).toEqual(['finish', 'leave', 'finishGlides']);
+    expect(t.active()).toBe(0);
+  });
+
+  it('AD-14 a primary pointerdown with only glidesRunning() true enters the gate, then calls finishGlides(), and enters once', async () => {
+    const t = await setup();
+    t.detach();
+    t.glides.running = true;
+    order.length = 0;
+    t.down(t.b.card2);
+    expect(order).toEqual(['enter', 'finishGlides', 'point']);
+    expect(t.active()).toBe(1);
+    t.fire('pointerup', { target: t.b.card2 });
     expect(t.active()).toBe(0);
   });
 });

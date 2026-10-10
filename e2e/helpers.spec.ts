@@ -9,6 +9,7 @@ import {
   centre,
   column,
   foot,
+  glidesSettled,
   openFixture,
   sameSession,
   stashSession,
@@ -467,6 +468,20 @@ test.describe('board helpers', () => {
     expect(await trayIds(page)).toEqual(['42', '0', '28m']);
     await page.getByTestId('undo').click();
     await expect.poll(() => trayIds(page)).toEqual([]);
+  });
+
+  test('AD-17 glidesSettled resolves once document.getAnimations() is empty after an Undo glide (Slow)', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-composing', { prefs: 'prefs-non-default' });
+    await glidesSettled(page);
+    const running = await page.evaluate(() => {
+      (document.querySelector('[data-testid="undo"]') as HTMLElement).click();
+      return document.getAnimations().length;
+    });
+    expect(running).toBeGreaterThan(0);
+    await glidesSettled(page);
+    expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
   });
 });
 

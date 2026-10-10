@@ -2,7 +2,16 @@ import { expect, type Locator, type Page, test } from '@playwright/test';
 import type { Rect } from '../src/ui/gestures/targeting';
 import { gapRects, partingOffsets, slotRects, trayLayout } from '../src/ui/layout/tray';
 import { stored } from './helpers/blocking';
-import { box, centre, openFixture, type Point, type Step, tapAt, trayIds } from './helpers/board';
+import {
+  box,
+  centre,
+  glidesSettled,
+  openFixture,
+  type Point,
+  type Step,
+  tapAt,
+  trayIds,
+} from './helpers/board';
 import { expectLeaves } from './helpers/dialogs';
 import { dragResidue, expectNoResidue } from './helpers/drag';
 import { animationFrames, hidePage } from './helpers/lifecycle';
@@ -437,6 +446,7 @@ test('R-32 (UI) after + (k = 2) on session-composing, tile 42 held over mid-bloc
 }) => {
   await open(page, 'session-composing');
   await plusButton(page).click();
+  await glidesSettled(page);
   expect((await storedMove(page)).destinationCount).toBe(2);
   expect(await trayIds(page)).toHaveLength(4);
   const g = await geometry(page);
@@ -480,6 +490,7 @@ test('R-34 R-32 after Flip (block left: D, 42, 0) tile 0 to gap 0 on session-com
 }) => {
   await open(page, 'session-composing');
   await flipButton(page).click();
+  await glidesSettled(page);
   await expectSaved(page);
   expect(await trayIds(page)).toEqual(['28m', '42', '0']);
   const g = await geometry(page);

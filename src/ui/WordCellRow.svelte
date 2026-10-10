@@ -114,6 +114,9 @@ const inPlace = $derived(place !== undefined);
     border-radius: 6px; pointer-events: none;
   }
   .wordcell :global(.face.wc-drag-layer) { z-index: 5; box-shadow: 0 6px 16px #0008; }
+  /* Epic 5 SPEC CAP-8 (DESIGN.md Layer order): a FLIP-gliding face (flip.ts `wc-glide`, literal
+     from gestures/classes.ts) rides above the cards and under the sticky bars (2), no shadow. */
+  .wordcell :global(.face.wc-glide) { z-index: 1; }
   .check {
     position: absolute; top: 2px; left: 4px; width: 14px; height: 14px; border-radius: 50%;
     background: var(--wc-accent-teal); pointer-events: none;

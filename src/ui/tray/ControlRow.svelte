@@ -1,8 +1,8 @@
 <script lang="ts">
-// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { game } from '../../shell/game.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { act } from '../act';
+import { capture, play } from '../flip';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { text } from '../text';
 
@@ -12,7 +12,8 @@ import { text } from '../text';
 // `canFlip`), each through act() (AD-12); at k = 0 the R-31 caption replaces them, single line,
 // ellipsizing before the letter count. Place has no controls. The right slot, ui-label,
 // right-aligned: in Composing the letter count (`draft.letterCount`, R-36); in Place the meta
-// (R-80) from `text.placeMeta`.
+// (R-80) from `text.placeMeta`. Each dispatch is wrapped in FLIP capture/play (epic 5 SPEC
+// CAP-8, F6, F7, F17).
 let {
   letterCount,
   meta,
@@ -24,6 +25,18 @@ let {
   /** Composing: the destination count and the D-block enablement flags from `GameView`. */
   controls?: { k: number; canDecK: boolean; canIncK: boolean; canFlip: boolean };
 } = $props();
+
+function setK(k: number): void {
+  const command = { type: 'setDestinationCount', k } as const;
+  capture();
+  play(command, game.dispatch(command));
+}
+
+function flipBlock(): void {
+  const command = { type: 'flip' } as const;
+  capture();
+  play(command, game.dispatch(command));
+}
 </script>
 
 <div class="row">
@@ -37,20 +50,20 @@ let {
           type="button"
           class="round"
           disabled={!controls.canDecK}
-          onclick={act(() => game.dispatch({ type: 'setDestinationCount', k: k - 1 }))}
+          onclick={act(() => setK(k - 1))}
         >{text.minus}</button>
         <span class="k">{k}</span>
         <button
           type="button"
           class="round"
           disabled={!controls.canIncK}
-          onclick={act(() => game.dispatch({ type: 'setDestinationCount', k: k + 1 }))}
+          onclick={act(() => setK(k + 1))}
         >{text.plus}</button>
         <button
           type="button"
           class="flip"
           disabled={!controls.canFlip}
-          onclick={act(() => game.dispatch({ type: 'flip' }))}
+          onclick={act(flipBlock)}
         ><span aria-hidden="true">{text.flipGlyph}</span> {text.flip}</button>
       {/if}
     {/if}

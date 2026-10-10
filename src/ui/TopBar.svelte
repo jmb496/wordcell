@@ -3,23 +3,30 @@ import type { GameView } from '../engine/index';
 import { game } from '../shell/game.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { act } from './act';
+import { capture, play } from './flip';
 import { overlays } from './overlays.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { text } from './text';
 
 // DESIGN.md Top bar: sticky, 44 px of content plus the top safe-area inset (owner Option A),
 // menu slot (epic 6), live score (R-82), Undo/Redo with desktop tooltips (F3). Undo and Redo clear
-// a tail selection first, after act()'s cancel() (AD-13, SPEC CAP-6).
+// a tail selection first, after act()'s cancel() (AD-13, SPEC CAP-6), then FLIP captures (its
+// flush renders the deselect, so no lift is recorded) and plays after the dispatch (epic 5 SPEC
+// CAP-8, F6, F7).
 let { view }: { view: GameView } = $props();
 
 function undo(): void {
   overlays.deselect();
-  game.dispatch({ type: 'undo' });
+  const command = { type: 'undo' } as const;
+  capture();
+  play(command, game.dispatch(command));
 }
 
 function redo(): void {
   overlays.deselect();
-  game.dispatch({ type: 'redo' });
+  const command = { type: 'redo' } as const;
+  capture();
+  play(command, game.dispatch(command));
 }
 </script>
 

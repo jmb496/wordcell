@@ -18,7 +18,8 @@ export type OpenOptions = {
 };
 
 // Seeds root fixture `<name>.json` as wordcell:session, opens '/', waits for the heading and the
-// 52 live cards, then (by default) for the store to leave 'booting', then clicks `steps`.
+// 52 live cards, then (by default) for the store to leave 'booting', then clicks `steps`, each
+// followed by `glidesSettled` (a step's FLIP glide, AD-14).
 export async function openFixture(
   page: Page,
   name: string,
@@ -32,7 +33,16 @@ export async function openFixture(
   await expect(page.getByRole('heading', { name: 'WordCell' })).toBeVisible();
   await expect(page.locator('[data-card-id]')).toHaveCount(52);
   if (booted) await waitBooted(page);
-  for (const step of steps) await page.getByTestId(step).click();
+  for (const step of steps) {
+    await page.getByTestId(step).click();
+    await glidesSettled(page);
+  }
+}
+
+// AD-14: waits until no animation runs in the document (FLIP glides, fly-backs, parting), so a
+// face read after an act() click sees the settled rect.
+export async function glidesSettled(page: Page): Promise<void> {
+  await expect.poll(() => page.evaluate(() => document.getAnimations().length)).toBe(0);
 }
 
 export const column = (page: Page, n: number) => page.getByTestId(`column-${n}`);

@@ -218,6 +218,9 @@ const liftStart = $derived(column.cards.length - count);
   :global(main.wc-selection-suppressed) .here { visibility: hidden; }
   :global(main.wc-selection-suppressed) .foot.target { border-color: transparent; background: none; }
   .cards :global(.face.wc-drag-layer) { z-index: 5; box-shadow: 0 6px 16px #0008; }
+  /* Epic 5 SPEC CAP-8 (DESIGN.md Layer order): a FLIP-gliding face (flip.ts `wc-glide`, literal
+     from gestures/classes.ts) rides above the cards and under the sticky bars (2), no shadow. */
+  .cards :global(.face.wc-glide) { z-index: 1; }
   /* DESIGN.md Card states, drop target under a drag: 3 px teal outline and 12 % teal wash. */
   .cards :global(.card.wc-drag-target) > :global(.face),
   .placeholder:global(.wc-drag-target) {

@@ -101,6 +101,10 @@ function stripPosition(i: number): 'bottom' | 'top' | undefined {
      with the lift shadow, as Column.svelte's. */
   .tiles:global(.wc-drag-tiles) { overflow: visible; }
   .tiles :global(.face.wc-drag-layer) { z-index: 5; box-shadow: 0 6px 16px #0008; }
+  /* Epic 5 SPEC CAP-8 (DESIGN.md Layer order): a FLIP-gliding face (flip.ts `wc-glide`, literal
+     from gestures/classes.ts) rides above the cards and under the sticky bars (2), no shadow; a
+     band-changing glide lifts the clip by `wc-drag-tiles` above. */
+  .tiles :global(.face.wc-glide) { z-index: 1; }
   /* Epic 5 SPEC CAP-6, F16: the caret, above the tiles' marks (1), out of the grid flow. */
   .wc-caret {
     position: absolute; top: 0; left: 0; z-index: 2; display: none; width: 3px;

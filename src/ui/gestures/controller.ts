@@ -51,9 +51,10 @@
 // SPEC F32, epic 4 SPEC F33), keeping the selection with no nav call (back's `closedByBack` clears
 // it); a release with no highlight and a plain cancel() (before-hide, act(), detach) deselect once,
 // a drop deselects in `pointerup` before its dispatch, and a same-id pointerdown restores. A
-// button-0 pointerdown with no active press during a fly-back enters the gate, finishes the flight,
-// then resolves (epic 4 SPEC F13); the settle's refreshHover() may repaint the mouse hover before
-// the press resolves, and a drag that then starts clears it again.
+// button-0 pointerdown with no active press during a fly-back (or a FLIP glide, epic 5 SPEC F6)
+// enters the gate, finishes the flight and every glide, then resolves (epic 4 SPEC F13); the
+// settle's refreshHover() may repaint the mouse hover before the press resolves, and a drag that
+// then starts clears it again.
 // Lift (epic 4 SPEC F32, epic 4 SPEC F33; AD-12): a dragged stack inside the selection (its top
 // wrapper is `lifted`) keeps the selection lift in the drag transform, `translate(pointer − press
 // point − lift)`; any other stack has lift 0. Every fly-back but a release with no highlight (which
@@ -206,6 +207,13 @@ export type ControllerDeps<H> = {
    * start.
    */
   trayInnerWidth(): number;
+  /**
+   * Epic 5 SPEC F6, AD-14: completes every running FLIP glide (flip.ts `finishAll`); each settles
+   * synchronously.
+   */
+  finishGlides(): void;
+  /** Epic 5 SPEC F6, AD-14: true while a FLIP glide is unsettled (flip.ts `running`). */
+  glidesRunning(): boolean;
 };
 
 export type CancelOptions = { readonly byBack?: boolean };
@@ -1183,13 +1191,15 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     }
     // Only the active press's own pointer acts on it; another pointer is untouched (CAP-4).
     if (event.button !== 0 || press !== null) return;
-    // F13: a press during a fly-back (or a tile drag's returns, epic 5 SPEC CAP-5) acts on the
-    // settled layout; the gate never idles between.
-    const inFlight = flight.running() || parting.running();
+    // F13: a press during a fly-back (or a tile drag's returns, epic 5 SPEC CAP-5, or a FLIP
+    // glide, epic 5 SPEC F6, AD-14) acts on, and measures, the settled layout; the gate never idles
+    // between.
+    const inFlight = flight.running() || parting.running() || deps.glidesRunning();
     if (inFlight) {
       gate.enter();
       flight.finishFlight();
       parting.finishAll();
+      deps.finishGlides();
     }
     const resolved = resolve(
       root,
@@ -1509,8 +1519,10 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     // Epic 4 SPEC F19: the settle suppresses; idle or not, the hover peek closes and the cell under
     // the last mouse point is suppressed. Epic 5 SPEC CAP-5, CAP-6: a tile or free-letter drag's
     // returns finish too; an active one's parting is end()'s (finished, or by back returned from
-    // its current offset).
+    // its current offset). Epic 5 SPEC F6: every FLIP glide finishes too (act(), the hide flush,
+    // back).
     flight.finishFlight();
+    deps.finishGlides();
     const kind = press?.drag?.kind;
     if (kind !== 'tile' && kind !== 'freeLetter') parting.finishAll();
     hover.closeHover();

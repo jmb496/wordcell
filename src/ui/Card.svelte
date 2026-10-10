@@ -173,6 +173,9 @@ const inView = $derived.by(() => {
     position: relative; box-sizing: border-box; width: var(--wc-w); height: var(--wc-H); margin: 0 2px;
     background: var(--wc-card-face); border: 1px solid var(--wc-card-edge); border-radius: 6px;
     color: var(--wc-card-ink); pointer-events: none;
+    /* Epic 5 SPEC CAP-8: the marks' and lock's z-index 1 stay inside their face, so a gliding
+       face (z-index 1, flip.ts) layers as one. */
+    isolation: isolate;
   }
   /* DESIGN.md Card flourish: a centred 1 px curve, 60 % of the width, at 86 % of the height. */
   .face::after {

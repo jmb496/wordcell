@@ -2,7 +2,16 @@ import { expect, type Page, test } from '@playwright/test';
 import type { Rect } from '../src/ui/gestures/targeting';
 import { gapRects, slotRects, trayLayout } from '../src/ui/layout/tray';
 import { stored } from './helpers/blocking';
-import { box, cards, centre, column, openFixture, type Point, tapAt } from './helpers/board';
+import {
+  box,
+  cards,
+  centre,
+  column,
+  glidesSettled,
+  openFixture,
+  type Point,
+  tapAt,
+} from './helpers/board';
 import { expectNoResidue } from './helpers/drag';
 import { animationFrames } from './helpers/lifecycle';
 import { waitForDictionary } from './helpers/restore';
@@ -391,6 +400,7 @@ const DROPPED: Partial<StoredMove> = {
 // Validate (tap), then the retarget to cell 3 (tap); the meta deltas are DOM reads.
 async function validateAndRetarget(page: Page): Promise<void> {
   await tapPrimary(page, 'Validate');
+  await glidesSettled(page);
   await expectStep(
     page,
     { reached: 'place', targetCell: 4, placementOrder: [1, 28, 9, W] },

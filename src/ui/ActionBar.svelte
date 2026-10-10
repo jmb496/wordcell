@@ -4,6 +4,7 @@ import type { GameView } from '../engine/index';
 import { dictionary } from '../shell/dictionary.svelte';
 import { game } from '../shell/game.svelte';
 import { act } from './act';
+import { capture, play } from './flip';
 import { fitSize } from './layout/fit';
 import { newGame } from './new-game';
 import { text } from './text';
@@ -23,14 +24,21 @@ let labelEl: HTMLSpanElement | null | undefined = $state();
 let size = $state(LABEL_MAX);
 
 // F15/F21: each click dispatches one `validate`; flushSync renders the result (Place, Confirm)
-// before the click handler returns, so a second tap lands on Confirm. No re-entrancy flag.
+// before the click handler returns, so a second tap lands on Confirm. No re-entrancy flag. Epic 5
+// SPEC CAP-8 (F6, F7, F22): FLIP captures before and plays after the dispatch.
 function validate(): void {
-  game.dispatch({ type: 'validate' });
+  const command = { type: 'validate' } as const;
+  capture();
+  const result = game.dispatch(command);
   flushSync();
+  play(command, result);
 }
 
+// Epic 5 SPEC CAP-8: kind `flyToCell`, animated by entry 11.
 function confirm(): void {
-  game.dispatch({ type: 'confirm' });
+  const command = { type: 'confirm' } as const;
+  capture();
+  play(command, game.dispatch(command));
 }
 
 // Label precedence (EXPERIENCE.md Validate): status ≠ playing → New game whatever the phase; Place
