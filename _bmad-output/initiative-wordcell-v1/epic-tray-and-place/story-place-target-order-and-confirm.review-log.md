@@ -1,6 +1,6 @@
 # Review log — story-place-target-order-and-confirm.md (ticket 5.9)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7. Pass 0: HEAD 77336d8, .passes/pass0.md, 366 words (budget 2.5x ≈ 915).
 Intent extras (tickets.toml entry 9, not copied into the ticket; fixer adds them to Description in pass 1): interface, tests, owns, consumers.
@@ -59,5 +59,34 @@ Fixer: all 13 applied; R-60/R-52 literals verified by a temporary engine run (ce
 - AC — R-80 cases → R-61 test Confirms into the stored target; R-41 test retargets to c then Confirms into c
 ### Decision needed (functionality / UX / gameplay)
 - none
+### Dropped
+- none
+
+## Pass 3 — 2026-10-09
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 16, decision-needed 0  |  Dropped in triage: 0 (+ 3 duplicates merged)
+Words (docs): 1337 (3.65 x pass 0; major +38, minors net −1)  |  Snapshot: .passes/pass3.md, fix diff .passes/pass3.fix.diff
+Fixer: all 11 applied; R-62 cursor {8, idle} (session-won cursor 8 idle, one Undo → Place 7); peek placed in R-61's test before Confirm; no commands added.
+Over budget (1300 words, 3.55x): minors applied only as word-neutral rewords or cuts; the rest listed below as unapplied.
+### Applied
+- [major] AC bullets 3, 5 — R-41, R-61, R-62 tests assert only DOM; rule-coverage preamble requires every P5 outcome by `current()` and stored `wordcell:session` → fixer item 1
+- [minor] AC bullet 4 — `reached: 'committed'` cannot fail (already committed in the redo tail); replace with moves length 2 → 2
+- [minor] AC bullet 2 — R-71 retarget cell unnamed → 3
+- [minor] AC bullet 5 — peek on c: which test, when (must be before c is the target), R-65 name → 4
+- [minor] Description — Consumers: entry 13's guard does not exist yet; list it for entry 13, re-check only the peek → 5
+- [minor] AC bullet 2 — "fresh load" could read as page.reload (seedStorage seeds once per page) → 6
+- [minor] AC bullet 1 — "several legal cells" parenthetical ambiguous (reached by Undo, not Validate) → 7
+- [minor] AC bullet 4 — "columns and cells per R-60" has no expected contents; narrow to what move 1 changes → 8
+- [minor] AC bullet 4 — FIXTURE_MAN `drop(2, 1, 6)` is an engine-test name; say the UI tail move → 9
+- [minor] AC bullet 5 — "(which includes c)" vague → 10
+- [minor] Notes — rule-7 stop should fire on the SPEC CAP-7 conditions, not the extra "exactly one free letter" pin → 11
+### Default applied (technical)
+- AC — each session-won + one Undo case → its own test (new page seeded, then one Undo)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Unapplied minors (over budget, additive)
+- AC bullet 2 — not-legal tap on cell 7 also opens no WordCell view (R-39 boundary)
+- AC bullet 2 — also drag c's top card in Place (WordCell top-card drag inert)
+- Notes — state c holds exactly 3 cards after the first commit
+- AC bullet 1 — "(stored Session byte-identical)" for session-place's no-dispatch taps
 ### Dropped
 - none
