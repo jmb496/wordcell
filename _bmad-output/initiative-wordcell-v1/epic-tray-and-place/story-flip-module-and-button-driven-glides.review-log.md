@@ -1,6 +1,6 @@
 # Review log — story-flip-module-and-button-driven-glides.md (ticket 5.10)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words (2.5x pass 0 plus the tickets.toml entry 10 fields unknown, interface, tests, owns, consumers that pass 1 adds to the Description). Pass 0: HEAD acf8115, .passes/pass0.md, 471 words.
 
@@ -74,3 +74,32 @@ Fixer: all 17 applied; no runnable commands added. Beyond the findings it added 
 - none
 ### Dropped
 - none
+
+## Pass 3 — 2026-10-10
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 4, minor 11, decision-needed 0  |  Dropped in triage: 2 (adversarial stretch: cancel() root guard, plan-level; e2e face reads after act() clicks, plan-level)
+Words (docs): 1500 (3.18 x pass 0; budget 1500, reached)  |  Snapshot: .passes/pass3.md, fix diff .passes/pass3.fix.diff
+Fixer: all 15 applied; source facts checked (`.tiles` overflow hidden / wc-drag-tiles, gate.whenIdle(relayout), pointerdown gate.enter() before finishFlight, session-composing block right k 1); room made by cutting the command list after "every other command → snap" (AC table keeps it), two entry-16 clauses (Notes keep them), shorter Notes.
+### Applied
+- [major] Description play / AC Validate — glides into the tray/strip are clipped by `.tiles { overflow: hidden }` (TileRows.svelte:95), so F22's visible D travel fails unseen; P5 rect checks ignore clipping → fixer item 1
+- [major] AC P5 "select a tray tile and press `+` in one evaluate" — a synthetic captured press throws at setPointerCapture → fixer item 2
+- [major] Description play "(the next rects include the re-layout and any scroll write)" — false: the AD-11 re-layout runs as a gate whenIdle task after the glides; no entry-10 dispatch re-lays out → fixer item 3
+- [major] AC controller.test.ts — AD-11 gate.enter() before finishing at pointerdown not asserted → fixer item 4
+- [minor] Consumers — entry 16's fly-back finish and hover-peek timer consumers not carried over → fixer item 5
+- [minor] glidesRunning() — no flip method bound (add running()) → fixer item 6
+- [minor] phase getter `game.view?.phase or equivalent` / null root — silent undefined, rule 6 → fixer item 7
+- [minor] Vitest scope — duration/onfinish/throw checks need createFlip on fakes, not only planner/kind → fixer item 8
+- [minor] reduced flag vs duration() two sources; literal 120 ms → fixer item 9
+- [minor] Tests line — reduced-motion fade P5 is entry 11's Confirm; move to (S) → fixer item 10
+- [minor] AC P5 — compare the D face rect's top-left, not the whole rect → fixer item 11
+- [minor] AC P5 second load — name fresh session-composing → fixer item 12
+- [minor] Description — "or `finished: 'won'`" redundant → fixer item 13
+- [minor] AC P5 — "none on mirrors" includes the destination column's mirrors during Validate → fixer item 14
+- [minor] AC durations — snap and undoRedo are both 1 × base; spy on the kind passed to duration() → fixer item 15
+### Default applied (technical)
+- clip → while a glide into the tray band runs, play adds the existing `wc-drag-tiles` class to the tile area and `wc-drag-layer` to the gliding face, removed at the last settle (finishAll included); P5 elementFromPoint at the D face's time-0 centre hits the face
+- re-layout → no entry-10 dispatch re-lays out; next rects after a gate-deferred re-layout are entry 12's (CAP-9)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- cancel() root guard before finishFlight — unreachable; placement is the plan's
+- e2e specs reading faces right after act() clicks — plan greps and lists them; ticket at budget
