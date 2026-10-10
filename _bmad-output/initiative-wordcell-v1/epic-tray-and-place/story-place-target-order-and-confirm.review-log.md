@@ -1,6 +1,6 @@
 # Review log — story-place-target-order-and-confirm.md (ticket 5.9)
 
-State: pass 3: done
+State: done (converged after 4 passes)
 
 Mode: docs, thorough, max 7. Pass 0: HEAD 77336d8, .passes/pass0.md, 366 words (budget 2.5x ≈ 915).
 Intent extras (tickets.toml entry 9, not copied into the ticket; fixer adds them to Description in pass 1): interface, tests, owns, consumers.
@@ -90,3 +90,21 @@ Over budget (1300 words, 3.55x): minors applied only as word-neutral rewords or 
 - AC bullet 1 — "(stored Session byte-identical)" for session-place's no-dispatch taps
 ### Dropped
 - none
+
+## Pass 4 — 2026-10-09
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 15, decision-needed 0  |  Dropped in triage: 0 (+ 1 duplicate merged)
+Words (docs): 1337 (3.65 x pass 0), no fix pass  |  Snapshot: .passes/pass3.md
+### Open (major, not fixed: second consecutive pass with ≤ 1 major)
+- Description, Consumers (L1) — omits the desktop hover peek, which the 5.8 plan (story-free-letters-by-tap-and-by-drag-plan.md:84) lists as a consumer of the WordCell press path; a click on a legal non-current Place cell now dispatches `setTarget` where e2e/wordcell-view.spec.ts (~l. 942) asserts a Place click does nothing (that test clicks current target 3, so stays green). Default for the build: list it; the hover peek stays open on the click as F26 kept for the Composing click-add, and the click does its phase-matrix action (EXPERIENCE.md WordCell view).
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Result — converged after 4 passes
+open major: Consumers (L1) omits the desktop hover peek (see Pass 4 Open).
+Majors per pass: 11, 4, 1, 1. Words 366 → 1337.
+
+Unapplied minors (for the build's plan):
+- Pass 3: not-legal tap on cell 7 also opens no WordCell view (R-39 boundary); drag c's top card in Place (top-card drag inert); Notes: c holds exactly 3 cards after the first commit; bullet 1 "(stored Session byte-identical)" for session-place's no-dispatch taps.
+- Pass 4: bullet 5 "in both" → "in `current().session` and storage"; bullet 4 expected columns (column 4 without 32, column 6 without 9); bullet 3 R-62 its own seeded test named with R-62; bullet 1 session-place cases already covered (tile-tap.spec.ts R-40/F13, board-phases.spec.ts R-42), keep green instead of duplicating; test names carry R-80 and R-65 (e.g. `R-41 R-80 …`, `R-61 R-65 R-80 …`); intent.ts:9-10 header "nothing in Place" goes stale; cancelled long-press UI Vitest needs an empty legal non-current cell in the Place harness (default: add empty cell 6, cells 3–5 unchanged); empty not-legal / empty current-target long-press rows (UI Vitest); setTarget observable: the Place move's `targetCell` in `current().session` and storage, cursor and `placementOrder` unchanged; R-73 equality asserted inside the bullet 2, 3, 5 tests; name the R-51 retarget cell (e.g. 3); R-41 Confirm into c: c's bottom → top with the free letter once; optional desktop click-with-hover-peek test; cut "(no existing e2e covers it)"; Description "it" → "the tile selection".
