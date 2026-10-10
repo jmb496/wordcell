@@ -1,5 +1,5 @@
 # Review loop — ticket 5.10 build (code mode, 033770b..70b4bb1)
-State: pass 2: done
+State: done
 
 Target: `_bmad-output/implementation-artifacts/review-loop/5-10-build.passes/pass0.diff` (git diff 033770b..70b4bb1)
 Intent: `_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-flip-module-and-button-driven-glides-plan.md`
@@ -51,3 +51,29 @@ Snapshot: tree d3f1aa1b8cbc98db7572889c33f2d88d0dbc4997 | fix diff 5-10-build.pa
 ### Fixer outcome
 All 8 applied: `wordcellMirrors` reads `[data-testid^="wordcell-"] [data-mirror-of]`, F27 has a positive control in Composing (`wordcell-4:28`) and asserts none of 28 mid-glide; flyToCell and empty-set tests re-capture and play on the same instance (2 animations); tickets.toml entry 10 aligned with the ticket Interface/Consumers (TOML parses); finish-all test moves faces on `finish()` (fixer confirmed it fails with measure-before-finishAll); R-70 chain selects column 1's tail before Redo (fixer confirmed it fails with deselect after capture); `columnMirrors` positive control at Validate; F27 asserts `wordcell-4`; new 0.5 px cut-off planner test. flip.ts and TopBar.svelte unchanged. `npx playwright test e2e/flip.spec.ts --project android` 3 passed.
 Checks (orchestrator, tree d3f1aa1): `npm test` 55 files / 2288 tests pass; `npm run lint` pass (203 files); `npm run check` 0 errors, 0 warnings.
+
+## Pass 3 — 2026-10-10 08:30
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 0, minor 7, decision-needed 0  |  Dropped in triage: 0
+Snapshot: tree d3f1aa1b8cbc98db7572889c33f2d88d0dbc4997 (no fix pass)
+### Applied
+- none (no majors; minors are not applied at convergence)
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none (triage note: the edge-case F27 card-20 finding kept minor: WordCellRow.svelte:63 renders every non-top cell card `hidden` (Card.svelte:161 `visibility: hidden`), so the cell already looks empty during the glide; the extra assertion only pins it)
+
+## Result — converged after 3 passes
+Majors per pass: 2, 2, 0. Technical defaults applied: 4 (pass 1: 2, pass 2: 1 plus the F27 selector correction). Decision-needed: none.
+Checks at the final state (HEAD 7c4555f, tree d3f1aa1, unchanged since pass 2's orchestrator run): `npm test` 55 files / 2288 tests pass; `npm run lint` pass (203 files); `npm run check` 0 errors, 0 warnings; `npx playwright test e2e/flip.spec.ts --project android` 3 passed (fixer, passes 1 and 2). `npm run test:all` not run by this loop.
+
+Unapplied minors (for the next build or loop):
+1. src/ui/flip.test.ts:485 `AD-14 the 0.5 px cut-off …` — the name says "a band changer", but only the first case changes band; make the exactly-0.5 case a columns → tray change (`bandChange: true`, `translate(0.5px, 0px)`) or rename it
+2. src/ui/flip.test.ts:230-268 kind table — no non-committing redo ending in `place`; add `['non-committing redo to Place', { type: 'redo' }, CHANGED, 'place', 'undoRedo']`
+3. src/ui/flip.test.ts reduced-motion tests — `reduced` never changes after `createFlip`, so reading it at each play is unproved; flip `t.state.reduced` between capture and play and assert the fade
+4. src/ui/flip.ts:251 — the reduced-motion fade takes `easing: 'ease-out'` while fly-back.ts's fade is linear ("as fly-back.ts"); pass the easing only for translate glides and assert `{ duration: 120 }` in the reduced cases
+5. plan frontmatter `deferred[1]` / Design Notes "Handed to other entries" vs tickets.toml entry 16 — the plan hands "a press, back or hide during a glide" to entry 16, whose verify/owns take only the press; add back/hide to entry 16 or narrow the plan's handoff to the press (back/hide covered by the controller.test.ts `cancel()` cases)
+6. e2e/flip.spec.ts F27 — optionally pin card 20's `visibility: hidden` in cell 4 while 28 glides (already true by construction)
+7. src/ui/flip.ts:246 — no Vitest of a non-null kind with no moved face (`snap` START → START): assert no `gate.enter()`, no `duration()` call, `running()` false, and that a following capture does not throw
+
