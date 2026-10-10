@@ -281,6 +281,14 @@ src/ui/
   at cursor 2, strip [26, 32, 45, 28, 42], target 5, legal 3–5, delta +21 (+16 into cell 4); one
   Confirm into 5 leaves cell 4 [20] with no badge; into 4 gives [20, 26, 32, 45, 28, 42].
   P5 in `e2e/place.spec.ts`.
+- As built (ticket 5.17): the Success-signal move in `e2e/success-signal.spec.ts` (android): from
+  `session-idle-empty-column` (seed 1) column 6's tail [1, 9, 28] dropped on empty column 1 (k 0),
+  cell 7's top 48 (W) added at the end → [1, 9, 28, 48], tile 28 before 9 → [1, 28, 9, 48]
+  (ANEW), Validate (legal 3–4, target 4, meta +9), retarget 3 (+5), strip 28 to gap 0 →
+  [28, 1, 9, 48], Confirm: score 49 → 54, cell 3 [28, 1, 9, 48], column 6 [31, 34, 27], cursor
+  `{ index: 2, phase: 'idle' }`; once by taps, once with the drop, the W insert and both reorders
+  by drag, both ending in the same Session. Notes guard not fired (ANEW validates); no new fixture,
+  no source change.
 
 ## CAP-8 FLIP and fly-to-cell
 
