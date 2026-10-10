@@ -143,3 +143,18 @@ Close-out docs: none
 - Ticket 5.17 (Success signal: a whole move by taps and by drag), step: build (bmad-build-auto exited 1 at 22:54 on 2026-10-09).
 - Reset: 00:10 EDT Sat 2026-10-10; rerun `loop.sh epic-tray-and-place` after it (+3 min).
 - Uncommitted: `_bmad-output/specs/spec-epic-5-tray/build-notes.md` (modified), `_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-success-signal-a-whole-move-by-taps-and-by-drag-plan.md` (new), `e2e/success-signal.spec.ts` (new).
+
+## Resumed — 2026-10-10T04:47Z
+After the usage limit reset, the 5.17 build was resumed from its review step (plan `in-review`, its own files uncommitted in the tree).
+
+## 5.17 Success signal: a whole move by taps and by drag — done
+What it adds: an end-to-end check that a player can make a whole move on a phone, start to finish: from the empty-column test game it plays the word ANEW (three letters moved to the empty column, the W added from a WordCell, letters reordered, Validate, a different target cell chosen, the order changed again, Confirm), once by taps only and once by dragging, and checks the saved game after every step and that both ways end in exactly the same game. No game code changed; it confirms the epic's tap and drag paths work together.
+Ticket review: 3 passes, converged (majors 6, 2, 0); nothing needed your input
+Build: built (resumed after the usage limit); commit dd74345
+Code review: thorough (risk medium), 1 pass, converged (majors 0); 0 fixes applied (3 minor notes in the log)
+Tests: all passing (test:all as one command: 2237 unit, 14 + 496 + 12 browser tests, build 513,537 / 600,000 bytes); the build also ran test:screens (no baseline changed)
+Ref to fix upstream: none
+Paused: usage limit at the build, reset 00:10 EDT 2026-10-10, resumed at 00:47 EDT
+Tokens: 2.2M input-equivalent for the resume session (code review 49%, build 42%, orchestrator 7%, other 3%); orchestrator peak context 60k
+Worth knowing: ANEW is a real dictionary word from the named start, so no substitute test game was needed (nothing for you to check at close-out). Three minor test-precision notes for the 5.14 sweep: the tap-only test does not prove that taps which should save nothing wrote nothing; the W drag cannot be told apart from a tap (same result); tile positions are read once before each drag, which may need a wait once later tickets animate tiles.
+Close-out docs: none

@@ -3,7 +3,7 @@ title: 'Success signal: a whole move by taps and by drag'
 type: 'feature'
 ticket: 17
 created: '2026-10-09'
-status: 'built'
+status: done
 route: 'full'
 route_source: 'auto'
 review: 'thorough'
