@@ -1,6 +1,6 @@
 # Review log — story-flip-module-and-button-driven-glides.md (ticket 5.10)
 
-State: pass 4: done
+State: pass 5: done
 
 Mode: docs, thorough, max 7, budget 1500 words (2.5x pass 0 plus the tickets.toml entry 10 fields unknown, interface, tests, owns, consumers that pass 1 adds to the Description). Pass 0: HEAD acf8115, .passes/pass0.md, 471 words.
 
@@ -128,3 +128,28 @@ Triage note: the elementFromPoint check (fix diff, adversarial), the hidden star
 - reverse-glide paint order accepted — superseded by item 1
 - entry 16's toml still lists finishAll — recorded in Notes; trimmed when entry 16 is pulled
 - dropped-word budget note — n/a
+
+## Pass 5 — 2026-10-10
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 2, minor 8, decision-needed 1  |  Dropped in triage: 3 (plan-level)
+Words (docs): 1500 (3.18 x pass 0; budget 1500)  |  Snapshot: .passes/pass5.md, fix diff .passes/pass5.fix.diff
+Fixer: all 10 applied; decision-needed item left untouched (no open-questions table); entry 12 and entry 16 handoffs merged into one Notes bullet; cuts to stay at budget ("seeded through seedStorage", "and motion.ts do", shorter Notes and changed:false wording).
+### Applied
+- [major] Tests line / AC "The live band-shift P5 lands with entry 12" — the P5 handoff (toml entry 10 tests "(S + P5)", rule-coverage AD-14 FLIP row) is recorded nowhere entry 12 will see; entry 12's toml tests lack it → fixer item 1
+- [major] AC P5 chain — before-click D-face top-lefts for the Undo step may be read while the Validate glide still runs (capture() records settled rects after finishAll), so the check fails or flakes → fixer item 2
+- [minor] play() "(the gate-deferred re-layout is entry 12's, CAP-9)" contradicts F24/build-notes CAP-9 (a move's row change applies in the same update) → fixer item 3
+- [minor] glide class unnamed/unowned → `wc-glide` in gestures/classes.ts, CSS beside each `wc-drag-layer` rule → fixer item 4
+- [minor] finish-all AC tests three of the named throws → "every rule-6 throw the Description names" → fixer item 5
+- [minor] a duplicated CardId (two live elements) silently keeps one → throws → fixer item 6
+- [minor] reduced-motion fade of a band changer: clip lift/glide class only for a translate, never a fade → fixer item 7
+- [minor] null-root check would always throw at install → "a null root at capture/play" → fixer item 8
+- [minor] Consumers — `wc-drag-tiles` now shared with the controller's tile drag → fixer item 9
+- [minor] New game sentence "(act()'s `cancel()` finishes any glide first)" — the guarantee is capture()'s finishAll; cut → fixer item 10
+### Default applied (technical)
+- band-shift P5 handoff → Notes line as for entry 16: entry 12 gains the pure-band-shift P5 when pulled
+- chain → each step records its before-click rects after the previous step's animations have finished
+### Decision needed (functionality / UX / gameplay)
+- Description play() / Undo of a free-letter add (and Undo Composing → Idle with free letters) — while Undo glides a free letter back to its own WordCell, that cell looks empty for the glide (used mirror gone at once, cards below hidden, the returning face still over the tray; 1 × base, 320 ms at Slow). The owner settled "the cell never looks empty" only for fly-to-cell — proposed default: leave it as the plain glide (the letter visibly flies home into its empty-looking cell); the alternative keeps the used mirror drawn until the glide settles, as fly-to-cell does
+### Dropped
+- kind function return type for the empty set (MotionKind | null) — plan-level
+- pointerdown early return for a non-primary button/second press before inFlight — acts on nothing; plan notes it
+- desktop column hover outline (z 3) over a z 1 glide — cosmetic; plan notes it
