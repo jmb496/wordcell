@@ -1,6 +1,6 @@
 # Review log — story-flip-module-and-button-driven-glides.md (ticket 5.10)
 
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7, budget 1500 words (2.5x pass 0 plus the tickets.toml entry 10 fields unknown, interface, tests, owns, consumers that pass 1 adds to the Description). Pass 0: HEAD acf8115, .passes/pass0.md, 471 words.
 
@@ -39,3 +39,38 @@ Fixer: all 18 applied; no runnable commands added; source facts checked (Command
 - none
 ### Dropped
 - none (duplicates across lenses merged)
+
+## Pass 2 — 2026-10-10
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 9, minor 9, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+Words (docs): 1481 (3.14 x pass 0; budget 1500)  |  Snapshot: .passes/pass2.md, fix diff .passes/pass2.fix.diff
+Fixer: all 17 applied; no runnable commands added. Beyond the findings it added `ControllerDeps.glidesRunning(): boolean` beside finishGlides() so the press takes gate.enter() before finishing (inFlight); cut repetition in Interface/Consumers; 0.5 px rule moved into the planner rules.
+### Applied
+- [major] Description install/cancel() — how the controller reaches finishAll unstated; a throwing pre-install singleton breaks controller.test.ts cancel() calls and main.ts order → fixer item 1
+- [major] Description "entry 16 adds the pointerdown wiring" — until entry 16 a press mid-glide neither finishes it (AD-14) nor measures settled faces (controller reads face rects/computed transforms); existing drag-after-Validate specs at risk → fixer item 2
+- [major] Description gate-counting — settle semantics unstated (async onfinish vs gate.leave() at count 0 throwing; cancel event) → fixer item 3
+- [major] Description planner / AC coordinate frame — anchor delta input has no role; band per card not an input; two SPEC cases merged → fixer item 4
+- [major] AC "a selected tile, Flip pressed, an unmoved tile" — untestable (Flip moves every S tile; node Vitest cannot see a flush/CSS lift) → fixer item 5
+- [major] Description card ↔ compact tile — SPEC's "takes its new size at once and glides from the previous rect's top-left" dropped, untested → fixer item 6
+- [major] AC — "durations only from motion.ts" has no normal-speed test (rule-coverage S + P5) → fixer item 7
+- [major] AC P5 "D faces gliding from/to the column" — no assertion of the glide's start → fixer item 8
+- [major] AC P5 "an edit discards the redo tail, R-71" — no redo tail on a fresh session-composing load → fixer item 9
+- [minor] createFlip deps — resulting phase source missing → fixer item 10
+- [minor] createFlip deps — reduced-motion "flag" goes stale; getter → fixer item 11
+- [minor] easing unstated → fixer item 12
+- [minor] capture() while pending, CardId missing on one side, unmapped data-place → fixer item 13
+- [minor] kind table — winning Confirm/committing Redo, unfinished Undo, changed:false Validate rows → fixer item 14
+- [minor] entry 16 overlap (cancel()/pointerdown now here) not recorded → fixer item 15
+- [minor] AC P5 Validate step — wait for Validate enabled (word list) → fixer item 16
+- [minor] Notes — open question names no answering test → fixer item 17
+- [minor] DOM root dep — App's main does not exist when main.ts builds deps → folded into fixer item 1
+### Default applied (technical)
+- controller seam → ControllerDeps gains finishGlides(); main.ts creates/installs flip after the gate and before createController; controller.test.ts passes a spy; root dep a getter or the mount target
+- pointerdown → finishAll wired into the controller's pointerdown here too (flip's running state joins inFlight); entry 16 keeps release capture/play and the press-path P5
+- settle → finishAll finishes and settles synchronously, idempotent per animation; a cancel event throws (rule 6), as fly-back.ts
+- planner → per-card {band, viewport rect} before/after (next measured after any scroll write) plus band rects; no anchor-delta input
+- selected-tile lift → Playwright on a separate load (select tile, `+` with block right, no animation on its face) plus planner equal-rects case
+- easing → ease-out as fly-back.ts
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
