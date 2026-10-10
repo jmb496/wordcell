@@ -1,6 +1,6 @@
 # Review log — story-flip-module-and-button-driven-glides.md (ticket 5.10)
 
-State: pass 6: done
+State: done (converged after 7 passes)
 
 Mode: docs, thorough, max 7, budget 1500 words (2.5x pass 0 plus the tickets.toml entry 10 fields unknown, interface, tests, owns, consumers that pass 1 adds to the Description). Pass 0: HEAD acf8115, .passes/pass0.md, 471 words.
 
@@ -179,3 +179,13 @@ Triage note: the adversarial reviewer's two layering majors (same-band glides st
 - TopBar column-tail deselect lift before Undo/Redo untested — plan adds a createFlip fake case or names it
 - second-load `+` with the block right moves no live face — the Flip → `+` step proves the wiring; plan note
 - duplicate of item 2 from the Flip-direction stretch — folded into item 10
+
+## Pass 7 — 2026-10-10 (verify-only)
+Reviewers: fix diff (pass6.fix.diff only)  |  Findings: major 0, minor 0, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1500 (3.18 x pass 0; budget 1500)  |  Snapshot: .passes/pass6.md (no fix this pass)
+
+## Result — converged after 7 passes
+Majors per pass: 10, 9, 4, 3, 2, 2, 0. Words 471 → 1500 (budget 1500, including the tickets.toml entry 10 fields added in pass 1).
+Decision needed (owner): Undo gliding a free letter back to its own WordCell leaves that cell looking empty for the glide (1 × base, 320 ms at Slow) — proposed default: the plain glide; alternative: keep the used mirror drawn until the glide settles, as fly-to-cell does (pass 5).
+Handoffs recorded in the ticket's Notes for tickets.toml: entry 16 drops `finishAll` in `pointerdown`/`cancel()` (now here); entry 12 gains the pure-band-shift P5.
+Unapplied minors: none. Plan-level items (see the Dropped lists): the kind function's empty-set return type; pointerdown's early return before inFlight; desktop hover outline over a z-1 glide; lifting the clip under TRAY_ROWS = 1 shows a wide word's overflow rows during a band-changer glide until entry 12; New game/Replay/restore exempt by construction; TopBar tail-deselect lift test; the second-load `+` with the block right moves no live face; e2e specs reading faces right after act() clicks must be listed; the epic file's Decision (CAP-8 split) and tickets.toml entry 16 need the finishAll move folded in at close-out.

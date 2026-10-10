@@ -158,3 +158,11 @@ Paused: usage limit at the build, reset 00:10 EDT 2026-10-10, resumed at 00:47 E
 Tokens: 2.2M input-equivalent for the resume session (code review 49%, build 42%, orchestrator 7%, other 3%); orchestrator peak context 60k
 Worth knowing: ANEW is a real dictionary word from the named start, so no substitute test game was needed (nothing for you to check at close-out). Three minor test-precision notes for the 5.14 sweep: the tap-only test does not prove that taps which should save nothing wrote nothing; the W drag cannot be told apart from a tap (same result); tile positions are read once before each drag, which may need a wait once later tickets animate tiles.
 Close-out docs: none
+
+## Stopped — 5.10 FLIP module and button-driven glides, at Step A (your decision needed)
+What it adds: the glide animation that moves letter cards smoothly to their new place after a button press (Validate, Flip, changing the word length, Undo/Redo), instead of jumping.
+Ticket review: 7 passes, converged (majors 10, 9, 4, 3, 2, 2, 0); one item needs your input (below).
+Build: not started.
+Tokens: 14.6M input-equivalent (ticket review 98%, orchestrator 1%, other 1%); orchestrator peak context 55k
+Worth knowing: the question is about what a WordCell looks like while Undo sends a free letter back into it. Proposed default: a plain glide, with the cell looking empty for the glide (about 180 ms at Normal, 320 ms at Slow). Alternative: the cell keeps its used look until the letter lands, the way Confirm's fly-to-cell does, which means more work in this ticket.
+Close-out docs: none yet (depends on your answer; if you pick the alternative, EXPERIENCE.md § Motion and the epic 5 SPEC/build-notes CAP-8 may need a line).
