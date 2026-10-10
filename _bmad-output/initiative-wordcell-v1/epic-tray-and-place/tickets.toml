@@ -185,10 +185,10 @@ after = [9]
 hitl = false
 risk = "high"
 unknown = "Whether a capture before dispatch gives the previous rects without a second render (SPEC Assumptions) and whether WAAPI on faces composes with the controller's drag transforms at release without a jump."
-interface = "New src/ui/flip.ts (capture(), play(command, result), finishAll()); ActionBar, TopBar and ControlRow wrap dispatch in capture/play."
-tests = "R-70 Undo Place → Composing keeps the arrangement and Composing → Idle returns the cards, animated (P5 supp.); AD-14 F22 D faces from and to the column (P5); AD-14 one live element during a Validate glide, faces animate, wrappers and mirrors never (P5); AD-14 FLIP kinds, band-relative set, no motion on a pure band shift, reduced-motion fade (S + P5)."
+interface = "New src/ui/flip.ts (`createFlip(deps)` and its install setter, `capture()`, `play(command, result)`, `finishAll()`, `running()` (an animation unsettled), the pure kind function and planner); main.ts creates and installs flip; ActionBar, TopBar and ControlRow wrap dispatch in capture/play; `ControllerDeps` gains `finishGlides()` and `glidesRunning()`."
+tests = "R-70 Undo Place → Composing keeps the arrangement and Composing → Idle returns the cards, animated (P5 supp.); AD-14 F22 D faces from and to the column (P5); AD-14 one live element during a Validate glide, faces animate, wrappers and mirrors never (P5); AD-14 FLIP kinds, band-relative set, durations (S + P5); AD-14 no motion on a pure band shift, reduced-motion fade, finish-all path, `cancel()` and `pointerdown` (S)."
 owns = "flip.ts, the kind table and the animated set; every later dispatching caller uses capture/play."
-consumers = "The gate's busy sources gain FLIP animations: list layout re-layout, the banner latch, w recompute and the controller's gate enter/leave; ActionBar/TopBar/ControlRow handlers change inside act(): list the AD-12 act() scan."
+consumers = "The gate's busy sources gain FLIP animations: list layout re-layout, the banner latch, w recompute and the controller's gate enter/leave; the controller's tile drag (`wc-drag-tiles` shared); ActionBar/TopBar/ControlRow handlers change inside act(): list the AD-12 act() scan; the controller's `cancel()` and `pointerdown` gain `finishGlides()`: list act(), the before-hide flush, before-back, the epic 4 fly-back finish, the hover-peek timer and controller.test.ts's fakes."
 references = ["spec — _bmad-output/specs/spec-epic-5-tray/build-notes.md, CAP-8", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/EXPERIENCE.md, Motion", "architecture — _bmad-output/planning-artifacts/architecture/architecture-wordcell-2026-09-27/ARCHITECTURE-SPINE.md, AD-10, AD-14"]
 
 [[entry]]

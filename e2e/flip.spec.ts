@@ -28,6 +28,7 @@ type FaceRead = {
   place: string | null;
   band: string | null;
   column: string | null;
+  wordcell: string | null;
 };
 type Read = {
   live: number;
@@ -38,6 +39,7 @@ type Read = {
   tilesOverflow: string;
   blockMirrors: string[];
   wordcellMirrors: string[];
+  columnMirrors: Record<string, string[]>;
 };
 
 // The button: a data-testid, or a tray control by its text.
@@ -88,6 +90,8 @@ function clickAndRead(page: Page, button: Button): Promise<Read> {
         place: wrapper.getAttribute('data-place'),
         band: wrapper.closest('[data-band]')?.getAttribute('data-band') ?? null,
         column: wrapper.closest('[data-column]')?.getAttribute('data-column') ?? null,
+        wordcell:
+          wrapper.closest('[data-testid^="wordcell-"]')?.getAttribute('data-testid') ?? null,
       });
     }
     const tiles = document.querySelector('[data-band="tray"] .tiles');
@@ -105,8 +109,16 @@ function clickAndRead(page: Page, button: Button): Promise<Read> {
         (m) => m.getAttribute('data-mirror-of') ?? '',
       ),
       wordcellMirrors: [
-        ...document.querySelectorAll('[data-band="wordcells"] [data-mirror-of]'),
+        ...document.querySelectorAll('[data-testid^="wordcell-"] [data-mirror-of]'),
       ].map((m) => m.getAttribute('data-mirror-of') ?? ''),
+      columnMirrors: Object.fromEntries(
+        [...document.querySelectorAll('[data-column]')].map((c) => [
+          c.getAttribute('data-column') ?? '',
+          [...c.querySelectorAll('[data-mirror-of]')].map(
+            (m) => m.getAttribute('data-mirror-of') ?? '',
+          ),
+        ]),
+      ),
     };
   }, button);
 }
@@ -157,6 +169,8 @@ test('R-70 AD-14 F22 Validate → Undo → Undo → Redo on session-composing: t
   }
   expect(read.tilesOverflow).toBe('visible');
   expect(read.blockMirrors).toEqual([]);
+  // The destination column's D ghosts exist during the glide (mirrorAnimations 0 covers them).
+  expect(read.columnMirrors['6']).toEqual(d.map(String));
   await glidesSettled(page);
   expect(await trayIds(page)).toEqual(['42', '0', '28']);
 
@@ -183,10 +197,18 @@ test('R-70 AD-14 F22 Validate → Undo → Undo → Redo on session-composing: t
   await glidesSettled(page);
   expect(await trayIds(page)).toEqual([]);
 
-  // Redo Idle → Composing: the S faces glide back into the tray (undoRedo, not a commit).
+  // Redo Idle → Composing: the S faces glide back into the tray (undoRedo, not a commit). Column
+  // 1's tail, which Redo does not move, is tap-selected first: TopBar deselects before capture, so
+  // no lift is recorded and it stays out of the animated set.
+  const tail = page.getByTestId('column-1').locator('[data-place="column"]').last();
+  await tapAt(page, await centre(tail));
+  await expect(page.locator('[data-selection-outline]')).toHaveCount(1);
+  await expect(tail).toHaveClass(/\blifted\b/);
   before = await topLefts(page);
   read = await clickAndRead(page, { testid: 'redo' });
   expectGlides(read, [42, 0], before);
+  await expect(page.locator('[data-selection-outline]')).toHaveCount(0);
+  await expect(page.locator('.lifted')).toHaveCount(0);
   for (const id of [42, 0]) expect(face(read, id).place).toBe('tray');
   expect(read.tilesOverflow).toBe('visible');
   expect(read.blockMirrors).toEqual(['28']);
@@ -241,13 +263,25 @@ test('AD-14 F27 Undo Composing → Idle on session-place-free-letter-two-cards +
   });
   // Composing: D 26 as the block copy, S 32, 45, 42 and the free letter 28 (from cell 4).
   expect(await trayIds(page)).toEqual(['26m', '32', '45', '28', '42']);
+  // Positive control: in Composing WordCell 4 holds the used mirror of 28 (R-33).
+  const wordcellMirrors = () =>
+    page
+      .locator('[data-testid^="wordcell-"] [data-mirror-of]')
+      .evaluateAll((els) =>
+        els.map(
+          (el) =>
+            `${el.closest('[data-testid]')?.getAttribute('data-testid')}:${el.getAttribute('data-mirror-of')}`,
+        ),
+      );
+  expect(await wordcellMirrors()).toEqual(['wordcell-4:28']);
 
   const before = await topLefts(page);
   const read = await clickAndRead(page, { testid: 'undo' });
   expectGlides(read, [28, 32, 42, 45], before);
   expect(face(read, 28).place).toBe('cell');
+  expect(face(read, 28).wordcell).toBe('wordcell-4');
   expect(face(read, 28).zIndex).toBe('1');
-  // F27 (owner): no used mirror of 28 is held in the WordCell band while the letter flies home.
+  // F27 (owner): no used mirror of 28 is held in any WordCell while the letter flies home.
   expect(read.wordcellMirrors.filter((m) => m === '28')).toHaveLength(0);
   for (const id of [32, 42, 45]) expect(face(read, id).place).toBe('column');
   expect(read.tilesOverflow).toBe('visible');

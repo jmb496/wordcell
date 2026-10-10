@@ -286,6 +286,11 @@ describe('AD-14 FLIP kind table', () => {
       expect(t.counts.enter).toBe(0);
       expect(t.duration).not.toHaveBeenCalled();
       expect(t.flip.running()).toBe(false);
+      // The capture was consumed: a next capture/play on the same instance animates normally.
+      expect(() => t.flip.capture()).not.toThrow();
+      t.root.show(START);
+      expect(() => t.flip.play(undo, CHANGED)).not.toThrow();
+      expect(t.active()).toBe(2);
     }
   });
 
@@ -299,6 +304,11 @@ describe('AD-14 FLIP kind table', () => {
       move(t, SAME_BAND, command, result);
       expect(t.counts.enter).toBe(0);
       expect(t.duration).not.toHaveBeenCalled();
+      // The capture was consumed: a next capture/play on the same instance animates normally.
+      expect(() => t.flip.capture()).not.toThrow();
+      t.root.show(START);
+      expect(() => t.flip.play(flipCommand, CHANGED)).not.toThrow();
+      expect(t.active()).toBe(2);
     }
   });
 
@@ -472,6 +482,30 @@ describe('AD-14 FLIP coordinate frame (planGlides)', () => {
     ).toEqual([]);
   });
 
+  it('AD-14 the 0.5 px cut-off: a band changer moved (0.3, 0.2) → none; exactly (0.5, 0) → one glide; (0.4, 12) → one glide', () => {
+    expect(
+      plan([[7, placed('columns', box(10, 300))]], [[7, placed('tray', box(10.3, 300.2))]]),
+    ).toEqual([]);
+    expect(
+      plan([[3, placed('tray', box(10.5, 520))]], [[3, placed('tray', box(10, 520))]]),
+    ).toEqual([
+      {
+        id: 3,
+        keyframes: [{ transform: 'translate(0.5px, 0px)' }, { transform: 'translate(0px, 0px)' }],
+        translate: true,
+        bandChange: false,
+      },
+    ]);
+    expect(plan([[3, placed('tray', box(0.4, 532))]], [[3, placed('tray', box(0, 520))]])).toEqual([
+      {
+        id: 3,
+        keyframes: [{ transform: 'translate(0.4px, 12px)' }, { transform: 'translate(0px, 0px)' }],
+        translate: true,
+        bandChange: false,
+      },
+    ]);
+  });
+
   it('AD-14 different sizes → the top-left delta; different sizes with equal top-lefts → none', () => {
     const card = box(10, 520, 40, 53);
     expect(plan([[3, placed('tray', card)]], [[3, placed('tray', box(30, 510, 44, 44))]])).toEqual([
@@ -519,6 +553,18 @@ describe('AD-14 FLIP finish-all path', () => {
     expect(first).toHaveLength(2);
     expect(t.active()).toBe(2);
     expect(t.flip.running()).toBe(true);
+    // Mid-glide each moving face reports a rect between its ends; finish() settles it (as WAAPI).
+    for (const [id, mid] of [
+      [4, box(70, 520)],
+      [7, box(30, 300)],
+    ] as [number, Box][]) {
+      const face = t.root.face(id);
+      const settled = face.rect;
+      face.rect = mid;
+      face.animations[0]?.finish.mockImplementation(() => {
+        face.rect = settled;
+      });
+    }
     // A second Undo during the first glide.
     t.flip.capture();
     expect(t.active()).toBe(0);
@@ -527,6 +573,13 @@ describe('AD-14 FLIP finish-all path', () => {
     t.root.show(START);
     t.flip.play(undo, CHANGED);
     expect(t.active()).toBe(2);
+    // The second glide starts from the settled rects (strip (98, 520) and (54, 520)), not mid-glide.
+    expect(t.root.face(4).animations[0]?.keyframes[0]).toEqual({
+      transform: 'translate(44px, 0px)',
+    });
+    expect(t.root.face(7).animations[0]?.keyframes[0]).toEqual({
+      transform: 'translate(44px, 420px)',
+    });
     expect(t.root.face(7).classList.contains('wc-glide')).toBe(true);
     expect(t.root.tiles.classList.contains('wc-drag-tiles')).toBe(true);
     // The first glide's late onfinish events are no-ops.
