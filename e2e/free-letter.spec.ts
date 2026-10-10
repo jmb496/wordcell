@@ -890,7 +890,7 @@ test.describe('android', () => {
     });
   }
 
-  test('AD-12 F5 back mid-drag (tile 42 selected first) leaves the app; the stored Session equals the pre-drag one bar activeMs, read after a restoring goForward: nothing selected, cell 7 unused', async ({
+  test('AD-12 F5 F18 back mid-drag (tile 42 selected first, nothing selected once held) leaves the app; the stored Session equals the pre-drag one bar activeMs, read after a restoring goForward: cell 7 unused', async ({
     page,
   }) => {
     await open(page, BLOCK);
@@ -900,6 +900,7 @@ test.describe('android', () => {
     const { hold } = await holdTop(page, [gapCentre(g, 1, 2, 1)]);
     try {
       await expectHeld(page);
+      await expectSelected(page, null);
       await expectLeaves(page);
     } finally {
       await hold.end();
@@ -908,7 +909,6 @@ test.describe('android', () => {
     await expect(page.getByRole('heading', { name: 'WordCell' })).toBeVisible();
     await expect(page.locator('[data-card-id]')).toHaveCount(52);
     expect(await storedGame(page)).toBe(before);
-    await expectSelected(page, null);
     await expectUnused(page);
   });
 });

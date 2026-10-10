@@ -4522,6 +4522,22 @@ describe('AD-12 epic 5 free-letter drag', () => {
     }
     expect(t.b.trayMirrorFace.animations).toHaveLength(0);
     expect(partedClasses(t.b.trayMirror)).toEqual([]);
+    // Back to the parting gap 0: the caret hides, the tiles part again.
+    centreOn(t, 56, GAP_Y);
+    expect(shown(t)).toBe(false);
+    expect(t.b.caret.style.transform).toBe('');
+    expect(transforms(t)).toEqual(['translate(48px, 0px)', 'translate(48px, 0px)', '']);
+    expect(partedClasses(t.b.trayMirror)).toEqual(['wc-parted', 'wc-part-start', 'wc-part-end']);
+    centreOn(t, 152, GAP_Y);
+    expect(shown(t)).toBe(true);
+    // Out of the band: the caret hides.
+    centreOn(t, 56, 300);
+    expect(shown(t)).toBe(false);
+    expect(t.b.caret.style.transform).toBe('');
+    centreOn(t, 152, GAP_Y);
+    expect(shown(t)).toBe(true);
+    expect(t.b.caret.style.transform).toBe('translate(142.5px, 6px)');
+    expect(t.b.trayMirrorFace.animations).toHaveLength(0);
     t.fire('pointerup');
     expect(navCalls).toEqual([dispatched({ type: 'addFreeLetter', cell: 3, index: 2 })]);
     expect(clean(t)).toBe(true);
@@ -4667,18 +4683,22 @@ describe('AD-12 epic 5 free-letter drag', () => {
   });
 
   it('AD-12 an under-25 % or out-of-band release flies back with no dispatch, every tray face at rest', async () => {
-    const t = await ready(null);
-    press(t);
-    centreOn(t, 56, GAP_Y);
-    centreOn(t, 56, 586.5);
-    expect(shown(t)).toBe(false);
-    expect(transforms(t)).toEqual(['', '', '']);
-    t.fire('pointerup');
-    expect(navCalls).toEqual([]);
-    expect(last(t.b.cellFace).keyframes[0]).toEqual({ transform: 'translate(34px, 110px)' });
-    t.advance(180);
-    expect(clean(t)).toBe(true);
-    expect(t.active()).toBe(0);
+    for (const y of [586.5, 300]) {
+      const t = await ready(null);
+      press(t);
+      centreOn(t, 56, GAP_Y);
+      centreOn(t, 56, y);
+      expect(shown(t), `y ${y}`).toBe(false);
+      expect(transforms(t), `y ${y}`).toEqual(['', '', '']);
+      t.fire('pointerup');
+      expect(navCalls, `y ${y}`).toEqual([]);
+      expect(last(t.b.cellFace).keyframes[0], `y ${y}`).toEqual({
+        transform: `translate(34px, ${y - 476.5}px)`,
+      });
+      t.advance(180);
+      expect(clean(t), `y ${y}`).toBe(true);
+      expect(t.active(), `y ${y}`).toBe(0);
+    }
   });
 
   it('AD-12 F5 cancel() (act()), a same-id pointerdown and detach settle a parted free-letter drag at once: no dispatch, gate idle, nothing selected', async () => {

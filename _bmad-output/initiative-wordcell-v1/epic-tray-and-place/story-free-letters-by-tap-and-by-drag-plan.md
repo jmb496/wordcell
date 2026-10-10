@@ -128,6 +128,7 @@ Exempt here: landing glides and FLIP (entries 10/16); tray growth (entry 12); Pl
 - Unit suite on the Linux filesystem (`~/wordcell-watch`, src and fixtures synced): 3.09 s (discarded warm-up), then 2.78, 2.73, 2.79 s → warm median 2.78 s (< 5 s, AD-17).
 
 - Orchestrator verification (2026-10-09, after the review patches): every `npm run test:all` step re-run green — lint, check, unit (54 files, 2224 tests), build, `test:e2e:dist`, the dev-server e2e suite on a temporary port-5180 copy of `playwright.config.ts` (474 passed, 0 failed; the copy deleted), `test:e2e:pwa` (12 passed); `npm run test:screens` exit 0, 10 passed, no baseline written or changed. Port 5173 is held by a `npm run dev --host` process started 11:05 from the docker-desktop bind mount (not this build's), which serves stale modules; it was left running.
+- Code review verification (2026-10-09, after code review pass 2's changes, including `createParting` `take()`): `npm run test:all` run as one command, exit 0, port 5173 free — lint (198 files), check (0 errors), unit (54 files, 2227 tests), build (513,501 / 600,000), `test:e2e:dist` (14 passed), `test:e2e` (478 passed, 434 skipped, 0 failed; `e2e/free-letter.spec.ts` 22 android + 1 desktop), `test:e2e:pwa` (12 passed). Screenshots (`npm run test:screens`) were not rerun by the review.
 
 ## Plan Change Log
 
@@ -214,14 +215,14 @@ Exempt here: landing glides and FLIP (entries 10/16); tray growth (entry 12); Pl
 - `src/ui/Card.svelte` — lock on every block mirror, CSS-shown; segment rules read the parted classes under `wc-parted`.
 - `src/ui/WordCellRow.svelte` — cell ghost and drag-layer rules.
 - `src/ui/layout/tray.ts` — `segmentEnds` JSDoc as built.
-- Tests: `controller.test.ts` (harness, two superseded tests, 14-case free-letter describe), `tile.test.ts`, `intent.test.ts`; new `e2e/free-letter.spec.ts` (17 android + 1 desktop); `:visible` lock selectors in `board-phases`, `drag`, `tray` specs; caret-aware selectors in `tile-drag` and `tray` specs.
+- Tests: `controller.test.ts` (harness, two superseded tests, 17-case free-letter describe), `tile.test.ts`, `intent.test.ts`; new `e2e/free-letter.spec.ts` (22 android + 1 desktop); `:visible` lock selectors in `board-phases`, `drag`, `tray` specs; caret-aware selectors in `tile-drag` and `tray` specs.
 - `_bmad-output/specs/spec-epic-5-tray/build-notes.md` — CAP-6 as built.
 
 **Review findings.** 30 findings (high 0, medium 3, low 19, false 8, maybe-false 0). Patched (7 entries, all low): free-letter residue helper (caret and parted classes) in every e2e end/edit check; reduced-motion mirror return P5; Place no-dispatch and no-ghost assertions in the inert Vitest; exact Place/Idle actions in intent.test.ts; caret-aware `tileTops`; R-65 sleep removed; tile-drag.spec.ts comment rewrapped. Deferred (1 entry, medium): no real free-letter drag parts a block across a row break in a browser (needs entry 12's long Composing fixture); the class-driven parted segment CSS is browser-checked by the k = 2 P5. Rejected: 22 rows, each with its reason in the Review Triage Log (8 false claims; lows that are ticket-scoped (Vitest-only row-break caret and segments, settled "when parting stops"), environment (the stale port-5173 server), or test additions for no observed defect).
 
 **Follow-up review recommendation:** false. Patched by verdict: high 0, medium 0, low 7.
 
-**Verification.** See Implementation Notes (orchestrator bullet): every `test:all` step green after the patches (unit 2224, e2e 474, pwa 12, dist 14, build in budget); `npm run test:screens` 10 passed, no baseline changed; unit warm median 2.78 s on the Linux filesystem (implementer).
+**Verification.** See Implementation Notes (code review bullet): `npm run test:all` green as one command after code review pass 2 (unit 2227, e2e 478, pwa 12, dist 14, build in budget); `npm run test:screens` 10 passed, no baseline changed (orchestrator run, before the code review; not rerun by the review); unit warm median 2.78 s on the Linux filesystem (implementer).
 
 **Residual risks.**
 - A real free-letter drag parting a block across a row break is unverified in a browser (deferred, entry 12's fixture); the parted segment CSS itself is browser-checked by the k = 2 P5.
