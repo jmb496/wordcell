@@ -1,5 +1,5 @@
 # Review loop — ticket 5.8 build (code mode, 875266c..44eda8b)
-State: pass 3: done
+State: done
 
 Target: `_bmad-output/implementation-artifacts/review-loop/5-8-build.passes/pass0.diff` (git diff 875266c..44eda8b)
 Intent: `_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-free-letters-by-tap-and-by-drag-plan.md`
@@ -71,3 +71,13 @@ Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings
 Fixer: items 1–4 applied (tests and plan only; controller.ts unchanged). 1: the F16 end-gap test now moves caret → parting gap (hidden, tiles parted, mirror parted classes) → caret → out of band (hidden) → caret → release; fails with `hideCaret` deleted and with hide-only-when-unaccepted. 2: back test asserts nothing selected while held, before leaving; renamed `AD-12 F5 F18 …`. 3: fly-back test loops y 586.5 and y 300. 4: plan Verification and Auto Run Result refreshed from a one-command `npm run test:all` (exit 0): lint, check, unit 2227, build 513,501 / 600,000, e2e:dist 14, e2e 478 passed 434 skipped, e2e:pwa 12; screenshots not rerun by the review.
 Checks (orchestrator): `npm test` 54 files / 2227 tests pass; lint pass; check 0 errors.
 Snapshot: tree 9125adc617e5925a79033c98d1aa8ee72ecc8ce9 | fix diff `5-8-build.passes/pass3.fix.diff` | full diff `5-8-build.passes/pass3.diff`
+
+## Pass 4 — 2026-10-09 (verify-only)
+Reviewers: fix diff (pass3.fix.diff only)  |  Findings: major 0, minor 0, decision-needed 0  |  Dropped in triage: 0
+Note: the stopping rule (two consecutive passes with at most one major: passes 2 and 3) should have ended the loop at pass 3's triage with its major recorded open; the orchestrator applied it instead, so this verify-only pass reviewed that fix before closing. No open major remains.
+
+## Result — converged after 4 passes
+Majors per pass: 3, 1, 1, 0. Decision needed: none open (pass 1's item answered by the owner: keep as built, SPEC F26). Technical defaults applied: 5.
+Final checks (tree 9125adc, HEAD 1382c32): `npm test` 54 files / 2227 tests pass; lint pass; check 0 errors; `npm run test:all` one command exit 0 (pass 3 fixer: build 513,501 / 600,000, e2e:dist 14, e2e 478, e2e:pwa 12). Screenshots (`npm run test:screens`) not rerun by the review.
+Unapplied minors:
+- plan triage rows at l. 152 and l. 155 still use the older "never rendered with a multi-mirror block" wording (pass 2 fixer note; the deferred entry and residual risk are already narrowed).
