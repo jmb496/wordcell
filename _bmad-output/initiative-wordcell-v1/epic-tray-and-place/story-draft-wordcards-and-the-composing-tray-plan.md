@@ -122,6 +122,8 @@ Seed 1 literals (card → letter from `src/engine/lang/en.ts` deck order).
 
 ## Plan Change Log
 
+- 2026-10-14 (ticket 5.15, S21; 5.1-m of `5-1-build.md` Pass 4): the screenshot command was `npm run test:screens -- --update-snapshots=all -g composing`, not the plain `-- --update-snapshots` the Tasks list. Reason: the first `--update-snapshots` run rewrote nothing, the composing change being under the 1 % `maxDiffPixelRatio` tolerance, so `all` was needed to regenerate the two composing baselines (see Implementation Notes, Screenshots).
+
 ## Review Triage Log
 
 ### 2026-10-08 — Review pass
