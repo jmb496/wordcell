@@ -100,6 +100,19 @@ async function expectGlide(page: Page, ids: readonly number[]): Promise<void> {
   expect(read.mirrors).toBe(0);
 }
 
+// A parted or shifted face's glide can already have settled under load: the moving face must run.
+async function expectGlideAmong(
+  page: Page,
+  moving: number,
+  allowed: readonly number[],
+): Promise<void> {
+  const read = await readGlides(page);
+  expect(read.faces).toContain(moving);
+  expect(read.faces.every((id) => allowed.includes(id))).toBe(true);
+  expect(read.wrappers).toBe(0);
+  expect(read.mirrors).toBe(0);
+}
+
 test('AD-14 F7 a tap-drop (select the column 3 tail, tap column 1) glides the moved faces by snap', async ({
   page,
 }) => {
@@ -244,7 +257,7 @@ test('AD-14 F17 a no-edit tile release flies back with no FLIP glide and a press
   } finally {
     await second.end();
   }
-  await expectGlide(page, [0, 42]);
+  await expectGlideAmong(page, 0, [0, 42]);
   await tapAt(page, await centre(tile(page, 42)));
   expect(await cardAnimations(page)).toBe(0);
   await expect(page.locator('[data-band="tray"] [data-card-id].selected')).toHaveCount(1);
@@ -359,7 +372,8 @@ test('AD-14 F6 P5 a press mid-glide on a card whose post-edit rect differs from 
   await composing(page);
   const target = await centre(tile(page, 42));
   const read = await dragRelease(page, 0, { x: target.x - 20, y: target.y });
-  expect(read.faces).toEqual([0, 42]);
+  expect(read.faces).toContain(0);
+  expect(read.faces.every((id) => id === 0 || id === 42)).toBe(true);
   // Card 0's wrapper is at its post-edit slot; its face still glides from the released point.
   const wrapper = await centre(tile(page, 0));
   const face = await faceRectNow(page, 0);

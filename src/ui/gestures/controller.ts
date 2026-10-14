@@ -1410,6 +1410,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       // Epic 5 SPEC CAP-5, CAP-6: the one command of a tile or free-letter drag, on the last
       // move's acceptance and gap; a release with none flew back (hover repaints at its settle).
       if (captured === null) return;
+      // A throwing dispatch halts the game (rule 6, AD-15): play is skipped, the capture stays pending.
       deps.play(captured, game.dispatch(captured));
       refreshHover();
       return;

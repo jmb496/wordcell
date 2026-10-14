@@ -32,9 +32,16 @@ const navCalls: string[] = [];
 const order: string[] = [];
 // Ticket 5.16 (CAP-8, F7): nav pop, gate leave, capture, dispatch and play, in order.
 const trace: string[] = [];
-const flipHooks: { onCapture: (() => void) | null; result: unknown } = {
+const flipHooks: {
+  onCapture: (() => void) | null;
+  result: unknown;
+  throwOnDispatch: boolean;
+  playResults: unknown[];
+} = {
   onCapture: null,
   result: { kind: 'applied' },
+  throwOnDispatch: false,
+  playResults: [],
 };
 const shared: { view: unknown; onDispatch: (() => void) | null } = {
   view: undefined,
@@ -134,6 +141,7 @@ vi.mock('../../shell/game.svelte', () => ({
       shared.onDispatch?.();
       trace.push('dispatch');
       navCalls.push(`dispatch ${JSON.stringify(command)}`);
+      if (flipHooks.throwOnDispatch) throw new Error('AD-15 fake dispatch throw');
       return flipHooks.result;
     },
   },
@@ -521,6 +529,8 @@ async function setup() {
   trace.length = 0;
   flipHooks.onCapture = null;
   flipHooks.result = { kind: 'applied' };
+  flipHooks.throwOnDispatch = false;
+  flipHooks.playResults = [];
   svelteFlush.onFlush = null;
   shared.onDispatch = null;
   const col = (column: number, cards: number[]) => ({
@@ -633,7 +643,8 @@ async function setup() {
       trace.push('capture');
       flipHooks.onCapture?.();
     },
-    play: (command) => {
+    play: (command, result) => {
+      flipHooks.playResults.push(result);
       trace.push('play');
       trace.push(`played ${(command as { type: string }).type}`);
     },
@@ -2027,6 +2038,29 @@ describe('AD-12 entry 8 drag', () => {
     t.fire('pointerup');
     expect(atCapture).toEqual(['', 'translate(100px, 0px)', '']);
     expect(trace).toEqual(['pop', 'capture', 'leave', 'dispatch', 'play', 'played drop']);
+    expect(flipHooks.playResults).toHaveLength(1);
+    expect(flipHooks.playResults[0]).toBe(flipHooks.result);
+  });
+
+  it('AD-14 F7 a throwing dispatch propagates to AD-15 and play does not run: a tap-drop and a tail-drop release', async () => {
+    const t = await setup();
+    t.detach();
+    t.tap(t.b.card1);
+    trace.length = 0;
+    flipHooks.throwOnDispatch = true;
+    expect(() => t.tap(t.b.card2)).toThrow('AD-15 fake dispatch throw');
+    expect(trace).toContain('capture');
+    expect(trace).not.toContain('play');
+    const u = await setup();
+    u.detach();
+    u.tap(u.b.card2);
+    trace.length = 0;
+    u.down(u.b.card1b, { clientX: 25, clientY: 50 });
+    move(u, 125, 50);
+    flipHooks.throwOnDispatch = true;
+    expect(() => u.fire('pointerup')).toThrow('AD-15 fake dispatch throw');
+    expect(trace).toContain('capture');
+    expect(trace).not.toContain('play');
   });
 
   it('AD-14 F17 a tap-drop captures after the deselect and plays after its dispatch; a no-highlight release flies back with no capture or play', async () => {
@@ -2036,6 +2070,7 @@ describe('AD-12 entry 8 drag', () => {
     trace.length = 0;
     t.tap(t.b.card2);
     expect(trace).toEqual(['leave', 'pop', 'capture', 'dispatch', 'play', 'played drop']);
+    expect(flipHooks.playResults[0]).toBe(flipHooks.result);
     trace.length = 0;
     t.down(t.b.card1b, { clientX: 25, clientY: 50 });
     move(t, 25, 1050);
@@ -2062,6 +2097,12 @@ describe('AD-12 entry 8 drag', () => {
     expect(n('capture')).toBe(n('play'));
     expect(n('capture')).toBe(0);
     expect(t.active()).toBe(0);
+    // The equality discriminates: an 'up' release dispatches once, one capture, one play.
+    t.down(t.b.card1b, { clientX: 25, clientY: 50 });
+    move(t, 125, 50);
+    t.fire('pointerup');
+    expect(n('capture')).toBe(1);
+    expect(n('play')).toBe(1);
   });
 
   it('AD-12 hover classes clear at threshold; refreshHover() and pointerover add none mid-drag or mid-fly-back; the fly-back end recomputes them', async () => {
@@ -4097,6 +4138,8 @@ describe('AD-12 epic 5 tile drag', () => {
       'play',
       'played arrange',
     ]);
+    expect(flipHooks.playResults).toHaveLength(1);
+    expect(flipHooks.playResults[0]).toBe(flipHooks.result);
   });
 
   it('AD-14 F7 capture count equals play count for a tile drag ended by pointercancel, lostpointercapture, cancel and cancel(byBack)', async () => {
@@ -4118,6 +4161,23 @@ describe('AD-12 epic 5 tile drag', () => {
     expect(n('capture')).toBe(n('play'));
     expect(n('capture')).toBe(0);
     expect(t.active()).toBe(0);
+    // The equality discriminates: an 'up' release dispatches once, one capture, one play.
+    press(t, t.b.tile2);
+    move(t, -72);
+    t.fire('pointerup');
+    expect(n('capture')).toBe(1);
+    expect(n('play')).toBe(1);
+  });
+
+  it('AD-14 F7 a throwing dispatch on a tile edit release propagates and play does not run', async () => {
+    const t = await ready();
+    press(t, t.b.tile2);
+    move(t, -72);
+    flipHooks.throwOnDispatch = true;
+    trace.length = 0;
+    expect(() => t.fire('pointerup')).toThrow('AD-15 fake dispatch throw');
+    expect(trace).toContain('capture');
+    expect(trace).not.toContain('play');
   });
 
   it('AD-12 R-51 a strip tile released over gap 0 dispatches one setPlacementOrder', async () => {
@@ -4972,6 +5032,25 @@ describe('AD-12 epic 5 free-letter drag', () => {
     expect([z.b.tileFace, z.b.tile2Face].map((f) => f.style.transform)).toEqual(['', '']);
     z.fire('pointerup');
     expect(navCalls).toEqual([dispatched({ type: 'addFreeLetter', cell: 3, index: 2 })]);
+  });
+
+  it('AD-14 F17 a free-letter drag release captures before the ghost clears, then leaves the gate, dispatches and plays', async () => {
+    const t = await ready(null);
+    press(t);
+    centreOn(t, 56, GAP_Y);
+    let ghostAtCapture: boolean | null = null;
+    flipHooks.onCapture = () => {
+      ghostAtCapture = t.b.cell3.classes.has('wc-drag-ghost');
+    };
+    trace.length = 0;
+    t.fire('pointerup');
+    expect(ghostAtCapture).toBe(true);
+    const at = (x: string) => trace.indexOf(x);
+    expect(at('capture')).toBeGreaterThanOrEqual(0);
+    expect(at('capture')).toBeLessThan(at('leave'));
+    expect(at('leave')).toBeLessThan(at('dispatch'));
+    expect(at('dispatch')).toBeLessThan(at('play'));
+    expect(flipHooks.playResults[0]).toBe(flipHooks.result);
   });
 
   it('AD-12 F16 the caret takes the winning rect of a row-break gap and follows it to the other row’s rect', async () => {

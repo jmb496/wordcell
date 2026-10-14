@@ -69,10 +69,10 @@ deferred:
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `src/ui/gestures/controller.ts` -- add `capture`/`play` to `ControllerDeps`; bracket tap sites; make `end()` return the captured command (or null) and capture on 'up' per the Always rules, moving the tail deselect into `end()`; pointerup consumes it -- CAP-8, F7
-- [ ] `src/main.ts` -- wire `capture`/`play` to flip
-- [ ] `src/ui/gestures/controller.test.ts` -- fakes; AD-14 order test (deselect, capture, before finishAll/clearDrag, then leave, dispatch, play; tail drag and `perform` drop each with a selection); every-dispatch-site bracket test; capture=play invariant per EndReason variant (non-throwing dispatches); tapDestinationCard/setTarget empty set
-- [ ] `e2e/*.spec.ts` -- Playwright (android, Slow): running `getAnimations()` with positive remaining time on faces only (none on wrappers/mirrors), read in one `page.evaluate` right after touch end, for tap drop, tail drop, tap-add, removal, tap-swap, tile and free letter edit releases; `getKeyframes()[0]` plus settled rect equals released rect within 1 px (translate glides; parted face at parted offset; zero-distance faces excluded); reduced-motion fade without first-keyframe check; no-edit flyBack; P5
+- [x] `src/ui/gestures/controller.ts` -- add `capture`/`play` to `ControllerDeps`; bracket tap sites; make `end()` return the captured command (or null) and capture on 'up' per the Always rules, moving the tail deselect into `end()`; pointerup consumes it -- CAP-8, F7
+- [x] `src/main.ts` -- wire `capture`/`play` to flip
+- [x] `src/ui/gestures/controller.test.ts` -- fakes; AD-14 order test (deselect, capture, before finishAll/clearDrag, then leave, dispatch, play; tail drag and `perform` drop each with a selection); every-dispatch-site bracket test; capture=play invariant per EndReason variant (non-throwing dispatches); tapDestinationCard/setTarget empty set
+- [x] `e2e/*.spec.ts` -- Playwright (android, Slow): running `getAnimations()` with positive remaining time on faces only (none on wrappers/mirrors), read in one `page.evaluate` right after touch end, for tap drop, tail drop, tap-add, removal, tap-swap, tile and free letter edit releases; `getKeyframes()[0]` plus settled rect equals released rect within 1 px (translate glides; parted face at parted offset; zero-distance faces excluded); reduced-motion fade without first-keyframe check; no-edit flyBack; P5
 
 **Acceptance Criteria:**
 - Given Slow motion, when a controller move is released, then the moving faces animate by `snap` from the released point.
