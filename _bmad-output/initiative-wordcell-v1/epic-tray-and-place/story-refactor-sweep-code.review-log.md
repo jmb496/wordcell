@@ -1,6 +1,6 @@
 # Review log — story-refactor-sweep-code (ticket 5.14)
 
-State: pass 1: done
+State: pass 2: done
 
 Pre-loop: HEAD 429584a, 282 words (copy: /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-refactor-sweep-code.review-log.passes/pass0.md). Budget 1500 words.
 
@@ -23,3 +23,18 @@ Reviewers: builder, edge-case, adversarial, ref-alignment  |  Findings: major 10
 ### Decision needed
 - none
 Words: 813 (2.9 x pass 0) | Snapshot: _bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-refactor-sweep-code.review-log.passes/pass1.md
+
+## Pass 2 — 2026-10-14
+Reviewers: fix-diff, edge-case, adversarial, ref-alignment  |  Findings: major 5 (merged), minor 6, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+### Applied (fixer items 1–11)
+- [major] Interface "only src change is S19" contradicts S6/S2/S7 src edits
+- [major] Consumers (S6 "changes screenshots") contradicts Rules (rendered output unchanged)
+- [major] Verify edit allow-list omits mandated work (S1 call-site adaptation, new helpers.spec/controller.test cases, hoist, S6 src, S19 cases)
+- [major] S19 regression case layer unspecified: default Playwright e2e/tray.spec.ts (android), forcing a fractional line width; `refit()` swaps `line.clientWidth` (measure() already fractional) (default applied)
+- [major] S20 strengthen vs rename: default add the used-cell-mark assert; rename only if plan shows R-33 sentence still covered (default applied)
+- [minor] S7 grep scope (.svelte, .css, inline style) and WAAPI out of scope; S4 case asserts return without waiting; S1 stale names recorded satisfied; every line number stale, S5 px values indicative
+### Default applied (technical)
+- S19 test layer, S20 assert-over-rename
+### Decision needed
+- none
+Words: 988 (3.5 x pass 0) | Snapshot: _bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-refactor-sweep-code.review-log.passes/pass2.md
