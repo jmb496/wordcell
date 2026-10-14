@@ -1,6 +1,6 @@
 # Review log — story-refactor-sweep-paperwork-and-budget
 
-State: pass 2: done
+State: done
 Pre-loop: HEAD 4f7f49f648df9df21e82ea63e603d8f1702a664d, 308 words, copy /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-refactor-sweep-paperwork-and-budget.review-log.passes/pass0.md
 Extra intent (from tickets.toml entry 15, not in the ticket; fixer adds to Description in pass 1):
 - interface: No code change; plan and ticket-record edits only.
@@ -39,3 +39,18 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 - P5 pass is from the test:all or test:screens run; cite S21, S22 to build-notes (CAP 12).
 ### Applied (pass 2)
 - all 6 majors and the minors applied; words 755 (2.45x pass 0, budget 770); Snapshot: story-refactor-sweep-paperwork-and-budget.review-log.passes/pass2.md. Unverified: `npx vitest run <file>` not executed (pretest/test scripts confirmed in package.json).
+
+## Pass 3 — 2026-10-14
+Reviewers: fix diff, builder/edge, ref alignment + adversarial  |  Findings: major 0, minor 6 (5 distinct), decision-needed 0  |  Dropped in triage: none
+Words (docs): 755 (2.45x pass 0)
+### Applied
+- none (converged)
+
+## Result — converged after 3 passes
+majors per pass: 8, 6, 0. Decision-needed: none. Technical defaults applied: 14 (pass 1: 8, pass 2: 6). Words 308 → 755. Unverified: `npx vitest run <file>` not executed (scripts confirmed in package.json).
+Unapplied minors:
+- S22 "12 workers" is the 2026-10-08 observation, not Playwright config (reword to "workers as observed").
+- S12: a failed timed run → owner stop, median not computed (no replacement run).
+- S12: watch re-run "slowest engine file" per-file timings of the first timed run; figure is the summary Duration.
+- Order: a red test:all or test:screens is an owner stop.
+- S22: its load run is separate from test:all; a pass is "not reproduced".
