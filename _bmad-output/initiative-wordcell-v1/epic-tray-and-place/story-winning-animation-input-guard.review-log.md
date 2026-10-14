@@ -1,6 +1,6 @@
 # Review log — story-winning-animation-input-guard (ticket 5.13)
 
-State: pass 5: done
+State: pass 6: done
 
 Pre-loop: HEAD b4217aca8a4b116c10a8e413a5e4e1992aa49812; copy /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-winning-animation-input-guard.review-log.passes/pass0.md; 365 words (wc -w of whole file).
 Mode: docs, thorough, max 7. Budget default 2.5x (~912 words).
@@ -86,3 +86,14 @@ Reviewers: fix-diff, edge-case, ref-alignment  |  Findings: major 2 (merged), mi
 - none
 Note: pass 4's fixer cut the unknown/tests/risk bullets of the Also: list (risk in frontmatter, unknown in Notes, tests in AC); the pass-5 fix-diff reviewer did not report the loss as a defect.
 Words (docs): 1147 (3.14x pass 0, over the 2.5x budget)  |  Snapshot: /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-winning-animation-input-guard.review-log.passes/pass5.md
+
+## Pass 6 — 2026-10-14
+Reviewers: fix-diff, edge-case (no findings), ref-alignment  |  Findings: major 1, minor 1, decision-needed 0  |  Dropped in triage: 0
+### Applied
+- [major] no test asserts the first new gesture completes the animation (calls `complete`) and the triggering gesture's events never do (F8 core clause) → item 1
+- [minor] generalised Undo pass-through must not override already-consumed gestures' marks → item 2
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none
+Words (docs): 1148 (3.15x pass 0, over the 2.5x budget)  |  Snapshot: /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-winning-animation-input-guard.review-log.passes/pass6.md
