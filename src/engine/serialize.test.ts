@@ -57,6 +57,7 @@ import validComposing from '../../fixtures/session-composing.json' with { type: 
 import validComposingDraft2Letters from '../../fixtures/session-composing-draft-2-letters.json' with {
   type: 'json',
 };
+import validComposingLong from '../../fixtures/session-composing-long.json' with { type: 'json' };
 import validGaveUp from '../../fixtures/session-gave-up.json' with { type: 'json' };
 import validGaveUpAfterCommit from '../../fixtures/session-gave-up-after-commit.json' with {
   type: 'json',
@@ -214,6 +215,7 @@ import validPlaceFreeLetterRedoTail from '../../fixtures/session-place-free-lett
 import validPlaceFreeLetterTwoCards from '../../fixtures/session-place-free-letter-two-cards.json' with {
   type: 'json',
 };
+import validPlaceLong from '../../fixtures/session-place-long.json' with { type: 'json' };
 import validPlaceOntoCommitted from '../../fixtures/session-place-onto-committed.json' with {
   type: 'json',
 };
@@ -295,9 +297,11 @@ type ValidName =
   | 'gave-up-after-commit'
   | 'place-compact'
   | 'place-free-letter-two-cards'
-  | 'place-onto-committed';
+  | 'place-onto-committed'
+  | 'composing-long'
+  | 'place-long';
 
-/** The fourteen CAP-9 round-trip fixtures (generator record: the plan's Implementation Notes). */
+/** The sixteen CAP-9 round-trip fixtures (generator record: the plan's Implementation Notes). */
 const VALID: readonly (readonly [ValidName, unknown])[] = [
   ['idle-fresh', validIdleFresh],
   ['composing', validComposing],
@@ -313,6 +317,8 @@ const VALID: readonly (readonly [ValidName, unknown])[] = [
   ['place-compact', validPlaceCompact],
   ['place-free-letter-two-cards', validPlaceFreeLetterTwoCards],
   ['place-onto-committed', validPlaceOntoCommitted],
+  ['composing-long', validComposingLong],
+  ['place-long', validPlaceLong],
 ];
 
 // --- rejection table ------------------------------------------------------------------------
@@ -897,6 +903,25 @@ describe('defining properties (§2, CAP-9)', () => {
       const cell = view(s, EN).cells.find((entry) => entry.cell === move.targetCell);
       expect(cell?.cards.length).toBeGreaterThan(0);
       expect(cell?.used).toBe(false);
+    },
+    // Ticket 5.12 (epic 5 SPEC CAP-9; AD-11): 14 tray tiles (S 7, F 1, D 6, the block on the left)
+    // with canIncK, so one `+` gives 15 (three compact rows at 412, perRow 7).
+    'composing-long': (s) => {
+      expect(s.cursor.phase).toBe('composing');
+      const move = s.moves[s.cursor.index];
+      expect(move.destinationSide).toBe('left');
+      const v = view(s, EN);
+      expect(v.phase).toBe('composing');
+      expect((v.draft?.arrangement.length ?? 0) + (v.draft?.destination.length ?? 0)).toBe(14);
+      expect(v.draft?.freeLetters).toHaveLength(1);
+      expect(v.canIncK).toBe(true);
+    },
+    // Ticket 5.12 (epic 5 SPEC CAP-9; AD-11): a strip of 15 tiles (three compact rows at 412,
+    // perRow 7); Confirm gives 0 tray tiles, Undo 15.
+    'place-long': (s) => {
+      expect(s.cursor.phase).toBe('place');
+      expect(s.moves.length).toBe(s.cursor.index + 1);
+      expect(view(s, EN).place?.placementOrder).toHaveLength(15);
     },
   };
 
@@ -1704,6 +1729,21 @@ const PLACE_COMPACT: readonly Command[] = [
   VALIDATE, // QUARTERED, target 9
 ];
 
+// Ticket 5.12 (seed 1): TAN committed to cell 3, then 7 source cards from column 1 on column 2 with
+// cell 3's top as the free letter; the block stays on the left (no Flip). k 6 gives 14 tiles, k 7 15.
+const COMPOSING_LONG_LEAD: readonly Command[] = [
+  drop(3, 2, 6),
+  FLIP,
+  VALIDATE,
+  CONFIRM,
+  drop(1, 7, 2),
+  { type: 'addFreeLetter', cell: 3 },
+];
+const COMPOSING_LONG: readonly Command[] = [
+  ...COMPOSING_LONG_LEAD,
+  { type: 'setDestinationCount', k: 6 },
+];
+
 const REBUILDS: readonly (readonly [string, unknown, () => Session])[] = [
   ['session-idle-fresh', validIdleFresh, () => deepFreeze(createSession(1))],
   ['session-composing', validComposing, () => fromSeed1(FIXTURE_TAN)],
@@ -1775,6 +1815,22 @@ const REBUILDS: readonly (readonly [string, unknown, () => Session])[] = [
         createSession(1),
         [...FIXTURE_TAN_DONE, drop(2, 2, 3), VALIDATE], // AIM (left side) → cell 3 on top of TAN
         ['tan', 'aim'],
+      ),
+  ],
+  [
+    'session-composing-long',
+    validComposingLong,
+    () => play(createSession(1), COMPOSING_LONG, ['tan']),
+  ],
+  [
+    'session-place-long',
+    validPlaceLong,
+    // The inline dictionary holds the 15-letter word the cards spell (no real word is that long).
+    () =>
+      play(
+        createSession(1),
+        [...COMPOSING_LONG_LEAD, { type: 'setDestinationCount', k: 7 }, VALIDATE],
+        ['tan', 'tnpdvimldxomiwn'],
       ),
   ],
 ];

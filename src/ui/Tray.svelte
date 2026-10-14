@@ -4,7 +4,7 @@ import type { CardId, GameView } from '../engine/index';
 import { game } from '../shell/game.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { dropTarget } from './gestures/drop-target';
-import { type TrayTile, trayOrder } from './layout/tray';
+import { type TrayLayout, type TrayTile, trayTiles } from './layout/tray';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import ControlRow from './tray/ControlRow.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
@@ -22,23 +22,13 @@ import WordLine from './tray/WordLine.svelte';
 // strip in `placementOrder` with origin tags and the `bottom`/`top` marks, and the meta (R-80),
 // no controls. Idle and Game over: all three rows empty. The band is the tile drag's one drop target
 // (AD-12 `use:dropTarget`, epic 5 SPEC CAP-5).
-let {
-  view,
-  w,
-  innerWidth,
-  height,
-}: { view: GameView; w: number; innerWidth: number; height: number } = $props();
+let { view, sizing, height }: { view: GameView; sizing: TrayLayout; height: number } = $props();
 
 // The draft in Composing and Place (`view.draft` is set in both); `place` only in Place.
 const draft = $derived(view.draft);
 const place = $derived(view.place);
 const NO_DESTINATION: readonly CardId[] = [];
-const tiles: TrayTile[] = $derived.by(() => {
-  if (view.place !== undefined)
-    return view.place.placementOrder.map((id) => ({ id, mirror: false }));
-  if (view.draft !== undefined) return trayOrder(view.draft);
-  return [];
-});
+const tiles: TrayTile[] = $derived(trayTiles(view));
 // Free-letter origin tags, looked up per render from `cells` (AD-3; no stored map).
 const tags: ReadonlyMap<CardId, number> = $derived(
   new Map(draft?.freeLetters.map((cell) => [originCard(view.cells, cell), cell]) ?? []),
@@ -61,8 +51,7 @@ const tags: ReadonlyMap<CardId, number> = $derived(
     faces={view.faces}
     strip={place !== undefined}
     {tags}
-    {w}
-    {innerWidth}
+    {sizing}
   />
   <div class="controls">
     {#if draft !== undefined}

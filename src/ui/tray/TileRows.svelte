@@ -2,12 +2,12 @@
 import type { CardId, Face } from '../../engine/index';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Card from '../Card.svelte';
-import { segmentEnds, type TrayTile, trayLayout } from '../layout/tray';
+import { segmentEnds, type TrayLayout, type TrayTile } from '../layout/tray';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { overlays } from '../overlays.svelte';
 
 // Epic 5 tile rows (DESIGN.md Tray band, Tile, Placement strip): a CSS grid of tile-pitch `Card`s
-// sized by `trayLayout`, card or compact mode. Composing: live S and free-letter tiles (place
+// sized by `layout.tray` (`trayLayout`), card or compact mode. Composing: live S and free-letter tiles (place
 // `tray`) with the D-block mirrors joined per row segment (one outline and one lock each). Place:
 // live strip tiles (place `strip`) in `placementOrder`, the first marked `bottom` and the last
 // `top` (R-50). A free-letter tile carries its origin-cell `tag` in both phases and modes; Card
@@ -27,19 +27,17 @@ let {
   faces,
   strip,
   tags,
-  w,
-  innerWidth,
+  sizing,
 }: {
   tiles: readonly TrayTile[];
   faces: readonly Face[];
   strip: boolean;
   /** Free-letter origin cell per live tile (Composing and Place). */
   tags: ReadonlyMap<CardId, number>;
-  w: number;
-  innerWidth: number;
+  /** The one `layout.tray` value the band's rows also read (AD-11, AD-3). */
+  sizing: TrayLayout;
 } = $props();
 
-const sizing = $derived(trayLayout(tiles.length, w, innerWidth));
 const pitch = $derived(sizing.tileWidth + 4);
 const mirrors = $derived(tiles.map((t) => t.mirror));
 

@@ -175,7 +175,11 @@ class FakeRoot {
 
 function fakeGate() {
   const counts = { enter: 0, leave: 0 };
+  const trace: string[] = [];
   const gate = {
+    scrollReset: () => {
+      trace.push('scrollReset');
+    },
     enter: () => {
       counts.enter += 1;
     },
@@ -184,7 +188,7 @@ function fakeGate() {
       counts.leave += 1;
     },
   } as unknown as Gate;
-  return { gate, active: () => counts.enter - counts.leave, counts };
+  return { gate, active: () => counts.enter - counts.leave, counts, trace };
 }
 
 const DURATIONS: Record<MotionKind, number> = {
@@ -218,6 +222,14 @@ function setup(options: { reduced?: boolean; phase?: Phase | undefined } = {}) {
   const stagger = vi.fn(() => (state.reduced ? 0 : 30));
   const flip: Flip = createFlip({
     gate: g.gate,
+    layout: {
+      beginMove: () => {
+        g.trace.push('beginMove');
+      },
+      endMove: () => {
+        g.trace.push('endMove');
+      },
+    },
     root: () => state.root as unknown as HTMLElement | null,
     reduced: () => state.reduced,
     phase: () => state.phase,
@@ -1044,5 +1056,53 @@ describe('AD-14 FLIP throws', () => {
     move(t, SAME_BAND);
     const animation = t.root.face(3).animations[0];
     expect(() => animation?.oncancel?.()).toThrow(/^AD-14 FLIP animation cancelled/);
+  });
+});
+
+describe('AD-11 move bracket', () => {
+  it('AD-11 capture clears scroll-busy, then opens the layout move, before anything else', () => {
+    const t = setup();
+    t.root.show(START);
+    t.flip.capture();
+    expect(t.trace).toEqual(['scrollReset', 'beginMove']);
+  });
+
+  it('AD-11 play applies the layout move right after the move flush and before it measures or animates', () => {
+    const t = setup();
+    t.root.show(START);
+    t.flip.capture();
+    t.trace.length = 0;
+    svelteFlush.onFlush = () => {
+      t.trace.push('flush');
+      t.root.show(SAME_BAND);
+    };
+    t.flip.play(flipCommand, CHANGED);
+    expect(t.trace).toEqual(['flush', 'endMove']);
+    expect(t.root.face(3).animations).toHaveLength(1);
+  });
+
+  it('AD-11 a no-op move (failed Validate) still brackets: reset, begin, end', () => {
+    const t = setup();
+    t.root.show(START);
+    move(t, START, { type: 'validate' }, { changed: false });
+    expect(t.trace).toEqual(['scrollReset', 'beginMove', 'endMove']);
+    expect(t.counts.enter).toBe(0);
+  });
+
+  it('AD-14 a pure band shift (every band and card up 6 px) animates no face', () => {
+    const t = setup();
+    t.root.show(START);
+    const up = (rect: Box): Box => ({ ...rect, top: rect.top - 6 });
+    const shifted: Scene = {
+      cards: START.cards.map((card) => ({ ...card, rect: up(card.rect) })),
+      bands: {
+        columns: up(BANDS.columns),
+        tray: up(BANDS.tray),
+        wordcells: up(BANDS.wordcells),
+      },
+    };
+    move(t, shifted);
+    expect(t.counts.enter).toBe(0);
+    for (const id of [3, 4, 7]) expect(t.root.face(id).animations).toHaveLength(0);
   });
 });

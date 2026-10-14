@@ -1,7 +1,15 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { createFlip } from '../flip';
 import { createGate } from '../gestures/gate';
 import { BAND_ORDER, parseBandsParam } from './bands';
 import { createLayout, type Layout, type LayoutDeps } from './layout.svelte';
+import { trayLayout } from './tray';
+
+// flip.ts reaches the game store through fly-back's prefs import (window at import): mocked as
+// flip.test.ts does.
+vi.mock('../../shell/prefs.svelte', () => ({
+  prefs: { motion: { baseMs: 180, reduced: false } },
+}));
 
 // AD-11 live layout with fake deps and a real gate on fake frames/timers. Server-compiled runes:
 // no `$effect` runs and `flushSync` is a no-op, so only getters and fake scroll writes are
@@ -19,6 +27,7 @@ type Viewport = {
   scrollY?: number;
   banner?: boolean;
   search?: string;
+  tiles?: number;
 };
 
 function setup(viewport: Viewport, initialPadding = { paddingTop: '0px', paddingBottom: '0px' }) {
@@ -28,6 +37,7 @@ function setup(viewport: Viewport, initialPadding = { paddingTop: '0px', padding
   const calls: string[] = [];
   const scrolls: number[] = [];
   let bannerCallback: (() => void) | undefined;
+  let tilesCallback: (() => void) | undefined;
   const padding = { ...initialPadding };
   const appended: { style: { cssText: string } }[] = [];
   const queries: string[] = [];
@@ -36,6 +46,7 @@ function setup(viewport: Viewport, initialPadding = { paddingTop: '0px', padding
     scrollY: 0,
     banner: false,
     search: '',
+    tiles: 0,
     ...viewport,
   };
   let layout: Layout | undefined;
@@ -95,6 +106,10 @@ function setup(viewport: Viewport, initialPadding = { paddingTop: '0px', padding
     watchBanner: (callback) => {
       bannerCallback = callback;
     },
+    tileCount: () => v.tiles,
+    watchTiles: (callback) => {
+      tilesCallback = callback;
+    },
   };
 
   const frames: (() => void)[] = [];
@@ -117,6 +132,7 @@ function setup(viewport: Viewport, initialPadding = { paddingTop: '0px', padding
   };
 
   layout = createLayout(gate, deps);
+  const created = layout;
   laidOut = { heights: layout.heights, innerHeight: v.innerHeight };
   const emit = (type: string) => {
     for (const listener of listeners.get(type) ?? []) listener();
@@ -137,6 +153,18 @@ function setup(viewport: Viewport, initialPadding = { paddingTop: '0px', padding
     flipMedia: (matches: boolean) => {
       v.hoverFine = matches;
       for (const listener of mediaListeners) listener();
+    },
+    /** A tile-count change outside a move (restore, New game, Replay): the watcher fires. */
+    swapTiles: (count: number) => {
+      v.tiles = count;
+      tilesCallback?.();
+    },
+    /** One move (flip.ts capture → dispatch → play): the view changes between begin and end. */
+    move: (count: number) => {
+      created.beginMove();
+      v.tiles = count;
+      tilesCallback?.();
+      created.endMove();
     },
     bannerChange: (shown: boolean) => {
       v.banner = shown;
@@ -475,5 +503,182 @@ describe('AD-11 live layout', () => {
     expect(t.layout.w).toBe(40);
     expect(t.layout.metrics.board).toBe(352);
     expect(t.layout.wide).toBe(true);
+  });
+});
+
+describe('AD-11 tray rows', () => {
+  const PERROW = 7; // 412: w 46, trayInnerWidth 384
+  const long = { ...PIXEL_7, innerHeight: 839 };
+
+  it('AD-11 trayLayout rows are 0, 1, 1, 2, 2, 3 for 0, 1, perRow, perRow + 1, 14, 15 tiles; the band grows only from three rows', () => {
+    const t = setup(long);
+    const base = t.layout.heights.tray;
+    const seen: [number, number, number][] = [];
+    for (const count of [0, 1, PERROW, PERROW + 1, 14, 15]) {
+      t.swapTiles(count);
+      seen.push([count, t.layout.tray.rows, t.layout.heights.tray - base]);
+    }
+    expect(seen).toEqual([
+      [0, 0, 0],
+      [1, 1, 0],
+      [7, 1, 0],
+      [8, 2, 0],
+      [14, 2, 0],
+      [15, 3, 48],
+    ]);
+  });
+
+  it('AD-3 the Tray sizing and the band rows share one value', () => {
+    const t = setup({ ...long, tiles: 15 });
+    expect(t.layout.tray).toBe(t.layout.tray);
+    expect(t.layout.tray).toEqual(trayLayout(15, 46, 384));
+    expect(t.layout.tray.mode).toBe('compact');
+    expect(t.layout.heights).toBe(t.layout.heights);
+  });
+
+  it('AD-11 a move that grows 14 → 15 at 412 × 839 keeps scrollTop (leftover 101 absorbs +48) and leaves the heights', () => {
+    const t = setup({ ...long, tiles: 14 });
+    const before = t.layout.heights.leftover;
+    t.move(15);
+    expect(t.layout.tray.rows).toBe(3);
+    expect(t.layout.heights.leftover).toBe(before - 48);
+    expect(t.v.scrollY).toBe(0);
+    expect(t.calls).toEqual([]);
+  });
+
+  it('AD-11 a move 14 → 15 → 14 at 412 × 780 scrolls 6 px, then returns to 0 (the shrink clamp equals the anchor delta)', () => {
+    const t = setup({ ...PIXEL_7, innerHeight: 780, tiles: 14 });
+    t.move(15);
+    expect(t.calls).toEqual(['ignoreNextScroll', 'scrollTo 6']);
+    expect(t.v.scrollY).toBe(6);
+    t.move(14);
+    // The browser already clamped scrollTop to 0 when the band shrank; the anchor delta agrees.
+    expect(t.calls).toEqual(['ignoreNextScroll', 'scrollTo 6']);
+    expect(t.v.scrollY).toBe(0);
+  });
+
+  it('AD-11 every tile-count edit kind (+1 and -1 around each row boundary) follows the rows in its move', () => {
+    const t = setup({ ...long, tiles: 6 });
+    const rows: number[] = [];
+    for (const count of [7, 8, 7, 14, 15, 14, 1, 0, 3]) {
+      t.move(count);
+      rows.push(t.layout.tray.rows);
+    }
+    expect(rows).toEqual([1, 2, 1, 2, 3, 2, 1, 0, 1]);
+  });
+
+  it('AD-11 a restore, New game or Replay swap sets the rows with no scroll write', () => {
+    const t = setup({ ...PIXEL_7, innerHeight: 780 });
+    t.swapTiles(15);
+    expect(t.layout.tray.rows).toBe(3);
+    t.swapTiles(0);
+    expect(t.layout.tray.rows).toBe(0);
+    expect(t.calls).toEqual([]);
+    expect(t.scrolls).toEqual([]);
+  });
+
+  it('AD-11 a swap then a move applies the anchor delta against the swapped rows', () => {
+    const t = setup({ ...PIXEL_7, innerHeight: 780 });
+    t.swapTiles(14);
+    t.move(15);
+    expect(t.calls).toEqual(['ignoreNextScroll', 'scrollTo 6']);
+  });
+
+  it('AD-11 a move whose rows do not change writes nothing, even while scroll-busy', () => {
+    const t = setup({ ...long, tiles: 14 });
+    t.gate.scroll();
+    expect(t.gate.busy).toBe(true);
+    t.move(14);
+    t.move(13);
+    expect(t.calls).toEqual([]);
+  });
+
+  it('AD-11 a row-changing move finding the gate busy throws, with no catch', () => {
+    const t = setup({ ...long, tiles: 14 });
+    t.gate.enter();
+    expect(() => t.move(15)).toThrow('AD-11 tray rows changed while the gate is busy');
+  });
+
+  it('AD-11 a row-changing move after a scroll-reset gate re-lays out at once (14 → 15 within 150 ms of a scroll)', () => {
+    const t = setup({ ...PIXEL_7, innerHeight: 780, tiles: 14 });
+    t.emit('scroll');
+    expect(t.gate.busy).toBe(true);
+    // flip.capture(): scrollReset first; without it the endMove below throws.
+    t.gate.scrollReset();
+    expect(t.gate.busy).toBe(false);
+    t.move(15);
+    expect(t.calls).toEqual(['ignoreNextScroll', 'scrollTo 6']);
+    expect(t.layout.heights.tray).toBeGreaterThan(0);
+  });
+
+  it('AD-11 beginMove while a move is open and endMove without one throw', () => {
+    const t = setup(long);
+    expect(() => t.layout.endMove()).toThrow('AD-11 endMove() without beginMove()');
+    t.layout.beginMove();
+    expect(() => t.layout.beginMove()).toThrow('AD-11 beginMove() while a move is open');
+  });
+});
+
+describe('AD-11 tray rows through flip.capture() / play()', () => {
+  const rect = { getBoundingClientRect: () => ({ left: 0, top: 0, width: 1, height: 1 }) };
+  const emptyRoot = { querySelectorAll: () => [], querySelector: () => rect };
+  const move780 = { ...PIXEL_7, innerHeight: 780 };
+  const validate = { type: 'validate' } as const;
+
+  // A real flip over the real layout and gate; no cards on the fake root, so nothing glides.
+  function flipOver(t: ReturnType<typeof setup>, gate: typeof t.gate = t.gate) {
+    return createFlip({
+      gate,
+      layout: t.layout,
+      root: () => emptyRoot as unknown as HTMLElement,
+      reduced: () => false,
+      phase: () => 'composing',
+      duration: () => 0,
+      stagger: () => 0,
+    });
+  }
+
+  it('AD-11 a 14 → 15 move within 150 ms of a scroll is busy before capture(), idle after, and re-lays out in play()', () => {
+    const t = setup({ ...move780, tiles: 14 });
+    const flip = flipOver(t);
+    t.emit('scroll');
+    expect(t.gate.busy).toBe(true);
+    flip.capture();
+    expect(t.gate.busy).toBe(false);
+    t.swapTiles(15);
+    flip.play({ type: 'setDestinationCount', k: 2 }, { changed: true });
+    expect(t.layout.tray.rows).toBe(3);
+    expect(t.calls).toEqual(['ignoreNextScroll', 'scrollTo 6']);
+  });
+
+  it('AD-11 without gate.scrollReset() in capture() the same move throws at play()', () => {
+    const t = setup({ ...move780, tiles: 14 });
+    const noReset = Object.create(t.gate, { scrollReset: { value: () => {} } });
+    const flip = flipOver(t, noReset);
+    t.emit('scroll');
+    flip.capture();
+    expect(t.gate.busy).toBe(true);
+    t.swapTiles(15);
+    expect(() => flip.play({ type: 'setDestinationCount', k: 2 }, { changed: true })).toThrow(
+      'AD-11 tray rows changed while the gate is busy',
+    );
+  });
+
+  it('AD-11 a failed Validate or no-op move within 150 ms of a scroll leaves the gate idle and the rows unchanged', () => {
+    const t = setup({ ...move780, tiles: 14 });
+    const flip = flipOver(t);
+    const rows = t.layout.tray.rows;
+    t.emit('scroll');
+    expect(t.gate.busy).toBe(true);
+    flip.capture();
+    flip.play(validate, { changed: false, rejectedWord: 'xyz' });
+    expect(t.gate.busy).toBe(false);
+    expect(t.layout.tray.rows).toBe(rows);
+    t.emit('scroll');
+    flip.capture();
+    flip.play({ type: 'flip' }, { changed: false });
+    expect(t.gate.busy).toBe(false);
+    expect(t.layout.tray.rows).toBe(rows);
+    expect(t.calls).toEqual([]);
   });
 });

@@ -1,7 +1,7 @@
 // Tray geometry: tile sizing and tile order after DESIGN.md Tray band and Tile (F2, build-notes
 // CAP-2), and the resting slot rects, insertion gap rects, parting offsets and D-block segment ends
 // tile and free-letter drags use (F3, build-notes CAP-5, CAP-6). Pure: no DOM, `window` or Svelte.
-import type { CardId, DestinationSide } from '../../engine/index';
+import type { CardId, DestinationSide, GameView } from '../../engine/index';
 import type { GapRect, Rect } from '../gestures/targeting';
 import { cardMetrics } from './geometry';
 
@@ -49,6 +49,22 @@ export function trayOrder(draft: {
   const live = draft.arrangement.map((id) => ({ id, mirror: false }));
   const block = draft.destination.map((id) => ({ id, mirror: true }));
   return draft.side === 'left' ? [...block, ...live] : [...live, ...block.reverse()];
+}
+
+/**
+ * The tiles the Tray renders (AD-3): the strip in `placementOrder` in Place, the R-30 tray order in
+ * Composing, none otherwise. The one source of the tile count `layout.tray` rows are derived from.
+ */
+export function trayTiles(view: GameView): TrayTile[] {
+  if (view.place !== undefined)
+    return view.place.placementOrder.map((id) => ({ id, mirror: false }));
+  if (view.draft !== undefined) return trayOrder(view.draft);
+  return [];
+}
+
+/** The tile count of `trayTiles(view)` (build-notes CAP-9). */
+export function trayTileCount(view: GameView): number {
+  return trayTiles(view).length;
 }
 
 const isInt = (n: number | undefined): boolean => Number.isInteger(n);

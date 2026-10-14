@@ -1,7 +1,8 @@
 // AD-14 FLIP (epic 5 SPEC CAP-8, F6, F7, F17, F22, F27; AD-10, AD-11): one module glides the
 // `.face` inside each live element (`[data-card-id]`) from its previous to its next rect around a
 // button-driven move; the wrapper (identity, hit rect) is never animated or classed, and mirrors
-// (`[data-mirror-of]`) never take part. `capture()` (before `game.dispatch`) finishes every running
+// (`[data-mirror-of]`) never take part. `capture()` (before `game.dispatch`) clears page-scroll
+// busy (`gate.scrollReset()`), opens the layout's move (`beginMove`), finishes every running
 // glide, flushes Svelte (a selection cleared just before renders, so no lift is recorded), then
 // records per CardId the face's viewport rect and its band (from `data-place`) and each band's
 // `[data-band]` rect. `play(command, result)` flushes, measures again and plans per face (pure
@@ -30,6 +31,7 @@ import { DRAG_TILES, GLIDE } from './gestures/classes';
 import { translate } from './gestures/fly-back';
 import type { Gate } from './gestures/gate';
 import { found } from './gestures/lookup';
+import type { Layout } from './layout/layout.svelte';
 import type { MotionKind } from './motion';
 
 /**
@@ -176,6 +178,8 @@ export function planGlides(input: {
 
 export type FlipDeps = {
   readonly gate: Gate;
+  /** AD-11: the move bracket (`beginMove` in `capture()`, `endMove` in `play()`). */
+  readonly layout: Pick<Layout, 'beginMove' | 'endMove'>;
   /** App's `<main>` (mounted after main.ts builds the deps); null before the mount. */
   root(): HTMLElement | null;
   /** `prefs.motion.reduced`, read at each play. */
@@ -280,6 +284,9 @@ export function createFlip(deps: FlipDeps): Flip {
 
   function capture(): void {
     if (pending !== null) throw new Error('AD-14 FLIP capture() while a capture is pending');
+    // AD-11 (F24): every move clears page-scroll busy first, so its tray re-layout runs at once.
+    gate.scrollReset();
+    deps.layout.beginMove();
     finishAll();
     flushSync();
     pending = measure(rootFor('capture'));
@@ -293,6 +300,8 @@ export function createFlip(deps: FlipDeps): Flip {
     if (phase === undefined) throw new Error('AD-14 FLIP play() with no view');
     const kind = motionKind(command, result, phase);
     flushSync();
+    // AD-11: the move's update is flushed; the tray-row change's anchor scroll lands before measuring.
+    deps.layout.endMove();
     const root = rootFor('play');
     const after = measure(root);
     for (const id of before.placed.keys()) {

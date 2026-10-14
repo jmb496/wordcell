@@ -12,6 +12,7 @@ import { createGate } from './ui/gestures/gate';
 import Halted from './ui/Halted.svelte';
 import { openHistoryNotice } from './ui/history-notice.svelte';
 import { browserLayoutDeps, createLayout } from './ui/layout/layout.svelte';
+import { trayTileCount } from './ui/layout/tray';
 import { duration, stagger } from './ui/motion';
 import { overlays } from './ui/overlays.svelte';
 // Imported before boot so the `@font-face` the font check loads is registered.
@@ -129,9 +130,13 @@ async function boot(): Promise<void> {
     setTimer: (callback, ms) => setTimeout(callback, ms),
     clearTimer: (handle) => clearTimeout(handle),
   });
-  const layout = createLayout(gate, browserLayoutDeps());
+  const layout = createLayout(
+    gate,
+    browserLayoutDeps(() => (game.view === undefined ? 0 : trayTileCount(game.view))),
+  );
   const flip = createFlip({
     gate,
+    layout,
     root: () => target.querySelector('main'),
     reduced: () => prefs.motion.reduced,
     phase: () => game.view?.phase,

@@ -8,7 +8,7 @@ import { type AnyNode, isNode, parseSvelte, ROOT, walk } from './architecture-sc
 // --- AD-17 valid fixtures -------------------------------------------------------------------
 
 describe('AD-17 valid session fixtures', () => {
-  it('AD-17 the valid fixtures/session-*.json files are exactly the fourteen rebuilt ones', () => {
+  it('AD-17 the valid fixtures/session-*.json files are exactly the sixteen rebuilt ones', () => {
     // Own copy of serialize.test.ts's VALID names (tests never import each other); serialize.test.ts
     // ties REBUILDS to VALID, so a new valid fixture fails here until both lists there name it.
     const names = readdirSync(posix.join(ROOT, 'fixtures'))
@@ -17,6 +17,7 @@ describe('AD-17 valid session fixtures', () => {
     expect(names).toEqual([
       'session-below-committed-last.json',
       'session-composing-draft-2-letters.json',
+      'session-composing-long.json',
       'session-composing.json',
       'session-gave-up-after-commit.json',
       'session-gave-up.json',
@@ -26,6 +27,7 @@ describe('AD-17 valid session fixtures', () => {
       'session-place-compact.json',
       'session-place-free-letter-redo-tail.json',
       'session-place-free-letter-two-cards.json',
+      'session-place-long.json',
       'session-place-onto-committed.json',
       'session-place.json',
       'session-won.json',
