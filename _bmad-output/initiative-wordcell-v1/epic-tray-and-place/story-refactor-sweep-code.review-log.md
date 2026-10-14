@@ -1,6 +1,6 @@
 # Review log — story-refactor-sweep-code (ticket 5.14)
 
-State: pass 4: done
+State: pass 5: done
 
 Pre-loop: HEAD 429584a, 282 words (copy: /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-refactor-sweep-code.review-log.passes/pass0.md). Budget 1500 words.
 
@@ -63,3 +63,18 @@ Reviewers: fix-diff, edge-case, adversarial, ref-alignment  |  Findings: major 3
 ### Decision needed
 - none
 Words: 1424 (5.0 x pass 0) | Snapshot: _bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-refactor-sweep-code.review-log.passes/pass4.md
+
+## Pass 5 — 2026-10-14
+Reviewers: fix-diff, edge-case, adversarial, ref-alignment  |  Findings: major 0, minor 4, decision-needed 0  |  Dropped in triage: 0
+### Applied
+- none (no major)
+### Decision needed
+- none
+
+## Result — converged after 5 passes
+Majors per pass: 10, 5, 4, 3, 0. Words 282 → 1424 (budget 1500).
+Unapplied minors:
+- Interface does not list the comment-only src edits (Board.svelte, lookup.ts header, hover-peek-timer.ts) that Verify allows.
+- Notes "Open question" still says scope is unknown; the Description now closes the deferred set.
+- S6 before/after computed-style record: say it is a temporary uncommitted probe, numbers in the plan.
+- A screenshot diff after S19 vs an S6 regression: stretch, one clause at most.
