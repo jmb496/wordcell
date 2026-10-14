@@ -1,19 +1,15 @@
-outcome: done
-ticket: 5.14
+outcome: complete
+ticket: 5.15
 reason: done
-next: 5.15
-updated: 2026-10-14T21:30:00Z
-summary: Ticket 5.14 (refactor sweep: code) is built, reviewed, tested and marked done.
+next: none
+updated: 2026-10-14T22:12:28Z
+summary: Ticket 5.15 (refactor sweep: paperwork and budget) is built, reviewed, tested and marked done; the epic has no tickets left.
 
 ## Report
 
-Ticket 5.14 is done: the epic's closing code cleanup (shared e2e helpers, one shared dialog card style, a word-line width fix, stronger tests). Ticket review (5 passes) and code review (2 passes) converged with nothing needing your input; `npm run test:all` passes.
+Ticket 5.15 is done: paperwork and measurements only, no code change. The unit-test budget holds (median 3.00 s, watch re-run 584 ms), the screenshot tests and `test:all` are green, and all 42 tray rule rows map to passing tests. Nothing needs your decision.
 
-**For you:**
-- `npm run test:screens` was not run (no Docker here); run it before the epic closes.
-- An open major from the 5-16 review (no test that a captured move equals the played move for free-letter drag ends) was deliberately not applied; it is in the plan's row table.
+Close-out docs: none from owner decisions; the 5.15 plan lists the close-out edits for the retrospective.
 
-Close-out docs: none
-
-Resume: `.claude/skills/epic-autopilot/scripts/loop.sh epic-tray-and-place`
-Tokens: 9.0M input-equivalent (build 50%, ticket review 30%, code review 18%, orchestrator 1%)
+Next: run `/bmad-retrospective` for epic-tray-and-place, apply its approved doc fixes, then mark the epic done with `bmad-preview-ticketing`.
+Digest: _bmad-output/implementation-artifacts/autopilot/epic-tray-and-place-20261008-1002.md

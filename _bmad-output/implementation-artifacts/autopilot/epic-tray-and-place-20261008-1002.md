@@ -253,3 +253,16 @@ Ref to fix upstream: none
 Tokens: 9.0M input-equivalent (build 50%, ticket review 30%, code review 18%, orchestrator 1%, other 1%)
 Worth knowing: S6 committed style-parity test deferred (story forbids new baselines); the 5-16 open major (capture = play invariant for free-letter drag ends etc.) was not applied and is reported to you; `npm run test:screens` not run (no Docker here) — run it before the epic closes.
 Close-out docs: none
+
+## 5.15 Refactor sweep: paperwork and budget — done
+What it adds: the epic's closing records: leftover paperwork rows recorded, the unit-test speed budget re-measured (median 3.00 s, watch re-run 584 ms, both within budget), and every tray rule mapped to a passing test. No code change.
+Ticket review: 3 passes, converged; nothing needed your input
+Build: built; commits 0fbcde4
+Code review: quick, 1 pass, converged; 0 fixes applied
+Tests: all passing (test:all; test:screens green per the plan)
+Ref to fix upstream: none
+Tokens: Tokens: 3.7M input-equivalent (ticket review 49%, build 34%, code review 10%, orchestrator 4%, other 2%); orchestrator peak context 57k
+Worth knowing: no source change; the plan lists the close-out edits for the retrospective (including the AGENTS.md Where-things-are additions for a bmad-project-context refresh). S22 not reproduced.
+Close-out docs: none
+## Run complete
+Close-out docs: none from owner decisions; see the 5.15 plan's build-notes close-out edit list for the retrospective.
