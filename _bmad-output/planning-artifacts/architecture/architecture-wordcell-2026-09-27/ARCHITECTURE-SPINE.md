@@ -517,13 +517,21 @@ sequenceDiagram
   bar's top, so a column under a bar is never a target and a release there flies back (epic 4
   SPEC F34); with a dev `?bands=` order that moves a bar off its edge every drag flies back (dev
   only). Tile, strip-tile and free-letter drags have the
-  tray band as their single drop target (accepted when it overlaps ≥ 25 % of the dragged rect's
-  area) and take the insertion index from a separate pure `insertionIndex(dragged, gapRects)` in
+  tray band as their single drop target, its hit rect clipped to the visible band like a column's
+  (epic 5 SPEC F4), accepted when it overlaps ≥ 25 % of the dragged rect's
+  area and take the insertion index from a separate pure `insertionIndex(dragged, gapRects)` in
   `targeting.ts` (nearest gap to the dragged centre, across wrapped rows nearest by distance;
   Vitest). Tile drags use the tray band; tile taps, column cards and WordCells hit-test on the
   full slot pitch: the live element is a slot wrapper `w + 4` wide carrying `data-card-id` (AD-14)
   with a `pointer-events: none` face, so the selection lift moves only the face (DESIGN.md Hit
-  rects, epic 4 SPEC F26). The dragged rect is the grabbed card's face rect after its transform;
+  rects, epic 4 SPEC F26). `data-place` `tray` and `strip` elements resolve to tile presses; a
+  D-block mirror press is a no-op that keeps a tile selection; a tile's wrapper spans the full
+  pitch both ways (tile width + 4 wide, tile height + 4 tall between rows) and the selected-tile 4 px
+  lift moves only the face (epic 5 SPEC F2). A tile or free-letter drag ends like a column drag
+  (epic 5 SPEC F5): `pointercancel`/`lostpointercapture` fly it back with no change; the tile
+  selection is cleared at the 8 px threshold and never restored (F18); a back mid-drag leaves the
+  app per the bare-Board rule (no history entry exists in Composing or Place) and the hide flush's
+  `cancel()` settles it at once with no dispatch. The dragged rect is the grabbed card's face rect after its transform;
   a dragged stack inside a tap selection keeps the 8 px lift (`SELECTION_LIFT_PX`, AD-11) in its
   transform, a stack dragged from above the selection is drawn evenly, and a restoring fly-back
   lands on the lifted slot with the lift, outline and `Here` returning at its start under both
@@ -658,13 +666,21 @@ sequenceDiagram
   WordCell view and peek copies, normal cards. Mirrors carry
   `data-mirror-of`, no `data-card-id` or `data-testid`, and never animate: they take no part in
   the FLIP glide, but a D-block mirror carries the tray's drag parting shift (snapped under
-  reduced motion; DESIGN.md Tray band, amended 2026-10-08). The store updates the
+  reduced motion; DESIGN.md Tray band, amended 2026-10-08). FLIP lives in one module, `src/ui/flip.ts`, which captures the rects of the
+  `.face` inside each live element before a view change and animates the faces, never the wrappers,
+  after the move's update and re-layout; each animation is gate-counted, and the controller's
+  `pointerdown` and `cancel()` finish every running one (epic 5 SPEC F6). The animation kind comes
+  from the dispatching command plus its `DispatchResult` and the resulting view phase, never from
+  comparing views (epic 5 SPEC F7). The store updates the
   Session on dispatch; animations run from the previous to the next view and are presentation
   only. Input during an animation completes it and acts on the settled state (EXPERIENCE.md
   Motion, including the winning-commit exception, implemented by deferring the end sheet).
   While the winning commit animation is pending, and for at least 300 ms after the win at any
-  speed (reduced motion and Fast included; amended 2026-10-08, epic 5 SPEC F23), `src/ui/motion.ts` installs one capture-phase
-  `pointerdown`/`click`/`keydown` listener on `document` that completes it and stops the event
+  speed (reduced motion and Fast included; amended 2026-10-08, epic 5 SPEC F23), `src/ui/motion.ts` installs capture-phase
+  listeners on `document` for `pointerdown`, `pointerup`, `pointercancel`, `click`, `keydown` and
+  `keyup` (the open-gesture tracker and the hide and `blur` clears are as epic 5 SPEC F8 states
+  them; the pending end-sheet open it cancels, the menu case and the Undo key aliases land in
+  epic 6) that complete it and stop the event
   (so native buttons are covered too: primary action, menu, Redo, banner Reload, end-sheet
   actions), except Undo (button or key aliases), which completes it, cancels the pending open,
   then undoes. Playwright: tap a WordCell during the winning animation → no view opens;
@@ -758,7 +774,7 @@ sequenceDiagram
     `controller.test.ts` into five files made the `/mnt/d` median worse (5.30 → 5.98 s: the drvfs
     suite is bound by total CPU, and each file adds worker start-up), so it was reverted, and from
     epic 4 the 5 s budget is measured warm on a checkout on the Linux filesystem (e.g.
-    `~/wordcell-watch`; 2.30 s at the epic 4 close), not on `/mnt/d` (owner, 2026-10-08, epic 4 SPEC F38, F41).
+    `~/wordcell-watch`; 2.30 s at the epic 4 close; 3.00 s at the epic 5 close, with a 584 ms watch re-run of the slowest engine file `src/engine/view.test.ts`), not on `/mnt/d` (owner, 2026-10-08, epic 4 SPEC F38, F41).
   - **Seeding.** `fixtures/*.json` (repo root) are serialised Sessions and histories shared
     by Vitest repro cases and Playwright: valid ones, plus the rejecting `session-invalid-*` and
     `history-invalid-*` files, one per parser check (the check codes in `src/engine/errors.ts`),
@@ -951,8 +967,9 @@ src/
                      # stored-key.ts
   ui/                # components; overlays.svelte.ts; layout/ (bands.ts, geometry.ts,
                      # layout.svelte.ts, tray.ts); gestures/ (controller.ts, classify.ts,
-                     # intent.ts, targeting.ts, drop-target.ts, gate.ts, click-swallow.ts);
-                     # act.ts; hover-peek.ts; motion.ts; keys.ts; text.ts;
+                     # intent.ts, targeting.ts, drop-target.ts, gate.ts, click-swallow.ts, classes.ts, fly-back.ts, hover-peek-timer.ts, lookup.ts, tile.ts,
+                     # visible-band.ts); tray/ (WordLine, TileRows, ControlRow .svelte, tags.ts);
+                     # act.ts; hover-peek.ts; motion.ts; flip.ts; keys.ts; text.ts;
                      # assets/ (font, OFL.txt)
   main.ts            # boot order (AD-16), global error handler (AD-15)
   architecture-tree-scan.test.ts, architecture-ad1.test.ts,
@@ -1043,7 +1060,7 @@ the per-ticket loop of `docs/development-methodology.md`.
 | 2 | Rules engine | Deal freeze and golden test (AD-5); Session types, replay and validation; commands and the command table (AD-2); view (AD-3); scoring and bands; history record, reconcile, `isRecorded`, statistics (AD-6); serialise/parse with rejection reasons (AD-7); `LangData` and the R-81 penalty (Scaffold deltas). Every engine sentence of spec §2–§6 tested | 1 |
 | 3 | App shell services | Game store states, dispatch and feedback (AD-4); history store (AD-6); storage (AD-7); dictionary load and retry (AD-8); clock and lifecycle (AD-9); seed; prefs and motion (AD-10); nav adapter and the overlays core (AD-13); fatal surface (AD-15); Session-rejected message, History notice and its Reset confirm (moved from rows 6 and 4, epic 3 spec E2, E3); boot order minus SW (AD-16); test-hook store accessors (`loaded()`, `current()`, `dictionaryState()`) and restore-boundary Playwright tests (AD-17) on a minimal board | 2 |
 | 4 | Board and gestures | Layout definition, geometry, gate and anchoring (AD-11); cards, columns, WordCells, top bar, action bar; pointer controller and targeting (AD-12); overlays store: tail selection and end-sheet states on the epic 3 core (AD-13); tap-select and foot pads; WordCell view (peek, sticky, hover); drop → Composing; every `GameView` board state, a static tray (live tiles, no gestures) and the Composing column gestures (epic 4 SPEC F1, F2, F17, moved from row 5; merged and deployed on its own, F29) | 3 |
-| 5 | Tray and Place | Tray interactions (tiles, destination block, D-block controls); free letters (tap and drag); arrange and tap-swap; Validate states and invalid-word line; placement strip; Confirm; FLIP and fly-to-cell (AD-14); tray growth | 4 |
+| 5 | Tray and Place | Tray interactions (tiles, destination block, D-block controls); free letters (tap and drag); arrange and tap-swap; Validate states and invalid-word line; placement strip; Confirm; FLIP and fly-to-cell (AD-14); tray growth; the winning-animation guard (AD-14; its pending end-sheet open, menu case and Undo key aliases move to epic 6, epic 5 SPEC F8) | 4 |
 | 6 | Game surfaces and keyboard | Menu sheet, confirm dialogs, end sheet, Statistics, Preferences, How to play, the history-unreadable end-sheet block, Statistics message and menu dot, pending-draft line, keyboard map, screen-reader labels and live region; `__APP_VERSION__` injection and menu footer (Consistency Conventions) | 5 |
 | 7 | PWA and release | SW registration, update policy, offline test (AD-16, AD-17); `requestPersistence()`; test-hook `swState()` and `precacheComplete()` (AD-17); device checks (brief §6.2 force-stop, §6.3 ten qualifying games, relaunch into Game over → Android back collapses the end sheet, A-A11) | 3 (SW), 5 (offline test), 6 (release checks) |
 
