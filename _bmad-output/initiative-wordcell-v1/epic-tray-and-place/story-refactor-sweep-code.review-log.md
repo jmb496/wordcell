@@ -1,6 +1,6 @@
 # Review log — story-refactor-sweep-code (ticket 5.14)
 
-State: pass 3: done
+State: pass 4: done
 
 Pre-loop: HEAD 429584a, 282 words (copy: /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-refactor-sweep-code.review-log.passes/pass0.md). Budget 1500 words.
 
@@ -52,3 +52,14 @@ Reviewers: fix-diff, edge-case, adversarial, ref-alignment  |  Findings: major 4
 ### Decision needed
 - none
 Words: 1375 (4.9 x pass 0) | Snapshot: _bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-refactor-sweep-code.review-log.passes/pass3.md
+
+## Pass 4 — 2026-10-14
+Reviewers: fix-diff, edge-case, adversarial, ref-alignment  |  Findings: major 3 (merged), minor 2, decision-needed 0  |  Dropped in triage: 0
+### Applied (fixer items 1–4)
+- [major] Verify edit allow-list omits Interface src edits (WordLine.svelte, Dialog/BlockingMessage/shared style, S2/S7 conditional) and lookup.test.ts cases (4 reviewers) → default: allow-list defers to "the Interface src changes"
+- [major] Allow-list forbids S20's class-count assertion replacement → add S20 beside S5
+- [major] 5-4-build.md src comment-only minors (Board.svelte F20 wording, lookup.ts header, hover-peek-timer.ts rewrap): default applied only when trivial, listed in plan; Verify allows comment-only src edits listed in the plan (default applied)
+- [minor] lookup.ts header comment updated with the `attribute()` throw
+### Decision needed
+- none
+Words: 1424 (5.0 x pass 0) | Snapshot: _bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-refactor-sweep-code.review-log.passes/pass4.md
