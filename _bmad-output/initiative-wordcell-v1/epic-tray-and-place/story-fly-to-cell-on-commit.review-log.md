@@ -1,6 +1,6 @@
 # Review log — story-fly-to-cell-on-commit (ticket 5.11)
 
-State: pass 1: done
+State: pass 2: done
 
 Pre-loop: HEAD d42b29d5603d7e94c1b654ef430a3285fe40733b; copy /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-fly-to-cell-on-commit.review-log.passes/pass0.md; 301 words (wc -w of whole file).
 Mode: docs, thorough, max 7. Budget default 2.5x (~750 words).
@@ -24,3 +24,18 @@ Words (docs): 832 (2.76x pass 0, over the 2.5x budget)  |  Snapshot: story-fly-t
 ### Decision needed (functionality / UX / gameplay)
 - none
 Fixer flagged (unverified, builder to confirm): reactive in-flight set via svelte/reactivity as a member of the existing Flip object passed to WordCellRow as a prop.
+
+## Pass 2 — 2026-10-14
+Reviewers: fix-diff, edge-case, adversarial, ref-alignment  |  Findings: major 5, minor 6, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+Words (docs): 829 (2.75x pass 0, over budget; net -3 this pass)  |  Snapshot: story-fly-to-cell-on-commit.review-log.passes/pass2.md
+### Applied
+- [major] In-flight state — how WordCellRow reaches flip state; prop route contradicts "no new exports" (flip.ts `installed` private, no getter) → item 1
+- [major] In-flight state/Landing — set the committed set and hold before play()'s first flushSync (motionKind computed from command/result/phase first), else the mirror and previous cards are already gone → item 2
+- [major] Held used mirror — what supplies its id, DOM position (lowest in the cell), no duplicate of the flying live card → item 3
+- [major] Playback — planGlides 0.5 px skip must not apply to flyToCell; i indexes the flying set → item 4
+- [major] Tests/AC — missing: hold released by finishAll / play with no animation / empty target; source-cell mirror + beneath card for a free letter from another cell (session-place-free-letter-two-cards); winning commit; badge → item 5
+- [minor, zero- or negative-word] mark svelte/reactivity `unverified`; drop "decided, ..." suffix; "final cell order (bottom of the committed run first)"; reduced `duration('flyToCell')` instead of 120 ms where possible; Redo AC "let it settle"; AC "just after the first landing" = seek first face to its end; presentation only (AD-14) → item 6
+### Default applied (technical)
+- flip.ts exports its in-flight state (read-only) rather than a prop; set before the first flushSync; no 0.5 px skip for flyToCell
+### Decision needed (functionality / UX / gameplay)
+- none
