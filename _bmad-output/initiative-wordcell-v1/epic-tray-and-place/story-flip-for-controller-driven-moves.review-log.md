@@ -1,6 +1,6 @@
 # Review log — story-flip-for-controller-driven-moves (ticket 5.16)
 
-State: pass 3: done
+State: pass 4: done
 Pre-loop: HEAD 9b30ac0, copy .passes/pass0.md, 261 words. Mode docs, thorough, max 7.
 
 ## Pass 1 — 2026-10-14 10:55
@@ -49,3 +49,17 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (none)  |  Fin
 ### Decision needed
 - none
 Words: 745 (2.9 x pass 0)  |  Snapshot: .passes/pass3.md
+
+## Pass 4 — 2026-10-14 11:40
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 0, minor 8 (4 merged distinct), decision-needed 0  |  Dropped in triage: 0
+No fix pass run (converged). Words: 745 (2.9 x pass 0).
+
+## Result — converged after 4 passes
+Majors per pass: 8, 3, 2, 0. Decision-needed: none. Technical defaults applied: ~9 (ControllerDeps seam, parted-face glide, capture before parting.finishAll, end() records capture, tail deselect into end(), per-site-class bracket test, etc.).
+### Unapplied minors
+- Description para 1 "(on a halt, play runs or AD-15 wins)" is ambiguous and wrong as written: a throwing dispatch gives no DispatchResult, so play cannot run; replace with "a throwing dispatch reaches AD-15 and play does not run" and limit the capture=play invariant to non-throwing dispatches (raised by 3 reviewers; fix next build/loop).
+- Moved tail deselect: say it is a separate branch (highlighted !== null) ahead of the capture; the existing highlighted === null deselect stays.
+- Zero-distance glide (face whose settled rect equals released rect) excluded from the running-animation assertion; single-card tail.
+- No-op result after a non-null releaseCommand: play yields empty animated set.
+- P5: name the pressed card as one whose post-edit position differs from its mid-glide position.
+- Open question overlaps the Verify first-keyframe assertion; mark Verify as its resolution.
