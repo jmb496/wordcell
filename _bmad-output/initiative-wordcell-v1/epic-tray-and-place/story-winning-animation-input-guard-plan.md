@@ -3,7 +3,7 @@ title: 'Winning-animation input guard'
 type: 'feature'
 ticket: '13'
 created: '2026-10-14'
-status: 'built'
+status: done
 baseline_revision: 'bbaf8f12ef35fe7d1da59cc57f2248004e8be7b8'
 route: 'full'
 route_source: 'auto'

@@ -231,3 +231,14 @@ Ref to fix upstream: none
 Tokens: 7.0M input-equivalent (build 39%, code review 35%, ticket review 23%, orchestrator 2%); orchestrator peak 54k
 Worth knowing: (1) session-place-long.json uses a 15-letter non-word with an inline dictionary (no real 15-letter word available); the loader does not re-check membership. (2) Open major carried to the refactor sweep: the 780-px scroll-busy e2e in e2e/tray-growth.spec.ts asserts 0 < scrollY < 6 after a smooth scroll, which is timing-fragile; fix by dispatching scroll and click in one evaluate, or rely on the real-flip unit case. (3) The watchTiles effect (New game/Replay swap) is covered only by unit fakes. (4) Anchor scrollTop write during an Android fling unverified (epic 7 device checks). (5) test:screens not run (no Docker here).
 Close-out docs: none
+
+## 5.13 Winning-animation input guard — done
+What it adds: while the winning animation plays, stray taps, clicks and key presses (including a held Enter or a double tap on Confirm) are swallowed so they cannot start a new game or open views; Undo still works, and the guard lifts after the animation settles. Adds the fast-motion prefs fixture.
+Ticket review: 7 passes, converged (majors 10, 10, 6, 3, 2, 1, 0); nothing needed your input
+Build: built; commits a6bb2c2
+Code review: thorough (ticket risk high), 3 passes, converged (majors 4, 2, 0); fixes applied in WIP commits 855ad3e, 05451d2
+Tests: all passing
+Ref to fix upstream: none
+Tokens: 7.6M input-equivalent (ticket review 48%, code review 28%, build 20%, orchestrator 2%, other 2%); orchestrator peak context 57k
+Worth knowing: unapplied minors from the code review log (motion.ts `typeof closest` guard against rule 6, use `instanceof Element` or drop it; plan Code Map notes) carried to the refactor sweep (5.14). test:screens not run (no Docker here).
+Close-out docs: none
