@@ -32,8 +32,8 @@ import { type TouchHold, touchHold } from './helpers/touch';
 // extra slot while the layout has room, `origin` = tray position 0's wrapper + 2 px x, `w` and the
 // inner width read from the rendered tray). Every edit asserts the stored wordcell:session equals
 // the store's Session (R-73 (UI)) and then one zero `dragResidue` read. Local helpers
-// (shared ones are in e2e/helpers/, ticket 5.14 S1): `open`/`expectSaved`/`storedMove`/geometry/hold
-// helpers from e2e/tile-drag.spec.ts, the used-cell
+// (shared ones are in e2e/helpers/, ticket 5.14 S1): `open`/`expectSaved`/`storedMove`/geometry/
+// hold helpers from e2e/tile-drag.spec.ts, the used-cell
 // check after e2e/board-phases.spec.ts `expectUsedCell3`.
 
 const SESSION = 'wordcell:session';

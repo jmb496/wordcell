@@ -41,7 +41,8 @@ async function points(locator: Locator): Promise<Point[]> {
   return out;
 }
 
-// The rendered selection outline count plus lifted cards (a count here, not helpers/selection.ts's Selection): null when none.
+// The rendered selection outline count plus lifted cards (a count here, not
+// helpers/selection.ts's Selection): null when none.
 function selection(page: Page): Promise<number | null> {
   return page.evaluate(() => {
     const outlines = document.querySelectorAll('[data-selection-outline]').length;

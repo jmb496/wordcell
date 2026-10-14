@@ -40,7 +40,7 @@ import {
   showPage,
   startHidden,
 } from './helpers/lifecycle';
-import { onAndroid } from './helpers/project';
+import { onAndroid, onDesktop } from './helpers/project';
 import {
   booted,
   dictionaryReady,
@@ -558,9 +558,20 @@ test.describe('gesture and geometry helpers', () => {
     ]);
   });
 
-  test('AD-17 onAndroid does not skip on the android project', () => {
-    onAndroid();
-    expect(test.info().status).not.toBe('skipped');
+  test('AD-17 onAndroid and onDesktop skip exactly on the project that does not match', () => {
+    const original = test.skip;
+    const calls: unknown[][] = [];
+    (test as { skip: unknown }).skip = (...args: unknown[]) => {
+      calls.push(args);
+    };
+    try {
+      onAndroid();
+      onDesktop();
+    } finally {
+      (test as { skip: unknown }).skip = original;
+    }
+    const name = test.info().project.name;
+    expect(calls.map((c) => c[0])).toEqual([name !== 'android', name !== 'desktop']);
   });
 
   test('AD-17 isList matches the word-list fetch, not the dev server en.txt?url module', () => {
@@ -605,6 +616,18 @@ test.describe('gesture and geometry helpers', () => {
     await expectFlownBack(face, rest);
     await expectFlownBack(face, { ...rest, x: rest.x + 1 });
     await expect(expectFlownBack(face, { ...rest, x: rest.x + 3 })).rejects.toThrow();
+    // A running animation on the face is not flown back; it resolves once the animation ends.
+    await face.evaluate((el) => {
+      (window as unknown as { __anim: Animation }).__anim = el.animate(
+        [{ opacity: 1 }, { opacity: 0.5 }],
+        { duration: 60_000 },
+      );
+    });
+    await expect(
+      expect(async () => expectFlownBack(face, rest)).toPass({ timeout: 300 }),
+    ).rejects.toThrow();
+    await face.evaluate(() => (window as unknown as { __anim: Animation }).__anim.cancel());
+    await expectFlownBack(face, rest);
   });
 
   test('AD-17 placeholder, space and footCorner locate an empty column, a point in its space and a foot corner', async ({
@@ -615,13 +638,9 @@ test.describe('gesture and geometry helpers', () => {
     const f = await box(foot(page, 1));
     expect(await space(page, 1)).toEqual({ x: f.x + f.w / 2, y: f.y - 6 });
     expect(await footCorner(page, 1)).toEqual({ x: f.x + 3, y: f.y + 3 });
-    const last = await box(cards(page, 2).last());
-    const f2 = await box(foot(page, 2));
-    if (last.y + last.h >= f2.y - 6) {
-      await expect(space(page, 2)).rejects.toThrow('column 2 has no empty space');
-    } else {
-      expect((await space(page, 2)).y).toBe(f2.y - 6);
-    }
+    // Column 2 is full (7 cards), column 1 is empty with room.
+    await expect(cards(page, 2)).toHaveCount(7);
+    await expect(space(page, 2)).rejects.toThrow('column 2 has no empty space');
   });
 
   test('AD-17 holdThrough moves one held touch through the points, runs check after each and returns the live hold', async ({

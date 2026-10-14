@@ -454,6 +454,8 @@ test('R-32 R-33 R-30 R-36 R-37 (UI) AD-14 session-place-compact after one Undo: 
     await expect(tray(page).locator(`[data-mirror-of="${id}"]`)).toHaveCount(1);
   }
   await expect(blockFace(36)).not.toHaveCSS('border-left-width', '0px');
+  await expect(blockFace(36)).toHaveCSS('border-right-width', '0px');
+  await expect(blockFace(9)).toHaveCSS('border-left-width', '0px');
   await expect(blockFace(9)).not.toHaveCSS('border-right-width', '0px');
   await expect(blockFace(7)).not.toHaveCSS('border-left-width', '0px');
   await expect(blockFace(7)).not.toHaveCSS('border-right-width', '0px');

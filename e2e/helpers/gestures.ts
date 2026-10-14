@@ -41,7 +41,12 @@ export async function holdThrough(
 // A card wrapper's face (AD-14).
 export const faceOf = (card: Locator) => card.locator(':scope > .face');
 
-export const idOf = async (card: Locator) => Number(await card.getAttribute('data-card-id'));
+export async function idOf(card: Locator): Promise<number> {
+  const attr = await card.getAttribute('data-card-id');
+  const id = Number(attr);
+  if (attr === null || Number.isNaN(id)) throw new Error('card has no numeric data-card-id');
+  return id;
+}
 
 export const css = (locator: Locator, property: string) =>
   locator.evaluate((el, p) => getComputedStyle(el).getPropertyValue(p), property);

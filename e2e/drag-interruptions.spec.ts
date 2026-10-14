@@ -31,8 +31,8 @@ import { tokenColor } from './helpers/style';
 // Epic 4 entry 9: drag interruptions (SPEC CAP-4, CAP-7, F13, F24, F28; AD-9, AD-12, AD-13, AD-16,
 // AD-17; build-notes CAP-4 AD-17 hide case and Cancel-first P4). A pick-up drag started with a
 // tail selected replaces it (`wc-selection-suppressed` on `<main>` mid-drag); hide, back, Undo and
-// a platform pointercancel end a held drag. Shared helpers are in e2e/helpers/. `session-idle-fresh` columns hold 7/7/7/7/6/6/6/6 cards;
-// `session-idle-empty-column` has column 1 empty with Undo enabled.
+// a platform pointercancel end a held drag. Shared helpers are in e2e/helpers/.
+// `session-idle-fresh` columns hold 7/7/7/7/6/6/6/6 cards; `session-idle-empty-column` has column 1 empty with Undo enabled.
 
 const SUPPRESSED = 'wc-selection-suppressed';
 
