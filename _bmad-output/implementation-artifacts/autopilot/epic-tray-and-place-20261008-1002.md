@@ -193,3 +193,14 @@ Ref to fix upstream: none
 Tokens: 5.7M input-equivalent (ticket review 38%, build 35%, code review 22%, orchestrator 3%, other 2%); orchestrator peak context 58k
 Worth knowing: open item carried to the refactor sweep: the "no end leaves a capture pending" check is untested for free-letter drag ends, same-id, tail up with no highlight, long-press and sheet/scrim ends (code read-through found no such path). `npm run test:screens` was not run (Docker unavailable here); the ticket's verify line names it, so run it before the epic closes. Gate-idle is not asserted in e2e (test hook does not expose the gate).
 Close-out docs: none
+
+## Resumed — 2026-10-14T16:37Z
+
+## 5.11 Fly-to-cell on commit — stopped (needs your decision)
+What it adds: when you Confirm a word (or Redo one), the letters would fly one after another from the tray into the WordCell.
+Ticket review: 5 passes, diverging (majors 9, 5, 5, 1, 3); one question for you (below). Not built yet.
+Build: not started
+Ref to fix upstream: SPEC.md F7 and build-notes.md CAP-8 (Fly-to-cell): which cards count as "flying" when the free letter is already in a WordCell (spec intent); ticket wording of previous-card visibility (ticket only).
+Tokens: Tokens: 3.0M input-equivalent (ticket review 96%, orchestrator 2%, other 2%); orchestrator peak context 51k
+Worth knowing: the question: during a Confirm's flight into a WordCell that already holds cards, the spec as written would make the cell look empty briefly (up to ~270 ms for a 10-letter word) between the first landing and the top card landing, while F27 says Confirm's fly is where the cell never looks empty. Proposed default: keep previous and landed cards visible until the last landing, then hide all but the top together, so the cell never looks empty. Alternative: the spec literal, with a brief empty cell.
+Close-out docs: none yet (SPEC.md F7 / build-notes CAP-8 may need a line once you answer)

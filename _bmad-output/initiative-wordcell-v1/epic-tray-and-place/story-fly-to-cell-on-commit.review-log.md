@@ -1,6 +1,6 @@
 # Review log — story-fly-to-cell-on-commit (ticket 5.11)
 
-State: pass 4: done
+State: pass 5: done
 
 Pre-loop: HEAD d42b29d5603d7e94c1b654ef430a3285fe40733b; copy /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-fly-to-cell-on-commit.review-log.passes/pass0.md; 301 words (wc -w of whole file).
 Mode: docs, thorough, max 7. Budget default 2.5x (~750 words).
@@ -66,3 +66,19 @@ Words (docs): 827 (2.75x pass 0)  |  Snapshot: story-fly-to-cell-on-commit.revie
 - none new (pass 3's F27 item stands)
 ### Minors not applied (over budget; build-plan detail)
 - mirror stacking mechanism; `[data-mirror-of]` scope inside `.wordcell`; delay-phase face overlap with re-flowed tray; reduced-motion same-pass hide; flushSync before paint untested; Undo "between landings" AC; card already in a WordCell does not fly; winning-commit ordering vs CAP-10; landing-order observation procedure; no screenshot baseline change expected.
+
+## Pass 5 — 2026-10-14
+Reviewers: fix-diff, builder  |  Findings: major 3, minor 0, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 827 (2.75x pass 0)  |  Snapshot: unchanged from pass4.md (no fix applied)
+### Open (not fixed; majors rose 1 → 3, so the loop stops)
+- [major] `tests:` line (Also list) still says "own-cell used mirror and previous top kept until the first landing", contradicting the pass-4 rule (mirror is the only previous top drawn) in the Description and the own-cell AC.
+- [major] Description / In-flight state: "previous cards stay as hidden as before" is ambiguous against the AC "previous top shown until the first landing" (WordCellRow `hidden={i !== top}` would hide the old top after commit). State per card: previous top keeps its pre-commit visibility (shown), other previous cards hidden, in the own cell the used mirror stands for the previous top.
+- [major] Playback defines the flying set as cards whose band changed to the WordCells, but the own-cell case calls the free letter "also a flying face" though it is already in a WordCell (same band). Define the committed set once (cards the Confirm/Redo places in the target cell, a free letter already in a WordCell included), say it is the flying set (same-band members glide rect to rect), and whether a free letter from another cell flies or only loses its mirror.
+### Decision needed (functionality / UX / gameplay)
+- Pass 3's F27 item stands (cell empty between first and last landing vs F27 "never looks empty").
+
+## Result — diverging at pass 5 (fix: the ticket's own Description/tests line for the first two; SPEC F7 / build-notes CAP-8 for the flying-set definition)
+
+Majors per pass: 9, 5, 5, 1, 3. Technical defaults applied: 5 (landing hook, flip-owned state export, no 0.5 px skip, GLIDE + clip lift, DOM mirror id).
+### Minors not applied
+- mirror stacking mechanism; `[data-mirror-of]` scope inside `.wordcell`; delay-phase face overlap with re-flowed tray; reduced-motion same-pass hide; flushSync before paint untested; Undo "between landings" AC; card already in a WordCell does not fly; winning-commit ordering vs CAP-10; landing-order observation procedure; no screenshot baseline change expected; plus pass-3 minors recorded as Applied/unapplied above.
