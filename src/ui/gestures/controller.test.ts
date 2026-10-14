@@ -3235,6 +3235,39 @@ describe('AD-12 entry 12 desktop hover peek', () => {
     expect(t.overlays.hoverPeek).toBeNull();
   });
 
+  it('AD-14 the winning guard clears a pending hover timer at install, starts none while installed and one after uninstall', async () => {
+    const t = await setup();
+    t.detach();
+    const motion = await import('../motion');
+    let now = 0;
+    const stop = motion.startTracker(
+      { addEventListener: () => undefined, removeEventListener: () => undefined },
+      { addEventListener: () => undefined, removeEventListener: () => undefined },
+      () => now,
+      { setTimer: () => 0, clearTimer: () => undefined },
+    );
+    try {
+      t.media.hoverFine = true;
+      enter3(t);
+      expect(hoverTimers(t)).toBe(1);
+      motion.install(true, () => undefined);
+      expect(t.clearTimer).toHaveBeenCalledWith(t.setTimer.mock.results[0]?.value);
+      t.advance(1000);
+      expect(t.overlays.hoverPeek).toBeNull();
+      leave3(t);
+      enter3(t);
+      expect(hoverTimers(t)).toBe(1);
+      now = 300;
+      motion.notifySettled();
+      expect(motion.guardInstalled()).toBe(false);
+      leave3(t);
+      enter3(t);
+      expect(hoverTimers(t)).toBe(2);
+    } finally {
+      stop();
+    }
+  });
+
   it('AD-12 an entry while that cell’s hover peek is open does not arm', async () => {
     const t = await setup();
     t.detach();

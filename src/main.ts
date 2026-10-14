@@ -13,7 +13,7 @@ import Halted from './ui/Halted.svelte';
 import { openHistoryNotice } from './ui/history-notice.svelte';
 import { browserLayoutDeps, createLayout } from './ui/layout/layout.svelte';
 import { trayTileCount } from './ui/layout/tray';
-import { duration, stagger } from './ui/motion';
+import { duration, hideClear, stagger, startTracker } from './ui/motion';
 import { overlays } from './ui/overlays.svelte';
 // Imported before boot so the `@font-face` the font check loads is registered.
 import './ui/app.css';
@@ -144,6 +144,11 @@ async function boot(): Promise<void> {
     stagger,
   });
   setFlip(flip);
+  // AD-14 (F8): the always-on open-gesture tracker, once, before the controller is created.
+  startTracker(document, window, () => performance.now(), {
+    setTimer: (callback, ms) => setTimeout(callback, ms),
+    clearTimer: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
+  });
   const controller = createController(gate, {
     elementFromPoint: (x, y) => document.elementFromPoint(x, y),
     setTimer: (callback, ms) => setTimeout(callback, ms),
@@ -159,6 +164,7 @@ async function boot(): Promise<void> {
   });
   game.registerBeforeHide(() => controller.cancel());
   game.registerBeforeHide(() => gate.scrollReset());
+  game.registerBeforeHide(() => hideClear());
   nav.registerBeforeBack(() => controller.cancel({ byBack: true }));
   setController(controller);
   // AD-16 order: lifecycle listeners (and the visible-time clock) right after the load, before mount.

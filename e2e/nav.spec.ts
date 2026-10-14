@@ -1,4 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
+import { glidesSettled } from './helpers/board';
 import {
   button,
   confirmDialog,
@@ -196,6 +197,9 @@ test('AD-13 win → New game → back leaves the app; no notice (already shown t
   await page.getByTestId('redo').click();
   const primary = page.getByTestId('primary-action');
   await expect(primary).toHaveText('New game');
+  // AD-14 (F8): the winning guard consumes input until the animation settles and 300 ms pass.
+  await glidesSettled(page);
+  await page.waitForTimeout(500);
   await primary.click();
   // AD-8: a plain Validate label needs the word list loaded.
   await waitForDictionary(page, 'ready');

@@ -32,7 +32,7 @@ import { translate } from './gestures/fly-back';
 import type { Gate } from './gestures/gate';
 import { found } from './gestures/lookup';
 import type { Layout } from './layout/layout.svelte';
-import type { MotionKind } from './motion';
+import { install, type MotionKind, notifySettled } from './motion';
 
 /**
  * The band a live card sits in: `data-place` column → columns, tray/strip → tray, cell →
@@ -292,7 +292,16 @@ export function createFlip(deps: FlipDeps): Flip {
     pending = measure(rootFor('capture'));
   }
 
+  // AD-14 (F8): the winning guard installs on entry, before any early return, on the dispatch
+  // result; settle is notified here only when the move started no animation (otherwise from the
+  // last animation's settle).
   function play(command: Command, result: DispatchResult): void {
+    install(result.finished === 'won', finishAll);
+    playMove(command, result);
+    if (animations.size === 0) notifySettled();
+  }
+
+  function playMove(command: Command, result: DispatchResult): void {
     const before = pending;
     if (before === null) throw new Error('AD-14 FLIP play() without a capture');
     pending = null;
@@ -421,6 +430,7 @@ export function createFlip(deps: FlipDeps): Flip {
       tiles?.classList.remove(DRAG_TILES);
       tiles = null;
       releaseHold();
+      notifySettled();
     }
     gate.leave();
   }

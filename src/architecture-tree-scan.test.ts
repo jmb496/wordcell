@@ -19,4 +19,20 @@ describe('AD-1 tree scan', () => {
     const violations = files.flatMap((p) => check(p, readFileSync(posix.join(ROOT, p), 'utf8')));
     expect(violations.map((v) => `${v.path}: ${v.rule} (${v.detail})`)).toEqual([]);
   });
+  it('AD-14 src/main.ts starts the tracker before the controller and registers the hide-clear after controller.cancel and gate.scrollReset', () => {
+    const source = readFileSync(posix.join(ROOT, 'src/main.ts'), 'utf8');
+    const at = (needle: string) => {
+      const index = source.indexOf(needle);
+      expect(index, needle).toBeGreaterThan(-1);
+      return index;
+    };
+    const tracker = at('startTracker(');
+    const controller = at('createController(gate');
+    const cancel = at('game.registerBeforeHide(() => controller.cancel())');
+    const scroll = at('game.registerBeforeHide(() => gate.scrollReset())');
+    const clear = at('game.registerBeforeHide(() => hideClear())');
+    expect(tracker).toBeLessThan(controller);
+    expect(cancel).toBeLessThan(scroll);
+    expect(scroll).toBeLessThan(clear);
+  });
 });

@@ -1,5 +1,15 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { duration, type MotionKind, stagger } from './motion';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  duration,
+  guardInstalled,
+  hideClear,
+  install,
+  type MotionKind,
+  notifySettled,
+  setHoverClear,
+  stagger,
+  startTracker,
+} from './motion';
 
 const mocked = vi.hoisted(() => ({ motion: { baseMs: 180, reduced: false } }));
 
@@ -55,6 +65,428 @@ describe('motion', () => {
       expect(stagger()).toBe(30);
       mocked.motion = { baseMs, reduced: true };
       expect(stagger()).toBe(0);
+    }
+  });
+});
+
+// AD-14 winning guard (SPEC F8, F23): fake EventTargets, plain-object events, fake timers.
+type Listener = (event: Event) => void;
+class FakeTarget {
+  readonly listeners = new Map<string, Listener[]>();
+  addEventListener(type: string, listener: Listener): void {
+    this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener]);
+  }
+  removeEventListener(type: string, listener: Listener): void {
+    this.listeners.set(
+      type,
+      (this.listeners.get(type) ?? []).filter((l) => l !== listener),
+    );
+  }
+  count(): number {
+    let n = 0;
+    for (const list of this.listeners.values()) n += list.length;
+    return n;
+  }
+  fire(type: string): void {
+    for (const l of this.listeners.get(type) ?? []) l({ type } as Event);
+  }
+}
+
+type Fake = {
+  type: string;
+  pointerId?: number;
+  code?: string;
+  repeat?: boolean;
+  target: { closest(selector: string): unknown };
+  prevented: number;
+  stopped: number;
+  preventDefault(): void;
+  stopPropagation(): void;
+};
+
+const PLAIN = { closest: () => null };
+const UNDO_TARGET = { closest: (selector: string) => (selector.includes('undo') ? {} : null) };
+
+function make(type: string, extra: Partial<Fake> = {}, undo = false): Fake {
+  const e: Fake = {
+    type,
+    target: undo ? UNDO_TARGET : PLAIN,
+    prevented: 0,
+    stopped: 0,
+    preventDefault() {
+      e.prevented++;
+    },
+    stopPropagation() {
+      e.stopped++;
+    },
+    ...extra,
+  };
+  return e;
+}
+
+describe('AD-14 winning guard', () => {
+  let doc: FakeTarget;
+  let win: FakeTarget;
+  let stop: () => void;
+  let complete: () => void;
+  let hover: () => void;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    doc = new FakeTarget();
+    win = new FakeTarget();
+    stop = startTracker(doc, win, () => Date.now(), {
+      setTimer: (cb, ms) => setTimeout(cb, ms),
+      clearTimer: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
+    });
+    complete = vi.fn();
+    hover = vi.fn();
+    setHoverClear(hover);
+  });
+  afterEach(() => {
+    stop();
+    vi.useRealTimers();
+  });
+
+  function send(e: Fake): Fake {
+    for (const l of doc.listeners.get(e.type) ?? []) l(e as unknown as Event);
+    return e;
+  }
+  const consumed = (e: Fake) => e.prevented === 1 && e.stopped === 1;
+  const passed = (e: Fake) => e.prevented === 0 && e.stopped === 0;
+  const down = (id: number, undo = false) => send(make('pointerdown', { pointerId: id }, undo));
+  const up = (id: number, undo = false) => send(make('pointerup', { pointerId: id }, undo));
+  const key = (code: string, repeat = false) => send(make('keydown', { code, repeat }));
+  const keyup = (code: string) => send(make('keyup', { code }));
+  const click = (undo = false) => send(make('click', {}, undo));
+  const win1 = () => install(true, complete);
+
+  it('AD-14 no listener exists before startTracker and stop removes them all', () => {
+    expect(doc.count()).toBe(6);
+    expect(win.count()).toBe(1);
+    stop();
+    expect(doc.count()).toBe(0);
+    expect(win.count()).toBe(0);
+    stop = startTracker(doc, win, () => Date.now(), {
+      setTimer: (cb, ms) => setTimeout(cb, ms),
+      clearTimer: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
+    });
+    expect(() =>
+      startTracker(doc, win, () => 0, { setTimer: () => 0, clearTimer: () => undefined }),
+    ).toThrow('twice');
+  });
+
+  it('AD-14 install clears a pending hover timer, install while installed changes nothing', () => {
+    win1();
+    expect(hover).toHaveBeenCalledTimes(1);
+    expect(guardInstalled()).toBe(true);
+    vi.advanceTimersByTime(100);
+    install(true, vi.fn());
+    expect(hover).toHaveBeenCalledTimes(1);
+    expect(down(1).prevented).toBe(1);
+    expect(complete).toHaveBeenCalledTimes(1);
+    install(false, vi.fn());
+    expect(guardInstalled()).toBe(true);
+  });
+
+  it('AD-14 a pointerdown before settle completes once and is consumed, its gesture to its end', () => {
+    win1();
+    expect(consumed(down(1))).toBe(true);
+    expect(complete).toHaveBeenCalledTimes(1);
+    expect(consumed(up(1))).toBe(true);
+    expect(consumed(click())).toBe(true);
+    expect(consumed(down(2))).toBe(true);
+    expect(complete).toHaveBeenCalledTimes(1);
+  });
+
+  it('AD-14 a gesture at 299 ms is consumed, at 300 ms (settled) it is not and uninstalls', () => {
+    win1();
+    notifySettled();
+    vi.advanceTimersByTime(299);
+    expect(guardInstalled()).toBe(true);
+    expect(consumed(down(1))).toBe(true);
+    expect(complete).toHaveBeenCalledTimes(1);
+    up(1);
+    click();
+    stop();
+    stop = startTracker(doc, win, () => Date.now(), {
+      setTimer: (cb, ms) => setTimeout(cb, ms),
+      clearTimer: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
+    });
+    setHoverClear(hover);
+    vi.setSystemTime(1000);
+    win1();
+    notifySettled();
+    vi.advanceTimersByTime(300);
+    expect(guardInstalled()).toBe(false);
+    expect(passed(down(1))).toBe(true);
+    expect(complete).toHaveBeenCalledTimes(1);
+  });
+
+  it('AD-14 natural settle before 300 ms waits for 300 ms, after 300 ms uninstalls at settle', () => {
+    win1();
+    vi.advanceTimersByTime(100);
+    notifySettled();
+    vi.advanceTimersByTime(199);
+    expect(guardInstalled()).toBe(true);
+    vi.advanceTimersByTime(1);
+    expect(guardInstalled()).toBe(false);
+    stop();
+    stop = startTracker(doc, win, () => Date.now(), {
+      setTimer: (cb, ms) => setTimeout(cb, ms),
+      clearTimer: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
+    });
+    win1();
+    vi.advanceTimersByTime(1000);
+    expect(guardInstalled()).toBe(true);
+    notifySettled();
+    expect(guardInstalled()).toBe(false);
+  });
+
+  it('AD-14 a keydown after settle and 300 ms in the backstop window passes through and uninstalls', () => {
+    win1();
+    notifySettled();
+    vi.advanceTimersByTime(300);
+    expect(guardInstalled()).toBe(false);
+    stop();
+    stop = startTracker(doc, win, () => Date.now(), {
+      setTimer: () => 0,
+      clearTimer: () => undefined,
+    });
+    win1();
+    notifySettled();
+    vi.advanceTimersByTime(299);
+    // Timers are inert here: the lazy check on the event uninstalls at 300 ms.
+    vi.setSystemTime(Date.now() + 1);
+    expect(passed(key('KeyA'))).toBe(true);
+    expect(guardInstalled()).toBe(false);
+  });
+
+  it('AD-14 the backstop runs duration(snap) after the last consumed end, 120 ms under reduced motion', () => {
+    for (const reduced of [false, true]) {
+      mocked.motion = { baseMs: 180, reduced };
+      const snap = reduced ? 120 : 180;
+      vi.setSystemTime(10_000);
+      win1();
+      down(1);
+      vi.advanceTimersByTime(500);
+      notifySettled();
+      expect(guardInstalled()).toBe(true);
+      up(1);
+      vi.advanceTimersByTime(snap - 1);
+      expect(guardInstalled()).toBe(true);
+      vi.advanceTimersByTime(1);
+      expect(guardInstalled()).toBe(false);
+    }
+  });
+
+  it('AD-14 a consumed pointercancel ends the gesture with no owed click', () => {
+    win1();
+    down(1);
+    expect(consumed(send(make('pointercancel', { pointerId: 1 })))).toBe(true);
+    notifySettled();
+    vi.advanceTimersByTime(300);
+    expect(guardInstalled()).toBe(false);
+    expect(passed(click())).toBe(true);
+  });
+
+  it('AD-14 a key held at install: repeats and keyup consumed, never complete', () => {
+    key('Enter');
+    win1();
+    expect(consumed(key('Enter', true))).toBe(true);
+    expect(consumed(keyup('Enter'))).toBe(true);
+    expect(complete).not.toHaveBeenCalled();
+    expect(consumed(click())).toBe(true);
+  });
+
+  it('AD-14 after uninstall the tracker keeps consuming a consumed gesture to its end', () => {
+    win1();
+    down(1);
+    key('Enter');
+    notifySettled();
+    vi.advanceTimersByTime(1000);
+    expect(guardInstalled()).toBe(true);
+    // A pointerdown/keydown while a consumed gesture is open: consumed, no uninstall.
+    expect(consumed(down(2))).toBe(true);
+    expect(consumed(key('KeyA'))).toBe(true);
+    expect(guardInstalled()).toBe(true);
+    up(1);
+    up(2);
+    keyup('Enter');
+    keyup('KeyA');
+    vi.advanceTimersByTime(180);
+    expect(guardInstalled()).toBe(false);
+    // Owed click after uninstall: consumed once.
+    expect(consumed(click())).toBe(true);
+    expect(passed(click())).toBe(true);
+  });
+
+  it('AD-14 two overlapping pointers keep the guard until the last consumed end plus the backstop', () => {
+    win1();
+    down(1);
+    notifySettled();
+    vi.advanceTimersByTime(400);
+    down(2);
+    up(1);
+    vi.advanceTimersByTime(500);
+    expect(guardInstalled()).toBe(true);
+    up(2);
+    vi.advanceTimersByTime(179);
+    expect(guardInstalled()).toBe(true);
+    vi.advanceTimersByTime(1);
+    expect(guardInstalled()).toBe(false);
+  });
+
+  it('AD-14 a duplicate pointerdown of a tracked pointerId is the same gesture', () => {
+    win1();
+    down(1);
+    notifySettled();
+    vi.advanceTimersByTime(400);
+    const dup = down(1);
+    expect(consumed(dup)).toBe(true);
+    up(1);
+    vi.advanceTimersByTime(180);
+    expect(guardInstalled()).toBe(false);
+  });
+
+  it('AD-14 a stray keyup/pointerup is not consumed and does not extend the backstop', () => {
+    win1();
+    notifySettled();
+    vi.advanceTimersByTime(250);
+    expect(passed(up(9))).toBe(true);
+    expect(passed(keyup('KeyZ'))).toBe(true);
+    vi.advanceTimersByTime(50);
+    expect(guardInstalled()).toBe(false);
+  });
+
+  it('AD-14 a click with no tracked gesture is consumed while installed, inside Undo it is not', () => {
+    win1();
+    expect(consumed(click())).toBe(true);
+    const u = click(true);
+    expect(passed(u)).toBe(true);
+    expect(guardInstalled()).toBe(false);
+    expect(complete).toHaveBeenCalledTimes(1);
+  });
+
+  it('AD-14 Undo pointerdown completes, uninstalls and passes through, its up and click too', () => {
+    win1();
+    vi.advanceTimersByTime(50);
+    expect(passed(down(1, true))).toBe(true);
+    expect(complete).toHaveBeenCalledTimes(1);
+    expect(guardInstalled()).toBe(false);
+    expect(passed(up(1, true))).toBe(true);
+    expect(passed(click(true))).toBe(true);
+  });
+
+  it('AD-14 Undo while a consumed pointer is open still undoes; the pointer stays consumed with one owed click', () => {
+    win1();
+    down(1);
+    expect(passed(down(2, true))).toBe(true);
+    expect(guardInstalled()).toBe(false);
+    expect(passed(up(2, true))).toBe(true);
+    expect(passed(click(true))).toBe(true);
+    expect(consumed(up(1))).toBe(true);
+    expect(consumed(click())).toBe(true);
+    expect(passed(click())).toBe(true);
+  });
+
+  it('AD-14 consumed pointerup, Undo down/up/click, then the pointer click: owed neither consumed nor cleared by Undo', () => {
+    win1();
+    down(1);
+    up(1);
+    expect(passed(down(2, true))).toBe(true);
+    expect(passed(up(2, true))).toBe(true);
+    expect(passed(click(true))).toBe(true);
+    expect(consumed(click())).toBe(true);
+    expect(passed(click())).toBe(true);
+  });
+
+  it('AD-14 the next pointerdown or keydown clears the owed click', () => {
+    for (const next of [() => down(5), () => key('KeyA')]) {
+      win1();
+      down(1);
+      up(1);
+      notifySettled();
+      vi.advanceTimersByTime(300);
+      expect(guardInstalled()).toBe(false);
+      next();
+      expect(passed(click())).toBe(true);
+      send(make('pointerup', { pointerId: 5 }));
+      keyup('KeyA');
+    }
+  });
+
+  it('AD-14 hide clears every gesture, counts as settle and the last end, a held repeat after it is consumed', () => {
+    key('Enter');
+    win1();
+    hideClear();
+    expect(guardInstalled()).toBe(true);
+    expect(consumed(key('Enter', true))).toBe(true);
+    expect(guardInstalled()).toBe(true);
+    vi.advanceTimersByTime(299);
+    expect(guardInstalled()).toBe(true);
+    vi.advanceTimersByTime(1);
+    expect(guardInstalled()).toBe(false);
+    expect(passed(key('Enter', true))).toBe(true);
+  });
+
+  it('AD-14 a key held through blur before the win cannot strand the guard (backstop after the clear)', () => {
+    key('Tab');
+    win1();
+    notifySettled();
+    vi.advanceTimersByTime(1000);
+    expect(guardInstalled()).toBe(true);
+    win.fire('blur');
+    expect(consumed(key('Tab', true))).toBe(true);
+    expect(guardInstalled()).toBe(true);
+    vi.advanceTimersByTime(180);
+    expect(guardInstalled()).toBe(false);
+  });
+
+  it('AD-14 a gesture held through hide after install: cleared, guard ends after the backstop', () => {
+    win1();
+    down(1);
+    key('KeyA');
+    vi.advanceTimersByTime(50);
+    hideClear();
+    vi.advanceTimersByTime(300);
+    expect(guardInstalled()).toBe(false);
+    expect(passed(down(2))).toBe(true);
+  });
+
+  it('AD-14 an unconsumed gesture is cleared by hide and does not affect the next guard', () => {
+    down(1);
+    hideClear();
+    win1();
+    expect(passed(up(1))).toBe(true);
+    expect(guardInstalled()).toBe(true);
+  });
+
+  it('AD-14 win, Undo, Redo win in sequence installs again', () => {
+    win1();
+    down(1, true);
+    up(1, true);
+    expect(guardInstalled()).toBe(false);
+    const again = vi.fn();
+    install(true, again);
+    expect(guardInstalled()).toBe(true);
+    expect(consumed(down(3))).toBe(true);
+    expect(again).toHaveBeenCalledTimes(1);
+  });
+
+  it('AD-14 the minimum holds at Fast (baseMs 90) and under reduced motion', () => {
+    for (const motion of [
+      { baseMs: 90, reduced: false },
+      { baseMs: 90, reduced: true },
+    ]) {
+      mocked.motion = motion;
+      win1();
+      notifySettled();
+      vi.advanceTimersByTime(299);
+      expect(guardInstalled()).toBe(true);
+      vi.advanceTimersByTime(1);
+      expect(guardInstalled()).toBe(false);
     }
   });
 });

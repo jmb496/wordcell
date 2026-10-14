@@ -1,10 +1,10 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CardId, Command, Phase } from '../engine/index';
 import type { DispatchResult } from '../shell/game.svelte';
 import type { BandKey, Box, Flip, Placed } from './flip';
 import { createFlip, flyingSet, inFlight, motionKind, planGlides } from './flip';
 import type { Gate } from './gestures/gate';
-import type { MotionKind } from './motion';
+import { guardInstalled, type MotionKind, startTracker } from './motion';
 
 // AD-14 FLIP (ticket 5.10, epic 5 SPEC CAP-8) in node: no DOM or WAAPI. A fake root answers
 // `querySelectorAll('[data-card-id]')` with fake wrappers (`getAttribute` of `data-card-id` and
@@ -203,8 +203,21 @@ const DURATIONS: Record<MotionKind, number> = {
 // The module-level `inFlight` hold outlives a test that leaves animations unsettled: every flip
 // made by setup() is finished after each test.
 const made: Flip[] = [];
+// AD-14 (F8): flip.play installs the winning guard in motion.ts, whose tracker main.ts starts.
+let stopTracker: () => void = () => undefined;
+beforeEach(() => {
+  vi.useFakeTimers();
+  vi.setSystemTime(0);
+  const inert = { addEventListener: () => undefined, removeEventListener: () => undefined };
+  stopTracker = startTracker(inert, inert, () => Date.now(), {
+    setTimer: (callback, ms) => setTimeout(callback, ms),
+    clearTimer: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
+  });
+});
 afterEach(() => {
   for (const flip of made.splice(0)) flip.finishAll();
+  stopTracker();
+  vi.useRealTimers();
 });
 
 function setup(options: { reduced?: boolean; phase?: Phase | undefined } = {}) {
@@ -1105,5 +1118,51 @@ describe('AD-11 move bracket', () => {
     move(t, shifted);
     expect(t.counts.enter).toBe(0);
     for (const id of [3, 4, 7]) expect(t.root.face(id).animations).toHaveLength(0);
+  });
+});
+
+describe('AD-14 winning guard hooks (ticket 5.13, CAP-10, F8)', () => {
+  it('AD-14 a winning play installs the guard on entry and it ends 300 ms after the last animation settles', () => {
+    const t = setup({ phase: 'idle' });
+    t.root.show(CELL_START);
+    t.flip.capture();
+    t.root.show(CELL_COMMITTED);
+    t.flip.play(confirm, { changed: true, finished: 'won' });
+    expect(guardInstalled()).toBe(true);
+    vi.advanceTimersByTime(1000);
+    expect(guardInstalled()).toBe(true);
+    settleAll(t, [3]);
+    expect(guardInstalled()).toBe(true);
+    settleAll(t, [4]);
+    expect(guardInstalled()).toBe(false);
+  });
+
+  it('AD-14 a play that is not won installs nothing', () => {
+    const t = setup({ phase: 'idle' });
+    fly(t, CELL_START, CELL_COMMITTED, confirm);
+    expect(guardInstalled()).toBe(false);
+  });
+
+  it('AD-14 the reduced-motion win settles when its fade ends', () => {
+    const t = setup({ phase: 'idle', reduced: true });
+    t.root.show(CELL_START);
+    t.flip.capture();
+    t.root.show(CELL_COMMITTED);
+    t.flip.play(confirm, { changed: true, finished: 'won' });
+    vi.advanceTimersByTime(500);
+    expect(guardInstalled()).toBe(true);
+    settleAll(t, [3, 4]);
+    expect(guardInstalled()).toBe(false);
+  });
+
+  it('AD-14 a winning play with no animation installs before the early return and settles at its end', () => {
+    const t = setup({ phase: 'place' });
+    t.root.show(START);
+    t.flip.capture();
+    t.flip.play({ type: 'setTarget', cell: 4 }, { changed: true, finished: 'won' });
+    expect(t.active()).toBe(0);
+    expect(guardInstalled()).toBe(true);
+    vi.advanceTimersByTime(300);
+    expect(guardInstalled()).toBe(false);
   });
 });

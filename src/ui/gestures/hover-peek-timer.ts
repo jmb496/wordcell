@@ -15,6 +15,7 @@
 // `wc-hover-peek-hidden` (DOM only) when a pick-up drag starts. The controller's state is read
 // through getters; timers come from its injected `setTimer`/`clearTimer`.
 import { game } from '../../shell/game.svelte';
+import { guardInstalled, setHoverClear } from '../motion';
 import { overlays } from '../overlays.svelte';
 import { HOVER_PEEK_HIDDEN } from './classes';
 import { LONG_PRESS_MS } from './classify';
@@ -115,6 +116,8 @@ export function createHoverPeekTimer<H>(
     // Entering another cell closes its hover peek even with no pointerout from it.
     if (overlays.hoverPeek !== null && overlays.hoverPeek !== n) overlays.closeHoverPeek();
     if (!deps.hoverFine() || hooks.pressHeld() || hooks.flying() || event.buttons !== 0) return;
+    // AD-14 (F8): none starts while the winning guard is installed.
+    if (guardInstalled()) return;
     if (cellEl === suppressed) return;
     if (overlays.hoverPeek === n || cellCards(n) === 0) return;
     hoverTimer = { handle: deps.setTimer(() => onHoverTimer(n), LONG_PRESS_MS), cell: n };
@@ -140,6 +143,9 @@ export function createHoverPeekTimer<H>(
     overlays.closeHoverPeek();
     if (suppressed === cellEl) suppressed = null;
   }
+
+  // AD-14 (F8): installing the winning guard clears a pending timer.
+  setHoverClear(stopHoverTimer);
 
   return { hoverEnter, hoverLeave, stopHoverTimer, closeHover, hideHoverPeek, suppress, reset };
 }

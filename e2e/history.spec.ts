@@ -1,5 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { stored } from './helpers/blocking';
+import { glidesSettled } from './helpers/board';
 import { openBoard, waitForDictionary } from './helpers/restore';
 import { fixture, seedStorage } from './helpers/seed';
 import { armStorageSpy, storageWrites } from './helpers/storage-spy';
@@ -254,6 +255,9 @@ test('§2 an unreadable history (history-invalid-version-unknown.json) is never 
   expect((await storageWrites(page)).filter(({ key }) => key === HISTORY)).toEqual([]);
   expect(await stored(page, HISTORY)).toBe(historyText);
   const rejected = { rejected: { reason: 'version-unknown', version: 2 } };
+  // AD-14 (F8): the winning guard consumes input until the animation settles and 300 ms pass.
+  await glidesSettled(page);
+  await page.waitForTimeout(500);
   await primary.click();
   // AD-8: a plain Validate label needs the word list loaded.
   await waitForDictionary(page, 'ready');
