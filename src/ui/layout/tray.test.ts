@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { GameView } from '../../engine/index';
 import type { Rect } from '../gestures/targeting';
 import { reorder } from '../gestures/targeting';
 import {
@@ -9,6 +10,8 @@ import {
   type TrayLayout,
   trayLayout,
   trayOrder,
+  trayTileCount,
+  trayTiles,
 } from './tray';
 
 describe('tray layout', () => {
@@ -519,5 +522,26 @@ describe('AD-11 segmentEnds at rest', () => {
       { start: true, end: false },
       { start: false, end: true },
     ]);
+  });
+});
+
+describe('tray tile source', () => {
+  const asView = (part: object) => part as GameView;
+
+  it('AD-3 trayTiles and trayTileCount: Place gives placementOrder, Composing the R-30 tray order, Idle and Game over none', () => {
+    const place = asView({ place: { placementOrder: [4, 9, 2] } });
+    expect(trayTiles(place)).toEqual([
+      { id: 4, mirror: false },
+      { id: 9, mirror: false },
+      { id: 2, mirror: false },
+    ]);
+    expect(trayTileCount(place)).toBe(3);
+    const composing = asView({ draft: { arrangement: [1, 2], destination: [7, 8], side: 'left' } });
+    expect(trayTiles(composing)).toEqual(
+      trayOrder({ arrangement: [1, 2], destination: [7, 8], side: 'left' }),
+    );
+    expect(trayTileCount(composing)).toBe(4);
+    expect(trayTileCount(asView({}))).toBe(0);
+    expect(trayTiles(asView({}))).toEqual([]);
   });
 });

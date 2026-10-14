@@ -131,3 +131,4 @@ Why derived: tile count and rows must flip in one render; a swap needs no hook. 
 **Verification:** `npm run test:all` green after the patches (unit 2335, e2e:dist 14, e2e 525 passed, pwa 12; build in budget); `npm run test:screens` 10/10 green with no new baselines.
 
 **Residual risks:** `session-place-long.json` uses a 15-letter non-word with an inline dictionary (no real 15-letter word available); the `$effect` swap path (`watchTiles`) is covered only by unit fakes since New game/Replay appear only at game over; the anchor `scrollTop` write during an Android fling is unverified (epic 7 device checks).
+- `fixtures/session-place-long.json` is a 15-letter non-word, valid only under the inline test dictionary and not reachable by real play.

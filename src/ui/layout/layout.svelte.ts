@@ -269,6 +269,7 @@ export function createLayout<E extends ProbeElement>(gate: Gate, deps: LayoutDep
 
   function beginMove(): void {
     if (moving) throw new Error('AD-11 beginMove() while a move is open');
+    // A `moving` left set by a dispatch throw between begin and end is intended: the app halts (rule 6).
     moving = true;
     moveScrollY = win.scrollY;
   }

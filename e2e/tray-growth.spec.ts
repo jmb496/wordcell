@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Locator, type Page, test } from '@playwright/test';
 import { glidesSettled, openFixture } from './helpers/board';
 
 // Ticket 5.12 (epic 5 SPEC CAP-9; AD-11, AD-14): the Tray band's rows follow the tile count in the
@@ -33,11 +33,9 @@ const tileCount = (page: Page) =>
 
 // Clicks `target` in the page task and reads, in the same task, how many column faces and how many
 // faces in all run an animation (animation time 0), and which animating WordCell faces are hidden.
-async function clickAndRead(page: Page, target: string) {
-  return page.evaluate((selector) => {
-    const el = document.querySelector<HTMLElement>(selector);
-    if (el === null) throw new Error(`no ${selector}`);
-    el.click();
+async function clickAndRead(target: Locator) {
+  return target.evaluate((el) => {
+    (el as HTMLElement).click();
     const running = (face: Element) => face.getAnimations().some((a) => a.playState === 'running');
     const faces = [...document.querySelectorAll('[data-card-id] > .face')];
     const animating = faces.filter(running);
@@ -51,10 +49,10 @@ async function clickAndRead(page: Page, target: string) {
           inCell(face) && getComputedStyle(face.parentElement as Element).visibility === 'hidden',
       ).length,
     };
-  }, target);
+  });
 }
 
-const PLUS = '[data-band="tray"] .controls button:nth-of-type(2)';
+const plus = (page: Page) => controls(page).getByRole('button', { name: '+', exact: true });
 
 for (const [height, grown] of [
   [839, 0],
@@ -72,7 +70,9 @@ for (const [height, grown] of [
       expect(await tileCount(page)).toBe(14);
       expect(await scrollY(page)).toBe(0);
 
-      const read = await clickAndRead(page, PLUS);
+      const read = await clickAndRead(plus(page));
+      // Positive control: the new tile's face animates in this task, so no column face is meaningful.
+      expect(read.animating).toBeGreaterThan(0);
       expect(read.columnFaces).toBe(0);
       await glidesSettled(page);
       expect(await tileCount(page)).toBe(15);
@@ -88,7 +88,7 @@ for (const [height, grown] of [
       expect(await wordCellRow(page)).toEqual(row);
     });
 
-    test('AD-11 session-place-long: a Confirm within 150 ms of a scroll still re-lays out at once (the move clears scroll-busy)', async ({
+    test('AD-11 session-place-long: a Confirm in the same task as a scroll still re-lays out at once (the move clears scroll-busy)', async ({
       page,
     }) => {
       // Only 412 × 780 has a scroll range (6 px) with three rows, so only there does a real scroll
@@ -96,27 +96,50 @@ for (const [height, grown] of [
       test.skip(height !== 780, 'no scroll range at 412 × 839');
       await openFixture(page, 'session-place-long');
       const full = await trayHeight(page);
-      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-      expect(await scrollY(page)).toBe(6);
-      await page.getByTestId('primary-action').click();
+      await page.evaluate(() => {
+        window.scrollTo(0, document.documentElement.scrollHeight);
+        document.querySelector<HTMLElement>('[data-testid="primary-action"]')?.click();
+      });
       await glidesSettled(page);
       expect(await tileCount(page)).toBe(0);
       expect(await trayHeight(page)).toBe(full - 48);
     });
 
-    test('AD-11 a restored three-row Tray lays out at load with no scroll, and the first row-changing move follows the anchor rule', async ({
+    test('AD-11 a restored three-row Tray lays out at load at the grown height with no scroll write, and the first Confirm follows the anchor rule', async ({
       page,
     }) => {
-      // A state swap (restore) sets the rows with no capture or scroll write; New game and Replay
-      // are reachable only at game over (no tiles), so restore is the UI-reachable swap. The
-      // following Confirm shrinks 15 → 0 at scroll 0: the anchor rule (anchorScroll clamps at 0)
-      // leaves scrollTop 0, and the row moves up by the part of the shrink the leftover cannot
-      // absorb (6 px at 780, none at 839).
+      // Restore is the UI-reachable state swap (New game and Replay appear only at game over, with
+      // no tiles); it sets the rows with no capture and no scroll write. The following Confirm
+      // shrinks 15 → 0 at scroll 0: anchorScroll clamps at 0, so scrollTop stays 0 and the row
+      // moves up by the part of the shrink the leftover cannot absorb (6 px at 780, none at 839).
+      await page.addInitScript(() => {
+        const w = window as unknown as { scrollWrites: number };
+        w.scrollWrites = 0;
+        const scrollTo = window.scrollTo.bind(window) as (...args: unknown[]) => void;
+        window.scrollTo = (...args: unknown[]) => {
+          w.scrollWrites++;
+          scrollTo(...args);
+        };
+      });
+      // The grown height the other tests use: session-composing-long after one `+`, on a second page.
+      const other = await page.context().newPage();
+      await openFixture(other, 'session-composing-long');
+      const base = await trayHeight(other);
+      await plus(other).click();
+      await glidesSettled(other);
+      const grownHeight = await trayHeight(other);
+      expect(grownHeight).toBe(base + 48);
+      await other.close();
+
       await openFixture(page, 'session-place-long');
       const row = await wordCellRow(page);
       const full = await trayHeight(page);
       expect(await tileCount(page)).toBe(15);
+      expect(full).toBe(grownHeight);
       expect(await scrollY(page)).toBe(0);
+      expect(
+        await page.evaluate(() => (window as unknown as { scrollWrites: number }).scrollWrites),
+      ).toBe(0);
       await page.getByTestId('primary-action').click();
       await glidesSettled(page);
       expect(await trayHeight(page)).toBe(full - 48);
@@ -136,7 +159,7 @@ for (const [height, grown] of [
       expect(bottom).toBe(grown);
       const row = await wordCellRow(page);
 
-      const confirm = await clickAndRead(page, '[data-testid="primary-action"]');
+      const confirm = await clickAndRead(page.getByTestId('primary-action'));
       expect(confirm.hiddenFlying).toBe(0);
       expect(confirm.animating).toBeGreaterThan(0);
       await glidesSettled(page);
@@ -152,7 +175,7 @@ for (const [height, grown] of [
       expect(await scrollY(page)).toBe(grown);
       expect(await wordCellRow(page)).toEqual(row);
 
-      const redo = await clickAndRead(page, '[data-testid="redo"]');
+      const redo = await clickAndRead(page.getByTestId('redo'));
       expect(redo.hiddenFlying).toBe(0);
       await glidesSettled(page);
       expect(await tileCount(page)).toBe(0);

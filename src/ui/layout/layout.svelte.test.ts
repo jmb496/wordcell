@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createFlip } from '../flip';
 import { createGate } from '../gestures/gate';
 import { BAND_ORDER, parseBandsParam } from './bands';
+import { bands } from './geometry';
 import { createLayout, type Layout, type LayoutDeps } from './layout.svelte';
 import { trayLayout } from './tray';
 
@@ -28,6 +29,8 @@ type Viewport = {
   banner?: boolean;
   search?: string;
   tiles?: number;
+  /** The fake scrollY never clamps to the document (a browser that has not yet clamped). */
+  noClamp?: boolean;
 };
 
 function setup(viewport: Viewport, initialPadding = { paddingTop: '0px', paddingBottom: '0px' }) {
@@ -47,6 +50,7 @@ function setup(viewport: Viewport, initialPadding = { paddingTop: '0px', padding
     banner: false,
     search: '',
     tiles: 0,
+    noClamp: false,
     ...viewport,
   };
   let layout: Layout | undefined;
@@ -60,7 +64,7 @@ function setup(viewport: Viewport, initialPadding = { paddingTop: '0px', padding
       return v.innerHeight;
     },
     get scrollY() {
-      if (layout !== undefined) {
+      if (layout !== undefined && !v.noClamp) {
         if (laidOut?.heights !== layout.heights) {
           laidOut = { heights: layout.heights, innerHeight: v.innerHeight };
         }
@@ -536,6 +540,17 @@ describe('AD-11 tray rows', () => {
     expect(t.layout.heights).toBe(t.layout.heights);
   });
 
+  it('AD-3 the Tray band height is the band value for layout.tray.rows at 0, 14 and 15 tiles on one layout', () => {
+    const t = setup(long);
+    const expected = (rows: number) =>
+      bands(t.layout.w, t.layout.bandOrder, rows, t.layout.bannerShown, 839, { top: 0, bottom: 0 })
+        .heights.tray;
+    for (const count of [0, 14, 15]) {
+      t.swapTiles(count);
+      expect(t.layout.heights.tray, `${count} tiles`).toBe(expected(t.layout.tray.rows));
+    }
+  });
+
   it('AD-11 a move that grows 14 → 15 at 412 × 839 keeps scrollTop (leftover 101 absorbs +48) and leaves the heights', () => {
     const t = setup({ ...long, tiles: 14 });
     const before = t.layout.heights.leftover;
@@ -557,7 +572,17 @@ describe('AD-11 tray rows', () => {
     expect(t.v.scrollY).toBe(0);
   });
 
-  it('AD-11 every tile-count edit kind (+1 and -1 around each row boundary) follows the rows in its move', () => {
+  it('AD-11 a shrink 15 → 14 at 412 × 780 with the browser not yet clamped issues scrollTo with the anchor value', () => {
+    const t = setup({ ...PIXEL_7, innerHeight: 780, tiles: 14, noClamp: true });
+    t.move(15);
+    expect(t.scrolls).toEqual([6]);
+    t.move(14);
+    // scrollY is still 6 (no clamp), so only the anchor logic can bring it back to 0.
+    expect(t.calls).toEqual(['ignoreNextScroll', 'scrollTo 6', 'ignoreNextScroll', 'scrollTo 0']);
+    expect(t.scrolls).toEqual([6, 0]);
+  });
+
+  it('AD-11 row-boundary tile counts (+1 and -1 around each row boundary) follow the rows in its move', () => {
     const t = setup({ ...long, tiles: 6 });
     const rows: number[] = [];
     for (const count of [7, 8, 7, 14, 15, 14, 1, 0, 3]) {
@@ -645,10 +670,16 @@ describe('AD-11 tray rows through flip.capture() / play()', () => {
     expect(t.gate.busy).toBe(true);
     flip.capture();
     expect(t.gate.busy).toBe(false);
+    const { w, metrics } = t.layout;
+    const whenIdle = vi.spyOn(t.gate, 'whenIdle');
     t.swapTiles(15);
     flip.play({ type: 'setDestinationCount', k: 2 }, { changed: true });
     expect(t.layout.tray.rows).toBe(3);
     expect(t.calls).toEqual(['ignoreNextScroll', 'scrollTo 6']);
+    // A row change recomputes neither the width nor the metrics and queues no relayout task.
+    expect(t.layout.w).toBe(w);
+    expect(t.layout.metrics).toBe(metrics);
+    expect(whenIdle).not.toHaveBeenCalled();
   });
 
   it('AD-11 without gate.scrollReset() in capture() the same move throws at play()', () => {
