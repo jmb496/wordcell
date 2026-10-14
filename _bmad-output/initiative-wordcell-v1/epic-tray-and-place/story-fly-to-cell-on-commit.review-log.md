@@ -1,6 +1,6 @@
 # Review log — story-fly-to-cell-on-commit (ticket 5.11)
 
-State: pass 3: done
+State: pass 4: done
 
 Pre-loop: HEAD d42b29d5603d7e94c1b654ef430a3285fe40733b; copy /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-fly-to-cell-on-commit.review-log.passes/pass0.md; 301 words (wc -w of whole file).
 Mode: docs, thorough, max 7. Budget default 2.5x (~750 words).
@@ -54,3 +54,15 @@ Words (docs): 827 (2.75x pass 0, over budget)  |  Snapshot: story-fly-to-cell-on
 - mirror id taken from the DOM at capture; GLIDE + clip lift reused from the band-changer glide; "flyToCell kind" wording
 ### Decision needed (functionality / UX / gameplay)
 - Description / SPEC line 248 vs F27 — the cell during a Confirm's fly-to-cell: as written (previous cards released at the first landing, each non-top card hidden at its own landing), the cell would look empty from the first landing until the top card lands (up to 9 × 30 ms for a 10-letter word), but F27 says "Confirm's fly-to-cell, where the cell never looks empty". Would the owner rather see landed cards stay visible until the top card lands (never empty, matches F27), or the spec's literal per-card hiding? — proposed default: keep landed and previous cards visible until the last landing, then hide all non-top committed cards together (never empty); not applied, the ticket keeps the spec's wording until the owner answers.
+
+## Pass 4 — 2026-10-14
+Reviewers: fix-diff, edge-case, adversarial, ref-alignment  |  Findings: major 1, minor 11, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 827 (2.75x pass 0)  |  Snapshot: story-fly-to-cell-on-commit.review-log.passes/pass4.md
+### Applied
+- [major] In-flight state vs AC bullet 2 — in a used own cell the previous cards are hidden and the mirror is what shows, yet the AC says "the used mirror and the previous top kept": reword the AC (and the Description sentence if needed) so the mirror is the only previous top drawn there; net-zero words → item 1
+### Default applied (technical)
+- own-cell wording only
+### Decision needed (functionality / UX / gameplay)
+- none new (pass 3's F27 item stands)
+### Minors not applied (over budget; build-plan detail)
+- mirror stacking mechanism; `[data-mirror-of]` scope inside `.wordcell`; delay-phase face overlap with re-flowed tray; reduced-motion same-pass hide; flushSync before paint untested; Undo "between landings" AC; card already in a WordCell does not fly; winning-commit ordering vs CAP-10; landing-order observation procedure; no screenshot baseline change expected.
