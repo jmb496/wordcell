@@ -1,6 +1,6 @@
 # Review log — story-winning-animation-input-guard (ticket 5.13)
 
-State: pass 1: done
+State: pass 2: done
 
 Pre-loop: HEAD b4217aca8a4b116c10a8e413a5e4e1992aa49812; copy /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-winning-animation-input-guard.review-log.passes/pass0.md; 365 words (wc -w of whole file).
 Mode: docs, thorough, max 7. Budget default 2.5x (~912 words).
@@ -25,3 +25,23 @@ Reviewers: builder, edge-case, adversarial, ref-alignment  |  Findings: major 10
 ### Decision needed (functionality / UX / gameplay)
 - none
 Words (docs): 904 (2.48x pass 0)  |  Snapshot: /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-winning-animation-input-guard.review-log.passes/pass1.md
+
+## Pass 2 — 2026-10-14
+Reviewers: fix-diff, edge-case, adversarial, ref-alignment  |  Findings: major 10 (merged), minor 3, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+### Applied
+- [major] tracker start seam unnamed → item 1
+- [major] settle notification for reduced-motion/empty-set play() → item 2
+- [major] hide/blur uninstall vs backstop wording contradiction → item 3
+- [major] repeat keydown with no tracked gesture after a clear → item 4
+- [major] duplicate pointerId behaviour → item 5
+- [major] click consumption rule → item 6
+- [major] post-uninstall consumption of every consumed gesture → item 7
+- [major] AC for idempotent install and stray keyup/pointerup → item 8
+- [major] hide-clear wiring proof through boot → item 9
+- [major] injectable clock seam and backstop timing cases → item 10
+- [minor] consumers wording; install parenthetical → items 11, 12
+### Default applied (technical)
+- tracker at module load (or one main.ts call per AD-16); repeats consumed; duplicate id same gesture; all clicks consumed except in Undo.
+### Decision needed (functionality / UX / gameplay)
+- none
+Words (docs): 1150 (3.15x pass 0, over the 2.5x budget)  |  Snapshot: /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-winning-animation-input-guard.review-log.passes/pass2.md
