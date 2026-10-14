@@ -1,6 +1,6 @@
 # Review log — story-fly-to-cell-on-commit (ticket 5.11)
 
-State: pass 2: done
+State: pass 3: done
 
 Pre-loop: HEAD d42b29d5603d7e94c1b654ef430a3285fe40733b; copy /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-fly-to-cell-on-commit.review-log.passes/pass0.md; 301 words (wc -w of whole file).
 Mode: docs, thorough, max 7. Budget default 2.5x (~750 words).
@@ -39,3 +39,18 @@ Words (docs): 829 (2.75x pass 0, over budget; net -3 this pass)  |  Snapshot: st
 - flip.ts exports its in-flight state (read-only) rather than a prop; set before the first flushSync; no 0.5 px skip for flyToCell
 ### Decision needed (functionality / UX / gameplay)
 - none
+
+## Pass 3 — 2026-10-14
+Reviewers: fix-diff, edge-case, adversarial, ref-alignment  |  Findings: major 5, minor 9, decision-needed 1  |  Dropped in triage: 0 (duplicates merged; 3 adversarial "majors" demoted to minor as build-plan detail: Ordering wording, set-emptying rule, AC wording beyond determinism)
+Words (docs): 827 (2.75x pass 0, over budget)  |  Snapshot: story-fly-to-cell-on-commit.review-log.passes/pass3.md
+### Applied
+- [major] In-flight state — how flip.ts finds the target cell's used-mirror id (no view access; Redo target unknown before dispatch): record every cell's used-mirror id from the DOM at capture (after its finishAll), at play keep the id of the cell that gains the committed cards → item 1
+- [major] Playback — flyToCell translating faces take GLIDE and lift the tile clip like a band-changer glide (F22); reduced fades take neither → item 2
+- [major] Description — "committing Redo" has no testable definition (motionKind: redo at idle → flyToCell): say "the flyToCell kind (F7)"; an empty flying set is a no-animation play → item 3
+- [major] AC — Playwright determinism: pause all faces' animations after the click, seek one face to its end and await its `finished` before asserting, filter getAnimations() to WAAPI animations on `.face` → item 4
+- [major] Tests line — name the mirror/badge/Redo checks under the existing P5 entries; rename "R-60 commit lands bottom → top" to AD-14 (R-60 is the atomic commit rule); own-cell mirror is R-52 not R-61; add 52-count to the own-cell AC bullet → item 5
+- [minor, net-zero words] Ordering bullet: kind moves above the first flushSync, mark the whole bullet unverified; fold the gate bullet into Landing; drop `settle` from the clear list; New game/Replay/restore already call finishAll via finishGlides; in a used cell the previous cards stay hidden and the mirror shows; unknown line = "resolved: synchronous landing hook"; define or drop "S"/"P5" → item 6
+### Default applied (technical)
+- mirror id taken from the DOM at capture; GLIDE + clip lift reused from the band-changer glide; "flyToCell kind" wording
+### Decision needed (functionality / UX / gameplay)
+- Description / SPEC line 248 vs F27 — the cell during a Confirm's fly-to-cell: as written (previous cards released at the first landing, each non-top card hidden at its own landing), the cell would look empty from the first landing until the top card lands (up to 9 × 30 ms for a 10-letter word), but F27 says "Confirm's fly-to-cell, where the cell never looks empty". Would the owner rather see landed cards stay visible until the top card lands (never empty, matches F27), or the spec's literal per-card hiding? — proposed default: keep landed and previous cards visible until the last landing, then hide all non-top committed cards together (never empty); not applied, the ticket keeps the spec's wording until the owner answers.
