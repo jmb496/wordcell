@@ -4,6 +4,7 @@ title: "Tray and Place"
 parent: initiative-wordcell-v1
 covers: []
 after: [epic-board-and-gestures]
+status: done
 assignee: ""
 risk: high
 ---
