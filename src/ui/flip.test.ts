@@ -374,6 +374,7 @@ describe('AD-14 FLIP kind table', () => {
       expect(animations).toHaveLength(2);
       for (const animation of animations) {
         expect(animation.options).toEqual({ duration: DURATIONS[kind], easing: 'ease-out' });
+        expect(animation.options.easing).toBe('ease-out');
       }
       expect(t.root.face(3).animations[0]?.keyframes).toEqual([
         { transform: 'translate(-44px, 0px)' },
@@ -384,7 +385,7 @@ describe('AD-14 FLIP kind table', () => {
     }
   });
 
-  it('AD-14 under reduced motion a flip play and an undo play fade opacity 0 → 1 over duration() (120), no translate, no wc-glide', () => {
+  it('AD-14 under reduced motion a flip play and an undo play fade opacity 0 → 1 over duration() (120) with linear/no easing, no translate, no wc-glide', () => {
     for (const [command, kind] of [
       [flipCommand, 'snap'],
       [undo, 'undoRedo'],
@@ -398,13 +399,14 @@ describe('AD-14 FLIP kind table', () => {
         expect(face.animations).toHaveLength(1);
         expect(face.animations[0]?.keyframes).toEqual([{ opacity: 0 }, { opacity: 1 }]);
         expect(face.animations[0]?.options).toEqual({ duration: 120 });
+        expect(face.animations[0]?.options.easing).toBeUndefined();
         expect(face.classList.contains('wc-glide')).toBe(false);
       }
       expect(t.root.tiles.classList.contains('wc-drag-tiles')).toBe(false);
     }
   });
 
-  it('AD-14 under reduced motion a band-changing undo fades the band changer and the same-band mover, no wc-glide, no wc-drag-tiles', () => {
+  it('AD-14 under reduced motion a band-changing undo fades (linear/no easing) the band changer and the same-band mover, no wc-glide, no wc-drag-tiles', () => {
     const t = setup({ reduced: true });
     t.root.show(START);
     move(t, BAND_CHANGE, undo);
@@ -415,6 +417,7 @@ describe('AD-14 FLIP kind table', () => {
       expect(face.animations).toHaveLength(1);
       expect(face.animations[0]?.keyframes).toEqual([{ opacity: 0 }, { opacity: 1 }]);
       expect(face.animations[0]?.options).toEqual({ duration: 120 });
+      expect(face.animations[0]?.options.easing).toBeUndefined();
       expect(face.classList.contains('wc-glide')).toBe(false);
     }
     expect(t.root.face(3).animations).toEqual([]);
@@ -584,14 +587,14 @@ describe('AD-14 flyToCell playback (ticket 5.11, CAP-8, F28)', () => {
     u.flip.finishAll();
   });
 
-  it('AD-14 flyToCell under reduced motion fades every face in at once (no delay, no wc-glide, no tile lift) over duration(flyToCell) and holds to its end', () => {
+  it('AD-14 flyToCell under reduced motion fades every face in at once (linear/no easing, no delay, no wc-glide, no tile lift) over duration(flyToCell) and holds to its end', () => {
     const t = setup({ phase: 'idle', reduced: true });
     fly(t, CELL_START, CELL_COMMITTED);
     for (const id of [3, 4]) {
       const animation = t.root.face(id).animations[0];
       expect(animation?.keyframes).toEqual([{ opacity: 0 }, { opacity: 1 }]);
       expect(animation?.options).toEqual({ duration: 120, delay: 0, fill: 'backwards' });
-      expect(animation?.options.delay).toBe(0);
+      expect(animation?.options.easing).toBeUndefined();
       expect(t.root.face(id).classList.contains('wc-glide')).toBe(false);
     }
     expect(t.root.tiles.classList.contains('wc-drag-tiles')).toBe(false);

@@ -4740,6 +4740,15 @@ describe('AD-12 epic 5 tile drag', () => {
     await miss((t) => {
       t.b.tiles.children.splice(t.b.tiles.children.indexOf(t.b.tile2), 1);
     }, /^AD-12 tile 4 not in \.tiles$/);
+    await miss((t) => {
+      t.b.tile.children.splice(t.b.tile.children.indexOf(t.b.tileFace), 1);
+    }, /^AD-12 card without a \.face$/);
+    await miss(() => {
+      shared.view = undefined;
+    }, /^AD-12 tile drag without a GameView$/);
+    // Not reachable without contorting the code: 'tile press without a capture' (a live tile press
+    // is always captured on its wrapper) and 'tile N pressed outside .tiles' (the captured wrapper
+    // is the one `.tiles` holds for that CardId).
   });
 });
 

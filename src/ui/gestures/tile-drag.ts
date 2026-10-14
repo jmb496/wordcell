@@ -15,22 +15,11 @@ import { REST } from './drag-types';
 import { trayTarget } from './drop-target';
 import { translate } from './fly-back';
 import { faceIn, found } from './lookup';
+import { overTray } from './over-tray';
 import type { createParting } from './parting';
-import { insertionIndex, pickTarget, type Rect } from './targeting';
+import { insertionIndex, type Rect } from './targeting';
 import { tileRun } from './tile';
-import { clip, type createVisibleBand } from './visible-band';
-
-/** Epic 5 SPEC CAP-5: the tray band's id as `pickTarget`'s sole candidate. */
-const TRAY = 0;
-
-/**
- * Epic 5 SPEC CAP-5, F4: whether the dragged rect overlaps the tray band, clipped to the visible
- * band, by the targeting rule (≥ 25 %). Shared with the free-letter drag.
- */
-export function overTray(dragged: Rect, band: ReturnType<typeof createVisibleBand>): boolean {
-  const trayRect = clip(trayTarget().getBoundingClientRect(), band.visibleBand());
-  return pickTarget(dragged, [{ id: TRAY, rect: trayRect }], TRAY, true).raw !== null;
-}
+import type { createVisibleBand } from './visible-band';
 
 export type TileDragDeps = {
   /** The card width and the tray's inner width, read once at a drag's start. */

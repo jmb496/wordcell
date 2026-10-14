@@ -29,10 +29,10 @@ import { REST } from './drag-types';
 import { trayTarget } from './drop-target';
 import { translate } from './fly-back';
 import { faceIn, found } from './lookup';
+import { overTray } from './over-tray';
 import type { createParting } from './parting';
 import { insertionIndex, type Rect } from './targeting';
 import { freeLetterRun } from './tile';
-import { overTray } from './tile-drag';
 import type { createVisibleBand } from './visible-band';
 
 export type FreeLetterDragDeps = {

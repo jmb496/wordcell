@@ -311,6 +311,9 @@ const labelSize = (page: Page) =>
     .locator('.primary-label')
     .evaluate((el) => Number.parseFloat(getComputedStyle(el).fontSize));
 
+const buttonSize = (page: Page) =>
+  primary(page).evaluate((el) => Number.parseFloat(getComputedStyle(el).fontSize));
+
 const primaryOverflows = (page: Page) =>
   primary(page).evaluate((el) => el.scrollWidth > el.clientWidth);
 
@@ -325,6 +328,7 @@ test('AD-11 (A9 4.2-m1) the primary label shrinks to 15 px between its 15/16 px 
   await waitForDictionary(page, 'failed');
   await expect(primary(page)).toHaveText('Word list unavailable');
   await expect.poll(() => labelSize(page)).toBe(16);
+  expect(await buttonSize(page)).toBe(16);
   expect(await primaryOverflows(page)).toBe(false);
 
   const g = await labelGeometry(page);
@@ -334,6 +338,7 @@ test('AD-11 (A9 4.2-m1) the primary label shrinks to 15 px between its 15/16 px 
     ((g.natural[15] as number) + (g.natural[16] as number)) / 2,
   );
   await expect.poll(() => labelSize(page)).toBe(15);
+  expect(await buttonSize(page)).toBe(await labelSize(page));
   expect(await primaryOverflows(page)).toBe(false);
   await between.evaluate((el) => (el as Element).remove());
   // The button widens back: the ResizeObserver refits the label to 16 px.
@@ -341,6 +346,7 @@ test('AD-11 (A9 4.2-m1) the primary label shrinks to 15 px between its 15/16 px 
 
   await forceContent(page, (g.natural[14] as number) - 10);
   await expect.poll(() => labelSize(page)).toBe(14);
+  expect(await buttonSize(page)).toBe(await labelSize(page));
   const display = await primary(page)
     .locator('.primary-label')
     .evaluate((el) => getComputedStyle(el).display);
