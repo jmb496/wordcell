@@ -1,6 +1,6 @@
 # Review log — story-flip-for-controller-driven-moves (ticket 5.16)
 
-State: pass 1: done
+State: pass 2: done
 Pre-loop: HEAD 9b30ac0, copy .passes/pass0.md, 261 words. Mode docs, thorough, max 7.
 
 ## Pass 1 — 2026-10-14 10:55
@@ -24,3 +24,17 @@ Fixer note: item 2 - code shows end() clears before pointerup dispatch; selectio
 - none
 ### Dropped
 - `after: [10]` should list tile/free-letter drag entries — transitive via 9→8→7.
+
+## Pass 2 — 2026-10-14 11:10
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 3 (merged), minor ~12, decision-needed 0  |  Dropped in triage: 3 (circular open-question note, hover/refreshHover, setFlip seam: stretch/obvious)
+### Applied (to fix)
+1. [major] Release order vs `parting.finishAll()` — edit-release branch runs `parting.finishAll()` before `clearDrag`; state capture runs before it so the parted faces' rendered (mid-animation) offsets are the previous rects (default applied; CAP-8 previous rects).
+2. [major] end()/pointerup split — capture is taken in `end()` on kind 'up' with a dispatching outcome; `end()` records that it captured and pointerup dispatches iff captured, play follows; the 'will dispatch' predicate is computed once; invariant test: capture count equals play count for every EndReason variant (incl. sameId, detach, cancel without byBack).
+3. [major] Bracket invariant — a test asserts every `game.dispatch` site is bracketed (capture directly before, after any deselect/clearTile; play directly after, unconditionally including a no-op result), at least one tap site (perform drop with a selection) in the order test.
+### Minor (word-neutral only; document over its 2.5x budget)
+- reduced-motion release case; released-point compares top-left only; drag drop vs tap drop wording in Verify; multi-card tail first/last faces.
+### Default applied (technical)
+- all three above.
+### Decision needed
+- none
+Words: 702 (2.7 x pass 0)  |  Snapshot: .passes/pass2.md
