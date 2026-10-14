@@ -3,7 +3,7 @@ title: 'Refactor sweep: code (ticket 5.14)'
 type: 'refactor'
 ticket: '14'
 created: '2026-10-14'
-status: 'built'
+status: done
 review: 'thorough'
 review_source: 'auto'
 baseline_revision: 'b352e48774d9503a4311b2aca61465157b4fdece'

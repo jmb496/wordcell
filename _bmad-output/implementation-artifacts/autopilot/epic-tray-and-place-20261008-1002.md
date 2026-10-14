@@ -242,3 +242,14 @@ Ref to fix upstream: none
 Tokens: 7.6M input-equivalent (ticket review 48%, code review 28%, build 20%, orchestrator 2%, other 2%); orchestrator peak context 57k
 Worth knowing: unapplied minors from the code review log (motion.ts `typeof closest` guard against rule 6, use `instanceof Element` or drop it; plan Code Map notes) carried to the refactor sweep (5.14). test:screens not run (no Docker here).
 Close-out docs: none
+
+## 5.14 Refactor sweep: code — done
+What it adds: the closing code cleanup of the epic: shared test helpers moved into one place, one shared card look for the dialogs, a fractional-width fix for word lines, and stronger tests for earlier tickets' leftover findings. No visible gameplay change.
+Ticket review: 5 passes, converged; nothing needed your input
+Build: built; commits 3131ef8
+Code review: thorough, 2 passes, converged; 1 fix applied (34f4221)
+Tests: all passing
+Ref to fix upstream: none
+Tokens: 9.0M input-equivalent (build 50%, ticket review 30%, code review 18%, orchestrator 1%, other 1%)
+Worth knowing: S6 committed style-parity test deferred (story forbids new baselines); the 5-16 open major (capture = play invariant for free-letter drag ends etc.) was not applied and is reported to you; `npm run test:screens` not run (no Docker here) — run it before the epic closes.
+Close-out docs: none
