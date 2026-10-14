@@ -180,3 +180,16 @@ Ref to fix upstream: none
 Tokens: 16.2M input-equivalent for this session (code review 50%, build 47%, orchestrator 2%, other 1%); orchestrator peak context 67k; the ticket review's 14.6M is in the stop entry above
 Worth knowing: the code review also brought the planning notes for later tickets in line with this one. Pressing during a glide now finishes the glide here, in 5.10, instead of in 5.16, and 5.12 gains a check that growing the tray does not move the columns. Two low/medium items are deferred: the reduced-motion fade and a press, back or hide during a glide are checked only by unit tests, not in the browser. 5.16 tests the press in the browser; back and hide during a glide are covered only by unit tests (review minor 5). Seven minor test-precision notes in the code review log are left for the 5.14 sweep. Unit suite warm median 2.87 s.
 Close-out docs: none (your 2026-10-10 answer is already recorded in SPEC F27 and changes no other owner doc)
+
+## Resumed — 2026-10-14T14:45Z
+
+## 5.16 FLIP for controller-driven moves — done
+What it adds: Cards now glide smoothly after drag releases and taps on the tray (drops, tap-add, removal, swaps, free letters); a release with no change flies back; pressing during a glide finishes it first.
+Ticket review: 4 passes, converged; nothing needed your input
+Build: built; commits bf274f7
+Code review: thorough (ticket risk high), 2 passes, converged; fixes applied in 74cebb3 (1 major each pass)
+Tests: all passing (`npm run test:all`)
+Ref to fix upstream: none
+Tokens: 5.7M input-equivalent (ticket review 38%, build 35%, code review 22%, orchestrator 3%, other 2%); orchestrator peak context 58k
+Worth knowing: open item carried to the refactor sweep: the "no end leaves a capture pending" check is untested for free-letter drag ends, same-id, tail up with no highlight, long-press and sheet/scrim ends (code read-through found no such path). `npm run test:screens` was not run (Docker unavailable here); the ticket's verify line names it, so run it before the epic closes. Gate-idle is not asserted in e2e (test hook does not expose the gate).
+Close-out docs: none

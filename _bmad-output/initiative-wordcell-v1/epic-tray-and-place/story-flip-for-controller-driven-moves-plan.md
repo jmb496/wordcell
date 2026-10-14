@@ -3,7 +3,7 @@ title: 'FLIP for controller-driven moves'
 type: 'feature'
 ticket: '16'
 created: '2026-10-14'
-status: 'built'
+status: done
 route: 'full'
 route_source: 'auto'
 review: 'thorough'
