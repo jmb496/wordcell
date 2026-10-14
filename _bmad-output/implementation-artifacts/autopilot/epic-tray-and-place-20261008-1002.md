@@ -204,3 +204,6 @@ Ref to fix upstream: SPEC.md F7 and build-notes.md CAP-8 (Fly-to-cell): which ca
 Tokens: Tokens: 3.0M input-equivalent (ticket review 96%, orchestrator 2%, other 2%); orchestrator peak context 51k
 Worth knowing: the question: during a Confirm's flight into a WordCell that already holds cards, the spec as written would make the cell look empty briefly (up to ~270 ms for a 10-letter word) between the first landing and the top card landing, while F27 says Confirm's fly is where the cell never looks empty. Proposed default: keep previous and landed cards visible until the last landing, then hide all but the top together, so the cell never looks empty. Alternative: the spec literal, with a brief empty cell.
 Close-out docs: none yet (SPEC.md F7 / build-notes CAP-8 may need a line once you answer)
+
+## Resumed — 2026-10-14T16:52:45Z
+Owner answers for 5.11 recorded (SPEC F28); ticket review log has its Result, going to the build.
