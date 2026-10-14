@@ -1,6 +1,6 @@
 # Review loop — ticket 5.11 build (code mode)
 
-State: pass 1: done
+State: pass 2: done
 Target: commit range c068cee..HEAD (6419f65) — diff at 5-11-build.passes/pass0.diff
 Intent: _bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-fly-to-cell-on-commit-plan.md
 Pre-loop: HEAD 6419f650756c48f78ceff46343db2faf2638aa4c, tree snapshot 0 = 798e3a82a6f6a0ca3f123b757de12a32257c4b0f
@@ -20,3 +20,13 @@ Snapshot: tree 798e3a82a6f6a0ca3f123b757de12a32257c4b0f (pre-fix)
 - none
 
 Pass 1 fix applied; snapshot tree cbcb67f4ec9d1ff789e0c34fd6ea152e701dd26e. Fixer reported test 2311 pass, lint pass, check pass, fly-to-cell e2e 7 pass. Fixer 6 (gate idle) is indirect and was not shown to fail against a leaked enter().
+
+## Pass 2 — 2026-10-14
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 0, minor 2, decision-needed 0  |  Dropped in triage: 0
+Snapshot: tree cbcb67f4ec9d1ff789e0c34fd6ea152e701dd26e (= HEAD 7a74d12 content; no fix pass run)
+### Minors left (not applied)
+- e2e 'gate idle' test: never shown failing against a leaked enter(); reword title or mutation-check it.
+- No e2e that New game / Replay mid-flight clears the hold (finishGlides main.ts:149 marked unverified in ticket); add one or record existing coverage in the plan.
+
+## Result — converged after 2 passes
+Final: npm test 2311 pass, lint pass, check pass.
