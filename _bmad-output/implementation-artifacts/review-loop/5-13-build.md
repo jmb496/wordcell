@@ -1,13 +1,13 @@
 # Review loop: ticket 5.13 build (code mode)
 
-State: pass 2: done
+State: pass 3: done
 Range: bbaf8f1..a6bb2c2 (HEAD a6bb2c2); intent: story-winning-animation-input-guard-plan.md; thorough, max 7
 Pre-loop tree 0: 60f702b969488653284d1a2294e34d7c1d8a673b
 Target diff: _bmad-output/implementation-artifacts/review-loop/5-13-build.passes/pass0.diff
 
 ## Pass 1 — 2026-10-14
 Reviewers: correctness, edge cases, verification gap, intent alignment  |  Findings: major 4, minor 12, decision-needed 0  |  Dropped in triage: 0 (3 reviewer majors on the same bug merged)
-State: pass 2: done
+State: pass 3: done
 ### Findings (triaged)
 1. [major] src/ui/motion.ts onEvent `!windowPassed` path — finish(t) runs `complete`→settle→notifySettled→evaluate before the gesture is in t.open, so the guard uninstalls while the gesture is still consumed (confirmed in source, 3 reviewers) — fix: t.open.set(id,true) before finish(t); add test whose `complete` calls notifySettled
 2. [major] src/ui/motion.test.ts — no test for keydown inside Undo passing through (AC)
@@ -37,3 +37,15 @@ Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings
 ### Applied (pass 2 fix, tree a106a972a490d45b98a120cf4ffc6f79a06d1c3b)
 - [major] flip.ts install after playMove + throw test; [major] pass-through branch pointer/key tests (mutation-checked); [minor] Undo branch restricted to start events; test title/time fixes; e2e smoke rename
 Final: npm test 2383 / lint / check pass.
+
+## Pass 3 — 2026-10-14
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 0, minor 5, decision-needed 0  |  Dropped in triage: 0
+
+## Result — converged after 3 passes
+
+Unapplied minors:
+- plan Code Map/Implementation Notes: record install-after-playMove; refresh Auto Run Result / review_loop_iteration; Docs task
+- motion.ts inUndo: `typeof closest` guard (rule 6) — use instanceof Element or drop
+- keyup lost under Meta+key (macOS desktop) can strand a consumed key entry until blur/hide
+- earlier: e2e fixed waits; lost pointerup; notifySettled silent with null tracker; flip animation-set scoping; e2e double-tap gap not asserted
+Final: npm test 2383 pass, lint pass, check pass (no code change since pass 2).
