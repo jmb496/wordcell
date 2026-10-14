@@ -1174,6 +1174,16 @@ describe('AD-14 winning guard hooks (ticket 5.13, CAP-10, F8)', () => {
     expect(guardInstalled()).toBe(false);
   });
 
+  it('AD-14 a winning play whose playMove throws leaves no guard installed', () => {
+    const t = setup({ phase: undefined });
+    t.root.show(START);
+    t.flip.capture();
+    expect(() => t.flip.play(confirm, { changed: true, finished: 'won' })).toThrow(
+      /^AD-14 FLIP play\(\) with no view/,
+    );
+    expect(guardInstalled()).toBe(false);
+  });
+
   it('AD-14 the reduced-motion win settles when its fade ends', () => {
     const t = setup({ phase: 'idle', reduced: true });
     t.root.show(CELL_START);
@@ -1186,7 +1196,7 @@ describe('AD-14 winning guard hooks (ticket 5.13, CAP-10, F8)', () => {
     expect(guardInstalled()).toBe(false);
   });
 
-  it('AD-14 a winning play with no animation installs before the early return and settles at its end', () => {
+  it('AD-14 a winning play with no animation installs after the early return and settles at its end', () => {
     const t = setup({ phase: 'place' });
     t.root.show(START);
     t.flip.capture();

@@ -292,12 +292,13 @@ export function createFlip(deps: FlipDeps): Flip {
     pending = measure(rootFor('capture'));
   }
 
-  // AD-14 (F8): the winning guard installs on entry, before any early return, on the dispatch
-  // result; settle is notified here only when the move started no animation (otherwise from the
-  // last animation's settle).
+  // AD-14 (F8): the winning guard installs on the dispatch result once playMove returns (it is
+  // synchronous, so no input arrives in between; a throw goes to the AD-15 halt with no guard
+  // left installed); settle is notified here only when the move started no animation (otherwise
+  // from the last animation's settle).
   function play(command: Command, result: DispatchResult): void {
-    install(result.finished === 'won', finishAll);
     playMove(command, result);
+    install(result.finished === 'won', finishAll);
     if (result.finished === 'won' && animations.size === 0) notifySettled();
   }
 

@@ -536,22 +536,58 @@ describe('AD-14 winning guard', () => {
     key('Enter');
     hideClear();
     win1();
+    vi.advanceTimersByTime(250);
     expect(consumed(key('Enter', true))).toBe(true);
     expect(guardInstalled()).toBe(true);
     notifySettled();
-    vi.advanceTimersByTime(299);
+    vi.advanceTimersByTime(49);
     expect(guardInstalled()).toBe(true);
     vi.advanceTimersByTime(1);
     expect(guardInstalled()).toBe(false);
   });
 
   it('AD-14 Undo uninstalls while a consumed key is open: its repeat and keyup are still consumed', () => {
-    key('Enter');
     win1();
+    expect(consumed(key('Enter'))).toBe(true);
     expect(passed(down(2, true))).toBe(true);
     expect(guardInstalled()).toBe(false);
     expect(consumed(key('Enter', true))).toBe(true);
     expect(consumed(keyup('Enter'))).toBe(true);
+  });
+
+  it('AD-14 blur clears a held pointer, then its pointerup over Undo does not uninstall', () => {
+    win1();
+    down(1);
+    win.fire('blur');
+    expect(passed(up(1, true))).toBe(true);
+    expect(guardInstalled()).toBe(true);
+    expect(complete).toHaveBeenCalledTimes(1);
+  });
+
+  it('AD-14 a start in the backstop window after a consumed pointer end passes and uninstalls', () => {
+    win1();
+    down(1);
+    notifySettled();
+    vi.advanceTimersByTime(400);
+    up(1);
+    vi.advanceTimersByTime(50);
+    expect(guardInstalled()).toBe(true);
+    expect(passed(down(2))).toBe(true);
+    expect(guardInstalled()).toBe(false);
+    expect(complete).toHaveBeenCalledTimes(1);
+  });
+
+  it('AD-14 a keydown in the backstop window after a consumed key end passes and uninstalls', () => {
+    win1();
+    key('Enter');
+    notifySettled();
+    vi.advanceTimersByTime(400);
+    keyup('Enter');
+    vi.advanceTimersByTime(50);
+    expect(guardInstalled()).toBe(true);
+    expect(passed(key('KeyA'))).toBe(true);
+    expect(guardInstalled()).toBe(false);
+    expect(complete).toHaveBeenCalledTimes(1);
   });
 
   it('AD-14 a consumed pointer held well past settle and 300 ms keeps the guard until its pointerup plus the backstop', () => {
@@ -586,11 +622,16 @@ describe('AD-14 winning guard', () => {
       { baseMs: 90, reduced: true },
     ]) {
       mocked.motion = motion;
-      win1();
+      const again = vi.fn();
+      install(true, again);
       notifySettled();
       vi.advanceTimersByTime(299);
       expect(guardInstalled()).toBe(true);
-      vi.advanceTimersByTime(1);
+      expect(consumed(down(7))).toBe(true);
+      expect(again).toHaveBeenCalledTimes(1);
+      up(7);
+      click();
+      vi.advanceTimersByTime(duration('snap'));
       expect(guardInstalled()).toBe(false);
     }
   });

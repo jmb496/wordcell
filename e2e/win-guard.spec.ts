@@ -70,7 +70,8 @@ test.describe('android', () => {
       const { action } = await place(page, prefs);
       await tapAt(page, action);
       const after = await stored(page);
-      // Only Slow asserts a running animation; Fast and reduced motion rely on the 300 ms minimum.
+      // The gap to the second tap is not asserted: tapAt timing is not reliable enough to pin it
+      // under 300 ms for Fast and reduced motion without flakiness. Only Slow asserts a running animation; Fast and reduced motion rely on the 300 ms minimum.
       if (name === 'Slow') expect(await running(page)).toBeGreaterThan(0);
       await tapAt(page, action);
       await glidesSettled(page);
@@ -162,7 +163,7 @@ test.describe('desktop', () => {
     });
   }
 
-  test('AD-9 AD-14 F8 a key held through hide during the win: after the hide time and the backstop a click on cell 6 opens the view', async ({
+  test('AD-9 AD-14 F8 smoke: after a key held through hide during the win, a cell 6 click opens the view (Vitest is authoritative for the timing)', async ({
     page,
   }) => {
     const { cell } = await place(page);

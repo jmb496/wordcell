@@ -194,7 +194,8 @@ function onEvent(t: Tracker, event: Event): void {
     }
   }
   const undo = inUndo(event);
-  if (t.installed && undo) {
+  if (t.installed && undo && (isStart || type === 'click')) {
+    // Untracked ends (pointerup/pointercancel/keyup) inside Undo pass through with no side effect.
     finish(t);
     uninstall(t);
     if (isStart && id !== null) t.open.set(id, false);
