@@ -3,7 +3,7 @@ title: 'Fly-to-cell on commit'
 type: 'feature'
 ticket: '11'
 created: '2026-10-14'
-status: built
+status: done
 route: 'full'
 route_source: 'auto'
 review: 'thorough'

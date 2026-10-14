@@ -207,3 +207,16 @@ Close-out docs: none yet (SPEC.md F7 / build-notes CAP-8 may need a line once yo
 
 ## Resumed — 2026-10-14T16:52:45Z
 Owner answers for 5.11 recorded (SPEC F28); ticket review log has its Result, going to the build.
+
+## 5.11 Fly-to-cell on commit — done
+What it adds: when you Confirm (or Redo) a word, the letters fly one after another into the WordCell. The cell never looks empty during the flight, and a free letter already in another WordCell flies too (your 2026-10-14 answers, SPEC F28).
+Ticket review: 5 passes, diverging (majors 9, 5, 5, 1, 3); two questions for you, answered 2026-10-14 and applied to the ticket
+Build: built; commit 6419f65
+Code review: thorough (ticket risk medium), 2 passes, converged (majors 4, 0); fixes applied in 7a74d12
+Tests: all passing (`npm run test:all`)
+Ref to fix upstream: SPEC.md F7 and build-notes.md CAP-8 (flying set; now answered, see Close-out docs)
+Tokens: 2.7M input-equivalent (code review 63%, build 31%, orchestrator 3%, other 3%); orchestrator peak context 55k
+Worth knowing: `npm run test:screens` was not run (Docker not installed in this WSL); no baseline change expected, run it before the epic closes. The build ran one independent reviewer instead of the full lens set. The hold is set after measuring, with a second flush before paint, because the ticket's "hold above the first flushSync" cannot work (recorded in the plan). Minor review items carried to the 5.14 sweep.
+Close-out docs:
+- SPEC.md F7 and build-notes.md CAP-8 ← free letter already in a WordCell flies too (owner, 2026-10-14, recorded as F28)
+- SPEC.md F27/F28 ← Confirm's fly-to-cell never shows an empty cell: previous top and landed cards stay until the last landing (owner, 2026-10-14)
