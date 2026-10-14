@@ -1,6 +1,6 @@
 # Review log — story-winning-animation-input-guard (ticket 5.13)
 
-State: pass 6: done
+State: pass 7: done (converged)
 
 Pre-loop: HEAD b4217aca8a4b116c10a8e413a5e4e1992aa49812; copy /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-winning-animation-input-guard.review-log.passes/pass0.md; 365 words (wc -w of whole file).
 Mode: docs, thorough, max 7. Budget default 2.5x (~912 words).
@@ -97,3 +97,13 @@ Reviewers: fix-diff, edge-case (no findings), ref-alignment  |  Findings: major 
 ### Decision needed (functionality / UX / gameplay)
 - none
 Words (docs): 1148 (3.15x pass 0, over the 2.5x budget)  |  Snapshot: /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-winning-animation-input-guard.review-log.passes/pass6.md
+
+## Pass 7 — 2026-10-14 (verify-only)
+Reviewers: fix-diff  |  Findings: major 0, minor 1, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1148 (3.15x pass 0 of 365, over the 2.5x budget; majors justified the growth)
+
+## Result — converged after 7 passes
+Majors per pass: 10, 10, 6, 3, 2, 1, 0. Open major: none. Decision-needed: none. Technical defaults applied: held-Enter fallback (Vitest authoritative), startTracker from main.ts at boot, injected clock, owed-click flag, duplicate pointerId = same gesture, Undo-event exemptions, prefs-fast Fast speed.
+Unapplied minors:
+- Description's Undo sentence lacks the "except a consumed gesture's own up/click" exception (it sits only in the Undo AC bullet); move it into the Description, word-neutral.
+- Pass 4's fixer cut the `unknown`, `tests`, `risk` bullets from the Also: list (risk stays in frontmatter, unknown in Notes with its default, tests in Acceptance Criteria); the caller asked for them in the Description.
