@@ -12,11 +12,19 @@ risk: high
 
 ## Description
 
-Wires entry 10's flip.ts into the pointer controller: every controller dispatch (drop, tapDestinationCard, tile tap-swap and removal, tap-add, setTarget, tile and free-letter releases) calls `flip.capture()` before and `flip.play(command, result)` after `game.dispatch`, on a drag release before `clearDrag` removes the drag and parting transforms (F7, build-notes CAP-8: `controller.ts` end() clears before the drop dispatch today), so a tile or free letter released with an edit glides from its released position by `snap` and one released with no edit returns by `flyBack` (F17); entry 10 already finishes glides in the controller's `pointerdown` and `cancel()` (`finishGlides`/`glidesRunning`, F6), and this entry's press-path P5 shows a press during a glide acting on the settled state.
+Wires entry 10's flip.ts into the pointer controller: every `game.dispatch` in `controller.ts` calls `flip.capture()` before and `flip.play(command, result)` after it, none left unwrapped: `applyTile` swap and removal, `perform` drop, tapDestinationCard, addFreeLetter, setTarget (capture/play with an empty animated set), the drag-as-tap tapDestinationCard, the tail drag drop, and the tile and free-letter release command (F7, F17, build-notes CAP-8).
+
+Release order: capture only when the release will dispatch (tail: `highlighted !== null`; tile and free letter: `releaseCommand !== null`), taken after the selection clear (`overlays.deselect` / `clearTile`) and before `clearDrag` (`end()` clears the drag and parting transforms before the dispatch today, and the tail `deselect` runs after `end()`, so both move ahead of it); then `clearDrag`, `gate.leave`, dispatch, play, in the same pointerup. No non-dispatching end (longPress, sheet or scrim tap, null command, pointercancel, lostCapture, `cancel`, byBack) leaves a capture pending (`flip.capture` throws if one is).
+
+A tile or free letter released with an edit glides by `snap` from its released point: the dragged face's viewport rect at the last move before release; the parted tiles and shifted tray faces glide from their parted offsets (CAP-8 previous rects). A release with no edit is the existing `flight.flyBack` (F17): no dispatch, no flip capture/play, regression coverage only (CAP-5/CAP-6 own it). Entry 10 already finishes glides in `pointerdown` and `cancel()` (`finishGlides`/`glidesRunning`, F6); new here is that the glide now comes from a controller dispatch, which entry 10 could not produce, and the press-path P5 shows a press during it acting on the settled state.
+
+- interface: no new module exports; `ControllerDeps` gains `capture` and `play`, wired in `main.ts` like `finishGlides`/`glidesRunning`, so the Vitest order test uses fakes.
+- tests: AD-14 FLIP kinds for controller-driven moves, release glides from the released point, flyBack on no edit (S + P5); AD-14 input during an animation completes it and acts on the settled state (P5; the S half is entry 10's).
+- owns: the controller's release FLIP wiring (capture/play) and the press-path P5.
 
 ## Acceptance Criteria
 
-Verify: npm run test:all and npm run test:screens are green with UI Vitest AD-14 capture-before-clearDrag order, and Playwright on android with prefs-non-default (Slow) shows running getAnimations() on the moving faces (none on wrappers or mirrors) read in a page.evaluate right after the touch end for a drop (snap), tap-add, removal, tap-swap, a tile and a free letter released with an edit (first keyframe at the released point) and with no edit (flyBack), and a press during a glide acting on the settled layout.
+Verify: npm run test:all and npm run test:screens are green (baselines unchanged), with the UI Vitest AD-14 order test (capture after the selection clear, before `clearDrag`, then `gate.leave`, dispatch, play, in one pointerup) plus one case per non-dispatching end leaving no capture pending, and a case covering tapDestinationCard and setTarget (setTarget: capture/play with an empty animated set, no running animation). Playwright on android with prefs-non-default (Slow) shows running getAnimations() with positive remaining time on the moving faces (none on wrappers or mirrors) read in a page.evaluate right after the touch end for a drop (snap), tap-add, removal, tap-swap, and a tile and a free letter released with an edit; there (non-reduced motion) the first keyframe is at the released point, asserted from `getKeyframes()[0]` read in the same evaluate: settled rect plus translate equals the released rect within 1 px, including a tail drop, and one parted face's first keyframe is at its parted offset, not transform none. A release with no edit shows flyBack (regression). Press-path P5: a release with an edit starts a glide, then a press on a card or tile mid-glide; getAnimations() is empty after the press, the gate is idle, and the press acts on the post-edit view.
 
 ## References
 
@@ -25,4 +33,4 @@ Verify: npm run test:all and npm run test:screens are green with UI Vitest AD-14
 
 ## Notes
 
-- Open question: Whether WAAPI on faces composes with the controller's drag transforms at release without a visible jump.
+- Open question: Whether WAAPI on faces composes with the controller's drag transforms at release without a visible jump. Resolved when the face rect in the last pre-`clearDrag` frame and in the first animated frame differ by under 1 px (Playwright); if it fails, stop and report a spine/spec issue, no silent workaround.
