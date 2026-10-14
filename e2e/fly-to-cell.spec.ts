@@ -34,7 +34,6 @@ type Run = {
   afterFirst: Snapshot;
   beforeLast: Snapshot;
   afterLast: Snapshot;
-  landed: number[];
 };
 
 // Clicks `testid` (the button), then watches the flight as described above.
@@ -97,7 +96,6 @@ function fly(page: Page, testid: string): Promise<Run> {
       await entry.a.finished;
       await frame();
     };
-    const landed: number[] = [];
     const first = order[0];
     const last = order[order.length - 1];
     let afterFirst = afterClick;
@@ -105,16 +103,13 @@ function fly(page: Page, testid: string): Promise<Run> {
     let afterLast = afterClick;
     if (first !== undefined && last !== undefined) {
       await seek(first);
-      landed.push(first.anim.id);
       afterFirst = snapshot();
       for (const entry of order.slice(1, -1)) {
         await seek(entry);
-        landed.push(entry.anim.id);
       }
       beforeLast = snapshot();
       if (last !== first) {
         await seek(last);
-        landed.push(last.anim.id);
       }
       afterLast = snapshot();
     }
@@ -128,7 +123,6 @@ function fly(page: Page, testid: string): Promise<Run> {
       afterFirst,
       beforeLast,
       afterLast,
-      landed,
     };
   }, testid);
 }
@@ -139,14 +133,14 @@ const shown = (cards: CellCard[] | undefined) =>
     .filter((c) => c.visibility !== 'hidden')
     .map((c) => `${c.mirror ? 'm' : ''}${c.id}`);
 
-test('AD-14 F28 Confirm on session-place: only the committed faces animate, staggered bottom first, every flying card visible, 52 live elements, previous top and landed cards shown until the last landing, then the non-top committed cards hide together', async ({
-  page,
-}) => {
-  await openFixture(page, 'session-place', { prefs: 'prefs-non-default' });
-  const run = await fly(page, 'primary-action');
+// The shared flight checks (Confirm and a committing Redo): only the committed faces animate
+// bottom first, every flying card visible, 52 live elements, the previous top and the committed
+// cards drawn until the last landing, then only the new top. `cell` is the target WordCell,
+// `committed` its new cards bottom → top, `before` its card ids at the click.
+function expectFlight(run: Run, cell: string, committed: number[], before: number[]): void {
   expect(run.onlyFaces).toBe(true);
   expect(run.clickLive).toBe(52);
-  expect(run.anims.map((a) => a.id)).toEqual([42, 0, 28]);
+  expect(run.anims.map((a) => a.id)).toEqual(committed);
   run.anims.forEach((a, i) => {
     expect(a.duration).toBe(FLY_MS);
     expect(a.delay).toBe(i * STAGGER_MS);
@@ -155,21 +149,40 @@ test('AD-14 F28 Confirm on session-place: only the committed faces animate, stag
   });
   for (const anim of run.anims)
     expect(run.flightVisible[anim.id], `card ${anim.id}`).toBe('visible');
-  // R-60 order: bottom → top, the target's cards in DOM order.
-  expect(run.landed).toEqual([42, 0, 28]);
-  const before = ids(run.start.cells['3']);
-  expect(ids(run.afterClick.cells['3'])).toEqual([...before, 42, 0, 28]);
+  expect(ids(run.start.cells[cell])).toEqual(before);
+  expect(ids(run.afterClick.cells[cell])).toEqual([...before, ...committed]);
   // The previous top (if any) and every committed card are drawn at the click; the first landing
-  // and just before the last change nothing; the last landing hides the non-top committed cards.
+  // and just before the last change nothing; the last landing hides all but the new top.
   const previousTop = before.length === 0 ? [] : [`${before[before.length - 1]}`];
-  const drawn = [...previousTop, '42', '0', '28'];
-  expect(shown(run.afterClick.cells['3'])).toEqual(drawn);
-  expect(shown(run.afterFirst.cells['3'])).toEqual(drawn);
-  expect(shown(run.beforeLast.cells['3'])).toEqual(drawn);
-  expect(shown(run.afterLast.cells['3'])).toEqual(['28']);
+  const drawn = [...previousTop, ...committed.map(String)];
+  expect(shown(run.afterClick.cells[cell])).toEqual(drawn);
+  expect(shown(run.afterFirst.cells[cell])).toEqual(drawn);
+  expect(shown(run.beforeLast.cells[cell])).toEqual(drawn);
+  expect(shown(run.afterLast.cells[cell])).toEqual([`${committed[committed.length - 1]}`]);
   expect(run.afterLast.live).toBe(52);
-  expect(run.afterLast.badges['3']).toBe(String(before.length + 3));
-  expect(run.afterClick.badges['3']).toBe(String(before.length + 3));
+  expect(run.afterClick.badges[cell]).toBe(String(before.length + committed.length));
+  expect(run.afterLast.badges[cell]).toBe(String(before.length + committed.length));
+}
+
+test('AD-14 F28 Confirm on session-place: only the committed faces animate, staggered bottom first, every flying card visible, 52 live elements, previous top and landed cards shown until the last landing, then the non-top committed cards hide together', async ({
+  page,
+}) => {
+  await openFixture(page, 'session-place', { prefs: 'prefs-non-default' });
+  const run = await fly(page, 'primary-action');
+  expectFlight(run, '3', [42, 0, 28], []);
+  await glidesSettled(page);
+});
+
+test('AD-14 F28 Confirm onto a non-empty cell on session-place-onto-committed: the previous top stays shown until the last landing, the cards beneath it stay hidden, then only the new top is shown', async ({
+  page,
+}) => {
+  await openFixture(page, 'session-place-onto-committed', { prefs: 'prefs-non-default' });
+  const run = await fly(page, 'primary-action');
+  // Cell 3 holds TAN (42, 0, 28) from the first move; AIM (2, 19, 26) lands on it.
+  expectFlight(run, '3', [2, 19, 26], [42, 0, 28]);
+  expect(shown(run.start.cells['3'])).toEqual(['28']);
+  expect(shown(run.afterClick.cells['3'])).toEqual(['28', '2', '19', '26']);
+  expect(shown(run.afterLast.cells['3'])).toEqual(['26']);
   await glidesSettled(page);
 });
 
@@ -182,7 +195,6 @@ test('AD-14 F28 Confirm into the free letter own cell on session-place-free-lett
   expect(run.clickLive).toBe(52);
   expect(run.start.cells['3']?.some((c) => c.mirror && c.id === 28)).toBe(true);
   expect(run.anims.map((a) => a.id)).toEqual([9, 32, 28]);
-  expect(run.landed).toEqual([9, 32, 28]);
   const mirrorFirst = (cards: CellCard[]) => cards[0]?.mirror === true && cards[0].id === 28;
   for (const snap of [run.afterClick, run.afterFirst, run.beforeLast]) {
     const cards = snap.cells['3'] ?? [];
@@ -197,19 +209,26 @@ test('AD-14 F28 Confirm into the free letter own cell on session-place-free-lett
   await glidesSettled(page);
 });
 
-test('AD-14 F28 Confirm on session-place-free-letter-two-cards into another cell: at the click the source cell mirror is gone, its beneath card shown, and the target badge final', async ({
+test('AD-14 F28 Confirm on session-place-free-letter-two-cards into another cell: at the click the source cell mirror is gone and its beneath card shown, the target cell holds the five committed cards and only the top is shown after the last landing', async ({
   page,
 }) => {
   await openFixture(page, 'session-place-free-letter-two-cards', { prefs: 'prefs-non-default' });
   const run = await fly(page, 'primary-action');
   expect(run.clickLive).toBe(52);
+  // Source cell 4 holds 20 and the used mirror of 28 (the free letter); 28 leaves for cell 5.
   expect(run.start.cells['4']?.some((c) => c.mirror && c.id === 28)).toBe(true);
-  expect(run.afterClick.cells['4']?.some((c) => c.mirror)).toBe(false);
-  const top = run.afterClick.cells['4']?.at(-1);
-  expect(top?.visibility).toBe('visible');
+  expect(ids(run.start.cells['4'])).toEqual([20, 28]);
+  for (const snap of [run.afterClick, run.afterFirst, run.beforeLast, run.afterLast]) {
+    expect(ids(snap.cells['4'])).toEqual([20]);
+    expect(shown(snap.cells['4'])).toEqual(['20']);
+  }
   expect(run.anims.map((a) => a.id)).toEqual([26, 32, 45, 28, 42]);
-  expect(run.landed).toEqual([26, 32, 45, 28, 42]);
-  expect(run.afterClick.badges['5']).toBe(String((run.start.cells['5'] ?? []).length + 5));
+  expect(ids(run.start.cells['5'])).toEqual([]);
+  expect(shown(run.afterClick.cells['5'])).toEqual(['26', '32', '45', '28', '42']);
+  expect(shown(run.beforeLast.cells['5'])).toEqual(['26', '32', '45', '28', '42']);
+  expect(shown(run.afterLast.cells['5'])).toEqual(['42']);
+  expect(run.afterClick.badges['5']).toBe('5');
+  expect(run.afterLast.badges['5']).toBe('5');
   await glidesSettled(page);
 });
 
@@ -239,46 +258,58 @@ test('AD-14 F28 Undo before a card has started acts on the settled layout and le
       ).length,
   );
   expect(heldVisible).toBe(0);
-  // Settled Place again: Confirm, settle, Undo, Redo.
+  // Settled Place again: Confirm, settle, Undo, then Redo with the Confirm checks.
   await page.getByTestId('primary-action').click();
   await glidesSettled(page);
   await page.getByTestId('undo').click();
   await glidesSettled(page);
-  const redo = await page.evaluate(() => {
-    document.querySelector<HTMLElement>('[data-testid="redo"]')?.click();
-    return [...document.querySelectorAll<HTMLElement>('[data-card-id]')].flatMap((w) => {
-      const face = w.querySelector<HTMLElement>(':scope > .face');
-      const running = face?.getAnimations().filter((a) => a.playState === 'running') ?? [];
-      return running.length === 0
-        ? []
-        : [
-            {
-              id: Number(w.getAttribute('data-card-id')),
-              delay: Number(running[0]?.effect?.getTiming().delay),
-              duration: Number(running[0]?.effect?.getTiming().duration),
-            },
-          ];
-    });
-  });
-  expect(redo.map((r) => r.id).sort((a, b) => a - b)).toEqual([0, 28, 42]);
-  for (const r of redo) expect(r.duration).toBe(FLY_MS);
-  expect(redo.map((r) => r.delay).sort((a, b) => a - b)).toEqual([0, STAGGER_MS, 2 * STAGGER_MS]);
+  const redo = await fly(page, 'redo');
+  expectFlight(redo, '3', [42, 0, 28], []);
   await glidesSettled(page);
 });
 
-test('AD-14 F28 one Confirm under emulated reduced motion: every face fades in at once, unstaggered, and the hold releases at the fade end', async ({
+test('AD-14 F28 a Confirm undone in the same click task leaves the gate idle: the board stays live, layout follows a viewport change and a second Confirm flies', async ({
+  page,
+}) => {
+  await openFixture(page, 'session-place', { prefs: 'prefs-non-default' });
+  await page.evaluate(() => {
+    document.querySelector<HTMLElement>('[data-testid="primary-action"]')?.click();
+    document.querySelector<HTMLElement>('[data-testid="undo"]')?.click();
+  });
+  await glidesSettled(page);
+  const bandWidth = () =>
+    page.evaluate(
+      () => document.querySelector('[data-band="columns"]')?.getBoundingClientRect().width,
+    );
+  const before = await bandWidth();
+  const size = page.viewportSize();
+  if (size === null) throw new Error('no viewport');
+  await page.setViewportSize({ width: size.width - 40, height: size.height });
+  // AD-11: layout work runs once the gate is idle; a leaked enter() would leave it deferred.
+  await expect.poll(bandWidth).toBeLessThan(before ?? 0);
+  expect(await page.evaluate(() => window.__wordcell?.current().kind)).toBe('active');
+  await page.getByTestId('primary-action').click();
+  await glidesSettled(page);
+  await expect(page.getByTestId('wordcell-3').locator('[data-card-id]')).toHaveCount(3);
+});
+
+test('AD-14 F28 one Confirm under emulated reduced motion on session-place-free-letter-redo-tail: every face fades in at once, unstaggered, the used mirror is held first and gone at the fade end', async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await openFixture(page, 'session-place', { prefs: 'prefs-non-default' });
+  await openFixture(page, 'session-place-free-letter-redo-tail', { prefs: 'prefs-non-default' });
   const run = await fly(page, 'primary-action');
-  expect(run.anims.map((a) => a.id).sort((a, b) => a - b)).toEqual([0, 28, 42]);
+  expect(run.anims.map((a) => a.id).sort((a, b) => a - b)).toEqual([9, 28, 32]);
   for (const a of run.anims) {
     expect(a.delay).toBe(0);
     expect(a.duration).toBe(120);
     expect(a.keyframes).toEqual(['0', '1']);
   }
-  expect(shown(run.beforeLast.cells['3'])).toContain('42');
-  expect(shown(run.afterLast.cells['3'])).toEqual(['28']);
+  const held = run.beforeLast.cells['3'] ?? [];
+  expect(held[0]?.mirror === true && held[0].id === 28).toBe(true);
+  expect(shown(held)).toEqual(['m28', '9', '32', '28']);
+  const after = run.afterLast.cells['3'] ?? [];
+  expect(after.some((c) => c.mirror)).toBe(false);
+  expect(shown(after)).toEqual(['28']);
   await glidesSettled(page);
 });

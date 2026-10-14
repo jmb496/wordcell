@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { CardId, Command, Phase } from '../engine/index';
 import type { DispatchResult } from '../shell/game.svelte';
 import type { BandKey, Box, Flip, Placed } from './flip';
@@ -196,6 +196,13 @@ const DURATIONS: Record<MotionKind, number> = {
   overlay: 180,
 };
 
+// The module-level `inFlight` hold outlives a test that leaves animations unsettled: every flip
+// made by setup() is finished after each test.
+const made: Flip[] = [];
+afterEach(() => {
+  for (const flip of made.splice(0)) flip.finishAll();
+});
+
 function setup(options: { reduced?: boolean; phase?: Phase | undefined } = {}) {
   svelteFlush.onFlush = null;
   svelteFlush.onEach = null;
@@ -217,6 +224,7 @@ function setup(options: { reduced?: boolean; phase?: Phase | undefined } = {}) {
     duration,
     stagger,
   });
+  made.push(flip);
   return { root, flip, duration, stagger, state, ...g };
 }
 
@@ -587,6 +595,29 @@ describe('AD-14 flyToCell playback (ticket 5.11, CAP-8, F28)', () => {
     );
     expect(committed()).toEqual([3, 4]);
     expect(t.active()).toBe(2);
+  });
+
+  it('AD-14 flyToCell throws when the flying cards land in different cells (rule 6)', () => {
+    const t = setup({ phase: 'idle' });
+    expect(() =>
+      fly(
+        t,
+        {
+          cards: [
+            { id: 3, place: 'tray', rect: box(10, 520) },
+            { id: 4, place: 'tray', rect: box(54, 520) },
+          ],
+          bands: BANDS,
+        },
+        {
+          cards: [
+            { id: 3, place: 'cell', rect: box(100, 400), cell: 5 },
+            { id: 4, place: 'cell', rect: box(140, 400), cell: 6 },
+          ],
+          bands: BANDS,
+        },
+      ),
+    ).toThrow(/^AD-14 FLIP flying card 4 lands in cell 6, not cell 5/);
   });
 
   it('AD-14 flyingSet lists the cards that entered a cell, in document order', () => {

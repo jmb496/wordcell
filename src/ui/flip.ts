@@ -333,6 +333,12 @@ export function createFlip(deps: FlipDeps): Flip {
     const ms = deps.duration('flyToCell');
     const step = reduced ? 0 : deps.stagger();
     const gaining = found(after.placed.get(flying[0] as CardId)?.cell, 'AD-14 FLIP flying cell');
+    for (const id of flying) {
+      const cell = after.placed.get(id)?.cell;
+      if (cell !== gaining) {
+        throw new Error(`AD-14 FLIP flying card ${id} lands in cell ${cell}, not cell ${gaining}`);
+      }
+    }
     for (const id of flying) inFlightCommitted.add(id);
     const mirror = before.mirrors.get(gaining);
     if (mirror !== undefined) inFlightUsed.add(mirror);
@@ -415,6 +421,8 @@ export function createFlip(deps: FlipDeps): Flip {
       entry.animation.finish();
       settle(entry);
     }
+    // Intentional and unconditional: a hold with no running animation (a play that animated
+    // nothing, or a settle already done) is released too, so no hold outlives finishAll().
     releaseHold();
   }
 

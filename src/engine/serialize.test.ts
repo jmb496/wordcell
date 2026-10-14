@@ -214,6 +214,9 @@ import validPlaceFreeLetterRedoTail from '../../fixtures/session-place-free-lett
 import validPlaceFreeLetterTwoCards from '../../fixtures/session-place-free-letter-two-cards.json' with {
   type: 'json',
 };
+import validPlaceOntoCommitted from '../../fixtures/session-place-onto-committed.json' with {
+  type: 'json',
+};
 import validWon from '../../fixtures/session-won.json' with { type: 'json' };
 import { EngineError } from './errors';
 import {
@@ -291,9 +294,10 @@ type ValidName =
   | 'idle-empty-column'
   | 'gave-up-after-commit'
   | 'place-compact'
-  | 'place-free-letter-two-cards';
+  | 'place-free-letter-two-cards'
+  | 'place-onto-committed';
 
-/** The thirteen CAP-9 round-trip fixtures (generator record: the plan's Implementation Notes). */
+/** The fourteen CAP-9 round-trip fixtures (generator record: the plan's Implementation Notes). */
 const VALID: readonly (readonly [ValidName, unknown])[] = [
   ['idle-fresh', validIdleFresh],
   ['composing', validComposing],
@@ -308,6 +312,7 @@ const VALID: readonly (readonly [ValidName, unknown])[] = [
   ['gave-up-after-commit', validGaveUpAfterCommit],
   ['place-compact', validPlaceCompact],
   ['place-free-letter-two-cards', validPlaceFreeLetterTwoCards],
+  ['place-onto-committed', validPlaceOntoCommitted],
 ];
 
 // --- rejection table ------------------------------------------------------------------------
@@ -882,6 +887,16 @@ describe('defining properties (§2, CAP-9)', () => {
       const cell = v.cells.find((entry) => entry.cell === c);
       expect(cell?.cards).toHaveLength(2);
       expect(cell?.isLegalTarget).toBe(true);
+    },
+    // Ticket 5.11 (epic 5 SPEC CAP-8, F28): the place-phase target already holds committed cards
+    // and no free letter is taken, so Confirm lands on a plain previous top (no R-52 used mirror).
+    'place-onto-committed': (s) => {
+      expect(s.cursor.phase).toBe('place');
+      const move = s.moves[s.cursor.index];
+      expect(move.freeLetters).toEqual([]);
+      const cell = view(s, EN).cells.find((entry) => entry.cell === move.targetCell);
+      expect(cell?.cards.length).toBeGreaterThan(0);
+      expect(cell?.used).toBe(false);
     },
   };
 
@@ -1750,6 +1765,16 @@ const REBUILDS: readonly (readonly [string, unknown, () => Session])[] = [
           VALIDATE, // MOUNT, target 5; legal 3–5
         ],
         ['quin', 'quartered', 'mount'],
+      ),
+  ],
+  [
+    'session-place-onto-committed',
+    validPlaceOntoCommitted,
+    () =>
+      play(
+        createSession(1),
+        [...FIXTURE_TAN_DONE, drop(2, 2, 3), VALIDATE], // AIM (left side) → cell 3 on top of TAN
+        ['tan', 'aim'],
       ),
   ],
 ];
