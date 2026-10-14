@@ -10,11 +10,17 @@ import {
   glidesSettled,
   openFixture,
   type Point,
+  sameSession,
+  stashSession,
   tapAt,
 } from './helpers/board';
-import { expectNoResidue } from './helpers/drag';
+import { dragResidue, expectNoResidue } from './helpers/drag';
+import { faceOf, holdThrough, path, plus } from './helpers/gestures';
 import { animationFrames } from './helpers/lifecycle';
+import { onAndroid } from './helpers/project';
 import { waitForDictionary } from './helpers/restore';
+import { selection } from './helpers/selection';
+import { storedText } from './helpers/session';
 import { type TouchHold, touchHold } from './helpers/touch';
 
 // Epic 5 entry 17 (SPEC Success signal; epic Done when 2 and Done when 3's same-Session sentence):
@@ -26,24 +32,19 @@ import { type TouchHold, touchHold } from './helpers/touch';
 // [28, 1, 9, 48], Confirm (score 49 → 54). Expected values are literals from engine replay over
 // the fixture, never edited to pass. Every dispatching step polls its stored value, then checks
 // the stored wordcell:session equals current().session before the next input (R-73 (UI)).
-// Helpers are local copies (S1 consolidation is entry 14's): `expectSaved`, `cellIds`,
+// Local helpers (shared ones are in e2e/helpers/, ticket 5.14 S1): `expectSaved`, `cellIds`,
 // `columnIds`, `signed`, `score`, `metaDelta`, `confirm` and the tile tap helpers from
-// e2e/place.spec.ts; `selection` from e2e/tap.spec.ts; `holdThrough` from e2e/drag.spec.ts;
-// `geometry`, `gapCentre`, `moveFace`, `path`, `mid`, `plus` from e2e/tile-drag.spec.ts;
+// e2e/place.spec.ts; `geometry`, `gapCentre`, `moveFace`, `mid` from e2e/tile-drag.spec.ts;
 // e2e/free-letter.spec.ts's `geometry`/`gapCentre` (one extra slot while the layout has room) as
 // `insertGeometry`/`insertGapCentre`. Adapted: both `geometry` variants read one `trayMetrics`;
 // tile-drag's `holdTile` and free-letter's `holdTop` share `holdFace` and return the `TouchHold`.
 // New here: `storedAt`, `expectStep`, `expectStoredCursor`, `expectFinalSession`, `expectLanded`.
-
-const onAndroid = () =>
-  test.skip(test.info().project.name !== 'android', 'touch flows run on android');
 
 const SESSION = 'wordcell:session';
 const FIXTURE = 'session-idle-empty-column';
 const W = 48;
 const tray = (page: Page) => page.locator('[data-band="tray"]');
 const tile = (page: Page, id: number) => tray(page).getByTestId(`card-${id}`);
-const faceOf = (page: Page, id: number) => tile(page, id).locator(':scope > .face');
 const selectedTiles = (page: Page) => tray(page).locator('[data-card-id].selected');
 const cell = (page: Page, n: number) => page.getByTestId(`wordcell-${n}`);
 const cellTop = (page: Page) => cell(page, 7).getByTestId(`card-${W}`);
@@ -149,22 +150,6 @@ async function expectStep(page: Page, move: Partial<StoredMove>, cursor?: Cursor
 async function expectStoredCursor(page: Page, cursor: Cursor): Promise<void> {
   await expect.poll(async () => (await storedAt(page)).cursor).toEqual(cursor);
   await expectSaved(page);
-}
-
-// The rendered column selection: the outline's column and its lifted cards.
-function selection(page: Page): Promise<{ column: number; count: number } | null> {
-  return page.evaluate(() => {
-    const outlines = document.querySelectorAll('[data-selection-outline]');
-    if (outlines.length > 1) throw new Error('more than one selection outline');
-    const outline = outlines[0];
-    if (outline === undefined) return null;
-    const col = outline.closest('[data-column]');
-    if (col === null) throw new Error('outline outside a column');
-    return {
-      column: Number(col.getAttribute('data-column')),
-      count: col.querySelectorAll('[data-place="column"].lifted').length,
-    };
-  });
 }
 
 async function tapTile(page: Page, id: number): Promise<void> {
@@ -302,6 +287,25 @@ async function insertGeometry(page: Page): Promise<Geometry & { room: boolean }>
   };
 }
 
+// Runs `act` (a tap that must dispatch nothing) and asserts the store's Session reference and the
+// stored wordcell:session text are untouched, so a wrong dispatch that saved cannot pass.
+async function expectNoDispatch(page: Page, act: () => Promise<void>): Promise<void> {
+  const text = await stashSession(page);
+  await act();
+  expect(await sameSession(page)).toBe(true);
+  expect(await storedText(page)).toBe(text);
+}
+
+// A held drag is a controller drag, not a degraded tap: its residue shows before the release.
+async function expectDragging(page: Page): Promise<void> {
+  await expect
+    .poll(async () => {
+      const residue = await dragResidue(page);
+      return residue.classes + residue.transforms;
+    })
+    .toBeGreaterThan(0);
+}
+
 const mid = (r: Rect): Point => ({ x: (r.left + r.right) / 2, y: (r.top + r.bottom) / 2 });
 
 // The centre of gap `index`'s (first) rect over the run [first, first + count).
@@ -314,31 +318,6 @@ function gapCentre(g: Geometry, first: number, count: number, index: number): Po
 }
 
 const insertGapCentre = gapCentre;
-
-const plus = (p: Point, dx: number, dy: number): Point => ({ x: p.x + dx, y: p.y + dy });
-
-// `steps` points from `from` (excluded) to `to` (included).
-function path(from: Point, to: Point, steps: number): Point[] {
-  return Array.from({ length: steps }, (_, i) => ({
-    x: from.x + ((to.x - from.x) * (i + 1)) / steps,
-    y: from.y + ((to.y - from.y) * (i + 1)) / steps,
-  }));
-}
-
-// One held touch moved to each point in turn, a frame after each move.
-async function holdThrough(page: Page, from: Point, points: Point[]): Promise<TouchHold> {
-  const hold = await touchHold(page, from);
-  try {
-    for (const p of points) {
-      await hold.moveTo(p);
-      await animationFrames(page, 2);
-    }
-  } catch (error) {
-    await hold.end();
-    throw error;
-  }
-  return hold;
-}
 
 // Moves a held face (pressed at its centre) so its centre lies on `to`, in `steps` moves.
 async function moveFace(page: Page, hold: TouchHold, from: Point, to: Point, steps = 4) {
@@ -366,7 +345,7 @@ async function holdFace(page: Page, start: Point, targets: Point[]): Promise<Tou
 
 // Live tray tile `id` held at its face centre and moved onto each target.
 async function holdTile(page: Page, id: number, targets: Point[]): Promise<TouchHold> {
-  return holdFace(page, await centre(faceOf(page, id)), targets);
+  return holdFace(page, await centre(faceOf(tile(page, id))), targets);
 }
 
 // Cell 7's top face (W) held at its centre and moved onto each target.
@@ -420,8 +399,10 @@ test.describe('android', () => {
   }) => {
     await open(page);
     // 1: tap-select the tail (no dispatch).
-    await tapAt(page, await centre(await tailHead(page)));
-    await expect.poll(() => selection(page)).toEqual({ column: 6, count: 3 });
+    await expectNoDispatch(page, async () => {
+      await tapAt(page, await centre(await tailHead(page)));
+      await expect.poll(() => selection(page)).toEqual({ column: 6, count: 3 });
+    });
     await expectSaved(page);
     // 2: tap-drop on empty column 1 (k 0).
     await tapAt(page, await centre(placeholder(page)));
@@ -430,7 +411,7 @@ test.describe('android', () => {
     await tapAt(page, await centre(cellTop(page)));
     await expectStep(page, { arrangement: [1, 9, 28, W], freeLetters: [7] });
     // 4: tap-swap tiles 9 and 28.
-    await select(page, 9);
+    await expectNoDispatch(page, () => select(page, 9));
     await expectSaved(page);
     await tapTile(page, 28);
     await expectStep(page, { arrangement: [1, 28, 9, W] });
@@ -438,7 +419,7 @@ test.describe('android', () => {
     // 5, 6: Validate (target 4, +9), retarget 3 (+5).
     await validateAndRetarget(page);
     // 7: tap-swap strip tiles 1 and 28.
-    await select(page, 1);
+    await expectNoDispatch(page, () => select(page, 1));
     await expectSaved(page);
     await tapTile(page, 28);
     await expectStep(page, { targetCell: 3, placementOrder: [28, 1, 9, W] });
@@ -472,26 +453,32 @@ test.describe('android', () => {
     await expectStep(page, DROPPED, { index: 1, phase: 'composing' });
     await expectNoResidue(page);
     // 3: W from cell 7 into the end gap of M (k 0).
+    await glidesSettled(page);
     const ig = await insertGeometry(page);
     expect(ig.tileCount).toBe(3);
     expect(ig.room).toBe(true);
     const add = await holdTop(page, [insertGapCentre(ig, 0, 3, 3)]);
+    await expectDragging(page);
     await add.end();
     await expectStep(page, { arrangement: [1, 9, 28, W], freeLetters: [7] });
     await expectNoResidue(page);
     // 4: tray tile 28 into the gap before tile 9.
+    await glidesSettled(page);
     const g = await geometry(page);
     expect(g.tileCount).toBe(4);
     const arrange = await holdTile(page, 28, [gapCentre(g, 0, 4, 1)]);
+    await expectDragging(page);
     await arrange.end();
     await expectStep(page, { arrangement: [1, 28, 9, W] });
     await expectNoResidue(page);
     // 5, 6: Validate (target 4, +9), retarget 3 (+5), by taps.
     await validateAndRetarget(page);
     // 7: strip tile 28 into gap 0.
+    await glidesSettled(page);
     const strip = await geometry(page);
     expect(strip.tileCount).toBe(4);
     const order = await holdTile(page, 28, [gapCentre(strip, 0, 4, 0)]);
+    await expectDragging(page);
     await order.end();
     await expectStep(page, { targetCell: 3, placementOrder: [28, 1, 9, W] });
     await expectNoResidue(page);

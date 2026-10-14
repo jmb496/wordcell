@@ -135,6 +135,16 @@ describe('AD-12 insertionIndex', () => {
     expect(insertionIndex(face(101, 20), gaps).index).toBe(2);
   });
 
+  it('AD-12 insertionIndex distance is Euclidean (F3): gap centres (30, 0), (20, 20) and (22, 13) from the face centre (0, 0) pick (22, 13), where Manhattan picks (30, 0) and Chebyshev (20, 20)', () => {
+    const at = (index: number, cx: number, cy: number): GapRect => ({
+      index,
+      rect: { left: cx - 2, top: cy - 2, right: cx + 2, bottom: cy + 2 },
+    });
+    const gaps = [at(0, 30, 0), at(1, 20, 20), at(2, 22, 13)];
+    expect(insertionIndex(face(0, 0), gaps).index).toBe(2);
+    expect(insertionIndex(face(0, 0), [...gaps].reverse()).index).toBe(2);
+  });
+
   it('AD-12 insertionIndex block left (k 3): indices stay in M; over mirror slot 2 → gap 0, over mirror slot 0 → the nearer start-of-row-1 rect (gap 4)', () => {
     // 9 tiles compact, mirrors at 0…2, M at 3…8; dragged over mirror slot 2 (centre (125, 22)).
     const gaps = gapsFor(9, 3, 6);

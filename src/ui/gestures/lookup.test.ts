@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { CellView, ColumnView } from '../../engine/index';
-import { cellIn, columnIn, found } from './lookup';
+import { attribute, cellIn, columnIn, found } from './lookup';
 
 const cell = (n: number, cards: number[]) => ({ cell: n, cards }) as unknown as CellView;
+const withAttribute = (value: string | null) =>
+  ({ getAttribute: () => value }) as unknown as Element;
 const column = (n: number) => ({ column: n, cards: [] }) as unknown as ColumnView;
 
 describe('AD-12 lookup', () => {
@@ -31,6 +33,35 @@ describe('AD-12 lookup', () => {
     expect(() => columnIn(columns, 3, 'AD-12 no column 3')).toThrow(/^AD-12 no column 3$/);
     expect(() => columnIn([column(2), column(1)], 1, 'AD-12 column 1 mismatch')).toThrow(
       /^AD-12 column 1 mismatch$/,
+    );
+  });
+
+  it("AD-12 attribute reads an integer value, '0' (CardId 0) included", () => {
+    expect(attribute(withAttribute('0'), 'data-card-id')).toBe(0);
+    expect(attribute(withAttribute('42'), 'data-card-id')).toBe(42);
+  });
+
+  it('AD-12 attribute throws on a missing attribute (rule 6: not card 0)', () => {
+    expect(() => attribute(withAttribute(null), 'data-card-id')).toThrow(
+      /^AD-12 data-card-id is missing or empty$/,
+    );
+  });
+
+  it('AD-12 attribute throws on an empty or blank attribute (rule 6: not card 0)', () => {
+    expect(() => attribute(withAttribute(''), 'data-column')).toThrow(
+      /^AD-12 data-column is missing or empty$/,
+    );
+    expect(() => attribute(withAttribute(' '), 'data-column')).toThrow(
+      /^AD-12 data-column is missing or empty$/,
+    );
+  });
+
+  it('AD-12 attribute throws on a non-integer value', () => {
+    expect(() => attribute(withAttribute('1.5'), 'data-wordcell')).toThrow(
+      /^AD-12 data-wordcell is not an integer$/,
+    );
+    expect(() => attribute(withAttribute('x'), 'data-wordcell')).toThrow(
+      /^AD-12 data-wordcell is not an integer$/,
     );
   });
 });

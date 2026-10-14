@@ -1,5 +1,6 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
 import {
+  type Box,
   box,
   cards,
   centre,
@@ -8,34 +9,32 @@ import {
   openFixture,
   sameSession,
   stashSession,
-  tapAt,
 } from './helpers/board';
-import { wc } from './helpers/dialogs';
 import { dragResidue, expectNoResidue } from './helpers/drag';
+import {
+  css,
+  expectFlownBack,
+  faceOf,
+  holdThrough,
+  idOf,
+  path,
+  plus,
+  targets,
+} from './helpers/gestures';
 import { animationFrames, hidePage, showPage } from './helpers/lifecycle';
+import { onAndroid, onDesktop } from './helpers/project';
+import { expectSelection, select } from './helpers/selection';
+import { cursorIndex, game, storedGame } from './helpers/session';
 import { armStorageSpy, storageWrites } from './helpers/storage-spy';
 import { tokenColor } from './helpers/style';
-import { type TouchHold, touchHold } from './helpers/touch';
 
 // Epic 4 entry 9: drag interruptions (SPEC CAP-4, CAP-7, F13, F24, F28; AD-9, AD-12, AD-13, AD-16,
 // AD-17; build-notes CAP-4 AD-17 hide case and Cancel-first P4). A pick-up drag started with a
 // tail selected replaces it (`wc-selection-suppressed` on `<main>` mid-drag); hide, back, Undo and
-// a platform pointercancel end a held drag. Helpers are local copies of e2e/drag.spec.ts and
-// e2e/tap.spec.ts. `session-idle-fresh` columns hold 7/7/7/7/6/6/6/6 cards;
+// a platform pointercancel end a held drag. Shared helpers are in e2e/helpers/. `session-idle-fresh` columns hold 7/7/7/7/6/6/6/6 cards;
 // `session-idle-empty-column` has column 1 empty with Undo enabled.
 
-type Point = { x: number; y: number };
-type Box = { x: number; y: number; w: number; h: number };
-type Selection = { column: number; count: number } | null;
-
 const SUPPRESSED = 'wc-selection-suppressed';
-
-const onAndroid = () =>
-  test.skip(test.info().project.name !== 'android', 'touch drag flows run on android');
-const onDesktop = () =>
-  test.skip(test.info().project.name !== 'desktop', 'mouse drag flows run on desktop');
-
-const faceOf = (card: Locator) => card.locator(':scope > .face');
 
 // Ticket 5.10 (epic 5 SPEC CAP-8): right after an Undo the drag's residue is gone at once; the
 // only `wc-drag-*` class allowed is `wc-drag-tiles` on the tray's `.tiles`, and only while a face
@@ -62,82 +61,6 @@ async function expectDragGoneUnderGlide(page: Page): Promise<void> {
 const outline = (page: Page) => page.locator('[data-selection-outline]');
 const here = (page: Page, n: number) => foot(page, n).locator('.here');
 
-const idOf = async (card: Locator) => Number(await card.getAttribute('data-card-id'));
-const plus = (p: Point, dx: number, dy: number): Point => ({ x: p.x + dx, y: p.y + dy });
-
-// `steps` points from `from` (excluded) to `to` (included).
-function path(from: Point, to: Point, steps: number): Point[] {
-  return Array.from({ length: steps }, (_, i) => ({
-    x: from.x + ((to.x - from.x) * (i + 1)) / steps,
-    y: from.y + ((to.y - from.y) * (i + 1)) / steps,
-  }));
-}
-
-// One held touch moved to each point in turn, a frame after each move.
-async function holdThrough(page: Page, from: Point, points: Point[]): Promise<TouchHold> {
-  const hold = await touchHold(page, from);
-  try {
-    for (const p of points) {
-      await hold.moveTo(p);
-      await animationFrames(page, 2);
-    }
-  } catch (error) {
-    await hold.end();
-    throw error;
-  }
-  return hold;
-}
-
-// The rendered selection: the outline's column and its lifted cards (e2e/tap.spec.ts).
-function selection(page: Page): Promise<Selection> {
-  return page.evaluate(() => {
-    const outlines = document.querySelectorAll('[data-selection-outline]');
-    if (outlines.length > 1) throw new Error('more than one selection outline');
-    const found = outlines[0];
-    if (found === undefined) {
-      if (document.querySelector('.lifted') !== null) throw new Error('lifted without outline');
-      return null;
-    }
-    const col = found.closest('[data-column]');
-    if (col === null) throw new Error('outline outside a column');
-    return {
-      column: Number(col.getAttribute('data-column')),
-      count: col.querySelectorAll('[data-place="column"].lifted').length,
-    };
-  });
-}
-
-const wcOf = async (page: Page) => (await wc(page))?.wc;
-
-async function expectSelection(page: Page, expected: Selection, entries: number): Promise<void> {
-  await expect.poll(() => selection(page)).toEqual(expected);
-  await expect.poll(() => wcOf(page)).toBe(entries);
-}
-
-async function select(page: Page, n: number, i: number): Promise<void> {
-  await tapAt(page, await centre(cards(page, n).nth(i)));
-  const count = await cards(page, n).count();
-  await expectSelection(page, { column: n, count: count - i }, 1);
-}
-
-// The store's Session without `activeMs` (a hide flush accrues time into a new reference).
-function game(page: Page): Promise<string> {
-  return page.evaluate(() => {
-    const current = window.__wordcell?.current();
-    if (current?.kind !== 'active') throw new Error(`store is ${current?.kind}`);
-    return JSON.stringify({ ...current.session, activeMs: 0 });
-  });
-}
-
-// The stored wordcell:session without `activeMs`.
-function storedGame(page: Page): Promise<string> {
-  return page.evaluate(() => {
-    const text = localStorage.getItem('wordcell:session');
-    if (text === null) throw new Error('wordcell:session is absent');
-    return JSON.stringify({ ...JSON.parse(text), activeMs: 0 });
-  });
-}
-
 const activeMs = (page: Page) =>
   page.evaluate(() => {
     const current = window.__wordcell?.current();
@@ -145,36 +68,9 @@ const activeMs = (page: Page) =>
     return current.session.activeMs;
   });
 
-const cursorIndex = (page: Page) =>
-  page.evaluate(() => {
-    const current = window.__wordcell?.current();
-    if (current?.kind !== 'active') throw new Error(`store is ${current?.kind}`);
-    return current.session.cursor.index;
-  });
-
-// The `data-column`s of elements carrying `wc-drag-target`.
-function targets(page: Page): Promise<number[]> {
-  return page.evaluate(() =>
-    [...document.querySelectorAll('.wc-drag-target')].map((el) =>
-      Number(el.closest('[data-column]')?.getAttribute('data-column')),
-    ),
-  );
-}
-
 const suppressed = (page: Page) =>
   page.evaluate((c) => document.querySelector('main')?.classList.contains(c) === true, SUPPRESSED);
-const css = (locator: Locator, property: string) =>
-  locator.evaluate((el, p) => getComputedStyle(el).getPropertyValue(p), property);
 const runningAnimations = (locator: Locator) => locator.evaluate((el) => el.getAnimations().length);
-
-// R-14 the tail returned: no running animation and back on `rest` (±1 px).
-async function expectFlownBack(face: Locator, rest: Box): Promise<void> {
-  await expect.poll(() => runningAnimations(face)).toBe(0);
-  const now = await box(face);
-  for (const k of ['x', 'y', 'w', 'h'] as const) {
-    expect(Math.abs(now[k] - rest[k]), k).toBeLessThanOrEqual(1);
-  }
-}
 
 // The fly-back spy (e2e/drag.spec.ts): logs the card id of every `.face` an `animate` call targets.
 async function recordFlyBack(page: Page): Promise<void> {

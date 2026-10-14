@@ -15,7 +15,10 @@ import {
 } from './helpers/board';
 import { expectLeaves } from './helpers/dialogs';
 import { dragResidue, expectNoResidue } from './helpers/drag';
+import { path } from './helpers/gestures';
 import { animationFrames, hidePage } from './helpers/lifecycle';
+import { onAndroid, onDesktop } from './helpers/project';
+import { game, storedGame } from './helpers/session';
 import { type TouchHold, touchHold } from './helpers/touch';
 
 // Epic 5 entry 8 (SPEC CAP-6, F5, F16, F18): free letters by tap and by drag on
@@ -28,15 +31,10 @@ import { type TouchHold, touchHold } from './helpers/touch';
 // rect from layout/tray.ts (`slotRects` over `trayLayout(tileCount, w, trayInnerWidth)` with one
 // extra slot while the layout has room, `origin` = tray position 0's wrapper + 2 px x, `w` and the
 // inner width read from the rendered tray). Every edit asserts the stored wordcell:session equals
-// the store's Session (R-73 (UI)) and then one zero `dragResidue` read. Helpers are local copies
-// (S1 consolidation is entry 14's): `open`/`expectSaved`/`storedMove`/geometry/hold helpers from
-// e2e/tile-drag.spec.ts, `game`/`storedGame` from e2e/drag-interruptions.spec.ts, the used-cell
+// the store's Session (R-73 (UI)) and then one zero `dragResidue` read. Local helpers
+// (shared ones are in e2e/helpers/, ticket 5.14 S1): `open`/`expectSaved`/`storedMove`/geometry/hold
+// helpers from e2e/tile-drag.spec.ts, the used-cell
 // check after e2e/board-phases.spec.ts `expectUsedCell3`.
-
-const onAndroid = () =>
-  test.skip(test.info().project.name !== 'android', 'touch flows run on android');
-const onDesktop = () =>
-  test.skip(test.info().project.name !== 'desktop', 'mouse flows run on desktop');
 
 const SESSION = 'wordcell:session';
 const FIXTURE = 'session-idle-empty-column';
@@ -123,24 +121,6 @@ async function current(page: Page): Promise<GameView> {
     return c.session;
   });
   return view(session as Session, EN);
-}
-
-// The store's Session without `activeMs` (a hide flush accrues time into a new reference).
-function game(page: Page): Promise<string> {
-  return page.evaluate(() => {
-    const c = window.__wordcell?.current();
-    if (c?.kind !== 'active') throw new Error(`store is ${c?.kind}`);
-    return JSON.stringify({ ...c.session, activeMs: 0 });
-  });
-}
-
-// The stored wordcell:session without `activeMs`.
-function storedGame(page: Page): Promise<string> {
-  return page.evaluate(() => {
-    const text = localStorage.getItem('wordcell:session');
-    if (text === null) throw new Error('wordcell:session is absent');
-    return JSON.stringify({ ...JSON.parse(text), activeMs: 0 });
-  });
 }
 
 async function expectSelected(page: Page, id: number | null): Promise<void> {
@@ -269,14 +249,6 @@ const slot = (g: Geometry, p: number): Rect => {
   if (s === undefined) throw new Error(`no slot ${p}`);
   return s;
 };
-
-// `steps` points from `from` (excluded) to `to` (included).
-function path(from: Point, to: Point, steps: number): Point[] {
-  return Array.from({ length: steps }, (_, i) => ({
-    x: from.x + ((to.x - from.x) * (i + 1)) / steps,
-    y: from.y + ((to.y - from.y) * (i + 1)) / steps,
-  }));
-}
 
 async function moveFace(page: Page, hold: TouchHold, from: Point, to: Point, steps = 4) {
   for (const p of path(from, to, steps)) {

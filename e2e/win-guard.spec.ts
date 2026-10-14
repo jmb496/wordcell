@@ -1,17 +1,13 @@
 import { expect, type Page, test } from '@playwright/test';
 import { centre, glidesSettled, openFixture, tapAt } from './helpers/board';
 import { hidePage, showPage } from './helpers/lifecycle';
+import { onAndroid, onDesktop } from './helpers/project';
 
 // Ticket 5.13 (epic 5 SPEC CAP-10, F8, F23; AD-14, AD-9): the winning-animation input guard.
 // session-won plus one Undo is the Place phase whose Confirm wins (cell 6 receives the last word).
 // Animation speed Slow is `prefs-non-default` (base 320 ms), Fast is `prefs-fast`, Normal is the
 // default. The Vitest guard cases in src/ui/motion.test.ts are authoritative for held-key repeats;
 // repeated `keyboard.down('Enter')` is Playwright's closest stand-in for a held key.
-
-const onAndroid = () =>
-  test.skip(test.info().project.name !== 'android', 'touch flows run on android');
-const onDesktop = () =>
-  test.skip(test.info().project.name !== 'desktop', 'keyboard flows run on desktop');
 
 const primary = (page: Page) => page.getByTestId('primary-action');
 const sheet = (page: Page) => page.locator('[data-view-sheet]');

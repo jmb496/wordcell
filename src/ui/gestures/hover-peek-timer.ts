@@ -1,17 +1,16 @@
 // AD-12 desktop hover-peek timer (epic 4 SPEC CAP-9, epic 4 SPEC F19; AD-12, AD-13): a mouse
 // `pointerover` entering a `[data-wordcell]` (relatedTarget outside it or null) arms one
 // LONG_PRESS_MS timer (a single slot keyed by cell number, so a replaced cell node's pointerout
-// still stops it) while
-// `hoverFine()`, with no press held, no fly-back, `buttons` 0, the cell not suppressed, its hover
-// peek not open and the cell non-empty in the GameView (AD-3); any real cell entry stops a pending
-// timer before its no-arm returns, and an entry into another cell closes an open hover peek first
-// (a removed node sends no pointerout). At fire it re-checks `hoverFine` and emptiness and calls
-// `overlays.openHoverPeek` (the store gates peek, view and modal tops). A mouse `pointerout`
-// leaving the cell clears its timer, closes the hover peek and lifts its suppression. Suppression
-// is one `[data-wordcell]` slot: the cell whose rect, half-open (a shared edge goes right or
-// lower), holds the last mouse point, set by the controller at every mouse press end, fly-back
-// settle and cancel(), so boundary pointerovers into it never arm until a pointerout leaves it;
-// `reset()` empties it at detach. `hideHoverPeek()` hides `[data-hover-peek]` with
+// still stops it) while `hoverFine()`, with no press held, no fly-back, `buttons` 0, the cell not
+// suppressed, its hover peek not open and the cell non-empty in the GameView (AD-3); any real cell
+// entry stops a pending timer before its no-arm returns, and an entry into another cell closes an
+// open hover peek first (a removed node sends no pointerout). At fire it re-checks `hoverFine` and
+// emptiness and calls `overlays.openHoverPeek` (the store gates peek, view and modal tops). A mouse
+// `pointerout` leaving the cell clears its timer, closes the hover peek and lifts its suppression.
+// Suppression is one `[data-wordcell]` slot: the cell whose rect, half-open (a shared edge goes
+// right or lower), holds the last mouse point, set by the controller at every mouse press end,
+// fly-back settle and cancel(), so boundary pointerovers into it never arm until a pointerout
+// leaves it; `reset()` empties it at detach. `hideHoverPeek()` hides `[data-hover-peek]` with
 // `wc-hover-peek-hidden` (DOM only) when a pick-up drag starts. The controller's state is read
 // through getters; timers come from its injected `setTimer`/`clearTimer`.
 import { game } from '../../shell/game.svelte';

@@ -1,6 +1,8 @@
 import { expect, type Page, test } from '@playwright/test';
-import { cards, centre, column, openFixture, tapAt, trayIds } from './helpers/board';
+import { cards, centre, openFixture, tapAt, trayIds } from './helpers/board';
+import { placeholder } from './helpers/gestures';
 import { waitForDictionary } from './helpers/restore';
+import { storedGame, storedText } from './helpers/session';
 import { armStorageSpy, storageWrites } from './helpers/storage-spy';
 
 // Epic 5 entry 3: the D-block controls, the k = 0 caption, Validate (F15, F21) and the primary
@@ -22,8 +24,6 @@ const kText = (page: Page) => controls(page).locator('.k');
 const primary = (page: Page) => page.getByTestId('primary-action');
 const invalid = (page: Page) => tray(page).locator('.word-line .invalid');
 const wordText = (page: Page) => tray(page).locator('.word-line .word-text');
-const placeholder = (page: Page, n: number) => column(page, n).locator('[data-placeholder]');
-
 type Stored = {
   moves: {
     destinationCount: number;
@@ -53,17 +53,6 @@ async function expectSaved(page: Page): Promise<Stored> {
   expect(stored).toEqual(current);
   return stored as Stored;
 }
-
-// The stored Session text with `activeMs` masked (e2e/column-phases.spec.ts).
-function storedGame(page: Page): Promise<string> {
-  return page.evaluate((key) => {
-    const text = localStorage.getItem(key);
-    if (text === null) throw new Error('wordcell:session is absent');
-    return JSON.stringify({ ...JSON.parse(text), activeMs: 0 });
-  }, SESSION);
-}
-
-const storedText = (page: Page) => page.evaluate((key) => localStorage.getItem(key), SESSION);
 
 const phase = (page: Page) =>
   page.evaluate(() => {
@@ -108,7 +97,7 @@ test('R-30 R-31 R-38 R-73 (UI) D-block controls on session-composing: + raises k
   await expect(minus(page)).toHaveText('−');
   await expect(plus(page)).toHaveText('+');
 
-  await plus(page).click();
+  await tapAt(page, await centre(plus(page)));
   await expect(kText(page)).toHaveText('2');
   let stored = await expectSaved(page);
   expect(stored.moves[0]?.destinationCount).toBe(2);
@@ -202,7 +191,7 @@ test('R-38 R-71 R-31 (UI) + after a failed Validate clears the invalid line', as
   await stubCatDog(page);
   await openFixture(page, 'session-composing');
   await failValidate(page);
-  await plus(page).click();
+  await tapAt(page, await centre(plus(page)));
   await expect(invalid(page)).toHaveCount(0);
   await expect(wordText(page)).toHaveText('TANE');
   await expectSaved(page);
@@ -280,6 +269,10 @@ test('R-31 (UI) k = 0: the empty-column caption replaces −, k, + and Flip; sin
   });
   expect(fit.scrollWidth).toBeLessThanOrEqual(fit.clientWidth);
   expect(fit.right).toBeLessThanOrEqual(fit.rowRight + 0.5);
+  // The caption ends before the count starts: the ellipsized caption never runs under the count.
+  const captionRight = await caption.evaluate((el) => el.getBoundingClientRect().right);
+  const countLeft = await count.evaluate((el) => el.getBoundingClientRect().left);
+  expect(captionRight).toBeLessThanOrEqual(countLeft + 0.5);
 });
 
 // The primary label span's natural nowrap width at 14, 15 and 16 px (a temporary inline font

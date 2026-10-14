@@ -1,10 +1,13 @@
-import { expect, type Locator, type Page, test } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 import { EN, view } from '../src/engine/index';
-import { centre, openFixture, tapAt } from './helpers/board';
-import { expectLeaves, wc } from './helpers/dialogs';
+import { box, centre, openFixture, type Point, tapAt } from './helpers/board';
+import { expectLeaves } from './helpers/dialogs';
 import { animationFrames } from './helpers/lifecycle';
+import { onAndroid, onDesktop } from './helpers/project';
 import { booted } from './helpers/restore';
 import { fixture, seedStorage } from './helpers/seed';
+import { wcOf } from './helpers/selection';
+import { cursorIndex } from './helpers/session';
 import { touchDrag, touchHold } from './helpers/touch';
 
 // Epic 4 entry 11: the WordCell long-press peek and sticky view (SPEC CAP-9, F14, F24, F27;
@@ -15,20 +18,11 @@ import { touchDrag, touchHold } from './helpers/touch';
 // empty). Every view case asserts the Session reference, the stored text and Undo/Redo enablement
 // unchanged (R-65 viewing changes nothing and does not enter the move history).
 
-type Point = { x: number; y: number };
-
-const onAndroid = () =>
-  test.skip(test.info().project.name !== 'android', 'touch flows run on android');
-const onDesktop = () =>
-  test.skip(test.info().project.name !== 'desktop', 'mouse flows run on desktop');
-
 const cell = (page: Page, n: number) => page.getByTestId(`wordcell-${n}`);
 const sheet = (page: Page) => page.locator('[data-view-sheet]');
 const scrim = (page: Page) => page.locator('[data-view-scrim]');
 const scrollArea = (page: Page) => page.locator('[data-view-scroll]');
 const mirrors = (page: Page) => sheet(page).locator('[data-mirror-of]');
-
-const wcOf = async (page: Page) => (await wc(page))?.wc;
 
 const overflows = (page: Page) =>
   scrollArea(page).evaluate((el) => el.scrollHeight > el.clientHeight);
@@ -72,14 +66,6 @@ async function stash(page: Page): Promise<Unchanged> {
   return async () => {
     expect(await read()).toEqual(before);
   };
-}
-
-function cursorIndex(page: Page): Promise<number> {
-  return page.evaluate(() => {
-    const current = window.__wordcell?.current();
-    if (current?.kind !== 'active') throw new Error(`store is ${current?.kind}`);
-    return current.session.cursor.index;
-  });
 }
 
 // A held long-press on `n`: the peek sheet shows while held (checked by `whileHeld`), then the
@@ -524,19 +510,11 @@ async function openPaused(page: Page, name: string, url = '/'): Promise<void> {
   await booted(page);
 }
 
-async function box(
-  locator: Locator,
-): Promise<{ x: number; y: number; width: number; height: number }> {
-  const b = await locator.boundingBox();
-  if (b === null) throw new Error('element has no box');
-  return b;
-}
-
 // Ticket Layout: the content-sized width min(count, 7)·(w + 4) − 4 + 32, w a rendered face's width.
 async function expectPeekWidth(page: Page, count: number): Promise<void> {
-  const w = (await box(peekMirrors(page).first().locator('.face'))).width;
+  const w = (await box(peekMirrors(page).first().locator('.face'))).w;
   const peek = await box(hoverPeek(page));
-  expect(Math.abs(peek.width - (Math.min(count, 7) * (w + 4) - 4 + 32))).toBeLessThanOrEqual(1);
+  expect(Math.abs(peek.w - (Math.min(count, 7) * (w + 4) - 4 + 32))).toBeLessThanOrEqual(1);
 }
 
 // The board column: the WordCell unit's track spans it (--wc-board wide).
@@ -564,7 +542,7 @@ async function hoverCell(page: Page, n: number): Promise<Point> {
 // Moves the mouse well away from the WordCell row (onto the top bar's empty middle).
 async function moveAway(page: Page): Promise<void> {
   const bar = await box(page.locator('[data-band="topBar"]'));
-  await page.mouse.move(bar.x + bar.width / 2, bar.y + 4);
+  await page.mouse.move(bar.x + bar.w / 2, bar.y + 4);
 }
 
 // expectNoView without animation frames (the paused clock holds them).
@@ -644,15 +622,15 @@ test.describe('desktop', () => {
     expect(tops.filter((top) => top === tops[0])).toHaveLength(7);
     const older = await box(hoverPeek(page).locator('.older'));
     const first = await box(peekMirrors(page).first());
-    expect(older.y + older.height).toBeLessThanOrEqual(first.y);
+    expect(older.y + older.h).toBeLessThanOrEqual(first.y);
     await expect(scrim(page)).toHaveCount(0);
     await expect(sheet(page)).toHaveCount(0);
     const peek = await box(hoverPeek(page));
     const anchor = await box(label(page, 6));
     const column = await boardColumn(page);
-    expect(Math.abs(peek.y + peek.height - anchor.y)).toBeLessThanOrEqual(1);
+    expect(Math.abs(peek.y + peek.h - anchor.y)).toBeLessThanOrEqual(1);
     expect(Math.abs(peek.x - column.x)).toBeLessThanOrEqual(1);
-    expect(peek.x + peek.width).toBeLessThanOrEqual(column.x + column.width + 1);
+    expect(peek.x + peek.w).toBeLessThanOrEqual(column.x + column.w + 1);
     await moveAway(page);
     await expect(hoverPeek(page)).toHaveCount(0);
     expect(await wcOf(page)).toBe(0);
@@ -679,8 +657,8 @@ test.describe('desktop', () => {
     const peek = await box(hoverPeek(page));
     const anchor = await box(label(page, 8));
     const column = await boardColumn(page);
-    expect(Math.abs(peek.y + peek.height - anchor.y)).toBeLessThanOrEqual(1);
-    expect(Math.abs(peek.x + peek.width - (column.x + column.width))).toBeLessThanOrEqual(1);
+    expect(Math.abs(peek.y + peek.h - anchor.y)).toBeLessThanOrEqual(1);
+    expect(Math.abs(peek.x + peek.w - (column.x + column.w))).toBeLessThanOrEqual(1);
     expect(peek.x).toBeGreaterThanOrEqual(column.x - 1);
     await unchanged();
   });
@@ -700,9 +678,9 @@ test.describe('desktop', () => {
     const peek = await box(hoverPeek(page));
     const anchor = await box(label(page, 8));
     const board = await box(page.locator('.board'));
-    expect(anchor.y - board.y).toBeLessThan(peek.height);
+    expect(anchor.y - board.y).toBeLessThan(peek.h);
     const c = await box(cell(page, 8));
-    expect(Math.abs(peek.y - (c.y + c.height))).toBeLessThanOrEqual(1);
+    expect(Math.abs(peek.y - (c.y + c.h))).toBeLessThanOrEqual(1);
     await unchanged();
   });
 
@@ -799,7 +777,7 @@ test.describe('desktop', () => {
     await hoverCell(page, 6);
     await page.clock.runFor(350);
     const c = await box(cell(page, 6));
-    await page.mouse.move(c.x + 2, c.y + c.height - 2);
+    await page.mouse.move(c.x + 2, c.y + c.h - 2);
     await page.clock.runFor(49);
     await expect(hoverPeek(page)).toHaveCount(0);
     await page.clock.runFor(1);

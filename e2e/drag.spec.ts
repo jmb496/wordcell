@@ -1,38 +1,40 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
 import {
+  type Box,
   box,
   cards,
   centre,
   column,
   foot,
   openFixture,
+  type Point,
   sameSession,
   stashSession,
+  trayIds,
 } from './helpers/board';
 import { expectNoResidue } from './helpers/drag';
+import {
+  css,
+  expectFlownBack,
+  faceOf,
+  holdThrough,
+  idOf,
+  path,
+  placeholder,
+  plus,
+  targets,
+} from './helpers/gestures';
 import { animationFrames } from './helpers/lifecycle';
+import { onAndroid, onDesktop } from './helpers/project';
 import { waitForDictionary } from './helpers/restore';
+import { type DraftDetail, draftDetail, storedText } from './helpers/session';
 import { tokenColor } from './helpers/style';
-import { type TouchHold, touchHold } from './helpers/touch';
 
 // Epic 4 entry 8: drag, overlap targeting and drop into Composing (R-14 drag half, Q-34, SPEC
 // CAP-7, AD-12, F12, F13, F26; rule-coverage §3 R-10, R-11, R-14 drag rows, R-20–R-23, R-73 drop
 // row). Nothing is selected in any case here (entry 9 owns the selection-replacing drag).
 // `session-idle-fresh` columns hold 7/7/7/7/6/6/6/6 cards; `session-idle-empty-column` has column 1
 // empty. Faces are located as `card-<id> > .face`; points come from live boxes.
-
-type Point = { x: number; y: number };
-type Box = { x: number; y: number; w: number; h: number };
-
-const onAndroid = () =>
-  test.skip(test.info().project.name !== 'android', 'touch drag flows run on android');
-const onDesktop = () =>
-  test.skip(test.info().project.name !== 'desktop', 'mouse drag flows run on desktop');
-
-const placeholder = (page: Page, n: number) => column(page, n).locator('[data-placeholder]');
-const faceOf = (card: Locator) => card.locator(':scope > .face');
-
-const idOf = async (card: Locator) => Number(await card.getAttribute('data-card-id'));
 
 // Overlap area of `a` with `b` ÷ area of `a`.
 function ratio(a: Box, b: Box): number {
@@ -50,8 +52,6 @@ function sessionShape(page: Page): Promise<{ moves: number; index: number }> {
   });
 }
 
-const storedText = (page: Page) => page.evaluate(() => localStorage.getItem('wordcell:session'));
-
 // R-73: the stored Session deep-equals the store's, read in one task.
 function storedMatchesCurrent(page: Page): Promise<boolean> {
   return page.evaluate(() => {
@@ -61,88 +61,24 @@ function storedMatchesCurrent(page: Page): Promise<boolean> {
   });
 }
 
-type Draft = {
-  phase: string;
-  sourceColumn: number;
-  sourceCount: number;
-  destinationColumn: number;
-  destinationCount: number;
-  destinationSide: string;
-  arrangement: number[];
-};
-
-// The cursor phase and the move at the cursor (the draft after a drop).
-function draft(page: Page): Promise<Draft> {
-  return page.evaluate(() => {
-    const current = window.__wordcell?.current();
-    if (current?.kind !== 'active') throw new Error(`store is ${current?.kind}`);
-    const { cursor, moves } = current.session;
-    const move = moves[cursor.index];
-    if (move === undefined) throw new Error('no move at the cursor');
-    return {
-      phase: cursor.phase,
-      sourceColumn: move.sourceColumn,
-      sourceCount: move.sourceCount,
-      destinationColumn: move.destinationColumn,
-      destinationCount: move.destinationCount,
-      destinationSide: move.destinationSide,
-      arrangement: [...move.arrangement],
-    };
-  });
-}
-
 async function expectDrop(
   page: Page,
   d: { sourceColumn: number; sourceCount: number; destinationColumn: number },
   k: number,
-): Promise<Draft> {
-  await expect.poll(async () => (await draft(page)).phase).toBe('composing');
-  const got = await draft(page);
+): Promise<DraftDetail> {
+  await expect.poll(async () => (await draftDetail(page)).phase).toBe('composing');
+  const got = await draftDetail(page);
   expect(got).toMatchObject({ ...d, destinationCount: k, destinationSide: 'left' });
   expect(await storedMatchesCurrent(page)).toBe(true);
   return got;
 }
 
-// The tray's elements in order: live tiles by id, mirrors as `<id>m` (board-phases.spec.ts).
-function trayOrder(page: Page): Promise<string[]> {
-  return page
-    .locator('[data-band="tray"] :is([data-card-id], [data-mirror-of])')
-    .evaluateAll((els) =>
-      els.map((el) =>
-        el.hasAttribute('data-mirror-of')
-          ? `${el.getAttribute('data-mirror-of')}m`
-          : (el.getAttribute('data-card-id') ?? ''),
-      ),
-    );
-}
-
-// The `data-column`s of elements carrying `wc-drag-target` (or that of their column).
-function targets(page: Page): Promise<number[]> {
-  return page.evaluate(() =>
-    [...document.querySelectorAll('.wc-drag-target')].map((el) =>
-      Number(el.closest('[data-column]')?.getAttribute('data-column')),
-    ),
-  );
-}
-
 const hasClass = (locator: Locator, name: string) =>
   locator.evaluate((el, c) => el.classList.contains(c), name);
-const css = (locator: Locator, property: string) =>
-  locator.evaluate((el, p) => getComputedStyle(el).getPropertyValue(p), property);
-
 // A held drag of `card`'s tail: its face carries an inline transform, its wrapper `wc-drag-ghost`.
 async function expectDragging(card: Locator): Promise<void> {
   expect(await faceOf(card).evaluate((el) => (el as HTMLElement).style.transform)).not.toBe('');
   expect(await hasClass(card, 'wc-drag-ghost')).toBe(true);
-}
-
-// R-14 the tail returned: `card`'s face has no running animation and is back on `rest` (±1 px).
-async function expectFlownBack(card: Locator, rest: Box): Promise<void> {
-  await expect.poll(() => faceOf(card).evaluate((el) => el.getAnimations().length)).toBe(0);
-  const now = await box(faceOf(card));
-  for (const k of ['x', 'y', 'w', 'h'] as const) {
-    expect(Math.abs(now[k] - rest[k]), k).toBeLessThanOrEqual(1);
-  }
 }
 
 // Logs the card id of every `.face` an `animate` call targets (the fly-back, F13); before goto.
@@ -162,38 +98,6 @@ async function recordFaceAnimations(page: Page): Promise<void> {
 
 const faceAnimations = (page: Page) =>
   page.evaluate(() => (window as unknown as { __faceAnimations: number[] }).__faceAnimations);
-
-// One held touch moved to each point in turn, a frame after each move (pointermove is
-// frame-aligned); `check` runs after every move.
-async function holdThrough(
-  page: Page,
-  from: Point,
-  points: Point[],
-  check: (i: number) => Promise<void> = async () => undefined,
-): Promise<TouchHold> {
-  const hold = await touchHold(page, from);
-  try {
-    for (const [i, p] of points.entries()) {
-      await hold.moveTo(p);
-      await animationFrames(page, 2);
-      await check(i);
-    }
-  } catch (error) {
-    await hold.end();
-    throw error;
-  }
-  return hold;
-}
-
-// `steps` points from `from` (excluded) to `to` (included).
-function path(from: Point, to: Point, steps: number): Point[] {
-  return Array.from({ length: steps }, (_, i) => ({
-    x: from.x + ((to.x - from.x) * (i + 1)) / steps,
-    y: from.y + ((to.y - from.y) * (i + 1)) / steps,
-  }));
-}
-
-const plus = (p: Point, dx: number, dy: number): Point => ({ x: p.x + dx, y: p.y + dy });
 
 test.describe('android', () => {
   test.beforeEach(onAndroid);
@@ -236,7 +140,7 @@ test.describe('android', () => {
     expect(await sameSession(page), 'one Session change per drop').toBe(true);
     // Static tray: the locked mirror of column 3's bottom card (A, card 0) first, then the dragged
     // tile (W, card 48).
-    expect(await trayOrder(page)).toEqual([`${bottom3Id}m`, `${draggedId}`]);
+    expect(await trayIds(page)).toEqual([`${bottom3Id}m`, `${draggedId}`]);
     const mirror = page.locator(`[data-band="tray"] [data-mirror-of="${bottom3Id}"]`);
     await expect(mirror.locator('.lock:visible')).toHaveCount(1);
     await expectNoResidue(page);
@@ -270,7 +174,7 @@ test.describe('android', () => {
     await animationFrames(page, 2);
     expect(await targets(page)).toEqual([]);
     await expect.poll(() => faceAnimations(page)).toEqual([await idOf(dragged)]);
-    await expectFlownBack(dragged, rest);
+    await expectFlownBack(faceOf(dragged), rest);
     expect(await storedText(page)).toBe(before);
     expect(await sameSession(page)).toBe(true);
     await expectNoResidue(page);
@@ -302,7 +206,7 @@ test.describe('android', () => {
     page: first,
     context,
   }) => {
-    const drafts: Draft[] = [];
+    const drafts: DraftDetail[] = [];
     // Two loads, each on its own page (seedStorage seeds a page once).
     let page = first;
     for (const where of ['top', 'foot'] as const) {
@@ -399,7 +303,7 @@ test.describe('android', () => {
     expect(got.arrangement).toEqual(ids);
     // D19: the emptied source column shows its ghosts, no placeholder.
     expect(await css(placeholder(page, 5), 'visibility')).toBe('hidden');
-    const tray = (await trayOrder(page)).filter((t) => !t.endsWith('m')).map(Number);
+    const tray = (await trayIds(page)).filter((t) => !t.endsWith('m')).map(Number);
     expect(tray).toEqual(ids);
     await expectNoResidue(page);
   });
@@ -473,8 +377,8 @@ test.describe('android', () => {
     expect(await storedText(page)).toBe(before);
     expect(await sameSession(page)).toBe(true);
     await expectNoResidue(page);
-    await expectFlownBack(pressed, rest);
-    await expectFlownBack(below, restBelow);
+    await expectFlownBack(faceOf(pressed), rest);
+    await expectFlownBack(faceOf(below), restBelow);
     expect(await storedText(page)).toBe(before);
   });
 
@@ -498,7 +402,7 @@ test.describe('android', () => {
     });
     await hold.end();
     await expect.poll(() => faceAnimations(page)).toEqual([await idOf(dragged)]);
-    await expectFlownBack(dragged, rest);
+    await expectFlownBack(faceOf(dragged), rest);
     await expectNoResidue(page);
     expect(await storedText(page)).toBe(before);
     expect(await sameSession(page)).toBe(true);
@@ -534,7 +438,7 @@ test.describe('android', () => {
       await hold.end();
     }
     await expect.poll(() => faceAnimations(page)).toEqual([await idOf(dragged)]);
-    await expectFlownBack(dragged, face);
+    await expectFlownBack(faceOf(dragged), face);
     await expectNoResidue(page);
     expect(await storedText(page)).toBe(before);
     expect(await sameSession(page)).toBe(true);
@@ -649,7 +553,7 @@ test.describe('android, scrolled board', () => {
     await animationFrames(page, 2);
     expect(await targets(page)).toEqual([]);
     await expect.poll(() => faceAnimations(page)).toEqual([await idOf(dragged)]);
-    await expectFlownBack(dragged, rest);
+    await expectFlownBack(faceOf(dragged), rest);
     expect(await storedText(page)).toBe(before);
     expect(await sameSession(page)).toBe(true);
     await expectNoResidue(page);
@@ -713,7 +617,7 @@ test.describe('android, scrolled board', () => {
     await animationFrames(page, 2);
     expect(await targets(page)).toEqual([]);
     await expect.poll(() => faceAnimations(page)).toEqual([await idOf(dragged)]);
-    await expectFlownBack(dragged, rest);
+    await expectFlownBack(faceOf(dragged), rest);
     expect(await storedText(page)).toBe(before);
     expect(await sameSession(page)).toBe(true);
     await expectNoResidue(page);
@@ -762,7 +666,7 @@ test.describe('android, scrolled board', () => {
     await animationFrames(page, 2);
     expect(await targets(page)).toEqual([]);
     await expect.poll(() => faceAnimations(page)).toContain(await idOf(dragged));
-    await expectFlownBack(dragged, rest);
+    await expectFlownBack(faceOf(dragged), rest);
     expect(await storedText(page)).toBe(before);
     expect(await sameSession(page)).toBe(true);
     await expectNoResidue(page);

@@ -57,7 +57,8 @@ function measure(el: HTMLElement, px: number): number {
 function refit(): void {
   const el = textEl;
   if (line == null || el == null) return;
-  const box = line.clientWidth - (invalid ? GLYPH_AND_GAP : 0);
+  // The fractional width, as `measure` reads the text: `clientWidth` rounds a fractional line up.
+  const box = line.getBoundingClientRect().width - (invalid ? GLYPH_AND_GAP : 0);
   size = fitSize((px) => measure(el, px), box, max);
 }
 

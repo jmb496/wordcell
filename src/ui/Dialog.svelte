@@ -1,4 +1,7 @@
 <script lang="ts">
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import MessageCard from './MessageCard.svelte';
+
 // DESIGN.md Dialog: a non-native modal (never showModal(), AD-13: a native modal <dialog> may take
 // Android back as its own close request). A full-viewport scrim consumes taps outside the card
 // (`onscrim`, when given, acts on them); the card is centred, max 320 px, buttons right-aligned,
@@ -27,7 +30,6 @@ const {
   onscrim,
   inert = false,
 }: Props = $props();
-const id = $props.id();
 
 function focusOnMount(button: HTMLButtonElement): void {
   button.focus();
@@ -60,15 +62,7 @@ function first(handler: (() => void) | undefined): (event: MouseEvent) => void {
 <div class="layer" {inert}>
   <!-- The scrim is pointer-only: keyboard and screen-reader users dismiss with the buttons. -->
   <div class="scrim" aria-hidden="true" onclick={first(onscrim)}></div>
-  <div
-    class="card"
-    role="dialog"
-    aria-modal="true"
-    aria-labelledby="{id}-title"
-    aria-describedby="{id}-body"
-  >
-    <h2 id="{id}-title">{title}</h2>
-    <p id="{id}-body">{body}</p>
+  <MessageCard role="dialog" {title} {body} modal positioned>
     <div class="buttons">
       <button type="button" class="secondary" onclick={first(ondismiss)} {@attach focusOnMount}
         >{dismiss}</button
@@ -77,7 +71,7 @@ function first(handler: (() => void) | undefined): (event: MouseEvent) => void {
         >{action}</button
       >
     </div>
-  </div>
+  </MessageCard>
 </div>
 
 <style>
@@ -86,15 +80,6 @@ function first(handler: (() => void) | undefined): (event: MouseEvent) => void {
     display: grid; place-items: center;
   }
   .scrim { position: absolute; inset: 0; background: var(--wc-scrim); }
-  .card {
-    position: relative; box-sizing: border-box; width: 100%; max-width: 320px; padding: 24px;
-    background: var(--wc-surface-raised); border-radius: 12px;
-  }
-  h2 { margin: 0; font: 600 1.25rem/1.75rem system-ui, "Roboto", sans-serif; color: var(--wc-ink-primary); }
-  p {
-    margin: 8px 0 0; font: 400 1rem/1.5rem system-ui, "Roboto", sans-serif;
-    color: var(--wc-ink-secondary); overflow-wrap: anywhere;
-  }
   .buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 24px; }
   button {
     min-height: 44px; padding: 0 16px; border-radius: 9999px;

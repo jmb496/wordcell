@@ -335,6 +335,7 @@ describe('AD-14 FLIP kind table', () => {
     ['committing redo', { type: 'redo' }, CHANGED, 'idle', 'flyToCell'],
     ['winning redo', { type: 'redo' }, { changed: true, finished: 'won' }, 'idle', 'flyToCell'],
     ['non-committing redo', { type: 'redo' }, CHANGED, 'composing', 'undoRedo'],
+    ['non-committing redo to Place', { type: 'redo' }, CHANGED, 'place', 'undoRedo'],
   ];
   for (const [label, command, result, phase, kind] of cases) {
     it(`AD-14 motionKind: ${label} → ${kind ?? 'empty set'}`, () => {
@@ -418,6 +419,42 @@ describe('AD-14 FLIP kind table', () => {
     }
     expect(t.root.face(3).animations).toEqual([]);
     expect(t.root.tiles.classList.contains('wc-drag-tiles')).toBe(false);
+  });
+
+  it('AD-14 reduced is read at each play: flipped between capture and play, the move fades (true) or glides (false)', () => {
+    const t = setup({ reduced: false });
+    t.root.show(START);
+    t.flip.capture();
+    t.root.show(SAME_BAND);
+    t.state.reduced = true;
+    t.flip.play(flipCommand, CHANGED);
+    expect(t.root.face(3).animations[0]?.keyframes).toEqual([{ opacity: 0 }, { opacity: 1 }]);
+    expect(t.root.face(3).classList.contains('wc-glide')).toBe(false);
+    t.flip.finishAll();
+
+    const u = setup({ reduced: true });
+    u.root.show(START);
+    u.flip.capture();
+    u.root.show(SAME_BAND);
+    u.state.reduced = false;
+    u.flip.play(flipCommand, CHANGED);
+    expect(u.root.face(3).animations[0]?.keyframes).toEqual([
+      { transform: 'translate(-44px, 0px)' },
+      { transform: 'translate(0px, 0px)' },
+    ]);
+    expect(u.root.face(3).classList.contains('wc-glide')).toBe(true);
+  });
+
+  it('AD-14 a non-null kind with no moved face starts nothing: no gate enter, no duration() call, running() false, and a following capture does not throw', () => {
+    const t = setup();
+    t.root.show(START);
+    t.flip.capture();
+    t.flip.play(flipCommand, CHANGED);
+    expect(t.counts.enter).toBe(0);
+    expect(t.duration).not.toHaveBeenCalled();
+    expect(t.flip.running()).toBe(false);
+    for (const id of [3, 4, 7]) expect(t.root.face(id).animations).toEqual([]);
+    expect(() => t.flip.capture()).not.toThrow();
   });
 
   it('AD-14 the kind reads the phase after the move (F7): a redo captured in place that ends idle animates nothing; one captured idle that ends composing animates as undoRedo', () => {
@@ -751,10 +788,20 @@ describe('AD-14 FLIP coordinate frame (planGlides)', () => {
     ).toEqual([]);
   });
 
-  it('AD-14 the 0.5 px cut-off: a band changer moved (0.3, 0.2) → none; exactly (0.5, 0) → one glide; (0.4, 12) → one glide', () => {
+  it('AD-14 the 0.5 px cut-off: a band changer moved (0.3, 0.2) → none, exactly (0.5, 0) → one glide; a same-band tile exactly (0.5, 0) → one glide; (0.4, 12) → one glide', () => {
     expect(
       plan([[7, placed('columns', box(10, 300))]], [[7, placed('tray', box(10.3, 300.2))]]),
     ).toEqual([]);
+    expect(
+      plan([[7, placed('columns', box(10.5, 300))]], [[7, placed('tray', box(10, 300))]]),
+    ).toEqual([
+      {
+        id: 7,
+        keyframes: [{ transform: 'translate(0.5px, 0px)' }, { transform: 'translate(0px, 0px)' }],
+        translate: true,
+        bandChange: true,
+      },
+    ]);
     expect(
       plan([[3, placed('tray', box(10.5, 520))]], [[3, placed('tray', box(10, 520))]]),
     ).toEqual([

@@ -2,8 +2,9 @@
 // `undefined`, never another falsy value such as CardId 0) into a throw of the caller's own message
 // (rule 6); `cellIn` finds a `CellView` by its `cell` field, never by index; `columnIn` takes the
 // `ColumnView` at index n − 1 and checks its `column` field. `attribute()` is the shared attribute
-// parser: `Number()` of the attribute's value (a missing or empty attribute reads as 0), throwing
-// when that is not an integer. Pure apart from reading the element.
+// parser: `Number()` of the attribute's value, throwing when the attribute is missing or empty (it
+// would read as 0, a valid CardId; rule 6) or is not an integer. Pure apart from reading the
+// element.
 import type { CellView, ColumnView } from '../../engine/index';
 
 /** `value`, or a throw of `new Error(message)` when it is `null` or `undefined`. */
@@ -26,9 +27,11 @@ export function columnIn(columns: readonly ColumnView[], n: number, message: str
   return found(entry?.column === n ? entry : undefined, message);
 }
 
-/** The integer value of `el`'s attribute `name`. */
+/** The integer value of `el`'s attribute `name`; throws when it is missing, empty or not one. */
 export function attribute(el: Element, name: string): number {
-  const value = Number(el.getAttribute(name));
+  const raw = el.getAttribute(name);
+  if (raw === null || raw.trim() === '') throw new Error(`AD-12 ${name} is missing or empty`);
+  const value = Number(raw);
   if (!Number.isInteger(value)) throw new Error(`AD-12 ${name} is not an integer`);
   return value;
 }

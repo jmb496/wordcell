@@ -13,6 +13,7 @@ import {
 } from './helpers/board';
 import { dragResidue } from './helpers/drag';
 import { animationFrames } from './helpers/lifecycle';
+import { onAndroid, onDesktop } from './helpers/project';
 import { booted, waitForDictionary } from './helpers/restore';
 import { armStorageSpy, storageWrites } from './helpers/storage-spy';
 import { tokenColor } from './helpers/style';
@@ -27,14 +28,9 @@ import { longPress, touchHold } from './helpers/touch';
 // cursor 1, strip [9, 32, 28], free letter 28 from cell 3 = [42, 0, 28], target 3 only. Expected
 // values are literals from view() over the fixtures, never edited to pass. Every setTarget,
 // setPlacementOrder and confirm asserts the stored wordcell:session equals current().session
-// before the next action (R-73). Helpers are local copies (S1 consolidation is entry 14's):
-// `expectSaved`/`storedMove` from e2e/tile-tap.spec.ts, ring/target checks and `expectUsedCell3`'s
+// before the next action (R-73). Local helpers (shared ones are in e2e/helpers/, ticket 5.14
+// S1): `expectSaved`/`storedMove` from e2e/tile-tap.spec.ts, ring/target checks and `expectUsedCell3`'s
 // shape from e2e/board-phases.spec.ts, `hoverPeek` from e2e/wordcell-view.spec.ts.
-
-const onAndroid = () =>
-  test.skip(test.info().project.name !== 'android', 'touch flows run on android');
-const onDesktop = () =>
-  test.skip(test.info().project.name !== 'desktop', 'mouse flows run on desktop');
 
 const SESSION = 'wordcell:session';
 const TWO = 'session-place-free-letter-two-cards';
@@ -154,6 +150,15 @@ async function swap(page: Page, a: number, b: number): Promise<number[]> {
   const order = (await storedMove(page)).placementOrder;
   if (order === undefined) throw new Error('no stored placementOrder');
   return order;
+}
+
+// After a setTarget since `base` with the spy armed: one wordcell:session write, the cursor and the
+// placementOrder as they were (a long-press that is a tap on the cell edits only the target).
+async function expectOneTargetWrite(page: Page, base: StoredMove): Promise<void> {
+  expect((await storageWrites(page)).filter((w) => w.key === SESSION)).toHaveLength(1);
+  const after = await expectSaved(page);
+  expect(after.cursor).toEqual({ index: 7, phase: 'place' });
+  expect(after.moves[after.cursor.index]?.placementOrder).toEqual(base.placementOrder);
 }
 
 // Taps `n` and checks the Place move's stored targetCell becomes `n` (setTarget, saved).
@@ -359,16 +364,21 @@ test.describe('android', () => {
     page,
   }) => {
     await openWonUndo(page);
+    const base = await storedMove(page);
+    await armStorageSpy(page);
     await longPress(page, await centre(cell(page, 5)), 600);
     await expect.poll(async () => (await storedMove(page)).targetCell).toBe(5);
     await expectTarget(page, 5);
     await expect(sheet(page)).toHaveCount(0);
+    await expectOneTargetWrite(page, base);
   });
 
   test('R-39 R-42 AD-12 a long-press on empty cell 3 held past 400 ms, then moved past 8 px over cell 4 and released, sets the target 3 (won + Undo)', async ({
     page,
   }) => {
     await openWonUndo(page);
+    const base = await storedMove(page);
+    await armStorageSpy(page);
     const hold = await touchHold(page, await centre(cell(page, 3)));
     try {
       await page.waitForTimeout(600);
@@ -378,6 +388,7 @@ test.describe('android', () => {
     }
     await expect.poll(async () => (await storedMove(page)).targetCell).toBe(3);
     await expectTarget(page, 3);
+    await expectOneTargetWrite(page, base);
   });
 
   test('R-39 F1 F13 with a strip tile selected (won + Undo): a not-legal tap on 7 keeps it, a drag from cell 4 and a drag on target 6’s top card clear it, a tap on target 6 clears it, each no dispatch; then a tap on cell 4 sets the target 4 and clears it', async ({
@@ -400,6 +411,8 @@ test.describe('android', () => {
     } finally {
       await drag4.end();
     }
+    // The 8 px move beat the 400 ms long-press timer: no peek, no view.
+    await expect(sheet(page)).toHaveCount(0);
     await expectSelected(page, null);
     await unchanged();
     // R-39: a drag on the current target's top card (13) moves nothing (no free-letter drag in
@@ -413,6 +426,7 @@ test.describe('android', () => {
     } finally {
       await drag6.end();
     }
+    await expect(sheet(page)).toHaveCount(0);
     await expectSelected(page, null);
     await unchanged();
     // F13: a tap on the current target clears, no dispatch.

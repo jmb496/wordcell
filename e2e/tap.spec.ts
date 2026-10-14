@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page, type Request, type Route, test } from '@playwright/test';
+import { expect, type Locator, type Page, type Route, test } from '@playwright/test';
 import {
   box,
   cards,
@@ -6,13 +6,18 @@ import {
   column,
   foot,
   openFixture,
+  type Point,
   sameSession,
   stashSession,
   tapAt,
 } from './helpers/board';
-import { expectLeaves, wc } from './helpers/dialogs';
+import { expectLeaves } from './helpers/dialogs';
+import { footCorner, space } from './helpers/gestures';
 import { animationFrames } from './helpers/lifecycle';
-import { booted, waitForDictionary } from './helpers/restore';
+import { onAndroid, onDesktop } from './helpers/project';
+import { booted, isList, waitForDictionary } from './helpers/restore';
+import { expectSelection, select, selection, wcOf } from './helpers/selection';
+import { type Draft, draft, storedText } from './helpers/session';
 import { tokenColor } from './helpers/style';
 import { longPress, touchHold } from './helpers/touch';
 
@@ -20,96 +25,8 @@ import { longPress, touchHold } from './helpers/touch';
 // F31; rule-coverage §3 R-14 tap rows, AD-11, AD-12, AD-13 rows). `session-idle-fresh` columns
 // hold 7/7/7/7/6/6/6/6 cards; `session-idle-empty-column` has column 1 empty and cell 7 filled.
 
-type Point = { x: number; y: number };
-type Selection = { column: number; count: number } | null;
-
 const LIST = '**/en*.txt';
-// The word-list fetch itself, not the dev server's `en.txt?url` module (dictionary.spec.ts).
-const isList = (request: Request) => /\/en[^/?]*\.txt$/.test(request.url());
-
-const onAndroid = () =>
-  test.skip(test.info().project.name !== 'android', 'touch tap flows run on android');
-const onDesktop = () =>
-  test.skip(test.info().project.name !== 'desktop', 'mouse hover flows run on desktop');
-
-// A point in column n's empty space: 6 px above its foot pad, below its bottom card.
-async function space(page: Page, n: number): Promise<Point> {
-  const f = await box(foot(page, n));
-  const y = f.y - 6;
-  const last = cards(page, n).last();
-  if ((await last.count()) > 0) {
-    const b = await box(last);
-    if (b.y + b.h >= y) throw new Error(`column ${n} has no empty space`);
-  }
-  return { x: f.x + f.w / 2, y };
-}
-
-// A corner of foot-n, off its label.
-async function footCorner(page: Page, n: number): Promise<Point> {
-  const f = await box(foot(page, n));
-  return { x: f.x + 3, y: f.y + 3 };
-}
-
 const cardAt = (page: Page, n: number, i: number) => centre(cards(page, n).nth(i));
-
-// The rendered selection: the outline's column and its lifted cards.
-function selection(page: Page): Promise<Selection> {
-  return page.evaluate(() => {
-    const outlines = document.querySelectorAll('[data-selection-outline]');
-    if (outlines.length > 1) throw new Error('more than one selection outline');
-    const outline = outlines[0];
-    if (outline === undefined) {
-      if (document.querySelector('.lifted') !== null) throw new Error('lifted without outline');
-      return null;
-    }
-    const col = outline.closest('[data-column]');
-    if (col === null) throw new Error('outline outside a column');
-    return {
-      column: Number(col.getAttribute('data-column')),
-      count: col.querySelectorAll('[data-place="column"].lifted').length,
-    };
-  });
-}
-
-const wcOf = async (page: Page) => (await wc(page))?.wc;
-
-async function expectSelection(page: Page, expected: Selection, entries: number): Promise<void> {
-  await expect.poll(() => selection(page)).toEqual(expected);
-  await expect.poll(() => wcOf(page)).toBe(entries);
-}
-
-async function select(page: Page, n: number, i: number): Promise<void> {
-  await tapAt(page, await cardAt(page, n, i));
-  const count = await cards(page, n).count();
-  await expectSelection(page, { column: n, count: count - i }, 1);
-}
-
-const storedText = (page: Page) => page.evaluate(() => localStorage.getItem('wordcell:session'));
-
-type Draft = {
-  phase: string;
-  sourceColumn: number;
-  sourceCount: number;
-  destinationColumn: number;
-  destinationCount: number;
-};
-
-// The cursor phase and the move at the cursor (the draft after a drop).
-function draft(page: Page): Promise<Draft> {
-  return page.evaluate(() => {
-    const current = window.__wordcell?.current();
-    if (current?.kind !== 'active') throw new Error(`store is ${current?.kind}`);
-    const { cursor, moves } = current.session;
-    const move = moves[cursor.index];
-    return {
-      phase: cursor.phase,
-      sourceColumn: move?.sourceColumn ?? 0,
-      sourceCount: move?.sourceCount ?? 0,
-      destinationColumn: move?.destinationColumn ?? 0,
-      destinationCount: move?.destinationCount ?? -1,
-    };
-  });
-}
 
 function cursorOf(page: Page): Promise<{ index: number; phase: string }> {
   return page.evaluate(() => {

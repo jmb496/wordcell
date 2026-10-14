@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type Page, type Request } from '@playwright/test';
 
 // AD-17 restore boundaries: snapshots of the stored Session and the hook's views, shared by the
 // game-store and restore specs.
@@ -70,3 +70,6 @@ export async function waitForDictionary(page: Page, state: DictionaryState): Pro
 export async function dictionaryReady(page: Page): Promise<void> {
   await waitForDictionary(page, 'ready');
 }
+
+// The word-list fetch itself, not the dev server's `en.txt?url` module (ticket 5.14 S1).
+export const isList = (request: Request) => /\/en[^/?]*\.txt$/.test(request.url());

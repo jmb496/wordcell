@@ -14,7 +14,9 @@ import {
 } from './helpers/board';
 import { expectLeaves } from './helpers/dialogs';
 import { dragResidue, expectNoResidue } from './helpers/drag';
+import { css, faceOf, holdThrough, path, plus } from './helpers/gestures';
 import { animationFrames, hidePage } from './helpers/lifecycle';
+import { game, storedGame } from './helpers/session';
 import { type TouchHold, touchHold } from './helpers/touch';
 
 // Epic 5 entry 7 (SPEC CAP-5): the tile drag in the tray and the strip on android. Faces are held
@@ -25,8 +27,8 @@ import { type TouchHold, touchHold } from './helpers/touch';
 // (UI)) and then one zero `dragResidue` read; a no-edit live-tile drag first asserts the held face
 // (`wc-drag-layer`, inline transform).
 // Expected values are literals from view() over the fixtures (seed 1; seed 191 for
-// session-place-compact), never edited to pass. Helpers are local copies (S1 consolidation is
-// entry 14's): `game`/`storedGame` from e2e/drag-interruptions.spec.ts, `expectSaved`,
+// session-place-compact), never edited to pass. Local helpers (shared ones are in
+// e2e/helpers/, ticket 5.14 S1): `expectSaved`,
 // `expectSelected` and `open` from e2e/tile-tap.spec.ts, `expectUsedCell3` from
 // e2e/board-phases.spec.ts.
 
@@ -37,7 +39,6 @@ test.beforeEach(() => {
 const SESSION = 'wordcell:session';
 const tray = (page: Page) => page.locator('[data-band="tray"]');
 const tile = (page: Page, id: number) => tray(page).getByTestId(`card-${id}`);
-const faceOf = (page: Page, id: number) => tile(page, id).locator(':scope > .face');
 const selectedTiles = (page: Page) => tray(page).locator('[data-card-id].selected');
 const controls = (page: Page) => tray(page).locator('.controls');
 const plusButton = (page: Page) => controls(page).getByRole('button', { name: '+', exact: true });
@@ -92,24 +93,6 @@ async function expectEdit(page: Page): Promise<StoredMove> {
   const move = await storedMove(page);
   expect(await dragResidue(page)).toEqual({ classes: 0, transforms: 0 });
   return move;
-}
-
-// The store's Session without `activeMs` (a hide flush accrues time into a new reference).
-function game(page: Page): Promise<string> {
-  return page.evaluate(() => {
-    const current = window.__wordcell?.current();
-    if (current?.kind !== 'active') throw new Error(`store is ${current?.kind}`);
-    return JSON.stringify({ ...current.session, activeMs: 0 });
-  });
-}
-
-// The stored wordcell:session without `activeMs`.
-function storedGame(page: Page): Promise<string> {
-  return page.evaluate(() => {
-    const text = localStorage.getItem('wordcell:session');
-    if (text === null) throw new Error('wordcell:session is absent');
-    return JSON.stringify({ ...JSON.parse(text), activeMs: 0 });
-  });
 }
 
 async function expectSelected(page: Page, id: number | null): Promise<void> {
@@ -191,31 +174,6 @@ function gapCentre(g: Geometry, first: number, count: number, index: number): Po
   return mid(found.rect);
 }
 
-const plus = (p: Point, dx: number, dy: number): Point => ({ x: p.x + dx, y: p.y + dy });
-
-// `steps` points from `from` (excluded) to `to` (included).
-function path(from: Point, to: Point, steps: number): Point[] {
-  return Array.from({ length: steps }, (_, i) => ({
-    x: from.x + ((to.x - from.x) * (i + 1)) / steps,
-    y: from.y + ((to.y - from.y) * (i + 1)) / steps,
-  }));
-}
-
-// One held touch moved to each point in turn, a frame after each move.
-async function holdThrough(page: Page, from: Point, points: Point[]): Promise<TouchHold> {
-  const hold = await touchHold(page, from);
-  try {
-    for (const p of points) {
-      await hold.moveTo(p);
-      await animationFrames(page, 2);
-    }
-  } catch (error) {
-    await hold.end();
-    throw error;
-  }
-  return hold;
-}
-
 // Moves a held face (pressed at its centre) so its centre lies on `to`, in `steps` moves.
 async function moveFace(page: Page, hold: TouchHold, from: Point, to: Point, steps = 4) {
   for (const p of path(from, to, steps)) {
@@ -230,7 +188,7 @@ async function holdTile(
   id: number,
   targets: Point[],
 ): Promise<{ hold: TouchHold; at: Point }> {
-  const start = await centre(faceOf(page, id));
+  const start = await centre(faceOf(tile(page, id)));
   const hold = await touchHold(page, start);
   let at = start;
   try {
@@ -271,16 +229,13 @@ const mirrorAnimations = (page: Page) =>
 
 // The held face: on the drag layer with an inline transform.
 async function expectHeld(page: Page, id: number): Promise<void> {
-  const face = faceOf(page, id);
+  const face = faceOf(tile(page, id));
   await expect(face).toHaveClass(/\bwc-drag-layer\b/);
   expect(await face.evaluate((el) => (el as HTMLElement).style.transform)).not.toBe('');
 }
 
 const settled = (locator: Locator) =>
   expect.poll(() => locator.evaluate((el) => el.getAnimations().length)).toBe(0);
-
-const css = (locator: Locator, property: string) =>
-  locator.evaluate((el, p) => getComputedStyle(el).getPropertyValue(p), property);
 
 // --- reorders --------------------------------------------------------------------------------------
 
@@ -378,11 +333,11 @@ test('AD-12 the drag layer: a face held over the action bar has wc-drag-layer, z
 }) => {
   await open(page, 'session-composing');
   const bar = await box(page.locator('[data-band="actionBar"]'));
-  const over = { x: (await centre(faceOf(page, 0))).x, y: bar.y + bar.h / 2 };
+  const over = { x: (await centre(faceOf(tile(page, 0)))).x, y: bar.y + bar.h / 2 };
   const { hold } = await holdTile(page, 0, [over]);
   try {
     await expectHeld(page, 0);
-    const face = faceOf(page, 0);
+    const face = faceOf(tile(page, 0));
     expect(await css(face, 'z-index')).toBe('5');
     expect(await css(face, 'box-shadow')).not.toBe('none');
     expect(await css(tray(page).locator('.tiles'), 'overflow')).toBe('visible');
@@ -456,8 +411,8 @@ test('R-32 (UI) after + (k = 2) on session-composing, tile 42 held over mid-bloc
   const { hold } = await holdTile(page, 42, [midBlock]);
   try {
     await expectHeld(page, 42);
-    await settled(faceOf(page, 0));
-    const zero = await box(faceOf(page, 0));
+    await settled(faceOf(tile(page, 0)));
+    const zero = await box(faceOf(tile(page, 0)));
     expect(Math.abs(zero.x - (g.slots[0]?.left ?? Number.NaN))).toBeLessThanOrEqual(0.5);
     expect((await transformed(page)).sort()).toEqual(['0', '42']);
     expect(await mirrorAnimations(page)).toBe(0);
@@ -498,8 +453,8 @@ test('R-34 R-32 after Flip (block left: D, 42, 0) tile 0 to gap 0 on session-com
   try {
     await expectHeld(page, 0);
     expect((await transformed(page)).sort()).toEqual(['0', '42']);
-    await settled(faceOf(page, 42));
-    const parted = await box(faceOf(page, 42));
+    await settled(faceOf(tile(page, 42)));
+    const parted = await box(faceOf(tile(page, 42)));
     const slot = g.slots[2] as Rect;
     expect(Math.abs(parted.x - slot.left)).toBeLessThanOrEqual(0.5);
     expect(Math.abs(parted.y - slot.top)).toBeLessThanOrEqual(0.5);
@@ -621,7 +576,7 @@ test('AD-12 F5 F18 pointercancel mid-drag (tile 42 selected first) flies back: S
     await hold.end();
   }
   await expectNoResidue(page);
-  await settled(faceOf(page, 0));
+  await settled(faceOf(tile(page, 0)));
   expect(await stored(page, SESSION)).toBe(before);
   await expectSelected(page, null);
   expect(await trayIds(page)).toEqual(['42', '0', '28m']);
@@ -674,16 +629,16 @@ test('AD-12 F2 F18 selected tile 0 on session-composing drags from its lifted fa
   const g = await geometry(page);
   await select(page, 0);
   const before = await stored(page, SESSION);
-  const lifted = await box(faceOf(page, 0));
+  const lifted = await box(faceOf(tile(page, 0)));
   const slot = g.slots[1] as Rect;
   // Premise: Card's selected lift raises the face 4 px off its slot.
   expect(Math.abs(lifted.y - (slot.top - 4))).toBeLessThanOrEqual(0.5);
-  const start = await centre(faceOf(page, 0));
+  const start = await centre(faceOf(tile(page, 0)));
   const { hold, at } = await holdTile(page, 0, [plus(start, 12, 0)]);
   try {
     await expectHeld(page, 0);
     await expectSelected(page, null);
-    const held = await box(faceOf(page, 0));
+    const held = await box(faceOf(tile(page, 0)));
     expect(Math.abs(held.y - lifted.y)).toBeLessThanOrEqual(0.5);
     expect(Math.abs(held.x - (lifted.x + 12))).toBeLessThanOrEqual(0.5);
     const tb = await box(tray(page));
@@ -693,10 +648,10 @@ test('AD-12 F2 F18 selected tile 0 on session-composing drags from its lifted fa
     await hold.end();
   }
   await expectNoResidue(page);
-  await settled(faceOf(page, 0));
+  await settled(faceOf(tile(page, 0)));
   expect(await stored(page, SESSION)).toBe(before);
   await expectSelected(page, null);
-  const rest = await box(faceOf(page, 0));
+  const rest = await box(faceOf(tile(page, 0)));
   expect(Math.abs(rest.x - slot.left)).toBeLessThanOrEqual(0.5);
   expect(Math.abs(rest.y - slot.top)).toBeLessThanOrEqual(0.5);
 });
@@ -720,7 +675,7 @@ test('AD-12 R-51 on session-place-compact tile 35 held on row 2 just past tile 7
       const slot = g.slots[p] as Rect;
       const o = parted[p];
       if (o === undefined) throw new Error(`no offset at ${p}`);
-      const b = await box(faceOf(page, id));
+      const b = await box(faceOf(tile(page, id)));
       expect(Math.abs(b.x - (slot.left + o.dx)), `card ${id} x`).toBeLessThanOrEqual(0.5);
       expect(Math.abs(b.y - (slot.top + o.dy)), `card ${id} y`).toBeLessThanOrEqual(0.5);
     }
@@ -748,16 +703,16 @@ test.describe('android, short viewport', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await open(page, 'session-composing');
     // Scroll so the action bar's top lies just below the tile row (clamped to the scroll range).
-    const row = await box(faceOf(page, 0));
+    const row = await box(faceOf(tile(page, 0)));
     const bar0 = await box(page.locator('[data-band="actionBar"]'));
     await page.evaluate((dy) => window.scrollBy(0, dy), Math.max(0, row.y + row.h + 4 - bar0.y));
     await animationFrames(page, 2);
     const before = await stored(page, SESSION);
     const bar = await box(page.locator('[data-band="actionBar"]'));
     const band = await box(tray(page));
-    const face = await box(faceOf(page, 0));
+    const face = await box(faceOf(tile(page, 0)));
     // Premises: the tile is pressable, the bar's top lies inside the tray band below the row.
-    const at = await centre(faceOf(page, 0));
+    const at = await centre(faceOf(tile(page, 0)));
     expect(
       await page.evaluate(
         ({ x, y }) =>

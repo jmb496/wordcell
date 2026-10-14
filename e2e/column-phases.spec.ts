@@ -6,14 +6,26 @@ import {
   column,
   foot,
   openFixture,
+  type Point,
   sameSession,
   stashSession,
   tapAt,
 } from './helpers/board';
 import { dragResidue, expectNoResidue } from './helpers/drag';
+import {
+  faceOf,
+  footCorner,
+  holdThrough,
+  path,
+  placeholder,
+  plus,
+  space,
+} from './helpers/gestures';
 import { animationFrames, hidePage } from './helpers/lifecycle';
+import { onAndroid, onDesktop } from './helpers/project';
+import { draft, game, storedGame, storedText } from './helpers/session';
 import { armStorageSpy, storageWrites } from './helpers/storage-spy';
-import { type TouchHold, touchHold } from './helpers/touch';
+import { touchHold } from './helpers/touch';
 
 // Epic 4 entry 10: the column side of Composing and the phase inertness of columns (SPEC CAP-8,
 // CAP-4; rule-coverage R-31, R-39, R-73, R-75 and the AD-9 / AD-17 hide row). `session-composing`
@@ -22,100 +34,19 @@ import { type TouchHold, touchHold } from './helpers/touch';
 // hold 7/7/7/7/6/6/6/6 cards; `session-idle-empty-column` has column 1 empty after one committed
 // whole-column self-drop.
 
-type Point = { x: number; y: number };
-
-const onAndroid = () =>
-  test.skip(test.info().project.name !== 'android', 'touch flows run on android');
-const onDesktop = () =>
-  test.skip(test.info().project.name !== 'desktop', 'mouse hover flows run on desktop');
-
 const ghosts = (page: Page, n: number) => column(page, n).locator('[data-mirror-of]');
-const placeholder = (page: Page, n: number) => column(page, n).locator('[data-placeholder]');
-const faceOf = (card: Locator) => card.locator(':scope > .face');
-
-const plus = (p: Point, dx: number, dy: number): Point => ({ x: p.x + dx, y: p.y + dy });
-
-// A point in column n's empty space: 6 px above its foot pad, below its bottom card or ghost.
-async function space(page: Page, n: number): Promise<Point> {
-  const f = await box(foot(page, n));
-  const y = f.y - 6;
-  const last = column(page, n).locator('[data-place="column"], [data-mirror-of]').last();
-  if ((await last.count()) > 0) {
-    const b = await box(last);
-    if (b.y + b.h >= y) throw new Error(`column ${n} has no empty space`);
-  }
-  return { x: f.x + f.w / 2, y };
-}
-
-// A corner of foot-n, off its label.
-async function footCorner(page: Page, n: number): Promise<Point> {
-  const f = await box(foot(page, n));
-  return { x: f.x + 3, y: f.y + 3 };
-}
-
 async function points(locator: Locator): Promise<Point[]> {
   const out: Point[] = [];
   for (const el of await locator.all()) out.push(await centre(el));
   return out;
 }
 
-// One held touch moved to each point in turn, a frame after each move.
-async function holdThrough(page: Page, from: Point, steps: Point[]): Promise<TouchHold> {
-  const hold = await touchHold(page, from);
-  try {
-    for (const p of steps) {
-      await hold.moveTo(p);
-      await animationFrames(page, 2);
-    }
-  } catch (error) {
-    await hold.end();
-    throw error;
-  }
-  return hold;
-}
-
-// `steps` points from `from` (excluded) to `to` (included).
-function path(from: Point, to: Point, steps: number): Point[] {
-  return Array.from({ length: steps }, (_, i) => ({
-    x: from.x + ((to.x - from.x) * (i + 1)) / steps,
-    y: from.y + ((to.y - from.y) * (i + 1)) / steps,
-  }));
-}
-
-// The rendered selection outline count plus lifted cards (e2e/tap.spec.ts): null when none.
+// The rendered selection outline count plus lifted cards (a count here, not helpers/selection.ts's Selection): null when none.
 function selection(page: Page): Promise<number | null> {
   return page.evaluate(() => {
     const outlines = document.querySelectorAll('[data-selection-outline]').length;
     const lifted = document.querySelectorAll('.lifted').length;
     return outlines === 0 && lifted === 0 ? null : outlines + lifted;
-  });
-}
-
-const storedText = (page: Page) => page.evaluate(() => localStorage.getItem('wordcell:session'));
-
-type Draft = {
-  phase: string;
-  sourceColumn: number;
-  sourceCount: number;
-  destinationColumn: number;
-  destinationCount: number;
-};
-
-// The cursor phase and the move at the cursor.
-function draft(page: Page): Promise<Draft> {
-  return page.evaluate(() => {
-    const current = window.__wordcell?.current();
-    if (current?.kind !== 'active') throw new Error(`store is ${current?.kind}`);
-    const { cursor, moves } = current.session;
-    const move = moves[cursor.index];
-    if (move === undefined) throw new Error(`no move at cursor ${cursor.index}`);
-    return {
-      phase: cursor.phase,
-      sourceColumn: move.sourceColumn,
-      sourceCount: move.sourceCount,
-      destinationColumn: move.destinationColumn,
-      destinationCount: move.destinationCount,
-    };
   });
 }
 
@@ -136,24 +67,6 @@ async function expectSaved(page: Page, count: number): Promise<void> {
   });
   expect(stored).toEqual(current);
   expect(stored.moves[stored.cursor.index].destinationCount).toBe(count);
-}
-
-// The store's Session without `activeMs` (a hide flush accrues time into a new reference).
-function game(page: Page): Promise<string> {
-  return page.evaluate(() => {
-    const current = window.__wordcell?.current();
-    if (current?.kind !== 'active') throw new Error(`store is ${current?.kind}`);
-    return JSON.stringify({ ...current.session, activeMs: 0 });
-  });
-}
-
-// The stored wordcell:session without `activeMs`.
-function storedGame(page: Page): Promise<string> {
-  return page.evaluate(() => {
-    const text = localStorage.getItem('wordcell:session');
-    if (text === null) throw new Error('wordcell:session is absent');
-    return JSON.stringify({ ...JSON.parse(text), activeMs: 0 });
-  });
 }
 
 const sessionWrites = async (page: Page) =>

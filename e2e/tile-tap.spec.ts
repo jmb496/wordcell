@@ -453,6 +453,28 @@ test('AD-12 F2 full pitch in a compact tray: a tap 1 px below a row-1 face selec
   expect(await stored(page, SESSION)).toBe(before);
 });
 
+test('AD-12 F2 full pitch in a compact tray: a tap 1 px above a row-2 block mirror keeps the selected tile; a tap 1 px above row 1 (the outer edge) selects nothing (session-place-compact + one Undo)', async ({
+  page,
+}) => {
+  await open(page, 'session-place-compact', ['undo']);
+  await expect(tray(page).locator('.tiles.compact')).toHaveCount(1);
+  const first = await box(tile(page, 1));
+  const last = await box(tray(page).locator('[data-mirror-of="7"]'));
+  expect(last.y).toBeGreaterThan(first.y + first.h);
+  await select(page, 1);
+  const before = await stored(page, SESSION);
+  // Row 2's block mirror owns the 2 px above it: it is not a live tile, so the selection stays.
+  await tapAt(page, { x: last.x + last.w / 2, y: last.y - 1 });
+  await expectSelected(page, 1);
+  expect(await stored(page, SESSION)).toBe(before);
+  // Deselect, then tap 1 px above tile 1's slot: no row above, so it is outside every tile.
+  await tapTile(page, 1);
+  await expectSelected(page, null);
+  await tapAt(page, { x: first.x + first.w / 2, y: first.y - 1 });
+  await expectSelected(page, null);
+  expect(await stored(page, SESSION)).toBe(before);
+});
+
 // --- back and reload ------------------------------------------------------------------------------
 
 test('AD-13 back with a tile selected leaves the app (no history entry)', async ({ page }) => {

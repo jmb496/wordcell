@@ -165,7 +165,7 @@ test('R-33 (UI) a free letter from cell 3: word ONE with E underlined, tag 3 on 
 
 // A compact-mode Composing scratch Session (no fixture holds one): session-place committed to
 // cell 3 (top 28 N), then S = column 4's tail 14 16 17 18 32, the free letter 28 from cell 3 and
-// D = 27 1 9 (k = 3) on the right: 9 tiles, more than one android row.
+// D = 9 1 27 (k = 3) on the right: 9 tiles, more than one android row.
 const COMPACT_SCRATCH = {
   version: 1,
   seed: 1,
@@ -213,6 +213,10 @@ test("R-33 (UI) compact mode: a free letter's origin tag sits top-left", async (
   await expect(tray(page).locator('.tag')).toHaveCount(1);
   await expect(tray(page).getByTestId('card-28').locator('.tag')).toHaveText('3');
   await expectCorner(page, 28, '.tag', 'top-left');
+  // R-33: the free letter's origin cell shows its used mark.
+  await expect(page.getByTestId('wordcell-3').locator('[data-mirror-of="28"]')).toHaveClass(
+    /\bused\b/,
+  );
   await expect(page.locator('[data-card-id]')).toHaveCount(52);
 });
 
@@ -233,12 +237,14 @@ test('R-32 (UI) k = 2: word MAN with A and N underlined, one blue block outline 
   await expect(tray(page).locator('.block.end')).toHaveCount(1);
   await expect(tray(page).locator('[data-mirror-of="27"]')).toHaveClass(/\bend\b/);
   const blue = await tokenColor(page, '--wc-destination');
+  const blockFace = (id: number) => tray(page).locator(`[data-mirror-of="${id}"] .face`);
   for (const id of [1, 27]) {
-    await expect(tray(page).locator(`[data-mirror-of="${id}"] .face`)).toHaveCSS(
-      'border-top-color',
-      blue,
-    );
+    await expect(blockFace(id)).toHaveCSS('border-top-color', blue);
+    await expect(blockFace(id)).toHaveCSS('border-bottom-color', blue);
   }
+  // The outline's open ends: the start face keeps its left border, the end face its right one.
+  await expect(blockFace(1)).toHaveCSS('border-left-color', blue);
+  await expect(blockFace(27)).toHaveCSS('border-right-color', blue);
   await expect(tray(page).locator('.lock:visible')).toHaveCount(1);
   // Joined edge to edge (Card.svelte `.block`): the start face drops its right border and overlaps
   // the end face, which drops its left border, by 1 px (no seam).
@@ -406,6 +412,10 @@ test('R-50 R-33 R-80 (UI) AD-14 session-place-compact: compact strip over two ro
   // Compact glyphs replace the `bottom`/`top` words.
   await expect(tray(page).locator('.position')).toHaveCount(0);
   expect(await tray(page).locator('.tiles').textContent()).not.toMatch(/bottom|top/);
+  // R-33: free letter 35's origin cell 4 shows its used mark.
+  await expect(page.getByTestId('wordcell-4').locator('[data-mirror-of="35"]')).toHaveClass(
+    /\bused\b/,
+  );
   await expect(page.locator('[data-card-id]')).toHaveCount(52);
 });
 
@@ -436,15 +446,25 @@ test('R-32 R-33 R-30 R-36 R-37 (UI) AD-14 session-place-compact after one Undo: 
   expect(tops[5]).toBe(tops[0]);
   expect(tops[6]).toBe(tops[0]);
   expect(tops[7]).toBeGreaterThan(tops[0] as number);
-  await expect(tray(page).locator('.block')).toHaveCount(3);
-  await expect(tray(page).locator('.block.start')).toHaveCount(2);
-  await expect(tray(page).locator('.block.end')).toHaveCount(2);
-  await expect(tray(page).locator('[data-mirror-of="36"]')).toHaveClass(/\bstart\b/);
-  await expect(tray(page).locator('[data-mirror-of="9"]')).toHaveClass(/\bend\b/);
-  await expect(tray(page).locator('[data-mirror-of="7"]')).toHaveClass(
-    /\bstart\b.*\bend\b|\bend\b.*\bstart\b/,
-  );
+  // Segment 1 (row 1) is 36m start and 9m end, segment 2 (row 2) is 7m, both; each segment end
+  // draws a non-zero computed border and each start mirror shows its one lock.
+  const blockFace = (id: number) => tray(page).locator(`[data-mirror-of="${id}"] .face`);
+  const shownLock = (id: number) => tray(page).locator(`[data-mirror-of="${id}"] .lock:visible`);
+  for (const id of [36, 9, 7]) {
+    await expect(tray(page).locator(`[data-mirror-of="${id}"]`)).toHaveCount(1);
+  }
+  await expect(blockFace(36)).not.toHaveCSS('border-left-width', '0px');
+  await expect(blockFace(9)).not.toHaveCSS('border-right-width', '0px');
+  await expect(blockFace(7)).not.toHaveCSS('border-left-width', '0px');
+  await expect(blockFace(7)).not.toHaveCSS('border-right-width', '0px');
+  await expect(shownLock(36)).toHaveCount(1);
+  await expect(shownLock(9)).toHaveCount(0);
+  await expect(shownLock(7)).toHaveCount(1);
   await expect(tray(page).locator('.lock:visible')).toHaveCount(2);
+  // R-33: free letter 35's origin cell 4 shows its used mark.
+  await expect(page.getByTestId('wordcell-4').locator('[data-mirror-of="35"]')).toHaveClass(
+    /\bused\b/,
+  );
   await expect(page.locator('[data-card-id]')).toHaveCount(52);
 });
 
@@ -510,6 +530,28 @@ test('AD-14 an Undo from session-composing remounts card 0: the column-3 ghost h
     'column',
   );
   expect(await ghost.evaluate((el) => el.isConnected)).toBe(false);
+  await expect(page.locator('[data-card-id]')).toHaveCount(52);
+});
+
+test('AD-14 an Undo from Place remounts the D card: the column-6 ghost handle is detached and card-28 is live; a Redo remounts it as a ghost', async ({
+  page,
+}) => {
+  await openFixture(page, 'session-place');
+  const column6 = page.getByTestId('column-6');
+  await expect(column6.locator('[data-mirror-of="28"]')).toHaveCount(1);
+  await expect(column6.getByTestId('card-28')).toHaveCount(0);
+  const ghost = await column6.locator('[data-mirror-of="28"]').elementHandle();
+  if (ghost === null) throw new Error('no column-6 ghost of card 28');
+  await page.getByTestId('undo').click();
+  await expect(column6.getByTestId('card-28')).toHaveAttribute('data-place', 'column');
+  expect(await ghost.evaluate((el) => el.isConnected)).toBe(false);
+  await expect(column6.locator('[data-mirror-of="28"]')).toHaveCount(0);
+  const live = await column6.getByTestId('card-28').elementHandle();
+  if (live === null) throw new Error('no live card 28 in column 6');
+  await page.getByTestId('redo').click();
+  await expect(column6.locator('[data-mirror-of="28"]')).toHaveCount(1);
+  expect(await live.evaluate((el) => el.isConnected)).toBe(false);
+  await expect(column6.getByTestId('card-28')).toHaveCount(0);
   await expect(page.locator('[data-card-id]')).toHaveCount(52);
 });
 
@@ -604,6 +646,40 @@ test('AD-11 a narrowed word line shrinks below 20 px and not below 14 px', async
   expect(await fontSize(page, '.word-text')).toBeGreaterThanOrEqual(14);
   // The size is the largest that fits the measured natural widths.
   expect(await fontSize(page, '.word-text')).toBe(fitted(await lineGeometry(page), 20));
+  await expect(measuring(page)).toHaveCount(0);
+});
+
+// AD-11 (R-30) Fit measures the line's fractional width: a `clientWidth` rounds up (a 33.6 px line
+// reads 34), so fitting against it chose a size whose text overflows the true width. The line is
+// set to a width just under the natural width at s + 1 px, with a fraction ≥ .5, so `clientWidth`
+// rounds up past the text (ticket 5.14 S19).
+test('AD-11 (R-30) a word line of fractional width, whose clientWidth rounds up past the next size, fits at the largest size its true width holds', async ({
+  page,
+}) => {
+  await openFixture(page, 'session-composing');
+  const line = tray(page).locator('.word-line .line');
+  await expect(tray(page).locator('.word-text')).toHaveText('TAN');
+  const g = await lineGeometry(page);
+  // The first size s whose next size's natural width has a fraction in (.55, 1) and is wider than
+  // s's, so the width `natural[s + 1] - .01` is fractional ≥ .5 and holds s but not s + 1.
+  let size: number | undefined;
+  for (let px = 14; px < 20 && size === undefined; px++) {
+    const next = g.natural[px + 1] as number;
+    if (next % 1 > 0.55 && (g.natural[px] as number) <= next - 0.01) size = px;
+  }
+  if (size === undefined) throw new Error('no size 14…19 with a fractional next natural width');
+  const width = (g.natural[size + 1] as number) - 0.01;
+  await narrow(page, width);
+  await expect.poll(() => fontSize(page, '.word-text')).toBe(size);
+  const read = await line.evaluate((el) => ({
+    width: el.getBoundingClientRect().width,
+    clientWidth: el.clientWidth,
+  }));
+  expect(Math.abs(read.width - width)).toBeLessThan(0.05);
+  // The premise: the integer clientWidth reaches the text that does not fit the true width.
+  expect(read.clientWidth).toBeGreaterThanOrEqual(g.natural[size + 1] as number);
+  expect(g.natural[size] as number).toBeLessThanOrEqual(read.width);
+  expect(g.natural[size + 1] as number).toBeGreaterThan(read.width);
   await expect(measuring(page)).toHaveCount(0);
 });
 

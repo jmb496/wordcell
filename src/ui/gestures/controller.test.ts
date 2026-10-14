@@ -28,6 +28,8 @@ import type { Gate } from './gate';
 // a test-set `rendered` (a running animation's mid-flight effect) or else the inline transform, so
 // a face's rect (layout margins) never counts as an offset.
 const navCalls: string[] = [];
+// The `navCalls` entry of a dispatched command (shared by the epic 5 describes).
+const dispatched = (command: Record<string, unknown>) => `dispatch ${JSON.stringify(command)}`;
 // Entry 9: gate enter/leave, animation finish and elementFromPoint calls, in order.
 const order: string[] = [];
 // Ticket 5.16 (CAP-8, F7): nav pop, gate leave, capture, dispatch and play, in order.
@@ -3349,6 +3351,22 @@ describe('AD-12 entry 12 desktop hover peek', () => {
     expect(t.overlays.hoverPeek).toBe(3);
   });
 
+  it('AD-12 detach clears the hover-peek suppression slot: after cancel() suppressed cell 3, detach and re-attach, a relatedTarget-null entry into cell 3 arms one hover timer', async () => {
+    const t = await setup();
+    const detach = t.detach();
+    open3(t);
+    t.controller.cancel();
+    // Suppressed: the boundary entry arms nothing beyond open3's own timer.
+    enter3(t, { relatedTarget: null });
+    expect(hoverTimers(t)).toBe(1);
+    detach();
+    t.detach();
+    enter3(t, { relatedTarget: null });
+    expect(hoverTimers(t)).toBe(2);
+    t.advance(400);
+    expect(t.overlays.hoverPeek).toBe(3);
+  });
+
   it('AD-12 suppression is one slot: a mouse press end over cell 3 suppresses it; a later one over no cell clears it', async () => {
     const t = await setup();
     t.detach();
@@ -3581,7 +3599,6 @@ describe('AD-12 entry 12 desktop hover peek', () => {
 // Epic 5 SPEC CAP-4 (F1, F2, F13, F18): the tile selection through the controller, on tileView().
 describe('AD-12 epic 5 tile tap', () => {
   type T = Awaited<ReturnType<typeof setup>>;
-  const dispatched = (command: Record<string, unknown>) => `dispatch ${JSON.stringify(command)}`;
   const move = (t: T, x: number, y: number) => t.fire('pointermove', { clientX: x, clientY: y });
   // A press on `el` at (100, 100) moved 10 px (past the threshold).
   const crossed = (t: T, el: FakeEl) => {
@@ -3899,7 +3916,6 @@ describe('AD-12 epic 5 tile tap', () => {
 // selected before each case unless a case says otherwise.
 describe('AD-12 epic 5 Place target', () => {
   type T = Awaited<ReturnType<typeof setup>>;
-  const dispatched = (command: Record<string, unknown>) => `dispatch ${JSON.stringify(command)}`;
   const dispatches = () => navCalls.filter((c) => c.startsWith('dispatch'));
   const ready = async (selected: number | null = 6) => {
     const t = await setup();
@@ -3944,6 +3960,12 @@ describe('AD-12 epic 5 Place target', () => {
     t.tap(t.b.cellCard);
     expect(t.overlays.tileSelection).toBeNull();
     t.overlays.selectTile(6);
+    // Cell 4 is not legal and empty in this view; give it a card so the tap could open a view.
+    const cell4 = (shared.view as { cells: { cell: number; cards: number[] }[] }).cells.find(
+      (c) => c.cell === 4,
+    );
+    if (cell4 === undefined) throw new Error('no cell 4 in the view');
+    cell4.cards = [5];
     t.tap(t.b.cell4);
     expect(t.overlays.tileSelection).toBe(6);
     expect(t.overlays.viewCell).toBeNull();
@@ -4066,7 +4088,6 @@ describe('AD-12 epic 5 Place target', () => {
 // 104 (and 152 in Place), y 666.5. Composing run [3, 4] (block of one on the right), Place [3, 4, 6].
 describe('AD-12 epic 5 tile drag', () => {
   type T = Awaited<ReturnType<typeof setup>>;
-  const dispatched = (command: Record<string, unknown>) => `dispatch ${JSON.stringify(command)}`;
   const move = (t: T, dx: number, dy = 0, init: Partial<FakeEvent> = {}) =>
     t.fire('pointermove', { clientX: 100 + dx, clientY: 100 + dy, ...init });
   const press = (t: T, el: FakeEl, init: Partial<FakeEvent> = {}) =>
@@ -4674,7 +4695,6 @@ describe('AD-12 epic 5 tile drag', () => {
 // translate(x − 7.5px, 6px).
 describe('AD-12 epic 5 free-letter drag', () => {
   type T = Awaited<ReturnType<typeof setup>>;
-  const dispatched = (command: Record<string, unknown>) => `dispatch ${JSON.stringify(command)}`;
   const GAP_Y = 666.5;
   const press = (t: T, el?: FakeEl, init: Partial<FakeEvent> = {}) =>
     t.down(el ?? t.b.cellCard, { clientX: 100, clientY: 100, ...init });

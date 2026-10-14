@@ -1,7 +1,7 @@
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, type Request, test } from '@playwright/test';
 import { expectAnotherWindow, expectOnlyButton, kind, stored } from './helpers/blocking';
 import {
   box,
@@ -20,6 +20,19 @@ import { button, expectLeaves, hitAt, wc } from './helpers/dialogs';
 import { buildRoot } from './helpers/dist-test';
 import { dragResidue, expectNoResidue } from './helpers/drag';
 import {
+  css,
+  expectFlownBack,
+  faceOf,
+  footCorner,
+  path as gesturePath,
+  holdThrough,
+  idOf,
+  placeholder,
+  plus,
+  space,
+  targets,
+} from './helpers/gestures';
+import {
   animationFrames,
   hidePage,
   pageHide,
@@ -27,9 +40,11 @@ import {
   showPage,
   startHidden,
 } from './helpers/lifecycle';
+import { onAndroid } from './helpers/project';
 import {
   booted,
   dictionaryReady,
+  isList,
   open,
   openBoard,
   type Snapshot,
@@ -38,6 +53,8 @@ import {
   waitForDictionary,
 } from './helpers/restore';
 import { captureBoot, fixture, seedStorage } from './helpers/seed';
+import { expectSelection, select, selection, wcOf } from './helpers/selection';
+import { cursorIndex, draft, draftDetail, game, storedGame, storedText } from './helpers/session';
 import { armStorageSpy, storageWrites } from './helpers/storage-spy';
 import { tokenColor } from './helpers/style';
 import { longPress, touchDrag, touchHold } from './helpers/touch';
@@ -369,6 +386,32 @@ test.describe('board helpers', () => {
     expect(other.url()).toBe('about:blank');
   });
 
+  test('AD-17 openFixture with { booted: false } returns at the 52 cards without waiting for the store to leave booting; the default waits once', async ({
+    page,
+    context,
+  }) => {
+    // Counts the page's `waitForFunction` calls, which `booted` (restore.ts) makes once.
+    const countWaits = (target: Page) => {
+      const waits = { count: 0 };
+      const original = target.waitForFunction.bind(target);
+      target.waitForFunction = ((...args: Parameters<typeof original>) => {
+        waits.count++;
+        return original(...args);
+      }) as typeof original;
+      return waits;
+    };
+
+    const unwaited = countWaits(page);
+    await openFixture(page, 'session-idle-empty-column', { booted: false });
+    await expect(page.locator('[data-card-id]')).toHaveCount(52);
+    expect(unwaited.count).toBe(0);
+
+    const other = await context.newPage();
+    const waited = countWaits(other);
+    await openFixture(other, 'session-idle-empty-column');
+    expect(waited.count).toBe(1);
+  });
+
   test('AD-17 column, cards and foot locate column n, its live cards (no mirrors) and foot pad n; none past 8', async ({
     page,
   }) => {
@@ -501,6 +544,162 @@ test.describe('drag helpers', () => {
     });
     expect(await dragResidue(page)).toEqual({ classes: 2, transforms: 1 });
     await expect(expectNoResidue(page)).rejects.toThrow();
+  });
+});
+
+test.describe('gesture and geometry helpers', () => {
+  test('AD-17 plus offsets a point; path lists steps points from the start (excluded) to the end (included)', () => {
+    expect(plus({ x: 1, y: 2 }, 3, -4)).toEqual({ x: 4, y: -2 });
+    expect(gesturePath({ x: 0, y: 0 }, { x: 8, y: 4 }, 4)).toEqual([
+      { x: 2, y: 1 },
+      { x: 4, y: 2 },
+      { x: 6, y: 3 },
+      { x: 8, y: 4 },
+    ]);
+  });
+
+  test('AD-17 onAndroid does not skip on the android project', () => {
+    onAndroid();
+    expect(test.info().status).not.toBe('skipped');
+  });
+
+  test('AD-17 isList matches the word-list fetch, not the dev server en.txt?url module', () => {
+    const request = (url: string) => ({ url: () => url }) as unknown as Request;
+    expect(isList(request('http://localhost/assets/en-abc123.txt'))).toBe(true);
+    expect(isList(request('http://localhost/generated/dictionary/en.txt'))).toBe(true);
+    expect(isList(request('http://localhost/generated/dictionary/en.txt?url'))).toBe(false);
+    expect(isList(request('http://localhost/assets/other.txt'))).toBe(false);
+  });
+
+  test('AD-17 faceOf, idOf and css read a card wrapper: its own face, its card id, a computed property', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-idle-fresh');
+    const card = page.getByTestId('card-0');
+    await expect(faceOf(card)).toHaveCount(1);
+    expect(
+      await faceOf(card).evaluate((el) => el.parentElement?.getAttribute('data-card-id')),
+    ).toBe('0');
+    expect(await idOf(card)).toBe(0);
+    expect(await css(page.locator('body'), 'display')).toBe('block');
+  });
+
+  test('AD-17 targets lists the columns of wc-drag-target elements; none on a clean board', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-idle-fresh');
+    expect(await targets(page)).toEqual([]);
+    await page.evaluate(() => {
+      document.querySelector('[data-testid="column-4"]')?.classList.add('wc-drag-target');
+      document.querySelector('[data-testid="foot-6"]')?.classList.add('wc-drag-target');
+    });
+    expect((await targets(page)).sort()).toEqual([4, 6]);
+  });
+
+  test('AD-17 expectFlownBack passes on the rest box within 1 px and rejects off it', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-idle-fresh');
+    const face = faceOf(page.getByTestId('card-0'));
+    const rest = await box(face);
+    await expectFlownBack(face, rest);
+    await expectFlownBack(face, { ...rest, x: rest.x + 1 });
+    await expect(expectFlownBack(face, { ...rest, x: rest.x + 3 })).rejects.toThrow();
+  });
+
+  test('AD-17 placeholder, space and footCorner locate an empty column, a point in its space and a foot corner', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-idle-empty-column');
+    await expect(placeholder(page, 1)).toHaveCount(1);
+    const f = await box(foot(page, 1));
+    expect(await space(page, 1)).toEqual({ x: f.x + f.w / 2, y: f.y - 6 });
+    expect(await footCorner(page, 1)).toEqual({ x: f.x + 3, y: f.y + 3 });
+    const last = await box(cards(page, 2).last());
+    const f2 = await box(foot(page, 2));
+    if (last.y + last.h >= f2.y - 6) {
+      await expect(space(page, 2)).rejects.toThrow('column 2 has no empty space');
+    } else {
+      expect((await space(page, 2)).y).toBe(f2.y - 6);
+    }
+  });
+
+  test('AD-17 holdThrough moves one held touch through the points, runs check after each and returns the live hold', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-idle-fresh');
+    const from = await centre(cards(page, 1).last());
+    const to = plus(from, 120, -160);
+    const seen: number[] = [];
+    const hold = await holdThrough(page, from, gesturePath(from, to, 3), async (i) => {
+      seen.push(i);
+    });
+    try {
+      expect(seen).toEqual([0, 1, 2]);
+      await hold.moveTo(plus(to, 5, 5));
+    } finally {
+      await hold.end();
+    }
+    await expect(
+      holdThrough(page, from, gesturePath(from, to, 2), async (i) => {
+        if (i === 1) throw new Error('check failed');
+      }),
+    ).rejects.toThrow('check failed');
+    await expectNoResidue(page);
+  });
+});
+
+test.describe('session and selection helpers', () => {
+  test('AD-17 draft and draftDetail read the move at the cursor; they reject when there is none', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-composing');
+    const detail = await draftDetail(page);
+    expect(detail).toMatchObject({
+      phase: 'composing',
+      sourceColumn: 3,
+      sourceCount: 2,
+      destinationColumn: 6,
+      destinationCount: 1,
+    });
+    expect(typeof detail.destinationSide).toBe('string');
+    expect(detail.arrangement.length).toBeGreaterThan(0);
+    const { destinationSide: _side, arrangement: _arrangement, ...base } = detail;
+    expect(await draft(page)).toEqual(base);
+    const fresh = await page.context().newPage();
+    await openFixture(fresh, 'session-idle-fresh');
+    await expect(draft(fresh)).rejects.toThrow('no move at cursor');
+    await expect(draftDetail(fresh)).rejects.toThrow('no move at cursor');
+  });
+
+  test('AD-17 storedText, game and storedGame read the stored text and the Session without activeMs', async ({
+    page,
+    context,
+  }) => {
+    await openFixture(page, 'session-composing');
+    expect(await storedText(page)).toBe(fixture('session-composing.json'));
+    const inStore = JSON.parse(await game(page));
+    const inStorage = JSON.parse(await storedGame(page));
+    expect(inStore.activeMs).toBe(0);
+    expect(inStorage).toEqual(inStore);
+    expect(await cursorIndex(page)).toBe(inStore.cursor.index);
+
+    const other = await context.newPage();
+    await expect(game(other)).rejects.toThrow('store is undefined');
+    await expect(cursorIndex(other)).rejects.toThrow('store is undefined');
+  });
+
+  test('AD-17 selection, wcOf, expectSelection and select read and wait for the tapped tail and its one History entry', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-idle-fresh');
+    expect(await selection(page)).toBeNull();
+    expect(await wcOf(page)).toBe(0);
+    await expectSelection(page, null, 0);
+    await select(page, 1, 4);
+    expect(await selection(page)).toEqual({ column: 1, count: 3 });
+    expect(await wcOf(page)).toBe(1);
+    await expectSelection(page, { column: 1, count: 3 }, 1);
   });
 });
 

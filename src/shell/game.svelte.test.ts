@@ -309,6 +309,19 @@ describe('game store', () => {
     expect(storage.writes).toEqual([]);
   });
 
+  it("AD-7 a rejected session's reason has a `version` key only when the version was readable (`'version' in`)", async () => {
+    const unreadable = await active(JSON.stringify(invalidNull));
+    const unreadableReason = (unreadable.game.current() as { reason: object }).reason;
+    expect('version' in unreadableReason).toBe(false);
+    const unknown = await active(JSON.stringify({ ...idleFresh, version: 99 }));
+    const unknownReason = (unknown.game.current() as { reason: object }).reason;
+    expect('version' in unknownReason).toBe(true);
+    expect(unknownReason).toEqual({ reason: 'version-unknown', version: 99 });
+    const replayFailed = await active(JSON.stringify(invalidLastOnly));
+    const replayReason = (replayFailed.game.current() as { reason: object }).reason;
+    expect('version' in replayReason).toBe(true);
+  });
+
   it('AD-4 load() after an active load throws', async () => {
     const { game } = await active(JSON.stringify(place));
     expect(() => game.load()).toThrow('AD-4 load() while active');

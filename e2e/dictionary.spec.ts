@@ -1,6 +1,6 @@
 import { expect, type Page, type Request, type Route, test } from '@playwright/test';
 import { animationFrames, showPage, startHidden } from './helpers/lifecycle';
-import { openBoard, waitForDictionary } from './helpers/restore';
+import { isList, openBoard, waitForDictionary } from './helpers/restore';
 import { fixture, seedStorage } from './helpers/seed';
 import { tokenColor } from './helpers/style';
 
@@ -13,9 +13,6 @@ test.beforeEach(() => {
 
 const LIST = '**/en*.txt';
 const BANNER = "Word list didn't load.";
-// The word-list fetch itself (as `LIST` matches it), not the dev server's `en.txt?url` module.
-const isList = (request: Request) => /\/en[^/?]*\.txt$/.test(request.url());
-
 const dictionaryState = (page: Page) => page.evaluate(() => window.__wordcell?.dictionaryState());
 
 // Every word-list request of the page, counted from before its first goto.

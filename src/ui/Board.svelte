@@ -25,7 +25,7 @@ import WordCellView from './WordCellView.svelte';
 
 // AD-11: the Board iterates the live layout's band order and lays every band out from its getters
 // (w, metrics, wide, heights, bandOrder, the gate-latched bannerShown; epic 4 build-notes CAP-1,
-// epic 4 build-notes CAP-3, epic 4 build-notes F20). The bars and the banner are content-sized;
+// epic 4 build-notes CAP-3, epic 4 SPEC F20). The bars and the banner are content-sized;
 // every other band takes its `bands()` height. DESIGN.md Scrolling: `--wc-pan` is the non-card
 // regions' touch-action (`pan-x pan-y` when wide); the Board itself and its units set no
 // touch-action (they compute `auto`). The `--wc-*` properties sit on `.board-root` (epic 4 SPEC
