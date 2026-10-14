@@ -1,6 +1,6 @@
 # Review log — story-winning-animation-input-guard (ticket 5.13)
 
-State: pass 3: done
+State: pass 4: done
 
 Pre-loop: HEAD b4217aca8a4b116c10a8e413a5e4e1992aa49812; copy /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-winning-animation-input-guard.review-log.passes/pass0.md; 365 words (wc -w of whole file).
 Mode: docs, thorough, max 7. Budget default 2.5x (~912 words).
@@ -61,3 +61,16 @@ Reviewers: fix-diff, edge-case, adversarial, ref-alignment  |  Findings: major 6
 ### Decision needed (functionality / UX / gameplay)
 - none
 Words (docs): 1150 (3.15x pass 0, over the 2.5x budget)  |  Snapshot: /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-winning-animation-input-guard.review-log.passes/pass3.md
+
+## Pass 4 — 2026-10-14
+Reviewers: fix-diff, edge-case, ref-alignment (adversarial dropped, late-pass)  |  Findings: major 3 (merged), minor 1, decision-needed 0  |  Dropped in triage: 0
+### Applied
+- [major] owed-click flag could swallow Undo's own click (contradicts Undo pass-through) → item 1
+- [major] hide e2e "420 ms" figure wrong (backstop is duration('snap') of the active speed, from the hide) → item 2
+- [major] consumers field lacked the four consumers required by tickets.toml → item 3
+- [minor] "in the window" undefined → item 4
+### Default applied (technical)
+- Undo-click exempt from owed-click; hide e2e wait derived from active-speed snap.
+### Decision needed (functionality / UX / gameplay)
+- none
+Words (docs): 1150 (3.15x pass 0, over the 2.5x budget)  |  Snapshot: /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-winning-animation-input-guard.review-log.passes/pass4.md
