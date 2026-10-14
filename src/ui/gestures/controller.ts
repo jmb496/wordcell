@@ -138,7 +138,7 @@
 // throw through lookup.ts and the DOM class names come from classes.ts.
 import { flushSync } from 'svelte';
 import type { CardId, Command, GameView } from '../../engine/index';
-import { game } from '../../shell/game.svelte';
+import { type DispatchResult, game } from '../../shell/game.svelte';
 import { prefs } from '../../shell/prefs.svelte';
 import { SELECTION_LIFT_PX } from '../layout/geometry';
 import {
@@ -214,6 +214,10 @@ export type ControllerDeps<H> = {
   finishGlides(): void;
   /** Epic 5 SPEC F6, AD-14: true while a FLIP glide is unsettled (flip.ts `running`). */
   glidesRunning(): boolean;
+  /** Epic 5 SPEC CAP-8, F7: flip.ts `capture`, called right before a dispatch. */
+  capture(): void;
+  /** Epic 5 SPEC CAP-8, F7: flip.ts `play`, called right after a non-throwing dispatch. */
+  play(command: Command, result: DispatchResult): void;
 };
 
 export type CancelOptions = { readonly byBack?: boolean };
@@ -617,7 +621,9 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     p.timer = null;
   }
 
-  function end(reason: EndReason): void {
+  // CAP-8, F7, F17: the command a drag release captured for (null unless `end()` called
+  // `deps.capture()`); `pointerup` dispatches it and plays.
+  function end(reason: EndReason): Command | null {
     const p = press;
     if (p === null) throw new Error('AD-12 end() with no active press');
     stopTimer(p);
@@ -635,6 +641,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     }
     const drag = p.drag;
     let flies = false;
+    let captured: Command | null = null;
     if (drag !== null) {
       // Epic 4 SPEC F19: a pick-up drag closes the hover peek at release, before the fly-back or
       // drop.
@@ -644,9 +651,11 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       // Epic 5 SPEC CAP-5, CAP-6, F5: an edit release and every non-flying end settle at once; the
       // fly-back lands unlifted, the parted faces return beside it (a free letter's caret and
       // parted classes go at once).
+      // CAP-8: the "will dispatch" predicate, computed once on 'up' for `flies` and the capture.
+      const release = kind === 'up' ? releaseCommand(drag) : null;
       flies =
         kind === 'up'
-          ? releaseCommand(drag) === null
+          ? release === null
           : kind === 'pointercancel' ||
             kind === 'lostCapture' ||
             (reason.kind === 'cancel' && reason.byBack);
@@ -659,6 +668,11 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
         flight.flyBack(drag, false);
         returnRun(drag);
       } else {
+        // CAP-8, F17: capture the released rects before the transforms clear.
+        if (release !== null) {
+          captured = release;
+          deps.capture();
+        }
         parting.finishAll();
         clearDrag(drag);
       }
@@ -675,6 +689,17 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       // A mid-drag Forward popstate (not reachable on Android) lands unlifted and snaps at settle, accepted.
       const closesSelection =
         reason.kind === 'cancel' && reason.byBack && overlays.top === 'tailSelection';
+      // CAP-8, F17: a drop deselects, then captures the released rects before `clearDrag`.
+      if (kind === 'up' && drag.highlighted !== null) {
+        if (overlays.selection !== null) overlays.deselect();
+        captured = {
+          type: 'drop',
+          sourceColumn: drag.source,
+          sourceCount: drag.count,
+          destinationColumn: drag.highlighted,
+        };
+        deps.capture();
+      }
       // The fly-back enters the gate before the press leaves it (F13).
       if (flies) flight.flyBack(drag, kind !== 'up' && !closesSelection);
       else clearDrag(drag);
@@ -695,6 +720,13 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     // that flies back, at the settle); epic 4 SPEC CAP-8: a crossed press with no drag repaints at
     // every other end.
     if (kind !== 'up' && (drag !== null ? !flies : p.state.kind === 'drag')) refreshHover();
+    return captured;
+  }
+
+  // CAP-8, F7: a tap-site dispatch bracketed by capture and play (a throw skips play, AD-15).
+  function moveDispatch(command: Command): void {
+    deps.capture();
+    deps.play(command, game.dispatch(command));
   }
 
   function unsuppress(): void {
@@ -1274,11 +1306,11 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
         return;
       case 'swap':
         overlays.clearTile();
-        game.dispatch(action.command);
+        moveDispatch(action.command);
         return;
       case 'remove':
         overlays.clearTile();
-        game.dispatch({ type: 'removeFreeLetter', cell: action.cell });
+        moveDispatch({ type: 'removeFreeLetter', cell: action.cell });
         return;
       case 'keep':
         return;
@@ -1309,7 +1341,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
         return;
       case 'drop':
         overlays.deselect();
-        game.dispatch({
+        moveDispatch({
           type: 'drop',
           sourceColumn: action.sourceColumn,
           sourceCount: action.sourceCount,
@@ -1317,16 +1349,16 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
         });
         return;
       case 'tapDestinationCard':
-        game.dispatch({ type: 'tapDestinationCard', card: action.card });
+        moveDispatch({ type: 'tapDestinationCard', card: action.card });
         return;
       case 'openView':
         overlays.openView(action.cell);
         return;
       case 'addFreeLetter':
-        game.dispatch({ type: 'addFreeLetter', cell: action.cell });
+        moveDispatch({ type: 'addFreeLetter', cell: action.cell });
         return;
       case 'setTarget':
-        game.dispatch({ type: 'setTarget', cell: action.cell });
+        moveDispatch({ type: 'setTarget', cell: action.cell });
         return;
       case 'none':
         return;
@@ -1339,7 +1371,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     if (p === null || !own(event)) return;
     const outcome = classify(p.state, { type: 'up' });
     const drag = p.drag;
-    end({ kind: 'up' });
+    const captured = end({ kind: 'up' });
     if (outcome === 'longPress') {
       releasePeek();
       return;
@@ -1370,28 +1402,22 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       const view = game.view;
       if (view === undefined) throw new Error('AD-12 drag-as-tap without a GameView');
       const card = destinationTap(p.hit, view);
-      if (card !== null) game.dispatch({ type: 'tapDestinationCard', card });
+      if (card !== null) moveDispatch({ type: 'tapDestinationCard', card });
       refreshHover();
       return;
     }
     if (drag.kind === 'tile' || drag.kind === 'freeLetter') {
       // Epic 5 SPEC CAP-5, CAP-6: the one command of a tile or free-letter drag, on the last
       // move's acceptance and gap; a release with none flew back (hover repaints at its settle).
-      const command = releaseCommand(drag);
-      if (command === null) return;
-      game.dispatch(command);
+      if (captured === null) return;
+      deps.play(captured, game.dispatch(captured));
       refreshHover();
       return;
     }
-    if (drag.highlighted === null) return;
-    // AD-12: the one command of a drag, on the last-shown highlight (EXPERIENCE.md step 6).
-    if (overlays.selection !== null) overlays.deselect();
-    game.dispatch({
-      type: 'drop',
-      sourceColumn: drag.source,
-      sourceCount: drag.count,
-      destinationColumn: drag.highlighted,
-    });
+    // AD-12: the one command of a drag, on the last-shown highlight (EXPERIENCE.md step 6),
+    // built and captured in `end()`.
+    if (captured === null) return;
+    deps.play(captured, game.dispatch(captured));
     refreshHover();
   }
 

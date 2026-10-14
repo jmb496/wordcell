@@ -92,7 +92,8 @@ async function storedMove(page: Page): Promise<StoredMove> {
 // An edit: saved before the next action (R-73 (UI)), then one residue read, no polling.
 async function expectEdit(page: Page): Promise<StoredMove> {
   const move = await storedMove(page);
-  expect(await dragResidue(page)).toEqual({ classes: 0, transforms: 0 });
+  // Ticket 5.16 (CAP-8, F17): the release's FLIP glide holds `wc-drag-tiles` until it settles.
+  await expectNoResidue(page);
   await expectNoTrayResidue(page);
   return move;
 }

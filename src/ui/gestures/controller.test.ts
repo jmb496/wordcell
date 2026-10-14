@@ -30,6 +30,12 @@ import type { Gate } from './gate';
 const navCalls: string[] = [];
 // Entry 9: gate enter/leave, animation finish and elementFromPoint calls, in order.
 const order: string[] = [];
+// Ticket 5.16 (CAP-8, F7): nav pop, gate leave, capture, dispatch and play, in order.
+const trace: string[] = [];
+const flipHooks: { onCapture: (() => void) | null; result: unknown } = {
+  onCapture: null,
+  result: { kind: 'applied' },
+};
 const shared: { view: unknown; onDispatch: (() => void) | null } = {
   view: undefined,
   onDispatch: null,
@@ -112,7 +118,10 @@ const clock: { add: (cb: () => void, ms: number) => void } = {
 vi.mock('../../shell/nav', () => ({
   nav: {
     push: () => navCalls.push('push'),
-    pop: () => navCalls.push('pop'),
+    pop: () => {
+      navCalls.push('pop');
+      trace.push('pop');
+    },
   },
 }));
 
@@ -123,8 +132,9 @@ vi.mock('../../shell/game.svelte', () => ({
     },
     dispatch: (command: Record<string, unknown>) => {
       shared.onDispatch?.();
+      trace.push('dispatch');
       navCalls.push(`dispatch ${JSON.stringify(command)}`);
-      return { kind: 'applied' };
+      return flipHooks.result;
     },
   },
 }));
@@ -508,6 +518,9 @@ async function setup() {
   vi.resetModules();
   navCalls.length = 0;
   order.length = 0;
+  trace.length = 0;
+  flipHooks.onCapture = null;
+  flipHooks.result = { kind: 'applied' };
   svelteFlush.onFlush = null;
   shared.onDispatch = null;
   const col = (column: number, cards: number[]) => ({
@@ -543,6 +556,7 @@ async function setup() {
     leave: () => {
       if (counts.enter - counts.leave === 0) throw new Error('fake gate leave() at count 0');
       order.push('leave');
+      trace.push('leave');
       counts.leave += 1;
     },
   } as unknown as Gate;
@@ -611,6 +625,18 @@ async function setup() {
     // Ticket 5.10 (epic 5 SPEC F6): flip.ts's finishAll/running, faked.
     finishGlides: () => order.push('finishGlides'),
     glidesRunning: () => glides.running,
+    // Ticket 5.16 (CAP-8, F7): flip.ts's capture/play, faked into `trace`.
+    capture: () => {
+      if (trace.filter((x) => x === 'capture').length > trace.filter((x) => x === 'play').length) {
+        throw new Error('fake capture() while a capture is pending');
+      }
+      trace.push('capture');
+      flipHooks.onCapture?.();
+    },
+    play: (command) => {
+      trace.push('play');
+      trace.push(`played ${(command as { type: string }).type}`);
+    },
   });
   const detach = () => controller.attach(b.root as unknown as HTMLElement);
   // A pointerdown whose resolution reads `target` from elementFromPoint; event.target is another
@@ -1987,6 +2013,57 @@ describe('AD-12 entry 8 drag', () => {
     expect(t.overlays.selection).toBeNull();
   });
 
+  it('AD-14 F17 a tail drop deselects, captures before the transforms clear, then leaves the gate, dispatches and plays', async () => {
+    const t = await setup();
+    t.detach();
+    t.tap(t.b.card2);
+    trace.length = 0;
+    t.down(t.b.card1b, { clientX: 25, clientY: 50 });
+    move(t, 125, 50);
+    let atCapture: string[] = [];
+    flipHooks.onCapture = () => {
+      atCapture = transforms(t);
+    };
+    t.fire('pointerup');
+    expect(atCapture).toEqual(['', 'translate(100px, 0px)', '']);
+    expect(trace).toEqual(['pop', 'capture', 'leave', 'dispatch', 'play', 'played drop']);
+  });
+
+  it('AD-14 F17 a tap-drop captures after the deselect and plays after its dispatch; a no-highlight release flies back with no capture or play', async () => {
+    const t = await setup();
+    t.detach();
+    t.tap(t.b.card1);
+    trace.length = 0;
+    t.tap(t.b.card2);
+    expect(trace).toEqual(['leave', 'pop', 'capture', 'dispatch', 'play', 'played drop']);
+    trace.length = 0;
+    t.down(t.b.card1b, { clientX: 25, clientY: 50 });
+    move(t, 25, 1050);
+    t.fire('pointerup');
+    expect(trace.filter((x) => x === 'capture' || x === 'play')).toEqual([]);
+  });
+
+  it('AD-14 F7 capture count equals play count for a tail drag ended by pointercancel, lostpointercapture, cancel and cancel(byBack)', async () => {
+    const t = await setup();
+    t.detach();
+    const ends: (() => void)[] = [
+      () => t.fire('pointercancel'),
+      () => t.fire('lostpointercapture', { target: t.b.card1b }),
+      () => t.controller.cancel(),
+      () => t.controller.cancel({ byBack: true }),
+    ];
+    for (const end of ends) {
+      t.down(t.b.card1b, { clientX: 25, clientY: 50 });
+      move(t, 125, 50);
+      end();
+      t.controller.cancel();
+    }
+    const n = (name: string) => trace.filter((x) => x === name).length;
+    expect(n('capture')).toBe(n('play'));
+    expect(n('capture')).toBe(0);
+    expect(t.active()).toBe(0);
+  });
+
   it('AD-12 hover classes clear at threshold; refreshHover() and pointerover add none mid-drag or mid-fly-back; the fly-back end recomputes them', async () => {
     const t = await setup();
     t.detach();
@@ -2850,6 +2927,34 @@ describe('AD-12 entry 10 Composing columns', () => {
     expect(t.active()).toBe(0);
   });
 
+  it('AD-14 F7 a drag-as-tap captures only when it dispatches; every non-dispatching end leaves captures equal to plays', async () => {
+    const t = await setup();
+    t.detach();
+    compose();
+    crossed(t);
+    trace.length = 0;
+    t.fire('pointerup');
+    expect(trace).toEqual(['leave', 'capture', 'dispatch', 'play', 'played tapDestinationCard']);
+    trace.length = 0;
+    crossed(t);
+    t.fire('pointercancel');
+    crossed(t);
+    t.fire('lostpointercapture', { target: t.b.card1 });
+    crossed(t);
+    t.controller.cancel();
+    crossed(t);
+    t.controller.cancel({ byBack: true });
+    expect(trace.filter((x) => x === 'capture' || x === 'play')).toEqual([]);
+    const u = await setup();
+    u.detach();
+    compose();
+    u.down(u.b.card1b, { clientX: 25, clientY: 30 });
+    move(u, 75, 30);
+    trace.length = 0;
+    u.fire('pointerup');
+    expect(trace.filter((x) => x === 'capture' || x === 'play')).toEqual([]);
+  });
+
   it('AD-12 the drag-as-tap reads kIfTapped at pointerup, not at pointerdown', async () => {
     const t = await setup();
     t.detach();
@@ -3452,6 +3557,20 @@ describe('AD-12 epic 5 tile tap', () => {
     expect(p.overlays.tileSelection).toBeNull();
   });
 
+  it('AD-14 F7 a swap and a removal capture after the clear and play after the dispatch; a select captures nothing', async () => {
+    const t = await ready();
+    trace.length = 0;
+    const calls = () => trace.filter((x) => x !== 'leave');
+    t.tap(t.b.tile2);
+    expect(calls()).toEqual(['capture', 'dispatch', 'play', 'played arrange']);
+    const r = await ready('composing', 4);
+    r.tap(r.b.tile2);
+    expect(calls()).toEqual(['capture', 'dispatch', 'play', 'played removeFreeLetter']);
+    const s = await ready('composing', null);
+    s.tap(s.b.tile);
+    expect(calls()).toEqual([]);
+  });
+
   it('AD-12 Q-31 a second tap on a selected Composing free letter dispatches removeFreeLetter and ends the selection; on an S tile only deselects', async () => {
     const t = await ready('composing', 4);
     const seen: (number | null)[] = [];
@@ -3510,7 +3629,15 @@ describe('AD-12 epic 5 tile tap', () => {
     t.overlays.selectTile(3);
     const seen: (number | null)[] = [];
     shared.onDispatch = () => seen.push(t.overlays.tileSelection);
+    trace.length = 0;
     t.tap(t.b.cellCard);
+    // AD-14 F7: the addFreeLetter tap site is bracketed, the clear before the capture.
+    expect(trace.filter((x) => x !== 'leave')).toEqual([
+      'capture',
+      'dispatch',
+      'play',
+      'played addFreeLetter',
+    ]);
     expect(navCalls).toEqual([dispatched({ type: 'addFreeLetter', cell: 3 })]);
     expect(seen).toEqual([null]);
     expect(t.overlays.tileSelection).toBeNull();
@@ -3527,7 +3654,15 @@ describe('AD-12 epic 5 tile tap', () => {
     t.overlays.selectTile(6);
     const seen: (number | null)[] = [];
     shared.onDispatch = () => seen.push(t.overlays.tileSelection);
+    trace.length = 0;
     t.tap(t.b.cell5);
+    // AD-14 F7: the setTarget tap site is a capture/play pair too.
+    expect(trace.filter((x) => x !== 'leave')).toEqual([
+      'capture',
+      'dispatch',
+      'play',
+      'played setTarget',
+    ]);
     expect(t.overlays.tileSelection).toBeNull();
     expect(navCalls).toEqual([dispatched({ type: 'setTarget', cell: 5 })]);
     expect(seen).toEqual([null]);
@@ -3920,6 +4055,69 @@ describe('AD-12 epic 5 tile drag', () => {
     r.fire('pointerup');
     expect(navCalls).toEqual([dispatched({ type: 'arrange', arrangement: [4, 3] })]);
     expect(clean(r)).toBe(true);
+  });
+
+  it('AD-14 F17 a tile edit release captures before finishAll and the transforms clear; a no-edit release captures nothing', async () => {
+    const t = await ready();
+    press(t, t.b.tile2);
+    move(t, -72);
+    let at: string[] = [];
+    flipHooks.onCapture = () => {
+      at = transforms(t);
+    };
+    trace.length = 0;
+    t.fire('pointerup');
+    expect(at).toEqual(['translate(48px, 0px)', 'translate(-72px, 0px)', '']);
+    expect(trace.indexOf('capture')).toBe(0);
+    expect(trace.filter((x) => x !== 'leave')).toEqual([
+      'capture',
+      'dispatch',
+      'play',
+      'played arrange',
+    ]);
+    expect(trace.indexOf('dispatch')).toBeGreaterThan(trace.lastIndexOf('leave'));
+    const n = await ready();
+    press(n, n.b.tile2);
+    move(n, 10);
+    trace.length = 0;
+    n.fire('pointerup');
+    expect(trace.filter((x) => x === 'capture' || x === 'play')).toEqual([]);
+  });
+
+  it('AD-14 F7 play still runs when the release dispatch is a no-op (changed false)', async () => {
+    const t = await ready();
+    press(t, t.b.tile2);
+    move(t, -72);
+    flipHooks.result = { changed: false };
+    trace.length = 0;
+    t.fire('pointerup');
+    expect(trace.filter((x) => x !== 'leave')).toEqual([
+      'capture',
+      'dispatch',
+      'play',
+      'played arrange',
+    ]);
+  });
+
+  it('AD-14 F7 capture count equals play count for a tile drag ended by pointercancel, lostpointercapture, cancel and cancel(byBack)', async () => {
+    const t = await ready();
+    trace.length = 0;
+    const ends: (() => void)[] = [
+      () => t.fire('pointercancel'),
+      () => t.fire('lostpointercapture', { target: t.b.tile2 }),
+      () => t.controller.cancel(),
+      () => t.controller.cancel({ byBack: true }),
+    ];
+    for (const end of ends) {
+      press(t, t.b.tile2);
+      move(t, -72);
+      end();
+      t.controller.cancel();
+    }
+    const n = (name: string) => trace.filter((x) => x === name).length;
+    expect(n('capture')).toBe(n('play'));
+    expect(n('capture')).toBe(0);
+    expect(t.active()).toBe(0);
   });
 
   it('AD-12 R-51 a strip tile released over gap 0 dispatches one setPlacementOrder', async () => {

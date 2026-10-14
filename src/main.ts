@@ -148,6 +148,8 @@ async function boot(): Promise<void> {
     trayInnerWidth: () => layout.trayInnerWidth,
     finishGlides: () => flip.finishAll(),
     glidesRunning: () => flip.running(),
+    capture: () => flip.capture(),
+    play: (command, result) => flip.play(command, result),
   });
   game.registerBeforeHide(() => controller.cancel());
   game.registerBeforeHide(() => gate.scrollReset());
