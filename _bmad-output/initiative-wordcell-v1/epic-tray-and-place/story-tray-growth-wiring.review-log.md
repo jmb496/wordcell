@@ -1,5 +1,5 @@
 # Review log — story-tray-growth-wiring (ticket 5.12)
-State: pass 1: done
+State: pass 2: review
 Pre-loop: HEAD ab81a9c1e4b72d6ec01d0e7a6d47a6c8b6a29b92, words 366, copy story-tray-growth-wiring.review-log.passes/pass0.md
 
 ## Pass 1 — 2026-10-14
@@ -22,3 +22,18 @@ Reviewers: builder's reading, edge-case hunter, adversarial, ref alignment  |  F
 Words: 891 (2.43 x pass 0)  |  Snapshot: story-tray-growth-wiring.review-log.passes/pass1.md
 ### Applied
 - all 8 majors and the minors → fixer items 1-9 (entry-12 fields added to Description; shrink behaviour = symmetric default, A-D4 silent; fling item recorded in SPEC CAP-9 / plan hand-over by fixer choice; numbers 48/42/6 and perRow 7 verified against geometry.test.ts and tray.ts)
+
+## Pass 2 — 2026-10-14
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 8, decision-needed 0  |  Dropped in triage: 5
+Words: 904 (2.47 x pass 0)  |  Snapshot: story-tray-growth-wiring.review-log.passes/pass2.md
+### Applied
+- [major] Description para 1 / Verify bullet 2 — release → gate.leave() → dispatch → rows order ambiguous → fixer item 1
+- [minor] bullet 1 reword, screens baseline wording, viewport coordinates, gesture-busy forced, New game/Replay in definition → fixer items 2-6 (word-neutral)
+### Default applied (technical)
+- all of the above
+### Decision needed
+- none
+### Dropped
+- edge "card mode with 15 tiles gives 1 row" — wrong: card mode is tiles <= perRow (tray.ts), 15 tiles is compact
+- adversarial Place strip may not reach three rows — SPEC Assumptions assert reachability and Notes carry the unknown with the hand-build fallback
+- clamp with scrollTop < delta, cancelled-drop rows, 150 ms constant source (AD-11 A-A9 names it), w with classic scrollbars, "block on the left", card-mode wording, 0-row band test — minor, over budget (would add words)
