@@ -336,7 +336,7 @@ export function createFlip(deps: FlipDeps): Flip {
     const ms = deps.duration(kind);
     for (const glide of glides) {
       const face = found(after.faces.get(glide.id), `AD-14 FLIP card ${glide.id} has no face`);
-      start(face, glide, root, { duration: ms, easing: 'ease-out' });
+      start(face, glide, root, { duration: ms });
     }
   }
 
@@ -380,7 +380,6 @@ export function createFlip(deps: FlipDeps): Flip {
       start(face, glide, root, {
         duration: ms,
         delay: i * step,
-        easing: 'ease-out',
         fill: 'backwards',
       });
     });
@@ -393,7 +392,11 @@ export function createFlip(deps: FlipDeps): Flip {
     options: KeyframeAnimationOptions,
   ): void {
     gate.enter();
-    const animation = face.animate(glide.keyframes, options);
+    // 5-10 #4: the reduced-motion fade is linear, as fly-back.ts's; only a translate eases out.
+    const animation = face.animate(
+      glide.keyframes,
+      glide.translate ? { ...options, easing: 'ease-out' } : options,
+    );
     const entry: Running = { animation, settled: false };
     animations.add(entry);
     if (glide.translate) {

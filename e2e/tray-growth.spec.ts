@@ -96,19 +96,25 @@ for (const [height, grown] of [
       test.skip(height !== 780, 'no scroll range at 412 × 839');
       await openFixture(page, 'session-place-long');
       const full = await trayHeight(page);
-      // One frame lets the scroll event reach the gate (busy); the Confirm follows in the same
-      // evaluate, well inside the 150 ms window.
-      const scrolled = await page.evaluate(async () => {
-        window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
-        await new Promise((resolve) => requestAnimationFrame(resolve));
-        await new Promise((resolve) => requestAnimationFrame(resolve));
-        const y = window.scrollY;
-        document.querySelector<HTMLElement>('[data-testid="primary-action"]')?.click();
-        return y;
-      });
-      // The smooth scroll was under way (events fired, no scrollend yet) when the Confirm ran.
+      // The Confirm is clicked from a `scroll` listener added after the layout gate's own, so the
+      // gate is busy (it has seen this scroll, no scrollend yet) with no dependence on frame or
+      // smooth-scroll timing.
+      const scrolled = await page.evaluate(
+        () =>
+          new Promise<number>((resolve) => {
+            window.addEventListener(
+              'scroll',
+              () => {
+                const y = window.scrollY;
+                document.querySelector<HTMLElement>('[data-testid="primary-action"]')?.click();
+                resolve(y);
+              },
+              { once: true },
+            );
+            window.scrollTo(0, document.documentElement.scrollHeight);
+          }),
+      );
       expect(scrolled).toBeGreaterThan(0);
-      expect(scrolled).toBeLessThan(6);
       await glidesSettled(page);
       expect(await tileCount(page)).toBe(0);
       expect(await trayHeight(page)).toBe(full - 48);

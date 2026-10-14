@@ -35,3 +35,8 @@ export function attribute(el: Element, name: string): number {
   if (!Number.isInteger(value)) throw new Error(`AD-12 ${name} is not an integer`);
   return value;
 }
+
+/** The `.face` of a card wrapper; throws when it has none. */
+export function faceIn(wrapper: Element): HTMLElement {
+  return found(wrapper.querySelector<HTMLElement>('.face'), 'AD-12 card without a .face');
+}

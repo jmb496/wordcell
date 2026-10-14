@@ -6,6 +6,7 @@ import { game } from '../shell/game.svelte';
 import { act } from './act';
 import { capture, play } from './flip';
 import { fitSize } from './layout/fit';
+import { measureWidth } from './layout/measure';
 import { newGame } from './new-game';
 import { text } from './text';
 
@@ -14,7 +15,8 @@ import { text } from './text';
 // label (button-label, 16 px) shrinks to the ui-label size (14 px) to fit the button's fractional
 // content width before it ellipsizes (A9 4.2-m1), measured on the label span itself under a
 // temporary inline font size, re-measured on mount, label change, button width change and
-// `document.fonts.ready` (as WordLine).
+// `document.fonts.ready` (as WordLine). The button takes the fitted size too, so the ellipsis glyph
+// (drawn in the block container's font) matches the label text (5-3 #1).
 let { view }: { view: GameView } = $props();
 
 const LABEL_MAX = 16;
@@ -78,17 +80,6 @@ const primary = $derived.by(
   },
 );
 
-/** The label span's nowrap width at `px`; restores its inline font size after. */
-function measure(el: HTMLElement, px: number): number {
-  const previous = el.style.fontSize;
-  el.style.fontSize = `${px}px`;
-  try {
-    return el.getBoundingClientRect().width;
-  } finally {
-    el.style.fontSize = previous;
-  }
-}
-
 function refit(): void {
   const el = labelEl;
   if (button == null || el == null) return;
@@ -97,7 +88,7 @@ function refit(): void {
     button.getBoundingClientRect().width -
     Number.parseFloat(style.paddingLeft) -
     Number.parseFloat(style.paddingRight);
-  size = fitSize((px) => measure(el, px), box, LABEL_MAX);
+  size = fitSize((px) => measureWidth(el, px), box, LABEL_MAX);
 }
 
 // Label change (and the span's mount).
@@ -128,6 +119,7 @@ onMount(() => {
     data-testid="primary-action"
     disabled={primary.onclick === undefined}
     onclick={primary.onclick}
+    style:font-size="{size}px"
     bind:this={button}
   ><span class="primary-label" bind:this={labelEl} style:font-size="{size}px">{primary.label}</span></button>
 </div>

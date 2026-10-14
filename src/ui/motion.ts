@@ -161,8 +161,8 @@ function consume(event: Event): void {
 }
 
 function inUndo(event: Event): boolean {
-  const target = event.target as { closest?: (selector: string) => unknown } | null;
-  return target !== null && typeof target.closest === 'function' && target.closest(UNDO) !== null;
+  const target = event.target as Element | null;
+  return target !== null && target.closest(UNDO) !== null;
 }
 
 function gestureId(event: Event): string | null {

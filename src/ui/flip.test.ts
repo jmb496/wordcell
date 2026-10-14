@@ -397,7 +397,7 @@ describe('AD-14 FLIP kind table', () => {
         const face = t.root.face(id);
         expect(face.animations).toHaveLength(1);
         expect(face.animations[0]?.keyframes).toEqual([{ opacity: 0 }, { opacity: 1 }]);
-        expect(face.animations[0]?.options.duration).toBe(120);
+        expect(face.animations[0]?.options).toEqual({ duration: 120 });
         expect(face.classList.contains('wc-glide')).toBe(false);
       }
       expect(t.root.tiles.classList.contains('wc-drag-tiles')).toBe(false);
@@ -414,7 +414,7 @@ describe('AD-14 FLIP kind table', () => {
       const face = t.root.face(id);
       expect(face.animations).toHaveLength(1);
       expect(face.animations[0]?.keyframes).toEqual([{ opacity: 0 }, { opacity: 1 }]);
-      expect(face.animations[0]?.options.duration).toBe(120);
+      expect(face.animations[0]?.options).toEqual({ duration: 120 });
       expect(face.classList.contains('wc-glide')).toBe(false);
     }
     expect(t.root.face(3).animations).toEqual([]);
@@ -590,7 +590,7 @@ describe('AD-14 flyToCell playback (ticket 5.11, CAP-8, F28)', () => {
     for (const id of [3, 4]) {
       const animation = t.root.face(id).animations[0];
       expect(animation?.keyframes).toEqual([{ opacity: 0 }, { opacity: 1 }]);
-      expect(animation?.options.duration).toBe(120);
+      expect(animation?.options).toEqual({ duration: 120, delay: 0, fill: 'backwards' });
       expect(animation?.options.delay).toBe(0);
       expect(t.root.face(id).classList.contains('wc-glide')).toBe(false);
     }

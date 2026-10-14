@@ -2,6 +2,7 @@
 import { onMount } from 'svelte';
 import type { CardId, Face } from '../../engine/index';
 import { fitSize } from '../layout/fit';
+import { measureWidth } from '../layout/measure';
 import { text } from '../text';
 
 // Word line (epic 5 SPEC CAP-1; DESIGN.md Typography word line, Tray band, Invalid-word message):
@@ -41,25 +42,12 @@ const max = $derived(invalid ? INVALID_MAX : WORD_MAX);
 const wordKey = $derived(wordCards.join(','));
 let size = $state(WORD_MAX);
 
-/** The text element's nowrap, unclipped width at `px`; restores its class and size after. */
-function measure(el: HTMLElement, px: number): number {
-  const previous = el.style.fontSize;
-  el.classList.add(MEASURING);
-  el.style.fontSize = `${px}px`;
-  try {
-    return el.getBoundingClientRect().width;
-  } finally {
-    el.classList.remove(MEASURING);
-    el.style.fontSize = previous;
-  }
-}
-
 function refit(): void {
   const el = textEl;
   if (line == null || el == null) return;
   // The fractional width, as `measure` reads the text: `clientWidth` rounds a fractional line up.
   const box = line.getBoundingClientRect().width - (invalid ? GLYPH_AND_GAP : 0);
-  size = fitSize((px) => measure(el, px), box, max);
+  size = fitSize((px) => measureWidth(el, px, MEASURING), box, max);
 }
 
 // Text change: the word, the rejected word (and with it the max) or the text element. `wordKey` is

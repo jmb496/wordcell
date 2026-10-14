@@ -884,6 +884,21 @@ describe('AD-12 resolved press target', () => {
     shared.view = undefined;
     expect(() => u.down(u.b.cellCard)).toThrow(/^AD-12 WordCell press without a GameView$/);
   });
+
+  it('AD-12 CAP-3 a card or part resolved outside its container throws: a cell card outside [data-wordcell], a column part outside [data-column], an unknown data-place', async () => {
+    const t = await setup();
+    t.detach();
+    const orphan = (attrs: Record<string, string>) => new FakeEl('div', attrs, t.b.root);
+    expect(() => t.down(orphan({ 'data-place': 'cell', 'data-card-id': '1' }))).toThrow(
+      /^AD-12 cell card outside \[data-wordcell\]$/,
+    );
+    expect(() => t.down(orphan({ 'data-place': 'column', 'data-card-id': '1' }))).toThrow(
+      /^AD-12 column part outside \[data-column\]$/,
+    );
+    expect(() => t.down(orphan({ 'data-place': 'nowhere', 'data-card-id': '1' }))).toThrow(
+      /^AD-12 unknown data-place nowhere$/,
+    );
+  });
 });
 
 describe('AD-12 press ends', () => {
@@ -2078,6 +2093,32 @@ describe('AD-12 entry 8 drag', () => {
     move(t, 25, 1050);
     t.fire('pointerup');
     expect(trace.filter((x) => x === 'capture' || x === 'play')).toEqual([]);
+  });
+
+  it('AD-14 F7 capture count equals play count for a long-press and its peek release, a same-id pointerdown over a tail drag with no highlight, and a sheet or scrim tap and press', async () => {
+    const t = await setup();
+    t.detach();
+    const n = (name: string) => trace.filter((x) => x === name).length;
+    trace.length = 0;
+    // A long-press on a non-empty WordCell, released as the peek ends.
+    t.down(t.b.cellCard);
+    t.advance(400);
+    t.fire('pointerup', { target: t.b.cellCard });
+    // A same-id pointerdown over a tail drag that has no highlight ends the lost press.
+    t.down(t.b.card1b, { clientX: 25, clientY: 50 });
+    move(t, 25, 1050);
+    t.down(t.b.card1b, { clientX: 25, clientY: 50 });
+    t.controller.cancel();
+    // The view's scrim and sheet: a tap, then a held press.
+    t.overlays.openView(3);
+    t.tap(t.b.scrim);
+    t.overlays.openView(3);
+    t.down(t.b.sheetMirror);
+    t.advance(1000);
+    t.fire('pointerup', { target: t.b.sheetMirror });
+    expect(n('capture')).toBe(n('play'));
+    expect(n('capture')).toBe(0);
+    expect(t.active()).toBe(0);
   });
 
   it('AD-14 F7 capture count equals play count for a tail drag ended by pointercancel, lostpointercapture, cancel and cancel(byBack)', async () => {
@@ -4685,6 +4726,21 @@ describe('AD-12 epic 5 tile drag', () => {
     expect(t.overlays.tileSelection).toBe(3);
     expect(t.active()).toBe(0);
   });
+
+  it('AD-12 CAP-3 the tile drag start throws on each lookup miss: no tray .tiles, a run tile not in .tiles (rule 6)', async () => {
+    const miss = async (cut: (t: T) => void, message: RegExp) => {
+      const t = await ready();
+      cut(t);
+      press(t, t.b.tile);
+      expect(() => move(t, 10, 0)).toThrow(message);
+    };
+    await miss((t) => {
+      t.b.tray.children.splice(t.b.tray.children.indexOf(t.b.tiles), 1);
+    }, /^AD-12 tray band without \.tiles$/);
+    await miss((t) => {
+      t.b.tiles.children.splice(t.b.tiles.children.indexOf(t.b.tile2), 1);
+    }, /^AD-12 tile 4 not in \.tiles$/);
+  });
 });
 
 // Epic 5 SPEC CAP-6 (F5, F16, F18; AD-10, AD-12, AD-14): the free-letter drag on tileView() from
@@ -5106,6 +5162,36 @@ describe('AD-12 epic 5 free-letter drag', () => {
     expect(flipHooks.playResults[0]).toBe(flipHooks.result);
   });
 
+  it('AD-14 F7 capture count equals play count for a free-letter drag: no end but an edit release leaves a capture pending', async () => {
+    const t = await ready(null);
+    const n = (name: string) => trace.filter((x) => x === name).length;
+    const ends: [string, () => void][] = [
+      ['pointercancel', () => t.fire('pointercancel')],
+      ['lostpointercapture', () => t.fire('lostpointercapture', { target: t.b.cellCard })],
+      ['cancel()', () => t.controller.cancel()],
+      ['cancel({ byBack: true })', () => t.controller.cancel({ byBack: true })],
+      ['same-id pointerdown', () => press(t)],
+      // Released over no gap of the tray: nothing to dispatch.
+      ['release with no accepted gap', () => t.fire('pointerup')],
+    ];
+    trace.length = 0;
+    for (const [name, end] of ends) {
+      press(t);
+      centreOn(t, 56, GAP_Y);
+      if (name === 'release with no accepted gap') centreOn(t, 56, 100);
+      end();
+      t.controller.cancel();
+      expect([name, n('capture'), n('play')]).toEqual([name, 0, 0]);
+    }
+    expect(t.active()).toBe(0);
+    // The equality discriminates: an edit release is one capture and one play.
+    press(t);
+    centreOn(t, 56, GAP_Y);
+    t.fire('pointerup');
+    expect(n('capture')).toBe(1);
+    expect(n('play')).toBe(1);
+  });
+
   it('AD-12 F16 the caret takes the winning rect of a row-break gap and follows it to the other row’s rect', async () => {
     const t = await ready(null);
     // Full: M [20 … 26] and one mirror (27) on 4 + 4 compact slots.
@@ -5385,5 +5471,23 @@ describe('AD-12 epic 5 free-letter drag', () => {
     t.b.tiles.children.splice(t.b.tiles.children.indexOf(t.b.trayMirror), 1);
     press(t);
     expect(() => move(t, 10, 0)).toThrow(/^AD-12 tray mirror 5 not in \.tiles/);
+  });
+
+  it('AD-12 CAP-3 the free-letter start throws on each lookup miss: no card in the cell, no tray .tiles, no caret (rule 6)', async () => {
+    const miss = async (cut: (t: T) => void, message: RegExp) => {
+      const t = await ready(null);
+      cut(t);
+      press(t);
+      expect(() => move(t, 10, 0)).toThrow(message);
+    };
+    await miss((t) => {
+      t.b.cell3.children.splice(t.b.cell3.children.indexOf(t.b.cellCard), 1);
+    }, /^AD-12 card \d+ not rendered in WordCell 3$/);
+    await miss((t) => {
+      t.b.tray.children.splice(t.b.tray.children.indexOf(t.b.tiles), 1);
+    }, /^AD-12 tray band without \.tiles$/);
+    await miss((t) => {
+      t.b.tiles.children.splice(t.b.tiles.children.indexOf(t.b.caret), 1);
+    }, /^AD-12 \.tiles without the caret$/);
   });
 });
