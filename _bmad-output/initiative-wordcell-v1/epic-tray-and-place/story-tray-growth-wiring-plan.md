@@ -62,7 +62,7 @@ deferred: []
 
 **Execution:**
 - [x] `src/ui/layout/tray.ts`, `layout.svelte.ts`, `flip.ts`, `main.ts`, `Board.svelte`, `Tray.svelte`, `tray/TileRows.svelte` -- wiring per Code Map -- one rows value, move-time re-layout
-- [x] `src/ui/layout/layout.svelte.test.ts`, `src/ui/flip.test.ts` -- AD-11 cases: `trayLayout` rows 0,1,1,2,2,3 for 0,1,`perRow`,`perRow`+1,14,15 and +48 px only from three rows; rows change only after an edit (call order release → `gate.leave()` → dispatch); every edit kind; swaps without capture/scroll; scroll-busy 14 → 15 (fails without `scrollReset`); no-op within 150 ms of a scroll; busy-gate throw; no face animation
+- [x] `src/ui/layout/layout.svelte.test.ts`, `src/ui/flip.test.ts` -- AD-11 cases: `trayLayout` rows 0,1,1,2,2,3 for 0,1,`perRow`,`perRow`+1,14,15 and +48 px only from three rows; rows change only after an edit (call order release → `gate.leave()` → dispatch); every edit kind (covered by `src/ui/gestures/controller.test.ts`, the ticket 5.16 order test, and the flip bracket and row-boundary tests); swaps without capture/scroll; scroll-busy 14 → 15 (fails without `scrollReset`); no-op within 150 ms of a scroll; busy-gate throw; no face animation
 - [x] fixtures + `serialize.test.ts` + architecture list -- `session-composing-long.json`, `session-place-long.json`
 - [x] Playwright -- WordCell row box unchanged at both viewports (scrollTop 0 / 6 / 0), Place Confirm/Undo/Redo rows, flying cards visible, no face animating after `+`
 
@@ -72,6 +72,8 @@ deferred: []
 - Given `npm run test:all` and `npm run test:screens`, when run, then both are green.
 
 ## Implementation Notes
+
+Fixtures generator record (`serialize.test.ts` REBUILDS): `session-composing-long` and `session-place-long` are built from seed 1 with `COMPOSING_LONG_LEAD` (TAN committed to cell 3, then 7 source cards from column 1 on column 2, cell 3's top as the free letter, no Flip); `COMPOSING_LONG` adds `setDestinationCount` k 6 (14 tiles), and `session-place-long` adds k 7 and Validate (15 tiles) under an inline dictionary.
 
 ## Plan Change Log
 
@@ -130,5 +132,4 @@ Why derived: tile count and rows must flip in one render; a swap needs no hook. 
 
 **Verification:** `npm run test:all` green after the patches (unit 2335, e2e:dist 14, e2e 525 passed, pwa 12; build in budget); `npm run test:screens` 10/10 green with no new baselines.
 
-**Residual risks:** `session-place-long.json` uses a 15-letter non-word with an inline dictionary (no real 15-letter word available); the `$effect` swap path (`watchTiles`) is covered only by unit fakes since New game/Replay appear only at game over; the anchor `scrollTop` write during an Android fling is unverified (epic 7 device checks).
-- `fixtures/session-place-long.json` is a 15-letter non-word, valid only under the inline test dictionary and not reachable by real play.
+**Residual risks:** `session-place-long.json` uses a 15-letter non-word with an inline dictionary (no real 15-letter word available), valid only under that test dictionary and not reachable by real play; the `$effect` swap path (`watchTiles`) is covered only by unit fakes since New game/Replay appear only at game over; the anchor `scrollTop` write during an Android fling is unverified (epic 7 device checks).

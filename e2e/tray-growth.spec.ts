@@ -88,7 +88,7 @@ for (const [height, grown] of [
       expect(await wordCellRow(page)).toEqual(row);
     });
 
-    test('AD-11 session-place-long: a Confirm in the same task as a scroll still re-lays out at once (the move clears scroll-busy)', async ({
+    test('AD-11 session-place-long: a Confirm within 150 ms of a scroll event re-lays out at once (the move clears scroll-busy)', async ({
       page,
     }) => {
       // Only 412 × 780 has a scroll range (6 px) with three rows, so only there does a real scroll
@@ -96,10 +96,19 @@ for (const [height, grown] of [
       test.skip(height !== 780, 'no scroll range at 412 × 839');
       await openFixture(page, 'session-place-long');
       const full = await trayHeight(page);
-      await page.evaluate(() => {
-        window.scrollTo(0, document.documentElement.scrollHeight);
+      // One frame lets the scroll event reach the gate (busy); the Confirm follows in the same
+      // evaluate, well inside the 150 ms window.
+      const scrolled = await page.evaluate(async () => {
+        window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        const y = window.scrollY;
         document.querySelector<HTMLElement>('[data-testid="primary-action"]')?.click();
+        return y;
       });
+      // The smooth scroll was under way (events fired, no scrollend yet) when the Confirm ran.
+      expect(scrolled).toBeGreaterThan(0);
+      expect(scrolled).toBeLessThan(6);
       await glidesSettled(page);
       expect(await tileCount(page)).toBe(0);
       expect(await trayHeight(page)).toBe(full - 48);

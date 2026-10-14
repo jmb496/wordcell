@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createFlip } from '../flip';
 import { createGate } from '../gestures/gate';
 import { BAND_ORDER, parseBandsParam } from './bands';
-import { bands } from './geometry';
+import { anchorScroll, bands } from './geometry';
 import { createLayout, type Layout, type LayoutDeps } from './layout.svelte';
 import { trayLayout } from './tray';
 
@@ -636,6 +636,30 @@ describe('AD-11 tray rows', () => {
     expect(t.layout.heights.tray).toBeGreaterThan(0);
   });
 
+  it('AD-11 a drag active (gate.enter) with no move leaves the rows and heights unchanged', () => {
+    const t = setup({ ...long, tiles: 15 });
+    const rows = t.layout.tray.rows;
+    const heights = { ...t.layout.heights };
+    t.gate.enter();
+    expect(t.layout.tray.rows).toBe(rows);
+    expect(t.layout.heights).toEqual(heights);
+    expect(t.calls).toEqual([]);
+  });
+
+  it('AD-11 a move 21 → 22 tiles (3 → 4 rows) grows the band by a further 48 px and scrolls to the anchorScroll target', () => {
+    const t = setup({ ...PIXEL_7, innerHeight: 780, tiles: 21 });
+    const base = t.layout.heights.tray - 48;
+    const prev = bands(t.layout.w, t.layout.bandOrder, 3, false, 780, { top: 0, bottom: 0 });
+    expect(t.layout.tray.rows).toBe(3);
+    t.move(22);
+    expect(t.layout.tray.rows).toBe(4);
+    expect(t.layout.heights.tray).toBe(base + 96);
+    const next = bands(t.layout.w, t.layout.bandOrder, 4, false, 780, { top: 0, bottom: 0 });
+    const target = anchorScroll(prev, next, 0, 780);
+    expect(target).toBeGreaterThan(0);
+    expect(t.calls).toEqual(['ignoreNextScroll', `scrollTo ${target}`]);
+  });
+
   it('AD-11 beginMove while a move is open and endMove without one throw', () => {
     const t = setup(long);
     expect(() => t.layout.endMove()).toThrow('AD-11 endMove() without beginMove()');
@@ -695,21 +719,18 @@ describe('AD-11 tray rows through flip.capture() / play()', () => {
     );
   });
 
-  it('AD-11 a failed Validate or no-op move within 150 ms of a scroll leaves the gate idle and the rows unchanged', () => {
+  it('AD-11 a failed Validate or no-op move within 150 ms of a scroll leaves the gate idle and writes no scroll', () => {
     const t = setup({ ...move780, tiles: 14 });
     const flip = flipOver(t);
-    const rows = t.layout.tray.rows;
     t.emit('scroll');
     expect(t.gate.busy).toBe(true);
     flip.capture();
     flip.play(validate, { changed: false, rejectedWord: 'xyz' });
     expect(t.gate.busy).toBe(false);
-    expect(t.layout.tray.rows).toBe(rows);
     t.emit('scroll');
     flip.capture();
     flip.play({ type: 'flip' }, { changed: false });
     expect(t.gate.busy).toBe(false);
-    expect(t.layout.tray.rows).toBe(rows);
     expect(t.calls).toEqual([]);
   });
 });

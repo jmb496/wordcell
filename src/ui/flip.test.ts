@@ -1060,11 +1060,12 @@ describe('AD-14 FLIP throws', () => {
 });
 
 describe('AD-11 move bracket', () => {
-  it('AD-11 capture clears scroll-busy, then opens the layout move, before anything else', () => {
+  it('AD-11 capture clears scroll-busy, then opens the layout move, before the flush', () => {
     const t = setup();
     t.root.show(START);
+    svelteFlush.onFlush = () => t.trace.push('flush');
     t.flip.capture();
-    expect(t.trace).toEqual(['scrollReset', 'beginMove']);
+    expect(t.trace).toEqual(['scrollReset', 'beginMove', 'flush']);
   });
 
   it('AD-11 play applies the layout move right after the move flush and before it measures or animates', () => {
