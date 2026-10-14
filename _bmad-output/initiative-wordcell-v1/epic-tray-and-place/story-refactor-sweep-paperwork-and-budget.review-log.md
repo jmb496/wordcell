@@ -1,6 +1,6 @@
 # Review log — story-refactor-sweep-paperwork-and-budget
 
-State: pass 1: done
+State: pass 2: done
 Pre-loop: HEAD 4f7f49f648df9df21e82ea63e603d8f1702a664d, 308 words, copy /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-refactor-sweep-paperwork-and-budget.review-log.passes/pass0.md
 Extra intent (from tickets.toml entry 15, not in the ticket; fixer adds to Description in pass 1):
 - interface: No code change; plan and ticket-record edits only.
@@ -25,3 +25,17 @@ Words (docs): 644 (2.09x pass 0; budget 770)  |  Snapshot: story-refactor-sweep-
 - Quote S10 replacement and S9 items; list S21/S22 as intentional additions to the epic's "S8–S13, S16" decision; drop CAP-11 from references; Notes open question → risk pointing to the stop rule; red/flaky run recorded not retried silently; name the plan path (story-refactor-sweep-paperwork-and-budget-plan.md).
 ### Decision needed
 - none
+
+## Pass 2 — 2026-10-14
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 6 (merged from 18 raw), minor 4, decision-needed 0  |  Dropped in triage: duplicates folded
+### Default applied (technical; majors)
+1. General stop rule: any owner stop (S12 over budget or unmeasured, S22 fails alone, P5 row without a passing test) finishes and maps every other row, records the stop, leaves the plan not built; Verify names it instead of green.
+2. Order and S22 load: S12, then S22 (after S12's timed runs, never in the median, load = `npm run test:e2e` with 12 workers in the Linux checkout, an S12 run reused as "alone"), then test:all, test:screens, the P5 audit.
+3. S12 detail: a failed timed run is excluded from the median and is a stop; met only strictly under 5 s / 1 s; median of the summary Duration line; watch re-run = append and revert a trailing newline in the slowest engine file, `npx vitest run <file>` (excludes pretest).
+4. S16 premise: the sweep plan l.154/219 says the hover-peek plan names the controller's `watchHoverFine`, not App.svelte → reword to check the plan for the hoverFine watcher owner and record what HEAD shows.
+5. S21: name the 5.1 and 5.2 plan files by path; check the epic's `## Boundaries` section, not the Decisions list.
+6. S13: epic-file close-out edits are listed, not made (S21 Boundaries clause excepted); CAP-12-deferred items are found in each plan's Design Notes and review `[defer]` lines, not only frontmatter `deferred`.
+### Minor
+- P5 pass is from the test:all or test:screens run; cite S21, S22 to build-notes (CAP 12).
+### Applied (pass 2)
+- all 6 majors and the minors applied; words 755 (2.45x pass 0, budget 770); Snapshot: story-refactor-sweep-paperwork-and-budget.review-log.passes/pass2.md. Unverified: `npx vitest run <file>` not executed (pretest/test scripts confirmed in package.json).
