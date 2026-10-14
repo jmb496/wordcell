@@ -1,6 +1,6 @@
 # Review log — story-flip-for-controller-driven-moves (ticket 5.16)
 
-State: pass 2: done
+State: pass 3: done
 Pre-loop: HEAD 9b30ac0, copy .passes/pass0.md, 261 words. Mode docs, thorough, max 7.
 
 ## Pass 1 — 2026-10-14 10:55
@@ -38,3 +38,14 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 ### Decision needed
 - none
 Words: 702 (2.7 x pass 0)  |  Snapshot: .passes/pass2.md
+
+## Pass 3 — 2026-10-14 11:25
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (none)  |  Findings: major 2 (merged from 6), minor ~5, decision-needed 0  |  Dropped in triage: 0
+### Applied (to fix)
+1. [major] Tail drag drop: `overlays.deselect()` runs in pointerup after `end()`, so "capture in end() after the selection clear" cannot hold — default applied: the tail deselect moves into `end()`'s up branch ahead of the capture when the release will dispatch; `end()` stores the captured command/flag and pointerup consumes it without recomputing `releaseCommand`; order test adds a tail drag with a selection.
+2. [major] Bracket invariant adjacency — per site class: tap sites capture is the previous statement and play the next; drag-release sites capture in `end()` and the dispatch is guarded by the recorded capture; the drag-as-tap tapDestinationCard captures only inside its `card !== null` branch (null-card case added to the capture=play count invariant).
+### Minor (word-neutral only)
+- halt: play still runs after a halting dispatch or the AD-15 surface wins; first-keyframe assertion scoped to translate glides; open-question observable = last pointermove rect vs first keyframe's rendered rect.
+### Decision needed
+- none
+Words: 745 (2.9 x pass 0)  |  Snapshot: .passes/pass3.md
