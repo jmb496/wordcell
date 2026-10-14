@@ -1,6 +1,6 @@
 # Review log — story-refactor-sweep-code (ticket 5.14)
 
-State: pass 2: done
+State: pass 3: done
 
 Pre-loop: HEAD 429584a, 282 words (copy: /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-refactor-sweep-code.review-log.passes/pass0.md). Budget 1500 words.
 
@@ -38,3 +38,17 @@ Reviewers: fix-diff, edge-case, adversarial, ref-alignment  |  Findings: major 5
 ### Decision needed
 - none
 Words: 988 (3.5 x pass 0) | Snapshot: _bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-refactor-sweep-code.review-log.passes/pass2.md
+
+## Pass 3 — 2026-10-14
+Reviewers: fix-diff, edge-case, adversarial, ref-alignment  |  Findings: major 4 (merged), minor 6, decision-needed 0  |  Dropped in triage: 0
+### Applied (fixer items 1–10)
+- [major] S6 "pixel-identical" unverifiable: no screenshot covers History notice/Reset confirm/Halted/rejected-root (verified: only board.screens.spec.ts) → default computed-style + bounding-box record before/after
+- [major] Deferred set open-ended; 5-4-build.md findings missing (hover-peek detach reset test; lookup.ts `attribute()` reads missing/empty as 0); lookup.test.ts already exists so only uncovered helpers need cases
+- [major] S19 three 5.1 minors unnamed (COMPACT_SCRATCH comment, R-32 k=2 outline colours, AD-14 isGhost case in e2e/tray.spec.ts)
+- [major] Verify allow-list lacks renames (S20) and S5 redundant-expect removal
+- [minor] S20 second minor; S7 diff base; S3 AD id; S19 fraction ≥ .5; S1 copy not in list recorded
+### Default applied (technical)
+- S6 check by computed style; `attribute()` throw (rule 6, behaviour-neutral); S1 extras recorded not moved
+### Decision needed
+- none
+Words: 1375 (4.9 x pass 0) | Snapshot: _bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-refactor-sweep-code.review-log.passes/pass3.md
