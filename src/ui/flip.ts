@@ -9,15 +9,21 @@
 // shift gets no motion), a band changer from captured − next viewport rect, sizes ignored (card ↔
 // compact by top-left), under 0.5 px on both axes none; under reduced motion a 0 → 1 opacity fade
 // at the settled rect. The kind is the pure `motionKind` of (command, DispatchResult, resulting
-// phase) (F7); `null` is the empty animated set, and `flyToCell` animates nothing here (its
-// fly-to-cell is entry 11's). Durations only from the injected `duration` (motion.ts, AD-10). A
-// translating face takes `wc-glide`, and a band-changing translate lifts the tile area's clip
-// (`wc-drag-tiles`, F22), both removed at the last settle. Each animation holds one gate count
+// phase) (F7); `null` is the empty animated set. `flyToCell` (Confirm, or a Redo at idle) plans
+// no per-face keyframes here: `play()` flies the cards the move placed in a WordCell (ticket 5.11,
+// F28, `flyingSet`): each face glides from its captured to its settled viewport rect (no 0.5 px
+// skip), bottom first, delay i × `stagger()` with fill backwards; under reduced motion all fade in
+// at once. `inFlight` (read-only reactive, AD-14 presentation only) tells WordCellRow to keep the
+// committed cards, the previous top and (own cell) the used mirror drawn until the last landing,
+// which hides the non-top committed cards together. Durations only from the injected `duration`
+// (motion.ts, AD-10). A translating face takes `wc-glide`, and a band-changing translate lifts the
+// tile area's clip (`wc-drag-tiles`, F22), both removed at the last settle. Each animation holds one gate count
 // (AD-11) until its idempotent settle: its `onfinish`, or `finishAll()` (finish, then settle
 // synchronously); a `cancel` event throws (rule 6). Installed once from main.ts through `setFlip`
 // (as act.ts's `setController`); the module-level `capture`, `play` and `finishAll` serve the
 // act()-wrapped callers.
 import { flushSync } from 'svelte';
+import { SvelteSet } from 'svelte/reactivity';
 import type { CardId, Command, Phase } from '../engine/index';
 import type { DispatchResult } from '../shell/game.svelte';
 import { DRAG_TILES, GLIDE } from './gestures/classes';
@@ -32,9 +38,23 @@ import type { MotionKind } from './motion';
  */
 export type BandKey = 'columns' | 'tray' | 'wordcells';
 export type Box = { left: number; top: number; width: number; height: number };
-/** A face's band and viewport rect. */
-export type Placed = { readonly band: BandKey; readonly rect: Box };
+/** A face's band and viewport rect; `cell` is the WordCell (3–10) of a `cell` card. */
+export type Placed = { readonly band: BandKey; readonly rect: Box; readonly cell?: number };
 export type Glide = { id: CardId; keyframes: Keyframe[]; translate: boolean; bandChange: boolean };
+
+const inFlightCommitted = new SvelteSet<CardId>();
+const inFlightUsed = new SvelteSet<CardId>();
+
+/**
+ * Ticket 5.11, F28: the fly-to-cell state WordCellRow reads (AD-14, presentation only). While
+ * `committed` is non-empty the hold is on: the committed cards and the target's previous top stay
+ * drawn, and `used` (zero or one id) is the target's R-52 used mirror, drawn beneath. Empty after
+ * the last landing, `finishAll()` and any play that animates nothing.
+ */
+export const inFlight: {
+  readonly committed: ReadonlySet<CardId>;
+  readonly used: ReadonlySet<CardId>;
+} = { committed: inFlightCommitted, used: inFlightUsed };
 
 const BANDS: readonly BandKey[] = ['columns', 'tray', 'wordcells'];
 
@@ -85,6 +105,24 @@ export function motionKind(
       );
     }
   }
+}
+
+/**
+ * F28: the CardIds a Confirm or Redo placed in a WordCell, in DOM order (bottom of the committed
+ * run first): every card now in a cell that was not in that cell at the capture, a tray or strip
+ * tile or a free letter from another cell.
+ */
+export function flyingSet(
+  before: ReadonlyMap<CardId, Placed>,
+  after: ReadonlyMap<CardId, Placed>,
+): CardId[] {
+  const ids: CardId[] = [];
+  for (const [id, next] of after) {
+    if (next.cell === undefined) continue;
+    const previous = found(before.get(id), `AD-14 FLIP card ${id} missing from the capture`);
+    if (previous.cell !== next.cell) ids.push(id);
+  }
+  return ids;
 }
 
 /**
@@ -146,6 +184,8 @@ export type FlipDeps = {
   phase(): Phase | undefined;
   /** motion.ts `duration` (AD-10). */
   duration(kind: MotionKind): number;
+  /** motion.ts `stagger` (AD-10): the delay between the fly-to-cell faces. */
+  stagger(): number;
 };
 
 export type Flip = {
@@ -163,6 +203,8 @@ type Measure = {
   readonly placed: ReadonlyMap<CardId, Placed>;
   readonly faces: ReadonlyMap<CardId, HTMLElement>;
   readonly bands: Readonly<Record<BandKey, Box>>;
+  /** Each WordCell's used-mirror CardId (R-52). */
+  readonly mirrors: ReadonlyMap<number, CardId>;
 };
 
 type Running = { readonly animation: Animation; settled: boolean };
@@ -188,7 +230,11 @@ function measure(root: HTMLElement): Measure {
       wrapper.querySelector<HTMLElement>(':scope > .face'),
       `AD-14 FLIP card ${id} has no face`,
     );
-    placed.set(id, { band, rect: boxOf(face) });
+    const cell = place === 'cell' ? cellOf(wrapper) : undefined;
+    placed.set(
+      id,
+      cell === undefined ? { band, rect: boxOf(face) } : { band, rect: boxOf(face), cell },
+    );
     faces.set(id, face);
   }
   const bands = {} as Record<BandKey, Box>;
@@ -197,7 +243,27 @@ function measure(root: HTMLElement): Measure {
       found(root.querySelector(`[data-band="${key}"]`), `AD-14 FLIP band ${key} missing`),
     );
   }
-  return { placed, faces, bands };
+  const mirrors = new Map<number, CardId>();
+  for (const cellEl of root.querySelectorAll<HTMLElement>('[data-wordcell]')) {
+    const mirror = cellEl.querySelector(':scope > [data-mirror-of]');
+    if (mirror !== null) {
+      mirrors.set(
+        Number(cellEl.getAttribute('data-wordcell')),
+        Number(mirror.getAttribute('data-mirror-of')) as CardId,
+      );
+    }
+  }
+  return { placed, faces, bands, mirrors };
+}
+
+function cellOf(wrapper: HTMLElement): number {
+  const raw = found(wrapper.parentElement, 'AD-14 FLIP cell card without a parent').getAttribute(
+    'data-wordcell',
+  );
+  if (raw === null || !/^\d+$/.test(raw)) {
+    throw new Error(`AD-14 FLIP cell card in a parent with data-wordcell ${raw}`);
+  }
+  return Number(raw);
 }
 
 export function createFlip(deps: FlipDeps): Flip {
@@ -223,6 +289,9 @@ export function createFlip(deps: FlipDeps): Flip {
     const before = pending;
     if (before === null) throw new Error('AD-14 FLIP play() without a capture');
     pending = null;
+    const phase = deps.phase();
+    if (phase === undefined) throw new Error('AD-14 FLIP play() with no view');
+    const kind = motionKind(command, result, phase);
     flushSync();
     const root = rootFor('play');
     const after = measure(root);
@@ -232,9 +301,10 @@ export function createFlip(deps: FlipDeps): Flip {
     for (const id of after.placed.keys()) {
       if (!before.placed.has(id)) throw new Error(`AD-14 FLIP card ${id} missing from the capture`);
     }
-    const phase = deps.phase();
-    if (phase === undefined) throw new Error('AD-14 FLIP play() with no view');
-    const kind = motionKind(command, result, phase);
+    if (kind === 'flyToCell') {
+      flyToCell(before, after, root);
+      return;
+    }
     const glides = planGlides({
       before: before.placed,
       after: after.placed,
@@ -247,28 +317,82 @@ export function createFlip(deps: FlipDeps): Flip {
     const ms = deps.duration(kind);
     for (const glide of glides) {
       const face = found(after.faces.get(glide.id), `AD-14 FLIP card ${glide.id} has no face`);
-      gate.enter();
-      const animation = face.animate(glide.keyframes, { duration: ms, easing: 'ease-out' });
-      const entry: Running = { animation, settled: false };
-      animations.add(entry);
-      if (glide.translate) {
-        face.classList.add(GLIDE);
-        gliding.add(face);
-        if (glide.bandChange && tiles === null) {
-          tiles = found(
-            root.querySelector<HTMLElement>('[data-band="tray"] .tiles'),
-            'AD-14 FLIP tile area missing',
-          );
-          tiles.classList.add(DRAG_TILES);
-        }
-      }
-      animation.onfinish = () => settle(entry);
-      // Rule 6: a cancelled glide would never settle (gate held, classes on); finishAll's
-      // finish() never cancels.
-      animation.oncancel = () => {
-        throw new Error('AD-14 FLIP animation cancelled');
-      };
+      start(face, glide, root, { duration: ms, easing: 'ease-out' });
     }
+  }
+
+  // F28: the flying set glides (or fades) in; the hold is set and rendered by a second flushSync,
+  // both before paint (the committed set is only known from the settled DOM).
+  function flyToCell(before: Measure, after: Measure, root: HTMLElement): void {
+    const flying = flyingSet(before.placed, after.placed);
+    if (flying.length === 0) {
+      flushSync();
+      return;
+    }
+    const reduced = deps.reduced();
+    const ms = deps.duration('flyToCell');
+    const step = reduced ? 0 : deps.stagger();
+    const gaining = found(after.placed.get(flying[0] as CardId)?.cell, 'AD-14 FLIP flying cell');
+    for (const id of flying) inFlightCommitted.add(id);
+    const mirror = before.mirrors.get(gaining);
+    if (mirror !== undefined) inFlightUsed.add(mirror);
+    flushSync();
+    flying.forEach((id, i) => {
+      const face = found(after.faces.get(id), `AD-14 FLIP card ${id} has no face`);
+      const from = found(before.placed.get(id), `AD-14 FLIP card ${id} missing from the capture`);
+      const to = found(after.placed.get(id), `AD-14 FLIP card ${id} missing after the move`);
+      const glide: Glide = reduced
+        ? { id, keyframes: [{ opacity: 0 }, { opacity: 1 }], translate: false, bandChange: false }
+        : {
+            id,
+            keyframes: [
+              { transform: translate(from.rect.left - to.rect.left, from.rect.top - to.rect.top) },
+              { transform: translate(0, 0) },
+            ],
+            translate: true,
+            bandChange: from.band !== to.band,
+          };
+      start(face, glide, root, {
+        duration: ms,
+        delay: i * step,
+        easing: 'ease-out',
+        fill: 'backwards',
+      });
+    });
+  }
+
+  function start(
+    face: HTMLElement,
+    glide: Glide,
+    root: HTMLElement,
+    options: KeyframeAnimationOptions,
+  ): void {
+    gate.enter();
+    const animation = face.animate(glide.keyframes, options);
+    const entry: Running = { animation, settled: false };
+    animations.add(entry);
+    if (glide.translate) {
+      face.classList.add(GLIDE);
+      gliding.add(face);
+      if (glide.bandChange && tiles === null) {
+        tiles = found(
+          root.querySelector<HTMLElement>('[data-band="tray"] .tiles'),
+          'AD-14 FLIP tile area missing',
+        );
+        tiles.classList.add(DRAG_TILES);
+      }
+    }
+    animation.onfinish = () => settle(entry);
+    // Rule 6: a cancelled glide would never settle (gate held, classes on); finishAll's
+    // finish() never cancels.
+    animation.oncancel = () => {
+      throw new Error('AD-14 FLIP animation cancelled');
+    };
+  }
+
+  function releaseHold(): void {
+    inFlightCommitted.clear();
+    inFlightUsed.clear();
   }
 
   // Idempotent: the animation's onfinish, or finishAll().
@@ -281,6 +405,7 @@ export function createFlip(deps: FlipDeps): Flip {
       gliding.clear();
       tiles?.classList.remove(DRAG_TILES);
       tiles = null;
+      releaseHold();
     }
     gate.leave();
   }
@@ -290,6 +415,7 @@ export function createFlip(deps: FlipDeps): Flip {
       entry.animation.finish();
       settle(entry);
     }
+    releaseHold();
   }
 
   function running(): boolean {

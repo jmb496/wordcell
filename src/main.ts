@@ -12,7 +12,7 @@ import { createGate } from './ui/gestures/gate';
 import Halted from './ui/Halted.svelte';
 import { openHistoryNotice } from './ui/history-notice.svelte';
 import { browserLayoutDeps, createLayout } from './ui/layout/layout.svelte';
-import { duration } from './ui/motion';
+import { duration, stagger } from './ui/motion';
 import { overlays } from './ui/overlays.svelte';
 // Imported before boot so the `@font-face` the font check loads is registered.
 import './ui/app.css';
@@ -136,6 +136,7 @@ async function boot(): Promise<void> {
     reduced: () => prefs.motion.reduced,
     phase: () => game.view?.phase,
     duration,
+    stagger,
   });
   setFlip(flip);
   const controller = createController(gate, {

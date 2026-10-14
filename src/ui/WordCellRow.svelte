@@ -2,13 +2,19 @@
 import type { CellView, Face, GameView } from '../engine/index';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Card from './Card.svelte';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import { inFlight } from './flip';
 
 // DESIGN.md WordCell, build-notes CAP-2: labels 3–10 in the `labelsRow` track, each wordcell-<n>
 // in the `cellsRow` track under column n − 2 (A-D7), outside its label (F25). Every cell card is
 // a live Card (AD-14) in DOM order bottom → top, stacked; only the top one is visible, except a
 // `used` cell's top card, which is live in the tray or strip and drawn here as a used mirror
 // (R-33). States come from `CellView` and `view.place` (AD-3). Cards are keyed by id plus mirror
-// kind (A9 4.3-m3, AD-14), so a live ↔ used switch remounts the node. During a free-letter drag
+// kind (A9 4.3-m3, AD-14), so a live ↔ used switch remounts the node. While a Confirm or Redo
+// flies its cards in (flip.ts `inFlight`, epic 5 SPEC CAP-8, F28) the cell holds: the committed
+// cards and the previous top stay shown (the cell never looks empty), and in the cell that held
+// the used mirror (R-52) that mirror, drawn first so beneath the committed faces, is the only
+// previous top; the last landing releases it and the non-top cards hide together. During a free-letter drag
 // (epic 5 SPEC CAP-6, R-61) the controller's `wc-drag-ghost` on the cell draws the 1 px dashed
 // ghost at the card rect and the dragged top face takes `wc-drag-layer` as Column's does (literals
 // from gestures/classes.ts); the count badge keeps counting the dragged card.
@@ -32,6 +38,8 @@ const inPlace = $derived(place !== undefined);
 {#each cells as cell (cell.cell)}
   {@const top = cell.cards.length - 1}
   {@const target = place?.target === cell.cell}
+  {@const lowest = cell.cards.findIndex((id) => inFlight.committed.has(id))}
+  {@const usedId = lowest < 0 ? undefined : [...inFlight.used][0]}
   {@const dim = inPlace && !cell.isLegalTarget && !target}
   <span
     class="label"
@@ -54,13 +62,16 @@ const inPlace = $derived(place !== undefined);
     style:grid-column={cell.cell - 2}
     style:grid-row={cellsRow}
   >
+    {#if usedId !== undefined}
+      <Card id={usedId} face={faces[usedId] as Face} place="cell" full mirror="used" />
+    {/if}
     {#each cell.cards as id, i (`${id}-${i === top && cell.used ? 'used' : 'live'}`)}
       <Card
         {id}
         face={faces[id] as Face}
         place="cell"
         full
-        hidden={i !== top}
+        hidden={i !== top && !(lowest >= 0 && (i >= lowest || (i === lowest - 1 && usedId === undefined)))}
         mirror={i === top && cell.used ? 'used' : undefined}
       />
     {/each}

@@ -34,7 +34,7 @@ function validate(): void {
   play(command, result);
 }
 
-// Epic 5 SPEC CAP-8: kind `flyToCell`, animated by entry 11.
+// Epic 5 SPEC CAP-8: kind `flyToCell`, played by flip.ts (F28).
 function confirm(): void {
   const command = { type: 'confirm' } as const;
   capture();

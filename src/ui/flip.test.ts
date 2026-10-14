@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { CardId, Command, Phase } from '../engine/index';
 import type { DispatchResult } from '../shell/game.svelte';
 import type { BandKey, Box, Flip, Placed } from './flip';
-import { createFlip, motionKind, planGlides } from './flip';
+import { createFlip, flyingSet, inFlight, motionKind, planGlides } from './flip';
 import type { Gate } from './gestures/gate';
 import type { MotionKind } from './motion';
 
@@ -14,7 +14,11 @@ import type { MotionKind } from './motion';
 // options) and returns a fake Animation whose `finish()` is recorded and whose `onfinish` a test
 // fires (WAAPI fires it later). A counting gate throws on a leave at count 0. `flushSync` is mocked
 // to run a hook the test sets, then clear it (as controller.test.ts).
-const svelteFlush = vi.hoisted(() => ({ onFlush: null as (() => void) | null, calls: 0 }));
+const svelteFlush = vi.hoisted(() => ({
+  onFlush: null as (() => void) | null,
+  onEach: null as (() => void) | null,
+  calls: 0,
+}));
 
 vi.mock('svelte', async (importOriginal) => {
   const actual = await importOriginal<typeof import('svelte')>();
@@ -22,6 +26,7 @@ vi.mock('svelte', async (importOriginal) => {
     ...actual,
     flushSync: () => {
       svelteFlush.calls += 1;
+      svelteFlush.onEach?.();
       svelteFlush.onFlush?.();
       svelteFlush.onFlush = null;
     },
@@ -71,10 +76,17 @@ class FakeFace {
 }
 
 class FakeWrapper {
+  readonly parentElement: { getAttribute(name: string): string | null } | null;
   constructor(
     readonly attrs: Record<string, string>,
     readonly face: FakeFace | null,
-  ) {}
+    cell?: number,
+  ) {
+    this.parentElement =
+      cell === undefined
+        ? null
+        : { getAttribute: (name) => (name === 'data-wordcell' ? String(cell) : null) };
+  }
   getAttribute(name: string): string | null {
     return this.attrs[name] ?? null;
   }
@@ -84,8 +96,9 @@ class FakeWrapper {
   }
 }
 
-type Card = { id: number; place: string; rect: Box };
-type Scene = { cards: Card[]; bands: Record<BandKey, Box> };
+type Card = { id: number; place: string; rect: Box; cell?: number };
+// `mirrors`: WordCell n → the CardId of its direct `[data-mirror-of]` child (R-52).
+type Scene = { cards: Card[]; bands: Record<BandKey, Box>; mirrors?: Record<number, number> };
 
 const box = (left: number, top: number, width = 40, height = 53): Box => ({
   left,
@@ -117,11 +130,32 @@ class FakeRoot {
       const face = kept ?? new FakeFace(card.rect);
       face.rect = card.rect;
       this.faces.set(card.id, face);
-      return new FakeWrapper({ 'data-card-id': String(card.id), 'data-place': card.place }, face);
+      return new FakeWrapper(
+        { 'data-card-id': String(card.id), 'data-place': card.place },
+        face,
+        card.cell,
+      );
     });
     this.bands = scene.bands;
+    this.mirrors = scene.mirrors ?? {};
   }
-  querySelectorAll(selector: string): FakeWrapper[] {
+  mirrors: Record<number, number> = {};
+  querySelectorAll(selector: string): unknown[] {
+    if (selector === '[data-wordcell]') {
+      return [...new Set(this.wrappers.map((w) => w.parentElement).filter((p) => p !== null))]
+        .map((p) => Number(p.getAttribute('data-wordcell')))
+        .concat(Object.keys(this.mirrors).map(Number))
+        .filter((n, i, all) => all.indexOf(n) === i)
+        .map((n) => ({
+          getAttribute: () => String(n),
+          querySelector: (inner: string) => {
+            if (inner !== ':scope > [data-mirror-of]')
+              throw new Error(`fake cell selector ${inner}`);
+            const id = this.mirrors[n];
+            return id === undefined ? null : { getAttribute: () => String(id) };
+          },
+        }));
+    }
     if (selector !== '[data-card-id]') throw new Error(`fake root selectorAll ${selector}`);
     return this.wrappers;
   }
@@ -164,6 +198,7 @@ const DURATIONS: Record<MotionKind, number> = {
 
 function setup(options: { reduced?: boolean; phase?: Phase | undefined } = {}) {
   svelteFlush.onFlush = null;
+  svelteFlush.onEach = null;
   svelteFlush.calls = 0;
   const root = new FakeRoot();
   const g = fakeGate();
@@ -173,14 +208,16 @@ function setup(options: { reduced?: boolean; phase?: Phase | undefined } = {}) {
     phase: ('phase' in options ? options.phase : 'composing') as Phase | undefined,
   };
   const duration = vi.fn((kind: MotionKind) => (state.reduced ? 120 : DURATIONS[kind]));
+  const stagger = vi.fn(() => (state.reduced ? 0 : 30));
   const flip: Flip = createFlip({
     gate: g.gate,
     root: () => state.root as unknown as HTMLElement | null,
     reduced: () => state.reduced,
     phase: () => state.phase,
     duration,
+    stagger,
   });
-  return { root, flip, duration, state, ...g };
+  return { root, flip, duration, stagger, state, ...g };
 }
 
 // Two tray tiles and a column card; SAME_BAND swaps the tiles.
@@ -272,28 +309,6 @@ describe('AD-14 FLIP kind table', () => {
     });
   }
 
-  it('AD-14 a flyToCell play (confirm, winning confirm, committing redo) starts no animation and takes no gate count', () => {
-    const plays: [Command, DispatchResult][] = [
-      [{ type: 'confirm' }, CHANGED],
-      [{ type: 'confirm' }, { changed: true, finished: 'won' }],
-      [{ type: 'redo' }, CHANGED],
-    ];
-    for (const [command, result] of plays) {
-      const t = setup({ phase: 'idle' });
-      t.root.show(START);
-      move(t, BAND_CHANGE, command, result);
-      expect([...t.root.faces.values()].flatMap((f) => f.animations)).toEqual([]);
-      expect(t.counts.enter).toBe(0);
-      expect(t.duration).not.toHaveBeenCalled();
-      expect(t.flip.running()).toBe(false);
-      // The capture was consumed: a next capture/play on the same instance animates normally.
-      expect(() => t.flip.capture()).not.toThrow();
-      t.root.show(START);
-      expect(() => t.flip.play(undo, CHANGED)).not.toThrow();
-      expect(t.active()).toBe(2);
-    }
-  });
-
   it('AD-14 the empty animated set (failed validate, setTarget) starts nothing', () => {
     for (const [command, result] of [
       [{ type: 'validate' }, { changed: false }],
@@ -380,9 +395,8 @@ describe('AD-14 FLIP kind table', () => {
     t.state.phase = 'idle';
     t.root.show(BAND_CHANGE);
     t.flip.play({ type: 'redo' }, CHANGED);
-    expect([...t.root.faces.values()].flatMap((f) => f.animations)).toEqual([]);
     expect(t.counts.enter).toBe(0);
-    expect(t.duration).not.toHaveBeenCalled();
+    expect(t.duration.mock.calls).toEqual([]);
     // Non-committing redo: phase idle at capture, composing after the move → undoRedo.
     t = setup({ phase: 'idle' });
     t.root.show(START);
@@ -395,6 +409,205 @@ describe('AD-14 FLIP kind table', () => {
       expect(t.root.face(id).animations[0]?.options.duration).toBe(DURATIONS.undoRedo);
     }
     expect(t.active()).toBe(2);
+  });
+});
+
+// Ticket 5.11 (CAP-8, F28): cell 5 holds card 9; tray tiles 3 and 4 are committed on top of it.
+const CELL_START: Scene = {
+  cards: [
+    { id: 9, place: 'cell', rect: box(100, 400), cell: 5 },
+    { id: 3, place: 'tray', rect: box(10, 520) },
+    { id: 4, place: 'tray', rect: box(54, 520) },
+  ],
+  bands: BANDS,
+};
+const CELL_COMMITTED: Scene = {
+  cards: [
+    { id: 9, place: 'cell', rect: box(100, 400), cell: 5 },
+    { id: 3, place: 'cell', rect: box(100, 400), cell: 5 },
+    { id: 4, place: 'cell', rect: box(100, 400), cell: 5 },
+  ],
+  bands: BANDS,
+};
+const confirm: Command = { type: 'confirm' };
+const committed = () => [...inFlight.committed];
+
+function fly(t: ReturnType<typeof setup>, from: Scene, to: Scene, command: Command = confirm) {
+  t.root.show(from);
+  t.flip.capture();
+  t.root.show(to);
+  t.flip.play(command, CHANGED);
+}
+
+function settleAll(t: ReturnType<typeof setup>, ids: number[]) {
+  for (const id of ids) t.root.face(id).animations[0]?.onfinish?.();
+}
+
+describe('AD-14 flyToCell playback (ticket 5.11, CAP-8, F28)', () => {
+  it('AD-14 flyToCell glides the committed faces captured → settled rect, bottom first, delay i × stagger() with fill backwards over duration(flyToCell), the target card 9 untouched', () => {
+    for (const command of [confirm, { type: 'redo' } as Command]) {
+      const t = setup({ phase: 'idle' });
+      fly(t, CELL_START, CELL_COMMITTED, command);
+      expect(t.duration.mock.calls).toEqual([['flyToCell']]);
+      expect(t.root.face(9).animations).toEqual([]);
+      expect(t.root.face(3).animations[0]?.keyframes).toEqual([
+        { transform: 'translate(-90px, 120px)' },
+        { transform: 'translate(0px, 0px)' },
+      ]);
+      expect(t.root.face(4).animations[0]?.keyframes).toEqual([
+        { transform: 'translate(-46px, 120px)' },
+        { transform: 'translate(0px, 0px)' },
+      ]);
+      expect(t.root.face(3).animations[0]?.options).toEqual({
+        duration: 360,
+        delay: 0,
+        easing: 'ease-out',
+        fill: 'backwards',
+      });
+      expect(t.root.face(4).animations[0]?.options.delay).toBe(30);
+      expect(t.root.face(3).classList.contains('wc-glide')).toBe(true);
+      expect(t.root.tiles.classList.contains('wc-drag-tiles')).toBe(true);
+      expect(t.active()).toBe(2);
+      settleAll(t, [3, 4]);
+      expect(t.active()).toBe(0);
+      expect(t.root.tiles.classList.contains('wc-drag-tiles')).toBe(false);
+    }
+  });
+
+  it('AD-14 flyToCell plays a winning confirm like any other', () => {
+    const t = setup({ phase: 'idle' });
+    t.root.show(CELL_START);
+    t.flip.capture();
+    t.root.show(CELL_COMMITTED);
+    t.flip.play(confirm, { changed: true, finished: 'won' });
+    expect(t.active()).toBe(2);
+  });
+
+  it('AD-14 flyToCell sets the hold before the second flushSync and keeps it until the last landing, which releases it together', () => {
+    const t = setup({ phase: 'idle' });
+    const seen: number[][] = [];
+    t.root.show(CELL_START);
+    t.flip.capture();
+    t.root.show(CELL_COMMITTED);
+    svelteFlush.calls = 0;
+    svelteFlush.onEach = () => seen.push(committed());
+    t.flip.play(confirm, CHANGED);
+    // The first flush renders the settled DOM (no hold yet), the second renders the hold.
+    expect(seen).toEqual([[], [3, 4]]);
+    expect(committed()).toEqual([3, 4]);
+    settleAll(t, [3]);
+    expect(committed()).toEqual([3, 4]);
+    settleAll(t, [4]);
+    expect(committed()).toEqual([]);
+    expect(t.active()).toBe(0);
+  });
+
+  it('AD-14 flyToCell records the target cell used mirror (R-52) only for the gaining cell, from the capture', () => {
+    const t = setup({ phase: 'idle' });
+    fly(t, { ...CELL_START, mirrors: { 5: 3, 7: 20 } }, CELL_COMMITTED);
+    expect([...inFlight.used]).toEqual([3]);
+    settleAll(t, [3, 4]);
+    expect([...inFlight.used]).toEqual([]);
+    const u = setup({ phase: 'idle' });
+    fly(u, CELL_START, CELL_COMMITTED);
+    expect([...inFlight.used]).toEqual([]);
+    u.flip.finishAll();
+  });
+
+  it('AD-14 flyToCell under reduced motion fades every face in at once (no delay, no wc-glide, no tile lift) over duration(flyToCell) and holds to its end', () => {
+    const t = setup({ phase: 'idle', reduced: true });
+    fly(t, CELL_START, CELL_COMMITTED);
+    for (const id of [3, 4]) {
+      const animation = t.root.face(id).animations[0];
+      expect(animation?.keyframes).toEqual([{ opacity: 0 }, { opacity: 1 }]);
+      expect(animation?.options.duration).toBe(120);
+      expect(animation?.options.delay).toBe(0);
+      expect(t.root.face(id).classList.contains('wc-glide')).toBe(false);
+    }
+    expect(t.root.tiles.classList.contains('wc-drag-tiles')).toBe(false);
+    expect(committed()).toEqual([3, 4]);
+    settleAll(t, [3, 4]);
+    expect(committed()).toEqual([]);
+  });
+
+  it('AD-14 flyToCell glides a free letter from another cell rect to rect, no tile lift, and skips nothing under 0.5 px', () => {
+    const t = setup({ phase: 'idle' });
+    const from: Scene = {
+      cards: [
+        { id: 9, place: 'cell', rect: box(100, 400), cell: 5 },
+        { id: 3, place: 'cell', rect: box(60, 400), cell: 4 },
+        { id: 4, place: 'tray', rect: box(100.2, 520) },
+      ],
+      bands: BANDS,
+    };
+    const to: Scene = {
+      cards: [
+        { id: 9, place: 'cell', rect: box(100, 400), cell: 5 },
+        { id: 3, place: 'cell', rect: box(100, 400), cell: 5 },
+        { id: 4, place: 'cell', rect: box(100, 400), cell: 5 },
+      ],
+      bands: BANDS,
+    };
+    fly(t, from, to);
+    expect(t.root.face(3).animations[0]?.keyframes?.[0]).toEqual({
+      transform: 'translate(-40px, 0px)',
+    });
+    expect(t.root.face(4).animations).toHaveLength(1);
+    expect(t.active()).toBe(2);
+    expect(t.root.tiles.classList.contains('wc-drag-tiles')).toBe(true);
+  });
+
+  it('AD-14 flyToCell: the in-flight state is empty after finishAll, after an animation-less play and for an empty flying set', () => {
+    const t = setup({ phase: 'idle' });
+    fly(t, CELL_START, CELL_COMMITTED);
+    expect(committed()).toEqual([3, 4]);
+    t.flip.finishAll();
+    expect(committed()).toEqual([]);
+    expect(t.active()).toBe(0);
+    // An animation-less flyToCell play (nothing moved) holds nothing.
+    t.root.show(CELL_COMMITTED);
+    t.flip.capture();
+    t.flip.play(confirm, CHANGED);
+    expect(committed()).toEqual([]);
+    expect(t.active()).toBe(0);
+    // A flyToCell kind whose flying set is empty (nothing entered a cell) animates nothing.
+    t.root.show(START);
+    t.flip.capture();
+    t.flip.play({ type: 'redo' }, CHANGED);
+    expect(committed()).toEqual([]);
+    expect(t.active()).toBe(0);
+  });
+
+  it('AD-14 flyToCell into an empty cell flies the committed set with no previous top to hold', () => {
+    const t = setup({ phase: 'idle' });
+    fly(
+      t,
+      { cards: CELL_START.cards.slice(1), bands: BANDS },
+      { cards: CELL_COMMITTED.cards.slice(1), bands: BANDS },
+    );
+    expect(committed()).toEqual([3, 4]);
+    expect(t.active()).toBe(2);
+  });
+
+  it('AD-14 flyingSet lists the cards that entered a cell, in document order', () => {
+    const at = (cell?: number): Placed =>
+      cell === undefined
+        ? { band: 'tray', rect: box(0, 0) }
+        : { band: 'wordcells', rect: box(0, 0), cell };
+    expect(
+      flyingSet(
+        new Map<CardId, Placed>([
+          [1 as CardId, at(5)],
+          [2 as CardId, at()],
+          [3 as CardId, at(4)],
+        ]),
+        new Map<CardId, Placed>([
+          [1 as CardId, at(5)],
+          [2 as CardId, at(5)],
+          [3 as CardId, at(5)],
+        ]),
+      ),
+    ).toEqual([2, 3]);
   });
 });
 
