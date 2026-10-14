@@ -220,3 +220,14 @@ Worth knowing: `npm run test:screens` was not run (Docker not installed in this 
 Close-out docs:
 - SPEC.md F7 and build-notes.md CAP-8 ← free letter already in a WordCell flies too (owner, 2026-10-14, recorded as F28)
 - SPEC.md F27/F28 ← Confirm's fly-to-cell never shows an empty cell: previous top and landed cards stay until the last landing (owner, 2026-10-14)
+
+## 5.12 Tray growth wiring — done
+What it adds: the tray now grows to two or three rows of compact tiles as letters are added (e.g. 14 → 15) and shrinks back, after every completed edit, never mid-drag; the WordCell row stays put and the page scrolls by any shortfall. Two long-word fixtures were added.
+Ticket review: 3 passes, converged; nothing needed your input
+Build: built; commits fa2a8fb
+Code review: thorough, 3 passes, converged; fixes applied in WIP commits a4420c3, 12bc402
+Tests: all passing
+Ref to fix upstream: none
+Tokens: 7.0M input-equivalent (build 39%, code review 35%, ticket review 23%, orchestrator 2%); orchestrator peak 54k
+Worth knowing: (1) session-place-long.json uses a 15-letter non-word with an inline dictionary (no real 15-letter word available); the loader does not re-check membership. (2) Open major carried to the refactor sweep: the 780-px scroll-busy e2e in e2e/tray-growth.spec.ts asserts 0 < scrollY < 6 after a smooth scroll, which is timing-fragile; fix by dispatching scroll and click in one evaluate, or rely on the real-flip unit case. (3) The watchTiles effect (New game/Replay swap) is covered only by unit fakes. (4) Anchor scrollTop write during an Android fling unverified (epic 7 device checks). (5) test:screens not run (no Docker here).
+Close-out docs: none

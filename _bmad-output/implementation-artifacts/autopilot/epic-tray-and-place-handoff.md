@@ -1,16 +1,20 @@
 outcome: done
-ticket: 5.11
+ticket: 5.12
 reason: done
-next: 5.12
-updated: 2026-10-14T17:23:48Z
-summary: Ticket 5.11 (letters fly into the WordCell on Confirm) is built, reviewed, tested and marked done.
+next: 5.13
+updated: 2026-10-14T18:30:00Z
+summary: Ticket 5.12 (tray grows to extra compact rows as letters are added) is built, reviewed, tested and marked done.
 
 ## Report
 
-Ticket 5.11 is done. Confirming or redoing a word now flies the letters into the WordCell one by one; the cell never looks empty, and a free letter already in another WordCell flies too. Ticket review needed your input (answered 2026-10-14); code review converged in 2 passes; `npm run test:all` passes.
+Ticket 5.12 is done: the tray now grows and shrinks its rows with the tile count after each completed edit, never mid-drag, and the WordCell row stays unchanged. Ticket review and code review each converged in 3 passes with nothing needing your input; `npm run test:all` passes.
 
-**For you:** `npm run test:screens` was not run (no Docker in this WSL); run it before the epic closes.
+**For you:**
+- The three-row Place fixture uses a 15-letter non-word with an inline dictionary, since no real 15-letter word fits. Say if that is not acceptable.
+- One timing-fragile e2e (780 px scroll-busy) is carried to the refactor sweep.
+- `npm run test:screens` was not run (no Docker here); run it before the epic closes.
+- Android fling behaviour with the anchor scroll write goes to the epic 7 device checks.
 
-**Close-out docs:** SPEC.md F7 and build-notes.md CAP-8 (free letter already in a WordCell flies, 2026-10-14); SPEC.md F27/F28 (cell never empty during Confirm's fly).
+Close-out docs: none
 
-To continue: rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-tray-and-place`. Digest: _bmad-output/implementation-artifacts/autopilot/epic-tray-and-place-20261008-1002.md
+Resume: `.claude/skills/epic-autopilot/scripts/loop.sh epic-tray-and-place`

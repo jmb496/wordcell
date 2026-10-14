@@ -3,7 +3,7 @@ title: 'Tray growth wiring'
 type: 'feature'
 ticket: '12'
 created: '2026-10-14'
-status: 'built'
+status: done
 route: 'full'
 route_source: 'auto'
 baseline_revision: '59f57b31d29f8242279a618da703d16ffc0123ba'

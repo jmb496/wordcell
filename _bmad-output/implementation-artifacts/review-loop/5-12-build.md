@@ -46,3 +46,22 @@ Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings
 - [minor] fixer 2–6 applied (flip trace flush, vacuous assertion dropped, mid-drag case, 4-row case, plan edits)
 Snapshot: tree 09a5acef1a24cab7746a1c1c99411ee1d7c1fe88. test/lint/check pass.
 State: pass 2: done
+
+## Pass 3 — 2026-10-14
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 1, minor 10, decision-needed 0  |  Dropped in triage: 0
+### Majors (open, not fixed: stopping rule, two consecutive passes with at most one)
+1. e2e/tray-growth.spec.ts scroll-busy Confirm test (~lines 96–114, 238–258): depends on a 6 px smooth scroll being caught mid-flight after two rAFs (0 < scrollY < 6); timing-fragile, fails under instant scroll / reduced motion / load. Proposed default: scroll, one frame, dispatch the scroll event and click in one evaluate, assert gate busy via hook or the re-laid-out height; or rely on the real-flip unit case. Passed 3 consecutive runs and fails without gate.scrollReset().
+### Minors (not applied)
+- layout test 21→22 uses production anchorScroll for expected value; assert a literal.
+- Redo step lacks animating > 0 positive control.
+- gate.enter() no-move test cannot fail; change tile count while entered or drop.
+- 'scroll-reset gate re-lays out at once' final assertion vacuous (heights.tray > 0).
+- no-op real-flip test should assert rows/heights unchanged.
+- restore test cannot prove the watchTiles swap path; unit swap test could assert capture/beginMove not called.
+- plan: point call-order claim at exact controller.test.ts test names; note scroll-busy e2e is a shrink (Confirm) and '+' grow is unit-tested.
+- Give up (not yet wired) must go through capture/play; note in Give up ticket.
+- Earlier unapplied: endMove busy-throw fires when band height unchanged (deliberate).
+State: pass 3: done
+
+## Result — converged after 3 passes
+open major: e2e scroll-busy Confirm test is timing-fragile (smooth-scroll mid-flight window).
