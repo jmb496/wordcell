@@ -122,6 +122,12 @@ Open items carried: the findings F-1 to F-10 above (none blocking). Nothing foun
 2. F-10, rendered change: apply the ActionBar ellipsis font size minor and the FLIP reduced-fade easing minor, or accept them as built? They change what the player sees.
 3. A1 (controller split): any objection to a source-only split now, or does the owner prefer to wait for epic 6 keyboard work to settle the controller first? Technical default: split now.
 
+### Resolved (2026-10-14)
+
+- Q2: owner said apply both minors; applied in 543575c, reviewed in 7e8dd28.
+- Q3: owner said split now; done in 543575c (source only). A1, A2, A7, A8, A10 applied; A3 to A6 applied (doc edits in 41a9765, AGENTS.md refresh after). A9 (autopilot `test:screens` check) not applied.
+- Q1: still open, awaiting the owner's go-ahead to merge and deploy.
+
 ## Assumptions
 
 - The epic was named in the invocation as `epic-tray-and-place`; the folder is `_bmad-output/initiative-wordcell-v1/epic-tray-and-place`. `tickets.py status <folder>` has no `pending_tickets` key in this version, so I derived "none pending" from the 17 rows being `done`.
