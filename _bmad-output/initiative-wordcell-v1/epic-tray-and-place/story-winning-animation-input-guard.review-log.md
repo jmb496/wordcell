@@ -1,6 +1,6 @@
 # Review log — story-winning-animation-input-guard (ticket 5.13)
 
-State: pass 4: done
+State: pass 5: done
 
 Pre-loop: HEAD b4217aca8a4b116c10a8e413a5e4e1992aa49812; copy /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-winning-animation-input-guard.review-log.passes/pass0.md; 365 words (wc -w of whole file).
 Mode: docs, thorough, max 7. Budget default 2.5x (~912 words).
@@ -74,3 +74,15 @@ Reviewers: fix-diff, edge-case, ref-alignment (adversarial dropped, late-pass)  
 ### Decision needed (functionality / UX / gameplay)
 - none
 Words (docs): 1150 (3.15x pass 0, over the 2.5x budget)  |  Snapshot: /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-winning-animation-input-guard.review-log.passes/pass4.md
+
+## Pass 5 — 2026-10-14
+Reviewers: fix-diff, edge-case, ref-alignment  |  Findings: major 2 (merged), minor 0 (two edge-case minors merged into majors), decision-needed 0  |  Dropped in triage: 0
+### Applied
+- [major] backstop-expiry uninstall wording dropped the 300 ms floor (F8/F23) → item 1
+- [major] Undo exception only stated for click; Undo pointerdown/keydown vs owed-click clear and consumed-open rule → item 2
+### Default applied (technical)
+- Undo events (all types) pass through and are exempt from owed-click.
+### Decision needed (functionality / UX / gameplay)
+- none
+Note: pass 4's fixer cut the unknown/tests/risk bullets of the Also: list (risk in frontmatter, unknown in Notes, tests in AC); the pass-5 fix-diff reviewer did not report the loss as a defect.
+Words (docs): 1147 (3.14x pass 0, over the 2.5x budget)  |  Snapshot: /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-winning-animation-input-guard.review-log.passes/pass5.md
