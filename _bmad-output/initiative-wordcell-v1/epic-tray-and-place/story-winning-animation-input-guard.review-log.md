@@ -1,6 +1,6 @@
 # Review log — story-winning-animation-input-guard (ticket 5.13)
 
-State: pass 2: done
+State: pass 3: done
 
 Pre-loop: HEAD b4217aca8a4b116c10a8e413a5e4e1992aa49812; copy /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-winning-animation-input-guard.review-log.passes/pass0.md; 365 words (wc -w of whole file).
 Mode: docs, thorough, max 7. Budget default 2.5x (~912 words).
@@ -45,3 +45,19 @@ Reviewers: fix-diff, edge-case, adversarial, ref-alignment  |  Findings: major 1
 ### Decision needed (functionality / UX / gameplay)
 - none
 Words (docs): 1150 (3.15x pass 0, over the 2.5x budget)  |  Snapshot: /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-winning-animation-input-guard.review-log.passes/pass2.md
+
+## Pass 3 — 2026-10-14
+Reviewers: fix-diff, edge-case, adversarial, ref-alignment  |  Findings: major 6 (merged), minor 1, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+### Applied
+- [major] module-load tracker throws under Vitest node env (vite.config.ts environment 'node') → explicit startTracker from main.ts boot → item 1
+- [major] reduced motion plays a real 120 ms fade (flip.ts flyToCell), settle at fade end, not early return → item 2
+- [major] Playwright hide case asserted an unexposed predicate → observable tap after 420 ms → item 3
+- [major] install point vs F8 "not when flip.play starts" → reading stated → item 4
+- [major] new pointerdown/keydown while a consumed gesture is open after settle+300 ms → item 5
+- [major] click ownership after uninstall (owed-click flag) → item 6
+- [minor] backstop-expiry uninstall wording → item 7
+### Default applied (technical)
+- startTracker(doc, win, now, timers) from main.ts; owed-click flag; observable-based hide e2e.
+### Decision needed (functionality / UX / gameplay)
+- none
+Words (docs): 1150 (3.15x pass 0, over the 2.5x budget)  |  Snapshot: /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-tray-and-place/story-winning-animation-input-guard.review-log.passes/pass3.md
