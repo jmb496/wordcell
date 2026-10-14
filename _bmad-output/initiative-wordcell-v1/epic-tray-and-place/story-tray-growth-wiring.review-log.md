@@ -1,5 +1,5 @@
 # Review log — story-tray-growth-wiring (ticket 5.12)
-State: pass 2: review
+State: pass 3: done
 Pre-loop: HEAD ab81a9c1e4b72d6ec01d0e7a6d47a6c8b6a29b92, words 366, copy story-tray-growth-wiring.review-log.passes/pass0.md
 
 ## Pass 1 — 2026-10-14
@@ -37,3 +37,13 @@ Words: 904 (2.47 x pass 0)  |  Snapshot: story-tray-growth-wiring.review-log.pas
 - edge "card mode with 15 tiles gives 1 row" — wrong: card mode is tiles <= perRow (tray.ts), 15 tiles is compact
 - adversarial Place strip may not reach three rows — SPEC Assumptions assert reachability and Notes carry the unknown with the hand-build fallback
 - clamp with scrollTop < delta, cancelled-drop rows, 150 ms constant source (AD-11 A-A9 names it), w with classic scrollbars, "block on the left", card-mode wording, 0-row band test — minor, over budget (would add words)
+
+## Pass 3 — 2026-10-14
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 0, minor 1, decision-needed 0  |  Dropped in triage: 0
+Words: 904 (2.47 x pass 0)  |  Snapshot: unchanged from pass 2
+### Applied
+- none (converged)
+
+## Result — converged after 3 passes
+Majors per pass: 8, 1, 0. Decision needed: none. Technical defaults applied: all findings (fixture names, shrink symmetry, trayLayout args, test determinism, drop order).
+Unapplied minors: "Place = strip tiles (3)" read as a tile count, should say 3 rows (+1 word); pass 2 minors dropped as over budget (clamp case with scrollTop < delta, cancelled-drop rows, 0-row band test, "block on the left" definition, classic-scrollbar w, card-mode wording); the "plan confirms the counts from the built fixture" and "A-D4 is silent on shrink" notes were trimmed in pass 2 for budget.
