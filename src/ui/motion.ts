@@ -222,15 +222,14 @@ function onEvent(t: Tracker, event: Event): void {
     return;
   }
   const windowPassed = t.settled && t.now() >= t.installAt + MIN_GUARD_MS;
-  if (!windowPassed) {
-    finish(t);
-  } else if (!consumedOpen(t)) {
+  if (windowPassed && !consumedOpen(t)) {
     // First start in the backstop window: the guard ends and the event passes through.
     uninstall(t);
     t.open.set(id, false);
     return;
   }
   t.open.set(id, true);
+  if (!windowPassed) finish(t);
   consume(event);
   evaluate(t);
 }

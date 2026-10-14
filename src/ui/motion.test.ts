@@ -157,12 +157,13 @@ describe('AD-14 winning guard', () => {
   const passed = (e: Fake) => e.prevented === 0 && e.stopped === 0;
   const down = (id: number, undo = false) => send(make('pointerdown', { pointerId: id }, undo));
   const up = (id: number, undo = false) => send(make('pointerup', { pointerId: id }, undo));
-  const key = (code: string, repeat = false) => send(make('keydown', { code, repeat }));
+  const key = (code: string, repeat = false, undo = false) =>
+    send(make('keydown', { code, repeat }, undo));
   const keyup = (code: string) => send(make('keyup', { code }));
   const click = (undo = false) => send(make('click', {}, undo));
   const win1 = () => install(true, complete);
 
-  it('AD-14 no listener exists before startTracker and stop removes them all', () => {
+  it('AD-14 startTracker adds six document and one window listener, stop removes them all, a second start throws', () => {
     expect(doc.count()).toBe(6);
     expect(win.count()).toBe(1);
     stop();
@@ -300,7 +301,7 @@ describe('AD-14 winning guard', () => {
     expect(consumed(click())).toBe(true);
   });
 
-  it('AD-14 after uninstall the tracker keeps consuming a consumed gesture to its end', () => {
+  it('AD-14 a start while a consumed gesture is open is consumed with no uninstall, the backstop counts from the last end', () => {
     win1();
     down(1);
     key('Enter');
@@ -309,8 +310,10 @@ describe('AD-14 winning guard', () => {
     expect(guardInstalled()).toBe(true);
     // A pointerdown/keydown while a consumed gesture is open: consumed, no uninstall.
     expect(consumed(down(2))).toBe(true);
+    vi.advanceTimersByTime(100);
     expect(consumed(key('KeyA'))).toBe(true);
     expect(guardInstalled()).toBe(true);
+    vi.advanceTimersByTime(100);
     up(1);
     up(2);
     keyup('Enter');
@@ -420,11 +423,14 @@ describe('AD-14 winning guard', () => {
   it('AD-14 hide clears every gesture, counts as settle and the last end, a held repeat after it is consumed', () => {
     key('Enter');
     win1();
+    vi.advanceTimersByTime(250);
     hideClear();
     expect(guardInstalled()).toBe(true);
+    vi.advanceTimersByTime(100);
     expect(consumed(key('Enter', true))).toBe(true);
     expect(guardInstalled()).toBe(true);
-    vi.advanceTimersByTime(299);
+    // The deadline stays the hide time + duration(snap) (430 ms), not the repeat + duration(snap).
+    vi.advanceTimersByTime(79);
     expect(guardInstalled()).toBe(true);
     vi.advanceTimersByTime(1);
     expect(guardInstalled()).toBe(false);
@@ -438,9 +444,12 @@ describe('AD-14 winning guard', () => {
     vi.advanceTimersByTime(1000);
     expect(guardInstalled()).toBe(true);
     win.fire('blur');
+    vi.advanceTimersByTime(100);
     expect(consumed(key('Tab', true))).toBe(true);
     expect(guardInstalled()).toBe(true);
-    vi.advanceTimersByTime(180);
+    vi.advanceTimersByTime(79);
+    expect(guardInstalled()).toBe(true);
+    vi.advanceTimersByTime(1);
     expect(guardInstalled()).toBe(false);
   });
 
@@ -473,6 +482,102 @@ describe('AD-14 winning guard', () => {
     expect(guardInstalled()).toBe(true);
     expect(consumed(down(3))).toBe(true);
     expect(again).toHaveBeenCalledTimes(1);
+  });
+
+  it('AD-14 a first gesture 300 ms or more after install, before settle: complete settles inside it, the guard stays to its end plus the backstop', () => {
+    install(
+      true,
+      vi.fn(() => notifySettled()),
+    );
+    vi.advanceTimersByTime(400);
+    expect(consumed(down(1))).toBe(true);
+    expect(guardInstalled()).toBe(true);
+    vi.advanceTimersByTime(1000);
+    expect(guardInstalled()).toBe(true);
+    expect(consumed(up(1))).toBe(true);
+    vi.advanceTimersByTime(179);
+    expect(guardInstalled()).toBe(true);
+    expect(consumed(click())).toBe(true);
+    vi.advanceTimersByTime(1);
+    expect(guardInstalled()).toBe(false);
+  });
+
+  it('AD-14 a keydown inside Undo while installed passes through, completes once and uninstalls', () => {
+    win1();
+    expect(passed(key('KeyU', false, true))).toBe(true);
+    expect(complete).toHaveBeenCalledTimes(1);
+    expect(guardInstalled()).toBe(false);
+  });
+
+  it('AD-14 a keydown inside Undo for a key code already consumed is still consumed', () => {
+    key('Enter');
+    win1();
+    expect(consumed(key('Enter', false, true))).toBe(true);
+    expect(guardInstalled()).toBe(true);
+    expect(complete).not.toHaveBeenCalled();
+  });
+
+  it('AD-14 blur after install clears the open gestures: their ends pass, the backstop counts from the blur', () => {
+    win1();
+    down(1);
+    key('Tab');
+    vi.advanceTimersByTime(200);
+    win.fire('blur');
+    notifySettled();
+    expect(passed(up(1))).toBe(true);
+    expect(passed(keyup('Tab'))).toBe(true);
+    vi.advanceTimersByTime(179);
+    expect(guardInstalled()).toBe(true);
+    vi.advanceTimersByTime(1);
+    expect(guardInstalled()).toBe(false);
+  });
+
+  it('AD-14 hide while not installed clears the open key, a later held repeat is consumed without moving the deadline', () => {
+    key('Enter');
+    hideClear();
+    win1();
+    expect(consumed(key('Enter', true))).toBe(true);
+    expect(guardInstalled()).toBe(true);
+    notifySettled();
+    vi.advanceTimersByTime(299);
+    expect(guardInstalled()).toBe(true);
+    vi.advanceTimersByTime(1);
+    expect(guardInstalled()).toBe(false);
+  });
+
+  it('AD-14 Undo uninstalls while a consumed key is open: its repeat and keyup are still consumed', () => {
+    key('Enter');
+    win1();
+    expect(passed(down(2, true))).toBe(true);
+    expect(guardInstalled()).toBe(false);
+    expect(consumed(key('Enter', true))).toBe(true);
+    expect(consumed(keyup('Enter'))).toBe(true);
+  });
+
+  it('AD-14 a consumed pointer held well past settle and 300 ms keeps the guard until its pointerup plus the backstop', () => {
+    win1();
+    down(1);
+    notifySettled();
+    vi.advanceTimersByTime(5000);
+    expect(guardInstalled()).toBe(true);
+    up(1);
+    vi.advanceTimersByTime(179);
+    expect(guardInstalled()).toBe(true);
+    vi.advanceTimersByTime(1);
+    expect(guardInstalled()).toBe(false);
+  });
+
+  it('AD-14 a click following a consumed Space or Enter keyup is consumed', () => {
+    for (const code of ['Space', 'Enter']) {
+      win1();
+      key(code);
+      notifySettled();
+      vi.advanceTimersByTime(400);
+      expect(consumed(keyup(code))).toBe(true);
+      expect(consumed(click())).toBe(true);
+      vi.advanceTimersByTime(180);
+      expect(guardInstalled()).toBe(false);
+    }
   });
 
   it('AD-14 the minimum holds at Fast (baseMs 90) and under reduced motion', () => {

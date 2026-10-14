@@ -298,7 +298,7 @@ export function createFlip(deps: FlipDeps): Flip {
   function play(command: Command, result: DispatchResult): void {
     install(result.finished === 'won', finishAll);
     playMove(command, result);
-    if (animations.size === 0) notifySettled();
+    if (result.finished === 'won' && animations.size === 0) notifySettled();
   }
 
   function playMove(command: Command, result: DispatchResult): void {

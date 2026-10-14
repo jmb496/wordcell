@@ -1137,6 +1137,37 @@ describe('AD-14 winning guard hooks (ticket 5.13, CAP-10, F8)', () => {
     expect(guardInstalled()).toBe(false);
   });
 
+  it('AD-14 a pointerdown through the tracker finishes the in-flight winning animations', () => {
+    stopTracker();
+    const listeners = new Map<string, (event: Event) => void>();
+    const doc = {
+      addEventListener: (type: string, listener: (event: Event) => void) => {
+        listeners.set(type, listener);
+      },
+      removeEventListener: () => undefined,
+    };
+    const inert = { addEventListener: () => undefined, removeEventListener: () => undefined };
+    stopTracker = startTracker(doc, inert, () => Date.now(), {
+      setTimer: (callback, ms) => setTimeout(callback, ms),
+      clearTimer: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
+    });
+    const t = setup({ phase: 'idle' });
+    t.root.show(CELL_START);
+    t.flip.capture();
+    t.root.show(CELL_COMMITTED);
+    t.flip.play(confirm, { changed: true, finished: 'won' });
+    expect(t.active()).toBeGreaterThan(0);
+    const event = {
+      type: 'pointerdown',
+      pointerId: 1,
+      target: { closest: () => null },
+      preventDefault: () => undefined,
+      stopPropagation: () => undefined,
+    };
+    listeners.get('pointerdown')?.(event as unknown as Event);
+    expect(t.active()).toBe(0);
+  });
+
   it('AD-14 a play that is not won installs nothing', () => {
     const t = setup({ phase: 'idle' });
     fly(t, CELL_START, CELL_COMMITTED, confirm);

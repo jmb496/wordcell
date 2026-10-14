@@ -66,13 +66,13 @@ deferred: []
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `src/ui/motion.ts` -- implement guard, tracker, owed-click flag, backstop, hover/settle/hide hooks per the story Description -- core of F8/F23
-- [ ] `src/ui/flip.ts` -- install on `play()` entry, notify settle on all paths -- both motion settings
-- [ ] `src/ui/gestures/hover-peek-timer.ts` -- predicate gate and clear registration -- F8 hover clause
-- [ ] `src/main.ts` -- `startTracker` at boot, hide-clear registration order -- AD-9/AD-16
-- [ ] `fixtures/prefs-fast.json` -- new fixture
-- [ ] `src/ui/motion.test.ts` (+ flip, hover-peek, game.svelte, architecture-scan tests) -- every UI Vitest case in the story's Acceptance Criteria, names starting `AD-14 …`, fake timers/EventTargets
-- [ ] `e2e/` new spec -- Playwright android and desktop cases listed in the story ACs, reusing helpers; if Playwright repeated `keyboard.down('Enter')` diverges from a held key, record it in Implementation Notes (Vitest case is authoritative)
+- [x] `src/ui/motion.ts` -- implement guard, tracker, owed-click flag, backstop, hover/settle/hide hooks per the story Description -- core of F8/F23
+- [x] `src/ui/flip.ts` -- install on `play()` entry, notify settle on all paths -- both motion settings
+- [x] `src/ui/gestures/hover-peek-timer.ts` -- predicate gate and clear registration -- F8 hover clause
+- [x] `src/main.ts` -- `startTracker` at boot, hide-clear registration order -- AD-9/AD-16
+- [x] `fixtures/prefs-fast.json` -- new fixture
+- [x] `src/ui/motion.test.ts` (+ flip, hover-peek, game.svelte, architecture-scan tests) -- every UI Vitest case in the story's Acceptance Criteria, names starting `AD-14 …`, fake timers/EventTargets
+- [x] `e2e/` new spec -- Playwright android and desktop cases listed in the story ACs, reusing helpers; if Playwright repeated `keyboard.down('Enter')` diverges from a held key, record it in Implementation Notes (Vitest case is authoritative)
 - [ ] Docs: none beyond Implementation Notes unless a pitfall emerges
 
 **Acceptance Criteria:**

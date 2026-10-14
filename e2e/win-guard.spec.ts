@@ -53,6 +53,7 @@ test.describe('android', () => {
     await glidesSettled(page);
     // The consumed tap's backstop (Slow snap 320 ms) and the 300 ms minimum pass.
     await page.waitForTimeout(700);
+    await expect(sheet(page)).toHaveCount(0);
     await tapAt(page, cell);
     await expect(sheet(page)).toHaveAttribute('data-mode', 'sticky');
   });
@@ -69,6 +70,7 @@ test.describe('android', () => {
       const { action } = await place(page, prefs);
       await tapAt(page, action);
       const after = await stored(page);
+      // Only Slow asserts a running animation; Fast and reduced motion rely on the 300 ms minimum.
       if (name === 'Slow') expect(await running(page)).toBeGreaterThan(0);
       await tapAt(page, action);
       await glidesSettled(page);
@@ -116,6 +118,7 @@ test.describe('android', () => {
     await expect(sheet(page)).toHaveCount(0);
     await glidesSettled(page);
     await page.waitForTimeout(700);
+    await expect(sheet(page)).toHaveCount(0);
     await tapAt(page, cell);
     await expect(sheet(page)).toHaveAttribute('data-mode', 'sticky');
   });
