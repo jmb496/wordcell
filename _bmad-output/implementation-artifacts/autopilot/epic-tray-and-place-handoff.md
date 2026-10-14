@@ -18,3 +18,7 @@ summary: The ticket review for 5.11 (cards fly into the WordCell on Confirm) nee
 **Close-out docs:** none yet; SPEC.md F7 and build-notes.md CAP-8 may need a line after your answers.
 
 To resume: record your answers in the ticket Notes and rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-tray-and-place`. Digest: _bmad-output/implementation-artifacts/autopilot/epic-tray-and-place-20261008-1002.md
+
+## Resolved (2026-10-14, ticket 5.11)
+
+Owner answered both: (1) never empty: previous top and landed cards stay visible until the last landing, then all but the top committed card hide together; (2) a free letter already in another WordCell flies too (rect to rect). Recorded as SPEC F28, ticket Notes and review log.

@@ -82,3 +82,8 @@ Words (docs): 827 (2.75x pass 0)  |  Snapshot: unchanged from pass4.md (no fix a
 Majors per pass: 9, 5, 5, 1, 3. Technical defaults applied: 5 (landing hook, flip-owned state export, no 0.5 px skip, GLIDE + clip lift, DOM mirror id).
 ### Minors not applied
 - mirror stacking mechanism; `[data-mirror-of]` scope inside `.wordcell`; delay-phase face overlap with re-flowed tray; reduced-motion same-pass hide; flushSync before paint untested; Undo "between landings" AC; card already in a WordCell does not fly; winning-commit ordering vs CAP-10; landing-order observation procedure; no screenshot baseline change expected; plus pass-3 minors recorded as Applied/unapplied above.
+
+## Owner answers (2026-10-14) — SPEC F28
+- The cell never looks empty during Confirm's fly-to-cell: previous top and landed cards stay visible until the last landing, then non-top committed cards hide together.
+- A free letter already in another WordCell flies to the target cell like the tray letters (rect to rect).
+Applied to the Description, Mechanism and Acceptance Criteria, including the three pass-5 majors (tests line, previous-card visibility, flying-set definition).
