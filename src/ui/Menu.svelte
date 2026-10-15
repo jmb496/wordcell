@@ -54,6 +54,7 @@ function replay(): void {
 // Ticket 6.6: Give up opens the end sheet at once, which owns the focus (its first action).
 function giveUp(): void {
   close();
+  overlays.clearTile();
   skipFocus = true;
   onDispatched(game.dispatch({ type: 'giveUp' }), (callback) => callback());
 }

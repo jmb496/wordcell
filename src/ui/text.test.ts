@@ -207,8 +207,14 @@ describe('AD-3 end sheet text', () => {
       'Lexicon Legend',
       'Perfect Deck',
     ]);
-    expect(text.bandMessage(1)).toBe('The cells are waking up.');
-    expect(text.bandMessage(5)).toBe('Fifty-two cards, one cell. Nothing left to prove.');
+    expect([0, 1, 2, 3, 4, 5].map((b) => text.bandMessage(b))).toEqual([
+      'Plenty of letters, not much broth. The deck forgives you.',
+      'The cells are waking up.',
+      'Halfway to glory, and it shows.',
+      'Long words, high cells. Nicely forged.',
+      'The dictionary is a little afraid of you.',
+      'Fifty-two cards, one cell. Nothing left to prove.',
+    ]);
     expect(() => text.bandName(6)).toThrow();
   });
 

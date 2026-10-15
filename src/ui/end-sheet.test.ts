@@ -125,3 +125,30 @@ describe('AD-13 end sheet entry', () => {
     }
   });
 });
+
+describe('AD-3 end sheet result mapping', () => {
+  const bands = [
+    [0, -40, 'Alphabet Soup', 'Plenty of letters, not much broth. The deck forgives you.'],
+    [1, 100, 'Warming Up', 'The cells are waking up.'],
+    [2, 200, 'Word Nerd', 'Halfway to glory, and it shows.'],
+    [3, 300, 'Wordsmith', 'Long words, high cells. Nicely forged.'],
+    [4, 400, 'Lexicon Legend', 'The dictionary is a little afraid of you.'],
+    [5, 530, 'Perfect Deck', 'Fifty-two cards, one cell. Nothing left to prove.'],
+  ] as const;
+
+  it.each(bands)(
+    'AD-3 band %i (finalScore %i) maps to %s through resultOf',
+    async (band, finalScore, name, message) => {
+      const { resultOf } = await load('won');
+      const view = { status: 'won', band, finalScore } as unknown as Parameters<typeof resultOf>[0];
+      expect(resultOf(view)).toEqual({ score: finalScore, band: name, message });
+    },
+  );
+
+  it('AD-3 resultOf throws on a finished view with no band or finalScore', async () => {
+    const { resultOf } = await load('won');
+    const view = (v: object) => v as Parameters<typeof resultOf>[0];
+    expect(() => resultOf(view({ finalScore: 1 }))).toThrow('AD-3');
+    expect(() => resultOf(view({ band: 1 }))).toThrow('AD-3');
+  });
+});

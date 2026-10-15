@@ -5,6 +5,8 @@ import { game } from '../shell/game.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { act } from './act';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import { resultOf } from './end-sheet';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { dropTarget } from './gestures/drop-target';
 import { type TrayLayout, type TrayTile, trayTiles } from './layout/tray';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
@@ -70,17 +72,18 @@ const tags: ReadonlyMap<CardId, number> = $derived(
       />
     {/if}
   </div>
-  {#if overlays.endSheet === 'collapsed' && view.band !== undefined && view.finalScore !== undefined}
+  {#if overlays.endSheet === 'collapsed' && (view.status === 'won' || view.status === 'gaveUp')}
+    {@const end = resultOf(view)}
     <!-- Epic 6 CAP-4 (6.6, DESIGN.md End screen): the collapsed end sheet's 56 px bar at the band's
          bottom edge, directly above the WordCell labels; no scrim, so the WordCells stay tappable. -->
     <button
       type="button"
       class="end-bar"
-      aria-label={text.endBar(view.finalScore, text.bandName(view.band))}
+      aria-label={text.endBar(end.score, end.band)}
       onclick={act(() => overlays.expandEndSheet())}
     >
-      <span class="end-score">{text.statNumber(view.finalScore)}</span>
-      <span class="end-band">{text.bandName(view.band)}</span>
+      <span class="end-score">{text.statNumber(end.score)}</span>
+      <span class="end-band">{end.band}</span>
     </button>
   {/if}
 </div>

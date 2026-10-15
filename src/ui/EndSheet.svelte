@@ -2,6 +2,8 @@
 import { tick, untrack } from 'svelte';
 import type { GameView } from '../engine/index';
 import { act } from './act';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import { field, resultOf } from './end-sheet';
 import { focusBoard } from './focus-board';
 import { requestReplay } from './new-game';
 import { openSurface } from './open-surface';
@@ -51,11 +53,6 @@ $effect(() => {
 
 // No part of the sheet acts on the second click of a multi-click (presence.ts `firstClick`).
 const first = (event: MouseEvent): boolean => event.detail <= 1;
-// AD-3: a finished view carries these fields; a missing one is a bug, never a default.
-function field(value: number | undefined, name: string): number {
-  if (value === undefined) throw new Error(`AD-3 finished GameView has no ${name}`);
-  return value;
-}
 
 const collapse = (event: MouseEvent): void => {
   if (first(event)) overlays.collapseEndSheet();
@@ -76,7 +73,7 @@ function onkeydown(event: KeyboardEvent): void {
 }
 
 function focusOnMount(button: HTMLButtonElement): void {
-  button.focus();
+  if (overlays.top === 'endSheet') button.focus();
 }
 </script>
 
@@ -100,9 +97,9 @@ function focusOnMount(button: HTMLButtonElement): void {
       </button>
       <div class="content">
         <h2 id="end-title">{result.status === 'won' ? text.endWinTitle : text.endGaveUpTitle}</h2>
-        <p class="score">{text.statNumber(field(result.finalScore, 'finalScore'))}</p>
-        <p class="band">{text.bandName(field(result.band, 'band'))}</p>
-        <p class="message">{text.bandMessage(field(result.band, 'band'))}</p>
+        <p class="score">{text.statNumber(resultOf(result).score)}</p>
+        <p class="band">{resultOf(result).band}</p>
+        <p class="message">{resultOf(result).message}</p>
         <dl>
           <div>
             <dt>{text.endLongestWord}</dt>

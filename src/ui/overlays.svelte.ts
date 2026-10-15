@@ -7,7 +7,7 @@
 // selection, `wordcellView` clears the view cell, `endSheet` collapses the sheet.
 // `resetForNewSession()` (New game, AD-4) kills the deferred end-sheet token, closes every entry
 // top-down and clears the rest. Invalid-state calls throw `AD-13 …` (rule 6); only CAP-5's named
-// no-ops are no-ops. DispatchResult finished/unfinished stays unwired until epic 6 (CAP-5).
+// no-ops are no-ops. DispatchResult finished/unfinished is wired in src/ui/end-sheet.ts (ticket 6.6).
 // Tile selection (epic 5 SPEC CAP-4, F1): one tray or strip tile `CardId` beside the tail selection,
 // with no entry (back ignores it, nav is never called); `selectTile` throws while a tile or tail
 // selection is set, `clearTile` is a no-op with none; `resetForNewSession()` clears it.

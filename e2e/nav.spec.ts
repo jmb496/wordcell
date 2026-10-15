@@ -230,3 +230,17 @@ test('AD-13 Undo then Redo into won on session-won reopens the end sheet: histor
   await expect.poll(() => wc(page).then((state) => state?.wc)).toBe(1);
   expect(await page.evaluate(() => history.length)).toBe(length);
 });
+
+test('AD-16 a relaunch into won with an unreadable history shows the notice over the sheet: wc 2, then dismissing leaves the sheet at wc 1', async ({
+  page,
+}) => {
+  await start(page, { history: VERSION_UNKNOWN, session: 'session-won.json' });
+  await boardReady(page);
+  await expect(notice(page)).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Every column cleared.' })).toHaveCount(1);
+  await expect.poll(() => wc(page).then((state) => state?.wc)).toBe(2);
+  await button(page, 'Not now').click();
+  await expect(notice(page)).toHaveCount(0);
+  await expect(page.getByRole('dialog', { name: 'Every column cleared.' })).toBeVisible();
+  await expect.poll(() => wc(page).then((state) => state?.wc)).toBe(1);
+});

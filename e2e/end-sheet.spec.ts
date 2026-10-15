@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { stored } from './helpers/blocking';
 import { centre, glidesSettled, openFixture, tapAt } from './helpers/board';
-import { type NavState, wc } from './helpers/dialogs';
+import { expectLeaves, type NavState, wc } from './helpers/dialogs';
 import { onAndroid, onDesktop } from './helpers/project';
 import { fixture, seedStorage } from './helpers/seed';
 
@@ -62,12 +62,35 @@ async function expectBoardFocus(page: Page): Promise<void> {
   else await expect(page.locator('main')).toBeFocused();
 }
 
+// Records, at the first frame the end sheet exists, how many animations run outside the sheet
+// (the flyToCell faces, AD-14); the sheet's own open transition is not counted.
+async function probeOutsideAnimations(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const probe: { outside?: number } = {};
+    (window as unknown as { __open: typeof probe }).__open = probe;
+    const tick = (): void => {
+      if (document.querySelector('[role="dialog"] .score') !== null) {
+        probe.outside = document
+          .getAnimations()
+          .filter(
+            (a) => !(a.effect as KeyframeEffect).target?.closest('[role="dialog"], .layer'),
+          ).length;
+        return;
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+}
+
 test.describe('android', () => {
   test.beforeEach(onAndroid);
 
   test('R-62 a win by Confirm opens the sheet after the glide: win title, final score = pre-win score plus the committed delta, no penalty line', async ({
     page,
   }) => {
+    // The session-won + Undo start stands in for a scripted one-move-from-won fixture (equivalent).
+    await probeOutsideAnimations(page);
     await openFixture(page, 'session-won', { steps: ['undo'] });
     await expect(primary(page)).toHaveAccessibleName('Confirm');
     const before = await topBarScore(page);
@@ -76,6 +99,10 @@ test.describe('android', () => {
     expect(Number.isFinite(delta)).toBe(true);
     await primary(page).click();
     await expect(sheet(page)).toBeVisible();
+    // The sheet opens only after the glide settles: no flyToCell face still animates at that frame.
+    expect(
+      await page.evaluate(() => (window as unknown as { __open: { outside?: number } }).__open),
+    ).toEqual({ outside: 0 });
     expect(await sheetScore(page)).toBe(before + delta);
     await expect(sheet(page).getByText(/letters? left/)).toHaveCount(0);
     await expect(replayButton(page)).toBeFocused();
@@ -202,17 +229,20 @@ test.describe('android', () => {
     await expect(replayButton(page)).toBeFocused();
   });
 
-  test('R-75 a scrim tap collapses and is consumed: a tap on column 1 selects nothing and pushes no entry', async ({
+  test('R-75 a scrim tap collapses and is consumed: a tap on a column card selects nothing, opens no view and pushes no entry', async ({
     page,
   }) => {
     await openFixture(page, 'session-gave-up', { endSheet: 'expanded' });
     const launch = await launchOf(page);
     await expect(sheet(page, GAVE)).toBeVisible();
     const before = await stored(page, SESSION);
+    // The sheet covers the WordCell row itself (a tap there lands on the sheet), so the scrim's
+    // tap goes to the board above it: a column card, which would otherwise select.
     await tapAt(page, await centre(page.locator('[data-column="1"] [data-card-id]').first()));
     await expect(anySheet(page)).toHaveCount(0);
     await expect.poll(() => wc(page)).toEqual({ wc: 0, launch });
     await expect(page.locator('[data-selection-outline]')).toHaveCount(0);
+    await expect(page.locator('[data-view-sheet]')).toHaveCount(0);
     await expect(bar(page)).toBeVisible();
     expect(await stored(page, SESSION)).toBe(before);
   });
@@ -221,10 +251,12 @@ test.describe('android', () => {
     page,
   }) => {
     await openFixture(page, 'session-won', { endSheet: 'expanded' });
+    const launch = await launchOf(page);
     await page.goBack();
     await expect(anySheet(page)).toHaveCount(0);
     await expect(bar(page)).toBeVisible();
-    await expect.poll(() => wcOf(page)).toBe(0);
+    await expect.poll(() => wc(page)).toEqual({ wc: 0, launch });
+    await expectLeaves(page);
   });
 
   test('R-75 the top bar and the action bar stay usable above the scrim', async ({ page }) => {
@@ -251,6 +283,7 @@ test.describe('android', () => {
       await expect(primary(page)).not.toHaveAccessibleName('New game');
       await expect(bar(page)).toHaveCount(0);
       await expect(page.locator('main')).not.toHaveJSProperty('inert', true);
+      await expectBoardFocus(page);
       if (name === 'session-gave-up') {
         const gaveUp = (await parsed(page)).gaveUp;
         expect(gaveUp).toBe(false);
@@ -271,6 +304,25 @@ test.describe('android', () => {
       await expectBoardFocus(page);
     });
   }
+
+  test('AD-13 R-62 a win by Redo while a sticky WordCell view is open drops the view and shows the sheet at wc 1', async ({
+    page,
+  }) => {
+    // A WordCell view cannot open in the Place phase after an Undo (a tap targets the cell), so the
+    // view opens over the collapsed won board, and Undo and Redo run as dispatched clicks (the
+    // view's scrim covers the top bar, as menu.spec).
+    await openFixture(page, 'session-won');
+    await tapAt(page, await centre(page.getByTestId('wordcell-6')));
+    await expect(page.locator('[data-view-sheet]')).toBeVisible();
+    await expect.poll(() => wcOf(page)).toBe(1);
+    await page.getByTestId('undo').dispatchEvent('click');
+    await glidesSettled(page);
+    await page.getByTestId('redo').dispatchEvent('click');
+    await glidesSettled(page);
+    await expect(page.locator('[data-view-sheet]')).toHaveCount(0);
+    await expect(sheet(page)).toBeVisible();
+    await expect.poll(() => wcOf(page)).toBe(1);
+  });
 
   test('R-75 Redo after an undone Give up does not reopen the sheet', async ({ page }) => {
     await openFixture(page, 'session-gave-up', { endSheet: 'expanded' });
@@ -344,6 +396,10 @@ test.describe('android', () => {
     await expect(panel).toBeVisible();
     await expect.poll(() => wcOf(page)).toBe(2);
     await expect(page.locator('main')).toHaveJSProperty('inert', true);
+    // The top bar (Undo) is unreachable under the panel.
+    expect(await page.getByTestId('undo').evaluate((el) => el.closest('[inert]') !== null)).toBe(
+      true,
+    );
     await page.keyboard.press('Escape');
     await expect(panel).toHaveCount(0);
     await expect(sheet(page)).toBeVisible();
