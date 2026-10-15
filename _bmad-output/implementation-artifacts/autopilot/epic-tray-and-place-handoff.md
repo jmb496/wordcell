@@ -13,3 +13,7 @@ Close-out docs: none from owner decisions; the 5.15 plan lists the close-out edi
 
 Next: run `/bmad-retrospective` for epic-tray-and-place, apply its approved doc fixes, then mark the epic done with `bmad-preview-ticketing`.
 Digest: _bmad-output/implementation-artifacts/autopilot/epic-tray-and-place-20261008-1002.md
+
+## Resolved — 5.8 browser check (2026-10-14)
+
+Owner checked the parted D-block outline across a row break by hand (fixture `session-place-compact`, Undo to Composing): two separate outlined pieces, one lock each. Looks fine; nothing open.
