@@ -1,6 +1,6 @@
 # Review log — story-surface-foundation-and-the-one-new-game-function
 
-State: pass 4: review (diverging, stopped)
+State: pass 4: done
 
 Pre-loop: HEAD d04dbfe, copy at story-surface-foundation-and-the-one-new-game-function.review-log.passes/pass0.md, 290 words (budget 1500 words).
 Ticket intent fields from tickets.toml entry 1 (verify, risk, unknown, interface, tests, owns, consumers): .review-log.passes/intent.md
@@ -85,4 +85,15 @@ Majors rose 5 -> 8, so the loop stops (diverging) and does not fix again.
 - [major] Opener clear-then-pop-then-push (F8) has no owner in Interface; entry 10 owns the closeView-first helper. Default: this ticket's open() only guards; helper delivered in entries 2/10; expected outcome per U case.
 ### Minor (unapplied)
 - historyNotice legal-top and chain U cases and transition-rule cases not in Tests list; close-then-reopen same id during exit; P6 spec covers open only (rule-coverage says open/close, peek); confirm style primary vs danger per DESIGN Buttons; entry 3 Esc proof depends on entry 10; confirm dismissal U case missing; confirm tops reachable only from empty; exit transition mechanism (class + transitionend; jsdom fires none); newGame sentence garbled.
-## Result — diverging at pass 4 (fix build-notes.md per-surface "Bars live" for menu/panel/dialog; AD-14/F7 reduced-motion wording; AD-12 act scan vs Dialog; then rerun)
+Resumed 2026-10-14 (second resume): owner sharpened F6, F7, F8 (commit bb8f525); settled, not findings. They answer the pass-4 majors on reduced motion, bars inert, and the openSurface(id) helper owned by 6.1. The diverging stop is lifted; all pass-4 majors and minors go to the fixer (technical defaults), the F6-F8 ones applied to the ticket and build-notes.md.
+### Applied (to the fixer, pass 4, aligned with F6-F8)
+- [major] Reduced motion: motion.ts exported constant sets --wc-fade-ms, CSS on --wc-reduced, no WAAPI, U pin (F7)
+- [major] Guard scope: new rules for the six new ids + resetConfirm tops; historyNotice keeps today's rules (existing tests unedited)
+- [major] newGame scan: textual `game.newGame(`; aliasing not detected
+- [major] act(): Dialog pass-through, callers wrap; Sheet/Panel wrap own close/onscrim; HANDLER_ATTRIBUTE gains `close`
+- [major] per-id depth matrix; 360x320 moved to entry 2
+- [major] top bar inert under menu/panel/dialog/History notice, U test; build-notes.md table rows updated (F6)
+- [major] openSurface(id) owned by 6.1 with U outcomes (F8); tickets.toml entry 10 interface edited to reuse it
+- [minor] Tests list additions, exit transition via transitionend, P6 spec scope, confirm style primary, Esc proof note, confirm dismissal U case
+Words (docs): 1528 (5.3 x pass 0; budget 1500)  |  Snapshot: story-surface-foundation-and-the-one-new-game-function.review-log.passes/pass4.md
+Note: tickets.toml entry 3 `verify` still lists Esc dismissal though entry 3 precedes entry 10 (mismatch, unedited).
