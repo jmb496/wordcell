@@ -1,5 +1,5 @@
 # Review loop log — ticket 6.6 build (code mode)
-State: pass 3: done
+State: pass 4: done
 Range: 889ca36..dbbf83a (HEAD dbbf83a); tree snapshot 0: 9f5ca2b476fb9e9519e5620dbe4b31bf8412bc28
 Intent: _bmad-output/initiative-wordcell-v1/epic-game-surfaces-and-keyboard/story-end-sheet-result-collapse-give-up-and-relaunch-plan.md
 
@@ -33,3 +33,12 @@ Reviewers: fix diff, correctness+edge, verification+intent  |  Findings: major 2
 - [major] Esc with Menu over expanded sheet also collapses sheet (Menu.svelte / EndSheet.svelte window keydown) → preventDefault/defaultPrevented + e2e
 - [major] longest-word/dash tests cited R-84, sentence is R-83 → rename + comments
 - [minor] Redo disabled assertion on game-over; Replay from expanded sheet restores board focus
+
+## Pass 4
+Reviewers: fix diff, full target  |  Findings: major 0, minor 2 (Esc guard coverage for other overlays; comment at EndSheet replay focus)  |  Dropped: 0
+
+## Result — converged after 4 passes
+Majors per pass: 6, 1, 2, 0. Decision needed: wording of 'Collapse result', 'Show result: …', 'Longest word', 'Words placed' (not in EXPERIENCE.md catalogue); default keep as built.
+Accepted deviation for owner: win-by-Confirm test starts from session-won + Undo instead of a scripted one-move-from-won fixture; no replay-valid fixture reaches bands 1-5/530 (view-level mapping unit test used instead).
+Unapplied minors: deferred open throws with another overlay on stack; Undo during win glide open/close; onUnfinished close() with overlay above; collapsed bar overlap/overflow at narrow widths; penalty alignment; one-frame bar/sheet overlap; Replay focus after History notice at boot; reduced-motion fade test; transition-duration test; collapse+reload test; history.length asserts; AD-3 isFinished helper; build-notes says board inert when expanded (spec/plan disagree); expectBoardFocus fallback only unit-tested; Esc guard tests for other overlays; plan change log entries for deviations.
+Final: npm test 2518 pass, lint pass, check pass.
