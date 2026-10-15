@@ -440,7 +440,7 @@ Layer order: table → board surfaces → cards → sticky bars (top bar, dictio
 action bar, collapsed end-sheet bar) → selection/lift → hover peek → drag layer → scrim →
 overlay. A lifted or dragged tail passes over the bars.
 The top bar and the action bar additionally sit above the end sheet's scrim. They sit below every
-other scrim and overlay (dialogs, panels, the sticky view).
+other scrim and overlay (dialogs, panels, the menu sheet, the sticky view), so while one of those is open ☰, Undo and Redo are covered and unreachable: the player closes it first (owner, 2026-10-15).
 
 ## Shapes
 
