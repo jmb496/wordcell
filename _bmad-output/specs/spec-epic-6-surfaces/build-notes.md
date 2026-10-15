@@ -16,7 +16,7 @@ Menu, end sheet, panels, dialogs, timer bar at 360 px. The version footer is fix
 | History notice | yes | no (top bar `inert`, SPEC F6) | Tab, Enter, Space, Esc only | its action | the board |
 | End sheet expanded | yes | yes | M, N, ?, Z, Y, Esc | first action | the board on collapse |
 | End sheet collapsed | no | yes | M, N, ?, Z, Y, Esc | the bar | n/a |
-| WordCell view | no | yes | M, N, ?, Z, Y, Esc | the view | the cell |
+| WordCell view | no | no (scrim covers them; owner 2026-10-15) | M, N, ?, Z, Y, Esc | the view | the cell |
 
 Check each cell against EXPERIENCE.md when building; a mismatch stops the ticket.
 
