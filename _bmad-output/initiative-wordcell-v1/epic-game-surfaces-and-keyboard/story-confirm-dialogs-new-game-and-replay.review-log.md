@@ -1,6 +1,6 @@
 # Review log — ticket 6.3
 
-State: pass 3: done
+State: pass 4: done
 
 Pre-loop: HEAD 65d6df3da4d3afec885f9a86565cf2e481c0d163, 319 words (story-confirm-dialogs-new-game-and-replay.review-log.passes/pass0.md)
 
@@ -55,3 +55,16 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 Words: 825 (2.59 x pass 0)  |  Snapshot: story-confirm-dialogs-new-game-and-replay.review-log.passes/pass3.md
 ### Applied
 - both majors + minors 3-8 → fixer items 1-8; unverified: effect focus beats presence restoreFocus (build to confirm)
+
+## Pass 4 — 2026-10-15
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 2 (merged), minor 1 (merged into major 1), decision-needed 0  |  Dropped in triage: 0
+### Majors
+1. Menu skip flag and the ConfirmDialogs ☰ target are unscoped: flag must be set only when the gate opens a confirm (at-once actions keep Menu's focus-main, e2e/menu.spec.ts 240/248), and ☰ applies only to menu-opened confirms (contradicts "non-menu opener returns to main")
+2. Existing e2e/menu.spec.ts "New game and Replay" block (lines ~224-252) runs mid-game fixtures (session-composing) that will now open a confirm; ticket must say the block is updated (mid-game via confirm accept, others at once) or test:all goes red
+### Default applied (technical)
+- both; reviewers' defaults
+### Decision needed
+- none
+Words: 826 (2.59 x pass 0)  |  Snapshot: story-confirm-dialogs-new-game-and-replay.review-log.passes/pass4.md
+### Applied
+- both majors → fixer items 1-2
