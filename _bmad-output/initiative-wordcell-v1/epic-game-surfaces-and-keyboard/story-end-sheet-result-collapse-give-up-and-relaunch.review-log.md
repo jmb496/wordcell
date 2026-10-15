@@ -1,6 +1,6 @@
 # Review log — ticket 6.6 End sheet
 
-State: pass 2: done
+State: pass 3: done
 Pre-loop: HEAD a65c897babe48d472a29189390e7b13327407b27, 436 words, copy at _bmad-output/initiative-wordcell-v1/epic-game-surfaces-and-keyboard/story-end-sheet-result-collapse-give-up-and-relaunch.review-log.passes/pass0.md
 Docs mode, thorough, max 7. Growth budget default 2.5x (1090 words).
 
@@ -51,3 +51,19 @@ Words (docs): see pass 2 fix below
 - getAnimations scoping / first-paint mechanism, Tab order, 360 px fit, WordCell view over collapsed bar, Esc over stacked surface, tie fixture: procedure detail for the build plan (near the growth budget) or stretch
 - Statistics-over-sheet Undo: top bar inert under panels (SPEC F6)
 Words: 1089 (2.5 x pass 0)  |  Snapshot: story-end-sheet-result-collapse-give-up-and-relaunch.review-log.passes/pass2.md
+
+## Pass 3 — 2026-10-15
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 2 (after triage), minor 2, decision-needed 0  |  Dropped in triage: 14
+### Applied
+- [major] Pass 2 cut `(the scrim covers the board between the bars)` and the scrim tap `consumed` from the Description (SPEC CAP-4, tickets.toml entry 6 state both) → restore, paid for by cutting words elsewhere
+- [major] "a status change before the deferred callback fires pushing nothing" is listed among Playwright cases but its trigger is entry 12's guard → make it a unit test of the token callback (AD-13 re-check), default applied
+- [minor] R-83 boundaries already exist in `src/engine/scoring.test.ts`: reword Verify; Perfect Deck fallback sentence reworded
+- [minor] collapsed bar shows score and band (DESIGN.md End screen), word-neutral edit
+### Default applied (technical)
+- re-check case as unit test; engine boundary tests already exist
+### Decision needed
+- none
+### Dropped
+- Store call vs sheet-entry pop order (adversarial major): AD-13 states the handler calls resetForNewSession; order is the spine's
+- Give up with a sticky view open, Statistics stack, focus after Undo of a Give up, tie case, zero-letters line, double activation, getAnimations timing, scrim "consumed" testability, all-empty focus case, Perfect Deck conditional: stretch, plan-level, or already covered by AD-13/EXPERIENCE (Give up with `n` ≥ 1 always; zero letters is a win)
+Words: 1095 (2.5 x pass 0)  |  Snapshot: story-end-sheet-result-collapse-give-up-and-relaunch.review-log.passes/pass3.md
