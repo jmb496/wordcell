@@ -1,5 +1,5 @@
 # Review loop log: ticket 6.9 build (code mode)
-State: pass 1: done
+State: pass 2: done
 Target: commit range 4005750..HEAD (a8c7a07), diff at 6-9-build.passes/pass0.diff
 Intent: _bmad-output/initiative-wordcell-v1/epic-game-surfaces-and-keyboard/story-how-to-play-panel-plan.md
 Pre-loop: HEAD a8c7a07bc78419b673307857af434682f1eba5c6, tree snapshot 0 e2b023ad950f9a4c76cad85eab897a244e67969c
@@ -23,3 +23,11 @@ Reviewers: correctness, edge cases, verification gap, intent alignment  |  Findi
 - keys documented before entry 10 wires them (plan scope, by design); Esc-guard and tile-selection tests; skipFocus reset check; band-threshold deviation note
 ### Applied (fixer: all 7 items; test 2537 pass, lint 0 errors, check 0 errors, 30 e2e pass on android)
 Snapshot: tree 82b4ef17c172d9ebe33088ac9060d99e0de67020
+
+## Pass 2 — 2026-10-15
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 0, minor 0, decision-needed 0  |  Dropped: 0
+No fixes; tree unchanged from pass 1 snapshot 82b4ef17c172d9ebe33088ac9060d99e0de67020.
+
+## Result — converged after 2 passes
+Final: npm test 2537 pass, lint 0 errors, check 0 errors.
+Unapplied minors: keyboard rows document keys not wired until entry 10 (plan scope); Esc-handler guards and tile-selection open untested; skipFocus reset on Menu reopen unconfirmed; band test pins R-83 arithmetic rather than engine thresholds (plan logs it); 52.00003 row-height cause for the How to play row not found (tolerance kept for that row only).
