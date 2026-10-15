@@ -45,6 +45,58 @@ function bandOf(band: number): (typeof BANDS)[number] {
   return entry;
 }
 
+/** The six band names in band 0–5 order (How to play, ticket 6.9; no copy of the table). */
+export function bandNames(): readonly string[] {
+  return BANDS.map((b) => b.name);
+}
+
+// EXPERIENCE.md Rating bands "English score" column (R-83: ceil(t × 530 / 520); the engine `band`
+// is not exported, AD-2). Static strings, no threshold logic.
+const BAND_SCORES = [
+  'below 159',
+  '159 or more',
+  '265 or more',
+  '378 or more',
+  '469 or more',
+  '530 (every card placed)',
+] as const;
+
+// How to play panel (ticket 6.9, CAP-8; EXPERIENCE.md How to play panel; spec §3–§6, §8, §9). The
+// owner reads this text at ticket review. Each section body is a list of paragraphs.
+const howTo = {
+  goal: [
+    'Empty all eight columns by placing words on the WordCells. A word placed on a high-numbered cell scores more, so long words on high cells score most.',
+  ],
+  table: [
+    'The table has eight columns of cards, 52 cards in all, and eight WordCells numbered 3 to 10 above them. Only the bottom card of a column can be picked up alone; a stack tail is that card and every card above it that you pick up with it.',
+    'The top card of a WordCell is a free letter: it can join one word, once, and its cell then shows the card beneath. One card, QU, counts as two letters everywhere, including scoring, and carries a \u00d72 badge.',
+  ],
+  move: [
+    'Pick up a stack tail, by dragging it or by tapping a card, and drop it on a column, its own included. The tail goes into the word you are composing.',
+    'If the column you drop on is not empty, at least one of its bottom cards must join the word (the destination block, locked in order). Choose how many with \u2212 and +, or by tapping a card in that column. Flip puts the block at the other end, reversed. Dropping on an empty column adds no destination cards.',
+    'Add free letters by tapping a WordCell\u2019s top card, and arrange the cards you moved and the free letters in any order. The word needs three or more letters and must be in the word list; tap Validate to check it.',
+    'Then choose a WordCell no higher than the word is long (the highest is already chosen), order the cards for placement, and tap Confirm.',
+  ],
+  undo: [
+    'Undo steps back one phase at a time, all the way to the deal. Redo steps forward again until you make a different change.',
+    'There is no Cancel button: Undo is always one tap away.',
+    'There are no hints.',
+  ],
+  empty: [
+    'An empty column is a legal destination, and the only one where no destination cards have to join the word. That is why emptying a column is valuable: a word built from picked-up cards and free letters alone needs one.',
+  ],
+  scoring: [
+    'Your score is the sum, over the WordCells, of the letters in the cell times the cell\u2019s number. A QU card counts as two letters.',
+    'If you give up, every letter left in the columns costs 10 points (a QU costs 20), and the score can go below zero. Giving up can be undone.',
+    'The rating at the end depends on your score. For this deck:',
+  ],
+  exampleIntro: [
+    'Columns, top to bottom: column 1 holds F E D K A, column 2 holds X O R I N, column 3 holds L M F B. Pick up E D K A from column 1 and drop it on column 3: its bottom card B must join, giving BAKED. If WordCell 6 shows L, add it for BALKED. Dropping on column 1 itself leaves F, which must join: FAKED, or with the L, FLAKED. Laying E D K A under column 3 without B is not allowed.',
+  ],
+} as const;
+
+const EXAMPLE_WORDS = ['BAKED', 'BALKED', 'FAKED', 'FLAKED'] as const;
+
 export const text = Object.freeze({
   validate: 'Validate',
   needLetters: 'Need 3+ letters',
@@ -161,6 +213,10 @@ export const text = Object.freeze({
   endBar: (score: number, band: string) =>
     `Show result: ${score < 0 ? `\u2212${-score}` : score}, ${band}`,
   bandName: (band: number) => bandOf(band).name,
+  bandScore: (band: number) => {
+    bandOf(band);
+    return BAND_SCORES[band];
+  },
   bandMessage: (band: number) => bandOf(band).message,
   // Q-06 the QU card's badge (DESIGN.md Components, QU card).
   quBadge: '\u00d72',
@@ -203,4 +259,63 @@ export const text = Object.freeze({
   viewTop: 'top',
   // F27 desktop hover peek (catalogue row 107): the older-cards line above the top 14.
   olderCards: (n: number) => (n === 1 ? '+1 older card' : `+${n} older cards`),
+  // Epic 6 CAP-8 (ticket 6.9) How to play panel and its menu row; flagged for the owner's text review.
+  howToPlay: 'How to play',
+  closeHowToPlay: 'Close how to play',
+  howTo: {
+    headings: {
+      goal: 'The goal',
+      table: 'The table',
+      move: 'A move',
+      undo: 'Undo and Redo',
+      empty: 'Empty columns',
+      scoring: 'Scoring, giving up and bands',
+      example: 'Worked example',
+      controls: 'Controls',
+    },
+    ...howTo,
+    exampleWords: EXAMPLE_WORDS,
+    exampleCaption: (word: string) => `${word}, ${letters(word.length)}`,
+    controlCaptions: { touch: 'Touch', mouse: 'Mouse', keyboard: 'Keyboard' },
+    // [gesture, effect] rows from EXPERIENCE.md's interaction text.
+    touch: [
+      ['Drag a card', 'Lifts it and the cards below it; drop on a column to start a word'],
+      ['Tap a card, then a column', 'Picks up the tail, then drops it on that column'],
+      ['Tap Here', 'Drops the tail on its own column'],
+      ['Tap a card in the destination column', 'Sets how many destination cards join'],
+      [
+        'Tap a WordCell\u2019s top card',
+        'Adds it as a free letter; tap its tile twice to remove it',
+      ],
+      ['Drag a tile, or tap two tiles', 'Rearranges the word'],
+      ['Tap a WordCell', 'Opens its cards in a view'],
+      ['Long-press a WordCell', 'Peeks at its cards until you let go'],
+    ],
+    mouse: [
+      ['Drag and click', 'The same as touch'],
+      ['Hover a column card', 'Outlines the tail a click would pick up'],
+      ['Hover a WordCell', 'Peeks at its cards after a short pause'],
+    ],
+    // [key, effect] rows: the complete EXPERIENCE.md Keyboard table.
+    keyboard: [
+      ['1\u20138', 'Select the bottom card of a column, or drop the selected tail on it'],
+      ['\u2191 / \u2193', 'Make the selected tail longer / shorter'],
+      [
+        '3\u20139, 0 (= 10)',
+        'Add that WordCell\u2019s top card as a free letter, or set it as the target',
+      ],
+      ['\u2190 / \u2192', 'Move focus along the tiles or the strip'],
+      ['Shift + \u2190 / \u2192', 'Move the focused tile or card one place'],
+      ['Space', 'Tap the focused card, tile or WordCell; on a WordCell, open its view'],
+      ['+ or = / -', 'More / fewer destination cards'],
+      ['F', 'Flip the destination block'],
+      ['Enter', 'Tap the focused item; otherwise Validate or Confirm'],
+      ['Z, Ctrl/Cmd + Z', 'Undo'],
+      ['Y, Ctrl/Cmd + Y, Ctrl/Cmd + Shift + Z', 'Redo'],
+      ['Esc', 'Close the topmost panel, or clear the selection'],
+      ['M', 'Open the menu'],
+      ['N', 'Start a new game'],
+      ['?', 'Open this page'],
+    ],
+  },
 } as const);

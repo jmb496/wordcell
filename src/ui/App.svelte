@@ -15,6 +15,8 @@ import type { Controller } from './gestures/controller';
 import Halted from './Halted.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import HistoryNotice from './HistoryNotice.svelte';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import HowToPlayPanel from './HowToPlayPanel.svelte';
 import type { Layout } from './layout/layout.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Menu from './Menu.svelte';
@@ -93,6 +95,7 @@ function rejectedBody(reason: RejectReason): string {
   <EndSheet view={board} />
   <PreferencesPanel />
   <StatisticsPanel />
+  <HowToPlayPanel />
   <ConfirmDialogs />
   {#if overlays.isOpen('historyNotice')}
     <HistoryNotice />

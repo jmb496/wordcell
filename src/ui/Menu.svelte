@@ -74,6 +74,13 @@ function statistics(): void {
   openSurface('statistics');
 }
 
+// Ticket 6.9: How to play closes the menu, then opens the panel, which owns the focus (as above).
+function howToPlay(): void {
+  close();
+  skipFocus = true;
+  openSurface('howToPlay');
+}
+
 const closeOnEsc = act((): void => {
   if (overlays.top === 'menu') close();
 });
@@ -137,6 +144,16 @@ function onkeydown(event: KeyboardEvent): void {
           <circle cx="15" cy="17" r="2" />
         </svg>
         <span>{text.preferences}</span>
+      </button>
+    </li>
+    <li>
+      <button type="button" class="row" onclick={act(howToPlay)}>
+        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+          <circle cx="12" cy="12" r="9" />
+          <path d="M9.5 9.5 a2.5 2.5 0 1 1 3.5 2.3 c-0.7 0.4 -1 0.9 -1 1.7" />
+          <path d="M12 17 V17.01" />
+        </svg>
+        <span>{text.howToPlay}</span>
       </button>
     </li>
   </ul>

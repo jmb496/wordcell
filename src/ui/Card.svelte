@@ -37,7 +37,7 @@ let {
   face: Face;
   /** Where the element sits; a live card also exposes it as data-place. */
   place: 'column' | 'cell' | 'tray' | 'strip' | 'view';
-  mirror?: 'ghost' | 'used' | 'block' | 'view';
+  mirror?: 'ghost' | 'used' | 'block' | 'view' | 'static';
   full?: boolean;
   hidden?: boolean;
   /** A live D card in its column in Composing (DESIGN.md Card, in destination block). */
@@ -111,6 +111,7 @@ const inView = $derived.by(() => {
   class:destination
   class:ghost
   class:used={mirror === 'used'}
+  class:static={mirror === 'static'}
   class:block
   class:start={segment?.start}
   class:end={segment?.end}
@@ -123,7 +124,7 @@ const inView = $derived.by(() => {
   data-card-id={mirror ? undefined : id}
   data-testid={mirror ? undefined : `card-${id}`}
   data-place={mirror ? undefined : place}
-  data-mirror-of={mirror ? id : undefined}
+  data-mirror-of={mirror && mirror !== 'static' ? id : undefined}
   aria-hidden={mirror ? 'true' : undefined}
 >
   <div class="face">
@@ -157,6 +158,8 @@ const inView = $derived.by(() => {
     touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
   }
   .card.full { height: var(--wc-H); }
+  /* Ticket 6.9: a static How to play example card takes no gestures; the panel must scroll. */
+  .card.static { touch-action: pan-y; }
   .card.cell { position: absolute; top: 0; left: 0; }
   .card.hidden { visibility: hidden; }
   /* R-65: a WordCell view mirror, in the sheet's flow; the sheet pans under it. */

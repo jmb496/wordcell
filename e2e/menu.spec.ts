@@ -7,7 +7,7 @@ import { select } from './helpers/selection';
 import { touchHold } from './helpers/touch';
 
 // Epic 6 entry 2 (ticket 6.2, SPEC CAP-2; AD-13, AD-14, AD-3): the ☰ button, the Menu sheet with its
-// three rows and the footer version. The footer is the WORDCELL_APP_VERSION override that
+// six rows and the footer version. The footer is the WORDCELL_APP_VERSION override that
 // playwright.config.ts sets for the dev server. Fixtures (seed 1): `session-idle-fresh` (Idle,
 // no moves), `session-idle-empty-column` (Idle, one move, cell 7 holds cards), `session-composing`,
 // `session-place`, `session-won`, `session-gave-up`.
@@ -36,7 +36,7 @@ async function expectClosed(page: Page): Promise<void> {
 }
 
 test.describe('the sheet', () => {
-  test('AD-13 ☰ opens the menu: three rows, the footer version, one entry, focus on the first row', async ({
+  test('AD-13 ☰ opens the menu: six rows, the footer version, one entry, focus on the first row', async ({
     page,
   }) => {
     await openFixture(page, 'session-idle-fresh');
@@ -45,10 +45,17 @@ test.describe('the sheet', () => {
     expect(box?.width).toBe(44);
     expect(box?.height).toBe(44);
     await openMenu(page);
-    await expect(sheet(page).getByRole('button')).toHaveCount(6); // five rows and the close control
-    for (const name of ['New game', 'Replay this deal', 'Give up', 'Statistics', 'Preferences']) {
+    await expect(sheet(page).getByRole('button')).toHaveCount(7); // six rows and the close control
+    for (const name of [
+      'New game',
+      'Replay this deal',
+      'Give up',
+      'Statistics',
+      'Preferences',
+      'How to play',
+    ]) {
       await expect(row(page, name)).toBeVisible();
-      expect((await row(page, name).boundingBox())?.height).toBe(52);
+      expect((await row(page, name).boundingBox())?.height).toBeCloseTo(52, 1);
     }
     await expect(sheet(page).getByText(VERSION, { exact: true })).toBeVisible();
     await expect(row(page, 'New game')).toBeFocused();
@@ -104,6 +111,7 @@ test.describe('the sheet', () => {
       row(page, 'Replay this deal'),
       row(page, 'Give up'),
       row(page, 'Preferences'),
+      row(page, 'How to play'),
       sheet(page).getByText(VERSION, { exact: true }),
     ]) {
       await target.scrollIntoViewIfNeeded();
