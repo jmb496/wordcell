@@ -10,3 +10,13 @@ Measured by reviewer: the leading space DOES render (flex item, white-space: pre
 - [major] Tray.svelte .pending-suffix — add padding-inline-start 0.25em (default applied, technical)
 - [major] e2e/pending-draft.spec.ts — rendered-gap assertion (Range rect of '·' vs word right edge >= 6px)
 State: pass 1: done
+State: pass 2: done
+
+## Pass 2
+Reviewers: fix diff  |  Findings: major 0, minor 1, decision-needed 0
+### Default applied (technical)
+- gap before '·': leading space did render (~3.6px) but too narrow → 0.25em padding-inline-start (pass 1)
+
+## Result — converged after 2 passes
+Baselines board-idle-pending-draft-{android,desktop}-linux.png need regeneration via Docker `npm run test:screens`.
+Unapplied minor: e2e/pending-draft.spec.ts 360px test re-lists gap/whiteSpace with dummy values in toEqual; destructure them out instead.
