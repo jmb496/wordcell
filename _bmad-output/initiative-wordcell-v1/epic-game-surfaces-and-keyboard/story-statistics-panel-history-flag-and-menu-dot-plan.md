@@ -3,7 +3,7 @@ title: 'Statistics panel, history flag and menu dot'
 type: 'feature'
 ticket: '5'
 created: '2026-10-15'
-status: built
+status: done
 baseline_revision: 'a1f53abfac2ffe845f243bd69f9700f64938691b'
 route: 'full'
 route_source: 'auto'

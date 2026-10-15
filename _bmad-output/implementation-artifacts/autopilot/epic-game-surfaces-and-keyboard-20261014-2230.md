@@ -93,3 +93,16 @@ Decision: wording of the Statistics labels the builder chose (Games played, Game
 Close-out docs: EXPERIENCE.md message catalogue ← Statistics panel strings once approved (owner, pending); SPEC.md F6 and EXPERIENCE/DESIGN Elevation note as above.
 Tokens: 2.5M input-equivalent (build 75%, code review 15%)
 Resume: reply with your choice or "default", record it in the ticket Notes, rerun loop.sh; it resumes at Step D.
+
+## 6.5 Statistics panel, history flag and menu dot — done
+What it adds: a Statistics panel (games played, won, given up, best and average score, longest word with its letter count) and an error dot on the menu button when saved history is unreadable.
+Ticket review: 5 passes, converged; longest-word wording answered by you (2026-10-15)
+Build: built; commit 44a6c0d
+Code review: thorough, 2 passes, converged (majors 2, 0); fixes in 0a422e8; Statistics labels kept as built (owner, 2026-10-15)
+Tests: all passing, screenshots passed (22 passed, 8 skipped)
+Ref to fix upstream: none
+Tokens: resume session 0.1M input-equivalent (orchestrator)
+Worth knowing: unapplied minors in review-loop/6-5-build.md § Result (extra e2e assertions for the dot and focus return; a test title that overstates).
+Close-out docs:
+- EXPERIENCE.md message catalogue ← Statistics panel strings and longest-word "8 letters" caption (owner, 2026-10-15)
+- SPEC.md F6 already holds the 2026-10-15 answer; EXPERIENCE/DESIGN Elevation note on the WordCell view may need the same
