@@ -21,3 +21,17 @@ Snapshot: tree dba94705e8f79b748efc4f37c0a88931ac35a005
 ### Dropped
 - text.ts "catalogue row 103" unverifiable — EXPERIENCE.md line 103 is that row; citation correct
 - AD-13 test names — matches existing names in the same file (lines 316, 419), AD-13 is a bound id; style only
+
+## Pass 2
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 0, minor 2, decision-needed 0  |  Dropped in triage: 0
+### Applied
+- none (no major)
+### Unapplied minors
+- e2e/end-sheet.spec.ts:214,222 — block tests named R-84; the unreadable-history rule is §2/Q-33 (rename for id tracing)
+- e2e/end-sheet.spec.ts:203-211 expectBlock — no assertion of DOM order (block under stat lines, above Replay/Statistics) or the danger styling; only the screenshot baseline covers them
+- Pass 1 carried: AD-13 test names; guard covered by e2e not unit test (plan amended)
+
+State: pass 2: done
+
+## Result — converged after 2 passes
+Final state: npm test 2520 passed, lint clean, check 0 errors (run after pass 1 fixes, no later changes).
