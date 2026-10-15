@@ -1,6 +1,6 @@
 # Review log — story-surface-foundation-and-the-one-new-game-function
 
-State: pass 3: review (diverging, stopped)
+State: pass 3: done
 
 Pre-loop: HEAD d04dbfe, copy at story-surface-foundation-and-the-one-new-game-function.review-log.passes/pass0.md, 290 words (budget 1500 words).
 Ticket intent fields from tickets.toml entry 1 (verify, risk, unknown, interface, tests, owns, consumers): .review-log.passes/intent.md
@@ -60,4 +60,12 @@ Majors rose 4 → 5, so the loop stops (diverging) and does not fix again.
 - 360 × 320 test: jsdom cannot measure layout; assert CSS rules in Vitest or move to Playwright; fix the viewport exactly
 - scan regex: also catch aliases/destructured newGame; ActionBar/App check is a source scan for the ./new-game import
 - Undo test at depth 3 (moot if the Undo paragraph is removed); halt with a surface open points to existing Halted behaviour
-## Result — diverging at pass 3 (fix build-notes.md F5 per-surface table "Bars live" for menu/panel/confirm, and the reduced-motion rule for CSS surfaces in AD-14/motion.ts, then rerun)
+Resumed 2026-10-14: owner recorded F6, F7, F8 (SPEC Decisions, .memlog.md); the diverging stop is lifted and F6-F8 are settled, not findings.
+### Applied (to the fixer, pass 3, aligned with F6-F8)
+- [major] Undo-over-a-surface paragraph and test deleted (F6); by-construction sentence restored
+- [major] openers clear selections/close views and peeks first, pop then push; open throws on peek, clears hoverPeek; U cases (F8)
+- [major] reduced motion: CSS opacity 120 ms via --wc-reduced, no WAAPI; e2e uses reducedMotion emulation (F7)
+- [major] transition-rule tests added (close/removal, peek, peek-to-sticky, open-then-close, focus)
+- [major] historyNotice legal tops (empty, endSheet), only resetConfirm stacks; U case
+- [minor] confirm tops empty-only, depth-3 chain, Esc owner note, act() on scrim/action, 360x320 as Playwright, scan aliases
+Words (docs): 1349 (4.7 x pass 0; budget 1500)  |  Snapshot: story-surface-foundation-and-the-one-new-game-function.review-log.passes/pass3.md
