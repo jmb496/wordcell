@@ -1,6 +1,6 @@
 # Review log — story-surface-foundation-and-the-one-new-game-function
 
-State: pass 3: done
+State: pass 4: review (diverging, stopped)
 
 Pre-loop: HEAD d04dbfe, copy at story-surface-foundation-and-the-one-new-game-function.review-log.passes/pass0.md, 290 words (budget 1500 words).
 Ticket intent fields from tickets.toml entry 1 (verify, risk, unknown, interface, tests, owns, consumers): .review-log.passes/intent.md
@@ -69,3 +69,20 @@ Resumed 2026-10-14: owner recorded F6, F7, F8 (SPEC Decisions, .memlog.md); the 
 - [major] historyNotice legal tops (empty, endSheet), only resetConfirm stacks; U case
 - [minor] confirm tops empty-only, depth-3 chain, Esc owner note, act() on scrim/action, 360x320 as Playwright, scan aliases
 Words (docs): 1349 (4.7 x pass 0; budget 1500)  |  Snapshot: story-surface-foundation-and-the-one-new-game-function.review-log.passes/pass3.md
+
+## Pass 4 — 2026-10-14
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 8 (merged), minor 8, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1349 (4.7 x pass 0; no fix run in pass 4)  |  Snapshot: .review-log.passes/pass3.md
+Majors rose 5 -> 8, so the loop stops (diverging) and does not fix again.
+### Majors (not fixed; all technical, default proposed)
+- [major] Reduced motion (4 reviewers): --wc-reduced is a 0/1 flag written by shell prefs, REDUCED_FADE_MS is an unexported ui const, shell cannot import ui; "literal fed through --wc-reduced" (F7 wording) is unbuildable. Default: keep flag; UI sets a 120 ms CSS property from an exported REDUCED_FADE_MS; surface CSS switches on it; U test pins agreement.
+- [major] Pair guard / peek throw / hoverPeek clear applied to historyNotice and resetConfirm break existing overlays.svelte.test.ts cases (open historyNotice over peek, over sticky view, hoverPeek kept) that the ticket says stay green. Default: scope to the six new ids (+ resetConfirm tops), or list the tests as edited.
+- [major] newGame scan stated two ways (alias/destructure vs literal `game.newGame(`); architecture-scan.ts lets aliasing pass. Default: textual `game.newGame(` check, drop alias claim, or AST check with positive controls.
+- [major] Moving act() inside Dialog/Sheet breaks the AD-12 act scan (Dialog.svelte is in ACT_EXEMPT_FILES; HistoryNotice already passes ondismiss={act(...)}). Default: Dialog stays pass-through, callers wrap; Sheet/Panel wrap own close, scan accepts onscrim/onclose.
+- [major] "Each new id at depth 0, 1 and max 3" untestable: only endSheet,statistics,resetConfirm and endSheet,historyNotice,resetConfirm reach depth 3. Default: per-id depth matrix.
+- [major] 360x320 Playwright check has no page (primitives unmounted until entry 2) and contradicts Notes. Default: move to entry 2.
+- [major] "Cover or inert" for Undo under a surface: Tab+Enter reaches a covered Undo with [endSheet, statistics]; build-notes "Bars live: per EXPERIENCE.md" does not say no. Default: bars inert unless top is empty/endSheet/wordcellView; U test.
+- [major] Opener clear-then-pop-then-push (F8) has no owner in Interface; entry 10 owns the closeView-first helper. Default: this ticket's open() only guards; helper delivered in entries 2/10; expected outcome per U case.
+### Minor (unapplied)
+- historyNotice legal-top and chain U cases and transition-rule cases not in Tests list; close-then-reopen same id during exit; P6 spec covers open only (rule-coverage says open/close, peek); confirm style primary vs danger per DESIGN Buttons; entry 3 Esc proof depends on entry 10; confirm dismissal U case missing; confirm tops reachable only from empty; exit transition mechanism (class + transitionend; jsdom fires none); newGame sentence garbled.
+## Result — diverging at pass 4 (fix build-notes.md per-surface "Bars live" for menu/panel/dialog; AD-14/F7 reduced-motion wording; AD-12 act scan vs Dialog; then rerun)
