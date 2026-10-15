@@ -1,6 +1,6 @@
 # Review log — story-keyboard-overlay-keys-f39-and-stale-tile-selection.md
 
-State: pass 2: done
+State: done
 
 Pre-loop: HEAD 631226a285aabd1754738d718fec41f3757da773; copy at story-keyboard-overlay-keys-f39-and-stale-tile-selection.review-log.passes/pass0.md; 369 words; budget default 2.5x (~922 words).
 
@@ -29,7 +29,7 @@ Words (docs): 808 (2.2 x pass 0)  |  Snapshot: story-keyboard-overlay-keys-f39-a
 
 ## Pass 2 — 2026-10-15
 Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 4, minor 5, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
-Words (docs): pending  |  Snapshot: pending
+Words (docs): 861 (2.3 x pass 0)  |  Snapshot: story-keyboard-overlay-keys-f39-and-stale-tile-selection.review-log.passes/pass2.md
 ### To apply (triaged)
 1. [major] Description — N is both overlay-opening (tail selection only) and phase-changing (clearTile): state per context (opens a confirm: tail selection only; acts at once in the rejected root / Game over / nothing to lose: clearTile).
 2. [major] Description — "key arriving while a pop is pending is dropped" contradicts openSurface/Undo/Redo waiting for the pop: acting keys (Undo, Redo, M, N, ?) wait for the pop then act; all other keys incl. Esc are dropped without side effects.
@@ -44,3 +44,21 @@ Words (docs): pending  |  Snapshot: pending
 - Z/Y held → repeat acts
 ### Decision needed (functionality / UX / gameplay)
 - none
+
+## Pass 3 — 2026-10-15
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 0, minor 5, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 861 (2.3 x pass 0)  |  Snapshot: unchanged from pass 2 (no fix pass)
+### Applied
+- none (zero majors; converged)
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none
+### Unapplied minors (for the build plan)
+- AC: state the expected outcome of the two-press Esc test (second Esc dropped while the pop is pending; acts on the next topmost entry after it completes).
+- AC wording "each key opening or closing its surface": M, N, ? open, Esc closes; M, N, ? and Z do nothing while a menu, panel or dialog is open.
+- Validate/Confirm/Flip: rows and clearTile call sites are built here, key bindings arrive with entry 11.
+- Pending pop: evaluate the gate after the pop completes, on the then-current GameView and overlay state.
+- Gate bullet: drop "or input" (no input exists in the surfaces) or name it.
+
+## Result — converged after 3 passes
