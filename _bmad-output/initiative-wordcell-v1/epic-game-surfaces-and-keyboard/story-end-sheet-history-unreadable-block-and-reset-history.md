@@ -33,3 +33,4 @@ A relaunch into Game over with an unreadable history shows the notice over the s
 - spec — _bmad-output/specs/spec-epic-6-surfaces/SPEC.md, Capabilities (CAP-4), Decisions (F4, F8)
 - design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/EXPERIENCE.md, Component Patterns, Keyboard, State Patterns
 - design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/DESIGN.md, Components
+- Decision (owner, 2026-10-15): the line "This game wasn't added to your statistics." shows only on the finished-game sheet that was open when the history was reset (from the sheet block, or the notice over it), kept through collapse and expand; gone after a reload or a new game; Undo then a new finish records normally with no line; resetting from the Statistics panel leaves the sheet with neither block nor line.
