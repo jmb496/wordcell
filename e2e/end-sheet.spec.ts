@@ -469,16 +469,14 @@ test.describe('android', () => {
     expect(await stored(page, HISTORY)).toBe(fixture(`${name}.json`));
   }
 
-  for (const [index, [name, sentence]] of VARIANTS.entries()) {
-    if (index === 0) {
-      test(`R-84 a live win shows the block with the variant sentence (${name}), history untouched`, async ({
-        page,
-      }) => {
-        await openFixture(page, 'session-won', { steps: ['undo'], history: name });
-        await primary(page).click();
-        await expectBlock(page, name, sentence, WIN);
-      });
-    }
+  for (const [name, sentence] of VARIANTS) {
+    test(`R-84 a live win shows the block with the variant sentence (${name}), history untouched`, async ({
+      page,
+    }) => {
+      await openFixture(page, 'session-won', { steps: ['undo'], history: name });
+      await primary(page).click();
+      await expectBlock(page, name, sentence, WIN);
+    });
 
     test(`R-84 a live Give up shows the block with the variant sentence (${name}), history untouched`, async ({
       page,
@@ -521,6 +519,7 @@ test.describe('android', () => {
     // Undo leaves the history empty, drops the line; a new finish records normally, no line.
     await page.getByTestId('undo').click();
     await expect(anySheet(page)).toHaveCount(0);
+    await expect(primary(page)).not.toHaveAccessibleName('New game');
     expect(await stored(page, HISTORY)).toBe(EMPTY);
     await giveUpFromMenu(page);
     await expect(sheet(page, GAVE)).toBeVisible();
@@ -559,6 +558,7 @@ test.describe('android', () => {
       history: fixture('history-invalid-version-unknown.json'),
     });
     await page.goto('/');
+    const seeded = fixture('history-invalid-version-unknown.json');
     await expect(notice(page)).toBeVisible();
     await expect(sheet(page)).toBeVisible();
     expect(await wc(page)).toEqual({ wc: 2, launch: expect.any(Number) });
@@ -569,20 +569,24 @@ test.describe('android', () => {
     await button(page, 'Keep it').click();
     await expect(notice(page)).toBeVisible();
     await expect.poll(() => wcOf(page)).toBe(2);
+    expect(await stored(page, HISTORY)).toBe(seeded);
     await notice(page).getByRole('button', { name: 'Reset history', exact: true }).click();
     await page.keyboard.press('Escape');
     await expect(confirmDialog(page)).toHaveCount(0);
     await expect(notice(page)).toBeVisible();
+    expect(await stored(page, HISTORY)).toBe(seeded);
     await notice(page).getByRole('button', { name: 'Reset history', exact: true }).click();
     await page.touchscreen.tap(5, 300);
     await expect(confirmDialog(page)).toHaveCount(0);
     await expect(notice(page)).toBeVisible();
+    expect(await stored(page, HISTORY)).toBe(seeded);
     await notice(page).getByRole('button', { name: 'Reset history', exact: true }).click();
     // Back sequence from wc 3.
     await page.goBack();
     await expect(confirmDialog(page)).toHaveCount(0);
     await expect(notice(page)).toBeVisible();
     await expect.poll(() => wcOf(page)).toBe(2);
+    expect(await stored(page, HISTORY)).toBe(seeded);
     await page.goBack();
     await expect(notice(page)).toHaveCount(0);
     await expect(sheet(page)).toBeVisible();

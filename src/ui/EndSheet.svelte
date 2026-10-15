@@ -1,7 +1,6 @@
 <script lang="ts">
 import { tick, untrack } from 'svelte';
 import type { GameView } from '../engine/index';
-// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { scoreHistory } from '../shell/history.svelte';
 import { act } from './act';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
@@ -66,6 +65,13 @@ const collapse = (event: MouseEvent): void => {
 const replay = (event: MouseEvent): void => {
   if (first(event) && !requestReplay(view)) void tick().then(focusBoard);
 };
+function unreadableReason() {
+  const current = scoreHistory.state;
+  if (current.status !== 'unreadable')
+    throw new Error('AD-13 end sheet block rendered with a readable history');
+  return current.reason;
+}
+
 const resetHistory = (event: MouseEvent): void => {
   if (first(event)) overlays.open('resetConfirm');
 };
@@ -146,12 +152,9 @@ function focusOnMount(button: HTMLButtonElement): void {
           <p class="penalty">{text.endPenalty(field(result.lettersLeft, 'lettersLeft'), field(result.penalty, 'penalty'))}</p>
         {/if}
         {#if historyUnreadable()}
-          {@const current = scoreHistory.state}
           <div class="unreadable">
             <p class="unreadable-title">{text.historyTitle}</p>
-            {#if current.status === 'unreadable'}
-              <p>{text.historySentence(current.reason)}</p>
-            {/if}
+            <p>{text.historySentence(unreadableReason())}</p>
             <p>{text.endNotAdded}</p>
             <button type="button" class="danger" bind:this={resetButton} onclick={act(resetHistory)}
               >{text.resetHistory}</button

@@ -23,7 +23,8 @@ function keepIt(): void {
 
 function deleteHistory(): void {
   // 6.7: a reset with the finished-game sheet open (and not from the Statistics panel) leaves that
-  // finish unrecorded; the line is shown only after the reset succeeded (rule 6).
+  // finish unrecorded; the line is shown only after the reset succeeded (rule 6). Delete history on
+  // the relaunch History notice over the expanded sheet is an intended case for setting the flag.
   const fromSheet = overlays.isOpen('endSheet') && !overlays.isOpen('statistics');
   scoreHistory.reset();
   if (fromSheet) overlays.markFinishUnrecorded();

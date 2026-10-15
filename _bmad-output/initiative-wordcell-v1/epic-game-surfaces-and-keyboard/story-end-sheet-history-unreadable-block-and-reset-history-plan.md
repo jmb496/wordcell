@@ -63,10 +63,10 @@ deferred: []
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `src/ui/text.ts`, `src/ui/overlays.svelte.ts`, `src/ui/ResetConfirm.svelte`, `src/ui/HistoryNotice.svelte`, `src/ui/EndSheet.svelte` -- as in the Code Map
-- [ ] Unit tests -- flag set/cleared (Undo from expanded and collapsed, new session, not set with Statistics open), text string
-- [ ] `e2e/end-sheet.spec.ts` -- Playwright (android): block after win and after Give up across the three variant fixtures with variant sentences and byte-equal storage; Reset history flows (Delete, Keep it, Esc, back, scrim); collapse/expand keeps the line; Undo leaves history empty and a new finish records normally; relaunch notice-over-sheet with the full back sequence; Reset from Statistics leaves neither
-- [ ] `e2e/end-sheet.screens.spec.ts` -- screens: block (`history-invalid-version-unknown`) and the single line at 360 px; baselines via `npm run test:screens`
+- [x] `src/ui/text.ts`, `src/ui/overlays.svelte.ts`, `src/ui/ResetConfirm.svelte`, `src/ui/HistoryNotice.svelte`, `src/ui/EndSheet.svelte` -- as in the Code Map
+- [x] Unit tests -- flag set/cleared (Undo from expanded and collapsed, new session), text string; the Statistics-open guard in `ResetConfirm` is covered by the e2e tests "Reset history from the Statistics panel ..." (no component-mount pattern exists in Vitest)
+- [x] `e2e/end-sheet.spec.ts` -- Playwright (android): block after win and after Give up across the three variant fixtures with variant sentences and byte-equal storage; Reset history flows (Delete, Keep it, Esc, back, scrim); collapse/expand keeps the line; Undo leaves history empty and a new finish records normally; relaunch notice-over-sheet with the full back sequence; Reset from Statistics leaves neither
+- [x] `e2e/end-sheet.screens.spec.ts` -- screens: block (`history-invalid-version-unknown`) and the single line at 360 px; baselines via `npm run test:screens`
 
 **Acceptance Criteria:**
 - Given an unreadable history, when a game finishes, then the sheet shows the block with the variant sentence and the stored history is unchanged.
