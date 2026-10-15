@@ -1,6 +1,6 @@
 # Review log — story-keyboard-board-keys-focus-moves-and-tooltips.md
 
-State: pass 4: done
+State: pass 5: done
 
 Pre-loop: HEAD 14b4641; copy at story-keyboard-board-keys-focus-moves-and-tooltips.review-log.passes/pass0.md; 226 words; budget 1500 words (stub being fleshed out).
 
@@ -60,3 +60,17 @@ See story-keyboard-board-keys-focus-moves-and-tooltips.review-log.passes/p4-find
 Words (docs): 1497 (6.6 x pass 0)  |  Snapshot: story-keyboard-board-keys-focus-moves-and-tooltips.review-log.passes/pass4.md
 ### Applied
 - [major] 1-2 of p4-findings.md (Enter on column card is the tap; global Enter only on tile/strip card/Board container; key-activation entry also covers 1–8 and ↑/↓); [minor] 3-5 applied. Fixer unverified: ActionBar.svelte title wording.
+
+## Pass 5 — 2026-10-15
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 2 (merged), minor ~5, decision-needed 0 new  |  Dropped in triage: 0
+### To apply (triaged)
+See story-keyboard-board-keys-focus-moves-and-tooltips.review-log.passes/p5-findings.md.
+### Default applied (technical)
+- Peek closes only when the tap changes phase or word data; every board row is single (held key acts once); Tab-order test with default band order
+### Decision needed (functionality / UX / gameplay)
+- none new (the column-focus reachability item above stands)
+
+Words (docs): 1492 (6.6 x pass 0)  |  Snapshot: story-keyboard-board-keys-focus-moves-and-tooltips.review-log.passes/pass5.md
+### Applied
+- [major] 1-2 of p5-findings.md (peek closes only when the tap changes phase/word data; empty-WordCell no-op only with nothing selected, Place Enter via canSetTarget); [minor] 3-4 applied; 5 left (technical defaults noted here: every board row is single; focus-loss fallback; Tab-order test with default band order).
+- Fixer unverified: controller.ts/intent.ts peek claim; canSetTarget flag name
