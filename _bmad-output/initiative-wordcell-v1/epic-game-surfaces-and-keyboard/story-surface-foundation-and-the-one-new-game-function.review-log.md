@@ -1,6 +1,6 @@
 # Review log — story-surface-foundation-and-the-one-new-game-function
 
-State: pass 5: done
+State: pass 6: done
 
 Pre-loop: HEAD d04dbfe, copy at story-surface-foundation-and-the-one-new-game-function.review-log.passes/pass0.md, 290 words (budget 1500 words).
 Ticket intent fields from tickets.toml entry 1 (verify, risk, unknown, interface, tests, owns, consumers): .review-log.passes/intent.md
@@ -115,3 +115,14 @@ Majors fell 8 -> 6, loop continues.
 - line-150 MODAL_TOP early return for new ids; screenshot specs wait for transition end
 Fixer outcome: all six applied; minors resetConfirm-only rule, transitioncancel, confirm-over-confirm U applied. Deviation (technical): top-bar inert assigned to App.svelte (`main` inert while any new id/resetConfirm/historyNotice is on the stack) instead of per component; initMotion() added to motion.ts, called from main.ts after prefs.load(). tickets.toml entry 2 tests/verify edited.
 Words (docs): 1535 (5.4 x pass 0; budget 1500)  |  Snapshot: story-surface-foundation-and-the-one-new-game-function.review-log.passes/pass5.md
+
+## Pass 6 — 2026-10-14
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 2, minor 2, decision-needed 0  |  Dropped in triage: 0
+Majors fell 6 -> 2. Edge-case and ref-alignment lenses returned [].
+### Applied (to the fixer, pass 6; technical, default applied)
+- [major] Motion: no mechanism for CSS to branch on the JS 0/1 flag `--wc-reduced` (no consumer in src/ui today; confirmed by grep) → default `@container style(--wc-reduced: 1)`, opacity-only branch inside; source scan also asserts the condition wraps the branch
+- [major] Focus return at stack removal runs while `main` is still inert (App.svelte `inert={...}` applies on a later flush; Dialog already needs focusOnReturn for this) → focus return runs after the inert update (reuse Dialog's mechanism or tick); U in an App mount
+- [minor] define "modal notice" for openSurface = historyNotice/resetConfirm tops (endSheet excluded; resetConfirm over historyNotice allowed)
+- [minor] reword the AD-12 test for pass-through components (scan covers `close`; callers wrap)
+Fixer outcome: all four applied. Container style query `@container style(--wc-reduced: 1)` chosen (unverified against the Chromium/Vite pipeline; the build is the check). Focus return after inert flush (tick or Dialog's focusOnReturn).
+Words (docs): 1522 (5.2 x pass 0; budget 1500)  |  Snapshot: story-surface-foundation-and-the-one-new-game-function.review-log.passes/pass6.md
