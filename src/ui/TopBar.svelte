@@ -4,18 +4,20 @@ import { game } from '../shell/game.svelte';
 import { prefs } from '../shell/prefs.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { act } from './act';
-import { capture, play } from './flip';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import { redo, undo } from './commands';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { historyUnreadable } from './history-notice.svelte';
 import { openSurface } from './open-surface';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { overlays } from './overlays.svelte';
 import { text } from './text';
 
 // DESIGN.md Top bar: sticky, 44 px of content plus the top safe-area inset (owner Option A),
-// menu slot (epic 6), live score (R-82), Undo/Redo with desktop tooltips (F3). Undo and Redo clear
-// a tail selection first, after act()'s cancel() (AD-13, SPEC CAP-6), then FLIP captures (its
-// flush renders the deselect, so no lift is recorded) and plays after the dispatch (epic 5 SPEC
-// CAP-8, F6, F7).
+// menu slot (epic 6), live score (R-82), Undo/Redo with desktop tooltips (F3). Undo and Redo are
+// `commands.ts` (shared with the keys): they clear a tail selection first, after act()'s cancel()
+// (AD-13, SPEC CAP-6), then FLIP captures (its flush renders the deselect, so no lift is recorded)
+// and plays after the dispatch (epic 5 SPEC CAP-8, F6, F7).
 let { view }: { view: GameView } = $props();
 
 // Epic 6 CAP-2: the ☰ button opens the menu only through openSurface (SPEC F8). The top bar is
@@ -42,20 +44,6 @@ $effect(() => {
 function timerText(): string {
   void refresh;
   return text.timer(game.elapsedMs(performance.now()));
-}
-
-function undo(): void {
-  overlays.deselect();
-  const command = { type: 'undo' } as const;
-  capture();
-  play(command, game.dispatch(command));
-}
-
-function redo(): void {
-  overlays.deselect();
-  const command = { type: 'redo' } as const;
-  capture();
-  play(command, game.dispatch(command));
 }
 </script>
 

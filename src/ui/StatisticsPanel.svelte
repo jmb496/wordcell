@@ -1,6 +1,7 @@
 <script lang="ts">
 import { tick, untrack } from 'svelte';
 import { scoreHistory } from '../shell/history.svelte';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { act } from './act';
 import { openSurface } from './open-surface';
 import { overlays } from './overlays.svelte';
@@ -16,8 +17,8 @@ import { text } from './text';
 // line under them only with no games played. While the history is unreadable it shows the History
 // message (the shared reason-to-sentence mapping over the live `scoreHistory.historyState.reason`) and
 // Reset history instead. Reset history opens the shared ResetConfirm: Delete history leaves the
-// panel open showing the fresh view, Keep it leaves the message. Esc: interim act()-wrapped window
-// handlers, active only on top (entry 10's keymap replaces them). Focus after the confirm closes
+// panel open showing the fresh view, Keep it leaves the message. Esc closes the topmost
+// overlay through the key handler (keys.ts, ticket 6.10). Focus after the confirm closes
 // goes to Reset history, or the heading when Delete removed it; at panel close to the ☰ button
 // after `tick()` (as PreferencesPanel does).
 const open = $derived(overlays.isOpen('statistics'));
@@ -70,18 +71,6 @@ function openConfirm(): void {
   openSurface('resetConfirm');
 }
 
-const closeOnEsc = act((): void => {
-  if (overlays.top === 'statistics') close();
-});
-
-function onkeydown(event: KeyboardEvent): void {
-  if (event.defaultPrevented) return;
-  if (event.key === 'Escape' && !event.repeat && overlays.top === 'statistics') {
-    event.preventDefault();
-    closeOnEsc();
-  }
-}
-
 const none = text.statNone;
 const tiles = $derived.by(() => {
   if (historyState.status === 'unreadable') return [];
@@ -98,8 +87,6 @@ const tiles = $derived.by(() => {
   ] as const;
 });
 </script>
-
-<svelte:window {onkeydown} />
 
 <Panel title={text.statistics} closeLabel={text.closeStatistics} onclose={act(close)}
   {open}
@@ -136,7 +123,7 @@ const tiles = $derived.by(() => {
 </Panel>
 
 {#if open && overlays.isOpen('resetConfirm')}
-  <ResetConfirm escKeeps />
+  <ResetConfirm />
 {/if}
 
 <style>

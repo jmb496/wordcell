@@ -28,9 +28,14 @@ let beforeBack: (() => void) | undefined;
 let ready = false;
 let failed = false;
 let rewound: (() => void) | undefined;
+const settleWaiters: (() => void)[] = [];
 
 function stateOf(value: unknown): { launch?: unknown; wc?: unknown } | undefined {
   return typeof value === 'object' && value !== null ? value : undefined;
+}
+
+function settled(): boolean {
+  return pending === 0 && queue.length === 0;
 }
 
 function drain(): void {
@@ -44,6 +49,8 @@ function drain(): void {
       history.back();
     }
   }
+  // One at a time: a waiter that closes an entry queues a pop, which the next waiter then waits for.
+  while (settled() && settleWaiters.length > 0) settleWaiters.shift()?.();
 }
 
 function finish(): void {
@@ -144,4 +151,10 @@ function pop(): void {
   enqueue('pop');
 }
 
-export const nav = { launch, register, registerBeforeBack, push, pop };
+/** AD-13: runs `fn` at once when no pop is pending, else when the queue next settles (epic 6 CAP-10). */
+function whenSettled(fn: () => void): void {
+  if (settled()) fn();
+  else settleWaiters.push(fn);
+}
+
+export const nav = { launch, register, registerBeforeBack, push, pop, settled, whenSettled };

@@ -2,6 +2,7 @@
 import { tick, untrack } from 'svelte';
 import type { GameView } from '../engine/index';
 import { game } from '../shell/game.svelte';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { act } from './act';
 import { onDispatched } from './end-sheet';
 import { requestNewGame, requestReplay } from './new-game';
@@ -17,8 +18,8 @@ import { text } from './text';
 // deal, Give up; each closes the sheet first, then acts once (no push); New game and Replay go
 // through the CAP-3 gates (a confirm while a game is in progress, else at once). Give up is `disabled` from `view.canGiveUp` only (AD-3, R-75). Every handler is
 // wrapped in `act()`. After the menu closes by any path, focus goes to the board (build-notes
-// Menu row); `main` carries tabindex -1 for it until epic 6's keyboard map (entry 10) owns focus.
-// `Esc` closes it (interim, replaced by entry 10's key handler).
+// Menu row); `main` carries tabindex -1 for it until ticket 6.11 (the board keys) owns focus.
+// `Esc` closes it through the key handler (keys.ts, ticket 6.10).
 let { view }: { view: GameView } = $props();
 
 const open = $derived(overlays.isOpen('menu'));
@@ -80,21 +81,7 @@ function howToPlay(): void {
   skipFocus = true;
   openSurface('howToPlay');
 }
-
-const closeOnEsc = act((): void => {
-  if (overlays.top === 'menu') close();
-});
-
-function onkeydown(event: KeyboardEvent): void {
-  if (event.defaultPrevented) return;
-  if (event.key === 'Escape' && !event.repeat && overlays.top === 'menu') {
-    event.preventDefault();
-    closeOnEsc();
-  }
-}
 </script>
-
-<svelte:window {onkeydown} />
 
 <Sheet title={text.menu} closeLabel={text.closeMenu} onclose={act(close)} onscrim={act(close)} {open}>
   <ul class="rows">

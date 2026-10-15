@@ -56,6 +56,18 @@ const LEGAL_TOPS: Partial<Record<OverlayId, readonly (OverlayId | undefined)[]>>
   replayConfirm: [undefined, 'endSheet', ...PANELS],
   resetConfirm: ['historyNotice', 'statistics', 'endSheet'],
 };
+// Epic 6 CAP-10: the entries under which `main` is inert and the game keys are suspended (only
+// Tab, Enter, Space and Esc act). The expanded end sheet and the WordCell view are not in the list.
+export const SUSPENDING: readonly OverlayId[] = [
+  'historyNotice',
+  'resetConfirm',
+  'menu',
+  'statistics',
+  'preferences',
+  'howToPlay',
+  'newGameConfirm',
+  'replayConfirm',
+];
 const NEW_SURFACES: readonly OverlayId[] = [
   'menu',
   'statistics',

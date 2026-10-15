@@ -2,6 +2,7 @@
 import { tick, untrack } from 'svelte';
 import type { GameView } from '../engine/index';
 import { scoreHistory } from '../shell/history.svelte';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { act } from './act';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { field, resultOf } from './end-sheet';
@@ -98,24 +99,10 @@ $effect(() => {
   });
 });
 
-const closeOnEsc = act((): void => {
-  if (overlays.top === 'endSheet') overlays.collapseEndSheet();
-});
-
-function onkeydown(event: KeyboardEvent): void {
-  if (event.defaultPrevented) return;
-  if (event.key === 'Escape' && !event.repeat && overlays.top === 'endSheet') {
-    event.preventDefault();
-    closeOnEsc();
-  }
-}
-
 function focusOnMount(button: HTMLButtonElement): void {
   if (overlays.top === 'endSheet') button.focus();
 }
 </script>
-
-<svelte:window {onkeydown} />
 
 {#if presence.present && result !== null}
   <div
@@ -174,7 +161,7 @@ function focusOnMount(button: HTMLButtonElement): void {
   </div>
 {/if}
 {#if ownsConfirm}
-  <ResetConfirm escKeeps />
+  <ResetConfirm />
 {/if}
 
 <style>

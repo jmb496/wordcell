@@ -22,7 +22,7 @@ import type { Layout } from './layout/layout.svelte';
 import Menu from './Menu.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { newGame } from './new-game';
-import { type OverlayId, overlays } from './overlays.svelte';
+import { overlays, SUSPENDING } from './overlays.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import PreferencesPanel from './PreferencesPanel.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
@@ -44,17 +44,7 @@ const board = $derived(game.view);
 // Epic 6 CAP-1 (6.1, SPEC F5, F6): `main` (Board, top bar, action bar) is inert while any modal
 // surface is on the stack. The expanded end sheet and the WordCell view are not in the list (their
 // entries own their exceptions). HistoryNotice, rendered below, keeps its own markup.
-const INERT_UNDER: readonly OverlayId[] = [
-  'historyNotice',
-  'resetConfirm',
-  'menu',
-  'statistics',
-  'preferences',
-  'howToPlay',
-  'newGameConfirm',
-  'replayConfirm',
-];
-const mainInert = $derived(INERT_UNDER.some((id) => overlays.isOpen(id)));
+const mainInert = $derived(SUSPENDING.some((id) => overlays.isOpen(id)));
 
 // Epic 4 SPEC CAP-6: one reaction recomputes the desktop hover classes at the last pointer
 // point whenever the selection or the GameView changes (tap, drop, Undo, Redo, Reload, back).

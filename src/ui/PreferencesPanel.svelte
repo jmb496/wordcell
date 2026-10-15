@@ -1,6 +1,7 @@
 <script lang="ts">
 import { tick, untrack } from 'svelte';
 import { type AnimationSpeed, prefs } from '../shell/prefs.svelte';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { act } from './act';
 import { overlays } from './overlays.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
@@ -11,9 +12,8 @@ import { text } from './text';
 // opened only through `openSurface('preferences')` (the Menu row). A radiogroup `Animation speed`
 // (Fast / Normal / Slow) and a `Show timer` switch (default off); each change calls the prefs setter
 // uncaught (rule 6: they throw while halted or booting, AD-10), writes at once, applies to the next
-// glide and never touches the Session. Every control is `act()`-wrapped. Esc: interim `act()`-wrapped
-// window handler, a no-op unless this panel is the top overlay (entry 10's keymap replaces it); it and the
-// back control share `close`, one path. At close focus goes to the ☰ button after `tick()` (as
+// glide and never touches the Session. Every control is `act()`-wrapped. Esc closes it through the key
+// handler (keys.ts, ticket 6.10); the back control uses `close`. At close focus goes to the ☰ button after `tick()` (as
 // ConfirmDialogs does; Panel's own return aims at the exiting menu row).
 const open = $derived(overlays.isOpen('preferences'));
 let wasOpen = false;
@@ -48,21 +48,7 @@ function setSpeed(speed: AnimationSpeed): void {
 function toggleTimer(): void {
   prefs.setShowTimer(!prefs.value.showTimer);
 }
-
-const closeOnEsc = act((): void => {
-  if (overlays.top === 'preferences') close();
-});
-
-function onkeydown(event: KeyboardEvent): void {
-  if (event.defaultPrevented) return;
-  if (event.key === 'Escape' && !event.repeat && overlays.top === 'preferences') {
-    event.preventDefault();
-    closeOnEsc();
-  }
-}
 </script>
-
-<svelte:window {onkeydown} />
 
 <Panel title={text.preferences} closeLabel={text.closePreferences} onclose={act(close)} {open}>
   <div class="group" role="radiogroup" aria-labelledby="speed-label">

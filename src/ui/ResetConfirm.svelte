@@ -1,5 +1,6 @@
 <script lang="ts">
 import { scoreHistory } from '../shell/history.svelte';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { act } from './act';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Dialog from './Dialog.svelte';
@@ -11,11 +12,9 @@ import { text } from './text';
 // and the Statistics panel; the parent mounts it while `resetConfirm` is open. The scrim acts as
 // Keep it. Delete history resets first, so a throwing write reaches AD-15 with nothing closed,
 // then closes only `resetConfirm`; `ondeleted` lets the notice close itself too. Focus return is
-// the opener's: the notice relies on Dialog, the panel on its own effect. `escKeeps` adds the
-// interim act()-wrapped Esc handler (acts as Keep it only while this is the top overlay; the notice
-// and the end sheet pass it, only the Statistics panel handles Esc itself; entry 10's keymap
-// replaces it).
-let { ondeleted, escKeeps = false }: { ondeleted?: () => void; escKeeps?: boolean } = $props();
+// the opener's: the notice relies on Dialog, the panel on its own effect. Esc acts as Keep it through the key
+// handler (keys.ts, ticket 6.10).
+let { ondeleted }: { ondeleted?: () => void } = $props();
 
 function keepIt(): void {
   overlays.close('resetConfirm');
@@ -31,21 +30,7 @@ function deleteHistory(): void {
   overlays.close('resetConfirm');
   ondeleted?.();
 }
-
-const keepOnEsc = act((): void => {
-  if (overlays.top === 'resetConfirm') keepIt();
-});
-
-function onkeydown(event: KeyboardEvent): void {
-  if (event.defaultPrevented) return;
-  if (escKeeps && event.key === 'Escape' && !event.repeat && overlays.top === 'resetConfirm') {
-    event.preventDefault();
-    keepOnEsc();
-  }
-}
 </script>
-
-<svelte:window {onkeydown} />
 
 <Dialog
   title={text.resetConfirmTitle}

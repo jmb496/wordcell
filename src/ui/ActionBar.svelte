@@ -1,10 +1,11 @@
 <script lang="ts">
-import { flushSync, onMount } from 'svelte';
+import { onMount } from 'svelte';
 import type { GameView } from '../engine/index';
 import { dictionary } from '../shell/dictionary.svelte';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { game } from '../shell/game.svelte';
 import { act } from './act';
-import { capture, play } from './flip';
+import { confirm, validate } from './commands';
 import { fitSize } from './layout/fit';
 import { measureWidth } from './layout/measure';
 import { newGame } from './new-game';
@@ -24,24 +25,6 @@ const LABEL_MAX = 16;
 let button: HTMLButtonElement | null | undefined;
 let labelEl: HTMLSpanElement | null | undefined = $state();
 let size = $state(LABEL_MAX);
-
-// F15/F21: each click dispatches one `validate`; flushSync renders the result (Place, Confirm)
-// before the click handler returns, so a second tap lands on Confirm. No re-entrancy flag. Epic 5
-// SPEC CAP-8 (F6, F7, F22): FLIP captures before and plays after the dispatch.
-function validate(): void {
-  const command = { type: 'validate' } as const;
-  capture();
-  const result = game.dispatch(command);
-  flushSync();
-  play(command, result);
-}
-
-// Epic 5 SPEC CAP-8: kind `flyToCell`, played by flip.ts (F28).
-function confirm(): void {
-  const command = { type: 'confirm' } as const;
-  capture();
-  play(command, game.dispatch(command));
-}
 
 // Label precedence (EXPERIENCE.md Validate): status ≠ playing → New game whatever the phase; Place
 // → Confirm; otherwise `Word list unavailable` > `Loading words…` > `Need 3+ letters` (reason

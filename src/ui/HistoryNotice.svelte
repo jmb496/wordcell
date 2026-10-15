@@ -12,8 +12,8 @@ import { text } from './text';
 // §2/Q-33 History notice and its Reset confirm (EXPERIENCE.md catalogue rows 102, 104), rendered
 // by App while the notice is open. The notice has no scrim action (owner decision 2026-10-01);
 // the confirm (ResetConfirm, shared with the Statistics panel) has its scrim act as Keep it, and
-// Delete history there closes it, then this notice. The notice passes `escKeeps`, so Esc on the
-// confirm acts as Keep it.
+// Delete history there closes it, then this notice. Esc on the confirm acts as Keep it
+// through the key handler (keys.ts).
 const body = $derived.by(() => {
   const reason = noticeReason();
   if (reason === undefined) throw new Error('AD-13 History notice rendered before it opened');
@@ -39,5 +39,5 @@ function notNow(): void {
   inert={overlays.top !== 'historyNotice'}
 />
 {#if overlays.isOpen('resetConfirm')}
-  <ResetConfirm ondeleted={notNow} escKeeps />
+  <ResetConfirm ondeleted={notNow} />
 {/if}

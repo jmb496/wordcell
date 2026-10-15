@@ -2,6 +2,8 @@
 import { game } from '../../shell/game.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { act } from '../act';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import { flip as flipBlock } from '../commands';
 import { capture, play } from '../flip';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { text } from '../text';
@@ -28,12 +30,6 @@ let {
 
 function setK(k: number): void {
   const command = { type: 'setDestinationCount', k } as const;
-  capture();
-  play(command, game.dispatch(command));
-}
-
-function flipBlock(): void {
-  const command = { type: 'flip' } as const;
   capture();
   play(command, game.dispatch(command));
 }

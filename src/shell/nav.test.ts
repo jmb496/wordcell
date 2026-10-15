@@ -419,3 +419,48 @@ describe('AD-13 before-back hook', () => {
     );
   });
 });
+
+describe('AD-13 settled', () => {
+  it('AD-13 whenSettled() runs at once with no pop pending, else after the pop settles and before a queued push is waited on', async () => {
+    const t = await setup([null]);
+    await t.nav.launch();
+    t.register();
+    const log: string[] = [];
+    t.nav.whenSettled(() => log.push('now'));
+    expect(log).toEqual(['now']);
+    expect(t.nav.settled()).toBe(true);
+    t.nav.push();
+    t.callbacks.depth = 1;
+    t.nav.pop();
+    expect(t.nav.settled()).toBe(false);
+    t.nav.whenSettled(() => log.push('after pop'));
+    expect(log).toEqual(['now']);
+    t.settle();
+    expect(log).toEqual(['now', 'after pop']);
+    expect(t.nav.settled()).toBe(true);
+  });
+
+  it('AD-13 whenSettled() waits for a push queued behind the pop; a waiter that queues a pop holds back the next waiter', async () => {
+    const t = await setup([null]);
+    await t.nav.launch();
+    t.register();
+    t.nav.push();
+    t.callbacks.depth = 1;
+    t.nav.push();
+    t.callbacks.depth = 2;
+    t.nav.pop();
+    t.nav.push();
+    expect(t.nav.settled()).toBe(false);
+    const log: string[] = [];
+    t.nav.whenSettled(() => {
+      log.push('first');
+      t.nav.pop();
+    });
+    t.nav.whenSettled(() => log.push('second'));
+    t.settle();
+    expect(log).toEqual(['first']);
+    expect(t.nav.settled()).toBe(false);
+    t.settle();
+    expect(log).toEqual(['first', 'second']);
+  });
+});

@@ -12,6 +12,7 @@ import { createController } from './ui/gestures/controller';
 import { createGate } from './ui/gestures/gate';
 import Halted from './ui/Halted.svelte';
 import { openHistoryNotice } from './ui/history-notice.svelte';
+import { installKeys } from './ui/keys';
 import { browserLayoutDeps, createLayout } from './ui/layout/layout.svelte';
 import { trayTileCount } from './ui/layout/tray';
 import { duration, hideClear, initMotion, stagger, startTracker } from './ui/motion';
@@ -176,6 +177,8 @@ async function boot(): Promise<void> {
   openAtBoot();
   openHistoryNotice();
   mount(App, { target, props: { layout, controller } });
+  // Epic 6 CAP-10: the one key handler, after the mount (it reads the store and the overlays).
+  installKeys(window);
   surface = true;
   await nextPaint();
   if (halted()) return;

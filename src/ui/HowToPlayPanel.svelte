@@ -1,5 +1,6 @@
 <script lang="ts">
 import { tick, untrack } from 'svelte';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { act } from './act';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Card from './Card.svelte';
@@ -11,8 +12,9 @@ import { bandNames, text } from './text';
 // Epic 6 CAP-8 (ticket 6.9; EXPERIENCE.md How to play panel; DESIGN.md Panels): the static
 // scrolling rules page, opened only through `openSurface('howToPlay')` (the Menu's last row). All
 // prose is in text.ts (AD-3); this file holds markup only. The §8 example is drawn with the real
-// card component as `mirror="static"` (aria-hidden, no card id or place attributes, AD-14). The Esc
-// handler and the ☰ refocus effect are interim copies of PreferencesPanel's (entry 10 removes them).
+// card component as `mirror="static"` (aria-hidden, no card id or place attributes, AD-14). The ☰
+// refocus effect is an interim copy of PreferencesPanel's; Esc closes it through the key handler
+// (keys.ts, ticket 6.10).
 const open = $derived(overlays.isOpen('howToPlay'));
 let wasOpen = false;
 
@@ -40,21 +42,7 @@ const tables = [
 function close(): void {
   overlays.close('howToPlay');
 }
-
-const closeOnEsc = act((): void => {
-  if (overlays.top === 'howToPlay') close();
-});
-
-function onkeydown(event: KeyboardEvent): void {
-  if (event.defaultPrevented) return;
-  if (event.key === 'Escape' && !event.repeat && overlays.top === 'howToPlay') {
-    event.preventDefault();
-    closeOnEsc();
-  }
-}
 </script>
-
-<svelte:window {onkeydown} />
 
 <Panel title={text.howToPlay} closeLabel={text.closeHowToPlay} onclose={act(close)} {open}>
   <section>
