@@ -1,6 +1,6 @@
 # Review log — story-how-to-play-panel.md
 
-State: pass 2: done
+State: pass 3: done
 
 Pre-loop: HEAD ae31bafbb84ba3dd16240be0c00aa8cabe9bfc85; copy at story-how-to-play-panel.review-log.passes/pass0.md; 217 words; budget 1500 words.
 
@@ -39,3 +39,19 @@ Words (docs): 899 (4.1 x pass 0; budget 1500)  |  Snapshot: story-how-to-play-pa
 - none new (band thresholds item from pass 1 stands)
 ### Dropped
 - none
+
+## Pass 3 — 2026-10-15
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 8, decision-needed 0  |  Dropped in triage: 1 (adversarial "touch/mouse rows unset" downgraded to minor: SPEC F3 delegates drafting the text to the build, owner reads it)
+Words (docs): 1051 (4.8 x pass 0; budget 1500)  |  Snapshot: story-how-to-play-panel.review-log.passes/pass3.md
+### Applied
+- [major] Example paragraph — static card layout variant unnamed (strip card shows a corner letter only) → fixer item 1
+- [minor] Game-over check — drop the `unverified` hedge (☰ is live above the expanded end sheet: App.svelte INERT_UNDER, EndSheet.svelte) → item 2
+- [minor] interface line lacks App.svelte mount → item 3
+- [minor] table labels not headings; scroll element is Panel `.content` → item 4
+- [minor] caption form; screenshot target → item 5
+### Default applied (technical)
+- full-height static card in a flex row with local size vars; Worked example region baseline
+### Decision needed (functionality / UX / gameplay)
+- none new
+### Dropped
+- touch/mouse rows list and the §8 derivation clause: left as unapplied minors (owner reviews the text, SPEC F3)
