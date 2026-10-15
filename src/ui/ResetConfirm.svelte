@@ -31,6 +31,7 @@ const keepOnEsc = act((): void => {
 });
 
 function onkeydown(event: KeyboardEvent): void {
+  if (event.defaultPrevented) return;
   if (escKeeps && event.key === 'Escape' && !event.repeat && overlays.top === 'resetConfirm') {
     event.preventDefault();
     keepOnEsc();

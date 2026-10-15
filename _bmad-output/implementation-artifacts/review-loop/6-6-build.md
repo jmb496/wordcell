@@ -1,5 +1,5 @@
 # Review loop log — ticket 6.6 build (code mode)
-State: pass 2: review
+State: pass 3: done
 Range: 889ca36..dbbf83a (HEAD dbbf83a); tree snapshot 0: 9f5ca2b476fb9e9519e5620dbe4b31bf8412bc28
 Intent: _bmad-output/initiative-wordcell-v1/epic-game-surfaces-and-keyboard/story-end-sheet-result-collapse-give-up-and-relaunch-plan.md
 
@@ -26,3 +26,10 @@ Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings
 - [minor] rename longest-word and Redo tests; New game seed/moves assert; win-sheet band text assert
 ### Unapplied minors (new)
 - Replay focus after History notice dismissed at boot; reduced-motion fade test; bar overflow at 320px; bar/sheet one-frame overlap; collapse+reload test; finished-status derived in Tray/EndSheet (AD-3 helper); clearTile/skipFocus plan note; build-notes says board inert when expanded (spec/plan disagree); expectBoardFocus fallback only unit-tested; relaunch instant probe; fixture substitution and band-530 view test unrecorded in Plan Change Log.
+
+## Pass 3
+Reviewers: fix diff, correctness+edge, verification+intent  |  Findings: major 2, minor 2  |  Dropped: 0
+### Applied
+- [major] Esc with Menu over expanded sheet also collapses sheet (Menu.svelte / EndSheet.svelte window keydown) → preventDefault/defaultPrevented + e2e
+- [major] longest-word/dash tests cited R-84, sentence is R-83 → rename + comments
+- [minor] Redo disabled assertion on game-over; Replay from expanded sheet restores board focus

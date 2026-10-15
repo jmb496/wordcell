@@ -153,7 +153,7 @@ test.describe('android', () => {
     await expect(sheet(page, GAVE).getByText('1 letter left: −10', { exact: true })).toBeVisible();
   });
 
-  test('R-84 the longest word shows from the view, QU as QU, with the words placed', async ({
+  test('R-83 the longest word shows from the view, QU as QU, with the words placed', async ({
     page,
   }) => {
     await openFixture(page, 'session-won', { endSheet: 'expanded' });
@@ -161,7 +161,7 @@ test.describe('android', () => {
     await expect(sheet(page).locator('dd').nth(1)).toHaveText('8');
   });
 
-  test('R-84 with no word committed the longest word shows a dash and words placed 0', async ({
+  test('R-83 with no word committed the longest word shows a dash and words placed 0', async ({
     page,
   }) => {
     await openFixture(page, 'session-gave-up', { endSheet: 'expanded' });
@@ -269,6 +269,7 @@ test.describe('android', () => {
   test('R-75 the top bar and the action bar stay usable above the scrim', async ({ page }) => {
     await openFixture(page, 'session-won', { endSheet: 'expanded' });
     await expect(page.getByTestId('undo')).toBeEnabled();
+    await expect(page.getByTestId('redo')).toBeDisabled();
     await expect(primary(page)).toHaveAccessibleName('New game');
     await page.getByTestId('undo').click();
     await expect(anySheet(page)).toHaveCount(0);
@@ -355,6 +356,23 @@ test.describe('android', () => {
     const after = await parsed(page);
     expect(after.seed).toBe(seed);
     expect(after.moves).toEqual([]);
+    await expectBoardFocus(page);
+  });
+
+  test('R-75 one Escape with the Menu open over the expanded sheet closes only the Menu; the next collapses the sheet', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-won', { endSheet: 'expanded' });
+    const launch = await launchOf(page);
+    await menuButton(page).click();
+    await expect(page.getByRole('dialog', { name: 'Menu' })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog', { name: 'Menu' })).toHaveCount(0);
+    await expect(handle(page)).toBeVisible();
+    await expect.poll(() => wc(page)).toEqual({ wc: 1, launch });
+    await page.keyboard.press('Escape');
+    await expect.poll(() => wc(page)).toEqual({ wc: 0, launch });
+    await expect(bar(page)).toBeVisible();
   });
 
   test('R-74 New game from the expanded sheet (action bar) hides it, wc 0 with the base launch', async ({

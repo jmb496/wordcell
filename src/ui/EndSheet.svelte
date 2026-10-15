@@ -58,7 +58,7 @@ const collapse = (event: MouseEvent): void => {
   if (first(event)) overlays.collapseEndSheet();
 };
 const replay = (event: MouseEvent): void => {
-  if (first(event)) requestReplay(view);
+  if (first(event) && !requestReplay(view)) void tick().then(focusBoard);
 };
 const statistics = (event: MouseEvent): void => {
   if (first(event)) openSurface('statistics');
@@ -69,7 +69,11 @@ const closeOnEsc = act((): void => {
 });
 
 function onkeydown(event: KeyboardEvent): void {
-  if (event.key === 'Escape' && !event.repeat && overlays.top === 'endSheet') closeOnEsc();
+  if (event.defaultPrevented) return;
+  if (event.key === 'Escape' && !event.repeat && overlays.top === 'endSheet') {
+    event.preventDefault();
+    closeOnEsc();
+  }
 }
 
 function focusOnMount(button: HTMLButtonElement): void {

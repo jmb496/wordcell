@@ -54,7 +54,11 @@ const closeOnEsc = act((): void => {
 });
 
 function onkeydown(event: KeyboardEvent): void {
-  if (event.key === 'Escape' && !event.repeat && overlays.top === 'preferences') closeOnEsc();
+  if (event.defaultPrevented) return;
+  if (event.key === 'Escape' && !event.repeat && overlays.top === 'preferences') {
+    event.preventDefault();
+    closeOnEsc();
+  }
 }
 </script>
 

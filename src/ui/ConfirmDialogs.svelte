@@ -61,12 +61,14 @@ const closeOnEsc = act((): void => {
 });
 
 function onkeydown(event: KeyboardEvent): void {
+  if (event.defaultPrevented) return;
   const top = overlays.top;
   if (
     event.key === 'Escape' &&
     !event.repeat &&
     (top === 'newGameConfirm' || top === 'replayConfirm')
   ) {
+    event.preventDefault();
     closeOnEsc();
   }
 }
