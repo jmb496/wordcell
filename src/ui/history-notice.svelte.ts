@@ -22,3 +22,8 @@ export function openHistoryNotice(): void {
 export function noticeReason(): HistoryRejectReason | undefined {
   return reason;
 }
+
+/** Epic 6 CAP-6: true exactly while the score history is unreadable, live over the store's state. */
+export function historyUnreadable(): boolean {
+  return scoreHistory.state.status === 'unreadable';
+}

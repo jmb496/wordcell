@@ -45,8 +45,8 @@ test.describe('the sheet', () => {
     expect(box?.width).toBe(44);
     expect(box?.height).toBe(44);
     await openMenu(page);
-    await expect(sheet(page).getByRole('button')).toHaveCount(5); // four rows and the close control
-    for (const name of ['New game', 'Replay this deal', 'Give up', 'Preferences']) {
+    await expect(sheet(page).getByRole('button')).toHaveCount(6); // five rows and the close control
+    for (const name of ['New game', 'Replay this deal', 'Give up', 'Statistics', 'Preferences']) {
       await expect(row(page, name)).toBeVisible();
       expect((await row(page, name).boundingBox())?.height).toBe(52);
     }

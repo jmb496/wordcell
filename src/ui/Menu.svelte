@@ -63,6 +63,13 @@ function preferences(): void {
   openSurface('preferences');
 }
 
+// Ticket 6.5: Statistics closes the menu, then opens the panel, which owns the focus (as above).
+function statistics(): void {
+  close();
+  skipFocus = true;
+  openSurface('statistics');
+}
+
 const closeOnEsc = act((): void => {
   if (overlays.top === 'menu') close();
 });
@@ -101,6 +108,16 @@ function onkeydown(event: KeyboardEvent): void {
           <path d="M6 5 H18 L15 9 L18 13 H6" />
         </svg>
         <span>{text.giveUp}</span>
+      </button>
+    </li>
+    <li>
+      <button type="button" class="row" onclick={act(statistics)}>
+        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+          <path d="M6 20 V12" />
+          <path d="M12 20 V5" />
+          <path d="M18 20 V9" />
+        </svg>
+        <span>{text.statistics}</span>
       </button>
     </li>
     <li>

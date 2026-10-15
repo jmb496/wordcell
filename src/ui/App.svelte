@@ -21,6 +21,8 @@ import { newGame } from './new-game';
 import { type OverlayId, overlays } from './overlays.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import PreferencesPanel from './PreferencesPanel.svelte';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import StatisticsPanel from './StatisticsPanel.svelte';
 import { text } from './text';
 
 // Roots: halted, Session rejected, the Board (AD-11) with the dialogs beside it. Script-side uses
@@ -87,6 +89,7 @@ function rejectedBody(reason: RejectReason): string {
   </main>
   <Menu view={board} />
   <PreferencesPanel />
+  <StatisticsPanel />
   <ConfirmDialogs />
   {#if overlays.isOpen('historyNotice')}
     <HistoryNotice />

@@ -1,7 +1,32 @@
 // Every EXPERIENCE.md message-catalogue string lives here (AGENTS.md Conventions); later entries
 // add theirs. Words are uppercased at render, `QU` stays `QU`, the minus sign is U+2212.
 const INVALID_WORD_SUFFIX = "isn't in the word list.";
+
+// Structurally the shell's `HistoryRejectReason`; not imported, because e2e specs import this file
+// and the shell store module needs the Svelte compiler.
+type HistoryRejectReason =
+  | { readonly reason: 'version-unknown'; readonly version: number }
+  | { readonly reason: 'version-unreadable' }
+  | { readonly reason: 'contents-unreadable'; readonly version: number };
+
 const letters = (n: number): string => (n === 1 ? '1 letter' : `${n} letters`);
+
+const historyVersionUnknown = (version: number): string =>
+  `It uses format version ${version}, which this version can't read.`;
+const historyVersionUnreadable = "Its format version can't be read.";
+const historyContentsUnreadable = (version: number): string =>
+  `It uses format version ${version} but its contents can't be read.`;
+
+function historySentence(reason: HistoryRejectReason): string {
+  switch (reason.reason) {
+    case 'version-unknown':
+      return historyVersionUnknown(reason.version);
+    case 'version-unreadable':
+      return historyVersionUnreadable;
+    case 'contents-unreadable':
+      return historyContentsUnreadable(reason.version);
+  }
+}
 
 export const text = Object.freeze({
   validate: 'Validate',
@@ -82,6 +107,21 @@ export const text = Object.freeze({
   speedNormal: 'Normal',
   speedSlow: 'Slow',
   showTimer: 'Show timer',
+  // Epic 6 CAP-6 (ticket 6.5, R-84, Q-44, Q-35) Statistics panel (DESIGN.md Panels; the catalogue
+  // lists only the empty line, so the other strings take that wording, flagged for the owner).
+  // `statNone` stands for a value that does not exist; negatives use U+2212.
+  statistics: 'Statistics',
+  closeStatistics: 'Close statistics',
+  statGamesPlayed: 'Games played',
+  statGamesWon: 'Games won',
+  statGamesGivenUp: 'Games given up',
+  statBestScore: 'Best score',
+  statAverageScore: 'Average score',
+  statLongestWord: 'Longest word',
+  statNone: '\u2014',
+  statNumber: (n: number) => (n < 0 ? `\u2212${-n}` : String(n)),
+  statLetters: letters,
+  statisticsEmpty: 'Finish or give up a game to see statistics here.',
   // Q-06 the QU card's badge (DESIGN.md Components, QU card).
   quBadge: '\u00d72',
   // §2 Session rejected: one title, one body per reason.
@@ -100,12 +140,12 @@ export const text = Object.freeze({
   // The variant sentences interpolate the stored version (the catalogue's 2 is a sample); the end
   // sheet (row 103) reuses them.
   historyTitle: "Your score history can't be read.",
-  historyVersionUnknown: (version: number) =>
-    `It uses format version ${version}, which this version can't read.`,
-  historyVersionUnreadable: "Its format version can't be read.",
-  historyContentsUnreadable: (version: number) =>
-    `It uses format version ${version} but its contents can't be read.`,
+  historyVersionUnknown,
+  historyVersionUnreadable,
+  historyContentsUnreadable,
   historyResetHint: 'Statistics are off until you reset it. Resetting deletes the old history.',
+  // The one reason-to-sentence mapping the History notice and the Statistics panel share.
+  historySentence,
   notNow: 'Not now',
   resetHistory: 'Reset history',
   // Reset history confirm (catalogue row 104).

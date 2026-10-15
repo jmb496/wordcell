@@ -16,6 +16,27 @@ describe('AD-13 history notice text', () => {
   });
 });
 
+describe('AD-13 shared history sentence and statistics text', () => {
+  it('AD-13 historySentence maps each reason to its own sentence', () => {
+    expect(text.historySentence({ reason: 'version-unknown', version: 7 })).toBe(
+      text.historyVersionUnknown(7),
+    );
+    expect(text.historySentence({ reason: 'version-unreadable' })).toBe(
+      text.historyVersionUnreadable,
+    );
+    expect(text.historySentence({ reason: 'contents-unreadable', version: 1 })).toBe(
+      text.historyContentsUnreadable(1),
+    );
+  });
+
+  it('AD-3 statLetters reads 1 letter and 8 letters; statNumber uses U+2212', () => {
+    expect(text.statLetters(1)).toBe('1 letter');
+    expect(text.statLetters(8)).toBe('8 letters');
+    expect(text.statNumber(-5)).toBe('\u22125');
+    expect(text.statNumber(0)).toBe('0');
+  });
+});
+
 describe('AD-8 dictionary text', () => {
   it('AD-8 invalidWord uppercases the engine spelling', () => {
     expect(text.invalidWord('tan')).toBe("TAN isn't in the word list.");

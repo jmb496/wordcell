@@ -15,10 +15,11 @@ interface Props {
   closeLabel: string;
   onclose: () => void;
   open?: boolean;
+  covered?: boolean;
   children: Snippet;
 }
 
-const { title, closeLabel, onclose, open = true, children }: Props = $props();
+const { title, closeLabel, onclose, open = true, covered = false, children }: Props = $props();
 const id = $props.id();
 const presence = createPresence(() => open);
 
@@ -34,7 +35,7 @@ function focusStart(heading: HTMLElement): void {
     role="dialog"
     aria-modal="true"
     aria-labelledby="{id}-title"
-    inert={!open}
+    inert={!open || covered}
     {@attach presence.attach}
     ontransitionend={presence.onend}
     ontransitioncancel={presence.oncancel}

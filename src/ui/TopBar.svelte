@@ -5,6 +5,8 @@ import { prefs } from '../shell/prefs.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { act } from './act';
 import { capture, play } from './flip';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import { historyUnreadable } from './history-notice.svelte';
 import { openSurface } from './open-surface';
 import { overlays } from './overlays.svelte';
 import { text } from './text';
@@ -62,6 +64,7 @@ function redo(): void {
     type="button"
     class="icon menu-button"
     aria-label={text.menu}
+    aria-describedby={historyUnreadable() ? 'menu-history-flag' : undefined}
     onclick={act(openMenu)}
   >
     <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
@@ -69,7 +72,9 @@ function redo(): void {
       <path d="M4 12 H20" />
       <path d="M4 17 H20" />
     </svg>
+    {#if historyUnreadable()}<span class="dot" aria-hidden="true"></span>{/if}
   </button>
+  {#if historyUnreadable()}<span id="menu-history-flag" class="sr-only">{text.historyTitle}</span>{/if}
   <p class="score">{text.score(view.displayScore)}</p>
   {#if prefs.value.showTimer}
     {@const timer = timerText()}
@@ -134,6 +139,15 @@ function redo(): void {
     display: grid; place-items: center;
     background: var(--wc-surface-raised); border: 1px solid var(--wc-outline);
     color: var(--wc-ink-primary); touch-action: none;
+  }
+  .menu-button { position: relative; }
+  .dot {
+    position: absolute; top: 8px; right: 8px; width: 10px; height: 10px; border-radius: 9999px;
+    background: var(--wc-error); border: 2px solid var(--wc-surface-raised); box-sizing: content-box;
+  }
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden;
+    clip-path: inset(50%); white-space: nowrap;
   }
   .icon:disabled { color: var(--wc-ink-disabled); }
   .icon svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }

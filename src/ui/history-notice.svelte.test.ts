@@ -92,4 +92,14 @@ describe('AD-13 openHistoryNotice', () => {
     mocks.history.state = { status: 'ok' };
     expect(t.noticeReason()).toEqual({ reason: 'version-unknown', version: 2 });
   });
+
+  it('AD-13 historyUnreadable() is true in an inactive game state, follows the store state and is false after reset', async () => {
+    for (const kind of ['rejected', 'halted', 'booting', 'active']) {
+      const t = await load(kind);
+      expect(t.historyUnreadable()).toBe(true);
+    }
+    const t = await load('rejected');
+    mocks.history.state = { status: 'ok' };
+    expect(t.historyUnreadable()).toBe(false);
+  });
 });
