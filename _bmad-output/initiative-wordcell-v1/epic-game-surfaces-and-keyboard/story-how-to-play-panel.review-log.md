@@ -1,6 +1,6 @@
 # Review log — story-how-to-play-panel.md
 
-State: pass 3: done
+State: pass 4: done
 
 Pre-loop: HEAD ae31bafbb84ba3dd16240be0c00aa8cabe9bfc85; copy at story-how-to-play-panel.review-log.passes/pass0.md; 217 words; budget 1500 words.
 
@@ -55,3 +55,29 @@ Words (docs): 1051 (4.8 x pass 0; budget 1500)  |  Snapshot: story-how-to-play-p
 - none new
 ### Dropped
 - touch/mouse rows list and the §8 derivation clause: left as unapplied minors (owner reviews the text, SPEC F3)
+
+## Pass 4 — 2026-10-15
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 0, minor 3 (after merge of a duplicate), decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1051 (4.8 x pass 0; budget 1500)  |  No fix pass ran; document unchanged since pass 3.
+### Applied
+- none (converged; minors not applied)
+### Default applied (technical)
+- none new
+### Decision needed (functionality / UX / gameplay)
+- none new
+### Dropped
+- none
+
+## Result — converged after 4 passes
+
+Majors per pass: 8, 4, 1, 0. Words 217 → 1051 (budget 1500).
+
+Decision needed (carried from pass 1, not blocking):
+- Band section — show only the six band names, or also each band's score threshold? Proposed default (as written in the ticket): names in ascending order only. Player-visible effect: the panel says which bands exist but not what score reaches them.
+
+Unapplied minors:
+- Number or quote the eight heading names (the sixth contains commas: `Scoring, giving up and bands`).
+- Give the example container's card sizes a formula (e.g. slot = min(board slot, content width / 6)) or leave to the baseline.
+- Name the "no prose text node" scan method (svelte/compiler Text nodes whitespace-only) or drop the clause.
+- List the touch and mouse gestures by name; optionally add a short §8 derivation clause to each example caption (owner reviews the text, SPEC F3).
+- Pass-3 edge/adversarial minors already folded into the pass-3 fix are done.

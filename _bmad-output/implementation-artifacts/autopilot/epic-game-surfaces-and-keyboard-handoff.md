@@ -1,17 +1,15 @@
-outcome: done
-ticket: 6.8
-reason: done
+outcome: stopped
+ticket: 6.9
+reason: stop rule 1 - ticket review found a decision for the owner (band list in How to play)
 next: 6.9
-updated: 2026-10-15T15:27:21Z
-summary: Ticket 6.8 (pending-draft line) is built, reviewed, tested and marked done.
+updated: 2026-10-15T17:02:43Z
+summary: Ticket 6.9 (How to play panel) is hardened, but one wording choice about the rating bands needs your answer before the build.
 
 ## Report
 
-Ticket 6.8 is done. After your answer on long words, the ticket review settled in 4 passes, the build passed, and the code review (2 passes) widened a cramped gap before the "·". All tests and screenshot checks pass.
+The ticket review converged after 4 passes. One question is yours: should the How to play panel list only the six rating-band names, or also the score each band needs?
+- Names only (proposed default, as the ticket is written): players see which ratings exist, with no numbers to aim for.
+- Names plus thresholds: players can aim for a score, but it adds numbers to the panel.
 
-Worth knowing: the two new screenshot baselines still show the old narrow gap (they passed anyway); regenerate them next time baselines are refreshed.
-
-Close-out docs (for the retro):
-- EXPERIENCE.md State Patterns (Idle/pending draft row) and DESIGN.md Tray band ← at 360 px the line never wraps or overflows, suffix always fully shown, word cut with "…" only if it cannot fit (owner, 2026-10-15)
-
-Next: ticket 6.9 (How to play panel). Rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-game-surfaces-and-keyboard`.
+Reply with your choice; I will record it in the ticket, commit, and rerun .claude/skills/epic-autopilot/scripts/loop.sh epic-game-surfaces-and-keyboard to resume at the build.
+Close-out docs: none yet.

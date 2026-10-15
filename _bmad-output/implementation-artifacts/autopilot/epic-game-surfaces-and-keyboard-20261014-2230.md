@@ -174,3 +174,13 @@ Tokens: 2.9M input-equivalent (build 51%, ticket review 21%, code review 17%, or
 Worth knowing: the code review widened the gap before "·" (padding 0.25em) after the build's own screenshot showed it cramped; the two new baselines (board-idle-pending-draft android/desktop) were not regenerated and still passed, so they show the old, narrower gap; regenerate them next time baselines are refreshed. Playwright tests use the existing TAN session rather than BAKED. One minor unapplied: tidy a toEqual in the 360 px test.
 Close-out docs:
 - EXPERIENCE.md State Patterns (Idle/pending draft row) and DESIGN.md Tray band ← at 360 px the line never wraps or overflows, suffix always fully shown, word ellipsizes only if it cannot fit (owner, 2026-10-15)
+
+## 6.9 How to play panel — stopped
+What it adds: a "How to play" panel in the menu explaining the rules, including the six rating bands.
+Ticket review: 4 passes, converged (majors 8, 4, 1, 0); one item needs your input (below)
+Build: not started
+Decision for you: should the panel list only the six band names (ascending), or also each band's score threshold? Proposed default: names only, as the ticket says. Effect: names only shows which ratings exist without numbers to aim for; thresholds add those numbers.
+Ref to fix upstream: none
+Tokens: Tokens: 2.4M input-equivalent (ticket review 96%, orchestrator 3%, other 1%); orchestrator peak context 52k
+Worth knowing: the review's last log update is committed with this stop.
+Close-out docs: none yet
