@@ -493,6 +493,69 @@ test.describe('android', () => {
     expect(await game()).toEqual(storedBefore);
     await expectLeaves(page);
   });
+
+  // Epic 6 CAP-1 (6.1, SPEC F7, AD-14): the sheet and its scrim fade with a CSS transition on
+  // `--wc-base-ms`, opacity only under reduced motion at the 120 ms fade. The recorder keeps every
+  // opacity `transitionend` (its `elapsedTime` is the transition's length) of the layer.
+  for (const reduced of [false, true]) {
+    test(`AD-14 WordCell view open/close transition (${reduced ? 'reduced motion' : 'normal'})`, async ({
+      page,
+    }) => {
+      if (reduced) await page.emulateMedia({ reducedMotion: 'reduce' });
+      await openFixture(page, 'session-idle-empty-column');
+      await page.evaluate(() => {
+        const log: { property: string; elapsed: number }[] = [];
+        (window as unknown as { __fades: typeof log }).__fades = log;
+        document.addEventListener(
+          'transitionend',
+          (event) => {
+            const target = event.target;
+            if (target instanceof Element && target.hasAttribute('data-view-layer')) {
+              log.push({ property: event.propertyName, elapsed: event.elapsedTime });
+            }
+          },
+          true,
+        );
+      });
+      const fades = () =>
+        page.evaluate(
+          () => (window as unknown as { __fades: { property: string; elapsed: number }[] }).__fades,
+        );
+      const base = await page.evaluate(
+        () =>
+          Number.parseFloat(
+            getComputedStyle(document.documentElement).getPropertyValue('--wc-base-ms'),
+          ) / 1000,
+      );
+      const expected = reduced ? 0.12 : base;
+      expect(
+        await page.evaluate(() =>
+          getComputedStyle(document.documentElement).getPropertyValue('--wc-fade-ms').trim(),
+        ),
+      ).toBe('120ms');
+      // Sticky view: opens to the shown end state, closes by back.
+      await openSticky(page, 7, 7);
+      const layer = page.locator('[data-view-layer]');
+      await expect(layer).toHaveCSS('opacity', '1');
+      await expect(layer).toHaveCSS('transition-property', 'opacity');
+      await expect(layer).toHaveCSS('transition-duration', `${expected}s`);
+      await expect.poll(async () => (await fades()).length).toBe(1);
+      await page.goBack();
+      await expectNoView(page);
+      await expect.poll(async () => (await fades()).length).toBe(2);
+      // A peek: the same two transitions, ending in the shown state while held.
+      await holdPeek(page, 7, async () => {
+        await expect(layer).toHaveCSS('opacity', '1');
+        await expect.poll(async () => (await fades()).length).toBe(3);
+      });
+      await expectNoView(page);
+      await expect.poll(async () => (await fades()).length).toBe(4);
+      for (const fade of await fades()) {
+        expect(fade.property).toBe('opacity');
+        expect(fade.elapsed).toBeCloseTo(expected, 2);
+      }
+    });
+  }
 });
 
 // Entry 12 (SPEC CAP-9, F19, F27): the desktop hover peek. The page clock is installed and paused

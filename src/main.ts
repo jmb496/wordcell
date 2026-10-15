@@ -13,7 +13,7 @@ import Halted from './ui/Halted.svelte';
 import { openHistoryNotice } from './ui/history-notice.svelte';
 import { browserLayoutDeps, createLayout } from './ui/layout/layout.svelte';
 import { trayTileCount } from './ui/layout/tray';
-import { duration, hideClear, stagger, startTracker } from './ui/motion';
+import { duration, hideClear, initMotion, stagger, startTracker } from './ui/motion';
 import { overlays } from './ui/overlays.svelte';
 // Imported before boot so the `@font-face` the font check loads is registered.
 import './ui/app.css';
@@ -113,6 +113,7 @@ async function boot(): Promise<void> {
   await fontCheck();
   // AD-10: prefs and the motion mirror before the Session load, also when halted meanwhile.
   prefs.load();
+  initMotion();
   game.load();
   if (game.state.kind === 'halted') {
     showStandalone();

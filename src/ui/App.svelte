@@ -14,7 +14,7 @@ import HistoryNotice from './HistoryNotice.svelte';
 import type { Layout } from './layout/layout.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { newGame } from './new-game';
-import { overlays } from './overlays.svelte';
+import { type OverlayId, overlays } from './overlays.svelte';
 import { text } from './text';
 
 // Roots: halted, Session rejected, the Board (AD-11) with the dialogs beside it. Script-side uses
@@ -28,6 +28,21 @@ function pointerRoot(node: HTMLElement): { destroy: () => void } {
 }
 
 const board = $derived(game.view);
+
+// Epic 6 CAP-1 (6.1, SPEC F5, F6): `main` (Board, top bar, action bar) is inert while any modal
+// surface is on the stack. The expanded end sheet and the WordCell view are not in the list (their
+// entries own their exceptions). HistoryNotice, rendered below, keeps its own markup.
+const INERT_UNDER: readonly OverlayId[] = [
+  'historyNotice',
+  'resetConfirm',
+  'menu',
+  'statistics',
+  'preferences',
+  'howToPlay',
+  'newGameConfirm',
+  'replayConfirm',
+];
+const mainInert = $derived(INERT_UNDER.some((id) => overlays.isOpen(id)));
 
 // Epic 4 SPEC CAP-6: one reaction recomputes the desktop hover classes at the last pointer
 // point whenever the selection or the GameView changes (tap, drop, Undo, Redo, Reload, back).
@@ -61,7 +76,7 @@ function rejectedBody(reason: RejectReason): string {
   />
 {:else if game.state.kind === 'active' && board}
   <!-- AD-13: dialogs render beside the board; while the notice is rendered the board is inert. -->
-  <main use:pointerRoot inert={overlays.isOpen('historyNotice')}>
+  <main use:pointerRoot inert={mainInert}>
     <Board view={board} {layout} />
   </main>
   {#if overlays.isOpen('historyNotice')}

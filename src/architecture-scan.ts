@@ -663,6 +663,7 @@ export const SELF: ReadonlySet<string> = new Set([
   'src/architecture-tree-scan.test.ts',
   'src/architecture-ad1.test.ts',
   'src/architecture-ad2-ad12-ad17.test.ts',
+  'src/architecture-new-game.test.ts',
 ]);
 
 export function walk(dir: string): string[] {

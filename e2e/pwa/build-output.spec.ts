@@ -111,3 +111,29 @@ test("AD-18 the build's .vite/manifest.json has the index.html entry under asset
   expect(entry?.isEntry).toBe(true);
   expect(entry?.file).toMatch(/^assets\//);
 });
+
+test('AD-10 the built CSS keeps the @container style(--wc-reduced branch, reading var(--wc-fade-ms) with no literal 120ms', () => {
+  // Epic 6 CAP-1 (6.1, SPEC F7): the surface components' reduced-motion branch must survive the
+  // CSS pipeline (minification may rewrite spacing, never drop the query); the dev-server spec
+  // e2e/wordcell-view.spec.ts proves the computed style.
+  const root = buildRoot();
+  const files = walk(root).filter((file) => /^assets\/[^/]+\.css$/.test(file));
+  expect(files.length).toBeGreaterThan(0);
+  const css = files.map((file) => readSite(file)).join('\n');
+  const starts = [...css.matchAll(/@container\s+style\(\s*--wc-reduced\s*:\s*1\s*\)/g)];
+  // Dialog and WordCellView are bundled today; Sheet and Panel have no opener until ticket 6.2 and
+  // are tree-shaken, and their branches join this scan once bundled.
+  expect(starts.length).toBeGreaterThanOrEqual(2);
+  for (const start of starts) {
+    let depth = 0;
+    let end = css.indexOf('{', start.index);
+    const from = end;
+    for (; end < css.length; end++) {
+      if (css[end] === '{') depth++;
+      if (css[end] === '}' && --depth === 0) break;
+    }
+    const branch = css.slice(from, end + 1);
+    expect(branch).toContain('var(--wc-fade-ms)');
+    expect(branch).not.toMatch(/120\s*ms/);
+  }
+});

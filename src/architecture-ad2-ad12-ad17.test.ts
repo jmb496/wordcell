@@ -123,8 +123,14 @@ describe('AD-2 engine index exports', () => {
 // regex over `.svelte`, ticket 1.10). Dialog, BlockingMessage and Halted pass handlers through
 // unwrapped and must contain no `act(` call; ActionBar's `onclick={primary.onclick}` is the one
 // exempt attribute, its derived `onclick:` properties checked instead (each ternary branch).
-const ACT_EXEMPT_FILES = new Set(['Dialog.svelte', 'BlockingMessage.svelte', 'Halted.svelte']);
-const HANDLER_ATTRIBUTE = /^on(?:click|action|dismiss|scrim)$/;
+const ACT_EXEMPT_FILES = new Set([
+  'Dialog.svelte',
+  'Sheet.svelte',
+  'Panel.svelte',
+  'BlockingMessage.svelte',
+  'Halted.svelte',
+]);
+const HANDLER_ATTRIBUTE = /^on(?:click|action|dismiss|scrim|close)$/;
 
 const isActCall = (node: unknown): boolean =>
   isNode(node) &&
@@ -207,6 +213,12 @@ describe('AD-12 act() scan', () => {
   const cases: [string, string, string, number][] = [
     ['act( call', OK, '<button onclick={act(go)}>a</button>', 0],
     ['component handlers', OK, '<D ondismiss={act(a)} onaction={act(b)} onscrim={act(c)} />', 0],
+    ['onclose wrapped', OK, '<Sheet onclose={act(a)} onscrim={act(b)} />', 0],
+    ['onclose bare', OK, '<Sheet onclose={a} />', 1],
+    ['onclose on: directive', OK, '<Sheet on:close={act(a)} />', 1],
+    ['Sheet passes through', 'src/ui/Sheet.svelte', '<button onclick={onclose}>a</button>', 0],
+    ['Panel passes through', 'src/ui/Panel.svelte', '<button onclick={onclose}>a</button>', 0],
+    ['act( in Sheet', 'src/ui/Sheet.svelte', '<script>const r = act(a);</script>', 1],
     ['bare identifier', OK, '<button onclick={go}>a</button>', 1],
     ['shorthand', OK, '<button {onclick}>a</button>', 1],
     ['spread', OK, '<button {...props}>a</button>', 1],
@@ -254,6 +266,8 @@ describe('AD-12 act() scan', () => {
         'src/ui/App.svelte',
         'src/ui/ActionBar.svelte',
         'src/ui/Dialog.svelte',
+        'src/ui/Sheet.svelte',
+        'src/ui/Panel.svelte',
         'src/ui/BlockingMessage.svelte',
         'src/ui/Halted.svelte',
       ]),

@@ -17,6 +17,12 @@ import { nav } from '../shell/nav';
 export type OverlayId =
   | 'historyNotice'
   | 'resetConfirm'
+  | 'menu'
+  | 'statistics'
+  | 'preferences'
+  | 'howToPlay'
+  | 'newGameConfirm'
+  | 'replayConfirm'
   | 'tailSelection'
   | 'wordcellView'
   | 'endSheet';
@@ -24,7 +30,40 @@ export type EndSheetState = 'hidden' | 'collapsed' | 'expanded';
 export type TailSelection = { readonly column: number; readonly count: number };
 
 const OWN_OPERATION: readonly OverlayId[] = ['tailSelection', 'wordcellView', 'endSheet'];
-const MODAL_TOP: readonly OverlayId[] = ['historyNotice', 'resetConfirm', 'endSheet'];
+const MODAL_TOP: readonly OverlayId[] = [
+  'historyNotice',
+  'resetConfirm',
+  'endSheet',
+  'menu',
+  'statistics',
+  'preferences',
+  'howToPlay',
+  'newGameConfirm',
+  'replayConfirm',
+];
+
+// Epic 6 CAP-1 (6.1): the legal top entries (`undefined` = an empty stack) under which each of
+// the six new ids, and resetConfirm, may open. A confirm opens only after the menu closed, never
+// over it; only resetConfirm stacks on historyNotice (SPEC F8). tailSelection, wordcellView and a
+// peek are never legal tops.
+const PANELS: readonly OverlayId[] = ['statistics', 'preferences', 'howToPlay'];
+const LEGAL_TOPS: Partial<Record<OverlayId, readonly (OverlayId | undefined)[]>> = {
+  menu: [undefined, 'endSheet'],
+  statistics: [undefined, 'endSheet'],
+  preferences: [undefined, 'endSheet'],
+  howToPlay: [undefined, 'endSheet'],
+  newGameConfirm: [undefined, 'endSheet', ...PANELS],
+  replayConfirm: [undefined, 'endSheet', ...PANELS],
+  resetConfirm: ['historyNotice', 'statistics', 'endSheet'],
+};
+const NEW_SURFACES: readonly OverlayId[] = [
+  'menu',
+  'statistics',
+  'preferences',
+  'howToPlay',
+  'newGameConfirm',
+  'replayConfirm',
+];
 
 let stack = $state.raw<readonly OverlayId[]>([]);
 let selection = $state.raw<TailSelection | null>(null);
@@ -67,6 +106,21 @@ function open(id: OverlayId): void {
   if (OWN_OPERATION.includes(id))
     throw new Error(`AD-13 open(${id}) while it has its own operation`);
   if (stack.includes(id)) throw new Error(`AD-13 open(${id}) while it is open`);
+  const legal = LEGAL_TOPS[id];
+  if (legal !== undefined) {
+    const top = stack.at(-1);
+    if (!legal.includes(top)) {
+      throw new Error(
+        top === undefined
+          ? `AD-13 open(${id}) on an empty stack`
+          : `AD-13 open(${id}) while ${top} is the top entry`,
+      );
+    }
+    if (NEW_SURFACES.includes(id)) {
+      if (peek !== null) throw new Error(`AD-13 open(${id}) while a peek is open`);
+      hoverPeek = null;
+    }
+  }
   push(id);
 }
 

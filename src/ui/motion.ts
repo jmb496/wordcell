@@ -13,7 +13,8 @@ const FACTOR: Record<MotionKind, number> = {
   flyToCell: 2,
   overlay: 1,
 };
-const REDUCED_FADE_MS = 120;
+/** AD-10: the reduced-motion fade, also written to `--wc-fade-ms` by `initMotion`. */
+export const REDUCED_FADE_MS = 120;
 const STAGGER_MS = 30;
 
 /** AD-10: the duration in ms of one animation of `kind`. */
@@ -21,6 +22,15 @@ export function duration(kind: MotionKind): number {
   const { baseMs, reduced } = prefs.motion;
   if (reduced) return kind === 'parting' ? 0 : REDUCED_FADE_MS;
   return baseMs * FACTOR[kind];
+}
+
+/**
+ * Epic 6 SPEC F7: writes `--wc-fade-ms` on the root so surface CSS (a CSS transition, never WAAPI)
+ * can read the reduced-motion fade under `@container style(--wc-reduced: 1)`; main.ts calls it
+ * right after `prefs.load()`. The shell's `motion.reduced` stays an on/off flag.
+ */
+export function initMotion(): void {
+  document.documentElement.style.setProperty('--wc-fade-ms', `${REDUCED_FADE_MS}ms`);
 }
 
 /** AD-10: the delay in ms between staggered animations. */

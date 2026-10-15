@@ -5,6 +5,7 @@ import type { CellView, Face, GameView } from '../engine/index';
 import Card from './Card.svelte';
 import { cellIn } from './gestures/lookup';
 import { overlays } from './overlays.svelte';
+import { createPresence } from './presence.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { text } from './text';
 
@@ -14,27 +15,50 @@ import { text } from './text';
 // `data-mode`. The sheet lists `CellView.cards` bottom first, the top last and tagged `top`, as
 // `view` mirrors (AD-14). The controller reads `[data-view-scroll]` at a long-press release
 // (overflow → sticky) and classifies presses on `[data-view-scrim]` and `[data-view-sheet]` itself:
-// neither carries a click handler. No transition (epic 4 SPEC Non-goals), so the release-time
-// overflow read sees the settled sheet.
+// neither carries a click handler. Epic 6 CAP-1 (6.1, SPEC F7): the sheet and scrim fade with a CSS
+// transition on `--wc-base-ms` (`--wc-fade-ms` under reduced motion), opacity only so the layout
+// never moves: the release-time overflow read of `[data-view-scroll]` sees the settled geometry at
+// once. On close it stays rendered, `inert` and `pointer-events: none`, until the transition ends;
+// peek-to-sticky changes `data-mode` only and replays nothing.
 let { view }: { view: GameView } = $props();
 
 const open = $derived(overlays.peek ?? overlays.viewCell);
+const presence = createPresence(() => open !== null);
+// The last open cell and mode, kept for the exit.
+let lastCell = $state<number | null>(null);
+let lastMode = $state<'peek' | 'sticky'>('sticky');
+$effect.pre(() => {
+  if (open === null) return;
+  lastCell = open;
+  lastMode = overlays.peek !== null ? 'peek' : 'sticky';
+});
+const shownCell = $derived(open ?? lastCell);
 
 function cellOf(n: number): CellView {
   return cellIn(view.cells, n, `AD-13 WordCell view of unknown cell ${n}`);
 }
 </script>
 
-{#if open !== null}
-  {@const cell = cellOf(open)}
+{#if presence.present && shownCell !== null}
+  {@const cell = cellOf(shownCell)}
   {@const title = text.viewTitle(cell.cell, cell.cards.length)}
+  <div
+    class="layer"
+    data-view-layer
+    class:shown={presence.shown}
+    class:exiting={open === null}
+    {@attach presence.attach}
+    ontransitionend={presence.onend}
+    ontransitioncancel={presence.onend}
+  >
   <div class="scrim" data-view-scrim></div>
   <div
     class="sheet"
     data-view-sheet
     role="dialog"
     aria-label={title}
-    data-mode={overlays.peek !== null ? 'peek' : 'sticky'}
+    inert={open === null}
+    data-mode={open === null ? lastMode : overlays.peek !== null ? 'peek' : 'sticky'}
   >
     <h2 class="title">{title}</h2>
     <div class="scroll" data-view-scroll>
@@ -52,11 +76,18 @@ function cellOf(n: number): CellView {
       </div>
     </div>
   </div>
+  </div>
 {/if}
 
 <style>
   /* DESIGN.md layer order: scrim and overlay above the bars (z 2), lifted faces (z 3) and the drag
      layer (z 5). */
+  .layer { position: relative; z-index: 10; opacity: 0; transition: opacity var(--wc-base-ms); }
+  .shown { opacity: 1; }
+  .exiting { pointer-events: none; }
+  @container style(--wc-reduced: 1) {
+    .layer { transition: opacity var(--wc-fade-ms); }
+  }
   .scrim {
     position: fixed; inset: 0; z-index: 10; background: var(--wc-scrim); touch-action: none;
   }
