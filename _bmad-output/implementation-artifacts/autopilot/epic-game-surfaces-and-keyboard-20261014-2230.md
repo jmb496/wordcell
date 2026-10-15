@@ -79,3 +79,10 @@ Ref to fix upstream: none
 Tokens: 6.1M input-equivalent (ticket review 50%, build 25%, code review 18%, other 4%, orchestrator 2%)
 Worth knowing: nothing
 Close-out docs: none
+
+## 6.5 Statistics panel, history flag and menu dot — stopped (owner decision needed)
+What it adds: a Statistics panel (games played, won, given up, best and average score, longest word) and an error dot on the menu button when saved history is unreadable.
+Ticket review: 5 passes, converged (majors 8, 5, 4, 2, 0); one item needs your input (below)
+Build: not started
+Worth knowing: the decision concerns only how the longest word is displayed.
+Decision: how to show the letter count beside the longest word on its tile. Proposed default: the uppercase word as the tile value, with a small secondary-ink caption "8 letters" beneath it (text from text.ts). Effect: only what the player reads on that tile; no rule or scoring change.

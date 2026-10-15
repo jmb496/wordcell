@@ -1,6 +1,6 @@
 # Review log — story-statistics-panel-history-flag-and-menu-dot
 
-State: pass 4: done
+State: pass 5: done
 
 Pre-loop: HEAD 1a7c369, words 291 (budget default 2.5x = ~728).
 
@@ -72,3 +72,15 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings (
 ### Unapplied minors
 - Session seed named in the AD-13 reload; focus-return mechanism after Delete history; `Statistics` title key; message rendered only in the unreadable branch; long-word wrap baseline; empty-line/unreadable rule merge; confirm scrim/Esc/back wording.
 Fix applied (2 majors). Words: 978 (3.4 x pass 0) | Snapshot: pass4.md
+
+## Pass 5 — 2026-10-15
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 0, minor 12, decision-needed 0  |  Dropped in triage: 0
+No fix pass (zero majors). Words: 978 (3.4 x pass 0).
+
+## Result — converged after 5 passes
+Majors per pass: 8, 5, 4, 2, 0. Decision needed (not applied): longest-word tile — how the letter count shows beside the word; proposed default: uppercase word as the tile value with `8 letters` as a small ink-secondary caption beneath (text.ts key); practical effect: what the player reads on that tile.
+Technical defaults applied: focus element for the panel, shared confirm location, getter/dot accessible description, Esc via interim handlers, fixtures.
+### Unapplied minors (for the build plan)
+- Esc handler citation says "6.3 and 6.2 plans"; the real sources are 6.4 (PreferencesPanel closeOnEsc) and 6.3 (ConfirmDialogs; it covers only newGame/replay confirms, so the reset confirm needs its own top-gated handler); Esc cases are interim until entry 10.
+- The shared Delete history closes only resetConfirm; the notice adds its own historyNotice close (overlays.close throws when not top).
+- Name the expected values for history-three-records.json (3 / 1 / 2 / 355 / 355 / LQUEJATA 8); whether historyTitle shows in the panel body; the dot appears wherever ☰ renders; focus-return mechanism after Delete history; assert the dot via the button's accessible description; array order is chronological (AD-6); a fractional-mean guard; AD-13 reload: History notice is the only overlay after reload and the Session fixture seeded alongside the history; unreadable baseline fixture (version-unknown); long-word wrap baseline; `Statistics` title key in text.ts; message rendered only in the unreadable branch; empty-line/unreadable rule merge.
