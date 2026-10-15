@@ -234,3 +234,17 @@ Build: not started
 Ref to fix upstream: none
 Decision needed: can a keyboard player put focus directly on any card of a fanned column, or only on one card per column (the bottom or last-focused card; the tail's top card after a key selection)? Proposed default: one Tab stop per non-empty column. Effect: a keyboard or screen-reader user cannot focus a buried card directly; they reach it by selecting with the number keys and up/down. Play stays fully possible.
 Close-out docs: none yet
+
+### 6.11 resumed (session 2026-10-15, owner decision on column focus stops recorded: one Tab stop per column)
+
+## 6.11 Keyboard: board keys, focus moves and tooltips — stopped
+What it adds: the board keys (1–8, arrows, Space, Enter, +/-, F), focus that follows the game phase, a visible focus ring and key hints in desktop tooltips.
+Ticket review: 7 passes, converged; the one decision was answered by the owner
+Build: built; commit 4bbf09d
+Code review: thorough, 5 passes, converged (majors 4, 1, 2, 1, 0); fixes in WIP commits c1b964c..bea1a7a plus the log; one decision for you (below)
+Tests: test, lint and check pass in the review loop; the full `test:all` and screenshots not yet run by the autopilot (Step D not started)
+Ref to fix upstream: none
+Decision needed: the focus ring on column cards is drawn inside the card (2px in), whereas DESIGN.md says a 2px ring at a 2px offset with a table-colour gap. Default: keep the inside ring. Effect: the ring looks slightly tighter than the design doc but is not hidden by the overlapping neighbour cards.
+Close-out docs:
+- DESIGN.md focus ring ← if the inside ring is kept, the doc's offset/gap wording changes (pending owner answer)
+Tokens: Tokens: 12.7M input-equivalent (build 54%, code review 43%, orchestrator 1%, other 1%); orchestrator peak context 56k

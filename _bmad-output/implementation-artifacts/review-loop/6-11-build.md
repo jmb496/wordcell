@@ -1,6 +1,6 @@
 # Code review loop — ticket 6.11 build (dd013d3..4bbf09d)
 
-State: pass 4: done
+State: done
 Pre-loop: HEAD 4bbf09d, tree snapshot 0 10bd112d8494982e4badbc10bfed0ab592ff696f; target diff `6-11-build.passes/pass0.diff`.
 Intent: story-keyboard-board-keys-focus-moves-and-tooltips-plan.md. Depth thorough, max 7.
 
@@ -64,3 +64,23 @@ Note: pass 3 e2e run is recorded here: the pass-3 fixer ran board-keys + tooltip
 ### Decision needed (functionality / UX / gameplay)
 - none
 Snapshot: tree 28af484dbd43feedcd8ec9cd1a0c8287376365ca (fix: mirror-focus e2e; npm test/lint/check pass; e2e desktop+android pass)
+
+## Pass 5 — 2026-10-15
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 0, minor 2, decision-needed 0  |  Dropped in triage: 0
+### Applied
+- none (converged)
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none new (carried from pass 1)
+
+## Result — converged after 5 passes
+Majors per pass: 4, 1, 2, 1, 0. Final: npm test 2667 passed, lint clean, check 0 errors (state unchanged since pass 4 checkpoint).
+Carried decision-needed (pass 1): Card.svelte card focus ring drawn inside the card (offset −2px) vs DESIGN.md 2px offset with a table gap; proposed default keep.
+Unapplied minors:
+- e2e Mirrors test selects `[data-mirror-of]`; static mirrors (`.card.static`, no data-mirror-of) are not asserted tabindex-free.
+- keys.test.ts Enter/Space on a column card in Composing/Place runs against a mocked controller; no e2e presses them for the real outcome (ticket line says "taps it ... canValidate true and false"; code treats Place/Composing column-card as inert except destination card with k) — reword ticket or add an e2e.
+- keys.ts view row duplicates Controller.activate's view-open sequence (comment added, no shared helper).
+- Pointer press natively focuses a card (plan deferral).
+- Space on a WordCell whose view is open closes and reopens it.
+- Flow 6 stand-in session (owner reviews).
