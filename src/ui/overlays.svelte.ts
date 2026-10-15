@@ -72,6 +72,10 @@ let peek = $state<number | null>(null);
 let viewCell = $state<number | null>(null);
 let hoverPeek = $state<number | null>(null);
 let tileSelection = $state<CardId | null>(null);
+// Epic 6 CAP-4 (6.7, owner 2026-10-15): the finished game's score was not recorded because the
+// history was reset while its end sheet was open. UI-only: cleared by Undo and a new session,
+// never stored, so a reload drops it.
+let unrecordedFinish = $state(false);
 let liveToken: number | null = null;
 let lastToken = 0;
 
@@ -226,7 +230,12 @@ function cancelEndSheetOpen(): void {
   liveToken = null;
 }
 
+function markFinishUnrecorded(): void {
+  unrecordedFinish = true;
+}
+
 function onUnfinished(): void {
+  unrecordedFinish = false;
   if (endSheet === 'expanded') {
     close('endSheet');
     endSheet = 'hidden';
@@ -275,6 +284,7 @@ function resetForNewSession(): void {
   cancelEndSheetOpen();
   for (let top = stack.at(-1); top !== undefined; top = stack.at(-1)) close(top);
   endSheet = 'hidden';
+  unrecordedFinish = false;
   selection = null;
   viewCell = null;
   peek = null;
@@ -297,6 +307,9 @@ export const overlays = {
   },
   get endSheet(): EndSheetState {
     return endSheet;
+  },
+  get unrecordedFinish(): boolean {
+    return unrecordedFinish;
   },
   get peek(): number | null {
     return peek;
@@ -324,6 +337,7 @@ export const overlays = {
   closeHoverPeek,
   expandEndSheet,
   collapseEndSheet,
+  markFinishUnrecorded,
   onUnfinished,
   deferEndSheetOpen,
   openDeferred,

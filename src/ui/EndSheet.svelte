@@ -1,14 +1,20 @@
 <script lang="ts">
 import { tick, untrack } from 'svelte';
 import type { GameView } from '../engine/index';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import { scoreHistory } from '../shell/history.svelte';
 import { act } from './act';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { field, resultOf } from './end-sheet';
 import { focusBoard } from './focus-board';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import { historyUnreadable } from './history-notice.svelte';
 import { requestReplay } from './new-game';
 import { openSurface } from './open-surface';
 import { type EndSheetState, overlays } from './overlays.svelte';
 import { createPresence } from './presence.svelte';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import ResetConfirm from './ResetConfirm.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { text } from './text';
 
@@ -60,9 +66,31 @@ const collapse = (event: MouseEvent): void => {
 const replay = (event: MouseEvent): void => {
   if (first(event) && !requestReplay(view)) void tick().then(focusBoard);
 };
+const resetHistory = (event: MouseEvent): void => {
+  if (first(event)) overlays.open('resetConfirm');
+};
 const statistics = (event: MouseEvent): void => {
   if (first(event)) openSurface('statistics');
 };
+
+// 6.7: the sheet owns the Reset history confirm unless the notice or the Statistics panel does.
+const ownsConfirm = $derived(
+  overlays.isOpen('resetConfirm') &&
+    !overlays.isOpen('historyNotice') &&
+    !overlays.isOpen('statistics'),
+);
+let resetButton = $state<HTMLButtonElement | null>(null);
+let replayButton = $state<HTMLButtonElement | null>(null);
+let confirmWasOwned = false;
+$effect(() => {
+  const now = ownsConfirm;
+  untrack(() => {
+    if (confirmWasOwned && !now && overlays.top === 'endSheet') {
+      void tick().then(() => (resetButton ?? replayButton)?.focus());
+    }
+    confirmWasOwned = now;
+  });
+});
 
 const closeOnEsc = act((): void => {
   if (overlays.top === 'endSheet') overlays.collapseEndSheet();
@@ -117,8 +145,23 @@ function focusOnMount(button: HTMLButtonElement): void {
         {#if result.status === 'gaveUp'}
           <p class="penalty">{text.endPenalty(field(result.lettersLeft, 'lettersLeft'), field(result.penalty, 'penalty'))}</p>
         {/if}
+        {#if historyUnreadable()}
+          {@const current = scoreHistory.state}
+          <div class="unreadable">
+            <p class="unreadable-title">{text.historyTitle}</p>
+            {#if current.status === 'unreadable'}
+              <p>{text.historySentence(current.reason)}</p>
+            {/if}
+            <p>{text.endNotAdded}</p>
+            <button type="button" class="danger" bind:this={resetButton} onclick={act(resetHistory)}
+              >{text.resetHistory}</button
+            >
+          </div>
+        {:else if overlays.unrecordedFinish}
+          <p class="unrecorded">{text.endNotAdded}</p>
+        {/if}
         <div class="actions">
-          <button type="button" class="secondary" onclick={act(replay)} {@attach focusOnMount}
+          <button type="button" class="secondary" bind:this={replayButton} onclick={act(replay)} {@attach focusOnMount}
             >{text.replayDeal}</button
           >
           <button type="button" class="secondary" onclick={act(statistics)}>{text.statistics}</button>
@@ -126,6 +169,9 @@ function focusOnMount(button: HTMLButtonElement): void {
       </div>
     </div>
   </div>
+{/if}
+{#if ownsConfirm}
+  <ResetConfirm escKeeps />
 {/if}
 
 <style>
@@ -169,6 +215,14 @@ function focusOnMount(button: HTMLButtonElement): void {
   dt { color: var(--wc-ink-secondary); font: 500 0.875rem/1.25rem system-ui, "Roboto", sans-serif; }
   dd { margin: 0; overflow-wrap: anywhere; text-align: right; }
   .penalty { margin: 4px 0 0; text-align: left; color: var(--wc-ink-secondary); }
+  .unreadable, .unrecorded { margin: 12px 0 0; text-align: left; color: var(--wc-ink-secondary); }
+  .unreadable p, .unrecorded { margin: 4px 0 0; }
+  .unreadable-title { color: var(--wc-ink-primary); font-weight: 600; }
+  .danger {
+    margin-top: 8px; min-height: 44px; padding: 0 16px; border-radius: 9999px;
+    background: var(--wc-error); border: none; color: var(--wc-ink-on-accent);
+    font: 600 1rem/1.5rem system-ui, "Roboto", sans-serif;
+  }
   .actions { display: flex; gap: 8px; margin-top: 16px; }
   .secondary {
     flex: 1; min-height: 44px; padding: 0 16px; border-radius: 9999px;

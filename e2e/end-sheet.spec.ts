@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { stored } from './helpers/blocking';
 import { centre, glidesSettled, openFixture, tapAt } from './helpers/board';
-import { expectLeaves, type NavState, wc } from './helpers/dialogs';
+import { button, confirmDialog, expectLeaves, type NavState, notice, wc } from './helpers/dialogs';
 import { onAndroid, onDesktop } from './helpers/project';
 import { fixture, seedStorage } from './helpers/seed';
 
@@ -439,6 +439,220 @@ test.describe('android', () => {
     await expect(panel).toHaveCount(0);
     await expect(sheet(page)).toBeVisible();
     await expect.poll(() => wcOf(page)).toBe(1);
+  });
+
+  // Ticket 6.7 (SPEC CAP-4, F4, F8; R-84; owner 2026-10-15). History fixtures are §2 rejection
+  // seeds; the wins and Give ups are live finishes on a game played with the seeded history.
+  const HISTORY = 'wordcell:history';
+  const NOT_ADDED = "This game wasn't added to your statistics.";
+  const UNREADABLE = "Your score history can't be read.";
+  const EMPTY = '{"version":1,"records":[]}';
+  const VARIANTS = [
+    ['history-invalid-version-unknown', "It uses format version 2, which this version can't read."],
+    ['history-invalid-null', "Its format version can't be read."],
+    [
+      'history-invalid-record-field-set',
+      "It uses format version 1 but its contents can't be read.",
+    ],
+  ] as const;
+  const resetButton = (page: Page) =>
+    anySheet(page).getByRole('button', { name: 'Reset history', exact: true });
+  const line = (page: Page) => anySheet(page).getByText(NOT_ADDED, { exact: true });
+
+  async function expectBlock(page: Page, name: string, sentence: string, title: string) {
+    const dialog = sheet(page, title);
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByText(UNREADABLE, { exact: true })).toBeVisible();
+    await expect(dialog.getByText(sentence, { exact: true })).toBeVisible();
+    await expect(line(page)).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Reset history', exact: true })).toBeVisible();
+    expect(await stored(page, HISTORY)).toBe(fixture(`${name}.json`));
+  }
+
+  for (const [index, [name, sentence]] of VARIANTS.entries()) {
+    if (index === 0) {
+      test(`R-84 a live win shows the block with the variant sentence (${name}), history untouched`, async ({
+        page,
+      }) => {
+        await openFixture(page, 'session-won', { steps: ['undo'], history: name });
+        await primary(page).click();
+        await expectBlock(page, name, sentence, WIN);
+      });
+    }
+
+    test(`R-84 a live Give up shows the block with the variant sentence (${name}), history untouched`, async ({
+      page,
+    }) => {
+      await openFixture(page, 'session-idle-fresh', { history: name });
+      await giveUpFromMenu(page);
+      await expectBlock(page, name, sentence, GAVE);
+    });
+  }
+
+  async function giveUpWithBlock(page: Page): Promise<void> {
+    await openFixture(page, 'session-idle-fresh', { history: 'history-invalid-version-unknown' });
+    await giveUpFromMenu(page);
+    await expect(resetButton(page)).toBeVisible();
+    await expect.poll(() => wcOf(page)).toBe(1);
+  }
+
+  test('AD-13 Reset history then Delete history closes only the confirm: sheet expanded at wc 1 with the single line', async ({
+    page,
+  }) => {
+    await giveUpWithBlock(page);
+    await resetButton(page).click();
+    await expect(confirmDialog(page)).toBeVisible();
+    await expect(button(page, 'Keep it')).toBeFocused();
+    await expect.poll(() => wcOf(page)).toBe(2);
+    await button(page, 'Delete history').click();
+    await expect(confirmDialog(page)).toHaveCount(0);
+    await expect.poll(() => wcOf(page)).toBe(1);
+    await expect(sheet(page, GAVE)).toBeVisible();
+    await expect(sheet(page, GAVE).getByText(UNREADABLE)).toHaveCount(0);
+    await expect(resetButton(page)).toHaveCount(0);
+    await expect(line(page)).toHaveCount(1);
+    await expect(replayButton(page)).toBeFocused();
+    expect(await stored(page, HISTORY)).toBe(EMPTY);
+    // Collapse and expand keep the line.
+    await handle(page).click();
+    await expect(anySheet(page)).toHaveCount(0);
+    await bar(page).click();
+    await expect(line(page)).toBeVisible();
+    // Undo leaves the history empty, drops the line; a new finish records normally, no line.
+    await page.getByTestId('undo').click();
+    await expect(anySheet(page)).toHaveCount(0);
+    expect(await stored(page, HISTORY)).toBe(EMPTY);
+    await giveUpFromMenu(page);
+    await expect(sheet(page, GAVE)).toBeVisible();
+    await expect(line(page)).toHaveCount(0);
+    await expect
+      .poll(async () => JSON.parse((await stored(page, HISTORY)) ?? 'null').records.length)
+      .toBe(1);
+  });
+
+  for (const how of ['Keep it', 'Escape', 'back', 'scrim'] as const) {
+    test(`AD-13 ${how} on the sheet's Reset confirm closes only the confirm; the block stays`, async ({
+      page,
+    }) => {
+      await giveUpWithBlock(page);
+      const before = await stored(page, HISTORY);
+      await resetButton(page).click();
+      await expect(confirmDialog(page)).toBeVisible();
+      if (how === 'Keep it') await button(page, 'Keep it').click();
+      else if (how === 'Escape') await page.keyboard.press('Escape');
+      else if (how === 'back') await page.goBack();
+      else await page.touchscreen.tap(5, 300);
+      await expect(confirmDialog(page)).toHaveCount(0);
+      await expect(sheet(page, GAVE)).toBeVisible();
+      await expect(resetButton(page)).toBeVisible();
+      await expect(resetButton(page)).toBeFocused();
+      await expect.poll(() => wcOf(page)).toBe(1);
+      expect(await stored(page, HISTORY)).toBe(before);
+    });
+  }
+
+  test('AD-13 a relaunch into Game over with an unreadable history shows the notice over the sheet; confirm and back sequence', async ({
+    page,
+  }) => {
+    await seedStorage(page, {
+      session: fixture('session-won.json'),
+      history: fixture('history-invalid-version-unknown.json'),
+    });
+    await page.goto('/');
+    await expect(notice(page)).toBeVisible();
+    await expect(sheet(page)).toBeVisible();
+    expect(await wc(page)).toEqual({ wc: 2, launch: expect.any(Number) });
+    await notice(page).getByRole('button', { name: 'Reset history', exact: true }).click();
+    await expect(confirmDialog(page)).toBeVisible();
+    await expect.poll(() => wcOf(page)).toBe(3);
+    // Keep it, Esc, back and a scrim tap return to the notice.
+    await button(page, 'Keep it').click();
+    await expect(notice(page)).toBeVisible();
+    await expect.poll(() => wcOf(page)).toBe(2);
+    await notice(page).getByRole('button', { name: 'Reset history', exact: true }).click();
+    await page.keyboard.press('Escape');
+    await expect(confirmDialog(page)).toHaveCount(0);
+    await expect(notice(page)).toBeVisible();
+    await notice(page).getByRole('button', { name: 'Reset history', exact: true }).click();
+    await page.touchscreen.tap(5, 300);
+    await expect(confirmDialog(page)).toHaveCount(0);
+    await expect(notice(page)).toBeVisible();
+    await notice(page).getByRole('button', { name: 'Reset history', exact: true }).click();
+    // Back sequence from wc 3.
+    await page.goBack();
+    await expect(confirmDialog(page)).toHaveCount(0);
+    await expect(notice(page)).toBeVisible();
+    await expect.poll(() => wcOf(page)).toBe(2);
+    await page.goBack();
+    await expect(notice(page)).toHaveCount(0);
+    await expect(sheet(page)).toBeVisible();
+    await expect.poll(() => wcOf(page)).toBe(1);
+    await page.goBack();
+    await expect(anySheet(page)).toHaveCount(0);
+    await expect(bar(page)).toBeVisible();
+    await expect.poll(() => wcOf(page)).toBe(0);
+    await expectLeaves(page);
+  });
+
+  test('AD-13 Delete history on the relaunch notice closes confirm and notice: sheet expanded, wc 1, the single line', async ({
+    page,
+  }) => {
+    await seedStorage(page, {
+      session: fixture('session-gave-up.json'),
+      history: fixture('history-invalid-null.json'),
+    });
+    await page.goto('/');
+    await expect(notice(page)).toBeVisible();
+    await notice(page).getByRole('button', { name: 'Reset history', exact: true }).click();
+    await button(page, 'Delete history').click();
+    await expect(confirmDialog(page)).toHaveCount(0);
+    await expect(notice(page)).toHaveCount(0);
+    await expect(sheet(page, GAVE)).toBeVisible();
+    await expect(line(page)).toBeVisible();
+    await expect(resetButton(page)).toHaveCount(0);
+    await expect.poll(() => wcOf(page)).toBe(1);
+    expect(await stored(page, HISTORY)).toBe(EMPTY);
+  });
+
+  test('AD-13 Reset history from the Statistics panel leaves the sheet with neither block nor line', async ({
+    page,
+  }) => {
+    await giveUpWithBlock(page);
+    await anySheet(page).getByRole('button', { name: 'Statistics', exact: true }).click();
+    await page
+      .getByRole('dialog', { name: 'Statistics' })
+      .getByRole('button', { name: 'Reset history', exact: true })
+      .click();
+    await button(page, 'Delete history').click();
+    await expect(confirmDialog(page)).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await expect(sheet(page, GAVE)).toBeVisible();
+    await expect(sheet(page, GAVE).getByText(UNREADABLE)).toHaveCount(0);
+    await expect(line(page)).toHaveCount(0);
+    await expect(resetButton(page)).toHaveCount(0);
+  });
+
+  test('AD-13 Reset history from the Statistics panel opened from the menu over the collapsed sheet leaves neither block nor line', async ({
+    page,
+  }) => {
+    await giveUpWithBlock(page);
+    await handle(page).click();
+    await expect(anySheet(page)).toHaveCount(0);
+    await menuButton(page).click();
+    await page.getByRole('button', { name: 'Statistics', exact: true }).click();
+    await page
+      .getByRole('dialog', { name: 'Statistics' })
+      .getByRole('button', { name: 'Reset history', exact: true })
+      .click();
+    await button(page, 'Delete history').click();
+    await expect(confirmDialog(page)).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('dialog', { name: 'Statistics' })).toHaveCount(0);
+    await bar(page).click();
+    await expect(sheet(page, GAVE)).toBeVisible();
+    await expect(sheet(page, GAVE).getByText(UNREADABLE)).toHaveCount(0);
+    await expect(line(page)).toHaveCount(0);
+    await expect(resetButton(page)).toHaveCount(0);
   });
 });
 

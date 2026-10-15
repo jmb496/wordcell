@@ -486,6 +486,27 @@ describe('AD-13 overlays epic 4: selection, views and end sheet', () => {
     expect(calls).toEqual([]);
   });
 
+  it('AD-13 unrecordedFinish: set by markFinishUnrecorded, kept through collapse and expand, cleared by onUnfinished from expanded or collapsed and by resetForNewSession', async () => {
+    const overlays = await load();
+    expect(overlays.unrecordedFinish).toBe(false);
+    overlays.openDeferred(overlays.deferEndSheetOpen());
+    overlays.markFinishUnrecorded();
+    overlays.collapseEndSheet();
+    overlays.expandEndSheet();
+    expect(overlays.unrecordedFinish).toBe(true);
+    overlays.onUnfinished();
+    expect(overlays.unrecordedFinish).toBe(false);
+    overlays.openDeferred(overlays.deferEndSheetOpen());
+    overlays.markFinishUnrecorded();
+    overlays.collapseEndSheet();
+    overlays.onUnfinished();
+    expect(overlays.unrecordedFinish).toBe(false);
+    overlays.openDeferred(overlays.deferEndSheetOpen());
+    overlays.markFinishUnrecorded();
+    overlays.resetForNewSession();
+    expect(overlays.unrecordedFinish).toBe(false);
+  });
+
   it('AD-13 onUnfinished from expanded throws when the end sheet is not the top entry', async () => {
     const overlays = await load();
     overlays.openDeferred(overlays.deferEndSheetOpen());

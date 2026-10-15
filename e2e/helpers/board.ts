@@ -19,6 +19,9 @@ export type OpenOptions = {
   // is asked for, the sheet is collapsed (its handle) so the Board is live, as in the specs written
   // before the sheet existed.
   endSheet?: 'expanded' | 'collapsed';
+  // Ticket 6.7: root fixture `<history>.json` seeded as wordcell:history; when it is unreadable the
+  // History notice shows at boot over a live game and is dismissed with Not now before `steps`.
+  history?: string;
 };
 
 export const END_SHEET = /^(Every column cleared\.|Game given up\.)$/;
@@ -29,16 +32,23 @@ export const END_SHEET = /^(Every column cleared\.|Game given up\.)$/;
 export async function openFixture(
   page: Page,
   name: string,
-  { prefs, steps = [], booted = true, endSheet = 'collapsed' }: OpenOptions = {},
+  { prefs, steps = [], booted = true, endSheet = 'collapsed', history }: OpenOptions = {},
 ): Promise<void> {
   await seedStorage(page, {
     session: fixture(`${name}.json`),
     ...(prefs === undefined ? {} : { prefs: fixture(`${prefs}.json`) }),
+    ...(history === undefined ? {} : { history: fixture(`${history}.json`) }),
   });
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'WordCell' })).toBeVisible();
   await expect(page.locator('[data-card-id]')).toHaveCount(52);
   if (booted) await waitBooted(page);
+  if (booted && history !== undefined) {
+    await page.getByRole('button', { name: 'Not now', exact: true }).click();
+    await expect(
+      page.getByRole('dialog', { name: "Your score history can't be read." }),
+    ).toHaveCount(0);
+  }
   if (
     booted &&
     endSheet === 'collapsed' &&

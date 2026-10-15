@@ -13,7 +13,8 @@ import { text } from './text';
 // then closes only `resetConfirm`; `ondeleted` lets the notice close itself too. Focus return is
 // the opener's: the notice relies on Dialog, the panel on its own effect. `escKeeps` adds the
 // interim act()-wrapped Esc handler (acts as Keep it only while this is the top overlay; the notice
-// leaves Esc unhandled; entry 10's keymap replaces it).
+// and the end sheet pass it, only the Statistics panel handles Esc itself; entry 10's keymap
+// replaces it).
 let { ondeleted, escKeeps = false }: { ondeleted?: () => void; escKeeps?: boolean } = $props();
 
 function keepIt(): void {
@@ -21,7 +22,11 @@ function keepIt(): void {
 }
 
 function deleteHistory(): void {
+  // 6.7: a reset with the finished-game sheet open (and not from the Statistics panel) leaves that
+  // finish unrecorded; the line is shown only after the reset succeeded (rule 6).
+  const fromSheet = overlays.isOpen('endSheet') && !overlays.isOpen('statistics');
   scoreHistory.reset();
+  if (fromSheet) overlays.markFinishUnrecorded();
   overlays.close('resetConfirm');
   ondeleted?.();
 }

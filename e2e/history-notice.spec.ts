@@ -167,7 +167,7 @@ test.describe('§2 History notice flows (history-invalid-version-unknown.json)',
     expect(await stored(page, SESSION)).toBe(session);
   });
 
-  test('§2 the Reset confirm focuses Keep it; Tab never reaches the notice; Escape leaves it open at wc 2 (interim)', async ({
+  test('§2 the Reset confirm focuses Keep it; Tab never reaches the notice; Escape keeps it and returns to the notice at wc 1', async ({
     page,
   }) => {
     await start(page, VERSION_UNKNOWN);
@@ -179,8 +179,9 @@ test.describe('§2 History notice flows (history-invalid-version-unknown.json)',
       for (const b of noticeButtons) await expect(b).not.toBeFocused();
     }
     await page.keyboard.press('Escape');
-    await expect(confirmDialog(page)).toBeVisible();
-    expect((await wc(page))?.wc).toBe(2);
+    await expect(confirmDialog(page)).toHaveCount(0);
+    await expect(notice(page)).toBeVisible();
+    await expect.poll(() => wc(page).then((state) => state?.wc)).toBe(1);
   });
 
   test('§2 Keep it closes the confirm, the notice stays with Reset history focused, wc 1', async ({

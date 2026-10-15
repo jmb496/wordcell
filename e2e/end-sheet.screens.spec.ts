@@ -18,3 +18,30 @@ test('AD-17 end sheet screenshot collapsed at 360 px', async ({ page }) => {
   await expect(page.getByRole('button', { name: /^Show result:/ })).toBeVisible();
   await expect(page).toHaveScreenshot('end-sheet-collapsed.png');
 });
+
+// Ticket 6.7: the unreadable-history block (variant history-invalid-version-unknown) and the
+// single line after Reset history, at 360 px.
+test('AD-17 end sheet screenshot with the history-unreadable block at 360 px', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 740 });
+  await openFixture(page, 'session-gave-up-after-commit', {
+    endSheet: 'expanded',
+    history: 'history-invalid-version-unknown',
+  });
+  await expect(page.getByRole('dialog', { name: 'Game given up.' })).toBeVisible();
+  await expect(page.getByText("This game wasn't added to your statistics.")).toBeVisible();
+  await expect(page).toHaveScreenshot('end-sheet-history-unreadable.png');
+});
+
+test('AD-17 end sheet screenshot with the not-added line at 360 px', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 740 });
+  await openFixture(page, 'session-gave-up-after-commit', {
+    endSheet: 'expanded',
+    history: 'history-invalid-version-unknown',
+  });
+  const sheet = page.getByRole('dialog', { name: 'Game given up.' });
+  await sheet.getByRole('button', { name: 'Reset history', exact: true }).click();
+  await page.getByRole('button', { name: 'Delete history', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Delete the score history?' })).toHaveCount(0);
+  await expect(sheet.getByText("This game wasn't added to your statistics.")).toBeVisible();
+  await expect(page).toHaveScreenshot('end-sheet-not-added.png');
+});

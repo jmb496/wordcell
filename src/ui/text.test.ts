@@ -29,6 +29,10 @@ describe('AD-13 shared history sentence and statistics text', () => {
     );
   });
 
+  it('AD-13 endNotAdded is the unrecorded-game line', () => {
+    expect(text.endNotAdded).toBe("This game wasn't added to your statistics.");
+  });
+
   it('AD-3 statLetters reads 1 letter and 8 letters; statNumber uses U+2212', () => {
     expect(text.statLetters(1)).toBe('1 letter');
     expect(text.statLetters(8)).toBe('8 letters');

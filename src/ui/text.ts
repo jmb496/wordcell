@@ -178,6 +178,9 @@ export const text = Object.freeze({
   historyResetHint: 'Statistics are off until you reset it. Resetting deletes the old history.',
   // The one reason-to-sentence mapping the History notice and the Statistics panel share.
   historySentence,
+  // Epic 6 CAP-4 (6.7): the end-sheet block's second line and the line that replaces the block
+  // after Reset history (catalogue row 103).
+  endNotAdded: "This game wasn't added to your statistics.",
   notNow: 'Not now',
   resetHistory: 'Reset history',
   // Reset history confirm (catalogue row 104).
