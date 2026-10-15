@@ -106,3 +106,15 @@ Worth knowing: unapplied minors in review-loop/6-5-build.md § Result (extra e2e
 Close-out docs:
 - EXPERIENCE.md message catalogue ← Statistics panel strings and longest-word "8 letters" caption (owner, 2026-10-15)
 - SPEC.md F6 already holds the 2026-10-15 answer; EXPERIENCE/DESIGN Elevation note on the WordCell view may need the same
+
+## 6.6 End sheet: result, collapse, Give up and relaunch — stopped (owner decision needed)
+What it adds: the end-of-game sheet (result, score, band, longest word, words placed, Replay this deal and Statistics buttons), collapsing to a bar, Give up and relaunch into a finished game.
+Ticket review: 4 passes, converged (majors 10, 5, 2, 0); nothing needed your input
+Build: built; commit dbbf83a
+Code review: thorough, 4 passes, converged (majors 6, 1, 2, 0); fixes in 02e4739, 2b42c05, 8135ba4; one wording decision open
+Tests: not run (Step D not reached)
+Ref to fix upstream: none
+Worth knowing: ticket-review minors carried to the build were handled in the plan.
+Decision: wording the builder chose that is not in the EXPERIENCE.md catalogue: handle name "Collapse result", bar name "Show result: …", labels "Longest word" and "Words placed". Proposed default: keep as built. Effect: only what players and screen-reader users read on the end sheet and its collapsed bar; no rule or scoring change.
+Close-out docs: EXPERIENCE.md message catalogue ← end-sheet strings once approved (owner, pending).
+Resume: reply with your choice or "default", record it in the ticket Notes, rerun loop.sh; it resumes at Step D (test:all, screenshots, mark done).
