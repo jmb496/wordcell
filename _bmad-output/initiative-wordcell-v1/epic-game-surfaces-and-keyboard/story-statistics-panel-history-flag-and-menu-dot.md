@@ -43,3 +43,4 @@ Verify: npm run test:all and npm run test:screens are green, the screens specs t
 - design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/DESIGN.md, Components
 
 - Decision (owner, 2026-10-15): the Statistics "longest word" tile shows the word in capitals as the main value with a small grey caption under it, "8 letters" ("1 letter" for one).
+- Decision (owner, 2026-10-15): the Statistics panel labels are kept as built: "Games played", "Games won", "Games given up", "Best score", "Average score", "Longest word", close button "Close statistics", empty text "Finish or give up a game to see statistics here." EXPERIENCE.md message catalogue gains them at the retrospective.
