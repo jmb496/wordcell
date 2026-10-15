@@ -1,6 +1,6 @@
 # Review log — story-surface-foundation-and-the-one-new-game-function
 
-State: pass 4: done
+State: pass 5: done
 
 Pre-loop: HEAD d04dbfe, copy at story-surface-foundation-and-the-one-new-game-function.review-log.passes/pass0.md, 290 words (budget 1500 words).
 Ticket intent fields from tickets.toml entry 1 (verify, risk, unknown, interface, tests, owns, consumers): .review-log.passes/intent.md
@@ -97,3 +97,21 @@ Resumed 2026-10-14 (second resume): owner sharpened F6, F7, F8 (commit bb8f525);
 - [minor] Tests list additions, exit transition via transitionend, P6 spec scope, confirm style primary, Esc proof note, confirm dismissal U case
 Words (docs): 1528 (5.3 x pass 0; budget 1500)  |  Snapshot: story-surface-foundation-and-the-one-new-game-function.review-log.passes/pass4.md
 Note: tickets.toml entry 3 `verify` still lists Esc dismissal though entry 3 precedes entry 10 (mismatch, unedited).
+
+## Pass 5 — 2026-10-14
+Reviewers: fix diff, builder's reading, edge-case hunter, ref alignment  |  Findings: major 6 (merged), minor 6, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+Majors fell 8 -> 6, loop continues.
+### Applied (to the fixer, pass 5; all technical, default applied)
+- [major] openSurface(id): no module, signature or wait mechanism → src/ui/open-surface.ts, synchronous, wait = nav's op queue (no new nav API), pre-checks modal-notice and throws before clearing; double call during pending pop covered by the queue + U case
+- [major] act() ownership of Sheet/Panel vs HANDLER_ATTRIBUTE `close` contradictory → one model, stated once
+- [major] top bar `inert` (F6) assigned to no component or test → Sheet/Panel/Dialog set inert on Board and bars per build-notes table; mount U per component; HistoryNotice stays green
+- [major] open(newId) over a tile selection unspecified → open does not touch tile selection; only openSurface clears it; reword Tests line
+- [major] reduced-motion pin untestable in jsdom → assert documentElement style `--wc-fade-ms` equals constant + source scan of surface CSS (no literal 120ms)
+- [major] 360x320 check moved to entry 2 but tickets.toml entry 2 tests/verify lack it → add to entry 2
+### Minor (applied only if no added words)
+- resetConfirm gets only the legal-top rule (no peek throw, no hoverPeek clear)
+- exit also ends on transitioncancel; confirm over confirm throws U case
+### Minor (unapplied)
+- line-150 MODAL_TOP early return for new ids; screenshot specs wait for transition end
+Fixer outcome: all six applied; minors resetConfirm-only rule, transitioncancel, confirm-over-confirm U applied. Deviation (technical): top-bar inert assigned to App.svelte (`main` inert while any new id/resetConfirm/historyNotice is on the stack) instead of per component; initMotion() added to motion.ts, called from main.ts after prefs.load(). tickets.toml entry 2 tests/verify edited.
+Words (docs): 1535 (5.4 x pass 0; budget 1500)  |  Snapshot: story-surface-foundation-and-the-one-new-game-function.review-log.passes/pass5.md
