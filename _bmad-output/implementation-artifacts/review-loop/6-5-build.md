@@ -1,5 +1,5 @@
 # Review loop — ticket 6.5 build (code)
-State: pass 1: done
+State: pass 2: done
 Target: /mnt/d/CodeProjects/wordcell/_bmad-output/implementation-artifacts/review-loop/6-5-build.passes/pass0.diff (a1f53ab..44a6c0d42af7e0ceb0b4f5ded92a54cc27c0d93f); pre-loop HEAD 44a6c0d42af7e0ceb0b4f5ded92a54cc27c0d93f, tree ee8b870af21b367c47603983f9b55f9ed017b0a5
 Intent: _bmad-output/initiative-wordcell-v1/epic-game-surfaces-and-keyboard/story-statistics-panel-history-flag-and-menu-dot-plan.md
 
@@ -20,3 +20,14 @@ Snapshot: tree 02cabb9cb41632f30730898e41360d0532efda4a
 ### Unapplied minors
 - one-letter longest word e2e: not seedable (parser rejects letterCount 1); covered by text.test.ts only
 - dot element presence asserted only via aria-describedby; panel dismissal by back/scrim untested; focus-return optional-chaining
+
+## Pass 2 — 2026-10-15
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 0, minor 5, decision-needed 0  |  Dropped in triage: 0
+
+## Result — converged after 2 passes
+
+Unapplied minors:
+- history-notice.svelte.test.ts:96-101 test title overstates (inactive game kinds, 'after reset'); rename to 'follows the store state'
+- e2e: dot element has no DOM assertion; focus return to menu button untested for back/scrim; Statistics row order in menu not asserted; panel dismissal (close/Esc/back) untested in the unreadable state
+- Esc/optional-chaining focus return in StatisticsPanel (silent skip if no target)
+- Owner: confirm tile labels / 'Close statistics' copy (text.ts)

@@ -86,3 +86,10 @@ Ticket review: 5 passes, converged (majors 8, 5, 4, 2, 0); one item needs your i
 Build: not started
 Worth knowing: the decision concerns only how the longest word is displayed.
 Decision: how to show the letter count beside the longest word on its tile. Proposed default: the uppercase word as the tile value, with a small secondary-ink caption "8 letters" beneath it (text from text.ts). Effect: only what the player reads on that tile; no rule or scoring change.
+
+## Resume 2026-10-15 — 6.5 build and code review — stopped (rule 1, owner decision)
+Owner's longest-word answer applied; ticket built (44a6c0d) and code-reviewed (thorough, 2 passes, converged, majors 2, 0; fixes in 0a422e8). Not run: Step D (test:all, screenshots, mark done).
+Decision: wording of the Statistics labels the builder chose (Games played, Games won, Games given up, Best score, Average score, Longest word, "Close statistics", empty line "Finish or give up a game to see statistics here."); they are not in the EXPERIENCE.md message catalogue. Proposed default: keep. Effect: only what players read on the panel.
+Close-out docs: EXPERIENCE.md message catalogue ← Statistics panel strings once approved (owner, pending); SPEC.md F6 and EXPERIENCE/DESIGN Elevation note as above.
+Tokens: 2.5M input-equivalent (build 75%, code review 15%)
+Resume: reply with your choice or "default", record it in the ticket Notes, rerun loop.sh; it resumes at Step D.
