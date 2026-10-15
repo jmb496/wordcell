@@ -1,6 +1,6 @@
 # Review log — ticket 6.4
 
-State: pass 3: done
+State: pass 4: done
 
 Pre-loop: HEAD 1cfa6e35e22edbffa5675b3fe7d6e737e522b613, 291 words (story-preferences-panel-and-the-top-bar-timer.review-log.passes/pass0.md)
 
@@ -61,3 +61,12 @@ Words: 975 (3.35 x pass 0)  |  Snapshot: story-preferences-panel-and-the-top-bar
 ### Applied
 - 7 majors + 2 minors → fixer items 1-8 (visibilitychange trigger removed; scrollWidth<=64 assertion; frozen-by-value; clock before goto; skipFocus + one close path; session-won undo; runFor 2000)
 - Note for pass 4: fixer dropped "(R-82, U+2212)" from the 360 px AC and the "read-only so AD-3/AD-4/AD-17 hook unaffected" clause; check R-82 coverage still present
+
+## Pass 4 — 2026-10-15
+Reviewers: fix diff (none), adversarial, ref alignment (none)  |  Findings: major 1, minor 2, decision-needed 0  |  Dropped in triage: 0
+Words: 980 (3.37 x pass 0)  |  Snapshot: story-preferences-panel-and-the-top-bar-timer.review-log.passes/pass4.md
+### Applied
+- [major] R-82 id lost from tests line and 360 px bullet (fixer in pass 3 dropped it) → restored (UI)(P6)
+- [minor, zero words] "a preference toggle" → "an Animation speed change"
+### Not applied minors
+- tick bullet "without hidePage" (implied)
