@@ -231,9 +231,7 @@ test.describe('peeks, tile selection and the end sheet', () => {
     await expect(selectedTiles(page)).toHaveCount(0);
   });
 
-  test('R-75 Esc collapses the expanded end sheet; M, N and ? stay live over it', async ({
-    page,
-  }) => {
+  test('R-75 Esc collapses the expanded end sheet; M and ? stay live over it', async ({ page }) => {
     await openFixture(page, 'session-won', { endSheet: 'expanded' });
     const sheet = page.getByRole('dialog', { name: END_SHEET });
     await expect(sheet).toBeVisible();
@@ -242,10 +240,25 @@ test.describe('peeks, tile selection and the end sheet', () => {
     await page.keyboard.press('Escape');
     await expect(menu(page)).toHaveCount(0);
     await expect(sheet).toBeVisible();
+    await page.keyboard.press('?');
+    await expect(howTo(page)).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(howTo(page)).toHaveCount(0);
+    await expect(sheet).toBeVisible();
     await expect.poll(() => wc(page).then((s) => s?.wc)).toBe(1);
     await page.keyboard.press('Escape');
     await expect(sheet).toHaveCount(0);
     await expect.poll(() => wc(page).then((s) => s?.wc)).toBe(0);
+  });
+
+  test('R-75 N over the expanded end sheet acts at once (no game in progress) and starts a new game', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-won', { endSheet: 'expanded' });
+    const sheet = page.getByRole('dialog', { name: END_SHEET });
+    await expect(sheet).toBeVisible();
+    await page.keyboard.press('n');
+    await expect(sheet).toHaveCount(0);
   });
 
   test('I-68 Esc on the New game confirm opened from the menu closes only the confirm: the menu is not reopened', async ({

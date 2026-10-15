@@ -210,7 +210,12 @@ describe('AD-12 key gate', () => {
     expect(keys.ROWS.confirm.gate(view({}))).toBe(true);
     expect(keys.ROWS.flip.gate(view({ canFlip: false }))).toBe(false);
     expect(keys.ROWS.flip.gate(view({}))).toBe(true);
-    for (const id of ['validate', 'confirm', 'flip'] as const) keys.ROWS[id].run(view({}));
+    for (const id of ['validate', 'confirm', 'flip'] as const) {
+      expect(keys.ROWS[id].single).toBe(true);
+      keys.ROWS[id].run(view({}));
+    }
+    expect(keys.ROWS.undo.single).toBe(false);
+    expect(keys.ROWS.redo.single).toBe(false);
     expect(mocks.log).toEqual(['validate', 'confirm', 'flip']);
   });
 
@@ -241,6 +246,20 @@ describe('AD-12 key gate', () => {
     settle();
     press('N');
     expect(mocks.log).toContain('newGameConfirm');
+  });
+
+  it('AD-12 F39: Y with a sticky view, a peek or a tail selection open acts (the close is the command, commands.test.ts)', () => {
+    overlays.openView(5);
+    expect(press('y')).toBe(true);
+    overlays.close('wordcellView');
+    settle();
+    overlays.openPeek(4);
+    expect(press('y')).toBe(true);
+    overlays.closePeek();
+    settle();
+    overlays.select(2, 3);
+    expect(press('y')).toBe(true);
+    expect(ACTED(mocks.log)).toEqual(['redo', 'redo', 'redo']);
   });
 
   it('AD-12 M, ? and a confirm-opening N clear a tail selection and pop its entry before opening; M closes a long-press peek and a sticky view', () => {
@@ -313,6 +332,7 @@ describe('AD-12 key table per surface', () => {
   });
 
   it('AD-12 the expanded end sheet: M opens the menu, ? How to play, N the confirm over it', () => {
+    setView({ inProgress: false });
     for (const [key, id] of [
       ['m', 'menu'],
       ['?', 'howToPlay'],
@@ -326,6 +346,10 @@ describe('AD-12 key table per surface', () => {
       overlays.onUnfinished();
       settle();
     }
+    // N is not suspended by the end sheet: with no game in progress it acts at once.
+    overlays.openDeferred(overlays.deferEndSheetOpen());
+    expect(press('n')).toBe(true);
+    expect(ACTED(mocks.log)).toEqual(['newGame']);
   });
 
   it('AD-12 a sticky WordCell view: M, N, ?, Z and Y act and close the view first; Esc closes it', () => {
@@ -340,13 +364,24 @@ describe('AD-12 key table per surface', () => {
     expect(ACTED(mocks.log)).toContain('newGameConfirm');
   });
 
-  it('AD-12 the rejected root: only N acts (at once) and Esc is live; M, ?, Z, Y do nothing', () => {
+  it('AD-12 the rejected root: only N acts (at once); M, ?, Z, Y and Esc with nothing open do nothing', () => {
     mocks.game.state = { kind: 'rejected' };
     mocks.game.view = undefined;
     for (const key of ['m', '?', 'z', 'y', 'Escape']) expect(press(key)).toBe(false);
     expect(mocks.log).toEqual([]);
     expect(press('n')).toBe(true);
     expect(mocks.log).toEqual(['cancel', 'newGame']);
+  });
+
+  it('AD-12 the rejected root with an overlay open: Esc closes it and N does nothing', () => {
+    mocks.game.state = { kind: 'rejected' };
+    mocks.game.view = undefined;
+    overlays.open('historyNotice');
+    expect(press('n')).toBe(false);
+    expect(mocks.log).toEqual([]);
+    expect(overlays.top).toBe('historyNotice');
+    expect(press('Escape')).toBe(true);
+    expect(overlays.depth).toBe(0);
   });
 
   it('AD-12 Halted: no key acts', () => {
@@ -368,6 +403,14 @@ describe('AD-12 Esc order', () => {
     expect(press('Escape')).toBe(true);
     expect(overlays.selection).toBeNull();
     expect(overlays.depth).toBe(0);
+  });
+
+  it('AD-12 Esc on an open overlay closes it and, through act(), also clears a live tile selection', () => {
+    overlays.open('menu');
+    overlays.selectTile(9);
+    expect(press('Escape')).toBe(true);
+    expect(overlays.isOpen('menu')).toBe(false);
+    expect(overlays.tileSelection).toBeNull();
   });
 
   it('AD-12 two Escs: the second, pressed while the first pop is pending, is dropped; after the pop completes Esc acts on the next topmost entry', () => {

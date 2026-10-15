@@ -2,7 +2,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Epic 6 CAP-10 (6.10, F39): the shared dispatching commands close a sticky view and any peek
 // before the dispatch and pop a tail selection, so `overlays.deselect()` never throws on them.
-const mocks = vi.hoisted(() => ({ log: [] as string[] }));
+const mocks = vi.hoisted(() => ({
+  log: [] as string[],
+  // The overlay state at the moment of each dispatch (F39: closed before the dispatch).
+  atDispatch: [] as { viewCell: unknown; peek: unknown; hoverPeek: unknown; selection: unknown }[],
+  overlays: undefined as
+    | { viewCell: unknown; peek: unknown; hoverPeek: unknown; selection: unknown }
+    | undefined,
+}));
 
 vi.mock('../shell/nav', () => ({ nav: { push: () => {}, pop: () => {} } }));
 vi.mock('svelte', () => ({ flushSync: () => mocks.log.push('flushSync') }));
@@ -10,6 +17,12 @@ vi.mock('../shell/game.svelte', () => ({
   game: {
     dispatch: (command: { type: string }) => {
       mocks.log.push(`dispatch ${command.type}`);
+      mocks.atDispatch.push({
+        viewCell: mocks.overlays?.viewCell ?? null,
+        peek: mocks.overlays?.peek ?? null,
+        hoverPeek: mocks.overlays?.hoverPeek ?? null,
+        selection: mocks.overlays?.selection ?? null,
+      });
       return { ok: true };
     },
   },
@@ -26,7 +39,9 @@ let commands: typeof import('./commands');
 beforeEach(async () => {
   vi.resetModules();
   mocks.log.length = 0;
+  mocks.atDispatch.length = 0;
   ({ overlays } = await import('./overlays.svelte'));
+  mocks.overlays = overlays;
   commands = await import('./commands');
 });
 
@@ -64,6 +79,8 @@ describe('AD-12 shared commands', () => {
       expect(overlays.viewCell).toBeNull();
       expect(overlays.depth).toBe(0);
     }
+    expect(mocks.atDispatch).toHaveLength(2);
+    for (const seen of mocks.atDispatch) expect(seen.viewCell).toBeNull();
   });
 
   it('AD-12 F39: Undo closes a long-press peek and a hover peek before the dispatch', () => {
@@ -73,6 +90,10 @@ describe('AD-12 shared commands', () => {
     overlays.openHoverPeek(6);
     commands.redo();
     expect(overlays.hoverPeek).toBeNull();
+    expect(mocks.atDispatch.map((seen) => [seen.peek, seen.hoverPeek])).toEqual([
+      [null, null],
+      [null, null],
+    ]);
   });
 
   it('AD-12 F39: Undo with a tail selection pops its entry before the dispatch', () => {
@@ -81,6 +102,7 @@ describe('AD-12 shared commands', () => {
     expect(overlays.selection).toBeNull();
     expect(overlays.depth).toBe(0);
     expect(mocks.log.indexOf('dispatch undo')).toBeGreaterThan(-1);
+    expect(mocks.atDispatch.map((seen) => seen.selection)).toEqual([null]);
   });
 
   it('AD-12 F39: Validate, Confirm and Flip close a sticky view, a peek and a hover peek before the dispatch', () => {
@@ -96,6 +118,10 @@ describe('AD-12 shared commands', () => {
       run();
       expect(overlays.hoverPeek).toBeNull();
     }
+    expect(mocks.atDispatch).toHaveLength(9);
+    for (const seen of mocks.atDispatch) {
+      expect([seen.viewCell, seen.peek, seen.hoverPeek]).toEqual([null, null, null]);
+    }
   });
 
   it('AD-12 F39: Validate, Confirm and Flip pop a tail selection before the dispatch', () => {
@@ -105,5 +131,6 @@ describe('AD-12 shared commands', () => {
       expect(overlays.selection).toBeNull();
       expect(overlays.depth).toBe(0);
     }
+    expect(mocks.atDispatch.map((seen) => seen.selection)).toEqual([null, null, null]);
   });
 });

@@ -87,6 +87,7 @@ function match(event: KeyboardEvent): Key | undefined {
 /** Runs one command now if it acts; returns whether it did. */
 function attempt(id: CommandId): boolean {
   const kind = game.state.kind;
+  if (SUSPENDING.some((entry) => overlays.isOpen(entry))) return false;
   if (kind === 'rejected') {
     if (id !== 'newGame') return false;
     act(newGame)();
@@ -94,7 +95,6 @@ function attempt(id: CommandId): boolean {
   }
   const view = game.view;
   if (kind !== 'active' || view === undefined) return false;
-  if (SUSPENDING.some((entry) => overlays.isOpen(entry))) return false;
   const row = ROWS[id];
   if (!row.gate(view)) return false;
   act(() => row.run(view))();
@@ -103,7 +103,7 @@ function attempt(id: CommandId): boolean {
 
 /** Esc: the topmost overlay entry, else a tile selection, else nothing. Returns whether it acted. */
 function pressEscape(): boolean {
-  if (game.state.kind !== 'active') return false;
+  if (game.state.kind === 'halted') return false;
   const top = overlays.top;
   if (top === undefined) {
     if (overlays.tileSelection === null) return false;

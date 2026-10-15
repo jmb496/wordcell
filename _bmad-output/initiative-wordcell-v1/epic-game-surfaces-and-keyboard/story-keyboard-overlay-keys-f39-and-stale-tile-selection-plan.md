@@ -74,6 +74,7 @@ baseline_revision: '50b9d38b83fda66862680d7a84f78a347ecc9d56'
 - Route full by size; implemented in the main session (the plan was written after the build, baseline = HEAD at start).
 - Review-log items: (1) two-press Esc outcome is in the AC above and in `keys.test.ts`; (2) "each key opening or closing its surface" = M, N, ? open, Esc closes, and M, N, ?, Z do nothing under an open menu, panel or dialog; (3) the Validate/Confirm/Flip rows (`ROWS`) and their commands are built here, the Enter/F bindings arrive with 6.11; (4) acting keys are evaluated inside `nav.whenSettled`, on the then-current GameView and overlays; (5) the gate bullet's "or input" is dropped: no input exists in the surfaces.
 - clearTile call site: every acting key runs inside `act()`, which clears the tile selection before the row (epic 5 CAP-4); the handler adds no second call. `openSurface` also clears a tile selection (6.1), so M, ? and a confirm-opening N clear it too, not only the tail selection as the ticket text says.
+- Esc on a sticky view or the expanded end sheet also clears a live tile selection, through `act()` (same reason as M, ? and N).
 - Pre-existing flake: `e2e/menu.spec.ts:39` fails intermittently on the android project (row height 51.99997 vs 52), also on the unmodified tree.
 
 ## Plan Change Log
