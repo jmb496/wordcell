@@ -67,3 +67,17 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 - Store call vs sheet-entry pop order (adversarial major): AD-13 states the handler calls resetForNewSession; order is the spine's
 - Give up with a sticky view open, Statistics stack, focus after Undo of a Give up, tie case, zero-letters line, double activation, getAnimations timing, scrim "consumed" testability, all-empty focus case, Perfect Deck conditional: stretch, plan-level, or already covered by AD-13/EXPERIENCE (Give up with `n` ≥ 1 always; zero letters is a win)
 Words: 1095 (2.5 x pass 0)  |  Snapshot: story-end-sheet-result-collapse-give-up-and-relaunch.review-log.passes/pass3.md
+
+## Pass 4 — 2026-10-15
+Reviewers: fix diff, adversarial, ref alignment (edge-case ran empty in pass 3)  |  Findings: major 0, minor 1, decision-needed 0  |  Dropped in triage: 0
+### Applied
+- none (converged; no fix pass)
+### Unapplied minors
+- `history.state` notation: write `launch: new` consistently in the three values (no net words)
+- From pass 3 drops/stretch (plan-level): getAnimations timing and first-paint observation, Give up with a sticky WordCell view open, Statistics stack over the sheet, tie case for longest word, focus after Undo of a Give up
+### Dropped
+- none
+
+State: done
+## Result — converged after 4 passes
+Majors per pass: 10, 5, 2, 0. Words 436 → 1095 (2.5 x pass 0). No decision-needed items. Technical defaults applied: 6 (reset path via resetForNewSession, near-win fixture, engine band tests, callback re-check as unit test, token ownership split with entry 12, no-animation assertion).
