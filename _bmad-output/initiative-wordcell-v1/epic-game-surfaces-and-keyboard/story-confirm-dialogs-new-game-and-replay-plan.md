@@ -3,7 +3,7 @@ title: 'Confirm dialogs, New game and Replay'
 type: 'feature'
 ticket: '3'
 created: '2026-10-15'
-status: 'built'
+status: done
 baseline_revision: '197fb8ada5c548d6a9b5c697a41c74de4745347a'
 route: 'full'
 route_source: 'auto'

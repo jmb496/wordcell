@@ -57,3 +57,14 @@ Ref to fix upstream: none
 Tokens: resume session 0.1M input-equivalent
 Worth knowing: unapplied minor: the menu inert test's Enter probe after blur cannot fail alone (the closest('[inert]') assertion carries the rule).
 Close-out docs: SPEC.md F6 (epic 6 spec) already holds the 2026-10-15 owner answer (☰ covered by a sticky WordCell view); EXPERIENCE.md/DESIGN.md Elevation wording on "top bar stays live" for the WordCell view may need the same note at the retro.
+
+## 6.3 Confirm dialogs, New game and Replay — done
+What it adds: New game and Replay this deal (menu and action bar) now ask "Keep playing?" first while a game is in progress; a fresh deal or finished game acts at once.
+Ticket review: 5 passes, converged (majors 10, 8, 2, 2, 0); nothing needed your input
+Build: built; commit d6dc6f0
+Code review: quick-equivalent single pass of the thorough loop, 1 pass, converged (major 0); 0 fixes applied (depth thorough: ticket risk medium)
+Tests: all passing, screenshots passed (16 passed, 2 skipped)
+Ref to fix upstream: none
+Tokens: 5.8M input-equivalent (ticket review 58%, build 25%, code review 10%, other 4%, orchestrator 2%)
+Worth knowing: unapplied ticket-review minors (tests line "five" vs six strings; tickets.toml entry 3 wording) were given to the build; entry-3 text in tickets.toml may still need syncing at publish.
+Close-out docs: none
