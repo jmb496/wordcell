@@ -864,6 +864,42 @@ describe('AD-12 board keys: Space and Enter', () => {
     ]);
   });
 
+  it('AD-12 Enter on a column card never validates or confirms, whatever canValidate and canConfirm say; it taps only a destination card with a k', () => {
+    for (const canValidate of [true, false]) {
+      for (const canConfirm of [true, false]) {
+        const flags = { canValidate, canConfirm };
+        mocks.log.length = 0;
+        board({
+          phase: 'composing',
+          flags,
+          kIfTapped: {
+            2: new Map([
+              [21, 2],
+              [20, null],
+            ]),
+          },
+        });
+        onColumn(2, 21);
+        expect(press('Enter')).toBe(true);
+        onColumn(2, 20);
+        expect(press('Enter')).toBe(false);
+        onTile(2, 1, 3);
+        expect(press('Enter')).toBe(canValidate);
+        expect(mocks.log).toEqual([
+          hit({ kind: 'card', column: 2, card: 21 }),
+          ...(canValidate ? ['cancel', 'validate'] : []),
+        ]);
+        mocks.log.length = 0;
+        board({ phase: 'place', flags });
+        onColumn(2, 21);
+        expect(press('Enter')).toBe(false);
+        onTile(5, 4, null, 'strip');
+        expect(press('Enter')).toBe(canConfirm);
+        expect(ACTED(mocks.log)).toEqual(canConfirm ? ['confirm'] : []);
+      }
+    }
+  });
+
   it('AD-12 Space on a tile or strip card is the tap (select, swap, return) and keeps the tile selection for it', () => {
     board({ phase: 'composing', arrangement: [1, 2, 3] });
     onTile(2, 1, 3);
@@ -952,6 +988,19 @@ describe('AD-12 board keys: Space and Enter', () => {
     press(' ');
     await flush();
     expect(mocks.log).toContain('focusBoard');
+  });
+
+  it('AD-12 Space on the last movable tile while only destination-block tiles remain: liveTiles is empty and focus goes to the board', async () => {
+    board({ phase: 'composing', arrangement: [1, 2] });
+    mocks.tiles = [1];
+    onTile(1, null, null);
+    mocks.onActivate = () => {
+      mocks.tiles = [];
+    };
+    press(' ');
+    await flush();
+    expect(mocks.log).toContain('focusBoard');
+    expect(mocks.log.some((entry) => entry.startsWith('focusCard'))).toBe(false);
   });
 
   it('AD-12 Space on a tile that is only selected keeps focus on it', async () => {
@@ -1091,6 +1140,8 @@ describe('AD-12 board keys: k, Flip and Shift', () => {
     onTile(2, 1, 3);
     expect(press('ArrowUp', { shift: true })).toBe(false);
     expect(press('ArrowDown', { shift: true })).toBe(false);
+    expect(press(' ', { shift: true })).toBe(false);
+    expect(press('Enter', { shift: true })).toBe(false);
     for (const mods of [{ ctrl: true }, { meta: true }, { alt: true }] as Mods[]) {
       expect(press('+', mods)).toBe(false);
       expect(press('f', mods)).toBe(false);
@@ -1117,9 +1168,20 @@ describe('AD-12 board keys: k, Flip and Shift', () => {
     }
   });
 
-  it('AD-12 the rows carry the key labels the tooltips read', async () => {
-    const { KEY_LABELS } = await import('./key-labels');
-    for (const [id, label] of Object.entries(KEY_LABELS)) {
+  it('AD-12 the rows carry the key labels the tooltips read', () => {
+    const labels = {
+      undo: 'Z',
+      redo: 'Y',
+      validate: 'Enter',
+      confirm: 'Enter',
+      'k-': '-',
+      'k+': '+',
+      flip: 'F',
+      menu: 'M',
+      newGame: 'N',
+      howToPlay: '?',
+    } as const;
+    for (const [id, label] of Object.entries(labels)) {
       expect(keys.ROWS[id as keyof typeof keys.ROWS].label).toBe(label);
     }
     for (const row of Object.values(keys.ROWS)) expect(row.label.length).toBeGreaterThan(0);
@@ -1197,6 +1259,37 @@ describe('AD-12 board keys: a pending pop', () => {
       press('Enter');
       settle();
       expect(mocks.log).toEqual([]);
+    }
+  });
+
+  it('AD-12 up and down during a pending pop do nothing and are not default-prevented; at settle each acts on the then-current selection', () => {
+    board({ cards: { 2: [20, 21, 22] } });
+    overlays.select(2, 2);
+    overlays.deselect();
+    overlays.select(2, 2);
+    mocks.log.length = 0;
+    expect(press('ArrowUp')).toBe(false);
+    expect(press('ArrowDown')).toBe(false);
+    expect(mocks.log).toEqual([]);
+    settle();
+    expect(mocks.log).toEqual([
+      hit({ kind: 'card', column: 2, card: 20 }),
+      hit({ kind: 'card', column: 2, card: 22 }),
+    ]);
+  });
+
+  it('AD-12 Space on a WordCell waits for a pending pop in Composing and Place too (the view row is in WAITS)', () => {
+    for (const phase of ['composing', 'place'] as const) {
+      board({ phase, cellCards: { 4: [40] } });
+      onCell(4);
+      overlays.openView(5);
+      overlays.close('wordcellView');
+      expect(press(' ')).toBe(false);
+      expect(overlays.viewCell).toBeNull();
+      settle();
+      expect(overlays.viewCell).toBe(4);
+      overlays.close('wordcellView');
+      settle();
     }
   });
 

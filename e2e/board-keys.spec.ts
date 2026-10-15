@@ -59,6 +59,10 @@ const where = (page: Page): Promise<Where> =>
     };
   });
 
+// The elements that are Tab stops (tabindex 0) among `locator`.
+const stops = (locator: Locator) =>
+  locator.evaluateAll((els) => els.filter((el) => (el as HTMLElement).tabIndex === 0).length);
+
 const focusedCard = async (page: Page): Promise<string | null> => (await where(page)).card;
 
 // Records each keydown's final `defaultPrevented` (the app's handler is registered first).
@@ -390,6 +394,51 @@ test.describe('Tab order', () => {
   });
 });
 
+test.describe('Tab order by phase', () => {
+  test('Q-24 Composing: the tray is exactly one Tab stop; Tab leaves it and Shift+Tab returns to the preceding column stop', async ({
+    page,
+  }) => {
+    await toComposing(page);
+    await page.keyboard.press('8');
+    expect(await stops(tiles(page))).toBe(1);
+    await tiles(page).nth(2).focus();
+    expect(await stops(tiles(page))).toBe(1);
+    await expect(tiles(page).nth(2)).toHaveAttribute('tabindex', '0');
+    await page.keyboard.press('Shift+Tab');
+    const back = await where(page);
+    expect(back.place).toBe('column');
+    const lastStop = await page.evaluate(() => {
+      const stopsInColumns = [
+        ...document.querySelectorAll<HTMLElement>('[data-column] [data-card-id]'),
+      ].filter((el) => el.tabIndex === 0);
+      return stopsInColumns.at(-1)?.getAttribute('data-card-id') ?? null;
+    });
+    expect(back.card).toBe(lastStop);
+    await page.keyboard.press('Tab');
+    const forward = await where(page);
+    expect(forward.place, 'Tab from the column stop enters the tray at one tile').toBe('tray');
+    await page.keyboard.press('Tab');
+    expect((await where(page)).place, 'Tab leaves the tray').not.toBe('tray');
+  });
+
+  test('Q-24 Place: the strip is exactly one Tab stop; Tab leaves it and Shift+Tab returns to the preceding column stop', async ({
+    page,
+  }) => {
+    await open(page, 'session-place-free-letter-two-cards');
+    expect(await stops(strip(page))).toBe(1);
+    await strip(page).nth(1).focus();
+    expect(await stops(strip(page))).toBe(1);
+    await expect(strip(page).nth(1)).toHaveAttribute('tabindex', '0');
+    await page.keyboard.press('Shift+Tab');
+    const back = await where(page);
+    expect(back.place).toBe('column');
+    await page.keyboard.press('Tab');
+    expect((await where(page)).place).toBe('strip');
+    await page.keyboard.press('Tab');
+    expect((await where(page)).place, 'Tab leaves the strip').not.toBe('strip');
+  });
+});
+
 test.describe('Composing', () => {
   test('R-33 Q-31 3-9 and 0 add that WordCell top card as a free letter and focus the new tile; a used or empty cell and 1, 2 are no-ops', async ({
     page,
@@ -654,6 +703,76 @@ test.describe('focus follows the phase', () => {
     await expect(page.getByRole('button', { name: 'Replay this deal', exact: true })).toBeFocused();
     await page.keyboard.press('Escape');
     await expect(page.locator('main')).toBeFocused();
+  });
+});
+
+// Undo and Redo always step a whole phase (R-70, Q-01), so inside Composing and Place they hand
+// focus to the new phase's target (focus-follow.ts followPhase); the same-phase recovery of a
+// removed item is in focus-follow.test.ts and the pointer-edit specs above.
+test.describe('Undo and Redo with a focused item', () => {
+  test('Q-24 Composing: Undo with a free letter tile focused leaves the tray for the board; Redo returns to the first tile with the free letter kept', async ({
+    page,
+  }) => {
+    await toComposing(page);
+    await page.keyboard.press('8');
+    await expect(tiles(page).last()).toBeFocused();
+    await page.keyboard.press('z');
+    await expect(tiles(page)).toHaveCount(0);
+    await expect(lowest(page, 4)).toBeFocused();
+    await page.keyboard.press('y');
+    await expect(tiles(page)).toHaveCount(5);
+    await expect(tiles(page).first()).toBeFocused();
+  });
+
+  test('Q-24 Place: after a strip reorder and a target change (not undo steps, Q-01) Undo focuses the first tile, Redo the first strip card with order and target kept', async ({
+    page,
+  }) => {
+    await open(page, 'session-place-free-letter-two-cards');
+    await strip(page).first().focus();
+    const order = () =>
+      strip(page).evaluateAll((els) => els.map((el) => el.getAttribute('data-card-id')));
+    await page.keyboard.press('Shift+ArrowRight');
+    await page.keyboard.press('4');
+    const placed = await order();
+    await expect(cell(page, 4)).toHaveClass(/target/);
+    await page.keyboard.press('z');
+    await expect(strip(page)).toHaveCount(0);
+    await expect(tiles(page).first()).toBeFocused();
+    await page.keyboard.press('y');
+    await expect(strip(page).first()).toBeFocused();
+    expect(await order()).toEqual(placed);
+    await expect(cell(page, 4)).toHaveClass(/target/);
+  });
+});
+
+test.describe('pointer drag and focus', () => {
+  test('R-14 Q-24 a pointer drag on a column card makes no programmatic focus() call (the press focus is the browser own)', async ({
+    page,
+  }) => {
+    await open(page, 'session-idle-fresh');
+    await page.evaluate(() => {
+      const w = window as unknown as { __focusCalls: string[] };
+      w.__focusCalls = [];
+      const native = HTMLElement.prototype.focus;
+      HTMLElement.prototype.focus = function (this: HTMLElement, options?: FocusOptions) {
+        w.__focusCalls.push(this.getAttribute('data-card-id') ?? this.tagName);
+        return native.call(this, options);
+      };
+    });
+    const box = await lowest(page, 1).boundingBox();
+    if (box === null) throw new Error('column 1 bottom card has no box');
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + 60, y - 60, { steps: 6 });
+    await page.mouse.move(x + 80, 2, { steps: 8 });
+    await page.mouse.up();
+    await glidesSettled(page);
+    expect(await phaseOf(page), 'the drag dropped nowhere').toBe('idle');
+    expect(
+      await page.evaluate(() => (window as unknown as { __focusCalls: string[] }).__focusCalls),
+    ).toEqual([]);
   });
 });
 

@@ -2,6 +2,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { expect, type Page, type Request, test } from '@playwright/test';
+import { EN, parseSession, view } from '../src/engine/index';
 import { expectAnotherWindow, expectOnlyButton, kind, stored } from './helpers/blocking';
 import {
   box,
@@ -55,6 +56,7 @@ import {
 import { captureBoot, fixture, seedStorage } from './helpers/seed';
 import { expectSelection, select, selection, wcOf } from './helpers/selection';
 import { cursorIndex, draft, draftDetail, game, storedGame, storedText } from './helpers/session';
+import { SESSIONS } from './helpers/sessions';
 import { armStorageSpy, storageWrites } from './helpers/storage-spy';
 import { tokenColor } from './helpers/style';
 import { longPress, touchDrag, touchHold } from './helpers/touch';
@@ -719,6 +721,30 @@ test.describe('session and selection helpers', () => {
     expect(await selection(page)).toEqual({ column: 1, count: 3 });
     expect(await wcOf(page)).toBe(1);
     await expectSelection(page, { column: 1, count: 3 }, 1);
+  });
+});
+
+test.describe('SESSIONS literals', () => {
+  test('AD-17 SESSIONS.flow6 and SESSIONS.cell10 parse and replay to their stated cursor and cells', () => {
+    const expected = {
+      flow6: { seed: 1, index: 3, columns: [1, 2, 3], cells: { 7: 14, 8: 7 } },
+      cell10: { seed: 3608, index: 1, columns: [], cells: { 10: 10 } },
+    } as const;
+    for (const [name, want] of Object.entries(expected)) {
+      const parsed = parseSession(SESSIONS[name as keyof typeof SESSIONS], EN);
+      if (!parsed.ok) throw new Error(`${name} does not parse: ${parsed.reason}`);
+      const session = parsed.session;
+      expect(session.seed).toBe(want.seed);
+      expect(session.cursor).toEqual({ index: want.index, phase: 'idle' });
+      const current = view(session, EN);
+      expect(current.phase).toBe('idle');
+      for (const n of want.columns) {
+        expect(current.columns.find((c) => c.column === n)?.cards).toEqual([]);
+      }
+      for (const [n, count] of Object.entries(want.cells)) {
+        expect(current.cells.find((c) => c.cell === Number(n))?.cards).toHaveLength(count);
+      }
+    }
   });
 });
 

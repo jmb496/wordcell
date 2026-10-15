@@ -5542,6 +5542,11 @@ describe('AD-12 epic 6 key activation', () => {
     expect(order[0]).toBe('finishGlides');
     expect(t.active()).toBe(0);
     expect(t.overlays.selection).toEqual({ column: 2, count: 1 });
+    tileView('composing');
+    t.overlays.deselect();
+    t.overlays.selectTile(3);
+    t.controller.activate({ kind: 'wordcell', cell: 4 });
+    expect(t.overlays.tileSelection).toBe(3);
   });
 
   it('AD-12 a tile activation selects, swaps and returns exactly as the tap does, keeping the selection a select or swap needs', async () => {
@@ -5600,12 +5605,58 @@ describe('AD-12 epic 6 key activation', () => {
     expect(navCalls).toEqual(['pop', 'push']);
   });
 
-  it('AD-12 peeks close only when the tap changes the phase or the word data; a held long-press peek ends with the cancel, a hover peek closes on a swap, a select leaves none to close', async () => {
-    const t = await ready('composing', 3);
+  it('AD-12 a column select, re-select and deselect by key leave an open hover peek open', async () => {
+    const t = await ready();
     t.media.hoverFine = true;
     t.overlays.openHoverPeek(3);
-    t.controller.activate({ kind: 'tile', card: 4 });
-    expect(t.overlays.hoverPeek).toBeNull();
+    t.controller.activate({ kind: 'card', column: 1, card: 0 });
+    expect(t.overlays.selection).toEqual({ column: 1, count: 2 });
+    expect(t.overlays.hoverPeek).toBe(3);
+    t.controller.activate({ kind: 'card', column: 1, card: 5 });
+    expect(t.overlays.selection).toEqual({ column: 1, count: 1 });
+    expect(t.overlays.hoverPeek).toBe(3);
+    t.controller.activate({ kind: 'wordcell', cell: 3 });
+    expect(t.overlays.selection).toBeNull();
+    expect(t.overlays.hoverPeek).toBe(3);
+  });
+
+  it('AD-12 a hover peek closes when the tap swaps a tile, drops a tail, adds a free letter, sets the target, sets k or opens the view', async () => {
+    const taps: [
+      string,
+      'idle' | 'composing' | 'place',
+      (t: Awaited<ReturnType<typeof ready>>) => void,
+    ][] = [
+      [
+        'swap',
+        'composing',
+        (t) => {
+          t.overlays.selectTile(3);
+          t.controller.activate({ kind: 'tile', card: 4 });
+        },
+      ],
+      [
+        'drop',
+        'idle',
+        (t) => {
+          t.overlays.select(1, 2);
+          t.controller.activate({ kind: 'space', column: 2, foot: true });
+        },
+      ],
+      ['addFreeLetter', 'composing', (t) => t.controller.activate({ kind: 'wordcell', cell: 3 })],
+      ['setTarget', 'place', (t) => t.controller.activate({ kind: 'wordcell', cell: 6 })],
+      ['k', 'composing', (t) => t.controller.activate({ kind: 'card', column: 1, card: 0 })],
+      ['openView', 'idle', (t) => t.controller.activate({ kind: 'wordcell', cell: 3 })],
+    ];
+    for (const [name, phase, tap] of taps) {
+      const t = await ready(phase);
+      t.media.hoverFine = true;
+      t.overlays.openHoverPeek(3);
+      tap(t);
+      expect(t.overlays.hoverPeek, name).toBeNull();
+    }
+  });
+
+  it('AD-12 a held long-press peek ends with the cancel that starts the activation', async () => {
     const h = await ready();
     h.down(h.b.cellCard);
     h.advance(400);

@@ -797,7 +797,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
 
   function activate(hit: Hit): void {
     if (root === null) throw new Error('AD-12 activate() while detached');
-    cancel();
+    settle(true, {});
     const view = game.view;
     if (view === undefined) throw new Error('AD-12 key activation without a GameView');
     if (overlays.viewCell !== null) overlays.close('wordcellView');
@@ -988,7 +988,9 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     pointerout,
   };
 
-  function cancel(options: CancelOptions = {}): void {
+  // `keepHover`: the key activation keeps an open hover peek (a select, re-select or deselect
+  // leaves peeks open, 6.11); `activate` closes it itself when the tap changes the word data.
+  function settle(keepHover: boolean, options: CancelOptions): void {
     if (root === null) return;
     // Epic 4 SPEC F19: the settle suppresses; idle or not, the hover peek closes and the cell under
     // the last mouse point is suppressed. Epic 5 SPEC CAP-5, CAP-6: a tile or free-letter drag's
@@ -999,10 +1001,16 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     deps.finishGlides();
     const kind = press?.drag?.kind;
     if (kind !== 'tile' && kind !== 'freeLetter') parting.finishAll();
-    hover.closeHover();
-    hover.suppress();
+    if (!keepHover) {
+      hover.closeHover();
+      hover.suppress();
+    }
     if (press === null) return;
     end({ kind: 'cancel', byBack: options.byBack === true });
+  }
+
+  function cancel(options: CancelOptions = {}): void {
+    settle(false, options);
   }
 
   function attach(next: HTMLElement): () => void {

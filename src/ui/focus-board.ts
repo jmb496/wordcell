@@ -40,11 +40,6 @@ export function focusFirstStrip(): void {
   else first.focus(FOCUS);
 }
 
-/** The WordCell `n`'s element. */
-export function focusCell(n: number): void {
-  document.querySelector<HTMLElement>(`[data-wordcell="${n}"]`)?.focus(FOCUS);
-}
-
 /**
  * Key removal (EXPERIENCE.md Keyboard): the tile list before and after, the removed tile's index in
  * the first. The next tile (now at that index), the previous one if it was last, `null` (the board)

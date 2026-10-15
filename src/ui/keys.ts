@@ -475,6 +475,7 @@ function match(event: KeyboardEvent): Resolved | undefined {
     }
     case ' ':
     case 'Enter': {
+      if (event.shiftKey) return undefined;
       const focus = readFocus();
       const ctx: KeyContext = { digit: 0, dir: 0, focus };
       if (focus.kind === 'control') return undefined;
