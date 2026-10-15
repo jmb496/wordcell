@@ -1,15 +1,16 @@
-outcome: stopped
+outcome: done
 ticket: 6.9
-reason: stop rule 1 - ticket review found a decision for the owner (band list in How to play)
-next: 6.9
-updated: 2026-10-15T17:02:43Z
-summary: Ticket 6.9 (How to play panel) is hardened, but one wording choice about the rating bands needs your answer before the build.
+reason: done
+next: 6.10
+updated: 2026-10-15T18:18:27Z
+summary: Ticket 6.9 (How to play panel) is built, reviewed, tested and marked done.
 
 ## Report
 
-The ticket review converged after 4 passes. One question is yours: should the How to play panel list only the six rating-band names, or also the score each band needs?
-- Names only (proposed default, as the ticket is written): players see which ratings exist, with no numbers to aim for.
-- Names plus thresholds: players can aim for a score, but it adds numbers to the panel.
+Ticket 6.9 is done: the Menu now has a How to play panel with the rules, a worked example and the six rating bands with their scores (your 2026-10-15 choice). Code review took 2 passes with nothing needing your input; all tests and screenshots pass. Please skim the panel wording at your leisure (checklist in the ticket Notes).
 
-Reply with your choice; I will record it in the ticket, commit, and rerun .claude/skills/epic-autopilot/scripts/loop.sh epic-game-surfaces-and-keyboard to resume at the build.
-Close-out docs: none yet.
+Close-out docs (apply at the retro):
+- EXPERIENCE.md Rating bands / How to play content <- band names plus scores in How to play (owner, 2026-10-15)
+
+Digest: _bmad-output/implementation-artifacts/autopilot/epic-game-surfaces-and-keyboard-20261014-2230.md
+Resume: .claude/skills/epic-autopilot/scripts/loop.sh epic-game-surfaces-and-keyboard

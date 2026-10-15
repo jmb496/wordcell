@@ -187,3 +187,15 @@ Close-out docs: none yet
 
 ### 6.9 resumed (session 2026-10-15)
 Owner answered the band question: names plus scores (commit 9def06b). Ticket review stays converged; resuming at Step B.
+
+## 6.9 How to play panel — done
+What it adds: a "How to play" panel as the last Menu row: eight short sections (goal, table, a move, undo/redo, empty columns, scoring and bands, a worked example drawn with cards, controls). The bands list shows all six names with the score each needs (owner, 2026-10-15).
+Ticket review: 4 passes, converged; the one decision was answered by the owner before the build
+Build: built; commit a8c7a07
+Code review: thorough, 2 passes, converged (majors 3, 0); 1 fix commit (fdcf981, tests only)
+Tests: all passing, screenshots passed (33 passed, 9 skipped)
+Ref to fix upstream: none
+Tokens: 2.9M input-equivalent (build 55%, code review 39%, orchestrator 4%); orchestrator peak context 56k
+Worth knowing: the build changed the menu e2e row-height check to `toBeCloseTo(52, 1)` (it measured 52.00003 about half the time; cause not found). The panel text (rules wording, Q-12 empty-column rule) is on the ticket's owner text-review checklist; the Keyboard table lists `?` and Esc behaviour that ticket 6.10 implements.
+Close-out docs:
+- EXPERIENCE.md Rating bands / How to play content ← How to play lists band names plus scores (owner, 2026-10-15)

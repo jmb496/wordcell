@@ -3,7 +3,7 @@ title: 'How to play panel'
 type: 'feature'
 ticket: '9'
 created: '2026-10-15'
-status: 'built'
+status: done
 baseline_revision: '4005750f23b89f80c9c4037b92c14c29436ee08b'
 route: 'full'
 route_source: 'auto'
