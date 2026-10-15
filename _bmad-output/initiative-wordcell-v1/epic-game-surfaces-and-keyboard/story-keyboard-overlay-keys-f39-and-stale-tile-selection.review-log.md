@@ -1,6 +1,6 @@
 # Review log — story-keyboard-overlay-keys-f39-and-stale-tile-selection.md
 
-State: pass 1: done
+State: pass 2: done
 
 Pre-loop: HEAD 631226a285aabd1754738d718fec41f3757da773; copy at story-keyboard-overlay-keys-f39-and-stale-tile-selection.review-log.passes/pass0.md; 369 words; budget default 2.5x (~922 words).
 
@@ -26,3 +26,21 @@ Words (docs): 808 (2.2 x pass 0)  |  Snapshot: story-keyboard-overlay-keys-f39-a
 - none
 ### Dropped (minor, unapplied)
 - N behaviour with/without confirm (already CAP-3 / confirm ticket); `after:` list completeness; Ctrl/Cmd naming nits
+
+## Pass 2 — 2026-10-15
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 4, minor 5, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+Words (docs): pending  |  Snapshot: pending
+### To apply (triaged)
+1. [major] Description — N is both overlay-opening (tail selection only) and phase-changing (clearTile): state per context (opens a confirm: tail selection only; acts at once in the rejected root / Game over / nothing to lose: clearTile).
+2. [major] Description — "key arriving while a pop is pending is dropped" contradicts openSurface/Undo/Redo waiting for the pop: acting keys (Undo, Redo, M, N, ?) wait for the pop then act; all other keys incl. Esc are dropped without side effects.
+3. [major] Description — removing the interim main tabindex while the board focus target stays with entry 11: keep the main tabindex until entry 11; replace only the per-component Esc handlers.
+4. [major] Description — Esc order omits menu, panels, confirms: topmost overlay-stack entry first (per overlays.svelte.ts: confirm / History notice, menu / panel, sticky view, expanded sheet collapses, tail selection pops), else tile selection, else nothing.
+5. [minor] repeat list: name it this ticket's default, "single-shot keys"; Z/Y repeat act (not ignored).
+6. [minor] AC: name tests for key-event filtering (repeat, chords, preventDefault, Shift+Z alias) and pop ordering/two-press Esc.
+7. [minor] Split the Description into short bullets without adding words.
+### Default applied (technical)
+- Pop-pending rule → acting keys wait, others dropped
+- Interim main tabindex → kept until entry 11
+- Z/Y held → repeat acts
+### Decision needed (functionality / UX / gameplay)
+- none
