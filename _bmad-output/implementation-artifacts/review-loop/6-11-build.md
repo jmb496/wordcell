@@ -1,6 +1,6 @@
 # Code review loop — ticket 6.11 build (dd013d3..4bbf09d)
 
-State: pass 3: done
+State: pass 4: done
 Pre-loop: HEAD 4bbf09d, tree snapshot 0 10bd112d8494982e4badbc10bfed0ab592ff696f; target diff `6-11-build.passes/pass0.diff`.
 Intent: story-keyboard-board-keys-focus-moves-and-tooltips-plan.md. Depth thorough, max 7.
 
@@ -53,3 +53,14 @@ Note: majors 4, 1, 2 — not a divergence of refs (pass 3's are a new restore-pa
 ### Decision needed (functionality / UX / gameplay)
 - none
 Snapshot: tree 5a93b13aedba4d7c60e176fa0d5d3d23d5bde0f6 (fix: first-sync phase follow on restore, focus-target.test.ts, tests; npm test/lint/check pass)
+
+## Pass 4 — 2026-10-15
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 1, minor 1, decision-needed 0  |  Dropped in triage: 0
+Note: pass 3 e2e run is recorded here: the pass-3 fixer ran board-keys + tooltips on desktop and android (50 passed, 40 skipped), including the four new tests.
+### Applied (sent to fixer)
+- [major] Card.svelte focusable/tabindex — ticket "Only the live element per card is focusable, never a mirror" has no proving test → add a test (UI Vitest or desktop e2e) that every [data-mirror-of] has no tabindex and exactly one element per data-card-id is focusable, in a state with mirrors (drag parting shift, ghost) → fixer 1
+### Default applied (technical)
+- the above
+### Decision needed (functionality / UX / gameplay)
+- none
+Snapshot: tree 28af484dbd43feedcd8ec9cd1a0c8287376365ca (fix: mirror-focus e2e; npm test/lint/check pass; e2e desktop+android pass)

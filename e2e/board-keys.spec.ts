@@ -422,6 +422,37 @@ test.describe('Tab order', () => {
   });
 });
 
+test.describe('Mirrors', () => {
+  test('Q-24 AD-14 no mirror is focusable and exactly one element per data-card-id is', async ({
+    page,
+  }) => {
+    await toComposing(page);
+    const found = await page.evaluate(() => {
+      const mirrors = [...document.querySelectorAll('[data-mirror-of]')];
+      const live = [...document.querySelectorAll('[data-card-id]')];
+      const ids = live.map((el) => el.getAttribute('data-card-id'));
+      return {
+        mirrors: mirrors.length,
+        focusableMirrors: mirrors.filter((el) => el.hasAttribute('tabindex')).length,
+        duplicateIds: ids.length - new Set(ids).size,
+        focusableLive: live.filter((el) => el.hasAttribute('tabindex')).length,
+        mirrorOfFocusable: mirrors.filter((el) =>
+          live.some(
+            (l) =>
+              l.getAttribute('data-card-id') === el.getAttribute('data-mirror-of') &&
+              l.hasAttribute('tabindex'),
+          ),
+        ).length,
+      };
+    });
+    expect(found.mirrors, 'the Composing board renders mirrors').toBeGreaterThan(0);
+    expect(found.focusableMirrors).toBe(0);
+    expect(found.duplicateIds).toBe(0);
+    expect(found.focusableLive).toBeGreaterThan(0);
+    expect(found.mirrorOfFocusable).toBeGreaterThan(0);
+  });
+});
+
 test.describe('Tab order by phase', () => {
   test('Q-24 Composing: the tray is exactly one Tab stop; Tab leaves it and Shift+Tab returns to the preceding column stop', async ({
     page,
