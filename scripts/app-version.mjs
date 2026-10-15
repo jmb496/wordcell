@@ -1,6 +1,6 @@
 // @ts-check
 // Epic 6 CAP-2 (ticket 6.2): the `__APP_VERSION__` string, `<package.json version> (<7-char git
-// SHA>)`. A non-empty `WORDCELL_APP_VERSION` is used verbatim and git is never consulted; unset runs
+// SHA>)`. A non-empty `WORDCELL_APP_VERSION` is used trimmed and git is never consulted; unset runs
 // `git rev-parse --short=7 HEAD`. A blank override, or a git failure, throws in every Vite mode
 // (rule 6); there is no dirty-tree suffix. vite.config.ts calls `resolveAppVersion` with the real
 // environment, package.json and git.
@@ -17,7 +17,7 @@ export function resolveAppVersion({ env, packageVersion, git }) {
     if (override.trim() === '') {
       throw new Error('app-version: WORDCELL_APP_VERSION is set but blank');
     }
-    return override;
+    return override.trim();
   }
   const sha = git().trim();
   if (!/^[0-9a-f]{7}$/.test(sha)) {

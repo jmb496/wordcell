@@ -13,14 +13,14 @@ describe('AD-18 app version resolver', () => {
     );
   });
 
-  it('AD-18 a non-empty override is used verbatim and git is never consulted', () => {
+  it('AD-18 a non-empty override is used trimmed and git is never consulted', () => {
     expect(
       resolveAppVersion({
         env: { WORDCELL_APP_VERSION: ' 9.9.9 (fixed) ' },
         packageVersion: '0.0.0',
         git: never,
       }),
-    ).toBe(' 9.9.9 (fixed) ');
+    ).toBe('9.9.9 (fixed)');
   });
 
   it('AD-18 a blank or whitespace override throws', () => {

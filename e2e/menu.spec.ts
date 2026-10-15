@@ -68,7 +68,18 @@ test.describe('the sheet', () => {
       await expect(page.getByTestId('undo')).not.toBeFocused();
       await expect(page.getByTestId('redo')).not.toBeFocused();
     }
+    // Enter with nothing focused (a focused sheet row would legitimately act): it must not reach the bar.
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+    await page.keyboard.press('Enter');
+    await expect(sheet(page)).toBeVisible();
+    await expect(page.getByTestId('undo')).toBeEnabled();
+    await expect(page.getByTestId('redo')).not.toBeFocused();
     expect(await stored(page, SESSION)).toBe(before);
+    for (const id of ['undo', 'redo']) {
+      expect(await page.getByTestId(id).evaluate((el) => el.closest('[inert]') !== null)).toBe(
+        true,
+      );
+    }
   });
 
   test('AD-14 the menu keeps 52 live card elements', async ({ page }) => {
@@ -125,7 +136,7 @@ test.describe('opening', () => {
     await expect(page.locator('[data-band="tray"] [data-card-id].selected')).toHaveCount(0);
   });
 
-  test('AD-13 ☰ opens from an open WordCell view: the view closes, one menu entry', async ({
+  test('AD-13 ☰ opens from an open WordCell view: the view closes, one menu entry (openSurface path via dispatched click, not a real tap)', async ({
     page,
   }) => {
     await openFixture(page, 'session-idle-empty-column');
@@ -140,7 +151,9 @@ test.describe('opening', () => {
     await expect.poll(() => wc(page).then((s) => s?.wc)).toBe(1);
   });
 
-  test('AD-13 ☰ opens over a held peek: the peek closes', async ({ page }) => {
+  test('AD-13 ☰ opens over a held peek: the peek closes (openSurface path via dispatched click, not a real tap)', async ({
+    page,
+  }) => {
     await openFixture(page, 'session-idle-empty-column');
     const hold = await touchHold(page, await centre(page.getByTestId('wordcell-7')));
     try {
