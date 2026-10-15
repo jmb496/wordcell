@@ -41,6 +41,29 @@ describe('AD-3 score text', () => {
   });
 });
 
+describe('AD-10 timer text', () => {
+  const table: [number, string][] = [
+    [0, '0:00'],
+    [999, '0:00'],
+    [59_999, '0:59'],
+    [60_000, '1:00'],
+    [3_599_999, '59:59'],
+    [3_600_000, '1:00:00'],
+    [43_384_000, '12:03:04'],
+  ];
+  for (const [ms, expected] of table) {
+    it(`AD-10 timer(${ms}) reads ${expected}`, () => {
+      expect(text.timer(ms)).toBe(expected);
+    });
+  }
+
+  it('AD-10 timer throws on negative and non-finite input', () => {
+    for (const bad of [-1, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+      expect(() => text.timer(bad)).toThrow();
+    }
+  });
+});
+
 describe('AD-13 F27 WordCell view text', () => {
   it('AD-13 F27 view title at 7 cards', () => {
     expect(text.viewTitle(6, 7)).toBe('WordCell 6 \u00b7 7 cards');

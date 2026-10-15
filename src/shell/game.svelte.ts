@@ -285,6 +285,19 @@ function whenVisible(): Promise<void> {
   });
 }
 
+/**
+ * AD-9 read-only accessor for the top-bar timer (ticket 6.4): the Session's `activeMs` plus the
+ * clock's unflushed ms (`clock.peek(now)`) while playing, `activeMs` once won or given up. Writes
+ * nothing and takes nothing. Throws unless active (rule 6).
+ */
+function elapsedMs(now: number): number {
+  if (state.kind !== 'active') throw new Error(`AD-9 elapsedMs() while ${state.kind}`);
+  const session = state.session;
+  return view(session, EN).status === 'playing'
+    ? session.activeMs + clock.peek(now)
+    : session.activeMs;
+}
+
 function loaded(): Loaded {
   const { session } = launch.get(() => `AD-17 loaded() while ${state.kind}`);
   return { session, history: scoreHistory.loaded(), prefs: prefs.loaded() };
@@ -330,6 +343,7 @@ export const game = {
   registerBeforeHide,
   whenVisible,
   isStale,
+  elapsedMs,
 };
 
 // Q-38: another window wrote (or cleared) a `wordcell:` key in this origin's localStorage.

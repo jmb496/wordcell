@@ -1225,3 +1225,43 @@ describe('game store R6 guard messages', () => {
     expect(() => game.loaded()).toThrow(/^AD-17 loaded\(\) while halted$/);
   });
 });
+
+describe('game store elapsedMs', () => {
+  it('AD-9 elapsedMs while playing is activeMs plus the clock peek', async () => {
+    const { game, clock, time } = await active(JSON.stringify({ ...composing, activeMs: 5000 }));
+    clock.resume(0);
+    time.now = 2500;
+    expect(game.elapsedMs(2500)).toBe(7500);
+    expect(game.elapsedMs(0)).toBe(5000);
+  });
+
+  it('AD-9 elapsedMs reads the clock without taking it (a repeat read is the same)', async () => {
+    const { game, clock, storage } = await active(JSON.stringify(composing));
+    clock.resume(0);
+    expect(game.elapsedMs(1234)).toBe(1234);
+    expect(game.elapsedMs(1234)).toBe(1234);
+    expect(storage.writes).toEqual([]);
+  });
+
+  it('AD-9 elapsedMs in a won game is activeMs, whatever the clock says', async () => {
+    const { game, clock } = await active(JSON.stringify({ ...won, activeMs: 4000 }));
+    clock.resume(0);
+    expect(game.elapsedMs(90_000)).toBe(4000);
+  });
+
+  it('AD-9 elapsedMs in a gave-up game is activeMs, whatever the clock says', async () => {
+    const { game, clock } = await active(JSON.stringify(gaveUp));
+    clock.resume(0);
+    expect(game.elapsedMs(90_000)).toBe(1000);
+  });
+
+  it('AD-9 elapsedMs throws while booting, rejected and halted', async () => {
+    const booting = await setup({ stored: JSON.stringify(place) });
+    expect(() => booting.game.elapsedMs(0)).toThrow('AD-9 elapsedMs() while booting');
+    const rejected = await active(JSON.stringify(invalidNull));
+    expect(() => rejected.game.elapsedMs(0)).toThrow('AD-9 elapsedMs() while rejected');
+    const halted = await active(JSON.stringify(place));
+    halted.game.halt('fatal', 'boom');
+    expect(() => halted.game.elapsedMs(0)).toThrow('AD-9 elapsedMs() while halted');
+  });
+});

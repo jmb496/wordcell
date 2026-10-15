@@ -62,6 +62,26 @@ export const text = Object.freeze({
   redo: 'Redo',
   // R-82 top-bar score; negatives with U+2212 (DESIGN.md Typography).
   score: (n: number) => `Score ${n < 0 ? `\u2212${-n}` : n}`,
+  // R-76 top-bar timer: floors to seconds, `m:ss` below one hour, `h:mm:ss` from it (hours
+  // unpadded, no cap). Throws on negative or non-finite input (rule 6).
+  timer: (ms: number): string => {
+    if (!Number.isFinite(ms) || ms < 0) throw new Error(`AD-10 timer(${ms})`);
+    const total = Math.floor(ms / 1000);
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = total % 60;
+    const ss = String(s).padStart(2, '0');
+    return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${ss}` : `${m}:${ss}`;
+  },
+  // Epic 6 CAP-7 (ticket 6.4) Preferences panel (DESIGN.md Panels; the catalogue lists no panel
+  // strings, so these take that wording, flagged for the owner).
+  preferences: 'Preferences',
+  closePreferences: 'Close preferences',
+  animationSpeed: 'Animation speed',
+  speedFast: 'Fast',
+  speedNormal: 'Normal',
+  speedSlow: 'Slow',
+  showTimer: 'Show timer',
   // Q-06 the QU card's badge (DESIGN.md Components, QU card).
   quBadge: '\u00d72',
   // §2 Session rejected: one title, one body per reason.

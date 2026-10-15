@@ -1,12 +1,12 @@
 <script lang="ts">
 import type { GameView } from '../engine/index';
 import { game } from '../shell/game.svelte';
+import { prefs } from '../shell/prefs.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { act } from './act';
 import { capture, play } from './flip';
 import { openSurface } from './open-surface';
 import { overlays } from './overlays.svelte';
-// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { text } from './text';
 
 // DESIGN.md Top bar: sticky, 44 px of content plus the top safe-area inset (owner Option A),
@@ -20,6 +20,26 @@ let { view }: { view: GameView } = $props();
 // `inert` while the menu is open because App makes `main` inert (SPEC F6).
 function openMenu(): void {
   openSurface('menu');
+}
+
+// Epic 6 CAP-7 (ticket 6.4, R-76, AD-9): the timer. The text always comes from a fresh
+// `game.elapsedMs(performance.now())` (never a stored `now`); `refresh` is only a re-read trigger,
+// bumped by a 1000 ms interval that runs while Show timer is on and the game is playing. Every
+// dispatch and leaving playing re-derive through the store state the call reads. The interval
+// neither dispatches nor writes, and the UI holds no visibility listener (AD-9).
+let refresh = $state(0);
+
+$effect(() => {
+  if (!prefs.value.showTimer || view.status !== 'playing') return;
+  const id = setInterval(() => {
+    refresh += 1;
+  }, 1000);
+  return () => clearInterval(id);
+});
+
+function timerText(): string {
+  void refresh;
+  return text.timer(game.elapsedMs(performance.now()));
 }
 
 function undo(): void {
@@ -51,6 +71,10 @@ function redo(): void {
     </svg>
   </button>
   <p class="score">{text.score(view.displayScore)}</p>
+  {#if prefs.value.showTimer}
+    {@const timer = timerText()}
+    <p class="timer" class:long={timer.length > 5}>{timer}</p>
+  {/if}
   <div class="undo-redo">
     <button
       type="button"
@@ -96,6 +120,14 @@ function redo(): void {
     font: 700 18px/24px system-ui, "Roboto", sans-serif; font-variant-numeric: tabular-nums;
     color: var(--wc-ink-primary);
   }
+  .timer {
+    flex: none; box-sizing: border-box; width: 64px; margin: 0 4px; text-align: right;
+    white-space: nowrap; overflow: hidden;
+    font: 700 18px/24px system-ui, "Roboto", sans-serif; font-variant-numeric: tabular-nums;
+    color: var(--wc-ink-primary);
+  }
+  /* h:mm:ss would overflow 64 px at the score's size, so only it shrinks (DESIGN.md Top bar). */
+  .timer.long { font-size: 13px; }
   .undo-redo { flex: none; display: flex; gap: 4px; }
   .icon {
     width: 44px; height: 44px; padding: 0; border-radius: 9999px;

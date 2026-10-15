@@ -4,6 +4,7 @@ import type { GameView } from '../engine/index';
 import { game } from '../shell/game.svelte';
 import { act } from './act';
 import { requestNewGame, requestReplay } from './new-game';
+import { openSurface } from './open-surface';
 import { overlays } from './overlays.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Sheet from './Sheet.svelte';
@@ -54,6 +55,14 @@ function giveUp(): void {
   game.dispatch({ type: 'giveUp' });
 }
 
+// Ticket 6.4: Preferences closes the menu, then opens the panel; Panel owns the focus, so Menu's
+// close leaves it alone (skipFocus, as the confirm rows do).
+function preferences(): void {
+  close();
+  skipFocus = true;
+  openSurface('preferences');
+}
+
 const closeOnEsc = act((): void => {
   if (overlays.top === 'menu') close();
 });
@@ -92,6 +101,17 @@ function onkeydown(event: KeyboardEvent): void {
           <path d="M6 5 H18 L15 9 L18 13 H6" />
         </svg>
         <span>{text.giveUp}</span>
+      </button>
+    </li>
+    <li>
+      <button type="button" class="row" onclick={act(preferences)}>
+        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+          <path d="M4 7 H20" />
+          <path d="M4 17 H20" />
+          <circle cx="9" cy="7" r="2" />
+          <circle cx="15" cy="17" r="2" />
+        </svg>
+        <span>{text.preferences}</span>
       </button>
     </li>
   </ul>

@@ -1,0 +1,125 @@
+<script lang="ts">
+import { tick, untrack } from 'svelte';
+import { type AnimationSpeed, prefs } from '../shell/prefs.svelte';
+import { act } from './act';
+import { overlays } from './overlays.svelte';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import Panel from './Panel.svelte';
+import { text } from './text';
+
+// Epic 6 CAP-7 (ticket 6.4, R-82, R-76, spec §7.10, Q-36; DESIGN.md Panels): the Preferences panel,
+// opened only through `openSurface('preferences')` (the Menu row). A radiogroup `Animation speed`
+// (Fast / Normal / Slow) and a `Show timer` switch (default off); each change calls the prefs setter
+// uncaught (rule 6: they throw while halted or booting, AD-10), writes at once, applies to the next
+// glide and never touches the Session. Every control is `act()`-wrapped. Esc: interim `act()`-wrapped
+// window handler, a no-op unless this panel is the top overlay (entry 10's keymap replaces it); it and the
+// back control share `close`, one path. At close focus goes to the ☰ button after `tick()` (as
+// ConfirmDialogs does; Panel's own return aims at the exiting menu row).
+const open = $derived(overlays.isOpen('preferences'));
+let wasOpen = false;
+
+$effect(() => {
+  const now = open;
+  untrack(() => {
+    if (wasOpen && !now) {
+      void tick().then(() => {
+        if (overlays.isOpen('menu')) return;
+        document.querySelector<HTMLElement>(`button[aria-label="${text.menu}"]`)?.focus();
+      });
+    }
+    wasOpen = now;
+  });
+});
+
+const SPEEDS: readonly (readonly [AnimationSpeed, string])[] = [
+  ['fast', text.speedFast],
+  ['normal', text.speedNormal],
+  ['slow', text.speedSlow],
+];
+
+function close(): void {
+  overlays.close('preferences');
+}
+
+function setSpeed(speed: AnimationSpeed): void {
+  prefs.setAnimationSpeed(speed);
+}
+
+function toggleTimer(): void {
+  prefs.setShowTimer(!prefs.value.showTimer);
+}
+
+const closeOnEsc = act((): void => {
+  if (overlays.top === 'preferences') close();
+});
+
+function onkeydown(event: KeyboardEvent): void {
+  if (event.key === 'Escape' && !event.repeat && overlays.top === 'preferences') closeOnEsc();
+}
+</script>
+
+<svelte:window {onkeydown} />
+
+<Panel title={text.preferences} closeLabel={text.closePreferences} onclose={act(close)} {open}>
+  <div class="group" role="radiogroup" aria-labelledby="speed-label">
+    <p id="speed-label" class="label">{text.animationSpeed}</p>
+    <div class="segments">
+      {#each SPEEDS as [speed, label] (speed)}
+        <label class="segment" class:on={prefs.value.animationSpeed === speed}>
+          <input
+            type="radio"
+            name="animation-speed"
+            value={speed}
+            checked={prefs.value.animationSpeed === speed}
+            onchange={act(() => setSpeed(speed))}
+          />
+          <span>{label}</span>
+        </label>
+      {/each}
+    </div>
+  </div>
+  <button
+    type="button"
+    class="switch-row"
+    role="switch"
+    aria-checked={prefs.value.showTimer}
+    onclick={act(toggleTimer)}
+  >
+    <span>{text.showTimer}</span>
+    <span class="track" class:on={prefs.value.showTimer} aria-hidden="true"
+      ><span class="thumb"></span></span
+    >
+  </button>
+</Panel>
+
+<style>
+  .group { padding-top: 8px; }
+  .label {
+    margin: 0 0 8px; font: 400 0.875rem/1.25rem system-ui, "Roboto", sans-serif;
+    color: var(--wc-ink-secondary);
+  }
+  .segments { display: flex; border: 1px solid var(--wc-outline); border-radius: 9999px; overflow: hidden; }
+  .segment {
+    position: relative; flex: 1; min-height: 44px; display: grid; place-items: center;
+    font: 400 1rem/1.5rem system-ui, "Roboto", sans-serif; color: var(--wc-ink-primary);
+  }
+  .segment + .segment { border-left: 1px solid var(--wc-outline); }
+  .segment.on { background: var(--wc-accent-teal); color: var(--wc-ink-on-accent); }
+  .segment input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; }
+  .segment:has(input:focus-visible) { outline: 2px solid var(--wc-accent-teal); outline-offset: -4px; }
+  .switch-row {
+    box-sizing: border-box; width: 100%; min-height: 52px; margin-top: 16px; padding: 0;
+    display: flex; align-items: center; justify-content: space-between; text-align: left;
+    background: none; border: none; color: var(--wc-ink-primary);
+    font: 400 1rem/1.5rem system-ui, "Roboto", sans-serif;
+  }
+  .track {
+    flex: none; width: 52px; height: 32px; box-sizing: border-box; padding: 3px;
+    border: 2px solid var(--wc-outline); border-radius: 9999px; background: var(--wc-surface-raised);
+    display: flex; align-items: center;
+    transition: background var(--wc-base-ms);
+  }
+  .track.on { background: var(--wc-accent-teal); border-color: var(--wc-accent-teal); justify-content: flex-end; }
+  .thumb { width: 20px; height: 20px; border-radius: 9999px; background: var(--wc-ink-secondary); }
+  .track.on .thumb { background: var(--wc-ink-on-accent); }
+</style>
