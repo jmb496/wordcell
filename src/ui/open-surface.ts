@@ -23,6 +23,10 @@ export function openSurface(id: SurfaceId): void {
   if (id !== 'resetConfirm' && (top === 'historyNotice' || top === 'resetConfirm')) {
     throw new Error(`AD-13 open(${id}) while ${top} is the top entry`);
   }
+  if (overlays.isOpen(id)) {
+    overlays.open(id);
+    return;
+  }
   overlays.clearTile();
   overlays.deselect();
   if (overlays.viewCell !== null) overlays.close('wordcellView');

@@ -37,7 +37,7 @@ function focusStart(heading: HTMLElement): void {
     inert={!open}
     {@attach presence.attach}
     ontransitionend={presence.onend}
-    ontransitioncancel={presence.onend}
+    ontransitioncancel={presence.oncancel}
   >
     <header>
       <button type="button" class="back" aria-label={closeLabel} onclick={firstClick(onclose)}

@@ -4,7 +4,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import dialogSrc from './Dialog.svelte?raw';
 import { initMotion, REDUCED_FADE_MS } from './motion';
 import panelSrc from './Panel.svelte?raw';
-import { firstClick, onMounted, onOpenChange, onTransitionEnd } from './presence';
+import {
+  firstClick,
+  onMounted,
+  onOpenChange,
+  onSettled,
+  onTransitionEnd,
+  ownsTransition,
+} from './presence';
 import sheetSrc from './Sheet.svelte?raw';
 import viewSrc from './WordCellView.svelte?raw';
 
@@ -57,6 +64,38 @@ describe('AD-14 presence', () => {
     const gone = { present: false, shown: false };
     expect(onTransitionEnd(gone, false)).toBe(gone);
     expect(onMounted(false)).toEqual({ present: false, shown: false });
+  });
+
+  it('AD-14 close during the open fade: the cancel of the reversed transition keeps it; the end (or a cancel with nothing running) removes it', () => {
+    let state = onMounted(true);
+    state = onOpenChange(state, false, true);
+    expect(onSettled(state, false, true)).toBe(state);
+    expect(onTransitionEnd(state, false)).toEqual({ present: false, shown: false });
+    expect(onSettled(state, false, false)).toEqual({ present: false, shown: false });
+  });
+
+  it('AD-14 a close in the frame it opened (no transition started) leaves once nothing is running; a reopen keeps it', () => {
+    const closed = onOpenChange(onMounted(true), false, true);
+    expect(onSettled(closed, false, false)).toEqual({ present: false, shown: false });
+    const reopened = onOpenChange(closed, true, true);
+    expect(onSettled(reopened, true, false)).toBe(reopened);
+  });
+
+  it('AD-14 only the surface own elements end its exit: a descendant opacity end does not', () => {
+    const node = { hasAttribute: () => false };
+    const marked = { hasAttribute: (name: string) => name === 'data-presence-target' };
+    const descendant = { hasAttribute: () => false };
+    expect(ownsTransition(node as unknown as EventTarget, node as unknown as EventTarget)).toBe(
+      true,
+    );
+    expect(ownsTransition(marked as unknown as EventTarget, node as unknown as EventTarget)).toBe(
+      true,
+    );
+    expect(
+      ownsTransition(descendant as unknown as EventTarget, node as unknown as EventTarget),
+    ).toBe(false);
+    expect(ownsTransition(null, node as unknown as EventTarget)).toBe(false);
+    expect(sheetSrc.match(/data-presence-target/g)).toHaveLength(2);
   });
 
   it('AD-12 firstClick ignores the second click of a multi-click and passes keyboard activation', () => {

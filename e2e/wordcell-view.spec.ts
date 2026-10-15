@@ -556,6 +556,84 @@ test.describe('android', () => {
       }
     });
   }
+
+  // Epic 6 CAP-1 (6.1, SPEC F7, AD-14): the exit behaviours, observed with the view layer's fade
+  // slowed to 3 s so every state between the close and the exit end can be read.
+  const slowFade = (page: Page) =>
+    page.addStyleTag({ content: '[data-view-layer] { transition-duration: 3s !important; }' });
+  const layerOf = (page: Page) => page.locator('[data-view-layer]');
+
+  test('AD-14 an exiting WordCell view is inert and non-interactive; closing then reopening cell 7 during the exit ends in the open view', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-idle-empty-column');
+    await slowFade(page);
+    await openSticky(page, 7, 7);
+    const layer = layerOf(page);
+    await expect(layer).toHaveCSS('opacity', '1');
+    const c = await centre(sheet(page));
+    await page.goBack();
+    await expect(layer).toHaveClass(/exiting/);
+    await expect(sheet(page)).toHaveAttribute('inert', '');
+    await expect(layer).toHaveCSS('pointer-events', 'none');
+    expect(
+      await page.evaluate(
+        ({ x, y }) => document.elementFromPoint(x, y)?.closest('[data-view-layer]') != null,
+        c,
+      ),
+    ).toBe(false);
+    await expect.poll(() => wcOf(page)).toBe(0);
+    // Reopen the same cell mid-exit.
+    await openSticky(page, 7, 7);
+    await expect(layer).not.toHaveClass(/exiting/);
+    await expect(sheet(page)).not.toHaveAttribute('inert');
+    await page.waitForTimeout(3500);
+    await expect(sheet(page)).toBeVisible();
+    await expect(layer).toHaveCSS('opacity', '1');
+  });
+
+  test('AD-14 a close during the open fade still fades out and then unmounts (no early unmount on the cancelled open)', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-idle-empty-column');
+    await slowFade(page);
+    await openSticky(page, 7, 7);
+    await page.waitForTimeout(500);
+    await page.goBack();
+    await expect(layerOf(page)).toHaveClass(/exiting/);
+    await page.waitForTimeout(500);
+    await expect(layerOf(page)).toHaveCount(1);
+    await expect(layerOf(page)).toHaveCount(0, { timeout: 5000 });
+  });
+
+  test('AD-14 peek to sticky replays no fade: exactly one opacity transition ran on the layer', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 412, height: 360 });
+    await openFixture(page, 'session-won');
+    await cell(page, 6).scrollIntoViewIfNeeded();
+    await slowFade(page);
+    await page.evaluate(() => {
+      const runs: string[] = [];
+      (window as unknown as { __runs: string[] }).__runs = runs;
+      document.addEventListener(
+        'transitionrun',
+        (event) => {
+          if (event.target instanceof Element && event.target.hasAttribute('data-view-layer')) {
+            runs.push(event.propertyName);
+          }
+        },
+        true,
+      );
+    });
+    await holdPeek(page, 6);
+    await expect(sheet(page)).toHaveAttribute('data-mode', 'sticky');
+    await page.waitForTimeout(3500);
+    await expect(layerOf(page)).toHaveCSS('opacity', '1');
+    expect(await page.evaluate(() => (window as unknown as { __runs: string[] }).__runs)).toEqual([
+      'opacity',
+    ]);
+  });
 });
 
 // Entry 12 (SPEC CAP-9, F19, F27): the desktop hover peek. The page clock is installed and paused

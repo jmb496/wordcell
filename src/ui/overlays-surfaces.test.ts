@@ -70,6 +70,12 @@ describe('AD-13 new surface ids: depth, close, back, reset', () => {
       expect(calls.filter((c) => c === 'pop')).toHaveLength(
         calls.filter((c) => c === 'push').length,
       );
+      overlays.open('statistics');
+      overlays.open(id);
+      overlays.closedByBack(1);
+      expect(overlays.top).toBe('statistics');
+      overlays.closedByBack(0);
+      expect(overlays.depth).toBe(0);
     });
 
     it(`AD-13 ${id}: dismissal closes only the confirm; the opener below stays`, async () => {
@@ -152,8 +158,12 @@ describe('AD-13 new surface ids: legal tops and refusals', () => {
       expect(() => overlays.openView(3)).toThrow(`AD-13 openView while ${id} is the top entry`);
       overlays.close(id);
     }
+    withEndSheet(overlays);
+    overlays.collapseEndSheet();
     overlays.open('newGameConfirm');
-    expect(() => overlays.expandEndSheet()).toThrow();
+    expect(() => overlays.expandEndSheet()).toThrow(
+      'AD-13 expandEndSheet while newGameConfirm is open',
+    );
     expect(() => overlays.openView(3)).toThrow(
       'AD-13 openView while newGameConfirm is the top entry',
     );
@@ -285,7 +295,9 @@ describe('AD-13 openSurface', () => {
     overlays.select(2, 3);
     calls.length = 0;
     openSurface('menu');
+    overlays.selectTile(7);
     expect(() => openSurface('menu')).toThrow('AD-13 open(menu) while it is open');
+    expect(overlays.tileSelection).toBe(7);
     expect(() => openSurface('statistics')).toThrow(
       'AD-13 open(statistics) while menu is the top entry',
     );

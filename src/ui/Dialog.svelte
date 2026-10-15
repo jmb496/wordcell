@@ -71,7 +71,7 @@ const first = firstClick;
   inert={inert || !open}
   {@attach presence.attach}
   ontransitionend={presence.onend}
-  ontransitioncancel={presence.onend}
+  ontransitioncancel={presence.oncancel}
 >
   <!-- The scrim is pointer-only: keyboard and screen-reader users dismiss with the buttons. -->
   <div class="scrim" aria-hidden="true" onclick={first(onscrim)}></div>

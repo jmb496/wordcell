@@ -24,15 +24,15 @@ let { view }: { view: GameView } = $props();
 
 const open = $derived(overlays.peek ?? overlays.viewCell);
 const presence = createPresence(() => open !== null);
-// The last open cell and mode, kept for the exit.
-let lastCell = $state<number | null>(null);
+// The last open cell (a snapshot, not the live view) and mode, kept for the exit.
+let lastCell = $state.raw<CellView | null>(null);
 let lastMode = $state<'peek' | 'sticky'>('sticky');
 $effect.pre(() => {
   if (open === null) return;
-  lastCell = open;
+  lastCell = cellOf(open);
   lastMode = overlays.peek !== null ? 'peek' : 'sticky';
 });
-const shownCell = $derived(open ?? lastCell);
+const shownCell = $derived(open === null ? lastCell : cellOf(open));
 
 function cellOf(n: number): CellView {
   return cellIn(view.cells, n, `AD-13 WordCell view of unknown cell ${n}`);
@@ -40,7 +40,7 @@ function cellOf(n: number): CellView {
 </script>
 
 {#if presence.present && shownCell !== null}
-  {@const cell = cellOf(shownCell)}
+  {@const cell = shownCell}
   {@const title = text.viewTitle(cell.cell, cell.cards.length)}
   <div
     class="layer"
@@ -49,7 +49,7 @@ function cellOf(n: number): CellView {
     class:exiting={open === null}
     {@attach presence.attach}
     ontransitionend={presence.onend}
-    ontransitioncancel={presence.onend}
+    ontransitioncancel={presence.oncancel}
   >
   <div class="scrim" data-view-scrim></div>
   <div

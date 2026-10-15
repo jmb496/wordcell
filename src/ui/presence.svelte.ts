@@ -1,17 +1,26 @@
 // Epic 6 CAP-1 (6.1, SPEC F5, F7): the reactive wrapper of `presence.ts` for Sheet, Panel, Dialog
 // and WordCellView. `attach` goes on the element that holds the transitions (it forces one layout
 // read, so the hidden start state is painted before `shown` is set); `onend` on its
-// `transitionend` and `transitioncancel`. Focus: the opener at open is remembered; at close (stack
+// `transitionend` and `oncancel` on its `transitioncancel` (an interrupted open reverses and cancels
+// the running transition; only a cancel with no replacement running unmounts). Focus: the opener at open is remembered; at close (stack
 // removal, not at exit end) it gets focus back after the `tick()` flush that lets `main`'s `inert`
 // clear, unless focus has moved somewhere outside this surface meanwhile (the next surface's start).
 import { tick, untrack } from 'svelte';
-import { onMounted, onOpenChange, onTransitionEnd, type PresenceState } from './presence';
+import {
+  onMounted,
+  onOpenChange,
+  onSettled,
+  onTransitionEnd,
+  ownsTransition,
+  type PresenceState,
+} from './presence';
 
 export interface Presence {
   readonly present: boolean;
   readonly shown: boolean;
   attach(element: HTMLElement): () => void;
   onend(event: TransitionEvent): void;
+  oncancel(event: TransitionEvent): void;
 }
 
 export function createPresence(isOpen: () => boolean): Presence {
@@ -19,6 +28,28 @@ export function createPresence(isOpen: () => boolean): Presence {
   let node: HTMLElement | undefined;
   let opener: Element | null = null;
   let wasOpen = false;
+
+  function opacityRunning(): boolean {
+    return (
+      node
+        ?.getAnimations({ subtree: true })
+        .some(
+          (a) =>
+            a instanceof CSSTransition &&
+            a.transitionProperty === 'opacity' &&
+            a.playState !== 'finished',
+        ) ?? false
+    );
+  }
+
+  // After a close is rendered: no opacity transition started (closed in the frame it opened, or the
+  // transition is instant), so no event will come.
+  function settleAfterClose(): void {
+    void tick().then(() => {
+      if (node === undefined) return;
+      state = onSettled(state, isOpen(), opacityRunning());
+    });
+  }
 
   function restoreFocus(): void {
     const target = opener;
@@ -39,7 +70,10 @@ export function createPresence(isOpen: () => boolean): Presence {
     untrack(() => {
       state = onOpenChange(state, open, node !== undefined);
       if (open && !wasOpen) opener = document.activeElement;
-      if (!open && wasOpen) restoreFocus();
+      if (!open && wasOpen) {
+        settleAfterClose();
+        restoreFocus();
+      }
       wasOpen = open;
     });
   });
@@ -62,8 +96,12 @@ export function createPresence(isOpen: () => boolean): Presence {
       });
     },
     onend(event) {
-      if (event.propertyName !== 'opacity') return;
+      if (event.propertyName !== 'opacity' || !ownsTransition(event.target, node)) return;
       state = onTransitionEnd(state, isOpen());
+    },
+    oncancel(event) {
+      if (event.propertyName !== 'opacity' || !ownsTransition(event.target, node)) return;
+      state = onSettled(state, isOpen(), opacityRunning());
     },
   };
 }

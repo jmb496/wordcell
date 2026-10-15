@@ -27,6 +27,22 @@ export function onTransitionEnd(state: PresenceState, open: boolean): PresenceSt
 }
 
 /**
+ * No transition of the opacity property is running any more (a cancel that was not a reversal, or the
+ * check after a close that never started one): nothing will fire `transitionend`, so a closed
+ * surface leaves now. A running transition (the reversal of an interrupted open) keeps it.
+ */
+export function onSettled(state: PresenceState, open: boolean, running: boolean): PresenceState {
+  return running ? state : onTransitionEnd(state, open);
+}
+
+/** Only the surface's own transitioning elements count: the node, or one marked `data-presence-target`. */
+export function ownsTransition(target: EventTarget | null, node: EventTarget | undefined): boolean {
+  if (target === null || node === undefined) return false;
+  if (target === node) return true;
+  return (target as Partial<Element>).hasAttribute?.('data-presence-target') === true;
+}
+
+/**
  * A multi-click guard shared by the surface components: no part of a surface acts on the second or
  * later click of a multi-click (a double tap on the opener lands its second click on the freshly
  * mounted surface). Keyboard activation has detail 0.

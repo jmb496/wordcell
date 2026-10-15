@@ -42,11 +42,11 @@ function focusStart(element: HTMLElement): void {
     inert={!open}
     {@attach presence.attach}
     ontransitionend={presence.onend}
-    ontransitioncancel={presence.onend}
+    ontransitioncancel={presence.oncancel}
   >
     <!-- The scrim is pointer-only: keyboard and screen-reader users close with the close control. -->
-    <div class="scrim" aria-hidden="true" onclick={firstClick(onscrim)}></div>
-    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="{id}-title">
+    <div class="scrim" data-presence-target aria-hidden="true" onclick={firstClick(onscrim)}></div>
+    <div class="sheet" data-presence-target role="dialog" aria-modal="true" aria-labelledby="{id}-title">
       <header>
         <h2 id="{id}-title">{title}</h2>
         <button type="button" class="close" aria-label={closeLabel} onclick={firstClick(onclose)}
