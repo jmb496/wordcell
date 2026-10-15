@@ -58,3 +58,19 @@ The earlier 'diverging' stop is withdrawn: the owner answered the design questio
 ### Default applied (technical)
 - parts shape and sibling branch, as proposed.
 Words: 841 (5.9 x pass 0, within 1500)  |  Snapshot: story-pending-draft-line.review-log.passes/pass3.md
+
+## Pass 4 — 2026-10-15
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 0, minor 5, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+### Minors (not applied)
+- Word/suffix spans need a flex (or block) container for `text-overflow` to work; Structure test should check computed display (raised by 2 reviewers).
+- Maximum is 10 cards, up to 11 letters with a QU card; make the long fixture a 10-card word, ideally with QU, plus a QU long-word Vitest case.
+- Ellipsis path not exercised at 360 px; optionally add a narrower probe viewport.
+- Fixture word: assert `pendingDraftWord.length` in a test; record the seed in the plan.
+- "Redo tail longer than one" has no Playwright step (engine test covers the field); name Confirm as the commit step.
+### Decision needed
+- none
+
+State: pass 4: done
+
+## Result — converged after 4 passes
+Majors per pass: 6, 2, 3, 0. Technical defaults applied: pass 3 (parts shape, sibling branch). Words 607 → 841 (pass 0: 143). Unapplied minors: see pass 4 minors and pass 3 minors.
