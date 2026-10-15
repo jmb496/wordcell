@@ -184,3 +184,6 @@ Ref to fix upstream: none
 Tokens: Tokens: 2.4M input-equivalent (ticket review 96%, orchestrator 3%, other 1%); orchestrator peak context 52k
 Worth knowing: the review's last log update is committed with this stop.
 Close-out docs: none yet
+
+### 6.9 resumed (session 2026-10-15)
+Owner answered the band question: names plus scores (commit 9def06b). Ticket review stays converged; resuming at Step B.
