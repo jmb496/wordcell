@@ -1,6 +1,6 @@
 # Review log — ticket 6.8
 
-State: pass 3: done (diverging)
+State: pass 3: done
 
 Pre-loop: HEAD 09623a6ebf8ab3a67adc228c1f9420e711ad793f, 143 words (story-pending-draft-line.review-log.passes/pass0.md); budget 1500 words.
 
@@ -50,6 +50,11 @@ Flow 3 setup/start state unnamed; discard sequence fixture/word; no aria-live ch
 ### Decision needed
 - none
 
-## Result — diverging at pass 3 (fix: DESIGN.md Tray band and EXPERIENCE.md Tray band row)
-Majors per pass: 6, 2, 3. The rise 2 → 3 comes from ambiguities in the two-span ellipsis structure that pass 2 added from DESIGN.md's "never wraps, word part ellipsizes first"; DESIGN.md does not say how the line is composed from text.ts or marked up in Tray.svelte. All three majors are technical (no player-visible choice); defaults are listed above. No pass 3 fix was applied.
-Unapplied minors: see pass 3 minors.
+### Resumed 2026-10-15
+The earlier 'diverging' stop is withdrawn: the owner answered the design question (ticket Notes), so it is settled, not decision-needed. Pass 3 fixes are applied now with the owner answer and the defaults above.
+### Applied (pass 3, after resume)
+- [major] 1 parts `{prefix, word, suffix}` from text.ts pendingDraft; 2 owner answer made AC (360 px narrow-width check: one row, no overflow, full suffix; `…` only if the word truly cannot fit); 3 Placement now names the sibling branch inside `.word-line` → fixer items 1–3
+- [minor] Flow 3 start state, discard words, no aria-live in Playwright, fixture tests, DESIGN.md exception → fixer items 4–8
+### Default applied (technical)
+- parts shape and sibling branch, as proposed.
+Words: 841 (5.9 x pass 0, within 1500)  |  Snapshot: story-pending-draft-line.review-log.passes/pass3.md
