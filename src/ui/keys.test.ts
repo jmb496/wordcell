@@ -1092,6 +1092,34 @@ describe('AD-12 board keys: WordCell Enter and Space', () => {
     expect(overlays.viewCell).toBe(4);
   });
 
+  it('AD-12 Space with the sticky view open over a tail selection closes the view, clears the selection and does not throw (non-empty and empty cell)', () => {
+    board({ cellCards: { 4: [40], 6: [60] } });
+    overlays.select(2, 1);
+    overlays.openView(6);
+    expect(overlays.top).toBe('wordcellView');
+    onCell(4);
+    expect(() => press(' ')).not.toThrow();
+    expect(overlays.selection).toBeNull();
+    expect(overlays.viewCell).toBe(4);
+    overlays.close('wordcellView');
+    settle();
+    overlays.select(2, 1);
+    overlays.openView(6);
+    onCell(5);
+    expect(() => press(' ')).not.toThrow();
+    expect(overlays.selection).toBeNull();
+    expect(overlays.viewCell).toBeNull();
+  });
+
+  it('AD-12 there is no giveUp key row', () => {
+    expect(Object.keys(keys.ROWS)).not.toContain('giveUp');
+  });
+
+  it('AD-12 there is no giveUp key label entry', async () => {
+    const { KEY_LABELS } = await import('./key-labels');
+    expect(Object.keys(KEY_LABELS)).not.toContain('giveUp');
+  });
+
   it('AD-12 the view-opening keys do nothing under the expanded end sheet', () => {
     board({ status: 'won', cellCards: { 4: [40] } });
     overlays.openDeferred(overlays.deferEndSheetOpen());

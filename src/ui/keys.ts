@@ -385,9 +385,10 @@ export const ROWS: Readonly<Record<CommandId, Row>> = {
     run: (view, ctx) => {
       if (ctx.focus.kind !== 'cell') throw new Error('AD-12 view key without a focused cell');
       const cell = required(cellOf(view, ctx.focus.cell), 'cell');
+      // An open sticky view sits above a tail selection (AD-13): close it before deselecting.
+      if (overlays.viewCell !== null) overlays.close('wordcellView');
       overlays.deselect();
       if (cell.cards.length === 0) return;
-      if (overlays.viewCell !== null) overlays.close('wordcellView');
       if (overlays.peek !== null) overlays.closePeek();
       overlays.closeHoverPeek();
       overlays.openView(cell.cell);

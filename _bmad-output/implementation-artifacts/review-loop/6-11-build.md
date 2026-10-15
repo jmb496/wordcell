@@ -1,6 +1,6 @@
 # Code review loop — ticket 6.11 build (dd013d3..4bbf09d)
 
-State: pass 1: done
+State: pass 2: done
 Pre-loop: HEAD 4bbf09d, tree snapshot 0 10bd112d8494982e4badbc10bfed0ab592ff696f; target diff `6-11-build.passes/pass0.diff`.
 Intent: story-keyboard-board-keys-focus-moves-and-tooltips-plan.md. Depth thorough, max 7.
 
@@ -23,3 +23,18 @@ Reviewers: correctness, edge cases, verification gap, intent alignment  |  Findi
 ### Dropped
 - see header
 Snapshot: tree d0162160b30690979ec5a35b8cb615d9da69f82b (fix: focus-follow.test.ts new, controller.ts settle(keepHover) bug fix, keys.ts Shift guard; npm test/lint/check pass)
+
+## Pass 2 — 2026-10-15
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 1, minor 5, decision-needed 0  |  Dropped in triage: 0 (the view-row crash was reported by two reviewers; merged with the "reimplements the controller path" minor)
+### Applied (sent to fixer)
+- [major] keys.ts view row run — overlays.deselect() runs before the open sticky view is closed; stack [tailSelection, wordcellView] (long-press peek released to sticky) makes Space throw AD-13 → close view first, then deselect (order of Controller.activate); keys.test + e2e case → fixer 1
+- [minor] keys.ts view row — duplicates the controller view-open sequence; reuse a shared helper where it fits without churn → fixer 1
+- [minor] e2e: `+`/`-`/Flip focus stays on a live tile (not body) → fixer 2
+- [minor] e2e expectNoop also compares selection/tileSelection → fixer 3
+- [minor] e2e Tab order continues past cell 10 to primary-action → fixer 4
+- [minor] literal assertion that Give up has no tooltip/key row (deleted in pass 1) → fixer 5
+### Default applied (technical)
+- all of the above
+### Decision needed (functionality / UX / gameplay)
+- none (open sub-question, not blocking: Space on a cell whose view is already open closes and reopens it — kept)
+Snapshot: tree 6e57ddb49834439641a700bfde2030ac0efe1efe (fix: view row closes sticky view before deselect; tests; npm test/lint/check pass; Tab test asserts disabled primary-action in Idle instead of focusing it)

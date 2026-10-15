@@ -80,11 +80,20 @@ async function press(page: Page, key: string): Promise<boolean> {
   return page.evaluate(() => (window as unknown as { __kp: boolean[] }).__kp.at(-1) ?? false);
 }
 
+const tileSelection = (page: Page) =>
+  page
+    .locator('[data-band="tray"] [data-card-id].selected')
+    .evaluateAll((els) => els.map((el) => el.getAttribute('data-card-id')));
+
 // A key that does not act dispatches nothing and is not default-prevented (CAP-10).
 async function expectNoop(page: Page, key: string): Promise<void> {
   const before = await game(page);
+  const selBefore = await selection(page);
+  const tilesBefore = await tileSelection(page);
   expect(await press(page, key), `${key} is not default-prevented`).toBe(false);
   expect(await game(page), `${key} dispatches nothing`).toBe(before);
+  expect(await selection(page), `${key} leaves the column selection`).toEqual(selBefore);
+  expect(await tileSelection(page), `${key} leaves the tile selection`).toEqual(tilesBefore);
 }
 
 async function open(
@@ -357,6 +366,13 @@ test.describe('Tab order', () => {
       'cell 9',
       'cell 10',
     ]);
+    await page.keyboard.press('Tab');
+    // Idle: the primary action is disabled (not a Tab stop), so Tab leaves the board stops.
+    await expect(primary(page)).toBeDisabled();
+    const after = await where(page);
+    expect(after.cell, 'Tab after cell 10 stops on no further cell').not.toBe('10');
+    expect(after.card, 'Tab after cell 10 stops on no card').toBeNull();
+    await page.keyboard.press('Shift+Tab');
     await page.keyboard.press('Enter');
     await expect(sheet(page)).toBeVisible();
   });
@@ -534,6 +550,23 @@ test.describe('Composing', () => {
     await expect.poll(side).toBe('right');
     expect(await press(page, 'Shift+F')).toBe(true);
     await expect.poll(side).toBe('left');
+  });
+
+  test('Q-24 +, - and F in Composing never leave focus on the body: a live tile or the region first tile keeps it', async ({
+    page,
+  }) => {
+    await toComposing(page);
+    // These keys re-render the destination block but never remove the focused movable tile.
+    await tiles(page).first().focus();
+    for (const key of ['+', '-', 'f']) {
+      await page.keyboard.press(key);
+      await expect
+        .poll(async () => {
+          const at = await where(page);
+          return at.tag !== 'BODY' && at.card !== null && at.place === 'tray';
+        }, key)
+        .toBe(true);
+    }
   });
 
   test('Q-24 Enter on a tile validates only when Validate is enabled; with the tray at 2 letters it is a no-op', async ({
