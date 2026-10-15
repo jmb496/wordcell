@@ -31,7 +31,8 @@ function focusStart(element: HTMLElement): void {
   const first = element.querySelector<HTMLElement>(
     'button:not(:disabled), [href], input:not(:disabled), [tabindex]:not([tabindex="-1"])',
   );
-  first?.focus();
+  if (first !== null) first.focus();
+  else element.closest<HTMLElement>('.sheet')?.querySelector<HTMLElement>('.close')?.focus();
 }
 </script>
 

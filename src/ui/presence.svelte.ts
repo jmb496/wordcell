@@ -11,6 +11,7 @@ import {
   onOpenChange,
   onSettled,
   onTransitionEnd,
+  ownsAnimation,
   ownsTransition,
   type PresenceState,
 } from './presence';
@@ -36,6 +37,7 @@ export function createPresence(isOpen: () => boolean): Presence {
         .some(
           (a) =>
             a instanceof CSSTransition &&
+            ownsAnimation(a, node) &&
             a.transitionProperty === 'opacity' &&
             a.playState !== 'finished',
         ) ?? false
@@ -53,9 +55,9 @@ export function createPresence(isOpen: () => boolean): Presence {
 
   function restoreFocus(): void {
     const target = opener;
-    opener = null;
     void tick().then(() => {
-      if (isOpen()) return;
+      if (isOpen()) return; // reopened during the exit: keep the opener
+      opener = null;
       if (!(target instanceof HTMLElement) || target === document.body || !target.isConnected) {
         return;
       }
@@ -68,8 +70,9 @@ export function createPresence(isOpen: () => boolean): Presence {
   $effect.pre(() => {
     const open = isOpen();
     untrack(() => {
+      const wasPresent = state.present;
       state = onOpenChange(state, open, node !== undefined);
-      if (open && !wasOpen) opener = document.activeElement;
+      if (open && !wasOpen && !wasPresent) opener = document.activeElement;
       if (!open && wasOpen) {
         settleAfterClose();
         restoreFocus();

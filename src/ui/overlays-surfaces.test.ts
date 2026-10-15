@@ -222,6 +222,26 @@ describe('AD-13 resetConfirm legal tops', () => {
     expect(() => overlays.open('resetConfirm')).toThrow(
       'AD-13 open(resetConfirm) while preferences is the top entry',
     );
+    overlays.close('preferences');
+    overlays.select(2, 3);
+    expect(() => overlays.open('resetConfirm')).toThrow(
+      'AD-13 open(resetConfirm) while tailSelection is the top entry',
+    );
+    overlays.deselect();
+    overlays.openView(4);
+    expect(() => overlays.open('resetConfirm')).toThrow(
+      'AD-13 open(resetConfirm) while wordcellView is the top entry',
+    );
+  });
+
+  it('AD-13 resetConfirm over a legal top keeps hoverPeek', async () => {
+    const { overlays } = await load();
+    overlays.openHoverPeek(5);
+    overlays.open('historyNotice');
+    expect(overlays.hoverPeek).toBe(5);
+    overlays.open('resetConfirm');
+    expect(overlays.hoverPeek).toBe(5);
+    expect(overlays.top).toBe('resetConfirm');
   });
 
   it('AD-13 historyNotice keeps its rules: opens over a peek or sticky view and keeps hoverPeek', async () => {

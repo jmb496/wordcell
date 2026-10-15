@@ -1,6 +1,6 @@
 # Review loop — 6-1-build (code mode)
 
-State: pass 1: done
+State: pass 2: done
 Target: a27a690..HEAD (build bfed752), diff at /mnt/d/CodeProjects/wordcell/_bmad-output/implementation-artifacts/review-loop/6-1-build.passes/pass0.diff. Intent: story-surface-foundation-and-the-one-new-game-function-plan.md. Pre-loop HEAD bfed7523ffed7cfe0f583a23868222bf73044911, tree 0 0888aacf016ac599d6c04ab331820718426f2d88.
 
 ## Pass 1 — 2026-10-14
@@ -16,3 +16,17 @@ Reviewers: correctness, edge cases, verification gap, intent alignment  |  Findi
 ### Decision needed
 - none
 Snapshot: tree f068ac28c60a2ea5cffadf05d4cbe0a49974f5ba; fix diff pass1.fix.diff; fixer ran test/lint/check/e2e green. Deferred: Sheet/Panel focus + act() caller mount tests to 6.2 (no opener).
+
+## Pass 2 — 2026-10-14
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 1, minor 5 (after dedupe), decision-needed 0  |  Dropped in triage: 0
+### Applied (sent to fixer)
+- [major] src/ui/surfaces.test.ts AD-13 App main inert loop — resetConfirm case opens historyNotice beneath, which is itself inert, so dropping resetConfirm from INERT_UNDER still passes
+- [minor] opacityRunning counts descendant transitions (ownership mismatch with ownsTransition) — reported by 2 reviewers
+- [minor] resetConfirm "keeps hoverPeek" test body never opens a peek
+- [minor] Sheet focusStart fallback when content has no focusable control
+- [minor] opener overwritten when reopened during exit
+### Dropped / recorded
+- silent guards in restoreFocus (rule 6): recorded as unapplied minor (guards map to specified outcomes: no opener, focus moved on)
+### Decision needed
+- none
+Snapshot: tree b637e1532fbed1021d1a9b5a59f4f67809b45943; fix diff pass2.fix.diff; test/lint/check green.

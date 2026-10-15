@@ -10,6 +10,7 @@ import {
   onOpenChange,
   onSettled,
   onTransitionEnd,
+  ownsAnimation,
   ownsTransition,
 } from './presence';
 import sheetSrc from './Sheet.svelte?raw';
@@ -79,6 +80,18 @@ describe('AD-14 presence', () => {
     expect(onSettled(closed, false, false)).toEqual({ present: false, shown: false });
     const reopened = onOpenChange(closed, true, true);
     expect(onSettled(reopened, true, false)).toBe(reopened);
+  });
+
+  it('AD-14 only animations targeting the surface own elements count as running', () => {
+    const node = { hasAttribute: () => false };
+    const marked = { hasAttribute: (name: string) => name === 'data-presence-target' };
+    const descendant = { hasAttribute: () => false };
+    const anim = (target: unknown) => ({ effect: { target } }) as unknown as Animation;
+    const n = node as unknown as EventTarget;
+    expect(ownsAnimation(anim(node), n)).toBe(true);
+    expect(ownsAnimation(anim(marked), n)).toBe(true);
+    expect(ownsAnimation(anim(descendant), n)).toBe(false);
+    expect(ownsAnimation({ effect: null } as unknown as Animation, n)).toBe(false);
   });
 
   it('AD-14 only the surface own elements end its exit: a descendant opacity end does not', () => {
@@ -217,6 +230,7 @@ describe('AD-14 Sheet, Panel and Dialog markup', () => {
 });
 
 describe('AD-13 App main inert', () => {
+  // resetConfirm opens over endSheet, which is not itself in INERT_UNDER, so its own inertness decides.
   const INERT_IDS = [
     'historyNotice',
     'resetConfirm',
@@ -247,7 +261,7 @@ describe('AD-13 App main inert', () => {
   for (const id of INERT_IDS) {
     it(`AD-13 main is inert while ${id} is on the stack`, async () => {
       const html = await mountApp((o) => {
-        if (id === 'resetConfirm') o.open('historyNotice');
+        if (id === 'resetConfirm') o.openDeferred(o.deferEndSheetOpen());
         o.open(id);
       });
       expect(html).toMatch(/<main[^>]*inert/);

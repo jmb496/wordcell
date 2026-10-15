@@ -42,6 +42,11 @@ export function ownsTransition(target: EventTarget | null, node: EventTarget | u
   return (target as Partial<Element>).hasAttribute?.('data-presence-target') === true;
 }
 
+/** The animation's effect target is the surface's own element (same predicate as `ownsTransition`). */
+export function ownsAnimation(animation: Animation, node: EventTarget | undefined): boolean {
+  return ownsTransition((animation.effect as KeyframeEffect | null)?.target ?? null, node);
+}
+
 /**
  * A multi-click guard shared by the surface components: no part of a surface acts on the second or
  * later click of a multi-click (a double tap on the opener lands its second click on the freshly
