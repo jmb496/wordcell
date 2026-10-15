@@ -297,7 +297,7 @@ None. EXPERIENCE.md and DESIGN.md already decide every visible behaviour of this
 ## Decisions
 
 Technical defaults under the owner's standing rule; none changes functionality, UX or gameplay.
-Next owner answer takes F9.
+Next owner answer takes F9. Owner answer 2026-10-15 (6.5): the Statistics longest-word tile shows the word big with a small grey "n letters" caption under it.
 
 | # | Question | Decision |
 | --- | --- | --- |

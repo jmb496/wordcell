@@ -41,3 +41,5 @@ Verify: npm run test:all and npm run test:screens are green, the screens specs t
 - spec — _bmad-output/specs/spec-epic-6-surfaces/SPEC.md, Capabilities (CAP-6), Decisions
 - design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/EXPERIENCE.md, Component Patterns, Keyboard, State Patterns
 - design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/DESIGN.md, Components
+
+- Decision (owner, 2026-10-15): the Statistics "longest word" tile shows the word in capitals as the main value with a small grey caption under it, "8 letters" ("1 letter" for one).
