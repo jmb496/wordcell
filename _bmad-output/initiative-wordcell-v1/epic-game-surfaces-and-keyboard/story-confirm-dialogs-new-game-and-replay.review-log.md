@@ -1,6 +1,6 @@
 # Review log — ticket 6.3
 
-State: pass 2: done
+State: pass 3: done
 
 Pre-loop: HEAD 65d6df3da4d3afec885f9a86565cf2e481c0d163, 319 words (story-confirm-dialogs-new-game-and-replay.review-log.passes/pass0.md)
 
@@ -42,3 +42,16 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 Words: 823 (2.58 x pass 0)  |  Snapshot: story-confirm-dialogs-new-game-and-replay.review-log.passes/pass2.md
 ### Applied
 - all 8 majors + minors 9-12 → fixer items 1-12; unverified: entry-6 end-sheet clause
+
+## Pass 3 — 2026-10-15
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 2 (merged), minor 7, decision-needed 0  |  Dropped in triage: 0
+### Majors
+1. Focus owner/mechanism unspecified (who focuses ☰ on dismissal, main on accept; presence restoreFocus targets an unmounted row; main inert until stack removal; menu reopened during exit)
+2. Replay confirm accept label `Replay` has no text.ts key (replayDeal is "Replay this deal"); New game accept reuses text.newGame
+### Default applied (technical)
+- all; no-word-cost minors: double-tap reason is firstClick, scan scope/CALL regex wording, requestNewGame(view) not undefined-tolerant, drop dangling "build-notes naming", test id prefixes, reload test via Playwright not Vitest
+### Decision needed
+- none
+Words: 825 (2.59 x pass 0)  |  Snapshot: story-confirm-dialogs-new-game-and-replay.review-log.passes/pass3.md
+### Applied
+- both majors + minors 3-8 → fixer items 1-8; unverified: effect focus beats presence restoreFocus (build to confirm)
