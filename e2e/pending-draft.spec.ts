@@ -102,12 +102,25 @@ test('R-72 a 10-letter pending word at 360 px stays on one row with the full suf
       suffixInside: r.right <= p.right + 0.5 && r.width >= suffix.scrollWidth - 0.5,
       oneRow:
         word.getBoundingClientRect().top === r.top && word.getBoundingClientRect().height <= 20,
+      whiteSpace: getComputedStyle(suffix).whiteSpace,
+      gap: (() => {
+        const node = suffix.firstChild as Text;
+        const range = document.createRange();
+        const at = (node.textContent ?? '').indexOf('·');
+        range.setStart(node, at);
+        range.setEnd(node, at + 1);
+        return range.getBoundingClientRect().left - word.getBoundingClientRect().right;
+      })(),
     };
   });
-  expect(fit).toEqual({
+  expect(fit.whiteSpace).toBe('pre');
+  expect(fit.gap).toBeGreaterThanOrEqual(6);
+  expect({ ...fit, gap: 0, whiteSpace: '' }).toEqual({
     overflow: true,
     bandOverflow: true,
     suffixInside: true,
     oneRow: true,
+    whiteSpace: '',
+    gap: 0,
   });
 });

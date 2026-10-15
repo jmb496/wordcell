@@ -107,7 +107,7 @@ const tags: ReadonlyMap<CardId, number> = $derived(
     white-space: nowrap; text-align: left;
   }
   .pending-word { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .pending-suffix { flex: none; white-space: pre; } /* pre keeps the suffix's leading space as a flex item */
+  .pending-suffix { flex: none; white-space: pre; padding-inline-start: 0.25em; } /* pre keeps the suffix's leading space as a flex item; the padding makes the gap to the word visible */
   .controls { flex: none; height: 44px; }
   .end-bar {
     position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; box-sizing: border-box; height: 56px;
