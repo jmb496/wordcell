@@ -130,3 +130,10 @@ Tokens: resume session 0.2M input-equivalent (orchestrator)
 Worth knowing: accepted deviation: the win-by-Confirm test starts from a won session plus Undo, and bands 1-5 are covered by a unit test since no fixture reaches them. Unapplied minors are listed in review-loop/6-6-build.md § Result.
 Close-out docs:
 - EXPERIENCE.md message catalogue ← end-sheet strings "Collapse result", "Show result: …", "Longest word", "Words placed" (owner, 2026-10-15)
+
+## 6.7 End sheet: history-unreadable block and Reset history — stopped (decision needed)
+What it adds: the end-sheet block shown when the score history can't be read, with Reset history, and the single reassurance line afterwards.
+Ticket review: 3 passes, converged (majors 3, 1, 0); one item needs your input (below)
+Decision: how long should "This game wasn't added to your statistics." show after Reset history? Proposed default: only on the sheet that was open when Reset ran from the sheet's block or the notice over it (kept through collapse/expand); gone after a reload; Undo then a new finish records normally with no line; a Reset from the Statistics panel leaves neither block nor line. Effect: the player sees the reassurance only right after resetting from the finished-game sheet.
+Resume: reply with your choice or "default", record it in the ticket Notes, rerun loop.sh; it resumes at Step A (review log has a Result) then build.
+Close-out docs: none yet
