@@ -1,6 +1,6 @@
 # Review log — story-keyboard-board-keys-focus-moves-and-tooltips.md
 
-State: pass 1: done
+State: pass 2: done
 
 Pre-loop: HEAD 14b4641; copy at story-keyboard-board-keys-focus-moves-and-tooltips.review-log.passes/pass0.md; 226 words; budget 1500 words (stub being fleshed out).
 
@@ -18,3 +18,17 @@ See story-keyboard-board-keys-focus-moves-and-tooltips.review-log.passes/p1-find
 Words (docs): 1074 (4.8 x pass 0)  |  Snapshot: story-keyboard-board-keys-focus-moves-and-tooltips.review-log.passes/pass1.md
 ### Applied
 - [major] items 1-10 and [minor] 11 of p1-findings.md applied by fixer (Description split into Keys/Activation/Focus/Tooltips, fields added, container resolved, test mapping, tooltip list)
+
+## Pass 2 — 2026-10-15
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 10 (merged from ~40 raw), minor 1, decision-needed 0  |  Dropped in triage: 0 (duplicates merged; minor repeat/ring/fixture nits folded into majors)
+### To apply (triaged)
+See story-keyboard-board-keys-focus-moves-and-tooltips.review-log.passes/p2-findings.md (11 items; Enter/act()/main/focus-board facts verified in EXPERIENCE.md, act.ts, App.svelte).
+### Default applied (technical)
+- WordCell per-cell Tab stops; column current item = last focused/bottom card; main stays the container; focus fallback to sibling/first/board; WAITS extended for activation keys; title from layout.hoverFine; key labels on Rows
+### Decision needed (functionality / UX / gameplay)
+- none
+
+Words (docs): 1497 (6.6 x pass 0; at the 1500 budget)  |  Snapshot: story-keyboard-board-keys-focus-moves-and-tooltips.review-log.passes/pass2.md
+### Applied
+- [major] items 1-10 and [minor] 11 of p2-findings.md applied (Enter vs Space activation, key-activation entry reusing tileTap/tapAction instead of act(), WAITS for activation keys, main/focusBoard container, per-cell Tab stops, extra no-ops with real GameView flags, same-column drop is a real drop, win focus on sheet open, focus loss fallback, key labels/hoverFine tooltips)
+- Fixer unverified: commands.ts/open-surface.ts closing helper name; Board.svelte not read
