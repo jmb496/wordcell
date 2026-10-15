@@ -1,6 +1,6 @@
 # Review log — ticket 6.4
 
-State: pass 1: done
+State: pass 2: done
 
 Pre-loop: HEAD 1cfa6e35e22edbffa5675b3fe7d6e737e522b613, 291 words (story-preferences-panel-and-the-top-bar-timer.review-log.passes/pass0.md)
 
@@ -24,3 +24,22 @@ Words: 923 (3.17 x pass 0, over the 2.5x budget: from pass 2 minors only if the 
 - all 10 majors and 2 minors → fixer items 1-12 (accessor game.elapsedMs(now); 1000 ms effect; 64 px box; roles; text.timer; fixtures session-won/session-gave-up/prefs-unreadable)
 ### Fixer-marked unverified
 - focus return to ☰ after panel close; h:mm:ss fit test editing session-composing activeMs (AD-7 limit unchecked); gave-up fixture negative score assumed
+
+## Pass 2 — 2026-10-15
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 8 (merged), minor ~8, decision-needed 0  |  Dropped in triage: 0
+### Majors (default applied, technical)
+1. Timer refresh: stale `now` vs `performance.now()` ambiguity (peek negative → text.timer throws) → template calls `game.elapsedMs(performance.now())`, interval and dispatch only bump a trigger
+2. elapsedMs throws in halted/rejected: say timer expression and effect are evaluated only in the active branch (TopBar mounted only there), Vitest throws case
+3. 360 px bullet rests on two unverified facts (gave-up score, AD-7 activeMs) → check and name a fixture or drop hedge
+4. Focus return after panel Back stated as unverified guess, no AC → read build-notes/Menu/6.3, state fact, one assertion
+5. Fixture assignment: prefs-non-default for persistence, prefs-fast for the Fast test
+6. "no dispatch" not observable → byte-identical keys plus move count
+7. "grows nothing while hidden" has no AC → one P6 AC with page.clock and visibility
+8. End-sheet clause in Description/AC depends on entry 6 (SPEC: freeze tests do not depend on the end sheet) → drop
+### Default applied / follow-up (not edited in the ticket)
+- elapsedMs is a new read path outside GameView: kept as the technical default; the spine/build-notes close-out should record it as a sanctioned AD-9 read path (upstream, not this ticket). tickets.toml entry 4 to be synced at publish.
+### Minors not applied (budget exceeded, fix adds words)
+- row order note for 6.5; throw inputs list; score re-centre note; Esc over end sheet; WAAPI move naming; won fixture 0:00 vs gave-up 0:01 (reword allowed)
+Words: 957 (3.29 x pass 0)  |  Snapshot: story-preferences-panel-and-the-top-bar-timer.review-log.passes/pass2.md
+### Applied
+- 8 majors + 1 minor → fixer items 1-9 (template reads fresh performance.now(); active-branch only; gave-up fixture Score −530 with activeMs edited; focus on ☰; fixture roles; hidden AC; end-sheet clauses removed)
