@@ -375,6 +375,8 @@ export const ROWS: Readonly<Record<CommandId, Row>> = {
   },
   // `Space` on a WordCell opens the sticky view in every phase (a tail selection is popped first);
   // with a tail selected and the cell empty it only deselects.
+  // The close-view, deselect, closePeek, openView sequence mirrors Controller.activate
+  // (gestures/controller.ts) and must change with it.
   view: {
     gate: (view, ctx) => {
       if (ctx.focus.kind !== 'cell' || overlays.top === 'endSheet') return false;

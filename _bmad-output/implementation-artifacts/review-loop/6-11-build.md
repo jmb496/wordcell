@@ -1,6 +1,6 @@
 # Code review loop — ticket 6.11 build (dd013d3..4bbf09d)
 
-State: pass 2: done
+State: pass 3: done
 Pre-loop: HEAD 4bbf09d, tree snapshot 0 10bd112d8494982e4badbc10bfed0ab592ff696f; target diff `6-11-build.passes/pass0.diff`.
 Intent: story-keyboard-board-keys-focus-moves-and-tooltips-plan.md. Depth thorough, max 7.
 
@@ -38,3 +38,18 @@ Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings
 ### Decision needed (functionality / UX / gameplay)
 - none (open sub-question, not blocking: Space on a cell whose view is already open closes and reopens it — kept)
 Snapshot: tree 6e57ddb49834439641a700bfde2030ac0efe1efe (fix: view row closes sticky view before deselect; tests; npm test/lint/check pass; Tab test asserts disabled primary-action in Idle instead of focusing it)
+
+## Pass 3 — 2026-10-15
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 2, minor 4, decision-needed 0  |  Dropped in triage: 0 (Tab-past-cell-10 "not run": the pass-2 fixer ran board-keys on desktop, 46 passed)
+Note: majors 4, 1, 2 — not a divergence of refs (pass 3's are a new restore-path gap and a test gap), the loop continues; pass 4 bar tightens.
+### Applied (sent to fixer)
+- [major] focus-follow.ts sync — first sync only records the phase, so a restore into Composing or Place leaves focus on body; ticket: "whatever the cause", only the first Idle paint moves no focus → on the first sync follow the phase when it is composing/place and no surface owns focus (Idle and Game over stay no-ops; the sheet owns Game over) + unit and e2e restore tests → fixer 1
+- [major] focus-target.ts readFocus untested (keys.test mocks it) → focus-target.test.ts with a fake document, and an e2e: Enter/Space on a focused Undo/Menu button in Composing does not fire a board row → fixer 2
+- [minor] focus-follow.test.ts — surfaceOwnsFocus yield and column-card recovery branch; drop/retitle the +,-,F e2e that cannot fail on recovery → fixer 3
+- [minor] keys.test.ts — Enter on a non-empty cell with a tail selected (deselect, no view) and with stack [tailSelection, wordcellView] → fixer 4
+- [minor] keys.ts view row — duplicate view-open sequence kept inline: add a comment citing Controller.activate (log correction: no shared helper was extracted in pass 2) → fixer 5
+### Default applied (technical)
+- all of the above
+### Decision needed (functionality / UX / gameplay)
+- none
+Snapshot: tree 5a93b13aedba4d7c60e176fa0d5d3d23d5bde0f6 (fix: first-sync phase follow on restore, focus-target.test.ts, tests; npm test/lint/check pass)

@@ -314,6 +314,18 @@ test.describe('Idle', () => {
     expect((await wc(page))?.wc).toBe(1);
   });
 
+  test('R-65 Enter on a non-empty WordCell with a tail selected is the tap: it deselects and opens no view', async ({
+    page,
+  }) => {
+    await open(page, 'session-idle-empty-column');
+    await page.keyboard.press('2');
+    await expectSelection(page, { column: 2, count: 1 }, 1);
+    await cell(page, 7).focus();
+    expect(await press(page, 'Enter')).toBe(true);
+    await expectSelection(page, null, 0);
+    await expect(sheet(page)).toHaveCount(0);
+  });
+
   test('Q-24 1 with the sticky view open closes it, then selects', async ({ page }) => {
     await open(page, 'session-idle-empty-column');
     await cell(page, 7).focus();
@@ -552,7 +564,7 @@ test.describe('Composing', () => {
     await expect.poll(side).toBe('left');
   });
 
-  test('Q-24 +, - and F in Composing never leave focus on the body: a live tile or the region first tile keeps it', async ({
+  test('Q-24 +, - and F in Composing leave focus on a live tray tile (the focused tile is never removed by them)', async ({
     page,
   }) => {
     await toComposing(page);
@@ -566,6 +578,23 @@ test.describe('Composing', () => {
           return at.tag !== 'BODY' && at.card !== null && at.place === 'tray';
         }, key)
         .toBe(true);
+    }
+  });
+
+  test('Q-24 Enter and Space on a focused top-bar button belong to the button: the board Enter row does not fire', async ({
+    page,
+  }) => {
+    await toComposing(page);
+    const before = await phaseOf(page);
+    const menu = page.getByRole('button', { name: 'Menu', exact: true });
+    for (const key of ['Enter', 'Space']) {
+      await menu.focus();
+      await page.keyboard.press(key);
+      await expect(page.getByRole('dialog', { name: 'Menu', exact: true })).toBeVisible();
+      expect(await phaseOf(page), `${key} on Menu does not validate`).toBe(before);
+      expect(before).toBe('composing');
+      await page.keyboard.press('Escape');
+      await expect(page.getByRole('dialog', { name: 'Menu', exact: true })).toHaveCount(0);
     }
   });
 
@@ -714,6 +743,16 @@ test.describe('focus follows the phase', () => {
     await last.click();
     await expect(tiles(page)).toHaveCount(4);
     await expect(tiles(page).first()).toBeFocused();
+  });
+
+  test('Q-24 a restore into Composing focuses the first tile at once', async ({ page }) => {
+    await open(page, 'session-composing-draft-2-letters');
+    await expect(tiles(page).first()).toBeFocused();
+  });
+
+  test('Q-24 a restore into Place focuses the first strip card at once', async ({ page }) => {
+    await open(page, 'session-place-free-letter-two-cards');
+    await expect(strip(page).first()).toBeFocused();
   });
 
   test('Q-24 the first Idle paint moves no focus', async ({ page }) => {

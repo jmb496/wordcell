@@ -1037,6 +1037,24 @@ describe('AD-12 board keys: WordCell Enter and Space', () => {
     expect(mocks.log).toEqual([hit({ kind: 'wordcell', cell: 5 })]);
   });
 
+  it('AD-12 Enter on a non-empty WordCell with a tail selected is the tap (a deselect, never a view): one activation, no view opened, no act()', () => {
+    board({ cellCards: { 4: [40] } });
+    overlays.select(2, 1);
+    onCell(4);
+    expect(press('Enter')).toBe(true);
+    expect(mocks.log).toEqual([hit({ kind: 'wordcell', cell: 4 })]);
+    expect(overlays.viewCell).toBeNull();
+  });
+
+  it('AD-12 Enter on a WordCell with the stack [tailSelection, wordcellView] is one tap activation (the controller closes the view and deselects)', () => {
+    board({ cellCards: { 4: [40], 6: [60] } });
+    overlays.select(2, 1);
+    overlays.openView(6);
+    onCell(4);
+    expect(() => press('Enter')).not.toThrow();
+    expect(mocks.log).toEqual([hit({ kind: 'wordcell', cell: 4 })]);
+  });
+
   it('AD-12 Enter on a WordCell adds the free letter in Composing (focus follows the new tile) and sets the target in Place; a used cell, an empty cell and the current target do nothing', async () => {
     board({ phase: 'composing', add: [6], cellCards: { 6: [61, 62], 7: [70] } });
     onCell(6);
