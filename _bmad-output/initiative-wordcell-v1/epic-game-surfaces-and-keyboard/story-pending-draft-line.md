@@ -29,3 +29,7 @@ Verify: npm run test:all and npm run test:screens are green. Playwright (android
 - design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/EXPERIENCE.md, Flow 3, State Patterns (Idle/pending draft row), A-E13 (assumption: wording and placement changes go to the owner)
 - design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/DESIGN.md, Tray band
 - rules — docs/game-flow-spec.md, R-72, Q-41
+
+## Notes
+
+- Owner answer (2026-10-15): at the narrowest phone width the line `Undone: WORD · Redo brings it back` never wraps or overflows and always shows the full ` · Redo brings it back` suffix; the word is cut with `…` only if it truly cannot fit.
