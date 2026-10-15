@@ -1,6 +1,6 @@
 # Review log — ticket 6.4
 
-State: pass 2: done
+State: pass 3: done
 
 Pre-loop: HEAD 1cfa6e35e22edbffa5675b3fe7d6e737e522b613, 291 words (story-preferences-panel-and-the-top-bar-timer.review-log.passes/pass0.md)
 
@@ -43,3 +43,21 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 Words: 957 (3.29 x pass 0)  |  Snapshot: story-preferences-panel-and-the-top-bar-timer.review-log.passes/pass2.md
 ### Applied
 - 8 majors + 1 minor → fixer items 1-9 (template reads fresh performance.now(); active-branch only; gave-up fixture Score −530 with activeMs edited; focus on ☰; fixture roles; hidden AC; end-sheet clauses removed)
+
+## Pass 3 — 2026-10-15
+Reviewers: fix diff, edge-case hunter (none), adversarial, ref alignment  |  Findings: major 7 (merged), minor 4, decision-needed 0  |  Dropped in triage: 1 (mounted-then-halted throw ordering: stretch, obvious guard)
+### Majors (default applied, technical)
+1. visibilitychange trigger added in pass 2 puts a listener in the UI (AGENTS.md/AD-9: only game.svelte.ts) → drop it; interval + dispatch + leaving playing refresh (3 reviewers)
+2. h:mm:ss in a fixed 64 px box: no fit rule/assertion → assert timer text scrollWidth <= its box in the 12:03:04 test; font fit rule per DESIGN
+3. Frozen-in-Game-over not tested by value → relaunch, advance page.clock, force re-derive, text unchanged
+4. page.clock must be installed before goto (negative peek hazard)
+5. Preferences row vs Menu's focus-main effect (skipFocus) and Esc/Back one close path; remove undefined "unless the menu reopened"
+6. "Undo out of Game over resumes": gave-up has no moves (cannot undo), won activeMs 0 → name won with a nonzero activeMs
+7. 360 px crossing 59:59→1:00:00 amount unstated → runFor 2000 ms, assert at least 1:00:00
+### Minors
+- applied (zero words): stray "and," grammar; Q-36 test picks a non-default value
+- not applied: ticking tolerance wording, WAAPI move naming
+Words: 975 (3.35 x pass 0)  |  Snapshot: story-preferences-panel-and-the-top-bar-timer.review-log.passes/pass3.md
+### Applied
+- 7 majors + 2 minors → fixer items 1-8 (visibilitychange trigger removed; scrollWidth<=64 assertion; frozen-by-value; clock before goto; skipFocus + one close path; session-won undo; runFor 2000)
+- Note for pass 4: fixer dropped "(R-82, U+2212)" from the 360 px AC and the "read-only so AD-3/AD-4/AD-17 hook unaffected" clause; check R-82 coverage still present
