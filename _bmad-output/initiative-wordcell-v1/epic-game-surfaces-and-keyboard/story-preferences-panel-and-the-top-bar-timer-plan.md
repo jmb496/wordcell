@@ -3,7 +3,7 @@ title: 'Preferences panel and the top-bar timer'
 type: 'feature'
 ticket: '4'
 created: '2026-10-15'
-status: 'built'
+status: done
 baseline_revision: 'b5b379853daff781c20e16943539d79622e19127'
 route: 'full'
 route_source: 'auto'

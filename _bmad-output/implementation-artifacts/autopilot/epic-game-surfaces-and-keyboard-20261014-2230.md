@@ -68,3 +68,14 @@ Ref to fix upstream: none
 Tokens: 5.8M input-equivalent (ticket review 58%, build 25%, code review 10%, other 4%, orchestrator 2%)
 Worth knowing: unapplied ticket-review minors (tests line "five" vs six strings; tickets.toml entry 3 wording) were given to the build; entry-3 text in tickets.toml may still need syncing at publish.
 Close-out docs: none
+
+## 6.4 Preferences panel and the top-bar timer — done
+What it adds: a Preferences panel (animation speed Fast/Normal/Slow, Show timer switch) reachable from the menu, and an optional timer in the top bar that ticks while you play and freezes when the game ends.
+Ticket review: 5 passes, converged (majors 10, 8, 7, 1, 1); nothing needed your input
+Build: built; commit 4170f94
+Code review: thorough (ticket risk medium), 2 passes, converged (majors 1, 0); fixes applied in 52a2e7b (extra e2e/unit coverage incl. the live playing-to-Game-over timer step)
+Tests: all passing (630 e2e), screenshots passed (18 passed, 4 skipped)
+Ref to fix upstream: none
+Tokens: 6.1M input-equivalent (ticket review 50%, build 25%, code review 18%, other 4%, orchestrator 2%)
+Worth knowing: nothing
+Close-out docs: none
