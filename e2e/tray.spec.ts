@@ -496,13 +496,24 @@ test('R-38 (UI) a failed Validate replaces the word line with the invalid line: 
   expect(await suffixOverflow(page)).toBeLessThanOrEqual(0.5);
 });
 
-for (const fixture of ['session-idle-pending-draft', 'session-won', 'session-gave-up']) {
+for (const fixture of ['session-won', 'session-gave-up']) {
   test(`AD-14 ${fixture}: word line, tiles and control row empty`, async ({ page }) => {
     await openFixture(page, fixture);
     await expectEmptyRows(page, false);
     expect(await trayIds(page)).toEqual([]);
   });
 }
+
+test('AD-14 session-idle-pending-draft: only the pending-draft line; tiles and control row empty', async ({
+  page,
+}) => {
+  await openFixture(page, 'session-idle-pending-draft');
+  await expect(tray(page).locator('.word-line .pending')).toHaveText(
+    'Undone: TAN \u00b7 Redo brings it back',
+  );
+  await expect(tray(page).locator('.controls *')).toHaveCount(0);
+  expect(await trayIds(page)).toEqual([]);
+});
 
 test('AD-11 the word line fits without overflow at a computed size within 14…20 px', async ({
   page,

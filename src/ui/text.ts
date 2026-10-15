@@ -58,6 +58,14 @@ export const text = Object.freeze({
   invalidWordSuffix: INVALID_WORD_SUFFIX,
   invalidWordParts: (word: string) => [word.toUpperCase(), INVALID_WORD_SUFFIX] as const,
   invalidWord: (word: string) => `${word.toUpperCase()} ${INVALID_WORD_SUFFIX}`,
+  // EXPERIENCE.md State Patterns (A-E13): the Idle pending-draft line; the word is the engine
+  // spelling uppercased, the suffix keeps its leading space (U+00B7) so only the word ellipsizes.
+  pendingDraft: (word: string) =>
+    ({
+      prefix: 'Undone: ',
+      word: word.toUpperCase(),
+      suffix: ' \u00b7 Redo brings it back',
+    }) as const,
   // DESIGN.md Tray band: the Composing letter count (R-36 letters, `QU` = 2).
   letters,
   // DESIGN.md Placement strip: the Place meta (R-80), the letter count (R-36), the target cell

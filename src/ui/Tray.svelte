@@ -52,6 +52,10 @@ const tags: ReadonlyMap<CardId, number> = $derived(
         destination={place === undefined ? draft.destination : NO_DESTINATION}
         rejectedWord={place === undefined ? game.feedback.rejectedWord : undefined}
       />
+    {:else if view.pendingDraftWord !== undefined}
+      {@const pending = text.pendingDraft(view.pendingDraftWord)}
+      <!-- Idle with a redo tail (R-72, Q-41): what Redo brings back; static text, no live region. -->
+      <p class="pending"><span class="pending-word">{pending.prefix}{pending.word}</span><span class="pending-suffix">{pending.suffix}</span></p>
     {/if}
   </div>
   <TileRows
@@ -97,6 +101,13 @@ const tags: ReadonlyMap<CardId, number> = $derived(
     background: var(--wc-surface); border-radius: 12px; touch-action: var(--wc-pan);
   }
   .word-line { flex: none; height: 24px; min-width: 0; }
+  .pending {
+    margin: 0; height: 24px; display: flex; align-items: center; justify-content: flex-start;
+    font: 500 14px/20px system-ui, "Roboto", sans-serif; color: var(--wc-ink-secondary);
+    white-space: nowrap; text-align: left;
+  }
+  .pending-word { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pending-suffix { flex: none; white-space: pre; } /* pre keeps the suffix's leading space as a flex item */
   .controls { flex: none; height: 44px; }
   .end-bar {
     position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; box-sizing: border-box; height: 56px;

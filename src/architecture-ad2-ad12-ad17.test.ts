@@ -23,6 +23,7 @@ describe('AD-17 valid session fixtures', () => {
       'session-gave-up.json',
       'session-idle-empty-column.json',
       'session-idle-fresh.json',
+      'session-idle-pending-draft-long.json',
       'session-idle-pending-draft.json',
       'session-one-letter-left.json',
       'session-place-compact.json',

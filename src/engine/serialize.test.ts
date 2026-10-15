@@ -69,6 +69,9 @@ import validIdleFresh from '../../fixtures/session-idle-fresh.json' with { type:
 import validIdlePendingDraft from '../../fixtures/session-idle-pending-draft.json' with {
   type: 'json',
 };
+import validIdlePendingDraftLong from '../../fixtures/session-idle-pending-draft-long.json' with {
+  type: 'json',
+};
 import invalidAd7ActiveMs from '../../fixtures/session-invalid-ad7-active-ms.json' with {
   type: 'json',
 };
@@ -301,9 +304,10 @@ type ValidName =
   | 'place-onto-committed'
   | 'composing-long'
   | 'place-long'
-  | 'one-letter-left';
+  | 'one-letter-left'
+  | 'idle-pending-draft-long';
 
-/** The seventeen CAP-9 round-trip fixtures (generator record: the plan's Implementation Notes). */
+/** The eighteen CAP-9 round-trip fixtures (generator record: the plan's Implementation Notes). */
 const VALID: readonly (readonly [ValidName, unknown])[] = [
   ['idle-fresh', validIdleFresh],
   ['composing', validComposing],
@@ -322,6 +326,7 @@ const VALID: readonly (readonly [ValidName, unknown])[] = [
   ['composing-long', validComposingLong],
   ['place-long', validPlaceLong],
   ['one-letter-left', validOneLetterLeft],
+  ['idle-pending-draft-long', validIdlePendingDraftLong],
 ];
 
 // --- rejection table ------------------------------------------------------------------------
@@ -931,6 +936,11 @@ describe('defining properties (§2, CAP-9)', () => {
     'one-letter-left': (s) => {
       expect(s.gaveUp).toBe(false);
       expect(view(s, EN).columns.flatMap((c) => c.cards)).toHaveLength(1);
+    },
+    // Story pending-draft-line: TAN committed, a 10-letter word placed then undone twice.
+    'idle-pending-draft-long': (s) => {
+      expect(s.cursor).toStrictEqual({ index: 1, phase: 'idle' });
+      expect(view(s, EN).pendingDraftWord).toBe('vimldxomiw');
     },
   };
 
@@ -1855,6 +1865,26 @@ const REBUILDS: readonly (readonly [string, unknown, () => Session])[] = [
           CONFIRM,
         ],
         ['ldxomiw', 'tnpdvim', 'lquejata', 'ekghhio', 'tscfsz', 'opnaen', 'yeurhf', 'brrcu'],
+      ),
+  ],
+  [
+    'session-idle-pending-draft-long',
+    validIdlePendingDraftLong,
+    () =>
+      play(
+        createSession(1),
+        [
+          drop(3, 2, 6),
+          FLIP,
+          VALIDATE,
+          CONFIRM,
+          drop(1, 7, 2),
+          { type: 'setDestinationCount', k: 3 },
+          VALIDATE,
+          UNDO,
+          UNDO,
+        ],
+        ['tan', 'vimldxomiw'],
       ),
   ],
 ];

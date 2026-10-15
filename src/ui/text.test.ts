@@ -226,4 +226,17 @@ describe('AD-3 end sheet text', () => {
     expect(text.endBar(172, 'Warming Up')).toBe('Show result: 172, Warming Up');
     expect(text.endBar(-40, 'Alphabet Soup')).toBe('Show result: −40, Alphabet Soup');
   });
+
+  it('AD-3 pendingDraft returns prefix, uppercased word and suffix', () => {
+    expect(text.pendingDraft('quake')).toEqual({
+      prefix: 'Undone: ',
+      word: 'QUAKE',
+      suffix: ' \u00b7 Redo brings it back',
+    });
+    const { prefix, word, suffix } = text.pendingDraft('quake');
+    expect(`${prefix}${word}${suffix}`).toBe('Undone: QUAKE \u00b7 Redo brings it back');
+    expect(text.pendingDraft('tan').word).toBe('TAN');
+    expect(text.pendingDraft('vimldxomiw').word).toBe('VIMLDXOMIW');
+    expect(text.pendingDraft('qu').word).toBe('QU');
+  });
 });
