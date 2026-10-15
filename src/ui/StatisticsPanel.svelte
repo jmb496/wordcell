@@ -22,7 +22,13 @@ import { text } from './text';
 // after `tick()` (as PreferencesPanel does).
 const open = $derived(overlays.isOpen('statistics'));
 const historyState = $derived(scoreHistory.state);
-const stats = $derived(scoreHistory.statistics);
+// AD-3: the readable branch needs `statistics`; undefined there is a store bug (rule 6), so fail fast.
+function readable() {
+  const s = scoreHistory.statistics;
+  if (s === undefined)
+    throw new Error('scoreHistory.statistics is undefined while the history is readable');
+  return s;
+}
 let wasOpen = false;
 let confirmWasOpen = false;
 let content: HTMLElement | undefined = $state();
@@ -69,20 +75,25 @@ const closeOnEsc = act((): void => {
 });
 
 function onkeydown(event: KeyboardEvent): void {
+  if (event.defaultPrevented) return;
   if (event.key === 'Escape' && !event.repeat && overlays.top === 'statistics') closeOnEsc();
 }
 
 const none = text.statNone;
-const tiles = $derived([
-  [text.statGamesPlayed, String(stats?.gamesPlayed ?? 0)],
-  [text.statGamesWon, String(stats?.gamesWon ?? 0)],
-  [text.statGamesGivenUp, String(stats?.gamesGivenUp ?? 0)],
-  [text.statBestScore, stats?.bestScore === undefined ? none : text.statNumber(stats.bestScore)],
-  [
-    text.statAverageScore,
-    stats?.averageScore === undefined ? none : text.statNumber(stats.averageScore),
-  ],
-] as const);
+const tiles = $derived.by(() => {
+  if (historyState.status === 'unreadable') return [];
+  const stats = readable();
+  return [
+    [text.statGamesPlayed, String(stats.gamesPlayed)],
+    [text.statGamesWon, String(stats.gamesWon)],
+    [text.statGamesGivenUp, String(stats.gamesGivenUp)],
+    [text.statBestScore, stats.bestScore === undefined ? none : text.statNumber(stats.bestScore)],
+    [
+      text.statAverageScore,
+      stats.averageScore === undefined ? none : text.statNumber(stats.averageScore),
+    ],
+  ] as const;
+});
 </script>
 
 <svelte:window {onkeydown} />
@@ -98,6 +109,7 @@ const tiles = $derived([
         >{text.resetHistory}</button
       >
     {:else}
+      {@const stats = readable()}
       <div class="tiles">
         {#each tiles as [label, value] (label)}
           <div class="tile">
@@ -107,13 +119,13 @@ const tiles = $derived([
         {/each}
         <div class="tile">
           <p class="label">{text.statLongestWord}</p>
-          <p class="value word">{stats?.longestWord?.spelling.toUpperCase() ?? none}</p>
-          {#if stats?.longestWord !== undefined}
+          <p class="value word">{stats.longestWord?.spelling.toUpperCase() ?? none}</p>
+          {#if stats.longestWord !== undefined}
             <p class="caption">{text.statLetters(stats.longestWord.letterCount)}</p>
           {/if}
         </div>
       </div>
-      {#if (stats?.gamesPlayed ?? 0) === 0}
+      {#if stats.gamesPlayed === 0}
         <p class="empty">{text.statisticsEmpty}</p>
       {/if}
     {/if}

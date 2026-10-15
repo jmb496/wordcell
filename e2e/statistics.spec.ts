@@ -64,6 +64,21 @@ test('R-84 the Statistics row opens the panel with the six values of three recor
   await expect(panel(page).getByRole('heading', { name: 'Statistics' })).toBeFocused();
 });
 
+test('R-84 best score and average score differ and skip a negative given-up record', async ({
+  page,
+}) => {
+  const rec = (outcome: string, finalScore: number) =>
+    `{"version":1,"seed":1,"outcome":"${outcome}","finalScore":${finalScore},"activeMs":0}`;
+  await openWith(
+    page,
+    `{"version":1,"records":[${rec('won', 100)},${rec('won', 51)},${rec('gaveUp', -20)}]}`,
+  );
+  await openPanel(page);
+  const rows = await tiles(page);
+  expect(rows[3]).toEqual(['Best score', '100']);
+  expect(rows[4]).toEqual(['Average score', '76']);
+});
+
 test('R-84 a fresh history shows zeros, dashes and the empty line', async ({ page }) => {
   await openWith(page, null);
   await openPanel(page);
