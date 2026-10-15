@@ -61,3 +61,4 @@ The spec's capabilities replace this section: `_bmad-output/specs/spec-epic-6-su
 - Decision: no entry is `hitl`; gates 3 and 4 run under the epic autopilot (owner, 2026-09-28, standing). The How to play text (entry 9) is read by the owner at ticket review (SPEC F3).
 - Decision: Done when 7 (merge and deploy) has no entry; it is the close-out after entry 17 and the retrospective, only on the owner's go-ahead.
 - Waits on epic-tray-and-place because: the tray, FLIP, the winning guard and the shared UI modules are its output; that container is done, so it does not gate the entries.
+- Decision (owner, 2026-10-15): for the rest of epic 6 autopilot keeps plain labels and button/screen-reader wording without stopping and lists every new string in the digest for the retrospective (EXPERIENCE.md message catalogue); it still stops for anything that changes what a player can do or how the game plays.

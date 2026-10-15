@@ -34,3 +34,4 @@ Verify: npm run test:all and npm run test:screens are green with Playwright on a
 
 - Open question: Which fixtures reach the six bands and the longest-word `—` case; the ticket scripts any missing one under the epic 3 regeneration rule (_bmad-output/initiative-wordcell-v1/epic-app-shell/story-engine-carry-ins-and-d1-export-removal.md, Fixture regeneration).
 - Out of scope: entry 7 (history-unreadable block, Reset history, Game-over reload with history-invalid-*) and entry 12 (guard half).
+- Decision (owner, 2026-10-15): end-sheet wording kept as built ("Collapse result", "Show result: …", "Longest word", "Words placed").
