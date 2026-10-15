@@ -1,6 +1,6 @@
 # Review log — story-surface-foundation-and-the-one-new-game-function
 
-State: pass 6: done
+State: pass 7: done (capped)
 
 Pre-loop: HEAD d04dbfe, copy at story-surface-foundation-and-the-one-new-game-function.review-log.passes/pass0.md, 290 words (budget 1500 words).
 Ticket intent fields from tickets.toml entry 1 (verify, risk, unknown, interface, tests, owns, consumers): .review-log.passes/intent.md
@@ -126,3 +126,15 @@ Majors fell 6 -> 2. Edge-case and ref-alignment lenses returned [].
 - [minor] reword the AD-12 test for pass-through components (scan covers `close`; callers wrap)
 Fixer outcome: all four applied. Container style query `@container style(--wc-reduced: 1)` chosen (unverified against the Chromium/Vite pipeline; the build is the check). Focus return after inert flush (tick or Dialog's focusOnReturn).
 Words (docs): 1522 (5.2 x pass 0; budget 1500)  |  Snapshot: story-surface-foundation-and-the-one-new-game-function.review-log.passes/pass6.md
+
+## Pass 7 — 2026-10-14 (verify-only)
+Reviewers: fix diff  |  Findings: major 1, minor 1, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1522 (no fix run)  |  Snapshot: .review-log.passes/pass6.md
+### Open major (not fixed, cap reached)
+- [major] Motion paragraph: "the build proves the query survives the CSS pipeline" names no test. Technical default: a gating check that reads dist/assets/*.css after build for `@container style(--wc-reduced` with the `--wc-fade-ms` branch, or an e2e/pwa emulated reduced-motion computed-style assertion, or drop the sentence.
+### Minor (unapplied)
+- openSurface "resetConfirm itself excepted" ambiguous: reword to "opening resetConfirm over historyNotice is the one allowed case"
+- line-150 MODAL_TOP early return for new ids; screenshot specs wait for transition end; tickets.toml entry 1 still lists the R-74 UI row (moved to entry 3); entry 3 verify lists Esc dismissal though entry 10 owns Esc; earlier pass-4 minors not applied
+
+## Result — capped at 7 passes (open majors: Motion build-check sentence names no test)
+Majors per pass: 11, 4, 5, 8, 6, 2, 1.

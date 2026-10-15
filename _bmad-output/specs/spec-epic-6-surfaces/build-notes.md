@@ -10,10 +10,10 @@ Menu, end sheet, panels, dialogs, timer bar at 360 px. The version footer is fix
 
 | Surface | Board inert | Bars live | Shortcuts active | Focus start | Focus return |
 | --- | --- | --- | --- | --- | --- |
-| Menu | yes | per EXPERIENCE.md | Tab, Enter, Space, Esc only | first row | the board; confirm dismissal returns to the ☰ button |
-| Panel | yes | per EXPERIENCE.md | Tab, Enter, Space, Esc only | panel heading or close | opener |
-| Confirm dialog | yes | per EXPERIENCE.md | Tab, Enter, Space, Esc only | Keep playing / Keep it | the board (from the menu: ☰) |
-| History notice | yes | per EXPERIENCE.md | Tab, Enter, Space, Esc only | its action | the board |
+| Menu | yes | no (top bar `inert`, SPEC F6) | Tab, Enter, Space, Esc only | first row | the board; confirm dismissal returns to the ☰ button |
+| Panel | yes | no (top bar `inert`, SPEC F6) | Tab, Enter, Space, Esc only | panel heading or close | opener |
+| Confirm dialog | yes | no (top bar `inert`, SPEC F6) | Tab, Enter, Space, Esc only | Keep playing / Keep it | the board (from the menu: ☰) |
+| History notice | yes | no (top bar `inert`, SPEC F6) | Tab, Enter, Space, Esc only | its action | the board |
 | End sheet expanded | yes | yes | M, N, ?, Z, Y, Esc | first action | the board on collapse |
 | End sheet collapsed | no | yes | M, N, ?, Z, Y, Esc | the bar | n/a |
 | WordCell view | no | yes | M, N, ?, Z, Y, Esc | the view | the cell |
