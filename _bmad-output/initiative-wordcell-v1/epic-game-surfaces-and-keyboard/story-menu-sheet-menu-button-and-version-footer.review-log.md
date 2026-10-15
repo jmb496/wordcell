@@ -1,5 +1,5 @@
 # Review log — ticket 6.2 (menu sheet, menu button and version footer)
-State: pass 1: done
+State: pass 2: done
 Pre-loop: HEAD b461581; words 333; copy /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-game-surfaces-and-keyboard/story-menu-sheet-menu-button-and-version-footer.review-log.passes/pass0.md
 
 ## Pass 1
@@ -23,3 +23,14 @@ Reviewers: builder, edge-case, adversarial, ref alignment  |  Findings: major 8 
 - ☰ in rejected/halted roots: SPEC CAP-3 already says no menu there
 Words: 720 (2.16 x pass 0)  |  Snapshot: story-menu-sheet-menu-button-and-version-footer.review-log.passes/pass1.md
 Fixer notes: EXPERIENCE.md has no menu strings (text.ts has only newGame); ticket says wording from DESIGN.md/EXPERIENCE.md Menu sheet. src/app-version.d.ts check unverified (file not yet existing).
+
+## Pass 2
+Reviewers: fix-diff, edge-case, adversarial, ref alignment  |  Findings: major 1 (reported by 2 reviewers), minor 7, decision-needed 0  |  Dropped in triage: 1 (byte-identical flush noise: AD-9 flush only on hide, stretch)
+### Applied (to fixer)
+- [major] footer-value assertion cannot hold in dev-server Playwright project (override unset in playwright.config.ts webServer) → set env in webServer (default) and say the resolver applies in every Vite mode
+- [minor] drop conditional "only if overflows" scroll clause; Game over case for New game/Replay; "status becomes gaveUp" wording; "checked against Scaffold deltas" (spine lacks the entry: close-out edit); focus after acting rows
+### Default applied (technical)
+- webServer env for the override
+### Decision needed
+- none
+Words: 793 (2.38 x pass 0)  |  Snapshot: story-menu-sheet-menu-button-and-version-footer.review-log.passes/pass2.md
