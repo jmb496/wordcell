@@ -1,6 +1,6 @@
 # Review log — story-statistics-panel-history-flag-and-menu-dot
 
-State: pass 3: done
+State: pass 4: done
 
 Pre-loop: HEAD 1a7c369, words 291 (budget default 2.5x = ~728).
 
@@ -59,3 +59,16 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings (
 ### Dropped
 - live-vs-captured reason test (both yield the same sentence, indistinguishable); exact-string version numbers; text.test.ts mapping; baseline fixture naming; fresh-history cross-reference; Reset→values phrase.
 Fix applied (4 majors, 3 minors). Words: 939 (3.2 x pass 0) | Snapshot: pass3.md
+
+## Pass 4 — 2026-10-15 (review triaged)
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings (after merge): major 2, minor 8, decision-needed 0  |  Dropped in triage: 0 (minors below the late-pass bar or add words over budget are left unapplied)
+### Applied (majors)
+1. Pass 3 made Esc a tested behaviour on the panel and the shared confirm, but nothing says what handles it (Panel.svelte and Dialog.svelte have none; 6.2/6.3 specify interim act()-wrapped window handlers) → say Esc uses the same interim handlers: the panel closes only when overlays.top is statistics, the shared confirm acts as Keep it only when it is top.
+2. The `0` rule (best/average `0`, not `—`) has no fixture → make the tie fixture two given-up records scoring 0 (equal letterCount, different spellings): best 0, average 0, the earlier spelling shows (net-zero words).
+### Default applied (technical)
+- Esc handler pattern → the interim handlers of 6.2/6.3; fixture contents.
+### Decision needed
+- none new (the letter-count rendering from pass 3 stays open).
+### Unapplied minors
+- Session seed named in the AD-13 reload; focus-return mechanism after Delete history; `Statistics` title key; message rendered only in the unreadable branch; long-word wrap baseline; empty-line/unreadable rule merge; confirm scrim/Esc/back wording.
+Fix applied (2 majors). Words: 978 (3.4 x pass 0) | Snapshot: pass4.md
