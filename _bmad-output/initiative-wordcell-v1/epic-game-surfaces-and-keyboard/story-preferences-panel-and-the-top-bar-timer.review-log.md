@@ -1,6 +1,6 @@
 # Review log — ticket 6.4
 
-State: pass 4: done
+State: done
 
 Pre-loop: HEAD 1cfa6e35e22edbffa5675b3fe7d6e737e522b613, 291 words (story-preferences-panel-and-the-top-bar-timer.review-log.passes/pass0.md)
 
@@ -70,3 +70,18 @@ Words: 980 (3.37 x pass 0)  |  Snapshot: story-preferences-panel-and-the-top-bar
 - [minor, zero words] "a preference toggle" → "an Animation speed change"
 ### Not applied minors
 - tick bullet "without hidePage" (implied)
+
+## Pass 5 — 2026-10-15
+Reviewers: fix diff, edge-case hunter (none), adversarial, ref alignment (none)  |  Findings: major 1, minor 2, decision-needed 0  |  Dropped in triage: 0
+### Open major (recorded, not fixed: two consecutive passes with at most one major)
+- AC bullets 1-2: no test for the live playing → over transition (Show timer on, Give up or win, advance page.clock, text equals the value at the transition and the stored activeMs via text.timer); only a relaunch into Game over is covered. Original contract: "sees it tick then freeze in Game over". Fix: add that step to bullet 1.
+### Minors not applied
+- Game over frozen-value bullet: "an Animation speed change" may not force a re-derive (vacuous); prefer `hidePage` then `showPage` (zero-word reword)
+- h:mm:ss shrink rule: m:ss at the score's size, h:mm:ss shrinks to fit 64 px (adds words)
+- earlier: tick bullet "without hidePage"; row-order note for 6.5; throw-inputs list; score re-centre note; Esc over end sheet; WAAPI move naming; ticking tolerance wording
+### Follow-ups (upstream)
+- `game.elapsedMs` is a new read path outside GameView: record as a sanctioned AD-9 read path in spine/build-notes close-out; sync tickets.toml entry 4 (interface, tests, description wording) at publish
+
+Words: 980 (3.37 x pass 0). Technical defaults applied: all findings of passes 1-4 (~27).
+
+## Result — converged after 5 passes (open major: no test for the live playing → Game over freeze)
