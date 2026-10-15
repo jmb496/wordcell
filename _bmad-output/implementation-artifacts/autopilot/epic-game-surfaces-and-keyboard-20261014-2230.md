@@ -152,3 +152,13 @@ Tokens: 2.3M input-equivalent (code review 46%, build 34%, other 16%, orchestrat
 Worth knowing: nothing
 Close-out docs:
 - EXPERIENCE.md State Patterns / message catalogue ← unrecorded-game line shows only on the sheet open at reset, gone after reload (owner, 2026-10-15)
+
+## 6.8 Pending-draft line — stopped
+What it adds: a small grey line in the tray, `Undone: BAKED · Redo brings it back`, shown while an undone word can be redone.
+Ticket review: 3 passes, diverging; majors 6, 2, 3; no decision-needed items, but one late major touches design intent (below)
+Build: not started
+Ref to fix upstream:
+- DESIGN.md Tray band ("never wraps, word part ellipsizes first") and ticket Acceptance Criteria → does a 10-letter word have to fit with the full suffix visible at the narrowest width (reviewer default: yes, line never overflows or wraps, add a narrow-width check)? Flagged spec_or_spine_intent.
+- DESIGN.md Tray band (idle line composition) → text.ts `pendingDraft` returns parts {prefix, word, suffix} vs one string; technical, default stated.
+- Ticket 6.8 Placement → names a Tray.svelte "Idle branch" that does not exist; the line is a sibling branch inside `.word-line`; technical.
+Worth knowing: pass 3 fixes were not applied; unapplied minors are in the review log.

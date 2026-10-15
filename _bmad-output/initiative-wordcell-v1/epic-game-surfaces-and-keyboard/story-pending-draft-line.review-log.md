@@ -1,6 +1,6 @@
 # Review log — ticket 6.8
 
-State: pass 2: done
+State: pass 3: done (diverging)
 
 Pre-loop: HEAD 09623a6ebf8ab3a67adc228c1f9420e711ad793f, 143 words (story-pending-draft-line.review-log.passes/pass0.md); budget 1500 words.
 
@@ -37,3 +37,19 @@ discard sequence spelled out (Validate, Undo, Undo) and absence after commit; Tr
 ### Applied
 - [major] reload test, ellipsis structure and test; minors 3–7 applied (fixer items 1–7); new fixture `session-idle-pending-draft-long.json` named but unverified (does not exist yet; build creates it)
 Snapshot: story-pending-draft-line.review-log.passes/pass2.md
+
+## Pass 3 — 2026-10-15
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 3, minor 5, decision-needed 0  |  Dropped in triage: 0
+Words: 559 (3.9 x pass 0, within the 1500 budget)
+### Majors (verified against src/ui/Tray.svelte:47-56 and the ticket)
+1. Two-span structure vs "built only by text.ts pendingDraft(word)" returning one string: the ticket does not say how prefix/word/suffix reach the DOM (default: text.ts returns parts, Tray renders them).
+2. "10-letter word ... may not overflow" reads two ways and no test forces the ellipsis path (default: say the line must not overflow, add a narrow-width check on the long fixture).
+3. "Tray.svelte's Idle branch, in the word-line slot": no such branch; `.word-line` holds WordLine under `{#if draft !== undefined}`; the ticket must say the new element is a sibling branch inside `.word-line`, not a WordLine change.
+### Minors
+Flow 3 setup/start state unnamed; discard sequence fixture/word; no aria-live check in Playwright if Vitest fallback is used; new fixture must pass the fixture tests; the DESIGN.md "word line renders only the card letters" exception unstated; ellipsis is only a guard (10 letters is the maximum).
+### Decision needed
+- none
+
+## Result — diverging at pass 3 (fix: DESIGN.md Tray band and EXPERIENCE.md Tray band row)
+Majors per pass: 6, 2, 3. The rise 2 → 3 comes from ambiguities in the two-span ellipsis structure that pass 2 added from DESIGN.md's "never wraps, word part ellipsizes first"; DESIGN.md does not say how the line is composed from text.ts or marked up in Tray.svelte. All three majors are technical (no player-visible choice); defaults are listed above. No pass 3 fix was applied.
+Unapplied minors: see pass 3 minors.
