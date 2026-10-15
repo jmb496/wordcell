@@ -5,6 +5,7 @@ import Card from '../Card.svelte';
 import { segmentEnds, type TrayLayout, type TrayTile } from '../layout/tray';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { overlays } from '../overlays.svelte';
+import { roving } from '../roving.svelte';
 
 // Epic 5 tile rows (DESIGN.md Tray band, Tile, Placement strip): a CSS grid of tile-pitch `Card`s
 // sized by `layout.tray` (`trayLayout`), card or compact mode. Composing: live S and free-letter tiles (place
@@ -40,6 +41,9 @@ let {
 
 const pitch = $derived(sizing.tileWidth + 4);
 const mirrors = $derived(tiles.map((t) => t.mirror));
+// Epic 6 CAP-10 (6.11): the tiles are one Tab stop, the last-focused live tile, else the first.
+const live = $derived(tiles.filter((t) => !t.mirror).map((t) => t.id));
+const stop = $derived(roving.tile !== null && live.includes(roving.tile) ? roving.tile : live[0]);
 
 // A D-block row segment starts at the block's first tile or a row start, and ends likewise
 // (`segmentEnds`).
@@ -79,6 +83,8 @@ function stripPosition(i: number): 'bottom' | 'top' | undefined {
       position={strip ? stripPosition(i) : undefined}
       selected={!tile.mirror && overlays.tileSelection === tile.id}
       returnSlot={!tile.mirror && overlays.tileSelection === tile.id && tags.has(tile.id)}
+      stop={!tile.mirror && tile.id === stop}
+      onfocus={() => roving.focusedTile(tile.id)}
     />
   {/each}
   {#if !strip && tiles.length > 0}

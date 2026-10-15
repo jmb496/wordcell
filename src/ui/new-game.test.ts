@@ -89,3 +89,17 @@ describe('AD-13 confirm accept paths', () => {
     expect(t.wc()).toBe(0);
   });
 });
+
+describe('AD-13 remembered tab stops', () => {
+  it('AD-13 New game and Replay clear the roving memory of the last-focused cards', async () => {
+    const { newGame, replayDeal } = await setup();
+    const { roving } = await import('./roving.svelte');
+    for (const run of [newGame, replayDeal]) {
+      roving.focusedColumn(3, 12);
+      roving.focusedTile(7);
+      run();
+      expect(roving.column(3)).toBeUndefined();
+      expect(roving.tile).toBeNull();
+    }
+  });
+});

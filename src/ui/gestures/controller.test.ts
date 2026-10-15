@@ -5500,3 +5500,134 @@ describe('AD-12 epic 5 free-letter drag', () => {
     }, /^AD-12 \.tiles without the caret$/);
   });
 });
+
+// Epic 6 CAP-10 (6.11): the key-activation entry, the released-pointer-tap path for a key press.
+describe('AD-12 epic 6 key activation', () => {
+  type T = Awaited<ReturnType<typeof setup>>;
+  const ready = async (
+    phase: 'idle' | 'composing' | 'place' = 'idle',
+    selected: number | null = null,
+  ) => {
+    const t = await setup();
+    t.detach();
+    if (phase !== 'idle') tileView(phase);
+    if (selected !== null) t.overlays.selectTile(selected);
+    navCalls.length = 0;
+    order.length = 0;
+    return t;
+  };
+  const move = (t: T, x: number, y: number) => t.fire('pointermove', { clientX: x, clientY: y });
+
+  it('AD-12 a column card activation is a tap: it selects the tail from that card with one push, and a second activation on another column drops', async () => {
+    const t = await ready();
+    t.controller.activate({ kind: 'card', column: 1, card: 0 });
+    expect(t.overlays.selection).toEqual({ column: 1, count: 2 });
+    expect(navCalls).toEqual(['push']);
+    t.controller.activate({ kind: 'space', column: 2, foot: true });
+    expect(t.overlays.selection).toBeNull();
+    expect(navCalls).toEqual([
+      'push',
+      'pop',
+      'dispatch {"type":"drop","sourceColumn":1,"sourceCount":2,"destinationColumn":2}',
+    ]);
+  });
+
+  it('AD-12 it cancels first (a held drag ends, the glides finish) and never calls clearTile on its own', async () => {
+    const t = await ready();
+    t.down(t.b.card1b, { clientX: 25, clientY: 50 });
+    move(t, 125, 50);
+    expect(t.active()).toBe(1);
+    order.length = 0;
+    t.controller.activate({ kind: 'card', column: 2, card: 1 });
+    expect(order[0]).toBe('finishGlides');
+    expect(t.active()).toBe(0);
+    expect(t.overlays.selection).toEqual({ column: 2, count: 1 });
+  });
+
+  it('AD-12 a tile activation selects, swaps and returns exactly as the tap does, keeping the selection a select or swap needs', async () => {
+    const t = await ready('composing');
+    t.controller.activate({ kind: 'tile', card: 3 });
+    expect(t.overlays.tileSelection).toBe(3);
+    t.controller.activate({ kind: 'tile', card: 4 });
+    expect(navCalls).toEqual([dispatched({ type: 'arrange', arrangement: [4, 3] })]);
+    expect(t.overlays.tileSelection).toBeNull();
+    navCalls.length = 0;
+    t.overlays.selectTile(4);
+    t.controller.activate({ kind: 'tile', card: 4 });
+    expect(navCalls).toEqual([dispatched({ type: 'removeFreeLetter', cell: 5 })]);
+    const p = await ready('place', 6);
+    p.controller.activate({ kind: 'tile', card: 3 });
+    expect(navCalls).toEqual([dispatched({ type: 'setPlacementOrder', order: [6, 4, 3] })]);
+    const s = await ready('place');
+    s.controller.activate({ kind: 'tile', card: 6 });
+    s.controller.activate({ kind: 'tile', card: 6 });
+    expect(s.overlays.tileSelection).toBeNull();
+  });
+
+  it('AD-12 a WordCell activation adds the free letter in Composing, sets the target in Place, opens the view in Idle and deselects a tail', async () => {
+    const t = await ready('composing');
+    t.controller.activate({ kind: 'wordcell', cell: 3 });
+    expect(navCalls).toEqual([dispatched({ type: 'addFreeLetter', cell: 3 })]);
+    const p = await ready('place');
+    p.controller.activate({ kind: 'wordcell', cell: 6 });
+    expect(navCalls).toEqual([dispatched({ type: 'setTarget', cell: 6 })]);
+    const i = await ready();
+    i.controller.activate({ kind: 'wordcell', cell: 3 });
+    expect(i.overlays.viewCell).toBe(3);
+    expect(navCalls).toEqual(['push']);
+    i.overlays.close('wordcellView');
+    i.controller.activate({ kind: 'card', column: 1, card: 5 });
+    navCalls.length = 0;
+    i.controller.activate({ kind: 'wordcell', cell: 3 });
+    expect(i.overlays.selection).toBeNull();
+    expect(i.overlays.viewCell).toBeNull();
+    expect(navCalls).toEqual(['pop']);
+  });
+
+  it('AD-12 a Composing destination card activation dispatches tapDestinationCard (R-31)', async () => {
+    const t = await ready('composing');
+    t.controller.activate({ kind: 'card', column: 1, card: 0 });
+    expect(navCalls).toEqual([dispatched({ type: 'tapDestinationCard', card: 0 })]);
+  });
+
+  it('AD-13 it closes an open sticky view first, then selects (the pop precedes the push)', async () => {
+    const t = await ready();
+    t.overlays.openView(3);
+    navCalls.length = 0;
+    t.controller.activate({ kind: 'card', column: 1, card: 5 });
+    expect(t.overlays.viewCell).toBeNull();
+    expect(t.overlays.selection).toEqual({ column: 1, count: 1 });
+    expect(navCalls).toEqual(['pop', 'push']);
+  });
+
+  it('AD-12 peeks close only when the tap changes the phase or the word data; a held long-press peek ends with the cancel, a hover peek closes on a swap, a select leaves none to close', async () => {
+    const t = await ready('composing', 3);
+    t.media.hoverFine = true;
+    t.overlays.openHoverPeek(3);
+    t.controller.activate({ kind: 'tile', card: 4 });
+    expect(t.overlays.hoverPeek).toBeNull();
+    const h = await ready();
+    h.down(h.b.cellCard);
+    h.advance(400);
+    expect(h.overlays.peek).toBe(3);
+    h.controller.activate({ kind: 'card', column: 1, card: 5 });
+    expect(h.overlays.peek).toBeNull();
+    expect(h.overlays.selection).toEqual({ column: 1, count: 1 });
+  });
+
+  it('AD-12 an activation while detached throws (rule 6)', async () => {
+    const t = await setup();
+    expect(() => t.controller.activate({ kind: 'card', column: 1, card: 0 })).toThrow(
+      /^AD-12 activate\(\) while detached/,
+    );
+  });
+
+  it('AD-12 a stale tile selection still throws through tileTap (its guard stays)', async () => {
+    const t = await ready('composing', 3);
+    t.overlays.clearTile();
+    t.overlays.selectTile(9);
+    expect(() => t.controller.activate({ kind: 'tile', card: 4 })).toThrow(
+      /^AD-12 tileTap with tile 9 selected/,
+    );
+  });
+});

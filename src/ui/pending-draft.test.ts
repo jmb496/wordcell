@@ -18,6 +18,7 @@ const draw = (pendingDraftWord: string | undefined, draft?: object): string =>
       } as unknown as GameView,
       sizing,
       height: 200,
+      hoverFine: false,
     },
   }).body;
 

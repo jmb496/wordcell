@@ -1,15 +1,77 @@
-// EXPERIENCE.md Focus: "the board" is the bottom card of the lowest-numbered non-empty column, or
-// the focusable board container (`main`) when every column is empty, as after a win. Cards carry no
-// tab stop of their own yet (the keyboard map, entry 10), so the chosen card is made programmatically
-// focusable (`tabindex="-1"`) here.
+// EXPERIENCE.md Focus (epic 6 CAP-10, 6.11): the single focus resolver. "The board" is the bottom
+// card of the lowest-numbered non-empty column, or the focusable board container (`main`) when
+// every column is empty, as after a win. Cards are Tab stops under the roving model (Card.svelte,
+// roving.svelte.ts), so no card is made focusable here. Programmatic focus never scrolls: the
+// layout anchors its own scroll (AD-11).
+import type { CardId } from '../engine/index';
+
+const FOCUS = { preventScroll: true } as const;
+
 export function focusBoard(): void {
   for (const column of document.querySelectorAll<HTMLElement>('[data-column]')) {
     const cards = column.querySelectorAll<HTMLElement>('[data-card-id][data-place="column"]');
     const bottom = cards.item(cards.length - 1);
     if (bottom === null) continue;
-    bottom.tabIndex = -1;
-    bottom.focus();
+    bottom.focus(FOCUS);
     return;
   }
-  document.querySelector<HTMLElement>('main')?.focus();
+  document.querySelector<HTMLElement>('main')?.focus(FOCUS);
+}
+
+/** Focuses the live element of card `id` (a column card, tray tile or strip card). */
+export function focusCard(id: CardId): boolean {
+  const el = document.querySelector<HTMLElement>(`[data-card-id="${id}"]`);
+  if (el === null || el.dataset.place === 'cell') return false;
+  el.focus(FOCUS);
+  return true;
+}
+
+/** Composing: the first movable tile (D-block mirrors carry no `data-place`); else the board. */
+export function focusFirstTile(): void {
+  const first = document.querySelector<HTMLElement>('[data-card-id][data-place="tray"]');
+  if (first === null) focusBoard();
+  else first.focus(FOCUS);
+}
+
+/** Place: the first strip card. */
+export function focusFirstStrip(): void {
+  const first = document.querySelector<HTMLElement>('[data-card-id][data-place="strip"]');
+  if (first === null) focusBoard();
+  else first.focus(FOCUS);
+}
+
+/** The WordCell `n`'s element. */
+export function focusCell(n: number): void {
+  document.querySelector<HTMLElement>(`[data-wordcell="${n}"]`)?.focus(FOCUS);
+}
+
+/**
+ * Key removal (EXPERIENCE.md Keyboard): the tile list before and after, the removed tile's index in
+ * the first. The next tile (now at that index), the previous one if it was last, `null` (the board)
+ * when none is left. `after` includes the tile itself when nothing was removed.
+ */
+export function afterRemoval(
+  card: CardId,
+  before: readonly CardId[],
+  after: readonly CardId[],
+): CardId | null {
+  if (after.includes(card)) return card;
+  const at = before.indexOf(card);
+  if (at < 0) throw new Error(`AD-14 afterRemoval: card ${card} is not in the tile list`);
+  return after[Math.min(at, after.length - 1)] ?? null;
+}
+
+/**
+ * Focus loss without a phase change (Undo/Redo inside a phase, a pointer edit, `+`/`-`, Flip): the
+ * next sibling of the lost item in its region, else the region's first item, else null (the
+ * board). `order` is the region's item ids when the item last held focus, `now` its items now.
+ */
+export function afterLoss(
+  lost: CardId,
+  order: readonly CardId[],
+  now: readonly CardId[],
+): CardId | null {
+  const at = order.indexOf(lost);
+  for (const id of order.slice(at + 1)) if (now.includes(id)) return id;
+  return now[0] ?? null;
 }

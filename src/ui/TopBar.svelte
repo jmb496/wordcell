@@ -18,7 +18,9 @@ import { text } from './text';
 // `commands.ts` (shared with the keys): they clear a tail selection first, after act()'s cancel()
 // (AD-13, SPEC CAP-6), then FLIP captures (its flush renders the deselect, so no lift is recorded)
 // and plays after the dispatch (epic 5 SPEC CAP-8, F6, F7).
-let { view }: { view: GameView } = $props();
+// Epic 6 CAP-10 (6.11): on a desktop (`hoverFine`) each button's `title` is `Label (Key)`
+// (`text.tooltip`), undefined on touch; the accessible name is unchanged.
+let { view, hoverFine }: { view: GameView; hoverFine: boolean } = $props();
 
 // Epic 6 CAP-2: the ☰ button opens the menu only through openSurface (SPEC F8). The top bar is
 // `inert` while the menu is open because App makes `main` inert (SPEC F6).
@@ -52,6 +54,7 @@ function timerText(): string {
     type="button"
     class="icon menu-button"
     aria-label={text.menu}
+    title={hoverFine ? text.tooltip('menu') : undefined}
     aria-describedby={historyUnreadable() ? 'menu-history-flag' : undefined}
     onclick={act(openMenu)}
   >
@@ -73,7 +76,7 @@ function timerText(): string {
       type="button"
       class="icon"
       aria-label={text.undo}
-      title={text.undo}
+      title={hoverFine ? text.tooltip('undo') : undefined}
       data-testid="undo"
       disabled={!view.canUndo}
       onclick={act(undo)}
@@ -87,7 +90,7 @@ function timerText(): string {
       type="button"
       class="icon"
       aria-label={text.redo}
-      title={text.redo}
+      title={hoverFine ? text.tooltip('redo') : undefined}
       data-testid="redo"
       disabled={!view.canRedo}
       onclick={act(redo)}

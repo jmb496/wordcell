@@ -18,9 +18,11 @@ import { text } from './text';
 // deal, Give up; each closes the sheet first, then acts once (no push); New game and Replay go
 // through the CAP-3 gates (a confirm while a game is in progress, else at once). Give up is `disabled` from `view.canGiveUp` only (AD-3, R-75). Every handler is
 // wrapped in `act()`. After the menu closes by any path, focus goes to the board (build-notes
-// Menu row); `main` carries tabindex -1 for it until ticket 6.11 (the board keys) owns focus.
+// Menu row); that return stays on `main` (tabindex -1), the 6.10 overlay focus return that ticket
+// 6.11's phase-focus effect (focus-follow.ts) yields to.
 // `Esc` closes it through the key handler (keys.ts, ticket 6.10).
-let { view }: { view: GameView } = $props();
+// Epic 6 CAP-10 (6.11): on a desktop (`hoverFine`) New game and How to play carry `Label (Key)` titles.
+let { view, hoverFine }: { view: GameView; hoverFine: boolean } = $props();
 
 const open = $derived(overlays.isOpen('menu'));
 let wasOpen = false;
@@ -86,7 +88,12 @@ function howToPlay(): void {
 <Sheet title={text.menu} closeLabel={text.closeMenu} onclose={act(close)} onscrim={act(close)} {open}>
   <ul class="rows">
     <li>
-      <button type="button" class="row" onclick={act(startNewGame)}>
+      <button
+        type="button"
+        class="row"
+        title={hoverFine ? text.tooltip('newGame') : undefined}
+        onclick={act(startNewGame)}
+      >
         <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
           <path d="M12 5 V19" />
           <path d="M5 12 H19" />
@@ -134,7 +141,12 @@ function howToPlay(): void {
       </button>
     </li>
     <li>
-      <button type="button" class="row" onclick={act(howToPlay)}>
+      <button
+        type="button"
+        class="row"
+        title={hoverFine ? text.tooltip('howToPlay') : undefined}
+        onclick={act(howToPlay)}
+      >
         <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
           <circle cx="12" cy="12" r="9" />
           <path d="M9.5 9.5 a2.5 2.5 0 1 1 3.5 2.3 c-0.7 0.4 -1 0.9 -1 1.7" />

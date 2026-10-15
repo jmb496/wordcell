@@ -32,6 +32,8 @@ let {
   position,
   returnSlot = false,
   selected = false,
+  stop = false,
+  onfocus,
 }: {
   id: CardId;
   face: Face;
@@ -69,7 +71,17 @@ let {
    * 4 px, slot unchanged; distinct from the column `lifted` look, no shadow).
    */
   selected?: boolean;
+  /** Epic 6 CAP-10 (6.11): this live card is its region's one Tab stop (`tabindex` 0, else -1). */
+  stop?: boolean;
+  /** Epic 6 CAP-10 (6.11): reports focus to the roving memory (roving.svelte.ts). */
+  onfocus?: () => void;
 } = $props();
+
+// Epic 6 CAP-10 (6.11): only a live column, tray or strip card takes focus (a Tab stop, or -1 for
+// the rest of its region); mirrors and the cards stacked in a WordCell never do (AD-14).
+const focusable = $derived(
+  mirror === undefined && (place === 'column' || place === 'tray' || place === 'strip'),
+);
 
 // DESIGN.md Card: `QU` is set as `Qu` with the ×2 badge (Q-06).
 const qu = $derived(face.letter === 'QU');
@@ -99,6 +111,7 @@ const inView = $derived.by(() => {
 });
 </script>
 
+<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div
   class="card"
   class:full
@@ -126,6 +139,8 @@ const inView = $derived.by(() => {
   data-place={mirror ? undefined : place}
   data-mirror-of={mirror && mirror !== 'static' ? id : undefined}
   aria-hidden={mirror ? 'true' : undefined}
+  tabindex={focusable ? (stop ? 0 : -1) : undefined}
+  onfocus={focusable ? onfocus : undefined}
 >
   <div class="face">
     {#if !ghost}
@@ -158,6 +173,10 @@ const inView = $derived.by(() => {
     touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
   }
   .card.full { height: var(--wc-H); }
+  /* DESIGN.md Focus ring (epic 6 CAP-10): 2 px accent-teal, `:focus-visible` only, enclosing the
+     card's visible strip (the wrapper), drawn inside it so the next card never covers it; it is
+     distinct from the selection outline on the face, and both draw when both apply. */
+  .card:focus-visible { outline: 2px solid var(--wc-accent-teal); outline-offset: -2px; }
   /* Ticket 6.9: a static How to play example card takes no gestures; the panel must scroll. */
   .card.static { touch-action: pan-y; }
   .card.cell { position: absolute; top: 0; left: 0; }

@@ -81,7 +81,7 @@ function rejectedBody(reason: RejectReason): string {
   <main use:pointerRoot inert={mainInert} tabindex="-1">
     <Board view={board} {layout} />
   </main>
-  <Menu view={board} />
+  <Menu view={board} hoverFine={layout.hoverFine} />
   <EndSheet view={board} />
   <PreferencesPanel />
   <StatisticsPanel />

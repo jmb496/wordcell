@@ -133,6 +133,12 @@
 // cell while the tray faces return (a mirror's shift cleared at once, never faded, under reduced
 // motion), the ghost clearing at the settle; cancel(), a same-id pointerdown and detach settle at
 // once.
+// Key activation (epic 6 CAP-10, 6.11): `activate(hit)` runs the released-tap path for a key press on
+// a focused card, tile or WordCell: `cancel()` (a held drag ends), the sticky view closes first (its
+// pop precedes any push, AD-13), then `applyTile(tileAction(hit))` and, for a non-tray hit,
+// `perform(hit)`. It never calls `clearTile()` itself, so a select, swap or return keeps the tile
+// selection it needs; a long-press or hover peek closes only when the tap swaps or returns a tile,
+// edits the word (drop, k, free letter, target) or opens the view.
 // Seams (epic 5 SPEC CAP-3, epic 5 SPEC F14): the visible band, the fly-back and the hover-peek
 // timer are factories built here from this controller's deps plus getters for its state; lookups
 // throw through lookup.ts and the DOM class names come from classes.ts. The tile drag, the
@@ -165,7 +171,14 @@ import { createFlyBack, translate } from './fly-back';
 import { createFreeLetterDrag } from './free-letter-drag';
 import type { Gate } from './gate';
 import { createHoverPeekTimer } from './hover-peek-timer';
-import { destinationTap, type Hit, type HoverAction, hoverAction, tapAction } from './intent';
+import {
+  destinationTap,
+  type Hit,
+  type HoverAction,
+  hoverAction,
+  type TapAction,
+  tapAction,
+} from './intent';
 import { cellIn, columnIn, faceIn, found } from './lookup';
 import { createParting } from './parting';
 import { OUTSIDE, resolve } from './resolve';
@@ -217,6 +230,14 @@ export type Controller = {
    * CAP-6).
    */
   refreshHover(): void;
+  /**
+   * Epic 6 CAP-10 (6.11): the key-activation entry. A key on a focused card, tile or WordCell is a
+   * released pointer tap on `hit`: `cancel()` first, never `clearTile()`, an open sticky view
+   * closed, then `tileTap` and `tapAction` (the tap path of `pointerup`). Peeks close only when the
+   * tap changes the phase or the word data. The caller gates it on the `GameView` flags, so every
+   * call acts.
+   */
+  activate(hit: Hit): void;
 };
 
 const LISTENED = [
@@ -768,6 +789,29 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     }
   }
 
+  // 6.11: the tap kinds that change the phase or the word data, or open the view (peeks close).
+  function changesData(tile: TileAction, tap: TapAction | null): boolean {
+    if (tile.kind === 'swap' || tile.kind === 'remove') return true;
+    return tap !== null && tap.kind !== 'select' && tap.kind !== 'deselect' && tap.kind !== 'none';
+  }
+
+  function activate(hit: Hit): void {
+    if (root === null) throw new Error('AD-12 activate() while detached');
+    cancel();
+    const view = game.view;
+    if (view === undefined) throw new Error('AD-12 key activation without a GameView');
+    if (overlays.viewCell !== null) overlays.close('wordcellView');
+    const tray = hit.kind === 'tile' || hit.kind === 'block';
+    const tile = tileAction(hit);
+    const tap = tray ? null : tapAction(hit, view, overlays.selection, overlays.top);
+    if (changesData(tile, tap)) {
+      if (overlays.peek !== null) overlays.closePeek();
+      overlays.closeHoverPeek();
+    }
+    applyTile(tile);
+    if (!tray) perform(hit);
+  }
+
   function pointerup(event: PointerEvent): void {
     if (event.pointerId === menuSlot) menuSlot = null;
     const p = press;
@@ -986,5 +1030,5 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     };
   }
 
-  return { cancel, attach, refreshHover };
+  return { cancel, attach, refreshHover, activate };
 }

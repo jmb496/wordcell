@@ -2,6 +2,7 @@
 // engine through one function (AD-4 `dispatch`). Each is wrapped in FLIP capture/play (epic 5 SPEC
 // CAP-8, F6, F7). Callers wrap them in act() (AD-12); the key handler's rows are in keys.ts.
 import { flushSync } from 'svelte';
+import type { Command } from '../engine/index';
 import { game } from '../shell/game.svelte';
 import { capture, play } from './flip';
 import { overlays } from './overlays.svelte';
@@ -56,4 +57,20 @@ export function flip(): void {
   const command = { type: 'flip' } as const;
   capture();
   play(command, game.dispatch(command));
+}
+
+/**
+ * Epic 6 CAP-10 (6.11): one word-editing command (a key's `addFreeLetter`, `setTarget`, `arrange`,
+ * `setPlacementOrder`), bracketed like the others; it changes the word data, so a view and peeks
+ * close first.
+ */
+export function edit(command: Command): void {
+  closeTransient();
+  capture();
+  play(command, game.dispatch(command));
+}
+
+// R-31: `−` and `+` (the buttons and the `-`/`+` keys) dispatch k ∓ 1 from the k they show.
+export function setK(k: number): void {
+  edit({ type: 'setDestinationCount', k });
 }

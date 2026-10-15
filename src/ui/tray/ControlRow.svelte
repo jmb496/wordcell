@@ -1,10 +1,8 @@
 <script lang="ts">
-import { game } from '../../shell/game.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { act } from '../act';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
-import { flip as flipBlock } from '../commands';
-import { capture, play } from '../flip';
+import { flip as flipBlock, setK } from '../commands';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { text } from '../text';
 
@@ -17,22 +15,19 @@ import { text } from '../text';
 // (R-80) from `text.placeMeta`. Each dispatch is wrapped in FLIP capture/play (epic 5 SPEC
 // CAP-8, F6, F7, F17).
 let {
+  hoverFine,
   letterCount,
   meta,
   controls,
 }: {
+  /** Epic 6 CAP-10 (6.11): desktop tooltips (`Label (Key)`), none on touch. */
+  hoverFine: boolean;
   letterCount: number;
   /** Place: the target cell and the net score change on commit. */
   meta?: { target: number; scoreDelta: number };
   /** Composing: the destination count and the D-block enablement flags from `GameView`. */
   controls?: { k: number; canDecK: boolean; canIncK: boolean; canFlip: boolean };
 } = $props();
-
-function setK(k: number): void {
-  const command = { type: 'setDestinationCount', k } as const;
-  capture();
-  play(command, game.dispatch(command));
-}
 </script>
 
 <div class="row">
@@ -46,6 +41,7 @@ function setK(k: number): void {
           type="button"
           class="round"
           disabled={!controls.canDecK}
+          title={hoverFine ? text.tooltip('k-') : undefined}
           onclick={act(() => setK(k - 1))}
         >{text.minus}</button>
         <span class="k">{k}</span>
@@ -53,12 +49,14 @@ function setK(k: number): void {
           type="button"
           class="round"
           disabled={!controls.canIncK}
+          title={hoverFine ? text.tooltip('k+') : undefined}
           onclick={act(() => setK(k + 1))}
         >{text.plus}</button>
         <button
           type="button"
           class="flip"
           disabled={!controls.canFlip}
+          title={hoverFine ? text.tooltip('flip') : undefined}
           onclick={act(flipBlock)}
         ><span aria-hidden="true">{text.flipGlyph}</span> {text.flip}</button>
       {/if}

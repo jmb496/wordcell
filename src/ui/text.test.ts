@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { KEY_LABELS } from './key-labels';
 import { bandNames, text } from './text';
 
 // AD-13 History notice catalogue (EXPERIENCE.md message catalogue rows 102, 104).
@@ -279,5 +280,24 @@ describe('AD-3 How to play text', () => {
       'FAKED, 5 letters',
       'FLAKED, 6 letters',
     ]);
+  });
+});
+
+describe('AD-3 tooltip text', () => {
+  it('AD-3 each keyed command reads Label (Key) from key-labels.ts', () => {
+    expect(text.tooltip('undo')).toBe('Undo (Z)');
+    expect(text.tooltip('redo')).toBe('Redo (Y)');
+    expect(text.tooltip('validate')).toBe('Validate (Enter)');
+    expect(text.tooltip('confirm')).toBe('Confirm (Enter)');
+    expect(text.tooltip('k-')).toBe('− (-)');
+    expect(text.tooltip('k+')).toBe('+ (+)');
+    expect(text.tooltip('flip')).toBe('Flip (F)');
+    expect(text.tooltip('menu')).toBe('Menu (M)');
+    expect(text.tooltip('newGame')).toBe('New game (N)');
+    expect(text.tooltip('howToPlay')).toBe('How to play (?)');
+  });
+
+  it('AD-3 Give up has no tooltip builder entry', () => {
+    expect(Object.keys(KEY_LABELS)).not.toContain('giveUp');
   });
 });

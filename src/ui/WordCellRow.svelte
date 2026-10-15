@@ -49,6 +49,7 @@ const inPlace = $derived(place !== undefined);
     style:grid-column={cell.cell - 2}
     style:grid-row={labelsRow}
   >{cell.cell}</span>
+  <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
   <div
     class="wordcell"
     class:empty={cell.cards.length === 0}
@@ -57,6 +58,7 @@ const inPlace = $derived(place !== undefined);
     class:dim
     role="group"
     aria-label="WordCell {cell.cell}"
+    tabindex="0"
     data-testid="wordcell-{cell.cell}"
     data-wordcell={cell.cell}
     style:grid-column={cell.cell - 2}
@@ -96,6 +98,8 @@ const inPlace = $derived(place !== undefined);
     touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
   }
   .dim { opacity: 0.35; }
+  /* DESIGN.md Focus ring (epic 6 CAP-10): each WordCell is one Tab stop; the ring encloses the slot. */
+  .wordcell:focus-visible { outline: 2px solid var(--wc-accent-teal); outline-offset: 2px; }
   /* The card rect inside the slot: empty outline, legal ring, selected-target ring. */
   .wordcell.empty::before,
   .wordcell.legal::after,

@@ -6,6 +6,7 @@ import { dictionary } from '../shell/dictionary.svelte';
 import { game } from '../shell/game.svelte';
 import { act } from './act';
 import { confirm, validate } from './commands';
+import type { TooltipCommand } from './key-labels';
 import { fitSize } from './layout/fit';
 import { measureWidth } from './layout/measure';
 import { newGame } from './new-game';
@@ -18,7 +19,9 @@ import { text } from './text';
 // temporary inline font size, re-measured on mount, label change, button width change and
 // `document.fonts.ready` (as WordLine). The button takes the fitted size too, so the ellipsis glyph
 // (drawn in the block container's font) matches the label text (5-3 #1).
-let { view }: { view: GameView } = $props();
+// Epic 6 CAP-10 (6.11): on a desktop (`hoverFine`) the button's `title` follows the primary action
+// (`Label (Key)`: Validate, Confirm, New game); a reason label has none.
+let { view, hoverFine }: { view: GameView; hoverFine: boolean } = $props();
 
 const LABEL_MAX = 16;
 
@@ -31,14 +34,20 @@ let size = $state(LABEL_MAX);
 // style) > Validate (AD-8). An undefined handler disables the button; every handler goes through
 // act() (AD-12 F9).
 const primary = $derived.by(
-  (): { label: string; reason: boolean; onclick: (() => void) | undefined } => {
+  (): {
+    label: string;
+    reason: boolean;
+    onclick: (() => void) | undefined;
+    tip?: TooltipCommand;
+  } => {
     if (view.status !== 'playing')
-      return { label: text.newGame, reason: false, onclick: act(newGame) };
+      return { label: text.newGame, reason: false, onclick: act(newGame), tip: 'newGame' };
     if (view.phase === 'place') {
       return {
         label: text.confirm,
         reason: false,
         onclick: view.canConfirm ? act(confirm) : undefined,
+        tip: 'confirm',
       };
     }
     if (dictionary.state === 'failed') {
@@ -59,6 +68,7 @@ const primary = $derived.by(
       label: text.validate,
       reason: false,
       onclick: view.canValidate ? act(validate) : undefined,
+      tip: 'validate',
     };
   },
 );
@@ -100,6 +110,7 @@ onMount(() => {
     class="primary"
     class:reason={primary.reason}
     data-testid="primary-action"
+    title={hoverFine && primary.tip !== undefined ? text.tooltip(primary.tip) : undefined}
     disabled={primary.onclick === undefined}
     onclick={primary.onclick}
     style:font-size="{size}px"

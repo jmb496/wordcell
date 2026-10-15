@@ -5,6 +5,7 @@ import Card from './Card.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { dropTarget } from './gestures/drop-target';
 import type { TailSelection } from './overlays.svelte';
+import { roving } from './roving.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { text } from './text';
 
@@ -63,6 +64,12 @@ const placeholder = $derived(
       draft.destinationColumn === column.column &&
       column.cards.every(inSource)),
 );
+// Epic 6 CAP-10 (6.11): the column is one Tab stop, its last-focused live card, else the bottom one.
+const live = $derived(column.cards.filter((id) => !isGhost(id)));
+const remembered = $derived(roving.column(column.column));
+const stop = $derived(
+  remembered !== undefined && live.includes(remembered) ? remembered : live.at(-1),
+);
 const source = $derived(selection?.column === column.column);
 const count = $derived(source && selection !== null ? selection.count : 0);
 /** Index of the first lifted card; the column length when this is not the source. */
@@ -95,6 +102,8 @@ const liftStart = $derived(column.cards.length - count);
         destination={phase === 'composing' && inDestination(id)}
         lifted={i >= liftStart}
         remainderTop={source && i === liftStart - 1}
+        stop={id === stop}
+        onfocus={() => roving.focusedColumn(column.column, id)}
       />
     {/each}
     {#if source}

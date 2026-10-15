@@ -251,8 +251,14 @@ test('AD-17 board render rules on session-won: count badges, placeholders, foot 
       useInnerText: true,
     });
   }
-  await expect(undo(page)).toHaveAttribute('title', 'Undo');
-  await expect(redo(page)).toHaveAttribute('title', 'Redo');
+  // Ticket 6.11: the desktop tooltip carries the key; touch has none.
+  if (desktop) {
+    await expect(undo(page)).toHaveAttribute('title', 'Undo (Z)');
+    await expect(redo(page)).toHaveAttribute('title', 'Redo (Y)');
+  } else {
+    await expect(undo(page)).not.toHaveAttribute('title');
+    await expect(redo(page)).not.toHaveAttribute('title');
+  }
   await expect(score(page)).toHaveCSS('font-variant-numeric', 'tabular-nums');
 });
 

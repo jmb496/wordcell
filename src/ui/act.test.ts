@@ -15,6 +15,7 @@ function fakeController(log: string[]): Controller {
     cancel: () => log.push('cancel'),
     attach: () => () => {},
     refreshHover: () => {},
+    activate: () => {},
   };
 }
 
@@ -55,6 +56,7 @@ describe('AD-12 act()', () => {
       cancel: () => log.push(`cancel ${overlays.tileSelection}`),
       attach: () => () => {},
       refreshHover: () => {},
+      activate: () => {},
     });
     const wrapped = act(() => log.push(`handler ${overlays.tileSelection}`));
     overlays.selectTile(12);

@@ -1,5 +1,7 @@
 // Every EXPERIENCE.md message-catalogue string lives here (AGENTS.md Conventions); later entries
 // add theirs. Words are uppercased at render, `QU` stays `QU`, the minus sign is U+2212.
+import { KEY_LABELS, type TooltipCommand } from './key-labels';
+
 const INVALID_WORD_SUFFIX = "isn't in the word list.";
 
 // Structurally the shell's `HistoryRejectReason`; not imported, because e2e specs import this file
@@ -97,7 +99,25 @@ const howTo = {
 
 const EXAMPLE_WORDS = ['BAKED', 'BALKED', 'FAKED', 'FLAKED'] as const;
 
+// Epic 6 CAP-10 (6.11): the tooltip label of each command that carries a key (the control's visible
+// label; `−` and `+` are the glyphs). Give up has none.
+const TOOLTIP_LABELS: Readonly<Record<TooltipCommand, string>> = {
+  undo: 'Undo',
+  redo: 'Redo',
+  validate: 'Validate',
+  confirm: 'Confirm',
+  'k-': '\u2212',
+  'k+': '+',
+  flip: 'Flip',
+  menu: 'Menu',
+  newGame: 'New game',
+  howToPlay: 'How to play',
+};
+
 export const text = Object.freeze({
+  // Epic 6 CAP-10 (6.11): the desktop tooltip `Label (Key)`, the key from key-labels.ts.
+  tooltip: (command: TooltipCommand): string =>
+    `${TOOLTIP_LABELS[command]} (${KEY_LABELS[command]})`,
   validate: 'Validate',
   needLetters: 'Need 3+ letters',
   // AD-8 dictionary states: Validate reason labels, the dictionary-failed banner line.

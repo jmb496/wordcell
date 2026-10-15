@@ -8,11 +8,13 @@ import { game } from '../shell/game.svelte';
 import { openHistoryNotice } from './history-notice.svelte';
 import { openSurface } from './open-surface';
 import { overlays } from './overlays.svelte';
+import { roving } from './roving.svelte';
 
 export function newGame(): void {
   const wasRejected = game.state.kind === 'rejected';
   game.newGame();
   overlays.resetForNewSession();
+  roving.reset();
   if (wasRejected) openHistoryNotice();
 }
 
@@ -20,6 +22,7 @@ export function newGame(): void {
 export function replayDeal(): void {
   game.replay();
   overlays.resetForNewSession();
+  roving.reset();
 }
 
 // Where the open confirm came from: only a menu row sets it (ConfirmDialogs returns focus to ☰ then,

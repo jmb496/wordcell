@@ -10,7 +10,7 @@ async function menuHtml(canGiveUp: boolean): Promise<string> {
   const { overlays } = await import('./overlays.svelte');
   overlays.open('menu');
   const { default: Menu } = await import('./Menu.svelte');
-  return render(Menu, { props: { view: { canGiveUp } as never } }).body;
+  return render(Menu, { props: { view: { canGiveUp } as never, hoverFine: false } }).body;
 }
 
 const giveUpButton = /<button[^>]*class="row[^"]*"[^>]*>(?:(?!<\/button>)[\s\S])*Give up/;

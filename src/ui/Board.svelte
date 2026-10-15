@@ -6,6 +6,7 @@ import ActionBar from './ActionBar.svelte';
 import Column from './Column.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import DictionaryBanner from './DictionaryBanner.svelte';
+import { createFocusFollow } from './focus-follow';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import HoverPeek from './HoverPeek.svelte';
 import type { BandId, Unit } from './layout/bands';
@@ -47,6 +48,13 @@ function gridUnit(unit: Unit): boolean {
   return unit.some((band) => GRID_UNITS.includes(band));
 }
 
+// Epic 6 CAP-10 (6.11): focus follows the phase and survives edits, after every DOM update.
+const follow = createFocusFollow();
+$effect(() => follow.attach());
+$effect(() => {
+  follow.sync(view);
+});
+
 function row(unit: Unit, band: BandId): number {
   return unit.indexOf(band) + 1;
 }
@@ -54,13 +62,13 @@ function row(unit: Unit, band: BandId): number {
 
 {#snippet band(id: BandId)}
   {#if id === 'topBar'}
-    <TopBar {view} />
+    <TopBar {view} hoverFine={layout.hoverFine} />
   {:else if id === 'banner'}
     <div class="banner" data-band="banner">{#if layout.bannerShown}<DictionaryBanner />{/if}</div>
   {:else if id === 'tray'}
-    <Tray {view} sizing={layout.tray} height={heights.tray} />
+    <Tray {view} sizing={layout.tray} height={heights.tray} hoverFine={layout.hoverFine} />
   {:else if id === 'actionBar'}
-    <ActionBar {view} />
+    <ActionBar {view} hoverFine={layout.hoverFine} />
   {:else}
     <div class="spacer" data-band={id} style:height="{heights[id]}px"></div>
   {/if}

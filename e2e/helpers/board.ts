@@ -31,11 +31,12 @@ export const END_SHEET = /^(Every column cleared\.|Game given up\.)$/;
 // followed by `glidesSettled` (a step's FLIP glide, AD-14).
 export async function openFixture(
   page: Page,
-  name: string,
+  name: string | { literal: string },
   { prefs, steps = [], booted = true, endSheet = 'collapsed', history }: OpenOptions = {},
 ): Promise<void> {
   await seedStorage(page, {
-    session: fixture(`${name}.json`),
+    // Ticket 6.11: `{ literal }` seeds a session text (helpers/sessions.ts) that is not a fixtures/ file.
+    session: typeof name === 'string' ? fixture(`${name}.json`) : name.literal,
     ...(prefs === undefined ? {} : { prefs: fixture(`${prefs}.json`) }),
     ...(history === undefined ? {} : { history: fixture(`${history}.json`) }),
   });

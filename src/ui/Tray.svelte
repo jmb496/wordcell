@@ -30,7 +30,12 @@ import WordLine from './tray/WordLine.svelte';
 // strip in `placementOrder` with origin tags and the `bottom`/`top` marks, and the meta (R-80),
 // no controls. Idle and Game over: all three rows empty. The band is the tile drag's one drop target
 // (AD-12 `use:dropTarget`, epic 5 SPEC CAP-5).
-let { view, sizing, height }: { view: GameView; sizing: TrayLayout; height: number } = $props();
+let {
+  view,
+  sizing,
+  height,
+  hoverFine,
+}: { view: GameView; sizing: TrayLayout; height: number; hoverFine: boolean } = $props();
 
 // The draft in Composing and Place (`view.draft` is set in both); `place` only in Place.
 const draft = $derived(view.draft);
@@ -68,6 +73,7 @@ const tags: ReadonlyMap<CardId, number> = $derived(
   <div class="controls">
     {#if draft !== undefined}
       <ControlRow
+        {hoverFine}
         letterCount={draft.letterCount}
         meta={place === undefined ? undefined : { target: place.target, scoreDelta: place.scoreDelta }}
         controls={place === undefined

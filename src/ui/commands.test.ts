@@ -134,3 +134,24 @@ describe('AD-12 shared commands', () => {
     expect(mocks.atDispatch.map((seen) => seen.selection)).toEqual([null, null, null]);
   });
 });
+
+describe('AD-12 epic 6 6.11 edit and setK', () => {
+  it('AD-12 edit and setK close a sticky view and a peek first, then capture, dispatch and play', () => {
+    overlays.openView(4);
+    commands.edit({ type: 'arrange', arrangement: [1, 2] });
+    overlays.openPeek(5);
+    commands.setK(2);
+    expect(mocks.log).toEqual([
+      'capture',
+      'dispatch arrange',
+      'play arrange',
+      'capture',
+      'dispatch setDestinationCount',
+      'play setDestinationCount',
+    ]);
+    for (const seen of mocks.atDispatch) {
+      expect(seen.viewCell).toBeNull();
+      expect(seen.peek).toBeNull();
+    }
+  });
+});
