@@ -3,7 +3,7 @@ import { tick, untrack } from 'svelte';
 import type { GameView } from '../engine/index';
 import { game } from '../shell/game.svelte';
 import { act } from './act';
-import { newGame } from './new-game';
+import { requestNewGame, requestReplay } from './new-game';
 import { overlays } from './overlays.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Sheet from './Sheet.svelte';
@@ -12,8 +12,8 @@ import { text } from './text';
 
 // Epic 6 CAP-2 (ticket 6.2, SPEC F5, F6, F8; DESIGN.md Menu sheet; EXPERIENCE.md Menu sheet): the
 // menu sheet, opened only through `openSurface('menu')` (the ☰ button). Rows: New game, Replay this
-// deal, Give up; each closes the sheet first, then acts once (no push), at once until entry 3 adds
-// the confirms. Give up is `disabled` from `view.canGiveUp` only (AD-3, R-75). Every handler is
+// deal, Give up; each closes the sheet first, then acts once (no push); New game and Replay go
+// through the CAP-3 gates (a confirm while a game is in progress, else at once). Give up is `disabled` from `view.canGiveUp` only (AD-3, R-75). Every handler is
 // wrapped in `act()`. After the menu closes by any path, focus goes to the board (build-notes
 // Menu row); `main` carries tabindex -1 for it until epic 6's keyboard map (entry 10) owns focus.
 // `Esc` closes it (interim, replaced by entry 10's key handler).
@@ -21,11 +21,16 @@ let { view }: { view: GameView } = $props();
 
 const open = $derived(overlays.isOpen('menu'));
 let wasOpen = false;
+// CAP-3: set only when a row's gate opened a confirm; the confirm's own effect owns that focus.
+let skipFocus = false;
 
 $effect(() => {
   const now = open;
   untrack(() => {
-    if (wasOpen && !now) void tick().then(() => document.querySelector('main')?.focus());
+    if (wasOpen && !now) {
+      if (skipFocus) skipFocus = false;
+      else void tick().then(() => document.querySelector('main')?.focus());
+    }
     wasOpen = now;
   });
 });
@@ -36,13 +41,12 @@ function close(): void {
 
 function startNewGame(): void {
   close();
-  newGame();
+  skipFocus = requestNewGame(view, 'menu');
 }
 
 function replay(): void {
   close();
-  game.replay();
-  overlays.resetForNewSession();
+  skipFocus = requestReplay(view, 'menu');
 }
 
 function giveUp(): void {

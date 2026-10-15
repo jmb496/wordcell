@@ -222,12 +222,14 @@ test.describe('Give up', () => {
 });
 
 test.describe('New game and Replay', () => {
-  for (const fixture of [
-    'session-idle-empty-column',
-    'session-composing',
-    'session-won',
-    'session-gave-up',
-  ]) {
+  // R-74: in-progress games go through the confirm (accept = the dialog's action button); finished
+  // games act at once. The confirms' own cases live in confirm.spec.ts.
+  for (const [fixture, inProgress] of [
+    ['session-idle-empty-column', true],
+    ['session-composing', true],
+    ['session-won', false],
+    ['session-gave-up', false],
+  ] as const) {
     test(`R-74 Q-29 New game gives a new seed and Replay the same seed with empty moves (${fixture})`, async ({
       page,
     }) => {
@@ -237,6 +239,12 @@ test.describe('New game and Replay', () => {
       await expect(row(page, 'New game')).toBeEnabled();
       await expect(row(page, 'Replay this deal')).toBeEnabled();
       await row(page, 'Replay this deal').click();
+      if (inProgress) {
+        await page
+          .getByRole('dialog', { name: 'Replay this deal?' })
+          .getByRole('button', { name: 'Replay', exact: true })
+          .click();
+      }
       await expectClosed(page);
       await expect(page.locator('main')).toBeFocused();
       await expect.poll(async () => (await parsed(page)).moves.length).toBe(0);
@@ -245,6 +253,7 @@ test.describe('New game and Replay', () => {
 
       await openMenu(page);
       await row(page, 'New game').click();
+      // The Replayed deal has no moves, so New game now acts at once.
       await expectClosed(page);
       await expect(page.locator('main')).toBeFocused();
       await expect.poll(async () => (await parsed(page)).seed).not.toBe(seed);

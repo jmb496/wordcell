@@ -6,6 +6,8 @@ import { act } from './act';
 import BlockingMessage from './BlockingMessage.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Board from './Board.svelte';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import ConfirmDialogs from './ConfirmDialogs.svelte';
 import type { Controller } from './gestures/controller';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Halted from './Halted.svelte';
@@ -82,6 +84,7 @@ function rejectedBody(reason: RejectReason): string {
     <Board view={board} {layout} />
   </main>
   <Menu view={board} />
+  <ConfirmDialogs />
   {#if overlays.isOpen('historyNotice')}
     <HistoryNotice />
   {/if}

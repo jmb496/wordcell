@@ -47,6 +47,15 @@ export const text = Object.freeze({
   menu: 'Menu',
   closeMenu: 'Close menu',
   replayDeal: 'Replay this deal',
+  // Epic 6 CAP-3 (EXPERIENCE.md catalogue rows 97, 98): the New game and Replay confirms; New game's
+  // action reuses `newGame` above.
+  newGameConfirmTitle: 'Start a new game?',
+  newGameConfirmBody: "This game won't count in your statistics.",
+  replayConfirmTitle: 'Replay this deal?',
+  replayConfirmBody:
+    "You'll start this deal again from the beginning. This game won't count in your statistics.",
+  replayConfirmAction: 'Replay',
+  keepPlaying: 'Keep playing',
   giveUp: 'Give up',
   // DESIGN.md Column slot: the source foot pad while a tail is selected (EXPERIENCE.md Foot pad).
   here: 'Here',

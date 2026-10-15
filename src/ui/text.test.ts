@@ -113,3 +113,22 @@ describe('AD-3 D-block control text', () => {
     expect(text.emptyColumn).toBe('Empty column: no cards join the word');
   });
 });
+
+// EXPERIENCE.md message catalogue rows 97, 98: all six confirm strings, and New game's action
+// reuses the New game row label.
+describe('AD-13 confirm dialog text', () => {
+  it('AD-13 the six confirm strings equal their catalogue rows', () => {
+    expect(text.newGameConfirmTitle).toBe('Start a new game?');
+    expect(text.newGameConfirmBody).toBe("This game won't count in your statistics.");
+    expect(text.replayConfirmTitle).toBe('Replay this deal?');
+    expect(text.replayConfirmBody).toBe(
+      "You'll start this deal again from the beginning. This game won't count in your statistics.",
+    );
+    expect(text.replayConfirmAction).toBe('Replay');
+    expect(text.keepPlaying).toBe('Keep playing');
+  });
+
+  it('AD-13 the New game confirm action reuses text.newGame', () => {
+    expect(text.newGame).toBe('New game');
+  });
+});
