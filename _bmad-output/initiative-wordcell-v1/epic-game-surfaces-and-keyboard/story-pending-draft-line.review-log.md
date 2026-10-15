@@ -1,6 +1,6 @@
 # Review log — ticket 6.8
 
-State: pass 1: done
+State: pass 2: done
 
 Pre-loop: HEAD 09623a6ebf8ab3a67adc228c1f9420e711ad793f, 143 words (story-pending-draft-line.review-log.passes/pass0.md); budget 1500 words.
 
@@ -22,3 +22,18 @@ plain text, no live region; redo tail longer than 1 shows only the pending word;
 ### Applied
 - [major] 1–6 and the reference minors applied by the fixer (also mirrored into tickets.toml id 8, left uncommitted by the checkpoint rule)
 Words: see pass copy (budget 1500)  |  Snapshot: story-pending-draft-line.review-log.passes/pass1.md
+
+## Pass 2 — 2026-10-15
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 2 (merged), minor 6, decision-needed 0  |  Dropped in triage: 0
+### Majors (triaged, merged)
+1. Reload sentence ("A reload restoring the session shows it") has no test (ref alignment major, adversarial minor).
+2. "Word part ellipsizes first, suffix stays" has no test and no structure; the 10-letter 360 px baseline likely does not overflow (raised by all four).
+### Minors
+discard sequence spelled out (Validate, Undo, Undo) and absence after commit; Tray Vitest positive case plus no aria-live; screens fixture via seedStorage; duplicate design refs merged (and Keyboard/Component Patterns dropped); CAP-9 fling device check out of this ticket's Verify.
+### Default applied (technical)
+- both majors: reviewers' defaults (reload step in Playwright; two-span structure with computed-style assertions).
+### Decision needed
+- none
+### Applied
+- [major] reload test, ellipsis structure and test; minors 3–7 applied (fixer items 1–7); new fixture `session-idle-pending-draft-long.json` named but unverified (does not exist yet; build creates it)
+Snapshot: story-pending-draft-line.review-log.passes/pass2.md
