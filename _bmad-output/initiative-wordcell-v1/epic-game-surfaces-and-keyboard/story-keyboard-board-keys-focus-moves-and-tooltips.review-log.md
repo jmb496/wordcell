@@ -1,6 +1,6 @@
 # Review log — story-keyboard-board-keys-focus-moves-and-tooltips.md
 
-State: pass 6: done
+State: done
 
 Pre-loop: HEAD 14b4641; copy at story-keyboard-board-keys-focus-moves-and-tooltips.review-log.passes/pass0.md; 226 words; budget 1500 words (stub being fleshed out).
 
@@ -87,3 +87,13 @@ See story-keyboard-board-keys-focus-moves-and-tooltips.review-log.passes/p6-find
 Words (docs): 1486 (6.6 x pass 0)  |  Snapshot: story-keyboard-board-keys-focus-moves-and-tooltips.review-log.passes/pass6.md
 ### Applied
 - [major] 1 of p6-findings.md (key-activation entry always closes a sticky view first; peeks conditional); [minor] 2-4 applied. Fixer deleted the standalone Tests paragraph (content kept in AC "Sentence to test"; the "P6 desktop" label dropped). Fixer unverified: EXPERIENCE.md/CAP-10 sticky-view wording (reviewers cited it).
+
+## Pass 7 — 2026-10-15 (verify-only)
+Reviewers: fix diff  |  Findings: major 0, minor 1, decision-needed 0
+Minor (unapplied): an inert Game-over column-card key — does it close the open end sheet? Pick one and test (default: inert key neither closes nor acts).
+
+## Result — converged after 7 passes
+Majors per pass: 10, 10, 3, 2, 2, 1, 0. Words 226 → 1486 (budget 1500).
+Decision needed: roving model — can a keyboard player focus any card of a fanned column, or only the bottom/last-focused one (default: the latter, as written).
+Unapplied minors: ←/→ and Shift outside tray/strip, key-label table in a pure module (text.ts must not import keys.ts), disabled-while-focused button fallback, pointer tap does not change the roving item, Tab-order test with default band order, Game-over inert key and the end sheet, Composing-entry fallback, tooltips on ActionBar title wording (unverified).
+Technical defaults applied: ~20 (see passes).

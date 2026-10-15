@@ -226,3 +226,11 @@ Worth knowing: spine AD-13 does not yet mention `nav.settled`/`whenSettled`. Two
 Close-out docs:
 - ARCHITECTURE-SPINE.md AD-13 ← mention `nav.settled`/`whenSettled` (build finding)
 - EXPERIENCE.md State Patterns (Idle/pending draft row) and DESIGN.md Tray band ← at 360 px the line never wraps or overflows (owner, 2026-10-15)
+
+## 6.11 Keyboard: board keys, focus moves and tooltips — stopped
+What it adds: the board keys (1–8, arrows, Space, Enter, +/-, F), focus that follows the game phase, a visible focus ring and the key shown in desktop button tooltips.
+Ticket review: 7 passes, converged (majors 10, 10, 3, 2, 2, 1, 0); one decision for you (below)
+Build: not started
+Ref to fix upstream: none
+Decision needed: can a keyboard player put focus directly on any card of a fanned column, or only on one card per column (the bottom or last-focused card; the tail's top card after a key selection)? Proposed default: one Tab stop per non-empty column. Effect: a keyboard or screen-reader user cannot focus a buried card directly; they reach it by selecting with the number keys and up/down. Play stays fully possible.
+Close-out docs: none yet
