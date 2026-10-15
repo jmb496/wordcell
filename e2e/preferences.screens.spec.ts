@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { stored } from './helpers/blocking';
-import { openFixture } from './helpers/board';
+import { collapseEndSheet, openFixture } from './helpers/board';
 import { fixture, seedStorage } from './helpers/seed';
 
 // Epic 6 ticket 6.4 (build-notes Screens specs): the Preferences panel and the top bar with the
@@ -30,6 +30,7 @@ test('AD-17 top bar with the timer and a negative score screenshot at 360 px', a
   await seedStorage(page, { session, prefs: fixture('prefs-non-default.json') });
   await page.goto('/');
   await expect(page.locator('[data-card-id]')).toHaveCount(52);
+  await collapseEndSheet(page);
   await expect(page.locator('[data-band="topBar"] .timer')).toHaveText('12:03:04');
   expect(await stored(page, 'wordcell:prefs')).not.toBeNull();
   await page.waitForFunction(() => window.__wordcell?.dictionaryState() === 'ready');

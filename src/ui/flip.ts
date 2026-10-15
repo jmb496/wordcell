@@ -190,6 +190,8 @@ export type FlipDeps = {
   duration(kind: MotionKind): number;
   /** motion.ts `stagger` (AD-10): the delay between the fly-to-cell faces. */
   stagger(): number;
+  /** Ticket 6.6: end-sheet.ts `onDispatched`, injected so this module imports no store. */
+  dispatched(result: DispatchResult, whenSettled: (callback: () => void) => void): void;
 };
 
 export type Flip = {
@@ -274,6 +276,8 @@ export function createFlip(deps: FlipDeps): Flip {
   const { gate } = deps;
   let pending: Measure | null = null;
   const animations = new Set<Running>();
+  /** Ticket 6.6: end-sheet opens waiting for the winning animation to settle. */
+  const settleCallbacks: (() => void)[] = [];
   /** The faces carrying `GLIDE`, and the `.tiles` carrying `DRAG_TILES`, until the last settle. */
   const gliding = new Set<HTMLElement>();
   let tiles: HTMLElement | null = null;
@@ -299,7 +303,16 @@ export function createFlip(deps: FlipDeps): Flip {
   function play(command: Command, result: DispatchResult): void {
     playMove(command, result);
     install(result.finished === 'won', finishAll);
-    if (result.finished === 'won' && animations.size === 0) notifySettled();
+    // Ticket 6.6: the end sheet's wiring; its deferred open runs when the animation settles.
+    deps.dispatched(result, (callback) => settleCallbacks.push(callback));
+    if (result.finished === 'won' && animations.size === 0) {
+      notifySettled();
+      drainSettled();
+    }
+  }
+
+  function drainSettled(): void {
+    for (const callback of settleCallbacks.splice(0)) callback();
   }
 
   function playMove(command: Command, result: DispatchResult): void {
@@ -435,6 +448,7 @@ export function createFlip(deps: FlipDeps): Flip {
       tiles = null;
       releaseHold();
       notifySettled();
+      drainSettled();
     }
     gate.leave();
   }

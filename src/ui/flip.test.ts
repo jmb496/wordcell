@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CardId, Command, Phase } from '../engine/index';
 import type { DispatchResult } from '../shell/game.svelte';
-import type { BandKey, Box, Flip, Placed } from './flip';
+import type { BandKey, Box, Flip, FlipDeps, Placed } from './flip';
 import { createFlip, flyingSet, inFlight, motionKind, planGlides } from './flip';
 import type { Gate } from './gestures/gate';
 import { guardInstalled, type MotionKind, startTracker } from './motion';
@@ -220,7 +220,13 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-function setup(options: { reduced?: boolean; phase?: Phase | undefined } = {}) {
+function setup(
+  options: {
+    reduced?: boolean;
+    phase?: Phase | undefined;
+    dispatched?: FlipDeps['dispatched'];
+  } = {},
+) {
   svelteFlush.onFlush = null;
   svelteFlush.onEach = null;
   svelteFlush.calls = 0;
@@ -248,6 +254,7 @@ function setup(options: { reduced?: boolean; phase?: Phase | undefined } = {}) {
     phase: () => state.phase,
     duration,
     stagger,
+    dispatched: options.dispatched ?? (() => {}),
   });
   made.push(flip);
   return { root, flip, duration, stagger, state, ...g };
@@ -1168,6 +1175,42 @@ describe('AD-11 move bracket', () => {
     move(t, shifted);
     expect(t.counts.enter).toBe(0);
     for (const id of [3, 4, 7]) expect(t.root.face(id).animations).toHaveLength(0);
+  });
+});
+
+describe('AD-14 end-sheet settle callbacks (ticket 6.6)', () => {
+  it('AD-14 a winning play hands whenSettled to dispatched: not run while the animation runs, once after it settles', () => {
+    const captured: unknown[] = [];
+    const t = setup({
+      phase: 'idle',
+      dispatched: (_r, whenSettled) => whenSettled(() => captured.push(() => undefined)),
+    });
+    t.root.show(CELL_START);
+    t.flip.capture();
+    t.root.show(CELL_COMMITTED);
+    t.flip.play(confirm, { changed: true, finished: 'won' });
+    expect(t.active()).toBeGreaterThan(0);
+    expect(captured).toHaveLength(0);
+    settleAll(t, [3]);
+    expect(captured).toHaveLength(0);
+    settleAll(t, [4]);
+    expect(captured).toHaveLength(1);
+    t.flip.finishAll();
+    expect(captured).toHaveLength(1);
+  });
+
+  it('AD-14 a winning play that starts no animation runs the callback at once', () => {
+    let ran = 0;
+    const t = setup({
+      phase: 'idle',
+      dispatched: (_r, whenSettled) => whenSettled(() => (ran += 1)),
+    });
+    t.root.show(CELL_START);
+    t.flip.capture();
+    t.root.show(CELL_START);
+    t.flip.play(confirm, { changed: true, finished: 'won' });
+    expect(t.active()).toBe(0);
+    expect(ran).toBe(1);
   });
 });
 

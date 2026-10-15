@@ -6,6 +6,7 @@ import { nav } from './shell/nav';
 import { prefs } from './shell/prefs.svelte';
 import App from './ui/App.svelte';
 import { setController } from './ui/act';
+import { onDispatched, openAtBoot } from './ui/end-sheet';
 import { createFlip, setFlip } from './ui/flip';
 import { createController } from './ui/gestures/controller';
 import { createGate } from './ui/gestures/gate';
@@ -143,6 +144,7 @@ async function boot(): Promise<void> {
     phase: () => game.view?.phase,
     duration,
     stagger,
+    dispatched: onDispatched,
   });
   setFlip(flip);
   // AD-14 (F8): the always-on open-gesture tracker, once, before the controller is created.
@@ -170,7 +172,8 @@ async function boot(): Promise<void> {
   setController(controller);
   // AD-16 order: lifecycle listeners (and the visible-time clock) right after the load, before mount.
   game.registerLifecycle();
-  // AD-16 boot surfaces: the History notice (active store, unreadable history; once per launch).
+  // AD-16 boot surfaces: the end sheet's entry first (R-73), then the History notice (active store, unreadable history; once per launch).
+  openAtBoot();
   openHistoryNotice();
   mount(App, { target, props: { layout, controller } });
   surface = true;

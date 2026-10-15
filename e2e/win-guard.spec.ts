@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { centre, glidesSettled, openFixture, tapAt } from './helpers/board';
+import { centre, collapseEndSheet, glidesSettled, openFixture, tapAt } from './helpers/board';
 import { hidePage, showPage } from './helpers/lifecycle';
 import { onAndroid, onDesktop } from './helpers/project';
 
@@ -50,6 +50,7 @@ test.describe('android', () => {
     // The consumed tap's backstop (Slow snap 320 ms) and the 300 ms minimum pass.
     await page.waitForTimeout(700);
     await expect(sheet(page)).toHaveCount(0);
+    await collapseEndSheet(page);
     await tapAt(page, cell);
     await expect(sheet(page)).toHaveAttribute('data-mode', 'sticky');
   });
@@ -116,6 +117,7 @@ test.describe('android', () => {
     await glidesSettled(page);
     await page.waitForTimeout(700);
     await expect(sheet(page)).toHaveCount(0);
+    await collapseEndSheet(page);
     await tapAt(page, cell);
     await expect(sheet(page)).toHaveAttribute('data-mode', 'sticky');
   });
@@ -168,6 +170,7 @@ test.describe('desktop', () => {
     await hidePage(page);
     await showPage(page);
     await page.waitForTimeout(800);
+    await collapseEndSheet(page);
     await tapAt(page, cell);
     await expect(sheet(page)).toHaveAttribute('data-mode', 'sticky');
     await page.keyboard.up('Enter');

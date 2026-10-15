@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { collapseEndSheet } from './helpers/board';
 import { fixture, seedStorage } from './helpers/seed';
 
 // AD-17 Screenshots (build-notes CAP-2): the Board in each phase, baselines generated and
@@ -18,6 +19,8 @@ for (const [phase, name] of [
     await expect(page.locator('[data-card-id]')).toHaveCount(52);
     // AD-8: the primary action settles once the word list is ready.
     await page.waitForFunction(() => window.__wordcell?.dictionaryState() === 'ready');
+    // Ticket 6.6 (R-73): Game over opens the end sheet expanded; the baseline shows it collapsed.
+    if (phase === 'game-over') await collapseEndSheet(page);
 
     // Copied from e2e/pwa/font.spec.ts (via the deleted placeholder spec).
     const fonts = await page.evaluate(async () => {

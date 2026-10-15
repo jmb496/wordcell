@@ -209,7 +209,7 @@ test.describe('Give up', () => {
     });
   }
 
-  test('R-75 Give up is enabled in Idle and acts at once: gaveUp is stored right after the click, the sheet closed', async ({
+  test('R-75 Give up is enabled in Idle and acts at once: gaveUp is stored right after the click, the menu closed, the end sheet open', async ({
     page,
   }) => {
     await openFixture(page, 'session-idle-fresh');
@@ -217,8 +217,11 @@ test.describe('Give up', () => {
     await expect(row(page, 'Give up')).toBeEnabled();
     await row(page, 'Give up').click();
     expect((await parsed(page)).gaveUp).toBe(true);
-    await expectClosed(page);
-    await expect(page.locator('main')).toBeFocused();
+    await expect(sheet(page)).toHaveCount(0);
+    // Ticket 6.6: the end sheet opens at once, one entry, focus on its first action.
+    await expect(page.getByRole('dialog', { name: 'Game given up.' })).toBeVisible();
+    await expect.poll(() => wc(page).then((s) => s?.wc)).toBe(1);
+    await expect(page.getByRole('button', { name: 'Replay this deal', exact: true })).toBeFocused();
   });
 });
 

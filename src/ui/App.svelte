@@ -8,6 +8,8 @@ import BlockingMessage from './BlockingMessage.svelte';
 import Board from './Board.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import ConfirmDialogs from './ConfirmDialogs.svelte';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import EndSheet from './EndSheet.svelte';
 import type { Controller } from './gestures/controller';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Halted from './Halted.svelte';
@@ -88,6 +90,7 @@ function rejectedBody(reason: RejectReason): string {
     <Board view={board} {layout} />
   </main>
   <Menu view={board} />
+  <EndSheet view={board} />
   <PreferencesPanel />
   <StatisticsPanel />
   <ConfirmDialogs />

@@ -235,11 +235,12 @@ test('§2 an unreadable history (history-invalid-version-unknown.json) is never 
   await seedStorage(page, { session: fixture('session-won.json'), history: historyText });
   await openBoard(page);
   const primary = page.getByTestId('primary-action');
-  // The History notice opens at boot (§2); dismiss it before touching the board.
+  // The History notice opens at boot (§2) over the expanded end sheet (R-73); dismiss it before
+  // touching the board; the sheet's entry stays.
   await page.getByRole('button', { name: 'Not now', exact: true }).click();
   await expect
     .poll(() => page.evaluate(() => (history.state as { wc: number } | null)?.wc))
-    .toBe(0);
+    .toBe(1);
   await page.getByTestId('undo').click();
   await expect(page.getByTestId('redo')).toBeEnabled();
   expect(await stored(page, HISTORY)).toBe(historyText);

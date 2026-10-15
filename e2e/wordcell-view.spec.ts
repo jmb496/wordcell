@@ -1,6 +1,14 @@
 import { expect, type Page, test } from '@playwright/test';
 import { EN, view } from '../src/engine/index';
-import { box, centre, openFixture, type Point, tapAt } from './helpers/board';
+import {
+  box,
+  centre,
+  collapseEndSheet,
+  END_SHEET,
+  openFixture,
+  type Point,
+  tapAt,
+} from './helpers/board';
 import { expectLeaves } from './helpers/dialogs';
 import { animationFrames } from './helpers/lifecycle';
 import { onAndroid, onDesktop } from './helpers/project';
@@ -649,6 +657,9 @@ async function openPaused(page: Page, name: string, url = '/'): Promise<void> {
   await page.goto(url);
   await expect(page.locator('[data-card-id]')).toHaveCount(52);
   await booted(page);
+  // Ticket 6.6: a finished fixture opens the end sheet expanded; collapse it so the Board is live.
+  if ((await page.getByRole('dialog', { name: END_SHEET }).count()) > 0)
+    await collapseEndSheet(page);
 }
 
 // Ticket Layout: the content-sized width min(count, 7)·(w + 4) − 4 + 32, w a rendered face's width.

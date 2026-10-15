@@ -28,6 +28,23 @@ function historySentence(reason: HistoryRejectReason): string {
   }
 }
 
+// EXPERIENCE.md Rating bands (A-E2), keyed by the view's `band` 0–5 (no threshold logic here).
+const BANDS = [
+  { name: 'Alphabet Soup', message: 'Plenty of letters, not much broth. The deck forgives you.' },
+  { name: 'Warming Up', message: 'The cells are waking up.' },
+  { name: 'Word Nerd', message: 'Halfway to glory, and it shows.' },
+  { name: 'Wordsmith', message: 'Long words, high cells. Nicely forged.' },
+  { name: 'Lexicon Legend', message: 'The dictionary is a little afraid of you.' },
+  { name: 'Perfect Deck', message: 'Fifty-two cards, one cell. Nothing left to prove.' },
+] as const;
+
+function bandOf(band: number): (typeof BANDS)[number] {
+  const entry = BANDS[band];
+  if (entry === undefined || !Number.isInteger(band))
+    throw new Error(`AD-3 band ${band} out of range`);
+  return entry;
+}
+
 export const text = Object.freeze({
   validate: 'Validate',
   needLetters: 'Need 3+ letters',
@@ -122,6 +139,21 @@ export const text = Object.freeze({
   statNumber: (n: number) => (n < 0 ? `\u2212${-n}` : String(n)),
   statLetters: letters,
   statisticsEmpty: 'Finish or give up a game to see statistics here.',
+  // Epic 6 CAP-4 (ticket 6.6, R-62, R-81, R-83, R-84) End sheet (EXPERIENCE.md catalogue rows 106,
+  // 109, Rating bands; DESIGN.md End screen). `n` and `p` come from the view (`lettersLeft`,
+  // `penalty`, QU already counts 2); the minus sign is U+2212. The labels and the handle and bar
+  // names are not in the catalogue and take this wording, flagged for the owner.
+  endWinTitle: 'Every column cleared.',
+  endGaveUpTitle: 'Game given up.',
+  endPenalty: (n: number, p: number) => `${letters(n)} left: \u2212${p}`,
+  endLongestWord: 'Longest word',
+  endWordsPlaced: 'Words placed',
+  endNone: '\u2014',
+  endCollapse: 'Collapse result',
+  endBar: (score: number, band: string) =>
+    `Show result: ${score < 0 ? `\u2212${-score}` : score}, ${band}`,
+  bandName: (band: number) => bandOf(band).name,
+  bandMessage: (band: number) => bandOf(band).message,
   // Q-06 the QU card's badge (DESIGN.md Components, QU card).
   quBadge: '\u00d72',
   // §2 Session rejected: one title, one body per reason.

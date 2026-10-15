@@ -3,8 +3,14 @@ import type { CardId, GameView } from '../engine/index';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { game } from '../shell/game.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import { act } from './act';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { dropTarget } from './gestures/drop-target';
 import { type TrayLayout, type TrayTile, trayTiles } from './layout/tray';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import { overlays } from './overlays.svelte';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import { text } from './text';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import ControlRow from './tray/ControlRow.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
@@ -64,6 +70,19 @@ const tags: ReadonlyMap<CardId, number> = $derived(
       />
     {/if}
   </div>
+  {#if overlays.endSheet === 'collapsed' && view.band !== undefined && view.finalScore !== undefined}
+    <!-- Epic 6 CAP-4 (6.6, DESIGN.md End screen): the collapsed end sheet's 56 px bar at the band's
+         bottom edge, directly above the WordCell labels; no scrim, so the WordCells stay tappable. -->
+    <button
+      type="button"
+      class="end-bar"
+      aria-label={text.endBar(view.finalScore, text.bandName(view.band))}
+      onclick={act(() => overlays.expandEndSheet())}
+    >
+      <span class="end-score">{text.statNumber(view.finalScore)}</span>
+      <span class="end-band">{text.bandName(view.band)}</span>
+    </button>
+  {/if}
 </div>
 
 <style>
@@ -71,9 +90,17 @@ const tags: ReadonlyMap<CardId, number> = $derived(
      max(H, 92) clipping overflow (F2), control row 44. */
   .tray {
     flex: none; box-sizing: border-box; width: var(--wc-board); padding: 8px;
-    display: flex; flex-direction: column;
+    position: relative; display: flex; flex-direction: column;
     background: var(--wc-surface); border-radius: 12px; touch-action: var(--wc-pan);
   }
   .word-line { flex: none; height: 24px; min-width: 0; }
   .controls { flex: none; height: 44px; }
+  .end-bar {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; box-sizing: border-box; height: 56px;
+    padding: 0 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    background: var(--wc-surface-raised); border: 1px solid var(--wc-outline); border-radius: 12px;
+    color: var(--wc-ink-primary); touch-action: none;
+  }
+  .end-score { font: 700 18px/24px system-ui, "Roboto", sans-serif; font-variant-numeric: tabular-nums; }
+  .end-band { font: 600 1.25rem/1.75rem system-ui, "Roboto", sans-serif; }
 </style>

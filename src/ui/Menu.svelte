@@ -3,6 +3,7 @@ import { tick, untrack } from 'svelte';
 import type { GameView } from '../engine/index';
 import { game } from '../shell/game.svelte';
 import { act } from './act';
+import { onDispatched } from './end-sheet';
 import { requestNewGame, requestReplay } from './new-game';
 import { openSurface } from './open-surface';
 import { overlays } from './overlays.svelte';
@@ -50,9 +51,11 @@ function replay(): void {
   skipFocus = requestReplay(view, 'menu');
 }
 
+// Ticket 6.6: Give up opens the end sheet at once, which owns the focus (its first action).
 function giveUp(): void {
   close();
-  game.dispatch({ type: 'giveUp' });
+  skipFocus = true;
+  onDispatched(game.dispatch({ type: 'giveUp' }), (callback) => callback());
 }
 
 // Ticket 6.4: Preferences closes the menu, then opens the panel; Panel owns the focus, so Menu's

@@ -15,7 +15,13 @@ export type OpenOptions = {
   steps?: readonly Step[];
   // Wait for the store to leave 'booting' (restore.ts `booted`).
   booted?: boolean;
+  // Ticket 6.6 (R-73): a relaunch into won or gaveUp opens the end sheet expanded. Unless 'expanded'
+  // is asked for, the sheet is collapsed (its handle) so the Board is live, as in the specs written
+  // before the sheet existed.
+  endSheet?: 'expanded' | 'collapsed';
 };
+
+export const END_SHEET = /^(Every column cleared\.|Game given up\.)$/;
 
 // Seeds root fixture `<name>.json` as wordcell:session, opens '/', waits for the heading and the
 // 52 live cards, then (by default) for the store to leave 'booting', then clicks `steps`, each
@@ -23,7 +29,7 @@ export type OpenOptions = {
 export async function openFixture(
   page: Page,
   name: string,
-  { prefs, steps = [], booted = true }: OpenOptions = {},
+  { prefs, steps = [], booted = true, endSheet = 'collapsed' }: OpenOptions = {},
 ): Promise<void> {
   await seedStorage(page, {
     session: fixture(`${name}.json`),
@@ -33,10 +39,24 @@ export async function openFixture(
   await expect(page.getByRole('heading', { name: 'WordCell' })).toBeVisible();
   await expect(page.locator('[data-card-id]')).toHaveCount(52);
   if (booted) await waitBooted(page);
+  if (
+    booted &&
+    endSheet === 'collapsed' &&
+    (await page.getByRole('dialog', { name: END_SHEET }).count()) > 0
+  ) {
+    await page.getByRole('button', { name: 'Collapse result', exact: true }).click();
+    await expect(page.getByRole('dialog', { name: END_SHEET })).toHaveCount(0);
+  }
   for (const step of steps) {
     await page.getByTestId(step).click();
     await glidesSettled(page);
   }
+}
+
+// Ticket 6.6: collapses the expanded end sheet by its grab handle and waits until it has left.
+export async function collapseEndSheet(page: Page): Promise<void> {
+  await page.getByRole('button', { name: 'Collapse result', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: END_SHEET })).toHaveCount(0);
 }
 
 // AD-14: waits until no animation runs in the document (FLIP glides, fly-backs, parting), so a

@@ -207,6 +207,7 @@ import invalidTypeSourceCount from '../../fixtures/session-invalid-type-source-c
 import invalidTypeTargetCell from '../../fixtures/session-invalid-type-target-cell.json' with {
   type: 'json',
 };
+import validOneLetterLeft from '../../fixtures/session-one-letter-left.json' with { type: 'json' };
 import validPlace from '../../fixtures/session-place.json' with { type: 'json' };
 import validPlaceCompact from '../../fixtures/session-place-compact.json' with { type: 'json' };
 import validPlaceFreeLetterRedoTail from '../../fixtures/session-place-free-letter-redo-tail.json' with {
@@ -299,9 +300,10 @@ type ValidName =
   | 'place-free-letter-two-cards'
   | 'place-onto-committed'
   | 'composing-long'
-  | 'place-long';
+  | 'place-long'
+  | 'one-letter-left';
 
-/** The sixteen CAP-9 round-trip fixtures (generator record: the plan's Implementation Notes). */
+/** The seventeen CAP-9 round-trip fixtures (generator record: the plan's Implementation Notes). */
 const VALID: readonly (readonly [ValidName, unknown])[] = [
   ['idle-fresh', validIdleFresh],
   ['composing', validComposing],
@@ -319,6 +321,7 @@ const VALID: readonly (readonly [ValidName, unknown])[] = [
   ['place-onto-committed', validPlaceOntoCommitted],
   ['composing-long', validComposingLong],
   ['place-long', validPlaceLong],
+  ['one-letter-left', validOneLetterLeft],
 ];
 
 // --- rejection table ------------------------------------------------------------------------
@@ -922,6 +925,12 @@ describe('defining properties (§2, CAP-9)', () => {
       expect(s.cursor.phase).toBe('place');
       expect(s.moves.length).toBe(s.cursor.index + 1);
       expect(view(s, EN).place?.placementOrder).toHaveLength(15);
+    },
+    // Ticket 6.6 (R-81): seven whole-column words, then five cards of column 8 on empty column 1,
+    // so exactly one letter is left and a Give up reads `1 letter left: −10`.
+    'one-letter-left': (s) => {
+      expect(s.gaveUp).toBe(false);
+      expect(view(s, EN).columns.flatMap((c) => c.cards)).toHaveLength(1);
     },
   };
 
@@ -1831,6 +1840,21 @@ const REBUILDS: readonly (readonly [string, unknown, () => Session])[] = [
         createSession(1),
         [...COMPOSING_LONG_LEAD, { type: 'setDestinationCount', k: 7 }, VALIDATE],
         ['tan', 'tnpdvimldxomiwn'],
+      ),
+  ],
+  [
+    'session-one-letter-left',
+    validOneLetterLeft,
+    () =>
+      play(
+        createSession(1),
+        [
+          ...[1, 2, 3, 4, 5, 6, 7].flatMap((c) => [drop(c, c <= 4 ? 7 : 6, c), VALIDATE, CONFIRM]),
+          drop(8, 5, 1),
+          VALIDATE,
+          CONFIRM,
+        ],
+        ['ldxomiw', 'tnpdvim', 'lquejata', 'ekghhio', 'tscfsz', 'opnaen', 'yeurhf', 'brrcu'],
       ),
   ],
 ];

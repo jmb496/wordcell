@@ -188,3 +188,32 @@ describe('AD-10 Preferences panel text', () => {
     expect(text.showTimer).toBe('Show timer');
   });
 });
+
+// Ticket 6.6 end sheet text (EXPERIENCE.md catalogue rows 106, 109, Rating bands).
+describe('AD-3 end sheet text', () => {
+  it('AD-3 endPenalty reads plural and singular with U+2212 (QU counting 2 is the lettersLeft of the view, R-81)', () => {
+    expect(text.endPenalty(12, 120)).toBe('12 letters left: −120');
+    expect(text.endPenalty(1, 10)).toBe('1 letter left: −10');
+    expect(text.endPenalty(2, 20)).toBe('2 letters left: −20');
+  });
+
+  it('AD-3 each band 0–5 maps to its own name and message', () => {
+    const names = [0, 1, 2, 3, 4, 5].map((b) => text.bandName(b));
+    expect(names).toEqual([
+      'Alphabet Soup',
+      'Warming Up',
+      'Word Nerd',
+      'Wordsmith',
+      'Lexicon Legend',
+      'Perfect Deck',
+    ]);
+    expect(text.bandMessage(1)).toBe('The cells are waking up.');
+    expect(text.bandMessage(5)).toBe('Fifty-two cards, one cell. Nothing left to prove.');
+    expect(() => text.bandName(6)).toThrow();
+  });
+
+  it('AD-3 endBar names the score (U+2212 when negative) and the band', () => {
+    expect(text.endBar(172, 'Warming Up')).toBe('Show result: 172, Warming Up');
+    expect(text.endBar(-40, 'Alphabet Soup')).toBe('Show result: −40, Alphabet Soup');
+  });
+});

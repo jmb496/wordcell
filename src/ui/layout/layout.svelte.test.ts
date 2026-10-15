@@ -683,6 +683,7 @@ describe('AD-11 tray rows through flip.capture() / play()', () => {
       reduced: () => false,
       phase: () => 'composing',
       duration: () => 0,
+      dispatched: () => {},
       stagger: () => 0,
     });
   }
