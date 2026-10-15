@@ -243,12 +243,24 @@ describe('AD-3 end sheet text', () => {
 
 // Ticket 6.9 How to play text (EXPERIENCE.md Rating bands, Keyboard).
 describe('AD-3 How to play text', () => {
-  it('AD-3 bandNames returns the six names in band order', () => {
+  it('AD-3 the goal heading reads The goal', () => {
     expect(text.howTo.headings.goal).toBe('The goal');
-    expect(bandNames()).toEqual([0, 1, 2, 3, 4, 5].map((b) => text.bandName(b)));
-    expect(bandNames()).toHaveLength(6);
   });
 
+  it('AD-3 bandNames returns the six EXPERIENCE.md Rating bands names in band order', () => {
+    const table = [
+      'Alphabet Soup',
+      'Warming Up',
+      'Word Nerd',
+      'Wordsmith',
+      'Lexicon Legend',
+      'Perfect Deck',
+    ];
+    expect(bandNames()).toEqual(table);
+    expect([0, 1, 2, 3, 4, 5].map((b) => text.bandName(b))).toEqual(table);
+  });
+
+  // The engine thresholds are pinned in scoring.test.ts (R-83); this pins the English strings only.
   it('AD-3 bandScore strings carry the R-83 arithmetic ceil(t * 530 / 520)', () => {
     const needed = [156, 260, 370, 460, 520].map((t) => Math.ceil((t * 530) / 520));
     expect(needed).toEqual([159, 265, 378, 469, 530]);
@@ -256,7 +268,7 @@ describe('AD-3 How to play text', () => {
     for (const band of [1, 2, 3, 4]) {
       expect(text.bandScore(band)).toBe(`${needed[band - 1]} or more`);
     }
-    expect(text.bandScore(5)).toContain(String(needed[4]));
+    expect(text.bandScore(5)).toBe('530 (every card placed)');
     expect(() => text.bandScore(6)).toThrow();
   });
 

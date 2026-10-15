@@ -19,8 +19,8 @@ const decode = (s: string): string =>
   s.replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n))).replace(/&amp;/g, '&');
 
 function inner(body: string, tag: string): string[] {
-  return [...body.matchAll(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, 'g'))].map((m) =>
-    decode((m[1] ?? '').replace(/<!---->|<!--\[.*?-->/g, '')),
+  return [...body.matchAll(new RegExp(`<${tag}(?=[\\s>])[^>]*>([\\s\\S]*?)</${tag}>`, 'g'))].map(
+    (m) => decode((m[1] ?? '').replace(/<!---->|<!--\[.*?-->/g, '')),
   );
 }
 
@@ -81,33 +81,45 @@ describe('AD-3 How to play panel', () => {
   });
 
   it('AD-3 the keyboard strings cover every key of the EXPERIENCE.md Keyboard table', () => {
-    const keys = text.howTo.keyboard.map(([key]) => key).join(' | ');
-    for (const key of [
-      '1–8',
-      '↑',
-      '↓',
-      '3–9',
-      '0',
-      '←',
-      '→',
-      'Shift',
+    expect(text.howTo.keyboard.map(([key]) => key)).toEqual([
+      '1\u20138',
+      '\u2191 / \u2193',
+      '3\u20139, 0 (= 10)',
+      '\u2190 / \u2192',
+      'Shift + \u2190 / \u2192',
       'Space',
-      '+',
-      '=',
-      '-',
+      '+ or = / -',
       'F',
       'Enter',
-      'Z',
-      'Ctrl/Cmd + Z',
-      'Y',
-      'Ctrl/Cmd + Y',
-      'Ctrl/Cmd + Shift + Z',
+      'Z, Ctrl/Cmd + Z',
+      'Y, Ctrl/Cmd + Y, Ctrl/Cmd + Shift + Z',
       'Esc',
       'M',
       'N',
       '?',
-    ]) {
-      expect(keys, key).toContain(key);
-    }
+    ]);
+    expect(text.howTo.keyboard.map(([, effect]) => effect)).toEqual([
+      'Select the bottom card of a column, or drop the selected tail on it',
+      'Make the selected tail longer / shorter',
+      'Add that WordCell\u2019s top card as a free letter, or set it as the target',
+      'Move focus along the tiles or the strip',
+      'Move the focused tile or card one place',
+      'Tap the focused card, tile or WordCell; on a WordCell, open its view',
+      'More / fewer destination cards',
+      'Flip the destination block',
+      'Tap the focused item; otherwise Validate or Confirm',
+      'Undo',
+      'Redo',
+      'Close the topmost panel, or clear the selection',
+      'Open the menu',
+      'Start a new game',
+      'Open this page',
+    ]);
+  });
+
+  it('AD-3 Q-12 the empty-column paragraph says it is the only column needing no destination cards', () => {
+    const [paragraph] = text.howTo.empty;
+    expect(paragraph).toContain('the only one where no destination cards have to join the word');
+    expect(paragraph).toContain('An empty column is a legal destination');
   });
 });

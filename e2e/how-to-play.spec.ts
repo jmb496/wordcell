@@ -56,10 +56,9 @@ test('AD-3 the menu lists the six rows in order, then How to play opens the outl
   for (const name of text.howTo.exampleWords.map(text.howTo.exampleCaption)) {
     expect(name).toMatch(/, [56] letters$/);
   }
-  for (const [band, name] of [0, 1, 2, 3, 4, 5].map((b) => [b, text.bandName(b)] as const)) {
-    await expect(panel(page).getByText(name, { exact: true })).toBeVisible();
-    await expect(panel(page).getByText(text.bandScore(band), { exact: true })).toBeVisible();
-  }
+  await expect(panel(page).locator('ul.bands li')).toHaveText(
+    [0, 1, 2, 3, 4, 5].map((b) => `${text.bandName(b)}${text.bandScore(b)}`),
+  );
   await expect(panel(page).locator('table')).toHaveCount(3);
   for (const caption of Object.values(text.howTo.controlCaptions)) {
     await expect(panel(page).locator('caption', { hasText: caption })).toHaveCount(1);
@@ -142,6 +141,8 @@ test('AD-14 at 360 px the page scrolls vertically only; the example cards are st
   const cards = panel(page).locator('.word .card');
   await expect(cards).toHaveCount(22);
   await expect(cards.first()).toHaveAttribute('aria-hidden', 'true');
-  expect(await cards.first().evaluate((el) => getComputedStyle(el).touchAction)).not.toBe('none');
+  expect(
+    await cards.evaluateAll((els) => els.map((el) => getComputedStyle(el).touchAction)),
+  ).toEqual(Array(22).fill('pan-y'));
   await expect(page.locator('[data-card-id]')).toHaveCount(52);
 });
