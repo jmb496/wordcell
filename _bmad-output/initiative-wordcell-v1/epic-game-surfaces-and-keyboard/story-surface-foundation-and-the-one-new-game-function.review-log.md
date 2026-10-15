@@ -1,6 +1,6 @@
 # Review log — story-surface-foundation-and-the-one-new-game-function
 
-State: pass 2: done
+State: pass 3: review (diverging, stopped)
 
 Pre-loop: HEAD d04dbfe, copy at story-surface-foundation-and-the-one-new-game-function.review-log.passes/pass0.md, 290 words (budget 1500 words).
 Ticket intent fields from tickets.toml entry 1 (verify, risk, unknown, interface, tests, owns, consumers): .review-log.passes/intent.md
@@ -41,3 +41,23 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 - openDeferred with a new surface on top: only if SPEC does not rule it (fixer to check) — proposed default: the stale token is dropped and the end sheet stays reachable from its bar
 Words (docs): 1210 (4.2 x pass 0)  |  Snapshot: _bmad-output/initiative-wordcell-v1/epic-game-surfaces-and-keyboard/story-surface-foundation-and-the-one-new-game-function.review-log.passes/pass2.md
 Note: the openDeferred item was resolved by SPEC CAP-5 / build-notes (input consumed in the guard window), so no decision-needed remains; ticket cites it.
+
+## Pass 3 — 2026-10-14
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 5 (merged), minor 9, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1210 (4.2 x pass 0; unchanged, no fix run in pass 3)  |  Snapshot: .review-log.passes/pass2.md
+Majors rose 4 → 5, so the loop stops (diverging) and does not fix again.
+### Majors (not fixed)
+- [major] "Undo over a surface" paragraph (added in pass 2) rests on a false premise: bars are below every scrim except the end sheet's (DESIGN.md 442–443) and shortcuts are suspended while a menu/panel/dialog is open (EXPERIENCE), so Undo/Redo cannot reach onUnfinished or a deferred end-sheet open with a new surface on top. Technical default: delete the paragraph and its test, restore the by-construction sentence, no onUnfinished change. Upstream cause: build-notes F5 table says "Bars live: per EXPERIENCE.md" for menu/panel/confirm instead of stating no.
+- [major] open(<new id>) vs the entry-less state: peek, hoverPeek, tile selection, tailSelection and wordcellView on top are illegal; ticket does not say openers clear/close first (pop then push) nor that open throws on peek and clears hoverPeek. Default: openers clear first; open throws on peek, clears hoverPeek; U cases.
+- [major] Reduced-motion mechanism: ticket says CSS on --wc-base-ms and also duration('overlay') (a JS/WAAPI value); prefs only writes --wc-base-ms and --wc-reduced. Default: CSS opacity transition on var(--wc-base-ms), under reduced motion a CSS 120 ms opacity-only transition with the literal sourced next to REDUCED_FADE_MS; state how the e2e sets reduced motion. Upstream: AGENTS.md / AD-14 / motion.ts do not say how CSS-driven surfaces get the 120 ms.
+- [major] Stated transition rules with no test: close then removal, peek, peek-to-sticky not replaying, open-then-immediate-close, focus at stack removal.
+- [major] "historyNotice keeps today's rule (boot, over endSheet)" is false: open('historyNotice') has no pair guard today. Default: state its legal tops (empty, endSheet) and give it a U case.
+### Minor (unapplied)
+- newGameConfirm/replayConfirm tops can be restricted to the empty stack (menu closes first); depth-3 chain is endSheet, statistics, resetConfirm
+- Esc: note the CAP-1 Esc clause is delivered by entry 10 (rule-coverage), entry 1's description narrowed
+- R-74 P6 supplement: moved to entry 3 in the ticket Notes, but tickets.toml entry 3 `tests` lacks the row and entry 1 still lists it
+- Sheet/Panel/Dialog should also wrap onscrim and the action button in act(); extend the AD-12 case
+- 360 × 320 test: jsdom cannot measure layout; assert CSS rules in Vitest or move to Playwright; fix the viewport exactly
+- scan regex: also catch aliases/destructured newGame; ActionBar/App check is a source scan for the ./new-game import
+- Undo test at depth 3 (moot if the Undo paragraph is removed); halt with a surface open points to existing Halted behaviour
+## Result — diverging at pass 3 (fix build-notes.md F5 per-surface table "Bars live" for menu/panel/confirm, and the reduced-motion rule for CSS surfaces in AD-14/motion.ts, then rerun)
