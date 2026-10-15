@@ -33,3 +33,10 @@ slug = "epic-tray-and-place"
 title = "Tray and Place"
 covers = []
 after = [{ epic = 4, needs = "the layout definition and geometry with trayLayout/trayOrder/trayGrowth and the gate (src/ui/layout, src/ui/gestures/gate.ts), the pointer controller with classify, intent, pickTarget and drop-target registration and its cancel()/act() wiring (src/ui/gestures, src/ui/act.ts), the slot-wrapper card with AD-14 live/mirror identity, the Board rendering every GameView state with the static tray (F2) and the Composing column gestures (F17), the overlays store, motion.ts durations, text.ts, the touchDrag/touchHold helpers, the Composing/Place fixtures and the board screenshot baselines" }]
+
+[[epic]]
+id = 6
+slug = "epic-game-surfaces-and-keyboard"
+title = "Game surfaces and keyboard"
+covers = []
+after = [{ epic = 5, needs = "the working tray and Place screen, FLIP and fly-to-cell, the winning-animation guard (src/ui/motion.ts, epic 5 F8), the overlays store with tile selection, text.ts, act(), the controller's cancel(), and the board screenshot baselines" }]

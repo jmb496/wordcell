@@ -1,0 +1,276 @@
+# Epic 6 — Game surfaces and keyboard. Table order is the build order (SPEC CAP-1 → CAP-12; CAP-4 splits into entries 6 and 7, CAP-10 into 10 and 11; the Success signal is entry 15).
+# Requirement source: _bmad-output/specs/spec-epic-6-surfaces/ (SPEC.md, rule-coverage.md, build-notes.md).
+# Build precondition for every entry: clean tree on epic-6-surfaces.
+# One lane through src/ui/overlays.svelte.ts, the new surface components, src/ui/keys.ts and motion.ts. The autopilot runs table order.
+# Extra keys as in epic 5: interface, tests, owns, consumers (retrospective L1). Every UI entry's check includes npm run test:screens in the Playwright container (L3).
+
+[[entry]]
+id = 1
+type = "story"
+title = "Surface foundation and the one New game function"
+description = "Tracer bullet through the overlays store, nav and the UI: adds the menu, statistics, preferences, howToPlay, newGameConfirm and replayConfirm entries to src/ui/overlays.svelte.ts (one history entry each, closed top-down, back and Esc close the topmost; dismissing a confirm opened from the menu closes only the confirm and does not reopen the menu), the shared sheet, full-screen panel and confirm-dialog components (dialog focus on the dismissive button, scrim rules, safe-area padding, 1 \u00d7 base open/close transition and the 120 ms reduced-motion fade, the WordCell view sheet and peek transition included); R4 already landed, so `newGame()` in src/ui/new-game.ts stays the one New game function and new entry points only add callers."
+verify = "npm run test:all and npm run test:screens are green (screens specs the ticket adds listed per build-notes) with UI Vitest AD-13 cases for every new entry (open, stack, close, back, resetForNewSession), confirm dismissal closing the confirm without reopening the menu, AD-12 act() on the shared close buttons, and a UI Vitest/scan test that no site other than new-game.ts repeats the New game sequence; P6 opening a WordCell view in Idle that animates and ends in the shown state, and under reduced motion fades."
+covers = ["CAP-1"]
+after = []
+hitl = false
+risk = "high"
+unknown = "Whether the shared components can be proved by UI Vitest alone before entry 2 and later entries give them a real opener (the AD-13 two-overlay reload case is entry 5's P6)."
+interface = "overlays.svelte.ts gains the six OverlayId values; new src/ui/Sheet.svelte, Panel.svelte (Dialog.svelte extended); new-game.ts unchanged (exports newGame)."
+tests = "AD-13 stack, close and back for each new entry (U); AD-12 act() on close buttons (U); newGame single-site scan (U); R-74 (UI) New game sequence unchanged from the action bar and rejected root (P6 supp.); WordCell view sheet and peek open/close transition (P6)."
+owns = "The primitives, the overlay ids, the transition, the New game function (R4)."
+consumers = "overlays.svelte.ts is shared by every surface and the tail selection: list the existing HistoryNotice, WordCellView and tail-selection consumers and the AD-13 tests."
+references = ["spec — _bmad-output/specs/spec-epic-6-surfaces/SPEC.md, Capabilities (CAP-1), Decisions", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/EXPERIENCE.md, Component Patterns, Keyboard, State Patterns", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/DESIGN.md, Components"]
+
+[[entry]]
+id = 2
+type = "story"
+title = "Menu sheet, menu button and version footer"
+description = "Replaces the top bar's menu slot with the 44 \u00d7 44 \u2630 button and opens the menu sheet with only the rows whose targets already exist (New game and Replay this deal acting at once, Give up; one 52 px row each with its glyph; Statistics, Preferences and How to play rows are added by entries 5, 4 and 9, each opening its real surface), clears any tap or tile selection on open, enables New game and Replay whenever a Session is active, enables Give up only in Idle while playing (R-75) and dispatches it at once with no confirmation, runs the menu items after closing the sheet (the pop completes before any push), and adds the footer line from `__APP_VERSION__` (`<package.json version> (<7-char git SHA>)` through a Vite `define` declared in src/app-version.d.ts; the build fails if git is unavailable; env override WORDCELL_APP_VERSION applying to every build and set in the screenshot container run; the define, git rule and override are to verify in the ticket against Scaffold deltas); the error dot arrives with entry 5; no placeholder surfaces."
+verify = "npm run test:all and npm run test:screens are green with Playwright on android that opens the menu from \u2630, shows the three rows and the footer version, disables Give up in Composing, Place and Game over, enables it in Idle and dispatches Give up (status becomes gaveUp, Session stored; the end sheet itself is entry 6), clears a tail selection and a tile selection on open, and leaves wordcell:session byte-identical on a close with no choice."
+covers = ["CAP-2"]
+after = [1]
+hitl = false
+risk = "medium"
+interface = "TopBar.svelte gains the menu button; new src/ui/MenuSheet.svelte; vite.config.ts `define` (checked against Scaffold deltas) and src/app-version.d.ts; text.ts menu strings."
+tests = "R-75 Give up enabled only in Idle while playing (P6); R-74 (UI) menu clears selection (P6 part); AD-14 52 live elements with the menu open (P6); AD-3 enablement from GameView (U); spine Consistency Conventions app version (U on the define)."
+owns = "The menu button and sheet, the version define."
+consumers = "TopBar.svelte is the Undo/Redo host (epic 5 F6, F7): list the FLIP capture/play wiring and the top-bar layout screenshots."
+references = ["spec — _bmad-output/specs/spec-epic-6-surfaces/SPEC.md, Capabilities (CAP-2), Decisions", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/EXPERIENCE.md, Component Patterns, Keyboard, State Patterns", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/DESIGN.md, Components"]
+
+[[entry]]
+id = 3
+type = "story"
+title = "Confirm dialogs, New game and Replay"
+description = "Wires the menu's New game and Replay this deal rows (acting at once since entry 2) and the action bar's New game to their confirm dialogs (texts from text.ts, `Keep playing` focused first, Esc, back and scrim tap dismiss) only while a game is in progress (GameView.inProgress, \u00a72, R-74, never re-derived); a fresh deal or finished game acts at once, and from the rejected root New game acts at once (no menu there, Replay not offered); New game calls newGame() from entry 1 and Replay calls `game.replay()` then `overlays.resetForNewSession()` (Q-29); adds the I-68 proofs (Q-29 Replay: same deal, empty moves, history unchanged; win \u2192 New game \u2192 back from a seeded won-state fixture with no end-sheet assertion, the sheet being entry 6's)."
+verify = "npm run test:all and npm run test:screens are green (screens specs the ticket adds listed per build-notes) with Playwright on android showing both dialogs only mid-game, boundary cases (fresh deal, one move, relaunch into Idle with only a redo tail, where the dialog shows because inProgress counts the redo tail), Keep playing leaving wordcell:session byte-identical, a confirm opened from the menu rows dismissed by Keep playing, Esc, back and scrim tap closing only the confirm with focus on the \u2630 button (the menu not reopened), New game giving a new seed and Replay the same deal, the finished-game and rejected-root New game with no dialog, and the I-68 cases: win \u2192 New game \u2192 back (seeded won-state fixture, no end-sheet assertion) leaves the app (or follows the bare-Board rule) and never returns to the finished game."
+covers = ["CAP-3"]
+after = [2]
+hitl = false
+risk = "medium"
+interface = "text.ts gains the dialog strings; the existing Dialog.svelte (extended in entry 1) used from MenuSheet; no store API change."
+tests = "R-74 (UI) confirm only while in progress, Replay keeps the seed (P6); Q-29 Replay proof (P6); win \u2192 New game \u2192 back (P6); AD-4 New game and Replay go through the store (U)."
+owns = "The two confirm dialogs, the I-68 proofs."
+consumers = "newGame() (entry 1) gains the menu and dialog callers: list the action bar, the rejected root and the deferred History notice."
+references = ["spec — _bmad-output/specs/spec-epic-6-surfaces/SPEC.md, Capabilities (CAP-3), Decisions", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/EXPERIENCE.md, Component Patterns, Keyboard, State Patterns", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/DESIGN.md, Components"]
+
+[[entry]]
+id = 4
+type = "story"
+title = "Preferences panel and the top-bar timer"
+description = "Adds the Preferences panel and its menu row (three-way segmented Animation speed Fast/Normal/Slow, Show timer switch, default off) writing through prefs.svelte.ts and applying at once, and the top-bar timer between score and Undo (`m:ss`, `h:mm:ss` from one hour) showing activeMs + peek(now) while playing and activeMs otherwise (AD-9), driven by a UI interval that runs only while Show timer is on and status is playing and never dispatches or writes, and that fits at 360 px."
+verify = "npm run test:all and npm run test:screens are green (screens specs the ticket adds listed per build-notes) with Playwright on android that sets Show timer and sees it tick then freeze in Game over, opens Preferences from its new menu row, sets Fast and sees a shorter glide, reloads with both kept, keeps both after New game and Replay, at 360 px the top bar fits with the timer shown and, with a negative score, the top-bar score beside the timer and Undo/Redo uses U+2212 (R-82), and with page.clock a relaunch into Game over shows the stored activeMs and a tick writes nothing; UI Vitest AD-10 on the formatter at 0, 59 999 ms and above 10 h, 3 599 000 ms (59:59) and 3 600 000 ms (1:00:00), hours unpadded with no cap (12:03:04); the Game over freeze and relaunch tests use seeded won/gaveUp fixtures and do not depend on the end sheet."
+covers = ["CAP-7"]
+after = [2]
+hitl = false
+risk = "medium"
+interface = "new src/ui/PreferencesPanel.svelte; TopBar.svelte gains the timer; text.ts timer format."
+tests = "R-76 (UI) timer shown only when on, frozen when over (P6); spec \u00a77.10 Preferences persist and survive New game (P6); Q-36 unreadable prefs default (existing S); AD-10 timer format (U)."
+owns = "The Preferences panel and the timer."
+consumers = "TopBar.svelte layout is shared with entry 2 and the screenshot baselines."
+references = ["spec — _bmad-output/specs/spec-epic-6-surfaces/SPEC.md, Capabilities (CAP-7), Decisions", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/EXPERIENCE.md, Component Patterns, Keyboard, State Patterns", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/DESIGN.md, Components"]
+
+[[entry]]
+id = 5
+type = "story"
+title = "Statistics panel, history flag and menu dot"
+description = "Adds the Statistics panel and its menu row (2 \u00d7 3 tiles: games played, won, given up, best score, average score (both leaving out given-up games with a negative score, R-84, Q-44, the engine's statistics output shown unchanged), longest word ever with its letter count, `\u2014` where none, the no-finished-games line, U+2212 negatives) over scoreHistory.statistics and one UI-layer derived unreadable-history getter over scoreHistory that also shows the History-unreadable message with Reset history in the panel and the error-coloured dot on the \u2630 button in TopBar.svelte; Reset history opens the existing confirm: Delete history closes only the dialog and the surface stays open showing the clean state, Keep it closes only the dialog."
+verify = "npm run test:all and npm run test:screens are green (screens specs the ticket adds listed per build-notes) with Playwright on android opening the panel from its menu row, seeded from history fixtures showing the six values, `\u2014` and the empty line on a fresh history, a history with only negative given-up games, the unreadable message and its version-sentence variants and the menu dot on each history-invalid-* fixture, and Reset history clearing the message and the dot with the panel staying open; the AD-13 two-overlay reload (Statistics panel with Reset history's confirm on top, seeded from a history-invalid-* fixture): Board stays, history.state { wc: 0, launch: new } once the notice is answered, back leaves the app."
+covers = ["CAP-6"]
+after = [2]
+hitl = false
+risk = "medium"
+interface = "new src/ui/StatisticsPanel.svelte; a UI-layer getter (history-notice.svelte.ts or a sibling) exports the one flag; TopBar.svelte gains the dot."
+tests = "R-84 statistics values and ties (P6); Q-44 best and average leave out negative given-up games, including a history with only those (P6); Q-33 unreadable message and menu dot (P6); Q-35 longest word spelling (P6 part); AD-13 two-overlay reload (P6)."
+owns = "The Statistics panel and the unreadable-history flag."
+consumers = "The flag is read by entries 5 (panel, dot) and 7 (end-sheet block) and the History notice."
+references = ["spec — _bmad-output/specs/spec-epic-6-surfaces/SPEC.md, Capabilities (CAP-6), Decisions", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/EXPERIENCE.md, Component Patterns, Keyboard, State Patterns", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/DESIGN.md, Components"]
+
+[[entry]]
+id = 6
+type = "story"
+title = "End sheet: result, collapse, Give up and relaunch"
+description = "Wires `finished`/`unfinished` from DispatchResult to overlays and builds the end sheet: a win by Confirm or Redo opens it after the commit animation settles (one cancelable deferred-open token), Give up opens it at once, a relaunch with status won or gaveUp opens the Board in Game over expanded with no animation (nav push at boot for its one entry); it shows the title (`Every column cleared.` or `Game given up.` with `n letters left: \u2212p`, n and p only from the view's lettersLeft and penalty), final score after R-81, band name and message, longest word (`\u2014` with none) and words placed, with Replay this deal and Statistics buttons (New game stays the action bar primary; Replay from the sheet acts at once in a finished game); grab handle, Esc, back and scrim tap (the scrim covers the board between the bars) collapse it to its bar (the scrim tap consumed), the bar expands it, expansion owns one history entry; the top bar and action bar stay above the scrim; a transition into Game over closes any open WordCell view first; Undo closes the sheet and resumes play, and Undo from Game over with the sheet collapsed sets it hidden with no pop; focus moves to its first action on open and back to the board on collapse."
+verify = "npm run test:all and npm run test:screens are green (screens specs the ticket adds listed per build-notes) with Playwright on android covering a win via session-won, a Give up from the menu and one with a QU left, every band on seeded fixtures, relaunch into won and gaveUp with the sheet expanded, collapse/expand and its history entries with back, WordCells viewable while collapsed, a WordCell view closed before the sheet opens, Undo from the sheet and from the collapsed sheet (no history pop), and Replay this deal from it; the discriminating win smoke test (after a win by Confirm the end sheet shows the win title and the final score equals the pre-win score plus the committed delta; a give-up would show the penalty line)."
+covers = ["CAP-4"]
+after = [3, 5]
+hitl = false
+risk = "high"
+unknown = "Which fixtures reach the six bands and the longest-word `\u2014` case; the ticket scripts any missing one under the epic 3 regeneration rule."
+interface = "overlays.svelte.ts wires the endSheet deferred open and cancel; new src/ui/EndSheet.svelte; text.ts band and outcome strings; game.dispatch's DispatchResult read in the UI."
+tests = "R-62 end sheet on win, discriminating win smoke test (P6); R-75 Give up opens it, Undo closes it, also collapsed (P6); R-73 relaunch expanded, no animation (P6); R-81 penalty line incl. QU (P6); R-83 score, band, message (P6); R-84 longest word, words placed (P6); AD-13 end-sheet entry (U, P6)."
+owns = "The end sheet, the deferred-open token."
+consumers = "The deferred open sits beside the AD-14 winning guard (entry 12) and the existing Confirm/Redo flyToCell wiring."
+references = ["spec — _bmad-output/specs/spec-epic-6-surfaces/SPEC.md, Capabilities (CAP-4), Decisions", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/EXPERIENCE.md, Component Patterns, Keyboard, State Patterns", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/DESIGN.md, Components"]
+
+[[entry]]
+id = 7
+type = "story"
+title = "End sheet: history-unreadable block and Reset history"
+description = "Adds the end-sheet block for an unreadable history (`Your score history can't be read.`, the version sentence variants, `This game wasn't added to your statistics.`, Reset history through the existing confirm), the replacement line after Reset history with a later Undo of that finish removing nothing (\u00a72), and the relaunch case where the History notice shows on top of the pushed sheet entry."
+verify = "npm run test:all and npm run test:screens are green (screens specs the ticket adds listed per build-notes) with Playwright on android on each history-invalid-* fixture after a win and a Give up showing the block and its variants, Reset history turning it into the single line, Undo after it leaving history empty, and a relaunch into Game over with an unreadable history showing the notice over the sheet: the Game-over reload case (boot replaces the base with { wc: 0, launch: new }, pushes the sheet entry then the notice so history.state is { wc: 2, launch: new }; Reset history pushes the confirm, wc 3; back closes the confirm, back acts as Not now, back collapses the sheet to wc 0, back leaves the app)."
+covers = ["CAP-4"]
+after = [6]
+hitl = false
+risk = "medium"
+interface = "EndSheet.svelte gains the block; text.ts strings."
+tests = "Q-33 end-sheet block and variants (P6); \u00a72 stays unrecorded after Reset, Undo removes nothing (P6); R-84 history untouched while unreadable (P6 part); AD-13 Game-over reload (P6)."
+owns = "The history-unreadable end-sheet block."
+references = ["spec — _bmad-output/specs/spec-epic-6-surfaces/SPEC.md, Capabilities (CAP-4), Decisions", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/EXPERIENCE.md, Component Patterns, Keyboard, State Patterns", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/DESIGN.md, Components"]
+
+[[entry]]
+id = 8
+type = "story"
+title = "Pending-draft line"
+description = "Shows `Undone: BAKED \u00b7 Redo brings it back` in the tray band in ink-secondary in Idle with a pending draft (word uppercase, `QU` as `QU`) from GameView only, absent otherwise and after a new edit discards the redo tail."
+verify = "npm run test:all and npm run test:screens are green with Playwright on android through EXPERIENCE.md Flow 3 steps 3 to 5 showing the line after the second Undo, gone after Redo, and gone after a new drop discards the redo data; UI Vitest AD-3 on the string with a QU word."
+covers = ["CAP-9"]
+after = [1]
+hitl = false
+risk = "low"
+interface = "Tray.svelte idle branch; text.ts pendingDraft(word)."
+tests = "R-72 pending-draft line and Redo (P6); AD-3 pendingDraft string (U)."
+owns = "The pending-draft line."
+references = ["spec — _bmad-output/specs/spec-epic-6-surfaces/SPEC.md, Capabilities (CAP-9), Decisions", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/EXPERIENCE.md, Component Patterns, Keyboard, State Patterns", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/DESIGN.md, Components"]
+
+[[entry]]
+id = 9
+type = "story"
+title = "How to play panel"
+description = "Adds the How to play panel and its menu row (the sheet now lists all six rows) with the eight sections in order, text drafted from spec \u00a73\u2013\u00a76 and \u00a79 (no Cancel, no hints, Q-12), rating-band names from text.ts, the \u00a78 worked example drawn with the real card component as static non-interactive images (aria-hidden, no data-card-id or data-testid, not live elements), and the controls section with the touch, mouse and keyboard tables; the owner reads the text at ticket review."
+verify = "npm run test:all and npm run test:screens are green with Playwright on android that opens the panel from its menu row, asserts the menu lists all six rows, sees the eight section headings in order, the four worked-example words, the band names, back closing it, and UI Vitest AD-3 that every string is in text.ts."
+covers = ["CAP-8"]
+after = [2]
+hitl = false
+risk = "medium"
+unknown = "How long the page is on a small viewport and whether the static cards need a new non-interactive Card variant."
+interface = "new src/ui/HowToPlayPanel.svelte; text.ts how-to-play strings; a static card variant of Card.svelte if needed."
+tests = "How to play outline (P6); AD-14 no live element for the static example cards (P6 part)."
+owns = "The How to play page."
+references = ["spec — _bmad-output/specs/spec-epic-6-surfaces/SPEC.md, Capabilities (CAP-8), Decisions", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/EXPERIENCE.md, Component Patterns, Keyboard, State Patterns", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/DESIGN.md, Components"]
+
+[[entry]]
+id = 10
+type = "story"
+title = "Keyboard: overlay keys, F39 and stale tile selection"
+description = "Adds the one key handler in src/ui/ mounted from src/main.ts (match on event.key, letter keys case-insensitive, Ctrl/Cmd+Shift+Z before Z) for the overlay and undo keys `M`, `N`, `?`, `Esc`, `Z`/`Y` and the Ctrl/Cmd aliases; keys that mirror a button (Undo, Redo, Validate, Confirm, +, -, Flip, M) act only when that control is enabled, other keys gate by the table's phase column from GameView; every key command cancels a drag (act()) and closes a sticky view first, overlay-opening keys, Undo and Redo clear a tail selection and pop its entry (any pop completing before a following push), peeks close only for keys that change phase or word data (F39: Undo, Redo, menu and keys no longer make overlays.deselect() throw); every key command that changes the phase clears the tile selection at the source (overlays.clearTile) while tileTap's stale-selection throw stays, tested separately; with any menu, panel or dialog open only Tab, Enter, Space and Esc act (M, N, ? and Z are no-ops), with the end sheet or a WordCell view open M, N, ?, Z, Y stay active; Esc closes the topmost overlay, else clears the selection, in Game over collapses the sheet; I-68's Escape case: Esc closes the topmost surface and never reopens or inverts."
+verify = "npm run test:all and npm run test:screens are green (screens specs the ticket adds listed per build-notes) with Playwright on desktop showing each key opening or closing its surface, Undo and Redo and the menu closing an open sticky WordCell view first without a page error, a tile selection surviving or clearing correctly when a key changes the phase, game keys doing nothing under an open panel while Tab/Enter/Space still work, the Esc fallback and the Escape case, and UI Vitest AD-12 on the key table and on the clearTile / tileTap throw separately."
+covers = ["CAP-10"]
+after = [3, 4, 5, 6, 9]
+hitl = false
+risk = "high"
+interface = "new src/ui/keys.ts (the table and handler) mounted from src/main.ts (the shell never imports ui; AD-9's listener rule covers only visibility/pagehide/pageshow); overlays.svelte.ts gains closeView-first helper; overlays.clearTile on phase-changing keys."
+tests = "Q-24 and A-E7 overlay and undo keys (P6 desktop); I-68 Esc closes the topmost, never reopens (P6 desktop); F39 key commands close an open view (P6, U); Esc fallback (P6 desktop); AD-13 clearTile on a key-changed phase and tileTap throw (U)."
+owns = "The key handler, F39, the stale tile selection."
+consumers = "act()'s cancel-first rule and every App button handler (the AD-12 act() scan)."
+references = ["spec — _bmad-output/specs/spec-epic-6-surfaces/SPEC.md, Capabilities (CAP-10), Decisions", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/EXPERIENCE.md, Component Patterns, Keyboard, State Patterns", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/DESIGN.md, Components"]
+
+[[entry]]
+id = 11
+type = "story"
+title = "Keyboard: board keys, focus moves and tooltips"
+description = "Adds the board keys of the EXPERIENCE.md table (`1`\u2013`8`, `\u2191`/`\u2193`, `3`\u2013`9`/`0`, `\u2190`/`\u2192`, `Shift`+arrows, `Space`, `Enter`, `+`/`=`/`-`, `F`), Space/Enter tile activation (select, swap, return; epic 5 plan deferral), focus order top bar \u2192 columns \u2192 tray \u2192 WordCells \u2192 action bar, focus following the phase (first movable tile, first strip card, the board, the end sheet's first action, the moved tile, the new tile after a key add, the next tile after a key removal, the tail's top card after a key selection), the visible focus ring in accent-teal, and the key in each desktop button's tooltip."
+verify = "npm run test:all and npm run test:screens are green with Playwright on desktop playing EXPERIENCE.md Flow 6 by keyboard alone, each table row for its phase (including no-ops that dispatch nothing), focus after every phase change and after each key edit, and tooltips showing the key."
+covers = ["CAP-10"]
+after = [10]
+hitl = false
+risk = "high"
+unknown = "Whether a focusable board container exists when every column is empty or the ticket adds it."
+interface = "keys.ts gains the board table; Board, Column, Tray and WordCellRow gain roving focus; Card focus handling."
+tests = "Q-24 and A-E7 board keys (P6 desktop); R-14 key selection and drop (P6 desktop); R-33 key add and remove (P6 desktop part); focus follows the phase (P6 desktop)."
+owns = "The board key table and focus moves."
+consumers = "Card focus and the pointer controller's press paths: list the controller tests and the e2e locators on data-card-id."
+references = ["spec — _bmad-output/specs/spec-epic-6-surfaces/SPEC.md, Capabilities (CAP-10), Decisions", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/EXPERIENCE.md, Component Patterns, Keyboard, State Patterns", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/DESIGN.md, Components"]
+
+[[entry]]
+id = 12
+type = "story"
+title = "Winning guard: the end-sheet half"
+description = "Finishes the AD-14 guard: the pending end-sheet open is cancelled by Undo (button, `Z` and Ctrl/Cmd+Z), so the animation completes, it undoes, and the sheet does not open; the guard recognises the Undo key aliases (keydown/keyup and repeats, only while Undo is enabled) beside the target match, Ctrl/Cmd+Shift+Z (Redo) is consumed like any other input; every other input in the window completes the animation and is consumed, then the sheet opens (outcome table in build-notes.md); the deferred open waits for whatever animations are in flight and fires at max(animation settled, 300 ms after the guard is installed), so Undo cancels the open and every other input is consumed for the whole guard window at every speed (EXPERIENCE.md Motion, epic 5 F8, F23); a Redo win behaves like a Confirm win; the menu button case. `inUndo` is already typeof-free."
+verify = "npm run test:all and npm run test:screens are green (screens specs the ticket adds listed per build-notes) with Playwright on android and desktop at Normal, Fast, Slow and under reduced motion proving Undo by button and by key during the window leaves play resumed with no sheet, a WordCell tap, the primary action and a menu press each only completing the animation before the sheet opens, and a Redo win followed at once by Undo, Undo between settle and 300 ms (cancels the open, undoes, no sheet) and Fast speed and reduced motion, where the animation settles before 300 ms."
+covers = ["CAP-5"]
+after = [6, 10]
+hitl = false
+risk = "high"
+interface = "motion.ts guard gains the event.key Undo-alias match beside the target match; overlays.svelte.ts cancel of the deferred open."
+tests = "AD-14 winning guard end-sheet half, Undo aliases, Redo win, menu case (P6); R-70 Undo during the window (P6); R-62 sheet opens after the animation settles (P6 part)."
+owns = "The guard's end-sheet half."
+consumers = "The guard is read by every dispatching caller and the epic 5 winning-guard tests."
+references = ["spec — _bmad-output/specs/spec-epic-6-surfaces/SPEC.md, Capabilities (CAP-5), Decisions", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/EXPERIENCE.md, Component Patterns, Keyboard, State Patterns", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/DESIGN.md, Components"]
+
+[[entry]]
+id = 13
+type = "story"
+title = "Screen-reader labels and live region"
+description = "Names every card button by letter, place and state, every WordCell by number, top card, count and state, `QU` as `Q U, counts as two letters`, moves the WordCellRow aria-label into text.ts, and adds one polite live region in the UI (announcements replace, not queue) announcing phase changes, the invalid-word message, commits (`BALKED placed on cell 6, plus 30`; announced after the dispatch of Confirm or a committing Redo returns, word/cell/delta from the committed move's view, stop and report if a field is missing), Undo, Redo, New game and the end outcome; the full string and trigger list goes in build-notes.md."
+verify = "npm run test:all and npm run test:screens are green with UI Vitest AD-3 on the label and announcement strings (plus, minus, no change; plural forms) and Playwright on android reading accessible names for a column card, a selected card, a used WordCell and a QU card and the live-region text through a phase change, an invalid word, a commit and a win."
+covers = ["CAP-11"]
+after = [11]
+hitl = false
+risk = "medium"
+unknown = "Whether live-region text must be deduplicated when several state changes land in one update."
+interface = "text.ts gains the label and announcement builders; Card.svelte, WordCellRow.svelte and a new LiveRegion.svelte read GameView."
+tests = "A-E9 card, WordCell and QU names (P6); A-E9 live-region announcements (P6); AD-3 string builders (U)."
+owns = "The accessible names and the live region."
+consumers = "Card.svelte and WordCellRow.svelte attributes read by the e2e locators."
+references = ["spec — _bmad-output/specs/spec-epic-6-surfaces/SPEC.md, Capabilities (CAP-11), Decisions", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/EXPERIENCE.md, Component Patterns, Keyboard, State Patterns", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/DESIGN.md, Components"]
+
+[[entry]]
+id = 14
+type = "story"
+title = "Carry-ins: wheel during a mouse drag, hover-peek re-anchor, bfcache hide flush"
+description = "Closes the epic 4 retrospective A8 items: after a desktop wheel scroll during a mouse drag the faces, highlight and drop target follow the pointer (controller test and desktop Playwright), a hover-peek re-anchor test asserting the peek stays anchored above the hovered cell after layout shifts, and the hide-flush `controller.cancel()` after a bfcache restore reproduced first and fixed only if it swallows a real back (done: a reproducing test whose failure is then fixed, or a recorded non-reproduction attempt in build-notes.md)."
+verify = "npm run test:all and npm run test:screens are green with a controller Vitest and a desktop Playwright case for the wheel scroll, the hover-peek re-anchor test passing, and either a failing-then-passing bfcache test or a build-notes line recording that it does not reproduce."
+covers = ["CAP-12"]
+after = [11]
+hitl = false
+risk = "medium"
+unknown = "Whether the bfcache back reproduces at all in Playwright's Chromium."
+interface = "controller.ts gains a scroll listener only if the repro needs it."
+tests = "A8 wheel during a mouse drag (U, P6 desktop); A8 hover-peek re-anchor (P6 desktop); A8 bfcache hide flush back (P6)."
+owns = "The A8 items."
+consumers = "controller.ts press and drop paths: list every drag test."
+references = ["spec — _bmad-output/specs/spec-epic-6-surfaces/SPEC.md, Capabilities (CAP-12), Decisions", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/EXPERIENCE.md, Component Patterns, Keyboard, State Patterns", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/DESIGN.md, Components"]
+
+[[entry]]
+id = 15
+type = "story"
+title = "Success signal: finish a game and play by keyboard"
+description = "Adds the epic's end-to-end proofs: on android a fresh launch plays to a win and to a Give up, reads the end sheet, opens Statistics, collapses and expands the sheet, starts a new game, turns on Show timer and opens How to play, and reloads with the sheet expanded; on desktop Flow 6 by keyboard alone; scripting any missing start fixture under the epic 3 regeneration rule."
+verify = "npm run test:all and npm run test:screens are green with the two Playwright flows passing with the stored Session equal to current().session after every step."
+covers = ["CAP-1", "CAP-2", "CAP-3", "CAP-4", "CAP-6", "CAP-7", "CAP-8", "CAP-10"]
+after = [4, 7, 9, 12, 13, 14]
+hitl = false
+risk = "medium"
+interface = "e2e/surfaces-success.spec.ts; any new fixture."
+tests = "Success signal android flow (P6); Flow 6 keyboard-only move (P6 desktop)."
+owns = "The Success signal."
+references = ["spec — _bmad-output/specs/spec-epic-6-surfaces/SPEC.md, Capabilities (CAP-1, CAP-2, CAP-3, CAP-4, CAP-6, CAP-7, CAP-8, CAP-10), Decisions", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/EXPERIENCE.md, Component Patterns, Keyboard, State Patterns", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/DESIGN.md, Components"]
+
+[[entry]]
+id = 16
+type = "story"
+title = "Refactor sweep: code"
+description = "Cleanup only, scope set from the build records and review findings deferred during the epic: duplicated surface code, comment history paragraphs, shared e2e helpers, the AD-1 and AD-2 scans, and any controller or overlays simplification the deferred findings name."
+verify = "npm run test:all and npm run test:screens are green with no behaviour change and no baseline change."
+covers = []
+after = [15]
+hitl = false
+risk = "low"
+tests = "Sweep inventory rows (P6 none)."
+owns = "The code sweep."
+consumers = "Whatever rows the inventory names."
+references = ["spec — _bmad-output/specs/spec-epic-6-surfaces/SPEC.md, Capabilities (Constraints), Decisions", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/EXPERIENCE.md, Component Patterns, Keyboard, State Patterns", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/DESIGN.md, Components"]
+
+[[entry]]
+id = 17
+type = "story"
+title = "Refactor sweep: paperwork and budget"
+description = "Paperwork and measurements only: the P6 audit of rule-coverage.md (every row maps to a passing test), the unit-suite budget, the size budget, the close-out edit lists in build-notes.md and the retrospective inputs."
+verify = "npm run test:all and npm run test:screens are green with every P6 row of rule-coverage.md covered, the unit median under 5 s on the Linux filesystem and the size script under 600,000 bytes."
+covers = []
+after = [16]
+hitl = false
+risk = "low"
+tests = "Done when 1 audit (P6 none)."
+owns = "The paperwork."
+references = ["spec — _bmad-output/specs/spec-epic-6-surfaces/SPEC.md, Capabilities (Constraints), Decisions", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/EXPERIENCE.md, Component Patterns, Keyboard, State Patterns", "design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/DESIGN.md, Components"]
