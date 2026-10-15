@@ -297,7 +297,7 @@ None. EXPERIENCE.md and DESIGN.md already decide every visible behaviour of this
 ## Decisions
 
 Technical defaults under the owner's standing rule; none changes functionality, UX or gameplay.
-Next owner answer takes F6.
+Next owner answer takes F9.
 
 | # | Question | Decision |
 | --- | --- | --- |
@@ -306,3 +306,6 @@ Next owner answer takes F6.
 | F3 | How to play text. | The CAP-8 ticket drafts it from the spec; the owner reads it at ticket review (EXPERIENCE.md: text is a build deliverable). |
 | F4 | Unreadable-history indicator. | One UI-layer derived getter over `scoreHistory` feeds the menu dot, the Statistics message and the end-sheet block (CAP-6). |
 | F5 | Sheets and `inert`. | The Board is `inert` under a modal surface as the History notice already does (AD-13); the end sheet leaves the top and action bars live (EXPERIENCE.md End sheet); the per-surface table is in `build-notes.md`. |
+| F6 | Undo/Redo while a surface is open (6.1 review). | Only the expanded end sheet leaves the top bar (Undo/Redo) live (EXPERIENCE.md End sheet, DESIGN.md Elevation); the menu, panels, dialogs and the History notice cover or make it inert, so no Undo/Redo path exists under them; `build-notes.md` per-surface table says so (technical default, 2026-10-15). |
+| F7 | Surface transition mechanism and reduced motion (AD-10, AD-14). | Sheets, panels and dialogs animate with CSS transitions on `--wc-base-ms`; under reduced motion they use an opacity-only transition of the 120 ms fade through the existing `--wc-reduced` variable (a CSS variable fed from the same constant `motion.ts` uses); no WAAPI for surfaces (technical default, 2026-10-15). |
+| F8 | Opening a surface over other state (AD-13, 6.1 review). | Opening any surface by tap or key first clears a tail or tile selection and pops its entry, closes a sticky view and closes any peek or hover peek (EXPERIENCE.md Menu sheet, Keyboard); the pop completes before the push; only the Reset-history confirm may stack on the History notice, and the end sheet's entry sits below it; every other surface is refused (`AD-13 open(...)` throws) while a modal notice is the top entry (technical default, 2026-10-15). |
