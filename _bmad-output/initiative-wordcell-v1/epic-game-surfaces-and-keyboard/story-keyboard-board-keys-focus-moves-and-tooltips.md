@@ -55,3 +55,4 @@ Verify: npm run test:all and npm run test:screens are green with Playwright on d
 ## Notes
 
 - Resolved (technical choice): the Board container is `main`; EXPERIENCE.md says only a focusable board container.
+- Owner decision (2026-10-15): one Tab stop per non-empty column (its bottom or last-focused card; the tail's top card after a key selection), not every card of a fanned column; play stays fully possible with 1-8 and up/down.
