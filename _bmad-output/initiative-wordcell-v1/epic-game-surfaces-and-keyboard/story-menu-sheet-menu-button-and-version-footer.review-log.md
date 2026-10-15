@@ -1,5 +1,5 @@
 # Review log — ticket 6.2 (menu sheet, menu button and version footer)
-State: pass 2: done
+State: done
 Pre-loop: HEAD b461581; words 333; copy /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-game-surfaces-and-keyboard/story-menu-sheet-menu-button-and-version-footer.review-log.passes/pass0.md
 
 ## Pass 1
@@ -34,3 +34,19 @@ Reviewers: fix-diff, edge-case, adversarial, ref alignment  |  Findings: major 1
 ### Decision needed
 - none
 Words: 793 (2.38 x pass 0)  |  Snapshot: story-menu-sheet-menu-button-and-version-footer.review-log.passes/pass2.md
+
+## Pass 3
+Reviewers: fix-diff, edge-case, adversarial, ref alignment  |  Findings: major 0, minor 8 (merged: 7), decision-needed 0  |  Dropped in triage: 0
+Words: 793 (2.38 x pass 0), unchanged (no fix pass)
+
+## Result — converged after 3 passes
+Majors per pass: 8, 1, 0. Technical defaults applied: 9. No decision-needed items.
+### Unapplied minors (for the build plan)
+- Override set but empty/whitespace throws and never falls through to git; empty git output throws; both in the resolver unit test.
+- Focus starts on the first row (build-notes Menu row); add the assertion; focus return after close or acting row.
+- ☰ during the winning-guard window follows the build-notes table (consumed, end sheet opens); test with entry 6.
+- Top bar is already inert via 6.1 App.svelte INERT_UNDER: add no inert of its own.
+- Every row first calls overlays.close('menu') (nav pop, async) then acts; Give up session-write assertion must await settle.
+- vite preview (pwa, dist-smoke) also runs the resolver and relies on git being present.
+- Playwright dev webServer has reuseExistingServer: !process.env.CI: local runs must not reuse a server started without the override.
+- Menu strings are absent from the EXPERIENCE.md catalogue (text.ts has only newGame): wording from DESIGN.md/EXPERIENCE.md Menu sheet; Scaffold deltas lack the define/override: close-out spine edit.
