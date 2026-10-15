@@ -107,6 +107,7 @@ jobs:
       options: --init --ipc=host
     env:
       WORDCELL_SCREENS_CONTAINER: '1'
+      WORDCELL_APP_VERSION: '0.0.0 (test)'
     steps:
       - name: checkout
         uses: actions/checkout@v7

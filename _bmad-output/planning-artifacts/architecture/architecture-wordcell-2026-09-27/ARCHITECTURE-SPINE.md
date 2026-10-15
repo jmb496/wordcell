@@ -1017,6 +1017,13 @@ Changes the first epic makes to commit `785c0f6`:
   `wrangler` (AD-1, AD-8, AD-17, AD-18);
   `playwright.config.ts`: `testIgnore` for `*.screens.spec.ts`; new `playwright.pwa.config.ts`
   and `playwright.screens.config.ts` (AD-17).
+- Epic 6 ticket 6.2 (close-out edit, not a deviation): `vite.config.ts` gains
+  `define: { __APP_VERSION__ }` from `scripts/app-version.mjs` (`<package.json version> (<7-char git
+  SHA>)`; a non-empty `WORDCELL_APP_VERSION` is used verbatim and git is never consulted; a blank
+  override or a git failure throws in every Vite mode, rule 6; no dirty-tree suffix), declared in
+  `src/app-version.d.ts`; the override is set to `0.0.0 (test)` in the `webServer` `env` of
+  `playwright.config.ts` and `playwright.screens.config.ts`, in `build:test`, in the `test:screens`
+  docker run (`-e`) and in the `ci.yml` screens job `env`.
 - CLAUDE.md: rule 5 path and the Commands and Testing expectations lines already updated with
   this spine (AD-8, AD-17; Docker in WSL2 only for screenshot baselines and the actionlint proof
   (ticket 1.11, 2026-09-28), uv/Python only for regenerating the font).

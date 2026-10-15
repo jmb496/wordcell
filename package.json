@@ -10,7 +10,7 @@
     "build": "vite build",
     "postbuild": "node scripts/size-budget.mjs",
     "prebuild:test": "node scripts/build-dictionary.mjs",
-    "build:test": "VITE_TEST_HOOKS=1 vite build --outDir dist-test",
+    "build:test": "WORDCELL_APP_VERSION='0.0.0 (test)' VITE_TEST_HOOKS=1 vite build --outDir dist-test",
     "preview": "vite preview",
     "build:dictionary": "node scripts/build-dictionary.mjs --force",
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json && tsc -p src/engine/tsconfig.json && tsc -p tsconfig.arch.json && tsc -p tsconfig.e2e.json",
@@ -25,7 +25,7 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:pwa": "npm run build:test && PW_PREVIEW=dist-test playwright test -c playwright.pwa.config.ts --project pwa",
     "test:e2e:dist": "PW_PREVIEW=dist playwright test -c playwright.pwa.config.ts --project dist-smoke",
-    "test:screens": "docker run --rm --init --ipc=host -e WORDCELL_SCREENS_CONTAINER=1 -v \"$PWD\":/work -v wordcell-screens-node-modules:/work/node_modules -w /work mcr.microsoft.com/playwright:v1.63.0-noble sh -c 'npm ci && npm run test:screens:run -- \"$@\"' screens",
+    "test:screens": "docker run --rm --init --ipc=host -e WORDCELL_SCREENS_CONTAINER=1 -e \"WORDCELL_APP_VERSION=0.0.0 (test)\" -v \"$PWD\":/work -v wordcell-screens-node-modules:/work/node_modules -w /work mcr.microsoft.com/playwright:v1.63.0-noble sh -c 'npm ci && npm run test:screens:run -- \"$@\"' screens",
     "test:screens:run": "playwright test -c playwright.screens.config.ts",
     "test:all": "npm run lint && npm run check && npm run test && npm run build && npm run test:e2e:dist && npm run test:e2e && npm run test:e2e:pwa"
   },

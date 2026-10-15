@@ -41,6 +41,13 @@ export const text = Object.freeze({
   confirm: 'Confirm',
   newGame: 'New game',
   undo: 'Undo',
+  // Epic 6 CAP-2 Menu sheet (DESIGN.md Menu sheet; the EXPERIENCE.md catalogue lists no menu
+  // strings, so these take that wording, flagged for the owner): the ☰ name, the sheet title and
+  // close label, the row labels (`newGame` above is the New game row).
+  menu: 'Menu',
+  closeMenu: 'Close menu',
+  replayDeal: 'Replay this deal',
+  giveUp: 'Give up',
   // DESIGN.md Column slot: the source foot pad while a tail is selected (EXPERIENCE.md Foot pad).
   here: 'Here',
   redo: 'Redo',

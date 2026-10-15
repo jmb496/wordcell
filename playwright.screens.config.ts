@@ -26,6 +26,8 @@ export default defineConfig({
   },
   projects: deviceProjects,
   webServer: {
+    // Epic 6 CAP-2: a fixed footer version (the resolver's override, scripts/app-version.mjs).
+    env: { WORDCELL_APP_VERSION: '0.0.0 (test)' },
     command: 'npm run dev -- --port 5173 --strictPort',
     url: 'http://localhost:5173',
     reuseExistingServer: false,

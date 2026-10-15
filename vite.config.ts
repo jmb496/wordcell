@@ -1,9 +1,12 @@
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { VitePWA } from 'vite-plugin-pwa';
 import { defineConfig } from 'vitest/config';
+import { appVersion } from './scripts/app-version.mjs';
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Epic 6 CAP-2: the footer version; throws when git fails and no override is set (rule 6).
+  define: { __APP_VERSION__: JSON.stringify(appVersion()) },
   build: {
     // AD-18 Font: never inline the font as a data: URL, so the build holds it once and the
     // index.html preload matches the @font-face URL; other assets keep Vite's default.

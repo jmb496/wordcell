@@ -13,6 +13,8 @@ import Halted from './Halted.svelte';
 import HistoryNotice from './HistoryNotice.svelte';
 import type { Layout } from './layout/layout.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import Menu from './Menu.svelte';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { newGame } from './new-game';
 import { type OverlayId, overlays } from './overlays.svelte';
 import { text } from './text';
@@ -76,9 +78,10 @@ function rejectedBody(reason: RejectReason): string {
   />
 {:else if game.state.kind === 'active' && board}
   <!-- AD-13: dialogs render beside the board; while the notice is rendered the board is inert. -->
-  <main use:pointerRoot inert={mainInert}>
+  <main use:pointerRoot inert={mainInert} tabindex="-1">
     <Board view={board} {layout} />
   </main>
+  <Menu view={board} />
   {#if overlays.isOpen('historyNotice')}
     <HistoryNotice />
   {/if}
@@ -89,6 +92,7 @@ function rejectedBody(reason: RejectReason): string {
 {/if}
 
 <style>
+  main:focus { outline: none; }
   .booting { padding: 16px; }
   h1 { margin: 0; font-size: 1.25rem; }
 </style>

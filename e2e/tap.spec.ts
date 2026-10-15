@@ -182,8 +182,10 @@ test.describe('android', () => {
     }
     const bar = await box(page.locator('[data-band="actionBar"]'));
     const top = await box(page.locator('[data-band="topBar"]'));
+    // The 4 px gap between Undo and Redo is bar background (the left edge is the ☰ button, 6.2).
+    const undoBox = await box(page.getByTestId('undo'));
     const regions: [string, Point][] = [
-      ['top bar background', { x: top.x + 22, y: top.y + top.h / 2 }],
+      ['top bar background', { x: undoBox.x + undoBox.w + 2, y: top.y + top.h / 2 }],
       ['score', await centre(page.locator('.score'))],
       ['tray band', await centre(page.locator('[data-band="tray"]'))],
       ['label', await centre(page.locator('.label').first())],
