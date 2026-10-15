@@ -204,7 +204,7 @@ const inView = $derived.by(() => {
     position: absolute; z-index: 1; display: flex; align-items: center; height: 12px;
     font: 700 11px/1 system-ui, "Roboto", sans-serif; color: var(--wc-card-ink);
   }
-  .mark.band-l, .mark.band-r { top: 72%; height: 28%; }
+  .mark.band-l, .mark.band-r { top: 72%; height: 28%; max-width: calc(100% - 8px); overflow: hidden; }
   .mark.band-l { left: 4px; }
   .mark.band-r { right: 4px; }
   .mark.tl { top: 2px; left: 3px; }
