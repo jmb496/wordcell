@@ -1,6 +1,6 @@
 # Review log — story-how-to-play-panel.md
 
-State: pass 1: done
+State: pass 2: done
 
 Pre-loop: HEAD ae31bafbb84ba3dd16240be0c00aa8cabe9bfc85; copy at story-how-to-play-panel.review-log.passes/pass0.md; 217 words; budget 1500 words.
 
@@ -21,5 +21,21 @@ Words (docs): 695 (3.2 x pass 0; budget 1500)  |  Snapshot: story-how-to-play-pa
 - Card static path, text.ts band accessor, test mechanics, screens spec name → defaults as above
 ### Decision needed (functionality / UX / gameplay)
 - Band section — show only the six names, or also each band's score threshold? — proposed default: names in ascending order only, no numbers (owner reads text at ticket review, SPEC F3)
+### Dropped
+- none
+
+## Pass 2 — 2026-10-15
+Reviewers: fix diff, edge-case hunter, ref alignment, builder's reading  |  Findings: major 4, minor 5, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+Words (docs): 899 (4.1 x pass 0; budget 1500)  |  Snapshot: story-how-to-play-panel.review-log.passes/pass2.md
+### Applied
+- [major] Verify "no Cancel / hint in the text" contradicts the body that states their absence → assert the text.ts sentences and no button named Cancel/Hint (fixer item 1)
+- [major] Example paragraph — static Card call shape, sizing vars (Board-only), touch-action (.card is none), data-mirror-of collisions → item 2
+- [major] Verify headings — Panel's own title is an h2, so sections are h3 and nine headings assert → item 3
+- [major] Verify omits tests for selection clear, one history entry, scroll reset on reopen, Game over open → item 4
+- [minor] back-control name, per-panel Esc handler + refocus effect, exact getByText, band accessor name → item 5
+### Default applied (technical)
+- static card: placeholder id, place column, no data-mirror-of, local size vars, touch-action pan-y; sections h3 → defaults taken
+### Decision needed (functionality / UX / gameplay)
+- none new (band thresholds item from pass 1 stands)
 ### Dropped
 - none
