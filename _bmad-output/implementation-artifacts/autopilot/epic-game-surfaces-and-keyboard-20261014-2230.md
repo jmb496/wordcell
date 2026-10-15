@@ -162,3 +162,15 @@ Ref to fix upstream:
 - DESIGN.md Tray band (idle line composition) → text.ts `pendingDraft` returns parts {prefix, word, suffix} vs one string; technical, default stated.
 - Ticket 6.8 Placement → names a Tray.svelte "Idle branch" that does not exist; the line is a sibling branch inside `.word-line`; technical.
 Worth knowing: pass 3 fixes were not applied; unapplied minors are in the review log.
+
+## 6.8 Pending-draft line — done
+What it adds: a small grey line in the tray, `Undone: BAKED · Redo brings it back`, shown while an undone word can be redone; a long word is cut with "…" only if it cannot fit, the suffix always stays (owner, 2026-10-15).
+Ticket review: resumed after your answer; 4 passes total, converged (majors 6, 2, 3, 0); nothing further needed your input
+Build: built; commit 0d28628
+Code review: quick, 2 passes, converged (majors 2, 0); 1 fix applied (aa867fb: gap before "·" widened)
+Tests: all passing, screenshots passed (32 passed, 8 skipped)
+Ref to fix upstream: none
+Tokens: 2.9M input-equivalent (build 51%, ticket review 21%, code review 17%, orchestrator 6%)
+Worth knowing: the code review widened the gap before "·" (padding 0.25em) after the build's own screenshot showed it cramped; the two new baselines (board-idle-pending-draft android/desktop) were not regenerated and still passed, so they show the old, narrower gap; regenerate them next time baselines are refreshed. Playwright tests use the existing TAN session rather than BAKED. One minor unapplied: tidy a toEqual in the 360 px test.
+Close-out docs:
+- EXPERIENCE.md State Patterns (Idle/pending draft row) and DESIGN.md Tray band ← at 360 px the line never wraps or overflows, suffix always fully shown, word ellipsizes only if it cannot fit (owner, 2026-10-15)

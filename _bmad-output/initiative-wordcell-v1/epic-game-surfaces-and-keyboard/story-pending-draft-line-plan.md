@@ -3,7 +3,7 @@ title: 'Pending-draft line'
 type: 'feature'
 ticket: 'story-pending-draft-line'
 created: '2026-10-15'
-status: 'built'
+status: done
 baseline_revision: '8fa949986daa899ee474adec57ac149a957bae88'
 route: 'full'
 route_source: 'auto'
