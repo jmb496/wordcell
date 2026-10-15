@@ -137,3 +137,6 @@ Ticket review: 3 passes, converged (majors 3, 1, 0); one item needs your input (
 Decision: how long should "This game wasn't added to your statistics." show after Reset history? Proposed default: only on the sheet that was open when Reset ran from the sheet's block or the notice over it (kept through collapse/expand); gone after a reload; Undo then a new finish records normally with no line; a Reset from the Statistics panel leaves neither block nor line. Effect: the player sees the reassurance only right after resetting from the finished-game sheet.
 Resume: reply with your choice or "default", record it in the ticket Notes, rerun loop.sh; it resumes at Step A (review log has a Result) then build.
 Close-out docs: none yet
+
+## Stopped — usage limit (login expired, not a real limit)
+Ticket 6.7, Step B (build): the build step ended at 09:28 with "Failed to authenticate: OAuth session expired and could not be refreshed" (owner logged in again afterwards). The plan is `in-progress` and the 16 uncommitted files are this build's own. Resume per bmad-build-auto's resume rule; do not discard them.
