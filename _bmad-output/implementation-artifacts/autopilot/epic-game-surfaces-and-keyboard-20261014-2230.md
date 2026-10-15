@@ -140,3 +140,15 @@ Close-out docs: none yet
 
 ## Stopped — usage limit (login expired, not a real limit)
 Ticket 6.7, Step B (build): the build step ended at 09:28 with "Failed to authenticate: OAuth session expired and could not be refreshed" (owner logged in again afterwards). The plan is `in-progress` and the 16 uncommitted files are this build's own. Resume per bmad-build-auto's resume rule; do not discard them.
+
+## 6.7 End sheet: history-unreadable block and Reset history — done
+What it adds: the end-sheet block shown when the score history can't be read, with Reset history, and the single "This game wasn't added to your statistics." line afterwards, kept only on the sheet open at the time of the reset (owner decision, 2026-10-15).
+Ticket review: 3 passes, converged; one item needed your input, answered 2026-10-15 (default)
+Build: built; commit 48c74ab (resumed after the login-expiry stop)
+Code review: thorough, 2 passes, converged (majors 1, 0); 1 fix pass applied (929fd67)
+Tests: all passing, screenshots passed (30 passed, 8 skipped)
+Ref to fix upstream: none
+Tokens: 2.3M input-equivalent (code review 46%, build 34%, other 16%, orchestrator 4%)
+Worth knowing: nothing
+Close-out docs:
+- EXPERIENCE.md State Patterns / message catalogue ← unrecorded-game line shows only on the sheet open at reset, gone after reload (owner, 2026-10-15)

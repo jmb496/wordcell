@@ -3,7 +3,7 @@ title: 'End sheet: history-unreadable block and Reset history'
 type: 'feature'
 ticket: '7'
 created: '2026-10-15'
-status: 'built'
+status: done
 baseline_revision: 'b3337bb2dd126227becb01128cc07e165d1411a6'
 route: 'full'
 route_source: 'auto'

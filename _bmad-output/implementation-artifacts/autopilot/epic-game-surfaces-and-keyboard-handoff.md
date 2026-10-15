@@ -1,18 +1,17 @@
-outcome: stopped
+outcome: done
 ticket: 6.7
-reason: rule 1, decision-needed in the ticket review (gameplay/UX wording of when a line shows)
-next: 6.7
-updated: 2026-10-15T13:10:00Z
-summary: Ticket 6.7 is hardened but needs your call on how long the "This game wasn't added to your statistics." line shows after Reset history.
+reason: done
+next: 6.8
+updated: 2026-10-15T14:20:00Z
+summary: Ticket 6.7 (end sheet history-unreadable block and Reset history) is built, reviewed, tested and marked done.
 
 ## Report
 
-The ticket review finished (3 passes, clean) with one question for you.
+6.7 is done: when the score history can't be read, the finished-game sheet now explains it and offers Reset history; afterwards it shows the single "This game wasn't added to your statistics." line on that sheet only. Code review took 2 passes; all tests and screenshots pass. Nothing needs your input.
 
-Question: how long should "This game wasn't added to your statistics." show after Reset history?
-- Proposed default: it shows only on the finished-game sheet that was open when you reset (from the sheet's block, or the notice over it), kept through collapse and expand. After a reload it is gone. Undo then a new finish records normally with no line. Resetting from the Statistics panel leaves the sheet with neither block nor line.
-- Effect: the reassurance appears only right after resetting from the finished-game sheet; otherwise the sheet just shows the result.
+Close-out docs:
+- EXPERIENCE.md State Patterns / message catalogue ← unrecorded-game line lifetime (owner, 2026-10-15)
+- EXPERIENCE.md message catalogue ← end-sheet strings from 6.6 (owner, 2026-10-15)
 
-Close-out docs: none yet.
-Resume: reply with your choice or "default"; record it in the ticket Notes, then rerun .claude/skills/epic-autopilot/scripts/loop.sh epic-game-surfaces-and-keyboard.
+Resume: rerun .claude/skills/epic-autopilot/scripts/loop.sh epic-game-surfaces-and-keyboard.
 Digest: _bmad-output/implementation-artifacts/autopilot/epic-game-surfaces-and-keyboard-20261014-2230.md
