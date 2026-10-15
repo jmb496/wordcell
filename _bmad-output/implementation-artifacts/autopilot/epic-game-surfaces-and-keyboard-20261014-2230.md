@@ -210,3 +210,19 @@ Ref to fix upstream: none
 Worth knowing: spine AD-13 does not yet mention `nav.settled`/`whenSettled` (owner doc, apply at retro). Two Playwright cases are unit-tested only (M during a touch peek, Undo disabled with a sticky view open: no fixture).
 Decision needed: the Validate, Confirm and Flip buttons now also close an open sticky word view or peek, and clear a tail selection, before acting, like Undo, Redo and the menu. Default: keep. If you refuse, those three buttons would leave the view open or risk a stale-selection error.
 Close-out docs: none
+
+### 6.10 resumed (session 2026-10-15)
+Owner decision recorded (commit cc889c0): Validate, Confirm and Flip close an open word view first (keep). Resumed at Step D.
+
+## 6.10 Keyboard: overlay keys, F39 and stale tile selection — done
+What it adds: keys M, N, ?, Esc, Z, Y open and close the menu, new-game dialog and panels, undo and redo; closing a view or selection first (F39).
+Ticket review: 3 passes, converged; nothing needed your input
+Build: built; commit 82cfde1
+Code review: thorough, 2 passes, converged (majors 3, 0); fixes in ddd5f19; the one decision was answered by the owner
+Tests: all passing (`test:all`), screenshots passed (33 passed, 9 skipped)
+Ref to fix upstream: none
+Tokens: 0.1M input-equivalent (this session)
+Worth knowing: spine AD-13 does not yet mention `nav.settled`/`whenSettled`. Two Playwright cases are unit-tested only. Baselines board-idle-pending-draft (android/desktop) predate the wider gap before "·" but still pass; regenerate at the next refresh.
+Close-out docs:
+- ARCHITECTURE-SPINE.md AD-13 ← mention `nav.settled`/`whenSettled` (build finding)
+- EXPERIENCE.md State Patterns (Idle/pending draft row) and DESIGN.md Tray band ← at 360 px the line never wraps or overflows (owner, 2026-10-15)
