@@ -1,6 +1,6 @@
 # Review log — story-end-sheet-history-unreadable-block-and-reset-history.md
 
-State: pass 1: done
+State: pass 2: done
 Pre-loop: HEAD a2ad4adf23613cffb3930c6a4cbacb0dfffb5775; pass 0 copy `.review-log.passes/pass0.md`, 252 words (growth budget 2.5x ≈ 630 words).
 
 ## Pass 1 — 2026-10-15
@@ -17,3 +17,20 @@ Words (docs): 428 (1.7 x pass 0)  |  Snapshot: .review-log.passes/pass1.md
 - Description, single line after Reset history — how long does `This game wasn't added to your statistics.` show? After a reload into Game over with the now-readable empty history, or after Undo then a new finish, does the sheet show the line? Nothing stored marks the finish as unrecorded (AGENTS rule 2) — proposed default: the line shows only on the sheet that was open when Reset ran (and its collapse/expand); after reload with a readable history the sheet shows no line; Undo then a new finish records normally with no line.
 ### Dropped
 - Focus return after Reset (plan detail); Give-up first-render flash (unlikely, plan); tab order, F8/act() citation, dependency list, AC split into numbered items — minor, unapplied
+
+## Pass 2 — 2026-10-15
+Reviewers: fix diff (replaces builder's reading), edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 8, decision-needed 1 (merged into the pass 1 item)  |  Dropped in triage: 1 (getter-unit-test naming, test choice left to the plan)
+Words (docs): pending  |  Snapshot: pending
+### Applied
+- [major] AC back sequence — "the notice stays after the first back" attached to the wrong step, no state after each back; EXPERIENCE says back acts as Not now (closes the notice) → fixer item 1 (steps with history.state after each)
+- [minor] confirm dismissal Esc/back/scrim = Keep it, never collapses the sheet or reaches the notice (EXPERIENCE Confirm dialog row) → item 2
+- [minor] Delete history history.state values (wc 1 in both cases) → item 3
+- [minor] cite catalogue rows by name, not line number → item 4
+- [minor] before Reset the stored history is unchanged by the finish (tickets.toml 7 tests: R-84 history untouched) → item 5
+- [minor] stored post-reset shape named; screens variant named; win/Give up seeding path → items 6-8
+### Default applied (technical)
+- Seeding: live finish on a seeded history for win and Give up, relaunch for the third fixture; screens variant history-invalid-version-unknown
+### Decision needed (functionality / UX / gameplay)
+- Extends the pass 1 item: if the player reaches Reset history through the Statistics panel (opened from the sheet or the menu) rather than the sheet's own block, does the sheet then show `This game wasn't added to your statistics.` or nothing? EXPERIENCE only covers Reset "from the end sheet". Proposed default: the line shows only after a Reset from the sheet's block or the notice over it; a Reset from the Statistics panel leaves the sheet with neither block nor line.
+### Dropped
+- Unit test naming for the shared getter (plan detail)
