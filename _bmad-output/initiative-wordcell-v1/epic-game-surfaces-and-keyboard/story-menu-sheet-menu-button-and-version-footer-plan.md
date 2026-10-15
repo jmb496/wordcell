@@ -3,7 +3,7 @@ title: 'Menu sheet, menu button and version footer'
 type: 'feature'
 ticket: '2'
 created: '2026-10-15'
-status: 'built'
+status: done
 baseline_revision: '4efa3cd434ad926d4090a7a4ade7ee69c82abe4d'
 route: 'full'
 route_source: 'auto'

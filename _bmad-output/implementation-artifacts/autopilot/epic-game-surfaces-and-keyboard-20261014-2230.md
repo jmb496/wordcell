@@ -45,3 +45,15 @@ Ref to fix upstream: none
 Tokens: 5.2M input-equivalent (build 38%, ticket review 35%, code review 20%, other 4%, orchestrator 2%)
 Worth knowing: decision pending — with a WordCell view open (or a peek), the view's scrim covers the top bar, so a real tap on ☰ cannot reach it, though the ticket and SPEC F6 say the top bar stays live. Proposed default: leave the layering, amend the ticket wording. Alternative: raise ☰ above the scrim (layering change plus real-tap e2e tests).
 Close-out docs: none yet
+
+## 6.2 Menu sheet, menu button and version footer — done
+What it adds: the ☰ menu button and the menu sheet (New game, Replay this deal, Give up) with the version footer.
+Resumed 2026-10-15 after the owner's answer (option A): the menu button stays covered by an open WordCell view; the player closes the view first. Recorded in the ticket, SPEC F6 and build-notes.
+Ticket review: 3 passes, converged; nothing needed your input
+Build: built; commit f924833
+Code review: thorough, 2 passes, converged (majors 1, 0); 1 fix applied (WIP dacf5ef)
+Tests: all passing, screenshots passed (14)
+Ref to fix upstream: none
+Tokens: resume session 0.1M input-equivalent
+Worth knowing: unapplied minor: the menu inert test's Enter probe after blur cannot fail alone (the closest('[inert]') assertion carries the rule).
+Close-out docs: SPEC.md F6 (epic 6 spec) already holds the 2026-10-15 owner answer (☰ covered by a sticky WordCell view); EXPERIENCE.md/DESIGN.md Elevation wording on "top bar stays live" for the WordCell view may need the same note at the retro.
