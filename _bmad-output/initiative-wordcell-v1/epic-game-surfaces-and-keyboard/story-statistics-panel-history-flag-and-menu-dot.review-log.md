@@ -1,6 +1,6 @@
 # Review log — story-statistics-panel-history-flag-and-menu-dot
 
-State: pass 2: done
+State: pass 3: done
 
 Pre-loop: HEAD 1a7c369, words 291 (budget default 2.5x = ~728).
 
@@ -42,3 +42,20 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings (
 ### Dropped
 - unreadable focus start (build-notes Per-surface defines it); panel title; tie rule read as per-record (R-84 spec line 346 and EXPERIENCE agree); halted/stale dot; Panel.svelte close cite; engine/UI line note; "(QU as QU)" deletion (text.ts convention).
 Fix applied (5 majors, 4 minors). Words: 886 (3.0 x pass 0) | Snapshot: pass2.md
+
+## Pass 3 — 2026-10-15 (review triaged)
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings (after merge): major 4, minor 3, decision-needed 1  |  Dropped in triage: 7
+### Applied (majors)
+1. Description says a negative-only history shows longest word `—` unconditionally; the engine counts longest word over all records (introduced by the pass-2 fix) → say `—` only when no record holds a longestWord (the fixture holds none).
+2. Focus start "panel heading or close" (build-notes) is two targets → name the one element, the same one PreferencesPanel (6.3) uses.
+3. The reset confirm and its handlers live inside HistoryNotice.svelte (deleteHistory also closes historyNotice) → say they move to a shared component/function used by the notice and the panel, focus return set per opener; Keep it asserted for Esc, back and scrim tap too.
+4. Tie fixture not pinned → exactly two records, the 101 won and the 0 given-up, equal letterCount, different spellings, the earlier in array order shows.
+### Applied (minors, no added words)
+- `launch` in the AD-13 clause is the post-reload launch id; getter Vitest covers an inactive game state too; Esc and back close the unreadable panel.
+### Default applied (technical)
+- Focus element, shared confirm location → build-notes/6.3 defaults.
+### Decision needed (functionality / UX / gameplay)
+- Longest-word tile — how the letter count is shown beside the word (what the player reads) — proposed default: the uppercase word as the tile value with `8 letters` as a small ink-secondary caption beneath it (string built from a text.ts key); the owner reads the copy at ticket review. Not applied.
+### Dropped
+- live-vs-captured reason test (both yield the same sentence, indistinguishable); exact-string version numbers; text.test.ts mapping; baseline fixture naming; fresh-history cross-reference; Reset→values phrase.
+Fix applied (4 majors, 3 minors). Words: 939 (3.2 x pass 0) | Snapshot: pass3.md
