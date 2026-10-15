@@ -129,7 +129,8 @@ when any of these holds:
    (AGENTS.md Policy), so present it as a question with the proposed wording.
 2. The build's plan status is not `built` (e.g. `blocked`: a ticket halt condition fired, or the
    build could not finish).
-3. `npm run test:all` fails after the build or after the code-review fixes.
+3. `npm run test:all` fails after the build or after the code-review fixes, or the screenshot check
+   of Step D.1 fails or cannot run.
 4. The next ticket is `hitl = true`, or the built ticket's **Owner checks at gate 4** line names a
    check other than reading the result (e.g. judging icon art). For the latter, build and verify
    it, leave it `built` (not `done`), and stop so the owner can check. The same path applies to a
@@ -307,6 +308,13 @@ committed there.
 1. Free the dev and preview ports (`! ss -ltn 'sport = :5173' | grep -q 5173`, same for 4173);
    if taken, stop (rule 5). Run `npm run test:all` yourself (background, wait). Fail → stop
    (rule 3) with the failing test names.
+   **Screenshots:** when the ticket's diff (baseline..HEAD) touches `src/ui/**`, `index.html`,
+   `fixtures/`, a `*.screens.spec.ts` or its baselines, also run `npm run test:screens`
+   (Docker, never skipped: `docker info` must succeed first; background, wait, after
+   `test:all`). Docker unavailable or any screenshot differing → stop (rule 3), name the cause;
+   never regenerate baselines unattended, and never mark the ticket done on a skipped check.
+   Record the outcome in the digest's Tests line ("screenshots: passed | not needed: no UI
+   change").
 2. If Step C left uncommitted code changes: commit them with the review log,
    `fix(<area>): code review loop fixes (ticket <ref>)`; if only the log (with its `## Result`)
    is uncommitted, commit it alone, `docs(review-loop): code review log (ticket <ref>)`; if the
@@ -330,7 +338,7 @@ What it adds: <one or two sentences a non-programmer understands>
 Ticket review: <n> passes, <converged|capped|diverging>; nothing needed your input | <items>
 Build: <built|blocked: reason in plain words>; commits <short shas>
 Code review: <quick|thorough>, <n> passes, <converged|capped|diverging>; <k> fixes applied
-Tests: all passing | <what failed>
+Tests: all passing, screenshots passed | not needed (no UI change) | <what failed>
 Ref to fix upstream: <for a capped or diverging loop: area → doc and section; or "none">
 Paused: <usage limit at <step>, reset <time as shown>, resumed at <time>; or omit the line>
 Tokens: <usage-report.py line, one-ticket mode; or omit the line>
