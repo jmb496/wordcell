@@ -155,3 +155,15 @@ describe('AD-13 confirm dialog text', () => {
     expect(text.newGame).toBe('New game');
   });
 });
+
+describe('AD-10 Preferences panel text', () => {
+  it('AD-10 the panel strings are the DESIGN.md Panels wording', () => {
+    expect(text.preferences).toBe('Preferences');
+    expect(text.closePreferences).toBe('Close preferences');
+    expect(text.animationSpeed).toBe('Animation speed');
+    expect(text.speedFast).toBe('Fast');
+    expect(text.speedNormal).toBe('Normal');
+    expect(text.speedSlow).toBe('Slow');
+    expect(text.showTimer).toBe('Show timer');
+  });
+});

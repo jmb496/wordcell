@@ -51,11 +51,11 @@ deferred: []
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `src/shell/game.svelte.ts` + Vitest -- `elapsedMs`: playing, won, gaveUp, halted/rejected throws
-- [ ] `src/ui/text.ts` + test -- `timer` table and throws, panel strings
-- [ ] `PreferencesPanel.svelte`, Menu row, `TopBar.svelte` timer
-- [ ] `e2e/preferences.spec.ts` -- every Verify bullet of the ticket, plus the live playing-to-Game-over freeze step in bullet 1
-- [ ] `e2e/preferences.screens.spec.ts` and baselines in the container
+- [x] `src/shell/game.svelte.ts` + Vitest -- `elapsedMs`: playing, won, gaveUp, halted/rejected throws
+- [x] `src/ui/text.ts` + test -- `timer` table and throws, panel strings
+- [x] `PreferencesPanel.svelte`, Menu row, `TopBar.svelte` timer
+- [x] `e2e/preferences.spec.ts` -- every Verify bullet of the ticket, plus the live playing-to-Game-over freeze step in bullet 1
+- [x] `e2e/preferences.screens.spec.ts` and baselines in the container
 
 **Acceptance Criteria:**
 - Given the ticket's Acceptance Criteria and the added live-freeze step, when `npm run test:all` and `npm run test:screens` run, then both are green.

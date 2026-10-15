@@ -1243,6 +1243,22 @@ describe('game store elapsedMs', () => {
     expect(storage.writes).toEqual([]);
   });
 
+  it('AD-9 elapsedMs with the clock paused is activeMs only', async () => {
+    const { game } = await active(JSON.stringify({ ...composing, activeMs: 5000 }));
+    expect(game.elapsedMs(5000)).toBe(5000);
+  });
+
+  it('AD-9 elapsedMs is identical immediately before and after the winning dispatch', async () => {
+    const { game, clock, time } = await active(JSON.stringify({ ...won, activeMs: 4000 }));
+    game.dispatch(UNDO);
+    clock.resume(time.now);
+    time.now += 1000;
+    const before = game.elapsedMs(time.now);
+    expect(before).toBe(5000);
+    expect(game.dispatch(REDO)).toEqual({ changed: true, finished: 'won' });
+    expect(game.elapsedMs(time.now)).toBe(before);
+  });
+
   it('AD-9 elapsedMs in a won game is activeMs, whatever the clock says', async () => {
     const { game, clock } = await active(JSON.stringify({ ...won, activeMs: 4000 }));
     clock.resume(0);

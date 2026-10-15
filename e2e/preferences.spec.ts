@@ -189,7 +189,9 @@ test.describe('panel (android)', () => {
     await menuButton(page).click();
     await menu(page).getByRole('button', { name: 'Give up', exact: true }).click();
     await expect.poll(async () => (await session(page)).gaveUp).toBe(true);
+    await expect(timer(page)).toHaveText('0:03');
     const frozen = await timer(page).textContent();
+    expect(frozen).toBe('0:03');
     expect(frozen).toBe(mss((await session(page)).activeMs));
     await page.clock.runFor(6000);
     await expect(timer(page)).toHaveText(frozen ?? '');
@@ -257,11 +259,13 @@ test.describe('panel (android)', () => {
     expect(await cssBase(page)).toBe('90ms');
     const fast = await glide('undo');
     await glidesSettled(page);
+    await page.getByTestId('redo').click();
+    await glidesSettled(page);
     await openPanel(page);
     await speed(page, 'Normal').check();
     await closePanel(page);
     expect(await cssBase(page)).toBe('180ms');
-    const normal = await glide('redo');
+    const normal = await glide('undo');
     expect(fast).toBeGreaterThan(0);
     expect(fast).toBeLessThan(normal);
   });
@@ -362,6 +366,17 @@ test.describe('panel (android)', () => {
 });
 
 test.describe('closing and focus', () => {
+  test('AD-13 Esc with no overlay open is a no-op: no panel, prefs and Session unchanged', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-idle-empty-column');
+    const before = [await stored(page, PREFS), await stored(page, SESSION)];
+    await page.keyboard.press('Escape');
+    await expect(panel(page)).toHaveCount(0);
+    await expect(menu(page)).toHaveCount(0);
+    expect([await stored(page, PREFS), await stored(page, SESSION)]).toEqual(before);
+  });
+
   for (const [name, close] of [
     ['the back control', (page: Page) => closePanel(page)],
     ['Esc', (page: Page) => page.keyboard.press('Escape')],
