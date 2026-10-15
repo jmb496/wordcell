@@ -3,7 +3,7 @@ title: 'Surface foundation and the one New game function'
 type: 'feature'
 ticket: '1'
 created: '2026-10-14'
-status: 'built'
+status: done
 baseline_revision: 'a27a69055eb624f3d75642a5ce1b16b7baf72c02'
 route: 'full'
 route_source: 'auto'
