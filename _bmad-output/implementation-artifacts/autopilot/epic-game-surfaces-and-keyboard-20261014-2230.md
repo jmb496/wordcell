@@ -34,3 +34,14 @@ Ref to fix upstream: Motion paragraph of the ticket (reduced-motion CSS branch g
 Tokens: 6.7M input-equivalent (code review 33%, build 30%, ticket review 25%, other 9%, orchestrator 3%)
 Worth knowing: open item carried to a later ticket or the refactor sweep: `openSurface('resetConfirm')` over the History notice with a sticky WordCell view or tail selection beneath throws AD-13 from its clearing step (latent, no opener calls it that way yet; default fix: skip clearing when the top is the History notice, plus a test). Flaky drag test: e2e/success-signal.spec.ts "the same move by drag" (android).
 Close-out docs: SPEC.md F6, F7, F8 (epic 6 spec) already hold your 2026-10-15 answers; no other owner doc changes.
+
+## 6.2 Menu sheet, menu button and version footer — stopped (rule 1, owner decision)
+What it adds: the ☰ menu button and the menu sheet (New game, Replay this deal, Give up) with the version footer.
+Ticket review: 3 passes, converged (majors 8, 1, 0); nothing needed your input
+Build: built; commit f924833
+Code review: thorough, 2 passes, converged (majors 1, 0); 1 fix applied (WIP dacf5ef); 1 decision for the owner
+Tests: build and review runs passed; full test:all and screenshots not yet run (stopped before Step D)
+Ref to fix upstream: none
+Tokens: 5.2M input-equivalent (build 38%, ticket review 35%, code review 20%, other 4%, orchestrator 2%)
+Worth knowing: decision pending — with a WordCell view open (or a peek), the view's scrim covers the top bar, so a real tap on ☰ cannot reach it, though the ticket and SPEC F6 say the top bar stays live. Proposed default: leave the layering, amend the ticket wording. Alternative: raise ☰ above the scrim (layering change plus real-tap e2e tests).
+Close-out docs: none yet

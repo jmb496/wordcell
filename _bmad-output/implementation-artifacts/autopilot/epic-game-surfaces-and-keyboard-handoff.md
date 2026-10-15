@@ -1,11 +1,14 @@
-outcome: done
-ticket: 6.1
-reason: done
+outcome: stopped
+ticket: 6.2
+reason: rule 1, code review decision-needed (menu button under the WordCell view scrim)
 next: 6.2
-updated: 2026-10-15T03:51:06Z
-summary: Ticket 6.1 (surface foundation and the one New game function) is built, reviewed, tested and marked done.
+updated: 2026-10-15T00:00:00Z
+summary: Ticket 6.2 is built and code-reviewed but needs your call on whether the menu button works while a WordCell view is open.
 
-Plain-language report: 6.1 is done. Your F6-F8 answers settled the ticket review (it capped at 7 passes with one small technical gap, fixed in the build). The code review converged in 3 passes; the full test run and screenshots pass (one drag test failed once and passed on rerun, so it may be flaky). One latent item is carried forward: opening the Reset-history confirm over the History notice while a WordCell view or tail selection sits beneath would throw; nothing calls it that way yet.
-Close-out docs: none new (F6-F8 already in the epic 6 SPEC).
-Resume: rerun .claude/skills/epic-autopilot/scripts/loop.sh epic-game-surfaces-and-keyboard for 6.2.
+Plain-language report: 6.2 (menu button, menu sheet, version footer) is built; the ticket review (3 passes) and code review (2 passes) converged. One choice is yours. When a WordCell view or peek is open, its dim layer covers the top bar, so touching ☰ does nothing until the view is closed. The ticket and SPEC F6 say the top bar stays live.
+- Option A (proposed default): leave it; amend the ticket wording. A player closes the view before opening the menu.
+- Option B: raise ☰ above the dim layer. A player can open the menu straight from the view; costs a layering change and real-tap tests.
+Not yet run: test:all and screenshots (Step D), marking done.
+Close-out docs: none yet.
+Resume: tell me A or B, I record it in the ticket Notes (and apply B if chosen), then rerun .claude/skills/epic-autopilot/scripts/loop.sh epic-game-surfaces-and-keyboard; the session resumes at Step D.
 Digest: _bmad-output/implementation-artifacts/autopilot/epic-game-surfaces-and-keyboard-20261014-2230.md
