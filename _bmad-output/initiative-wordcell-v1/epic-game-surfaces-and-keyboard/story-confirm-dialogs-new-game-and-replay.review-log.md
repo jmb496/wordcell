@@ -1,6 +1,6 @@
 # Review log — ticket 6.3
 
-State: pass 4: done
+State: done
 
 Pre-loop: HEAD 65d6df3da4d3afec885f9a86565cf2e481c0d163, 319 words (story-confirm-dialogs-new-game-and-replay.review-log.passes/pass0.md)
 
@@ -68,3 +68,8 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 Words: 826 (2.59 x pass 0)  |  Snapshot: story-confirm-dialogs-new-game-and-replay.review-log.passes/pass4.md
 ### Applied
 - both majors → fixer items 1-2
+
+## Pass 5 — 2026-10-15
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 0, minor 1 (duplicate), decision-needed 0  |  Dropped in triage: 0
+## Result — converged after 5 passes
+Unapplied minors: tests line says "all five strings" but six text.ts keys are added (write "six"); tickets.toml entry 3 still says the action bar goes to the confirm dialogs, "MenuSheet", and lacks the new wording (sync when publishing); unverified: new focus effect beats presence restoreFocus, entry-6 end-sheet clause, post-New-game history.state (confirm at build).
