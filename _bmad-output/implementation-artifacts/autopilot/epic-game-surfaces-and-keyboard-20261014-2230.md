@@ -118,3 +118,15 @@ Worth knowing: ticket-review minors carried to the build were handled in the pla
 Decision: wording the builder chose that is not in the EXPERIENCE.md catalogue: handle name "Collapse result", bar name "Show result: …", labels "Longest word" and "Words placed". Proposed default: keep as built. Effect: only what players and screen-reader users read on the end sheet and its collapsed bar; no rule or scoring change.
 Close-out docs: EXPERIENCE.md message catalogue ← end-sheet strings once approved (owner, pending).
 Resume: reply with your choice or "default", record it in the ticket Notes, rerun loop.sh; it resumes at Step D (test:all, screenshots, mark done).
+
+## 6.6 End sheet: result, collapse, Give up and relaunch — done
+What it adds: the end-of-game sheet (result, score, band, longest word, words placed, Replay this deal and Statistics buttons), collapsing to a bar, Give up and relaunch into a finished game.
+Ticket review: 4 passes, converged; nothing needed your input
+Build: built; commit dbbf83a
+Code review: thorough, 4 passes, converged (majors 6, 1, 2, 0); wording kept as built (owner, 2026-10-15)
+Tests: all passing, screenshots passed (26 passed, 8 skipped)
+Ref to fix upstream: none
+Tokens: resume session 0.2M input-equivalent (orchestrator)
+Worth knowing: accepted deviation: the win-by-Confirm test starts from a won session plus Undo, and bands 1-5 are covered by a unit test since no fixture reaches them. Unapplied minors are listed in review-loop/6-6-build.md § Result.
+Close-out docs:
+- EXPERIENCE.md message catalogue ← end-sheet strings "Collapse result", "Show result: …", "Longest word", "Words placed" (owner, 2026-10-15)

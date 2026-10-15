@@ -3,7 +3,7 @@ title: 'End sheet: result, collapse, Give up and relaunch'
 type: 'feature'
 ticket: '6'
 created: '2026-10-15'
-status: 'built'
+status: done
 baseline_revision: '889ca3679ae481c001112fa52596496c26c9e8d3'
 route: 'full'
 route_source: 'auto'
