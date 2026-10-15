@@ -1,16 +1,16 @@
-outcome: done
-ticket: 6.9
-reason: done
+outcome: stopped
+ticket: 6.10
+reason: rule 1, code review decision-needed (button behaviour)
 next: 6.10
-updated: 2026-10-15T18:18:27Z
-summary: Ticket 6.9 (How to play panel) is built, reviewed, tested and marked done.
+updated: 2026-10-15T19:42:17Z
+summary: Ticket 6.10 is built and code-reviewed, but one gameplay-visible choice needs your answer before it is marked done.
 
 ## Report
 
-Ticket 6.9 is done: the Menu now has a How to play panel with the rules, a worked example and the six rating bands with their scores (your 2026-10-15 choice). Code review took 2 passes with nothing needing your input; all tests and screenshots pass. Please skim the panel wording at your leisure (checklist in the ticket Notes).
+Ticket 6.10 (keyboard keys for menus and dialogs) is built and went through 2 code review passes, with no remaining problems except one choice for you.
 
-Close-out docs (apply at the retro):
-- EXPERIENCE.md Rating bands / How to play content <- band names plus scores in How to play (owner, 2026-10-15)
+**Your decision:** when a word view is open (tap-and-hold peek or a sticky view), should the Validate, Confirm and Flip buttons close it first, as Undo, Redo and the menu do? Recommended: yes (keep). Effect: the view closes when you press them, and no stale-selection error occurs. If no: those buttons would act with the view still open.
 
-Digest: _bmad-output/implementation-artifacts/autopilot/epic-game-surfaces-and-keyboard-20261014-2230.md
-Resume: .claude/skills/epic-autopilot/scripts/loop.sh epic-game-surfaces-and-keyboard
+To resume: answer this (record it in the ticket Notes), then run `.claude/skills/epic-autopilot/scripts/loop.sh epic-game-surfaces-and-keyboard`. The next session runs `test:all` (and screenshots, as `src/ui` changed), then marks 6.10 done.
+
+Close-out docs: none yet (spine AD-13 should mention `nav.settled`/`whenSettled`).

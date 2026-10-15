@@ -1,6 +1,6 @@
 # Code review loop — ticket 6.10 build (50b9d38..82cfde1)
 
-State: pass 1: done
+State: pass 2: done
 Pre-loop: HEAD 82cfde1, tree snapshot 0 c9407152ca53f3596e65f32f309fc57e8f123936; target diff `6-10-build.passes/pass0.diff`.
 Intent: story-keyboard-overlay-keys-f39-and-stale-tile-selection-plan.md. Depth thorough, max 7.
 
@@ -21,3 +21,17 @@ Reviewers: correctness, edge cases, verification gap, intent alignment  |  Findi
 ### Dropped
 - none
 Snapshot pass 1: tree 6ddf54f54344fa8b2018e732e7651d2442927360; test/lint/check pass (fixer + orchestrator lint/check).
+
+## Pass 2 — 2026-10-15
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 0, minor 1, decision-needed 0  |  Dropped in triage: 0
+### Applied
+- none (converged; no fix pass)
+### Unapplied minors
+- keys.test.ts 'AD-12 Halted: no key acts' presses Esc with nothing open, so the halted guard in pressEscape is not pinned; open an overlay first.
+- nav.whenSettled/settled not documented in spine AD-13 (spine update for owner).
+- Two distinct taps during a pending pop each queue a waiter (two undos at settle); waiters never dropped if the pop fails.
+- Esc on a sticky view/end sheet also clears a live tile selection via act() (noted in plan).
+
+## Result — converged after 2 passes
+Decision needed (owner): Validate, Confirm and Flip buttons also close an open sticky WordCell view/peek and pop a tail selection before acting; default keep.
+Final: npm test 2580 passed, lint ok, check ok.

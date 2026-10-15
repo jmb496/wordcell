@@ -199,3 +199,14 @@ Tokens: 2.9M input-equivalent (build 55%, code review 39%, orchestrator 4%); orc
 Worth knowing: the build changed the menu e2e row-height check to `toBeCloseTo(52, 1)` (it measured 52.00003 about half the time; cause not found). The panel text (rules wording, Q-12 empty-column rule) is on the ticket's owner text-review checklist; the Keyboard table lists `?` and Esc behaviour that ticket 6.10 implements.
 Close-out docs:
 - EXPERIENCE.md Rating bands / How to play content ← How to play lists band names plus scores (owner, 2026-10-15)
+
+## 6.10 Keyboard: overlay keys, F39 and stale tile selection — stopped
+What it adds: keys M, N, ?, Esc, Z, Y open and close the menu, new-game dialog and panels, undo and redo, and closing a view or selection first (F39).
+Ticket review: 3 passes, converged; nothing needed your input
+Build: built; commit 82cfde1
+Code review: thorough, 2 passes, converged (majors 3, 0); fixes in ddd5f19; one decision for you (below)
+Tests: test, lint and check pass in the review loop; the full `test:all` and screenshots not yet re-run by the autopilot
+Ref to fix upstream: none
+Worth knowing: spine AD-13 does not yet mention `nav.settled`/`whenSettled` (owner doc, apply at retro). Two Playwright cases are unit-tested only (M during a touch peek, Undo disabled with a sticky view open: no fixture).
+Decision needed: the Validate, Confirm and Flip buttons now also close an open sticky word view or peek, and clear a tail selection, before acting, like Undo, Redo and the menu. Default: keep. If you refuse, those three buttons would leave the view open or risk a stale-selection error.
+Close-out docs: none
