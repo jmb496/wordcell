@@ -1,16 +1,16 @@
-outcome: stopped
+outcome: done
 ticket: 6.11
-reason: stop rule 1, code review needs an owner decision (focus ring style on column cards)
-next: 6.11
-updated: 2026-10-15T22:49:47Z
-summary: Ticket 6.11 is built and code-reviewed (converged in 5 passes) but asks whether the keyboard focus ring on column cards may sit inside the card.
+reason: done
+next: 6.12
+updated: 2026-10-15T23:57:28Z
+summary: Ticket 6.11 (keyboard board keys, focus moves, tooltips) passed all tests and screenshots and is marked done.
 
 ## Report
 
-Ticket 6.11 (board keys, focus moves, tooltips) is built and its code review found nothing left open. One look-and-feel choice is yours: DESIGN.md asks for a focus ring drawn outside the card with a small gap; the build draws it inside the card edge because the outside ring gets hidden by overlapping cards in a fanned column. Proposed default: keep the inside ring. Effect: the ring is slightly tighter than the design doc says but always fully visible; you would see it in the new screenshot baselines. If you refuse, the ring would be clipped by neighbouring cards in fanned columns.
+Ticket 6.11 is done: the full test run and the screenshot check both passed, and the focus ring stays inside the card as you decided. Next ready ticket is 6.12 (winning guard: end-sheet half).
 
-Still to do on 6.11: full test run, screenshots (it touches the UI), then mark done. Close-out docs: DESIGN.md focus ring wording (if you keep the inside ring), plus earlier entries in the digest.
+Close-out docs (for the retro): DESIGN.md focus ring wording ← inside ring (owner, 2026-10-15); plus the earlier entries in the digest (e.g. AD-13 `nav.settled`, EXPERIENCE.md/DESIGN.md 360 px tray line).
 
 ## Next
 
-Record your answer in the ticket Notes, commit, then rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-game-surfaces-and-keyboard` (it resumes at Step D). Digest: `_bmad-output/implementation-artifacts/autopilot/epic-game-surfaces-and-keyboard-20261014-2230.md`.
+Rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-game-surfaces-and-keyboard`. Digest: _bmad-output/implementation-artifacts/autopilot/epic-game-surfaces-and-keyboard-20261014-2230.md

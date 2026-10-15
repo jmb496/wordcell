@@ -248,3 +248,17 @@ Decision needed: the focus ring on column cards is drawn inside the card (2px in
 Close-out docs:
 - DESIGN.md focus ring ← if the inside ring is kept, the doc's offset/gap wording changes (pending owner answer)
 Tokens: Tokens: 12.7M input-equivalent (build 54%, code review 43%, orchestrator 1%, other 1%); orchestrator peak context 56k
+
+### 6.11 resumed (session 2026-10-15, owner decision on card focus ring recorded: keep the inside ring)
+
+## 6.11 Keyboard: board keys, focus moves and tooltips — done
+What it adds: the board keys (1–8, arrows, Space, Enter, +/-, F), focus that follows the game phase, a visible focus ring and key hints in desktop tooltips.
+Ticket review: 7 passes, converged; the one decision was answered by the owner
+Build: built; commit 4bbf09d
+Code review: thorough, 5 passes, converged (majors 4, 1, 2, 1, 0); fixes in WIP commits c1b964c..bea1a7a; the focus-ring decision was answered by the owner (keep inside)
+Tests: all passing (`test:all`), screenshots passed (37 passed, 13 skipped)
+Ref to fix upstream: none
+Tokens: Tokens: 0.1M input-equivalent (orchestrator 58%, other 42%); orchestrator peak context 51k
+Worth knowing: unapplied minors from the review log: static mirrors not asserted tabindex-free; Enter/Space on column cards in Composing/Place only unit-tested with a mocked controller; pointer press natively focuses a card; Space on a WordCell with an open view closes and reopens it.
+Close-out docs:
+- DESIGN.md focus ring ← card focus ring is drawn inside the card edge (2px in), not at a 2px offset with a gap (owner, 2026-10-15)
