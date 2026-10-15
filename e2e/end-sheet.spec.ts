@@ -62,21 +62,24 @@ async function expectBoardFocus(page: Page): Promise<void> {
   else await expect(page.locator('main')).toBeFocused();
 }
 
-// Records, at the first frame the end sheet exists, how many animations run outside the sheet
-// (the flyToCell faces, AD-14); the sheet's own open transition is not counted.
+// Started just before Confirm (the fixture has booted, the sheet is absent): records the most
+// animations running outside the sheet before it exists (the flyToCell faces, AD-14) and how many
+// run at the first frame the end sheet exists; the sheet's own open transition is not counted.
 async function probeOutsideAnimations(page: Page): Promise<void> {
-  await page.addInitScript(() => {
-    const probe: { outside?: number } = {};
+  await page.evaluate(() => {
+    const probe: { max: number; outside?: number } = { max: 0 };
     (window as unknown as { __open: typeof probe }).__open = probe;
+    const outsideCount = (): number =>
+      document
+        .getAnimations()
+        .filter((a) => !(a.effect as KeyframeEffect).target?.closest('[role="dialog"], .layer'))
+        .length;
     const tick = (): void => {
       if (document.querySelector('[role="dialog"] .score') !== null) {
-        probe.outside = document
-          .getAnimations()
-          .filter(
-            (a) => !(a.effect as KeyframeEffect).target?.closest('[role="dialog"], .layer'),
-          ).length;
+        probe.outside = outsideCount();
         return;
       }
+      probe.max = Math.max(probe.max, outsideCount());
       requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
@@ -90,19 +93,23 @@ test.describe('android', () => {
     page,
   }) => {
     // The session-won + Undo start stands in for a scripted one-move-from-won fixture (equivalent).
-    await probeOutsideAnimations(page);
     await openFixture(page, 'session-won', { steps: ['undo'] });
     await expect(primary(page)).toHaveAccessibleName('Confirm');
+    await expect(anySheet(page)).toHaveCount(0);
     const before = await topBarScore(page);
     const meta = (await page.locator('[data-band="tray"] .meta').textContent()) ?? '';
     const delta = Number((/·\s*(\S+)$/.exec(meta)?.[1] ?? '').replace('−', '-').replace('+', ''));
     expect(Number.isFinite(delta)).toBe(true);
+    await probeOutsideAnimations(page);
     await primary(page).click();
     await expect(sheet(page)).toBeVisible();
     // The sheet opens only after the glide settles: no flyToCell face still animates at that frame.
-    expect(
-      await page.evaluate(() => (window as unknown as { __open: { outside?: number } }).__open),
-    ).toEqual({ outside: 0 });
+    const probe = await page.evaluate(
+      () => (window as unknown as { __open: { max: number; outside?: number } }).__open,
+    );
+    expect(probe.max).toBeGreaterThan(0); // the glide was observed, so the check is not vacuous
+    expect(probe.outside).toBe(0);
+    await expect(sheet(page).locator('.band')).toHaveText('Word Nerd');
     expect(await sheetScore(page)).toBe(before + delta);
     await expect(sheet(page).getByText(/letters? left/)).toHaveCount(0);
     await expect(replayButton(page)).toBeFocused();
@@ -146,7 +153,7 @@ test.describe('android', () => {
     await expect(sheet(page, GAVE).getByText('1 letter left: −10', { exact: true })).toBeVisible();
   });
 
-  test('R-84 the longest word is the earliest longest, QU as QU, with the words placed', async ({
+  test('R-84 the longest word shows from the view, QU as QU, with the words placed', async ({
     page,
   }) => {
     await openFixture(page, 'session-won', { endSheet: 'expanded' });
@@ -324,7 +331,7 @@ test.describe('android', () => {
     await expect.poll(() => wcOf(page)).toBe(1);
   });
 
-  test('R-75 Redo after an undone Give up does not reopen the sheet', async ({ page }) => {
+  test('R-75 Redo is disabled after an undone Give up', async ({ page }) => {
     await openFixture(page, 'session-gave-up', { endSheet: 'expanded' });
     await page.getByTestId('undo').click();
     await expect(anySheet(page)).toHaveCount(0);
@@ -355,10 +362,14 @@ test.describe('android', () => {
   }) => {
     await openFixture(page, 'session-won', { endSheet: 'expanded' });
     const launch = await launchOf(page);
+    const { seed } = await parsed(page);
     await primary(page).click();
     await expect(anySheet(page)).toHaveCount(0);
     await expect.poll(() => wc(page)).toEqual({ wc: 0, launch });
     await expect(bar(page)).toHaveCount(0);
+    const after = await parsed(page);
+    expect(after.seed).not.toBe(seed);
+    expect(after.moves).toEqual([]);
   });
 
   test('R-74 Replay from the collapsed sheet (menu) hides the bar and pops nothing', async ({
