@@ -1,6 +1,6 @@
 # Review log — story-statistics-panel-history-flag-and-menu-dot
 
-State: pass 1: done
+State: pass 2: done
 
 Pre-loop: HEAD 1a7c369, words 291 (budget default 2.5x = ~728).
 
@@ -24,3 +24,21 @@ Reviewers: builder's reading, edge-case hunter, adversarial, ref alignment  |  F
 ### Dropped
 - end-sheet opener for the panel (entry 7's, consumers field covers); fixture matrix size reduced instead of listing all ~18 (folded into 5); tile rounding test (engine owns the rule).
 Fix applied (all 8 majors, 3 minors + tickets.toml fields added). Words: 794 (2.7 x pass 0; front matter and References included) | Snapshot: pass1.md
+
+## Pass 2 — 2026-10-15 (review triaged)
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings (after merge): major 5, minor 4, decision-needed 0  |  Dropped in triage: 7
+### Accepted (majors)
+1. Focus rules stated but not tested; panel-close focus goes to ☰ like Preferences (6.3 plan) → add to Reset history AC.
+2. `0` rule and fractional mean have no fixture → the tie fixture also holds a given-up record scoring 0 (not negative, so counted) and a non-integer mean.
+3. Only-negative fixture: pin that it has no longestWord (`—`, no count).
+4. Panel needs the version for the variant sentences but noticeReason() is captured at open: one shared reason→sentence mapping fed by live scoreHistory.state.reason.
+5. AD-13 reload: name history-invalid-version-unknown.json; the panel and confirm are gone after reload.
+### Accepted (minors, no added words)
+- Tie fixture wording (equal letterCount, different records); drop the redundant "dot clears on any history reset" sentence; dot asserted with all surfaces closed; consumers reword.
+### Default applied (technical)
+- Focus target after panel close, shared mapping location, fixture contents → reviewers' defaults.
+### Decision needed
+- none
+### Dropped
+- unreadable focus start (build-notes Per-surface defines it); panel title; tie rule read as per-record (R-84 spec line 346 and EXPERIENCE agree); halted/stale dot; Panel.svelte close cite; engine/UI line note; "(QU as QU)" deletion (text.ts convention).
+Fix applied (5 majors, 4 minors). Words: 886 (3.0 x pass 0) | Snapshot: pass2.md
