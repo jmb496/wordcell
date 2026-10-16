@@ -1,6 +1,6 @@
 # Review log: story-refactor-sweep-code
 
-State: pass 3: done
+State: pass 4: done
 
 Pre-loop: HEAD 0aabff067f72e04a4342a375028c4689ef4f6c40; words 109; copy /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-game-surfaces-and-keyboard/story-refactor-sweep-code.review-log.passes/pass0.md
 Budget: 1500 words.
@@ -49,4 +49,15 @@ Reviewers: fix diff, edge-case, adversarial, ref alignment  |  Findings (merged)
 ### Default applied (technical)
 - all; proposed reviewer defaults taken.
 Words (docs): 1326 (12.2x pass 0, within stated budget 1500)  |  Snapshot: _bmad-output/initiative-wordcell-v1/epic-game-surfaces-and-keyboard/story-refactor-sweep-code.review-log.passes/pass3.md
+Fixer: all items applied.
+
+## Pass 4 — 2026-10-16
+Reviewers: fix diff, edge-case, adversarial, ref alignment  |  Findings (merged): major 2, minor 7, decision-needed 0  |  Dropped in triage: 0
+### Applied (to fixer)
+- [major] Tests line allows "unit or helper test for a moved helper"; AC says only scan tests may be new Vitest tests (contract contradiction) → item 1
+- [major] Owns "a file outside it needs a named inventory row" vs Deferred set "outside Owns is recorded for owner" → item 2
+- [minor, word-neutral] `none` outcome; scan "no token/regex removed or narrowed"; Owns includes rows' specs; flaky drag tests plural; not-done-ticket entries get no row; reducedMotion mechanism left to plan → item 3
+### Default applied (technical)
+- all; reviewer defaults taken. Dropped nothing; "no text change" ref item (A8 row) needs none.
+Words (docs): 1365 (12.5x pass 0, within stated budget 1500)  |  Snapshot: _bmad-output/initiative-wordcell-v1/epic-game-surfaces-and-keyboard/story-refactor-sweep-code.review-log.passes/pass4.md
 Fixer: all items applied.
