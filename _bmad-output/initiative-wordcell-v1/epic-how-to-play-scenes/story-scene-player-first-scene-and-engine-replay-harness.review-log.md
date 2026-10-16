@@ -1,6 +1,6 @@
 # Review log — story-scene-player-first-scene-and-engine-replay-harness.md
 
-State: pass 3: done
+State: pass 4: done
 
 Pre-loop: HEAD a5593dc4d44b2d08484392c5aa7437fad578e97d, 315 words (pass 0 copy: story-scene-player-first-scene-and-engine-replay-harness.passes/pass0.md). Growth budget 2.5x = ~790 words.
 
@@ -59,3 +59,13 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 - (none new; tap resume-vs-restart carried)
 
 Fix applied; words 909 (2.88x pass 0); snapshot passes/pass3.md. Minors not applied (cap): figcaption naming, unknown-key rejection, rest kind name.
+
+## Pass 4 — 2026-10-16
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 0, minor 2, decision-needed 0  |  Dropped in triage: 0
+Words: 909 (2.88x pass 0)
+
+## Result — converged after 4 passes
+
+Majors per pass: 11, 7, 5, 0. Decision needed (owner): after a tap pauses a scene, does the next tap resume from the paused point or restart from step 1? Proposed default: restart from step 1 (epic: "a tap pauses or restarts"); the ticket keeps the epic's wording.
+Technical defaults applied: about 10 (reduced-motion Replay to frame 0, hidden restart at step 1, dictionary from the generated file in a named repro case, replay helper outside *.test.ts, pause/play as one covering button, etc.).
+Unapplied minors: Tests line gives the hidden stop no tier; negative tests should say they add word/score/rejected entries to a clone of scene 1; figcaption naming the figure; unknown-key rejection in the fixture; name the rest kind (not parting); QU array shape in fixture; getAnimations scoped to the scene (partly applied).
