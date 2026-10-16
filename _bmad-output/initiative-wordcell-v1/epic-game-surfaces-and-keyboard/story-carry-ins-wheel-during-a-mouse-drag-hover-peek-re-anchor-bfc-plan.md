@@ -3,7 +3,7 @@ title: 'Carry-ins: wheel during a mouse drag, hover-peek re-anchor, bfcache hide
 type: 'feature'
 ticket: '14'
 created: '2026-10-15'
-status: built
+status: done
 route: 'full'
 route_source: 'auto'
 baseline_revision: 'f1d04312b6be1601b6ae2f25276cafc0155b3f18'

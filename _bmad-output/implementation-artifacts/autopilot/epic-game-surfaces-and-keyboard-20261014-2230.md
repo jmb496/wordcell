@@ -316,3 +316,14 @@ Close-out docs:
 - EXPERIENCE.md § Accessibility Floor ← buried WordCell cards hidden from screen readers (owner, 2026-10-15)
 - SPEC.md CAP-11 ("every card is a button") ← same exception (owner, 2026-10-15)
 - SPEC.md CAP-5 "(none: opens at once)" edit may be needed (from 6.12)
+
+## 6.14 Carry-ins: wheel during a mouse drag, hover-peek re-anchor, bfcache hide flush — done
+What it adds: while dragging a card with the mouse, scrolling the page wheel now keeps the card, highlight and drop spot following the pointer; the hover-peek anchoring is now covered by a test; the bfcache Back concern was tried and does not reproduce, so no fix was needed.
+Ticket review: 5 passes, converged (majors 7, 4, 3, 2, 0); nothing needed your input
+Build: built; commit e01cf6a
+Code review: thorough, 1 pass, converged; 0 fixes applied
+Tests: all passing, screenshots passed
+Ref to fix upstream: none
+Tokens: 6.8M input-equivalent (build 47%, ticket review 37%, code review 9%, other 5%, orchestrator 3%); orchestrator peak context 59k
+Worth knowing: bfcache non-reproduction recorded in build-notes.md; review noted minor test-wording points left unapplied (e.g. two wheel cases that pass on a no-scroll implementation).
+Close-out docs: none
