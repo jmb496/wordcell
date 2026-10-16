@@ -301,23 +301,23 @@ const stepScenes = [
     rules: 'R-23 R-33 R-38',
     // Per frame: the open layer's tiles (undefined: no tray), Validate class, cell 6 covered.
     frames: [
-      { tiles: undefined, validate: undefined, used: false },
-      { tiles: undefined, validate: undefined, used: false },
-      { tiles: 'BEDKA', validate: 'lit', used: false },
-      { tiles: 'BAKED', validate: 'lit', used: false },
-      { tiles: 'BALKED', validate: 'lit', used: true },
-      { tiles: 'BALKED', validate: 'pressed', used: true },
+      { tiles: undefined, validate: undefined, used: false, k: 0, side: 'left' },
+      { tiles: undefined, validate: undefined, used: false, k: 0, side: 'left' },
+      { tiles: 'BEDKA', validate: 'lit', used: false, k: 1, side: 'left' },
+      { tiles: 'BAKED', validate: 'lit', used: false, k: 1, side: 'left' },
+      { tiles: 'BALKED', validate: 'lit', used: true, k: 1, side: 'left' },
+      { tiles: 'BALKED', validate: 'pressed', used: true, k: 1, side: 'left' },
     ],
   },
   {
     id: 'destination' as const,
     rules: 'R-30 R-31 R-32',
     frames: [
-      { tiles: undefined, validate: undefined, used: false },
-      { tiles: 'APE', validate: 'lit', used: false },
-      { tiles: 'TAPE', validate: 'lit', used: false },
-      { tiles: 'STAPE', validate: 'lit', used: false },
-      { tiles: 'PEATS', validate: 'lit', used: false },
+      { tiles: undefined, validate: undefined, used: false, k: 0, side: 'left' },
+      { tiles: 'APE', validate: 'lit', used: false, k: 1, side: 'left' },
+      { tiles: 'TAPE', validate: 'lit', used: false, k: 2, side: 'left' },
+      { tiles: 'STAPE', validate: 'lit', used: false, k: 3, side: 'left' },
+      { tiles: 'PEATS', validate: 'lit', used: false, k: 3, side: 'right' },
     ],
   },
 ];
@@ -343,6 +343,14 @@ for (const { id, rules, frames } of stepScenes) {
         await expect(open.locator('.tiles .card')).toHaveText(frame.tiles.split(''));
         await expect(open.locator('.validate')).toHaveClass(new RegExp(frame.validate ?? ''));
         await expect(open.locator('.cell6.used')).toHaveCount(frame.used ? 1 : 0);
+        const n = frame.tiles.length;
+        const locked = frame.side === 'left' ? [0, frame.k] : [n - frame.k, n];
+        const marked = await open
+          .locator('.tiles .card')
+          .evaluateAll((els) => els.map((el, j) => el.classList.contains('destination') && j));
+        expect(marked.filter((j) => j !== false)).toStrictEqual(
+          Array.from({ length: frame.k }, (_, j) => locked[0] + j),
+        );
         await expect(layer.and(figure.locator('[style*="opacity: 1"]'))).toHaveCount(1);
       }
       if (i < frames.length - 1)

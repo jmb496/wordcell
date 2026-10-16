@@ -80,14 +80,11 @@ describe('AD-2 How to play scene replay', () => {
   it.each([
     ['compose', compose],
     ['destination', destination],
-  ] as const)(
-    'R-30 R-38 scene %s: a stated word changed to a non-word fails the harness',
-    (_name, fixture) => {
-      const scene = clone(fixture);
-      (scene.words as unknown as { word: string }[])[0].word = 'XQZXQ';
-      expect(() => replayScene(scene, DICT)).toThrow(/stated word XQZXQ/);
-    },
-  );
+  ] as const)('R-30 R-38 scene %s: a wrong stated word fails the harness', (_name, fixture) => {
+    const scene = clone(fixture);
+    (scene.words as unknown as { word: string }[])[0].word = 'XQZXQ';
+    expect(() => replayScene(scene, DICT)).toThrow(/stated word XQZXQ/);
+  });
 
   it('R-31 scene destination: setDestinationCount 0 after the drop throws r31-destination-count (cf. replay.test.ts k = 0 on a non-empty destination)', () => {
     const scene = clone(destination);

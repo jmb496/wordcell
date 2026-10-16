@@ -125,6 +125,20 @@ describe.each([
         expect(frame.order.join('')).toBe(word.word);
       }
     });
+    // Frames with no fixture word: the first tray order is the destination block then the carried
+    // tail (R-30), and the pressed frame keeps the previous frame's order.
+    const drop = data.commands[0] as { sourceColumn: number; sourceCount: number };
+    const cols = data.start.columns as string[][];
+    const first = [
+      ...cols[scene.carry.destinationColumn - 1].slice(-scene.carry.destinationCount),
+      ...cols[drop.sourceColumn - 1].slice(-drop.sourceCount),
+    ].join('');
+    const open = scene.frames.filter((f) => f.order !== undefined);
+    expect(open[0].order?.join('')).toBe(first);
+    scene.frames.forEach((frame, i) => {
+      if (i > 0 && data.commands[applied[i] - 1]?.type === 'validate')
+        expect(frame.order).toStrictEqual(scene.frames[i - 1].order);
+    });
   });
 
   it('AD-14 the tray cards fly one RICH_SLOT apart and no tail effect follows the fly step', () => {
@@ -144,7 +158,10 @@ describe.each([
     scene.frames.forEach((frame, i) => {
       const done = data.commands.slice(0, applied[i]);
       const counts = done.filter((c) => c.type === 'setDestinationCount') as { k: number }[];
-      if (counts.length > 0) expect(frame.k).toBe(counts[counts.length - 1].k);
+      if (frame.order !== undefined)
+        expect(frame.k).toBe(
+          counts.length > 0 ? counts[counts.length - 1].k : scene.carry.destinationCount,
+        );
       if (frame.order !== undefined)
         expect(frame.side === 'right').toBe(done.some((c) => c.type === 'flip'));
     });
