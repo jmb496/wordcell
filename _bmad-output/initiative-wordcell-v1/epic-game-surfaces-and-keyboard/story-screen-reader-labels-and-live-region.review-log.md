@@ -1,6 +1,6 @@
 # Review log — story-screen-reader-labels-and-live-region
 
-State: pass 5: done
+State: pass 6: done
 
 Pre-loop: HEAD c4b130d, pass0.md 241 words, budget 1500 words.
 
@@ -101,3 +101,19 @@ punctuation of the Announcer first sentence and the UI Vitest bullet; a used cel
 - none
 
 Minors a-g applied (word-neutral).
+
+## Pass 6 — 2026-10-15 23:50
+Reviewers: fix diff, edge-case hunter (none), adversarial, ref alignment (none)  |  Findings: major 1, minor 7, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1497 (6.2x pass 0, within the 1500 budget)  |  Snapshot: story-screen-reader-labels-and-live-region.review-log.passes/pass6.md
+### Majors (triaged)
+1. The column foot has a name template but no role: Column.svelte renders it as a plain `<div class="foot" data-testid="foot-N">`, so an aria-label there is not reliably exposed; default, `role="group"` with the aria-label, not focusable (focus stays with the keyboard ticket), Playwright locates it by `foot-N` and reads the accessible name.
+### Minors (over budget unless word-neutral)
+restore the source of `{WORD}`/letter count (`draft.word`, `draft.letterCount`) and add it to the throw list; drop the unreachable bare `Idle.` clause; column `i` direction (`ColumnView.cards` order); `announceReset` prefix values; aria-hidden cell cards never focusable; tray-tile families; hidden-page rAF drop (not applied).
+### Default applied (technical)
+- the major: reviewer default.
+### Decision needed
+- none new
+### Dropped
+- none
+
+Minors a, b, c, d, e applied (word-neutral).
