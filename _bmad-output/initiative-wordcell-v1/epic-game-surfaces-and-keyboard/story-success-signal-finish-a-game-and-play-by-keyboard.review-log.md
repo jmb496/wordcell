@@ -1,6 +1,6 @@
 # Review log — ticket 6.15 Success signal
 
-State: pass 2: done
+State: pass 3: done
 Pre-loop: HEAD bc81b42b5ad90657220fdef2aeb75c85e0685866, 178 words (copy: .passes/pass0.md)
 
 ## Pass 1 — 2026-10-16
@@ -39,3 +39,21 @@ Words (docs): 620 (3.5 x pass 0)  |  Snapshot: .passes/pass2.md
 - none
 ### Dropped
 - covers trimming (frontmatter mirrors tickets.toml)
+
+## Pass 3 — 2026-10-16
+Reviewers: fix-diff (0), edge-case (1 major), adversarial (7 major), ref alignment (0)  |  Findings: major 7 after merge, minor ~6, decision-needed 0  |  Dropped in triage: duplicates merged
+Words (docs): 723 (4.1 x pass 0, over budget)  |  Snapshot: .passes/pass3.md
+### Applied
+- [major] Flow 6 key helpers file-local → move to e2e/helpers/keys.ts (+ helpers.spec.ts test)
+- [major] Flow 6 final Session/score literal → moves[3] literal, score 190
+- [major] Test A step 1 gestures → taps via tapAt, no drag helpers
+- [major] steps 2, 5, 7 without assertions → added
+- [major] Test B delta literal 36 (319 → 355)
+- [major] stash/sameSession flaky across time accrual/reload → scoped; game() elsewhere
+- [major] test names → start with proven R-/Q-/I- ids
+### Default applied (technical)
+- Timer poll timeout, audit scoped to covers, Esc detail, waitForDictionary(page,'ready').
+### Decision needed
+- none
+### Dropped
+- none
