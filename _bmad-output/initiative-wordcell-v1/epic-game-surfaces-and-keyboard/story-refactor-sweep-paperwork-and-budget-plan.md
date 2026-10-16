@@ -3,7 +3,7 @@ title: 'Refactor sweep: paperwork and budget'
 type: 'chore'
 ticket: '17'
 created: '2026-10-16'
-status: built
+status: done
 baseline_revision: 'e7976a0439f9cd71bed12225dd96d0b4d2476812'
 route: 'oneshot'
 route_source: 'auto'

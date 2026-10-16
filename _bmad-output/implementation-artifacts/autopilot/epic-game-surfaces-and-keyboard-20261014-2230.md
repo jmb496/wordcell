@@ -349,3 +349,17 @@ Ref to fix upstream: none
 Tokens: 3.8M input-equivalent (ticket review 64%, build 22%, code review 7%, other 5%, orchestrator 3%)
 Worth knowing: nothing
 Close-out docs: none
+
+## 6.17 Refactor sweep: paperwork and budget — done
+What it adds: Final paperwork for the epic: every row of the rule-coverage table checked against a passing test (three row texts corrected), the owner-facing doc edit list gathered in build-notes, and the speed and size budgets measured. No game or code changes.
+Ticket review: 4 passes, converged (majors 9, 5, 2, 0); nothing needed your input
+Build: built; commits 3c47da4
+Code review: quick, 1 pass, converged; 0 fixes applied
+Tests: all passing (test:all exit 0; unit median 4.44 s on the Linux filesystem, size 536,102 / 600,000 bytes); screenshots: the build ran test:screens (37 passed); not needed for this docs-only diff
+Ref to fix upstream: none
+Tokens: 4.2M input-equivalent (ticket review 50%, build 35%, code review 8%, other 4%, orchestrator 3%); orchestrator peak context 56k
+Worth knowing: D45 (EXPERIENCE.md Keyboard text vs the one-Tab-stop-per-column decision) and D46-D48 (tickets.toml entry 3 wording, 6.13 test-bullet wording) are recorded for the owner, not applied. Watch re-run was not measured in a live watch session.
+Close-out docs: see build-notes.md "Close-out edits" (SPEC CAP-5, CAP-11, EXPERIENCE.md Accessibility Floor, AD-13 nav.settled, message catalogue, pending-draft 360 px, DESIGN focus ring); plus EXPERIENCE.md Keyboard roving text (D45)
+
+## Run complete
+All tickets of the epic are done. Next: /bmad-retrospective, apply its owner-approved doc fixes (including the Close-out docs above and in build-notes.md), then mark the epic done.
