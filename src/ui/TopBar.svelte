@@ -122,8 +122,9 @@ function timerText(): string {
     font: 700 18px/24px system-ui, "Roboto", sans-serif; font-variant-numeric: tabular-nums;
     color: var(--wc-ink-primary);
   }
-  /* h:mm:ss would overflow 64 px at the score's size, so only it shrinks (DESIGN.md Top bar). */
-  .timer.long { font-size: 13px; }
+  /* h:mm:ss would overflow 64 px at the score's size, so only it shrinks (DESIGN.md Top bar); 12 px leaves
+     margin for the widest system fonts (13 px measured 65 px on the CI runner, 64 px box). */
+  .timer.long { font-size: 12px; }
   .undo-redo { flex: none; display: flex; gap: 4px; }
   .icon {
     width: 44px; height: 44px; padding: 0; border-radius: 9999px;
