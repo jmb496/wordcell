@@ -1,6 +1,6 @@
 # Review log — story-compose-and-destination-block-scenes.md
 
-State: pass 1: done
+State: pass 2: done
 
 Pre-loop: HEAD d9895643d34c0c46ca3e99c54160884a86aa4b07, 143 words (pass 0 copy: story-compose-and-destination-block-scenes.passes/pass0.md). Growth budget 2.5x = ~357 words (default). Note: no epic-8 SPEC.md exists under _bmad-output/specs/; the epic file is the requirement source.
 
@@ -23,3 +23,20 @@ Reviewers: builder's reading, edge-case hunter, adversarial, ref alignment  |  F
 - (none)
 
 Fix applied; words 532 (3.7x pass 0, over the 2.5x budget: from pass 2 minors go to the fixer only when they add no words); snapshot story-compose-and-destination-block-scenes.passes/pass1.md. All 8 majors and the applicable minors applied. Unverified by the fixer: scene 3 word strings (APE, TAPE, STAPE, PEATS) derived from R-30 to R-32, not run through the engine; dictionary membership of balked/peats checked in generated/dictionary/en.txt.
+
+## Pass 2 — 2026-10-16
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 6 (merged), minor 6, decision-needed 0  |  Dropped in triage: 3 (adversarial minors: 'canValidate true at STAPE' already stated, scene 3 column-count note, caption string reuse: plan detail)
+### Applied (to fixer)
+- [major] validatable shape/indexing undefined and frame→Validate state mapping (canValidate is true from the drop until validate succeeds, then false in the place phase) → `{after: count, canValidate}` as scores, entries listed, drawn Validate lit exactly when true
+- [major] arrange CardIds: fixture ids are those startOf assigns; words entries catch a wrong id
+- [major] a rejected validate in `commands` does not fail the positive replay (scene-replay.ts records rejectedWords only for words entries) → harness fails on any rejectedWord in commands (or equivalent assertion), so a dictionary lacking BALKED fails the replay
+- [major] scene 2 frame list ambiguous (count, final frame is a script pose of the open tray, Place is scene 4)
+- [major] Frame type widening fields and normal-motion steps for −/+/Flip/cell 6 (target ids carrying commands; cell 6 drawn used after the borrow, R-33)
+- [major] tests: inline Set {'balked'}; one concrete illegal case; drop the vacuous score negative; test-name ids line
+- [minor, no added words] 'index into M'; static controls inert non-button markup
+### Default applied (technical)
+- all six above are technical (harness/fixture contract, test shape); none changes what the player sees beyond epic HP-3
+### Decision needed (functionality / UX / gameplay)
+- (none)
+
+Fix applied; words 599 (4.2x pass 0; over budget). Snapshot passes/pass2.md. Applied all 6 majors; item 3 resolved without a harness throw (existing 8.1 test expects rejectedWords [undefined,'bedka']): positive replay asserts rejectedWords all undefined, negative expects 'balked' rejected. Minor 'index into M' not applied (budget). Unverified by fixer: setDestinationCount 0 throws r31-destination-count on scene 3 (inferred, not run; no TABLE row for non-self count 0); no fixture replay was run.
