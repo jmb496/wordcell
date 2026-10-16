@@ -1,0 +1,71 @@
+---
+type: epic
+title: "How to play with animated scenes"
+parent: initiative-wordcell-v1
+covers: []
+after: [epic-game-surfaces-and-keyboard]
+assignee: ""
+risk: medium
+---
+
+# How to play with animated scenes
+
+## Description
+
+Replaces the static How to play page (epic 6 ticket 6.9) with short, looping animated scenes in the style of modern app onboarding: five basic scenes (drag a tail onto a column; compose a word by rearranging and borrowing a WordCell letter; the destination block with −/+ and Flip; place on a WordCell with the card order; scoring). After the basics a "Tricky rules" section of three animated scenes covers the rules a new player trips on (dropping on the source column; the destination-card rule and empty columns; one top card per WordCell). The scenes are option A of the owner's 2026-10-16 discussion: hand-scripted scenes built from the real `Card` component, not video and not a replay through the real engine; their scripts are checked against the engine in tests so they cannot drift from the rules.
+
+## Outcome
+
+A first-time player understands a full move (pick up, drop, compose, place, score) and the rules that surprise people without reading a page of text; the signal is the owner's read of the scenes and, later, fewer rule questions from new players. The remaining text rules stay available beneath the scenes.
+
+## Requirements
+
+Epic-local source (no parent ids); the rules cited are `docs/game-flow-spec.md`.
+
+- HP-1: A scene player runs a scene script (steps: grab, move, drop, tap, with a target and a time) on the real `Card` component, with a pointer ghost, using `src/ui/motion.ts` durations so the Animation speed preference applies. Each scene loops with a short rest between runs, and a tap on the scene pauses or restarts it (a small pause/play icon shows the state, no other visible buttons), and animates nothing while its panel is closed or hidden.
+- HP-2: With reduced motion, a scene shows no movement: it steps through its frames on a Next control, and the final frame is the resting state.
+- HP-3: Five basic scenes, in order, on the rulebook position of `docs/game-flow-spec.md` §8 (col1 F E D K A, col2 X O R I N, col3 L M F B, top to bottom; WordCell 6 shows L). Storyboards approved by the owner 2026-10-16 (Notes): (a) drag: press E, the tail E D K A lifts, drop on column 3, the tray opens (R-10, R-20, R-23); (b) compose: B is the locked block, tiles arranged to A K E D (BAKED), tap WordCell 6 to borrow L, arranged A L K E D (BALKED), tap Validate (R-30, R-33, R-34, R-38); (c) destination block and Flip on a mini board (source tail P E, destination column S T A): drop shows A locked, word APE; + twice shows S T A, STAPE with Validate still lit (R-38: only structural checks grey it out); Flip moves the block right reversed, PEATS (R-31, R-32, R-30); (d) place: BALKED, cells 3–6 lit and 6 pre-selected, tap 5 then 6, drag D to the front (order D B A L K E, top E), Confirm, cards fly to cell 6 (R-40, R-42, R-50 to R-52, R-60); (e) scoring: cell 3 CAT 9, cell 4 QUIT (QU counts two) 16, cell 6 BALKED 36, total 61 (R-80, R-36).
+- HP-4: A "Tricky rules" section after the basics, three animated scenes, each with a one- or two-line caption (owner 2026-10-16; the earlier eight-rule proposal was cut to these): (a) drop on the source column: lift E D K A from col1, drop it back on col1, F is left behind and must join, FAKED (R-21); (b) the destination-card rule and empty columns, one scene: a non-empty destination column makes its bottom card B join the word, then the same word is built by dropping on an empty column where nothing has to join and lifted cards plus free letters alone give BAT (R-13, R-31, R-22); (c) one top card per WordCell per word: tap WordCell 5, its top S joins and the cell dims, a second tap does nothing (R-33; the engine throws `r33-free-letter-duplicate`, the UI never dispatches it). Cut by the owner: only a bottom-reaching tail and no WordCell cards, locked block and Flip (covered by scene c), target ≤ word length, other columns inert, QU counts two (covered by scene e).
+- HP-5: Every scene's game content (moves, words, scores) lives in a JSON file under `fixtures/` that the UI imports to animate and an engine test under `src/engine/` replays through the real engine (AD-1 allows JSON from `fixtures/` in engine tests and bans value imports of the engine from `src/ui/`; no spine change): each move is legal, each word is in the dictionary, each stated score equals the engine's, and the rejected cases match the `TABLE` in `src/engine/commands.test.ts`. A rule or deal change that breaks a scene fails the unit suite (AGENTS.md rule 6: fail fast).
+- HP-6: All scene text (captions, rule lines, the Next, Pause and Replay control names) is in `src/ui/text.ts`; each scene is a `<figure>` with a text description and `aria-hidden` animation; every button is wrapped in `act()`.
+- HP-7: The scenes sit above the text sections; the move steps and the worked example are removed from the text (the scenes replace them), and the goal, table, undo, empty-column, scoring and rating text remain; the final bundle stays under the 600,000-byte budget with the margin recorded.
+
+## Done when
+
+1. On `android` the How to play panel shows the five basic scenes in order, each looping, pausable and replayable, followed by the three Tricky rules scenes; Playwright asserts each scene's play and pause/replay by tap.
+2. Every scene script passes the engine replay test (HP-5); changing a rule constant or a scene move makes it fail.
+3. With reduced motion on, no scene animates and the Next control steps through its frames; with Animation speed Slow, a scene runs slower than Fast; a closed or hidden panel runs no animation.
+4. `npm run test:all` and `npm run test:screens` are green, with a screenshot baseline of each scene's final frame, and the size budget is met.
+5. The owner has read the scene captions and the Tricky rules text (SPEC F3 style review) and the EXPERIENCE.md How to play section describes the new panel.
+
+## Boundaries
+
+`src/ui/` (a scene player, scene scripts, the How to play panel), `src/ui/text.ts`, scene content in `fixtures/`, one engine replay test under `src/engine/` (test only, no engine source change), `e2e/`, tests, and the EXPERIENCE.md How to play section. Not the engine, the shell, the game store or any rule: scenes never touch the game `Session`, the score history or `dispatch`. Not an interactive tutorial on a live board (option C, a later epic if wanted), and not the device checks of spine epic 7.
+
+## References
+
+- design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/EXPERIENCE.md, How to play panel (currently "One static page"), Motion, Accessibility Floor
+- design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/DESIGN.md, Components (Panels, cards)
+- rules — docs/game-flow-spec.md, R-10 to R-13, R-20 to R-23, R-30 to R-41, R-50 to R-52, R-60, R-80, §8 worked example
+- code — src/ui/HowToPlayPanel.svelte, src/ui/text.ts (`howTo`), src/ui/motion.ts, src/ui/Card.svelte (`mirror="static"`)
+- prior — _bmad-output/initiative-wordcell-v1/epic-game-surfaces-and-keyboard/story-how-to-play-panel.md (6.9), its Notes owner checklist
+- constraint — AGENTS.md, Architecture rules 3, 6, 7 and Conventions (text.ts, act(), motion durations)
+
+## Notes
+
+- Decision (owner, 2026-10-16): option A, hand-scripted scenes with engine-checked scripts; epic goes straight to tickets, no separate spec; its own small epic after epic 6.
+- Decision (owner, 2026-10-16): the basics cover drag and drop, add/flip/rearrange letters, adding to WordCells (free letters and placing), and scoring; a Tricky rules section follows for edge cases.
+- Assumption: scenes use a fixed hand-built position drawn with static cards, not a seeded deal and not the engine's `view()`; the engine replay in tests (HP-5) is the guard against drift.
+- Decision (owner, 2026-10-16): scene 1 (drag) approved as storyboarded in HP-3a; caption "Press a card and drag: it takes every card below it. Drop the stack on a column."
+- Decision (owner, 2026-10-16): scene 2 (compose) approved with Flip split out; caption "Arrange your cards into a word. Tap a WordCell to borrow its top card. Then Validate."
+- Decision (owner, 2026-10-16): scene 3 (destination block, −/+, Flip) approved with a correction by the owner: Validate does not grey out for STAPE (R-38, only structural checks do; the dictionary is checked on the tap). Caption "The cards you land on stay in order and can't be shuffled. −/+ choose how many; Flip makes the word read upward instead."
+- Decision (owner, 2026-10-16): scene 4 (place) approved as in HP-3d; caption "Pick a WordCell no higher than the word is long. Order the cards: the last one becomes that cell's free letter. Then Confirm."
+- Decision (owner, 2026-10-16): scene 5 (scoring) approved as in HP-3e; caption "Each WordCell scores its letters times its number. QU counts as two letters. Long words on high cells score most."
+- Decision (owner, 2026-10-16): Tricky rules cut to drop-on-source-column, the destination-card rule combined with empty columns (the owner's idea: preface with the note that at least one destination card must join unless the destination is an empty column), and one top card per WordCell; all animated. The owner added the empty-column topic; dropped "only a bottom tail", the whole second group and the separate "at least one picked-up card" scene (hard to show that someone does not want to use the destination card). Captions drafted: (a) "Dropping back on the column you lifted from is allowed: the cards left behind are the ones you land on. F must join, giving FAKED."; (b) "A column with cards makes its bottom card join the word. Drop on an empty column and nothing has to join, so a word from lifted cards and free letters works. That's why emptying a column pays off."; (c) "A WordCell lends only its top card, once per word. The card beneath shows after you place the word." Wording is reviewed again at ticket 4 review.
+- Decision (owner, 2026-10-16): scenes sit above the text sections; the move steps and the worked example text are removed because the scenes replace them.
+- Decision (owner, 2026-10-16): no first-launch onboarding; the tutorial stays reachable from the menu only.
+- Decision (owner, 2026-10-16): scenes loop with a rest between runs; a tap pauses or restarts; no other visible controls beyond a small pause/play icon.
+- Technical finding (default taken, 2026-10-16): the engine replay test lives under `src/engine/` and reads the scene content from `fixtures/*.json`; the UI imports the same JSON. The Animation speed preference scales scenes through `duration()` alone (all kinds are multiples of `baseMs`; reduced motion gives the 120 ms fade), so no `motion.ts` scale factor is needed. A scene needing a duration no existing kind gives adds a kind to `FACTOR` in ticket 1.
+- Technical finding: the existing How to play screenshot baseline `e2e/how-to-play.screens.spec.ts-snapshots/how-to-play-example-android-linux.png` changes when the example text is removed; other panel specs (`e2e/how-to-play.spec.ts`) that read the move or example text need updating in ticket 5.
+- Decision (2026-10-16): tracer bullet is entry 1 (player, fixture format, engine replay harness and scene 1); entries 2 to 4 run in sequence because they all edit the panel and `text.ts`; entry 5 is the sweep. Entries 1 (plan) and 4 (plan, wording) carry a plan checkpoint, entries 1 and 5 a done checkpoint, so autopilot stops there for the owner.
+- Waits on epic-game-surfaces-and-keyboard because: the How to play panel, `text.ts` `howTo`, `act()` and the panel shell are its output.

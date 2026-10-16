@@ -1,0 +1,82 @@
+# Epic 8 — How to play with animated scenes. Table order is the build order (HP-1 to HP-7); scene content is JSON in fixtures/ replayed by an engine test (AD-1).
+# Requirement source: the epic file's Requirements. One lane through src/ui/HowToPlayPanel.svelte, a new scene player, text.ts and e2e.
+# Every UI entry's check includes npm run test:screens in the Playwright container (epic 5 retro L3).
+
+[[entry]]
+id = 1
+type = "story"
+title = "Scene player, first scene and engine replay harness"
+description = "Tracer bullet: a scene format (steps grab, move, drop, tap with a target and a time) whose game content (moves, words, scores) is JSON under fixtures/, a player that animates it on static Card components with a pointer ghost through WAAPI with motion.ts durations, loops with a rest between runs, pauses and restarts on a tap with a small pause/play icon, stops when the panel is closed or hidden and steps through frames under reduced motion; wires it above the text sections of the How to play panel with scene 1 (press E, lift E D K A, drop on column 3, HP-3a); adds the engine test under src/engine/ that replays every scene fixture through the real engine (legal moves, dictionary words, stated scores, rejected cases against the command TABLE); all scene text in text.ts, each scene a figure with a text description and aria-hidden animation."
+verify = "npm run test:all and npm run test:screens are green with a Playwright android test that plays, pauses and restarts scene 1, a reduced-motion test that steps through its frames, a test that a closed panel runs no animation, and an engine test that fails when the fixture is changed to an illegal move."
+covers = ["HP-1", "HP-2", "HP-5", "HP-6"]
+after = []
+hitl = false
+risk = "medium"
+unknown = "Largest entry: player, fixture format and replay harness in one session; if the plan exceeds one session, split the harness into a following entry. Also whether a scene needs a duration no existing motion kind gives."
+plan_checkpoint = true
+done_checkpoint = true
+interface = "new src/ui/scenes/ (player, script types, one script file per scene); fixtures/how-to-play-*.json; src/engine/ scene replay test; HowToPlayPanel.svelte gains a scene slot; text.ts howTo gains scene strings."
+tests = "Engine replay of every fixture (U, src/engine); play, pause, restart (P6 android); reduced-motion step-through (P6); closed panel animates nothing (U or P6)."
+owns = "The scene player, the fixture format and the engine replay harness."
+consumers = "HowToPlayPanel.svelte and text.ts howTo are shared with the existing sections (6.9); list the how-to-play specs and the panel screenshot baselines."
+references = ["rules — docs/game-flow-spec.md, R-10, R-20, R-23, §8", "code — src/ui/HowToPlayPanel.svelte, src/ui/motion.ts, src/ui/Card.svelte, src/engine/commands.test.ts TABLE", "constraint — ARCHITECTURE-SPINE.md#ad-1 (UI imports engine types only; engine tests may import fixtures/*.json)"]
+
+[[entry]]
+id = 2
+type = "story"
+title = "Compose and destination-block scenes"
+description = "Adds scene 2 (arrange A K E D, borrow L from WordCell 6, BALKED, Validate, HP-3b) and scene 3 (mini board: source P E, destination S T A; APE, + twice STAPE with Validate still lit, Flip to PEATS, HP-3c), each with its caption in text.ts and an engine-replayed fixture."
+verify = "npm run test:all and npm run test:screens are green with Playwright android tests that play each scene to its last frame, a final-frame screenshot baseline of each, and an engine replay that passes for both fixtures and fails when a stated word is changed to a non-word."
+covers = ["HP-3", "HP-5", "HP-6"]
+after = [1]
+hitl = false
+risk = "low"
+interface = "new script files under src/ui/scenes/ and fixtures; text.ts howTo captions."
+tests = "Engine replay incl. words and that Validate stays enabled for STAPE (U); play to last frame (P6 android); final-frame screenshots (screens)."
+owns = "Scenes 2 and 3 and their captions."
+references = ["rules — docs/game-flow-spec.md, R-30 to R-38, §8"]
+
+[[entry]]
+id = 3
+type = "story"
+title = "Place and scoring scenes"
+description = "Adds scene 4 (place BALKED: cells 3–6 lit, 6 pre-selected, tap 5 then 6, drag D to the front, Confirm, fly to cell 6, HP-3d) and scene 5 (cells 3, 4 and 6 holding CAT, QUIT and BALKED, per-cell numbers 9, 16, 36, total 61, QU counting two, HP-3e), each with its caption in text.ts and an engine-replayed fixture."
+verify = "npm run test:all and npm run test:screens are green with Playwright android tests that play both scenes to their last frame, a final-frame screenshot baseline of each, and an engine replay that checks the placement order and the 61 total and fails when a stated number is changed."
+covers = ["HP-3", "HP-5", "HP-6"]
+after = [2]
+hitl = false
+risk = "low"
+interface = "new script files under src/ui/scenes/ and fixtures; text.ts howTo captions."
+tests = "Engine replay incl. placement and scores (U); play to last frame (P6 android); final-frame screenshots (screens)."
+owns = "Scenes 4 and 5 and their captions."
+references = ["rules — docs/game-flow-spec.md, R-40 to R-42, R-50 to R-52, R-60, R-80, R-36"]
+
+[[entry]]
+id = 4
+type = "story"
+title = "Tricky rules section"
+description = "Adds the Tricky rules section after the basic scenes with three animated scenes (HP-4): drop back on the source column (F must join, FAKED, R-21); the destination-card rule and empty columns in one scene (B must join on a column with cards; on an empty column nothing has to join and BAT is built from a lifted card and free letters, R-13, R-31, R-22); one top card per WordCell per word (tap cell 5, S joins, the cell dims, a second tap does nothing, R-33). Captions are the drafts in the epic Notes."
+verify = "npm run test:all and npm run test:screens are green with a Playwright android test that the Tricky rules heading and three scenes render in order and play, each fixture passes the engine replay including the rejected cases (r33-free-letter-duplicate and the empty-destination-column case), and the owner has approved the wording at ticket review."
+covers = ["HP-4", "HP-5", "HP-6"]
+after = [3]
+hitl = true
+risk = "low"
+unknown = "How scene (b) shows two halves (non-empty column, then empty column) in one loop without crowding a phone-width panel; the owner reviews the wording."
+plan_checkpoint = true
+interface = "text.ts howTo tricky-rule strings; new script files and fixtures; HowToPlayPanel.svelte section."
+tests = "Section and scenes render in order (P6 android); scenes play and restart (P6); engine replay incl. rejected cases (U)."
+owns = "The Tricky rules section."
+references = ["rules — docs/game-flow-spec.md, R-13, R-21, R-22, R-31, R-33, Q-11", "code — src/engine/commands.test.ts TABLE (no-op or throw per command)"]
+
+[[entry]]
+id = 5
+type = "story"
+title = "Panel layout, docs, budget and sweep"
+description = "Settles the final panel order (scenes above the remaining text sections, anchors, scroll), removes the move steps and worked example text that the scenes replace and updates the How to play specs and screenshot baseline, updates the EXPERIENCE.md How to play section from 'one static page' to the scenes plus text (HP-7), measures the bundle against the 600,000-byte budget and records the margin, runs the epic's coverage audit against the Requirements, and lists every new text.ts string for the owner's catalogue review."
+verify = "npm run test:all and npm run test:screens are green, the build size is under 600,000 bytes with the margin recorded in the ticket Notes, and every HP id has a passing test or a recorded reason."
+covers = ["HP-7"]
+after = [4]
+hitl = false
+risk = "low"
+done_checkpoint = true
+references = ["design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/EXPERIENCE.md, How to play panel", "constraint — docs/development-methodology.md, Definition of done"]
