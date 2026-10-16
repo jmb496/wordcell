@@ -262,3 +262,13 @@ Tokens: Tokens: 0.1M input-equivalent (orchestrator 58%, other 42%); orchestrato
 Worth knowing: unapplied minors from the review log: static mirrors not asserted tabindex-free; Enter/Space on column cards in Composing/Place only unit-tested with a mocked controller; pointer press natively focuses a card; Space on a WordCell with an open view closes and reopens it.
 Close-out docs:
 - DESIGN.md focus ring ← card focus ring is drawn inside the card edge (2px in), not at a 2px offset with a gap (owner, 2026-10-15)
+
+## 6.12 Winning guard: the end-sheet half — stopped
+What it adds: Undo (button or key) during the win animation now cancels the pending end sheet, and every other input only finishes the animation before the sheet opens.
+Ticket review: 5 passes, converged; nothing needed your input
+Build: built; commit 4a93645
+Code review: thorough (ticket risk high), 2 passes, converged; fixes applied in 248b166
+Tests: `npm run test:all` FAILED at the dev-server e2e: [android] menu.spec.ts:39 "AD-13 ☰ opens the menu…" expected a menu row height of exactly 52 and got 51.99997 (sub-pixel layout; that spec already special-cases the "How to play" row). 880 passed, 825 skipped after it. Biome also reports 1 formatting warning (src/ui/motion.test.ts:691), exit 0. Screenshots not run (stopped before).
+Ref to fix upstream: none
+Worth knowing: the menu spec and menu files are not touched by this ticket (diff is guard, flip, motion, main, new-game and tests), so this looks like a pre-existing flaky pixel check, but I did not confirm it by rerunning. Step B prompt did not pass on two unapplied ticket-review minors (releaseHold wrapper test; SPEC CAP-5 "(none: opens at once)" edit); check the plan covers them.
+Close-out docs: none new from this ticket (SPEC.md CAP-5 clause may need the F23 edit above)
