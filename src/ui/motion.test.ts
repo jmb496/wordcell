@@ -738,7 +738,7 @@ describe('AD-14 winning guard', () => {
       expect(passed(down(1))).toBe(true);
     });
 
-    it('R-62 AD-14 a settle after 300 ms opens at settle', () => {
+    it('AD-14 a settle after 300 ms opens at settle', () => {
       armed(500);
       expect(opened).toHaveBeenCalledTimes(1);
       expect(guardInstalled()).toBe(false);
@@ -756,7 +756,7 @@ describe('AD-14 winning guard', () => {
       expect(opened).toHaveBeenCalledTimes(1);
     });
 
-    it('R-70 AD-14 Undo between settle and 300 ms cancels the open', () => {
+    it('AD-14 Undo between settle and 300 ms cancels the open', () => {
       armed(90);
       vi.advanceTimersByTime(60);
       expect(passed(down(1, true))).toBe(true);
@@ -785,8 +785,14 @@ describe('AD-14 winning guard', () => {
         expect(complete).toHaveBeenCalledTimes(1);
         expect(guardInstalled()).toBe(true);
         if (undo) {
+          vi.advanceTimersByTime(1000);
+          expect(opened).not.toHaveBeenCalled();
           releaseHold();
           expect(guardInstalled()).toBe(false);
+          expect(opened).not.toHaveBeenCalled();
+        } else {
+          vi.advanceTimersByTime(300);
+          expect(opened).toHaveBeenCalledTimes(1);
         }
       });
     }
@@ -815,6 +821,8 @@ describe('AD-14 winning guard', () => {
       expect(passed(keyOf('keydown', 'KeyZ', 'z'))).toBe(true);
       for (let i = 0; i < 3; i++)
         expect(passed(keyOf('keydown', 'KeyZ', 'z', {}, true))).toBe(true);
+      vi.advanceTimersByTime(1000);
+      expect(opened).not.toHaveBeenCalled();
       releaseHold();
       expect(passed(keyOf('keydown', 'KeyZ', 'z', {}, true))).toBe(true);
       expect(passed(keyOf('keyup', 'KeyZ', 'z'))).toBe(true);
@@ -940,6 +948,28 @@ describe('AD-14 winning guard', () => {
       expect(passed(key('Escape'))).toBe(true);
       install(true, vi.fn());
       expect(guardInstalled()).toBe(true);
+    });
+
+    it('AD-14 a click on a non-Undo control (a New game or Replay row) is consumed by an installed guard, then the open fires', () => {
+      armed();
+      expect(consumed(down(1))).toBe(true);
+      up(1);
+      expect(consumed(click(false))).toBe(true);
+      expect(complete).toHaveBeenCalledTimes(1);
+      vi.advanceTimersByTime(300);
+      expect(opened).toHaveBeenCalledTimes(1);
+    });
+
+    it('AD-14 a new game (releaseHold) clears a held Undo and its pending open, and is a no-op with no guard', () => {
+      releaseHold();
+      armed();
+      vi.advanceTimersByTime(400);
+      down(1, true);
+      releaseHold();
+      expect(guardInstalled()).toBe(false);
+      vi.advanceTimersByTime(1000);
+      expect(opened).not.toHaveBeenCalled();
+      expect(passed(down(2))).toBe(true);
     });
 
     it('AD-14 finishGuard completes the animation once and is a no-op without a guard', () => {

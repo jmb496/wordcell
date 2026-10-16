@@ -33,13 +33,6 @@ deferred:
     location: >-
       src/main.ts
     severity: low
-  - summary: >-
-      resetForNewSession does not clear the guard hold or pending opens.
-    evidence: |-
-      New game is consumed during the window so it is believed unreachable; the ticket text mentions clearing, the plan listed no change to new-game.ts. Needs the owner's call.
-    location: >-
-      src/ui/new-game.ts
-    severity: low (unverified)
 ---
 
 <intent-contract>
@@ -92,6 +85,8 @@ deferred:
 
 ## Implementation Notes
 
+- New game / Replay in the guard window: the only UI path is the menu rows (a menu press is consumed and the menu stays closed, covered per speed) and, on desktop, the N key (covered in the Esc/Tab/M/N case). There is no Replay key and no other control, so no separate Playwright case exists; a Vitest case in src/ui/motion.test.ts pins that a click on a non-Undo control is consumed by an installed guard.
+
 ## Plan Change Log
 
 ## Review Triage Log
@@ -120,4 +115,4 @@ deferred:
 - Files: src/ui/motion.ts, src/ui/flip.ts, src/main.ts, motion/flip/controller tests, e2e/win-guard.spec.ts.
 - Review: 3 medium patches applied (all test-quality), 3 deferred, rest rejected (see triage log).
 - Verification: lint, check, unit (2698), dist, pwa e2e green; dev e2e 880 passed, 1 failed (menu.spec.ts:39, fails on baseline too, deferred). An earlier run's board-keys Q-24 failure was load flake (passes alone).
-- Residual risk: resetForNewSession does not clear the hold (deferred, needs owner view).
+- Residual risk: none open; new-game.ts calls `releaseHold()` beside `overlays.resetForNewSession()` (review fix).

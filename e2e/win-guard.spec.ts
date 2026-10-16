@@ -368,6 +368,8 @@ for (const project of ['android', 'desktop'] as const) {
         const length = await page.evaluate(() => history.length);
         await primary(page).click();
         await page.clock.runFor(400);
+        // WAAPI runs in real time: the animation is still in flight when Undo lands.
+        expect(await running(page)).toBeGreaterThan(0);
         await page.getByTestId('undo').click();
         await glidesSettled(page);
         await page.clock.runFor(1000);

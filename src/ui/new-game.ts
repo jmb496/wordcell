@@ -6,6 +6,7 @@
 import type { GameView } from '../engine/index';
 import { game } from '../shell/game.svelte';
 import { openHistoryNotice } from './history-notice.svelte';
+import { releaseHold } from './motion';
 import { openSurface } from './open-surface';
 import { overlays } from './overlays.svelte';
 import { roving } from './roving.svelte';
@@ -14,6 +15,7 @@ export function newGame(): void {
   const wasRejected = game.state.kind === 'rejected';
   game.newGame();
   overlays.resetForNewSession();
+  releaseHold();
   roving.reset();
   if (wasRejected) openHistoryNotice();
 }
@@ -22,6 +24,7 @@ export function newGame(): void {
 export function replayDeal(): void {
   game.replay();
   overlays.resetForNewSession();
+  releaseHold();
   roving.reset();
 }
 
