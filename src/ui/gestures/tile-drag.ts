@@ -108,8 +108,8 @@ export function createTileDrag(deps: TileDragDeps) {
     }
   }
 
-  // Epic 5 SPEC CAP-5 one tile drag move (`scrolled`: the page scroll since the drag start, F3): transform, accept the clipped tray band, pick the gap,
-  // part on a change (DOM only).
+  // Epic 5 SPEC CAP-5 one tile drag move (`scrolled`: the page scroll since the drag start, F3):
+  // transform, accept the clipped tray band, pick the gap, part on a change (DOM only).
   function move(drag: TileDrag, x: number, y: number, scrolled: number): void {
     drag.dx = x - drag.x;
     drag.dy = y - drag.y + scrolled;

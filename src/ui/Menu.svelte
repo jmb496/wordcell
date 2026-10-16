@@ -13,15 +13,15 @@ import Sheet from './Sheet.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { text } from './text';
 
-// Epic 6 CAP-2 (ticket 6.2, SPEC F5, F6, F8; DESIGN.md Menu sheet; EXPERIENCE.md Menu sheet): the
-// menu sheet, opened only through `openSurface('menu')` (the ☰ button). Rows: New game, Replay this
-// deal, Give up; each closes the sheet first, then acts once (no push); New game and Replay go
-// through the CAP-3 gates (a confirm while a game is in progress, else at once). Give up is `disabled` from `view.canGiveUp` only (AD-3, R-75). Every handler is
-// wrapped in `act()`. After the menu closes by any path, focus goes to the board (build-notes
-// Menu row); that return stays on `main` (tabindex -1), the 6.10 overlay focus return that ticket
-// 6.11's phase-focus effect (focus-follow.ts) yields to.
-// `Esc` closes it through the key handler (keys.ts, ticket 6.10).
-// Epic 6 CAP-10 (6.11): on a desktop (`hoverFine`) New game and How to play carry `Label (Key)` titles.
+// Epic 6 CAP-2 (SPEC F5, F6, F8; DESIGN.md Menu sheet; EXPERIENCE.md Menu sheet): the menu sheet,
+// opened only through `openSurface('menu')` (the ☰ button). Rows: New game, Replay this deal, Give
+// up; each closes the sheet first, then acts once (no push); New game and Replay go through the
+// CAP-3 gates (a confirm while a game is in progress, else at once). Give up is `disabled` from
+// `view.canGiveUp` only (AD-3, R-75). Every handler is wrapped in `act()`. After the menu closes by
+// any path, focus goes to the board (build-notes Menu row); that return stays on `main`
+// (tabindex -1), the overlay focus return that the phase-focus effect (focus-follow.ts) yields to.
+// `Esc` closes it through the key handler (keys.ts).
+// Epic 6 CAP-10: on a desktop (`hoverFine`) New game and How to play carry `Label (Key)` titles.
 let { view, hoverFine }: { view: GameView; hoverFine: boolean } = $props();
 
 const open = $derived(overlays.isOpen('menu'));
