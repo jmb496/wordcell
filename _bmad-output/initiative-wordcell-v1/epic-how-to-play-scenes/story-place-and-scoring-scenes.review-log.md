@@ -1,6 +1,6 @@
 # Review log — story-place-and-scoring-scenes.md
 
-State: pass 1: done
+State: pass 2: done
 
 Pre-loop: HEAD 3ee207aa10e7b40100164b89d37db81a4648ce24, 158 words (pass 0 copy: story-place-and-scoring-scenes.passes/pass0.md). Growth budget 2.5x = ~395 words (default). Note: no epic-8 SPEC.md exists under _bmad-output/specs/; the epic file is the requirement source. Ticket toml fields interface/tests/owns (entry 3 of tickets.toml) are passed to reviewers and fixer as intent; fixer adds them to the Description in pass 1.
 
@@ -22,3 +22,22 @@ Reviewers: builder's reading, edge-case hunter, adversarial, ref alignment  |  F
 - (none)
 
 Fix applied; words 658 (4.2x pass 0, over the 2.5x budget: from pass 2 minors go to the fixer only when they add no words); snapshot story-place-and-scoring-scenes.passes/pass1.md. All 8 majors and the minors applied. Fixer ran temporary replays of scene 4 commands (incl. confirm) and scene 5 start through the engine: pass (temp test deleted). Deviation: scene 5 needs one undrawn `Z` column card because the engine start throws `start-no-column-card` on an empty board.
+
+## Pass 2 — 2026-10-16
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 8 (merged; 4 reviewers flagged #1), minor 3 applied, decision-needed 0  |  Dropped in triage: 3 (toml references drift: toml out of scope; place-entry-per-after and place.after validity: plan detail)
+### Applied (to fixer)
+- [major] scene 5 cell 6 order contradicts scene 4 (D B A L K E, top E); scene 4 "holds exactly BALKED" → D B A L K E (spelled BALKED by the word, order is the push, R-60)
+- [major] scene 4 commands 0 to 3 have no steps/frame mapping: state which are pre-applied set-up vs steps, what frame 0 is, frame→`after` mapping
+- [major] generic replay test asserts moves.length > 0 (how-to-play-scenes.test.ts:41); scoring has commands [] → relax or own test
+- [major] Frame.order already means tray tile letters (types.ts:55): name the new field (placeOrder)
+- [major] value types: cells.cards compared as letters (QU), place.order as CardIds; viewFrom holds CardIds
+- [major] scene 5 start.columns literal ([["Z"]], not drawn)
+- [major] scene 5 steps (reveal, no pointer) and Frame encoding of revealed numbers/total
+- [major] cellScores: harness computes each non-empty cell's score from viewFrom, fails on mismatch/missing, and the sum must equal the scores entry
+- [minor, no added words] garbled captions sentence; delete the R-36 clause
+### Default applied (technical)
+- all above are harness/fixture/Frame contract choices; none changes what the player sees beyond epic HP-3
+### Decision needed (functionality / UX / gameplay)
+- (none)
+
+Fix applied; words 775 (4.9x pass 0, over budget); snapshot story-place-and-scoring-scenes.passes/pass2.md. All 8 majors and minors applied. Fixer notes: 8.2's coverage test (scenes.test.ts:91-93) requires steps for every fixture command, so the ticket now states the rule that it skips scene 4's set-up prefix (commands 0 to 2); scene 5 reveal steps: whether the pointer can be hidden is `unverified` (Step type requires type and target).
