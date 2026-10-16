@@ -1,6 +1,6 @@
 # Review log — story-refactor-sweep-paperwork-and-budget (ticket 6.17)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 122 words (copy at .passes/pass0.md), HEAD d86d694.
 Ticket intent also includes the tickets.toml entry 17 fields not copied into the file:
@@ -45,3 +45,15 @@ Words (docs): 1049 (8.6 x pass 0)  |  Snapshot: .passes/pass2.md
 - none
 ### Dropped / not applied (minor)
 - digest source command, References tidy, close-out justification wording
+
+## Pass 3 — 2026-10-16
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (clean)  |  Findings: major 2, minor 6, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1194 (9.8 x pass 0)  |  Snapshot: .passes/pass3.md
+### Applied
+- [major] Retrospective inputs — pass 2's "owner-visible exception to AGENTS.md" for `built` is an unauthorised deviation (AGENTS.md rule 7): drop it; a recorded Verify miss leaves the plan before `built` with misses listed first for the owner, who decides
+- [major] Measurements — spine AD-17 Speed re-measures the 5 s median AND the 1 s watch gate at each epic's refactor sweep; "watch gate is not measured" dropped: measure the slowest engine test file's re-run on the Linux checkout and record it; a miss is recorded for owner
+- [minor] test:screens/timing runs fall under the rerun rule; bfcache part counts as covered by the accepted non-reproduction; "android + desktop" rows need a test in each project; git status check = tracked changes only, allowed set named; remove loose line-56 note when its entry is added, keep the line-52 owner-decision sentence; note 5-run protocol is a stricter superset of AD-17's median of three
+### Default applied (technical)
+- all above → reviewer defaults
+### Decision needed (functionality / UX / gameplay)
+- none
