@@ -1,6 +1,6 @@
 # Review log — story-carry-ins-wheel-during-a-mouse-drag-hover-peek-re-anchor-bfc
 
-State: pass 3: done
+State: pass 4: done
 
 Pre-loop: HEAD d994852, pass0.md 210 words, budget 1500 words (epic precedent for fleshed-out tickets; caller gave none). Ticket intent also includes tickets.toml entry 14 fields: unknown, interface, tests, owns (and consumers, already partly absent).
 
@@ -62,3 +62,20 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 Words (docs): 1366 (6.5x pass 0, within the 1500 budget)  |  Snapshot: story-carry-ins-wheel-during-a-mouse-drag-hover-peek-re-anchor-bfc.review-log.passes/pass3.md
 ### Applied
 - [major] all three → fixer items 1–3; minors folded in (tray rows closed: overflow hidden)
+
+## Pass 4 — 2026-10-15 23:55
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 2, minor 3, decision-needed 0  |  Dropped in triage: 0
+### Majors (triaged)
+1. Hover-peek card-count shift unreachable: `commands.ts` `undo()`/`redo()` call `closeTransient()` → `closeHoverPeek()`, so Undo/Redo always closes the peek and the ticket's claim "keys.ts does not call closeHoverPeek" is false (verified). Default: drop the card-count shift (two shifts remain: width, banner); the effect trigger stays untested by this ticket, noted.
+2. Wheel scroll baseline moment unspecified (press vs drag start): default baseline is the live `scrollY` at drag start; a scroll between press and drag start is absorbed into the origin read at drag start with no recompute; one Vitest assertion.
+### Minors (applied only if no or few words)
+- Drag variant starts from a fresh press on an unselected tail (a selected-tail drag has depth 1); failing-first applies per variant (passing variants dropped, noted in build-notes.md); listener removal and layout-originated scroll assertions in the wheel minimum list.
+### Default applied (technical)
+- both majors.
+### Decision needed
+- none
+### Dropped
+- none
+Words (docs): 1421 (6.8x pass 0, within the 1500 budget)  |  Snapshot: story-carry-ins-wheel-during-a-mouse-drag-hover-peek-re-anchor-bfc.review-log.passes/pass4.md
+### Applied
+- [major] both → fixer items 1–2; minors 3–4 folded in
