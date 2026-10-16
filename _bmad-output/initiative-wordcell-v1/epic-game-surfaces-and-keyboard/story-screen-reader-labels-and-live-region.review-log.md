@@ -1,6 +1,6 @@
 # Review log — story-screen-reader-labels-and-live-region
 
-State: pass 2: done
+State: pass 3: done
 
 Pre-loop: HEAD c4b130d, pass0.md 241 words, budget 1500 words.
 
@@ -41,6 +41,26 @@ H. Test gaps: tray tile, foot/source foot, destination, phase strings, unchanged
 `src/ui/tray/ControlRow.svelte` path; Idle row / word edits in Composing silent; only the first sheet open announces (re-expand, hidden-return silent); scan Tray files; fold 1-card row; visually-hidden mechanism clipped 1px not display:none; list default strings in Notes.
 ### Default applied (technical)
 - all eight majors: reviewers' proposed defaults.
+### Decision needed
+- none
+### Dropped
+- none
+
+## Pass 3 — 2026-10-15 22:35
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 7 (merged), minor 9, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+Words (docs): 1511 (6.3x pass 0, at the 1500 budget)  |  Snapshot: story-screen-reader-labels-and-live-region.review-log.passes/pass3.md
+### Majors (triaged, merged)
+1. Undo/Redo rows contradict the "unchanged wordCount and phase announces nothing" rule when the undo only reverts a Composing/Place edit: default, Undo/Redo always announce when the session reference changed; the unchanged rule applies to the other triggers.
+2. Pending-rAF behaviour undefined: a new announce cancels a pending set (latest wins); outcome is set in a later frame than the commit text; fake-rAF test for two announces in one frame.
+3. Give up (and any finished dispatch) through `dispatchAnnounced`: announcer sets nothing, only the outcome announces; exactly one set.
+4. `announceOutcome` at `openDeferred` fires even when the token is dead (Undo between settle and open, CAP-5): announce only when the sheet really opens; test it.
+5. Tray tile `i`/`n` undefined: left to right in the strip; n counts only live (named) tiles; example with free letters.
+6. AC gaps: mirrors/role/aria-hidden, region visually hidden and not inert, visibilitychange silence, Undo-cancelled win.
+7. "Replay-load" undefined in AC: replace with concrete cases (relaunch into stored session, relaunch into Game over, pageshow/visible return).
+### Minors
+Mount point (not Tray.svelte: pending-draft.test.ts forbids aria-live there; root sibling outside inert wrappers) + test; letters 0/1 edge; non-top WordCell cards aria-hidden; destination-only example; roles (WordCell group); source foot only during tap selection; selected phrasing; throw from dispatchAnnounced like `field()`; negative-delta Vitest example.
+### Default applied (technical)
+- all seven majors: reviewers' proposed defaults.
 ### Decision needed
 - none
 ### Dropped
