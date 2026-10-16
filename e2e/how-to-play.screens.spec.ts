@@ -36,3 +36,27 @@ test('AD-17 how to play scene 1 final frame screenshot at 360 px', async ({ page
   await expect(scene.getByRole('button', { name: text.howTo.sceneControls.replay })).toBeVisible();
   await expect(scene).toHaveScreenshot('how-to-play-scene-1-final.png');
 });
+
+// Epic 8 ticket 2 (HP-2): the final frames of scene 2 (compose, Validate pressed) and scene 3
+// (destination, PEATS after Flip) under reduced motion at 360 px.
+for (const [n, id, last] of [
+  [2, 'compose', 5],
+  [3, 'destination', 4],
+] as const) {
+  test(`AD-17 how to play scene ${n} final frame screenshot at 360 px`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.setViewportSize({ width: 360, height: 740 });
+    await openFixture(page, 'session-idle-fresh');
+    await page.getByRole('button', { name: 'Menu', exact: true }).click();
+    await page.getByRole('button', { name: 'How to play', exact: true }).click();
+    const panel = page.getByRole('dialog', { name: 'How to play', exact: true });
+    const scene = panel.getByRole('figure', { name: text.howTo.scenes[id] });
+    await scene.scrollIntoViewIfNeeded();
+    for (let i = 0; i < last; i++)
+      await scene.getByRole('button', { name: text.howTo.sceneControls.next, exact: true }).click();
+    await expect(
+      scene.getByRole('button', { name: text.howTo.sceneControls.replay }),
+    ).toBeVisible();
+    await expect(scene).toHaveScreenshot(`how-to-play-scene-${n}-final.png`);
+  });
+}

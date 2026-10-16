@@ -350,6 +350,10 @@ export const text = Object.freeze({
     // scene control names; the owner reads the captions at the epic's text review.
     scenes: {
       drag: 'Press a card and drag: it takes every card below it. Drop the stack on a column.',
+      compose:
+        'Arrange your cards into a word. Tap a WordCell to borrow its top card. Then Validate.',
+      destination:
+        "The cards you land on stay in order and can't be shuffled. \u2212/+ choose how many; Flip makes the word read upward instead.",
     },
     sceneControls: {
       pause: 'Pause animation',

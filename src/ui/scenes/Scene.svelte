@@ -11,19 +11,26 @@ import { frameTail, ghostStart } from './effects';
 import {
   CARD_H,
   CARD_W,
+  CELL6,
   COLUMN_AREA_H,
+  CONTROL_BOX,
+  CONTROLS_H,
+  CONTROLS_TOP,
   columnX,
   HAND_H,
   HAND_W,
+  RICH_INSET,
+  RICH_SLOT,
+  RICH_TILE_W,
+  RICH_TRAY_H,
   SLOT,
-  STAGE_H,
   STAGE_W,
   STRIP,
   TRAY_H,
   TRAY_TOP,
 } from './geometry';
 import { type RunState, ScenePlayer } from './player';
-import type { Scene } from './types';
+import type { Frame, Scene } from './types';
 
 // Epic 8 ticket 1 (HP-1, HP-2, HP-6; EXPERIENCE.md How to play panel): one scene as a <figure>
 // with a visible description and an aria-hidden stage drawn with static cards (AD-14: no card id,
@@ -35,20 +42,35 @@ let { scene }: { scene: Scene } = $props();
 
 const id = $props.id();
 // The stage geometry for the markup (Biome reads script usage only).
-const geo = {
+// A scene whose frames list tray tiles draws the open tray as one layer per frame (tiles, k and
+// side, the controls row, WordCell 6's state): a step's reveal fades the next layer in.
+const rich = $derived(scene.frames.some((f) => f.order !== undefined));
+const trayHeight = $derived(rich ? RICH_TRAY_H : TRAY_H);
+const cell6Letter = $derived(
+  scene.frames[0].cell6 === undefined ? undefined : scene.fixture.start.cells?.['6']?.at(-1),
+);
+const geo = $derived({
   stageW: STAGE_W,
-  stageH: STAGE_H,
+  stageH: TRAY_TOP + trayHeight,
+  rich,
+  richSlot: RICH_SLOT,
+  richTileW: RICH_TILE_W,
+  inset: RICH_INSET,
+  controlsTop: CONTROLS_TOP,
+  controlsH: CONTROLS_H,
+  box: CONTROL_BOX,
+  cell: CELL6,
   cardW: CARD_W,
   slot: SLOT,
   cardH: CARD_H,
   strip: STRIP,
   columnH: COLUMN_AREA_H,
   trayTop: TRAY_TOP,
-  trayH: TRAY_H,
+  trayH: trayHeight,
   handW: HAND_W,
   handH: HAND_H,
   columnX,
-};
+});
 const ghostFrom = $derived(ghostStart(scene));
 const controls = text.howTo.sceneControls;
 const reduced = $derived(prefs.motion.reduced);
@@ -80,6 +102,10 @@ const drawn = $derived.by(() => {
 });
 const last = $derived(scene.frames.length - 1);
 const current = $derived(scene.frames[frame]);
+const currentIndex = $derived(frame);
+// Whether tile `j` of a frame's `order` is in the destination block (R-31, R-32).
+const inBlock = (frame: Frame, j: number): boolean =>
+  frame.side === 'left' ? j < (frame.k ?? 0) : j >= (frame.order?.length ?? 0) - (frame.k ?? 0);
 const tailStyle = $derived(reduced ? frameTail(scene, current) : undefined);
 
 function element(node: HTMLElement, key: string): HTMLElement {
@@ -179,6 +205,48 @@ const replay = (): void => {
           </div>
         {/each}
       </div>
+      {#if cell6Letter !== undefined}
+        <div class="cell6" style:left="{geo.cell.x}px" style:top="{geo.cell.y}px">
+          <Card id={0} face={face(cell6Letter)} place="cell" mirror="static" full />
+          <span class="num">6</span>
+        </div>
+      {/if}
+      {#each scene.frames as frame, i (i)}
+        {#if geo.rich && frame.tray && frame.order !== undefined}
+          <div
+            class="layer"
+            data-scene-el="tray-{i}"
+            style:top="{geo.trayTop}px"
+            style:height="{geo.trayH}px"
+            style:opacity={reduced ? (i === currentIndex ? 1 : 0) : undefined}
+            style:--wc-w="{geo.richTileW}px"
+            style:--wc-slot="{geo.richSlot}px"
+          >
+            {#if frame.cell6 === 'used' && cell6Letter !== undefined}
+              <div class="cell6 used" style:left="{geo.cell.x}px" style:top="{geo.cell.y - geo.trayTop}px">
+                <Card id={0} face={face(cell6Letter)} place="cell" mirror="static" full />
+                <span class="num">6</span>
+              </div>
+            {/if}
+            <div class="tiles" style:left="{geo.inset}px">
+              {#each frame.order as letter, j (j)}
+                <Card id={0} face={face(letter)} place="tray" mirror="static" full destination={inBlock(frame, j)} />
+              {/each}
+            </div>
+            <span class="ctl round" style:left="{geo.box.minus.x}px" style:width="{geo.box.minus.w}px" style:top="{geo.controlsTop}px" style:height="{geo.controlsH}px">{text.minus}</span>
+            <span class="ctl round" style:left="{geo.box.plus.x}px" style:width="{geo.box.plus.w}px" style:top="{geo.controlsTop}px" style:height="{geo.controlsH}px">{text.plus}</span>
+            <span class="ctl" style:left="{geo.box.flip.x}px" style:width="{geo.box.flip.w}px" style:top="{geo.controlsTop}px" style:height="{geo.controlsH}px">{text.flipGlyph} {text.flip}</span>
+            <span
+              class="ctl validate {frame.validate ?? 'off'}"
+              style:left="{geo.box.validate.x}px"
+              style:width="{geo.box.validate.w}px"
+              style:top="{geo.controlsTop}px"
+              style:height="{geo.controlsH}px"
+            >{text.validate}</span>
+          </div>
+        {/if}
+      {/each}
+      {#if !geo.rich}
       <div
         class="tray"
         data-scene-el="tray"
@@ -193,6 +261,7 @@ const replay = (): void => {
           <Card id={0} face={face(letter)} place="tray" mirror="static" full />
         {/each}
       </div>
+      {/if}
       <svg
         class="ghost"
         data-scene-el="ghost"
@@ -242,6 +311,31 @@ const replay = (): void => {
     position: absolute; left: 0; right: 0; box-sizing: border-box; padding: 2px 16px;
     display: flex; align-items: center; opacity: 0; border-top: 1px solid var(--wc-outline);
   }
+  .layer {
+    position: absolute; left: 0; right: 0; box-sizing: border-box; opacity: 0;
+    background: var(--wc-surface-raised); border-top: 1px solid var(--wc-outline);
+  }
+  .tiles { position: absolute; top: 3px; display: flex; }
+  .cell6 { position: absolute; width: var(--wc-slot); }
+  .cell6 .num {
+    display: block; text-align: center; font: 500 12px/16px system-ui, "Roboto", sans-serif;
+    color: var(--wc-ink-secondary);
+  }
+  .cell6.used { background: var(--wc-surface-raised); }
+  .cell6.used :global(.card) { opacity: 0.4; }
+  .ctl {
+    position: absolute; box-sizing: border-box; display: grid; place-items: center;
+    border-radius: 9999px; background: var(--wc-surface-raised); border: 1px solid var(--wc-outline);
+    color: var(--wc-ink-primary); white-space: nowrap;
+    font: 600 14px/20px system-ui, "Roboto", sans-serif;
+  }
+  .ctl.validate { border: none; }
+  .validate.lit { background: var(--wc-accent-orange); color: var(--wc-ink-on-accent); }
+  .validate.pressed {
+    background: var(--wc-accent-orange); color: var(--wc-ink-on-accent);
+    filter: brightness(0.8); transform: scale(0.94);
+  }
+  .validate.off { color: var(--wc-ink-disabled); }
   .ghost {
     position: absolute; top: 0; left: 0; opacity: 0; pointer-events: none;
     filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.45));

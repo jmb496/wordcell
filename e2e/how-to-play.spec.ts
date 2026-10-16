@@ -164,6 +164,10 @@ const sceneAnimations = (page: Page) =>
       })),
   );
 
+// Only the drag scene's animations (ids `drag-...`): the other scenes keep playing meanwhile.
+const dragAnimations = async (page: Page) =>
+  (await sceneAnimations(page)).filter((a) => a.id.startsWith('drag-'));
+
 test('R-10 R-20 R-23 AD-14 the scene plays on open, a tap pauses it and a tap restarts it from step 1', async ({
   page,
 }) => {
@@ -173,25 +177,25 @@ test('R-10 R-20 R-23 AD-14 the scene plays on open, a tap pauses it and a tap re
   await expect(scene(page).getByText(text.howTo.scenes.drag, { exact: true })).toBeVisible();
   await expect(scene(page).getByRole('button', { name: controls.next })).toHaveCount(0);
   await expect
-    .poll(async () => (await sceneAnimations(page)).map((a) => a.id))
+    .poll(async () => (await dragAnimations(page)).map((a) => a.id))
     .toContain('drag-step-1');
   await scene(page).getByRole('button', { name: controls.pause, exact: true }).click();
   const paused = scene(page).getByRole('button', { name: controls.restart, exact: true });
   await expect(paused).toBeVisible();
-  const frozen = await sceneAnimations(page);
+  const frozen = await dragAnimations(page);
   expect(frozen.length).toBeGreaterThan(0);
   expect(frozen.every((a) => a.playState === 'paused' || a.playState === 'finished')).toBe(true);
   await page.waitForTimeout(400);
-  expect(await sceneAnimations(page)).toEqual(frozen);
+  expect(await dragAnimations(page)).toEqual(frozen);
   await paused.click();
   await expect(
     scene(page).getByRole('button', { name: controls.pause, exact: true }),
   ).toBeVisible();
-  const ids = (await sceneAnimations(page)).map((a) => a.id);
+  const ids = (await dragAnimations(page)).map((a) => a.id);
   expect(ids).toContain('drag-step-0');
   expect(ids).not.toContain('drag-step-2');
   await expect
-    .poll(async () => (await sceneAnimations(page)).map((a) => a.id))
+    .poll(async () => (await dragAnimations(page)).map((a) => a.id))
     .toContain('drag-step-2');
 });
 
@@ -288,3 +292,76 @@ test('AD-9 a hidden page stops the scene and a visible one restarts it at step 1
     .poll(async () => (await sceneAnimations(page)).map((a) => a.id))
     .toContain('drag-step-0');
 });
+
+// Epic 8 ticket 2 (HP-3b, HP-3c, HP-2): scenes 2 and 3 stepped to their last frame under reduced
+// motion; per frame the open tray layer, its tiles, k's side, Validate and WordCell 6 are asserted.
+const stepScenes = [
+  {
+    id: 'compose' as const,
+    rules: 'R-23 R-33 R-38',
+    // Per frame: the open layer's tiles (undefined: no tray), Validate class, cell 6 covered.
+    frames: [
+      { tiles: undefined, validate: undefined, used: false },
+      { tiles: undefined, validate: undefined, used: false },
+      { tiles: 'BEDKA', validate: 'lit', used: false },
+      { tiles: 'BAKED', validate: 'lit', used: false },
+      { tiles: 'BALKED', validate: 'lit', used: true },
+      { tiles: 'BALKED', validate: 'pressed', used: true },
+    ],
+  },
+  {
+    id: 'destination' as const,
+    rules: 'R-30 R-31 R-32',
+    frames: [
+      { tiles: undefined, validate: undefined, used: false },
+      { tiles: 'APE', validate: 'lit', used: false },
+      { tiles: 'TAPE', validate: 'lit', used: false },
+      { tiles: 'STAPE', validate: 'lit', used: false },
+      { tiles: 'PEATS', validate: 'lit', used: false },
+    ],
+  },
+];
+
+for (const { id, rules, frames } of stepScenes) {
+  test(`${rules} AD-14 with reduced motion scene ${id} steps through ${frames.length} frames to its last`, async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await openFixture(page, 'session-idle-fresh');
+    await openPanel(page);
+    const figure = panel(page).getByRole('figure', { name: text.howTo.scenes[id] });
+    await figure.scrollIntoViewIfNeeded();
+    await expect(figure.getByText(text.howTo.scenes[id], { exact: true })).toBeVisible();
+    expect(await sceneAnimations(page)).toEqual([]);
+    for (const [i, frame] of frames.entries()) {
+      const layer = figure.locator('[data-scene-el^="tray-"]');
+      if (frame.tiles === undefined) {
+        for (const el of await layer.all()) await expect(el).toHaveCSS('opacity', '0');
+      } else {
+        const open = figure.locator(`[data-scene-el="tray-${i}"]`);
+        await expect(open).toHaveCSS('opacity', '1');
+        await expect(open.locator('.tiles .card')).toHaveText(frame.tiles.split(''));
+        await expect(open.locator('.validate')).toHaveClass(new RegExp(frame.validate ?? ''));
+        await expect(open.locator('.cell6.used')).toHaveCount(frame.used ? 1 : 0);
+        await expect(layer.and(figure.locator('[style*="opacity: 1"]'))).toHaveCount(1);
+      }
+      if (i < frames.length - 1)
+        await figure.getByRole('button', { name: controls.next, exact: true }).click();
+    }
+    await expect(figure.getByRole('button', { name: controls.next })).toHaveCount(0);
+    await figure.getByRole('button', { name: controls.replay, exact: true }).click();
+    await expect(figure.getByRole('button', { name: controls.next, exact: true })).toBeVisible();
+  });
+
+  test(`${rules} AD-14 scene ${id} plays on open through its last step`, async ({ page }) => {
+    await openFixture(page, 'session-idle-fresh');
+    await openPanel(page);
+    const figure = panel(page).getByRole('figure', { name: text.howTo.scenes[id] });
+    await figure.scrollIntoViewIfNeeded();
+    await expect(figure.getByRole('button', { name: controls.pause, exact: true })).toBeVisible();
+    const lastStep = frames.filter((f) => f.tiles !== undefined).length + 2;
+    await expect
+      .poll(async () => (await sceneAnimations(page)).map((a) => a.id), { timeout: 20_000 })
+      .toContain(`${id}-step-${lastStep}`);
+  });
+}

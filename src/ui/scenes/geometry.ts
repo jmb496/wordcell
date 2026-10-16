@@ -19,3 +19,21 @@ export const HAND_H = 32;
 export const HAND_TIP = { x: 9, y: 1 } as const;
 
 export const columnX = (column: number): number => COLUMN_X0 + (column - 1) * COLUMN_PITCH;
+
+// Epic 8 ticket 2: the open tray of the compose and destination scenes holds a tile row and a
+// controls row (−, +, Flip, Validate), so its tiles use a 40 px pitch (a block of up to six fits).
+export const RICH_TRAY_H = 104;
+export const RICH_SLOT = 40;
+export const RICH_TILE_W = 36;
+export const RICH_INSET = 6;
+/** The tray controls row: top inside the tray, height, and the x and width of each control. */
+export const CONTROLS_TOP = 68;
+export const CONTROLS_H = 30;
+export const CONTROL_BOX = {
+  minus: { x: 6, w: 36 },
+  plus: { x: 46, w: 36 },
+  flip: { x: 90, w: 64 },
+  validate: { x: 162, w: 84 },
+} as const;
+/** WordCell 6's card on the stage (left of column 1). */
+export const CELL6 = { x: 4, y: 4 } as const;

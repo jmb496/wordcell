@@ -30,6 +30,8 @@ export function ghostStart(scene: Scene): string {
 export function sceneEffects(scene: Scene): readonly (readonly Effect[])[] {
   let pointer = scene.targets.rest;
   let carry: Point = { x: 0, y: 0 };
+  // After the fly the tail is in the tray: later moves are only the pointer's.
+  let flown = false;
   return scene.steps.map((step): Effect[] => {
     const to = scene.targets[step.target];
     const from = pointer;
@@ -61,7 +63,7 @@ export function sceneEffects(scene: Scene): readonly (readonly Effect[])[] {
         effects.push(ghost([0, 1]), tail(add(carry, { x: 0, y: -LIFT })));
         break;
       case 'move':
-        effects.push(ghost(), tail(add(carry, sub(to, from))));
+        effects.push(ghost(), ...(flown ? [] : [tail(add(carry, sub(to, from)))]));
         break;
       case 'drop':
         effects.push(tail(add(carry, { x: 0, y: LIFT })));
@@ -70,6 +72,8 @@ export function sceneEffects(scene: Scene): readonly (readonly Effect[])[] {
         const { tailHome, destHome, trayTail, trayDest } = scene.layout;
         // Each tail card flies on its own, from its place in the stack (j strips down the
         // wrapper, which rests at `carry`) to its own place in the tray row.
+        flown = true;
+        const slot = scene.layout.traySlot ?? SLOT;
         const resting = add(tailHome, carry);
         for (let j = 0; j < scene.carry.count; j++)
           effects.push({
@@ -79,7 +83,7 @@ export function sceneEffects(scene: Scene): readonly (readonly Effect[])[] {
               {
                 transform: at(
                   sub(
-                    { x: trayTail.x + j * SLOT, y: trayTail.y },
+                    { x: trayTail.x + j * slot, y: trayTail.y },
                     add(resting, { x: 0, y: j * STRIP }),
                   ),
                 ),

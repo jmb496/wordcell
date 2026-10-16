@@ -1,9 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
+import composeFixture from '../../../fixtures/how-to-play-compose.json';
+import destinationFixture from '../../../fixtures/how-to-play-destination.json';
 import fixture from '../../../fixtures/how-to-play-drag.json';
 import { text } from '../text';
+import { composeScene } from './compose';
+import { destinationScene } from './destination';
 import { dragScene } from './drag';
 import { sceneEffects } from './effects';
 import effectsSource from './effects.ts?raw';
+import { RICH_SLOT } from './geometry';
 import { type AnimationHandle, type PlayerDeps, restMs, ScenePlayer } from './player';
 import playerSource from './player.ts?raw';
 import source from './Scene.svelte?raw';
@@ -75,6 +80,133 @@ describe('AD-14 scene script against its fixture', () => {
     expect(flown).toHaveLength(dragScene.carry.count);
     expect(new Set(flown.map((e) => e.keyframes[1].transform)).size).toBe(dragScene.carry.count);
     expect(layout.trayTail.y).toBeGreaterThan(layout.tailHome.y);
+  });
+});
+
+// Epic 8 ticket 2 (HP-3b, HP-3c, HP-5, HP-6): scenes 2 and 3 against their fixtures.
+describe.each([
+  ['compose', composeScene, composeFixture, [0, 0, 1, 2, 3, 4]],
+  ['destination', destinationScene, destinationFixture, [0, 1, 2, 3, 4]],
+] as const)('AD-14 scene %s against its fixture', (name, scene, data, applied) => {
+  it('AD-14 the indexes of the steps carrying a command cover the fixture commands in order', () => {
+    const indexes = scene.steps.flatMap((s) => (s.command === undefined ? [] : [s.command]));
+    expect([...new Set(indexes)]).toStrictEqual(data.commands.map((_, i) => i));
+    expect(indexes).toStrictEqual([...indexes].sort((a, b) => a - b));
+    expect(scene.id).toBe(data.scene);
+    expect(scene.caption).toBe(text.howTo.scenes[name]);
+  });
+
+  it('AD-14 the carried tail matches the fixture drop command', () => {
+    expect(data.commands[0]).toMatchObject({
+      type: 'drop',
+      sourceColumn: scene.carry.sourceColumn,
+      sourceCount: scene.carry.count,
+      destinationColumn: scene.carry.destinationColumn,
+    });
+  });
+
+  it('AD-14 the drawn Validate is lit exactly where the fixture says it is validatable, pressed on the tap', () => {
+    expect(scene.frames).toHaveLength(applied.length);
+    scene.frames.forEach((frame, i) => {
+      const entry = data.validatable.find((v) => v.after === applied[i]);
+      expect(entry).toBeDefined();
+      const pressed = data.commands[applied[i] - 1]?.type === 'validate';
+      expect(frame.validate).toBe(pressed ? 'pressed' : entry?.canValidate ? 'lit' : 'off');
+    });
+  });
+
+  it('AD-14 each open tray frame spells the fixture word (block, then the arranged cards)', () => {
+    scene.frames.forEach((frame, i) => {
+      expect(frame.tray).toBe(frame.order !== undefined);
+      const word = data.words.find(
+        (w) => w.command === applied[i] - 1 && frame.order !== undefined,
+      );
+      if (frame.order !== undefined && word !== undefined) {
+        expect(frame.order.join('')).toBe(word.word);
+      }
+    });
+  });
+
+  it('AD-14 the tray cards fly one RICH_SLOT apart and no tail effect follows the fly step', () => {
+    const effects = sceneEffects(scene);
+    const xs = effects
+      .flat()
+      .filter((e) => /^tail-\d+$/.test(e.element))
+      .map((e) => Number(/translate\((-?[\d.]+)px/.exec(String(e.keyframes[1].transform))?.[1]));
+    expect(xs).toHaveLength(scene.carry.count);
+    for (let j = 1; j < xs.length; j++) expect(xs[j] - xs[j - 1]).toBe(RICH_SLOT);
+    const fly = scene.steps.findIndex((s) => s.type === 'fly');
+    for (const later of effects.slice(fly + 1))
+      expect(later.some((e) => e.element === 'tail')).toBe(false);
+  });
+
+  it('AD-14 each frame k is the latest setDestinationCount applied and side is right exactly after a flip', () => {
+    scene.frames.forEach((frame, i) => {
+      const done = data.commands.slice(0, applied[i]);
+      const counts = done.filter((c) => c.type === 'setDestinationCount') as { k: number }[];
+      if (counts.length > 0) expect(frame.k).toBe(counts[counts.length - 1].k);
+      if (frame.order !== undefined)
+        expect(frame.side === 'right').toBe(done.some((c) => c.type === 'flip'));
+    });
+  });
+
+  it('AD-14 every animated element is declared and every step names a motion kind', () => {
+    for (const effect of sceneEffects(scene).flat())
+      expect(scene.elements).toContain(effect.element);
+    for (const step of scene.steps) expect(KINDS).toContain(step.kind);
+    for (const frame of scene.frames.filter((f) => f.tray))
+      expect(scene.elements).toContain(`tray-${scene.frames.indexOf(frame)}`);
+  });
+});
+
+describe('AD-14 scene compose frames', () => {
+  it('AD-14 frames: start, lifted, BEDKA k 1 left, BAKED, BALKED with cell 6 used, Validate pressed', () => {
+    expect(composeScene.frames.map((f) => [f.tail, f.order?.join(''), f.k, f.side])).toStrictEqual([
+      ['home', undefined, undefined, undefined],
+      ['lifted', undefined, undefined, undefined],
+      ['gone', 'BEDKA', 1, 'left'],
+      ['gone', 'BAKED', 1, 'left'],
+      ['gone', 'BALKED', 1, 'left'],
+      ['gone', 'BALKED', 1, 'left'],
+    ]);
+    expect(composeScene.frames.map((f) => f.cell6)).toStrictEqual([
+      'top',
+      'top',
+      'top',
+      'top',
+      'used',
+      'used',
+    ]);
+  });
+});
+
+describe('AD-14 scene destination frames', () => {
+  it('AD-14 frames: start, APE, TAPE, STAPE with k 1 to 3 left, PEATS with k 3 right; no cell 6', () => {
+    expect(
+      destinationScene.frames.map((f) => [f.order?.join(''), f.k, f.side, f.cell6]),
+    ).toStrictEqual([
+      [undefined, undefined, undefined, undefined],
+      ['APE', 1, 'left', undefined],
+      ['TAPE', 2, 'left', undefined],
+      ['STAPE', 3, 'left', undefined],
+      ['PEATS', 3, 'right', undefined],
+    ]);
+  });
+});
+
+describe('AD-1 a step command must fit its step type', () => {
+  it('AD-1 a move names an arrange, a tap one of the tap commands; a mismatch or a missing command throws', () => {
+    const [grab, move, drop, fly, ...taps] = composeScene.steps;
+    const redefine = (steps: typeof composeScene.steps) => defineScene({ ...composeScene, steps });
+    expect(() => redefine([grab, move, drop, fly, ...taps])).not.toThrow();
+    expect(() => redefine([grab, { ...move, command: 0 }])).toThrow(/step 1 \(move\)/);
+    expect(() => redefine([grab, { ...move, command: 99 }])).toThrow(/step 1 \(move\)/);
+    const tap = taps[1];
+    expect(() => redefine([grab, { ...tap, command: 1 }])).toThrow(/step 1 \(tap\)/);
+    expect(() => redefine([grab, { ...tap, command: 3 }])).not.toThrow();
+    expect(() => redefine([grab, { ...fly, command: 0 }])).toThrow(/step 1 \(fly\)/);
+    expect(() => redefine([{ ...grab, command: undefined }])).toThrow(/no fixture drop command/);
+    expect(() => redefine([grab, { ...move, command: undefined }])).not.toThrow();
   });
 });
 
@@ -280,6 +412,28 @@ describe('AD-3 scene figure structure', () => {
     expect(body).not.toContain('data-testid');
     expect(body).not.toContain('data-mirror-of');
   });
+
+  it.each([
+    ['compose', composeScene, 4],
+    ['destination', destinationScene, 4],
+  ] as const)(
+    'AD-3 scene %s: one tray layer per open frame, Validate and controls drawn, no ids',
+    async (name, scene, layers) => {
+      mocked.motion = { baseMs: 180, reduced: false };
+      vi.resetModules();
+      const { render } = await import('svelte/server');
+      const { default: Scene } = await import('./Scene.svelte');
+      const body = render(Scene, { props: { scene } }).body;
+      expect(body).toContain(`>${text.howTo.scenes[name]}</figcaption>`);
+      expect(body.match(/data-scene-el="tray-\d"/g)).toHaveLength(layers);
+      expect(body).toContain(`>${text.validate}</span>`);
+      expect(body).toContain(text.flip);
+      expect(body).not.toContain('data-card-id');
+      expect(body).not.toContain('data-testid');
+      expect(body).not.toContain('data-mirror-of');
+      expect(body.includes('class="cell6')).toBe(name === 'compose');
+    },
+  );
 
   it('AD-3 reduced motion shows frame 0 with Next and no tap button', async () => {
     const body = await html(true);

@@ -49,6 +49,8 @@ describe('AD-3 How to play panel', () => {
     expect(paragraphs).toEqual(expected);
     expect(inner(body, 'figcaption')).toEqual([
       text.howTo.scenes.drag,
+      text.howTo.scenes.compose,
+      text.howTo.scenes.destination,
       ...text.howTo.exampleWords.map(text.howTo.exampleCaption),
     ]);
     expect(inner(body, 'caption')).toEqual(Object.values(text.howTo.controlCaptions));
@@ -63,8 +65,10 @@ describe('AD-3 How to play panel', () => {
     expect(body).not.toContain('data-testid');
     expect(body).not.toContain('data-mirror-of');
     expect(body).not.toContain('data-place');
-    // 22 worked-example cards plus scene 1’s 19 static cards (10 column, 4 tail, 5 tray) (epic 8 ticket 1).
-    expect(body.match(/class="card[^"]*static/g)).toHaveLength(22 + 19);
+    // 22 worked-example cards plus scene 1’s 19 static cards (10 column, 4 tail, 5 tray) (epic 8
+    // ticket 1), scene 2's 39 (9 column, 1 D, 4 tail, cell 6, tray layers 5 + 5 + 7 + 7) and scene
+    // 3's 22 (2 column, 1 D, 2 tail, tray layers 3 + 4 + 5 + 5) (epic 8 ticket 2).
+    expect(body.match(/class="card[^"]*static/g)).toHaveLength(22 + 19 + 39 + 22);
   });
 
   it('AD-3 the markup has no prose text node (every string is a text.ts expression)', () => {

@@ -30,6 +30,8 @@ export interface SceneFixture {
   readonly words?: readonly { readonly command: number; readonly word: string }[];
   /** After `after` commands, the engine's live score (R-80) equals `score`. */
   readonly scores?: readonly { readonly after: number; readonly score: number }[];
+  /** After `after` commands, the engine's `canValidate` (R-38) equals `canValidate`. */
+  readonly validatable?: readonly { readonly after: number; readonly canValidate: boolean }[];
   /**
    * After `after` commands, `command` has `outcome`; `row` cites the command TABLE row in
    * `commands.test.ts` (id and precondition, never imported or copied).
@@ -96,6 +98,12 @@ export function replayScene(scene: SceneFixture, dictionary: ReadonlySet<string>
     const engine = viewFrom(start, sessions[after], EN).liveScore;
     if (engine !== score)
       fail(scene, `after ${after} commands stated score ${score}, engine ${engine}`);
+  }
+  for (const { after, canValidate } of scene.validatable ?? []) {
+    index('validatable after', after, count);
+    const engine = viewFrom(start, sessions[after], EN).canValidate;
+    if (engine !== canValidate)
+      fail(scene, `after ${after} commands stated canValidate ${canValidate}, engine ${engine}`);
   }
   for (const { after, command, outcome, check, rejectedWord } of scene.rejected ?? []) {
     index('rejected after', after, count);

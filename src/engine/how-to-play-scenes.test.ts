@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import composeFixture from '../../fixtures/how-to-play-compose.json' with { type: 'json' };
+import destinationFixture from '../../fixtures/how-to-play-destination.json' with { type: 'json' };
 import dragFixture from '../../fixtures/how-to-play-drag.json' with { type: 'json' };
 import dictionary from '../../generated/dictionary/en.txt?raw';
 import type { Command } from './commands';
@@ -9,8 +11,14 @@ import { replayScene, type SceneFixture } from './scene-replay';
 // negative cases clone the fixture and break one field; a small inline dictionary Set holds the
 // minimal word, and only the named dictionary repro test loads the generated file (once).
 
-const FIXTURES: readonly SceneFixture[] = [dragFixture as unknown as SceneFixture];
-const DICT = new Set(['baked']);
+const compose = composeFixture as unknown as SceneFixture;
+const destination = destinationFixture as unknown as SceneFixture;
+const FIXTURES: readonly SceneFixture[] = [
+  dragFixture as unknown as SceneFixture,
+  compose,
+  destination,
+];
+const DICT = new Set(['baked', 'balked']);
 const clone = (scene: SceneFixture): SceneFixture => structuredClone(scene);
 
 function expectEngineError(fn: () => unknown, check: string): void {
@@ -33,6 +41,59 @@ describe('AD-2 How to play scene replay', () => {
       expect(session.moves.length).toBeGreaterThan(0);
     },
   );
+
+  it('R-23 R-33 R-38 scene compose: BAKED, BALKED with the borrowed L, then validate; validatable matches the engine', () => {
+    const { session, rejectedWords } = replayScene(compose, DICT);
+    expect(rejectedWords).toStrictEqual([undefined, undefined, undefined, undefined]);
+    expect(session.cursor.phase).toBe('place');
+    expect(compose.validatable).toHaveLength(compose.commands.length + 1);
+  });
+
+  it('R-30 R-31 R-32 scene destination: APE, TAPE, STAPE and PEATS after Flip, validatable matches the engine', () => {
+    const { session, rejectedWords } = replayScene(destination, DICT);
+    expect(rejectedWords).toStrictEqual([undefined, undefined, undefined, undefined]);
+    expect(session.cursor.phase).toBe('composing');
+    expect(destination.validatable).toHaveLength(destination.commands.length + 1);
+  });
+
+  it('R-38 scene compose: a flipped validatable flag fails the harness', () => {
+    for (const fixture of [compose, destination]) {
+      const count = fixture.validatable?.length ?? 0;
+      for (let i = 0; i < count; i++) {
+        const scene = clone(fixture);
+        const entry = (scene.validatable as unknown as { canValidate: boolean }[])[i];
+        entry.canValidate = !entry.canValidate;
+        expect(() => replayScene(scene, DICT)).toThrow(/stated canValidate/);
+      }
+    }
+  });
+
+  it('R-38 scene compose: BALKED missing from the dictionary fails the fixture; without validatable the last rejectedWord is balked', () => {
+    const only = new Set(['baked']);
+    expect(() => replayScene(compose, only)).toThrow(/after 4 commands stated canValidate false/);
+    const scene = clone(compose);
+    delete (scene as { validatable?: unknown }).validatable;
+    const { rejectedWords } = replayScene(scene, only);
+    expect(rejectedWords[rejectedWords.length - 1]).toBe('balked');
+  });
+
+  it.each([
+    ['compose', compose],
+    ['destination', destination],
+  ] as const)(
+    'R-30 R-38 scene %s: a stated word changed to a non-word fails the harness',
+    (_name, fixture) => {
+      const scene = clone(fixture);
+      (scene.words as unknown as { word: string }[])[0].word = 'XQZXQ';
+      expect(() => replayScene(scene, DICT)).toThrow(/stated word XQZXQ/);
+    },
+  );
+
+  it('R-31 scene destination: setDestinationCount 0 after the drop throws r31-destination-count (cf. replay.test.ts k = 0 on a non-empty destination)', () => {
+    const scene = clone(destination);
+    (scene.commands as Command[])[1] = { type: 'setDestinationCount', k: 0 };
+    expectEngineError(() => replayScene(scene, DICT), 'r31-destination-count');
+  });
 
   it('R-23 scene drag: the drop of E D K A on column 3 reaches Composing with D = B', () => {
     const { session } = replayScene(dragFixture as unknown as SceneFixture, DICT);
@@ -111,6 +172,8 @@ describe('AD-2 How to play scene replay', () => {
       { ...scene, words: [{ command: -1, word: 'X' }] },
       { ...scene, scores: [{ after: 2, score: 0 }] },
       { ...scene, scores: [{ after: -1, score: 0 }] },
+      { ...scene, validatable: [{ after: 2, canValidate: false }] },
+      { ...scene, validatable: [{ after: -1, canValidate: false }] },
       { ...scene, rejected: [{ after: 2, command, outcome: 'noop', row }] },
       { ...scene, rejected: [{ after: -1, command, outcome: 'noop', row }] },
     ];
