@@ -132,6 +132,7 @@ test.describe('android', () => {
     await expect(page.getByRole('heading', { name: 'WordCell' })).toBeVisible();
     await booted(page);
     await expect(sheet(page, GAVE)).toBeVisible();
+    expect((await storedView(page)).status).toBe('gaveUp');
     await expect(page.getByRole('button', { name: 'Collapse result', exact: true })).toBeVisible();
     await animationFrames(page, 2);
     expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
@@ -162,6 +163,7 @@ test.describe('android', () => {
     await expect(prefs(page)).toHaveCount(0);
     await expect(timer(page).first()).toBeVisible();
     const first = await timer(page).first().textContent();
+    expect(first).toMatch(/^(\d+:)?\d{1,2}:\d{2}$/);
     await expect.poll(() => timer(page).first().textContent(), { timeout: 5000 }).not.toBe(first);
 
     // 7: How to play by tap dispatches nothing.
@@ -214,7 +216,9 @@ test.describe('desktop', () => {
     await page.keyboard.press('Enter');
     await expect(primary(page)).toHaveAccessibleName('Confirm');
     await synced(page);
+    const beforeSix = await game(page);
     expect(await press(page, '6')).toBe(false);
+    expect(await game(page)).toBe(beforeSix);
     await page.keyboard.press('Enter');
     await expect(page.getByTestId('wordcell-6').locator('.count')).toHaveText('6');
     await synced(page);
@@ -242,12 +246,18 @@ test.describe('desktop', () => {
     await page.keyboard.press('?');
     await expect(howTo(page)).toBeVisible();
     const before = await game(page);
+    const action = await primary(page).textContent();
+    const trayCount = await tray(page).locator('[data-card-id]').count();
     await page.keyboard.press('Escape');
     await expect(howTo(page)).toHaveCount(0);
     expect(await game(page)).toBe(before);
+    expect(await primary(page).textContent()).toBe(action);
+    await expect(tray(page).locator('[data-card-id]')).toHaveCount(trayCount);
     await page.keyboard.press('Escape');
     await expect(page.getByRole('dialog')).toHaveCount(0);
     expect(await game(page)).toBe(before);
+    expect(await primary(page).textContent()).toBe(action);
+    await expect(tray(page).locator('[data-card-id]')).toHaveCount(trayCount);
     await synced(page);
   });
 });

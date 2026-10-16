@@ -51,7 +51,7 @@ deferred: []
 - [ ] `e2e/helpers/keys.ts`, `e2e/board-keys.spec.ts` -- move the Flow 6 helpers unchanged; board-keys imports them -- reuse by the new spec
 - [ ] `e2e/helpers.spec.ts` -- one AD-17 test for `keys.ts` -- helper coverage
 - [ ] `e2e/surfaces-success.spec.ts` -- the three tests per the story file (android A, android B, desktop Flow 6) -- the epic's Success signal
-- [ ] Audit by grep that every P6 row of `rule-coverage.md` whose CAP is in the story's `covers` has a passing test carrying its id; list gaps in Implementation Notes
+- [x] Audit by grep that every P6 row of `rule-coverage.md` whose CAP is in the story's `covers` has a passing test carrying its id; list gaps in Implementation Notes
 
 **Acceptance Criteria:**
 - Given the android project, when the A and B tests run, then each step observes what the story file lists and the stored Session equals `game()` after each step.
@@ -62,7 +62,7 @@ deferred: []
 
 Subagent implemented: moved Flow 6 helpers to `e2e/helpers/keys.ts` (only `export` keywords added: `tray`, `tiles`, `where`, `focusedCard`, `Where`); added `e2e/surfaces-success.spec.ts` (3 tests) and one AD-17 test in `e2e/helpers.spec.ts`. No new fixture, no `src/` change.
 
-Rule-coverage audit (grep of test names): ids R-62, R-70..R-76, R-81..R-84, Q-24, Q-33, Q-35, Q-44, A-E7, A-E9, F39 each have a test. Rows not grepped by the subagent (AD-13 reload/overlay rows, discriminating win smoke test, A8/bfcache) were not audited; no gap fixed here. A8 is not carried in any test name found by grep (row is CAP-12, outside this ticket's `covers`).
+Rule-coverage audit (grep of test names): ids R-62, R-70..R-76, R-81..R-84, Q-24, Q-33, Q-35, Q-44, A-E7, A-E9, F39 each have a test. Remaining rows grepped over e2e/ and src/ (test names): AD-13 two-overlay reload (Statistics plus Reset confirm) covered, e2e/statistics.spec.ts `AD-13 reload with Statistics and its Reset confirm open ...`; AD-13 Game-over reload with unreadable history covered, e2e/end-sheet.spec.ts (`AD-13 a relaunch into Game over with an unreadable history ...`, `AD-13 Delete history on the relaunch notice ...`) and e2e/nav.spec.ts; confirm dismissed from a menu row (focus on the menu button) covered, e2e/confirm.spec.ts `R-74 ... confirm dismissed by ... focus on the menu button`; discriminating win smoke test covered, e2e/end-sheet.spec.ts `R-62 a win by Confirm opens the sheet after the glide: win title, final score = pre-win score plus the committed delta ...`. A8 (wheel, hover-peek re-anchor, bfcache hide flush) is row CAP-12 of rule-coverage.md, outside this ticket's `covers`; no test name carries the id `A8` (e2e/wheel-drag.spec.ts, e2e/hover-peek-reanchor.spec.ts and e2e/lifecycle.spec.ts carry AD-12, R-73, Q-38 ids): recorded as a gap, not fixed here.
 
 ## Plan Change Log
 

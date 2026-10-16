@@ -1210,9 +1210,9 @@ test.describe('keys helpers', () => {
     test.skip(test.info().project.name !== 'desktop', 'keyboard flows run on desktop');
     await toComposing(page);
     await expect(tray(page)).toBeVisible();
-    expect(await tiles(page).count()).toBe(4);
+    await expect(tiles(page)).toHaveCount(4);
     expect(await press(page, '8')).toBe(true);
-    expect(await tiles(page).count()).toBe(5);
+    await expect(tiles(page)).toHaveCount(5);
     await arrangeByKeys(page, 'ENANA');
     await expect(tray(page).locator('.word-line')).toHaveText('ZENANA');
     const at = await where(page);
