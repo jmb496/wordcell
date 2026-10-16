@@ -1,6 +1,6 @@
 # Review log — story-compose-and-destination-block-scenes.md
 
-State: pass 2: done
+State: pass 3: done
 
 Pre-loop: HEAD d9895643d34c0c46ca3e99c54160884a86aa4b07, 143 words (pass 0 copy: story-compose-and-destination-block-scenes.passes/pass0.md). Growth budget 2.5x = ~357 words (default). Note: no epic-8 SPEC.md exists under _bmad-output/specs/; the epic file is the requirement source.
 
@@ -40,3 +40,20 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 - (none)
 
 Fix applied; words 599 (4.2x pass 0; over budget). Snapshot passes/pass2.md. Applied all 6 majors; item 3 resolved without a harness throw (existing 8.1 test expects rejectedWords [undefined,'bedka']): positive replay asserts rejectedWords all undefined, negative expects 'balked' rejected. Minor 'index into M' not applied (budget). Unverified by fixer: setDestinationCount 0 throws r31-destination-count on scene 3 (inferred, not run; no TABLE row for non-self count 0); no fixture replay was run.
+
+## Pass 3 — 2026-10-16
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 6 (merged), minor 5 applicable, decision-needed 0  |  Dropped in triage: 7 (stretch minors: cell 6 'used' look, frame 5 'pose' note, words entry on scene 2 drop, derive arrange ids by test, canFlip assertion, scene 3 default k, M undefined; all plan detail, over budget)
+### Applied (to fixer)
+- [major] frame→command-count mapping, and 'pressed' overrides validatable's false after validate; 'off' = drawn disabled (per-frame table for both scenes)
+- [major] step→command mapping for both scenes and the defineScene rule for tap steps (arrange, cell 6 tap, −/+, Flip, Validate)
+- [major] UI SceneFixtureData also gains optional validatable (AD-1: UI cannot import the engine type)
+- [major] validatable range check (like scores/rejected) and its out-of-range test
+- [major] caption is the figure's description (types.ts), no second string
+- [major] shared DICT in how-to-play-scenes.test.ts becomes {'baked','balked'}; the negative builds its own {'baked'}
+- [minor, word-neutral] setDestinationCount 0 cite: TABLE has no non-self row; cite replay.test.ts 'k = 0 on a non-empty destination'; scene ids for the two fixtures
+### Default applied (technical)
+- all of the above are harness/script/test contract choices
+### Decision needed (functionality / UX / gameplay)
+- (none)
+
+Fix applied; words 707 (4.9x pass 0; over budget). Snapshot passes/pass3.md. All 6 majors and the 2 word-neutral minors applied. Unverified by fixer: tray letter strings per frame and validatable truth values derived from the ticket and view.ts, not replayed (fixtures do not exist yet).
