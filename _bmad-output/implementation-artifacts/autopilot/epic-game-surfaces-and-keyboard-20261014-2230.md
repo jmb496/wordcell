@@ -293,3 +293,8 @@ Ref to fix upstream: none
 Tokens: 0.1M input-equivalent (orchestrator 58%, other 42%); orchestrator peak context 52k
 Worth knowing: the one desktop e2e timeout seen earlier was a one-off slowdown; two unapplied ticket-review minors (releaseHold wrapper test; SPEC CAP-5 "(none: opens at once)" edit) are carried.
 Close-out docs: SPEC.md CAP-5 "(none: opens at once)" edit may be needed (technical, from the ticket review)
+
+## Stopped — ticket 6.13 step A (decision needed, session 2026-10-16)
+Ticket review ran 7 passes and hit the cap (majors per pass 8, 8, 7, 4, 2, 1, 2). One decision is the owner's: should screen-reader users reach the cards buried under a WordCell's top card one by one? EXPERIENCE.md and SPEC CAP-11 say every card is a button; the ticket hides buried cards and lets the WordCell's name give the top card and count. Proposed default: keep them hidden. Effect: a screen-reader user hears the top card and the count but cannot step through the cards beneath.
+Two late majors (not spec intent, ticket wording only): the Idle phase text and the "resulting phase text" definition were trimmed away in pass 6 although the Undo, Redo, New game and Replay rows use them; the no-op Vitest bullet lost "after time has elapsed". Both are one-sentence restorations; ref to fix upstream: none beyond the ticket itself.
+Resume: answer the question, record it in the ticket Notes, restore the two sentences, then rerun the driver (Step A resumes from the review log).

@@ -1,6 +1,6 @@
 # Review log — story-screen-reader-labels-and-live-region
 
-State: pass 6: done
+State: pass 7: done
 
 Pre-loop: HEAD c4b130d, pass0.md 241 words, budget 1500 words.
 
@@ -117,3 +117,18 @@ restore the source of `{WORD}`/letter count (`draft.word`, `draft.letterCount`) 
 - none
 
 Minors a, b, c, d, e applied (word-neutral).
+
+## Pass 7 — 2026-10-15 00:10 (verify-only, fix-diff lens)
+Reviewers: fix diff only  |  Findings: major 2, minor 0, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1497 (unchanged, no fix pass)  |  Snapshot: story-screen-reader-labels-and-live-region.review-log.passes/pass7.md
+### Open majors (verified real against the file, recorded not fixed: pass 7 is the cap)
+1. Pass 6's trims dropped the `Idle.` phase string and the sentence "Resulting phase text is the phase row's string", yet the Undo and Redo rows (`{resulting phase text}`) and `announceReset` ("appends the Idle phase text") still depend on them; the Idle text is undefined. Fix: one sentence defining resulting phase text as `Composing. {WORD}, {N letters}.`, `Place. {WORD}, {N letters}.` or `Idle.`.
+2. Pass 6 trimmed the pass-5 fix "a no-op dispatch after time has elapsed announces nothing" (Vitest bullet, line 67) to "a no-op dispatch announces nothing"; without the elapsed time the test passes a wrong session-reference implementation. Fix: restore "after time has elapsed".
+### Decision needed (open from pass 5)
+- Non-top WordCell cards hidden from screen readers (see Pass 5).
+
+## Result — capped at 7 passes (open majors: Idle phase text undefined after pass 6 trims; no-op test lost "after time has elapsed")
+
+Majors per pass: 8, 8, 7, 4, 2, 1, 2. Words 241 -> 1497.
+### Unapplied minors
+hidden-page rAF set is spoken on return (drop pending set on hidden, or note it); tray-tile families named in Composing/Place; `ColumnView.cards` is the field name in view.ts (cards top to bottom; the pass-6 fixer asked to check); Playwright win ordering under zero animation is Vitest-only; Card props plumbing for i/n/selected/destination; roles/focus boundary with the keyboard ticket; Give up outcome example (the penalty line is not read); Place to Composing / Composing to Idle phase tests; redo-from-Place target test.
