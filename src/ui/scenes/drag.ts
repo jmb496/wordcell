@@ -1,6 +1,6 @@
 import fixture from '../../../fixtures/how-to-play-drag.json';
 import { text } from '../text';
-import { COLUMN_AREA_H, columnX, SLOT, STAGE_W, STRIP } from './geometry';
+import { COLUMN_AREA_H, columnX, SLOT, STAGE_W, STRIP, TRAY_TOP } from './geometry';
 import { defineScene } from './script';
 import type { Scene, SceneFixtureData } from './types';
 
@@ -19,6 +19,13 @@ const landing = {
   y: data.start.columns[carry.destinationColumn - 1].length * STRIP,
 };
 const offset = { x: landing.x - home.x, y: landing.y - home.y };
+const destHome = {
+  x: landing.x,
+  y: (data.start.columns[carry.destinationColumn - 1].length - carry.destinationCount) * STRIP,
+};
+// Where the cards come to rest in the tray row (DESIGN.md tray: 16 px inset, D cards first).
+const trayDest = { x: 16, y: TRAY_TOP + 3 };
+const trayTail = { x: trayDest.x + carry.destinationCount * SLOT, y: trayDest.y };
 const grab = { x: home.x + SLOT / 2, y: home.y + STRIP / 2 };
 
 export const dragScene: Scene = defineScene({
@@ -30,20 +37,33 @@ export const dragScene: Scene = defineScene({
     rest: { x: STAGE_W - 24, y: COLUMN_AREA_H - 24 },
     grab,
     over: { x: grab.x + offset.x, y: grab.y + offset.y },
+    tray: trayTail,
   },
-  elements: ['stage', 'tail', 'ghost', 'tray'],
+  elements: ['stage', 'tail', 'tail-0', 'tail-1', 'tail-2', 'tail-3', 'dest', 'ghost', 'tray'],
   steps: [
-    { type: 'grab', target: 'grab', kind: 'snap', command: 0 },
-    { type: 'move', target: 'over', kind: 'undoRedo' },
+    {
+      type: 'grab',
+      target: 'grab',
+      kind: 'flyToCell',
+      command: 0,
+      wait: { kind: 'flyToCell', times: 2 },
+    },
+    { type: 'move', target: 'over', kind: 'flyToCell', times: 2 },
     {
       type: 'drop',
       target: 'over',
-      kind: 'snap',
+      kind: 'flyToCell',
       command: 0,
-      reveal: { show: 'tray', hide: ['tail', 'ghost'], kind: 'overlay' },
+    },
+    {
+      type: 'fly',
+      target: 'tray',
+      kind: 'flyToCell',
+      times: 2,
+      reveal: { show: 'tray', hide: ['tail', 'dest', 'ghost'], kind: 'overlay' },
     },
   ],
-  rest: { kind: 'flyToCell', times: 4 },
+  rest: { kind: 'flyToCell', times: 6 },
   frames: [
     { tail: 'home', tray: false },
     { tail: 'lifted', tray: false },
@@ -51,4 +71,5 @@ export const dragScene: Scene = defineScene({
     { tail: 'gone', tray: true },
   ],
   offset,
+  layout: { tailHome: home, destHome, trayTail, trayDest },
 });

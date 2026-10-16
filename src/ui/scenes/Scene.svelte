@@ -13,7 +13,8 @@ import {
   CARD_W,
   COLUMN_AREA_H,
   columnX,
-  GHOST,
+  HAND_H,
+  HAND_W,
   SLOT,
   STAGE_H,
   STAGE_W,
@@ -44,7 +45,8 @@ const geo = {
   columnH: COLUMN_AREA_H,
   trayTop: TRAY_TOP,
   trayH: TRAY_H,
-  ghost: GHOST,
+  handW: HAND_W,
+  handH: HAND_H,
   columnX,
 };
 const ghostFrom = $derived(ghostStart(scene));
@@ -63,13 +65,17 @@ const drawn = $derived.by(() => {
   const all = fixture.start.columns;
   const source = all[c.sourceColumn - 1];
   return {
-    columns: all.map((cards, i) =>
-      i + 1 === c.sourceColumn ? cards.slice(0, cards.length - c.count) : cards,
-    ),
+    columns: all.map((cards, i) => {
+      if (i + 1 === c.sourceColumn) return cards.slice(0, cards.length - c.count);
+      if (i + 1 === c.destinationColumn) return cards.slice(0, cards.length - c.destinationCount);
+      return cards;
+    }),
     tail: source.slice(-c.count),
     destination: all[c.destinationColumn - 1].slice(-c.destinationCount),
     tailTop: (source.length - c.count) * STRIP,
     sourceColumn: c.sourceColumn,
+    destColumn: c.destinationColumn,
+    destTop: (all[c.destinationColumn - 1].length - c.destinationCount) * STRIP,
   };
 });
 const last = $derived(scene.frames.length - 1);
@@ -151,6 +157,16 @@ const replay = (): void => {
       {/each}
       <div
         class="tail"
+        data-scene-el="dest"
+        style:left="{geo.columnX(drawn.destColumn)}px"
+        style:top="{drawn.destTop}px"
+      >
+        {#each drawn.destination as letter, j (j)}
+          <Card id={0} face={face(letter)} place="column" mirror="static" full={j === drawn.destination.length - 1} />
+        {/each}
+      </div>
+      <div
+        class="tail"
         data-scene-el="tail"
         style:left="{geo.columnX(drawn.sourceColumn)}px"
         style:top="{drawn.tailTop}px"
@@ -158,7 +174,9 @@ const replay = (): void => {
         style:visibility={reduced && tailStyle === undefined ? 'hidden' : undefined}
       >
         {#each drawn.tail as letter, j (j)}
-          <Card id={0} face={face(letter)} place="column" mirror="static" full={j === drawn.tail.length - 1} />
+          <div data-scene-el="tail-{j}">
+            <Card id={0} face={face(letter)} place="column" mirror="static" full={j === drawn.tail.length - 1} />
+          </div>
         {/each}
       </div>
       <div
@@ -175,13 +193,23 @@ const replay = (): void => {
           <Card id={0} face={face(letter)} place="tray" mirror="static" full />
         {/each}
       </div>
-      <div
+      <svg
         class="ghost"
         data-scene-el="ghost"
-        style:width="{geo.ghost}px"
-        style:height="{geo.ghost}px"
+        viewBox="0 0 28 32"
+        width={geo.handW}
+        height={geo.handH}
         style:transform={ghostFrom}
-      ></div>
+        aria-hidden="true"
+      >
+        <path
+          d="M9 1.5c1.4 0 2.5 1.1 2.5 2.5v9l1.2-.4c1.2-.4 2.5.3 2.8 1.5l.3-.1c1.2-.4 2.5.3 2.8 1.5l.2-.1c1.3-.4 2.8.4 3 1.8l.7 6.2c.3 2.8-.9 5.6-3.2 7.2H12.5c-1.5 0-2.9-.7-3.8-1.9L3.4 20.3c-.8-1.1-.5-2.6.6-3.3 1-.6 2.2-.4 3 .4l.5.6V4c0-1.4 1.1-2.5 2.5-2.5z"
+          fill="#fff"
+          stroke="#1a1a1a"
+          stroke-width="1.6"
+          stroke-linejoin="round"
+        />
+      </svg>
     </div>
     {#if !reduced}
       <button type="button" class="tap" aria-label={running === 'playing' ? controls.pause : controls.restart} onclick={act(tap)}>
@@ -215,9 +243,8 @@ const replay = (): void => {
     display: flex; align-items: center; opacity: 0; border-top: 1px solid var(--wc-outline);
   }
   .ghost {
-    position: absolute; top: 0; left: 0; border-radius: 50%; opacity: 0;
-    background: var(--wc-ink-primary); border: 2px solid var(--wc-table); box-sizing: border-box;
-    pointer-events: none;
+    position: absolute; top: 0; left: 0; opacity: 0; pointer-events: none;
+    filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.45));
   }
   .tap {
     position: absolute; inset: 0; padding: 0; border: 0; border-radius: 8px;

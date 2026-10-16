@@ -45,10 +45,10 @@ describe('AD-14 scene script against its fixture', () => {
 
   it('AD-14 every grab and drop step names a fixture drop command; step kinds are motion kinds', () => {
     const types = dragScene.steps.map((s) => s.type);
-    expect(types).toStrictEqual(['grab', 'move', 'drop']);
+    expect(types).toStrictEqual(['grab', 'move', 'drop', 'fly']);
     for (const step of dragScene.steps) {
       expect(KINDS).toContain(step.kind);
-      if (step.type !== 'move')
+      if (step.type === 'grab' || step.type === 'drop')
         expect(dragScene.fixture.commands[step.command ?? -1]?.type).toBe('drop');
     }
   });
@@ -62,15 +62,19 @@ describe('AD-14 scene script against its fixture', () => {
     ]);
   });
 
-  it('AD-14 the carried tail ends each step where the next begins and lands on its offset', () => {
+  it('AD-14 the carried tail ends each step where the next begins, lands on its offset, then flies to the tray', () => {
     const effects = sceneEffects(dragScene);
     const tails = effects.flat().filter((e) => e.element === 'tail' && e.phase === 0);
     for (let i = 1; i < tails.length; i++)
       expect(tails[i].keyframes[0].transform).toBe(tails[i - 1].keyframes[1].transform);
-    const { offset } = dragScene;
-    expect(tails[tails.length - 1].keyframes[1].transform).toBe(
-      `translate(${offset.x}px, ${offset.y}px)`,
-    );
+    const { offset, layout } = dragScene;
+    const dropAt = dragScene.steps.findIndex((s) => s.type === 'drop');
+    const landed = effects[dropAt].find((e) => e.element === 'tail');
+    expect(landed?.keyframes[1].transform).toBe(`translate(${offset.x}px, ${offset.y}px)`);
+    const flown = effects.flat().filter((e) => e.element.startsWith('tail-'));
+    expect(flown).toHaveLength(dragScene.carry.count);
+    expect(new Set(flown.map((e) => e.keyframes[1].transform)).size).toBe(dragScene.carry.count);
+    expect(layout.trayTail.y).toBeGreaterThan(layout.tailHome.y);
   });
 });
 
@@ -168,10 +172,11 @@ describe('AD-14 scene player', () => {
       await flush();
     }
     const ids = animations.map((a) => a.id).filter((id, i, all) => id !== all[i - 1]);
-    expect(ids.slice(0, 5)).toStrictEqual([
+    expect(ids.slice(0, 6)).toStrictEqual([
       'drag-step-0',
       'drag-step-1',
       'drag-step-2',
+      'drag-step-3',
       'drag-rest',
       'drag-step-0',
     ]);

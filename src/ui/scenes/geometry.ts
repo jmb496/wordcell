@@ -13,6 +13,9 @@ export const STAGE_W = 252;
 export const STAGE_H = TRAY_TOP + TRAY_H;
 /** The tail lifts this far while carried (DESIGN.md Card lift). */
 export const LIFT = 8;
-export const GHOST = 24;
+/** The pointer hand's box and its fingertip inside it (the point the hand targets). */
+export const HAND_W = 28;
+export const HAND_H = 32;
+export const HAND_TIP = { x: 9, y: 1 } as const;
 
 export const columnX = (column: number): number => COLUMN_X0 + (column - 1) * COLUMN_PITCH;

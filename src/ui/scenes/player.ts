@@ -94,27 +94,34 @@ export class ScenePlayer {
     return true;
   }
 
+  /** Holds still for `ms` (a no-op animation of the stage, so a tap pauses it too). */
+  private async hold(id: string, ms: number): Promise<void> {
+    const still: Effect = {
+      element: 'stage',
+      keyframes: [{ opacity: 1 }, { opacity: 1 }],
+      kind: this.scene.rest.kind,
+      times: 1,
+      phase: 0,
+    };
+    await this.play([still], id, () => ms);
+  }
+
   private async loop(run: number): Promise<void> {
     try {
       for (;;) {
         for (let i = 0; i < this.scene.steps.length; i++) {
           if (await this.hiddenStop(run)) return;
           const id = `${this.scene.id}-step-${i}`;
+          const wait = this.scene.steps[i].wait;
+          if (wait) await this.hold(id, this.deps.duration(wait.kind) * wait.times);
           for (const phase of [0, 1] as const) {
             const items = this.effects[i].filter((e) => e.phase === phase);
-            if (items.length > 0) await this.play(items, id, (e) => this.deps.duration(e.kind));
+            if (items.length > 0)
+              await this.play(items, id, (e) => this.deps.duration(e.kind) * e.times);
           }
         }
         if (await this.hiddenStop(run)) return;
-        const rest: Effect = {
-          element: 'stage',
-          keyframes: [{ opacity: 1 }, { opacity: 1 }],
-          kind: this.scene.rest.kind,
-          phase: 0,
-        };
-        await this.play([rest], `${this.scene.id}-rest`, () =>
-          restMs(this.scene, this.deps.duration),
-        );
+        await this.hold(`${this.scene.id}-rest`, restMs(this.scene, this.deps.duration));
         this.cancelAll();
       }
     } catch (error) {

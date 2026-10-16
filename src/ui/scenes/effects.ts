@@ -1,5 +1,5 @@
 import type { MotionKind } from '../motion';
-import { GHOST, LIFT } from './geometry';
+import { HAND_TIP, LIFT, SLOT, STRIP } from './geometry';
 import type { Frame, Point, Scene } from './types';
 
 /** One element's keyframes inside a step; `phase` 1 runs after every phase 0 effect finished. */
@@ -7,11 +7,13 @@ export interface Effect {
   readonly element: string;
   readonly keyframes: Keyframe[];
   readonly kind: MotionKind;
+  /** The duration in multiples of `duration(kind)`. */
+  readonly times: number;
   readonly phase: 0 | 1;
 }
 
 const at = (p: Point): string => `translate(${p.x}px, ${p.y}px)`;
-const ghostAt = (p: Point): string => at({ x: p.x - GHOST / 2, y: p.y - GHOST / 2 });
+const ghostAt = (p: Point): string => at({ x: p.x - HAND_TIP.x, y: p.y - HAND_TIP.y });
 const add = (a: Point, b: Point): Point => ({ x: a.x + b.x, y: a.y + b.y });
 const sub = (a: Point, b: Point): Point => ({ x: a.x - b.x, y: a.y - b.y });
 
@@ -22,7 +24,8 @@ export function ghostStart(scene: Scene): string {
 
 /**
  * The effects of every step in order, walking the pointer from target to target and the carried
- * tail with it: grab presses and lifts the tail, move carries it, drop lowers it and then reveals.
+ * tail with it: grab presses and lifts the tail, move carries it, drop lowers it, fly sends the tail
+ * and the D cards down into the tray, and a reveal fades the next part in.
  */
 export function sceneEffects(scene: Scene): readonly (readonly Effect[])[] {
   let pointer = scene.targets.rest;
@@ -39,6 +42,7 @@ export function sceneEffects(scene: Scene): readonly (readonly Effect[])[] {
         { transform: ghostAt(to), ...(opacity ? { opacity: opacity[1] } : {}) },
       ],
       kind: step.kind,
+      times: step.times ?? 1,
       phase: 0,
     });
     const tail = (next: Point): Effect => {
@@ -48,6 +52,7 @@ export function sceneEffects(scene: Scene): readonly (readonly Effect[])[] {
         element: 'tail',
         keyframes: [{ transform: at(before) }, { transform: at(next) }],
         kind: step.kind,
+        times: step.times ?? 1,
         phase: 0,
       };
     };
@@ -61,6 +66,41 @@ export function sceneEffects(scene: Scene): readonly (readonly Effect[])[] {
       case 'drop':
         effects.push(tail(add(carry, { x: 0, y: LIFT })));
         break;
+      case 'fly': {
+        const { tailHome, destHome, trayTail, trayDest } = scene.layout;
+        // Each tail card flies on its own, from its place in the stack (j strips down the
+        // wrapper, which rests at `carry`) to its own place in the tray row.
+        const resting = add(tailHome, carry);
+        for (let j = 0; j < scene.carry.count; j++)
+          effects.push({
+            element: `tail-${j}`,
+            keyframes: [
+              { transform: at({ x: 0, y: 0 }) },
+              {
+                transform: at(
+                  sub(
+                    { x: trayTail.x + j * SLOT, y: trayTail.y },
+                    add(resting, { x: 0, y: j * STRIP }),
+                  ),
+                ),
+              },
+            ],
+            kind: step.kind,
+            times: step.times ?? 1,
+            phase: 0,
+          });
+        effects.push({
+          element: 'dest',
+          keyframes: [
+            { transform: at({ x: 0, y: 0 }) },
+            { transform: at(sub(trayDest, destHome)) },
+          ],
+          kind: step.kind,
+          times: step.times ?? 1,
+          phase: 0,
+        });
+        break;
+      }
       case 'tap':
         effects.push(ghost());
         break;
@@ -70,6 +110,7 @@ export function sceneEffects(scene: Scene): readonly (readonly Effect[])[] {
         element: step.reveal.show,
         keyframes: [{ opacity: 0 }, { opacity: 1 }],
         kind: step.reveal.kind,
+        times: 1,
         phase: 1,
       });
       for (const element of step.reveal.hide)
@@ -77,6 +118,7 @@ export function sceneEffects(scene: Scene): readonly (readonly Effect[])[] {
           element,
           keyframes: [{ opacity: 1 }, { opacity: 0 }],
           kind: step.reveal.kind,
+          times: 1,
           phase: 1,
         });
     }

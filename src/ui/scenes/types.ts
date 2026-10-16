@@ -19,7 +19,7 @@ export interface Point {
   readonly y: number;
 }
 
-export type StepType = 'grab' | 'move' | 'drop' | 'tap';
+export type StepType = 'grab' | 'move' | 'drop' | 'fly' | 'tap';
 
 export interface Step {
   readonly type: StepType;
@@ -27,6 +27,10 @@ export interface Step {
   readonly target: string;
   /** The motion.ts kind of this step (never literal ms, AD-10). */
   readonly kind: MotionKind;
+  /** The step's duration is `times` multiples of `duration(kind)` (default 1). */
+  readonly times?: number;
+  /** A hold before the step starts: `times` multiples of `duration(kind)`. */
+  readonly wait?: { readonly kind: MotionKind; readonly times: number };
   /** The fixture command a grab or drop step animates. */
   readonly command?: number;
   /** After the step: `show` fades in, `hide` fades out, over `kind`. */
@@ -64,4 +68,11 @@ export interface Scene {
   readonly frames: readonly Frame[];
   /** The tail's offset from its column to the landing place. */
   readonly offset: Point;
+  /** Stage top-left points: where the tail and the D cards sit before the play, and where they fly to in the tray. */
+  readonly layout: {
+    readonly tailHome: Point;
+    readonly destHome: Point;
+    readonly trayTail: Point;
+    readonly trayDest: Point;
+  };
 }
