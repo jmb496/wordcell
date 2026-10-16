@@ -13,3 +13,14 @@ Tests: all passing (test:all), screenshots passed (38 passed, 14 skipped), both 
 Ref to fix upstream: none
 Worth knowing: review minors left: the dictionary test passes vacuously (scene 1 has no words yet), hiddenStop fires only at step/loop boundaries (known residual risk in the plan), defineScene does not range-check carry counts or columns, plan checkboxes unticked. The plan checkpoint question (does the harness split into a following ticket?) is answered by the plan: read it.
 Close-out docs: none
+
+## 8.2 Compose and destination-block scenes — done
+What it adds: two more animated scenes in the How to play panel: composing BALKED from letters (borrowing L, Validate), and the destination-block scene (STAPE, then Flip to PEATS), each with its caption and a test that replays it through the real game engine.
+Ticket review: 5 passes, converged (majors 8, 6, 6, 1, 1); nothing needed your input
+Build: built; commit 797ba44 (plan: three medium findings patched as tests, no high); the one open major was a test detail, resolved in the build
+Code review: quick, 2 passes, converged (majors 2, 0); fixes applied in c92ec45
+Tests: all passing (test:all), screenshots passed (40 passed, 16 skipped)
+Ref to fix upstream: none
+Tokens: Tokens: 6.9M input-equivalent (ticket review 51%, build 31%, code review 12%, orchestrator 3%, other 3%); orchestrator peak context 62k
+Worth knowing: nothing
+Close-out docs: none

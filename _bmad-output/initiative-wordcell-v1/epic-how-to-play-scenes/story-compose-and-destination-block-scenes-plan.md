@@ -3,7 +3,7 @@ title: 'Compose and destination-block scenes'
 type: 'feature'
 ticket: '2'
 created: '2026-10-16'
-status: 'built'
+status: done
 baseline_revision: 'be5c73d7655fdfd629aae769b6c7cd5500f07424'
 route: 'full'
 route_source: 'auto'
