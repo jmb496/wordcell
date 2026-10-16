@@ -1,5 +1,5 @@
 # Review loop: ticket 6.12 build (code mode)
-State: pass 1: review
+State: pass 2: done
 Target: commit range eb4d1ca..HEAD (4a93645), diff at 6-12-build.passes/pass0.diff; tree snapshot 0 bb98e6cdfe8aaec4302a0992ecdace0b4e36232c; HEAD 4a93645
 Intent: _bmad-output/initiative-wordcell-v1/epic-game-surfaces-and-keyboard/story-winning-guard-the-end-sheet-half-plan.md
 
@@ -20,4 +20,15 @@ Reviewers: correctness, edge cases, verification gap, intent alignment  |  Findi
 - hide only at Slow on desktop → minor, unapplied
 ### Fix outcome (pass 1)
 Fixer applied all 5 (new-game.ts calls releaseHold in newGame/replayDeal + unit case; alias/held-Z assertions; New game/Replay unreachable by UI beyond menu rows, so a unit case plus plan note instead of e2e; test renames; running>0 before Undo). npm test 2700 pass, check 0 errors, lint 1 warning (pre-existing motion.test.ts:691 void vs undefined, exit 0). Snapshot: tree e7ae97341055899d30581b7629b9d62b77f2c0dd
-State: pass 1: done
+State: pass 2: done
+
+## Pass 2 — 2026-10-15
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 0, minor 3, decision-needed 0  |  Dropped in triage: 0
+### Minors (unapplied)
+- src/ui/new-game.test.ts — no test that newGame()/replayDeal() call releaseHold (the motion.test case calls releaseHold directly)
+- e2e/win-guard.spec.ts 'Redo button during a Redo win' — taps a disabled button, so it cannot tell consume from no-op; covered by unit and key e2e cases
+- motion.test.ts — Z/Ctrl+Z alias not tested between settle and the 300 ms floor (button path is)
+Also unapplied from pass 1: back wiring only unit-covered via finishGuard; hide e2e only at Slow desktop; lint warning motion.test.ts:691 (`void` vs `undefined`, exit 0).
+
+## Result — converged after 2 passes
+Majors per pass: 3, 0. Final state: npm test 2700 pass, npm run check 0 errors, npm run lint exit 0 with 1 formatting warning (motion.test.ts:691). Not re-run after pass 2 (no fixes).
