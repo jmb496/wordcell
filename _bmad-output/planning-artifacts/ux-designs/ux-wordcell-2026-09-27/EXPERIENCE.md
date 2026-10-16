@@ -106,6 +106,9 @@ the pending-draft line and the live region.
 | Menu and panel names (epic 6) | `Menu`, `Close menu`, `Replay this deal`, `Preferences`, `Close preferences`, `Animation speed` (`Fast` / `Normal` / `Slow`), `Show timer`, `Statistics`, `Close statistics` | Menu sheet, Preferences and Statistics panels (owner kept the wording, 2026-10-15). |
 | Statistics tiles (R-84, epic 6) | `Games played`, `Games won`, `Games given up`, `Best score`, `Average score`, `Longest word`; the longest word is shown in capitals with a small grey `8 letters` caption below it (`1 letter` for one); `—` where no value exists | Statistics panel (owner, 2026-10-15). |
 | End sheet labels (epic 6) | `Longest word`, `Words placed`, `—` when none; handle `Collapse result`; collapsed bar `Show result: 172, Warming Up` (score with U+2212 if negative, then the band name) | End sheet (owner kept the wording, 2026-10-15). |
+| Close how to play (epic 6) | `Close how to play` | How to play panel close control. |
+| Screen-reader names (epic 6, CAP-11) | `{L}, column {c}, card {i} of {n}{, selected}{, destination}`; `{L}, tray, tile {i} of {n}{, selected}`; `{L}, WordCell {c}, top`; `WordCell {c}, top {L}, {n card(s)}{, used}`; `WordCell {c}, empty`; `Column {c} foot`; `Column {c}, here`; `Q U, counts as two letters` | Accessible names of cards, tiles, WordCells and foot pads (`src/ui/text.ts`). |
+| Live region announcements (epic 6, CAP-11) | `Composing. {WORD}, {N letters}.`; `Place. ...`; `Idle.`; `{WORD} placed on cell {c}, plus N`, `minus N` or `no change`; `Undo. {phase}`; `Redo. {phase}`; `New game. Idle.`; `Replay. Idle.`; `{title} Score {N}, {band}.` (`minus N` for a negative score) | The polite live region (`src/ui/text.ts`, `src/ui/announce.ts`). |
 | Win outcome | `Every column cleared.` | End sheet title. |
 | Hover peek, more than 14 cards (R-65) | `+n older cards`; for one, `+1 older card` | Hover peek, a line above the first row. |
 | WordCell view and peek title (R-65) | `WordCell 6 · 7 cards`; for one card, `WordCell 6 · 1 card` | View sheet title (peek and sticky view). |
@@ -202,7 +205,7 @@ column card, a WordCell top card or a tray or strip tile is inert in every phase
 | Session rejected | Session-rejected message | Board not shown; only New game, which acts at once with no confirm dialog. The stored Session is untouched until New game (§2). Keyboard focus moves to its one button (`New game`) when it appears and when its cause changes (owner, 2026-09-30). |
 | Session and history both unreadable | Session-rejected message, then History notice | The Session-rejected message first; the History notice after New game. |
 | History unreadable | History notice, then Board | Notice once per launch. On a relaunch into Game over, the end sheet's entry is pushed first and the History notice shows on top; the sheet is visible once the notice is dismissed; menu ☰ carries a small error-coloured dot; Statistics shows the message; a finished game shows the end-sheet line. |
-| Idle, pending draft | Board | Redo enabled; tray line `Undone: … · Redo brings it back`. [ASSUMPTION A-E13] |
+| Idle, pending draft | Board | Redo enabled; tray line `Undone: … · Redo brings it back`. At 360 px the line never wraps or overflows: the suffix always shows in full and only the word ellipsizes, and only when it cannot fit. [ASSUMPTION A-E13] |
 | Idle, tail selected | Board | Tail lifted 8 px with teal outline; foot pads live; `Here` on the source column. |
 | Dragging a tail | Board | Tail follows the finger; ghosts in its old places; target column highlighted live (drop-target state); no highlight when no column meets the overlap minimum, or while the target is the source column and has never left it (Q-34). |
 | Composing | Board | Tray open; S ghosts in the source column; D cards in the destination column in destination style; used WordCells hatched (R-33). |
@@ -314,11 +317,16 @@ top card with tags inside the first and last tiles (R-50, R-52). **Confirm** com
 ### Keyboard (desktop, always on, Q-24)
 
 Cards and WordCells are focusable but have no native activation; the shell handles their keys.
+Tab order is roving: each non-empty column is one Tab stop (its bottom or last-focused card; the
+tail's top card after a key selection), not every card of a fanned column; the tray, the strip
+and each WordCell 3–10 are one stop each, with `←`/`→` moving within the tray or strip. Play stays
+fully possible with `1`–`8` and `↑`/`↓` (owner, 2026-10-15, ticket 6.11).
 `Space` or `Enter` on a focused column card is the tap on it per the phase matrix, in every phase.
 On a focused WordCell, `Enter` is exactly the tap (Idle with nothing selected: open the sticky
 view; Idle with a tail selected: deselect, no view; Composing: add the free letter; Place: set the
 target; Game over: open the view). `Space` on a focused WordCell opens the sticky view in every
-phase; with a tail selected it first clears the selection (popping its history entry). An empty
+phase; with a tail selected it first clears the selection (popping its history entry). `Space` on a
+WordCell whose view is already open only closes that view; it does not reopen it (owner, 2026-10-16). An empty
 WordCell never opens a view (Component Patterns → WordCell): with a tail selected, `Space` on it
 deselects with no view, like the tap. Any overlay opened by a key (`Space`
 view, `?` How to play, `N` confirm dialog, `M` menu) first clears a tail selection and pops its
@@ -327,7 +335,9 @@ entry before pushing its own.
 While the menu sheet, a panel or a dialog is open, game shortcuts are suspended: only `Tab`,
 `Enter` and `Space` act, natively, and `Esc` closes the topmost overlay (custom handling, same as
 back). While the end sheet or a WordCell view is open, game shortcuts stay active; any game
-shortcut first closes the sticky view, then acts. Any key command that changes the phase or the
+shortcut first closes the sticky view, then acts. Validate, Confirm and Flip likewise first close an open
+sticky word view or peek and clear a tail selection before acting, like Undo, Redo and the menu
+(owner, 2026-10-15, ticket 6.10). Any key command that changes the phase or the
 word data likewise first closes an open long-press peek or hover peek. `Enter`/`Space` on a focused button activate
 that button; the global `Enter` below applies when focus is on a tile or the board. No
 Ctrl/Cmd/Alt except the undo and redo aliases; Shift is allowed; keys match on the produced
@@ -410,9 +420,9 @@ the end sheet expanded.
 - **Targets** ≥ 44 × 44 px everywhere (carryover §5), including strips, foot pads and D-block
   buttons.
 - **Keyboard**: full play on desktop via the table above; visible focus ring in
-  `{colors.accent-teal}`; focus order top bar (menu, Undo, Redo) → columns → tray → WordCells → action bar.
-- **Screen readers**: every card is a button named by letter, place and state (`E, column 1,
-  card 2 of 5, selected`); WordCells by number, top card and count (`WordCell 6, top L, 4 cards,
+  `{colors.accent-teal}`; focus order top bar (menu, Undo, Redo) → columns (one Tab stop per non-empty column) → tray → WordCells → action bar.
+- **Screen readers**: every card in a column or the tray is a button named by letter, place and state (`E, column 1,
+  card 2 of 5, selected`); a card buried under a WordCell's top card is `aria-hidden`, and the WordCell's name gives its top card and count; WordCells by number, top card and count (`WordCell 6, top L, 4 cards,
   used`); `QU` is read "Q U, counts as two letters". A polite live region announces phase changes
   (`Composing. BAKED, 5 letters.`), the invalid-word message, commits (`BALKED placed on cell 6,
   plus 30`) and the end outcome. Full screen-reader play is not a v1 test target.

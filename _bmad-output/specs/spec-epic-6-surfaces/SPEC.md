@@ -124,8 +124,7 @@ holds the how, the as-built facts and the close-out edits.
     table in `build-notes.md`); hiding the page does not kill the token (it completes at once and
     the sheet opens expanded on return, R-73); only boot or reload (boot opens the sheet, R-73) and
     `resetForNewSession` kill it; browser back cannot be consumed: it completes the animation,
-    follows the normal back rule, and the sheet then opens; the deferred open waits for whatever animations are in flight
-    (none: opens at once); a Redo win behaves like a Confirm win; the menu button case is proved;
+    follows the normal back rule, and the sheet then opens; the deferred open waits for whatever animations are in flight and fires at max(animation settled, 300 ms after guard install) at every speed (epic 5 F8, F23); a Redo win behaves like a Confirm win; the menu button case is proved;
     P6 Playwright for each case at Normal, Fast, Slow and under reduced motion, plus a Redo win
     followed at once by Undo, Undo between settle and 300 ms (no sheet), and the Fast and reduced-motion cases where the animation settles before 300 ms.
 
@@ -207,8 +206,8 @@ holds the how, the as-built facts and the close-out edits.
 
 - **CAP-11** Screen-reader labels and live region (A-E9; EXPERIENCE.md Accessibility Floor)
   - **intent:** A screen-reader user can tell what each control and card is and what just happened.
-  - **success:** every card button is named by letter, place and state (`E, column 1, card 2 of
-    5, selected`), WordCells by number, top card, count and state (`WordCell 6, top L, 4 cards,
+  - **success:** every card button in a column or the tray is named by letter, place and state (`E, column 1, card 2 of
+    5, selected`), buried WordCell cards are `aria-hidden` and the WordCell's name gives its top card and count, WordCells by number, top card, count and state (`WordCell 6, top L, 4 cards,
     used`), `QU` read `Q U, counts as two letters`, the `WordCellRow` aria-label moves into
     `text.ts`, the `−`, `+` and `Flip` names follow epic 5 F9; one polite live region in the UI
     announces phase changes (`Composing. BAKED, 5 letters.`), the invalid-word message, commits

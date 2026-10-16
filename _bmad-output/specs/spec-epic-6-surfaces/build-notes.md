@@ -55,38 +55,45 @@ Announcements: phase change `Composing. {WORD}, {N letters}.` / `Place. ...`; in
 
 ## Close-out edits (owner-visible docs; the spec wins)
 
-- Spine AD-13 (line "menu plus confirm, epic 4 SPEC F16") and EXPERIENCE.md/epic 4 F16 references: change "menu plus confirm" to "a panel plus a confirm" (the Statistics panel with Reset history's confirm; a menu item closes the menu before a confirm opens, CAP-1).
+Close-out edits applied 2026-10-16 (owner-authorised): every entry below, plus the four additions at the end of this list, is applied to its target file. Where the old text was not verbatim the nearest equivalent was edited (line breaks, and the EXPERIENCE.md catalogue, which gained three rows). The `nav.settled`/`whenSettled` sentence was checked against `src/shell/nav.ts` before applying. Entries are marked "applied".
+
+- (applied) Spine AD-13 (line "menu plus confirm, epic 4 SPEC F16") and EXPERIENCE.md/epic 4 F16 references: change "menu plus confirm" to "a panel plus a confirm" (the Statistics panel with Reset history's confirm; a menu item closes the menu before a confirm opens, CAP-1).
 
 Listed by ticket 6.17 and applied by no ticket; applying the list is the owner's call (SPEC CAP-12; AGENTS.md rule 7 and Policy: no AD is reopened). Each entry is file, old text (verbatim; a `\` marks a source line break), new text, reason.
 
-- **EXPERIENCE.md Accessibility Floor, Screen readers bullet** (owner, 2026-10-15; the SPEC CAP-11 entry below is the same exception).
+- (applied) **EXPERIENCE.md Accessibility Floor, Screen readers bullet** (owner, 2026-10-15; the SPEC CAP-11 entry below is the same exception).
   - Old: "every card is a button named by letter, place and state (`E, column 1, \ card 2 of 5, selected`)"
   - New: "every card in a column or the tray is a button named by letter, place and state (`E, column 1, card 2 of 5, selected`); a card buried under a WordCell's top card is `aria-hidden`, and the WordCell's name gives its top card and count"
   - Reason: 6.13 hides buried WordCell cards from screen readers (owner decision 2026-10-15); a screen-reader user cannot step through the cards beneath.
-- **SPEC.md CAP-11, success line** (owner, 2026-10-15).
+- (applied) **SPEC.md CAP-11, success line** (owner, 2026-10-15).
   - Old: "every card button is named by letter, place and state (`E, column 1, card 2 of \ 5, selected`)"
   - New: "every card button in a column or the tray is named by letter, place and state (`E, column 1, card 2 of 5, selected`); buried WordCell cards are `aria-hidden` and the WordCell's name gives its top card and count"
   - Reason: same decision as the entry above.
-- **SPEC.md CAP-5** (technical; from 6.12 and its ticket review).
+- (applied) **SPEC.md CAP-5** (technical; from 6.12 and its ticket review).
   - Old: "the deferred open waits for whatever animations are in flight \ (none: opens at once)"
   - New: "the deferred open waits for whatever animations are in flight and fires at max(animation settled, 300 ms after guard install) at every speed (epic 5 F8, F23)"
   - Reason: "(none: opens at once)" contradicts the built behaviour: with Fast speed or reduced motion the sheet still opens 300 ms after the guard installs (build-notes, Winning-guard input outcomes; `win-guard.spec.ts` fake-clock cases).
-- **Spine AD-13, the push-depth bullet ("Push depth and stale-launch edges")** (technical, 6.10).
+- (applied) **Spine AD-13, the push-depth bullet ("Push depth and stale-launch edges")** (technical, 6.10).
   - Old: no mention of `nav.settled` or `nav.whenSettled`; the bullet ends at "Known edges, accepted as residuals:" and its list.
   - New: add a sentence after "...sends `depth + 1`.": "`nav.settled()` is true when no history operation is pending or queued; `nav.whenSettled(fn)` runs `fn` at once when settled, otherwise when the queue next settles (epic 6 CAP-10)."
   - Reason: `src/shell/nav.ts` exports both and 6.10 relies on them; the spine does not name them. Check the sentence against `nav.ts` before applying; no AD is reopened.
-- **EXPERIENCE.md Message catalogue** (owner, 2026-10-15: new strings are listed, not asked about).
+- (applied) **EXPERIENCE.md Message catalogue** (owner, 2026-10-15: new strings are listed, not asked about).
   - Old: no rows for the How to play close control, the screen-reader names or the live-region announcements; the rows `Menu and panel names (epic 6)`, `Statistics tiles` and `End sheet labels` already exist.
   - New: add rows `Close how to play`; screen-reader names (`{L}, column {c}, card {i} of {n}{, selected}{, destination}`, `{L}, tray, tile {i} of {n}{, selected}`, `{L}, WordCell {c}, top`, `WordCell {c}, top {L}, {n card(s)}{, used}`, `WordCell {c}, empty`, `Column {c} foot`, `Column {c}, here`, `Q U, counts as two letters`); announcements (`Composing. {WORD}, {N letters}.`, `Place. ...`, `Idle.`, `{WORD} placed on cell {c}, plus N|minus N|no change`, `Undo. {phase}`, `Redo. {phase}`, `New game`, `Replay`, `{title} Score {N|minus N}, {band}.`) as in "Live region strings (CAP-11)" above and `src/ui/text.ts`.
   - Reason: `text.ts` holds them; the catalogue is the single list the rule "every catalogue string only in text.ts" points at.
-- **EXPERIENCE.md State Patterns, row "Idle, pending draft" and DESIGN.md Tray band** (owner, 2026-10-15).
+- (applied) **EXPERIENCE.md State Patterns, row "Idle, pending draft" and DESIGN.md Tray band** (owner, 2026-10-15).
   - Old: "| Idle, pending draft | Board | Redo enabled; tray line `Undone: … · Redo brings it back`. [ASSUMPTION A-E13] |"
   - New: the same row plus "At 360 px the line never wraps or overflows: the suffix always shows in full and only the word ellipsizes, and only when it cannot fit"; add the same sentence to DESIGN.md Tray band.
   - Reason: 6.8 and its code review fixed this behaviour (`pending-draft.spec.ts` R-72 10-letter case).
-- **DESIGN.md Components, Focus ring bullet** (owner, 2026-10-15, 6.11).
+- (applied) **DESIGN.md Components, Focus ring bullet** (owner, 2026-10-15, 6.11).
   - Old: "A 2 px `{colors.accent-teal}` ring at 2 px offset, with a `{colors.table}` gap between the ring and the element."
   - New: "A 2 px `{colors.accent-teal}` ring. On a card it is drawn inside the card edge (2 px in), with no offset or gap; on other controls it keeps the 2 px offset and the `{colors.table}` gap."
   - Reason: owner kept the inside ring for cards; the doc's offset wording no longer matches (`keyboard.screens.spec.ts` baselines).
+- **Additions (owner, applied 2026-10-16).**
+  - EXPERIENCE.md Keyboard: Validate, Confirm and Flip close an open sticky word view or peek (and clear a tail selection) before acting, like Undo, Redo and the menu (owner 2026-10-15, ticket 6.10 Notes). Applied.
+  - EXPERIENCE.md Keyboard and Accessibility Floor: one Tab stop per non-empty column (owner 2026-10-15, ticket 6.11 Notes; plan item D45), consistent with the 6.11 ticket's roving model. Applied.
+  - Spine AD-9: the shell's read-only `elapsedMs(now)` accessor for the top-bar timer (checked against `src/shell/game.svelte.ts`). Applied.
+  - EXPERIENCE.md Keyboard: `Space` on a WordCell with an open view now only closes the view; it no longer closes and reopens (owner 2026-10-16). Docs only; code is separate. Applied.
 - Already satisfied, no edit: SPEC F6 and DESIGN.md Elevation & Depth carry the 2026-10-15 owner answer (☰ covered by a sticky WordCell view); EXPERIENCE.md Rating bands carries the English score column How to play lists; the Statistics and end-sheet strings are catalogue rows.
 
 ## Carry-ins (ticket 6.14, epic 4 retro A8)

@@ -25,7 +25,7 @@ Spine edits are batched at close-out as in epic 3, so the R1 AD-13 record (retro
   reported in SPEC Open Questions (Q-42 wins per AGENTS.md Policy). Folded at the epic 4 retrospective, C1.
 - AD-11: `cardWidth`'s first argument is the available viewport width (`clientWidth`, excluding a
   classic scrollbar), kept stable by `scrollbar-gutter: stable` (CAP-1). Folded at the epic 4 retrospective, C2.
-- AD-13 (F16): the two-plain-overlay reload case is proven in epic 6 (menu plus confirm dialog);
+- AD-13 (F16): the two-plain-overlay reload case is proven in epic 6 (a panel plus a confirm dialog);
   epic 4 proves the one-overlay case with a tail selection and with the sticky view. Folded at the epic 4 retrospective, C12.
 - Proposed epics rows 4/5 (F1, F2, F17): epic 4 renders every `GameView` board state, a static tray
   (live tiles, no gestures) and the Composing column gestures; epic 5 keeps the tray interactions,

@@ -415,7 +415,9 @@ sequenceDiagram
   `pageshow`, `clock.resume(now)` only when `document.visibilityState === 'visible'`. The flush writes only `wordcell:session`; the history is written only by
   `reconcile` / `reset`, prefs only by `prefs.svelte.ts`. `accrue` ignores time unless status =
   playing. The timer display is `activeMs + peek(now)` while status = playing and `activeMs`
-  otherwise, updated by a UI interval only while Show timer is on and status = playing, and
+  otherwise (the shell exposes this as the read-only `elapsedMs(now)` accessor: `activeMs` plus the
+  clock's unflushed ms while playing, `activeMs` once won or given up, a throw unless `active`),
+  updated by a UI interval only while Show timer is on and status = playing, and
   re-rendered on every dispatch and on leaving playing, so the frozen value equals the recorded
   duration. Ticks never dispatch or write. Playwright: `hidePage` mid-`touchHold` drag returns the
   tail, writes `wordcell:session` once and dispatches no command (`e2e/drag-interruptions.spec.ts`
@@ -607,12 +609,14 @@ sequenceDiagram
     any reload: the epic 3 reload cases assert `{ wc: 1, launch: <new> }`, back → Board at
     `wc: 0`, back → the app is left, and no old-launch entry is reached. Epic 4 re-proves the
     one-overlay case with a tail selection and with the sticky view; the two-plain-overlay case
-    is proven in epic 6 (menu plus confirm, epic 4 SPEC F16).
+    is proven in epic 6 (a panel plus a confirm, epic 4 SPEC F16).
   - Push depth and stale-launch edges (as built in epic 3, ticket 3.8; refinements, no decision
     changed). `nav` keeps the current entry's `wc` as it knows it: set from `state.wc` on every
     current-launch `popstate` with a numeric `wc` (own pop settled, Forward, back), +1 per push
     sent; each push sends `{ wc: count + 1, launch }`, so a push after a Forward correction sends
-    `depth + 1`. Known edges, accepted as residuals:
+    `depth + 1`. `nav.settled()` is true when no history operation is pending or queued;
+    `nav.whenSettled(fn)` runs `fn` at once when settled, otherwise when the queue next settles
+    (epic 6 CAP-10). Known edges, accepted as residuals:
     - **Stale-entry push.** A push made while the current entry is an ignored stale-launch entry
       (reached only by Forward; Android has no Forward) stacks above it, so `wc` no longer equals
       the distance from the base: the next back lands on the stale entry and is swallowed once,

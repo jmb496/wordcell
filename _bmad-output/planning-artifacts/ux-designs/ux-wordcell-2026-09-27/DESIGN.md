@@ -479,7 +479,7 @@ pills (`{rounded.full}`); among badges only the error dot is a circle. The 44 ×
   drawn under the S ghosts, as during the drag); *inert*
   (Composing: every column except the destination column; Place: all columns; Game over: all
   columns (R-75); R-39): unchanged look, no hover. S ghosts are inert too.
-- **Focus ring.** A 2 px `{colors.accent-teal}` ring at 2 px offset, with a `{colors.table}` gap
+- **Focus ring.** A 2 px `{colors.accent-teal}` ring. On a card it is drawn inside the card edge (2 px in), with no offset or gap; on other controls it keeps the 2 px offset and the `{colors.table}` gap
   between the ring and the element. It is distinct from the selection outline (outline plus lift);
   when both apply, both are drawn. On a fanned column card the focus ring encloses the card's
   visible strip; the selection outline encloses the whole lifted tail.
@@ -544,7 +544,7 @@ pills (`{rounded.full}`); among badges only the error dot is a circle. The 44 ×
   validated word in word order; reordering the strip does not change it. The control row holds the
   meta line, right-aligned like the letter count. In Idle the band shows one ui-label line in
   ink-secondary in the word-line position, left-aligned (the pending word or nothing,
-  EXPERIENCE.md); it never wraps, and the word part ellipsizes first. The tile rows and the
+  EXPERIENCE.md); it never wraps, and the word part ellipsizes first. At 360 px the pending-draft line never wraps or overflows: the suffix always shows in full and only the word ellipsizes, and only when it cannot fit. The tile rows and the
   control row are empty.
 - **Tile.** A card in the tray. Movable tiles (S and free letters) are normal cards. A free-letter
   tile carries its WordCell number tag (`6`, `{typography.card-badge}`) in the bottom band, left,
