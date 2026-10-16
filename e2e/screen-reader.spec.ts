@@ -104,6 +104,14 @@ test('A-E9 Composing names the destination card, tray tiles, a selected tile and
   await expect(page.getByRole('button', { name: 'Flip', exact: true })).toHaveCount(1);
 });
 
+test('A-E9 Place names the tray tiles of the placement strip', async ({ page }) => {
+  await openFixture(page, 'session-place');
+  const tiles = page.getByRole('button', { name: /, tray, tile \d of \d/ });
+  await expect(tiles).toHaveCount(3);
+  await expect(tiles.first()).toHaveAccessibleName(/, tray, tile 1 of 3$/);
+  await expect(tiles.last()).toHaveAccessibleName(/, tray, tile 3 of 3$/);
+});
+
 test('A-E9 live region through Validate, Confirm, Undo and a committing Redo', async ({ page }) => {
   await openFixture(page, 'session-composing');
   await recordRegion(page);
@@ -193,10 +201,8 @@ test('A-E9 a win announces the commit text first, then the outcome', async ({ pa
   await primary(page).click();
   await expect.poll(async () => (await sets(page)).length).toBe(2);
   const [commit, outcome] = await sets(page);
-  expect(commit).toMatch(
-    /^[A-Z]+ placed on cell \d+, (plus|minus) \d+$|^[A-Z]+ placed on cell \d+, no change$/,
-  );
-  expect(outcome).toMatch(new RegExp(`^${WIN} Score \\d+, [A-Za-z ]+\\.$`));
+  expect(commit).toBe('SBRRCU placed on cell 6, plus 36');
+  expect(outcome).toBe(`${WIN} Score 355, Word Nerd.`);
 });
 
 test('A-E9 a Give up announces only the outcome, penalty not read', async ({ page }) => {

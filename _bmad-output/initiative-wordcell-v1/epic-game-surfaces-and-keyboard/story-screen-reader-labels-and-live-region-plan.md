@@ -53,7 +53,7 @@ deferred:
 |----------|--------------|---------------------------|----------------|
 | Commit | Confirm, wordCount 2 to 3, pre-view place.target 6, scoreDelta 30 | `BALKED placed on cell 6, plus 30` | missing field throws |
 | Win | Confirm that wins | commit string, then in a later frame `srOutcome` once the sheet opens | no outcome if `openDeferred` returns false |
-| Give up | `giveUp` | only the outcome sets the region, e.g. `Game over. Score minus 12, Wordsmith.`; the penalty line is not read | none |
+| Give up | `giveUp` | only the outcome sets the region, e.g. `Game given up. Score minus 12, Wordsmith.`; the penalty line is not read | none |
 | Repeat reject | Validate same word twice | two separate sets | none |
 | No-op | `changed` false after elapsed time | no set | none |
 | Hidden return | `visibilitychange`/`pageshow` | silent; a pending rAF set is dropped on hidden | none |
@@ -77,9 +77,9 @@ deferred:
 - [x] `src/ui/text.ts` -- add all strings; `QU` name `Q U, counts as two letters`; plural forms via `letters`; `minus N` never U+2212.
 - [x] `src/ui/announce.ts` -- announcer as above. Hidden-page rAF: on `visibilitychange` to hidden, cancel any pending rAF and drop the pending set (resolves the review minor; the listener lives here as a read of `document.hidden` at set time, not a new `visibilitychange` listener, which AD-9 allows only in `game.svelte.ts`: instead, in the rAF callback, skip the set when `document.hidden`).
 - [x] `src/ui/App.svelte`, `new-game.ts`, `end-sheet.ts`, `overlays.svelte.ts`, `commands.ts`, `controller.ts`, `Menu.svelte` -- wiring.
-- [ ] Card/Column/WordCellRow/tray -- labels. Tray-tile families (live tiles in Composing and Place, left to right; D-block copies and strip mirrors unnamed) are named in both phases using the tray template; `n` counts live named tiles only. Card props plumbing: parents pass `name`, `selected`, `destination` flags; `i`/`n` are computed by the parent.
-- [ ] Tests -- UI Vitest cases per ticket AC bullet, plus: Place to Composing and Composing to Idle phase strings, redo-from-Place target (commit uses the pre-view `place.target`), Give-up outcome example with penalty not read, hidden-page rAF drop, no `game.dispatch(` scan. Playwright (android) per ticket AC; win ordering under zero animation is Vitest-only (fake rAF with synchronous settle); Playwright asserts commit-then-outcome with the normal animation.
-- [ ] Docs -- `build-notes.md` string and trigger list; record EXPERIENCE.md Accessibility Floor and SPEC CAP-11 exception for buried WordCell cards as a close-out note in Implementation Notes (docs not edited here).
+- [x] Card/Column/WordCellRow/tray -- labels. Tray-tile families (live tiles in Composing and Place, left to right; D-block copies and strip mirrors unnamed) are named in both phases using the tray template; `n` counts live named tiles only. Card props plumbing: parents pass `name`, `selected`, `destination` flags; `i`/`n` are computed by the parent.
+- [x] Tests -- UI Vitest cases per ticket AC bullet, plus: Place to Composing and Composing to Idle phase strings, redo-from-Place target (commit uses the pre-view `place.target`), Give-up outcome example with penalty not read, hidden-page rAF drop, no `game.dispatch(` scan. Playwright (android) per ticket AC; win ordering under zero animation is Vitest-only (fake rAF with synchronous settle); Playwright asserts commit-then-outcome with the normal animation.
+- [x] Docs -- `build-notes.md` string and trigger list; record EXPERIENCE.md Accessibility Floor and SPEC CAP-11 exception for buried WordCell cards as a close-out note in Implementation Notes (docs not edited here).
 
 **Acceptance Criteria:**
 - Given the ticket file's Acceptance Criteria, when `npm run test:all` runs, then it passes, and `npm run test:screens` shows no baseline change.

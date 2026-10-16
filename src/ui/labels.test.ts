@@ -14,6 +14,7 @@ import src13 from './gestures/tile-drag.ts?raw';
 import src9 from './keys.ts?raw';
 import src3 from './Menu.svelte?raw';
 import src10 from './new-game.ts?raw';
+import { overlays } from './overlays.svelte';
 import src4 from './Tray.svelte?raw';
 import { text } from './text';
 import src14 from './tray/ControlRow.svelte?raw';
@@ -180,6 +181,20 @@ describe('AD-3 tray tile names', () => {
     ]);
     expect(names(html)).toEqual(['A, tray, tile 1 of 2', 'E, tray, tile 2 of 2']);
     expect(tags(html, /data-mirror-of="5"[^>]*/)[0]).not.toContain('aria-label');
+  });
+
+  it('AD-3 the selected live tile reads the selected suffix, mirrors still uncounted', () => {
+    overlays.selectTile(4);
+    try {
+      const html = drawTiles([
+        { id: 0, mirror: false },
+        { id: 5, mirror: true },
+        { id: 4, mirror: false },
+      ]);
+      expect(names(html)).toEqual(['A, tray, tile 1 of 2', 'E, tray, tile 2 of 2, selected']);
+    } finally {
+      overlays.clearTile();
+    }
   });
 
   it('AD-3 the strip names tiles with the tray template', () => {
