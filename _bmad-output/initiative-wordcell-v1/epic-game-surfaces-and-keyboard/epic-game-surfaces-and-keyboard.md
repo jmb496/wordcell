@@ -4,7 +4,7 @@ title: "Game surfaces and keyboard"
 parent: initiative-wordcell-v1
 covers: []
 after: [epic-tray-and-place]
-status: in-progress
+status: done
 assignee: ""
 risk: high
 ---
