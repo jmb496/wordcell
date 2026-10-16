@@ -1,6 +1,6 @@
 # Review log — story-refactor-sweep-paperwork-and-budget (ticket 6.17)
 
-State: pass 3: done
+State: pass 4: done (converged)
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 122 words (copy at .passes/pass0.md), HEAD d86d694.
 Ticket intent also includes the tickets.toml entry 17 fields not copied into the file:
@@ -57,3 +57,20 @@ Words (docs): 1194 (9.8 x pass 0)  |  Snapshot: .passes/pass3.md
 - all above → reviewer defaults
 ### Decision needed (functionality / UX / gameplay)
 - none
+
+## Pass 4 — 2026-10-16
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (clean)  |  Findings: major 0, minor 7, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1194 (9.8 x pass 0, within budget 1500)  |  Snapshot: .passes/pass3.md (no fix pass)
+### Unapplied minors
+- "failing timing run" = `npm test` exits non-zero (rerun once, not counted); a slow green run always counts
+- "Passing": skipped or not-run-in-the-cited-project is not passing
+- Size figure: read from the `npm run build` step output of test:all (not `build:test`), including the failing build's error line on a miss
+- One phrase for the unmet-Verify end state ("plan status stays below `built`") in Measurements and Retrospective inputs
+- Record the test:all HEAD hash and require it to equal the timing clone's hash
+- Quote the "android + desktop" tag as it appears in rule-coverage.md
+- Earlier: digest source command for new catalogue strings, References tidy, close-out justification wording
+### Decision needed
+- none
+
+## Result — converged after 4 passes
+majors per pass: 9, 5, 2, 0. No open major. No decision-needed items. Technical defaults applied: all fixes (reviewer defaults).
