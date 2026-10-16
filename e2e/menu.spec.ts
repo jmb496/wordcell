@@ -56,9 +56,8 @@ test.describe('the sheet', () => {
     ]) {
       await expect(row(page, name)).toBeVisible();
       const height = (await row(page, name).boundingBox())?.height;
-      // The 'How to play' row measures 52.00003 (sub-pixel layout); the five older rows are exact.
-      if (name === 'How to play') expect(height).toBeCloseTo(52, 1);
-      else expect(height).toBe(52);
+      // Rows measure 52 +- a sub-pixel (51.99997, 52.00003) depending on layout rounding.
+      expect(height).toBeCloseTo(52, 1);
     }
     await expect(sheet(page).getByText(VERSION, { exact: true })).toBeVisible();
     await expect(row(page, 'New game')).toBeFocused();

@@ -688,7 +688,7 @@ describe('AD-14 winning guard', () => {
   // Ticket 6.12 (AD-14, R-62, R-70): the end-sheet half. `armed()` installs a guard whose `complete`
   // settles the animation and drains the open callback through whenOpenAllowed (as flip.ts does).
   describe('end-sheet half', () => {
-    let opened: () => void & ReturnType<typeof vi.fn>;
+    let opened: ReturnType<typeof vi.fn>;
     beforeEach(() => {
       opened = vi.fn();
     });
