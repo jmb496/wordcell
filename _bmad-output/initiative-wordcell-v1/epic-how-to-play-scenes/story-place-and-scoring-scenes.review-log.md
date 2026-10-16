@@ -1,6 +1,6 @@
 # Review log — story-place-and-scoring-scenes.md
 
-State: pass 2: done
+State: pass 3: done
 
 Pre-loop: HEAD 3ee207aa10e7b40100164b89d37db81a4648ce24, 158 words (pass 0 copy: story-place-and-scoring-scenes.passes/pass0.md). Growth budget 2.5x = ~395 words (default). Note: no epic-8 SPEC.md exists under _bmad-output/specs/; the epic file is the requirement source. Ticket toml fields interface/tests/owns (entry 3 of tickets.toml) are passed to reviewers and fixer as intent; fixer adds them to the Description in pass 1.
 
@@ -41,3 +41,19 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 - (none)
 
 Fix applied; words 775 (4.9x pass 0, over budget); snapshot story-place-and-scoring-scenes.passes/pass2.md. All 8 majors and minors applied. Fixer notes: 8.2's coverage test (scenes.test.ts:91-93) requires steps for every fixture command, so the ticket now states the rule that it skips scene 4's set-up prefix (commands 0 to 2); scene 5 reveal steps: whether the pointer can be hidden is `unverified` (Step type requires type and target).
+
+## Pass 3 — 2026-10-16
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 5, minor 3 applied, decision-needed 0  |  Dropped in triage: 2 (adversarial stretch minors: scene 5 reachability, scene 4 loop restart: build-plan detail, would add words)
+### Applied (to fixer)
+- [major] steps→commands: COMMAND_TYPES (script.ts) has no setTarget/setPlacementOrder/confirm; state mapping (tap: setTarget, confirm; move: setPlacementOrder; fly command-less after the Confirm tap)
+- [major] Scene.carry is required and Scene.svelte draws from start.columns/carry: scene 5 has no tail; make carry optional / draw nothing without it (the `Z` column not drawn)
+- [major] Frame new-field types/defaults (placeTarget number, lit number[], placeOrder letters, numbers count, total number; tray/tail for scene 5 and place frames)
+- [major] scene 4 `scores` [{after 8, 36}], `cells` and `cellScores` at after 8; sum check fails without a scores entry at that after
+- [major] scene 5 step count (four reveal tap steps: three numbers, then total) and pointer shown or not left to plan, test not tied to it
+- [minor, no added words] "counts 4 to 7" → "after 4 to 7"; frame i vs step wording / fly shares final frame; DICT negative's failure mode (EngineError of setTarget in composing)
+### Default applied (technical)
+- all are script/Frame/harness contract choices
+### Decision needed (functionality / UX / gameplay)
+- (none)
+
+Fix applied; words 819 (5.2x pass 0, over budget); snapshot story-place-and-scoring-scenes.passes/pass3.md. All 5 majors and minors applied. Fixer verified setTarget needs the place phase (commands.ts); "scene 4 draws no Validate" not checked against Scene.svelte.
