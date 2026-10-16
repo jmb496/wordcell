@@ -1,6 +1,6 @@
 # Review log — story-screen-reader-labels-and-live-region
 
-State: pass 4: done
+State: pass 5: done
 
 Pre-loop: HEAD c4b130d, pass0.md 241 words, budget 1500 words.
 
@@ -84,3 +84,20 @@ commit fields vs SPEC wording sentence; owner-defaults list lacks top-card name;
 - none
 
 Minors a, b, c applied (word-neutral).
+
+## Pass 5 — 2026-10-15 23:25
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 2 (merged), minor ~15, decision-needed 1  |  Dropped in triage: 0
+Words (docs): 1494 (6.2x pass 0, within the 1500 budget)  |  Snapshot: story-screen-reader-labels-and-live-region.review-log.passes/pass5.md
+### Majors (triaged, merged)
+1. "Same reference announces nothing" cannot be implemented: `dispatch` runs `accrue` first, so `state.session` is replaced on nearly every dispatch (game.svelte.ts:140-145); the no-op signal is `DispatchResult.changed` (`result.session !== accrued`). Define the rule on `changed`; the invalid-word row is decided by `DispatchResult.rejectedWord !== undefined`, independent of `changed`. Test: elapsed time before a no-op dispatch.
+2. The region is mounted in App.svelte's active branch only (Halted/BlockingMessage/active are exclusive, App.svelte:70-93), so New game from the rejected root mounts the region in the same render as the announcement (a fresh live region is not announced): default, mount the region once at the App root outside the branches (still not in Tray.svelte, not inert); test New game from the rejected root announces.
+### Minors (over budget: applied only if word-neutral)
+punctuation of the Announcer first sentence and the UI Vitest bullet; a used cell exposes no button in the Vitest case; `i` order in a column ("from the top" = column order); who passes i/n/selected/destination to Card; openDeferred must return whether it opened; tray-tile selection leaves feet as `Column {c} foot`; Give up outcome example; roles/focus stay with the keyboard ticket; Playwright adds source foot/destination/tray tile selected; Place to Composing / Composing to Idle phase tests; redo-from-Place target test.
+### Default applied (technical)
+- both majors: reviewers' proposed defaults (App-root mount is a technical placement).
+### Decision needed (functionality / UX / gameplay)
+- Description Labels paragraph (non-top WordCell cards) — EXPERIENCE.md Accessibility Floor and SPEC CAP-11 say "every card is a button named by letter, place and state", but the ticket hides every WordCell card except the top card of an unused cell from screen readers (the cell's name already gives top card and count). Does a screen-reader user need to reach the buried cards one by one? — proposed default: keep them hidden (they are never interactive, Card.svelte).
+### Dropped
+- none
+
+Minors a-g applied (word-neutral).
