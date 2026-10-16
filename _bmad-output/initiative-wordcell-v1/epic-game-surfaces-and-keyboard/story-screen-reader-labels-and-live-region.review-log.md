@@ -1,6 +1,6 @@
 # Review log — story-screen-reader-labels-and-live-region
 
-State: pass 3: done
+State: pass 4: done
 
 Pre-loop: HEAD c4b130d, pass0.md 241 words, budget 1500 words.
 
@@ -65,3 +65,22 @@ Mount point (not Tray.svelte: pending-draft.test.ts forbids aria-live there; roo
 - none
 ### Dropped
 - none
+
+## Pass 4 — 2026-10-15 23:00
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 4 (merged), minor 9, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1503 (6.2x pass 0, at the 1500 budget)  |  Snapshot: story-screen-reader-labels-and-live-region.review-log.passes/pass4.md
+### Majors (triaged, merged)
+1. Redo win: settle callback can run in the same task as the commit, so "cancel pending rAF, latest wins" drops the commit text; outcome must queue behind a pending commit set (never cancels it); Vitest with synchronous settle.
+2. Tray tile rule ("i counts free letters") contradicts its example (`E, tray, tile 2 of 2` for `[A, free F, E]`): default, `i` and `n` count live named tiles only.
+3. A used WordCell's top card renders as a `used` mirror (WordCellRow.svelte:77), so the top-card button row applies only to a non-used cell; in a used cell only the group carries the name.
+4. Non-top WordCell cards: `hidden` is only a class (Card.svelte:123), so they would be unnamed buttons; require aria-hidden and no role=button there, one-named-button-per-cell Vitest case.
+### Minors (over budget: applied only if word-neutral)
+commit fields vs SPEC wording sentence; owner-defaults list lacks top-card name; missing-field wording consistency (throw to AD-15, one sentence); non-source foot naming; hidden-page rAF dropped; phase-change guard wording; hidden-win outcome silent on return; scan no `game.dispatch(` in src/ui outside announce.ts; Playwright win ordering under zero animation (covered by Vitest).
+### Default applied (technical)
+- all four majors: reviewers' proposed defaults.
+### Decision needed
+- none
+### Dropped
+- none
+
+Minors a, b, c applied (word-neutral).
