@@ -338,3 +338,14 @@ Ref to fix upstream: none
 Tokens: 5.5M input-equivalent (ticket review 51%, build 24%, code review 19%, other 4%, orchestrator 3%); orchestrator peak context 62k
 Worth knowing: no test name carries id A8 (CAP-12 wheel, hover-peek, bfcache); recorded as a gap in the plan, outside this ticket's covers. The flaky drag-interruptions F32 reduced-motion test ("no running animation") may merit a look in the refactor sweep.
 Close-out docs: none
+
+## 6.16 Refactor sweep: code — done
+What it adds: Tidies the code with no change to how the game behaves: trims old history comments in the menu, the new-game check and the tile drag.
+Ticket review: 5 passes, converged; nothing needed your input
+Build: built; commits fcbd8eb
+Code review: quick, 1 pass, converged; 0 fixes applied
+Tests: all passing, screenshots passed (37 passed, 13 skipped)
+Ref to fix upstream: none
+Tokens: 3.8M input-equivalent (ticket review 64%, build 22%, code review 7%, other 5%, orchestrator 3%)
+Worth knowing: nothing
+Close-out docs: none
