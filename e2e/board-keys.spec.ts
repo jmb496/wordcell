@@ -1,8 +1,17 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
-import { cards, glidesSettled, openFixture } from './helpers/board';
+import { cards, glidesSettled } from './helpers/board';
 import { wc } from './helpers/dialogs';
+import {
+  arrangeByKeys,
+  focusedCard,
+  open,
+  press,
+  tiles,
+  toComposing,
+  tray,
+  where,
+} from './helpers/keys';
 import { onDesktop } from './helpers/project';
-import { dictionaryReady } from './helpers/restore';
 import { expectSelection, selection } from './helpers/selection';
 import { draftDetail, game } from './helpers/session';
 import { SESSIONS } from './helpers/sessions';
@@ -19,8 +28,10 @@ import { SESSIONS } from './helpers/sessions';
 
 test.beforeEach(onDesktop);
 
-const tray = (page: Page) => page.locator('[data-band="tray"]');
-const tiles = (page: Page) => tray(page).locator('[data-card-id][data-place="tray"]');
+// The elements that are Tab stops (tabindex 0) among `locator`.
+const stops = (locator: Locator) =>
+  locator.evaluateAll((els) => els.filter((el) => (el as HTMLElement).tabIndex === 0).length);
+
 const strip = (page: Page) => tray(page).locator('[data-card-id][data-place="strip"]');
 const cell = (page: Page, n: number) => page.getByTestId(`wordcell-${n}`);
 const foot = (page: Page, n: number) => page.getByTestId(`foot-${n}`);
@@ -33,52 +44,6 @@ const phaseOf = (page: Page) =>
     return current.session.cursor.phase;
   });
 const lowest = (page: Page, n: number) => cards(page, n).last();
-
-type Where = {
-  tag: string;
-  card: string | null;
-  place: string | null;
-  column: string | null;
-  cell: string | null;
-  testid: string | null;
-  name: string | null;
-};
-
-// A description of the focused element, for Tab-order and focus-target assertions.
-const where = (page: Page): Promise<Where> =>
-  page.evaluate(() => {
-    const el = document.activeElement as HTMLElement | null;
-    return {
-      tag: el?.tagName ?? '',
-      card: el?.getAttribute('data-card-id') ?? null,
-      place: el?.getAttribute('data-place') ?? null,
-      column: el?.closest('[data-column]')?.getAttribute('data-column') ?? null,
-      cell: el?.getAttribute('data-wordcell') ?? null,
-      testid: el?.getAttribute('data-testid') ?? null,
-      name: el?.getAttribute('aria-label') ?? null,
-    };
-  });
-
-// The elements that are Tab stops (tabindex 0) among `locator`.
-const stops = (locator: Locator) =>
-  locator.evaluateAll((els) => els.filter((el) => (el as HTMLElement).tabIndex === 0).length);
-
-const focusedCard = async (page: Page): Promise<string | null> => (await where(page)).card;
-
-// Records each keydown's final `defaultPrevented` (the app's handler is registered first).
-async function track(page: Page): Promise<void> {
-  await page.evaluate(() => {
-    const w = window as unknown as { __kp: boolean[] };
-    w.__kp = [];
-    window.addEventListener('keydown', (event) => w.__kp.push(event.defaultPrevented));
-  });
-}
-
-// Presses `key`; returns whether the app default-prevented it (it did something).
-async function press(page: Page, key: string): Promise<boolean> {
-  await page.keyboard.press(key);
-  return page.evaluate(() => (window as unknown as { __kp: boolean[] }).__kp.at(-1) ?? false);
-}
 
 const tileSelection = (page: Page) =>
   page
@@ -94,61 +59,6 @@ async function expectNoop(page: Page, key: string): Promise<void> {
   expect(await game(page), `${key} dispatches nothing`).toBe(before);
   expect(await selection(page), `${key} leaves the column selection`).toEqual(selBefore);
   expect(await tileSelection(page), `${key} leaves the tile selection`).toEqual(tilesBefore);
-}
-
-async function open(
-  page: Page,
-  name: string | { literal: string },
-  options: Parameters<typeof openFixture>[2] = {},
-) {
-  await openFixture(page, name, options);
-  await dictionaryReady(page);
-  await track(page);
-}
-
-// Flow 6 steps 2: `6`, `↑` x3, `5` (columns 1-3 are empty in `SESSIONS.flow6`).
-async function toComposing(page: Page): Promise<void> {
-  await open(page, { literal: SESSIONS.flow6 });
-  for (const key of ['6', 'ArrowUp', 'ArrowUp', 'ArrowUp', '5']) await page.keyboard.press(key);
-  await expect(tiles(page)).toHaveCount(4);
-}
-
-async function letters(locator: Locator): Promise<string[]> {
-  return locator.evaluateAll((els) =>
-    els.map((el) => el.querySelector('.glyph')?.textContent?.toUpperCase() ?? ''),
-  );
-}
-
-// Moves the tray tiles into `target` (the movable letters after the block) by keys alone: `←`/`→`
-// to reach a tile, `Shift`+`←` to carry it left.
-async function arrangeByKeys(page: Page, target: string): Promise<void> {
-  for (let p = 0; p < target.length; p++) {
-    const have = await letters(tiles(page));
-    const c = have.findIndex((letter, i) => i >= p && letter === target[p]);
-    expect(c, `a ${target[p]} at or after ${p}`).toBeGreaterThanOrEqual(0);
-    if (c === p) continue;
-    const ids = await tiles(page).evaluateAll((els) =>
-      els.map((el) => el.getAttribute('data-card-id')),
-    );
-    const carried = ids[c] as string;
-    let at = ids.indexOf(await focusedCard(page));
-    while (at !== c) {
-      await page.keyboard.press(at < c ? 'ArrowRight' : 'ArrowLeft');
-      at += at < c ? 1 : -1;
-      await expect.poll(() => focusedCard(page)).toBe(ids[at]);
-    }
-    for (let step = c - 1; step >= p; step--) {
-      await page.keyboard.press('Shift+ArrowLeft');
-      await expect
-        .poll(() =>
-          tiles(page)
-            .evaluateAll((els) => els.map((el) => el.getAttribute('data-card-id')))
-            .then((now) => now.indexOf(carried)),
-        )
-        .toBe(step);
-      expect(await focusedCard(page)).toBe(carried);
-    }
-  }
 }
 
 test.describe('Idle', () => {

@@ -33,6 +33,7 @@ import {
   space,
   targets,
 } from './helpers/gestures';
+import { arrangeByKeys, focusedCard, press, tiles, toComposing, tray, where } from './helpers/keys';
 import {
   animationFrames,
   hidePage,
@@ -1199,5 +1200,24 @@ test.describe('buildRoot', () => {
       else process.env.PW_PREVIEW = saved;
       rmSync(repo, { recursive: true, force: true });
     }
+  });
+});
+
+test.describe('keys helpers', () => {
+  test('AD-17 toComposing, press, arrangeByKeys, where and focusedCard drive Flow 6 by keys alone', async ({
+    page,
+  }) => {
+    test.skip(test.info().project.name !== 'desktop', 'keyboard flows run on desktop');
+    await toComposing(page);
+    await expect(tray(page)).toBeVisible();
+    expect(await tiles(page).count()).toBe(4);
+    expect(await press(page, '8')).toBe(true);
+    expect(await tiles(page).count()).toBe(5);
+    await arrangeByKeys(page, 'ENANA');
+    await expect(tray(page).locator('.word-line')).toHaveText('ZENANA');
+    const at = await where(page);
+    expect(at.place).toBe('tray');
+    expect(await focusedCard(page)).toBe(at.card);
+    expect(await press(page, 'F9')).toBe(false);
   });
 });
