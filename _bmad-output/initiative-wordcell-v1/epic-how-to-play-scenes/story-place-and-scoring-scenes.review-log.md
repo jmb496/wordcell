@@ -1,6 +1,6 @@
 # Review log — story-place-and-scoring-scenes.md
 
-State: pass 5: done
+State: pass 6: done
 
 Pre-loop: HEAD 3ee207aa10e7b40100164b89d37db81a4648ce24, 158 words (pass 0 copy: story-place-and-scoring-scenes.passes/pass0.md). Growth budget 2.5x = ~395 words (default). Note: no epic-8 SPEC.md exists under _bmad-output/specs/; the epic file is the requirement source. Ticket toml fields interface/tests/owns (entry 3 of tickets.toml) are passed to reviewers and fixer as intent; fixer adds them to the Description in pass 1.
 
@@ -84,3 +84,15 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 - (none)
 
 Fix applied; words 843 (5.3x pass 0, over budget); snapshot story-place-and-scoring-scenes.passes/pass5.md. Both majors and the minor applied. Fixer found Scene.svelte does not draw post-drop columns for a 'gone' frame (drawn.columns come from fixture.start + carry), so the ticket now adds a proposed `carry.landed` rule (append the tail to the destination column); this is a proposed Scene.svelte change, `unverified` by running.
+
+## Pass 6 — 2026-10-16
+Reviewers: fix diff, edge-case hunter, adversarial (ref alignment dropped: clean in passes 4 and 5)  |  Findings: major 1, minor 3 applied (net zero words), decision-needed 0  |  Dropped in triage: 10 (late-pass bar: tests-line precision, scene 4 start-frame drawing (technical default: cells row and Validate lit, no tray; raised before, plan detail), scene 5 tap targets, ghost/motion kind, landed typing, caption-equality test (8.2's scenes test already asserts caption), toml drift (out of scope), stack-label wording, whole-ticket length)
+### Applied (to fixer)
+- [major] `carry.landed` as written overlaps the D block and the tail (Scene.svelte slices D out of the destination column and draws it as `dest`; the tail element is hidden only under reduced motion): reword so with `landed` the full destination column is drawn (D block, then the tail), `dest` and `tail` are not drawn, in animated and reduced modes
+- [minor, net zero words] list "WordCell stacks" among the new static visuals (Scene.svelte draws only cell 6's top card); scene 5 final frame `numbers` 3; negatives "a changed placement order" → "a changed `cells` card, `legalTargets`, target or order entry"
+### Default applied (technical)
+- all are drawing/contract choices
+### Decision needed (functionality / UX / gameplay)
+- (none)
+
+Fix applied; words 843 (unchanged, 5.3x pass 0); snapshot story-place-and-scoring-scenes.passes/pass6.md. Major and minors applied. Fixer cut "none rejected", "no dictionary entries" and the scene 5 per-cell numbers repeat to offset (the first two were pass-1/2 content). `landed` skipping the destination slice and not drawing `dest`/`tail` is new Scene.svelte work (needs a guard), checked by reading only.
