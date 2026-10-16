@@ -1,6 +1,6 @@
 # Review log — story-carry-ins-wheel-during-a-mouse-drag-hover-peek-re-anchor-bfc
 
-State: pass 2: done
+State: pass 3: done
 
 Pre-loop: HEAD d994852, pass0.md 210 words, budget 1500 words (epic precedent for fleshed-out tickets; caller gave none). Ticket intent also includes tickets.toml entry 14 fields: unknown, interface, tests, owns (and consumers, already partly absent).
 
@@ -44,3 +44,21 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 Words (docs): 1096 (5.2x pass 0, within the 1500 budget)  |  Snapshot: story-carry-ins-wheel-during-a-mouse-drag-hover-peek-re-anchor-bfc.review-log.passes/pass2.md
 ### Applied
 - [major] all four → fixer items 1–4; minors folded in
+
+## Pass 3 — 2026-10-15 23:30
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 3 (merged), minor 6, decision-needed 0  |  Dropped in triage: 0 (duplicates merged; two adversarial majors reclassified minor: helper-only bfcache coverage is already gated by "exists only if reproduced", listener-cleanup assertions are test precision)
+### Majors (triaged, merged)
+1. Bfcache variants contradict the pass sentence and one precondition is unreachable: pass per variant (idle: Back pops the menu, depth −1, no pending back left; halt: Back not consumed, Reload shows, depth unchanged, no leftover pending back); a drag cannot coexist with the modal menu, so the drag variant is "drag live before pagehide, no surface, nav depth 0, next Back not swallowed"; halt staleness is produced by writing a `wordcell:` key between `pageHide` and `pageShow`; starting history stated for goBack.
+2. Hover-peek shift mechanisms unnamed: card count via Undo/Redo key with the pointer parked (peek assert open before and after, counts ≥ 1, 0 cards out of scope), banner by forcing a dictionary load failure, peek-open assertion before measuring.
+3. Wheel oracle can pass on a wrong implementation: Vitest fake rects translate with the scroll offset, the asserted target differs from the pre-scroll target, negative assertion that the pre-scroll target is no longer highlighted.
+### Minors
+- Listener on window (passive), removed after drop, cancel, pointercancel and lostpointercapture, none from a mouse press that never becomes a drag; tray row container scroll (check Tray.svelte, say in or out); helper-only (1) test not committed as bfcache coverage unless it failed first; non-overlap with the cell as a second peek assertion and cite the Components paragraph, not a line number.
+### Default applied (technical)
+- all three majors: reviewers' proposed defaults.
+### Decision needed
+- none
+### Dropped
+- none
+Words (docs): 1366 (6.5x pass 0, within the 1500 budget)  |  Snapshot: story-carry-ins-wheel-during-a-mouse-drag-hover-peek-re-anchor-bfc.review-log.passes/pass3.md
+### Applied
+- [major] all three → fixer items 1–3; minors folded in (tray rows closed: overflow hidden)
