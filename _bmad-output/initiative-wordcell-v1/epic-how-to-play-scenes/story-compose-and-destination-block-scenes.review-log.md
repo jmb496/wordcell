@@ -1,6 +1,6 @@
 # Review log — story-compose-and-destination-block-scenes.md
 
-State: pass 3: done
+State: pass 4: done
 
 Pre-loop: HEAD d9895643d34c0c46ca3e99c54160884a86aa4b07, 143 words (pass 0 copy: story-compose-and-destination-block-scenes.passes/pass0.md). Growth budget 2.5x = ~357 words (default). Note: no epic-8 SPEC.md exists under _bmad-output/specs/; the epic file is the requirement source.
 
@@ -57,3 +57,14 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 - (none)
 
 Fix applied; words 707 (4.9x pass 0; over budget). Snapshot passes/pass3.md. All 6 majors and the 2 word-neutral minors applied. Unverified by fixer: tray letter strings per frame and validatable truth values derived from the ticket and view.ts, not replayed (fixtures do not exist yet).
+
+## Pass 4 — 2026-10-16
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 15 (merged), decision-needed 0  |  Dropped in triage: 0 (frame-i-vs-step-i contradiction reclassified minor: the explicit per-frame list is testable; others stay minor under the late bar and the word budget)
+### Applied (to fixer)
+- [major] `defineScene` rule read literally makes every move step name an arrange, which would reject the drag scene's commandless pointer move and scene 2's pointer move → state: a step that has a `command` must match its type (grab/drop a drop, move an arrange, tap addFreeLetter/validate/setDestinationCount/flip); a move without `command` stays a pointer move; only the grab and drop carry command 0
+### Default applied (technical)
+- the rule above is a script-validation contract choice
+### Decision needed (functionality / UX / gameplay)
+- (none)
+
+Fix applied; words 719 (5.0x pass 0). Snapshot passes/pass4.md. Major applied. Unverified by fixer: script.ts read only at the grab/drop check; drag.ts step 2 commandless move confirmed by the pass-4 adversarial reviewer's reading.
