@@ -385,14 +385,14 @@ test('R-40 R-42 R-50 R-51 R-52 R-60 AD-14 with reduced motion scene place steps 
   const figure = panel(page).getByRole('figure', { name: text.howTo.scenes.place });
   await figure.scrollIntoViewIfNeeded();
   expect(await sceneAnimations(page)).toEqual([]);
-  // Per frame: strip letters (undefined: none), lit cells, the selected cell, cell 6's cards.
+  // Per frame: strip letters (undefined: none), lit cells, the selected WordCell number, cell 6's cards.
   const frames = [
-    { strip: undefined, lit: 0, target: 0, cell6: 'L', button: text.validate },
-    { strip: 'BALKED', lit: 3, target: 1, cell6: 'L', button: text.confirm },
-    { strip: 'BALKED', lit: 3, target: 1, cell6: 'L', button: text.confirm },
-    { strip: 'BALKED', lit: 3, target: 1, cell6: 'L', button: text.confirm },
-    { strip: 'DBALKE', lit: 3, target: 1, cell6: 'L', button: text.confirm },
-    { strip: undefined, lit: 0, target: 0, cell6: 'DBALKE', button: undefined },
+    { strip: undefined, lit: [], target: undefined, cell6: 'L', button: text.validate },
+    { strip: 'BALKED', lit: [3, 4, 5], target: 6, cell6: 'L', button: text.confirm },
+    { strip: 'BALKED', lit: [3, 4, 6], target: 5, cell6: 'L', button: text.confirm },
+    { strip: 'BALKED', lit: [3, 4, 5], target: 6, cell6: 'L', button: text.confirm },
+    { strip: 'DBALKE', lit: [3, 4, 5], target: 6, cell6: 'L', button: text.confirm },
+    { strip: undefined, lit: [], target: undefined, cell6: 'DBALKE', button: undefined },
   ];
   for (const [i, frame] of frames.entries()) {
     const layer = figure.locator(`[data-scene-el="place-${i}"]`);
@@ -400,8 +400,13 @@ test('R-40 R-42 R-50 R-51 R-52 R-60 AD-14 with reduced motion scene place steps 
     await expect(figure.locator('[data-scene-el^="place-"][style*="opacity: 1"]')).toHaveCount(1);
     if (frame.strip === undefined) await expect(layer.locator('.tiles')).toHaveCount(0);
     else await expect(layer.locator('.tiles .card')).toHaveText(frame.strip.split(''));
-    await expect(layer.locator('.stack.lit')).toHaveCount(frame.lit);
-    await expect(layer.locator('.stack.target')).toHaveCount(frame.target);
+    // The WordCell numbers of the lit stacks and of the selected one (R-40 R-42).
+    const cellNumbers = async (selector: string): Promise<number[]> =>
+      (await layer.locator(`.wcell:has(${selector}) .num`).allTextContents()).map(Number);
+    expect(await cellNumbers('.stack.lit')).toEqual(frame.lit);
+    expect(await cellNumbers('.stack.target')).toEqual(
+      frame.target === undefined ? [] : [frame.target],
+    );
     await expect(layer.locator('.wcell').last().locator('.card')).toHaveText(frame.cell6.split(''));
     if (frame.button !== undefined) await expect(layer.locator('.ctl')).toHaveText(frame.button);
     else await expect(layer.locator('.ctl')).toHaveCount(0);

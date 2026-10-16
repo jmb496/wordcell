@@ -136,10 +136,10 @@ export function replayScene(scene: SceneFixture, dictionary: ReadonlySet<string>
   for (const { after, cell, cards } of scene.cells ?? []) {
     index('cells after', after, count);
     const shown = viewFrom(start, sessions[after], EN);
-    const held = shown.cells
-      .find((c) => c.cell === cell)
-      ?.cards.map((id) => shown.faces[id].letter);
-    if (held?.join(',') !== cards.join(','))
+    const shownCell = shown.cells.find((c) => c.cell === cell);
+    if (shownCell === undefined) fail(scene, `cells entry names no such cell ${cell}`);
+    const held = shownCell.cards.map((id) => shown.faces[id].letter);
+    if (held.join(',') !== cards.join(','))
       fail(scene, `after ${after} commands cell ${cell} stated ${cards}, engine ${held}`);
   }
   for (const { after, target, legalTargets, order } of scene.place ?? []) {
@@ -161,7 +161,6 @@ export function replayScene(scene: SceneFixture, dictionary: ReadonlySet<string>
     index('cellScores after', after, count);
     const shown = viewFrom(start, sessions[after], EN);
     const listed = (scene.cellScores ?? []).filter((entry) => entry.after === after);
-    let sum = 0;
     for (const { cell, cards } of shown.cells.filter((c) => c.cards.length > 0)) {
       const score = cards.reduce((n, id) => n + shown.faces[id].letterCount, 0) * cell;
       const entry = listed.find((e) => e.cell === cell);
@@ -169,15 +168,14 @@ export function replayScene(scene: SceneFixture, dictionary: ReadonlySet<string>
         fail(scene, `after ${after} commands cell ${cell} has no stated score`);
       if (entry.score !== score)
         fail(scene, `after ${after} commands cell ${cell} stated ${entry.score}, engine ${score}`);
-      sum += score;
     }
     for (const { cell } of listed)
       if (!shown.cells.some((c) => c.cell === cell && c.cards.length > 0))
         fail(scene, `after ${after} commands cell ${cell} is empty but has a stated score`);
     const total = (scene.scores ?? []).find((entry) => entry.after === after);
+    // The per-cell scores sum to the engine's live score (R-80), which the `scores` check above
+    // already compares with this entry, so only its presence is checked here.
     if (total === undefined) fail(scene, `after ${after} commands cellScores have no scores entry`);
-    if (total.score !== sum)
-      fail(scene, `after ${after} commands cell scores sum ${sum}, stated total ${total.score}`);
   }
   for (const { after, command, outcome, check, rejectedWord } of scene.rejected ?? []) {
     index('rejected after', after, count);

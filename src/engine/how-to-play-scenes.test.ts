@@ -144,6 +144,13 @@ describe('AD-2 How to play scene replay', () => {
     }
   });
 
+  it('R-52 scene place: a cells entry naming a cell the view does not list fails the harness', () => {
+    const scene = edit<{ cell: number }>(place, 'cells', (e) => {
+      e[0].cell = 11;
+    });
+    expect(() => replayScene(scene, DICT)).toThrow(/no such cell 11/);
+  });
+
   it('R-80 scene scoring: a non-empty cell with no stated score fails the harness', () => {
     const scene = edit(scoring, 'cellScores', (e) => {
       e.pop();
@@ -162,7 +169,7 @@ describe('AD-2 How to play scene replay', () => {
     expect(() => replayScene(scene, DICT)).toThrow(/cell 5 is empty/);
   });
 
-  it('R-80 scene scoring: cell scores that do not sum to the stated total fail the harness', () => {
+  it('R-80 scene scoring: cell scores without a scores entry for the total fail the harness', () => {
     const scene = edit<{ after: number; score: number }>(scoring, 'scores', (e) => {
       e.length = 0;
     });
@@ -230,6 +237,24 @@ describe('AD-2 How to play scene replay', () => {
   it('R-38 R-41 scene place: BALKED missing from the dictionary throws an EngineError at command 4 setTarget', () => {
     // The rejected validate (command 3) leaves Composing, so setTarget (command 4) is a wrong-phase throw.
     expectEngineError(() => replayScene(place, new Set(['baked'])), 'command-phase');
+    // The harness reports no command index, so pin it: the first 4 commands (through the rejected
+    // validate) replay under the same dictionary and command 4 is the setTarget that throws.
+    expect(place.commands[4].type).toBe('setTarget');
+    const head = { ...place, commands: place.commands.slice(0, 4) } as SceneFixture;
+    expect(() =>
+      replayScene(
+        {
+          ...head,
+          words: [],
+          scores: [],
+          cells: [],
+          place: [],
+          validatable: [],
+          cellScores: [],
+        } as SceneFixture,
+        new Set(['baked']),
+      ),
+    ).not.toThrow();
   });
 
   it('R-23 scene drag: the drop of E D K A on column 3 reaches Composing with D = B', () => {

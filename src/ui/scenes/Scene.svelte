@@ -141,18 +141,28 @@ const drawn = $derived.by(() => {
 });
 // A WordCell's cards (bottom to top) in frame `i`: the fixture start, or, in the last frame, the
 // fixture `cells` entry that states them after the scene's commands (R-52).
-const cellCards = (cell: number, i: number): readonly string[] =>
-  (i === scene.frames.length - 1
-    ? scene.fixture.cells?.findLast((entry) => entry.cell === cell)?.cards
-    : undefined) ??
-  scene.fixture.start.cells?.[String(cell)] ??
-  [];
+const cellCards = (cell: number, i: number): readonly string[] => {
+  const start = scene.fixture.start.cells;
+  if (i === scene.frames.length - 1) {
+    const stated = scene.fixture.cells;
+    if (stated === undefined) throw new Error(`scene ${scene.id}: the fixture states no cells`);
+    const entry = stated.findLast((e) => e.cell === cell);
+    if (entry !== undefined) return entry.cards;
+  }
+  // A WordCell the fixture start does not list is empty (its cells map lists the non-empty ones).
+  return start?.[String(cell)] ?? [];
+};
+function needed(field: string): never {
+  throw new Error(`scene ${scene.id}: the fixture has no ${field}`);
+}
 const PLACE_CELLS = [3, 4, 5, 6] as const;
 const stackHeight = (n: number): number => (n - 1) * STRIP + CARD_H;
 // The scoring scene's WordCells (fixture cells with a stated score), left to right.
 const scoreCells = $derived(
-  (scene.fixture.cellScores ?? []).map((entry) => {
-    const cards = cellCards(entry.cell, 0);
+  (scene.fixture.cellScores ?? needed('cellScores')).map((entry) => {
+    const cards = scene.fixture.start.cells?.[String(entry.cell)];
+    if (cards === undefined)
+      throw new Error(`scene ${scene.id}: start lists no cell ${entry.cell}`);
     return {
       ...entry,
       cards,
@@ -375,7 +385,7 @@ const replay = (): void => {
             data-scene-el="score-{k + 1}"
             style:left="{geo.scoreStackX(k) - 12}px"
             style:top="{geo.stackTop + stackHeight(entry.cards.length) + 4}px"
-            style:opacity={reduced ? ((current.numbers ?? 0) > k ? 1 : 0) : undefined}
+            style:opacity={reduced ? ((current.numbers ?? needed('numbers')) > k ? 1 : 0) : undefined}
           >{text.howTo.scoreFigure(entry.letters, entry.cell, entry.score)}</span>
         {/each}
         <span
@@ -386,7 +396,7 @@ const replay = (): void => {
           style:top="{geo.totalBox.y}px"
           style:height="{geo.totalBox.h}px"
           style:opacity={reduced ? (current.total === undefined ? 0 : 1) : undefined}
-        >{text.score(scene.frames[last].total ?? 0)}</span>
+        >{text.score(scene.frames[last].total ?? needed('total'))}</span>
       {/if}
       {#if !geo.rich && !placeMode && !scoreMode && drawn.carried}
       <div

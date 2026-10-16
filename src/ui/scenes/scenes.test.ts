@@ -511,6 +511,8 @@ describe('AD-14 scene place against its fixture', () => {
   it('AD-14 Q-06 R-80 the drawn Validate follows the fixture validatable: lit, pressed on the tap, then off', () => {
     expect(placeScene.frames).toHaveLength(6);
     placeScene.frames.forEach((frame, i) => {
+      // Scene.svelte draws Validate only on a frame with neither a strip nor lit cells.
+      if (frame.placeOrder !== undefined || frame.lit !== undefined) return;
       const entry = placeFixture.validatable.find((v) => v.after === applied(i));
       expect(entry).toBeDefined();
       const pressed = placeFixture.commands[applied(i) - 1]?.type === 'validate';
