@@ -1,6 +1,6 @@
 # Review log — story-carry-ins-wheel-during-a-mouse-drag-hover-peek-re-anchor-bfc
 
-State: pass 4: done
+State: pass 5: done
 
 Pre-loop: HEAD d994852, pass0.md 210 words, budget 1500 words (epic precedent for fleshed-out tickets; caller gave none). Ticket intent also includes tickets.toml entry 14 fields: unknown, interface, tests, owns (and consumers, already partly absent).
 
@@ -79,3 +79,13 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 Words (docs): 1421 (6.8x pass 0, within the 1500 budget)  |  Snapshot: story-carry-ins-wheel-during-a-mouse-drag-hover-peek-re-anchor-bfc.review-log.passes/pass4.md
 ### Applied
 - [major] both → fixer items 1–2; minors 3–4 folded in
+
+## Pass 5 — 2026-10-16 00:20
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 0, minor 2, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1421 (6.8x pass 0, within the 1500 budget)  |  Snapshot: unchanged from pass4.md (no fix pass)
+### Minors (not applied)
+- `dictionary.showBanner` is a getter (wait until it is true), not an action.
+- Name the e2e observable for nav depth / pending-back counter in the plan (test-hook field or Back behaviour only).
+
+## Result — converged after 5 passes
+Majors per pass: 7, 4, 3, 2, 0. No decision-needed items. Technical defaults applied: all majors (incl. 1 px peek tolerance; peek card-count shift dropped because Undo/Redo closes the peek, F39).
