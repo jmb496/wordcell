@@ -3288,6 +3288,7 @@ describe('AD-12 entry 12 desktop hover peek', () => {
       { addEventListener: () => undefined, removeEventListener: () => undefined },
       () => now,
       { setTimer: () => 0, clearTimer: () => undefined },
+      () => false,
     );
     try {
       t.media.hoverFine = true;

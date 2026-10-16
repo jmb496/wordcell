@@ -209,10 +209,16 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(0);
   const inert = { addEventListener: () => undefined, removeEventListener: () => undefined };
-  stopTracker = startTracker(inert, inert, () => Date.now(), {
-    setTimer: (callback, ms) => setTimeout(callback, ms),
-    clearTimer: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
-  });
+  stopTracker = startTracker(
+    inert,
+    inert,
+    () => Date.now(),
+    {
+      setTimer: (callback, ms) => setTimeout(callback, ms),
+      clearTimer: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
+    },
+    () => false,
+  );
 });
 afterEach(() => {
   for (const flip of made.splice(0)) flip.finishAll();
@@ -1194,12 +1200,15 @@ describe('AD-14 end-sheet settle callbacks (ticket 6.6)', () => {
     settleAll(t, [3]);
     expect(captured).toHaveLength(0);
     settleAll(t, [4]);
+    // Ticket 6.12: the open callback goes through whenOpenAllowed, so the 300 ms floor applies.
+    expect(captured).toHaveLength(0);
+    vi.advanceTimersByTime(300);
     expect(captured).toHaveLength(1);
     t.flip.finishAll();
     expect(captured).toHaveLength(1);
   });
 
-  it('AD-14 a winning play that starts no animation runs the callback at once', () => {
+  it('AD-14 a winning play that starts no animation runs the callback at the 300 ms floor', () => {
     let ran = 0;
     const t = setup({
       phase: 'idle',
@@ -1210,6 +1219,10 @@ describe('AD-14 end-sheet settle callbacks (ticket 6.6)', () => {
     t.root.show(CELL_START);
     t.flip.play(confirm, { changed: true, finished: 'won' });
     expect(t.active()).toBe(0);
+    expect(ran).toBe(0);
+    vi.advanceTimersByTime(299);
+    expect(ran).toBe(0);
+    vi.advanceTimersByTime(1);
     expect(ran).toBe(1);
   });
 });
@@ -1240,10 +1253,16 @@ describe('AD-14 winning guard hooks (ticket 5.13, CAP-10, F8)', () => {
       removeEventListener: () => undefined,
     };
     const inert = { addEventListener: () => undefined, removeEventListener: () => undefined };
-    stopTracker = startTracker(doc, inert, () => Date.now(), {
-      setTimer: (callback, ms) => setTimeout(callback, ms),
-      clearTimer: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
-    });
+    stopTracker = startTracker(
+      doc,
+      inert,
+      () => Date.now(),
+      {
+        setTimer: (callback, ms) => setTimeout(callback, ms),
+        clearTimer: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
+      },
+      () => false,
+    );
     const t = setup({ phase: 'idle' });
     t.root.show(CELL_START);
     t.flip.capture();

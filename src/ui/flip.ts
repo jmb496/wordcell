@@ -32,7 +32,7 @@ import { translate } from './gestures/fly-back';
 import type { Gate } from './gestures/gate';
 import { found } from './gestures/lookup';
 import type { Layout } from './layout/layout.svelte';
-import { install, type MotionKind, notifySettled } from './motion';
+import { install, type MotionKind, notifySettled, whenOpenAllowed } from './motion';
 
 /**
  * The band a live card sits in: `data-place` column → columns, tray/strip → tray, cell →
@@ -312,7 +312,7 @@ export function createFlip(deps: FlipDeps): Flip {
   }
 
   function drainSettled(): void {
-    for (const callback of settleCallbacks.splice(0)) callback();
+    for (const callback of settleCallbacks.splice(0)) whenOpenAllowed(callback);
   }
 
   function playMove(command: Command, result: DispatchResult): void {

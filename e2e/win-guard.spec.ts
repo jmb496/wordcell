@@ -1,5 +1,12 @@
 import { expect, type Page, test } from '@playwright/test';
-import { centre, collapseEndSheet, glidesSettled, openFixture, tapAt } from './helpers/board';
+import {
+  centre,
+  collapseEndSheet,
+  END_SHEET,
+  glidesSettled,
+  openFixture,
+  tapAt,
+} from './helpers/board';
 import { hidePage, showPage } from './helpers/lifecycle';
 import { onAndroid, onDesktop } from './helpers/project';
 
@@ -176,3 +183,263 @@ test.describe('desktop', () => {
     await page.keyboard.up('Enter');
   });
 });
+
+// Ticket 6.12 (CAP-5, AD-14, R-62, R-70, build-notes "Winning-guard input outcomes"): the end-sheet
+// half. The 300 ms floor timing and the hold cases are authoritative in src/ui/motion.test.ts; these
+// cases pin the outcomes at each animation speed and, where the project allows, by key.
+const endSheet = (page: Page) => page.getByRole('dialog', { name: END_SHEET });
+const giveUpItem = (page: Page) => page.getByRole('button', { name: 'Give up', exact: true });
+const SPEEDS = [
+  ['Normal', undefined, false],
+  ['Fast', 'prefs-fast', false],
+  ['Slow', 'prefs-non-default', false],
+  ['reduced motion', undefined, true],
+] as const;
+
+async function confirmWin(page: Page, prefs: string | undefined, reduced: boolean) {
+  if (reduced) await page.emulateMedia({ reducedMotion: 'reduce' });
+  await place(page, prefs);
+  await primary(page).click();
+}
+
+for (const project of ['android', 'desktop'] as const) {
+  test.describe(`${project} end-sheet half`, () => {
+    test.beforeEach(project === 'android' ? onAndroid : onDesktop);
+
+    for (const [name, prefs, reduced] of SPEEDS) {
+      test(`AD-14 R-62 no input: the sheet opens after the win (${name})`, async ({ page }) => {
+        await confirmWin(page, prefs, reduced);
+        await expect(endSheet(page)).toBeVisible();
+      });
+
+      test(`AD-14 R-70 Undo button during the window: undone, play resumed, no sheet (${name})`, async ({
+        page,
+      }) => {
+        if (reduced) await page.emulateMedia({ reducedMotion: 'reduce' });
+        await place(page, prefs);
+        const before = await stored(page);
+        const length = await page.evaluate(() => history.length);
+        await primary(page).click();
+        await page.getByTestId('undo').click();
+        await glidesSettled(page);
+        await page.waitForTimeout(800);
+        await expect(endSheet(page)).toHaveCount(0);
+        await expect(primary(page)).toHaveAccessibleName('Confirm');
+        expect(await stored(page)).toEqual(before);
+        expect(await page.evaluate(() => history.length)).toBe(length);
+      });
+
+      test(`AD-14 the menu button press is consumed, the menu stays closed, then the sheet opens (${name})`, async ({
+        page,
+      }) => {
+        const errors: string[] = [];
+        page.on('pageerror', (error) => errors.push(error.message));
+        await confirmWin(page, prefs, reduced);
+        await page.getByRole('button', { name: 'Menu', exact: true }).click();
+        await expect(endSheet(page)).toBeVisible();
+        await expect(giveUpItem(page)).toHaveCount(0);
+        expect(errors).toEqual([]);
+      });
+    }
+
+    test('R-70 Undo after the sheet opened: the sheet closes and play resumes', async ({
+      page,
+    }) => {
+      await place(page);
+      await primary(page).click();
+      await expect(endSheet(page)).toBeVisible();
+      await page.getByTestId('undo').click();
+      await expect(endSheet(page)).toHaveCount(0);
+      await expect(primary(page)).toHaveAccessibleName('Confirm');
+    });
+  });
+}
+
+test.describe('desktop end-sheet half keys', () => {
+  test.beforeEach(onDesktop);
+
+  for (const [name, prefs, reduced] of SPEEDS) {
+    for (const chord of ['z', 'Control+z']) {
+      test(`AD-14 R-70 ${chord} during the window undoes with no sheet (${name})`, async ({
+        page,
+      }) => {
+        await confirmWin(page, prefs, reduced);
+        await page.keyboard.press(chord);
+        await glidesSettled(page);
+        await page.waitForTimeout(800);
+        await expect(endSheet(page)).toHaveCount(0);
+        await expect(primary(page)).toHaveAccessibleName('Confirm');
+      });
+    }
+
+    for (const key of ['Control+Shift+z', 'y', 'Control+y', 'Escape', 'Tab', 'm', 'n']) {
+      test(`AD-14 ${key} during the window is consumed and the sheet opens (${name})`, async ({
+        page,
+      }) => {
+        await confirmWin(page, prefs, reduced);
+        await page.keyboard.press(key);
+        await expect(endSheet(page)).toBeVisible();
+        await expect(giveUpItem(page)).toHaveCount(0);
+      });
+    }
+  }
+
+  test('AD-9 AD-14 hide during the window completes the animation at once; on return the sheet is open and expanded', async ({
+    page,
+  }) => {
+    await confirmWin(page, 'prefs-non-default', false);
+    await expect.poll(() => running(page)).toBeGreaterThan(0);
+    await hidePage(page);
+    // The hide flush finished the animation (Slow runs 640 ms), long before the 300 ms floor.
+    expect(await running(page)).toBe(0);
+    await showPage(page);
+    await expect(endSheet(page)).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Show result:/ })).toHaveCount(0);
+  });
+});
+
+// Ticket 6.12 timing cases on Playwright's fake clock: the guard reads performance.now and
+// setTimeout, which the clock owns, so the 300 ms floor is stepped with runFor. WAAPI animations
+// still run in real time. The clock runs from boot and is paused once the board is ready.
+async function frozenPlace(page: Page, prefs: string | undefined, reduced: boolean) {
+  if (reduced) await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.clock.install({ time: 0 });
+  const points = await place(page, prefs);
+  await page.clock.pauseAt(60_000);
+  return points;
+}
+
+for (const project of ['android', 'desktop'] as const) {
+  test.describe(`${project} end-sheet half, fake clock`, () => {
+    test.beforeEach(project === 'android' ? onAndroid : onDesktop);
+
+    for (const [name, prefs, reduced] of [
+      ['Fast', 'prefs-fast', false],
+      ['reduced motion', undefined, true],
+    ] as const) {
+      test(`AD-14 R-62 no input: the sheet opens 300 ms after install, not at settle (${name})`, async ({
+        page,
+      }) => {
+        await frozenPlace(page, prefs, reduced);
+        await primary(page).click();
+        await glidesSettled(page);
+        await expect(endSheet(page)).toHaveCount(0);
+        await page.clock.runFor(299);
+        await expect(endSheet(page)).toHaveCount(0);
+        await page.clock.runFor(1);
+        await expect(endSheet(page)).toBeVisible();
+      });
+
+      test(`AD-14 R-70 Undo between settle and 300 ms leaves no sheet (${name})`, async ({
+        page,
+      }) => {
+        await frozenPlace(page, prefs, reduced);
+        await primary(page).click();
+        await glidesSettled(page);
+        await page.getByTestId('undo').click();
+        await page.clock.runFor(1000);
+        await expect(endSheet(page)).toHaveCount(0);
+        await expect(primary(page)).toHaveAccessibleName('Confirm');
+      });
+
+      test(`AD-14 a non-Undo input between settle and 300 ms is consumed and the sheet still opens at 300 ms (${name})`, async ({
+        page,
+      }) => {
+        const { cell } = await frozenPlace(page, prefs, reduced);
+        await primary(page).click();
+        await glidesSettled(page);
+        await tapAt(page, cell);
+        await page.clock.runFor(299);
+        await expect(endSheet(page)).toHaveCount(0);
+        await page.clock.runFor(1);
+        await expect(endSheet(page)).toBeVisible();
+        await expect(sheet(page)).toHaveCount(0);
+      });
+    }
+
+    for (const [name, prefs] of [
+      ['Normal', undefined],
+      ['Slow', 'prefs-non-default'],
+    ] as const) {
+      test(`AD-14 R-70 Undo button after the floor during the animation: no sheet, no history entry (${name})`, async ({
+        page,
+      }) => {
+        await frozenPlace(page, prefs, false);
+        const length = await page.evaluate(() => history.length);
+        await primary(page).click();
+        await page.clock.runFor(400);
+        await page.getByTestId('undo').click();
+        await glidesSettled(page);
+        await page.clock.runFor(1000);
+        await expect(endSheet(page)).toHaveCount(0);
+        await expect(primary(page)).toHaveAccessibleName('Confirm');
+        expect(await page.evaluate(() => history.length)).toBe(length);
+      });
+    }
+  });
+}
+
+// Ticket 6.12 AC: each of these only completes the animation and is consumed; the sheet then opens.
+for (const project of ['android', 'desktop'] as const) {
+  test.describe(`${project} end-sheet half, other inputs`, () => {
+    test.beforeEach(project === 'android' ? onAndroid : onDesktop);
+
+    for (const [name, prefs, reduced] of SPEEDS) {
+      test(`AD-14 a WordCell tap during the window opens no view; the sheet opens (${name})`, async ({
+        page,
+      }) => {
+        if (reduced) await page.emulateMedia({ reducedMotion: 'reduce' });
+        const { cell, action } = await place(page, prefs);
+        await tapAt(page, action);
+        await tapAt(page, cell);
+        await expect(endSheet(page)).toBeVisible();
+        await expect(sheet(page)).toHaveCount(0);
+      });
+
+      test(`AD-14 a second primary action press is consumed: same session, the sheet opens (${name})`, async ({
+        page,
+      }) => {
+        if (reduced) await page.emulateMedia({ reducedMotion: 'reduce' });
+        const { action } = await place(page, prefs);
+        await tapAt(page, action);
+        const after = await stored(page);
+        await tapAt(page, action);
+        await expect(endSheet(page)).toBeVisible();
+        expect(await stored(page)).toEqual(after);
+      });
+
+      test(`AD-14 the Redo button during a Redo win is consumed and the sheet opens (${name})`, async ({
+        page,
+      }) => {
+        if (reduced) await page.emulateMedia({ reducedMotion: 'reduce' });
+        await place(page, prefs);
+        await primary(page).click();
+        await expect(endSheet(page)).toBeVisible();
+        await collapseEndSheet(page);
+        await page.getByTestId('undo').click();
+        await glidesSettled(page);
+        await page.getByTestId('redo').click();
+        // Redo is disabled once the win is redone: a coordinate tap reaches the guard.
+        await tapAt(page, await centre(page.getByTestId('redo')));
+        await expect(endSheet(page)).toBeVisible();
+      });
+
+      test(`AD-14 Redo win followed at once by the Undo button: no sheet (${name})`, async ({
+        page,
+      }) => {
+        if (reduced) await page.emulateMedia({ reducedMotion: 'reduce' });
+        await place(page, prefs);
+        await primary(page).click();
+        await expect(endSheet(page)).toBeVisible();
+        await collapseEndSheet(page);
+        await page.getByTestId('undo').click();
+        await glidesSettled(page);
+        await page.getByTestId('redo').click();
+        await page.getByTestId('undo').click();
+        await glidesSettled(page);
+        await page.waitForTimeout(800);
+        await expect(endSheet(page)).toHaveCount(0);
+      });
+    }
+  });
+}

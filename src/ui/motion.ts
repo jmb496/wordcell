@@ -66,6 +66,15 @@ type Tracker = {
   /** A consumed pointerup's click is still owed (consumed once, cleared by the next down). */
   owedClick: boolean;
   timer: unknown;
+  /** Ticket 6.12: the injected Undo-enabled predicate (the `GameView` `canUndo` flag, AD-3). */
+  readonly canUndo: () => boolean;
+  /** Open callbacks waiting for the floor (and the hold) in `whenOpenAllowed`. */
+  pending: (() => void)[];
+  /** An accepted Undo gesture holds the open back until its dispatch or its end. */
+  hold: boolean;
+  /** The gesture id whose end releases the hold (null: a click, released at once). */
+  holdId: string | null;
+  holdTimer: unknown;
 };
 
 let tracker: Tracker | null = null;
@@ -99,6 +108,7 @@ export function install(won: boolean, complete: () => void): void {
   t.complete = complete;
   t.completed = false;
   t.installAt = t.now();
+  t.hold = false;
   t.settled = false;
   t.settledAt = 0;
   t.lastEnd = t.installAt;
@@ -122,9 +132,64 @@ export function hideClear(): void {
   clearOpen(live('hideClear'), true);
 }
 
+/**
+ * Ticket 6.12: finishes the winning animation; no-op when no guard is installed. Called from the
+ * hide flush (before `hideClear`) and the back callback (after `controller.cancel`).
+ */
+export function finishGuard(): void {
+  const t = live('finishGuard');
+  if (t.installed) finish(t);
+}
+
+/**
+ * Ticket 6.12 (AD-14, R-62): runs `callback` at once with no guard installed; otherwise once the
+ * floor (install + 300 ms on the injected clock) has passed and no Undo hold is pending, after
+ * uninstalling the guard so it never consumes input on the sheet.
+ */
+export function whenOpenAllowed(callback: () => void): void {
+  // No tracker (unit tests of other modules) means no guard installed.
+  const t = tracker;
+  if (t === null || !t.installed) {
+    callback();
+    return;
+  }
+  t.pending.push(callback);
+  evaluate(t);
+}
+
+/**
+ * Ticket 6.12: a dispatch returned `unfinished`: drops the hold and any pending open and
+ * uninstalls at once (the Undo cancelled the open).
+ */
+export function releaseHold(): void {
+  const t = tracker;
+  if (t === null || !t.installed) return;
+  t.pending = [];
+  uninstall(t);
+}
+
+function clearHold(t: Tracker): void {
+  t.hold = false;
+  t.holdId = null;
+  if (t.holdTimer !== null) t.timers.clearTimer(t.holdTimer);
+  t.holdTimer = null;
+}
+
+// The hold ends one tick after its gesture's end/click unless a dispatch got there first.
+function scheduleRelease(t: Tracker): void {
+  if (!t.hold || t.holdTimer !== null) return;
+  t.holdTimer = t.timers.setTimer(() => {
+    t.holdTimer = null;
+    t.hold = false;
+    t.holdId = null;
+    evaluate(t);
+  }, 0);
+}
+
 function clearOpen(t: Tracker, hide: boolean): void {
   const consumed = [...t.open.values()].some((c) => c);
   t.open.clear();
+  clearHold(t);
   if (!t.installed) return;
   if (consumed) t.lastEnd = t.now();
   if (hide && !t.settled) {
@@ -142,6 +207,7 @@ function consumedOpen(t: Tracker): boolean {
 function uninstall(t: Tracker): void {
   t.installed = false;
   t.complete = null;
+  clearHold(t);
   if (t.timer !== null) t.timers.clearTimer(t.timer);
   t.timer = null;
 }
@@ -152,6 +218,19 @@ function evaluate(t: Tracker): void {
   if (!t.installed) return;
   if (t.timer !== null) t.timers.clearTimer(t.timer);
   t.timer = null;
+  if (t.hold) return;
+  if (t.pending.length > 0) {
+    const wait = t.installAt + MIN_GUARD_MS - t.now();
+    if (wait > 0) {
+      t.timer = t.timers.setTimer(() => evaluate(t), wait);
+      return;
+    }
+    const callbacks = t.pending;
+    t.pending = [];
+    uninstall(t);
+    for (const callback of callbacks) callback();
+    return;
+  }
   if (!t.settled || consumedOpen(t)) return;
   const at = Math.max(t.settledAt, t.installAt + MIN_GUARD_MS, t.lastEnd + duration('snap'));
   const wait = at - t.now();
@@ -175,6 +254,14 @@ function inUndo(event: Event): boolean {
   return target !== null && target.closest(UNDO) !== null;
 }
 
+// keys.ts `match`: Ctrl/Meta+Shift+Z is Redo (no alias), Alt+Z matches nothing; plain Shift+Z,
+// bare Z and Ctrl/Meta+Z are Undo, Caps Lock included.
+function undoKey(event: Event): boolean {
+  const e = event as KeyboardEvent;
+  if (!event.type.startsWith('key') || e.key.toLowerCase() !== 'z' || e.altKey) return false;
+  return !((e.ctrlKey || e.metaKey) && e.shiftKey);
+}
+
 function gestureId(event: Event): string | null {
   if (event.type.startsWith('pointer')) return `p${(event as PointerEvent).pointerId}`;
   if (event.type.startsWith('key')) return `k${(event as KeyboardEvent).code}`;
@@ -192,6 +279,7 @@ function onEvent(t: Tracker, event: Event): void {
     if (consumed !== undefined) {
       // A tracked gesture: its events (duplicate down, repeats, end) follow its consumed flag.
       if (isEnd) {
+        if (t.hold && t.holdId === id) scheduleRelease(t);
         t.open.delete(id);
         if (consumed) {
           t.lastEnd = t.now();
@@ -203,12 +291,18 @@ function onEvent(t: Tracker, event: Event): void {
       return;
     }
   }
-  const undo = inUndo(event);
+  const undo = (inUndo(event) || undoKey(event)) && t.canUndo();
   if (t.installed && undo && (isStart || type === 'click')) {
     // Untracked ends (pointerup/pointercancel/keyup) inside Undo pass through with no side effect.
+    // The hold is set before finish drains the open callbacks; the dispatch (releaseHold) or the
+    // gesture's end ends it.
+    if (!t.hold) {
+      t.hold = true;
+      t.holdId = isStart ? id : null;
+    }
     finish(t);
-    uninstall(t);
     if (isStart && id !== null) t.open.set(id, false);
+    if (type === 'click') scheduleRelease(t);
     return;
   }
   if (type === 'click') {
@@ -233,7 +327,7 @@ function onEvent(t: Tracker, event: Event): void {
     return;
   }
   const windowPassed = t.settled && t.now() >= t.installAt + MIN_GUARD_MS;
-  if (windowPassed && !consumedOpen(t)) {
+  if (windowPassed && !consumedOpen(t) && !t.hold) {
     // First start in the backstop window: the guard ends and the event passes through.
     uninstall(t);
     t.open.set(id, false);
@@ -258,6 +352,7 @@ export function startTracker(
   win: ListenTarget,
   now: () => number,
   timers: GuardTimers,
+  canUndo: () => boolean,
 ): () => void {
   if (tracker !== null) throw new Error('AD-14 startTracker() called twice');
   const t: Tracker = {
@@ -273,6 +368,11 @@ export function startTracker(
     lastEnd: 0,
     owedClick: false,
     timer: null,
+    canUndo,
+    pending: [],
+    hold: false,
+    holdId: null,
+    holdTimer: null,
   };
   tracker = t;
   const onDoc = (event: Event) => onEvent(t, event);
@@ -283,6 +383,7 @@ export function startTracker(
     for (const type of DOC_EVENTS) doc.removeEventListener(type, onDoc, true);
     win.removeEventListener('blur', onBlur);
     if (t.timer !== null) timers.clearTimer(t.timer);
+    clearHold(t);
     tracker = null;
     hoverClear = null;
   };

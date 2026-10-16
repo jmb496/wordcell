@@ -15,7 +15,15 @@ import { openHistoryNotice } from './ui/history-notice.svelte';
 import { installKeys } from './ui/keys';
 import { browserLayoutDeps, createLayout } from './ui/layout/layout.svelte';
 import { trayTileCount } from './ui/layout/tray';
-import { duration, hideClear, initMotion, stagger, startTracker } from './ui/motion';
+import {
+  duration,
+  finishGuard,
+  hideClear,
+  initMotion,
+  releaseHold,
+  stagger,
+  startTracker,
+} from './ui/motion';
 import { overlays } from './ui/overlays.svelte';
 // Imported before boot so the `@font-face` the font check loads is registered.
 import './ui/app.css';
@@ -145,14 +153,24 @@ async function boot(): Promise<void> {
     phase: () => game.view?.phase,
     duration,
     stagger,
-    dispatched: onDispatched,
+    dispatched: (result, whenSettled) => {
+      onDispatched(result, whenSettled);
+      // Ticket 6.12: an Undo dispatch drops the guard's hold beside onUnfinished's cancel.
+      if (result.unfinished === true) releaseHold();
+    },
   });
   setFlip(flip);
   // AD-14 (F8): the always-on open-gesture tracker, once, before the controller is created.
-  startTracker(document, window, () => performance.now(), {
-    setTimer: (callback, ms) => setTimeout(callback, ms),
-    clearTimer: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
-  });
+  startTracker(
+    document,
+    window,
+    () => performance.now(),
+    {
+      setTimer: (callback, ms) => setTimeout(callback, ms),
+      clearTimer: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
+    },
+    () => game.view?.canUndo === true,
+  );
   const controller = createController(gate, {
     elementFromPoint: (x, y) => document.elementFromPoint(x, y),
     setTimer: (callback, ms) => setTimeout(callback, ms),
@@ -168,8 +186,12 @@ async function boot(): Promise<void> {
   });
   game.registerBeforeHide(() => controller.cancel());
   game.registerBeforeHide(() => gate.scrollReset());
+  game.registerBeforeHide(() => finishGuard());
   game.registerBeforeHide(() => hideClear());
-  nav.registerBeforeBack(() => controller.cancel({ byBack: true }));
+  nav.registerBeforeBack(() => {
+    controller.cancel({ byBack: true });
+    finishGuard();
+  });
   setController(controller);
   // AD-16 order: lifecycle listeners (and the visible-time clock) right after the load, before mount.
   game.registerLifecycle();
