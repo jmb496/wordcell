@@ -298,3 +298,7 @@ Close-out docs: SPEC.md CAP-5 "(none: opens at once)" edit may be needed (techni
 Ticket review ran 7 passes and hit the cap (majors per pass 8, 8, 7, 4, 2, 1, 2). One decision is the owner's: should screen-reader users reach the cards buried under a WordCell's top card one by one? EXPERIENCE.md and SPEC CAP-11 say every card is a button; the ticket hides buried cards and lets the WordCell's name give the top card and count. Proposed default: keep them hidden. Effect: a screen-reader user hears the top card and the count but cannot step through the cards beneath.
 Two late majors (not spec intent, ticket wording only): the Idle phase text and the "resulting phase text" definition were trimmed away in pass 6 although the Undo, Redo, New game and Replay rows use them; the no-op Vitest bullet lost "after time has elapsed". Both are one-sentence restorations; ref to fix upstream: none beyond the ticket itself.
 Resume: answer the question, record it in the ticket Notes, restore the two sentences, then rerun the driver (Step A resumes from the review log).
+
+## Resume 2026-10-16 — 6.13 Step A closed, build next
+Owner decision on buried WordCell cards recorded in the ticket Notes (commit 2a2d6cc); the two trimmed sentences are restored. Ticket review counts as complete (7 passes, capped, its late majors resolved by that commit). Ref to fix upstream: none. Continuing at Step B.
+Close-out docs: EXPERIENCE.md Accessibility Floor and SPEC CAP-11 ("every card is a button") need an exception for buried WordCell cards (owner, 2026-10-15).
