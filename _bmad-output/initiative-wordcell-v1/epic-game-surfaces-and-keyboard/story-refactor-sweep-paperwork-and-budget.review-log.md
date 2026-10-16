@@ -1,6 +1,6 @@
 # Review log — story-refactor-sweep-paperwork-and-budget (ticket 6.17)
 
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 122 words (copy at .passes/pass0.md), HEAD d86d694.
 Ticket intent also includes the tickets.toml entry 17 fields not copied into the file:
@@ -27,3 +27,21 @@ Words (docs): 696 (5.7 x pass 0; budget 1500)  |  Snapshot: .passes/pass1.md
 - all of the above are technical/process choices → reviewer defaults taken
 ### Decision needed (functionality / UX / gameplay)
 - none
+
+## Pass 2 — 2026-10-16
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 5 (merged), minor 8, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1049 (8.6 x pass 0)  |  Snapshot: .passes/pass2.md
+### Applied
+- [major] Measurements/Verify — plan status when a Verify item is unmet: `built` allowed with misses listed first as open Verify misses for the owner; only unavailable preconditions halt
+- [major] Measurements — test:all is `&&`-chained: after a red step run remaining scripts individually; rerun is the failing script only; size number from last successful build; a stopped-short run is not green; non-budget size-script exit is a real failure
+- [major] Measurements — Linux checkout method: ~/wordcell-watch is not a git repo; clone/rsync epic branch HEAD, npm ci, warm-up, record hash and dir
+- [major] Audit/Measurements — "U, P6" rows need both halves; rows with no id matched by named behaviour with a CAP/AD/Q id; "passing" = green in this ticket's own run, so order is: worklist and lists, static audit, one test:all + test:screens, measurements, fill audit
+- [major] Worklist — D38/D40/D45 sit in both the recorded and the handed rows: work only the handed (paperwork/wording) part, keep the rest recorded without duplication
+- [minor] Worklist `applied` for spine/SPEC/EXPERIENCE/DESIGN rows means listed in close-out section; extend the existing Close-out section, convert the loose buried-card note (line 56) into an entry, include EXPERIENCE.md/epic 4 F16 refs
+- [minor] Size: record `total N / 600000` line, margin = 600000 - N, "at most 600,000"; timing basis `time npm test` incl. pretest, strict < 5 s, failing run not counted; 'P6 none' meaning; closing `git status --short` check
+### Default applied (technical)
+- all above → reviewer defaults
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped / not applied (minor)
+- digest source command, References tidy, close-out justification wording
