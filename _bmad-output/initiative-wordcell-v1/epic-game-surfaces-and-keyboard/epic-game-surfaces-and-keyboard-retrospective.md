@@ -109,6 +109,18 @@ All are proposals; none is applied. "Docs" means an owner-visible document.
 
 Needs the owner: A3 to A7, A10. A1, A2, A8 and A9 are technical defaults for the dev loop.
 
+### Resolved (2026-10-16)
+
+Applied after the owner's go-ahead; each is its own commit on `epic-6-surfaces`, nothing pushed.
+
+- A1 done (`ee6085a`): the no-op announce test now covers a phase change, a commit, Undo and Redo and fails without the `changed` guard (checked by removing it); the two relaunch specs record from before boot (`recordRegionFromBoot`) with an Undo positive control; a two-card tail reads `selected` on both cards. F-7 closed.
+- A3 and A4 done (`f0c571e`): every `build-notes.md` close-out edit is applied, plus the four additions (Validate, Confirm and Flip close an open word view first; one Tab stop per column; the AD-9 `elapsedMs` mention; Space on an open WordCell only closes it). F-1, F-5 and F-6 closed.
+- F-3 fixed (`ee6085a`): reproduced first (`AD-13 close(wordcellView) while the top is historyNotice`), then `openSurface('resetConfirm')` over the History notice leaves what is beneath it alone; a test covers a view, a tail selection and a peek beneath.
+- Owner decision (2026-10-16): Space on a WordCell whose view is open only closes it (`ee6085a`, test in `src/ui/keys.test.ts`). F-11's Space question is closed; the other F-11 minors stay recorded.
+- A5 partly done (`853ab41`): the two `board-idle-pending-draft` baselines (android, desktop) are regenerated in the Playwright container with the wider gap before the dot. The owner skim of the 6.11 and 6.12 baselines is not recorded.
+- A8 measured, not changed: median 4.35 s of 5 s over five warm runs on a Linux-filesystem clone (wall time including the pretest); `controller.test.ts` alone about 2.7 s and unsplit by owner decision F41. A live watch re-run was not measured. `npm run test:all` exit 0 after these changes.
+- Still open: A2 (wheel and hover-peek tests), A6 (owner skim of the 6.9 wording and screen-reader strings), A7 (D4 to D9 and D16 sweep leftovers), A9, A10 (device checks), F-18 headroom.
+
 ## Acceptance verdict
 
 **accepted-with-open-items**, criteria declared (the epic file has Done when). Every ticket is finished, so the unfinished-ticket rule does not apply.
@@ -121,11 +133,11 @@ Needs the owner: A3 to A7, A10. A1, A2, A8 and A9 are technical defaults for the
 6. Done when 6 (accessible names and live region): **met** by text assertions in `src/ui/labels.test.ts`, `src/ui/announce.test.ts` and `e2e/screen-reader.spec.ts` (passing in this run), with the F-7 test-strength gaps open and no real screen-reader pass.
 7. Done when 7 (merge and deploy on the owner's go-ahead): **open**. No go-ahead has been given for epic 6; this retro does not merge or deploy.
 
-Open items carried: F-1, F-3, F-5, F-7, F-8, F-18 and the owner reviews in A5 to A7 and A10. None is a failing criterion.
+Open items carried (after the 2026-10-16 fixes, see Resolved above): F-8 (A2), F-18, the sweep leftovers in A7 and the owner reviews in A5 (6.11 and 6.12 baselines), A6 and A10. F-1, F-3, F-5, F-6, F-7 and F-11's Space question are closed. None is a failing criterion.
 
 ## Open questions
 
-1. Done when 7: do you give the go-ahead to merge `epic-6-surfaces` and deploy, once you have applied or declined the doc edits in A3 and A4? Nothing in this retro changes that call, but the merge is owner-gated.
-2. A3, A4: shall I apply the close-out doc edits for you (they are exact old/new text in `build-notes.md`), or do you want to apply them yourself?
-3. F-3: do you want the latent `openSurface('resetConfirm')` over the History notice fixed as a small ticket now, or left until an opener can reach it?
-4. F-11 / D4: Space on a WordCell with an open view closes and reopens it. Is that the behaviour you want, or should it just close the view?
+1. Done when 7 (still open): do you give the go-ahead to merge `epic-6-surfaces` and deploy, once you have applied or declined the doc edits in A3 and A4? Nothing in this retro changes that call, but the merge is owner-gated.
+2. (Answered 2026-10-16: applied, `f0c571e`.) A3, A4: shall I apply the close-out doc edits for you (they are exact old/new text in `build-notes.md`), or do you want to apply them yourself?
+3. (Answered 2026-10-16: fixed, `ee6085a`.) F-3: do you want the latent `openSurface('resetConfirm')` over the History notice fixed as a small ticket now, or left until an opener can reach it?
+4. (Answered 2026-10-16: just close, `ee6085a`.) F-11 / D4: Space on a WordCell with an open view closes and reopens it. Is that the behaviour you want, or should it just close the view?
