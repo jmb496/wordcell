@@ -1,14 +1,9 @@
 outcome: stopped
 ticket: 6.12
-reason: rule 3, npm run test:all failed at check (type errors in src/ui/motion.test.ts 701, 721, 731)
-next: 6.12
-updated: 2026-10-16T01:25:00Z
-summary: Ticket 6.12 is built and reviewed; the full test run now fails on three test-file type errors, not on the earlier menu check.
+reason: rule 3, test:all failed (1 desktop e2e timeout in board-keys.spec.ts:794)
+next: 6.12 (resume at Step D)
+updated: 2026-10-16T01:40:00Z
+summary: Ticket 6.12 is built and reviewed, but one desktop keyboard test timed out in the full test run, so it is not marked done.
 
-## Report
-
-The earlier menu row-height failure is fixed. The rerun of the full test run now stops earlier, at the type check: three errors in `src/ui/motion.test.ts` (lines 701, 721, 731), where the `opened` test mock is typed so that it cannot be passed as a plain function. No game behaviour is affected; it is a test-only typing fix. Nothing needs your decision. Ticket 6.12 stays `built`, not done. Screenshots were not run (they follow a green test run).
-
-Resume: fix the mock's type in that test file (for example type `opened` as `vi.fn<() => void>()`), then rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-game-surfaces-and-keyboard`.
-
-Close-out docs: SPEC.md CAP-5 "(none: opens at once)" edit may be needed (from ticket 6.12 review).
+Plain-language report: the earlier sub-pixel and type-check problems are fixed. This run's full check passed everything except one desktop test, "a winning commit moves focus to the end sheet first action", which timed out during cleanup. That test is next to the code 6.12 changed, so I did not assume it was a fluke. Nothing needs your decision. Resume: run that one test alone; if it passes, rerun the driver; if not, it needs a test-only update for the new win-animation guard.
+Close-out docs: SPEC.md CAP-5 "(none: opens at once)" edit may be needed (carried from the ticket review).
