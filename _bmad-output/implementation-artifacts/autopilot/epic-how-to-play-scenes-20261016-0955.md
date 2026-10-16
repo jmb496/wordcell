@@ -24,3 +24,15 @@ Ref to fix upstream: none
 Tokens: Tokens: 6.9M input-equivalent (ticket review 51%, build 31%, code review 12%, orchestrator 3%, other 3%); orchestrator peak context 62k
 Worth knowing: nothing
 Close-out docs: none
+
+## 8.3 Place and scoring scenes — stopped (needs your answer)
+What it adds: scene 4 (placing BALKED in WordCell 6) and scene 5 (scoring: CAT 9, QUIT 16, BALKED 36, total 61) in the How to play panel, with captions and engine-replayed tests.
+Ticket review: 7 passes, converged (majors 8, 8, 5, 3, 2, 1, 0); nothing needed your input
+Build: built; commit 1fb031f (plan: no high, one medium deferred: do earlier scene layers show through behind later ones on a phone-size screen?)
+Code review: thorough, 2 passes, converged (majors 1, 1); technical fixes in f71a763 (WIP); tests, lint and check pass. Stopped on one owner question (below).
+Tests: not yet run by the autopilot (test:all and screenshots still to run after your answer)
+Ref to fix upstream: none
+Tokens: Tokens: 8.3M input-equivalent (ticket review 51%, build 27%, code review 18%, other 2%, orchestrator 1%); orchestrator peak context 56k
+Worth knowing: open item: fixtures/how-to-play-place.json has WordCell 6 contents in frames 0–4 written by hand, not checked by the engine; add cells entries for cell 6 at after 3 to 7 (a technical fix the next session can take).
+Owner question: during scene 4, column 3 still shows the B card while B is also in the word strip and later in cell 6, so B appears twice. Keep it (as the ticket says) or hide B from column 3? Proposed: keep. Effect: keeping shows B both in the column and in the word being placed; hiding makes it read as B being taken from the column.
+Close-out docs: none
