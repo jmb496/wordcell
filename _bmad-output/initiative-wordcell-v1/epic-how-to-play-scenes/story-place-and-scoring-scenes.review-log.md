@@ -1,6 +1,6 @@
 # Review log — story-place-and-scoring-scenes.md
 
-State: pass 6: done
+State: pass 7: done
 
 Pre-loop: HEAD 3ee207aa10e7b40100164b89d37db81a4648ce24, 158 words (pass 0 copy: story-place-and-scoring-scenes.passes/pass0.md). Growth budget 2.5x = ~395 words (default). Note: no epic-8 SPEC.md exists under _bmad-output/specs/; the epic file is the requirement source. Ticket toml fields interface/tests/owns (entry 3 of tickets.toml) are passed to reviewers and fixer as intent; fixer adds them to the Description in pass 1.
 
@@ -96,3 +96,10 @@ Reviewers: fix diff, edge-case hunter, adversarial (ref alignment dropped: clean
 - (none)
 
 Fix applied; words 843 (unchanged, 5.3x pass 0); snapshot story-place-and-scoring-scenes.passes/pass6.md. Major and minors applied. Fixer cut "none rejected", "no dictionary entries" and the scene 5 per-cell numbers repeat to offset (the first two were pass-1/2 content). `landed` skipping the destination slice and not drawing `dest`/`tail` is new Scene.svelte work (needs a guard), checked by reading only.
+
+## Pass 7 — 2026-10-16 (verify-only)
+Reviewers: fix diff  |  Findings: major 0, minor 0, decision-needed 0  |  Dropped in triage: 0
+
+## Result — converged after 7 passes
+Majors per pass: 8, 8, 5, 3, 2, 1, 0. No decision-needed items, no open major. Words 158 → 843 (5.3x, over the 2.5x budget; contract detail, not procedure).
+Unapplied minors (for the build plan): scene 4 start frame content (cells row and Validate lit, no tray); scene 5 reveal-step targets and pointer; `carry.landed` typing and the new Scene.svelte guard (unrun); QU counting two spelled out in `cellScores`; extra negatives (QU encoding, legalTargets); frame counts in the P6 test; tickets.toml drift ("per-cell numbers", R-36, interface/tests lacking the new fields); drawing of WordCell stacks and stack-vs-word label; DICT-negative check code.
