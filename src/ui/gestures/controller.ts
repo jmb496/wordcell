@@ -133,6 +133,14 @@
 // cell while the tray faces return (a mirror's shift cleared at once, never faded, under reduced
 // motion), the ghost clearing at the settle; cancel(), a same-id pointerdown and detach settle at
 // once.
+// Wheel during a mouse drag (ticket 6.14, F3): a page scroll under a held mouse drag moves no
+// `pointermove`, so a mouse press adds a passive `window` `scroll` listener, removed in `end()`. The
+// drag reads `scrollY` once at its start (`drag.scroll.base`, so a scroll between the press and the
+// threshold crossing is absorbed there); every move and every scroll event writes `translate(pointer
+// delta + the live scrollY − base)` on the faces (the stored `dx`/`dy` carry it for the fly-back and
+// the parting) and re-runs targeting from the last pointer point against the live rects; a
+// pointerup re-reads the live offset first, so a release before the scroll event still drops on the
+// recomputed target. Touch and pen presses add no listener; `gate.ts` is neither read nor changed.
 // Key activation (epic 6 CAP-10, 6.11): `activate(hit)` runs the released-tap path for a key press on
 // a focused card, tile or WordCell: `cancel()` (a held drag ends), the sticky view closes first (its
 // pop precedes any push, AD-13), then `applyTile(tileAction(hit))` and, for a non-tray hit,
@@ -318,6 +326,8 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     if (p.captured?.hasPointerCapture(p.pointerId) === true) {
       p.captured.releasePointerCapture(p.pointerId);
     }
+    // F3: the scroll listener goes with the press.
+    if (p.mouse) window.removeEventListener('scroll', rescroll);
     // Epic 4 SPEC F19: any mouse press end suppresses the cell under the last mouse point.
     if (p.mouse) hover.suppress();
     const kind = reason.kind;
@@ -519,6 +529,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       lift,
       dx: 0,
       dy: 0,
+      scroll: null,
       hasLeftSource: false,
       highlighted: null,
       target: null,
@@ -561,16 +572,22 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
 
   // AD-12 one drag move: transform, measure, pick, highlight (DOM only, F12).
   function dragMove(drag: Drag, x: number, y: number): void {
+    // F3: a mouse drag follows the page scroll since its start.
+    let scrolled = 0;
+    if (drag.scroll !== null) {
+      scrolled = window.scrollY - drag.scroll.base;
+      drag.scroll.delta = scrolled;
+    }
     if (drag.kind === 'tile') {
-      tileDrag.move(drag, x, y);
+      tileDrag.move(drag, x, y, scrolled);
       return;
     }
     if (drag.kind === 'freeLetter') {
-      freeLetterDrag.move(drag, x, y);
+      freeLetterDrag.move(drag, x, y, scrolled);
       return;
     }
     drag.dx = x - drag.x;
-    drag.dy = y - drag.y;
+    drag.dy = y - drag.y + scrolled;
     for (const face of drag.faces) face.style.transform = translate(drag.dx, drag.dy - drag.lift);
     const grabbed = drag.faces[0];
     if (grabbed === undefined) throw new Error('AD-12 drag without a face');
@@ -601,6 +618,16 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     );
     drag.target = targetElement(drag, highlighted, columnEl);
     drag.target.classList.add(DRAG_TARGET);
+  }
+
+  // F3: re-runs the drag move at the last pointer point when the live offset differs from the one
+  // last applied (a scroll event, or the release reading it first); a no-op without a mouse drag.
+  function rescroll(): void {
+    if (press === null || press.drag === null) return;
+    const { drag, lastX, lastY } = press;
+    const scroll = drag.scroll;
+    if (scroll === null || window.scrollY - scroll.base === scroll.delta) return;
+    dragMove(drag, lastX, lastY);
   }
 
   function onTimer(p: Press<H>): void {
@@ -676,8 +703,11 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       timer: null,
       drag: null,
       mouse: event.pointerType === 'mouse',
+      lastX: event.clientX,
+      lastY: event.clientY,
     };
     press = p;
+    if (p.mouse) window.addEventListener('scroll', rescroll, { passive: true });
     if (p.captured !== null) {
       menuSlot = null;
       p.captured.setPointerCapture(p.pointerId);
@@ -695,12 +725,15 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     const crossing = next.kind === 'drag' && p.state.kind !== 'drag';
     if (crossing) stopTimer(p);
     p.state = next;
+    p.lastX = event.clientX;
+    p.lastY = event.clientY;
     // The threshold-crossing move is the first drag move (epic 4 SPEC CAP-7); epic 4 SPEC CAP-8:
     // any column press clears the hover there, picked up or not.
     if (crossing) {
       if (p.hit.kind === 'card' || p.hit.kind === 'space') clearHover();
       // Epic 5 SPEC CAP-5: a live tile press starts its drag (lift measured) before the F18 clear.
       p.drag = startDrag(p);
+      if (p.drag !== null && p.mouse) p.drag.scroll = { base: window.scrollY, delta: 0 };
       // Epic 5 SPEC F18: a live tile press and a free-letter drag clear the tile selection at the
       // threshold.
       if (p.hit.kind === 'tile' || p.drag?.kind === 'freeLetter') overlays.clearTile();
@@ -817,6 +850,8 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     if (event.pointerId === menuSlot) menuSlot = null;
     const p = press;
     if (p === null || !own(event)) return;
+    // F3: the live scroll offset decides the release target, scroll event or not.
+    rescroll();
     const outcome = classify(p.state, { type: 'up' });
     const drag = p.drag;
     const captured = end({ kind: 'up' });

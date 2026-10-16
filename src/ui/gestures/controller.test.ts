@@ -151,6 +151,11 @@ vi.mock('../../shell/game.svelte', () => ({
 
 type Listener = (event: unknown) => void;
 
+// Ticket 6.14 (F3): the fake page scroll. Every rect but the sticky bars' translates with it; the
+// fake `window` records the controller's scroll listeners and their options.
+const pageScroll = { y: 0 };
+const scrollListeners = new Map<Listener, unknown>();
+
 class FakeEl {
   readonly captures = new Set<number>();
   readonly log: string[] = [];
@@ -213,7 +218,18 @@ class FakeEl {
     const dx = m === null ? 0 : Number(m[1]);
     const dy = m === null ? 0 : Number(m[2]);
     const r = this.rect;
-    return { left: r.left + dx, top: r.top + dy, right: r.right + dx, bottom: r.bottom + dy };
+    const sy =
+      (this.closest('[data-band="topBar"]') ??
+      this.closest('[data-band="banner"]') ??
+      this.closest('[data-band="actionBar"]'))
+        ? 0
+        : pageScroll.y;
+    return {
+      left: r.left + dx,
+      top: r.top + dy - sy,
+      right: r.right + dx,
+      bottom: r.bottom + dy - sy,
+    };
   }
   /** `getComputedStyle(this).transform`: `rendered`, else the inline transform (`none` if empty). */
   computedTransform(): string {
@@ -555,6 +571,21 @@ async function setup() {
   durations.override = {};
   vi.stubGlobal('getComputedStyle', (el: FakeEl) => ({ transform: el.computedTransform() }));
   vi.stubGlobal('DOMMatrixReadOnly', FakeMatrix);
+  pageScroll.y = 0;
+  scrollListeners.clear();
+  vi.stubGlobal('window', {
+    get scrollY() {
+      return pageScroll.y;
+    },
+    addEventListener: (type: string, fn: Listener, options: unknown) => {
+      expect(type).toBe('scroll');
+      scrollListeners.set(fn, options);
+    },
+    removeEventListener: (type: string, fn: Listener) => {
+      expect(type).toBe('scroll');
+      scrollListeners.delete(fn);
+    },
+  });
   const { overlays } = await import('../overlays.svelte');
   const { createController } = await import('./controller');
   const { dropTarget } = await import('./drop-target');
@@ -5681,5 +5712,294 @@ describe('AD-12 epic 6 key activation', () => {
     expect(() => t.controller.activate({ kind: 'tile', card: 4 })).toThrow(
       /^AD-12 tileTap with tile 9 selected/,
     );
+  });
+});
+
+// Ticket 6.14 (F3, epic 4 retro A8): a wheel scroll during a mouse drag moves no pointermove, so the
+// scroll listener recomputes the faces, highlight and drop target from the last pointer point
+// against the post-scroll rects. The fake rects translate with `pageScroll.y` (sticky bars aside).
+describe('AD-12 wheel during a mouse drag', () => {
+  type T = Awaited<ReturnType<typeof setup>>;
+  const MOUSE = { pointerType: 'mouse' } as const;
+  const drop = (source: number, count: number, destination: number) =>
+    dispatched({
+      type: 'drop',
+      sourceColumn: source,
+      sourceCount: count,
+      destinationColumn: destination,
+    });
+  // The page scrolls to `y`; `fire` dispatches the window scroll event (false: the offset changed
+  // before the event fired).
+  const scrollTo = (y: number, fire = true) => {
+    pageScroll.y = y;
+    if (fire) for (const fn of [...scrollListeners.keys()]) fn({ type: 'scroll' });
+  };
+  const lit = (t: T) => t.b.placeholder3.classes.has('wc-drag-target');
+  const down = (t: T, init: Partial<FakeEvent> = {}) =>
+    t.down(t.b.card1b, { clientX: 25, clientY: 50, ...MOUSE, ...init });
+  const move = (t: T, x: number, y: number) =>
+    t.fire('pointermove', { clientX: x, clientY: y, ...MOUSE });
+  const column = async (startScroll = 0) => {
+    const t = await setup();
+    t.detach();
+    pageScroll.y = startScroll;
+    return t;
+  };
+
+  it('AD-12 F3 a wheel during a mouse column drag adds the scroll delta to the faces and clears a target the scroll took away; the release flies back from the cumulative transform', async () => {
+    const t = await column();
+    down(t);
+    // Face y 200 … 260 over column 3 (y 0 … 400).
+    move(t, 125, 230);
+    expect(lit(t)).toBe(true);
+    expect(t.b.face1b.style.transform).toBe('translate(100px, 180px)');
+    scrollTo(300);
+    // Pointer delta (100, 180) plus the scroll delta 300; column 3 now ends at y 100.
+    expect(t.b.face1b.style.transform).toBe('translate(100px, 480px)');
+    expect(lit(t)).toBe(false);
+    t.fire('pointerup');
+    expect(navCalls).toEqual([]);
+    expect(t.b.face1b.animations.at(-1)?.keyframes[0]).toEqual({
+      transform: 'translate(100px, 480px)',
+    });
+    t.advance(180);
+    expect(t.active()).toBe(0);
+  });
+
+  it('AD-12 F3 a scroll that brings a column under the faces lights it and a release with no pointermove drops there', async () => {
+    const t = await column(300);
+    down(t);
+    // Face y 250 … 310; column 3 spans y −300 … 100 at scroll 300: not lit.
+    move(t, 125, 580);
+    expect(t.b.face1b.style.transform).toBe('translate(100px, 530px)');
+    expect(lit(t)).toBe(false);
+    scrollTo(0);
+    expect(t.b.face1b.style.transform).toBe('translate(100px, 230px)');
+    expect(lit(t)).toBe(true);
+    t.fire('pointerup');
+    expect(navCalls).toEqual([drop(1, 1, 3)]);
+    expect(t.active()).toBe(0);
+  });
+
+  it('AD-12 F3 a release with the scroll offset changed but no scroll event fired still drops on the recomputed target', async () => {
+    const t = await column(300);
+    down(t);
+    move(t, 125, 580);
+    expect(lit(t)).toBe(false);
+    scrollTo(0, false);
+    expect(lit(t)).toBe(false);
+    t.fire('pointerup');
+    expect(navCalls).toEqual([drop(1, 1, 3)]);
+  });
+
+  it('AD-12 F3 a later pointermove continues from the scroll delta with no jump', async () => {
+    const t = await column();
+    down(t);
+    move(t, 125, 230);
+    scrollTo(300);
+    move(t, 125, 240);
+    expect(t.b.face1b.style.transform).toBe('translate(100px, 490px)');
+    scrollTo(250);
+    expect(t.b.face1b.style.transform).toBe('translate(100px, 440px)');
+    t.controller.cancel();
+  });
+
+  it('AD-12 F3 a wheel after the press and before the threshold crossing is absorbed into the origin: no jump, no recompute', async () => {
+    const t = await column();
+    down(t);
+    const rect = vi.spyOn(t.b.face1b, 'getBoundingClientRect');
+    scrollTo(300);
+    expect(t.b.face1b.style.transform).toBe('');
+    expect(rect).not.toHaveBeenCalled();
+    move(t, 25, 62);
+    expect(t.b.face1b.style.transform).toBe('translate(0px, 12px)');
+    scrollTo(350);
+    expect(t.b.face1b.style.transform).toBe('translate(0px, 62px)');
+    t.controller.cancel();
+  });
+
+  it('AD-12 F3 a scroll event with the offset unchanged (a wheel at the page end) recomputes nothing', async () => {
+    const t = await column();
+    down(t);
+    move(t, 125, 230);
+    const rect = vi.spyOn(t.b.face1b, 'getBoundingClientRect');
+    scrollTo(0);
+    expect(rect).not.toHaveBeenCalled();
+    expect(t.b.face1b.style.transform).toBe('translate(100px, 180px)');
+    expect(lit(t)).toBe(true);
+    t.controller.cancel();
+  });
+
+  it('AD-12 F3 any scroll source takes the same recompute (a layout scrollTo write fires the same scroll event)', async () => {
+    const t = await column();
+    down(t);
+    move(t, 125, 230);
+    // Layout's own write: the offset moves and one scroll event follows.
+    scrollTo(120);
+    expect(t.b.face1b.style.transform).toBe('translate(100px, 300px)');
+    t.controller.cancel();
+  });
+
+  it('AD-12 F3 the listener is passive, on a mouse press only, and gone after drop, cancel, pointercancel and lostpointercapture', async () => {
+    const touch = await column();
+    touch.down(touch.b.card1b, { clientX: 25, clientY: 50, pointerType: 'touch' });
+    expect(scrollListeners.size).toBe(0);
+    touch.fire('pointerup');
+    const pen = await column();
+    pen.down(pen.b.card1b, { clientX: 25, clientY: 50, pointerType: 'pen' });
+    expect(scrollListeners.size).toBe(0);
+    pen.fire('pointerup');
+    const enders: [string, (t: T) => void][] = [
+      ['drop', (t) => t.fire('pointerup')],
+      ['cancel', (t) => t.controller.cancel()],
+      ['pointercancel', (t) => t.fire('pointercancel')],
+      ['lostpointercapture', (t) => t.fire('lostpointercapture', { target: t.b.card1b })],
+    ];
+    for (const [name, end] of enders) {
+      const t = await column();
+      down(t);
+      expect([...scrollListeners.values()], name).toEqual([{ passive: true }]);
+      move(t, 125, 230);
+      end(t);
+      expect(scrollListeners.size, name).toBe(0);
+      const before = t.b.face1b.style.transform;
+      scrollTo(300);
+      expect(t.b.face1b.style.transform, name).toBe(before);
+      t.advance(180);
+    }
+  });
+
+  it('AD-12 F3 a mouse press that never becomes a drag adds no recompute on a scroll', async () => {
+    const t = await column();
+    down(t);
+    expect(scrollListeners.size).toBe(1);
+    const rect = vi.spyOn(t.b.face1b, 'getBoundingClientRect');
+    const targets = vi.spyOn(t.b.column3, 'getBoundingClientRect');
+    scrollTo(200);
+    expect(rect).not.toHaveBeenCalled();
+    expect(targets).not.toHaveBeenCalled();
+    t.fire('pointerup');
+    expect(scrollListeners.size).toBe(0);
+  });
+
+  describe('tray drags', () => {
+    const press = (t: T, el: FakeEl, init: Partial<FakeEvent> = {}) =>
+      t.down(el, { clientX: 100, clientY: 100, ...MOUSE, ...init });
+    const tileMove = (t: T, dx: number, dy = 0) =>
+      t.fire('pointermove', { clientX: 100 + dx, clientY: 100 + dy, ...MOUSE });
+    const ready = async () => {
+      const t = await setup();
+      t.detach();
+      tileView();
+      navCalls.length = 0;
+      return t;
+    };
+
+    it('AD-12 F3 a wheel during a mouse tile drag adds the scroll delta to the face and recomputes the tray acceptance; a release then flies back with no dispatch', async () => {
+      const t = await ready();
+      press(t, t.b.tile2);
+      tileMove(t, -72);
+      expect(t.b.tile2Face.style.transform).toBe('translate(-72px, 0px)');
+      expect(t.b.tileFace.style.transform).toBe('translate(48px, 0px)');
+      scrollTo(300);
+      expect(t.b.tile2Face.style.transform).toBe('translate(-72px, 300px)');
+      // The tray now spans y 300 … 500; the face stayed at y 640 … 693: not accepted, tile 3 home.
+      expect(t.b.tileFace.animations.at(-1)?.keyframes.at(-1)).toEqual({
+        transform: 'translate(0px, 0px)',
+      });
+      t.fire('pointerup');
+      expect(navCalls).toEqual([]);
+      expect(t.b.tile2Face.animations.at(-1)?.keyframes[0]).toEqual({
+        transform: 'translate(-72px, 300px)',
+      });
+      t.advance(180);
+      expect(t.active()).toBe(0);
+    });
+
+    it('AD-12 F3 a small wheel scroll over the tray keeps the gap and a release with no pointermove still arranges', async () => {
+      const t = await ready();
+      press(t, t.b.tile2);
+      tileMove(t, -72);
+      scrollTo(10);
+      expect(t.b.tile2Face.style.transform).toBe('translate(-72px, 10px)');
+      t.fire('pointerup');
+      expect(navCalls).toEqual([dispatched({ type: 'arrange', arrangement: [4, 3] })]);
+      expect(t.active()).toBe(0);
+    });
+
+    it('AD-12 F3 a tile release with the offset changed and no scroll event fired recomputes at the release', async () => {
+      const t = await ready();
+      press(t, t.b.tile2);
+      tileMove(t, -72);
+      scrollTo(300, false);
+      t.fire('pointerup');
+      expect(navCalls).toEqual([]);
+      t.advance(180);
+      expect(t.active()).toBe(0);
+    });
+
+    // Two-row tray (inner width 100: perRow 2, compact 44 px rows 48 px apart): the scroll moves the
+    // tray up a whole row under the fixed pointer, so the gap pick must use the start-frame rect.
+    it('AD-12 F3 a wheel scroll that keeps a tile drag over the tray re-picks the gap in the drag-start frame', async () => {
+      const t = await ready();
+      t.trayWidth.innerWidth = 100;
+      press(t, t.b.tile);
+      // Face centre (20, 666.5): nearest gap 0 (row 0), which leaves the order unchanged.
+      tileMove(t, -12);
+      expect(t.b.tile2Face.style.transform).toBe('');
+      scrollTo(48);
+      // The pointer now lies over row 1: the gap before tile 3's old successor, gap 2.
+      expect(t.b.tileFace.style.transform).toBe('translate(-12px, 48px)');
+      expect(t.b.tile2Face.style.transform).toBe('translate(-48px, 0px)');
+      t.fire('pointerup');
+      expect(navCalls).toEqual([dispatched({ type: 'arrange', arrangement: [4, 3] })]);
+    });
+
+    it('AD-12 F3 a wheel scroll that keeps a free-letter drag over the tray re-picks the gap in the drag-start frame', async () => {
+      const t = await ready();
+      t.trayWidth.innerWidth = 100;
+      t.overlays.selectTile(3);
+      press(t, t.b.cellCard);
+      // Face centre (20, 662): nearest gap 0 (row 0), which parts tile 4 and the mirror.
+      tileMove(t, -2, 185.5);
+      expect(t.b.tile2Face.style.transform).toBe('translate(-48px, 48px)');
+      expect(t.b.trayMirrorFace.style.transform).toBe('translate(48px, 0px)');
+      scrollTo(48);
+      // Row 1 is now under the pointer: gap 1 parts the mirror alone.
+      expect(t.b.tile2Face.style.transform).toBe('');
+      expect(t.b.trayMirrorFace.style.transform).toBe('translate(48px, 0px)');
+      t.fire('pointerup');
+      expect(navCalls).toEqual([dispatched({ type: 'addFreeLetter', cell: 3, index: 2 })]);
+    });
+
+    it('AD-12 F3 a wheel during a mouse free-letter drag adds the scroll delta and recomputes; a release with no pointermove flies back', async () => {
+      const t = await ready();
+      t.overlays.selectTile(3);
+      press(t, t.b.cellCard);
+      tileMove(t, 6);
+      tileMove(t, 56 - 22 - 100 + 100, 666.5 - 476.5 - 100 + 100);
+      expect(t.b.cellFace.style.transform).toBe('translate(34px, 190px)');
+      expect(t.b.trayMirrorFace.style.transform).toBe('translate(48px, 0px)');
+      scrollTo(200);
+      expect(t.b.cellFace.style.transform).toBe('translate(34px, 390px)');
+      expect(t.b.trayMirrorFace.animations.at(-1)?.keyframes.at(-1)).toEqual({
+        transform: 'translate(0px, 0px)',
+      });
+      t.fire('pointerup');
+      expect(navCalls).toEqual([]);
+      t.advance(180);
+      expect(t.active()).toBe(0);
+    });
+
+    it('AD-12 F3 a small wheel scroll during a free-letter drag keeps the gap and the release adds the letter', async () => {
+      const t = await ready();
+      t.overlays.selectTile(3);
+      press(t, t.b.cellCard);
+      tileMove(t, 6);
+      tileMove(t, 34, 190);
+      scrollTo(10, false);
+      t.fire('pointerup');
+      expect(navCalls).toEqual([dispatched({ type: 'addFreeLetter', cell: 3, index: 1 })]);
+    });
   });
 });

@@ -31,7 +31,7 @@ import { translate } from './fly-back';
 import { faceIn, found } from './lookup';
 import { overTray } from './over-tray';
 import type { createParting } from './parting';
-import { insertionIndex, type Rect } from './targeting';
+import { inStartFrame, insertionIndex, type Rect } from './targeting';
 import { freeLetterRun } from './tile';
 import type { createVisibleBand } from './visible-band';
 
@@ -101,6 +101,7 @@ export function createFreeLetterDrag(deps: FreeLetterDragDeps) {
       lift: 0,
       dx: 0,
       dy: 0,
+      scroll: null,
       tiles,
       caret,
       tilesRect: tiles.getBoundingClientRect(),
@@ -185,14 +186,14 @@ export function createFreeLetterDrag(deps: FreeLetterDragDeps) {
 
   // Epic 5 SPEC CAP-6 one free-letter drag move: transform, accept the clipped tray band, pick the
   // gap, part or show the caret on a change (DOM only); a caret follows its gap's winning rect.
-  function move(drag: FreeLetterDrag, x: number, y: number): void {
+  function move(drag: FreeLetterDrag, x: number, y: number, scrolled: number): void {
     drag.dx = x - drag.x;
-    drag.dy = y - drag.y;
+    drag.dy = y - drag.y + scrolled;
     const face = drag.faces[0];
     face.style.transform = translate(drag.dx, drag.dy);
     const dragged = face.getBoundingClientRect();
     const accepted = overTray(dragged, band);
-    const pick = accepted ? insertionIndex(dragged, drag.gaps) : null;
+    const pick = accepted ? insertionIndex(inStartFrame(dragged, scrolled), drag.gaps) : null;
     const gap = pick === null ? null : pick.index;
     const rect = pick === null ? null : pick.rect;
     if (accepted === drag.accepted && gap === drag.gap) {

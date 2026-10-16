@@ -12,6 +12,13 @@ export type EndReason =
   | { readonly kind: 'cancel'; readonly byBack: boolean };
 
 /**
+ * Ticket 6.14 (F3): a mouse drag's page-scroll state: `base` is `scrollY` read at the drag start,
+ * `delta` the live `scrollY` minus `base` as last applied to the faces (null on a touch or pen
+ * drag, whose page never scrolls under it).
+ */
+export type DragScroll = { readonly base: number; delta: number };
+
+/**
  * Epic 4 SPEC CAP-7: a press that crossed the threshold on a column card whose column
  * `canPickUp`.
  */
@@ -34,6 +41,7 @@ export type ColumnDrag = {
   /** The last pointer offset from the press point written on the faces. */
   dx: number;
   dy: number;
+  scroll: DragScroll | null;
   hasLeftSource: boolean;
   highlighted: number | null;
   /** The element carrying `wc-drag-target`. */
@@ -59,6 +67,7 @@ export type TileDrag = {
   /** The last pointer offset from the press point written on the face. */
   dx: number;
   dy: number;
+  scroll: DragScroll | null;
   /** The `.tiles` element carrying `DRAG_TILES`. */
   readonly tiles: HTMLElement;
   readonly run: ReturnType<typeof tileRun>;
@@ -91,6 +100,7 @@ export type FreeLetterDrag = {
   /** The last pointer offset from the press point written on the face. */
   dx: number;
   dy: number;
+  scroll: DragScroll | null;
   /** The `.tiles` element carrying `DRAG_TILES`, and its caret. */
   readonly tiles: HTMLElement;
   readonly caret: HTMLElement;
@@ -134,6 +144,9 @@ export type Press<H> = {
   drag: Drag | null;
   /** Epic 4 SPEC F19: `pointerType === 'mouse'` (a mouse press end sets the suppression). */
   readonly mouse: boolean;
+  /** Ticket 6.14 (F3): the last own pointer point, the origin of a scroll-driven recompute. */
+  lastX: number;
+  lastY: number;
 };
 
 export type Resolved = {

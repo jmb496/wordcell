@@ -69,6 +69,14 @@ export function pickTarget(
   return { raw, highlighted: raw === sourceId && !hasLeftSource ? null : raw };
 }
 
+/**
+ * Ticket 6.14 (F3): the dragged rect in the frame the tray's gap rects were measured in (the drag
+ * start): the page has scrolled up by `scrolled` since, so the gaps now sit that much higher.
+ */
+export function inStartFrame(r: Rect, scrolled: number): Rect {
+  return { left: r.left, top: r.top + scrolled, right: r.right, bottom: r.bottom + scrolled };
+}
+
 /** F3, build-notes CAP-5: the gap rect nearest the dragged face's centre (the element itself). */
 export function insertionIndex(dragged: Rect, gapRects: readonly GapRect[]): GapRect {
   const head = gapRects[0];

@@ -17,7 +17,7 @@ import { translate } from './fly-back';
 import { faceIn, found } from './lookup';
 import { overTray } from './over-tray';
 import type { createParting } from './parting';
-import { insertionIndex, type Rect } from './targeting';
+import { inStartFrame, insertionIndex, type Rect } from './targeting';
 import { tileRun } from './tile';
 import type { createVisibleBand } from './visible-band';
 
@@ -71,6 +71,7 @@ export function createTileDrag(deps: TileDragDeps) {
       lift,
       dx: 0,
       dy: 0,
+      scroll: null,
       tiles,
       run,
       runFaces,
@@ -107,16 +108,16 @@ export function createTileDrag(deps: TileDragDeps) {
     }
   }
 
-  // Epic 5 SPEC CAP-5 one tile drag move: transform, accept the clipped tray band, pick the gap,
+  // Epic 5 SPEC CAP-5 one tile drag move (`scrolled`: the page scroll since the drag start, F3): transform, accept the clipped tray band, pick the gap,
   // part on a change (DOM only).
-  function move(drag: TileDrag, x: number, y: number): void {
+  function move(drag: TileDrag, x: number, y: number, scrolled: number): void {
     drag.dx = x - drag.x;
-    drag.dy = y - drag.y;
+    drag.dy = y - drag.y + scrolled;
     const face = drag.faces[0];
     face.style.transform = translate(drag.dx, drag.dy - drag.lift);
     const dragged = face.getBoundingClientRect();
     const accepted = overTray(dragged, band);
-    const gap = accepted ? insertionIndex(dragged, drag.gaps).index : null;
+    const gap = accepted ? insertionIndex(inStartFrame(dragged, scrolled), drag.gaps).index : null;
     if (accepted === drag.accepted && gap === drag.gap) return;
     drag.accepted = accepted;
     drag.gap = gap;
