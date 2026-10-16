@@ -1,6 +1,6 @@
 # Review log — story-scene-player-first-scene-and-engine-replay-harness.md
 
-State: pass 2: done
+State: pass 3: done
 
 Pre-loop: HEAD a5593dc4d44b2d08484392c5aa7437fad578e97d, 315 words (pass 0 copy: story-scene-player-first-scene-and-engine-replay-harness.passes/pass0.md). Growth budget 2.5x = ~790 words.
 
@@ -42,3 +42,20 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 - (none new; tap resume-vs-restart carried from pass 1)
 
 Fix applied; words 872 (2.77x pass 0); snapshot passes/pass2.md.
+
+## Pass 3 — 2026-10-16
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 5 (merged), minor 6, decision-needed 0  |  Dropped in triage: 2 (icon shows state vs action, pref change mid-run: precision, plan detail)
+### Applied (to fixer)
+- [major] hidden stop must be required (HP-1, Done-when 3), no exemption; mechanism within AD-9 (read document.hidden / whenVisible at step boundaries, no src/ui listener)
+- [major] UI cannot run the engine: frames are script poses; the fixture-vs-script unit test guards drift
+- [major] pause/play tap target: a real button covering the scene, icon shows state, absent under reduced motion
+- [major] Slow-vs-Fast has no tier or Verify entry
+- [major] replay function in a non-test helper (no test-to-test import), dictionary passed as parameter
+### Default applied (technical)
+- hidden handled via document.hidden/whenVisible at boundaries; replay helper takes dictionary as parameter; tap target is a transparent button
+### Minors (word-neutral only)
+- figcaption names the figure; fixture rejects unknown keys; getAnimations scoped to the scene; name the rest kind (not parting)
+### Decision needed
+- (none new; tap resume-vs-restart carried)
+
+Fix applied; words 909 (2.88x pass 0); snapshot passes/pass3.md. Minors not applied (cap): figcaption naming, unknown-key rejection, rest kind name.
