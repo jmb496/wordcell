@@ -1,6 +1,6 @@
 # Review log — story-compose-and-destination-block-scenes.md
 
-State: pass 4: done
+State: pass 5: done
 
 Pre-loop: HEAD d9895643d34c0c46ca3e99c54160884a86aa4b07, 143 words (pass 0 copy: story-compose-and-destination-block-scenes.passes/pass0.md). Growth budget 2.5x = ~357 words (default). Note: no epic-8 SPEC.md exists under _bmad-output/specs/; the epic file is the requirement source.
 
@@ -68,3 +68,16 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 - (none)
 
 Fix applied; words 719 (5.0x pass 0). Snapshot passes/pass4.md. Major applied. Unverified by fixer: script.ts read only at the grab/drop check; drag.ts step 2 commandless move confirmed by the pass-4 adversarial reviewer's reading.
+
+## Pass 5 — 2026-10-16
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 13, decision-needed 0  |  Dropped in triage: 0
+Words: 719 (5.0x pass 0, unchanged; no fix pass, stopping rule met: passes 4 and 5 each had at most one major)
+### Open major (not fixed)
+- [major] Tests: the negative "compose with its own Set {'baked'} gives last `rejectedWords` 'balked'" cannot pass as written: with the rejected validate the session stays Composing, so canValidate after 4 is true while the fixture's `validatable` says false, and `replayScene` throws the validatable mismatch before it returns `rejectedWords`. Recommended default: the negative clones the fixture with `validatable` deleted and asserts last `rejectedWords` is 'balked'; a second negative asserts the unmodified fixture with {'baked'} throws a validatable mismatch (this also satisfies the ticket's "fails on BALKED missing from the dictionary").
+### Decision needed (functionality / UX / gameplay)
+- (none)
+
+## Result — converged after 5 passes
+open major: the compose negative test above (fix: delete `validatable` in the cloned fixture, see the default).
+Majors per pass: 8, 6, 6, 1, 1. Decision needed: none. Technical defaults applied: about 20 (fixture/harness contract: validatable field, rejectedWords assertion instead of a throw, step→command rule, frame table, DICT change, etc.).
+Unapplied minors: grab/drop must still name a drop (the "if any" wording); scene 2's first move is commandless and the coverage test accepts a repeated index; "frame i = state after step i" does not match scene 2's 6 steps vs frames 0 to 5; tail/tray values for every new frame; cell 6 field optional (absent in scene 3); setDestinationCount 0 negative is a cloned-fixture test, not a `rejected` entry; "index 1 into M"; validatable false after 0 and after 4 (Place); lowercase 'balked' in the negative; words entry for command 0 and none for validate; drawn-Validate test skips the validate frame; which validatable entry the negative flips; element ids/reveals for the new steps and scene 3's pointer start; Frame optional fields vs the drag test; negative changing a stated words entry (tickets.toml verify); real-dictionary repro picks up both fixtures via FIXTURES; ticket length (move frame tables to the plan).
