@@ -1,5 +1,5 @@
 # Review log — ticket 6.12 (Winning guard: the end-sheet half)
-State: pass 1: done
+State: pass 2: done
 Pre-loop: HEAD a11599b; words 298 (budget 1500); copy /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-game-surfaces-and-keyboard/story-winning-guard-the-end-sheet-half.review-log.passes/pass0.md
 
 ## Pass 1 — 2026-10-15
@@ -17,6 +17,23 @@ Words (docs): 875 (2.9x pass 0; budget 1500)  |  Snapshot: passes/pass1.md
 ### Default applied (technical)
 - Undo-enabled source → injected canUndo from GameView flag
 - Cancel owner → Undo dispatch unfinished result
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Pass 2 — 2026-10-15
+Reviewers: fix-diff, edge-case, adversarial, ref alignment  |  Findings: major 5 (merged), minor 4, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1208  |  Snapshot: passes/pass2.md
+### Applied
+- [major] Undo button pointerdown/click race: accepted Undo press suppresses the pending open until dispatch or cancel → 1
+- [major] Alias aligned with EXPERIENCE/keys.ts (Shift+Z is Undo, Alt excluded) → 2
+- [major] Held Z repeats follow keys.ts → 3
+- [major] Hide vs 300 ms floor → 4
+- [major] AC rows: Redo button, input between settle and 300 ms, Undo after open → 5
+- [minor] floor home whenOpenAllowed; win-path only; open uninstalls guard; modifier keydown → 6-9
+### Default applied (technical)
+- Floor in motion.ts whenOpenAllowed; suppress-open on accepted Undo press
 ### Decision needed (functionality / UX / gameplay)
 - none
 ### Dropped
