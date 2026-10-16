@@ -1,6 +1,6 @@
 # Review log — story-place-and-scoring-scenes.md
 
-State: pass 3: done
+State: pass 4: done
 
 Pre-loop: HEAD 3ee207aa10e7b40100164b89d37db81a4648ce24, 158 words (pass 0 copy: story-place-and-scoring-scenes.passes/pass0.md). Growth budget 2.5x = ~395 words (default). Note: no epic-8 SPEC.md exists under _bmad-output/specs/; the epic file is the requirement source. Ticket toml fields interface/tests/owns (entry 3 of tickets.toml) are passed to reviewers and fixer as intent; fixer adds them to the Description in pass 1.
 
@@ -57,3 +57,17 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 - (none)
 
 Fix applied; words 819 (5.2x pass 0, over budget); snapshot story-place-and-scoring-scenes.passes/pass3.md. All 5 majors and minors applied. Fixer verified setTarget needs the place phase (commands.ts); "scene 4 draws no Validate" not checked against Scene.svelte.
+
+## Pass 4 — 2026-10-16
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 3 (after late-pass bar), minor 3 applied (no added words), decision-needed 0  |  Dropped in triage: 7 (minors that add words while over budget: carry guards, lit/placeTarget derivation test, DICT check code, extra negative, frame counts in P6, scene 5 card-stack drawing; a stretch)
+### Applied (to fixer)
+- [major] scene 4 "draws no Validate / no validatable entry" (added in pass 3, unchecked) contradicts the Validate tap step and 8.2's drawn-Validate rule: scene 4 draws Validate (pressed at the tap, then off in the place phase), `validatable` entries per after, per the existing rule
+- [major] frame/step table: 6 steps (Validate tap, tap 5, tap 6, drag, Confirm tap, fly) vs "frame i+1 = after step i" gives 7 frames; list them explicitly (fly shares final, or Confirm tap and fly one step)
+- [major] scene 4 start/validated frames: what is drawn (word cards in a strip in R-51 order B A L K E D until the drag, placeOrder on the validated frame; fixture place.order for after 4 to 6 = default order)
+- [minor, no added words] "per-cell numbers" → "per-cell scores"; replace the "8.2's coverage test skips scene 4's set-up prefix" sentence with "scene 4 has its own coverage test (indexes 3 to 7)"
+### Default applied (technical)
+- Scene 4 start strip order = R-51 default; Validate drawn per 8.2's rule
+### Decision needed (functionality / UX / gameplay)
+- (none)
+
+Fix applied; words 831 (5.3x pass 0, over budget); snapshot story-place-and-scoring-scenes.passes/pass4.md. All 3 majors and the two no-word minors applied. Fixer cut 43 words incl. the pointer-ghost aside (pass 3 item 5) and "inert markup ... as 8.1"; the remaining "New static visuals" line still says "per-cell numbers".
