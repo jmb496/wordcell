@@ -1,6 +1,6 @@
 # Review log — story-place-and-scoring-scenes.md
 
-State: pass 4: done
+State: pass 5: done
 
 Pre-loop: HEAD 3ee207aa10e7b40100164b89d37db81a4648ce24, 158 words (pass 0 copy: story-place-and-scoring-scenes.passes/pass0.md). Growth budget 2.5x = ~395 words (default). Note: no epic-8 SPEC.md exists under _bmad-output/specs/; the epic file is the requirement source. Ticket toml fields interface/tests/owns (entry 3 of tickets.toml) are passed to reviewers and fixer as intent; fixer adds them to the Description in pass 1.
 
@@ -71,3 +71,16 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 - (none)
 
 Fix applied; words 831 (5.3x pass 0, over budget); snapshot story-place-and-scoring-scenes.passes/pass4.md. All 3 majors and the two no-word minors applied. Fixer cut 43 words incl. the pointer-ghost aside (pass 3 item 5) and "inert markup ... as 8.1"; the remaining "New static visuals" line still says "per-cell numbers".
+
+## Pass 5 — 2026-10-16
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 2 (after dedupe), minor 1 applied (no added words), decision-needed 0  |  Dropped in triage: 8 (adversarial/stretch minors that add words while over budget or are plan detail: start-frame drawing, QU wording in cellScores, scene 5 tap targets, WordCell stacks visual, DICT ordering note, place.order negative naming, CardId note)
+### Applied (to fixer)
+- [major] scene 4 `validatable`: "true after 3 only" ambiguous against 8.2 (compose chain is true after 1 to 3, view.ts canValidate): state entries for after 3 to 8 (true after 3 only), the frame counts, set-up counts 0 to 2 unlisted (harness lists only given entries, scene-replay.ts:102)
+- [major] scene 4 keeps `carry` (source 1, count 4, destination 3) and draws post-drop columns with tail gone as 8.2's gone frames do; only scene 5 omits carry
+- [minor, no added words] "New static visuals" line: "per-cell numbers" → "per-cell scores"
+### Default applied (technical)
+- both are fixture/script contract choices
+### Decision needed (functionality / UX / gameplay)
+- (none)
+
+Fix applied; words 843 (5.3x pass 0, over budget); snapshot story-place-and-scoring-scenes.passes/pass5.md. Both majors and the minor applied. Fixer found Scene.svelte does not draw post-drop columns for a 'gone' frame (drawn.columns come from fixture.start + carry), so the ticket now adds a proposed `carry.landed` rule (append the tail to the destination column); this is a proposed Scene.svelte change, `unverified` by running.
