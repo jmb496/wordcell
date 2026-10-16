@@ -3,7 +3,7 @@ title: 'Winning guard: the end-sheet half'
 type: 'feature'
 ticket: '12'
 created: '2026-10-15'
-status: 'built'
+status: done
 baseline_revision: 'eb4d1caa990d58d94505c57915905442f314de60'
 route: 'full'
 route_source: 'auto'

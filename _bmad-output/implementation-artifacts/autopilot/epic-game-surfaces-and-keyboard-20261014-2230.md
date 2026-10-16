@@ -280,3 +280,16 @@ Resume: fix the typing of `opened` in `src/ui/motion.test.ts` (test-only), then 
 ## Stopped — ticket 6.12 step D (test:all failed, session 2026-10-16)
 The type check now passes, but the dev-server e2e run (880 passed, 825 skipped) had one failure: `[desktop] e2e/board-keys.spec.ts:794 "Q-24 a winning commit moves focus to the end sheet first action"`. The error is "Tearing down context exceeded the test timeout of 30000ms", not an assertion; this test sits right next to the 6.12 win-animation guard, so it may be a real interaction (the end sheet now waits for the animation) or a one-off slowdown. Not confirmed by a rerun. Screenshots not run. Ticket 6.12 stays `built`.
 Resume: rerun `npx playwright test e2e/board-keys.spec.ts -g "Q-24 a winning commit" --project=desktop`; if it passes alone and again in `test:all`, mark done; if it fails, the test needs updating for the 6.12 guard (test-only fix) before rerunning the driver.
+
+### 6.12 resumed (session 2026-10-15, Step D)
+
+## 6.12 Winning guard: the end-sheet half — done
+What it adds: Undo during the win animation cancels the pending end sheet; any other input only finishes the animation before the sheet opens.
+Ticket review: 5 passes, converged; nothing needed your input
+Build: built; commit 4a93645
+Code review: thorough, 2 passes, converged; fixes in 248b166
+Tests: all passing (`test:all`, the earlier timeout in board-keys.spec.ts:794 did not recur, it passed alone and in the full run), screenshots passed (37 passed, 13 skipped)
+Ref to fix upstream: none
+Tokens: 0.1M input-equivalent (orchestrator 58%, other 42%); orchestrator peak context 52k
+Worth knowing: the one desktop e2e timeout seen earlier was a one-off slowdown; two unapplied ticket-review minors (releaseHold wrapper test; SPEC CAP-5 "(none: opens at once)" edit) are carried.
+Close-out docs: SPEC.md CAP-5 "(none: opens at once)" edit may be needed (technical, from the ticket review)
