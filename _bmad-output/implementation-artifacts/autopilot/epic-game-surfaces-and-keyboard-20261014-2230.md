@@ -302,3 +302,17 @@ Resume: answer the question, record it in the ticket Notes, restore the two sent
 ## Resume 2026-10-16 — 6.13 Step A closed, build next
 Owner decision on buried WordCell cards recorded in the ticket Notes (commit 2a2d6cc); the two trimmed sentences are restored. Ticket review counts as complete (7 passes, capped, its late majors resolved by that commit). Ref to fix upstream: none. Continuing at Step B.
 Close-out docs: EXPERIENCE.md Accessibility Floor and SPEC CAP-11 ("every card is a button") need an exception for buried WordCell cards (owner, 2026-10-15).
+
+## 6.13 Screen-reader labels and live region — done
+What it adds: Every card, WordCell, foot and control now has a spoken name, and a hidden announcer reads out phase changes, rejected words, placements, undo/redo and the game outcome to screen-reader users. Cards buried under a WordCell's top card stay hidden from screen readers (your decision).
+Ticket review: 7 passes, capped; your decision on buried cards was recorded and the two trimmed sentences restored
+Build: built; commits bbf049d (feat(ui): screen-reader labels and live region)
+Code review: thorough, 2 passes, diverging; test-strength fixes applied (labels.test.ts, e2e/screen-reader.spec.ts)
+Tests: all passing, screenshots passed (37 passed, 13 skipped)
+Ref to fix upstream: story-screen-reader-labels-and-live-region.md Tests bullets (no-op changed:false guard, relaunch-silent recorder attach timing, selected state with a one-card tail) → ticket test wording, not spec intent
+Tokens: Tokens: 6.7M input-equivalent (build 75%, code review 21%, orchestrator 2%, other 2%); orchestrator peak context 63k
+Worth knowing: Give-up outcome title reads "Game given up." (existing end-sheet title), not "Game over." as the plan example said. Earlier test:e2e runs showed load-dependent timing flakes (wordcell-view, board-keys) that pass alone.
+Close-out docs:
+- EXPERIENCE.md § Accessibility Floor ← buried WordCell cards hidden from screen readers (owner, 2026-10-15)
+- SPEC.md CAP-11 ("every card is a button") ← same exception (owner, 2026-10-15)
+- SPEC.md CAP-5 "(none: opens at once)" edit may be needed (from 6.12)

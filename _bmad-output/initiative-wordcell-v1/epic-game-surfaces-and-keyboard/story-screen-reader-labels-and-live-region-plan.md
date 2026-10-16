@@ -3,7 +3,7 @@ title: 'Screen-reader labels and live region'
 type: 'feature'
 ticket: '13'
 created: '2026-10-15'
-status: 'built'
+status: done
 baseline_revision: '1b663dadaf953abf386bc7884bcb7aef07895af3'
 route: 'full'
 route_source: 'auto'
