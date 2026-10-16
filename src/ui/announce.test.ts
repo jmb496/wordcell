@@ -137,8 +137,14 @@ describe('AD-3 announcer', () => {
     expect(spoken()).toEqual(['Place. BAKED, 5 letters.', 'Composing. QUAKE, 1 letter.']);
   });
 
-  it('AD-3 a no-op dispatch (changed false) after time has elapsed announces nothing', () => {
-    dispatch({ type: 'flip' }, composing('baked', 5), composing('baked', 5), { changed: false });
+  it('AD-3 a no-op dispatch (changed false) after time has elapsed announces nothing, even when the views differ', () => {
+    const noop = { changed: false } as const;
+    dispatch({ type: 'flip' }, composing('baked', 5), composing('baked', 5), noop);
+    // Each of these would announce if `changed` were ignored: a phase change, a commit, Undo, Redo.
+    dispatch({ type: 'validate' }, composing('baked', 5), placing('baked', 5, 5, 10, 2), noop);
+    dispatch({ type: 'confirm' }, placing('baked', 5, 5, 10, 2), view({ wordCount: 3 }), noop);
+    dispatch({ type: 'undo' }, composing('baked', 5), view(), noop);
+    dispatch({ type: 'redo' }, view(), composing('baked', 5), noop);
     expect(writes).toEqual([]);
   });
 

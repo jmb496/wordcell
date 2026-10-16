@@ -27,6 +27,40 @@ export async function recordRegion(page: Page): Promise<void> {
   }, REGION);
 }
 
+/**
+ * Installs the recorder before the page's own scripts run (call it before `openFixture`), so a set
+ * made while the app boots is recorded too. Watches the whole document: the region need not exist yet.
+ */
+export async function recordRegionFromBoot(page: Page): Promise<void> {
+  await page.addInitScript((selector) => {
+    window.__sr = [];
+    const inRegion = (node: Node | null): Element | null => {
+      const el = node instanceof Element ? node : (node?.parentElement ?? null);
+      return el?.closest(selector) ?? null;
+    };
+    new MutationObserver((records) => {
+      for (const record of records) {
+        if (record.type === 'characterData') {
+          const text = record.target.textContent;
+          if (inRegion(record.target) !== null && text) window.__sr?.push(text);
+          continue;
+        }
+        for (const node of record.addedNodes) {
+          const holder =
+            inRegion(node) ??
+            (node instanceof Element
+              ? node.matches(selector)
+                ? node
+                : node.querySelector(selector)
+              : null);
+          const text = holder?.textContent;
+          if (text) window.__sr?.push(text);
+        }
+      }
+    }).observe(document, { childList: true, characterData: true, subtree: true });
+  }, REGION);
+}
+
 /** Every string set since `recordRegion` (or the last `resetRegion`). */
 export const sets = (page: Page): Promise<string[]> => page.evaluate(() => window.__sr ?? []);
 

@@ -3,8 +3,9 @@
 // peek or hover peek, then opens `id`. Synchronous: the wait for a pop is nav's op queue (a pop
 // settles before the next push, nav.ts), so there is no second wait here. Over a modal notice
 // (historyNotice or resetConfirm on top) it throws the store's `AD-13 open(...)` before clearing
-// anything, except for resetConfirm itself, which may stack on the History notice; every other
-// illegal open is left to the store's pair guard.
+// anything, except for resetConfirm itself, which stacks on the History notice as it is (whatever
+// sits beneath the notice stays, and clearing it would close a non-top entry); every other illegal
+// open is left to the store's pair guard.
 import { type OverlayId, overlays } from './overlays.svelte';
 
 export type SurfaceId = Extract<
@@ -23,7 +24,7 @@ export function openSurface(id: SurfaceId): void {
   if (id !== 'resetConfirm' && (top === 'historyNotice' || top === 'resetConfirm')) {
     throw new Error(`AD-13 open(${id}) while ${top} is the top entry`);
   }
-  if (overlays.isOpen(id)) {
+  if (overlays.isOpen(id) || (id === 'resetConfirm' && top === 'historyNotice')) {
     overlays.open(id);
     return;
   }

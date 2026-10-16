@@ -310,6 +310,23 @@ describe('AD-13 openSurface', () => {
     );
   });
 
+  it('AD-13 resetConfirm over the History notice leaves a sticky view, a tail selection or a peek beneath it untouched', async () => {
+    for (const beneath of ['view', 'tail', 'peek'] as const) {
+      const { overlays, openSurface } = await load();
+      if (beneath === 'view') overlays.openView(4);
+      else if (beneath === 'tail') overlays.select(2, 3);
+      else overlays.openPeek(4);
+      overlays.open('historyNotice');
+      calls.length = 0;
+      expect(() => openSurface('resetConfirm')).not.toThrow();
+      expect(overlays.top).toBe('resetConfirm');
+      expect(calls).toEqual(['push']);
+      expect(
+        overlays.viewCell !== null || overlays.selection !== null || overlays.peek !== null,
+      ).toBe(true);
+    }
+  });
+
   it('AD-13 a second call while the pop is pending throws from the store guard; nav sees one pop then one push', async () => {
     const { overlays, openSurface } = await load();
     overlays.select(2, 3);

@@ -1,7 +1,13 @@
 import { expect, type Page, test } from '@playwright/test';
 import { centre, glidesSettled, openFixture, tapAt } from './helpers/board';
 import { hidePage, showPage } from './helpers/lifecycle';
-import { REGION, recordRegion, resetRegion, sets } from './helpers/live-region';
+import {
+  REGION,
+  recordRegion,
+  recordRegionFromBoot,
+  resetRegion,
+  sets,
+} from './helpers/live-region';
 import { onAndroid } from './helpers/project';
 import { fixture, seedStorage } from './helpers/seed';
 
@@ -219,15 +225,18 @@ test('A-E9 a Give up announces only the outcome, penalty not read', async ({ pag
 });
 
 test('A-E9 a relaunch into a stored session is silent', async ({ page }) => {
+  await recordRegionFromBoot(page);
   await openFixture(page, 'session-composing');
-  await recordRegion(page);
   await settled(page);
   expect(await sets(page)).toEqual([]);
+  // Control: the boot recorder does see a set, so the empty list above is not a blind recorder.
+  await page.getByTestId('undo').click();
+  await expect.poll(async () => (await sets(page)).length).toBe(1);
 });
 
 test('A-E9 a relaunch into Game over is silent', async ({ page }) => {
+  await recordRegionFromBoot(page);
   await openFixture(page, 'session-gave-up', { endSheet: 'expanded' });
-  await recordRegion(page);
   await settled(page);
   expect(await sets(page)).toEqual([]);
 });

@@ -374,7 +374,8 @@ export const ROWS: Readonly<Record<CommandId, Row>> = {
     touchesHistory: (view, ctx) => ctx.focus.kind !== 'tile' && view.phase === 'idle',
   },
   // `Space` on a WordCell opens the sticky view in every phase (a tail selection is popped first);
-  // with a tail selected and the cell empty it only deselects.
+  // with a tail selected and the cell empty it only deselects; with that cell's view already open
+  // it only closes it (owner, 2026-10-16).
   // The close-view, deselect, closePeek, openView sequence mirrors Controller.activate
   // (gestures/controller.ts) and must change with it.
   view: {
@@ -388,9 +389,10 @@ export const ROWS: Readonly<Record<CommandId, Row>> = {
       if (ctx.focus.kind !== 'cell') throw new Error('AD-12 view key without a focused cell');
       const cell = required(cellOf(view, ctx.focus.cell), 'cell');
       // An open sticky view sits above a tail selection (AD-13): close it before deselecting.
+      const reopen = overlays.viewCell !== cell.cell;
       if (overlays.viewCell !== null) overlays.close('wordcellView');
       overlays.deselect();
-      if (cell.cards.length === 0) return;
+      if (!reopen || cell.cards.length === 0) return;
       if (overlays.peek !== null) overlays.closePeek();
       overlays.closeHoverPeek();
       overlays.openView(cell.cell);

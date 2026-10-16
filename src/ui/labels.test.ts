@@ -73,6 +73,15 @@ describe('AD-3 screen-reader names', () => {
     ]);
   });
 
+  it('AD-3 every card of a picked tail of two or more reads selected', () => {
+    const html = drawColumn(column(1, [0, 1, 4]), { selection: { column: 1, count: 2 } });
+    expect(names(html)).toEqual([
+      'A, column 1, card 1 of 3',
+      'B, column 1, card 2 of 3, selected',
+      'E, column 1, card 3 of 3, selected',
+    ]);
+  });
+
   it('AD-3 a destination card in Composing reads destination, joined after selected; a ghost carries no name', () => {
     const draft = { source: [1], destination: [4], sourceColumn: 2, destinationColumn: 1 };
     const html = drawColumn(column(1, [0, 1, 4]), {

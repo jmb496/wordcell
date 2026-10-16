@@ -1129,6 +1129,16 @@ describe('AD-12 board keys: WordCell Enter and Space', () => {
     expect(overlays.viewCell).toBeNull();
   });
 
+  it('AD-12 Space on a WordCell whose sticky view is open only closes the view (owner, 2026-10-16)', () => {
+    board({ cellCards: { 4: [40] } });
+    overlays.openView(4);
+    onCell(4);
+    expect(press(' ')).toBe(true);
+    expect(overlays.viewCell).toBeNull();
+    settle();
+    expect(overlays.viewCell).toBeNull();
+  });
+
   it('AD-12 there is no giveUp key row', () => {
     expect(Object.keys(keys.ROWS)).not.toContain('giveUp');
   });
