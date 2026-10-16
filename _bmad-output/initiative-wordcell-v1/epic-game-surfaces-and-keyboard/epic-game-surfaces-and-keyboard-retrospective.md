@@ -119,7 +119,9 @@ Applied after the owner's go-ahead; each is its own commit on `epic-6-surfaces`,
 - Owner decision (2026-10-16): Space on a WordCell whose view is open only closes it (`ee6085a`, test in `src/ui/keys.test.ts`). F-11's Space question is closed; the other F-11 minors stay recorded.
 - A5 partly done (`853ab41`): the two `board-idle-pending-draft` baselines (android, desktop) are regenerated in the Playwright container with the wider gap before the dot. The owner skim of the 6.11 and 6.12 baselines is not recorded.
 - A8 measured, not changed: median 4.35 s of 5 s over five warm runs on a Linux-filesystem clone (wall time including the pretest); `controller.test.ts` alone about 2.7 s and unsplit by owner decision F41. A live watch re-run was not measured. `npm run test:all` exit 0 after these changes.
-- Still open: A2 (wheel and hover-peek tests), A6 (owner skim of the 6.9 wording and screen-reader strings), A7 (D4 to D9 and D16 sweep leftovers), A9, A10 (device checks), F-18 headroom.
+- A2 done for the wheel (this commit): with the scroll handler disabled only one wheel test passed for the wrong reason (`a small wheel scroll during a free-letter drag keeps the gap…`); it now asserts the face follows the scroll (190 + 10 px) and fails without the listener (checked by disabling `rescroll`). The other tests that pass without the handler are legitimate no-op or listener checks. The hover-peek re-anchor stays covered by the desktop e2e only: it depends on real layout (`getBoundingClientRect`), which the node-environment unit tests can only fake, so a Vitest would add little; accepted.
+- Owner decision (2026-10-16): the remaining owner items are left unreviewed and any problem is fixed when it arises: A6 (6.9 wording, screen-reader strings, 6.11 and 6.12 baselines), A7 (D4 to D9 and D16 sweep leftovers), A10 (device checks). A9 (autopilot Docker-check lesson) is moot and dropped. F-18 (unit-time headroom, 4.35 s of 5 s) is noted, not acted on.
+- Still open: Done when 7 (mark the epic done; merge and deploy go-ahead).
 
 ## Acceptance verdict
 

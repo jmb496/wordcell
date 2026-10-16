@@ -5997,7 +5997,10 @@ describe('AD-12 wheel during a mouse drag', () => {
       press(t, t.b.cellCard);
       tileMove(t, 6);
       tileMove(t, 34, 190);
-      scrollTo(10, false);
+      expect(t.b.cellFace.style.transform).toBe('translate(34px, 190px)');
+      scrollTo(10);
+      // The face follows the page scroll (190 + 10), so this fails without the scroll listener.
+      expect(t.b.cellFace.style.transform).toBe('translate(34px, 200px)');
       t.fire('pointerup');
       expect(navCalls).toEqual([dispatched({ type: 'addFreeLetter', cell: 3, index: 1 })]);
     });
