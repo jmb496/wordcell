@@ -1,5 +1,5 @@
 # Review log — ticket 6.12 (Winning guard: the end-sheet half)
-State: pass 5: review
+State: done
 Pre-loop: HEAD a11599b; words 298 (budget 1500); copy /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-game-surfaces-and-keyboard/story-winning-guard-the-end-sheet-half.review-log.passes/pass0.md
 
 ## Pass 1 — 2026-10-15
@@ -66,3 +66,16 @@ Words (docs): 1477  |  Snapshot: passes/pass4.md
 - none
 ### Dropped
 - none (unapplied minors: SPEC CAP-5 stale "(none: opens at once)" clause edit; Playwright floor cases may use page.clock; "after 300 ms" parenthetical removed)
+
+## Pass 5 — 2026-10-15
+Reviewers: fix-diff, edge-case, adversarial, ref alignment  |  Findings: major 0, minor 4, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1477 (4.9x pass 0; budget 1500)  |  Snapshot: passes/pass4.md (no fix pass)
+
+## Result — converged after 5 passes
+Majors per pass: 7, 5, 3, 1, 0. No decision-needed items. Technical defaults applied: 8 groups (see passes 1-4).
+Unapplied minors (for the build plan):
+- releaseHold() wiring site: main.ts wraps the `dispatched` dep passed to createFlip (`onDispatched(r,w); if (r.unfinished === true) releaseHold()`), not a dispatch-result site in main.ts; add a test through that wrapper.
+- Rename the new motion.ts export to `releaseUndoHold()` (flip.ts has a private `releaseHold`).
+- Hold must end if an enabled Undo's dispatch returns not-unfinished: the (b) re-arm timer should cancel only when the release actually ran.
+- Restore "no pointer-moved-off detection"; the pass-1 "inUndo stays typeof-free" sentence was dropped in pass 4 (keep the AGENTS.md rule 6 constraint in the plan).
+- SPEC.md CAP-5 still says "(none: opens at once)"; edit it to match F23; Playwright floor cases may use page.clock.
