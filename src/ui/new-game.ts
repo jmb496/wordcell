@@ -5,15 +5,18 @@
 // game is in progress, else the ungated action. `newGame()` and `replayDeal()` stay ungated.
 import type { GameView } from '../engine/index';
 import { game } from '../shell/game.svelte';
+import { announceReset } from './announce';
 import { openHistoryNotice } from './history-notice.svelte';
 import { releaseHold } from './motion';
 import { openSurface } from './open-surface';
 import { overlays } from './overlays.svelte';
 import { roving } from './roving.svelte';
+import { text } from './text';
 
 export function newGame(): void {
   const wasRejected = game.state.kind === 'rejected';
   game.newGame();
+  announceReset(text.announceNewGame);
   overlays.resetForNewSession();
   releaseHold();
   roving.reset();
@@ -23,6 +26,7 @@ export function newGame(): void {
 /** Replay this deal (Q-29): same seed, empty moves; every entry closes. */
 export function replayDeal(): void {
   game.replay();
+  announceReset(text.announceReplay);
   overlays.resetForNewSession();
   releaseHold();
   roving.reset();

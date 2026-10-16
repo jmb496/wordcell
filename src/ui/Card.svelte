@@ -34,6 +34,8 @@ let {
   selected = false,
   stop = false,
   onfocus,
+  name,
+  silent = false,
 }: {
   id: CardId;
   face: Face;
@@ -75,6 +77,13 @@ let {
   stop?: boolean;
   /** Epic 6 CAP-10 (6.11): reports focus to the roving memory (roving.svelte.ts). */
   onfocus?: () => void;
+  /**
+   * Epic 6 CAP-11 (6.13): the screen-reader name, built by the parent from `GameView` and the
+   * selection (`text.ts`); a live card with a name is a `role="button"`, a mirror never has one.
+   */
+  name?: string;
+  /** Epic 6 CAP-11 (6.13): a buried WordCell card, hidden from screen readers (no role). */
+  silent?: boolean;
 } = $props();
 
 // Epic 6 CAP-10 (6.11): only a live column, tray or strip card takes focus (a Tab stop, or -1 for
@@ -82,6 +91,9 @@ let {
 const focusable = $derived(
   mirror === undefined && (place === 'column' || place === 'tray' || place === 'strip'),
 );
+
+// Epic 6 CAP-11 (6.13): only a live, audible card carries its name.
+const named = $derived(name !== undefined && mirror === undefined && !silent);
 
 // DESIGN.md Card: `QU` is set as `Qu` with the ×2 badge (Q-06).
 const qu = $derived(face.letter === 'QU');
@@ -138,7 +150,9 @@ const inView = $derived.by(() => {
   data-testid={mirror ? undefined : `card-${id}`}
   data-place={mirror ? undefined : place}
   data-mirror-of={mirror && mirror !== 'static' ? id : undefined}
-  aria-hidden={mirror ? 'true' : undefined}
+  role={named ? 'button' : undefined}
+  aria-label={named ? name : undefined}
+  aria-hidden={mirror || silent ? 'true' : undefined}
   tabindex={focusable ? (stop ? 0 : -1) : undefined}
   onfocus={focusable ? onfocus : undefined}
 >

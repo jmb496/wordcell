@@ -265,8 +265,9 @@ function deferEndSheetOpen(): number {
   return lastToken;
 }
 
-function openDeferred(token: number): void {
-  if (liveToken === null || token !== liveToken) return;
+/** Returns whether the sheet opened (false on a dead token, e.g. Undo between settle and open). */
+function openDeferred(token: number): boolean {
+  if (liveToken === null || token !== liveToken) return false;
   if (endSheet !== 'hidden') throw new Error(`AD-13 openDeferred while ${endSheet}`);
   if (peek !== null) throw new Error('AD-13 openDeferred while a peek is open');
   const viewOnTop = stack.at(-1) === 'wordcellView';
@@ -278,6 +279,7 @@ function openDeferred(token: number): void {
   if (viewOnTop) close('wordcellView');
   endSheet = 'expanded';
   push('endSheet');
+  return true;
 }
 
 function selectTile(card: CardId): void {

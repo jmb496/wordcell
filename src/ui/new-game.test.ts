@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 // overlays on a simulated session history, the game store stubbed. After an accept the overlays
 // are at depth 0 and `history.state.wc` is 0 once the nav queue settles.
 
+vi.mock('./announce', () => ({ announceReset: () => undefined }));
 vi.mock('../shell/game.svelte', () => ({
   game: { state: { kind: 'active' }, newGame: () => undefined, replay: () => undefined },
 }));

@@ -85,7 +85,10 @@ test("R-38 a word not in the list shows TAN isn't in the word list., stays Compo
   await expect(primary).toBeEnabled();
   await primary.click();
 
-  const message = page.getByText("TAN isn't in the word list.", { exact: true });
+  // Ticket 6.13: the polite live region carries the same sentence, so the tray band scopes it.
+  const message = page
+    .locator('[data-band="tray"]')
+    .getByText("TAN isn't in the word list.", { exact: true });
   await expect(message).toBeVisible();
   // 4.2 hand-over: the message sits in the tray band's word-line slot (DESIGN.md Invalid-word message).
   await expect(

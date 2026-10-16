@@ -147,6 +147,7 @@
 import { flushSync } from 'svelte';
 import type { Command } from '../../engine/index';
 import { type DispatchResult, game } from '../../shell/game.svelte';
+import { dispatchAnnounced } from '../announce';
 import { SELECTION_LIFT_PX } from '../layout/geometry';
 import { overlays } from '../overlays.svelte';
 import {
@@ -412,7 +413,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
   // CAP-8, F7: a tap-site dispatch bracketed by capture and play (a throw skips play, AD-15).
   function moveDispatch(command: Command): void {
     deps.capture();
-    deps.play(command, game.dispatch(command));
+    deps.play(command, dispatchAnnounced(command));
   }
 
   function unsuppress(): void {
@@ -858,14 +859,14 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       // move's acceptance and gap; a release with none flew back (hover repaints at its settle).
       if (captured === null) return;
       // A throwing dispatch halts the game (rule 6, AD-15): play is skipped, the capture stays pending.
-      deps.play(captured, game.dispatch(captured));
+      deps.play(captured, dispatchAnnounced(captured));
       refreshHover();
       return;
     }
     // AD-12: the one command of a drag, on the last-shown highlight (EXPERIENCE.md step 6),
     // built and captured in `end()`.
     if (captured === null) return;
-    deps.play(captured, game.dispatch(captured));
+    deps.play(captured, dispatchAnnounced(captured));
     refreshHover();
   }
 

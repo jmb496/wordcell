@@ -30,6 +30,23 @@ function historySentence(reason: HistoryRejectReason): string {
   }
 }
 
+// Epic 6 CAP-11 (6.13) screen-reader names and announcements (EXPERIENCE.md Accessibility Floor,
+// A-E9; the wording beyond the SPEC examples is flagged for the owner). `QU` is read as two
+// letters on a name; a word string spells it `QU`. A number in a name or announcement is never
+// signed with U+2212: a negative reads `minus N`.
+const QU_NAME = 'Q U, counts as two letters';
+const letterName = (letter: string): string => (letter === 'QU' ? QU_NAME : letter);
+const cards = (n: number): string => (n === 1 ? '1 card' : `${n} cards`);
+const joinState = (selected: boolean, destination: boolean): string =>
+  `${selected ? ', selected' : ''}${destination ? ', destination' : ''}`;
+const deltaWords = (n: number): string =>
+  n > 0 ? `plus ${n}` : n < 0 ? `minus ${-n}` : 'no change';
+const phaseIdle = 'Idle.';
+const phaseComposing = (word: string, n: number): string =>
+  `Composing. ${word.toUpperCase()}, ${letters(n)}.`;
+const phasePlace = (word: string, n: number): string =>
+  `Place. ${word.toUpperCase()}, ${letters(n)}.`;
+
 // EXPERIENCE.md Rating bands (A-E2), keyed by the view's `band` 0–5 (no threshold logic here).
 const BANDS = [
   { name: 'Alphabet Soup', message: 'Plenty of letters, not much broth. The deck forgives you.' },
@@ -238,6 +255,38 @@ export const text = Object.freeze({
     return BAND_SCORES[band];
   },
   bandMessage: (band: number) => bandOf(band).message,
+  // Epic 6 CAP-11 (6.13) names: column card, tray tile, WordCell top card, WordCell, empty
+  // WordCell, column foot and the source foot (`i` of `n` counts from the first entry).
+  nameColumnCard: (
+    letter: string,
+    column: number,
+    i: number,
+    n: number,
+    selected: boolean,
+    destination: boolean,
+  ) =>
+    `${letterName(letter)}, column ${column}, card ${i} of ${n}${joinState(selected, destination)}`,
+  nameTrayTile: (letter: string, i: number, n: number, selected: boolean) =>
+    `${letterName(letter)}, tray, tile ${i} of ${n}${selected ? ', selected' : ''}`,
+  nameCellTop: (letter: string, cell: number) => `${letterName(letter)}, WordCell ${cell}, top`,
+  nameCell: (cell: number, letter: string, count: number, used: boolean) =>
+    `WordCell ${cell}, top ${letterName(letter)}, ${cards(count)}${used ? ', used' : ''}`,
+  nameCellEmpty: (cell: number) => `WordCell ${cell}, empty`,
+  nameFoot: (column: number) => `Column ${column} foot`,
+  nameFootSource: (column: number) => `Column ${column}, here`,
+  // Epic 6 CAP-11 announcements: delta wording, phase strings, triggers, the outcome sentence.
+  delta: deltaWords,
+  phaseIdle,
+  phaseComposing,
+  phasePlace,
+  announceCommit: (word: string, cell: number, delta: number) =>
+    `${word.toUpperCase()} placed on cell ${cell}, ${deltaWords(delta)}`,
+  announceUndo: (phase: string) => `Undo. ${phase}`,
+  announceRedo: (phase: string) => `Redo. ${phase}`,
+  announceNewGame: 'New game',
+  announceReplay: 'Replay',
+  srOutcome: (title: string, score: number, band: string) =>
+    `${title} Score ${score < 0 ? `minus ${-score}` : score}, ${band}.`,
   // Q-06 the QU card's badge (DESIGN.md Components, QU card).
   quBadge: '\u00d72',
   // §2 Session rejected: one title, one body per reason.

@@ -6,6 +6,7 @@
 import { tick } from 'svelte';
 import type { GameView } from '../engine/index';
 import { type DispatchResult, game } from '../shell/game.svelte';
+import { announceOutcome } from './announce';
 import { focusBoard } from './focus-board';
 import { overlays } from './overlays.svelte';
 import { text } from './text';
@@ -25,10 +26,10 @@ export function onDispatched(result: DispatchResult, whenSettled: WhenSettled): 
     const token = overlays.deferEndSheetOpen();
     // AD-13: pushes only while the store still says won (the token callback re-check).
     whenSettled(() => {
-      if (game.view?.status === 'won') overlays.openDeferred(token);
+      if (game.view?.status === 'won' && overlays.openDeferred(token)) announceOutcome();
     });
   } else if (result.finished === 'gaveUp') {
-    overlays.openDeferred(overlays.deferEndSheetOpen());
+    if (overlays.openDeferred(overlays.deferEndSheetOpen())) announceOutcome();
   }
 }
 

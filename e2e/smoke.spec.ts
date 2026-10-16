@@ -25,7 +25,9 @@ test('AD-17 board renders 52 live card elements with AD-14 attributes', async ({
   await expect(page.getByTestId('column-8').getByTestId(/^card-\d+$/)).toHaveCount(6);
   for (let cell = 3; cell <= 10; cell++) {
     await expect(page.getByTestId(`wordcell-${cell}`)).toBeVisible();
-    await expect(page.getByTestId(`wordcell-${cell}`)).toHaveAccessibleName(`WordCell ${cell}`);
+    await expect(page.getByTestId(`wordcell-${cell}`)).toHaveAccessibleName(
+      `WordCell ${cell}, empty`,
+    );
   }
   await expect(page.getByTestId('app')).toHaveCount(0);
   const current = await page.evaluate(() => window.__wordcell?.current());

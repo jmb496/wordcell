@@ -4,6 +4,8 @@ import type { CellView, Face, GameView } from '../engine/index';
 import Card from './Card.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { inFlight } from './flip';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import { text } from './text';
 
 // DESIGN.md WordCell, build-notes CAP-2: labels 3–10 in the `labelsRow` track, each wordcell-<n>
 // in the `cellsRow` track under column n − 2 (A-D7), outside its label (F25). Every cell card is
@@ -57,7 +59,14 @@ const inPlace = $derived(place !== undefined);
     class:target
     class:dim
     role="group"
-    aria-label="WordCell {cell.cell}"
+    aria-label={cell.cards.length === 0
+      ? text.nameCellEmpty(cell.cell)
+      : text.nameCell(
+          cell.cell,
+          (faces[cell.cards[top] as number] as Face).letter,
+          cell.cards.length,
+          cell.used,
+        )}
     tabindex="0"
     data-testid="wordcell-{cell.cell}"
     data-wordcell={cell.cell}
@@ -75,6 +84,8 @@ const inPlace = $derived(place !== undefined);
         full
         hidden={i !== top && !(lowest >= 0 && (i >= lowest || (i === lowest - 1 && usedId === undefined)))}
         mirror={i === top && cell.used ? 'used' : undefined}
+        name={i === top ? text.nameCellTop((faces[id] as Face).letter, cell.cell) : undefined}
+        silent={i !== top}
       />
     {/each}
     {#if cell.cards.length >= 2}<span class="count">{cell.cards.length}</span>{/if}

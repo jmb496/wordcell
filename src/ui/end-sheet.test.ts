@@ -3,11 +3,13 @@ import { describe, expect, it, vi } from 'vitest';
 // Ticket 6.6 AD-13 end-sheet entry: the wiring of DispatchResult to the real overlays store, with
 // nav and the game store stubbed.
 const calls: string[] = [];
+const outcomes: string[] = [];
 const store: { view: { status: string } | undefined } = { view: undefined };
 
 vi.mock('../shell/nav', () => ({
   nav: { push: () => calls.push('push'), pop: () => calls.push('pop') },
 }));
+vi.mock('./announce', () => ({ announceOutcome: () => outcomes.push('outcome') }));
 vi.mock('./focus-board', () => ({ focusBoard: () => calls.push('focusBoard') }));
 vi.mock('../shell/game.svelte', () => ({
   game: {
@@ -20,6 +22,7 @@ vi.mock('../shell/game.svelte', () => ({
 async function load(status?: string) {
   vi.resetModules();
   calls.length = 0;
+  outcomes.length = 0;
   store.view = status === undefined ? undefined : { status };
   const { overlays } = await import('./overlays.svelte');
   const sheet = await import('./end-sheet');
@@ -92,6 +95,33 @@ describe('AD-13 end sheet entry', () => {
     onDispatched({ changed: true, unfinished: true }, settleNow);
     expect(overlays.endSheet).toBe('hidden');
     expect(calls).toEqual([]);
+  });
+
+  it('AD-3 the outcome is announced only when the sheet really opens: a win after settle, a Give up at once, never an Undo-cancelled win, boot or expand', async () => {
+    const { onDispatched } = await load('won');
+    const pending: (() => void)[] = [];
+    onDispatched({ changed: true, finished: 'won' }, (cb) => pending.push(cb));
+    expect(outcomes).toEqual([]);
+    pending[0]?.();
+    expect(outcomes).toEqual(['outcome']);
+
+    const cancelled = await load('won');
+    const later: (() => void)[] = [];
+    cancelled.onDispatched({ changed: true, finished: 'won' }, (cb) => later.push(cb));
+    cancelled.overlays.cancelEndSheetOpen();
+    later[0]?.();
+    expect(outcomes).toEqual([]);
+
+    const gave = await load('gaveUp');
+    gave.onDispatched({ changed: true, finished: 'gaveUp' }, settleNow);
+    expect(outcomes).toEqual(['outcome']);
+    gave.overlays.collapseEndSheet();
+    gave.overlays.expandEndSheet();
+    expect(outcomes).toEqual(['outcome']);
+
+    const boot = await load('gaveUp');
+    boot.openAtBoot();
+    expect(outcomes).toEqual([]);
   });
 
   it('AD-13 unfinished with a win pending cancels the open', async () => {

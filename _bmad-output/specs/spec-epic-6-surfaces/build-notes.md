@@ -47,7 +47,13 @@ Repeats ignored for toggles; Space/Enter on a focused button stays native; `?` m
 
 ## Live region strings (CAP-11)
 
-One polite region in the UI, announcements replace. Triggers: phase change (`Composing. BAKED, 5 letters.`), invalid word, commit (just-committed signal from the dispatch call site; word, cell and delta from the committed move's view), Undo, Redo, New game (default: announce the resulting phase), outcome. A winning Confirm announces the commit at commit time and the outcome when the sheet opens, replacing the commit text (test). The ticket lists every string here.
+Ticket 6.13 built this; `src/ui/text.ts` holds every string, `src/ui/announce.ts` the one setter. One polite region (`role="status"`, clipped) mounted once at the App root; announcements replace (clear, then set in the next rAF; latest wins; the outcome queues behind a pending commit set; a set falling due while `document.hidden` is skipped).
+
+Names: column card `{L}, column {c}, card {i} of {n}{, selected}{, destination}`; tray tile `{L}, tray, tile {i} of {n}{, selected}` (live tiles only); WordCell top card `{L}, WordCell {c}, top`; WordCell `WordCell {c}, top {L}, {n card(s)}{, used}`; empty `WordCell {c}, empty`; foot `Column {c} foot` (`role="group"`), source foot `Column {c}, here`. QU reads `Q U, counts as two letters`. Buried WordCell cards are `aria-hidden` (owner decision 2026-10-15).
+
+Announcements: phase change `Composing. {WORD}, {N letters}.` / `Place. ...`; invalid word `{WORD} isn't in the word list.`; commit `{WORD} placed on cell {c}, plus N|minus N|no change` (from the pre-dispatch view); Undo `Undo. {phase}`; Redo `Redo. {phase}` (idle phase `Idle.`); New game `New game. Idle.`; Replay `Replay. Idle.`; outcome `{title} Score {N|minus N}, {band}.` (title is the end sheet's: `Every column cleared.` or `Game given up.`), set only when `openDeferred` returns true. Give up sets no other string. Silent: relaunch, sheet re-expand, hidden return, word edits inside Composing, no-op dispatches (`changed` false).
+
+Close-out note for the docs (not edited here): EXPERIENCE.md Accessibility Floor and SPEC CAP-11 ("every card is a button") need an exception for buried WordCell cards.
 
 ## Close-out edits (owner-visible docs; the spec wins)
 

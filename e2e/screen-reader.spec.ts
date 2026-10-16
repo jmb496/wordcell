@@ -1,0 +1,298 @@
+import { expect, type Page, test } from '@playwright/test';
+import { centre, glidesSettled, openFixture, tapAt } from './helpers/board';
+import { hidePage, showPage } from './helpers/lifecycle';
+import { REGION, recordRegion, resetRegion, sets } from './helpers/live-region';
+import { onAndroid } from './helpers/project';
+import { fixture, seedStorage } from './helpers/seed';
+
+// Epic 6 ticket 6.13 (SPEC CAP-11; EXPERIENCE.md Accessibility Floor, A-E9): accessible names and
+// the one polite live region. Fixtures (seed 1): `session-composing` (TAN, 3 letters, column 3's
+// two cards on column 6 with k = 1), `session-place` (the same word in Place, target cell 3),
+// `session-idle-fresh`, `session-won` (Undo gives the Place whose Confirm wins), `session-gave-up`.
+
+test.beforeEach(onAndroid);
+
+const primary = (page: Page) => page.getByTestId('primary-action');
+const region = (page: Page) => page.locator(REGION);
+const menuButton = (page: Page) => page.getByRole('button', { name: 'Menu', exact: true });
+const WIN = 'Every column cleared.';
+
+// Waits one settled frame so a pending rAF set has landed.
+async function settled(page: Page): Promise<void> {
+  await glidesSettled(page);
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
+}
+
+// The glyph of a live card, `Qu` read as the QU name.
+async function letterOf(page: Page, id: number): Promise<string> {
+  const glyph = (await page.getByTestId(`card-${id}`).locator('.glyph').textContent()) ?? '';
+  return glyph === 'Qu' ? 'Q U, counts as two letters' : glyph;
+}
+
+test('A-E9 the region is one polite status element at the root, clipped and not inert', async ({
+  page,
+}) => {
+  await openFixture(page, 'session-idle-fresh');
+  await expect(region(page)).toHaveCount(1);
+  await expect(region(page)).toHaveAttribute('role', 'status');
+  await expect(region(page)).toHaveAttribute('aria-live', 'polite');
+  const state = await region(page).evaluate((el) => ({
+    display: getComputedStyle(el).display,
+    inert: el.closest('[inert]') !== null,
+    insideTray: el.closest('[data-band="tray"]') !== null,
+  }));
+  expect(state).toEqual({ display: 'block', inert: false, insideTray: false });
+  await menuButton(page).click();
+  expect(await region(page).evaluate((el) => el.closest('[inert]') !== null)).toBe(false);
+});
+
+test('A-E9 column cards, a selected card and a source foot read their names', async ({ page }) => {
+  await openFixture(page, 'session-idle-fresh');
+  const first = page.locator('[data-testid="column-1"] [data-place="column"]');
+  const n = await first.count();
+  const id = Number(await first.nth(1).getAttribute('data-card-id'));
+  const letter = await letterOf(page, id);
+  await expect(first.nth(1)).toHaveAttribute('role', 'button');
+  await expect(first.nth(1)).toHaveAccessibleName(`${letter}, column 1, card 2 of ${n}`);
+  await expect(page.getByTestId('foot-1')).toHaveAttribute('role', 'group');
+  await expect(page.getByRole('group', { name: 'Column 3 foot' })).toHaveCount(1);
+
+  await tapAt(page, await centre(first.nth(n - 1)));
+  const last = Number(await first.nth(n - 1).getAttribute('data-card-id'));
+  await expect(first.nth(n - 1)).toHaveAccessibleName(
+    `${await letterOf(page, last)}, column 1, card ${n} of ${n}, selected`,
+  );
+  await expect(page.getByTestId('foot-1')).toHaveAccessibleName('Column 1, here');
+  await expect(page.getByTestId('foot-2')).toHaveAccessibleName('Column 2 foot');
+});
+
+test('A-E9 an empty WordCell reads its name', async ({ page }) => {
+  await openFixture(page, 'session-idle-fresh');
+  await expect(page.getByTestId('wordcell-3')).toHaveAccessibleName('WordCell 3, empty');
+});
+
+test('A-E9 a stacked WordCell reads its name and exposes one named button', async ({ page }) => {
+  await openFixture(page, 'session-won');
+  const name = await page.getByTestId('wordcell-7').getAttribute('aria-label');
+  expect(name).toMatch(/^WordCell 7, top (Q U, counts as two letters|[A-Z]), \d+ cards$/);
+  // Only the top card of a non-used cell is a named button; a buried card is aria-hidden.
+  const buttons = page.getByTestId('wordcell-7').getByRole('button');
+  await expect(buttons).toHaveCount(1);
+  await expect(buttons.first()).toHaveAccessibleName(/, WordCell 7, top$/);
+});
+
+test('A-E9 Composing names the destination card, tray tiles, a selected tile and −, +, Flip', async ({
+  page,
+}) => {
+  await openFixture(page, 'session-composing');
+  await expect(page.getByRole('button', { name: /, destination$/ })).toHaveCount(1);
+  const tiles = page.getByRole('button', { name: /, tray, tile \d of \d/ });
+  const n = await tiles.count();
+  expect(n).toBeGreaterThan(0);
+  await expect(tiles.last()).toHaveAccessibleName(new RegExp(`, tray, tile ${n} of ${n}$`));
+  await tapAt(page, await centre(tiles.first()));
+  await expect(
+    page.getByRole('button', { name: new RegExp(`, tray, tile 1 of ${n}, selected$`) }),
+  ).toHaveCount(1);
+  await expect(page.getByRole('button', { name: '−', exact: true })).toHaveCount(1);
+  await expect(page.getByRole('button', { name: '+', exact: true })).toHaveCount(1);
+  await expect(page.getByRole('button', { name: 'Flip', exact: true })).toHaveCount(1);
+});
+
+test('A-E9 live region through Validate, Confirm, Undo and a committing Redo', async ({ page }) => {
+  await openFixture(page, 'session-composing');
+  await recordRegion(page);
+  await primary(page).click();
+  await expect(primary(page)).toHaveText('Confirm');
+  await expect.poll(() => sets(page)).toEqual(['Place. TAN, 3 letters.']);
+  await resetRegion(page);
+
+  await primary(page).click();
+  await glidesSettled(page);
+  await expect.poll(() => sets(page)).toEqual(['TAN placed on cell 3, plus 9']);
+  await resetRegion(page);
+
+  await page.getByTestId('undo').click();
+  await expect.poll(() => sets(page)).toEqual(['Undo. Place. TAN, 3 letters.']);
+  await resetRegion(page);
+
+  await page.getByTestId('redo').click();
+  await expect.poll(() => sets(page)).toEqual(['TAN placed on cell 3, plus 9']);
+});
+
+test('A-E9 Undo and Redo of a phase announce the resulting phase', async ({ page }) => {
+  await openFixture(page, 'session-composing');
+  await recordRegion(page);
+  await page.getByTestId('undo').click();
+  await expect.poll(() => sets(page)).toEqual(['Undo. Idle.']);
+  await resetRegion(page);
+  await page.getByTestId('redo').click();
+  await expect.poll(() => sets(page)).toEqual(['Redo. Composing. TAN, 3 letters.']);
+});
+
+test('A-E9 a repeated invalid word is announced twice, as two separate sets', async ({ page }) => {
+  await page.route(/\/en[^/?]*\.txt$/, (route) =>
+    route.fulfill({ status: 200, body: 'cat\ndog\n' }),
+  );
+  await seedStorage(page, { session: fixture('session-composing.json') });
+  await page.goto('/');
+  await expect(page.getByTestId('card-0')).toBeVisible();
+  await expect(primary(page)).toHaveText('Validate');
+  await expect(primary(page)).toBeEnabled();
+  await recordRegion(page);
+  await primary(page).click();
+  await expect.poll(() => sets(page)).toEqual(["TAN isn't in the word list."]);
+  await settled(page);
+  await primary(page).click();
+  await expect
+    .poll(() => sets(page))
+    .toEqual(["TAN isn't in the word list.", "TAN isn't in the word list."]);
+});
+
+test('A-E9 New game and Replay announce the Idle phase', async ({ page }) => {
+  await openFixture(page, 'session-composing');
+  await recordRegion(page);
+  await menuButton(page).click();
+  await page
+    .getByRole('dialog', { name: 'Menu', exact: true })
+    .getByRole('button', { name: 'Replay this deal', exact: true })
+    .click();
+  await page
+    .getByRole('dialog', { name: 'Replay this deal?' })
+    .getByRole('button', { name: 'Replay', exact: true })
+    .click();
+  await expect.poll(() => sets(page)).toEqual(['Replay. Idle.']);
+  await resetRegion(page);
+
+  await menuButton(page).click();
+  await page
+    .getByRole('dialog', { name: 'Menu', exact: true })
+    .getByRole('button', { name: 'New game', exact: true })
+    .click();
+  // After Replay the deal has no moves, so New game acts at once (R-74).
+  await expect.poll(() => sets(page)).toEqual(['New game. Idle.']);
+});
+
+test('A-E9 New game from the rejected root announces', async ({ page }) => {
+  await seedStorage(page, { session: fixture('session-invalid-version-unknown.json') });
+  await page.goto('/');
+  await recordRegion(page);
+  await page.getByRole('button', { name: 'New game', exact: true }).click();
+  await expect.poll(() => sets(page)).toEqual(['New game. Idle.']);
+});
+
+test('A-E9 a win announces the commit text first, then the outcome', async ({ page }) => {
+  await openFixture(page, 'session-won', { steps: ['undo'] });
+  await recordRegion(page);
+  await resetRegion(page);
+  await primary(page).click();
+  await expect.poll(async () => (await sets(page)).length).toBe(2);
+  const [commit, outcome] = await sets(page);
+  expect(commit).toMatch(
+    /^[A-Z]+ placed on cell \d+, (plus|minus) \d+$|^[A-Z]+ placed on cell \d+, no change$/,
+  );
+  expect(outcome).toMatch(new RegExp(`^${WIN} Score \\d+, [A-Za-z ]+\\.$`));
+});
+
+test('A-E9 a Give up announces only the outcome, penalty not read', async ({ page }) => {
+  await openFixture(page, 'session-idle-fresh');
+  await recordRegion(page);
+  await menuButton(page).click();
+  await page
+    .getByRole('dialog', { name: 'Menu', exact: true })
+    .getByRole('button', { name: 'Give up', exact: true })
+    .click();
+  await expect.poll(async () => (await sets(page)).length).toBe(1);
+  const [outcome] = await sets(page);
+  expect(outcome).toMatch(/^Game given up\. Score minus \d+, [A-Za-z ]+\.$/);
+});
+
+test('A-E9 a relaunch into a stored session is silent', async ({ page }) => {
+  await openFixture(page, 'session-composing');
+  await recordRegion(page);
+  await settled(page);
+  expect(await sets(page)).toEqual([]);
+});
+
+test('A-E9 a relaunch into Game over is silent', async ({ page }) => {
+  await openFixture(page, 'session-gave-up', { endSheet: 'expanded' });
+  await recordRegion(page);
+  await settled(page);
+  expect(await sets(page)).toEqual([]);
+});
+
+test('A-E9 a return from hidden and a sheet re-expand are silent', async ({ page }) => {
+  await openFixture(page, 'session-gave-up', { endSheet: 'expanded' });
+  await recordRegion(page);
+  await page.getByRole('button', { name: 'Collapse result', exact: true }).click();
+  await page.getByRole('button', { name: /^Show result:/ }).click();
+  await hidePage(page);
+  await page.waitForTimeout(300);
+  await showPage(page);
+  await settled(page);
+  expect(await sets(page)).toEqual([]);
+});
+
+test('A-E9 a used WordCell reads its name with used', async ({ page }) => {
+  await openFixture(page, 'session-place-free-letter-two-cards');
+  await expect(page.getByTestId('wordcell-4')).toHaveAccessibleName(
+    'WordCell 4, top N, 2 cards, used',
+  );
+});
+
+test('A-E9 a QU column card reads Q U, counts as two letters', async ({ page }) => {
+  await openFixture(page, 'session-idle-fresh');
+  await expect(
+    page.getByRole('button', { name: 'Q U, counts as two letters, column 3, card 2 of 7' }),
+  ).toHaveCount(1);
+});
+
+test('A-E9 a QU top card of a non-used WordCell reads Q U, counts as two letters', async ({
+  page,
+}) => {
+  // Place with QU as the free letter of cell 4, undone twice: Idle, cell 4 no longer used.
+  await openFixture(page, 'session-place-compact', { steps: ['undo', 'undo'] });
+  await expect(page.getByTestId('wordcell-4')).toHaveAccessibleName(
+    'WordCell 4, top Q U, counts as two letters, 3 cards',
+  );
+  await expect(
+    page.getByRole('button', { name: 'Q U, counts as two letters, WordCell 4, top' }),
+  ).toHaveCount(1);
+});
+
+test('A-E9 the region has no inert ancestor with a panel and a dialog open', async ({ page }) => {
+  const inert = () => region(page).evaluate((el) => el.closest('[inert]') !== null);
+  await openFixture(page, 'session-idle-empty-column');
+  await menuButton(page).click();
+  await page
+    .getByRole('dialog', { name: 'Menu', exact: true })
+    .getByRole('button', { name: 'Preferences', exact: true })
+    .click();
+  await expect(page.getByRole('dialog', { name: 'Preferences', exact: true })).toBeVisible();
+  expect(await inert()).toBe(false);
+  await page.getByRole('button', { name: 'Close preferences', exact: true }).click();
+  await menuButton(page).click();
+  await page
+    .getByRole('dialog', { name: 'Menu', exact: true })
+    .getByRole('button', { name: 'New game', exact: true })
+    .click();
+  await expect(page.getByRole('dialog', { name: 'Start a new game?' })).toBeVisible();
+  expect(await inert()).toBe(false);
+});
+
+test('A-E9 the region has no inert ancestor with the History notice open', async ({ page }) => {
+  await seedStorage(page, {
+    session: fixture('session-idle-fresh.json'),
+    history: fixture('history-invalid-null.json'),
+  });
+  await page.goto('/');
+  await expect(
+    page.getByRole('dialog', { name: "Your score history can't be read." }),
+  ).toBeVisible();
+  expect(await region(page).evaluate((el) => el.closest('[inert]') !== null)).toBe(false);
+});

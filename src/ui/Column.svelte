@@ -104,6 +104,16 @@ const liftStart = $derived(column.cards.length - count);
         remainderTop={source && i === liftStart - 1}
         stop={id === stop}
         onfocus={() => roving.focusedColumn(column.column, id)}
+        name={ghost
+          ? undefined
+          : text.nameColumnCard(
+              (faces[id] as Face).letter,
+              column.column,
+              i + 1,
+              column.cards.length,
+              i >= liftStart,
+              phase === 'composing' && inDestination(id),
+            )}
       />
     {/each}
     {#if source}
@@ -122,6 +132,8 @@ const liftStart = $derived(column.cards.length - count);
     class:source
     class:target={selection !== null && !source}
     class:whole={source && liftStart === 0}
+    role="group"
+    aria-label={source ? text.nameFootSource(column.column) : text.nameFoot(column.column)}
     data-testid="foot-{column.column}"
     data-foot={column.column}
     style:grid-row={footRow}

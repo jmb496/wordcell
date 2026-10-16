@@ -3,7 +3,7 @@
 // CAP-8, F6, F7). Callers wrap them in act() (AD-12); the key handler's rows are in keys.ts.
 import { flushSync } from 'svelte';
 import type { Command } from '../engine/index';
-import { game } from '../shell/game.svelte';
+import { dispatchAnnounced } from './announce';
 import { capture, play } from './flip';
 import { overlays } from './overlays.svelte';
 
@@ -23,14 +23,14 @@ export function undo(): void {
   closeTransient();
   const command = { type: 'undo' } as const;
   capture();
-  play(command, game.dispatch(command));
+  play(command, dispatchAnnounced(command));
 }
 
 export function redo(): void {
   closeTransient();
   const command = { type: 'redo' } as const;
   capture();
-  play(command, game.dispatch(command));
+  play(command, dispatchAnnounced(command));
 }
 
 // F15/F21: each call dispatches one `validate`; flushSync renders the result (Place, Confirm)
@@ -39,7 +39,7 @@ export function validate(): void {
   closeTransient();
   const command = { type: 'validate' } as const;
   capture();
-  const result = game.dispatch(command);
+  const result = dispatchAnnounced(command);
   flushSync();
   play(command, result);
 }
@@ -49,14 +49,14 @@ export function confirm(): void {
   closeTransient();
   const command = { type: 'confirm' } as const;
   capture();
-  play(command, game.dispatch(command));
+  play(command, dispatchAnnounced(command));
 }
 
 export function flip(): void {
   closeTransient();
   const command = { type: 'flip' } as const;
   capture();
-  play(command, game.dispatch(command));
+  play(command, dispatchAnnounced(command));
 }
 
 /**
@@ -67,7 +67,7 @@ export function flip(): void {
 export function edit(command: Command): void {
   closeTransient();
   capture();
-  play(command, game.dispatch(command));
+  play(command, dispatchAnnounced(command));
 }
 
 // R-31: `−` and `+` (the buttons and the `-`/`+` keys) dispatch k ∓ 1 from the k they show.

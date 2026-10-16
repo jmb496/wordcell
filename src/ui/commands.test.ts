@@ -27,6 +27,10 @@ vi.mock('../shell/game.svelte', () => ({
     },
   },
 }));
+vi.mock('./announce', async () => {
+  const { game } = await import('../shell/game.svelte');
+  return { dispatchAnnounced: (c: never) => game.dispatch(c) };
+});
 vi.mock('./flip', () => ({
   capture: () => mocks.log.push('capture'),
   play: (command: { type: string }) => mocks.log.push(`play ${command.type}`),

@@ -3,6 +3,8 @@ import { game, type RejectReason } from '../shell/game.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { act } from './act';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import { region } from './announce';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import BlockingMessage from './BlockingMessage.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Board from './Board.svelte';
@@ -67,6 +69,10 @@ function rejectedBody(reason: RejectReason): string {
 }
 </script>
 
+<!-- Epic 6 CAP-11 (6.13): the one polite live region, mounted once here outside every branch and
+     inert wrapper; only announce.ts sets it. -->
+<div class="live" role="status" aria-live="polite" use:region></div>
+
 {#if game.state.kind === 'halted'}
   <Halted />
 {:else if game.state.kind === 'rejected'}
@@ -97,6 +103,10 @@ function rejectedBody(reason: RejectReason): string {
 {/if}
 
 <style>
+  .live {
+    position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0;
+    overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+  }
   main:focus { outline: none; }
   .booting { padding: 16px; }
   h1 { margin: 0; font-size: 1.25rem; }

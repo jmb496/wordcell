@@ -1,9 +1,9 @@
 <script lang="ts">
 import { tick, untrack } from 'svelte';
 import type { GameView } from '../engine/index';
-import { game } from '../shell/game.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { act } from './act';
+import { dispatchAnnounced } from './announce';
 import { onDispatched } from './end-sheet';
 import { requestNewGame, requestReplay } from './new-game';
 import { openSurface } from './open-surface';
@@ -59,7 +59,7 @@ function giveUp(): void {
   close();
   overlays.clearTile();
   skipFocus = true;
-  onDispatched(game.dispatch({ type: 'giveUp' }), (callback) => callback());
+  onDispatched(dispatchAnnounced({ type: 'giveUp' }), (callback) => callback());
 }
 
 // Ticket 6.4: Preferences closes the menu, then opens the panel; Panel owns the focus, so Menu's
