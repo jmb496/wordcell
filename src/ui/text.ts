@@ -346,6 +346,17 @@ export const text = Object.freeze({
     exampleWords: EXAMPLE_WORDS,
     exampleCaption: (word: string) => `${word}, ${letters(word.length)}`,
     controlCaptions: { touch: 'Touch', mouse: 'Mouse', keyboard: 'Keyboard' },
+    // Epic 8 ticket 1 (HP-6): scene captions (the figure's visible description, its name) and the
+    // scene control names; the owner reads the captions at the epic's text review.
+    scenes: {
+      drag: 'Press a card and drag: it takes every card below it. Drop the stack on a column.',
+    },
+    sceneControls: {
+      pause: 'Pause animation',
+      restart: 'Restart animation',
+      next: 'Next',
+      replay: 'Replay',
+    },
     // [gesture, effect] rows from EXPERIENCE.md's interaction text.
     touch: [
       ['Drag a card', 'Lifts it and the cards below it; drop on a column to start a word'],

@@ -4,6 +4,8 @@ import source from './HowToPlayPanel.svelte?raw';
 import { bandNames, text } from './text';
 
 // Ticket 6.9 (CAP-8): the How to play panel by server render (the unit environment has no DOM).
+// Epic 8 ticket 1: the scenes read the Animation speed pref, whose store imports the game store.
+vi.mock('../shell/prefs.svelte', () => ({ prefs: { motion: { baseMs: 180, reduced: false } } }));
 vi.mock('../shell/nav', () => ({ nav: { push: () => undefined, pop: () => undefined } }));
 
 async function html(): Promise<string> {
@@ -45,9 +47,10 @@ describe('AD-3 How to play panel', () => {
       ...text.howTo.exampleIntro,
     ];
     expect(paragraphs).toEqual(expected);
-    expect(inner(body, 'figcaption')).toEqual(
-      text.howTo.exampleWords.map(text.howTo.exampleCaption),
-    );
+    expect(inner(body, 'figcaption')).toEqual([
+      text.howTo.scenes.drag,
+      ...text.howTo.exampleWords.map(text.howTo.exampleCaption),
+    ]);
     expect(inner(body, 'caption')).toEqual(Object.values(text.howTo.controlCaptions));
     for (const name of bandNames()) expect(body).toContain(name);
     expect(text.howTo.undo.join(' ')).toContain('no Cancel');
@@ -60,7 +63,8 @@ describe('AD-3 How to play panel', () => {
     expect(body).not.toContain('data-testid');
     expect(body).not.toContain('data-mirror-of');
     expect(body).not.toContain('data-place');
-    expect(body.match(/class="card[^"]*static/g)).toHaveLength(22);
+    // 22 worked-example cards plus scene 1’s 19 static cards (10 column, 4 tail, 5 tray) (epic 8 ticket 1).
+    expect(body.match(/class="card[^"]*static/g)).toHaveLength(22 + 19);
   });
 
   it('AD-3 the markup has no prose text node (every string is a text.ts expression)', () => {

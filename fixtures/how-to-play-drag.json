@@ -1,0 +1,12 @@
+{
+  "scene": "drag",
+  "start": {
+    "columns": [
+      ["F", "E", "D", "K", "A"],
+      ["X", "O", "R", "I", "N"],
+      ["L", "M", "F", "B"]
+    ],
+    "cells": { "6": ["L"] }
+  },
+  "commands": [{ "type": "drop", "sourceColumn": 1, "sourceCount": 4, "destinationColumn": 3 }]
+}

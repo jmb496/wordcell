@@ -7,6 +7,10 @@ import Card from './Card.svelte';
 import { overlays } from './overlays.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Panel from './Panel.svelte';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import { scenes } from './scenes/index';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import Scene from './scenes/Scene.svelte';
 import { bandNames, text } from './text';
 
 // Epic 6 CAP-8 (ticket 6.9; EXPERIENCE.md How to play panel; DESIGN.md Panels): the static
@@ -45,6 +49,9 @@ function close(): void {
 </script>
 
 <Panel title={text.howToPlay} closeLabel={text.closeHowToPlay} onclose={act(close)} {open}>
+  <section class="scenes">
+    {#each scenes as scene (scene.id)}<Scene {scene} />{/each}
+  </section>
   <section>
     <h3>{h.goal}</h3>
     {#each text.howTo.goal as paragraph}<p>{paragraph}</p>{/each}
