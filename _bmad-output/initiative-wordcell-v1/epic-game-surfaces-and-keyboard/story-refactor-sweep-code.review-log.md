@@ -1,6 +1,6 @@
 # Review log: story-refactor-sweep-code
 
-State: pass 4: done
+State: pass 5: done (converged)
 
 Pre-loop: HEAD 0aabff067f72e04a4342a375028c4689ef4f6c40; words 109; copy /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-game-surfaces-and-keyboard/story-refactor-sweep-code.review-log.passes/pass0.md
 Budget: 1500 words.
@@ -61,3 +61,23 @@ Reviewers: fix diff, edge-case, adversarial, ref alignment  |  Findings (merged)
 - all; reviewer defaults taken. Dropped nothing; "no text change" ref item (A8 row) needs none.
 Words (docs): 1365 (12.5x pass 0, within stated budget 1500)  |  Snapshot: _bmad-output/initiative-wordcell-v1/epic-game-surfaces-and-keyboard/story-refactor-sweep-code.review-log.passes/pass4.md
 Fixer: all items applied.
+
+## Pass 5 — 2026-10-16
+Reviewers: fix diff, edge-case, adversarial, ref alignment  |  Findings: major 0, minor 11, decision-needed 0  |  Dropped in triage: 0
+No fix pass (converged). Words: 1365 (12.5x pass 0, within budget 1500).
+
+## Result — converged after 5 passes
+Majors per pass: 7, 7, 5, 2, 0. No decision-needed, no open major.
+
+### Unapplied minors (for the next build or loop)
+- "entries of a not-done ticket" exclusion should cover every deferred source, not only carry-ins/`deferred:`.
+- "outside the categories or Owns" → say "outside Owns" only (keeps the comment-edit exception).
+- `recorded for owner` trigger "new assertion" → "new assertion in an existing test, or a new P6 row" (scan/helper cases stay allowed).
+- 6.17 rows derived from applied rows are not part of the closed deferred set.
+- A comment holding only an id citation is kept as is.
+- Probe: record raw getBoundingClientRect and computed-style strings; any textual difference is a mismatch.
+- `none` row only when the category has no row at all.
+- `already satisfied` check applies to every deferred item, not only carry-ins.
+- Merge spec-local helpers only if behaviourally identical, else record for owner.
+- Size budget is AD-18 (size) and unit median AD-17; optionally name the 600,000-byte limit.
+- At publish, sync tickets.toml entry 16 owns/tests text to the ticket.
