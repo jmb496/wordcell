@@ -272,3 +272,7 @@ Tests: `npm run test:all` FAILED at the dev-server e2e: [android] menu.spec.ts:3
 Ref to fix upstream: none
 Worth knowing: the menu spec and menu files are not touched by this ticket (diff is guard, flip, motion, main, new-game and tests), so this looks like a pre-existing flaky pixel check, but I did not confirm it by rerunning. Step B prompt did not pass on two unapplied ticket-review minors (releaseHold wrapper test; SPEC CAP-5 "(none: opens at once)" edit); check the plan covers them.
 Close-out docs: none new from this ticket (SPEC.md CAP-5 clause may need the F23 edit above)
+
+## Stopped — ticket 6.12 step D (test:all failed on type check, session 2026-10-16)
+The sub-pixel menu row check is fixed (9f90cce), but the same commit's "lint type" change broke the type check: `npm run check` (svelte-check) reports 3 errors in `src/ui/motion.test.ts` at lines 701, 721 and 731 — the `opened` mock is passed where a `() => void` is expected, and is called as a constructor-style mock type. Lint passes. The unit, e2e and screenshot steps did not run. Ticket 6.12 stays `built`.
+Resume: fix the typing of `opened` in `src/ui/motion.test.ts` (test-only), then rerun the driver.

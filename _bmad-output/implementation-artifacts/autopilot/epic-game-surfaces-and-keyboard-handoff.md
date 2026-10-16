@@ -1,18 +1,14 @@
 outcome: stopped
 ticket: 6.12
-reason: rule 3, npm run test:all failed (android menu row height 51.99997 vs 52)
+reason: rule 3, npm run test:all failed at check (type errors in src/ui/motion.test.ts 701, 721, 731)
 next: 6.12
-updated: 2026-10-16T00:00:00Z
-summary: Ticket 6.12 is built and code-reviewed, but the full test run failed on one menu row-height check unrelated to the ticket.
+updated: 2026-10-16T01:25:00Z
+summary: Ticket 6.12 is built and reviewed; the full test run now fails on three test-file type errors, not on the earlier menu check.
 
 ## Report
 
-6.12 (Undo cancels the pending win sheet) was reviewed (5 passes), built and code-reviewed (2 passes) with nothing needing your decision. The full test run then failed on one test: the android menu spec expects each menu row to be exactly 52 px tall and one measured 51.99997. This ticket does not touch the menu, so it looks like a flaky sub-pixel check (the spec already tolerates it for the "How to play" row), but I did not rerun it. There is also a one-line formatting warning in src/ui/motion.test.ts:691.
+The earlier menu row-height failure is fixed. The rerun of the full test run now stops earlier, at the type check: three errors in `src/ui/motion.test.ts` (lines 701, 721, 731), where the `opened` test mock is typed so that it cannot be passed as a plain function. No game behaviour is affected; it is a test-only typing fix. Nothing needs your decision. Ticket 6.12 stays `built`, not done. Screenshots were not run (they follow a green test run).
 
-The ticket stays `built`, not done. Options: rerun `npm run test:all` to see whether it was a flake, or loosen that row check to `toBeCloseTo(52, 1)` like its neighbour (a test-only change). Neither affects gameplay.
+Resume: fix the mock's type in that test file (for example type `opened` as `vi.fn<() => void>()`), then rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-game-surfaces-and-keyboard`.
 
-Close-out docs: SPEC.md CAP-5 "(none: opens at once)" clause should match F23 (ticket-review minor, not yet applied).
-
-## Next
-
-Resolve the above, then rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-game-surfaces-and-keyboard`. Digest: _bmad-output/implementation-artifacts/autopilot/epic-game-surfaces-and-keyboard-20261014-2230.md
+Close-out docs: SPEC.md CAP-5 "(none: opens at once)" edit may be needed (from ticket 6.12 review).
