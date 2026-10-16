@@ -1,6 +1,6 @@
 # Review log — ticket 6.15 Success signal
 
-State: pass 3: done
+State: pass 4: done
 Pre-loop: HEAD bc81b42b5ad90657220fdef2aeb75c85e0685866, 178 words (copy: .passes/pass0.md)
 
 ## Pass 1 — 2026-10-16
@@ -57,3 +57,26 @@ Words (docs): 723 (4.1 x pass 0, over budget)  |  Snapshot: .passes/pass3.md
 - none
 ### Dropped
 - none
+
+## Pass 4 — 2026-10-16
+Reviewers: fix-diff, edge-case, adversarial, ref alignment  |  Findings: major 0, minor 9, decision-needed 0  |  Dropped in triage: none
+Words (docs): 723 (unchanged; no fix pass)
+### Applied
+- none (converged)
+### Decision needed
+- none
+
+## Result — converged after 4 passes
+
+Majors per pass: 8, 7, 7, 0. Words 178 → 723 (4.1x). Decision-needed: none. Technical defaults applied: all pass 1-3 choices.
+
+Unapplied minors (for the build plan):
+- stray ",." in the Flow 6 paragraph ("),. Adds:" → "). Adds:")
+- R-75 in the android test name but Undo-after-Give-up not exercised; claim only the Give-up-acts-at-once sentence or drop R-75 from the name
+- keys.ts move: state that "what they use" means adding `export` to the shared locators (tray, tiles, strip, cell, primary, focusedCard, where, letters) and that helpers.spec.ts asserts the names
+- android flows: openFixture then waitForDictionary(page,'ready'); desktop uses keys.ts `open`
+- record where the replayed literals (49→58, −372, 319→355, 190, moves[3]) are derived (build plan table)
+- reload step: wait for dialog and `Collapse result` before animationFrames; do not use openFixture (it collapses the sheet)
+- confirm against R-76/AD-9 that the timer runs on a fresh Idle game, else make a move first
+- Esc: assert dialog 'How to play' count 0 and focus return; say where I-68 is defined
+- list the dispatching keys of Flow 6 beside the expectations
