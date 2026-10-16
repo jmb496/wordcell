@@ -373,3 +373,85 @@ for (const { id, rules, frames } of stepScenes) {
       .toContain(`${id}-step-${lastStep}`);
   });
 }
+
+// Epic 8 ticket 3 (HP-3d, HP-3e, HP-2): scenes 4 (place) and 5 (scoring) stepped to their last
+// frame under reduced motion; per frame the open layer, the strip, the lit cells and the figures.
+test('R-40 R-42 R-50 R-51 R-52 R-60 AD-14 with reduced motion scene place steps through 6 frames to its last', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await openFixture(page, 'session-idle-fresh');
+  await openPanel(page);
+  const figure = panel(page).getByRole('figure', { name: text.howTo.scenes.place });
+  await figure.scrollIntoViewIfNeeded();
+  expect(await sceneAnimations(page)).toEqual([]);
+  // Per frame: strip letters (undefined: none), lit cells, the selected cell, cell 6's cards.
+  const frames = [
+    { strip: undefined, lit: 0, target: 0, cell6: 'L', button: text.validate },
+    { strip: 'BALKED', lit: 3, target: 1, cell6: 'L', button: text.confirm },
+    { strip: 'BALKED', lit: 3, target: 1, cell6: 'L', button: text.confirm },
+    { strip: 'BALKED', lit: 3, target: 1, cell6: 'L', button: text.confirm },
+    { strip: 'DBALKE', lit: 3, target: 1, cell6: 'L', button: text.confirm },
+    { strip: undefined, lit: 0, target: 0, cell6: 'DBALKE', button: undefined },
+  ];
+  for (const [i, frame] of frames.entries()) {
+    const layer = figure.locator(`[data-scene-el="place-${i}"]`);
+    await expect(layer).toHaveCSS('opacity', '1');
+    await expect(figure.locator('[data-scene-el^="place-"][style*="opacity: 1"]')).toHaveCount(1);
+    if (frame.strip === undefined) await expect(layer.locator('.tiles')).toHaveCount(0);
+    else await expect(layer.locator('.tiles .card')).toHaveText(frame.strip.split(''));
+    await expect(layer.locator('.stack.lit')).toHaveCount(frame.lit);
+    await expect(layer.locator('.stack.target')).toHaveCount(frame.target);
+    await expect(layer.locator('.wcell').last().locator('.card')).toHaveText(frame.cell6.split(''));
+    if (frame.button !== undefined) await expect(layer.locator('.ctl')).toHaveText(frame.button);
+    else await expect(layer.locator('.ctl')).toHaveCount(0);
+    if (i < frames.length - 1)
+      await figure.getByRole('button', { name: controls.next, exact: true }).click();
+  }
+  await expect(figure.getByRole('button', { name: controls.next })).toHaveCount(0);
+  await figure.getByRole('button', { name: controls.replay, exact: true }).click();
+  await expect(figure.getByRole('button', { name: controls.next, exact: true })).toBeVisible();
+});
+
+test('R-80 R-36 AD-14 with reduced motion scene scoring steps through 5 frames to the total', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await openFixture(page, 'session-idle-fresh');
+  await openPanel(page);
+  const figure = panel(page).getByRole('figure', { name: text.howTo.scenes.scoring });
+  await figure.scrollIntoViewIfNeeded();
+  expect(await sceneAnimations(page)).toEqual([]);
+  const figures = ['3 × 3 = 9', '4 × 4 = 16', '6 × 6 = 36'];
+  for (let i = 0; i < 5; i++) {
+    for (const [k, label] of figures.entries())
+      await expect(figure.getByText(label, { exact: true })).toHaveCSS(
+        'opacity',
+        i > k ? '1' : '0',
+      );
+    await expect(figure.getByText(text.score(61), { exact: true })).toHaveCSS(
+      'opacity',
+      i === 4 ? '1' : '0',
+    );
+    if (i < 4) await figure.getByRole('button', { name: controls.next, exact: true }).click();
+  }
+  await expect(figure.getByRole('button', { name: controls.next })).toHaveCount(0);
+  await figure.getByRole('button', { name: controls.replay, exact: true }).click();
+  await expect(figure.getByRole('button', { name: controls.next, exact: true })).toBeVisible();
+});
+
+for (const [id, rules, lastStep] of [
+  ['place', 'R-40 R-42 R-51', 6],
+  ['scoring', 'R-80 R-36', 3],
+] as const) {
+  test(`${rules} AD-14 scene ${id} plays on open through its last step`, async ({ page }) => {
+    await openFixture(page, 'session-idle-fresh');
+    await openPanel(page);
+    const figure = panel(page).getByRole('figure', { name: text.howTo.scenes[id] });
+    await figure.scrollIntoViewIfNeeded();
+    await expect(figure.getByRole('button', { name: controls.pause, exact: true })).toBeVisible();
+    await expect
+      .poll(async () => (await sceneAnimations(page)).map((a) => a.id), { timeout: 30_000 })
+      .toContain(`${id}-step-${lastStep}`);
+  });
+}

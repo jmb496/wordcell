@@ -354,7 +354,14 @@ export const text = Object.freeze({
         'Arrange your cards into a word. Tap a WordCell to borrow its top card. Then Validate.',
       destination:
         "The cards you land on stay in order and can't be shuffled. \u2212/+ choose how many; Flip makes the word read upward instead.",
+      place:
+        "Pick a WordCell no higher than the word is long. Order the cards: the last one becomes that cell's free letter. Then Confirm.",
+      scoring:
+        'Each WordCell scores its letters times its number. QU counts as two letters. Long words on high cells score most.',
     },
+    // Epic 8 ticket 3 (HP-3e): a scoring scene's per-WordCell figure, letters times the cell number.
+    scoreFigure: (letters: number, cell: number, score: number): string =>
+      `${letters} \u00d7 ${cell} = ${score}`,
     sceneControls: {
       pause: 'Pause animation',
       restart: 'Restart animation',

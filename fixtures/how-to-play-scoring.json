@@ -1,0 +1,23 @@
+{
+  "scene": "scoring",
+  "start": {
+    "columns": [["Z"]],
+    "cells": {
+      "3": ["C", "A", "T"],
+      "4": ["QU", "I", "T"],
+      "6": ["D", "B", "A", "L", "K", "E"]
+    }
+  },
+  "commands": [],
+  "cells": [
+    { "after": 0, "cell": 3, "cards": ["C", "A", "T"] },
+    { "after": 0, "cell": 4, "cards": ["QU", "I", "T"] },
+    { "after": 0, "cell": 6, "cards": ["D", "B", "A", "L", "K", "E"] }
+  ],
+  "scores": [{ "after": 0, "score": 61 }],
+  "cellScores": [
+    { "after": 0, "cell": 3, "score": 9 },
+    { "after": 0, "cell": 4, "score": 16 },
+    { "after": 0, "cell": 6, "score": 36 }
+  ]
+}

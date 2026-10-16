@@ -37,3 +37,22 @@ export const CONTROL_BOX = {
 } as const;
 /** WordCell 6's card on the stage (left of column 1). */
 export const CELL6 = { x: 4, y: 4 } as const;
+
+// Epic 8 ticket 3: the place scene's lower area (WordCells 3 to 6, the placement strip, Confirm;
+// y from the area's top, TRAY_TOP) and the scoring scene's total row. Cards there use the rich
+// pitch (RICH_SLOT) except the WordCells, which keep the full card.
+export const PLACE_H = 188;
+export const SCORE_H = 52;
+/** WordCell n (3 to 6): its card's left and top inside the place area. */
+export const PLACE_CELL_TOP = 8;
+export const placeCellX = (cell: number): number => 30 + (cell - 3) * 56;
+/** The placement strip's tile row: top inside the area, and tile i's left. */
+export const STRIP_TOP = 92;
+export const stripTileX = (i: number): number => RICH_INSET + i * RICH_SLOT;
+/** Confirm: left, width, top and height inside the area. */
+export const CONFIRM_BOX = { x: 78, w: 96, y: 154, h: 30 } as const;
+/** The scoring scene's WordCell stacks: stack k (0 to 2) left and top on the stage. */
+export const scoreStackX = (k: number): number => 24 + k * 72;
+export const SCORE_STACK_TOP = 22;
+/** The scoring scene's total pill (stage coordinates; the stage is TRAY_TOP + SCORE_H high). */
+export const SCORE_TOTAL_BOX = { x: 76, w: 100, y: 214, h: 32 } as const;

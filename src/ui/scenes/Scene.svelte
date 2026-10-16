@@ -13,19 +13,29 @@ import {
   CARD_W,
   CELL6,
   COLUMN_AREA_H,
+  CONFIRM_BOX,
   CONTROL_BOX,
   CONTROLS_H,
   CONTROLS_TOP,
   columnX,
   HAND_H,
   HAND_W,
+  PLACE_CELL_TOP,
+  PLACE_H,
+  placeCellX,
   RICH_INSET,
   RICH_SLOT,
   RICH_TILE_W,
   RICH_TRAY_H,
+  SCORE_H,
+  SCORE_STACK_TOP,
+  SCORE_TOTAL_BOX,
   SLOT,
   STAGE_W,
   STRIP,
+  STRIP_TOP,
+  scoreStackX,
+  stripTileX,
   TRAY_H,
   TRAY_TOP,
 } from './geometry';
@@ -45,7 +55,13 @@ const id = $props.id();
 // A scene whose frames list tray tiles draws the open tray as one layer per frame (tiles, k and
 // side, the controls row, WordCell 6's state): a step's reveal fades the next layer in.
 const rich = $derived(scene.frames.some((f) => f.order !== undefined));
-const trayHeight = $derived(rich ? RICH_TRAY_H : TRAY_H);
+// Epic 8 ticket 3: the place scene draws one layer per frame (WordCells 3 to 6, the placement
+// strip, Confirm); the scoring scene draws WordCell stacks with per-cell figures and a total.
+const placeMode = $derived(scene.frames.some((f) => f.lit !== undefined));
+const scoreMode = $derived(scene.frames.some((f) => f.numbers !== undefined));
+const trayHeight = $derived(
+  placeMode ? PLACE_H : scoreMode ? SCORE_H : rich ? RICH_TRAY_H : TRAY_H,
+);
 const cell6Letter = $derived(
   scene.frames[0].cell6 === undefined ? undefined : scene.fixture.start.cells?.['6']?.at(-1),
 );
@@ -53,6 +69,11 @@ const geo = $derived({
   stageW: STAGE_W,
   stageH: TRAY_TOP + trayHeight,
   rich,
+  confirm: CONFIRM_BOX,
+  placeCellTop: PLACE_CELL_TOP,
+  stripTop: STRIP_TOP,
+  stackTop: SCORE_STACK_TOP,
+  totalBox: SCORE_TOTAL_BOX,
   richSlot: RICH_SLOT,
   richTileW: RICH_TILE_W,
   inset: RICH_INSET,
@@ -70,6 +91,9 @@ const geo = $derived({
   handW: HAND_W,
   handH: HAND_H,
   columnX,
+  placeCellX,
+  scoreStackX,
+  stripTileX,
 });
 const ghostFrom = $derived(ghostStart(scene));
 const controls = text.howTo.sceneControls;
@@ -84,22 +108,58 @@ const face = (letter: string) => ({ letter, letterCount: letter === 'QU' ? 2 : 1
 // tail, the tail, the D cards that join, and the tail's top in its column).
 const drawn = $derived.by(() => {
   const { carry: c, fixture } = scene;
+  if (c === undefined)
+    return {
+      carried: false,
+      columns: [],
+      tail: [],
+      destination: [],
+      tailTop: 0,
+      sourceColumn: 0,
+      destColumn: 0,
+      destTop: 0,
+    };
   const all = fixture.start.columns;
   const source = all[c.sourceColumn - 1];
+  // `landed`: the move is done, so the destination column is drawn whole and no tail or D block.
+  const landed = c.landed === true;
   return {
+    carried: !landed,
     columns: all.map((cards, i) => {
       if (i + 1 === c.sourceColumn) return cards.slice(0, cards.length - c.count);
-      if (i + 1 === c.destinationColumn) return cards.slice(0, cards.length - c.destinationCount);
+      if (i + 1 === c.destinationColumn && !landed)
+        return cards.slice(0, cards.length - c.destinationCount);
       return cards;
     }),
-    tail: source.slice(-c.count),
-    destination: all[c.destinationColumn - 1].slice(-c.destinationCount),
+    tail: landed ? [] : source.slice(-c.count),
+    destination: landed ? [] : all[c.destinationColumn - 1].slice(-c.destinationCount),
     tailTop: (source.length - c.count) * STRIP,
     sourceColumn: c.sourceColumn,
     destColumn: c.destinationColumn,
     destTop: (all[c.destinationColumn - 1].length - c.destinationCount) * STRIP,
   };
 });
+// A WordCell's cards (bottom to top) in frame `i`: the fixture start, or, in the last frame, the
+// fixture `cells` entry that states them after the scene's commands (R-52).
+const cellCards = (cell: number, i: number): readonly string[] =>
+  (i === scene.frames.length - 1
+    ? scene.fixture.cells?.findLast((entry) => entry.cell === cell)?.cards
+    : undefined) ??
+  scene.fixture.start.cells?.[String(cell)] ??
+  [];
+const PLACE_CELLS = [3, 4, 5, 6] as const;
+const stackHeight = (n: number): number => (n - 1) * STRIP + CARD_H;
+// The scoring scene's WordCells (fixture cells with a stated score), left to right.
+const scoreCells = $derived(
+  (scene.fixture.cellScores ?? []).map((entry) => {
+    const cards = cellCards(entry.cell, 0);
+    return {
+      ...entry,
+      cards,
+      letters: cards.reduce((n, letter) => n + face(letter).letterCount, 0),
+    };
+  }),
+);
 const last = $derived(scene.frames.length - 1);
 const current = $derived(scene.frames[frame]);
 const currentIndex = $derived(frame);
@@ -181,6 +241,7 @@ const replay = (): void => {
           {/each}
         </div>
       {/each}
+      {#if drawn.carried}
       <div
         class="tail"
         data-scene-el="dest"
@@ -205,6 +266,7 @@ const replay = (): void => {
           </div>
         {/each}
       </div>
+      {/if}
       {#if cell6Letter !== undefined}
         <div class="cell6" style:left="{geo.cell.x}px" style:top="{geo.cell.y}px">
           <Card id={0} face={face(cell6Letter)} place="cell" mirror="static" full />
@@ -246,7 +308,87 @@ const replay = (): void => {
           </div>
         {/if}
       {/each}
-      {#if !geo.rich}
+      {#if placeMode}
+        {#each scene.frames as frame, i (i)}
+          <div
+            class="layer"
+            data-scene-el="place-{i}"
+            style:top="{geo.trayTop}px"
+            style:height="{geo.trayH}px"
+            style:opacity={reduced ? (i === currentIndex ? 1 : 0) : i === 0 ? 1 : undefined}
+            style:--wc-w="{geo.richTileW}px"
+            style:--wc-slot="{geo.richSlot}px"
+          >
+            {#each PLACE_CELLS as cell (cell)}
+              {@const cards = cellCards(cell, i)}
+              {@const lit = frame.lit?.includes(cell) ?? false}
+              {@const target = frame.placeTarget === cell}
+              <div class="wcell" style:left="{geo.placeCellX(cell)}px" style:top="{geo.placeCellTop}px">
+                <div class="stack" class:empty={cards.length === 0} class:lit={lit && !target} class:target>
+                  {#each cards as letter, j (j)}
+                    <Card id={0} face={face(letter)} place="column" mirror="static" full={j === cards.length - 1} />
+                  {/each}
+                  {#if target}
+                    <span class="check" aria-hidden="true">
+                      <svg viewBox="0 0 14 14" width="14" height="14"><path d="M3.5 7.2 L6 9.6 L10.5 4.6" /></svg>
+                    </span>
+                  {/if}
+                </div>
+                <span class="num">{cell}</span>
+              </div>
+            {/each}
+            {#if frame.placeOrder !== undefined}
+              <div class="tiles" data-scene-el="strip-{i}" style:left="{geo.inset}px" style:top="{geo.stripTop}px">
+                {#each frame.placeOrder as letter, j (j)}
+                  <Card id={0} face={face(letter)} place="tray" mirror="static" full />
+                {/each}
+              </div>
+              <span
+                class="ctl validate lit"
+                style:left="{geo.confirm.x}px"
+                style:width="{geo.confirm.w}px"
+                style:top="{geo.confirm.y}px"
+                style:height="{geo.confirm.h}px"
+              >{text.confirm}</span>
+            {:else if frame.lit === undefined}
+              <span
+                class="ctl validate {frame.validate ?? 'off'}"
+                style:left="{geo.confirm.x}px"
+                style:width="{geo.confirm.w}px"
+                style:top="{geo.confirm.y}px"
+                style:height="{geo.confirm.h}px"
+              >{text.validate}</span>
+            {/if}
+          </div>
+        {/each}
+      {/if}
+      {#if scoreMode}
+        {#each scoreCells as entry, k (entry.cell)}
+          <span class="wnum" style:left="{geo.scoreStackX(k)}px" style:top="4px">{entry.cell}</span>
+          <div class="stack score" style:left="{geo.scoreStackX(k)}px" style:top="{geo.stackTop}px">
+            {#each entry.cards as letter, j (j)}
+              <Card id={0} face={face(letter)} place="column" mirror="static" full={j === entry.cards.length - 1} />
+            {/each}
+          </div>
+          <span
+            class="figure"
+            data-scene-el="score-{k + 1}"
+            style:left="{geo.scoreStackX(k) - 12}px"
+            style:top="{geo.stackTop + stackHeight(entry.cards.length) + 4}px"
+            style:opacity={reduced ? ((current.numbers ?? 0) > k ? 1 : 0) : undefined}
+          >{text.howTo.scoreFigure(entry.letters, entry.cell, entry.score)}</span>
+        {/each}
+        <span
+          class="ctl total"
+          data-scene-el="total"
+          style:left="{geo.totalBox.x}px"
+          style:width="{geo.totalBox.w}px"
+          style:top="{geo.totalBox.y}px"
+          style:height="{geo.totalBox.h}px"
+          style:opacity={reduced ? (current.total === undefined ? 0 : 1) : undefined}
+        >{text.score(scene.frames[last].total ?? 0)}</span>
+      {/if}
+      {#if !geo.rich && !placeMode && !scoreMode && drawn.carried}
       <div
         class="tray"
         data-scene-el="tray"
@@ -316,6 +458,36 @@ const replay = (): void => {
     background: var(--wc-surface-raised); border-top: 1px solid var(--wc-outline);
   }
   .tiles { position: absolute; top: 3px; display: flex; }
+  .wcell { position: absolute; width: var(--wc-slot); }
+  .stack { position: relative; width: var(--wc-slot); display: flex; flex-direction: column; }
+  .stack.score { position: absolute; }
+  .stack.empty { height: var(--wc-H); }
+  .stack.empty::before, .stack.lit::after, .stack.target::after {
+    content: ''; position: absolute; top: 0; left: 2px; box-sizing: border-box;
+    width: var(--wc-w); height: var(--wc-H); border-radius: 6px; pointer-events: none;
+  }
+  .stack.empty::before { border: 2px solid var(--wc-outline); }
+  .stack.lit::after { border: 2px solid var(--wc-accent-teal); }
+  .stack.target::after { border: 3px solid var(--wc-accent-teal); }
+  .stack.empty.lit::before, .stack.empty.target::before { border: none; }
+  .check {
+    position: absolute; top: 2px; left: 4px; width: 14px; height: 14px; border-radius: 50%;
+    background: var(--wc-accent-teal); pointer-events: none;
+  }
+  .check svg {
+    display: block; fill: none; stroke: var(--wc-ink-on-accent); stroke-width: 2;
+    stroke-linecap: round; stroke-linejoin: round;
+  }
+  .wnum, .wcell .num {
+    position: absolute; width: var(--wc-slot); text-align: center;
+    font: 600 13px/16px system-ui, "Roboto", sans-serif; color: var(--wc-ink-secondary);
+  }
+  .wcell .num { position: static; display: block; width: auto; }
+  .figure {
+    position: absolute; width: calc(var(--wc-slot) + 24px); text-align: center; opacity: 0;
+    font: 700 14px/20px system-ui, "Roboto", sans-serif; color: var(--wc-ink-primary);
+  }
+  .total { opacity: 0; font-weight: 700; }
   .cell6 { position: absolute; width: var(--wc-slot); }
   .cell6 .num {
     display: block; text-align: center; font: 500 12px/16px system-ui, "Roboto", sans-serif;

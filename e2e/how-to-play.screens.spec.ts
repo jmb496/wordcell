@@ -37,11 +37,14 @@ test('AD-17 how to play scene 1 final frame screenshot at 360 px', async ({ page
   await expect(scene).toHaveScreenshot('how-to-play-scene-1-final.png');
 });
 
-// Epic 8 ticket 2 (HP-2): the final frames of scene 2 (compose, Validate pressed) and scene 3
-// (destination, PEATS after Flip) under reduced motion at 360 px.
+// Epic 8 tickets 2 and 3 (HP-2): the final frames of scene 2 (compose, Validate pressed), scene 3
+// (destination, PEATS after Flip), scene 4 (place, BALKED on cell 6) and scene 5 (scoring, total 61)
+// under reduced motion at 360 px.
 for (const [n, id, last] of [
   [2, 'compose', 5],
   [3, 'destination', 4],
+  [4, 'place', 5],
+  [5, 'scoring', 4],
 ] as const) {
   test(`AD-17 how to play scene ${n} final frame screenshot at 360 px`, async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });

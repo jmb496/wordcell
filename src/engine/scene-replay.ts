@@ -33,6 +33,34 @@ export interface SceneFixture {
   /** After `after` commands, the engine's `canValidate` (R-38) equals `canValidate`. */
   readonly validatable?: readonly { readonly after: number; readonly canValidate: boolean }[];
   /**
+   * After `after` commands, cell `cell` holds `cards` (letters bottom to top, `'QU'` for the QU
+   * card; R-52, epic 8 ticket 3).
+   */
+  readonly cells?: readonly {
+    readonly after: number;
+    readonly cell: number;
+    readonly cards: readonly string[];
+  }[];
+  /**
+   * After `after` commands (Place phase only), the target, the legal targets (R-40, R-42) and the
+   * placement order (CardIds bottom to top, R-51) equal the engine's.
+   */
+  readonly place?: readonly {
+    readonly after: number;
+    readonly target: number;
+    readonly legalTargets: readonly number[];
+    readonly order: readonly number[];
+  }[];
+  /**
+   * After `after` commands, cell `cell` scores `score` (its letters x its number, R-80); every
+   * non-empty cell must be listed and the listed scores sum to the `scores` entry at that `after`.
+   */
+  readonly cellScores?: readonly {
+    readonly after: number;
+    readonly cell: number;
+    readonly score: number;
+  }[];
+  /**
    * After `after` commands, `command` has `outcome`; `row` cites the command TABLE row in
    * `commands.test.ts` (id and precondition, never imported or copied).
    */
@@ -104,6 +132,52 @@ export function replayScene(scene: SceneFixture, dictionary: ReadonlySet<string>
     const engine = viewFrom(start, sessions[after], EN).canValidate;
     if (engine !== canValidate)
       fail(scene, `after ${after} commands stated canValidate ${canValidate}, engine ${engine}`);
+  }
+  for (const { after, cell, cards } of scene.cells ?? []) {
+    index('cells after', after, count);
+    const shown = viewFrom(start, sessions[after], EN);
+    const held = shown.cells
+      .find((c) => c.cell === cell)
+      ?.cards.map((id) => shown.faces[id].letter);
+    if (held?.join(',') !== cards.join(','))
+      fail(scene, `after ${after} commands cell ${cell} stated ${cards}, engine ${held}`);
+  }
+  for (const { after, target, legalTargets, order } of scene.place ?? []) {
+    index('place after', after, count);
+    const place = viewFrom(start, sessions[after], EN).place;
+    if (place === undefined) fail(scene, `after ${after} commands there is no Place phase`);
+    if (place.target !== target)
+      fail(scene, `after ${after} commands stated target ${target}, engine ${place.target}`);
+    if (place.legalTargets.join(',') !== legalTargets.join(','))
+      fail(
+        scene,
+        `after ${after} commands stated legalTargets ${legalTargets}, engine ${place.legalTargets}`,
+      );
+    if (place.placementOrder.join(',') !== order.join(','))
+      fail(scene, `after ${after} commands stated order ${order}, engine ${place.placementOrder}`);
+  }
+  const stated = new Set((scene.cellScores ?? []).map((entry) => entry.after));
+  for (const after of stated) {
+    index('cellScores after', after, count);
+    const shown = viewFrom(start, sessions[after], EN);
+    const listed = (scene.cellScores ?? []).filter((entry) => entry.after === after);
+    let sum = 0;
+    for (const { cell, cards } of shown.cells.filter((c) => c.cards.length > 0)) {
+      const score = cards.reduce((n, id) => n + shown.faces[id].letterCount, 0) * cell;
+      const entry = listed.find((e) => e.cell === cell);
+      if (entry === undefined)
+        fail(scene, `after ${after} commands cell ${cell} has no stated score`);
+      if (entry.score !== score)
+        fail(scene, `after ${after} commands cell ${cell} stated ${entry.score}, engine ${score}`);
+      sum += score;
+    }
+    for (const { cell } of listed)
+      if (!shown.cells.some((c) => c.cell === cell && c.cards.length > 0))
+        fail(scene, `after ${after} commands cell ${cell} is empty but has a stated score`);
+    const total = (scene.scores ?? []).find((entry) => entry.after === after);
+    if (total === undefined) fail(scene, `after ${after} commands cellScores have no scores entry`);
+    if (total.score !== sum)
+      fail(scene, `after ${after} commands cell scores sum ${sum}, stated total ${total.score}`);
   }
   for (const { after, command, outcome, check, rejectedWord } of scene.rejected ?? []) {
     index('rejected after', after, count);

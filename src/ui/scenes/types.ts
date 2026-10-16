@@ -14,6 +14,27 @@ export interface SceneFixtureData {
   readonly commands: readonly { readonly type: string; readonly [key: string]: unknown }[];
   /** After `after` commands, the engine's `canValidate` (R-38); the UI draws Validate from it. */
   readonly validatable?: readonly { readonly after: number; readonly canValidate: boolean }[];
+  /** The engine's live score after `after` commands (R-80); the scoring scene draws its total. */
+  readonly scores?: readonly { readonly after: number; readonly score: number }[];
+  /** After `after` commands, cell `cell` holds `cards` (letters bottom to top; epic 8 ticket 3). */
+  readonly cells?: readonly {
+    readonly after: number;
+    readonly cell: number;
+    readonly cards: readonly string[];
+  }[];
+  /** After `after` commands in the Place phase: target, legal targets, order (CardIds, R-51). */
+  readonly place?: readonly {
+    readonly after: number;
+    readonly target: number;
+    readonly legalTargets: readonly number[];
+    readonly order: readonly number[];
+  }[];
+  /** After `after` commands, cell `cell` scores `score` (letters x number, R-80). */
+  readonly cellScores?: readonly {
+    readonly after: number;
+    readonly cell: number;
+    readonly score: number;
+  }[];
 }
 
 export interface Point {
@@ -35,6 +56,11 @@ export interface Step {
   readonly wait?: { readonly kind: MotionKind; readonly times: number };
   /** The fixture command this step animates; its type must fit the step's (script.ts). */
   readonly command?: number;
+  /**
+   * A `fly` in a scene whose tail has already landed: `element` slides by `by` and fades out
+   * (the placement strip flying to its WordCell).
+   */
+  readonly flies?: { readonly element: string; readonly by: Point };
   /** After the step: `show` fades in, `hide` fades out, over `kind`. */
   readonly reveal?: {
     readonly show: string;
@@ -47,7 +73,9 @@ export interface Step {
  * One reduced-motion frame: where the carried tail is and whether the tray is open. The optional
  * fields draw the open tray (epic 8 ticket 2): the tile letters in tray order, the destination
  * block's size `k` and `side`, Validate (`pressed` on the tap), and WordCell 6's top card (`top`)
- * or its borrowed state (`used`, R-33).
+ * or its borrowed state (`used`, R-33). The place and scoring scenes (epic 8 ticket 3) add the
+ * placement strip (`placeTarget` the selected WordCell, `lit` the legal ones, `placeOrder` the
+ * letters bottom to top) and the scoring figures (`numbers` per-cell scores shown, `total`).
  */
 export interface Frame {
   readonly tail: 'home' | 'lifted' | 'over' | 'gone';
@@ -57,6 +85,11 @@ export interface Frame {
   readonly side?: 'left' | 'right';
   readonly validate?: 'off' | 'lit' | 'pressed';
   readonly cell6?: 'top' | 'used';
+  readonly placeTarget?: number;
+  readonly lit?: readonly number[];
+  readonly placeOrder?: readonly string[];
+  readonly numbers?: number;
+  readonly total?: number;
 }
 
 export interface Scene {
@@ -64,12 +97,17 @@ export interface Scene {
   readonly fixture: SceneFixtureData;
   /** The figure's visible description (text.ts). */
   readonly caption: string;
-  /** The tail the pointer carries; `destinationCount` is the D block that joins (R-31). */
-  readonly carry: {
+  /**
+   * The tail the pointer carries; `destinationCount` is the D block that joins (R-31). Absent in a
+   * scene that draws no column move (scoring). `landed`: the move is already done, so the
+   * destination column is drawn whole (D block, then the tail) and `dest` and `tail` are not drawn.
+   */
+  readonly carry?: {
     readonly sourceColumn: number;
     readonly count: number;
     readonly destinationColumn: number;
     readonly destinationCount: number;
+    readonly landed?: boolean;
   };
   readonly targets: Readonly<Record<string, Point>>;
   /** Scene-local element ids the player may animate (`data-scene-el`). */
@@ -78,10 +116,10 @@ export interface Scene {
   /** The rest between loops: `times` multiples of `duration(kind)`. */
   readonly rest: { readonly kind: MotionKind; readonly times: number };
   readonly frames: readonly Frame[];
-  /** The tail's offset from its column to the landing place. */
-  readonly offset: Point;
+  /** The tail's offset from its column to the landing place (scenes that carry a tail). */
+  readonly offset?: Point;
   /** Stage top-left points: where the tail and the D cards sit before the play, and where they fly to in the tray. */
-  readonly layout: {
+  readonly layout?: {
     readonly tailHome: Point;
     readonly destHome: Point;
     readonly trayTail: Point;

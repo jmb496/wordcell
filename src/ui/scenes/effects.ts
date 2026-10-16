@@ -30,14 +30,22 @@ export function ghostStart(scene: Scene): string {
 export function sceneEffects(scene: Scene): readonly (readonly Effect[])[] {
   let pointer = scene.targets.rest;
   let carry: Point = { x: 0, y: 0 };
-  // After the fly the tail is in the tray: later moves are only the pointer's.
-  let flown = false;
+  // After the fly the tail is in the tray: later moves are only the pointer's. A landed or
+  // carry-less scene draws no tail at all.
+  let flown = scene.carry === undefined || scene.carry.landed === true;
+  // The ghost fades in with its first movement.
+  let shown = false;
   return scene.steps.map((step): Effect[] => {
     const to = scene.targets[step.target];
     const from = pointer;
     pointer = to;
     const effects: Effect[] = [];
-    const ghost = (opacity?: [number, number]): Effect => ({
+    const ghost = (opacity?: [number, number]): Effect => {
+      const fade: [number, number] | undefined = opacity ?? (shown ? undefined : [0, 1]);
+      shown = true;
+      return ghostEffect(fade);
+    };
+    const ghostEffect = (opacity?: [number, number]): Effect => ({
       element: 'ghost',
       keyframes: [
         { transform: ghostAt(from), ...(opacity ? { opacity: opacity[0] } : {}) },
@@ -69,6 +77,22 @@ export function sceneEffects(scene: Scene): readonly (readonly Effect[])[] {
         effects.push(tail(add(carry, { x: 0, y: LIFT })));
         break;
       case 'fly': {
+        if (step.flies !== undefined) {
+          const { element, by } = step.flies;
+          effects.push({
+            element,
+            keyframes: [
+              { transform: at({ x: 0, y: 0 }), opacity: 1 },
+              { transform: at(by), opacity: 0 },
+            ],
+            kind: step.kind,
+            times: step.times ?? 1,
+            phase: 0,
+          });
+          break;
+        }
+        if (scene.carry === undefined || scene.layout === undefined)
+          throw new Error(`scene ${scene.id}: a fly step needs a carry and a layout, or flies`);
         const { tailHome, destHome, trayTail, trayDest } = scene.layout;
         // Each tail card flies on its own, from its place in the stack (j strips down the
         // wrapper, which rests at `carry`) to its own place in the tray row.
@@ -138,6 +162,8 @@ export function frameTail(scene: Scene, frame: Frame): string | undefined {
     case 'lifted':
       return at({ x: 0, y: -LIFT });
     case 'over':
+      if (scene.offset === undefined)
+        throw new Error(`scene ${scene.id}: an over frame needs an offset`);
       return at(add(scene.offset, { x: 0, y: -LIFT }));
     case 'gone':
       return undefined;

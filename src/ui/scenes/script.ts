@@ -4,9 +4,9 @@ import type { Scene, StepType } from './types';
 const COMMAND_TYPES: Record<StepType, readonly string[]> = {
   grab: ['drop'],
   drop: ['drop'],
-  move: ['arrange'],
+  move: ['arrange', 'setPlacementOrder'],
   fly: [],
-  tap: ['addFreeLetter', 'validate', 'setDestinationCount', 'flip'],
+  tap: ['addFreeLetter', 'validate', 'setDestinationCount', 'flip', 'setTarget', 'confirm'],
 };
 
 /**
@@ -23,6 +23,15 @@ export function defineScene(scene: Scene): Scene {
     if (!Object.hasOwn(scene.targets, step.target))
       throw new Error(`${where}: step ${i} has unknown target ${step.target}`);
     const command = step.command === undefined ? undefined : scene.fixture.commands[step.command];
+    const carried = scene.carry !== undefined && scene.carry.landed !== true;
+    if ((step.type === 'grab' || step.type === 'drop') && !carried)
+      throw new Error(`${where}: step ${i} (${step.type}) needs a carry that is not landed`);
+    if (
+      step.type === 'fly' &&
+      carried &&
+      (scene.layout === undefined || scene.offset === undefined)
+    )
+      throw new Error(`${where}: step ${i} (fly) needs an offset and a layout`);
     if (step.type === 'grab' || step.type === 'drop') {
       if (command?.type !== 'drop')
         throw new Error(`${where}: step ${i} (${step.type}) names no fixture drop command`);
