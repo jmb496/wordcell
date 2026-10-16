@@ -1,6 +1,6 @@
 # Review log: story-refactor-sweep-code
 
-State: pass 2: done
+State: pass 3: done
 
 Pre-loop: HEAD 0aabff067f72e04a4342a375028c4689ef4f6c40; words 109; copy /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-game-surfaces-and-keyboard/story-refactor-sweep-code.review-log.passes/pass0.md
 Budget: 1500 words.
@@ -36,3 +36,17 @@ Reviewers: fix diff, edge-case, adversarial, ref alignment  |  Findings (merged)
 - all; behaviour-fix rows recorded for the owner/retrospective, not swept (AGENTS.md rule 7).
 Words (docs): 1156 (10.6x pass 0, within stated budget 1500)  |  Snapshot: _bmad-output/initiative-wordcell-v1/epic-game-surfaces-and-keyboard/story-refactor-sweep-code.review-log.passes/pass2.md
 Fixer: all 10 items applied.
+
+## Pass 3 — 2026-10-16
+Reviewers: fix diff, edge-case, adversarial, ref alignment  |  Findings (merged): major 5, minor 7, decision-needed 0  |  Dropped in triage: 0
+### Applied (to fixer)
+- [major] "one of the five below" lists four categories (introduced by pass 2) → item 1
+- [major] `recorded for owner` reasons exclude bug fixes, test-quality rows (rename/new assertion), newly flagged scan hits; "(or retrospective)" is not an outcome → item 2
+- [major] "sorted set of test titles identical" contradicts allowed new helper/scan tests → item 3
+- [major] widened scan "must pass on current tree" vs "newly flagged hit becomes a row" → item 4
+- [major] Owns narrower than the surface components the rows touch → item 5
+- [minor] References separator, unit-median wording, not-done-ticket carry-ins, direct importers, probe settled, id-citation multiset → item 6
+### Default applied (technical)
+- all; proposed reviewer defaults taken.
+Words (docs): 1326 (12.2x pass 0, within stated budget 1500)  |  Snapshot: _bmad-output/initiative-wordcell-v1/epic-game-surfaces-and-keyboard/story-refactor-sweep-code.review-log.passes/pass3.md
+Fixer: all items applied.
