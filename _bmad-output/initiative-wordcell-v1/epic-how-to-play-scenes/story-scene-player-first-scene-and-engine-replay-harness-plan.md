@@ -3,7 +3,7 @@ title: 'Scene player, first scene and engine replay harness'
 type: 'feature'
 ticket: '1'
 created: '2026-10-16'
-status: 'built'
+status: done
 baseline_revision: '6a8ad66f61fa932ffc64b1bf7d75ccc98f7ed493'
 route: 'full'
 route_source: 'auto'
