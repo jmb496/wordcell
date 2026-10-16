@@ -1,5 +1,5 @@
 # Review log — ticket 6.12 (Winning guard: the end-sheet half)
-State: pass 4: review
+State: pass 5: review
 Pre-loop: HEAD a11599b; words 298 (budget 1500); copy /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-game-surfaces-and-keyboard/story-winning-guard-the-end-sheet-half.review-log.passes/pass0.md
 
 ## Pass 1 — 2026-10-15
@@ -53,3 +53,16 @@ Words (docs): 1458  |  Snapshot: passes/pass3.md
 - none
 ### Dropped
 - none
+
+## Pass 4 — 2026-10-15
+Reviewers: fix-diff, edge-case, adversarial, ref alignment  |  Findings: major 1, minor 6, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1477  |  Snapshot: passes/pass4.md
+### Applied
+- [major] hold end (a) mechanism: motion.ts releaseHold() called from main.ts on an unfinished dispatch result → 1
+- [minor] single-slot before-back callback wiring; whenOpenAllowed without a guard → 2, 3
+### Default applied (technical)
+- releaseHold() export, called from main.ts dispatch wrapper
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none (unapplied minors: SPEC CAP-5 stale "(none: opens at once)" clause edit; Playwright floor cases may use page.clock; "after 300 ms" parenthetical removed)
