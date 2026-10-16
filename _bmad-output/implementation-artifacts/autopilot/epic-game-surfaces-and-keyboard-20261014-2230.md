@@ -327,3 +327,14 @@ Ref to fix upstream: none
 Tokens: 6.8M input-equivalent (build 47%, ticket review 37%, code review 9%, other 5%, orchestrator 3%); orchestrator peak context 59k
 Worth knowing: bfcache non-reproduction recorded in build-notes.md; review noted minor test-wording points left unapplied (e.g. two wheel cases that pass on a no-scroll implementation).
 Close-out docs: none
+
+## 6.15 Success signal: finish a game and play by keyboard — done
+What it adds: two end-to-end tests: a fresh android launch that plays to a win and to a Give up, reads the end sheet, opens Statistics, collapses and expands the sheet, starts a new game, turns on Show timer, opens How to play and reloads; and a desktop keyboard-only move (Flow 6). The keyboard helpers moved to a shared file.
+Ticket review: 4 passes, converged (majors 8, 7, 7, 0); nothing needed your input
+Build: built; commits a8878c7
+Code review: thorough, 2 passes, converged; 2 fixes applied
+Tests: all passing (one unrelated drag-interruptions animation test failed once under load, passed 10 of 10 alone and on a full rerun), screenshots not needed (no UI change)
+Ref to fix upstream: none
+Tokens: 5.5M input-equivalent (ticket review 51%, build 24%, code review 19%, other 4%, orchestrator 3%); orchestrator peak context 62k
+Worth knowing: no test name carries id A8 (CAP-12 wheel, hover-peek, bfcache); recorded as a gap in the plan, outside this ticket's covers. The flaky drag-interruptions F32 reduced-motion test ("no running animation") may merit a look in the refactor sweep.
+Close-out docs: none
