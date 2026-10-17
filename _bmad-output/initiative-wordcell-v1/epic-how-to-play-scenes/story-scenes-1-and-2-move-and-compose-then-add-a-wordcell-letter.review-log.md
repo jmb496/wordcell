@@ -1,6 +1,6 @@
 # Review log — ticket 8.7 (Scenes 1 and 2)
 
-State: pass 1: done
+State: pass 2: done
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 198 words. HEAD at start: 0a52938.
 Note: this epic has no SPEC.md (epic file: "goes straight to tickets, no separate spec").
 
@@ -26,3 +26,21 @@ Words (docs): 1140 (5.8 x pass 0, budget 1500)  |  Snapshot: story-scenes-1-and-
 - Scene 1/2 board contents and caption wording — the exact cards, words and caption text are what the player sees — proposed default: reuse the HP-3 rulebook-position lineage (E D K A onto column 3, BAKED/BALKED, borrow L from cell 6) with captions built from the approved old ones plus the owner's sentence; owner reads at done
 
 Fixer applied items 1-10 (item 10's filler part skipped: not owned by 8.7). Fixer also edited tickets.toml; the orchestrator reverted that (out of scope).
+
+## Pass 2 — 2026-10-17
+Reviewers: Fix diff, Edge-case hunter, Adversarial, Ref alignment  |  Findings (merged): major 4, minor 6, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+Words (docs): 1453 (7.3 x pass 0, budget 1500)  |  Snapshot: story-scenes-1-and-2-move-and-compose-then-add-a-wordcell-letter.passes/pass2.md
+### Accepted (sent to fixer)
+- [major] Reorder step type unspecified (script.ts command-fit table: `arrange` only on `move`; no glide step); AC4 duration test tautological
+- [major] `opens` only on harness SceneFixture; UI SceneFixtureData, scene 2 opening frame / reduced-motion frame 0, index validation unspecified
+- [major] Continuity test and its negative test not defined as a comparison (a changed decoration card still replays legally)
+- [major] Default board contradicts invariants (§8 col 3 L M F B cannot spell with k>1; Flip side right vs BALKED); order of arrange/k/flip; −/+ and Flip must actually appear; scene 2 sequence
+- [minor] Playwright test names use covered R-ids + AD-14 (not HP-1); captions not "owner-approved" composites; fixture test DICT/FIXTURES lists; no remaining reference grep; count phrasing; baseline names and Docker blocker; toml refinements note
+### Default applied (technical)
+- Reorder step — name a step type for the glide bound to `arrange` with kind snap; duration test asserts kind and scaling
+- Continuity — harness-level comparison helper used by positive and negative tests
+### Decision needed (functionality / UX / gameplay)
+- Scene 1 Flip with the E D K A tail — the flipped word AKEDB is not a word (only DEKARE/DEKARES/DEKAGRAM read upward from that tail), so the pinned default has scene 1 end on a non-word flipped draft and scene 2 flip back before BALKED. Would the owner rather drop Flip from scene 1, keep Flip with a different lifted tail, or keep the flip-back? — proposed default: as written (flip shown, scene 2 flips back); the owner reads it at done
+- (pass 1 item stands)
+
+Fixer applied pass 2 items 1-9 (pinned sequence verified against engine and dictionary in a /tmp script). Fixer reported finding 4 only partly (see decision needed).
