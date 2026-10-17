@@ -35,3 +35,7 @@ Verify: npm run test:all and npm run test:screens are green with Playwright andr
 - rules — docs/game-flow-spec.md, R-40 to R-42, R-50 to R-52, R-60, R-80, Q-02, Q-06, §8
 - code — src/ui/scenes, fixtures/how-to-play-compose.json, src/engine/scene-replay.ts, src/engine/commands.test.ts TABLE
 - constraint — ARCHITECTURE-SPINE.md#ad-1
+
+## Notes
+
+- Decision: 2026-10-16, owner: in scene 4 (place) the B card is hidden from column 3 while B is in the word strip, so the scene reads as B taken from the column (not shown twice). Overrides "destination column whole" in the Description. Code: `src/ui/scenes/Scene.svelte` `drawn.columns` also trims the destination column in `landed` mode; test in `scenes.test.ts` (AD-3 scene place).

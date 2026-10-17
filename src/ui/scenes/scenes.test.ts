@@ -643,6 +643,19 @@ describe('AD-3 scenes place and scoring figure structure', () => {
     expect(html).not.toContain('data-mirror-of');
   });
 
+  it('AD-3 scene place: column 3 is drawn without its B, which sits in the strip (owner decision, ticket 8.3)', async () => {
+    const html = await body(placeScene);
+    // Column 1 keeps F (the four moved cards are in the strip) and column 3 L M F; the column's
+    // top card is the one drawn `full`.
+    const topOf = (n: number): string[] => {
+      const segment = html.split('<div class="column ')[n] ?? '';
+      const upToTop = segment.slice(0, segment.indexOf(' full '));
+      return [...upToTop.matchAll(/class="glyph[^"]*">([^<]+)</g)].map((m) => m[1]);
+    };
+    expect(topOf(1)).toStrictEqual([]);
+    expect(topOf(3)).toStrictEqual(['L', 'M']);
+  });
+
   it('AD-3 scene scoring: three stacks with figures, a total, nothing of the start columns', async () => {
     const html = await body(scoringScene);
     expect(html).toContain(`>${text.howTo.scenes.scoring}</figcaption>`);

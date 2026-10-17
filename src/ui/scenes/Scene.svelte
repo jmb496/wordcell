@@ -121,14 +121,14 @@ const drawn = $derived.by(() => {
     };
   const all = fixture.start.columns;
   const source = all[c.sourceColumn - 1];
-  // `landed`: the move is done, so the destination column is drawn whole and no tail or D block.
+  // `landed`: the move is done, so no tail or D block is drawn; the destination column still loses
+  // its D block cards (the word's own cards sit in the strip, owner decision 2026-10-16).
   const landed = c.landed === true;
   return {
     carried: !landed,
     columns: all.map((cards, i) => {
       if (i + 1 === c.sourceColumn) return cards.slice(0, cards.length - c.count);
-      if (i + 1 === c.destinationColumn && !landed)
-        return cards.slice(0, cards.length - c.destinationCount);
+      if (i + 1 === c.destinationColumn) return cards.slice(0, cards.length - c.destinationCount);
       return cards;
     }),
     tail: landed ? [] : source.slice(-c.count),
