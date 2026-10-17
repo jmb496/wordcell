@@ -1,6 +1,6 @@
 # Review log — Rework sweep: docs, budget and cleanup (ticket 8.11)
 
-State: pass 4: done
+State: pass 5: done
 Pre-loop: HEAD 7ea1ccf, 135 words, copy at story-rework-sweep-docs-budget-and-cleanup.passes/pass0.md. Budget 1500 words.
 Toml fields to carry into the Description in pass 1: verify (present as Acceptance Criteria), risk low (present), references (present), hitl = false, done_checkpoint = true.
 
@@ -54,3 +54,16 @@ Words (docs): 1414 (10.5 x pass 0; budget 1500)  |  Snapshot: story-rework-sweep
 - [minor] step-carry test: `step.carry ??` read becomes `carryOf(scene)`, assert the throw once; types.ts holds the Step.carry and lifts declarations; baselines check = compare PNG list with spec names (test:screens catches missing only); Orphans bullet joins the list; scene-replay.ts is an engine file, edit limited to deleting rejected support (epic Boundaries)
 ### Default applied (technical)
 - all of the above → reviewers' proposed defaults, word-neutral rewording
+
+## Pass 5 — 2026-10-17
+Reviewers: fix-diff, edge-case, adversarial, ref alignment  |  Findings: major 1, minor 2, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1414 (10.5 x pass 0; budget 1500), no fix applied  |  Snapshot: unchanged from pass 4
+### Open (not fixed, per stopping rule)
+- [major] Description / Removal list, `src/engine/scene-replay.ts`: the deletion-only edit touches an engine source file, while the epic Boundaries say "one engine replay test under src/engine/ (test only, no engine source change)" and AGENTS rule 7 asks before deviating. Ticket 8.10 explicitly handed the `rejected` deletion to 8.11, which supports it, but the ticket does not record it as a deliberate exception. Suggested fix: name it as an exception to the epic Boundaries (the file is imported only by `how-to-play-scenes.test.ts`), require `npm test` (AD-1 scan, `index.test.ts`) green and no engine export change; drop the "test-support harness" wording.
+### Unapplied minors
+- HP-1 and HP-5 annotations should be worded as consequences of the owner's decision, not as named by it; list for the owner's read at the done checkpoint.
+- References: "AD-14 (scenes)" — the spine has no scene text; say "(tray and FLIP; scene tests carry the tag)".
+- Pass 4 minors left: none open.
+
+## Result — converged after 5 passes (open major: scene-replay.ts engine-source edit is not recorded as an exception to the epic Boundaries)
+Majors per pass: 9, 5, 5, 1, 1. Words 135 → 1414. Decision-needed: none (one reclassified technical in pass 3: epic annotation wording).
