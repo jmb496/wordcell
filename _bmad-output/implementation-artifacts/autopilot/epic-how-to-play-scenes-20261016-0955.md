@@ -53,3 +53,14 @@ Close-out docs: none
 ## 8.4 Tricky rules section — stopped before start (rule 4)
 Ticket is hitl = true; also gated_by epic-game-surfaces-and-keyboard in tickets.py. Nothing built.
 Close-out docs: none
+
+## 8.4 Tricky rules section — done
+What it adds: a "Tricky rules" section in the How to play panel with three animated scenes: dropping back on the source column, the destination-card rule with empty columns, and one top card per WordCell per word. Captions use the owner's 2026-10-17 wording.
+Ticket review: 4 passes, converged (majors 9, 4, 2, 0); nothing needed your input
+Build: built; commit 0cd5db3
+Code review: quick, 2 passes, converged (majors 3, 0); 1 round of fixes applied (a9b77a6)
+Tests: all passing (test:all), screenshots passed (45 passed, 21 skipped)
+Ref to fix upstream: none
+Tokens: 7.5M input-equivalent (ticket review 42%, build 40%, code review 12%, other 4%, orchestrator 3%); orchestrator peak context 58k
+Worth knowing: the plan has no sentence-to-test mapping table (AGENTS.md asks for one), left as a minor; the ticket review log lists further unapplied minors.
+Close-out docs: none
