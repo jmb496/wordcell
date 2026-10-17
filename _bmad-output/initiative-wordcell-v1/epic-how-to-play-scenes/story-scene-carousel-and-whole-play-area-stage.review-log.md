@@ -1,6 +1,6 @@
 # Review log — story-scene-carousel-and-whole-play-area-stage
 
-State: pass 5: done
+State: pass 6: done
 Pre-loop: HEAD 2a2ae35, words 270, budget 1500 words (stub), copy /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-how-to-play-scenes/story-scene-carousel-and-whole-play-area-stage.passes/pass0.md
 Intent extra (tickets.toml entry 6, not yet in the ticket): interface = "src/ui/scenes/ (carousel, stage), HowToPlayPanel.svelte, text.ts howTo control names."; tests = "Carousel behaviour (P6 android); stage structure (U); screenshots (screens)."; owns = "The carousel and the shared play-area stage."; unknown = "How to fit eight columns plus the tray inside the phone-width panel at readable card size; reuse the layout measuring of src/ui/layout/."; verify = (as in Acceptance Criteria); risk = medium.
 
@@ -75,3 +75,15 @@ Reviewers: fix-diff, edge-case, adversarial, ref-alignment  |  Findings: major 3
 ### Applied
 - 3 majors and 2 minors (focus on every re-entry, focus to Replay at the final frame, deterministic filler letters; Panel.svelte in interface, "Next" name) → fixer items 1–5
 Words: 1483 (5.5 x pass 0; budget 1500)  |  Snapshot: _bmad-output/initiative-wordcell-v1/epic-how-to-play-scenes/story-scene-carousel-and-whole-play-area-stage.passes/pass5.md
+
+## Pass 6 — 2026-10-17
+Reviewers: fix-diff, edge-case, adversarial, ref-alignment (ref found nothing)  |  Findings: major 3 (after merge and the late-pass bar), minor ~10, decision-needed 0  |  Dropped in triage: 0 (detail-level adversarial items reclassified minor: focus-loss mechanism, getAnimations scoping, placeholder height source, stage column overflow rule, dots count, announcement wording)
+### Default applied (technical)
+- Card-width formula is min(widthTerm, max(32, heightTerm)): the 32 px floor never exceeds the width term; a short panel box caps the width only when the stage would exceed it; stage height derives from the fitted width, so the scene key (width) already covers it; a refit that changes the width re-enters the scene by design; unit test pins the formula.
+- Focus returns to Next when Replay is pressed (Replay unmounts); assertion after Replay.
+- Filler letter sequence added to the Unit AC list.
+### Unapplied minors (over budget / build-plan detail)
+- Focus-loss detection mechanism (build plan); getAnimations scoping to the carousel; placeholder height before first measurement; stage column clipping rule; N <= 14 dots; arrow-path position announcement; Screens end signal "Replay visible"; baseline regeneration for other panels shifted by the gutter; restoring three cut sentences (covered by AC).
+### Applied
+- 3 majors (focus after Replay, filler letters in Unit AC, min(widthTerm, max(32, heightTerm)) formula) → fixer items 1–3
+Words: 1493 (5.5 x pass 0; budget 1500)  |  Snapshot: _bmad-output/initiative-wordcell-v1/epic-how-to-play-scenes/story-scene-carousel-and-whole-play-area-stage.passes/pass6.md
