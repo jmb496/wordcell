@@ -3,7 +3,7 @@ title: 'Scene 3: place with cards tucking into the WordCell'
 type: 'feature'
 ticket: '8'
 created: '2026-10-17'
-status: 'built'
+status: done
 baseline_revision: '85b61219ce73d93b639f652927fc801349b2f05c'
 route: 'full'
 route_source: 'auto'

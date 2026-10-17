@@ -39,3 +39,14 @@ What it adds: the Place scene (scene 3) shows the word's cards tucking one by on
 Ticket review: 6 passes, converged; majors 8, 7, 5, 2, 2, 0; one item needs your input (caption wording)
 Decision: keep the Scene 3 caption as it is ("Pick a WordCell no higher than the word is long. Order the cards: the last one becomes that cell's free letter. Then Confirm.") or reword it to mention the cards tucking in? Only the on-screen text changes; no behaviour or animation. Proposed default: keep it. The epic says scene captions are owner-reviewed.
 Build: not started
+
+## 8.8 Scene 3: place with cards tucking into the WordCell — done (resumed after owner decision)
+What it adds: In the How to play Place scene the word's six cards now tuck one by one into the chosen WordCell, leaving a single top card (E).
+Ticket review: 6 passes, converged; owner kept the Scene 3 caption as approved (2026-10-17, commit 85b6121)
+Build: built; commit 118c272
+Code review: quick, 1 pass, converged; 0 fixes applied
+Tests: all passing, screenshots passed
+Ref to fix upstream: none
+Tokens: Tokens: 2.9M input-equivalent (build 71%, code review 12%, other 11%, orchestrator 5%); orchestrator peak context 60k
+Worth knowing: the build prompt omitted the ticket review's unapplied minors (orchestrator oversight); the code review found nothing major. The owner reviews all scene captions at the epic end.
+Close-out docs: none
