@@ -151,6 +151,7 @@ test('AD-14 at 360 px the page scrolls vertically only; the scenes carry no card
   const content = page.locator('.panel .content');
   expect(await content.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
   expect(await content.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+  await expect(content).toHaveCSS('scrollbar-gutter', 'stable');
   await expect(panel(page).locator('[data-card-id]')).toHaveCount(0);
   await expect(panel(page).locator('[data-testid^="card-"]')).toHaveCount(0);
   await expect(panel(page).locator('[data-mirror-of]')).toHaveCount(0);
@@ -726,6 +727,25 @@ test('HP-1 Left and Right move between scenes while focus is in the carousel, st
   await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.drag);
   await page.keyboard.press('ArrowLeft');
   await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.drag);
+  // Handled keys, also at an end, are prevented and stopped before they bubble to the document.
+  const keyOutcome = (key: string) =>
+    page.evaluate((k) => {
+      let reached = false;
+      const spy = () => {
+        reached = true;
+      };
+      document.addEventListener('keydown', spy);
+      const event = new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true });
+      (document.activeElement ?? document.body).dispatchEvent(event);
+      document.removeEventListener('keydown', spy);
+      return { prevented: event.defaultPrevented, reached };
+    }, key);
+  expect(await keyOutcome('ArrowLeft')).toEqual({ prevented: true, reached: false });
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.drag);
+  expect(await keyOutcome('ArrowRight')).toEqual({ prevented: true, reached: false });
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.compose);
+  await page.keyboard.press('ArrowLeft');
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.drag);
   await dotOf(page, 8).click();
   await page.keyboard.press('ArrowRight');
   await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.topCard);
@@ -978,6 +998,7 @@ for (const [width, name] of [
 // covered by reopening: the scene keyed on baseMs starts at step 1 with that speed's durations.
 test('HP-1 AD-10 a different Animation speed seeded before opening starts the scene at step 1 with its durations', async ({
   page,
+  context,
 }) => {
   await openFixture(page, 'session-idle-fresh', { prefs: 'prefs-fast' });
   await openPanel(page);
@@ -989,5 +1010,14 @@ test('HP-1 AD-10 a different Animation speed seeded before opening starts the sc
   await openPanel(page);
   await expect.poll(() => stepIds(page)).toContain('drag-step-0');
   expect(await stepIds(page)).not.toContain('drag-step-2');
-  expect((await sceneAnimations(page)).find((a) => a.id === 'drag-step-0')?.duration).toBe(fast);
+  const reopened = (await sceneAnimations(page)).find((a) => a.id === 'drag-step-0')?.duration;
+  expect(reopened).toBe(fast);
+  // The slower seeded speed's step is longer, so the scene key carries baseMs.
+  const slowPage = await context.newPage();
+  await openFixture(slowPage, 'session-idle-fresh', { prefs: 'prefs-non-default' });
+  await openPanel(slowPage);
+  await expect.poll(() => stepIds(slowPage)).toContain('drag-step-0');
+  const slow = (await sceneAnimations(slowPage)).find((a) => a.id === 'drag-step-0')?.duration ?? 0;
+  expect(fast).toBeGreaterThan(0);
+  expect(slow).toBeGreaterThan(fast);
 });
