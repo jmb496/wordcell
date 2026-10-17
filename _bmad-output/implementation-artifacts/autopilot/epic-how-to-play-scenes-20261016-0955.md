@@ -36,3 +36,9 @@ Tokens: Tokens: 8.3M input-equivalent (ticket review 51%, build 27%, code review
 Worth knowing: open item: fixtures/how-to-play-place.json has WordCell 6 contents in frames 0–4 written by hand, not checked by the engine; add cells entries for cell 6 at after 3 to 7 (a technical fix the next session can take).
 Owner question: during scene 4, column 3 still shows the B card while B is also in the word strip and later in cell 6, so B appears twice. Keep it (as the ticket says) or hide B from column 3? Proposed: keep. Effect: keeping shows B both in the column and in the word being placed; hiding makes it read as B being taken from the column.
 Close-out docs: none
+
+## 8.3 Place and scoring scenes — stopped at Step D (test:all failed)
+Owner answered the scene 4 question: hide B from column 3 (commit e7ecefa).
+Tests: test:all failed, 1 of 2839: `src/ui/how-to-play.test.ts` "AD-3 the example cards are static" expects 159 static cards, now 158. Cause: hiding B from column 3 removed one card (stale count at line 75). Not touched by the orchestrator.
+Next: update the count (and its comment) to 158, rerun test:all and test:screens (scene 4 changed, so baselines may differ: never regenerate unattended).
+Close-out docs: none

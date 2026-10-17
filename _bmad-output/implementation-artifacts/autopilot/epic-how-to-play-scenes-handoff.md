@@ -1,10 +1,8 @@
 outcome: stopped
 ticket: 8.3
-reason: stop rule 1, code review has a decision-needed item (scene 4 shows B twice)
+reason: stop rule 3, test:all failed after the owner's column 3 change
 next: 8.3
-updated: 2026-10-16T23:02:06Z
-summary: Ticket 8.3 is built and code-reviewed; one question for you about scene 4 before it can be finished.
+updated: 2026-10-17T01:08:53Z
+summary: One unit test still counts 159 example cards; hiding B from column 3 made it 158.
 
-Question: in the place scene (scene 4), the B card stays in column 3 while the same B also appears in the word strip and later in cell 6, so a viewer sees B twice. Option 1 (proposed, what the ticket says): keep it. Option 2: hide B from column 3 while it is in the word, so it reads as taken from the column.
-
-Where it stands: the build (1fb031f) and technical code-review fixes (f71a763) are committed; the full test run and screenshot check have not been done yet. Once you answer, record it in the ticket Notes, commit, and rerun .claude/skills/epic-autopilot/scripts/loop.sh epic-how-to-play-scenes; the next session resumes at Step D (the code review log has a Result). If you pick option 2, the fix should go in before tests. Close-out docs: none so far.
+In plain words: your decision (hide B in column 3) is built. One safety test counts the example cards in the panel and still expects the old number. The fix is to change 159 to 158 in src/ui/how-to-play.test.ts (line 75, plus its comment). Everything else passed (2838 tests). Screenshots not yet run; scene 4 changed, so they may differ and need your look. Resume: fix the count, then rerun loop.sh epic-how-to-play-scenes. Close-out docs: none.
