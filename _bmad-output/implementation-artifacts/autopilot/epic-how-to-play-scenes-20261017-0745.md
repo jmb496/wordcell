@@ -50,3 +50,9 @@ Ref to fix upstream: none
 Tokens: Tokens: 2.9M input-equivalent (build 71%, code review 12%, other 11%, orchestrator 5%); orchestrator peak context 60k
 Worth knowing: the build prompt omitted the ticket review's unapplied minors (orchestrator oversight); the code review found nothing major. The owner reviews all scene captions at the epic end.
 Close-out docs: none
+
+## 8.9 Scene 4: scoring with stacks growing — stopped (decision needed)
+What it adds: the Scoring scene, where each WordCell's stack grows and its score shows (9, 16, 36, total 61).
+Ticket review: 4 passes, converged; majors 8, 6, 6, 0; one item needs your input
+Decision: should each WordCell grow and then show its own number one cell at a time (3 → 9, 4 → 16, 6 → 36, then total 61), or should all three stacks grow first and then the numbers and total show? Proposed default: one cell at a time (as the ticket now says). Effect: only pacing and teaching order, reduced-motion frames and tap steps; no rules change.
+Build: not started
