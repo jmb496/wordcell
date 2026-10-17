@@ -1,6 +1,6 @@
 # Review log — Scene 3: place with cards tucking into the WordCell (ticket 8.8)
 
-State: pass 3: done
+State: pass 4: done
 
 Pass 0: 134 words (pass0.md); budget 1500 words. Pulled from tickets.toml entry 8; toml fields not copied: interface = "scene script and effects under src/ui/scenes/; fixtures; text.ts caption."; tests = "Engine replay (U); play (P6 android); screenshots."; owns = "Scene 3."; verify (as AC); risk low; references (rules R-40 to R-42, R-50 to R-52, R-60).
 
@@ -55,6 +55,20 @@ Words (docs): 1362 (10.2 x pass 0; budget 1500)  |  Snapshot: story-scene-3-plac
 - [minor] wording, fixture import location, hidden page, strip-4 fade, rest filter → fixer 6-9
 ### Default applied (technical)
 - Effect.easing field; ghost fades in first slice; instant place-5/tuck swap; cellTop equality in unit test.
+### Decision needed (functionality / UX / gameplay)
+- none new
+### Dropped
+- none
+
+## Pass 4 — 2026-10-17
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (ref alignment found nothing)  |  Findings: major 2, minor 10, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1471 (11.0 x pass 0; budget 1500)  |  Snapshot: story-scene-3-place-with-cards-tucking-into-the-wordcell.passes/pass4.md
+### Applied
+- [major] flier geometry (36 vs 40 px, origin, frame, per-axis scale) → fixer 1
+- [major] no test ties flier landing box to place-5's E → fixer 2 (bounding-rect check at rest)
+- [minor] Step.tucks cell field/validation, player/effects plumbing, swap keyframes, fade keyframes, mid-tuck poll, R-51 locator → fixer 3-7
+### Default applied (technical)
+- FACE_MARGIN constant; per-axis scale sx=CARD_W/RICH_TILE_W, sy=1; constant-opacity swap; highlights pop at swap accepted.
 ### Decision needed (functionality / UX / gameplay)
 - none new
 ### Dropped
