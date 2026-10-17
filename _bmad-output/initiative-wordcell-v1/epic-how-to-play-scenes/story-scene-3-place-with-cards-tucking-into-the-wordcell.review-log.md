@@ -1,6 +1,6 @@
 # Review log — Scene 3: place with cards tucking into the WordCell (ticket 8.8)
 
-State: pass 2: done
+State: pass 3: done
 
 Pass 0: 134 words (pass0.md); budget 1500 words. Pulled from tickets.toml entry 8; toml fields not copied: interface = "scene script and effects under src/ui/scenes/; fixtures; text.ts caption."; tests = "Engine replay (U); play (P6 android); screenshots."; owns = "Scene 3."; verify (as AC); risk low; references (rules R-40 to R-42, R-50 to R-52, R-60).
 
@@ -40,5 +40,22 @@ Words (docs): 1078 (8.0 x pass 0; budget 1500)  |  Snapshot: story-scene-3-place
 - Step.tucks expansion in effects.ts; cell-6 L hidden as D lands; fliers layer faded not removed with motion on.
 ### Decision needed (functionality / UX / gameplay)
 - none new (caption item from pass 1 stands)
+### Dropped
+- none
+
+## Pass 3 — 2026-10-17
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 5 (merged), minor 7, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1362 (10.2 x pass 0; budget 1500)  |  Snapshot: story-scene-3-place-with-cards-tucking-into-the-wordcell.passes/pass3.md
+### Applied
+- [major] easing warps per-card timing → fixer 1 (Effect.easing, linear tuck-k with k/6 slices)
+- [major] effect list/elements/phases/defaults, defineScene validation → fixer 2
+- [major] hand-off: cell6 hide dead weight, E crossfade dip → fixer 3 (instant swap)
+- [major] ghost during step 6 → fixer 4
+- [major] test strength and mid-tuck coverage → fixer 5
+- [minor] wording, fixture import location, hidden page, strip-4 fade, rest filter → fixer 6-9
+### Default applied (technical)
+- Effect.easing field; ghost fades in first slice; instant place-5/tuck swap; cellTop equality in unit test.
+### Decision needed (functionality / UX / gameplay)
+- none new
 ### Dropped
 - none
