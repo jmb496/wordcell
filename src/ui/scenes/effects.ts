@@ -1,5 +1,18 @@
 import type { MotionKind } from '../motion';
-import { HAND_TIP, LIFT, RICH_SLOT, SLOT, STRIP } from './geometry';
+import {
+  CARD_W,
+  FACE_MARGIN,
+  HAND_TIP,
+  LIFT,
+  PLACE_CELL_TOP,
+  placeCellX,
+  RICH_SLOT,
+  RICH_TILE_W,
+  SLOT,
+  STRIP,
+  STRIP_TOP,
+  stripTileX,
+} from './geometry';
 import type { Frame, Point, Scene } from './types';
 
 /** One element's keyframes inside a step; `phase` 1 runs after every phase 0 effect finished. */
@@ -10,7 +23,18 @@ export interface Effect {
   /** The duration in multiples of `duration(kind)`. */
   readonly times: number;
   readonly phase: 0 | 1;
+  /** The animation's effect-level easing (absent: the player's default, ease-in-out). */
+  readonly easing?: string;
 }
+
+/** Where tuck flier `k` starts: the strip tile's place in the place layers' frame (ticket 8). */
+export const tuckStart = (k: number): string =>
+  `translate(${stripTileX(k)}px, ${STRIP_TOP}px) scale(1, 1)`;
+/** Where every flier ends: WordCell `cell`'s top-card face (only x scales, tile face 36 to 40). */
+export const tuckEnd = (cell: number): string => {
+  const sx = CARD_W / RICH_TILE_W;
+  return `translate(${placeCellX(cell) + FACE_MARGIN - FACE_MARGIN * sx}px, ${PLACE_CELL_TOP}px) scale(${sx}, 1)`;
+};
 
 const at = (p: Point): string => `translate(${p.x}px, ${p.y}px)`;
 const ghostAt = (p: Point): string => at({ x: p.x - HAND_TIP.x, y: p.y - HAND_TIP.y });
@@ -82,6 +106,61 @@ export function sceneEffects(scene: Scene): readonly (readonly Effect[])[] {
         effects.push(carried(add(carries[mover], { x: 0, y: LIFT })));
         break;
       case 'fly': {
+        if (step.tucks !== undefined) {
+          // Epic 8 ticket 8 (R-51, R-52): each card flies in its own sixth of six multiples, leftmost
+          // first, onto the cell's top-card face; the final frame then replaces the fliers.
+          const { cell, letters } = step.tucks;
+          const placed = scene.frames.findLast((f) => f.placeOrder !== undefined);
+          if (placed === undefined)
+            throw new Error(`scene ${scene.id}: a tucks step needs a placeOrder frame`);
+          const stripId = `strip-${scene.frames.indexOf(placed)}`;
+          const n = letters.length;
+          const whole = { kind: step.kind, times: n } as const;
+          const hold = (element: string, opacity: number): Effect => ({
+            element,
+            keyframes: [{ opacity }, { opacity }],
+            kind: step.kind,
+            times: n,
+            phase: 0,
+          });
+          const swap = (element: string, opacity: number): Effect => ({
+            element,
+            keyframes: [{ opacity }, { opacity }],
+            kind: 'overlay',
+            times: 1,
+            phase: 1,
+          });
+          effects.push({
+            element: 'ghost',
+            keyframes: [
+              { transform: ghostAt(to), opacity: 1 },
+              { transform: ghostAt(to), opacity: 0 },
+            ],
+            kind: step.kind,
+            times: 1,
+            phase: 0,
+          });
+          effects.push(hold('tuck', 1), hold(stripId, 0), hold('confirm', 0));
+          letters.forEach((_, k) => {
+            const start = tuckStart(k);
+            const end = tuckEnd(cell);
+            const frames: Keyframe[] = [
+              ...(k === 0 ? [] : [{ offset: 0, transform: start }]),
+              { offset: k / n, transform: start, easing: 'ease-in-out' },
+              { offset: (k + 1) / n, transform: end },
+              ...(k === n - 1 ? [] : [{ offset: 1, transform: end }]),
+            ];
+            effects.push({
+              element: `tuck-${k}`,
+              keyframes: frames,
+              ...whole,
+              phase: 0,
+              easing: 'linear',
+            });
+          });
+          effects.push(swap(`place-${scene.frames.length - 1}`, 1), swap('tuck', 0));
+          break;
+        }
         if (step.flies !== undefined) {
           const { element, by } = step.flies;
           effects.push({

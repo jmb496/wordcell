@@ -184,6 +184,10 @@ const sceneAnimations = (page: Page) =>
         id: a.id,
         playState: a.playState,
         duration: Number(a.effect?.getTiming().duration),
+        element: (a.effect as KeyframeEffect).target
+          ?.closest('[data-scene-el]')
+          ?.getAttribute('data-scene-el'),
+        currentTime: Number(a.currentTime),
       })),
   );
 
@@ -421,7 +425,7 @@ test('R-40 R-42 R-50 R-51 R-52 R-60 AD-14 with reduced motion scene place steps 
     { strip: 'BALKED', lit: [3, 4, 6], target: 5, cell6: 'L', button: text.confirm },
     { strip: 'BALKED', lit: [3, 4, 5], target: 6, cell6: 'L', button: text.confirm },
     { strip: 'DBALKE', lit: [3, 4, 5], target: 6, cell6: 'L', button: text.confirm },
-    { strip: undefined, lit: [], target: undefined, cell6: 'DBALKE', button: undefined },
+    { strip: undefined, lit: [], target: undefined, cell6: 'E', button: undefined },
   ];
   for (const [i, frame] of frames.entries()) {
     const layer = figure.locator(`[data-scene-el="place-${i}"]`);
@@ -447,6 +451,87 @@ test('R-40 R-42 R-50 R-51 R-52 R-60 AD-14 with reduced motion scene place steps 
   await expect(figure.getByRole('button', { name: controls.next })).toHaveCount(0);
   await figure.getByRole('button', { name: controls.replay, exact: true }).click();
   await expect(figure.getByRole('button', { name: controls.next, exact: true })).toBeVisible();
+});
+
+test('R-51 R-52 AD-14 with motion on the place scene tucks D B A L K E into WordCell 6, ending on one top card E', async ({
+  page,
+}) => {
+  await openFixture(page, 'session-idle-fresh');
+  await openPanel(page);
+  const figure = await showScene(page, 'place');
+  const fliers = figure.locator('[data-scene-el^="tuck-"]');
+  expect(
+    await fliers.evaluateAll((nodes) => nodes.map((n) => n.getAttribute('data-scene-el'))),
+  ).toEqual(['tuck-0', 'tuck-1', 'tuck-2', 'tuck-3', 'tuck-4', 'tuck-5']);
+  expect(await fliers.locator('.glyph').allTextContents()).toEqual(['D', 'B', 'A', 'L', 'K', 'E']);
+  await expect
+    .poll(
+      async () =>
+        (await sceneAnimations(page)).filter(
+          (a) =>
+            a.id === 'place-step-6' && a.element?.startsWith('tuck-') && a.playState === 'running',
+        ).length,
+      { timeout: 30_000 },
+    )
+    .toBe(6);
+  await expect
+    .poll(
+      async () =>
+        (await sceneAnimations(page)).filter((a) => a.playState === 'running').map((a) => a.id),
+      { timeout: 30_000 },
+    )
+    .toEqual(['place-rest']);
+  const last = figure.locator('[data-scene-el="place-5"]');
+  await expect(
+    last.locator('.wcell', { has: page.locator('.num', { hasText: /^6$/ }) }).locator('.card'),
+  ).toHaveText(['E']);
+  const rects = await page.evaluate(() => {
+    const face = (root: Element | null) => root?.querySelector('.face')?.getBoundingClientRect();
+    const cells = document.querySelectorAll('[data-scene-el="place-5"] .wcell');
+    const cell6 = [...cells].find((c) => c.querySelector('.num')?.textContent === '6') ?? null;
+    const a = face(document.querySelector('[data-scene-el="tuck-5"]'));
+    const b = face(cell6?.querySelector('.card') ?? null);
+    return a && b
+      ? { a: [a.x, a.y, a.width, a.height], b: [b.x, b.y, b.width, b.height] }
+      : undefined;
+  });
+  expect(rects).toBeDefined();
+  rects?.a.forEach((v, i) => {
+    expect(Math.abs(v - (rects.b[i] ?? 0))).toBeLessThan(0.5);
+  });
+});
+
+test('R-51 AD-14 a tap while card 1 is in flight pauses the tuck and a second tap restores the frame-0 look', async ({
+  page,
+}) => {
+  await openFixture(page, 'session-idle-fresh');
+  await openPanel(page);
+  const figure = await showScene(page, 'place');
+  await expect
+    .poll(
+      async () => {
+        const a = (await sceneAnimations(page)).find(
+          (x) => x.id === 'place-step-6' && x.element === 'tuck-1',
+        );
+        return (
+          a !== undefined && a.currentTime > a.duration / 6 && a.currentTime < (a.duration * 2) / 6
+        );
+      },
+      { timeout: 30_000, intervals: [20] },
+    )
+    .toBe(true);
+  await figure.getByRole('button', { name: controls.pause, exact: true }).click();
+  await expect(figure.locator('[data-scene-el="tuck"]')).toHaveCSS('opacity', '1');
+  await figure.getByRole('button', { name: controls.restart, exact: true }).click();
+  await expect(figure.locator('[data-scene-el="place-0"]')).toHaveCSS('opacity', '1');
+  await expect(figure.locator('[data-scene-el="tuck"]')).toHaveCSS('opacity', '0');
+  await expect(
+    figure
+      .locator('[data-scene-el="place-0"] .wcell', {
+        has: page.locator('.num', { hasText: /^6$/ }),
+      })
+      .locator('.card'),
+  ).toHaveText(['L']);
 });
 
 test('R-80 R-36 AD-14 with reduced motion scene scoring steps through 5 frames to the total', async ({

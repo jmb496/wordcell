@@ -8,6 +8,8 @@ export const CARD_W = 40;
 export const SLOT = SCENE_BASE.slot;
 export const STRIP = SCENE_BASE.strip;
 export const CARD_H = SCENE_BASE.cardH;
+/** The gap between a card's slot edge and its face (tile and column Card alike). */
+export const FACE_MARGIN = 2;
 export const COLUMN_PITCH = SLOT;
 export const COLUMN_X0 = 0;
 export const COLUMNS = 8;
@@ -15,7 +17,10 @@ export const COLUMNS = 8;
 export const MIN_COLUMN_CARDS = 5;
 /** The tallest column over any scene (filler, scripted cards and a landed tail); pinned by a test. */
 export const MAX_COLUMN_CARDS = 9;
-/** The tallest WordCell stack over any scene (the place scene's DBALKE). */
+/**
+ * The tallest WordCell stack over any scene: the scoring scene's stacks (the place scene's last
+ * frame draws one top card, R-52).
+ */
 export const MAX_CELL_CARDS = 6;
 export const TRAY_ROWS = 2;
 export const STAGE_INPUTS: SceneStageInputs = {

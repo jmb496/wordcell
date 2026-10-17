@@ -9,7 +9,7 @@ import topCardFixture from '../../../fixtures/how-to-play-top-card.json';
 import { sceneStageHeight } from '../layout/geometry';
 import { text } from '../text';
 import { destinationRuleScene } from './destination-rule';
-import { frameDest, ghostStart, sceneEffects } from './effects';
+import { frameDest, ghostStart, sceneEffects, tuckEnd, tuckStart } from './effects';
 import effectsSource from './effects.ts?raw';
 import { freeLetterScene } from './free-letter';
 import { CARD_W, columnX, LIFT, MIN_COLUMN_CARDS, RICH_SLOT, STAGE_INPUTS } from './geometry';
@@ -286,6 +286,7 @@ function fakes(initiallyHidden = false) {
     id: string;
     element: string;
     ms: number;
+    easing: string | undefined;
     done: () => void;
     cancelled: boolean;
     paused: boolean;
@@ -293,14 +294,14 @@ function fakes(initiallyHidden = false) {
   let hidden = initiallyHidden;
   let visible: (() => void) | undefined;
   const deps: PlayerDeps = {
-    animate: (element, _keyframes, ms, id) => {
+    animate: (element, _keyframes, ms, id, easing) => {
       let done!: () => void;
       let fail!: (e: unknown) => void;
       const finished = new Promise<unknown>((resolve, reject) => {
         done = () => resolve(undefined);
         fail = reject;
       });
-      const record = { id, element, ms, done, cancelled: false, paused: false };
+      const record = { id, element, ms, easing, done, cancelled: false, paused: false };
       animations.push(record);
       const handle: AnimationHandle = {
         finished,
@@ -331,6 +332,24 @@ const flush = async (): Promise<void> => {
 };
 
 describe('AD-14 scene player', () => {
+  it('AD-14 the player forwards each effect easing to animate: every tuck-k flight is linear', async () => {
+    const { animations, deps } = fakes();
+    const player = new ScenePlayer(placeScene, deps, () => undefined);
+    player.start();
+    await flush();
+    for (let guard = 0; guard < 80; guard++) {
+      for (const a of animations) a.done();
+      await flush();
+    }
+    player.destroy();
+    for (let k = 0; k < 6; k++) {
+      const calls = animations.filter((a) => a.element === `tuck-${k}`);
+      expect(calls.length).toBeGreaterThan(0);
+      expect(calls.every((a) => a.easing === 'linear')).toBe(true);
+    }
+    expect(animations.find((a) => a.element === 'ghost')?.easing).toBeUndefined();
+  });
+
   it('AD-14 steps run in order, then the rest, then the loop starts again at step 1', async () => {
     const { animations, deps } = fakes();
     const player = new ScenePlayer(moveComposeScene, deps, () => undefined);
@@ -562,7 +581,9 @@ describe('AD-14 scene place against its fixture', () => {
       tray: false,
       validate: 'off',
       lit: [],
+      cellTop: true,
     });
+    expect(placeScene.frames.filter((f) => f.cellTop)).toHaveLength(1);
     expect(placeScene.carry?.landed).toBe(true);
   });
 
@@ -576,8 +597,61 @@ describe('AD-14 scene place against its fixture', () => {
       expect(placeScene.elements).toContain(effect.element);
       expect(effect.element).not.toMatch(/^(tail|dest)/);
     }
-    const fly = effects[placeScene.steps.findIndex((s) => s.type === 'fly')];
-    expect(fly.filter((e) => e.element === 'strip-4' && e.phase === 0)).toHaveLength(1);
+    const index = placeScene.steps.findIndex((s) => s.type === 'fly');
+    expect(placeScene.steps[index].flies).toBeUndefined();
+    expect(placeScene.steps[index].reveal).toBeUndefined();
+    const fly = effects[index];
+    expect(fly.some((e) => e.element === 'strip-4' && e.keyframes.length === 2)).toBe(true);
+  });
+
+  it('AD-14 the tuck: six fliers D B A L K E, one sixth each, linear with a segment easing, strip and Confirm hidden, swap in phase 1', () => {
+    const index = placeScene.steps.findIndex((s) => s.type === 'fly');
+    const fly = sceneEffects(placeScene)[index];
+    const hidden = [{ opacity: 0 }, { opacity: 0 }];
+    for (const id of ['strip-4', 'confirm'])
+      expect(fly.find((e) => e.element === id)?.keyframes).toStrictEqual(hidden);
+    const ghost = fly.filter((e) => e.element === 'ghost');
+    expect(ghost).toHaveLength(1);
+    expect([ghost[0].phase, ghost[0].times, ghost[0].kind]).toStrictEqual([0, 1, 'flyToCell']);
+    expect([ghost[0].keyframes[0].opacity, ghost[0].keyframes[1].opacity]).toStrictEqual([1, 0]);
+    expect(fly.find((e) => e.element === 'tuck' && e.phase === 0)?.keyframes).toStrictEqual([
+      { opacity: 1 },
+      { opacity: 1 },
+    ]);
+    for (let k = 0; k < 6; k++) {
+      const e = need(fly.find((x) => x.element === `tuck-${k}`));
+      expect([e.phase, e.times, e.kind, e.easing]).toStrictEqual([0, 6, 'flyToCell', 'linear']);
+      const offsets = e.keyframes.map((f) => f.offset);
+      expect(offsets).toStrictEqual(
+        [k === 0 ? undefined : 0, k / 6, (k + 1) / 6, k === 5 ? undefined : 1].filter(
+          (o) => o !== undefined,
+        ),
+      );
+      const departure = e.keyframes.find((f) => f.offset === k / 6);
+      expect(departure?.easing).toBe('ease-in-out');
+      expect(departure?.transform).toBe(tuckStart(k));
+      expect(e.keyframes.find((f) => f.offset === (k + 1) / 6)?.transform).toBe(tuckEnd(6));
+    }
+    const swap = fly.filter((e) => e.phase === 1);
+    expect(swap.map((e) => [e.element, e.kind, e.times, e.keyframes])).toStrictEqual([
+      ['place-5', 'overlay', 1, [{ opacity: 1 }, { opacity: 1 }]],
+      ['tuck', 'overlay', 1, [{ opacity: 0 }, { opacity: 0 }]],
+    ]);
+  });
+
+  it('AD-1 defineScene throws when the tucks cell or letters differ from the last placement frame', () => {
+    const index = placeScene.steps.findIndex((s) => s.type === 'fly');
+    const tucks = need(placeScene.steps[index].tucks);
+    const redefine = (t: typeof tucks) =>
+      defineScene({
+        ...placeScene,
+        steps: placeScene.steps.map((s, i) => (i === index ? { ...s, tucks: t } : s)),
+      });
+    expect(() => redefine(tucks)).not.toThrow();
+    expect(() => redefine({ ...tucks, cell: 5 })).toThrow(/cell 5/);
+    expect(() => redefine({ ...tucks, letters: ['B', 'A', 'L', 'K', 'E', 'D'] })).toThrow(
+      /placement order/,
+    );
   });
 
   it('AD-1 a landed scene allows no grab or drop, a carried one needs its geometry, and a tap or move command must fit', () => {
@@ -659,6 +733,44 @@ describe('AD-3 scenes place and scoring figure structure', () => {
     expect(html).not.toContain('data-card-id');
     expect(html).not.toContain('data-testid');
     expect(html).not.toContain('data-mirror-of');
+  });
+
+  it('AD-3 scene place: tuck fliers follow D B A L K E in DOM order after the place layers, none under reduced motion', async () => {
+    const html = await body(placeScene);
+    const ids = [...html.matchAll(/data-scene-el="(tuck(?:-\d)?|place-\d)"/g)].map((m) => m[1]);
+    expect(ids).toStrictEqual([
+      'place-0',
+      'place-1',
+      'place-2',
+      'place-3',
+      'place-4',
+      'place-5',
+      'tuck',
+      'tuck-0',
+      'tuck-1',
+      'tuck-2',
+      'tuck-3',
+      'tuck-4',
+      'tuck-5',
+    ]);
+    expect(html.match(/data-scene-el="confirm"/g)).toHaveLength(1);
+    expect(html).not.toContain('data-mirror-of');
+    expect((await body(placeScene, true)).match(/data-scene-el="tuck/g)).toBeNull();
+  });
+
+  it('AD-3 scene place: the last layer draws cell 6 as the one top card E, the fixture cells entry keeps six', async () => {
+    const html = await body(placeScene, true);
+    const layers = html.split('data-scene-el="place-').slice(1);
+    const cell6 = (layer: string) =>
+      layer.split('class="wcell ').find((c) => />6<\/span>/.test(c)) ?? '';
+    const cards = (layer: string) => (cell6(layer).match(/class="card /g) ?? []).length;
+    expect(cards(layers[5])).toBe(1);
+    expect(cards(layers[0])).toBe(1);
+    expect(cell6(layers[5])).toContain('>E</span>');
+    expect(placeFixture.cells.at(-1)?.cards).toHaveLength(6);
+    expect(placeFixture.cells.at(-1)?.cards.at(-1)).toBe('E');
+    const full = await body(scoringScene, true);
+    expect(full).toContain('data-scene-el="score-3"');
   });
 
   it('AD-3 scene place: column 3 is drawn without its B, which sits in the strip (owner decision, ticket 8.3)', async () => {

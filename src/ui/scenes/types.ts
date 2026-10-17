@@ -98,6 +98,11 @@ export interface Step {
    * (the placement strip flying to its WordCell).
    */
   readonly flies?: { readonly element: string; readonly by: Point };
+  /**
+   * A `fly` that tucks the placement strip's cards into WordCell `cell` one after another,
+   * leftmost first (`letters` in placement order, R-51); epic 8 ticket 8.
+   */
+  readonly tucks?: { readonly cell: number; readonly letters: readonly string[] };
   /** After the step: `show` fades in, `hide` fades out, over `kind`. */
   readonly reveal?: {
     readonly show?: string;
@@ -132,6 +137,8 @@ export interface Frame {
   readonly placeOrder?: readonly string[];
   readonly numbers?: number;
   readonly total?: number;
+  /** The WordCells this frame draws as one top card, not the fixture's stack (R-52; ticket 8). */
+  readonly cellTop?: boolean;
 }
 
 export interface Scene {

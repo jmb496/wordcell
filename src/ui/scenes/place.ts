@@ -78,6 +78,14 @@ export const placeScene: Scene = defineScene({
     'place-4',
     'place-5',
     'strip-4',
+    'confirm',
+    'tuck',
+    'tuck-0',
+    'tuck-1',
+    'tuck-2',
+    'tuck-3',
+    'tuck-4',
+    'tuck-5',
   ],
   steps: [
     {
@@ -136,14 +144,7 @@ export const placeScene: Scene = defineScene({
       target: 'confirm',
       kind: 'flyToCell',
       times: 2,
-      flies: {
-        element: 'strip-4',
-        by: {
-          x: placeCellX(6) + 20 - (stripTileX(0) + (6 * RICH_SLOT) / 2),
-          y: PLACE_CELL_TOP - STRIP_TOP,
-        },
-      },
-      reveal: { show: 'place-5', hide: [], kind: 'overlay' },
+      tucks: { cell: 6, letters: ordered },
     },
   ],
   rest: { kind: 'flyToCell', times: 6 },
@@ -153,6 +154,6 @@ export const placeScene: Scene = defineScene({
     placing(5, dflt),
     placing(6, dflt),
     placing(6, ordered),
-    { tail: 'gone', tray: false, validate: 'off', lit: [] },
+    { tail: 'gone', tray: false, validate: 'off', lit: [], cellTop: true },
   ],
 });

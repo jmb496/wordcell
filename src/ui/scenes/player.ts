@@ -16,7 +16,13 @@ export interface AnimationHandle {
 
 export interface PlayerDeps {
   /** Animates the scene element `element` (an id of `scene.elements`) over `ms`, filling forwards. */
-  animate(element: string, keyframes: Keyframe[], ms: number, id: string): AnimationHandle;
+  animate(
+    element: string,
+    keyframes: Keyframe[],
+    ms: number,
+    id: string,
+    easing?: string,
+  ): AnimationHandle;
   duration(kind: MotionKind): number;
   hidden(): boolean;
   whenVisible(): Promise<void>;
@@ -79,7 +85,9 @@ export class ScenePlayer {
     id: string,
     ms: (e: Effect) => number,
   ): Promise<void> {
-    const animations = items.map((e) => this.deps.animate(e.element, e.keyframes, ms(e), id));
+    const animations = items.map((e) =>
+      this.deps.animate(e.element, e.keyframes, ms(e), id, e.easing),
+    );
     this.live.push(...animations);
     await Promise.all(animations.map((a) => a.finished));
   }

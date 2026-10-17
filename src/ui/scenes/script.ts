@@ -74,6 +74,26 @@ export function defineScene(scene: Scene): Scene {
       throw new Error(
         `${where}: step ${i} animates command ${step.command}, below opens ${scene.fixture.opens}`,
       );
+    if (step.tucks !== undefined) {
+      const { cell, letters } = step.tucks;
+      const placed = scene.frames.findLast((f) => f.placeOrder !== undefined);
+      if (step.type !== 'fly' || step.flies !== undefined || step.reveal !== undefined)
+        throw new Error(`${where}: step ${i} tucks only in a fly without flies or a reveal`);
+      if (placed === undefined || cell !== placed.placeTarget)
+        throw new Error(`${where}: step ${i} tucks into cell ${cell}, not the placed target`);
+      if (letters.join('') !== placed.placeOrder?.join(''))
+        throw new Error(`${where}: step ${i} tucks ${letters.join('')}, not the placement order`);
+      const needs = [
+        'tuck',
+        'confirm',
+        `place-${scene.frames.length - 1}`,
+        `strip-${scene.frames.indexOf(placed)}`,
+        ...letters.map((_, k) => `tuck-${k}`),
+      ];
+      for (const id of needs)
+        if (!scene.elements.includes(id))
+          throw new Error(`${where}: step ${i} (tucks) does not declare ${id}`);
+    }
     if (step.type === 'arrange') {
       if (step.command === undefined)
         throw new Error(`${where}: step ${i} (arrange) names no fixture command`);

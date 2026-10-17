@@ -8,7 +8,7 @@ import Card from '../Card.svelte';
 import { cardMetrics } from '../layout/geometry';
 import { duration } from '../motion';
 import { text } from '../text';
-import { frameDest, frameTail, ghostStart } from './effects';
+import { frameDest, frameTail, ghostStart, tuckStart } from './effects';
 import {
   CONFIRM_BOX,
   CONTROL_BOX,
@@ -153,7 +153,8 @@ const cellCards = (cell: number, i: number): readonly string[] => {
     const stated = scene.fixture.cells;
     if (stated === undefined) throw new Error(`scene ${scene.id}: the fixture states no cells`);
     const entry = stated.findLast((e) => e.cell === cell);
-    if (entry !== undefined) return entry.cards;
+    if (entry !== undefined)
+      return scene.frames[i].cellTop === true ? entry.cards.slice(-1) : entry.cards;
   }
   // A WordCell the fixture start does not list is empty (its cells map lists the non-empty ones).
   return start?.[String(cell)] ?? [];
@@ -176,6 +177,10 @@ const scoreCells = $derived(
   }),
 );
 const last = $derived(scene.frames.length - 1);
+// Epic 8 ticket 8: a fly step that tucks the strip's cards into a WordCell draws one flier per card
+// (motion on only); the Confirm span of the layer before the last carries `confirm`.
+const tucks = $derived(scene.steps.find((s) => s.tucks !== undefined)?.tucks);
+const tuckFrom = (k: number): string => tuckStart(k);
 const current = $derived(scene.frames[frame]);
 const currentIndex = $derived(frame);
 // Whether tile `j` of a frame's `order` is in the destination block (R-31, R-32).
@@ -210,11 +215,11 @@ $effect(() => {
   const next = new ScenePlayer(
     scene,
     {
-      animate: (key, keyframes, ms, animationId) => {
+      animate: (key, keyframes, ms, animationId, easing) => {
         const animation = element(node, key).animate(keyframes, {
           duration: ms,
           fill: 'forwards',
-          easing: 'ease-in-out',
+          easing: easing ?? 'ease-in-out',
         });
         animation.id = animationId;
         return animation;
@@ -390,6 +395,7 @@ const replay = (): void => {
               </div>
               <span
                 class="ctl validate lit"
+                data-scene-el={i === last - 1 ? 'confirm' : undefined}
                 style:left="{geo.confirm.x}px"
                 style:width="{geo.confirm.w}px"
                 style:top="{geo.confirm.y}px"
@@ -406,6 +412,21 @@ const replay = (): void => {
             {/if}
           </div>
         {/each}
+      {/if}
+      {#if placeMode && tucks !== undefined && !reduced}
+        <div class="layer tuck" data-scene-el="tuck" style:top="{geo.trayTop}px" style:height="{geo.placeH}px">
+          {#each tucks.letters as letter, k (k)}
+            <div
+              class="flier"
+              data-scene-el="tuck-{k}"
+              style:transform={tuckFrom(k)}
+              style:--wc-w="{geo.richTileW}px"
+              style:--wc-slot="{geo.richSlot}px"
+            >
+              <Card id={0} face={face(letter)} place="tray" mirror="static" full />
+            </div>
+          {/each}
+        </div>
       {/if}
       {#if scoreMode}
         {#each scoreCells as entry, k (entry.cell)}
@@ -492,6 +513,8 @@ const replay = (): void => {
     background: var(--wc-surface-raised); box-shadow: inset 0 1px 0 var(--wc-outline);
   }
   .tiles { position: absolute; top: 4px; display: flex; }
+  .layer.tuck { background: none; box-shadow: none; pointer-events: none; }
+  .flier { position: absolute; left: 0; top: 0; transform-origin: 0 0; display: flex; }
   .tile { display: flex; flex: none; }
   .wcell { position: absolute; width: var(--wc-slot); }
   .stack { position: relative; width: var(--wc-slot); display: flex; flex-direction: column; }

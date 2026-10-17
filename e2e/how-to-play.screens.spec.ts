@@ -16,7 +16,7 @@ const replay = text.howTo.sceneControls.replay;
 
 // Epic 8 tickets 1 to 4 and 7 (HP-2, HP-4): the final frame of every scene under reduced motion at
 // 360 px, reached by its dot and Next: scene 1 (move-compose, BAKED after the arrange), scene 2
-// (free-letter, BALKED with Validate pressed), scene 3 (place, BALKED on cell 6), scene 4 (scoring,
+// (free-letter, BALKED with Validate pressed), scene 3 (place, one top card E on cell 6), scene 4 (scoring,
 // total 61), and the Tricky rules scenes source-drop (FAKED), destination-rule (half 2, BAT) and
 // top-card (SAT with cell 5 dimmed).
 for (const [n, id, last] of [
