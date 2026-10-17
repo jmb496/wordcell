@@ -40,4 +40,4 @@ Verify: npm run test:all and npm run test:screens are green; engine replay check
 ## Notes
 
 - Decision: 2026-10-17, review default taken (the owner reviews all scene captions at the epic end): the Scene 4 caption stays as it is in `text.howTo.scenes.scoring`.
-- PROPOSED BY REVIEW (default): interleaved per cell; owner may choose all stacks first, then 9, 16, 36, total at the epic-end review.
+- Decision: 2026-10-17, owner chose stacks first: all three stacks (cells 3, 4, 6) grow downwards one after another, then the figures 9, 16, 36 appear, then the total 61. This replaces the interleaved order (grow cell, then its figure) written in the Description's "Order per cell" and reduced-motion paragraphs: rework the step layout, timings, reduced-motion frames (frame 0 top cards only; the next frames show the stacks full; then the figures; then the total) and tests to match, keeping every other constraint.
