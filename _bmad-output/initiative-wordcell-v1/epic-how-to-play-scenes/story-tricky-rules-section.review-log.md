@@ -1,6 +1,6 @@
 # Review log — story-tricky-rules-section.md
 
-State: pass 2: done
+State: pass 3: done
 
 Pre-loop: HEAD 9482609cbbf2f875dbda9facacd20568a2a352bb, 238 words (pass 0 copy: story-tricky-rules-section.passes/pass0.md). Growth budget 2.5x = ~595 words (default). Note: no epic-8 SPEC.md exists under _bmad-output/specs/; the epic file is the requirement source. Ticket toml fields (entry 4: description, verify, covers, interface, tests, owns, unknown, references) are in story-tricky-rules-section.passes/toml-fields.md, passed to reviewers and fixer as intent; fixer adds them to the Description in pass 1.
 
@@ -43,3 +43,18 @@ Words (docs): 940 before fix (over budget)
 ### Dropped
 - none. Minors deferred (document over budget, they add words): (b) `validatable` list, id-to-key map in test, `after` wording, baseline names, panel placement clause, scene (c) empty-column rationale.
 Words (docs): 935 (3.9 x pass 0, over budget)  |  Snapshot: story-tricky-rules-section.passes/pass2.md. Fixer verified scene (b) by replay; stage positions, Undo control and cell-dim timing unverified (plan time).
+
+## Pass 3 — 2026-10-16 22:40
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (found none)  |  Findings: major 2, minor ~13 (several no-change/cosmetic), decision-needed 0  |  Dropped in triage: 0
+Words (docs): 935 before fix (over budget)
+### Applied (to fixer)
+- [major] positions of cells 3, 4, 5 and the Undo control unspecified (Scene.svelte draws only cell 6): default reuse place.ts `cellPoint(n)`; Undo in the stage header row; exact placement settled at the plan checkpoint, marked `unverified`
+- [major] scene (c) has no `validatable` entries and (b)'s is "listed per count": list both, verified by replay
+- [minor, no net words] `.cell6.used` reuse via a shared `.cell.used` class; steps without `carry` use `Scene.carry`
+### Default applied (technical)
+- Cell placement via place.ts `cellPoint`; Undo in stage header row
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none; remaining minors deferred (over budget, or cosmetic): Verify/Tests drift, rejected-`after` negative, Q-31 index clause, loop-restart wording, scene (a) move target id, key-not-position caption lookup, baseline-scope plan check.
+Words (docs): 925 (3.9 x pass 0, over budget)  |  Snapshot: story-tricky-rules-section.passes/pass3.md. validatable values replay-verified; cell/Undo placement unverified (plan time).
