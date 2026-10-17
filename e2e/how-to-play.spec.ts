@@ -1,4 +1,5 @@
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Locator, type Page, test } from '@playwright/test';
+import { STAGE_W, STRIP } from '../src/ui/scenes/geometry';
 import { text } from '../src/ui/text';
 import { openFixture } from './helpers/board';
 import { wc } from './helpers/dialogs';
@@ -534,7 +535,10 @@ test('R-51 AD-14 a tap while card 1 is in flight pauses the tuck and a second ta
   ).toHaveText(['L']);
 });
 
-test('R-80 R-36 AD-14 with reduced motion scene scoring steps through 5 frames to the total', async ({
+// Epic 8 ticket 9 (HP-2, HP-3): the visible cards of WordCell `cell` in the scene (the stage's mini stack).
+const cellCards = (figure: Locator, cell: number) => figure.locator(`[data-cell="${cell}"] .card`);
+
+test('R-80 R-36 AD-14 with reduced motion scene scoring steps through 6 frames to the total', async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -542,22 +546,228 @@ test('R-80 R-36 AD-14 with reduced motion scene scoring steps through 5 frames t
   await openPanel(page);
   const figure = await showScene(page, 'scoring');
   expect(await sceneAnimations(page)).toEqual([]);
+  await expect(figure.locator('[data-scene-el^="grow-"]')).toHaveCount(0);
   const figures = ['3 × 3 = 9', '4 × 4 = 16', '6 × 6 = 36'];
-  for (let i = 0; i < 5; i++) {
-    for (const [k, label] of figures.entries())
+  // Visible cards of cells 3, 4, 6 per frame: stacks fill in turn, then figures, then the total.
+  const counts = [
+    [1, 1, 1],
+    [3, 1, 1],
+    [3, 3, 1],
+    [3, 3, 6],
+    [3, 3, 6],
+    [3, 3, 6],
+  ];
+  for (let i = 0; i < 6; i++) {
+    for (const [k, cell] of [3, 4, 6].entries())
+      await expect(cellCards(figure, cell)).toHaveCount(counts[i][k]);
+    for (const label of figures)
       await expect(figure.getByText(label, { exact: true })).toHaveCSS(
         'opacity',
-        i > k ? '1' : '0',
+        i >= 4 ? '1' : '0',
       );
     await expect(figure.getByText(text.score(61), { exact: true })).toHaveCSS(
       'opacity',
-      i === 4 ? '1' : '0',
+      i === 5 ? '1' : '0',
     );
-    if (i < 4) await figure.getByRole('button', { name: controls.next, exact: true }).click();
+    if (i < 5) await figure.getByRole('button', { name: controls.next, exact: true }).click();
   }
   await expect(figure.getByRole('button', { name: controls.next })).toHaveCount(0);
   await figure.getByRole('button', { name: controls.replay, exact: true }).click();
   await expect(figure.getByRole('button', { name: controls.next, exact: true })).toBeVisible();
+});
+
+// Epic 8 ticket 9: the scoring scene's growth wrappers (motion on). `wrapper-<cell>-<j>` boxes are
+// read in ONE evaluate so a running scene cannot change between reads.
+const GROW_CELLS = [
+  [3, 3],
+  [4, 3],
+  [6, 6],
+] as const;
+const readScoring = (page: Page) =>
+  page.evaluate((cells) => {
+    const box = (el: Element | null) => {
+      const r = el?.getBoundingClientRect();
+      if (!r) throw new Error('missing element');
+      return { top: r.top, height: r.height, width: r.width, left: r.left };
+    };
+    const stage = box(document.querySelector('[data-scene-el="stage"]'));
+    const opacity = (el: Element | null) => Number(getComputedStyle(el ?? document.body).opacity);
+    const byEl = (id: string) => document.querySelector(`[data-scene-el="${id}"]`);
+    return {
+      stage,
+      cells: cells.map(([cell, n]) => {
+        const mini = document.querySelector(`[data-cell="${cell}"] .mini`);
+        return {
+          cell,
+          mini: box(mini),
+          wrappers: Array.from({ length: n }, (_, j) => {
+            const w = byEl(`grow-${cell}-${j}`);
+            return {
+              ...box(w),
+              opacity: opacity(w),
+              transform: w ? getComputedStyle(w).transform : '',
+            };
+          }),
+          lastCard: box([...(mini?.querySelectorAll('.card') ?? [])].at(-1) ?? null),
+        };
+      }),
+      figures: ['score-1', 'score-2', 'score-3', 'total'].map((id) => opacity(byEl(id))),
+      total: byEl('total')?.textContent,
+      badge: (() => {
+        const w = byEl('grow-4-0');
+        const b = [...(w?.querySelectorAll('*') ?? [])].find(
+          (e) => e.children.length === 0 && e.textContent === '\u00d72',
+        );
+        return { wrapper: box(w), badge: box(b ?? null) };
+      })(),
+    };
+  }, GROW_CELLS);
+
+/** Polls until the scoring scene is resting (only `scoring-rest` runs), then pauses it. */
+async function restAndPause(page: Page, figure: Locator): Promise<void> {
+  await expect
+    .poll(
+      async () =>
+        (await sceneAnimations(page))
+          .filter((a) => a.id.startsWith('scoring-') && a.playState === 'running')
+          .map((a) => a.id),
+      { timeout: 30_000 },
+    )
+    .toEqual(['scoring-rest']);
+  await figure.getByRole('button', { name: controls.pause, exact: true }).click();
+}
+
+test('R-80 R-36 AD-14 with motion on the scoring scene grows the stacks first, then shows 9, 16, 36 and the total 61', async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await openFixture(page, 'session-idle-fresh');
+  await openPanel(page);
+  const figure = await showScene(page, 'scoring');
+  // Step 2 grows cell 6; by then no figure shows.
+  await expect
+    .poll(
+      async () =>
+        (await sceneAnimations(page)).some(
+          (a) =>
+            a.id === 'scoring-step-2' &&
+            a.element?.startsWith('grow-6-') &&
+            a.playState === 'running',
+        ),
+      { timeout: 30_000 },
+    )
+    .toBe(true);
+  await figure.getByRole('button', { name: controls.pause, exact: true }).click();
+  expect((await readScoring(page)).figures).toEqual([0, 0, 0, 0]);
+  await figure.getByRole('button', { name: controls.restart, exact: true }).click();
+  await restAndPause(page, figure);
+  const strip = (await readScoring(page)).stage.width / STAGE_W;
+  const read = await readScoring(page);
+  for (const { cell, mini, wrappers } of read.cells) {
+    for (const [j, w] of wrappers.entries()) {
+      expect(w.opacity, `grow-${cell}-${j}`).toBe(1);
+      expect(Math.abs(w.top - (mini.top + j * STRIP * strip))).toBeLessThan(0.5);
+    }
+  }
+  expect(read.figures).toEqual([1, 1, 1, 1]);
+  expect(read.total).toBe(text.score(61));
+});
+
+test('Q-06 AD-14 QUIT keeps its x2 badge inside the strip under the card below, once the stack has grown', async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await openFixture(page, 'session-idle-fresh');
+  await openPanel(page);
+  const figure = await showScene(page, 'scoring');
+  await restAndPause(page, figure);
+  const { stage, badge } = await readScoring(page);
+  const strip = (stage.width / STAGE_W) * STRIP;
+  expect(badge.badge.top).toBeGreaterThanOrEqual(badge.wrapper.top - 0.5);
+  expect(badge.badge.top + badge.badge.height).toBeLessThanOrEqual(badge.wrapper.top + strip + 0.5);
+});
+
+test('AD-14 R-65 a tap restart returns the stacks to their collapsed top cards and hides the figures (HP-1)', async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await openFixture(page, 'session-idle-fresh');
+  await openPanel(page);
+  const figure = await showScene(page, 'scoring');
+  await expect
+    .poll(
+      async () =>
+        (await sceneAnimations(page)).some(
+          (a) => a.element?.startsWith('grow-6-') && a.playState === 'running' && a.currentTime > 0,
+        ),
+      { timeout: 30_000, intervals: [20] },
+    )
+    .toBe(true);
+  await figure.getByRole('button', { name: controls.pause, exact: true }).click();
+  await figure.getByRole('button', { name: controls.restart, exact: true }).click();
+  // Read at once, inside step 0's two-multiple wait, where the frame stays still.
+  const read = await readScoring(page);
+  expect(read.figures).toEqual([0, 0, 0, 0]);
+  for (const { cell, mini, wrappers } of read.cells) {
+    for (const [j, w] of wrappers.entries()) {
+      if (j < wrappers.length - 1) expect(w.opacity, `grow-${cell}-${j}`).toBe(0);
+      else expect(Math.abs(w.top - mini.top)).toBeLessThan(0.5);
+    }
+  }
+});
+
+test('AD-14 R-65 reduced motion draws no growth wrappers and one top card per stack; switching back restores them (HP-2)', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await openFixture(page, 'session-idle-fresh');
+  await openPanel(page);
+  const figure = await showScene(page, 'scoring');
+  await expect(figure.locator('[data-scene-el^="grow-"]')).toHaveCount(0);
+  for (const cell of [3, 4, 6]) await expect(cellCards(figure, cell)).toHaveCount(1);
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  const back = panel(page).getByRole('figure', { name: text.howTo.scenes.scoring });
+  await expect(back.locator('[data-scene-el^="grow-"]')).toHaveCount(12);
+});
+
+test('R-80 R-36 AD-14 the animated final frame and the reduced-motion final frame have equal stack boxes', async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await openFixture(page, 'session-idle-fresh');
+  await openPanel(page);
+  const figure = await showScene(page, 'scoring');
+  await restAndPause(page, figure);
+  const rel = async () => {
+    const r = await readScoring(page);
+    return r.cells.map((c) => ({
+      height: c.mini.height,
+      last: [c.lastCard.left - r.stage.left, c.lastCard.top - r.stage.top, c.lastCard.height],
+    }));
+  };
+  const animated = await rel();
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const still = panel(page).getByRole('figure', { name: text.howTo.scenes.scoring });
+  for (let i = 0; i < 5; i++)
+    await still.getByRole('button', { name: controls.next, exact: true }).click();
+  const reducedRead = await page.evaluate(() => {
+    const stage = document.querySelector('[data-scene-el="stage"]')?.getBoundingClientRect();
+    return [3, 4, 6].map((cell) => {
+      const mini = document.querySelector(`[data-cell="${cell}"] .mini`);
+      const last = [...(mini?.querySelectorAll('.card') ?? [])].at(-1)?.getBoundingClientRect();
+      if (!stage || !mini || !last) throw new Error('missing');
+      return {
+        height: mini.getBoundingClientRect().height,
+        last: [last.left - stage.left, last.top - stage.top, last.height],
+      };
+    });
+  });
+  for (const [k, a] of animated.entries()) {
+    expect(Math.abs(a.height - reducedRead[k].height)).toBeLessThan(0.5);
+    a.last.forEach((v, i) => {
+      expect(Math.abs(v - reducedRead[k].last[i])).toBeLessThan(0.5);
+    });
+  }
 });
 
 for (const [id, rules, lastStep] of [
@@ -593,7 +803,9 @@ for (const [id, later] of [
     const prefix = stepPrefix[id];
     const mine = async () =>
       (await sceneAnimations(page)).filter((a) => a.id.startsWith(`${prefix}-step-`));
-    await expect.poll(async () => (await mine()).map((a) => a.id)).toContain(`${prefix}-step-1`);
+    await expect
+      .poll(async () => (await mine()).map((a) => a.id), { timeout: 30_000 })
+      .toContain(`${prefix}-step-1`);
     await figure.getByRole('button', { name: controls.pause, exact: true }).click();
     const paused = figure.getByRole('button', { name: controls.restart, exact: true });
     await expect(paused).toBeVisible();
@@ -1031,7 +1243,7 @@ test('HP-1 AD-11 resize refits the stage; two scenes have equal stage heights; a
   const other = await box();
   expect(other.height).toBeCloseTo(first.height, 0);
   expect(other.width).toBeCloseTo(first.width, 0);
-  await expect.poll(() => stepIds(page)).toContain('scoring-step-1');
+  await expect.poll(() => stepIds(page), { timeout: 30_000 }).toContain('scoring-step-1');
   await markLive(page);
   await page.setViewportSize({ width: 412, height: 740 });
   await expect.poll(() => reEntered(page)).toBe(true);

@@ -12,7 +12,18 @@ import { destinationRuleScene } from './destination-rule';
 import { frameDest, ghostStart, sceneEffects, tuckEnd, tuckStart } from './effects';
 import effectsSource from './effects.ts?raw';
 import { freeLetterScene } from './free-letter';
-import { CARD_W, columnX, LIFT, MIN_COLUMN_CARDS, RICH_SLOT, STAGE_INPUTS } from './geometry';
+import {
+  CARD_H,
+  CARD_W,
+  CELLS_TOP,
+  columnX,
+  LIFT,
+  MIN_COLUMN_CARDS,
+  placeCellX,
+  RICH_SLOT,
+  STAGE_INPUTS,
+  STRIP,
+} from './geometry';
 import { moveComposeScene } from './move-compose';
 import { placeScene } from './place';
 import { type AnimationHandle, type PlayerDeps, restMs, ScenePlayer } from './player';
@@ -673,33 +684,183 @@ describe('AD-14 scene place against its fixture', () => {
 });
 
 describe('AD-14 scene scoring against its fixture', () => {
-  it('AD-14 R-80 the four steps are commandless taps revealing 9, 16, 36 and the total 61', () => {
+  it('AD-14 R-80 the four steps are commandless taps: three grow a stack, the third reveals 9, 16, 36 together, the fourth the total 61', () => {
     expect(scoringFixture.commands).toStrictEqual([]);
     expect(scoringScene.id).toBe(scoringFixture.scene);
     expect(scoringScene.caption).toBe(text.howTo.scenes.scoring);
     expect(scoringScene.carry).toBeUndefined();
-    expect(scoringScene.steps.map((s) => [s.type, s.command, s.reveal?.show])).toStrictEqual([
-      ['tap', undefined, 'score-1'],
-      ['tap', undefined, 'score-2'],
-      ['tap', undefined, 'score-3'],
-      ['tap', undefined, 'total'],
+    expect(
+      scoringScene.steps.map((s) => [s.type, s.command, s.grows, s.reveal?.show]),
+    ).toStrictEqual([
+      ['tap', undefined, { cell: 3, cards: 3 }, undefined],
+      ['tap', undefined, { cell: 4, cards: 3 }, undefined],
+      ['tap', undefined, { cell: 6, cards: 6 }, ['score-1', 'score-2', 'score-3']],
+      ['tap', undefined, undefined, 'total'],
     ]);
+    // The k-th grown cell is the k-th scored cell.
+    expect(scoringScene.steps.flatMap((s) => (s.grows ? [s.grows.cell] : []))).toStrictEqual(
+      scoringFixture.cellScores.map((c) => c.cell),
+    );
     expect(scoringFixture.cellScores.map((c) => c.score)).toStrictEqual([9, 16, 36]);
     expect(scoringFixture.scores).toStrictEqual([{ after: 0, score: 61 }]);
   });
 
-  it('AD-14 R-80 frames reveal one more per-cell figure each, the last adds the stated total', () => {
-    expect(scoringScene.frames.map((f) => [f.numbers, f.total])).toStrictEqual([
-      [0, undefined],
-      [1, undefined],
-      [2, undefined],
-      [3, undefined],
-      [3, scoringFixture.scores[0].score],
+  it('AD-14 R-80 R-65 six frames: stacks fill one by one, then the three figures, then the stated total', () => {
+    expect(scoringScene.frames.map((f) => [f.stacks, f.numbers, f.total])).toStrictEqual([
+      [0, 0, undefined],
+      [1, 0, undefined],
+      [2, 0, undefined],
+      [3, 0, undefined],
+      [3, 3, undefined],
+      [3, 3, scoringFixture.scores[0].score],
     ]);
     for (const frame of scoringScene.frames) {
       expect(frame.tail).toBe('gone');
       expect(frame.tray).toBe(false);
       expect(frame.order).toBeUndefined();
+    }
+  });
+
+  // Epic 8 ticket 9 (HP-3): the grow effects, as keyframe arithmetic.
+  const stepFx = (i: number) => sceneEffects(scoringScene)[i];
+  const grown = (i: number, element: string) => {
+    const effect = stepFx(i).find((e) => e.element === element);
+    if (effect === undefined) throw new Error(`no effect ${element}`);
+    return effect;
+  };
+  const px = (n: number) => `translateY(${n}px)`;
+
+  it('AD-14 R-65 stacks grow: each grown cell has its top card and one card per slice, phase 0, linear, g + n - 1 multiples', () => {
+    for (const [i, cell, n] of [
+      [0, 3, 3],
+      [1, 4, 3],
+      [2, 6, 6],
+    ] as const) {
+      const ids = stepFx(i)
+        .filter((e) => e.element.startsWith('grow-'))
+        .map((e) => e.element);
+      expect(ids.sort()).toStrictEqual(Array.from({ length: n }, (_, j) => `grow-${cell}-${j}`));
+      for (const e of stepFx(i).filter((f) => f.element.startsWith('grow-'))) {
+        expect(e.phase).toBe(0);
+        expect(e.easing).toBe('linear');
+        expect(e.kind).toBe('flyToCell');
+        expect(e.times).toBe(2 + n - 1);
+      }
+    }
+  });
+
+  it('AD-14 R-65 at each offset o_m the top card has risen by n-1-m strips while card m appears; it ends at translateY 0', () => {
+    for (const [i, cell, n] of [
+      [0, 3, 3],
+      [1, 4, 3],
+      [2, 6, 6],
+    ] as const) {
+      const g = 2;
+      const top = grown(i, `grow-${cell}-${n - 1}`).keyframes;
+      expect(top[0]).toMatchObject({ offset: 0, transform: px(-(n - 1) * STRIP) });
+      for (let m = 0; m < n - 1; m++) {
+        const o = (g + m) / (g + n - 1);
+        expect(top[m + 1]).toMatchObject({
+          offset: o,
+          transform: px(-(n - 1 - m) * STRIP),
+          easing: 'ease-in-out',
+        });
+        expect(grown(i, `grow-${cell}-${m}`).keyframes).toStrictEqual([
+          { offset: 0, opacity: 0 },
+          { offset: o, opacity: 0 },
+          { offset: o, opacity: 1 },
+          { offset: 1, opacity: 1 },
+        ]);
+      }
+      expect(top.at(-1)).toStrictEqual({ offset: 1, transform: 'translateY(0px)' });
+      expect(top).toHaveLength(n + 1);
+    }
+  });
+
+  it('AD-14 the ghost taps the collapsed top card at a fixed point and the figures show after the last stack', () => {
+    for (const [i, cell] of [
+      [0, 3],
+      [1, 4],
+      [2, 6],
+    ] as const) {
+      expect(scoringScene.targets[`cell${cell}`]).toStrictEqual({
+        x: placeCellX(cell) + 22,
+        y: CELLS_TOP + CARD_H / 2,
+      });
+      expect(grown(i, 'ghost').times).toBe(2);
+    }
+    const shows = (i: number) =>
+      stepFx(i)
+        .filter((e) => e.phase === 1)
+        .map((e) => e.element);
+    expect(shows(0)).toStrictEqual([]);
+    expect(shows(1)).toStrictEqual([]);
+    expect(shows(2)).toStrictEqual(['score-1', 'score-2', 'score-3']);
+    expect(shows(3)).toStrictEqual(['total']);
+    // A step lasts wait + max(phase 0 times) + the reveal (multiples of the flyToCell duration).
+    const len = (i: number) => {
+      const wait = scoringScene.steps[i].wait?.times ?? 0;
+      const phase0 = Math.max(
+        ...stepFx(i)
+          .filter((e) => e.phase === 0)
+          .map((e) => e.times),
+      );
+      return wait + phase0 + (stepFx(i).some((e) => e.phase === 1) ? 0.5 : 0);
+    };
+    expect([0, 1, 2, 3].map(len)).toStrictEqual([6, 5, 8.5, 3.5]);
+  });
+
+  it('AD-14 defineScene throws on a bad grows step and on a list reveal.show on an arrange step', () => {
+    const steps = scoringScene.steps;
+    const redefine = (i: number, patch: object, elements = scoringScene.elements) =>
+      defineScene({
+        ...scoringScene,
+        elements,
+        steps: steps.map((s, k) => (k === i ? { ...s, ...patch } : s)),
+      });
+    expect(() => redefine(0, { type: 'move' })).toThrow(/grows only on a tap/);
+    expect(() => redefine(0, { grows: { cell: 5, cards: 3 } })).toThrow(/fixture start lacks/);
+    expect(() => redefine(0, { grows: { cell: 3, cards: 2 } })).toThrow(/not the fixture's 3/);
+    expect(() => redefine(1, { grows: { cell: 3, cards: 3 } })).toThrow(/cell 3 twice/);
+    expect(() =>
+      redefine(
+        0,
+        {},
+        scoringScene.elements.filter((e) => e !== 'grow-3-2'),
+      ),
+    ).toThrow(/does not declare grow-3-2/);
+    expect(() => redefine(3, { reveal: { show: ['a', 'b'], hide: [], kind: 'overlay' } })).toThrow(
+      /reveals unknown element a/,
+    );
+    const arrange = moveComposeScene.steps.find((s) => s.type === 'arrange');
+    const list = { ...arrange, reveal: { show: ['tray-1'], hide: [], kind: 'overlay' } };
+    expect(() =>
+      defineScene({ ...moveComposeScene, steps: [list as (typeof moveComposeScene.steps)[0]] }),
+    ).toThrow(/reveals one tray layer, not a list/);
+  });
+
+  it('AD-14 reveal.show accepts a list: each id is checked and faded in over the step kind', () => {
+    expect(() =>
+      defineScene({
+        ...scoringScene,
+        steps: scoringScene.steps.map((s, k) =>
+          k === 2
+            ? {
+                ...s,
+                reveal: {
+                  show: ['score-1', 'score-2', 'score-3'],
+                  hide: [],
+                  kind: 'overlay' as const,
+                },
+              }
+            : s,
+        ),
+      }),
+    ).not.toThrow();
+    for (const e of stepFx(2).filter((f) => f.phase === 1)) {
+      expect(e.keyframes).toStrictEqual([{ opacity: 0 }, { opacity: 1 }]);
+      expect(e.kind).toBe('overlay');
+      expect(e.times).toBe(1);
     }
   });
 
@@ -793,11 +954,46 @@ describe('AD-3 scenes place and scoring figure structure', () => {
     for (const figure of ['3 \u00d7 3 = 9', '4 \u00d7 4 = 16', '6 \u00d7 6 = 36'])
       expect(html).toContain(`>${figure}</span>`);
     expect(html).toContain(`>${text.score(61)}</span>`);
-    // Eight columns of filler (5 cards each) and the stacks 3 + 3 + 6.
+    // Eight columns of filler (5 cards each) and the stacks 3 + 3 + 6 (all in the DOM, in wrappers).
     expect(html.match(/class="card[^"]*static/g)).toHaveLength(8 * MIN_COLUMN_CARDS + 12);
     expect(html).not.toContain('>Z<');
     expect(html).not.toContain('data-scene-el="tail');
     expect(html).not.toContain('data-card-id');
+  });
+
+  it('AD-14 scene scoring: growth wrappers in list order, base style equal to the t=0 keyframes, none and top cards only under reduced motion', async () => {
+    const html = await body(scoringScene);
+    const wrappers = [...html.matchAll(/<div data-scene-el="(grow-\d+-\d+)"([^>]*)>/g)];
+    expect(wrappers.map((m) => m[1])).toStrictEqual([
+      ...['3-0', '3-1', '3-2', '4-0', '4-1', '4-2', '6-0', '6-1', '6-2', '6-3', '6-4', '6-5'].map(
+        (id) => `grow-${id}`,
+      ),
+    ]);
+    // SSR prints `transform: translateY(-40px);`; compare with spaces dropped (and -0 as 0).
+    const px = (value: string) => value.replace(/\s/g, '').replace(/-0px/g, '0px');
+    for (const [, id, rawStyle] of wrappers) {
+      const style = px(rawStyle);
+      const [, cell, j] = /grow-(\d+)-(\d+)/.exec(id) ?? [];
+      const n = scoringFixture.start.cells[cell as '3'].length;
+      const effect = sceneEffects(scoringScene)
+        .flat()
+        .find((e) => e.element === id);
+      const first = effect?.keyframes[0];
+      if (Number(j) < n - 1) {
+        expect(style).toContain('opacity:0');
+        expect(first).toMatchObject({ offset: 0, opacity: 0 });
+        expect(style).not.toContain('transform');
+      } else {
+        expect(style).toContain(`transform:${px(String(first?.transform))}`);
+        expect(style).not.toContain('opacity');
+      }
+    }
+    const reduced = await body(scoringScene, true);
+    expect(reduced).not.toContain('data-scene-el="grow-');
+    // Frame 0 draws only the top cards (R-65): fixture-listed top letters T, T, E.
+    const mini = (cell: number) =>
+      (reduced.split(`data-cell="${cell}"`)[1] ?? '').split('class="cell')[0];
+    for (const cell of [3, 4, 6]) expect((mini(cell).match(/class="card /g) ?? []).length).toBe(1);
   });
 });
 

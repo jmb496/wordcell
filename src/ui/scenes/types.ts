@@ -103,9 +103,14 @@ export interface Step {
    * leftmost first (`letters` in placement order, R-51); epic 8 ticket 8.
    */
   readonly tucks?: { readonly cell: number; readonly letters: readonly string[] };
-  /** After the step: `show` fades in, `hide` fades out, over `kind`. */
+  /**
+   * A tap that grows WordCell `cell`'s stack from its collapsed top card to its `cards` cards,
+   * downwards, while the pointer rests on it (epic 8 ticket 9; motion on only).
+   */
+  readonly grows?: { readonly cell: number; readonly cards: number };
+  /** After the step: `show` fades in (one id, or several together), `hide` fades out, over `kind`. */
   readonly reveal?: {
-    readonly show?: string;
+    readonly show?: string | readonly string[];
     readonly hide: readonly string[];
     readonly kind: MotionKind;
   };
@@ -136,6 +141,8 @@ export interface Frame {
   readonly lit?: readonly number[];
   readonly placeOrder?: readonly string[];
   readonly numbers?: number;
+  /** The scoring scene's full stacks (epic 8 ticket 9): stack k, in `cellScores` order, is full when `stacks > k`. */
+  readonly stacks?: number;
   readonly total?: number;
   /** The WordCells this frame draws as one top card, not the fixture's stack (R-52; ticket 8). */
   readonly cellTop?: boolean;

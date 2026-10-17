@@ -28,6 +28,8 @@ export const STAGE_INPUTS: SceneStageInputs = {
   trayRows: TRAY_ROWS,
   cellCards: MAX_CELL_CARDS,
 };
+/** The transform that lifts a stack's top card `lifted` strips up, over the cards below it (ticket 9). */
+export const liftedBy = (lifted: number): string => `translateY(${-lifted * STRIP}px)`;
 const stack = (n: number): number => (n - 1) * STRIP + CARD_H;
 export const COLUMN_AREA_H = stack(MAX_COLUMN_CARDS);
 /** The foot row below the columns holds the Undo pill. */

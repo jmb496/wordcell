@@ -1,4 +1,4 @@
-import { COLUMNS, fillerCount } from './geometry';
+import { COLUMNS, fillerCount, liftedBy } from './geometry';
 
 /** A static card's face from a scene letter (QU counts two letters, R-36). */
 export const face = (letter: string) => ({ letter, letterCount: letter === 'QU' ? 2 : 1 });
@@ -24,3 +24,11 @@ export function fillerColumns(lengths: readonly number[]): string[][] {
     }),
   );
 }
+
+/**
+ * The inline base style of card `j` of a growing stack of `cards` (epic 8 ticket 9, HP-1): every
+ * card but the top is hidden, and the top card sits collapsed at the stack's top. It equals the
+ * first keyframe of the card's grow effect (effects.ts), so cancelling the animations restores it.
+ */
+export const growBase = (cards: number, j: number): { opacity?: 0; transform?: string } =>
+  j < cards - 1 ? { opacity: 0 } : { transform: liftedBy(cards - 1) };

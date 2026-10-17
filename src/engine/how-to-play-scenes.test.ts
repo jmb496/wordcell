@@ -319,6 +319,16 @@ describe('AD-2 How to play scene replay', () => {
     expect(() => replayScene(scene, DICT)).toThrow(/no such cell 11/);
   });
 
+  // Regression only (Q-06, R-36): QUIT counted as three letters instead of four fails the harness.
+  it('R-36 Q-06 scene scoring: QUIT stated 12 (QU counted as one) fails the harness', () => {
+    const scene = edit<{ cell: number; score: number }>(scoring, 'cellScores', (e) => {
+      const quit = e.find((entry) => entry.cell === 4);
+      if (quit === undefined) throw new Error('no cell 4 entry');
+      quit.score = 12;
+    });
+    expect(() => replayScene(scene, DICT)).toThrow(/cell 4 stated 12, engine 16/);
+  });
+
   it('R-80 scene scoring: a non-empty cell with no stated score fails the harness', () => {
     const scene = edit(scoring, 'cellScores', (e) => {
       e.pop();

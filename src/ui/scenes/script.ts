@@ -17,7 +17,9 @@ const COMMAND_TYPES: Record<StepType, readonly string[]> = {
  * (its own, else the scene's) differs from the fixture drop command it names, a step animating a
  * command below the fixture's `opens` (epic 8 ticket 7), an `arrange` step without its command or
  * its `tray-<frame>` layer (with both frames' orders, one letter multiset, and every
- * `tray-<frame>-tile-<j>` declared), or a non-positive rest.
+ * `tray-<frame>-tile-<j>` declared; a list `reveal.show` there throws), a `grows` step (ticket 9)
+ * that is not a tap, names a cell the fixture start lacks, a card count other than the start's
+ * (or under 2) or an already grown cell, or lacks a `grow-<cell>-<j>` element, or a non-positive rest.
  */
 export function defineScene(scene: Scene): Scene {
   const where = `scene ${scene.id}`;
@@ -94,12 +96,30 @@ export function defineScene(scene: Scene): Scene {
         if (!scene.elements.includes(id))
           throw new Error(`${where}: step ${i} (tucks) does not declare ${id}`);
     }
+    if (step.grows !== undefined) {
+      const { cell, cards } = step.grows;
+      const stated = scene.fixture.start.cells?.[String(cell)];
+      if (step.type !== 'tap') throw new Error(`${where}: step ${i} grows only on a tap`);
+      if (stated === undefined)
+        throw new Error(`${where}: step ${i} grows cell ${cell}, which the fixture start lacks`);
+      if (cards !== stated.length || cards < 2)
+        throw new Error(
+          `${where}: step ${i} grows ${cards} cards, not the fixture's ${stated.length} (at least 2)`,
+        );
+      if (scene.steps.slice(0, i).some((s) => s.grows?.cell === cell))
+        throw new Error(`${where}: step ${i} grows cell ${cell} twice`);
+      for (let j = 0; j < cards; j++)
+        if (!scene.elements.includes(`grow-${cell}-${j}`))
+          throw new Error(`${where}: step ${i} (grows) does not declare grow-${cell}-${j}`);
+    }
     if (step.type === 'arrange') {
+      if (Array.isArray(step.reveal?.show))
+        throw new Error(`${where}: step ${i} (arrange) reveals one tray layer, not a list`);
       if (step.command === undefined)
         throw new Error(`${where}: step ${i} (arrange) names no fixture command`);
-      if (!/^tray-\d+$/.test(step.reveal?.show ?? ''))
+      if (typeof step.reveal?.show !== 'string' || !/^tray-\d+$/.test(step.reveal.show))
         throw new Error(`${where}: step ${i} (arrange) must reveal its tray-<frame> layer`);
-      const layer = step.reveal?.show as string;
+      const layer = step.reveal.show;
       const frame = Number(layer.slice('tray-'.length));
       const before = scene.frames[frame - 1]?.order;
       const after = scene.frames[frame]?.order;

@@ -19,7 +19,7 @@ import {
   TRAY_TOP,
 } from './geometry';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
-import { face } from './stage';
+import { face, growBase } from './stage';
 
 // Epic 8 ticket 6 (HP-1, HP-6; DESIGN.md Layout, AD-11, AD-14): the shared stage draws the whole
 // play area as the game does, in BAND_ORDER's order: eight columns (filler on the far end, then the
@@ -34,10 +34,12 @@ interface Props {
   filler: readonly (readonly string[])[];
   /** WordCell stacks by number (bottom to top); absent: the scene draws the band itself. */
   cells: Readonly<Record<string, readonly string[]>> | undefined;
+  /** Epic 8 ticket 9: WordCells (by number) whose cards sit in growth wrappers, with their card counts. */
+  grow?: Readonly<Record<string, number>>;
   scale: number;
   children: Snippet;
 }
-const { columns, filler, cells, scale, children }: Props = $props();
+const { columns, filler, cells, grow, scale, children }: Props = $props();
 const CELL_NUMBERS = [3, 4, 5, 6, 7, 8, 9, 10] as const;
 const COLUMN_NUMBERS = Array.from({ length: COLUMNS }, (_, i) => i + 1);
 // The geometry for the markup (Biome reads script usage only).
@@ -88,7 +90,14 @@ const geo = {
         <span class="num">{cell}</span>
         <div class="mini" class:empty={cards.length === 0}>
           {#each cards as letter, j (j)}
-            <Card id={0} face={face(letter)} place="column" mirror="static" full={j === cards.length - 1} />
+            {#if grow?.[String(cell)] === cards.length}
+              {@const base = growBase(cards.length, j)}
+              <div data-scene-el="grow-{cell}-{j}" style:opacity={base.opacity} style:transform={base.transform}>
+                <Card id={0} face={face(letter)} place="column" mirror="static" full={j === cards.length - 1} />
+              </div>
+            {:else}
+              <Card id={0} face={face(letter)} place="column" mirror="static" full={j === cards.length - 1} />
+            {/if}
           {/each}
         </div>
       </div>

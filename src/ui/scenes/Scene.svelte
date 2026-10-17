@@ -177,11 +177,35 @@ const scoreCells = $derived(
   }),
 );
 const last = $derived(scene.frames.length - 1);
+// Epic 8 ticket 9: a scene whose frames count `stacks` draws its WordCells as one top card (R-65)
+// and grows them. Motion on: growth wrappers over the full start stacks (`grow`, the cell's card
+// count); reduced motion: no wrappers, stack k (in `cellScores` order) is full when `stacks > k`.
+const stackMode = $derived(scene.frames.some((f) => f.stacks !== undefined));
+const grow = $derived(
+  stackMode && !reduced
+    ? Object.fromEntries(
+        scene.steps.flatMap((s) =>
+          s.grows === undefined ? [] : [[String(s.grows.cell), s.grows.cards]],
+        ),
+      )
+    : undefined,
+);
+
 // Epic 8 ticket 8: a fly step that tucks the strip's cards into a WordCell draws one flier per card
 // (motion on only); the Confirm span of the layer before the last carries `confirm`.
 const tucks = $derived(scene.steps.find((s) => s.tucks !== undefined)?.tucks);
 const tuckFrom = (k: number): string => tuckStart(k);
 const current = $derived(scene.frames[frame]);
+const stageCells = $derived.by(() => {
+  const start = scene.fixture.start.cells ?? {};
+  if (!stackMode || !reduced) return start;
+  return Object.fromEntries(
+    Object.entries(start).map(([cell, cards]) => {
+      const k = scoreCells.findIndex((entry) => String(entry.cell) === cell);
+      return [cell, k >= 0 && (current.stacks ?? needed('stacks')) > k ? cards : cards.slice(-1)];
+    }),
+  );
+});
 const currentIndex = $derived(frame);
 // Whether tile `j` of a frame's `order` is in the destination block (R-31, R-32).
 const inBlock = (frame: Frame, j: number): boolean =>
@@ -275,7 +299,7 @@ const replay = (): void => {
 
 <figure class="scene" aria-labelledby="{id}-caption" bind:this={figure}>
   <div class="area" style:width="{geo.stageW * scale}px" style:height="{stageHeight}px">
-    <Stage columns={drawn.columns} {filler} cells={placeMode ? undefined : (scene.fixture.start.cells ?? {})} {scale}>
+    <Stage columns={drawn.columns} {filler} cells={placeMode ? undefined : stageCells} {grow} {scale}>
       {#if drawn.carried}
       <div
         class="tail"

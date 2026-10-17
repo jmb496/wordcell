@@ -4,6 +4,7 @@ import {
   FACE_MARGIN,
   HAND_TIP,
   LIFT,
+  liftedBy,
   PLACE_CELL_TOP,
   placeCellX,
   RICH_SLOT,
@@ -210,14 +211,49 @@ export function sceneEffects(scene: Scene): readonly (readonly Effect[])[] {
         fly('dest', carries.dest, sub(trayDest, destHome));
         break;
       }
-      case 'tap':
+      case 'tap': {
         effects.push(ghost());
+        if (step.grows !== undefined) {
+          // Epic 8 ticket 9 (HP-3): the ghost's move (g multiples) holds the stack collapsed, then
+          // each of the n - 1 slices (one multiple each) lowers the top card one strip while card m
+          // appears under it; the top card ends at its resting place.
+          const { cell, cards: n } = step.grows;
+          const g = step.times ?? 1;
+          const whole = g + n - 1;
+          const o = (m: number): number => (g + m) / whole;
+          const grown = { kind: step.kind, times: whole, phase: 0, easing: 'linear' } as const;
+          effects.push({
+            element: `grow-${cell}-${n - 1}`,
+            keyframes: [
+              { offset: 0, transform: liftedBy(n - 1) },
+              ...Array.from({ length: n - 1 }, (_, m) => ({
+                offset: o(m),
+                transform: liftedBy(n - 1 - m),
+                easing: 'ease-in-out',
+              })),
+              { offset: 1, transform: liftedBy(0) },
+            ],
+            ...grown,
+          });
+          for (let m = 0; m < n - 1; m++)
+            effects.push({
+              element: `grow-${cell}-${m}`,
+              keyframes: [
+                { offset: 0, opacity: 0 },
+                { offset: o(m), opacity: 0 },
+                { offset: o(m), opacity: 1 },
+                { offset: 1, opacity: 1 },
+              ],
+              ...grown,
+            });
+        }
         break;
+      }
       case 'arrange': {
         // Epic 8 ticket 7: the pointer does not drag every card. It fades out, the new frame's
         // layer replaces the old one in place, and each moved tile glides from its place in the
         // previous frame's `order` to its place in this one (one step, one glide).
-        const layer = step.reveal?.show ?? '';
+        const layer = typeof step.reveal?.show === 'string' ? step.reveal.show : '';
         const frame = Number(/^tray-(\d+)$/.exec(layer)?.[1]);
         const before = scene.frames[frame - 1]?.order;
         const after = scene.frames[frame]?.order;
@@ -286,13 +322,14 @@ export function sceneEffects(scene: Scene): readonly (readonly Effect[])[] {
         flownAt = new Map();
       }
       if (step.reveal.show !== undefined && step.type !== 'arrange')
-        effects.push({
-          element: step.reveal.show,
-          keyframes: [{ opacity: 0 }, { opacity: 1 }],
-          kind: step.reveal.kind,
-          times: 1,
-          phase: 1,
-        });
+        for (const element of [step.reveal.show].flat())
+          effects.push({
+            element,
+            keyframes: [{ opacity: 0 }, { opacity: 1 }],
+            kind: step.reveal.kind,
+            times: 1,
+            phase: 1,
+          });
       for (const element of step.reveal.hide)
         effects.push({
           element,
