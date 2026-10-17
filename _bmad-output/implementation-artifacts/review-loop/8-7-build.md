@@ -1,6 +1,6 @@
 # Review loop: ticket 8.7 build (code mode)
 
-State: pass 2: done
+State: done
 
 Pre-loop: HEAD 6841d78, tree 43afbfa115822ef3cf452b9ab470419b22fe783a. Target diff: _bmad-output/implementation-artifacts/review-loop/8-7-build.passes/pass0.diff (e915ac0..6841d78, PNGs excluded).
 
@@ -31,3 +31,15 @@ Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings
 - all of the above
 
 Fix outcome: all 5 applied (3: no change possible, layer rule; engine letter list is the tie). Snapshot tree a72a864; npm test/lint/check pass.
+
+## Pass 3
+Reviewers: fix diff, correctness+edge, verification gap, intent alignment  |  Findings: major 0, minor 3, decision-needed 0  |  Dropped in triage: 0
+Snapshot: tree a72a864 (no fix pass). Final npm test / lint / check: pass.
+
+## Result — converged after 3 passes
+
+Unapplied minors:
+- e2e/how-to-play.spec.ts reduced-motion test: name says eight frames but asserts only frames 0-2; weak `opacity: 1` style-string locator (covered by stepScenes table).
+- scenes.test.ts arrange step: `e.times === step.times` is tautological; pin literal target `flip`/times 3 or update plan text (plan said `rest`/1).
+- scenes.test.ts 'no move step names an arrange command': vacuous (`commands[-1]`); assert `step.command === undefined || type !== 'arrange'` and that a move step was inspected.
+- Earlier skipped: tray-0 frame-0 opacity forced in Scene.svelte only safe while just free-letter has a frame-0 tray; greedy letter matching in arrange unsupported for repeated letters (no scene has them).
