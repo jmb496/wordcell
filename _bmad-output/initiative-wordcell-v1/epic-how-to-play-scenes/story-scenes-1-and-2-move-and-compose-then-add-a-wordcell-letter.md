@@ -19,9 +19,9 @@ Ticket fields (`tickets.toml`, entry 7): interface — new scripts, fixtures, `t
 
 ### Content
 
-Both scenes use the existing player and stage (8.6). The owner's 2026-10-17 "fuller board" decision supersedes HP-3's exact columns. Fuller means at least the old board's cards plus decoration cards the 8.6 stage can draw (rich-slot geometry: `RICH_SLOT` in `geometry.ts`). Keep column 1's tail E D K A and WordCell 6's L (`docs/game-flow-spec.md` §8); column 3 is redecorated; decoration lives in the fixture `start`, the single source of truth. Only dictionary words are stated in `words`; intermediate non-words are not. The builder may change the sequence if the engine rejects it, recording the substitute in the plan, but only the `arrange` ids or column 3's decoration.
+Both scenes use the existing player and stage (8.6). The owner's 2026-10-17 "fuller board" decision supersedes HP-3's exact columns. Fuller means at least the old board's cards plus decoration cards the 8.6 stage can draw (rich-slot geometry: `RICH_SLOT` in `geometry.ts`). Keep WordCell 6's L (`docs/game-flow-spec.md` §8); columns 1 and 3 are redecorated per the owner-set content below; decoration lives in the fixture `start`, the single source of truth. Only dictionary words are stated in `words`; intermediate non-words are not. The builder may change the sequence if the engine rejects it, recording the substitute in the plan, but only the `arrange` ids or column 3's decoration.
 
-Default, verified against the engine and `generated/dictionary/en.txt`: column 3 = the letters M, U, N, B (top to bottom). Scene 1 commands: `drop` 1 to 3 (4 cards), `setDestinationCount` k=2, k=3 (UNBEDKA), `arrange` [0, 22, 8, 6] (CardIds of A K E D, confirmed by the engine replay, AC1; a start change that renumbers them is a builder fix; UNBAKED), `setDestinationCount` k=2, k=1 (BAKED), `flip` (draft AKEDB, not a word). Scene 2's steps after `opens`: tap Flip (side back to left, BAKED), tap WordCell 6 (`addFreeLetter` cell 6 index 1, BALKED), tap Validate, bound to `flip`, `addFreeLetter`, `validate`; frame 0 uses `landed: true` plus the shared final-frame constants. Scene 1 ends on a non-word because no flipped word survives the free letter L (checked over the dictionary), so scene 2 flips back first. Dropping that Flip, or changing the tail, is the owner's design change; the owner reads the Flip-ending draft at done.
+Owner-set content (2026-10-17, replaces the earlier E D K A default; the builder verifies it against the engine and `generated/dictionary/en.txt` and records any substitute in the plan, changing only decoration cards and `arrange` ids): the lifted tail is three cards K B A (top to bottom, from a longer column 1 with decoration above), dropped on column 3 whose bottom two cards are D above E (decoration above them, at least one more card so k can reach 3). Scene 1 commands: `drop` 1 to 3 (3 cards), `setDestinationCount` k=2, k=3 (a non-word draft; the + taps), `setDestinationCount` k=2 (the − tap), `flip` (side right: the word reads M then the block reversed), `arrange` K B A to B A K (animated reorder, the pointer does not drag every card), ending on BAKED, a real word (the block D E reversed is ED). Scene 2 starts from that final state (side right, k=2, BAKED): tap WordCell 6 (`addFreeLetter` cell 6, its top card L between A and K), BALKED, tap Validate; steps bound to `addFreeLetter`, `validate`; frame 0 uses `landed: true` plus the shared final-frame constants. Both scenes end on real words, so the "arrange the cards into a word" caption fits. The step order of scene 1 is grab, move, drop, + (k=2, k=3), − (k=2), Flip, arrange; replace any other order in this ticket with it.
 
 Invariants for any sequence:
 
@@ -29,7 +29,7 @@ Invariants for any sequence:
 - D is column 3's bottom k cards, M the lifted cards. Every k satisfies R-31 (1 <= k <= destination column length after the drop).
 - The D block is never reordered or interleaved with M (R-31, R-32); −/+ and Flip change only k and side (R-30, R-31). Flipped (side right) the word is M then D reversed (R-30).
 - The free letter joins M, never D, at an index inside M (R-33, R-34); `arrange` permutes M only.
-- Scene 1 includes a drop, at least one + and one −, an arrange and a Flip, and ends on the flipped draft; scene 2 taps WordCell 6 and ends on `validate`.
+- Scene 1 includes a drop, at least one + and one −, a Flip and an arrange, and ends on BAKED; scene 2 taps WordCell 6 and ends on `validate` with BALKED.
 
 ### Scene 1 to 2 continuity
 
@@ -37,7 +37,7 @@ Scene 1's final frame and scene 2's first frame are the same board. Scene 2's fi
 
 ### Reorder animation
 
-The step order is grab, move, drop, taps for + (k=2, k=3), arrange, taps for − (k=2, k=1), Flip. The reorder is a new `StepType` `arrange` in `src/ui/scenes/script.ts` (the `move` pointer ghost does not fit; `move` keeps accepting `arrange` in the command-fit table, for the unchanged `source-drop.ts`), binding the same command, kind `snap` (as `src/ui/flip.ts` `motionKind`). The pointer ghost is hidden and the tiles glide from the Frame `order` change, scaled through `duration()`. Reduced motion shows the arranged order (HP-2).
+The step order is grab, move, drop, taps for + (k=2, k=3), tap for − (k=2), Flip, arrange. The reorder is a new `StepType` `arrange` in `src/ui/scenes/script.ts` (the `move` pointer ghost does not fit; `move` keeps accepting `arrange` in the command-fit table, for the unchanged `source-drop.ts`), binding the same command, kind `snap` (as `src/ui/flip.ts` `motionKind`). The pointer ghost is hidden and the tiles glide from the Frame `order` change, scaled through `duration()`. Reduced motion shows the arranged order (HP-2).
 
 ### Replacement end state
 
@@ -45,7 +45,7 @@ The old drag, compose and destination scripts (`src/ui/scenes/drag.ts`, `compose
 
 ### Captions (DRAFT, for the owner's review)
 
-Set in `src/ui/text.ts` as `howTo.scenes.moveCompose` and `howTo.scenes.freeLetter`. Built from owner-approved pieces in the epic Notes; the composite is a draft. The owner's review includes caption 1's "arrange the cards into a word" against the non-word AKEDB ending.
+Set in `src/ui/text.ts` as `howTo.scenes.moveCompose` and `howTo.scenes.freeLetter`. Built from owner-approved pieces in the epic Notes; the composite is a draft.
 
 - Scene 1: "Press a card and drag: it takes every card below it. Drop the stack on a column and arrange the cards into a word. The cards you land on stay in order and can't be shuffled. −/+ choose how many; Flip makes the word read upward instead."
 - Scene 2: "Tap a WordCell to borrow its top card. The top card of each WordCell can be used as a free letter added to the word. Then Validate."
@@ -66,3 +66,7 @@ Verify: npm run test:all and npm run test:screens are green.
 - parent — _bmad-output/initiative-wordcell-v1/epic-how-to-play-scenes/epic-how-to-play-scenes.md
 - rules — docs/game-flow-spec.md, R-10, R-13, R-20, R-23, R-30 to R-38
 - code — src/ui/scenes/
+
+## Notes
+
+- Decision: 2026-10-17, owner: Flip must end on a real word. Scene 1 shows the + up to 3 destination cards, the − back down to 2, Flip, then the animated rearrangement of the moved cards, ending on BAKED; scene 2 continues from that state and adds the WordCell 6 top card L (BALKED). Scene 1 lifts the three cards K B A onto a column ending D E (the Description's owner-set content). Captions stay drafts for the owner's review at done.
