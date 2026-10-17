@@ -9,6 +9,7 @@
     { "type": "addFreeLetter", "cell": 5, "index": 0 }
   ],
   "words": [{ "command": 1, "word": "SAT" }],
+  "block": [{ "after": 1, "k": 0, "side": "left" }, { "after": 2, "k": 0, "side": "left" }],
   "validatable": [
     { "after": 0, "canValidate": false },
     { "after": 1, "canValidate": false },

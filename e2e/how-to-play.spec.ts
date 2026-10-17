@@ -495,10 +495,10 @@ const trickyScenes = [
     lastStep: 5,
     // Per frame: the open layer's tiles, Validate class, the cells dimmed in that layer.
     frames: [
-      { tiles: undefined, validate: undefined, used: [] },
-      { tiles: undefined, validate: undefined, used: [] },
-      { tiles: 'FEDKA', validate: 'lit', used: [] },
-      { tiles: 'FAKED', validate: 'lit', used: [] },
+      { dest: undefined, tiles: undefined, validate: undefined, used: [] },
+      { dest: undefined, tiles: undefined, validate: undefined, used: [] },
+      { dest: 'gone', tiles: 'FEDKA', validate: 'lit', used: [] },
+      { dest: 'gone', tiles: 'FAKED', validate: 'lit', used: [] },
     ],
   },
   {
@@ -507,14 +507,14 @@ const trickyScenes = [
     scene: 'destination-rule',
     lastStep: 10,
     frames: [
-      { tiles: undefined, validate: undefined, used: [] },
-      { tiles: undefined, validate: undefined, used: [] },
-      { tiles: 'BAT', validate: 'lit', used: [] },
-      { tiles: undefined, validate: undefined, used: [] },
-      { tiles: undefined, validate: undefined, used: [] },
-      { tiles: 'B', validate: 'off', used: [] },
-      { tiles: 'BA', validate: 'off', used: [3] },
-      { tiles: 'BAT', validate: 'lit', used: [3, 4] },
+      { dest: undefined, tiles: undefined, validate: undefined, used: [] },
+      { dest: undefined, tiles: undefined, validate: undefined, used: [] },
+      { dest: 'gone', tiles: 'BAT', validate: 'lit', used: [] },
+      { dest: undefined, tiles: undefined, validate: undefined, used: [] },
+      { dest: 'lifted', tiles: undefined, validate: undefined, used: [] },
+      { dest: 'gone', tiles: 'B', validate: 'off', used: [] },
+      { dest: 'gone', tiles: 'BA', validate: 'off', used: [3] },
+      { dest: 'gone', tiles: 'BAT', validate: 'lit', used: [3, 4] },
     ],
   },
   {
@@ -523,10 +523,10 @@ const trickyScenes = [
     scene: 'top-card',
     lastStep: 5,
     frames: [
-      { tiles: undefined, validate: undefined, used: [] },
-      { tiles: undefined, validate: undefined, used: [] },
-      { tiles: 'AT', validate: 'off', used: [] },
-      { tiles: 'SAT', validate: 'lit', used: [5] },
+      { dest: undefined, tiles: undefined, validate: undefined, used: [] },
+      { dest: undefined, tiles: undefined, validate: undefined, used: [] },
+      { dest: 'gone', tiles: 'AT', validate: 'off', used: [] },
+      { dest: 'gone', tiles: 'SAT', validate: 'lit', used: [5] },
     ],
   },
 ];
@@ -550,20 +550,28 @@ for (const { id, rules, frames } of trickyScenes) {
         const open = figure.locator(`[data-scene-el="tray-${i}"]`);
         await expect(open).toHaveCSS('opacity', '1');
         await expect(open.locator('.tiles .card')).toHaveText(frame.tiles.split(''));
-        await expect(open.locator('.validate')).toHaveClass(new RegExp(frame.validate ?? ''));
+        await expect(open.locator('.validate')).toHaveClass(
+          new RegExp(`(^|\\s)${frame.validate}(\\s|$)`),
+        );
         const dimmed = await open
           .locator('.cell.used')
           .evaluateAll((els) => els.map((el) => Number(el.getAttribute('data-cell'))));
         expect(dimmed).toStrictEqual(frame.used);
         await expect(layers.and(figure.locator('[style*="opacity: 1"]'))).toHaveCount(1);
       }
+      // Scene.svelte destState: `gone` hides the D block (it is in the tray), `lifted` shows it.
+      const dest = figure.locator('[data-scene-el="dest"]');
+      if (frame.dest === 'gone') await expect(dest).toHaveCSS('visibility', 'hidden');
+      else await expect(dest).toHaveCSS('visibility', 'visible');
       if (i < frames.length - 1)
         await figure.getByRole('button', { name: controls.next, exact: true }).click();
     }
     await expect(figure.getByRole('button', { name: controls.next })).toHaveCount(0);
     await figure.getByRole('button', { name: controls.replay, exact: true }).click();
     await expect(figure.getByRole('button', { name: controls.next, exact: true })).toBeVisible();
-    // Frame 0 is the start again: no layer shown, tail back at home.
+    // Frame 0 is the start again: no layer shown, tail and D block back at home.
+    await expect(figure.locator('[data-scene-el="dest"]')).toHaveCSS('visibility', 'visible');
+    await expect(figure.locator('[data-scene-el="tail"]')).toHaveCSS('visibility', 'visible');
     for (const el of await figure.locator('[data-scene-el^="tray-"]').all())
       await expect(el).toHaveCSS('opacity', '0');
   });

@@ -15,6 +15,7 @@
     { "command": 0, "word": "BAT" },
     { "command": 4, "word": "BAT" }
   ],
+  "block": [{ "after": 1, "k": 1, "side": "left" }, { "after": 3, "k": 0, "side": "left" }, { "after": 4, "k": 0, "side": "left" }, { "after": 5, "k": 0, "side": "left" }],
   "validatable": [
     { "after": 0, "canValidate": false },
     { "after": 1, "canValidate": true },

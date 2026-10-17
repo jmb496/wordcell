@@ -32,6 +32,12 @@ export interface SceneFixture {
   readonly scores?: readonly { readonly after: number; readonly score: number }[];
   /** After `after` commands, the engine's `canValidate` (R-38) equals `canValidate`. */
   readonly validatable?: readonly { readonly after: number; readonly canValidate: boolean }[];
+  /** After `after` commands, the draft's D block size `k` and `side` (R-31) equal the engine's. */
+  readonly block?: readonly {
+    readonly after: number;
+    readonly k: number;
+    readonly side: 'left' | 'right';
+  }[];
   /**
    * After `after` commands, cell `cell` holds `cards` (letters bottom to top, `'QU'` for the QU
    * card; R-52, epic 8 ticket 3).
@@ -132,6 +138,16 @@ export function replayScene(scene: SceneFixture, dictionary: ReadonlySet<string>
     const engine = viewFrom(start, sessions[after], EN).canValidate;
     if (engine !== canValidate)
       fail(scene, `after ${after} commands stated canValidate ${canValidate}, engine ${engine}`);
+  }
+  for (const { after, k, side } of scene.block ?? []) {
+    index('block after', after, count);
+    const draft = viewFrom(start, sessions[after], EN).draft;
+    if (draft === undefined) fail(scene, `after ${after} commands there is no draft`);
+    if (draft.k !== k || draft.side !== side)
+      fail(
+        scene,
+        `after ${after} commands stated k ${k} ${side}, engine k ${draft.k} ${draft.side}`,
+      );
   }
   for (const { after, cell, cards } of scene.cells ?? []) {
     index('cells after', after, count);

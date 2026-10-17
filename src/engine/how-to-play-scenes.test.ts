@@ -363,23 +363,30 @@ describe('AD-2 How to play scene replay', () => {
       sourceCount: 4,
       destinationColumn: 1,
     });
-    expect(sourceDrop.validatable?.map((v) => v.canValidate)).toStrictEqual([false, true, true]);
-    expect(sourceDrop.words).toStrictEqual([{ command: 1, word: 'FAKED' }]);
+  });
+
+  it.each([
+    ['source-drop', sourceDrop],
+    ['destination-rule', destinationRule],
+    ['top-card', topCard],
+  ] as const)('R-31 scene %s: a wrong stated k or side fails the harness', (_name, fixture) => {
+    expect(() => replayScene(fixture, DICT)).not.toThrow();
+    for (const i of (fixture.block ?? []).keys()) {
+      const wrongK = edit<{ k: number }>(fixture, 'block', (e) => {
+        e[i].k += 1;
+      });
+      expect(() => replayScene(wrongK, DICT)).toThrow(/stated k/);
+      const wrongSide = edit<{ side: string }>(fixture, 'block', (e) => {
+        e[i].side = 'right';
+      });
+      expect(() => replayScene(wrongSide, DICT)).toThrow(/stated k/);
+    }
   });
 
   it('R-13 R-22 R-31 Q-12 Q-27 scene destination-rule: both halves give BAT; the rejected k 1 on the empty column throws', () => {
     const { session, rejectedWords } = replayScene(destinationRule, DICT);
     expect(rejectedWords.every((w) => w === undefined)).toBe(true);
     expect(session.cursor.phase).toBe('composing');
-    expect(destinationRule.words?.map((w) => w.word)).toStrictEqual(['BAT', 'BAT']);
-    expect(destinationRule.validatable?.map((v) => v.canValidate)).toStrictEqual([
-      false,
-      true,
-      false,
-      false,
-      false,
-      true,
-    ]);
     expect(destinationRule.rejected).toHaveLength(1);
     expect(destinationRule.rejected?.[0]).toMatchObject({
       after: 3,
@@ -391,8 +398,6 @@ describe('AD-2 How to play scene replay', () => {
   it('R-33 Q-31 scene top-card: the S on top of cell 5, added at index 0, gives SAT; a second add throws', () => {
     const { rejectedWords } = replayScene(topCard, DICT);
     expect(rejectedWords).toStrictEqual([undefined, undefined]);
-    expect(topCard.commands[1]).toStrictEqual({ type: 'addFreeLetter', cell: 5, index: 0 });
-    expect(topCard.validatable?.map((v) => v.canValidate)).toStrictEqual([false, false, true]);
     expect(topCard.rejected?.[0]).toMatchObject({
       after: 2,
       outcome: 'throw',

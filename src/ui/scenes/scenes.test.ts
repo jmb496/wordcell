@@ -14,7 +14,7 @@ import { destinationRuleScene } from './destination-rule';
 import { dragScene } from './drag';
 import { frameDest, sceneEffects } from './effects';
 import effectsSource from './effects.ts?raw';
-import { LIFT, RICH_SLOT } from './geometry';
+import { CARD_W, columnX, LIFT, RICH_SLOT } from './geometry';
 import { placeScene } from './place';
 import { type AnimationHandle, type PlayerDeps, restMs, ScenePlayer } from './player';
 import playerSource from './player.ts?raw';
@@ -807,7 +807,7 @@ describe.each([
 });
 
 describe('AD-14 scene source-drop', () => {
-  it("R-21 R-14 Q-34 the drop lands at the tail's home: the pointer goes out and back, then offset 0", () => {
+  it("AD-14 R-21 R-14 Q-34 the drop lands at the tail's home: the pointer goes out and back, then offset 0", () => {
     expect(sourceDropScene.offset).toStrictEqual({ x: 0, y: 0 });
     expect(sourceDropScene.steps.map((s) => [s.type, s.target, s.command])).toStrictEqual([
       ['grab', 'grab', 0],
@@ -823,9 +823,12 @@ describe('AD-14 scene source-drop', () => {
     const out = sourceDropScene.targets.out;
     const grab = sourceDropScene.targets.grab;
     expect(out.x).toBeLessThan(grab.x - 20);
+    // R-14 Q-34: the out point is beyond the source column's hit rect (card width at its x).
+    const sourceX = columnX(need(carryOf(sourceDropScene)).sourceColumn);
+    expect(out.x < sourceX || out.x > sourceX + CARD_W).toBe(true);
   });
 
-  it('R-21 R-31 frames: start, lifted, F E D K A with F locked (k 1 left), FAKED', () => {
+  it('AD-14 R-21 R-31 frames: start, lifted, F E D K A with F locked (k 1 left), FAKED', () => {
     expect(
       sourceDropScene.frames.map((f) => [f.tail, f.order?.join(''), f.k, f.side, f.dest]),
     ).toStrictEqual([
@@ -834,12 +837,11 @@ describe('AD-14 scene source-drop', () => {
       ['gone', 'FEDKA', 1, 'left', 'gone'],
       ['gone', 'FAKED', 1, 'left', 'gone'],
     ]);
-    expect(sourceDropFixture.words).toStrictEqual([{ command: 1, word: 'FAKED' }]);
   });
 });
 
 describe('AD-14 scene destination-rule', () => {
-  it('R-31 R-22 Q-12 Q-27 frames: half 1 BAT with B locked, undone, half 2 B alone (k 0) then A and T from the cells', () => {
+  it('AD-14 R-31 R-22 Q-12 Q-27 frames: half 1 BAT with B locked, undone, half 2 B alone (k 0) then A and T from the cells', () => {
     expect(
       destinationRuleScene.frames.map((f) => [f.tail, f.dest, f.order?.join(''), f.k, f.used]),
     ).toStrictEqual([
@@ -852,10 +854,9 @@ describe('AD-14 scene destination-rule', () => {
       ['home', 'gone', 'BA', 0, [3]],
       ['home', 'gone', 'BAT', 0, [3, 4]],
     ]);
-    expect(destinationRuleFixture.words.map((w) => w.word)).toStrictEqual(['BAT', 'BAT']);
   });
 
-  it('R-31 the second half lifts the D block (the same B), not the tail; the undo returns what flew into the tray', () => {
+  it('AD-14 R-31 the second half lifts the D block (the same B), not the tail; the undo returns what flew into the tray', () => {
     const effects = sceneEffects(destinationRuleScene);
     const undo = destinationRuleScene.steps.findIndex((s) => s.command === 1);
     const back = effects[undo].filter((e) => e.phase === 1 && e.element !== 'tray-2');
@@ -906,7 +907,7 @@ describe('AD-14 scene destination-rule', () => {
 });
 
 describe('AD-14 scene top-card', () => {
-  it('R-33 Q-31 the free letter is cell 5 at index 0 and the second tap on cell 5 carries no command', () => {
+  it('AD-14 R-33 Q-31 the free letter is cell 5 at index 0 and the second tap on cell 5 carries no command', () => {
     expect(topCardFixture.commands[1]).toStrictEqual({ type: 'addFreeLetter', cell: 5, index: 0 });
     const taps = topCardScene.steps.filter((s) => s.type === 'tap');
     expect(taps.map((s) => [s.target, s.command])).toStrictEqual([
@@ -946,6 +947,30 @@ describe('AD-14 the scenes in the panel order', () => {
       [...basicScenes, ...trickyScenes].map((s) => s.id),
     );
   });
+});
+
+describe('AD-14 frame k and side against the engine-checked fixture block', () => {
+  // The commands applied in each frame (the frame's `n`); the engine replay checks `block` (R-31).
+  it.each([
+    ['source-drop', sourceDropScene, sourceDropFixture.block, [0, 0, 1, 2]],
+    [
+      'destination-rule',
+      destinationRuleScene,
+      destinationRuleFixture.block,
+      [0, 0, 1, 2, 2, 3, 4, 5],
+    ],
+    ['top-card', topCardScene, topCardFixture.block, [0, 0, 1, 2]],
+  ] as const)(
+    'AD-14 R-31 scene %s: every frame k and side equal the fixture block',
+    (_n, scene, block, applied) => {
+      expect(scene.frames).toHaveLength(applied.length);
+      for (const [i, frame] of scene.frames.entries()) {
+        const stated = block.find((b) => b.after === applied[i]);
+        expect(frame.k).toBe(frame.tray ? stated?.k : undefined);
+        expect(frame.side).toBe(frame.tray ? stated?.side : undefined);
+      }
+    },
+  );
 });
 
 describe('AD-14 frameDest and the Tricky rules frames', () => {

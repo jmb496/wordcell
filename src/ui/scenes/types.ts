@@ -16,6 +16,12 @@ export interface SceneFixtureData {
   readonly validatable?: readonly { readonly after: number; readonly canValidate: boolean }[];
   /** The engine's live score after `after` commands (R-80); the scoring scene draws its total. */
   readonly scores?: readonly { readonly after: number; readonly score: number }[];
+  /** After `after` commands, the draft's D block size and side (R-31); the frames' `k` and `side` equal it. */
+  readonly block?: readonly {
+    readonly after: number;
+    readonly k: number;
+    readonly side: string;
+  }[];
   /** After `after` commands, cell `cell` holds `cards` (letters bottom to top; epic 8 ticket 3). */
   readonly cells?: readonly {
     readonly after: number;

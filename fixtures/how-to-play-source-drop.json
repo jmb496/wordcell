@@ -13,6 +13,7 @@
     { "type": "arrange", "arrangement": [0, 22, 8, 6] }
   ],
   "words": [{ "command": 1, "word": "FAKED" }],
+  "block": [{ "after": 1, "k": 1, "side": "left" }, { "after": 2, "k": 1, "side": "left" }],
   "validatable": [
     { "after": 0, "canValidate": false },
     { "after": 1, "canValidate": true },
