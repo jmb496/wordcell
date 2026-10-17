@@ -49,3 +49,7 @@ Tests: all passing (test:all), screenshots passed (42 passed, 18 skipped)
 Tokens: 0.1M input-equivalent (this resume session)
 Worth knowing: open item from the code review: fixtures/how-to-play-place.json cell 6 contents in frames 0–4 are hand-written, not engine-checked; one deferred medium (earlier scene layers showing through on a phone-size screen) carried to the sweep.
 Close-out docs: none
+
+## 8.4 Tricky rules section — stopped before start (rule 4)
+Ticket is hitl = true; also gated_by epic-game-surfaces-and-keyboard in tickets.py. Nothing built.
+Close-out docs: none
