@@ -271,15 +271,6 @@ describe('AD-3 How to play text', () => {
     expect(text.bandScore(5)).toBe('530 (every card placed)');
     expect(() => text.bandScore(6)).toThrow();
   });
-
-  it('AD-3 the example captions read WORD, n letters', () => {
-    expect(text.howTo.exampleWords.map(text.howTo.exampleCaption)).toEqual([
-      'BAKED, 5 letters',
-      'BALKED, 6 letters',
-      'FAKED, 5 letters',
-      'FLAKED, 6 letters',
-    ]);
-  });
 });
 
 describe('AD-3 tooltip text', () => {

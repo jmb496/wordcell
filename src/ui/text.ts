@@ -90,12 +90,6 @@ const howTo = {
     'The table has eight columns of cards, 52 cards in all, and eight WordCells numbered 3 to 10 above them. Only the bottom card of a column can be picked up alone; a stack tail is that card and every card above it that you pick up with it.',
     'The top card of a WordCell is a free letter: it can join one word, once, and its cell then shows the card beneath. One card, QU, counts as two letters everywhere, including scoring, and carries a \u00d72 badge.',
   ],
-  move: [
-    'Pick up a stack tail, by dragging it or by tapping a card, and drop it on a column, its own included. The tail goes into the word you are composing.',
-    'If the column you drop on is not empty, at least one of its bottom cards must join the word (the destination block, locked in order). Choose how many with \u2212 and +, or by tapping a card in that column. Flip puts the block at the other end, reversed. Dropping on an empty column adds no destination cards.',
-    'Add free letters by tapping a WordCell\u2019s top card, and arrange the cards you moved and the free letters in any order. The word needs three or more letters and must be in the word list; tap Validate to check it.',
-    'Then choose a WordCell no higher than the word is long (the highest is already chosen), order the cards for placement, and tap Confirm.',
-  ],
   undo: [
     'Undo steps back one phase at a time, all the way to the deal. Redo steps forward again until you make a different change.',
     'There is no Cancel button: Undo is always one tap away.',
@@ -109,12 +103,7 @@ const howTo = {
     'If you give up, every letter left in the columns costs 10 points (a QU costs 20), and the score can go below zero. Giving up can be undone.',
     'The rating at the end depends on your score. For this deck:',
   ],
-  exampleIntro: [
-    'Columns, top to bottom: column 1 holds F E D K A, column 2 holds X O R I N, column 3 holds L M F B. Pick up E D K A from column 1 and drop it on column 3: its bottom card B must join, giving BAKED. If WordCell 6 shows L, add it for BALKED. Dropping on column 1 itself leaves F, which must join: FAKED, or with the L, FLAKED. Laying E D K A under column 3 without B is not allowed.',
-  ],
 } as const;
-
-const EXAMPLE_WORDS = ['BAKED', 'BALKED', 'FAKED', 'FLAKED'] as const;
 
 // Epic 6 CAP-10 (6.11): the tooltip label of each command that carries a key (the control's visible
 // label; `−` and `+` are the glyphs). Give up has none.
@@ -337,16 +326,12 @@ export const text = Object.freeze({
       tricky: 'Tricky rules',
       goal: 'The goal',
       table: 'The table',
-      move: 'A move',
       undo: 'Undo and Redo',
       empty: 'Empty columns',
       scoring: 'Scoring, giving up and bands',
-      example: 'Worked example',
       controls: 'Controls',
     },
     ...howTo,
-    exampleWords: EXAMPLE_WORDS,
-    exampleCaption: (word: string) => `${word}, ${letters(word.length)}`,
     controlCaptions: { touch: 'Touch', mouse: 'Mouse', keyboard: 'Keyboard' },
     // Epic 8 ticket 1 (HP-6): scene captions (the figure's visible description, its name) and the
     // scene control names; the owner reads the captions at the epic's text review.

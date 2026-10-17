@@ -48,7 +48,7 @@ spine, the spines win.
 | **End sheet** | Status becomes won or gaveUp | Score, band, longest word, words placed (R-83). |
 | **Statistics panel** | Menu; end sheet | The six R-84 statistics, or the unreadable-history message. |
 | **Preferences panel** | Menu | Animation speed, Show timer (spec §7.10, R-76). |
-| **How to play panel** | Menu; `?` | Rules, worked example, controls. |
+| **How to play panel** | Menu; `?` | Animated scenes, rules text, controls. |
 | **History notice** | Launch, when the score history is unreadable (§2, Q-33) | Name the version, offer Reset history. Pushes one history entry; back acts as `Not now`. |
 | **Session-rejected message** | Launch, when the stored Session is rejected (§2) | Name the version, offer New game. Replaces the Board. It is a root with no history entry; back leaves the app. |
 
@@ -163,7 +163,7 @@ Behavioural. Visual specs live in `DESIGN.md` → Components.
 | **End sheet** | Any transition into won, by Confirm or by Redo, opens it after the commit animation settles; Give up opens it at once. Relaunch with status won or gaveUp opens the Board in Game over with the sheet expanded and no animation. A transition into Game over closes any open WordCell view before the sheet opens. When the sheet opens, focus moves to its first action. The grab handle, back, `Esc` and a scrim tap collapse it to its bar (they do not close it; the scrim tap is consumed), and focus returns to the board; tapping the bar expands it. Expanded, the top bar (with Undo) and the action bar (with New game) stay above the scrim and usable; collapsed, there is no scrim and its bar sits over the tray band (empty in Game over), directly above the WordCell labels, so WordCells stay fully tappable to view. The large number is the final score after R-81. Longest word ties go to the earliest committed word (R-84); it shows `—` when no word was committed (R-83). The game record holds the word's spelling and its letter count (R-84, Q-35). After Reset history from the end sheet, the finished game stays unrecorded (§2): the history block and its Reset history button are replaced by the line `This game wasn't added to your statistics.`, and a later Undo of that finish removes nothing (R-84). The line shows only on the sheet that was open when the history was reset, from its block or from the notice over it; it stays through collapse and expand and is gone after a reload or a new game; a later Undo then a new finish records normally with no line; a reset from the Statistics panel leaves the sheet with neither block nor line (owner, 2026-10-15). Undo in the top bar closes it and resumes play (R-70, R-75). |
 | **Statistics panel** | Reads the score history; shows games played, won, given up, best score, average score (both leave out given-up games with a negative score, R-84, Q-44; whole number, rounded like `Math.round`, half toward +∞), longest word ever as the word and its letter count, ties to the earliest record (R-84). The record holds the word's spelling (R-84, Q-35). `—` where no value exists. [ASSUMPTION A-E3: average rounding, longest-word ties] |
 | **Preferences panel** | Changes apply immediately and persist outside the Session; not undoable; survive New game and Replay this deal (spec §7.10, brief §7). Show timer defaults to off (R-76). |
-| **How to play panel** | Static scrolling page; see its section below. |
+| **How to play panel** | Scrolling panel of animated scenes and text; see its section below. |
 
 ### Phase matrix
 
@@ -447,21 +447,28 @@ the end sheet expanded.
 
 ## How to play panel (brief §7)
 
-One static page, text rewritten from the legacy rulebook to match spec §3–§6 and §9 (notably
-Q-12, no Cancel, no hints). Sections, in order:
+Animated scenes first, then rules text rewritten from the legacy rulebook to match spec §3–§6 and
+§9 (notably Q-12, no Cancel, no hints), then Controls. No anchors, links or in-panel navigation
+(HP-7). Sections, in order:
 
-1. **The goal**: empty all eight columns by placing words on WordCells; long words on high
+1. **Basic scenes** (five, HP-3): drag a tail onto a column; compose a word; the destination
+   block with −/+ and Flip; place on a WordCell; scoring. Each is a figure with a caption.
+2. **Tricky rules** (heading, then three scenes, HP-4): drop on the source column; the
+   destination-card rule and empty columns (Q-12, R-22); one top card per WordCell.
+3. **The goal**: empty all eight columns by placing words on WordCells; long words on high
    cells score most.
-2. **The table**: columns, stack tails, WordCells 3–10, free letters, the `QU` card (×2).
-3. **A move**: pick up a stack tail; drop it on a column (its own included); the destination's
-   bottom cards must join unless the column is empty (Q-12); flip; add free letters; arrange;
-   Validate; choose a cell and the order; Confirm.
-4. **Undo and Redo**: step back one phase at a time, all the way to the deal; there is no Cancel.
-5. **Empty columns** and why they are valuable (R-22).
-6. **Scoring, giving up and bands** (R-80, R-81, R-83), with the band names.
-7. **Worked example**: spec §8 (BAKED, BALKED, FAKED, FLAKED), drawn with the real card component
-   as static images, not interactive.
+4. **The table**: columns, stack tails, WordCells 3–10, free letters, the `QU` card (×2).
+5. **Undo and Redo**: step back one phase at a time, all the way to the deal; there is no Cancel.
+6. **Empty columns** and why they are valuable (R-22).
+7. **Scoring, giving up and bands** (R-80, R-81, R-83), with the band names.
 8. **Controls**: touch, mouse and the keyboard table.
+
+Scenes (HP-1, HP-2, AD-14): each loops with a short rest between runs, at the Animation speed
+preference. A tap pauses a playing scene (a small pause icon) and a tap on a paused scene
+restarts it from step 1. A closed or hidden panel animates nothing. With reduced motion a scene
+does not move: a Next control steps through its frames, the final frame is the resting state and
+Replay returns to the first. The scenes replace the former "A move" steps and worked example
+text; their cards are static, aria-hidden copies with no card id (AD-14).
 
 The text itself is a build ticket's deliverable; this spine fixes the outline.
 

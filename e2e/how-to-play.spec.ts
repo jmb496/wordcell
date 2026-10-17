@@ -49,13 +49,7 @@ test('AD-3 the menu lists the six rows in order, then How to play opens the outl
   await expect(panel(page)).toBeVisible();
   const headings = panel(page).getByRole('heading');
   await expect(headings).toHaveText([text.howToPlay, ...Object.values(h)]);
-  const example = panel(page).locator('section.example');
-  for (const word of text.howTo.exampleWords) {
-    await expect(example.getByText(text.howTo.exampleCaption(word), { exact: true })).toBeVisible();
-  }
-  for (const name of text.howTo.exampleWords.map(text.howTo.exampleCaption)) {
-    expect(name).toMatch(/, [56] letters$/);
-  }
+  expect(Object.values(h)).toHaveLength(7);
   await expect(panel(page).locator('ul.bands li')).toHaveText(
     [0, 1, 2, 3, 4, 5].map((b) => `${text.bandName(b)}${text.bandScore(b)}`),
   );
@@ -122,7 +116,7 @@ test('AD-13 from Game over the panel closes with focus on the menu button and th
   await expect(page.getByRole('button', { name: 'Collapse result', exact: true })).toBeVisible();
 });
 
-test('AD-14 at 360 px the page scrolls vertically only; the example cards are static, the 52 live cards stay one element each', async ({
+test('AD-14 at 360 px the page scrolls vertically only; the scenes carry no card ids, the 52 live cards stay one element each', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 360, height: 740 });
@@ -131,19 +125,9 @@ test('AD-14 at 360 px the page scrolls vertically only; the example cards are st
   const content = page.locator('.panel .content');
   expect(await content.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
   expect(await content.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
-  const rowsFit = await panel(page)
-    .locator('.word')
-    .evaluateAll((els) => els.map((el) => el.scrollWidth <= el.clientWidth));
-  expect(rowsFit).toEqual([true, true, true, true]);
   await expect(panel(page).locator('[data-card-id]')).toHaveCount(0);
   await expect(panel(page).locator('[data-testid^="card-"]')).toHaveCount(0);
   await expect(panel(page).locator('[data-mirror-of]')).toHaveCount(0);
-  const cards = panel(page).locator('.word .card');
-  await expect(cards).toHaveCount(22);
-  await expect(cards.first()).toHaveAttribute('aria-hidden', 'true');
-  expect(
-    await cards.evaluateAll((els) => els.map((el) => getComputedStyle(el).touchAction)),
-  ).toEqual(Array(22).fill('pan-y'));
   await expect(page.locator('[data-card-id]')).toHaveCount(52);
 });
 
@@ -482,10 +466,42 @@ test('R-21 R-31 R-33 AD-14 the Tricky rules heading and its three scenes follow 
     s.topCard,
   ]);
   expect(h.tricky).toBe('Tricky rules');
-  expect(order[9]).toBe(h.goal);
+  expect(order.slice(9)).toStrictEqual([h.goal, h.table, h.undo, h.empty, h.scoring, h.controls]);
+  await expect(panel(page).locator('a, [role="link"], [href]')).toHaveCount(0);
   for (const caption of [s.sourceDrop, s.destinationRule, s.topCard])
     await expect(panel(page).getByRole('figure', { name: caption })).toHaveCount(1);
 });
+
+// Epic 8 ticket 5 (HP-1): a tap pauses scenes 2 to 5 and a second tap restarts them from step 0.
+for (const id of ['compose', 'destination', 'place', 'scoring'] as const) {
+  test(`R-10 AD-14 a tap on scene ${id} pauses it and a second tap restarts it from step 0`, async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-idle-fresh');
+    await openPanel(page);
+    const figure = panel(page).getByRole('figure', { name: text.howTo.scenes[id] });
+    await figure.scrollIntoViewIfNeeded();
+    const mine = async () =>
+      (await sceneAnimations(page)).filter((a) => a.id.startsWith(`${id}-step-`));
+    await expect.poll(async () => (await mine()).map((a) => a.id)).toContain(`${id}-step-1`);
+    await figure.getByRole('button', { name: controls.pause, exact: true }).click();
+    const paused = figure.getByRole('button', { name: controls.restart, exact: true });
+    await expect(paused).toBeVisible();
+    const frozen = await mine();
+    expect(frozen.length).toBeGreaterThan(0);
+    expect(frozen.every((a) => a.playState === 'paused' || a.playState === 'finished')).toBe(true);
+    await page.waitForTimeout(400);
+    expect(await mine()).toEqual(frozen);
+    await paused.click();
+    await expect(figure.getByRole('button', { name: controls.pause, exact: true })).toBeVisible();
+    const ids = (await mine()).map((a) => a.id);
+    expect(ids).toContain(`${id}-step-0`);
+    expect(ids).not.toContain(`${id}-step-2`);
+    await expect
+      .poll(async () => (await mine()).map((a) => a.id), { timeout: 30_000 })
+      .toContain(`${id}-step-2`);
+  });
+}
 
 const trickyScenes = [
   {

@@ -39,4 +39,37 @@ Verify: `test:all` and `test:screens` green, the build size is at most 600,000 b
 
 ## Notes
 
-Holds the budget margin, HP-1..HP-7 coverage table and new-string list (filled by the build).
+**Budget (AD-18, `scripts/size-budget.mjs`):** total 547,309 / 600,000 gzip bytes; margin 52,691. Measured on base HEAD ae50f4f19bc8c5e277dd6778f4fedd9ef068b317 plus this ticket's working tree (`npm run test:all`, build step; no source edit after).
+
+**HP coverage (`e2e/how-to-play.spec.ts` on `android` unless noted):**
+
+| Sentence | Passing test or reason |
+| --- | --- |
+| HP-1 runs a script on `Card` with ghost, loops, tap pauses or restarts, none while closed or hidden | scene 1 tap test ('the scene plays on open, a tap pauses it...'), new tap pause/restart tests for compose, destination, place, scoring, the Tricky pause/restart tests, 'closed, the scene animates nothing', 'a hidden page stops the scene' |
+| HP-1 Animation speed applies | 'Animation speed Slow runs a scene step longer than Fast' |
+| HP-2 reduced motion: Next steps frames, final frame resting | the reduced-motion Next tests per scene (drag, compose, destination, place, scoring, Tricky) |
+| HP-3 five basic scenes in order | 'the Tricky rules heading and its three scenes follow the five basic scenes, in order'; screenshots scene 1-5 |
+| HP-4 Tricky section, three scenes | same order test; Tricky scene tests; screenshots scene 6-8 |
+| HP-5 content in `fixtures/`, engine replay | the scene replay test under `src/engine/` (epic tickets 1 to 4) |
+| HP-6 text in `text.ts`, figure, aria-hidden, `act()` | `src/ui/how-to-play.test.ts` AD-3 tests (paragraphs, figcaptions, no prose node, static cards) |
+| HP-7 order, removed sections | 'HP-7 the A move and Worked example headings are absent...' (Vitest), the full-sequence order test, no-links check |
+| HP-7 budget | reason: `size-budget.mjs` gate in `npm run build` (margin above) |
+| HP-7 owner reads the text | reason: owner review |
+
+**New strings** (diff of `src/ui/text.ts` against `bbf44c3~1` = 6a8ad66f61fa932ffc64b1bf7d75ccc98f7ed493; only strings still present):
+
+| Key | String | Ticket |
+| --- | --- | --- |
+| `howTo.headings.tricky` | Tricky rules | 8.4 |
+| `howTo.scenes.drag` | Press a card and drag: it takes every card below it. Drop the stack on a column. | 8.1 |
+| `howTo.scenes.compose` | Arrange your cards into a word. Tap a WordCell to borrow its top card. Then Validate. | 8.2 |
+| `howTo.scenes.destination` | The cards you land on stay in order and can't be shuffled. −/+ choose how many; Flip makes the word read upward instead. | 8.2 |
+| `howTo.scenes.place` | Pick a WordCell no higher than the word is long. Order the cards: the last one becomes that cell's free letter. Then Confirm. | 8.3 |
+| `howTo.scenes.scoring` | Each WordCell scores its letters times its number. QU counts as two letters. Long words on high cells score most. | 8.3 |
+| `howTo.scenes.sourceDrop` | Dropping back on the column you lifted from is allowed. As always, you must use at least 1 letter from the destination column: F must join, giving FAKED. | 8.4 |
+| `howTo.scenes.destinationRule` | You must use at least 1 letter from the destination column, unless you drag to an empty column. | 8.4 |
+| `howTo.scenes.topCard` | The top card of each WordCell can be used as a free letter added to the word. | 8.4 |
+| `howTo.scoreFigure(letters, cell, score)` | `${letters} × ${cell} = ${score}` | 8.3 |
+| `howTo.sceneControls.pause` / `restart` / `next` / `replay` | Pause animation / Restart animation / Next / Replay | 8.1 |
+
+Removed by this ticket: `howTo.move`, `exampleIntro`, `EXAMPLE_WORDS`, `exampleWords`, `exampleCaption`, headings `move` and `example`. Unchanged existing strings (goal, table, undo, empty, scoring) were not edited.

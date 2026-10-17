@@ -27,11 +27,11 @@ function inner(body: string, tag: string): string[] {
 }
 
 describe('AD-3 How to play panel', () => {
-  it('AD-3 the title and the nine h3 headings equal the text.ts strings, in order', async () => {
+  it('AD-3 the title and the seven h3 headings equal the text.ts strings, in order', async () => {
     const body = await html();
     expect(inner(body, 'h2')).toEqual([text.howToPlay]);
     expect(inner(body, 'h3')).toEqual(Object.values(text.howTo.headings));
-    expect(Object.values(text.howTo.headings)).toHaveLength(9);
+    expect(Object.values(text.howTo.headings)).toHaveLength(7);
   });
 
   it('AD-3 every body paragraph, caption and band is rendered from text.ts', async () => {
@@ -40,11 +40,9 @@ describe('AD-3 How to play panel', () => {
     const expected = [
       ...text.howTo.goal,
       ...text.howTo.table,
-      ...text.howTo.move,
       ...text.howTo.undo,
       ...text.howTo.empty,
       ...text.howTo.scoring,
-      ...text.howTo.exampleIntro,
     ];
     expect(paragraphs).toEqual(expected);
     expect(inner(body, 'figcaption')).toEqual([
@@ -56,7 +54,6 @@ describe('AD-3 How to play panel', () => {
       text.howTo.scenes.sourceDrop,
       text.howTo.scenes.destinationRule,
       text.howTo.scenes.topCard,
-      ...text.howTo.exampleWords.map(text.howTo.exampleCaption),
     ]);
     expect(inner(body, 'caption')).toEqual(Object.values(text.howTo.controlCaptions));
     for (const name of bandNames()) expect(body).toContain(name);
@@ -64,13 +61,13 @@ describe('AD-3 How to play panel', () => {
     expect(text.howTo.undo.join(' ')).toContain('no hints');
   });
 
-  it('AD-3 the example cards are static: no card id, test id, place or mirror-of', async () => {
+  it('AD-3 the scene cards are static: no card id, test id, place or mirror-of', async () => {
     const body = await html();
     expect(body).not.toContain('data-card-id');
     expect(body).not.toContain('data-testid');
     expect(body).not.toContain('data-mirror-of');
     expect(body).not.toContain('data-place');
-    // 22 worked-example cards plus scene 1’s 19 static cards (10 column, 4 tail, 5 tray) (epic 8
+    // Scene 1’s 19 static cards (10 column, 4 tail, 5 tray) (epic 8
     // ticket 1), scene 2's 39 (9 column, 1 D, 4 tail, cell 6, tray layers 5 + 5 + 7 + 7) and scene
     // 3's 22 (2 column, 1 D, 2 tail, tray layers 3 + 4 + 5 + 5) (epic 8 ticket 2), scene 4's 44 (9 column, B hidden from column 3,
     // cell 6 in five layers and as a stack of six, strips 4 x 6) and scene 5's 12 (stacks 3 + 3 + 6)
@@ -79,8 +76,25 @@ describe('AD-3 How to play panel', () => {
     // tray layers 3 + 1 + 2 + 3, dimmed cell copies 2 + 2 + 2) and top-card's 12 (1 column, 2 tail,
     // cell 5's 2, tray layers 2 + 3, one dimmed copy of cell 5's 2).
     expect(body.match(/class="card[^"]*static/g)).toHaveLength(
-      22 + 19 + 39 + 22 + 44 + 12 + 24 + 24 + 12,
+      19 + 39 + 22 + 44 + 12 + 24 + 24 + 12,
     );
+  });
+
+  it('HP-7 the A move and Worked example headings are absent; the kept sections are present', async () => {
+    const body = await html();
+    const headings = inner(body, 'h3');
+    expect(headings).not.toContain('A move');
+    expect(headings).not.toContain('Worked example');
+    expect(headings).toEqual([
+      text.howTo.headings.tricky,
+      text.howTo.headings.goal,
+      text.howTo.headings.table,
+      text.howTo.headings.undo,
+      text.howTo.headings.empty,
+      text.howTo.headings.scoring,
+      text.howTo.headings.controls,
+    ]);
+    expect(body).not.toContain('class="example"');
   });
 
   it('AD-3 the markup has no prose text node (every string is a text.ts expression)', () => {
