@@ -1,13 +1,13 @@
 # Review log — story-panel-layout-docs-budget-and-sweep.md
 
-State: pass 2: done
+State: pass 3: done
 
 Pre-loop: HEAD 0c56071d749d350ed0fdcccd9604addf7a6c5409, 173 words (pass 0 copy: story-panel-layout-docs-budget-and-sweep.passes/pass0.md). Growth budget 2.5x = ~432 words (default). No epic-8 SPEC.md exists; the epic file is the requirement source. Ticket toml fields (entry 5) in .passes/toml-fields.md, passed as intent.
 
 ## Pass 1 — 2026-10-16
 Words (docs): 488 (2.8 x pass 0; OVER the 2.5x budget: from here minors only if the fix adds no words)  |  Snapshot: story-panel-layout-docs-budget-and-sweep.passes/pass1.md
 Reviewers: builder's reading, edge-case hunter, adversarial, ref alignment  |  Findings: major 8 (merged from 4 reviewers), minor 4, decision-needed 0  |  Dropped in triage: 0 (all cited lines verified: EXPERIENCE.md 51/166/450-463, size-budget.mjs gzip AD-18, 9 baselines incl. example)
-State: pass 2: done
+State: pass 3: done
 ### Applied (to fixer)
 - [major] "anchors, scroll" undefined → default: drop; order = basics, Tricky rules, goal/table/undo/empty/scoring/controls; e2e DOM-order assertion
 - [major] removal scope unlisted → default: name headings, howTo keys, example cards/CSS, tests; Controls stays; keep AD-14 invariant re-pointed
@@ -24,7 +24,7 @@ State: pass 2: done
 ## Pass 2 — 2026-10-16
 Words (docs): 541 (3.1 x pass 0, over budget)  |  Snapshot: story-panel-layout-docs-budget-and-sweep.passes/pass2.md
 Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 5, minor 6, decision-needed 0  |  Dropped in triage: 0 (merged duplicates of the "with the commit" and "under 600,000" minors)
-State: pass 2: done
+State: pass 3: done
 ### Applied (to fixer)
 - [major] screenshot "confirm" → add any missing final-frame baseline (5+3), generated only via test:screens
 - [major] gap tests: Playwright android (Vitest if not UI-observable), AD-n names; "closed or hidden" panel (epic Done-when 3)
@@ -32,5 +32,19 @@ State: pass 2: done
 - [major] "full-panel baseline if layout changes" undefined → default none beyond the 8 finals; any source edit after the margin re-runs test:all and re-records
 - [major] removal touchpoints: how-to-play.test.ts (9→7 headings), text.test.ts, e2e spec section.example, screens example test, EXAMPLE_WORDS, move/example/exampleIntro/exampleWords/exampleCaption keys
 - [minor] "extend the existing e2e order test" (full h3/figcaption sequence); "at most 600,000"; margin recorded with HEAD hash of the measured build (drop "with the commit"); pause/restart tap asserted for all 8 scenes; new-string base = parent of first 8.1 code commit, table lists only remaining strings
+### Default applied (technical)
+- all items above
+
+## Pass 3 — 2026-10-16
+Words (docs): 541 (3.1 x pass 0, over budget)  |  Snapshot: story-panel-layout-docs-budget-and-sweep.passes/pass3.md
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (ref: none)  |  Findings: major 3, minor 6 (3 no-add applied), decision-needed 0  |  Dropped in triage: 0
+State: pass 3: done
+### Applied (to fixer)
+- [major] text.ts removal list omits the `move` paragraphs array (text.ts ~93-98) → add (+few words)
+- [major] gap-test names "starting with the AD-n id" contradicts AGENTS Conventions (R-id first, AD-n where none) → reword per convention
+- [major] "no anchors, links or controls" contradicts scenes' Pause/Next/Replay and Close → "no anchors, links or in-panel navigation"
+- [minor, no-add reword] coverage audit: map existing tests first, add only real gaps; HEAD hash = base commit of the measured working tree
+### Not applied (minor, would add words)
+- order-test naming (line 34 vs 466), example-cards unit test how-to-play.test.ts:67, HP-7/EXPERIENCE item 8 citation, new-strings note
 ### Default applied (technical)
 - all items above
