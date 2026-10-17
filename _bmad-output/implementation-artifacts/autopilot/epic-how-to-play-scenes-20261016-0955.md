@@ -64,3 +64,17 @@ Ref to fix upstream: none
 Tokens: 7.5M input-equivalent (ticket review 42%, build 40%, code review 12%, other 4%, orchestrator 3%); orchestrator peak context 58k
 Worth knowing: the plan has no sentence-to-test mapping table (AGENTS.md asks for one), left as a minor; the ticket review log lists further unapplied minors.
 Close-out docs: none
+
+## 8.5 Panel layout, docs, budget and sweep — done
+What it adds: final layout of the How to play panel, doc updates, size-budget check and the epic's cleanup sweep (removed the old static example and its strings and screenshot).
+Ticket review: 4 passes, converged (majors 8, 5, 3, 0); nothing needed your input
+Build: built; commit 216cb69
+Code review: quick, 1 pass, converged (majors 0); 0 fixes applied
+Tests: all passing (test:all), screenshots passed (44 passed, 20 skipped)
+Ref to fix upstream: none
+Tokens: 3.7M input-equivalent (ticket review 52%, build 29%, code review 8%, other 7%, orchestrator 3%); orchestrator peak context 55k
+Worth knowing: the build's internal review patched one medium (restart assertion in scene tests); a few unapplied minors from the ticket review remain in its review log.
+Close-out docs: none
+
+## Run complete
+All tickets of epic-how-to-play-scenes are done. Close-out docs: none.
