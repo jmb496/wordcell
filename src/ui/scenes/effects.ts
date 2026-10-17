@@ -54,15 +54,11 @@ export function ghostStart(scene: Scene): string {
  */
 export function sceneEffects(scene: Scene): readonly (readonly Effect[])[] {
   let pointer = scene.targets.rest;
-  // Where the tail wrapper and the D block rest relative to their homes.
-  const carries: Record<'tail' | 'dest', Point> = { tail: { x: 0, y: 0 }, dest: { x: 0, y: 0 } };
-  // The element the pointer carries: the tail, or (a `lifts: 'dest'` carry) the D block.
-  let mover: 'tail' | 'dest' = 'tail';
+  // Where the tail wrapper rests relative to its home.
+  let tailAt: Point = { x: 0, y: 0 };
   // After the fly the carried cards are in the tray: later moves are only the pointer's. A landed or
   // carry-less scene draws no tail at all.
   let flown = scene.carry === undefined || scene.carry.landed === true;
-  // Where the flown elements rest in the tray (their transform), so an undo can send them back.
-  let flownAt = new Map<string, string>();
   // The ghost fades in with its first movement.
   let shown = false;
   return scene.steps.map((step): Effect[] => {
@@ -85,10 +81,10 @@ export function sceneEffects(scene: Scene): readonly (readonly Effect[])[] {
       };
     };
     const carried = (next: Point): Effect => {
-      const before = carries[mover];
-      carries[mover] = next;
+      const before = tailAt;
+      tailAt = next;
       return {
-        element: mover,
+        element: 'tail',
         keyframes: [{ transform: at(before) }, { transform: at(next) }],
         kind: step.kind,
         times: step.times ?? 1,
@@ -97,14 +93,13 @@ export function sceneEffects(scene: Scene): readonly (readonly Effect[])[] {
     };
     switch (step.type) {
       case 'grab':
-        mover = step.carry?.lifts === 'dest' ? 'dest' : 'tail';
-        effects.push(ghost(), carried(add(carries[mover], { x: 0, y: -LIFT })));
+        effects.push(ghost(), carried(add(tailAt, { x: 0, y: -LIFT })));
         break;
       case 'move':
-        effects.push(ghost(), ...(flown ? [] : [carried(add(carries[mover], sub(to, from)))]));
+        effects.push(ghost(), ...(flown ? [] : [carried(add(tailAt, sub(to, from)))]));
         break;
       case 'drop':
-        effects.push(carried(add(carries[mover], { x: 0, y: LIFT })));
+        effects.push(carried(add(tailAt, { x: 0, y: LIFT })));
         break;
       case 'fly': {
         if (step.tucks !== undefined) {
@@ -179,11 +174,10 @@ export function sceneEffects(scene: Scene): readonly (readonly Effect[])[] {
         if (scene.carry === undefined || scene.layout === undefined)
           throw new Error(`scene ${scene.id}: a fly step needs a carry and a layout, or flies`);
         const { tailHome, destHome, trayTail, trayDest } = scene.layout;
-        const fly = (element: string, start: Point, end: Point): void => {
-          flownAt.set(element, at(end));
+        const fly = (element: string, end: Point): void => {
           effects.push({
             element,
-            keyframes: [{ transform: at(start) }, { transform: at(end) }],
+            keyframes: [{ transform: at({ x: 0, y: 0 }) }, { transform: at(end) }],
             kind: step.kind,
             times: step.times ?? 1,
             phase: 0,
@@ -191,24 +185,16 @@ export function sceneEffects(scene: Scene): readonly (readonly Effect[])[] {
         };
         flown = true;
         // Each tail card flies on its own, from its place in the stack (j strips down the
-        // wrapper, which rests at its carry) to its own place in the tray row; the D block, which
-        // may itself be the lifted element, flies to the start of the row.
-        if (mover === 'tail') {
-          // The wrapper itself only fades out (the reveal); an undo returns it from where it rests.
-          flownAt.set('tail', at(carries.tail));
-          const slot = scene.layout.traySlot ?? SLOT;
-          const resting = add(tailHome, carries.tail);
-          for (let j = 0; j < scene.carry.count; j++)
-            fly(
-              `tail-${j}`,
-              { x: 0, y: 0 },
-              sub(
-                { x: trayTail.x + j * slot, y: trayTail.y },
-                add(resting, { x: 0, y: j * STRIP }),
-              ),
-            );
-        }
-        fly('dest', carries.dest, sub(trayDest, destHome));
+        // wrapper, which rests at its carry) to its own place in the tray row; the D block flies to
+        // the start of the row. The wrapper itself only fades out (the reveal).
+        const slot = scene.layout.traySlot ?? SLOT;
+        const resting = add(tailHome, tailAt);
+        for (let j = 0; j < scene.carry.count; j++)
+          fly(
+            `tail-${j}`,
+            sub({ x: trayTail.x + j * slot, y: trayTail.y }, add(resting, { x: 0, y: j * STRIP })),
+          );
+        fly('dest', sub(trayDest, destHome));
         break;
       }
       case 'tap': {
@@ -299,28 +285,6 @@ export function sceneEffects(scene: Scene): readonly (readonly Effect[])[] {
       }
     }
     if (step.reveal) {
-      const undone =
-        step.command !== undefined && scene.fixture.commands[step.command]?.type === 'undo';
-      // An undo sends what flew into the tray back to its column while the tray fades out.
-      if (undone) {
-        for (const [element, end] of flownAt) {
-          const fades = !element.startsWith('tail-');
-          effects.push({
-            element,
-            keyframes: [
-              { transform: end, ...(fades ? { opacity: 0 } : {}) },
-              { transform: at({ x: 0, y: 0 }), ...(fades ? { opacity: 1 } : {}) },
-            ],
-            kind: step.reveal.kind,
-            times: 1,
-            phase: 1,
-          });
-        }
-        carries.tail = { x: 0, y: 0 };
-        carries.dest = { x: 0, y: 0 };
-        flown = false;
-        flownAt = new Map();
-      }
       if (step.reveal.show !== undefined && step.type !== 'arrange')
         for (const element of [step.reveal.show].flat())
           effects.push({
@@ -361,7 +325,7 @@ export function frameTail(scene: Scene, frame: Frame): string | undefined {
 
 /**
  * A reduced-motion frame's D block: `lifted` raises it, `gone` hides it (it is in the tray), absent
- * leaves it at home (epic 8 ticket 4; earlier scenes name no `dest` and keep it drawn).
+ * leaves it at home (scenes that name no `dest` keep it drawn).
  */
 export function frameDest(frame: Frame): { transform?: string; hidden: boolean } {
   switch (frame.dest) {

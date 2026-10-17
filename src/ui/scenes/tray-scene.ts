@@ -12,7 +12,6 @@ import {
   SLOT,
   STRIP,
   TRAY_TOP,
-  UNDO_BOX,
 } from './geometry';
 import type { Point, SceneFixtureData } from './types';
 
@@ -71,12 +70,3 @@ export const trayTargets = {
   cell6: { x: placeCellX(6) + SLOT / 2, y: CELLS_TOP + CARD_H / 2 },
   tiles: { x: RICH_INSET + RICH_SLOT * 3, y: TRAY_TOP + 4 + CARD_H / 2 },
 } as const;
-
-/** The pointer target on the top card of WordCell `cell` (3 to 5) drawn with `count` cards. */
-export const cellTarget = (cell: number, count: number): Point => ({
-  x: placeCellX(cell) + SLOT / 2,
-  y: CELLS_TOP + (count - 1) * STRIP + CARD_H / 2,
-});
-
-/** The pointer target on the scene's Undo pill. */
-export const undoTarget: Point = { x: UNDO_BOX.x + UNDO_BOX.w / 2, y: UNDO_BOX.y + UNDO_BOX.h / 2 };

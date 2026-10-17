@@ -34,7 +34,6 @@ import {
   STRIP_TOP,
   TRAY_H,
   TRAY_TOP,
-  UNDO_BOX,
 } from './geometry';
 import { type RunState, ScenePlayer } from './player';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
@@ -73,7 +72,6 @@ const geo = $derived({
   figureTop: SCORE_FIGURE_TOP,
   rich,
   confirm: CONFIRM_BOX,
-  undoBox: UNDO_BOX,
   placeCellTop: PLACE_CELL_TOP,
   placeLabelTop: PLACE_LABEL_TOP,
   stripTop: STRIP_TOP,
@@ -213,19 +211,6 @@ const inBlock = (frame: Frame, j: number): boolean =>
 const tailStyle = $derived(reduced ? frameTail(scene, current) : undefined);
 // The D block's reduced-motion state; a frame that names none leaves it drawn at home.
 const destState = $derived(reduced ? frameDest(current) : { hidden: false });
-// Epic 8 ticket 4: a scene with an `undo` command draws the Undo pill. A tray layer repeats the
-// WordCells 3 to 5 the fixture start lists whose top card its frame has borrowed, dimmed, over the
-// stage's own band (ticket 6).
-const MINI_CELLS = [3, 4, 5] as const;
-const miniCells = $derived(
-  placeMode || scoreMode
-    ? []
-    : MINI_CELLS.flatMap((cell) => {
-        const cards = scene.fixture.start.cells?.[String(cell)];
-        return cards === undefined ? [] : [{ cell, cards }];
-      }),
-);
-const hasUndo = $derived(scene.fixture.commands.some((c) => c.type === 'undo'));
 
 function element(node: HTMLElement, key: string): HTMLElement {
   const found = node.querySelector<HTMLElement>(`[data-scene-el="${key}"]`);
@@ -328,16 +313,6 @@ const replay = (): void => {
         {/each}
       </div>
       {/if}
-      {#if hasUndo}
-        <span
-          class="ctl undo"
-          data-scene-el="undo"
-          style:left="{geo.undoBox.x}px"
-          style:width="{geo.undoBox.w}px"
-          style:top="{geo.undoBox.y}px"
-          style:height="{geo.undoBox.h}px"
-        >{text.undo}</span>
-      {/if}
       {#each scene.frames as frame, i (i)}
         {#if geo.rich && frame.tray && frame.order !== undefined}
           <div
@@ -347,17 +322,6 @@ const replay = (): void => {
             style:height="{geo.trayH}px"
             style:opacity={reduced ? (i === currentIndex ? 1 : 0) : i === 0 ? 1 : undefined}
           >
-            {#each miniCells.filter((m) => frame.used?.includes(m.cell)) as entry (entry.cell)}
-              <div
-                class="cell used"
-                data-cell={entry.cell}
-                style:left="{geo.placeCellX(entry.cell)}px"
-                style:top="{geo.labelsTop - geo.trayTop}px"
-              >
-                <span class="num">{entry.cell}</span>
-                {@render wcell(entry.cards)}
-              </div>
-            {/each}
             {#if frame.cell6 === 'used' && cell6Letter !== undefined}
               <div class="cell6 cell used" style:left="{geo.placeCellX(6)}px" style:top="{geo.labelsTop - geo.trayTop}px">
                 <span class="num">6</span>

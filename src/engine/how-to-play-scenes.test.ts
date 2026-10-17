@@ -466,33 +466,8 @@ describe('AD-2 How to play scene replay', () => {
     expect(() => replayScene(wrong, DICT)).toThrow(/stated word BAKED/);
   });
 
-  it('AD-2 a rejected case states its outcome, citing the TABLE row, and the harness checks it', () => {
-    const scene = clone(baseDrop);
-    const row = { id: 'R-13', precondition: 'sourceCount 0' };
-    const command: Command = {
-      type: 'drop',
-      sourceColumn: 1,
-      sourceCount: 0,
-      destinationColumn: 3,
-    };
-    const good = {
-      ...scene,
-      rejected: [{ after: 0, command, outcome: 'throw' as const, check: 'r13-source-count', row }],
-    };
-    expect(() => replayScene(good, DICT)).not.toThrow();
-    const bad = { ...good, rejected: [{ ...good.rejected[0], check: 'r31-destination-count' }] };
-    expect(() => replayScene(bad, DICT)).toThrow(/expected throw r31-destination-count/);
-    const noop = {
-      ...scene,
-      rejected: [{ after: 1, command: { type: 'undo' } as Command, outcome: 'noop' as const, row }],
-    };
-    expect(() => replayScene(noop, DICT)).toThrow(/expected a no-op/);
-  });
-
   it('AD-2 a fixture index out of range or negative fails with the scene-named harness Error', () => {
     const scene = clone(baseDrop);
-    const command: Command = { type: 'undo' };
-    const row = { id: 'R-70', precondition: 'nothing to undo' };
     const bad: SceneFixture[] = [
       { ...scene, words: [{ command: 1, word: 'X' }] },
       { ...scene, words: [{ command: -1, word: 'X' }] },
@@ -500,8 +475,6 @@ describe('AD-2 How to play scene replay', () => {
       { ...scene, scores: [{ after: -1, score: 0 }] },
       { ...scene, validatable: [{ after: 2, canValidate: false }] },
       { ...scene, validatable: [{ after: -1, canValidate: false }] },
-      { ...scene, rejected: [{ after: 2, command, outcome: 'noop', row }] },
-      { ...scene, rejected: [{ after: -1, command, outcome: 'noop', row }] },
     ];
     for (const fixture of bad)
       expect(() => replayScene(fixture, DICT)).toThrow(/^scene base-drop: .* out of range 0\.\.\d/);

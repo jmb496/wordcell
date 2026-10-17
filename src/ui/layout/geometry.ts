@@ -164,7 +164,7 @@ export const SCENE_BASE = {
   /** The strip between stacked cards, and the card height, at the base slot. */
   strip: 20,
   cardH: 56,
-  /** The foot row below the columns (the Undo pill), the gaps around the tray, the tray, the labels. */
+  /** The foot row below the columns (spacing), the gaps around the tray, the tray, the labels. */
   foot: 44,
   gap: 4,
   trayFirstRow: 60,

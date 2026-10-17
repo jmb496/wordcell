@@ -2,7 +2,7 @@
 // (the component sets the matching Card CSS variables from these). Epic 8 ticket 6: the stage draws
 // the whole play area (eight columns, the foot row, the tray, WordCells 3 to 10; BAND_ORDER) at the
 // scene base slot SLOT; the component scales it by the fitted card width (`sceneFit`, AD-11).
-import { SCENE_BASE, type SceneStageInputs, sceneBaseHeight } from '../layout/geometry';
+import { SCENE_BASE, type SceneStageInputs } from '../layout/geometry';
 
 export const CARD_W = 40;
 export const SLOT = SCENE_BASE.slot;
@@ -10,8 +10,8 @@ export const STRIP = SCENE_BASE.strip;
 export const CARD_H = SCENE_BASE.cardH;
 /** The gap between a card's slot edge and its face (tile and column Card alike). */
 export const FACE_MARGIN = 2;
-export const COLUMN_PITCH = SLOT;
-export const COLUMN_X0 = 0;
+const COLUMN_PITCH = SLOT;
+const COLUMN_X0 = 0;
 export const COLUMNS = 8;
 /** Every column shows at least this many cards (scripted cards under filler at the far end). */
 export const MIN_COLUMN_CARDS = 5;
@@ -22,7 +22,7 @@ export const MAX_COLUMN_CARDS = 9;
  * frame draws one top card, R-52).
  */
 export const MAX_CELL_CARDS = 6;
-export const TRAY_ROWS = 2;
+const TRAY_ROWS = 2;
 export const STAGE_INPUTS: SceneStageInputs = {
   columnCards: MAX_COLUMN_CARDS,
   trayRows: TRAY_ROWS,
@@ -32,8 +32,8 @@ export const STAGE_INPUTS: SceneStageInputs = {
 export const liftedBy = (lifted: number): string => `translateY(${-lifted * STRIP}px)`;
 const stack = (n: number): number => (n - 1) * STRIP + CARD_H;
 export const COLUMN_AREA_H = stack(MAX_COLUMN_CARDS);
-/** The foot row below the columns holds the Undo pill. */
-export const FOOT_H = SCENE_BASE.foot;
+/** The foot row below the columns. */
+const FOOT_H = SCENE_BASE.foot;
 export const TRAY_TOP = COLUMN_AREA_H + FOOT_H + SCENE_BASE.gap;
 export const TRAY_H = SCENE_BASE.trayFirstRow + (TRAY_ROWS - 1) * SCENE_BASE.trayExtraRow;
 export const STAGE_W = 8 * SLOT;
@@ -41,7 +41,6 @@ export const STAGE_W = 8 * SLOT;
 export const LABELS_TOP = TRAY_TOP + TRAY_H + SCENE_BASE.gap;
 export const CELLS_TOP = LABELS_TOP + SCENE_BASE.labels;
 export const STAGE_H = CELLS_TOP + stack(MAX_CELL_CARDS);
-export const BASE_HEIGHT = sceneBaseHeight(STAGE_INPUTS);
 /** The tail lifts this far while carried (DESIGN.md Card lift). */
 export const LIFT = 8;
 /** The pointer hand's box and its fingertip inside it (the point the hand targets). */
@@ -94,6 +93,3 @@ export const CONFIRM_BOX = { x: 78, w: 96, y: 64, h: 30 } as const;
  */
 export const SCORE_FIGURE_TOP = TRAY_TOP + 8;
 export const SCORE_TOTAL_BOX = { x: (STAGE_W - 100) / 2, w: 100, y: TRAY_TOP + 66, h: 30 } as const;
-
-// Epic 8 ticket 4: the Tricky rules scenes draw an Undo pill in the foot row at the right.
-export const UNDO_BOX = { x: STAGE_W - 52, w: 48, y: COLUMN_AREA_H + 7, h: 30 } as const;

@@ -821,12 +821,12 @@ const sourceDropRows = [
     rules: 'R-21 R-13 Q-11',
     scene: 'source-drop',
     lastStep: 5,
-    // Per frame: the open layer's tiles, Validate class, the cells dimmed in that layer.
+    // Per frame: the D block state, the open layer's tiles and Validate class.
     frames: [
-      { dest: undefined, tiles: undefined, validate: undefined, used: [] },
-      { dest: undefined, tiles: undefined, validate: undefined, used: [] },
-      { dest: 'gone', tiles: 'FEDKA', validate: 'lit', used: [] },
-      { dest: 'gone', tiles: 'FAKED', validate: 'lit', used: [] },
+      { dest: undefined, tiles: undefined, validate: undefined },
+      { dest: undefined, tiles: undefined, validate: undefined },
+      { dest: 'gone', tiles: 'FEDKA', validate: 'lit' },
+      { dest: 'gone', tiles: 'FAKED', validate: 'lit' },
     ],
   },
 ];
@@ -852,10 +852,6 @@ for (const { id, rules, frames } of sourceDropRows) {
         await expect(open.locator('.validate')).toHaveClass(
           new RegExp(`(^|\\s)${frame.validate}(\\s|$)`),
         );
-        const dimmed = await open
-          .locator('.cell.used')
-          .evaluateAll((els) => els.map((el) => Number(el.getAttribute('data-cell'))));
-        expect(dimmed).toStrictEqual(frame.used);
         await expect(layers.and(figure.locator('[style*="opacity: 1"]'))).toHaveCount(1);
       }
       // Scene.svelte destState: `gone` hides the D block (it is in the tray), `lifted` shows it.

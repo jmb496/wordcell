@@ -1000,7 +1000,6 @@ describe.each([
 ] as const)('AD-14 scene %s against its fixture', (name, scene, data, caption, applied) => {
   type Frames = readonly {
     validate?: string;
-    used?: readonly number[];
     order?: readonly string[];
   }[];
   const frames = scene.frames as Frames;
@@ -1015,9 +1014,9 @@ describe.each([
   });
 
   it('AD-14 every grab and drop step carry is pinned to the drop command it names', () => {
-    for (const [i, step] of scene.steps.entries()) {
+    for (const step of scene.steps) {
       if (step.type !== 'grab' && step.type !== 'drop') continue;
-      const c = step.carry ?? carryOf(scene);
+      const c = carryOf(scene);
       const command = data.commands[step.command ?? -1] as {
         type: string;
         sourceColumn: number;
@@ -1030,15 +1029,13 @@ describe.each([
         c.count,
         c.destinationColumn,
       ]);
-      // A mismatching carry throws at load.
-      const wrong = { ...c, count: c.count + 1 };
-      expect(() =>
-        defineScene({
-          ...scene,
-          steps: scene.steps.map((s, j) => (j === i ? { ...s, carry: wrong } : s)),
-        }),
-      ).toThrow(/carry differs from fixture drop command/);
     }
+    // A mismatching carry throws at load.
+    const carry = carryOf(scene);
+    const wrong = { ...carry, count: carry.count + 1 };
+    expect(() => defineScene({ ...scene, carry: wrong })).toThrow(
+      /carry differs from fixture drop command/,
+    );
   });
 
   it('AD-14 R-38 the frame count, n per frame and Validate follow the fixture validatable', () => {
@@ -1051,16 +1048,6 @@ describe.each([
     expect(data.validatable.map((v) => v.after)).toStrictEqual(
       Array.from({ length: data.commands.length + 1 }, (_, i) => i),
     );
-  });
-
-  it('AD-14 R-33 a cell is dimmed in the frame its letter is added: Frame.used is the addFreeLetter cells so far', () => {
-    frames.forEach((frame, i) => {
-      const cells = data.commands
-        .slice(0, applied[i])
-        .filter((c) => c.type === 'addFreeLetter')
-        .map((c) => (c as unknown as { cell: number }).cell);
-      expect(frame.used ?? []).toStrictEqual(cells);
-    });
   });
 
   it('AD-14 frame 0 equals the start: tail home, no tray, nothing dimmed, and every cell of the start is drawn', async () => {
@@ -1082,31 +1069,6 @@ describe.each([
       ).toStrictEqual(listed);
       expect(body).not.toContain('data-testid');
       expect(body).not.toContain('data-card-id');
-    } finally {
-      mocked.motion = { baseMs: 180, reduced: false };
-    }
-  });
-
-  it('AD-14 the drawn dim per frame: the open tray layer repeats exactly the Frame.used cells as .cell.used', async () => {
-    mocked.motion = { baseMs: 180, reduced: true };
-    try {
-      vi.resetModules();
-      const { render } = await import('svelte/server');
-      const { default: Scene } = await import('./Scene.svelte');
-      for (const [i, frame] of frames.entries()) {
-        if (frame.order === undefined) continue;
-        // Render with frame i as the first (shown) frame; its layer is `tray-0`.
-        const body = render(Scene, {
-          props: { scene: { ...scene, frames: scene.frames.slice(i) }, ...FIT },
-        }).body;
-        const layer = body.slice(body.indexOf('data-scene-el="tray-0"'));
-        const end = layer.indexOf('data-scene-el="tray-', 10);
-        const mine = end < 0 ? layer : layer.slice(0, end);
-        const keys = [...mine.matchAll(/class="cell used[^"]*" data-cell="(\d)"/g)].map((m) =>
-          Number(m[1]),
-        );
-        expect(keys).toStrictEqual([...(frame.used ?? [])]);
-      }
     } finally {
       mocked.motion = { baseMs: 180, reduced: false };
     }

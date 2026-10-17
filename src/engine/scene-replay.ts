@@ -1,5 +1,4 @@
 import { type ApplyContext, applyFrom, type Command } from './commands';
-import { EngineError } from './errors';
 import { EN } from './lang/en';
 import { createSession, type Session } from './session';
 import { startOf } from './test-helpers';
@@ -14,9 +13,6 @@ import { viewFrom } from './view';
  * the fixture and the engine is a plain `Error` (AGENTS rule 6); an illegal move throws the
  * engine's own `EngineError`.
  */
-
-/** A rejected case's outcome: what `applyFrom` does with the command (AD-2 TABLE). */
-export type RejectedOutcome = 'throw' | 'noop' | 'rejectedWord';
 
 export interface SceneFixture {
   readonly scene: string;
@@ -72,18 +68,6 @@ export interface SceneFixture {
     readonly cell: number;
     readonly score: number;
   }[];
-  /**
-   * After `after` commands, `command` has `outcome`; `row` cites the command TABLE row in
-   * `commands.test.ts` (id and precondition, never imported or copied).
-   */
-  readonly rejected?: readonly {
-    readonly after: number;
-    readonly command: Command;
-    readonly outcome: RejectedOutcome;
-    readonly check?: string;
-    readonly rejectedWord?: string;
-    readonly row: { readonly id: string; readonly precondition: string };
-  }[];
 }
 
 export interface SceneReplay {
@@ -107,8 +91,8 @@ function fail(scene: SceneFixture, message: string): never {
 }
 
 /**
- * Replays `scene.commands` over its start, then checks the optional `words`, `scores` and
- * `rejected` fields when present. `dictionary` is the `ctx.dictionary` of `validate`.
+ * Replays `scene.commands` over its start, then checks the optional `words`, `scores`,
+ * `validatable` and `cellScores` fields when present. `dictionary` is the `ctx.dictionary` of `validate`.
  */
 export function replayScene(scene: SceneFixture, dictionary: ReadonlySet<string>): SceneReplay {
   const start = sceneStart(scene);
@@ -202,28 +186,6 @@ export function replayScene(scene: SceneFixture, dictionary: ReadonlySet<string>
     // The per-cell scores sum to the engine's live score (R-80), which the `scores` check above
     // already compares with this entry, so only its presence is checked here.
     if (total === undefined) fail(scene, `after ${after} commands cellScores have no scores entry`);
-  }
-  for (const { after, command, outcome, check, rejectedWord } of scene.rejected ?? []) {
-    index('rejected after', after, count);
-    const before = sessions[after];
-    let thrown: unknown;
-    let result: ReturnType<typeof applyFrom> | undefined;
-    try {
-      result = applyFrom(start, before, command, ctx);
-    } catch (error) {
-      thrown = error;
-    }
-    if (outcome === 'throw') {
-      if (!(thrown instanceof EngineError) || thrown.check !== check)
-        fail(scene, `rejected case after ${after}: expected throw ${check}, got ${String(thrown)}`);
-    } else if (thrown !== undefined || result === undefined) {
-      fail(scene, `rejected case after ${after}: expected ${outcome}, got ${String(thrown)}`);
-    } else if (outcome === 'noop') {
-      if (result.session !== before || result.rejectedWord !== undefined)
-        fail(scene, `rejected case after ${after}: expected a no-op`);
-    } else if (result.rejectedWord === undefined || result.rejectedWord !== rejectedWord) {
-      fail(scene, `rejected case after ${after}: expected rejectedWord ${rejectedWord}`);
-    }
   }
   return { session: sessions[sessions.length - 1], rejectedWords };
 }

@@ -7,7 +7,7 @@ const COMMAND_TYPES: Record<StepType, readonly string[]> = {
   move: ['arrange', 'setPlacementOrder'],
   arrange: ['arrange'],
   fly: [],
-  tap: ['addFreeLetter', 'validate', 'setDestinationCount', 'flip', 'setTarget', 'confirm', 'undo'],
+  tap: ['addFreeLetter', 'validate', 'setDestinationCount', 'flip', 'setTarget', 'confirm'],
 };
 
 /**
@@ -42,7 +42,7 @@ export function defineScene(scene: Scene): Scene {
     if (step.type === 'grab' || step.type === 'drop') {
       if (command?.type !== 'drop')
         throw new Error(`${where}: step ${i} (${step.type}) names no fixture drop command`);
-      const c = step.carry ?? scene.carry;
+      const c = scene.carry;
       if (
         c === undefined ||
         command.sourceColumn !== c.sourceColumn ||
@@ -51,15 +51,6 @@ export function defineScene(scene: Scene): Scene {
       )
         throw new Error(
           `${where}: step ${i} (${step.type}) carry differs from fixture drop command`,
-        );
-      if (
-        c.lifts === 'dest' &&
-        (scene.carry === undefined ||
-          c.sourceColumn !== scene.carry.destinationColumn ||
-          c.count !== scene.carry.destinationCount)
-      )
-        throw new Error(
-          `${where}: step ${i} (${step.type}) lifts a D block the scene does not have`,
         );
     } else if (step.command !== undefined) {
       const allowed = COMMAND_TYPES[step.type];
