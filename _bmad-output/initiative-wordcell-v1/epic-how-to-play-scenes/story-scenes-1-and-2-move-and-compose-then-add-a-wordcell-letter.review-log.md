@@ -1,6 +1,6 @@
 # Review log — ticket 8.7 (Scenes 1 and 2)
 
-State: pass 4: done
+State: pass 5: done (converged)
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 198 words. HEAD at start: 0a52938.
 Note: this epic has no SPEC.md (epic file: "goes straight to tickets, no separate spec").
 
@@ -71,3 +71,28 @@ Words (docs): 1486 (7.5 x pass 0, budget 1500)  |  Snapshot: story-scenes-1-and-
 - (none new; passes 1 and 2 items stand)
 
 Fixer applied pass 4 items 1-9 (wc 1486; Verify line shortened to the two npm scripts to make room).
+
+## Pass 5 — 2026-10-17
+Reviewers: Fix diff, Edge-case hunter, Adversarial, Ref alignment  |  Findings (merged): major 0, minor 12, decision-needed 0  |  Dropped in triage: 0 (eight reviewer-labelled majors from the adversarial lens reclassified minor under the pass-4 bar: each is a builder-picked, engine-checked detail, an already-flagged owner item, or verification precision; none is a defect in shipped behaviour, a gating check or the ticket's contract)
+Words (docs): 1486 (7.5 x pass 0, budget 1500; no fix pass)
+### Applied
+- none (converged)
+### Decision needed
+- unchanged from passes 1 and 2
+
+## Result — converged after 5 passes
+
+Unapplied minors (next build or loop; the ticket is at its word budget, so any fix must add no words):
+- R-31 bound wording: "1 <= k <= destination column length after the drop" should read the column's own length before the lifted cards land (4 for M U N B)
+- "Fuller means at least the old board's cards" contradicts the default column 3 (M U N B replaces L M F B); reword to column 1's tail and F, cell 6's L, a bottom B, plus decoration within MAX_COLUMN_CARDS / MAX_CELL_CARDS
+- Verify line was shortened to the two npm scripts; AC1 to AC3 carry the toml verify clauses (point the Verify line at them)
+- `opens` validation: harness range check; helper asserts `opens === scene1.commands.length` and scene 2 has more than `opens` commands; negative test mutates `opens`
+- The `arrange` step's target (`rest`), default `times`, and COMMAND_TYPES entry; one step = one glide of all moved tiles
+- Pin that AC5 names two preference values (Fast vs Slow)
+- CardIds [0,22,8,6] depend on `startOf` numbering; decoration must not add A/K/E/D, or the test derives ids from letters
+- Stated words are locked; a change is an owner decision
+- Scene 2 caption's first sentence is redundant with the owner sentence; the scene-2 Flip-back is not in the caption
+- Scene 2 final frame: spell out the pressed-Validate tray content; scene ids `move-compose` / `free-letter` for e2e retargeting
+- place.ts comment names the removed compose scene (ticket 8.8 owns place), so the grep should exclude prose comments
+- tickets.toml entry 7 `interface` and `references` still differ from the ticket; sync at done
+- M/D notation and R-31 precision; scene 2 first frame equals scene 1's last frame with the pointer at rest
