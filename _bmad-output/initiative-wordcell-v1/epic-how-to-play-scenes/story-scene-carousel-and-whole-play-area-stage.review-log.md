@@ -1,6 +1,6 @@
 # Review log — story-scene-carousel-and-whole-play-area-stage
 
-State: pass 2: done
+State: pass 3: done
 Pre-loop: HEAD 2a2ae35, words 270, budget 1500 words (stub), copy /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-how-to-play-scenes/story-scene-carousel-and-whole-play-area-stage.passes/pass0.md
 Intent extra (tickets.toml entry 6, not yet in the ticket): interface = "src/ui/scenes/ (carousel, stage), HowToPlayPanel.svelte, text.ts howTo control names."; tests = "Carousel behaviour (P6 android); stage structure (U); screenshots (screens)."; owns = "The carousel and the shared play-area stage."; unknown = "How to fit eight columns plus the tray inside the phone-width panel at readable card size; reuse the layout measuring of src/ui/layout/."; verify = (as in Acceptance Criteria); risk = medium.
 
@@ -33,3 +33,19 @@ Reviewers: fix-diff, edge-case, adversarial, ref-alignment  |  Findings: major 1
 ### Applied
 - 10 majors and 2 minors (fit symbols, reduced-motion frame/Replay, Playwright-vs-unit sizes, dots wrap, hidden/pref re-entry, filler ids, missing P6 cases, overlay-gated mount, carousel root/keys, test naming) → fixer items 1–12
 Words: 1180 (4.4 x pass 0, within the 1500 budget)  |  Snapshot: _bmad-output/initiative-wordcell-v1/epic-how-to-play-scenes/story-scene-carousel-and-whole-play-area-stage.passes/pass2.md
+
+## Pass 3 — 2026-10-17
+Reviewers: fix-diff, edge-case, adversarial, ref-alignment  |  Findings: major 8 (after merge), minor 8, decision-needed 1  |  Dropped in triage: 0
+### Default applied (technical)
+- Hidden tab follows the existing player (stops at the next step boundary, restarts once visible); the "user-paused stays paused" clause is dropped; test sets document.hidden/visibilityState and dispatches visibilitychange.
+- Scene is keyed on (index, reduced motion, speed, fitted card width): a change re-enters as a newly shown scene (step 1, playing).
+- Focus stays on the activated carousel control; focus inside a scene that unmounts moves to the carousel root (tabindex -1); keys act only with focus in the root.
+- Stage and controls are in the panel's scrolling content; landscape/desktop reach controls by scrolling.
+- Static Card carries none of data-card-id/testid/place/mirror-of (Card.svelte).
+- New card-width function lives with src/ui/layout/ and reuses what fits (fixer names it), band order from BAND_ORDER; formula inputs pinned, 360 px result >= 32 px in a unit assertion.
+- Filler goes at the far end of each column, ids unique per scene (unit assertion).
+### Decision needed (functionality / UX / gameplay)
+- Carousel behaviours the owner's 2026-10-17 decision does not state: buttons and keys only (no swipe), no wrap-around at the ends, panel always opens on scene 1, every entry restarts the scene — question: does the owner confirm these? — proposed default: as listed (already in the ticket; the loop applied them as technical in pass 1)
+### Applied
+- 8 majors and 4 minors (hidden-tab per player, focus and keys, keyed re-entry, vertical bounds, static card attributes, layout reuse, fit formula, filler placement; content width, exit placeholder, AC wording, locators) → fixer items 1–12
+Words: 1393 (5.2 x pass 0; budget 1500, nearly reached)  |  Snapshot: _bmad-output/initiative-wordcell-v1/epic-how-to-play-scenes/story-scene-carousel-and-whole-play-area-stage.passes/pass3.md
