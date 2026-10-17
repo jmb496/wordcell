@@ -3,7 +3,7 @@ title: 'Scene 5: the one Tricky rule'
 type: 'feature'
 ticket: '10'
 created: '2026-10-17'
-status: 'built'
+status: done
 baseline_revision: 'f12c91de42043c661007f9d9f124dce75a044a5b'
 route: 'full'
 route_source: 'auto'

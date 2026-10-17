@@ -67,3 +67,14 @@ Ref to fix upstream: none
 Tokens: see handoff run; orchestrator session small
 Worth knowing: the build skipped its own internal review; the code review loop covered it. Two minors not applied (defineScene checks), reasons in the plan. Review noted an untested `cards < 2` throw in script.ts and no assertion of top letters beyond the screenshot baseline. The owner reviews all scene captions at the epic end.
 Close-out docs: epic-how-to-play-scenes SPEC.md (Scene 4 pacing) ← stacks grow first, then figures, then total (owner, 2026-10-17), if the spec describes the interleaved order
+
+## 8.10 Scene 5: the one Tricky rule — done
+What it adds: How to play now ends with one Tricky-rule scene (lift E D K A, drop back on column 1, F must join, FAKED shows in the tray) replacing the three old Tricky scenes; the empty-column and one-top-card scenes are gone.
+Ticket review: 4 passes, converged (majors 8, 6, 1, 0); nothing needed your input
+Build: built; commit 7bdd8fa
+Code review: quick, 1 pass, converged; 0 fixes applied
+Tests: all passing (one unrelated desktop e2e teardown timeout in board-keys on the first run passed alone and on a full rerun), screenshots passed
+Ref to fix upstream: none
+Tokens: Tokens: 5.4M input-equivalent (ticket review 61%, build 26%, code review 6%, orchestrator 4%, other 3%); orchestrator peak context 64k
+Worth knowing: epic file Done-when/HP-4/HP-5 wording still says three Tricky scenes, and tickets.toml entry 11 description needs narrowing; both left for 8.11 or the retro. Code review noted no scene-level test for the R-22 empty-column caption sentence and that the harness's rejected branch is removed in 8.11.
+Close-out docs: none
