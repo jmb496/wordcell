@@ -80,3 +80,95 @@ hitl = false
 risk = "low"
 done_checkpoint = true
 references = ["design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/EXPERIENCE.md, How to play panel", "constraint — docs/development-methodology.md, Definition of done"]
+
+# Rework (owner 2026-10-17, epic Notes): carousel of five scenes on the whole play area.
+
+[[entry]]
+id = 6
+type = "story"
+title = "Scene carousel and whole play-area stage"
+description = "Replaces the stacked scene list in the How to play panel with a carousel: one scene at a time, left and right arrow buttons (named, native buttons, wrapped in act(), 44 px targets, previous disabled visually on the first scene and next on the last), dots as buttons that jump to a scene with the current one marked, the current scene plays and the others render nothing, keyboard arrows move between scenes, reduced motion keeps the Next-frame control. Gives every scene one shared stage that draws the whole play area like the game: eight columns with more cards than today and the tray with the word strip and WordCells 3 to 10 where the game puts them (static Card components), so scenes are scripted on a real-looking board. Existing scenes keep working on the new stage until the following entries replace them."
+verify = "npm run test:all and npm run test:screens are green with a Playwright android test that only one scene is playing, the arrows and dots move between scenes and name the position, a closed panel animates nothing, and a screenshot of the stage."
+covers = ["HP-1", "HP-2", "HP-6"]
+after = [5]
+hitl = false
+risk = "medium"
+unknown = "How to fit eight columns plus the tray inside the phone-width panel at readable card size; reuse the layout measuring of src/ui/layout/."
+interface = "src/ui/scenes/ (carousel, stage), HowToPlayPanel.svelte, text.ts howTo control names."
+tests = "Carousel behaviour (P6 android); stage structure (U); screenshots (screens)."
+owns = "The carousel and the shared play-area stage."
+references = ["design — EXPERIENCE.md How to play panel, DESIGN.md tray and cards", "rules — docs/game-flow-spec.md §8"]
+
+[[entry]]
+id = 7
+type = "story"
+title = "Scenes 1 and 2: move and compose, then add a WordCell letter"
+description = "Scene 1 combines the old drag and destination-block scenes on a fuller board: lift a stack, drop it, the cards are rearranged in the tray with an animated reorder (the pointer does not drag every card), add destination letters with the plus and minus, Flip. Scene 2 starts from scene 1's final state and adds a WordCell's top card as a free letter (change the word as needed), Validate; its caption includes: The top card of each WordCell can be used as a free letter added to the word. Fixtures replayed by the engine test; captions drafted in text.ts for the owner's review."
+verify = "npm run test:all and npm run test:screens are green; engine replay passes for both fixtures and scene 2 provably starts from scene 1's final position; Playwright android plays both."
+covers = ["HP-3", "HP-5", "HP-6"]
+after = [6]
+hitl = false
+risk = "medium"
+interface = "new scripts, fixtures/how-to-play-*.json, text.ts captions; removes the old compose and destination-block scenes."
+tests = "Engine replay incl. continuity of scene 2's start with scene 1's end (U); play to last frame (P6 android); screenshots."
+owns = "Scenes 1 and 2 and their captions."
+references = ["rules — docs/game-flow-spec.md, R-30 to R-38, R-21", "code — src/ui/scenes/"]
+
+[[entry]]
+id = 8
+type = "story"
+title = "Scene 3: place with cards tucking into the WordCell"
+description = "Place scene laid out exactly like the game. The word's cards animate into the chosen WordCell leftmost first, each disappearing below the card above it, so the WordCell ends with a single top card and not a stack; order dragging of the free letter stays as in the current scene."
+verify = "npm run test:all and npm run test:screens are green; engine replay passes; a Playwright android test plays the scene; a final-frame screenshot shows one top card."
+covers = ["HP-3", "HP-5"]
+after = [7]
+hitl = false
+risk = "low"
+interface = "scene script and effects under src/ui/scenes/; fixtures; text.ts caption."
+tests = "Engine replay (U); play (P6 android); screenshots."
+owns = "Scene 3."
+references = ["rules — docs/game-flow-spec.md, R-40 to R-42, R-50 to R-52, R-60"]
+
+[[entry]]
+id = 9
+type = "story"
+title = "Scene 4: scoring with stacks growing"
+description = "Scoring scene starts as the game looks (WordCells recognisably on the board), animates each WordCell stack downwards to show how many cards it holds, then shows the per-cell numbers and the total; QU counts two."
+verify = "npm run test:all and npm run test:screens are green; engine replay checks the scores; Playwright android plays the scene."
+covers = ["HP-3", "HP-5"]
+after = [8]
+hitl = false
+risk = "low"
+interface = "scene script under src/ui/scenes/; fixture; text.ts caption."
+tests = "Engine replay incl. scores (U); play (P6 android); screenshots."
+owns = "Scene 4."
+references = ["rules — docs/game-flow-spec.md, R-80, R-36"]
+
+[[entry]]
+id = 10
+type = "story"
+title = "Scene 5: the one Tricky rule"
+description = "Replaces the Tricky rules section (three scenes) by a single scene as the last carousel item: lift E D K A, drop back on column 1, F must join, the rearranged word (FAKED) is animated in the tray, on the shared stage and visuals. Caption: Dropping back on the column you lifted from is allowed. You must use at least 1 letter from the destination column, unless you drag to an empty column. The empty-column and one-top-card scenes are removed."
+verify = "npm run test:all and npm run test:screens are green; engine replay passes for the scene fixture; no leftover Tricky rules section or fixtures for the removed scenes."
+covers = ["HP-4", "HP-5", "HP-6"]
+after = [9]
+hitl = false
+risk = "low"
+interface = "scene script and fixture; text.ts; removes the old Tricky rules scenes."
+tests = "Engine replay (U); play (P6 android); screenshots."
+owns = "Scene 5."
+references = ["rules — docs/game-flow-spec.md, R-21, R-13"]
+
+[[entry]]
+id = 11
+type = "story"
+title = "Rework sweep: docs, budget and cleanup"
+description = "Removes dead scene code, fixtures, text and tests of the replaced scenes, updates the EXPERIENCE.md How to play section (carousel, arrows, dots, five scenes), updates specs and screenshot baselines, measures the bundle against the 600,000-byte budget and records the margin, and lists every new or changed text.ts string for the owner's review."
+verify = "npm run test:all and npm run test:screens are green, the build size is under 600,000 bytes with the margin recorded, and no unused scene code or fixture remains."
+covers = ["HP-7"]
+after = [10]
+hitl = false
+risk = "low"
+done_checkpoint = true
+references = ["design — EXPERIENCE.md How to play panel", "constraint — docs/development-methodology.md, Definition of done"]
+
