@@ -36,3 +36,7 @@ Verify: npm run test:all and npm run test:screens are green; engine replay passe
 
 - parent — _bmad-output/initiative-wordcell-v1/epic-how-to-play-scenes/epic-how-to-play-scenes.md
 - rules — docs/game-flow-spec.md, R-40 to R-42, R-50 to R-52, R-60
+
+## Notes
+
+- Decision: 2026-10-17, review default taken (the owner reviews all scene captions at the epic end): the Scene 3 caption stays the approved 2026-10-16 text: "Pick a WordCell no higher than the word is long. Order the cards: the last one becomes that cell's free letter. Then Confirm."
