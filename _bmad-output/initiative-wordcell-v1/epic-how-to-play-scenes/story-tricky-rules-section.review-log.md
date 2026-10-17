@@ -1,6 +1,6 @@
 # Review log — story-tricky-rules-section.md
 
-State: pass 1: done
+State: pass 2: done
 
 Pre-loop: HEAD 9482609cbbf2f875dbda9facacd20568a2a352bb, 238 words (pass 0 copy: story-tricky-rules-section.passes/pass0.md). Growth budget 2.5x = ~595 words (default). Note: no epic-8 SPEC.md exists under _bmad-output/specs/; the epic file is the requirement source. Ticket toml fields (entry 4: description, verify, covers, interface, tests, owns, unknown, references) are in story-tricky-rules-section.passes/toml-fields.md, passed to reviewers and fixer as intent; fixer adds them to the Description in pass 1.
 
@@ -26,3 +26,20 @@ Fixer verified scenes (a)(b)(c) through replayScene; Q-30 left out of rules ref 
 - none
 ### Dropped
 - toml-fields stray note
+
+## Pass 2 — 2026-10-16 22:10
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 4 (merged), minor 9, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 940 before fix (over budget)
+### Applied (to fixer)
+- [major] scene (b) needs two carries but Scene.carry is single: per-step carry override (or carries by drop command) in Interface, script/test pin each grab/drop to its fixture drop command
+- [major] stage drawing: positions of cells 3, 4, 5 (top card + number, from frame 0), Undo control and its target/accessible text, reset motion kind, whether a cell dims in the frame its letter is added, scene (a) self-drop landing at the tail's home
+- [major] frames vs steps mismatch in (a) and (c): fold or add frames so frames = steps + 1 or name the exception; Next click count
+- [major] `n` and the Validate state per frame undefined: define n; frame validate follows `validatable`
+- [minor, no added words] scene (b) empty column: use the listed column; DICT claim: state inert (scenes never validate) or drop; R-14/Q-34 out of the Names list
+### Default applied (technical)
+- Per-step carry override; Undo drawn as a scene control; frame validate follows fixture `validatable`
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none. Minors deferred (document over budget, they add words): (b) `validatable` list, id-to-key map in test, `after` wording, baseline names, panel placement clause, scene (c) empty-column rationale.
+Words (docs): 935 (3.9 x pass 0, over budget)  |  Snapshot: story-tricky-rules-section.passes/pass2.md. Fixer verified scene (b) by replay; stage positions, Undo control and cell-dim timing unverified (plan time).
