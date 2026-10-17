@@ -86,7 +86,14 @@ describe('AD-2 How to play scene replay', () => {
       destinationCount: 2,
       destinationSide: 'right',
     });
-    expect(moveCompose.words).toStrictEqual([{ command: 5, word: 'BAKED' }]);
+    expect(moveCompose.words?.map((w) => w.word)).toStrictEqual([
+      'EKBA',
+      'DEKBA',
+      'NDEKBA',
+      'DEKBA',
+      'KBAED',
+      'BAKED',
+    ]);
     expect(moveCompose.validatable).toHaveLength(moveCompose.commands.length + 1);
     expect(moveCompose.block?.map((b) => [b.k, b.side])).toStrictEqual([
       [1, 'left'],
@@ -186,6 +193,12 @@ describe('AD-2 How to play scene replay', () => {
       (moved as { opens?: number }).opens = opens;
       expect(() => expectContinuity(moveCompose, moved)).toThrow();
     }
+    // Passes the start, prefix and opens checks; only the stated block at `opens` differs. (The
+    // engine board check cannot differ alone: replay is deterministic over the same start and prefix.)
+    const block = clone(freeLetter);
+    const stated = block.block?.find((b) => b.after === block.opens);
+    (stated as { k: number }).k = 3;
+    expect(() => expectContinuity(moveCompose, block)).toThrow();
   });
 
   it('AD-2 scene free-letter: opens outside 1..commands.length-1 or not an integer fails the harness', () => {

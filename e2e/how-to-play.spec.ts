@@ -258,8 +258,9 @@ test('R-10 R-20 R-23 AD-14 with reduced motion scene 1 shows eight frames on Nex
     if (i === 0) frames.push(await transform());
     await expect(open).toHaveCSS('opacity', '0');
   }
-  // Frame 2 has the tail gone into the tray: frames 0 and 1 differ in the tail's transform.
-  expect(new Set(frames).size).toBe(2);
+  // Frame 2 has the tail gone into the tray with tray-2 shown.
+  await expect(tail).toHaveCSS('visibility', 'hidden');
+  await expect(scene(page).locator('[data-scene-el="tray-2"]')).toHaveCSS('opacity', '1');
   for (let i = 2; i < 7; i++)
     await scene(page).getByRole('button', { name: controls.next, exact: true }).click();
   await expect(open).toHaveCSS('opacity', '1');
@@ -342,6 +343,7 @@ const stepScenes = [
   {
     id: 'freeLetter' as const,
     rules: 'R-33 R-34 R-38',
+    // The last step index (Validate); the rest after it is `freeLetter-rest`, not a step id.
     lastStep: 1,
     frames: [
       { tiles: 'BAKED', validate: 'lit', used: false, k: 2, side: 'right' },

@@ -1070,6 +1070,17 @@ describe('AD-14 scene free-letter against its fixture', () => {
     ).not.toThrow();
   });
 
+  it('AD-14 every animated element is declared and every step names a motion kind', () => {
+    for (const effect of sceneEffects(freeLetterScene).flat())
+      expect(freeLetterScene.elements).toContain(effect.element);
+    for (const step of freeLetterScene.steps) expect(KINDS).toContain(step.kind);
+    // Frame 0 is scene 1's final tray, drawn by Scene.svelte as the always-open tray-0 layer, which
+    // is not animated and so not declared; the later open frames are the animated layers.
+    freeLetterScene.frames.forEach((frame, i) => {
+      if (i > 0 && frame.tray) expect(freeLetterScene.elements).toContain(`tray-${i}`);
+    });
+  });
+
   it('AD-14 the first step of scene 2 is a tap from the rest point: the pointer is at rest at its start', () => {
     expect(freeLetterScene.steps[0].type).toBe('tap');
     const [first] = sceneEffects(freeLetterScene)[0].filter((e) => e.element === 'ghost');
@@ -1107,9 +1118,10 @@ describe('AD-14 the arrange step', () => {
     const { duration } = await import('../motion');
     const total = (baseMs: number): number => {
       mocked.motion = { baseMs, reduced: false };
-      return sceneEffects(moveComposeScene)
-        [index].filter((e) => e.element === 'ghost')
-        .reduce((ms, e) => ms + duration(e.kind) * e.times, 0);
+      return sceneEffects(moveComposeScene)[index].reduce(
+        (ms, e) => ms + duration(e.kind) * e.times,
+        0,
+      );
     };
     const fast = total(90);
     expect(fast).toBeGreaterThan(0);
@@ -1123,6 +1135,19 @@ describe('AD-14 the arrange step', () => {
     expect(() => redefine({ ...step, command: undefined })).toThrow(/names no fixture command/);
     expect(() => redefine({ ...step, reveal: undefined })).toThrow(/tray-<frame> layer/);
     expect(() => redefine(step)).not.toThrow();
+  });
+
+  it('AD-1 an arrange step throws at load when a tile element is undeclared or the frames differ in letters', () => {
+    const redefine = (scene: Scene) =>
+      defineScene({ ...scene, steps: [moveComposeScene.steps[0], step] });
+    const elements = moveComposeScene.elements.filter((e) => e !== 'tray-7-tile-4');
+    expect(() => redefine({ ...moveComposeScene, elements })).toThrow(
+      /does not declare tray-7-tile-4/,
+    );
+    const frames = moveComposeScene.frames.map((f, i) =>
+      i === 7 ? { ...f, order: ['B', 'A', 'K', 'E', 'X'] } : f,
+    );
+    expect(() => redefine({ ...moveComposeScene, frames })).toThrow(/differ in letters/);
   });
 });
 

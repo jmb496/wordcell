@@ -16,7 +16,8 @@ const COMMAND_TYPES: Record<StepType, readonly string[]> = {
  * fixture, no frames, a step whose command does not fit its type, a grab or drop whose carry
  * (its own, else the scene's) differs from the fixture drop command it names, a step animating a
  * command below the fixture's `opens` (epic 8 ticket 7), an `arrange` step without its command or
- * its `tray-<frame>` layer, or a non-positive rest.
+ * its `tray-<frame>` layer (with both frames' orders, one letter multiset, and every
+ * `tray-<frame>-tile-<j>` declared), or a non-positive rest.
  */
 export function defineScene(scene: Scene): Scene {
   const where = `scene ${scene.id}`;
@@ -78,6 +79,21 @@ export function defineScene(scene: Scene): Scene {
         throw new Error(`${where}: step ${i} (arrange) names no fixture command`);
       if (!/^tray-\d+$/.test(step.reveal?.show ?? ''))
         throw new Error(`${where}: step ${i} (arrange) must reveal its tray-<frame> layer`);
+      const layer = step.reveal?.show as string;
+      const frame = Number(layer.slice('tray-'.length));
+      const before = scene.frames[frame - 1]?.order;
+      const after = scene.frames[frame]?.order;
+      if (before === undefined || after === undefined)
+        throw new Error(
+          `${where}: step ${i} (arrange) needs orders on frames ${frame - 1}, ${frame}`,
+        );
+      if ([...before].sort().join('') !== [...after].sort().join(''))
+        throw new Error(
+          `${where}: step ${i} (arrange) frames ${frame - 1}, ${frame} differ in letters`,
+        );
+      for (let j = 0; j < after.length; j++)
+        if (!scene.elements.includes(`${layer}-tile-${j}`))
+          throw new Error(`${where}: step ${i} (arrange) does not declare ${layer}-tile-${j}`);
     }
     for (const id of step.reveal ? [step.reveal.show ?? [], ...step.reveal.hide].flat() : [])
       if (!scene.elements.includes(id))
