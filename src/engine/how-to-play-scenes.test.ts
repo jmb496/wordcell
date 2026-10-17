@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import composeFixture from '../../fixtures/how-to-play-compose.json' with { type: 'json' };
 import destinationFixture from '../../fixtures/how-to-play-destination.json' with { type: 'json' };
+import destinationRuleFixture from '../../fixtures/how-to-play-destination-rule.json' with {
+  type: 'json',
+};
 import dragFixture from '../../fixtures/how-to-play-drag.json' with { type: 'json' };
 import placeFixture from '../../fixtures/how-to-play-place.json' with { type: 'json' };
 import scoringFixture from '../../fixtures/how-to-play-scoring.json' with { type: 'json' };
+import sourceDropFixture from '../../fixtures/how-to-play-source-drop.json' with { type: 'json' };
+import topCardFixture from '../../fixtures/how-to-play-top-card.json' with { type: 'json' };
 import dictionary from '../../generated/dictionary/en.txt?raw';
 import type { Command } from './commands';
 import { EngineError } from './errors';
@@ -17,14 +22,20 @@ const compose = composeFixture as unknown as SceneFixture;
 const destination = destinationFixture as unknown as SceneFixture;
 const place = placeFixture as unknown as SceneFixture;
 const scoring = scoringFixture as unknown as SceneFixture;
+const sourceDrop = sourceDropFixture as unknown as SceneFixture;
+const destinationRule = destinationRuleFixture as unknown as SceneFixture;
+const topCard = topCardFixture as unknown as SceneFixture;
 const FIXTURES: readonly SceneFixture[] = [
   dragFixture as unknown as SceneFixture,
   compose,
   destination,
   place,
   scoring,
+  sourceDrop,
+  destinationRule,
+  topCard,
 ];
-const DICT = new Set(['baked', 'balked']);
+const DICT = new Set(['baked', 'balked', 'faked', 'bat', 'sat']);
 const clone = (scene: SceneFixture): SceneFixture => structuredClone(scene);
 
 function expectEngineError(fn: () => unknown, check: string): void {
@@ -341,6 +352,108 @@ describe('AD-2 How to play scene replay', () => {
     ];
     for (const fixture of bad)
       expect(() => replayScene(fixture, DICT)).toThrow(/^scene drag: .* out of range 0\.\.\d/);
+  });
+
+  // Epic 8 ticket 4 (HP-4, HP-5): the Tricky rules scenes.
+  it('R-21 R-13 Q-11 scene source-drop: a self-drop of E D K A leaves F as D (k 1 left), arranged A K E D gives FAKED', () => {
+    const { session, rejectedWords } = replayScene(sourceDrop, DICT);
+    expect(rejectedWords).toStrictEqual([undefined, undefined]);
+    expect(session.moves[0]).toMatchObject({
+      sourceColumn: 1,
+      sourceCount: 4,
+      destinationColumn: 1,
+    });
+    expect(sourceDrop.validatable?.map((v) => v.canValidate)).toStrictEqual([false, true, true]);
+    expect(sourceDrop.words).toStrictEqual([{ command: 1, word: 'FAKED' }]);
+  });
+
+  it('R-13 R-22 R-31 Q-12 Q-27 scene destination-rule: both halves give BAT; the rejected k 1 on the empty column throws', () => {
+    const { session, rejectedWords } = replayScene(destinationRule, DICT);
+    expect(rejectedWords.every((w) => w === undefined)).toBe(true);
+    expect(session.cursor.phase).toBe('composing');
+    expect(destinationRule.words?.map((w) => w.word)).toStrictEqual(['BAT', 'BAT']);
+    expect(destinationRule.validatable?.map((v) => v.canValidate)).toStrictEqual([
+      false,
+      true,
+      false,
+      false,
+      false,
+      true,
+    ]);
+    expect(destinationRule.rejected).toHaveLength(1);
+    expect(destinationRule.rejected?.[0]).toMatchObject({
+      after: 3,
+      outcome: 'throw',
+      check: 'r31-set-count-empty-destination',
+    });
+  });
+
+  it('R-33 Q-31 scene top-card: the S on top of cell 5, added at index 0, gives SAT; a second add throws', () => {
+    const { rejectedWords } = replayScene(topCard, DICT);
+    expect(rejectedWords).toStrictEqual([undefined, undefined]);
+    expect(topCard.commands[1]).toStrictEqual({ type: 'addFreeLetter', cell: 5, index: 0 });
+    expect(topCard.validatable?.map((v) => v.canValidate)).toStrictEqual([false, false, true]);
+    expect(topCard.rejected?.[0]).toMatchObject({
+      after: 2,
+      outcome: 'throw',
+      check: 'r33-free-letter-duplicate',
+    });
+  });
+
+  it.each([
+    ['source-drop', sourceDrop],
+    ['destination-rule', destinationRule],
+    ['top-card', topCard],
+  ] as const)('R-30 scene %s: a changed stated word fails the harness', (_name, fixture) => {
+    const scene = edit<{ word: string }>(fixture, 'words', (e) => {
+      e[0].word = 'XQZXQ';
+    });
+    expect(() => replayScene(scene, DICT)).toThrow(/stated word XQZXQ/);
+  });
+
+  it.each([
+    ['source-drop', sourceDrop],
+    ['destination-rule', destinationRule],
+    ['top-card', topCard],
+  ] as const)(
+    'R-38 scene %s: every flipped validatable flag fails the harness',
+    (_name, fixture) => {
+      for (let i = 0; i < (fixture.validatable?.length ?? 0); i++) {
+        const scene = edit<{ canValidate: boolean }>(fixture, 'validatable', (e) => {
+          e[i].canValidate = !e[i].canValidate;
+        });
+        expect(() => replayScene(scene, DICT)).toThrow(/stated canValidate/);
+      }
+    },
+  );
+
+  it.each([
+    ['destination-rule', destinationRule, 'r31-set-count-empty-destination'],
+    ['top-card', topCard, 'r33-free-letter-duplicate'],
+  ] as const)(
+    'R-31 R-33 scene %s: a changed rejected check fails the harness',
+    (_name, fixture, check) => {
+      const scene = edit<{ check: string }>(fixture, 'rejected', (e) => {
+        expect(e[0].check).toBe(check);
+        e[0].check = 'r31-destination-count';
+      });
+      expect(() => replayScene(scene, DICT)).toThrow(/expected throw r31-destination-count/);
+    },
+  );
+
+  it('R-31 scene destination-rule: moving the rejected case to after 1 command (a non-empty destination) fails the harness', () => {
+    const scene = edit<{ after: number }>(destinationRule, 'rejected', (e) => {
+      e[0].after = 1;
+    });
+    expect(() => replayScene(scene, DICT)).toThrow(/rejected case after 1/);
+  });
+
+  it('R-33 scene top-card: moving the rejected case before the free letter is added fails the harness', () => {
+    // After 1 command the first S has not been added, so the add is legal and does not throw.
+    const scene = edit<{ after: number }>(topCard, 'rejected', (e) => {
+      e[0].after = 1;
+    });
+    expect(() => replayScene(scene, DICT)).toThrow(/rejected case after 1: expected throw/);
   });
 
   it('R-38 AD-17 dictionary repro: every fixture word is in the generated dictionary', () => {

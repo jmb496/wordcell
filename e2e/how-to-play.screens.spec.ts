@@ -45,6 +45,11 @@ for (const [n, id, last] of [
   [3, 'destination', 4],
   [4, 'place', 5],
   [5, 'scoring', 4],
+  // Epic 8 ticket 4 (HP-4): the Tricky rules scenes, source-drop (FAKED), destination-rule (half 2,
+  // BAT) and top-card (SAT with cell 5 dimmed).
+  [6, 'sourceDrop', 3],
+  [7, 'destinationRule', 7],
+  [8, 'topCard', 3],
 ] as const) {
   test(`AD-17 how to play scene ${n} final frame screenshot at 360 px`, async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });

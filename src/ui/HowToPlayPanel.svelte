@@ -8,7 +8,7 @@ import { overlays } from './overlays.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Panel from './Panel.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
-import { scenes } from './scenes/index';
+import { basicScenes, trickyScenes } from './scenes/index';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Scene from './scenes/Scene.svelte';
 import { bandNames, text } from './text';
@@ -50,7 +50,11 @@ function close(): void {
 
 <Panel title={text.howToPlay} closeLabel={text.closeHowToPlay} onclose={act(close)} {open}>
   <section class="scenes">
-    {#each scenes as scene (scene.id)}<Scene {scene} />{/each}
+    {#each basicScenes as scene (scene.id)}<Scene {scene} />{/each}
+  </section>
+  <section class="tricky">
+    <h3>{h.tricky}</h3>
+    {#each trickyScenes as scene (scene.id)}<Scene {scene} />{/each}
   </section>
   <section>
     <h3>{h.goal}</h3>

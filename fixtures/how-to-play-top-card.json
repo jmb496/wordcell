@@ -1,0 +1,26 @@
+{
+  "scene": "top-card",
+  "start": {
+    "columns": [["N", "A", "T"], []],
+    "cells": { "5": ["R", "S"] }
+  },
+  "commands": [
+    { "type": "drop", "sourceColumn": 1, "sourceCount": 2, "destinationColumn": 2 },
+    { "type": "addFreeLetter", "cell": 5, "index": 0 }
+  ],
+  "words": [{ "command": 1, "word": "SAT" }],
+  "validatable": [
+    { "after": 0, "canValidate": false },
+    { "after": 1, "canValidate": false },
+    { "after": 2, "canValidate": true }
+  ],
+  "rejected": [
+    {
+      "after": 2,
+      "command": { "type": "addFreeLetter", "cell": 5 },
+      "outcome": "throw",
+      "check": "r33-free-letter-duplicate",
+      "row": { "id": "R-33", "precondition": "on a used cell" }
+    }
+  ]
+}

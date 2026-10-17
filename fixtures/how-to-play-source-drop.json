@@ -1,0 +1,21 @@
+{
+  "scene": "source-drop",
+  "start": {
+    "columns": [
+      ["F", "E", "D", "K", "A"],
+      ["X", "O", "R", "I", "N"],
+      ["L", "M", "F", "B"]
+    ],
+    "cells": { "6": ["L"] }
+  },
+  "commands": [
+    { "type": "drop", "sourceColumn": 1, "sourceCount": 4, "destinationColumn": 1 },
+    { "type": "arrange", "arrangement": [0, 22, 8, 6] }
+  ],
+  "words": [{ "command": 1, "word": "FAKED" }],
+  "validatable": [
+    { "after": 0, "canValidate": false },
+    { "after": 1, "canValidate": true },
+    { "after": 2, "canValidate": true }
+  ]
+}

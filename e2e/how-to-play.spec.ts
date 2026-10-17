@@ -460,3 +460,135 @@ for (const [id, rules, lastStep] of [
       .toContain(`${id}-step-${lastStep}`);
   });
 }
+
+// Epic 8 ticket 4 (HP-4, HP-2, HP-6): the Tricky rules section, after the five basic scenes.
+// Captions are looked up by their text.ts key, never by position; the order is asserted separately.
+test('R-21 R-31 R-33 AD-14 the Tricky rules heading and its three scenes follow the five basic scenes, in order', async ({
+  page,
+}) => {
+  await openFixture(page, 'session-idle-fresh');
+  await openPanel(page);
+  const s = text.howTo.scenes;
+  const order = await panel(page).locator('h3, figure.scene > figcaption').allTextContents();
+  expect(order.slice(0, 9)).toStrictEqual([
+    s.drag,
+    s.compose,
+    s.destination,
+    s.place,
+    s.scoring,
+    h.tricky,
+    s.sourceDrop,
+    s.destinationRule,
+    s.topCard,
+  ]);
+  expect(h.tricky).toBe('Tricky rules');
+  expect(order[9]).toBe(h.goal);
+  for (const caption of [s.sourceDrop, s.destinationRule, s.topCard])
+    await expect(panel(page).getByRole('figure', { name: caption })).toHaveCount(1);
+});
+
+const trickyScenes = [
+  {
+    id: 'sourceDrop' as const,
+    rules: 'R-21 R-13 Q-11',
+    scene: 'source-drop',
+    lastStep: 5,
+    // Per frame: the open layer's tiles, Validate class, the cells dimmed in that layer.
+    frames: [
+      { tiles: undefined, validate: undefined, used: [] },
+      { tiles: undefined, validate: undefined, used: [] },
+      { tiles: 'FEDKA', validate: 'lit', used: [] },
+      { tiles: 'FAKED', validate: 'lit', used: [] },
+    ],
+  },
+  {
+    id: 'destinationRule' as const,
+    rules: 'R-13 R-22 R-31',
+    scene: 'destination-rule',
+    lastStep: 10,
+    frames: [
+      { tiles: undefined, validate: undefined, used: [] },
+      { tiles: undefined, validate: undefined, used: [] },
+      { tiles: 'BAT', validate: 'lit', used: [] },
+      { tiles: undefined, validate: undefined, used: [] },
+      { tiles: undefined, validate: undefined, used: [] },
+      { tiles: 'B', validate: 'off', used: [] },
+      { tiles: 'BA', validate: 'off', used: [3] },
+      { tiles: 'BAT', validate: 'lit', used: [3, 4] },
+    ],
+  },
+  {
+    id: 'topCard' as const,
+    rules: 'R-33',
+    scene: 'top-card',
+    lastStep: 5,
+    frames: [
+      { tiles: undefined, validate: undefined, used: [] },
+      { tiles: undefined, validate: undefined, used: [] },
+      { tiles: 'AT', validate: 'off', used: [] },
+      { tiles: 'SAT', validate: 'lit', used: [5] },
+    ],
+  },
+];
+
+for (const { id, rules, frames } of trickyScenes) {
+  test(`${rules} AD-14 with reduced motion scene ${id} steps through ${frames.length} frames to its last, caption equal to text.ts`, async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await openFixture(page, 'session-idle-fresh');
+    await openPanel(page);
+    const figure = panel(page).getByRole('figure', { name: text.howTo.scenes[id] });
+    await figure.scrollIntoViewIfNeeded();
+    await expect(figure.locator('figcaption')).toHaveText(text.howTo.scenes[id]);
+    expect(await sceneAnimations(page)).toEqual([]);
+    for (const [i, frame] of frames.entries()) {
+      const layers = figure.locator('[data-scene-el^="tray-"]');
+      if (frame.tiles === undefined) {
+        for (const el of await layers.all()) await expect(el).toHaveCSS('opacity', '0');
+      } else {
+        const open = figure.locator(`[data-scene-el="tray-${i}"]`);
+        await expect(open).toHaveCSS('opacity', '1');
+        await expect(open.locator('.tiles .card')).toHaveText(frame.tiles.split(''));
+        await expect(open.locator('.validate')).toHaveClass(new RegExp(frame.validate ?? ''));
+        const dimmed = await open
+          .locator('.cell.used')
+          .evaluateAll((els) => els.map((el) => Number(el.getAttribute('data-cell'))));
+        expect(dimmed).toStrictEqual(frame.used);
+        await expect(layers.and(figure.locator('[style*="opacity: 1"]'))).toHaveCount(1);
+      }
+      if (i < frames.length - 1)
+        await figure.getByRole('button', { name: controls.next, exact: true }).click();
+    }
+    await expect(figure.getByRole('button', { name: controls.next })).toHaveCount(0);
+    await figure.getByRole('button', { name: controls.replay, exact: true }).click();
+    await expect(figure.getByRole('button', { name: controls.next, exact: true })).toBeVisible();
+    // Frame 0 is the start again: no layer shown, tail back at home.
+    for (const el of await figure.locator('[data-scene-el^="tray-"]').all())
+      await expect(el).toHaveCSS('opacity', '0');
+  });
+
+  test(`${rules} AD-14 scene ${id} plays on open through its last step; a tap pauses and a tap restarts`, async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    const row = trickyScenes.find((t) => t.id === id);
+    await openFixture(page, 'session-idle-fresh');
+    await openPanel(page);
+    const figure = panel(page).getByRole('figure', { name: text.howTo.scenes[id] });
+    await figure.scrollIntoViewIfNeeded();
+    const prefix = `${row?.scene}-step-`;
+    await expect(figure.getByRole('button', { name: controls.pause, exact: true })).toBeVisible();
+    await expect
+      .poll(async () => (await sceneAnimations(page)).map((a) => a.id), { timeout: 60_000 })
+      .toContain(`${prefix}${row?.lastStep}`);
+    await figure.getByRole('button', { name: controls.pause, exact: true }).click();
+    const paused = figure.getByRole('button', { name: controls.restart, exact: true });
+    await expect(paused).toBeVisible();
+    await paused.click();
+    await expect(figure.getByRole('button', { name: controls.pause, exact: true })).toBeVisible();
+    await expect
+      .poll(async () => (await sceneAnimations(page)).map((a) => a.id))
+      .toContain(`${prefix}0`);
+  });
+}

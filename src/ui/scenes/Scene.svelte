@@ -7,11 +7,12 @@ import { act } from '../act';
 import Card from '../Card.svelte';
 import { duration } from '../motion';
 import { text } from '../text';
-import { frameTail, ghostStart } from './effects';
+import { frameDest, frameTail, ghostStart } from './effects';
 import {
   CARD_H,
   CARD_W,
   CELL6,
+  CELLS_TOP,
   COLUMN_AREA_H,
   CONFIRM_BOX,
   CONTROL_BOX,
@@ -38,6 +39,7 @@ import {
   stripTileX,
   TRAY_H,
   TRAY_TOP,
+  UNDO_BOX,
 } from './geometry';
 import { type RunState, ScenePlayer } from './player';
 import type { Frame, Scene } from './types';
@@ -70,6 +72,8 @@ const geo = $derived({
   stageH: TRAY_TOP + trayHeight,
   rich,
   confirm: CONFIRM_BOX,
+  cellsTop: CELLS_TOP,
+  undoBox: UNDO_BOX,
   placeCellTop: PLACE_CELL_TOP,
   stripTop: STRIP_TOP,
   stackTop: SCORE_STACK_TOP,
@@ -121,22 +125,27 @@ const drawn = $derived.by(() => {
     };
   const all = fixture.start.columns;
   const source = all[c.sourceColumn - 1];
+  // A drop on the source column (R-21): the destination cards are the bottom ones of what the lift
+  // left behind.
+  const left = source.slice(0, source.length - c.count);
+  const destCards = c.sourceColumn === c.destinationColumn ? left : all[c.destinationColumn - 1];
+  const destFrom = destCards.length - c.destinationCount;
   // `landed`: the move is done, so no tail or D block is drawn; the destination column still loses
   // its D block cards (the word's own cards sit in the strip, owner decision 2026-10-16).
   const landed = c.landed === true;
   return {
     carried: !landed,
     columns: all.map((cards, i) => {
-      if (i + 1 === c.sourceColumn) return cards.slice(0, cards.length - c.count);
-      if (i + 1 === c.destinationColumn) return cards.slice(0, cards.length - c.destinationCount);
+      if (i + 1 === c.sourceColumn && c.sourceColumn !== c.destinationColumn) return left;
+      if (i + 1 === c.destinationColumn) return destCards.slice(0, destFrom);
       return cards;
     }),
     tail: landed ? [] : source.slice(-c.count),
-    destination: landed ? [] : all[c.destinationColumn - 1].slice(-c.destinationCount),
+    destination: landed ? [] : destCards.slice(destFrom),
     tailTop: (source.length - c.count) * STRIP,
     sourceColumn: c.sourceColumn,
     destColumn: c.destinationColumn,
-    destTop: (all[c.destinationColumn - 1].length - c.destinationCount) * STRIP,
+    destTop: destFrom * STRIP,
   };
 });
 // A WordCell's cards (bottom to top) in frame `i`: the fixture start, or, in the last frame, the
@@ -177,6 +186,21 @@ const currentIndex = $derived(frame);
 const inBlock = (frame: Frame, j: number): boolean =>
   frame.side === 'left' ? j < (frame.k ?? 0) : j >= (frame.order?.length ?? 0) - (frame.k ?? 0);
 const tailStyle = $derived(reduced ? frameTail(scene, current) : undefined);
+// The D block's reduced-motion state; a frame that names none leaves it drawn at home.
+const destState = $derived(reduced ? frameDest(current) : { hidden: false });
+// Epic 8 ticket 4: WordCells 3 to 5 the fixture start lists are drawn in the column area from frame
+// 0 (the place and scoring scenes draw their own cells); a scene with an `undo` command draws the
+// Undo pill. A tray layer repeats the cells whose top card its frame has borrowed, dimmed.
+const MINI_CELLS = [3, 4, 5] as const;
+const miniCells = $derived(
+  placeMode || scoreMode
+    ? []
+    : MINI_CELLS.flatMap((cell) => {
+        const cards = scene.fixture.start.cells?.[String(cell)];
+        return cards === undefined ? [] : [{ cell, cards }];
+      }),
+);
+const hasUndo = $derived(scene.fixture.commands.some((c) => c.type === 'undo'));
 
 function element(node: HTMLElement, key: string): HTMLElement {
   const found = node.querySelector<HTMLElement>(`[data-scene-el="${key}"]`);
@@ -231,6 +255,14 @@ const replay = (): void => {
 };
 </script>
 
+{#snippet wcell(cards: readonly string[])}
+  <div class="mini">
+    {#each cards as letter, j (j)}
+      <Card id={0} face={face(letter)} place="column" mirror="static" full={j === cards.length - 1} />
+    {/each}
+  </div>
+{/snippet}
+
 <figure class="scene" aria-labelledby="{id}-caption" bind:this={figure}>
   <div class="area">
     <div
@@ -257,6 +289,8 @@ const replay = (): void => {
         data-scene-el="dest"
         style:left="{geo.columnX(drawn.destColumn)}px"
         style:top="{drawn.destTop}px"
+        style:transform={destState.transform}
+        style:visibility={destState.hidden ? 'hidden' : undefined}
       >
         {#each drawn.destination as letter, j (j)}
           <Card id={0} face={face(letter)} place="column" mirror="static" full={j === drawn.destination.length - 1} />
@@ -278,10 +312,26 @@ const replay = (): void => {
       </div>
       {/if}
       {#if cell6Letter !== undefined}
-        <div class="cell6" style:left="{geo.cell.x}px" style:top="{geo.cell.y}px">
+        <div class="cell6 cell" style:left="{geo.cell.x}px" style:top="{geo.cell.y}px">
           <Card id={0} face={face(cell6Letter)} place="cell" mirror="static" full />
           <span class="num">6</span>
         </div>
+      {/if}
+      {#each miniCells as entry (entry.cell)}
+        <div class="cell" data-cell={entry.cell} style:left="{geo.placeCellX(entry.cell)}px" style:top="{geo.cellsTop}px">
+          {@render wcell(entry.cards)}
+          <span class="num">{entry.cell}</span>
+        </div>
+      {/each}
+      {#if hasUndo}
+        <span
+          class="ctl undo"
+          data-scene-el="undo"
+          style:left="{geo.undoBox.x}px"
+          style:width="{geo.undoBox.w}px"
+          style:top="{geo.undoBox.y}px"
+          style:height="{geo.undoBox.h}px"
+        >{text.undo}</span>
       {/if}
       {#each scene.frames as frame, i (i)}
         {#if geo.rich && frame.tray && frame.order !== undefined}
@@ -294,8 +344,19 @@ const replay = (): void => {
             style:--wc-w="{geo.richTileW}px"
             style:--wc-slot="{geo.richSlot}px"
           >
+            {#each miniCells.filter((m) => frame.used?.includes(m.cell)) as entry (entry.cell)}
+              <div
+                class="cell used"
+                data-cell={entry.cell}
+                style:left="{geo.placeCellX(entry.cell)}px"
+                style:top="{geo.cellsTop - geo.trayTop}px"
+              >
+                {@render wcell(entry.cards)}
+                <span class="num">{entry.cell}</span>
+              </div>
+            {/each}
             {#if frame.cell6 === 'used' && cell6Letter !== undefined}
-              <div class="cell6 used" style:left="{geo.cell.x}px" style:top="{geo.cell.y - geo.trayTop}px">
+              <div class="cell6 cell used" style:left="{geo.cell.x}px" style:top="{geo.cell.y - geo.trayTop}px">
                 <Card id={0} face={face(cell6Letter)} place="cell" mirror="static" full />
                 <span class="num">6</span>
               </div>
@@ -498,13 +559,15 @@ const replay = (): void => {
     font: 700 14px/20px system-ui, "Roboto", sans-serif; color: var(--wc-ink-primary);
   }
   .total { opacity: 0; font-weight: 700; }
-  .cell6 { position: absolute; width: var(--wc-slot); }
-  .cell6 .num {
+  .cell { position: absolute; width: var(--wc-slot); }
+  .mini { display: flex; flex-direction: column; }
+  .cell .num {
     display: block; text-align: center; font: 500 12px/16px system-ui, "Roboto", sans-serif;
     color: var(--wc-ink-secondary);
   }
-  .cell6.used { background: var(--wc-surface-raised); }
-  .cell6.used :global(.card) { opacity: 0.4; }
+  .cell:not(.cell6) .num { font-size: 11px; line-height: 12px; }
+  .cell.used { background: var(--wc-surface-raised); }
+  .cell.used :global(.card) { opacity: 0.4; }
   .ctl {
     position: absolute; box-sizing: border-box; display: grid; place-items: center;
     border-radius: 9999px; background: var(--wc-surface-raised); border: 1px solid var(--wc-outline);

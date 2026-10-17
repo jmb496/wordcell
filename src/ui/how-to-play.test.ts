@@ -27,11 +27,11 @@ function inner(body: string, tag: string): string[] {
 }
 
 describe('AD-3 How to play panel', () => {
-  it('AD-3 the title and the eight h3 headings equal the text.ts strings, in order', async () => {
+  it('AD-3 the title and the nine h3 headings equal the text.ts strings, in order', async () => {
     const body = await html();
     expect(inner(body, 'h2')).toEqual([text.howToPlay]);
     expect(inner(body, 'h3')).toEqual(Object.values(text.howTo.headings));
-    expect(Object.values(text.howTo.headings)).toHaveLength(8);
+    expect(Object.values(text.howTo.headings)).toHaveLength(9);
   });
 
   it('AD-3 every body paragraph, caption and band is rendered from text.ts', async () => {
@@ -53,6 +53,9 @@ describe('AD-3 How to play panel', () => {
       text.howTo.scenes.destination,
       text.howTo.scenes.place,
       text.howTo.scenes.scoring,
+      text.howTo.scenes.sourceDrop,
+      text.howTo.scenes.destinationRule,
+      text.howTo.scenes.topCard,
       ...text.howTo.exampleWords.map(text.howTo.exampleCaption),
     ]);
     expect(inner(body, 'caption')).toEqual(Object.values(text.howTo.controlCaptions));
@@ -71,8 +74,13 @@ describe('AD-3 How to play panel', () => {
     // ticket 1), scene 2's 39 (9 column, 1 D, 4 tail, cell 6, tray layers 5 + 5 + 7 + 7) and scene
     // 3's 22 (2 column, 1 D, 2 tail, tray layers 3 + 4 + 5 + 5) (epic 8 ticket 2), scene 4's 44 (9 column, B hidden from column 3,
     // cell 6 in five layers and as a stack of six, strips 4 x 6) and scene 5's 12 (stacks 3 + 3 + 6)
-    // (epic 8 ticket 3).
-    expect(body.match(/class="card[^"]*static/g)).toHaveLength(22 + 19 + 39 + 22 + 44 + 12);
+    // (epic 8 ticket 3), then the Tricky rules scenes (epic 8 ticket 4): source-drop's 24 (9 column,
+    // F as D, 4 tail, tray layers 5 + 5), destination-rule's 24 (2 column, 1 D, 2 tail, cells 2 + 2,
+    // tray layers 3 + 1 + 2 + 3, dimmed cell copies 2 + 2 + 2) and top-card's 12 (1 column, 2 tail,
+    // cell 5's 2, tray layers 2 + 3, one dimmed copy of cell 5's 2).
+    expect(body.match(/class="card[^"]*static/g)).toHaveLength(
+      22 + 19 + 39 + 22 + 44 + 12 + 24 + 24 + 12,
+    );
   });
 
   it('AD-3 the markup has no prose text node (every string is a text.ts expression)', () => {

@@ -56,3 +56,9 @@ export const scoreStackX = (k: number): number => 24 + k * 72;
 export const SCORE_STACK_TOP = 22;
 /** The scoring scene's total pill (stage coordinates; the stage is TRAY_TOP + SCORE_H high). */
 export const SCORE_TOTAL_BOX = { x: 76, w: 100, y: 214, h: 32 } as const;
+
+// Epic 8 ticket 4: the Tricky rules scenes draw WordCells 3 to 5 in the column area, below the
+// columns (card left `placeCellX(n)`, top `CELLS_TOP`; no column reaches y 118: the tallest is
+// destination-rule column 2 after its drop, bottom at 116), and an Undo pill at the top right.
+export const CELLS_TOP = 118;
+export const UNDO_BOX = { x: 200, w: 48, y: 6, h: 30 } as const;

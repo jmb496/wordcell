@@ -6,13 +6,14 @@ const COMMAND_TYPES: Record<StepType, readonly string[]> = {
   drop: ['drop'],
   move: ['arrange', 'setPlacementOrder'],
   fly: [],
-  tap: ['addFreeLetter', 'validate', 'setDestinationCount', 'flip', 'setTarget', 'confirm'],
+  tap: ['addFreeLetter', 'validate', 'setDestinationCount', 'flip', 'setTarget', 'confirm', 'undo'],
 };
 
 /**
  * AGENTS rule 6: a bad script throws when it is defined (at load), never falls back: no steps, a
  * step or reveal naming an unknown target or element, a grab or drop without a drop command of the
- * fixture, no frames, a step whose command does not fit its type, or a non-positive rest.
+ * fixture, no frames, a step whose command does not fit its type, a grab or drop whose carry
+ * (its own, else the scene's) differs from the fixture drop command it names, or a non-positive rest.
  */
 export function defineScene(scene: Scene): Scene {
   const where = `scene ${scene.id}`;
@@ -35,6 +36,25 @@ export function defineScene(scene: Scene): Scene {
     if (step.type === 'grab' || step.type === 'drop') {
       if (command?.type !== 'drop')
         throw new Error(`${where}: step ${i} (${step.type}) names no fixture drop command`);
+      const c = step.carry ?? scene.carry;
+      if (
+        c === undefined ||
+        command.sourceColumn !== c.sourceColumn ||
+        command.sourceCount !== c.count ||
+        command.destinationColumn !== c.destinationColumn
+      )
+        throw new Error(
+          `${where}: step ${i} (${step.type}) carry differs from fixture drop command`,
+        );
+      if (
+        c.lifts === 'dest' &&
+        (scene.carry === undefined ||
+          c.sourceColumn !== scene.carry.destinationColumn ||
+          c.count !== scene.carry.destinationCount)
+      )
+        throw new Error(
+          `${where}: step ${i} (${step.type}) lifts a D block the scene does not have`,
+        );
     } else if (step.command !== undefined) {
       const allowed = COMMAND_TYPES[step.type];
       if (command === undefined || !allowed.includes(command.type))
@@ -42,7 +62,7 @@ export function defineScene(scene: Scene): Scene {
           `${where}: step ${i} (${step.type}) names fixture command ${step.command}, not a ${allowed.join(' or ')}`,
         );
     }
-    for (const id of step.reveal ? [step.reveal.show, ...step.reveal.hide] : [])
+    for (const id of step.reveal ? [step.reveal.show ?? [], ...step.reveal.hide].flat() : [])
       if (!scene.elements.includes(id))
         throw new Error(`${where}: step ${i} reveals unknown element ${id}`);
   }

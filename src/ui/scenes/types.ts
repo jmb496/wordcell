@@ -44,6 +44,22 @@ export interface Point {
 
 export type StepType = 'grab' | 'move' | 'drop' | 'fly' | 'tap';
 
+/**
+ * A column move a scene draws: the tail of `count` cards from `sourceColumn`, the `destinationCount`
+ * destination cards (R-31) that join from `destinationColumn`. `landed`: the move is already done,
+ * so the destination column is drawn whole (D block, then the tail) and `dest` and `tail` are not
+ * drawn. `lifts: 'dest'` (epic 8 ticket 4, a `Step.carry` only): the pointer carries the scene's D
+ * block (the primary carry's destination cards) instead of the tail.
+ */
+export interface Carry {
+  readonly sourceColumn: number;
+  readonly count: number;
+  readonly destinationColumn: number;
+  readonly destinationCount: number;
+  readonly landed?: boolean;
+  readonly lifts?: 'dest';
+}
+
 export interface Step {
   readonly type: StepType;
   /** A scene-local target id: where the pointer ghost goes. */
@@ -57,13 +73,18 @@ export interface Step {
   /** The fixture command this step animates; its type must fit the step's (script.ts). */
   readonly command?: number;
   /**
+   * A grab or drop that carries something other than `Scene.carry` (absent: `Scene.carry`); its
+   * source, count and destination are pinned to the fixture drop command the step names.
+   */
+  readonly carry?: Carry;
+  /**
    * A `fly` in a scene whose tail has already landed: `element` slides by `by` and fades out
    * (the placement strip flying to its WordCell).
    */
   readonly flies?: { readonly element: string; readonly by: Point };
   /** After the step: `show` fades in, `hide` fades out, over `kind`. */
   readonly reveal?: {
-    readonly show: string;
+    readonly show?: string;
     readonly hide: readonly string[];
     readonly kind: MotionKind;
   };
@@ -75,7 +96,10 @@ export interface Step {
  * block's size `k` and `side`, Validate (`pressed` on the tap), and WordCell 6's top card (`top`)
  * or its borrowed state (`used`, R-33). The place and scoring scenes (epic 8 ticket 3) add the
  * placement strip (`placeTarget` the selected WordCell, `lit` the legal ones, `placeOrder` the
- * letters bottom to top) and the scoring figures (`numbers` per-cell scores shown, `total`).
+ * letters bottom to top) and the scoring figures (`numbers` per-cell scores shown, `total`). The
+ * Tricky rules scenes (epic 8 ticket 4) add `used` (WordCells 3 to 5 whose top card is borrowed,
+ * dimmed in the frame its letter is added, R-33) and `dest` (the D block: lifted, or gone into the
+ * tray; absent: at home).
  */
 export interface Frame {
   readonly tail: 'home' | 'lifted' | 'over' | 'gone';
@@ -85,6 +109,8 @@ export interface Frame {
   readonly side?: 'left' | 'right';
   readonly validate?: 'off' | 'lit' | 'pressed';
   readonly cell6?: 'top' | 'used';
+  readonly used?: readonly number[];
+  readonly dest?: 'lifted' | 'gone';
   readonly placeTarget?: number;
   readonly lit?: readonly number[];
   readonly placeOrder?: readonly string[];
@@ -99,16 +125,9 @@ export interface Scene {
   readonly caption: string;
   /**
    * The tail the pointer carries; `destinationCount` is the D block that joins (R-31). Absent in a
-   * scene that draws no column move (scoring). `landed`: the move is already done, so the
-   * destination column is drawn whole (D block, then the tail) and `dest` and `tail` are not drawn.
+   * scene that draws no column move (scoring).
    */
-  readonly carry?: {
-    readonly sourceColumn: number;
-    readonly count: number;
-    readonly destinationColumn: number;
-    readonly destinationCount: number;
-    readonly landed?: boolean;
-  };
+  readonly carry?: Carry;
   readonly targets: Readonly<Record<string, Point>>;
   /** Scene-local element ids the player may animate (`data-scene-el`). */
   readonly elements: readonly string[];

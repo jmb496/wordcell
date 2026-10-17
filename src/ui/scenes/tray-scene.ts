@@ -1,15 +1,18 @@
 import {
   CARD_H,
   CELL6,
+  CELLS_TOP,
   CONTROL_BOX,
   CONTROLS_H,
   CONTROLS_TOP,
   columnX,
+  placeCellX,
   RICH_INSET,
   RICH_SLOT,
   SLOT,
   STRIP,
   TRAY_TOP,
+  UNDO_BOX,
 } from './geometry';
 import type { Point, SceneFixtureData } from './types';
 
@@ -28,14 +31,18 @@ export function carryGeometry(data: SceneFixtureData, carry: Carry) {
     x: columnX(carry.sourceColumn),
     y: (data.start.columns[carry.sourceColumn - 1].length - carry.count) * STRIP,
   };
-  const landing = {
-    x: columnX(carry.destinationColumn),
-    y: data.start.columns[carry.destinationColumn - 1].length * STRIP,
-  };
+  // A drop on the source column (R-21): the tail lands back at its home and the D cards are the
+  // bottom ones of what the lift left behind.
+  const same = carry.sourceColumn === carry.destinationColumn;
+  const destLength = data.start.columns[carry.destinationColumn - 1].length;
+  const landing = same ? home : { x: columnX(carry.destinationColumn), y: destLength * STRIP };
   const offset = { x: landing.x - home.x, y: landing.y - home.y };
   const destHome = {
     x: landing.x,
-    y: (data.start.columns[carry.destinationColumn - 1].length - carry.destinationCount) * STRIP,
+    y:
+      (same
+        ? destLength - carry.count - carry.destinationCount
+        : destLength - carry.destinationCount) * STRIP,
   };
   const trayDest = { x: RICH_INSET, y: TRAY_TOP + 4 };
   const trayTail = { x: trayDest.x + carry.destinationCount * RICH_SLOT, y: trayDest.y };
@@ -59,3 +66,12 @@ export const trayTargets = {
   cell6: { x: CELL6.x + SLOT / 2, y: CELL6.y + CARD_H / 2 },
   tiles: { x: RICH_INSET + RICH_SLOT * 3, y: TRAY_TOP + 4 + CARD_H / 2 },
 } as const;
+
+/** The pointer target on the top card of WordCell `cell` (3 to 5) drawn with `count` cards. */
+export const cellTarget = (cell: number, count: number): Point => ({
+  x: placeCellX(cell) + SLOT / 2,
+  y: CELLS_TOP + (count - 1) * STRIP + CARD_H / 2,
+});
+
+/** The pointer target on the scene's Undo pill. */
+export const undoTarget: Point = { x: UNDO_BOX.x + UNDO_BOX.w / 2, y: UNDO_BOX.y + UNDO_BOX.h / 2 };
