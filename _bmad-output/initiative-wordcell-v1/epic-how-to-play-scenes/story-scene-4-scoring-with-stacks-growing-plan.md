@@ -3,7 +3,7 @@ title: 'Scene 4: scoring with stacks growing'
 type: 'feature'
 ticket: '9'
 created: '2026-10-17'
-status: 'built'
+status: done
 baseline_revision: '31d0bb29237d73ab027596234860d78b167a8a88'
 route: 'full'
 route_source: 'auto'

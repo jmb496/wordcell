@@ -56,3 +56,14 @@ What it adds: the Scoring scene, where each WordCell's stack grows and its score
 Ticket review: 4 passes, converged; majors 8, 6, 6, 0; one item needs your input
 Decision: should each WordCell grow and then show its own number one cell at a time (3 → 9, 4 → 16, 6 → 36, then total 61), or should all three stacks grow first and then the numbers and total show? Proposed default: one cell at a time (as the ticket now says). Effect: only pacing and teaching order, reduced-motion frames and tap steps; no rules change.
 Build: not started
+
+## 8.9 Scene 4: scoring with stacks growing — done (resumed after owner decision)
+What it adds: the How to play Scoring scene now shows the three stacks (cells 3, 4, 6) growing downwards in turn, then the figures 9, 16, 36 together, then the total 61.
+Ticket review: 4 passes converged, then a 2-pass re-review (majors 4, 0) after the owner chose stacks first (2026-10-17)
+Build: built; commit 5aa3ca9 (committed by the orchestrator: the step was told not to commit)
+Code review: thorough, 1 pass, converged; 0 fixes applied
+Tests: all passing, screenshots passed
+Ref to fix upstream: none
+Tokens: see handoff run; orchestrator session small
+Worth knowing: the build skipped its own internal review; the code review loop covered it. Two minors not applied (defineScene checks), reasons in the plan. Review noted an untested `cards < 2` throw in script.ts and no assertion of top letters beyond the screenshot baseline. The owner reviews all scene captions at the epic end.
+Close-out docs: epic-how-to-play-scenes SPEC.md (Scene 4 pacing) ← stacks grow first, then figures, then total (owner, 2026-10-17), if the spec describes the interleaved order
