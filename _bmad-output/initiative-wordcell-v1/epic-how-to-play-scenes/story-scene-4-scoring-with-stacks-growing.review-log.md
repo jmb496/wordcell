@@ -1,5 +1,5 @@
 # Review log — story-scene-4-scoring-with-stacks-growing.md
-State: pass 1: done
+State: pass 2: done
 Pre-loop: HEAD 33be4a6, 101 words (pass0.md); budget 1500 words.
 
 ## Pass 1 — 2026-10-17
@@ -13,4 +13,15 @@ Words: 937 (~9x pass 0; within 1500 budget)  |  Snapshot: story-scene-4-scoring-
 ### Decision needed
 - none (epic 2026-10-17 supplies the intent)
 ### Dropped
+- none
+
+## Pass 2 — 2026-10-17
+Reviewers: fix-diff, edge-case, adversarial, ref-alignment  |  Findings: major 6 (merged), minor 7, decision-needed 0  |  Dropped: 0
+Words: 1432 (~14x pass 0; budget 1500)  |  Snapshot: story-scene-4-scoring-with-stacks-growing.passes/pass2.md
+### Applied
+- [major] Stage/Scene grow contract; Playwright assertions via opacity/boxes not card counts; unit vs layout split; defineScene check list; false play-on-open claim; restart test definition
+- [minor] timing/loop length, baseline name, test ids, ghost rest, negative regexp, Notes interleave default
+### Default applied (technical)
+- Stage optional grow prop; wrappers with data-scene-el; SSR body test for order
+### Decision needed
 - none
