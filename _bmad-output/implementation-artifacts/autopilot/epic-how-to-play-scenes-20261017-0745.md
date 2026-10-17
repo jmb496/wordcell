@@ -22,3 +22,14 @@ Ticket review: 5 passes, converged (majors 9, 4, 2, 1, 0); two items need your i
 Build: not started
 Ref to fix upstream: none
 Worth knowing: the review log has an uncommitted final edit, committed with this stop.
+
+## 8.7 Scenes 1 and 2: move and compose, then add a WordCell letter — done (resumed after owner decision)
+What it adds: How to play scene 1 shows lifting cards, setting the count with plus/minus, arranging to BAKED and pressing Flip; scene 2 flips back, borrows the top card L of a WordCell to make BALKED, and validates.
+Ticket review: 5 passes, converged; owner set scene 1 and 2 content and the Flip ending (BAKED then BALKED) on 2026-10-17 (commit e915ac0)
+Build: built; commit 6841d78
+Code review: thorough, 3 passes, converged; fixes applied in 2 WIP commits (d63d3dd, 0d554d1)
+Tests: all passing, screenshots passed
+Ref to fix upstream: none
+Tokens: 6.7M input-equivalent (build 54%, code review 39%, other 5%, orchestrator 2%); orchestrator peak context 56k
+Worth knowing: unapplied ticket-review minors were passed to the build; tickets.toml entry 7 interface/references still differ from the ticket (sync noted in review log).
+Close-out docs: none new (owner's scene content decision lives in the ticket; EXPERIENCE.md carousel entry from 8.6 stands)

@@ -3,7 +3,7 @@ title: 'Scenes 1 and 2: move and compose, then add a WordCell letter'
 type: 'feature'
 ticket: '7'
 created: '2026-10-17'
-status: 'built'
+status: done
 baseline_revision: 'e915ac0305cd40b2d52739a5931bdd37f95d634a'
 route: 'full'
 route_source: 'auto'
