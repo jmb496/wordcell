@@ -1,6 +1,6 @@
 # Review log — Scene 5: the one Tricky rule (ticket 8.10)
 
-State: pass 1: done
+State: pass 2: done
 Pre-loop: HEAD cf77609, 155 words, copy at story-scene-5-the-one-tricky-rule.passes/pass0.md. Budget 1500 words.
 Toml fields to carry into the Description in pass 1: interface = "scene script and fixture; text.ts; removes the old Tricky rules scenes."; tests = "Engine replay (U); play (P6 android); screenshots."; owns = "Scene 5."; verify and risk (low) are already present; references = rules — docs/game-flow-spec.md, R-21, R-13.
 
@@ -18,6 +18,24 @@ Words (docs): 1190 (7.7 x pass 0; budget 1500)  |  Snapshot: story-scene-5-the-o
 - [major] toml fields (interface, tests, owns, references) copied → 8
 ### Default applied (technical)
 - 8.10/8.11 cleanup split → 8.10 deletes the removed scenes; 8.11 removes what then becomes unused (Frame.used, Undo pill, rejected)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Pass 2 — 2026-10-17
+Reviewers: fix-diff, edge-case, adversarial, ref alignment  |  Findings: major 6 (merged), minor ~8, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1443 (9.3 x pass 0; budget 1500)  |  Snapshot: story-scene-5-the-one-tricky-rule.passes/pass2.md
+### Applied
+- [major] AC grep vs kept e2e `trickyScenes` local → rename to `sourceDropRows`
+- [major] false claim about `i < 7` loops (scene-1 frame counts) → rule + checkable grep
+- [major] e2e tests on old last/second-last scenes re-pointed in place
+- [major] scene-5 baseline will differ (figcaption inside figure) → regenerate in Docker
+- [major] false claim about grep matching comments → removed; comment cleanup stated
+- [major] engine harness rejected-case tests removed with fixtures; support left to 8.11
+- minors: Next arrow vs in-scene Next wording, Q-34 conditional, literal caption assertion, a11y note, 8.11 hand-off
+### Default applied (technical)
+- e2e local rename → `sourceDropRows`; rejected-path harness left to 8.11
 ### Decision needed (functionality / UX / gameplay)
 - none
 ### Dropped
