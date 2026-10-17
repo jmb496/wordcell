@@ -1,6 +1,6 @@
 # Review log — Scene 3: place with cards tucking into the WordCell (ticket 8.8)
 
-State: pass 5: done
+State: pass 6: done
 
 Pass 0: 134 words (pass0.md); budget 1500 words. Pulled from tickets.toml entry 8; toml fields not copied: interface = "scene script and effects under src/ui/scenes/; fixtures; text.ts caption."; tests = "Engine replay (U); play (P6 android); screenshots."; owns = "Scene 3."; verify (as AC); risk low; references (rules R-40 to R-42, R-50 to R-52, R-60).
 
@@ -87,3 +87,21 @@ Words (docs): 1421 (10.6 x pass 0; budget 1500)  |  Snapshot: story-scene-3-plac
 - none new
 ### Dropped
 - none
+
+## Pass 6 — 2026-10-17
+Reviewers: fix diff (clean), edge-case hunter, adversarial, ref alignment (clean)  |  Findings: major 0, minor 6, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1421 (unchanged, no fix applied)  |  Snapshot: passes/pass5.md
+### Triage
+- Adversarial's "mid-tuck poll cannot run reliably" labelled major: reclassified minor under the pass-4+ bar (precision in a verify procedure; the contract and shipped behaviour are unaffected). Default: poll with `intervals: [20]`, `timeout: 30_000`, or pause at `place-step-6` and set `currentTime` via `page.evaluate`.
+### Unapplied minors (for the build plan)
+- Mid-tuck test mechanism (above).
+- Add a unit assertion that every tuck-k start keyframe is `translate(stripTileX(k), STRIP_TOP) scale(1, 1)`.
+- `FACE_MARGIN` mirrors Card.svelte `.face { margin: 0 2px }`; the e2e rect-equality check is the pin.
+- "restore frame 4's look" should read "restore the base look (frame 0)".
+- "only home of the one-card assertion" vs the motion-on test repeating it.
+- Hides' `kind`/`times`, how `effects.ts` derives ids (`strip-<k>`, `place-<last>`), and where the default easing is applied (`easing ?? 'ease-in-out'` in Scene.svelte).
+### Decision needed (functionality / UX / gameplay)
+- Caption — keep current caption or reword to mention the tuck — proposed default: keep unchanged; owner may reword at the plan/done checkpoint.
+
+## Result — converged after 6 passes
+Majors per pass (merged): 8, 7, 5, 2, 2, 0. Words 134 -> 1421 (budget 1500).

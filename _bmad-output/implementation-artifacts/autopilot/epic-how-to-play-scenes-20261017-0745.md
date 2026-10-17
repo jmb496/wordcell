@@ -33,3 +33,9 @@ Ref to fix upstream: none
 Tokens: 6.7M input-equivalent (build 54%, code review 39%, other 5%, orchestrator 2%); orchestrator peak context 56k
 Worth knowing: unapplied ticket-review minors were passed to the build; tickets.toml entry 7 interface/references still differ from the ticket (sync noted in review log).
 Close-out docs: none new (owner's scene content decision lives in the ticket; EXPERIENCE.md carousel entry from 8.6 stands)
+
+## 8.8 Scene 3: place with cards tucking into the WordCell — stopped (step A, decision needed)
+What it adds: the Place scene (scene 3) shows the word's cards tucking one by one into the chosen WordCell, ending with a single top card.
+Ticket review: 6 passes, converged; majors 8, 7, 5, 2, 2, 0; one item needs your input (caption wording)
+Decision: keep the Scene 3 caption as it is ("Pick a WordCell no higher than the word is long. Order the cards: the last one becomes that cell's free letter. Then Confirm.") or reword it to mention the cards tucking in? Only the on-screen text changes; no behaviour or animation. Proposed default: keep it. The epic says scene captions are owner-reviewed.
+Build: not started
