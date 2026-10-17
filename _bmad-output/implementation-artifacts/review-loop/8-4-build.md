@@ -1,6 +1,6 @@
 # Review loop — ticket 8.4 build (code, quick, max 7)
 
-State: pass 1: done
+State: done
 Pre-loop: HEAD 0cd5db3, tree snapshot 0 5b3d444. Range fe586c0..HEAD (build commit 0cd5db3). Intent: story-tricky-rules-section-plan.md
 
 ## Pass 1 — 2026-10-16
@@ -18,3 +18,11 @@ Snapshot: tree 8494dc0b9d3e5bb497fcf705057a6d452cecade0
 ### Dropped
 - text.ts 2026-10-17 date: owner's decision date in epic Notes
 - Plan lacks sentence→test mapping (minor, plan doc, not applied)
+
+## Pass 2 — 2026-10-16
+Reviewers: correctness, fix diff  |  Findings: major 0, minor 0, decision-needed 0  |  Dropped: 0
+
+## Result — converged after 2 passes
+
+Unapplied minors: plan lacks a sentence→test mapping table (AGENTS.md requires one in the ticket plan).
+Final: npm test pass (2894), lint pass, check pass.
