@@ -3,7 +3,7 @@ title: 'Scene carousel and whole play-area stage'
 type: 'feature'
 ticket: '6'
 created: '2026-10-17'
-status: 'built'
+status: done
 baseline_revision: '412f96ec7a5d73de837fa50acb50c50a0462a1cc'
 route: 'full'
 route_source: 'auto'
