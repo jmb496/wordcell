@@ -1,8 +1,8 @@
-outcome: complete
-ticket: 8.5
-reason: done
-next: none
-updated: 2026-10-17T04:01:08Z
-summary: Ticket 8.5 is done and the How to play scenes epic has no tickets left.
+outcome: stopped
+ticket: 8.6
+reason: rule 1, decision needed on carousel behaviour
+next: 8.6
+updated: 2026-10-17T12:00:05Z
+summary: Ticket 8.6 review converged but needs your confirmation of four carousel behaviours before build.
 
-In plain words: ticket 8.5 (panel layout, docs, size budget, cleanup sweep) is built, reviewed, tested (test:all and screenshots passed) and marked done. Nothing needs your decision. Close-out docs: none. Next: run /bmad-retrospective for the epic, apply its approved doc fixes, then mark the epic container done with bmad-preview-ticketing.
+The ticket review (7 passes) is clean. One question for you: the carousel as written has no swipe or drag (buttons and Left/Right keys only), no looping at the first/last scene (arrows dim), always opens on scene 1, and restarts a scene from step 1 each time you enter it. Do you confirm? If yes, tell me and I record it in the ticket Notes and rerun .claude/skills/epic-autopilot/scripts/loop.sh epic-how-to-play-scenes; if not, tell me which to change.

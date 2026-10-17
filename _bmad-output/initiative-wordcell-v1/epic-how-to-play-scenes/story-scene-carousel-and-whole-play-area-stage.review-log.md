@@ -1,6 +1,6 @@
 # Review log — story-scene-carousel-and-whole-play-area-stage
 
-State: pass 6: done
+State: pass 7: done
 Pre-loop: HEAD 2a2ae35, words 270, budget 1500 words (stub), copy /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-how-to-play-scenes/story-scene-carousel-and-whole-play-area-stage.passes/pass0.md
 Intent extra (tickets.toml entry 6, not yet in the ticket): interface = "src/ui/scenes/ (carousel, stage), HowToPlayPanel.svelte, text.ts howTo control names."; tests = "Carousel behaviour (P6 android); stage structure (U); screenshots (screens)."; owns = "The carousel and the shared play-area stage."; unknown = "How to fit eight columns plus the tray inside the phone-width panel at readable card size; reuse the layout measuring of src/ui/layout/."; verify = (as in Acceptance Criteria); risk = medium.
 
@@ -87,3 +87,14 @@ Reviewers: fix-diff, edge-case, adversarial, ref-alignment (ref found nothing)  
 ### Applied
 - 3 majors (focus after Replay, filler letters in Unit AC, min(widthTerm, max(32, heightTerm)) formula) → fixer items 1–3
 Words: 1493 (5.5 x pass 0; budget 1500)  |  Snapshot: _bmad-output/initiative-wordcell-v1/epic-how-to-play-scenes/story-scene-carousel-and-whole-play-area-stage.passes/pass6.md
+
+## Pass 7 — 2026-10-17 (verify-only)
+Reviewers: fix-diff  |  Findings: major 0, minor 2, decision-needed 0  |  Dropped in triage: 0
+### Unapplied minors
+- Restore "stage and controls scroll with the panel content" in Fit (Landscape AC covers it); Unit AC "short-height case" should read "height-capped case and floor-wins case".
+
+## Result — converged after 7 passes
+Majors per pass: 12, 10, 8, 5, 3, 3, 0. Words 270 → 1493 (budget 1500).
+Decision needed (not blocking): carousel behaviours the owner's 2026-10-17 decision does not state — buttons and keys only (no swipe), no wrap-around, the panel always opens on scene 1, every entry restarts the scene; the ticket carries these defaults.
+Technical defaults applied: ~35 across passes (see each pass).
+Unapplied minors: those listed under passes 3 to 7 (height reserve, maxima source, getAnimations scoping, placeholder height, stage column clipping, dot count bound, arrow-path position announcement, Screens end signal, other-panel baseline regeneration, restoring cut sentences, Unit AC floor-wins case wording).
