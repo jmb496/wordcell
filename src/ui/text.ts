@@ -343,12 +343,9 @@ export const text = Object.freeze({
         "Pick a WordCell no higher than the word is long. Order the cards: the last one becomes that cell's free letter. Then Confirm.",
       scoring:
         'Each WordCell scores its letters times its number. QU counts as two letters. Long words on high cells score most.',
-      // Epic 8 ticket 4 (HP-4): the Tricky rules captions, the owner's wording of 2026-10-17.
+      // Epic 8 ticket 10 (HP-4): the one Tricky rule, the owner's wording of 2026-10-17.
       sourceDrop:
-        'Dropping back on the column you lifted from is allowed. As always, you must use at least 1 letter from the destination column: F must join, giving FAKED.',
-      destinationRule:
-        'You must use at least 1 letter from the destination column, unless you drag to an empty column.',
-      topCard: 'The top card of each WordCell can be used as a free letter added to the word.',
+        'Dropping back on the column you lifted from is allowed. You must use at least 1 letter from the destination column, unless you drag to an empty column.',
     },
     // Epic 8 ticket 3 (HP-3e): a scoring scene's per-WordCell figure, letters times the cell number.
     scoreFigure: (letters: number, cell: number, score: number): string =>

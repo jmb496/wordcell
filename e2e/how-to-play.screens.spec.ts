@@ -14,19 +14,16 @@ test.beforeEach(() => {
 const next = text.howTo.sceneControls.next;
 const replay = text.howTo.sceneControls.replay;
 
-// Epic 8 tickets 1 to 4 and 7 (HP-2, HP-4): the final frame of every scene under reduced motion at
+// Epic 8 tickets 1 to 3, 7 and 10 (HP-2, HP-4): the final frame of every scene under reduced motion at
 // 360 px, reached by its dot and Next: scene 1 (move-compose, BAKED after the arrange), scene 2
 // (free-letter, BALKED with Validate pressed), scene 3 (place, one top card E on cell 6), scene 4 (scoring,
-// total 61), and the Tricky rules scenes source-drop (FAKED), destination-rule (half 2, BAT) and
-// top-card (SAT with cell 5 dimmed).
+// total 61) and scene 5 (source-drop, the one Tricky rule, FAKED).
 for (const [n, id, last] of [
   [1, 'moveCompose', 7],
   [2, 'freeLetter', 2],
   [3, 'place', 5],
   [4, 'scoring', 5],
   [5, 'sourceDrop', 3],
-  [6, 'destinationRule', 7],
-  [7, 'topCard', 3],
 ] as const) {
   test(`AD-17 how to play scene ${n} final frame screenshot at 360 px`, async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -35,7 +32,7 @@ for (const [n, id, last] of [
     await page.getByRole('button', { name: 'Menu', exact: true }).click();
     await page.getByRole('button', { name: 'How to play', exact: true }).click();
     const panel = page.getByRole('dialog', { name: 'How to play', exact: true });
-    await panel.getByRole('button', { name: text.howTo.carousel.dot(n, 7), exact: true }).click();
+    await panel.getByRole('button', { name: text.howTo.carousel.dot(n, 5), exact: true }).click();
     const scene = panel.getByRole('figure', { name: text.howTo.scenes[id] });
     await expect(scene).toBeVisible();
     for (let i = 0; i < last; i++)
@@ -54,7 +51,7 @@ test('AD-17 how to play scene 4 start frame screenshot at 360 px', async ({ page
   await page.getByRole('button', { name: 'Menu', exact: true }).click();
   await page.getByRole('button', { name: 'How to play', exact: true }).click();
   const panel = page.getByRole('dialog', { name: 'How to play', exact: true });
-  await panel.getByRole('button', { name: text.howTo.carousel.dot(4, 7), exact: true }).click();
+  await panel.getByRole('button', { name: text.howTo.carousel.dot(4, 5), exact: true }).click();
   const scene = panel.getByRole('figure', { name: text.howTo.scenes.scoring });
   await expect(scene).toBeVisible();
   await expect(scene.getByRole('button', { name: next, exact: true })).toBeVisible();

@@ -16,15 +16,7 @@ const menu = (page: Page) => page.getByRole('dialog', { name: 'Menu', exact: tru
 const panel = (page: Page) => page.getByRole('dialog', { name: 'How to play', exact: true });
 const h = text.howTo.headings;
 // Epic 8 ticket 6: the scenes in carousel order, by their text.ts keys; the panel shows one at a time.
-const sceneOrder = [
-  'moveCompose',
-  'freeLetter',
-  'place',
-  'scoring',
-  'sourceDrop',
-  'destinationRule',
-  'topCard',
-] as const;
+const sceneOrder = ['moveCompose', 'freeLetter', 'place', 'scoring', 'sourceDrop'] as const;
 type SceneKey = (typeof sceneOrder)[number];
 // A scene's animation ids start with its script id (`move-compose-step-1`), not its text.ts key.
 const stepPrefix: Record<SceneKey, string> = {
@@ -33,8 +25,6 @@ const stepPrefix: Record<SceneKey, string> = {
   place: 'place',
   scoring: 'scoring',
   sourceDrop: 'source-drop',
-  destinationRule: 'destination-rule',
-  topCard: 'top-card',
 };
 /** A scene's open tray layers (not the tile wrappers inside them). */
 const trayLayers = '[data-scene-el^="tray-"]:not([data-scene-el*="-tile-"])';
@@ -785,7 +775,7 @@ for (const [id, rules, lastStep] of [
   });
 }
 
-// Epic 8 ticket 4 (HP-4, HP-2, HP-6): the Tricky rules scenes follow the four basic ones in the carousel
+// Epic 8 ticket 10 (HP-4, HP-2, HP-6): the one Tricky rule scene follows the four basic ones in the carousel
 // (ticket 6 removes the stacked list and its heading). Captions are looked up by their text.ts key.
 // Epic 8 ticket 5 (HP-1): a tap pauses scenes 2 to 4 and a second tap restarts them from step 0
 // (`later`: a step the restart has not reached yet; free-letter has two steps).
@@ -825,7 +815,7 @@ for (const [id, later] of [
   });
 }
 
-const trickyScenes = [
+const sourceDropRows = [
   {
     id: 'sourceDrop' as const,
     rules: 'R-21 R-13 Q-11',
@@ -839,37 +829,9 @@ const trickyScenes = [
       { dest: 'gone', tiles: 'FAKED', validate: 'lit', used: [] },
     ],
   },
-  {
-    id: 'destinationRule' as const,
-    rules: 'R-13 R-22 R-31',
-    scene: 'destination-rule',
-    lastStep: 10,
-    frames: [
-      { dest: undefined, tiles: undefined, validate: undefined, used: [] },
-      { dest: undefined, tiles: undefined, validate: undefined, used: [] },
-      { dest: 'gone', tiles: 'BAT', validate: 'lit', used: [] },
-      { dest: undefined, tiles: undefined, validate: undefined, used: [] },
-      { dest: 'lifted', tiles: undefined, validate: undefined, used: [] },
-      { dest: 'gone', tiles: 'B', validate: 'off', used: [] },
-      { dest: 'gone', tiles: 'BA', validate: 'off', used: [3] },
-      { dest: 'gone', tiles: 'BAT', validate: 'lit', used: [3, 4] },
-    ],
-  },
-  {
-    id: 'topCard' as const,
-    rules: 'R-33',
-    scene: 'top-card',
-    lastStep: 5,
-    frames: [
-      { dest: undefined, tiles: undefined, validate: undefined, used: [] },
-      { dest: undefined, tiles: undefined, validate: undefined, used: [] },
-      { dest: 'gone', tiles: 'AT', validate: 'off', used: [] },
-      { dest: 'gone', tiles: 'SAT', validate: 'lit', used: [5] },
-    ],
-  },
 ];
 
-for (const { id, rules, frames } of trickyScenes) {
+for (const { id, rules, frames } of sourceDropRows) {
   test(`${rules} AD-14 with reduced motion scene ${id} steps through ${frames.length} frames to its last, caption equal to text.ts`, async ({
     page,
   }) => {
@@ -917,7 +879,7 @@ for (const { id, rules, frames } of trickyScenes) {
     page,
   }) => {
     test.setTimeout(90_000);
-    const row = trickyScenes.find((t) => t.id === id);
+    const row = sourceDropRows.find((t) => t.id === id);
     await openFixture(page, 'session-idle-fresh');
     await openPanel(page);
     const figure = await showScene(page, id);
@@ -938,15 +900,7 @@ for (const { id, rules, frames } of trickyScenes) {
 }
 
 // Epic 8 ticket 6 (HP-1, HP-2, HP-6; AD-11): the scene carousel and the fitted whole-play-area stage.
-const sceneIds = [
-  'move-compose',
-  'free-letter',
-  'place',
-  'scoring',
-  'source-drop',
-  'destination-rule',
-  'top-card',
-] as const;
+const sceneIds = ['move-compose', 'free-letter', 'place', 'scoring', 'source-drop'] as const;
 const current = (page: Page) => panel(page).getByRole('figure');
 const stepIds = async (page: Page) => (await sceneAnimations(page)).map((a) => a.id);
 /** Remembers the live animations so a later check can tell whether the scene was re-entered. */
@@ -960,7 +914,7 @@ const reEntered = (page: Page) =>
     (window as unknown as { live: Animation[] }).live.some((a) => a.playState === 'idle'),
   );
 
-test('HP-1 HP-6 the panel mounts one playing scene figure, the arrows and seven dots named exactly', async ({
+test('HP-1 HP-6 the panel mounts one playing scene figure, the arrows and five dots named exactly', async ({
   page,
 }) => {
   await openFixture(page, 'session-idle-fresh');
@@ -984,7 +938,7 @@ test('HP-1 HP-6 the panel mounts one playing scene figure, the arrows and seven 
   await expect(panel(page).locator('a, [role="link"], [href]')).toHaveCount(0);
 });
 
-test('HP-1 the arrows walk all seven scenes in order, one figure at a time, only the current scene animating', async ({
+test('HP-1 the arrows walk all five scenes in order, one figure at a time, only the current scene animating', async ({
   page,
 }) => {
   await openFixture(page, 'session-idle-fresh');
@@ -1022,13 +976,13 @@ test('HP-1 a disabled end is a no-op that keeps focus; a dot jumps to its scene 
   await arrow(page, 'previous').click({ force: true });
   await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.moveCompose);
   await expect(arrow(page, 'previous')).toBeFocused();
-  await dotOf(page, 7).click();
-  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.topCard);
-  await expect(dotOf(page, 7)).toBeFocused();
-  await expect(dotOf(page, 7)).toHaveAttribute('aria-current', 'true');
+  await dotOf(page, 5).click();
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.sourceDrop);
+  await expect(dotOf(page, 5)).toBeFocused();
+  await expect(dotOf(page, 5)).toHaveAttribute('aria-current', 'true');
   await arrow(page, 'next').focus();
   await arrow(page, 'next').click({ force: true });
-  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.topCard);
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.sourceDrop);
   await expect(arrow(page, 'next')).toBeFocused();
   await dotOf(page, 3).click();
   await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.place);
@@ -1069,20 +1023,20 @@ test('HP-1 Left and Right move between scenes while focus is in the carousel, st
   await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.freeLetter);
   await page.keyboard.press('ArrowLeft');
   await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.moveCompose);
-  await dotOf(page, 7).click();
+  await dotOf(page, 5).click();
   await page.keyboard.press('ArrowRight');
-  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.topCard);
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.sourceDrop);
   // A modified key is ignored.
   await page.keyboard.press('Shift+ArrowLeft');
-  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.topCard);
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.sourceDrop);
   // Outside the carousel (the Close control) the keys do nothing.
   await panel(page).getByRole('button', { name: 'Close how to play', exact: true }).focus();
   await page.keyboard.press('ArrowLeft');
-  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.topCard);
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.sourceDrop);
   // Inside a scene (its pause control) they act.
   await current(page).getByRole('button', { name: controls.pause, exact: true }).focus();
   await page.keyboard.press('ArrowLeft');
-  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.destinationRule);
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.scoring);
   await expect(root(page)).toBeFocused();
 });
 
@@ -1130,9 +1084,9 @@ test('HP-1 closed, the carousel keeps no scene and no animation; rapid switching
   await openFixture(page, 'session-idle-fresh');
   await openPanel(page);
   for (let i = 0; i < sceneOrder.length - 1; i++) await arrow(page, 'next').click();
-  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.topCard);
-  await expect.poll(() => stepIds(page)).toContain('top-card-step-0');
-  expect((await stepIds(page)).every((id) => id.startsWith('top-card-'))).toBe(true);
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.sourceDrop);
+  await expect.poll(() => stepIds(page)).toContain('source-drop-step-0');
+  expect((await stepIds(page)).every((id) => id.startsWith('source-drop-'))).toBe(true);
   expect(
     await page.evaluate(
       () =>
@@ -1140,7 +1094,7 @@ test('HP-1 closed, the carousel keeps no scene and no animation; rapid switching
           .getAnimations()
           .filter(
             (a) =>
-              !a.id.startsWith('top-card-') &&
+              !a.id.startsWith('source-drop-') &&
               (a.effect as KeyframeEffect | null)?.target?.closest('figure'),
           ).length,
     ),
@@ -1270,11 +1224,11 @@ test('HP-1 AD-11 landscape: cards are at least 32 px, the arrows and dots are re
     expect(b?.width ?? 0).toBeGreaterThanOrEqual(44);
     expect(b?.height ?? 0).toBeGreaterThanOrEqual(44);
   }
-  await dotOf(page, 7).scrollIntoViewIfNeeded();
-  await dotOf(page, 7).click();
-  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.topCard);
+  await dotOf(page, 5).scrollIntoViewIfNeeded();
+  await dotOf(page, 5).click();
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.sourceDrop);
   await arrow(page, 'previous').click();
-  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.destinationRule);
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.scoring);
 });
 
 for (const [width, name] of [
@@ -1287,7 +1241,7 @@ for (const [width, name] of [
     await openFixture(page, 'session-idle-fresh');
     await openPanel(page);
     await page.setViewportSize({ width, height: 740 });
-    await expect(dotOf(page, 7)).toBeVisible();
+    await expect(dotOf(page, 5)).toBeVisible();
     const geometry = await page.evaluate(() => {
       const content = document.querySelector('.panel .content');
       const inner = document.querySelector('.panel .inner');
@@ -1303,7 +1257,7 @@ for (const [width, name] of [
       return { left, right, dots, overflow: content.scrollWidth > content.clientWidth };
     });
     expect(geometry.overflow).toBe(false);
-    expect(geometry.dots).toHaveLength(7);
+    expect(geometry.dots).toHaveLength(5);
     for (const d of geometry.dots) {
       expect(d.w).toBeGreaterThanOrEqual(44);
       expect(d.h).toBeGreaterThanOrEqual(44);

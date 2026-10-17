@@ -1,14 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
-import destinationRuleFixture from '../../../fixtures/how-to-play-destination-rule.json';
 import freeLetterFixture from '../../../fixtures/how-to-play-free-letter.json';
 import moveComposeFixture from '../../../fixtures/how-to-play-move-compose.json';
 import placeFixture from '../../../fixtures/how-to-play-place.json';
 import scoringFixture from '../../../fixtures/how-to-play-scoring.json';
 import sourceDropFixture from '../../../fixtures/how-to-play-source-drop.json';
-import topCardFixture from '../../../fixtures/how-to-play-top-card.json';
 import { sceneStageHeight } from '../layout/geometry';
 import { text } from '../text';
-import { destinationRuleScene } from './destination-rule';
 import { frameDest, ghostStart, sceneEffects, tuckEnd, tuckStart } from './effects';
 import effectsSource from './effects.ts?raw';
 import { freeLetterScene } from './free-letter';
@@ -33,7 +30,6 @@ import { scoringScene } from './scoring';
 import { defineScene } from './script';
 import { sourceDropScene } from './source-drop';
 import { FILLER_LETTERS } from './stage';
-import { topCardScene } from './top-card';
 import type { Scene } from './types';
 
 // Epic 8 ticket 1 (HP-1, HP-5, HP-6): the scene script, player and figure structure.
@@ -997,18 +993,10 @@ describe('AD-3 scenes place and scoring figure structure', () => {
   });
 });
 
-// Epic 8 ticket 4 (HP-4, HP-5, HP-6): the Tricky rules scenes against their fixtures.
+// Epic 8 ticket 10 (HP-4, HP-5, HP-6): the one Tricky rule scene against its fixture.
 describe.each([
   // `applied`: per frame, the number of fixture commands applied (the ticket's `n`).
   ['source-drop', sourceDropScene, sourceDropFixture, text.howTo.scenes.sourceDrop, [0, 0, 1, 2]],
-  [
-    'destination-rule',
-    destinationRuleScene,
-    destinationRuleFixture,
-    text.howTo.scenes.destinationRule,
-    [0, 0, 1, 2, 2, 3, 4, 5],
-  ],
-  ['top-card', topCardScene, topCardFixture, text.howTo.scenes.topCard, [0, 0, 1, 2]],
 ] as const)('AD-14 scene %s against its fixture', (name, scene, data, caption, applied) => {
   type Frames = readonly {
     validate?: string;
@@ -1167,111 +1155,16 @@ describe('AD-14 scene source-drop', () => {
   });
 });
 
-describe('AD-14 scene destination-rule', () => {
-  it('AD-14 R-31 R-22 Q-12 Q-27 frames: half 1 BAT with B locked, undone, half 2 B alone (k 0) then A and T from the cells', () => {
-    expect(
-      destinationRuleScene.frames.map((f) => [f.tail, f.dest, f.order?.join(''), f.k, f.used]),
-    ).toStrictEqual([
-      ['home', undefined, undefined, undefined, undefined],
-      ['lifted', undefined, undefined, undefined, undefined],
-      ['gone', 'gone', 'BAT', 1, undefined],
-      ['home', undefined, undefined, undefined, undefined],
-      ['home', 'lifted', undefined, undefined, undefined],
-      ['home', 'gone', 'B', 0, undefined],
-      ['home', 'gone', 'BA', 0, [3]],
-      ['home', 'gone', 'BAT', 0, [3, 4]],
-    ]);
-  });
-
-  it('AD-14 R-31 the second half lifts the D block (the same B), not the tail; the undo returns what flew into the tray', () => {
-    const effects = sceneEffects(destinationRuleScene);
-    const undo = destinationRuleScene.steps.findIndex((s) => s.command === 1);
-    const back = effects[undo].filter((e) => e.phase === 1 && e.element !== 'tray-2');
-    expect(back.map((e) => e.element).sort()).toStrictEqual(['dest', 'tail', 'tail-0', 'tail-1']);
-    for (const e of back) expect(e.keyframes[1].transform).toBe('translate(0px, 0px)');
-    // After the undo, no tail effect moves it again, and the half-2 grab, move and drop act on dest.
-    const grab2 = destinationRuleScene.steps.findIndex((s) => s.type === 'grab' && s.command === 2);
-    const later = effects.slice(grab2).flat();
-    expect(later.some((e) => e.element === 'tail' || e.element.startsWith('tail-'))).toBe(false);
-    const lift = effects[grab2].find((e) => e.element === 'dest');
-    expect(lift?.keyframes[0].transform).toBe('translate(0px, 0px)');
-    expect(lift?.keyframes[1].transform).toBe('translate(0px, -8px)');
-    const fly =
-      effects[destinationRuleScene.steps.findIndex((s, i) => i > grab2 && s.type === 'fly')];
-    expect(fly.filter((e) => e.phase === 0).map((e) => e.element)).toStrictEqual(['dest']);
-  });
-
-  it('AD-1 a lifts-dest carry that matches its drop command but not the scene D block throws the lifts message', () => {
-    // Carry 2 equals fixture command 2 (column 2, 1 card, to column 3); the primary carry now has
-    // two D cards, so lifting "the D block" of 1 card is inconsistent.
-    expect(() =>
-      defineScene({
-        ...destinationRuleScene,
-        carry: { ...carryOf(destinationRuleScene), destinationCount: 2 },
-      }),
-    ).toThrow(/step 5 \(grab\) lifts a D block the scene does not have/);
-  });
-
-  it('AD-14 the Undo tap names the fixture undo command, reveals no layer and hides tray-2', () => {
-    const step = destinationRuleScene.steps.find((s) => s.target === 'undo');
-    expect(step?.type).toBe('tap');
-    expect(destinationRuleFixture.commands[step?.command ?? -1]).toStrictEqual({ type: 'undo' });
-    expect(step?.reveal?.show).toBeUndefined();
-    expect(step?.reveal?.hide).toStrictEqual(['tray-2']);
-  });
-
-  it('AD-3 the Undo pill is aria-hidden stage markup labelled by text.undo, with no test id', async () => {
-    mocked.motion = { baseMs: 180, reduced: false };
-    vi.resetModules();
-    const { render } = await import('svelte/server');
-    const { default: Scene } = await import('./Scene.svelte');
-    const body = render(Scene, { props: { scene: destinationRuleScene, ...FIT } }).body;
-    expect(body).toMatch(new RegExp(`data-scene-el="undo"[^>]*>${text.undo}</span>`));
-    expect(body).not.toContain('data-testid');
-    const outside = body.slice(body.indexOf('<button'));
-    expect(outside).not.toContain(text.undo);
-  });
-});
-
-describe('AD-14 scene top-card', () => {
-  it('AD-14 R-33 Q-31 the free letter is cell 5 at index 0 and the second tap on cell 5 carries no command', () => {
-    expect(topCardFixture.commands[1]).toStrictEqual({ type: 'addFreeLetter', cell: 5, index: 0 });
-    const taps = topCardScene.steps.filter((s) => s.type === 'tap');
-    expect(taps.map((s) => [s.target, s.command])).toStrictEqual([
-      ['cell5', 1],
-      ['cell5', undefined],
-    ]);
-    // The throw lives only in the fixture's rejected list.
-    expect(topCardFixture.rejected[0].check).toBe('r33-free-letter-duplicate');
-    expect(topCardScene.frames).toHaveLength(4);
-    expect(topCardScene.frames[3].used).toStrictEqual([5]);
-    expect(topCardFixture.start.columns[1]).toStrictEqual([]);
-  });
-
-  it('AD-14 the second tap animates only the pointer: no reveal, no layer, nothing dimmed again', () => {
-    const effects = sceneEffects(topCardScene);
-    const second = effects.at(-1) ?? [];
-    expect(second.map((e) => e.element)).toStrictEqual(['ghost']);
-  });
-});
-
 describe('AD-14 the scenes in the panel order', () => {
-  it('AD-14 the three Tricky rules scenes follow the four basic scenes', async () => {
-    const { basicScenes, trickyScenes, scenes } = await import('./index');
+  it('AD-14 the one Tricky rule scene follows the four basic scenes', async () => {
+    const { basicScenes, scenes } = await import('./index');
     expect(basicScenes.map((s) => s.id)).toStrictEqual([
       'move-compose',
       'free-letter',
       'place',
       'scoring',
     ]);
-    expect(trickyScenes.map((s) => s.id)).toStrictEqual([
-      'source-drop',
-      'destination-rule',
-      'top-card',
-    ]);
-    expect(scenes.map((s) => s.id)).toStrictEqual(
-      [...basicScenes, ...trickyScenes].map((s) => s.id),
-    );
+    expect(scenes.map((s) => s.id)).toStrictEqual([...basicScenes.map((s) => s.id), 'source-drop']);
   });
 });
 
@@ -1281,13 +1174,6 @@ describe('AD-14 frame k and side against the engine-checked fixture block', () =
     ['move-compose', moveComposeScene, moveComposeFixture.block, [0, 0, 1, 2, 3, 4, 5, 6]],
     ['free-letter', freeLetterScene, freeLetterFixture.block, [6, 7, 8]],
     ['source-drop', sourceDropScene, sourceDropFixture.block, [0, 0, 1, 2]],
-    [
-      'destination-rule',
-      destinationRuleScene,
-      destinationRuleFixture.block,
-      [0, 0, 1, 2, 2, 3, 4, 5],
-    ],
-    ['top-card', topCardScene, topCardFixture.block, [0, 0, 1, 2]],
   ] as const)(
     'AD-14 R-31 scene %s: every frame k and side equal the fixture block',
     (_n, scene, block, applied) => {
@@ -1301,7 +1187,7 @@ describe('AD-14 frame k and side against the engine-checked fixture block', () =
   );
 });
 
-describe('AD-14 frameDest and the Tricky rules frames', () => {
+describe('AD-14 frameDest and the source-drop frames', () => {
   it('AD-14 frameDest: lifted raises by LIFT and is shown, gone is hidden, absent stays at home', () => {
     const frame = { tail: 'home', tray: false } as const;
     expect(frameDest({ ...frame, dest: 'lifted' })).toStrictEqual({
@@ -1312,12 +1198,13 @@ describe('AD-14 frameDest and the Tricky rules frames', () => {
     expect(frameDest(frame)).toStrictEqual({ hidden: false });
   });
 
-  it('AD-14 the Tricky rules frames name the D block as the ticket lists: gone once the tray is open, lifted when half 2 lifts B', async () => {
-    const { trickyScenes } = await import('./index');
-    expect(trickyScenes.map((s) => s.frames.map((f) => f.dest))).toStrictEqual([
-      [undefined, undefined, 'gone', 'gone'],
-      [undefined, undefined, 'gone', undefined, 'lifted', 'gone', 'gone', 'gone'],
-      [undefined, undefined, 'gone', 'gone'],
+  it('AD-14 the source-drop frames name the D block: gone once the tray is open', async () => {
+    const { scenes } = await import('./index');
+    expect(scenes.at(-1)?.frames.map((f) => f.dest)).toStrictEqual([
+      undefined,
+      undefined,
+      'gone',
+      'gone',
     ]);
   });
 });
@@ -1463,6 +1350,9 @@ describe('AD-14 the arrange step', () => {
 describe('AD-14 scene captions come from text.ts', () => {
   it('AD-14 HP-6 each figure caption equals its text.ts string; scene 2 holds the owner sentence verbatim', () => {
     expect(moveComposeScene.caption).toBe(text.howTo.scenes.moveCompose);
+    expect(sourceDropScene.caption).toBe(
+      'Dropping back on the column you lifted from is allowed. You must use at least 1 letter from the destination column, unless you drag to an empty column.',
+    );
     expect(freeLetterScene.caption).toBe(text.howTo.scenes.freeLetter);
     expect(text.howTo.scenes.freeLetter).toContain(
       'The top card of each WordCell can be used as a free letter added to the word.',
