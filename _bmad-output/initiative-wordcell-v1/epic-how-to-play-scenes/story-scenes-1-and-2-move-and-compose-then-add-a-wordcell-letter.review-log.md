@@ -1,6 +1,6 @@
 # Review log — ticket 8.7 (Scenes 1 and 2)
 
-State: pass 3: done
+State: pass 4: done
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 198 words. HEAD at start: 0a52938.
 Note: this epic has no SPEC.md (epic file: "goes straight to tickets, no separate spec").
 
@@ -58,3 +58,16 @@ Words (docs): 1495 (7.6 x pass 0, budget 1500)  |  Snapshot: story-scenes-1-and-
 - (none new; pass 1 and 2 items stand)
 
 Fixer applied pass 3 items 1-12 (wc 1495, cuts made for room).
+
+## Pass 4 — 2026-10-17
+Reviewers: Fix diff, Edge-case hunter, Adversarial, Ref alignment  |  Findings (merged): major 1, minor 12, decision-needed 0  |  Dropped in triage: 0 (reviewer majors on untested `opens` guards, script-to-fixture proof gap and the unspecified "fuller" amount reclassified minor under the pass-4 bar: verification precision / builder detail)
+Words (docs): 1486 (7.5 x pass 0, budget 1500)  |  Snapshot: story-scenes-1-and-2-move-and-compose-then-add-a-wordcell-letter.passes/pass4.md
+### Accepted (sent to fixer)
+- [major] Dropping `arrange` from `COMMAND_TYPES.move` makes `defineScene` throw for source-drop.ts (move step, command 1 = arrange; verified) and breaks the unchanged Tricky scene: keep `move` accepting `arrange`; scope the "no move step names arrange" test to the two new scenes
+- [minor, zero-add only (ticket at 1495 words, budget 1500)] AD-14 test that defineScene rejects steps below `opens`; script frames vs fixture data; "fuller" minimum; define M/D; AC3 split by motion mode; scene 2 step list; wording of the k invariant; toml `interface` sync stays with the owner
+### Default applied (technical)
+- Keep `arrange` allowed for `move`; the new StepType is used by the two new scenes only
+### Decision needed
+- (none new; passes 1 and 2 items stand)
+
+Fixer applied pass 4 items 1-9 (wc 1486; Verify line shortened to the two npm scripts to make room).
