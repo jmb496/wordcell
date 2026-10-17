@@ -1,6 +1,6 @@
 # Review log — Scene 5: the one Tricky rule (ticket 8.10)
 
-State: pass 3: done
+State: pass 4: done
 Pre-loop: HEAD cf77609, 155 words, copy at story-scene-5-the-one-tricky-rule.passes/pass0.md. Budget 1500 words.
 Toml fields to carry into the Description in pass 1: interface = "scene script and fixture; text.ts; removes the old Tricky rules scenes."; tests = "Engine replay (U); play (P6 android); screenshots."; owns = "Scene 5."; verify and risk (low) are already present; references = rules — docs/game-flow-spec.md, R-21, R-13.
 
@@ -53,3 +53,19 @@ Words (docs): 1452 (9.4 x pass 0; budget 1500)  |  Snapshot: story-scene-5-the-o
 - none
 ### Dropped
 - AC grep widening (dangling identifiers fail check/lint anyway); showScene note (no change needed)
+
+## Pass 4 — 2026-10-17
+Reviewers: fix-diff, edge-case, adversarial, ref alignment  |  Findings: major 0, minor 10, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1452 (no fix pass; budget 1500)  |  Snapshot: pass3.md (unchanged)
+### Applied
+- none (no majors; minors not applied, over budget)
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Result — converged after 4 passes (majors per pass 8, 6, 1, 0)
+
+Words 155 -> 1452. Unapplied minors for the build plan: "61 tests today" in the AC will fall with the removed cases; grep does not match bare `'top-card-'` prefixes in e2e (rapid-switch test ~1135/1145 re-pointed per Description); name the 3 rejected-specific engine tests rather than line range ~598-631 (fix "whole the" typo); drop 'bat'/'sat' from DICT in the engine test; scene 5 caption literal as a separate `it` or renamed title; screens baseline regeneration is a precondition of test:screens green; text.ts ~346 comment is reworded (heads kept sourceDrop key), not removed; epic file Done-when/HP-4/HP-5 wording still says three Tricky scenes (rework Note reconciles; 8.11 may tidy); tickets.toml entry 11 description to narrow when published; scattered screens-spec edits could be one sentence.
