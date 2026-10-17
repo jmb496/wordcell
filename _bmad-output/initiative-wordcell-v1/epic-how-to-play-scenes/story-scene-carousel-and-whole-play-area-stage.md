@@ -39,3 +39,7 @@ Verify: `npm run test:all` and `npm run test:screens` are green. Playwright test
 - rules — docs/game-flow-spec.md §8
 - architecture — ARCHITECTURE-SPINE.md AD-3, AD-11, AD-14
 - decision — the epic's owner decision of 2026-10-17
+
+## Notes
+
+- Decision: 2026-10-17, owner: confirmed the carousel behaviours as written in the Description: buttons, dots and Left/Right keys only (no swipe or drag), no wrap-around at the first and last scene, the panel always opens on scene 1, and every scene entry restarts the scene at step 1.
