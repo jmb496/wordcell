@@ -1,6 +1,6 @@
 # Review log — Scene 5: the one Tricky rule (ticket 8.10)
 
-State: pass 2: done
+State: pass 3: done
 Pre-loop: HEAD cf77609, 155 words, copy at story-scene-5-the-one-tricky-rule.passes/pass0.md. Budget 1500 words.
 Toml fields to carry into the Description in pass 1: interface = "scene script and fixture; text.ts; removes the old Tricky rules scenes."; tests = "Engine replay (U); play (P6 android); screenshots."; owns = "Scene 5."; verify and risk (low) are already present; references = rules — docs/game-flow-spec.md, R-21, R-13.
 
@@ -40,3 +40,16 @@ Words (docs): 1443 (9.3 x pass 0; budget 1500)  |  Snapshot: story-scene-5-the-o
 - none
 ### Dropped
 - none
+
+## Pass 3 — 2026-10-17
+Reviewers: fix-diff, edge-case, adversarial, ref alignment  |  Findings: major 1, minor ~12, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1452 (9.4 x pass 0; budget 1500)  |  Snapshot: story-scene-5-the-one-tricky-rule.passes/pass3.md
+### Applied
+- [major] Removal bullet would delete the engine k/side `it.each` wholesale, losing source-drop's block check → keep with source-drop row only
+- minors: false carousel.test count claim, scenes.test k/side rows, R-22/R-23 coverage wording, frameDest form, caption literal test named, replay command run (61 pass), Frame.cell6 stays
+### Default applied (technical)
+- engine generic tables stay with source-drop row only
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- AC grep widening (dangling identifiers fail check/lint anyway); showScene note (no change needed)
