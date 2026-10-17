@@ -9,7 +9,7 @@ import topCardFixture from '../../../fixtures/how-to-play-top-card.json';
 import { sceneStageHeight } from '../layout/geometry';
 import { text } from '../text';
 import { destinationRuleScene } from './destination-rule';
-import { frameDest, sceneEffects } from './effects';
+import { frameDest, ghostStart, sceneEffects } from './effects';
 import effectsSource from './effects.ts?raw';
 import { freeLetterScene } from './free-letter';
 import { CARD_W, columnX, LIFT, MIN_COLUMN_CARDS, RICH_SLOT, STAGE_INPUTS } from './geometry';
@@ -1085,6 +1085,7 @@ describe('AD-14 scene free-letter against its fixture', () => {
     expect(freeLetterScene.steps[0].type).toBe('tap');
     const [first] = sceneEffects(freeLetterScene)[0].filter((e) => e.element === 'ghost');
     expect(first.keyframes[0].opacity).toBe(0);
+    expect(first.keyframes[0].transform).toBe(ghostStart(freeLetterScene));
   });
 });
 

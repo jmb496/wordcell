@@ -86,14 +86,8 @@ describe('AD-2 How to play scene replay', () => {
       destinationCount: 2,
       destinationSide: 'right',
     });
-    expect(moveCompose.words?.map((w) => w.word)).toStrictEqual([
-      'EKBA',
-      'DEKBA',
-      'NDEKBA',
-      'DEKBA',
-      'KBAED',
-      'BAKED',
-    ]);
+    // Only dictionary words are stated (ticket Content); the intermediate non-words are pinned below.
+    expect(moveCompose.words).toStrictEqual([{ command: 5, word: 'BAKED' }]);
     expect(moveCompose.validatable).toHaveLength(moveCompose.commands.length + 1);
     expect(moveCompose.block?.map((b) => [b.k, b.side])).toStrictEqual([
       [1, 'left'],
@@ -174,6 +168,32 @@ describe('AD-2 How to play scene replay', () => {
       at(one.validatable, one.commands.length),
     );
   }
+
+  it('R-30 R-31 scene move-compose: the draft word cards read EKBA, DEKBA, NDEKBA, DEKBA, KBAED, BAKED after commands 0 to 5 (k and side as the block)', () => {
+    const start = sceneStart(moveCompose);
+    const letters = ['EKBA', 'DEKBA', 'NDEKBA', 'DEKBA', 'KBAED', 'BAKED'];
+    letters.forEach((expected, command) => {
+      const prefix = without(moveCompose, command + 1);
+      const { session } = replayScene(prefix, DICT);
+      const view = viewFrom(start, session, EN);
+      expect(view.draft?.wordCards.map((id) => view.faces[id].letter).join('')).toBe(expected);
+      const block = moveCompose.block?.find((b) => b.after === command + 1);
+      expect([view.draft?.k, view.draft?.side]).toStrictEqual([block?.k, block?.side]);
+    });
+  });
+
+  it('R-30 scene move-compose and free-letter: the arrange ids [3, 0, 22] map through the scene start to B, A, K', () => {
+    for (const fixture of [moveCompose, freeLetter]) {
+      const arrange = fixture.commands[5] as Extract<Command, { type: 'arrange' }>;
+      expect(arrange.arrangement).toStrictEqual([3, 0, 22]);
+      const view = viewFrom(
+        sceneStart(fixture),
+        replayScene(without(fixture, 0), DICT).session,
+        EN,
+      );
+      expect(arrange.arrangement.map((id) => view.faces[id].letter)).toStrictEqual(['B', 'A', 'K']);
+    }
+  });
 
   it('R-30 R-31 R-34 scene free-letter: it opens on scene move-compose final position (same start, prefix commands, board, block, Validate)', () => {
     expect(() => expectContinuity(moveCompose, freeLetter)).not.toThrow();

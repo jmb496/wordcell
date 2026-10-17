@@ -1,6 +1,6 @@
 # Review loop: ticket 8.7 build (code mode)
 
-State: pass 1: done
+State: pass 2: done
 
 Pre-loop: HEAD 6841d78, tree 43afbfa115822ef3cf452b9ab470419b22fe783a. Target diff: _bmad-output/implementation-artifacts/review-loop/8-7-build.passes/pass0.diff (e915ac0..6841d78, PNGs excluded).
 
@@ -18,3 +18,16 @@ Reviewers: correctness, edge cases, verification gap, intent alignment  |  Findi
 - all of the above, reviewer defaults
 
 Fix outcome: all 7 applied (findings 2 no change needed, comment added; 4 partly, 6 partly, see fixer). Snapshot tree 1d5c0b8; npm test/lint/check pass.
+
+## Pass 2
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 1, minor 5, decision-needed 0  |  Dropped in triage: 0 (reduced-motion frames minor reported by 3 reviewers, merged; ticket-confirmed major: Content says only dictionary words in `words`)
+### Applied (sent to fixer)
+- [major] fixtures/how-to-play-move-compose.json words — pass-1 fix added 5 non-words, contradicting ticket Content "Only dictionary words are stated in words" → keep only BAKED; keep middle-frame coverage by engine-test replay assertions of draft letters per command
+- [minor] reduced-motion scene 1 test: dead `frames`, no distinct assertion → assert frames[1] != frames[0]
+- [minor] AC2(c) tautology / UI frame vs engine view: assert engine draft letters/k/side at opens vs scene frame order literal
+- [minor] scene 2 first-step test checks only opacity 0 → also ghost transform equals rest target
+- [minor] arrange ids literal 3,0,22: test they read B,A,K via sceneStart
+### Default applied (technical)
+- all of the above
+
+Fix outcome: all 5 applied (3: no change possible, layer rule; engine letter list is the tie). Snapshot tree a72a864; npm test/lint/check pass.

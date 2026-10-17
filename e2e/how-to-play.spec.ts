@@ -258,6 +258,7 @@ test('R-10 R-20 R-23 AD-14 with reduced motion scene 1 shows eight frames on Nex
     if (i === 0) frames.push(await transform());
     await expect(open).toHaveCSS('opacity', '0');
   }
+  expect(frames[1]).not.toBe(frames[0]);
   // Frame 2 has the tail gone into the tray with tray-2 shown.
   await expect(tail).toHaveCSS('visibility', 'hidden');
   await expect(scene(page).locator('[data-scene-el="tray-2"]')).toHaveCSS('opacity', '1');
