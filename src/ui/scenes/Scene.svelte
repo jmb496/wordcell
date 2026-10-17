@@ -316,7 +316,7 @@ const replay = (): void => {
             data-scene-el="tray-{i}"
             style:top="{geo.trayTop}px"
             style:height="{geo.trayH}px"
-            style:opacity={reduced ? (i === currentIndex ? 1 : 0) : undefined}
+            style:opacity={reduced ? (i === currentIndex ? 1 : 0) : i === 0 ? 1 : undefined}
           >
             {#each miniCells.filter((m) => frame.used?.includes(m.cell)) as entry (entry.cell)}
               <div
@@ -337,7 +337,9 @@ const replay = (): void => {
             {/if}
             <div class="tiles" style:left="{geo.inset}px" style:--wc-w="{geo.richTileW}px" style:--wc-slot="{geo.richSlot}px">
               {#each frame.order as letter, j (j)}
-                <Card id={0} face={face(letter)} place="tray" mirror="static" full destination={inBlock(frame, j)} />
+                <div class="tile" data-scene-el="tray-{i}-tile-{j}">
+                  <Card id={0} face={face(letter)} place="tray" mirror="static" full destination={inBlock(frame, j)} />
+                </div>
               {/each}
             </div>
             <span class="ctl round" style:left="{geo.box.minus.x}px" style:width="{geo.box.minus.w}px" style:top="{geo.controlsTop}px" style:height="{geo.controlsH}px">{text.minus}</span>
@@ -490,6 +492,7 @@ const replay = (): void => {
     background: var(--wc-surface-raised); box-shadow: inset 0 1px 0 var(--wc-outline);
   }
   .tiles { position: absolute; top: 4px; display: flex; }
+  .tile { display: flex; flex: none; }
   .wcell { position: absolute; width: var(--wc-slot); }
   .stack { position: relative; width: var(--wc-slot); display: flex; flex-direction: column; }
   .stack.empty { height: var(--wc-H); }

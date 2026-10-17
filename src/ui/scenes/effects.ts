@@ -1,5 +1,5 @@
 import type { MotionKind } from '../motion';
-import { HAND_TIP, LIFT, SLOT, STRIP } from './geometry';
+import { HAND_TIP, LIFT, RICH_SLOT, SLOT, STRIP } from './geometry';
 import type { Frame, Point, Scene } from './types';
 
 /** One element's keyframes inside a step; `phase` 1 runs after every phase 0 effect finished. */
@@ -134,6 +134,54 @@ export function sceneEffects(scene: Scene): readonly (readonly Effect[])[] {
       case 'tap':
         effects.push(ghost());
         break;
+      case 'arrange': {
+        // Epic 8 ticket 7: the pointer does not drag every card. It fades out, the new frame's
+        // layer replaces the old one in place, and each moved tile glides from its place in the
+        // previous frame's `order` to its place in this one (one step, one glide).
+        const layer = step.reveal?.show ?? '';
+        const frame = Number(/^tray-(\d+)$/.exec(layer)?.[1]);
+        const before = scene.frames[frame - 1]?.order;
+        const after = scene.frames[frame]?.order;
+        if (before === undefined || after === undefined)
+          throw new Error(
+            `scene ${scene.id}: an arrange step needs tray frames ${frame - 1}, ${frame}`,
+          );
+        const times = step.times ?? 1;
+        effects.push(
+          {
+            element: 'ghost',
+            keyframes: [{ opacity: 1 }, { opacity: 0 }],
+            kind: step.kind,
+            times,
+            phase: 0,
+          },
+          {
+            element: layer,
+            keyframes: [{ opacity: 1 }, { opacity: 1 }],
+            kind: step.kind,
+            times,
+            phase: 0,
+          },
+        );
+        const taken = new Set<number>();
+        after.forEach((letter, j) => {
+          const from = before.findIndex((l, i) => l === letter && !taken.has(i));
+          if (from < 0) throw new Error(`scene ${scene.id}: arrange has no ${letter} before`);
+          taken.add(from);
+          if (from === j) return;
+          effects.push({
+            element: `${layer}-tile-${j}`,
+            keyframes: [
+              { transform: at({ x: (from - j) * RICH_SLOT, y: 0 }) },
+              { transform: at({ x: 0, y: 0 }) },
+            ],
+            kind: step.kind,
+            times,
+            phase: 0,
+          });
+        });
+        break;
+      }
     }
     if (step.reveal) {
       const undone =
@@ -158,7 +206,7 @@ export function sceneEffects(scene: Scene): readonly (readonly Effect[])[] {
         flown = false;
         flownAt = new Map();
       }
-      if (step.reveal.show !== undefined)
+      if (step.reveal.show !== undefined && step.type !== 'arrange')
         effects.push({
           element: step.reveal.show,
           keyframes: [{ opacity: 0 }, { opacity: 1 }],

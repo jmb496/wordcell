@@ -50,7 +50,7 @@ export const fillerCount = (length: number): number => Math.max(0, MIN_COLUMN_CA
 export const columnRowY = (length: number, index: number): number =>
   (fillerCount(length) + index) * STRIP;
 
-// Epic 8 ticket 2: the open tray of the compose and destination scenes holds a tile row and a
+// Epic 8 ticket 2: the open tray of the move-compose and free-letter scenes holds a tile row and a
 // controls row (−, +, Flip, Validate), so its tiles use a 40 px pitch (a block of up to six fits).
 export const RICH_SLOT = 40;
 export const RICH_TILE_W = 36;

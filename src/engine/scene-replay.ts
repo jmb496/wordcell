@@ -26,6 +26,12 @@ export interface SceneFixture {
     readonly cells?: Readonly<Record<string, readonly string[]>>;
   };
   readonly commands: readonly Command[];
+  /**
+   * Epic 8 ticket 7: the number of leading commands that replay an earlier scene (the first
+   * animated command has index `opens`); an integer in 1..commands.length-1. Test support only:
+   * `words`, `validatable` and `block` indices stay absolute over the whole list.
+   */
+  readonly opens?: number;
   /** After `command`, the draft word (R-30) equals `word` (uppercase) and was not rejected. */
   readonly words?: readonly { readonly command: number; readonly word: string }[];
   /** After `after` commands, the engine's live score (R-80) equals `score`. */
@@ -119,6 +125,10 @@ export function replayScene(scene: SceneFixture, dictionary: ReadonlySet<string>
       fail(scene, `${field} ${value} is out of range 0..${max}`);
   };
   const count = scene.commands.length;
+  if (scene.opens !== undefined) {
+    if (!Number.isInteger(scene.opens) || scene.opens < 1 || scene.opens > count - 1)
+      fail(scene, `opens ${scene.opens} is out of range 1..${count - 1}`);
+  }
   for (const { command, word } of scene.words ?? []) {
     index('words command', command, count - 1);
     if (rejectedWords[command] !== undefined)

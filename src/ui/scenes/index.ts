@@ -1,18 +1,16 @@
-import { composeScene } from './compose';
-import { destinationScene } from './destination';
 import { destinationRuleScene } from './destination-rule';
-import { dragScene } from './drag';
+import { freeLetterScene } from './free-letter';
+import { moveComposeScene } from './move-compose';
 import { placeScene } from './place';
 import { scoringScene } from './scoring';
 import { sourceDropScene } from './source-drop';
 import { topCardScene } from './top-card';
 import type { Scene } from './types';
 
-/** The five basic How to play scenes, in order (epic 8 tickets 1 to 3). */
+/** The four basic How to play scenes, in order (epic 8 tickets 1 to 3 and 7). */
 export const basicScenes: readonly Scene[] = [
-  dragScene,
-  composeScene,
-  destinationScene,
+  moveComposeScene,
+  freeLetterScene,
   placeScene,
   scoringScene,
 ];

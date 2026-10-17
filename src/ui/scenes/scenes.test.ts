@@ -1,21 +1,19 @@
 import { describe, expect, it, vi } from 'vitest';
-import composeFixture from '../../../fixtures/how-to-play-compose.json';
-import destinationFixture from '../../../fixtures/how-to-play-destination.json';
 import destinationRuleFixture from '../../../fixtures/how-to-play-destination-rule.json';
-import fixture from '../../../fixtures/how-to-play-drag.json';
+import freeLetterFixture from '../../../fixtures/how-to-play-free-letter.json';
+import moveComposeFixture from '../../../fixtures/how-to-play-move-compose.json';
 import placeFixture from '../../../fixtures/how-to-play-place.json';
 import scoringFixture from '../../../fixtures/how-to-play-scoring.json';
 import sourceDropFixture from '../../../fixtures/how-to-play-source-drop.json';
 import topCardFixture from '../../../fixtures/how-to-play-top-card.json';
 import { sceneStageHeight } from '../layout/geometry';
 import { text } from '../text';
-import { composeScene } from './compose';
-import { destinationScene } from './destination';
 import { destinationRuleScene } from './destination-rule';
-import { dragScene } from './drag';
 import { frameDest, sceneEffects } from './effects';
 import effectsSource from './effects.ts?raw';
+import { freeLetterScene } from './free-letter';
 import { CARD_W, columnX, LIFT, MIN_COLUMN_CARDS, RICH_SLOT, STAGE_INPUTS } from './geometry';
+import { moveComposeScene } from './move-compose';
 import { placeScene } from './place';
 import { type AnimationHandle, type PlayerDeps, restMs, ScenePlayer } from './player';
 import playerSource from './player.ts?raw';
@@ -51,72 +49,77 @@ const KINDS = ['snap', 'flyBack', 'parting', 'undoRedo', 'flyToCell', 'overlay']
 
 describe('AD-14 scene script against its fixture', () => {
   it('AD-14 the carried tail matches the fixture drop command: source, tail length, destination', () => {
-    const command = fixture.commands[0];
+    const command = moveComposeFixture.commands[0] as {
+      sourceColumn: number;
+      sourceCount: number;
+      destinationColumn: number;
+    };
     expect(command).toMatchObject({
       type: 'drop',
-      sourceColumn: carryOf(dragScene).sourceColumn,
-      sourceCount: carryOf(dragScene).count,
-      destinationColumn: carryOf(dragScene).destinationColumn,
+      sourceColumn: carryOf(moveComposeScene).sourceColumn,
+      sourceCount: carryOf(moveComposeScene).count,
+      destinationColumn: carryOf(moveComposeScene).destinationColumn,
     });
-    const columns = fixture.start.columns;
+    const columns = moveComposeFixture.start.columns;
     expect(columns[command.sourceColumn - 1].slice(-command.sourceCount)).toStrictEqual([
-      'E',
-      'D',
       'K',
+      'B',
       'A',
     ]);
     expect(
-      columns[command.destinationColumn - 1].slice(-carryOf(dragScene).destinationCount),
-    ).toStrictEqual(['B']);
+      columns[command.destinationColumn - 1].slice(-carryOf(moveComposeScene).destinationCount),
+    ).toStrictEqual(['E']);
   });
 
   it('AD-14 every grab and drop step names a fixture drop command; step kinds are motion kinds', () => {
-    const types = dragScene.steps.map((s) => s.type);
-    expect(types).toStrictEqual(['grab', 'move', 'drop', 'fly']);
-    for (const step of dragScene.steps) {
+    const types = moveComposeScene.steps.map((s) => s.type);
+    expect(types).toStrictEqual([
+      'grab',
+      'move',
+      'drop',
+      'fly',
+      'tap',
+      'tap',
+      'tap',
+      'tap',
+      'arrange',
+    ]);
+    for (const step of moveComposeScene.steps) {
       expect(KINDS).toContain(step.kind);
       if (step.type === 'grab' || step.type === 'drop')
-        expect(dragScene.fixture.commands[step.command ?? -1]?.type).toBe('drop');
+        expect(moveComposeScene.fixture.commands[step.command ?? -1]?.type).toBe('drop');
     }
   });
 
-  it('AD-14 the frames are start, lifted, over column 3, dropped with the tray open', () => {
-    expect(dragScene.frames).toStrictEqual([
-      { tail: 'home', tray: false },
-      { tail: 'lifted', tray: false },
-      { tail: 'over', tray: false },
-      { tail: 'gone', tray: true },
-    ]);
-  });
-
   it('AD-14 the carried tail ends each step where the next begins, lands on its offset, then flies to the tray', () => {
-    const effects = sceneEffects(dragScene);
+    const effects = sceneEffects(moveComposeScene);
     const tails = effects.flat().filter((e) => e.element === 'tail' && e.phase === 0);
     for (let i = 1; i < tails.length; i++)
       expect(tails[i].keyframes[0].transform).toBe(tails[i - 1].keyframes[1].transform);
-    const offset = need(dragScene.offset);
-    const layout = need(dragScene.layout);
-    const dropAt = dragScene.steps.findIndex((s) => s.type === 'drop');
+    const offset = need(moveComposeScene.offset);
+    const layout = need(moveComposeScene.layout);
+    const dropAt = moveComposeScene.steps.findIndex((s) => s.type === 'drop');
     const landed = effects[dropAt].find((e) => e.element === 'tail');
     expect(landed?.keyframes[1].transform).toBe(`translate(${offset.x}px, ${offset.y}px)`);
     const flown = effects.flat().filter((e) => e.element.startsWith('tail-'));
-    expect(flown).toHaveLength(carryOf(dragScene).count);
-    expect(new Set(flown.map((e) => e.keyframes[1].transform)).size).toBe(carryOf(dragScene).count);
+    expect(flown).toHaveLength(carryOf(moveComposeScene).count);
+    expect(new Set(flown.map((e) => e.keyframes[1].transform)).size).toBe(
+      carryOf(moveComposeScene).count,
+    );
     expect(layout.trayTail.y).toBeGreaterThan(layout.tailHome.y);
   });
 });
 
 // Epic 8 ticket 2 (HP-3b, HP-3c, HP-5, HP-6): scenes 2 and 3 against their fixtures.
 describe.each([
-  ['compose', composeScene, composeFixture, [0, 0, 1, 2, 3, 4]],
-  ['destination', destinationScene, destinationFixture, [0, 1, 2, 3, 4]],
-] as const)('AD-14 scene %s against its fixture', (name, scene, data, applied) => {
+  ['move-compose', moveComposeScene, moveComposeFixture, [0, 0, 1, 2, 3, 4, 5, 6]],
+] as const)('AD-14 scene %s against its fixture', (_name, scene, data, applied) => {
   it('AD-14 the indexes of the steps carrying a command cover the fixture commands in order', () => {
     const indexes = scene.steps.flatMap((s) => (s.command === undefined ? [] : [s.command]));
     expect([...new Set(indexes)]).toStrictEqual(data.commands.map((_, i) => i));
     expect(indexes).toStrictEqual([...indexes].sort((a, b) => a - b));
     expect(scene.id).toBe(data.scene);
-    expect(scene.caption).toBe(text.howTo.scenes[name]);
+    expect(scene.caption).toBe(text.howTo.scenes.moveCompose);
   });
 
   it('AD-14 the carried tail matches the fixture drop command', () => {
@@ -199,52 +202,46 @@ describe.each([
   });
 });
 
-describe('AD-14 scene compose frames', () => {
-  it('AD-14 frames: start, lifted, BEDKA k 1 left, BAKED, BALKED with cell 6 used, Validate pressed', () => {
-    expect(composeScene.frames.map((f) => [f.tail, f.order?.join(''), f.k, f.side])).toStrictEqual([
-      ['home', undefined, undefined, undefined],
-      ['lifted', undefined, undefined, undefined],
-      ['gone', 'BEDKA', 1, 'left'],
-      ['gone', 'BAKED', 1, 'left'],
-      ['gone', 'BALKED', 1, 'left'],
-      ['gone', 'BALKED', 1, 'left'],
-    ]);
-    expect(composeScene.frames.map((f) => f.cell6)).toStrictEqual([
-      'top',
-      'top',
-      'top',
-      'top',
-      'used',
-      'used',
+describe('AD-14 scene move-compose and free-letter frames', () => {
+  it('AD-14 move-compose frames: start, lifted, EKBA k 1, k 2, k 3, k 2, Flip, then arranged to BAKED', () => {
+    expect(
+      moveComposeScene.frames.map((f) => [f.tail, f.order?.join(''), f.k, f.side, f.cell6]),
+    ).toStrictEqual([
+      ['home', undefined, undefined, undefined, 'top'],
+      ['lifted', undefined, undefined, undefined, 'top'],
+      ['gone', 'EKBA', 1, 'left', 'top'],
+      ['gone', 'DEKBA', 2, 'left', 'top'],
+      ['gone', 'NDEKBA', 3, 'left', 'top'],
+      ['gone', 'DEKBA', 2, 'left', 'top'],
+      ['gone', 'KBAED', 2, 'right', 'top'],
+      ['gone', 'BAKED', 2, 'right', 'top'],
     ]);
   });
-});
 
-describe('AD-14 scene destination frames', () => {
-  it('AD-14 frames: start, APE, TAPE, STAPE with k 1 to 3 left, PEATS with k 3 right; no cell 6', () => {
+  it('AD-14 free-letter frames: BAKED as scene 1 left it, BALKED with cell 6 used, Validate pressed', () => {
     expect(
-      destinationScene.frames.map((f) => [f.order?.join(''), f.k, f.side, f.cell6]),
+      freeLetterScene.frames.map((f) => [f.order?.join(''), f.k, f.side, f.cell6, f.validate]),
     ).toStrictEqual([
-      [undefined, undefined, undefined, undefined],
-      ['APE', 1, 'left', undefined],
-      ['TAPE', 2, 'left', undefined],
-      ['STAPE', 3, 'left', undefined],
-      ['PEATS', 3, 'right', undefined],
+      ['BAKED', 2, 'right', 'top', 'lit'],
+      ['BALKED', 2, 'right', 'used', 'lit'],
+      ['BALKED', 2, 'right', 'used', 'pressed'],
     ]);
   });
 });
 
 describe('AD-1 a step command must fit its step type', () => {
-  it('AD-1 a move names an arrange, a tap one of the tap commands; a mismatch or a missing command throws', () => {
-    const [grab, move, drop, fly, ...taps] = composeScene.steps;
-    const redefine = (steps: typeof composeScene.steps) => defineScene({ ...composeScene, steps });
-    expect(() => redefine([grab, move, drop, fly, ...taps])).not.toThrow();
+  it('AD-1 a move names an arrange, a tap one of the tap commands, an arrange step only an arrange; a mismatch or a missing command throws', () => {
+    const [grab, move, drop, fly, plus, , , , arrange] = moveComposeScene.steps;
+    const redefine = (steps: typeof moveComposeScene.steps) =>
+      defineScene({ ...moveComposeScene, steps });
+    expect(() => redefine([grab, move, drop, fly, plus, arrange])).not.toThrow();
     expect(() => redefine([grab, { ...move, command: 0 }])).toThrow(/step 1 \(move\)/);
     expect(() => redefine([grab, { ...move, command: 99 }])).toThrow(/step 1 \(move\)/);
-    const tap = taps[1];
-    expect(() => redefine([grab, { ...tap, command: 1 }])).toThrow(/step 1 \(tap\)/);
-    expect(() => redefine([grab, { ...tap, command: 3 }])).not.toThrow();
+    expect(() => redefine([grab, { ...move, command: 5 }])).not.toThrow();
+    expect(() => redefine([grab, { ...plus, command: 5 }])).toThrow(/step 1 \(tap\)/);
+    expect(() => redefine([grab, { ...plus, command: 3 }])).not.toThrow();
     expect(() => redefine([grab, { ...fly, command: 0 }])).toThrow(/step 1 \(fly\)/);
+    expect(() => redefine([grab, { ...arrange, command: 4 }])).toThrow(/step 1 \(arrange\)/);
     expect(() => redefine([{ ...grab, command: undefined }])).toThrow(/no fixture drop command/);
     expect(() => redefine([grab, { ...move, command: undefined }])).not.toThrow();
   });
@@ -252,22 +249,22 @@ describe('AD-1 a step command must fit its step type', () => {
 
 describe('AD-1 a bad script throws at load', () => {
   it('AD-1 no steps, an unknown target, an unknown reveal element or a missing drop command throws', () => {
-    expect(() => defineScene({ ...dragScene, steps: [] })).toThrow(/no steps/);
-    const [grab, ...rest] = dragScene.steps;
+    expect(() => defineScene({ ...moveComposeScene, steps: [] })).toThrow(/no steps/);
+    const [grab, ...rest] = moveComposeScene.steps;
     expect(() =>
-      defineScene({ ...dragScene, steps: [{ ...grab, target: 'nowhere' }, ...rest] }),
+      defineScene({ ...moveComposeScene, steps: [{ ...grab, target: 'nowhere' }, ...rest] }),
     ).toThrow(/unknown target nowhere/);
-    const drop = dragScene.steps[2];
+    const drop = moveComposeScene.steps[2];
     expect(() =>
       defineScene({
-        ...dragScene,
+        ...moveComposeScene,
         steps: [grab, { ...drop, reveal: { show: 'ghostly', hide: [], kind: 'overlay' } }],
       }),
     ).toThrow(/unknown element ghostly/);
-    expect(() => defineScene({ ...dragScene, steps: [{ ...grab, command: 5 }] })).toThrow(
+    expect(() => defineScene({ ...moveComposeScene, steps: [{ ...grab, command: 5 }] })).toThrow(
       /no fixture drop command/,
     );
-    expect(() => defineScene({ ...dragScene, frames: [] })).toThrow(/no frames/);
+    expect(() => defineScene({ ...moveComposeScene, frames: [] })).toThrow(/no frames/);
   });
 });
 
@@ -276,8 +273,8 @@ describe('AD-10 scene durations', () => {
     const { duration } = await import('../motion');
     for (const baseMs of [90, 180, 320]) {
       mocked.motion = { baseMs, reduced: false };
-      const ms = restMs(dragScene, duration);
-      expect(ms).toBe(duration(dragScene.rest.kind) * dragScene.rest.times);
+      const ms = restMs(moveComposeScene, duration);
+      expect(ms).toBe(duration(moveComposeScene.rest.kind) * moveComposeScene.rest.times);
       expect(ms % baseMs).toBe(0);
     }
     mocked.motion = { baseMs: 180, reduced: false };
@@ -336,21 +333,18 @@ const flush = async (): Promise<void> => {
 describe('AD-14 scene player', () => {
   it('AD-14 steps run in order, then the rest, then the loop starts again at step 1', async () => {
     const { animations, deps } = fakes();
-    const player = new ScenePlayer(dragScene, deps, () => undefined);
+    const player = new ScenePlayer(moveComposeScene, deps, () => undefined);
     player.start();
     await flush();
-    for (let guard = 0; guard < 8; guard++) {
+    for (let guard = 0; guard < 60; guard++) {
       for (const a of animations) a.done();
       await flush();
     }
     const ids = animations.map((a) => a.id).filter((id, i, all) => id !== all[i - 1]);
-    expect(ids.slice(0, 6)).toStrictEqual([
-      'drag-step-0',
-      'drag-step-1',
-      'drag-step-2',
-      'drag-step-3',
-      'drag-rest',
-      'drag-step-0',
+    expect(ids.slice(0, 11)).toStrictEqual([
+      ...moveComposeScene.steps.map((_, i) => `move-compose-step-${i}`),
+      'move-compose-rest',
+      'move-compose-step-0',
     ]);
     player.destroy();
   });
@@ -358,7 +352,7 @@ describe('AD-14 scene player', () => {
   it('AD-14 a tap while playing pauses; a tap while paused restarts from step 1', async () => {
     const { animations, deps } = fakes();
     const states: string[] = [];
-    const player = new ScenePlayer(dragScene, deps, (s) => states.push(s));
+    const player = new ScenePlayer(moveComposeScene, deps, (s) => states.push(s));
     player.start();
     await flush();
     animations[0].done();
@@ -376,7 +370,7 @@ describe('AD-14 scene player', () => {
     await flush();
     expect(player.state).toBe('playing');
     expect(animations.slice(0, before).every((a) => a.cancelled)).toBe(true);
-    expect(animations[before].id).toBe('drag-step-0');
+    expect(animations[before].id).toBe('move-compose-step-0');
     expect(states).toStrictEqual(['playing', 'paused', 'playing']);
     player.destroy();
     expect(animations.every((a) => a.cancelled)).toBe(true);
@@ -384,13 +378,13 @@ describe('AD-14 scene player', () => {
 
   it('AD-9 a hidden page runs no step until visible again, then restarts at step 1, with no listener', async () => {
     const { animations, deps, show } = fakes(true);
-    const player = new ScenePlayer(dragScene, deps, () => undefined);
+    const player = new ScenePlayer(moveComposeScene, deps, () => undefined);
     player.start();
     await flush();
     expect(animations).toHaveLength(0);
     show();
     await flush();
-    expect(animations[0].id).toBe('drag-step-0');
+    expect(animations[0].id).toBe('move-compose-step-0');
     player.destroy();
     for (const file of [source, playerSource, effectsSource])
       expect(file).not.toMatch(/visibilitychange|pagehide|addEventListener/);
@@ -398,7 +392,7 @@ describe('AD-14 scene player', () => {
 
   it('AD-9 a scene paused by a tap while hidden stays paused when the page turns visible', async () => {
     const f = fakes(true);
-    const player = new ScenePlayer(dragScene, f.deps, () => undefined);
+    const player = new ScenePlayer(moveComposeScene, f.deps, () => undefined);
     player.start();
     await flush();
     player.toggle();
@@ -410,20 +404,20 @@ describe('AD-14 scene player', () => {
     player.toggle();
     await flush();
     expect(player.state).toBe('playing');
-    expect(f.animations[0].id).toBe('drag-step-0');
+    expect(f.animations[0].id).toBe('move-compose-step-0');
     player.destroy();
   });
 
   it('AD-9 a step finishing while the page went hidden stops at the next boundary', async () => {
     const f = fakes();
-    const player = new ScenePlayer(dragScene, f.deps, () => undefined);
+    const player = new ScenePlayer(moveComposeScene, f.deps, () => undefined);
     player.start();
     await flush();
     const hidden = vi.spyOn(f.deps, 'hidden').mockReturnValue(true);
     f.animations[0].done();
     await flush();
-    expect(f.animations.every((a) => a.cancelled || a.id === 'drag-step-0')).toBe(true);
-    expect(f.animations.filter((a) => a.id === 'drag-step-1')).toHaveLength(0);
+    expect(f.animations.every((a) => a.cancelled || a.id === 'move-compose-step-0')).toBe(true);
+    expect(f.animations.filter((a) => a.id === 'move-compose-step-1')).toHaveLength(0);
     hidden.mockRestore();
     player.destroy();
   });
@@ -435,14 +429,14 @@ describe('AD-3 scene figure structure', () => {
     vi.resetModules();
     const { render } = await import('svelte/server');
     const { default: Scene } = await import('./Scene.svelte');
-    return render(Scene, { props: { scene: dragScene, ...FIT } }).body;
+    return render(Scene, { props: { scene: moveComposeScene, ...FIT } }).body;
   }
 
   it('AD-3 a figure named by its visible description, an aria-hidden stage, a tap button outside it', async () => {
     const body = await html(false);
     expect(body).toContain('<figure');
     expect(body).toMatch(/aria-labelledby="([^"]+)-caption"/);
-    expect(body).toContain(`>${text.howTo.scenes.drag}</figcaption>`);
+    expect(body).toContain(`>${text.howTo.scenes.moveCompose}</figcaption>`);
     const stage = body.slice(body.indexOf('class="stage'), body.indexOf('<button'));
     expect(body).toContain('aria-hidden="true"');
     expect(stage).toContain('data-scene-el="tail"');
@@ -454,26 +448,39 @@ describe('AD-3 scene figure structure', () => {
   });
 
   it.each([
-    ['compose', composeScene, 4],
-    ['destination', destinationScene, 4],
+    ['move-compose', moveComposeScene, 6, 'moveCompose'],
+    ['free-letter', freeLetterScene, 3, 'freeLetter'],
   ] as const)(
     'AD-3 scene %s: one tray layer per open frame, Validate and controls drawn, no ids',
-    async (name, scene, layers) => {
+    async (name, scene, layers, key) => {
       mocked.motion = { baseMs: 180, reduced: false };
       vi.resetModules();
       const { render } = await import('svelte/server');
       const { default: Scene } = await import('./Scene.svelte');
       const body = render(Scene, { props: { scene, ...FIT } }).body;
-      expect(body).toContain(`>${text.howTo.scenes[name]}</figcaption>`);
+      expect(body).toContain(`>${text.howTo.scenes[key]}</figcaption>`);
       expect(body.match(/data-scene-el="tray-\d"/g)).toHaveLength(layers);
       expect(body).toContain(`>${text.validate}</span>`);
       expect(body).toContain(text.flip);
       expect(body).not.toContain('data-card-id');
       expect(body).not.toContain('data-testid');
       expect(body).not.toContain('data-mirror-of');
-      expect(body.includes('class="cell6')).toBe(name === 'compose');
+      expect(body.includes('class="cell6')).toBe(name === 'free-letter');
     },
   );
+
+  it('AD-3 AD-14 in normal motion free-letter draws its tray-0 layer open (scene 1 final tray) and move-compose has no tray-0 layer', async () => {
+    mocked.motion = { baseMs: 180, reduced: false };
+    vi.resetModules();
+    const { render } = await import('svelte/server');
+    const { default: Scene } = await import('./Scene.svelte');
+    const layer = (scene: Scene) => {
+      const body = render(Scene, { props: { scene, ...FIT } }).body;
+      return /<div[^>]*data-scene-el="tray-0"[^>]*>/.exec(body)?.[0];
+    };
+    expect(layer(freeLetterScene)).toMatch(/opacity:\s*1/);
+    expect(layer(moveComposeScene)).toBeUndefined();
+  });
 
   it('AD-3 reduced motion shows frame 0 with Next and no tap button', async () => {
     const body = await html(true);
@@ -583,8 +590,8 @@ describe('AD-14 scene place against its fixture', () => {
     expect(() => redefine([{ ...fly }])).not.toThrow();
     expect(() =>
       defineScene({
-        ...dragScene,
-        steps: [dragScene.steps[3]],
+        ...moveComposeScene,
+        steps: [moveComposeScene.steps[3]],
         layout: undefined,
       }),
     ).toThrow(/needs an offset and a layout/);
@@ -941,12 +948,11 @@ describe('AD-14 scene top-card', () => {
 });
 
 describe('AD-14 the scenes in the panel order', () => {
-  it('AD-14 the three Tricky rules scenes follow the five basic scenes', async () => {
+  it('AD-14 the three Tricky rules scenes follow the four basic scenes', async () => {
     const { basicScenes, trickyScenes, scenes } = await import('./index');
     expect(basicScenes.map((s) => s.id)).toStrictEqual([
-      'drag',
-      'compose',
-      'destination',
+      'move-compose',
+      'free-letter',
       'place',
       'scoring',
     ]);
@@ -964,6 +970,8 @@ describe('AD-14 the scenes in the panel order', () => {
 describe('AD-14 frame k and side against the engine-checked fixture block', () => {
   // The commands applied in each frame (the frame's `n`); the engine replay checks `block` (R-31).
   it.each([
+    ['move-compose', moveComposeScene, moveComposeFixture.block, [0, 0, 1, 2, 3, 4, 5, 6]],
+    ['free-letter', freeLetterScene, freeLetterFixture.block, [6, 7, 8]],
     ['source-drop', sourceDropScene, sourceDropFixture.block, [0, 0, 1, 2]],
     [
       'destination-rule',
@@ -1003,5 +1011,127 @@ describe('AD-14 frameDest and the Tricky rules frames', () => {
       [undefined, undefined, 'gone', undefined, 'lifted', 'gone', 'gone', 'gone'],
       [undefined, undefined, 'gone', 'gone'],
     ]);
+  });
+});
+
+// Epic 8 ticket 7 (HP-3, HP-5, HP-6): scene 2 against its fixture, the arrange step, continuity.
+describe('AD-14 scene free-letter against its fixture', () => {
+  const data = freeLetterFixture;
+  const opens = need(data.opens);
+  // Frame i = the state after `opens + i` fixture commands (frame 0 is scene 1's final position).
+  const applied = [opens, opens + 1, opens + 2];
+
+  it('AD-14 the steps carry fixture commands from opens on, in order, and the scene id equals the fixture', () => {
+    const indexes = freeLetterScene.steps.flatMap((s) =>
+      s.command === undefined ? [] : [s.command],
+    );
+    expect(indexes).toStrictEqual([opens, opens + 1]);
+    expect(data.commands.slice(opens).map((c) => c.type)).toStrictEqual([
+      'addFreeLetter',
+      'validate',
+    ]);
+    expect(freeLetterScene.id).toBe(data.scene);
+    expect(freeLetterScene.fixture.opens).toBe(moveComposeFixture.commands.length);
+  });
+
+  it('AD-14 each frame validate, k, side and word equal the fixture at its absolute after, pressed on the tap', () => {
+    freeLetterScene.frames.forEach((frame, i) => {
+      const valid = data.validatable.find((v) => v.after === applied[i]);
+      const pressed = data.commands[applied[i] - 1]?.type === 'validate';
+      expect(frame.validate).toBe(pressed ? 'pressed' : valid?.canValidate ? 'lit' : 'off');
+      const block = data.block.find((b) => b.after === applied[i]);
+      expect([frame.k, frame.side]).toStrictEqual([block?.k, block?.side]);
+      const word = data.words.find((w) => w.command === applied[i] - 1);
+      if (word !== undefined) expect(frame.order?.join('')).toBe(word.word);
+    });
+    expect(freeLetterScene.frames.map((f) => f.cell6)).toStrictEqual(['top', 'used', 'used']);
+  });
+
+  it('AD-14 frame 0 deep-equals the last frame of move-compose (tile order, k, side, cell 6) and the board and tail are the same', () => {
+    expect(freeLetterScene.frames[0]).toStrictEqual(moveComposeScene.frames.at(-1));
+    expect(freeLetterScene.fixture.start).toStrictEqual(moveComposeScene.fixture.start);
+    expect(freeLetterScene.carry).toStrictEqual({ ...need(moveComposeScene.carry), landed: true });
+    expect(freeLetterScene.targets.rest).toStrictEqual(moveComposeScene.targets.rest);
+  });
+
+  it('AD-14 no move step of either new script names an arrange command', () => {
+    for (const scene of [moveComposeScene, freeLetterScene])
+      for (const step of scene.steps.filter((s) => s.type === 'move'))
+        expect(scene.fixture.commands[step.command ?? -1]?.type).not.toBe('arrange');
+  });
+
+  it('AD-1 a step animating a command below opens throws when the script is defined', () => {
+    const [tap] = freeLetterScene.steps;
+    expect(() =>
+      defineScene({ ...freeLetterScene, steps: [{ ...tap, command: opens - 2 }] }),
+    ).toThrow(/below opens 6/);
+    expect(() =>
+      defineScene({ ...freeLetterScene, steps: [{ ...tap, command: undefined }] }),
+    ).not.toThrow();
+  });
+
+  it('AD-14 the first step of scene 2 is a tap from the rest point: the pointer is at rest at its start', () => {
+    expect(freeLetterScene.steps[0].type).toBe('tap');
+    const [first] = sceneEffects(freeLetterScene)[0].filter((e) => e.element === 'ghost');
+    expect(first.keyframes[0].opacity).toBe(0);
+  });
+});
+
+describe('AD-14 the arrange step', () => {
+  const index = moveComposeScene.steps.findIndex((s) => s.type === 'arrange');
+  const step = moveComposeScene.steps[index];
+
+  it('AD-14 it is a snap step bound to the arrange command, hides the pointer and glides only the moved tiles', () => {
+    expect(step.kind).toBe('snap');
+    expect(moveComposeScene.fixture.commands[step.command ?? -1]?.type).toBe('arrange');
+    const effects = sceneEffects(moveComposeScene)[index];
+    const ghost = effects.find((e) => e.element === 'ghost');
+    expect(ghost?.keyframes.map((k) => k.opacity)).toStrictEqual([1, 0]);
+    // Flip leaves K B A E D; arranged B A K E D: B and A move one place left, K two places right.
+    const moved = Object.fromEntries(
+      effects
+        .filter((e) => /tile/.test(e.element))
+        .map((e) => [e.element, e.keyframes.map((k) => k.transform)]),
+    );
+    expect(moved).toStrictEqual({
+      'tray-7-tile-0': [`translate(${RICH_SLOT}px, 0px)`, 'translate(0px, 0px)'],
+      'tray-7-tile-1': [`translate(${RICH_SLOT}px, 0px)`, 'translate(0px, 0px)'],
+      'tray-7-tile-2': [`translate(${-2 * RICH_SLOT}px, 0px)`, 'translate(0px, 0px)'],
+    });
+    expect(effects.every((e) => e.kind === 'snap' && e.times === step.times)).toBe(true);
+    // The layer is shown from the start of the glide: no later fade-in replaces it.
+    expect(effects.filter((e) => e.element === 'tray-7' && e.phase === 1)).toHaveLength(0);
+  });
+
+  it('AD-14 its total ms doubles when the Animation speed preference doubles (Fast 90 ms against Slow 180 ms)', async () => {
+    const { duration } = await import('../motion');
+    const total = (baseMs: number): number => {
+      mocked.motion = { baseMs, reduced: false };
+      return sceneEffects(moveComposeScene)
+        [index].filter((e) => e.element === 'ghost')
+        .reduce((ms, e) => ms + duration(e.kind) * e.times, 0);
+    };
+    const fast = total(90);
+    expect(fast).toBeGreaterThan(0);
+    expect(total(180)).toBe(fast * 2);
+    mocked.motion = { baseMs: 180, reduced: false };
+  });
+
+  it('AD-1 an arrange step needs its command and a tray-<frame> layer to reveal', () => {
+    const redefine = (s: typeof step) =>
+      defineScene({ ...moveComposeScene, steps: [moveComposeScene.steps[0], s] });
+    expect(() => redefine({ ...step, command: undefined })).toThrow(/names no fixture command/);
+    expect(() => redefine({ ...step, reveal: undefined })).toThrow(/tray-<frame> layer/);
+    expect(() => redefine(step)).not.toThrow();
+  });
+});
+
+describe('AD-14 scene captions come from text.ts', () => {
+  it('AD-14 HP-6 each figure caption equals its text.ts string; scene 2 holds the owner sentence verbatim', () => {
+    expect(moveComposeScene.caption).toBe(text.howTo.scenes.moveCompose);
+    expect(freeLetterScene.caption).toBe(text.howTo.scenes.freeLetter);
+    expect(text.howTo.scenes.freeLetter).toContain(
+      'The top card of each WordCell can be used as a free letter added to the word.',
+    );
   });
 });

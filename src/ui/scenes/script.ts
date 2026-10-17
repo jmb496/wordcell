@@ -5,6 +5,7 @@ const COMMAND_TYPES: Record<StepType, readonly string[]> = {
   grab: ['drop'],
   drop: ['drop'],
   move: ['arrange', 'setPlacementOrder'],
+  arrange: ['arrange'],
   fly: [],
   tap: ['addFreeLetter', 'validate', 'setDestinationCount', 'flip', 'setTarget', 'confirm', 'undo'],
 };
@@ -13,7 +14,9 @@ const COMMAND_TYPES: Record<StepType, readonly string[]> = {
  * AGENTS rule 6: a bad script throws when it is defined (at load), never falls back: no steps, a
  * step or reveal naming an unknown target or element, a grab or drop without a drop command of the
  * fixture, no frames, a step whose command does not fit its type, a grab or drop whose carry
- * (its own, else the scene's) differs from the fixture drop command it names, or a non-positive rest.
+ * (its own, else the scene's) differs from the fixture drop command it names, a step animating a
+ * command below the fixture's `opens` (epic 8 ticket 7), an `arrange` step without its command or
+ * its `tray-<frame>` layer, or a non-positive rest.
  */
 export function defineScene(scene: Scene): Scene {
   const where = `scene ${scene.id}`;
@@ -61,6 +64,20 @@ export function defineScene(scene: Scene): Scene {
         throw new Error(
           `${where}: step ${i} (${step.type}) names fixture command ${step.command}, not a ${allowed.join(' or ')}`,
         );
+    }
+    if (
+      step.command !== undefined &&
+      scene.fixture.opens !== undefined &&
+      step.command < scene.fixture.opens
+    )
+      throw new Error(
+        `${where}: step ${i} animates command ${step.command}, below opens ${scene.fixture.opens}`,
+      );
+    if (step.type === 'arrange') {
+      if (step.command === undefined)
+        throw new Error(`${where}: step ${i} (arrange) names no fixture command`);
+      if (!/^tray-\d+$/.test(step.reveal?.show ?? ''))
+        throw new Error(`${where}: step ${i} (arrange) must reveal its tray-<frame> layer`);
     }
     for (const id of step.reveal ? [step.reveal.show ?? [], ...step.reveal.hide].flat() : [])
       if (!scene.elements.includes(id))

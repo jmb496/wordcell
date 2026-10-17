@@ -12,6 +12,11 @@ export interface SceneFixtureData {
     readonly cells?: Readonly<Record<string, readonly string[]>>;
   };
   readonly commands: readonly { readonly type: string; readonly [key: string]: unknown }[];
+  /**
+   * Epic 8 ticket 7: the number of leading commands that replay the previous scene; the first
+   * animated command has index `opens` (the engine test proves the continuity, AD-1).
+   */
+  readonly opens?: number;
   /** After `after` commands, the engine's `canValidate` (R-38); the UI draws Validate from it. */
   readonly validatable?: readonly { readonly after: number; readonly canValidate: boolean }[];
   /** The engine's live score after `after` commands (R-80); the scoring scene draws its total. */
@@ -48,7 +53,12 @@ export interface Point {
   readonly y: number;
 }
 
-export type StepType = 'grab' | 'move' | 'drop' | 'fly' | 'tap';
+/**
+ * `arrange` (epic 8 ticket 7): the tray tiles glide from the previous frame's `order` to this
+ * frame's (the pointer ghost fades out); the step names the arrange command and `reveal.show`
+ * names the new frame's layer (`tray-<frame>`).
+ */
+export type StepType = 'grab' | 'move' | 'drop' | 'fly' | 'tap' | 'arrange';
 
 /**
  * A column move a scene draws: the tail of `count` cards from `sourceColumn`, the `destinationCount`

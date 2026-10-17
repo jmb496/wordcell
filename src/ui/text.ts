@@ -334,11 +334,11 @@ export const text = Object.freeze({
     // Epic 8 ticket 1 (HP-6): scene captions (the figure's visible description, its name) and the
     // scene control names; the owner reads the captions at the epic's text review.
     scenes: {
-      drag: 'Press a card and drag: it takes every card below it. Drop the stack on a column.',
-      compose:
-        'Arrange your cards into a word. Tap a WordCell to borrow its top card. Then Validate.',
-      destination:
-        "The cards you land on stay in order and can't be shuffled. \u2212/+ choose how many; Flip makes the word read upward instead.",
+      // Epic 8 ticket 7: the owner-reviewed drafts, kept verbatim (the owner reads them at done).
+      moveCompose:
+        "Press a card and drag: it takes every card below it. Drop the stack on a column and arrange the cards into a word. The cards you land on stay in order and can't be shuffled. \u2212/+ choose how many; Flip makes the word read upward instead.",
+      freeLetter:
+        'Tap a WordCell to borrow its top card. The top card of each WordCell can be used as a free letter added to the word. Then Validate.',
       place:
         "Pick a WordCell no higher than the word is long. Order the cards: the last one becomes that cell's free letter. Then Confirm.",
       scoring:

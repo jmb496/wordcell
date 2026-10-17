@@ -16,8 +16,8 @@ import {
 } from './geometry';
 import type { Point, SceneFixtureData } from './types';
 
-// Epic 8 ticket 2: the geometry the compose and destination scripts share with drag.ts's scheme,
-// drawn from the fixture start and the script's `carry`: the tail's home and landing, the D cards,
+// Epic 8 ticket 2: the geometry the move-compose and free-letter scripts share, drawn from the
+// fixture start and the script's `carry`: the tail's home and landing, the D cards,
 // the tray rest points (tile row of the rich tray) and the pointer targets on its controls.
 interface Carry {
   readonly sourceColumn: number;

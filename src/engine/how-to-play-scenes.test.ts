@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import composeFixture from '../../fixtures/how-to-play-compose.json' with { type: 'json' };
-import destinationFixture from '../../fixtures/how-to-play-destination.json' with { type: 'json' };
 import destinationRuleFixture from '../../fixtures/how-to-play-destination-rule.json' with {
   type: 'json',
 };
-import dragFixture from '../../fixtures/how-to-play-drag.json' with { type: 'json' };
+import freeLetterFixture from '../../fixtures/how-to-play-free-letter.json' with { type: 'json' };
+import moveComposeFixture from '../../fixtures/how-to-play-move-compose.json' with { type: 'json' };
 import placeFixture from '../../fixtures/how-to-play-place.json' with { type: 'json' };
 import scoringFixture from '../../fixtures/how-to-play-scoring.json' with { type: 'json' };
 import sourceDropFixture from '../../fixtures/how-to-play-source-drop.json' with { type: 'json' };
@@ -12,23 +11,38 @@ import topCardFixture from '../../fixtures/how-to-play-top-card.json' with { typ
 import dictionary from '../../generated/dictionary/en.txt?raw';
 import type { Command } from './commands';
 import { EngineError } from './errors';
-import { replayScene, type SceneFixture } from './scene-replay';
+import { EN } from './lang/en';
+import { replayScene, type SceneFixture, sceneStart } from './scene-replay';
+import { viewFrom } from './view';
 
 // Epic 8 ticket 1 (HP-5): every How to play scene fixture replays through the real engine. The
 // negative cases clone the fixture and break one field; a small inline dictionary Set holds the
 // minimal word, and only the named dictionary repro test loads the generated file (once).
 
-const compose = composeFixture as unknown as SceneFixture;
-const destination = destinationFixture as unknown as SceneFixture;
+const moveCompose = moveComposeFixture as unknown as SceneFixture;
+const freeLetter = freeLetterFixture as unknown as SceneFixture;
+// A test-local one-drop scene (the old board's E D K A onto column 3) the generic harness cases
+// below clone and break; it is no How to play scene.
+const baseDrop: SceneFixture = {
+  scene: 'base-drop',
+  start: {
+    columns: [
+      ['F', 'E', 'D', 'K', 'A'],
+      ['X', 'O', 'R', 'I', 'N'],
+      ['L', 'M', 'F', 'B'],
+    ],
+    cells: { '6': ['L'] },
+  },
+  commands: [{ type: 'drop', sourceColumn: 1, sourceCount: 4, destinationColumn: 3 }],
+};
 const place = placeFixture as unknown as SceneFixture;
 const scoring = scoringFixture as unknown as SceneFixture;
 const sourceDrop = sourceDropFixture as unknown as SceneFixture;
 const destinationRule = destinationRuleFixture as unknown as SceneFixture;
 const topCard = topCardFixture as unknown as SceneFixture;
 const FIXTURES: readonly SceneFixture[] = [
-  dragFixture as unknown as SceneFixture,
-  compose,
-  destination,
+  moveCompose,
+  freeLetter,
   place,
   scoring,
   sourceDrop,
@@ -60,22 +74,130 @@ describe('AD-2 How to play scene replay', () => {
     },
   );
 
-  it('R-23 R-33 R-38 scene compose: BAKED, BALKED with the borrowed L, then validate; validatable matches the engine', () => {
-    const { session, rejectedWords } = replayScene(compose, DICT);
-    expect(rejectedWords).toStrictEqual([undefined, undefined, undefined, undefined]);
-    expect(session.cursor.phase).toBe('place');
-    expect(compose.validatable).toHaveLength(compose.commands.length + 1);
-  });
-
-  it('R-30 R-31 R-32 scene destination: APE, TAPE, STAPE and PEATS after Flip, validatable matches the engine', () => {
-    const { session, rejectedWords } = replayScene(destination, DICT);
-    expect(rejectedWords).toStrictEqual([undefined, undefined, undefined, undefined]);
+  // Epic 8 ticket 7 (HP-3, HP-5): scenes move-compose and free-letter.
+  it('R-10 R-13 R-20 R-23 R-30 R-31 scene move-compose: K B A onto column 3 (M = K B A, D = the bottom k cards), k 2, 3, 2, Flip, arrange to BAKED', () => {
+    const { session, rejectedWords } = replayScene(moveCompose, DICT);
+    expect(rejectedWords.every((w) => w === undefined)).toBe(true);
     expect(session.cursor.phase).toBe('composing');
-    expect(destination.validatable).toHaveLength(destination.commands.length + 1);
+    expect(session.moves[0]).toMatchObject({
+      sourceColumn: 1,
+      sourceCount: 3,
+      destinationColumn: 3,
+      destinationCount: 2,
+      destinationSide: 'right',
+    });
+    expect(moveCompose.words).toStrictEqual([{ command: 5, word: 'BAKED' }]);
+    expect(moveCompose.validatable).toHaveLength(moveCompose.commands.length + 1);
+    expect(moveCompose.block?.map((b) => [b.k, b.side])).toStrictEqual([
+      [1, 'left'],
+      [2, 'left'],
+      [3, 'left'],
+      [2, 'left'],
+      [2, 'right'],
+      [2, 'right'],
+    ]);
   });
 
-  it('R-38 scene compose: a flipped validatable flag fails the harness', () => {
-    for (const fixture of [compose, destination]) {
+  it('R-31 R-32 scene move-compose: k is bounded by the destination column own length before the lifted cards land (column 3, 5 cards)', () => {
+    const own = moveCompose.start.columns[2].length;
+    expect(own).toBe(5);
+    for (const [k, ok] of [
+      [own, true],
+      [own + 1, false],
+    ] as const) {
+      const scene = clone(moveCompose);
+      (scene.commands as Command[])[1] = { type: 'setDestinationCount', k };
+      for (const key of ['words', 'validatable', 'block'] as const) delete scene[key];
+      if (ok) expect(() => replayScene(scene, DICT)).not.toThrow();
+      else expectEngineError(() => replayScene(scene, DICT), 'r31-destination-count');
+    }
+  });
+
+  it('R-33 R-34 R-38 scene free-letter: WordCell 6 L joins M between A and K (BALKED), then validate leaves Composing; validatable matches the engine', () => {
+    const { session, rejectedWords } = replayScene(freeLetter, DICT);
+    expect(rejectedWords.every((w) => w === undefined)).toBe(true);
+    expect(session.cursor.phase).toBe('place');
+    expect(freeLetter.commands[freeLetter.commands.length - 1]).toStrictEqual({ type: 'validate' });
+    expect(freeLetter.words).toStrictEqual([
+      { command: 5, word: 'BAKED' },
+      { command: 6, word: 'BALKED' },
+    ]);
+    expect(freeLetter.validatable).toHaveLength(freeLetter.commands.length + 1);
+    expect(freeLetter.validatable?.at(-1)?.canValidate).toBe(false);
+  });
+
+  // The continuity helper (ticket 7 AC2): scene `two` provably opens on scene `one`'s final board.
+  const without = (scene: SceneFixture, commands: number): SceneFixture => ({
+    ...scene,
+    commands: scene.commands.slice(0, commands),
+    opens: undefined,
+    words: undefined,
+    validatable: undefined,
+    block: undefined,
+  });
+  const boardOf = (scene: SceneFixture, commands: number) => {
+    const prefix = without(scene, commands);
+    const { session } = replayScene(prefix, DICT);
+    const view = viewFrom(sceneStart(prefix), session, EN);
+    return {
+      columns: view.columns,
+      cells: view.cells,
+      draft: view.draft && {
+        destination: view.draft.destination,
+        k: view.draft.k,
+        side: view.draft.side,
+        arrangement: view.draft.arrangement,
+        wordCards: view.draft.wordCards,
+        freeLetters: view.draft.freeLetters,
+      },
+    };
+  };
+  function expectContinuity(one: SceneFixture, two: SceneFixture): void {
+    expect(two.start).toStrictEqual(one.start);
+    expect(two.opens).toBe(one.commands.length);
+    expect(two.commands.length).toBeGreaterThan(two.opens ?? 0);
+    one.commands.forEach((command, i) => {
+      expect(two.commands[i]).toStrictEqual(command);
+    });
+    expect(boardOf(two, two.opens ?? 0)).toStrictEqual(boardOf(one, one.commands.length));
+    const at = <T extends { after: number }>(list: readonly T[] | undefined, after: number) =>
+      list?.find((e) => e.after === after);
+    expect(at(two.block, two.opens ?? 0)).toStrictEqual(at(one.block, one.commands.length));
+    expect(at(two.validatable, two.opens ?? 0)).toStrictEqual(
+      at(one.validatable, one.commands.length),
+    );
+  }
+
+  it('R-30 R-31 R-34 scene free-letter: it opens on scene move-compose final position (same start, prefix commands, board, block, Validate)', () => {
+    expect(() => expectContinuity(moveCompose, freeLetter)).not.toThrow();
+    expect(freeLetter.opens).toBe(6);
+    expect(boardOf(freeLetter, 6).draft).toMatchObject({ k: 2, side: 'right' });
+  });
+
+  it('R-30 R-31 scene free-letter: a changed start card, a changed prefix command or a changed opens fails the continuity helper', () => {
+    const startCard = clone(freeLetter);
+    (startCard.start.columns[1] as string[])[0] = 'Z';
+    expect(() => expectContinuity(moveCompose, startCard)).toThrow();
+    const prefix = clone(freeLetter);
+    (prefix.commands as Command[])[3] = { type: 'setDestinationCount', k: 1 };
+    expect(() => expectContinuity(moveCompose, prefix)).toThrow();
+    for (const opens of [5, 7]) {
+      const moved = clone(freeLetter);
+      (moved as { opens?: number }).opens = opens;
+      expect(() => expectContinuity(moveCompose, moved)).toThrow();
+    }
+  });
+
+  it('AD-2 scene free-letter: opens outside 1..commands.length-1 or not an integer fails the harness', () => {
+    for (const opens of [0, 8, 2.5, -1]) {
+      const scene = clone(freeLetter);
+      (scene as { opens?: number }).opens = opens;
+      expect(() => replayScene(scene, DICT)).toThrow(/opens .* is out of range 1\.\.7/);
+    }
+  });
+
+  it('R-38 scenes move-compose and free-letter: a flipped validatable flag fails the harness', () => {
+    for (const fixture of [moveCompose, freeLetter]) {
       const count = fixture.validatable?.length ?? 0;
       for (let i = 0; i < count; i++) {
         const scene = clone(fixture);
@@ -86,26 +208,28 @@ describe('AD-2 How to play scene replay', () => {
     }
   });
 
-  it('R-38 scene compose: BALKED missing from the dictionary fails the fixture; without validatable the last rejectedWord is balked', () => {
+  it('R-38 scene free-letter: BALKED missing from the dictionary fails the fixture; without validatable the last rejectedWord is balked', () => {
     const only = new Set(['baked']);
-    expect(() => replayScene(compose, only)).toThrow(/after 4 commands stated canValidate false/);
-    const scene = clone(compose);
+    expect(() => replayScene(freeLetter, only)).toThrow(
+      /after 8 commands stated canValidate false/,
+    );
+    const scene = clone(freeLetter);
     delete (scene as { validatable?: unknown }).validatable;
     const { rejectedWords } = replayScene(scene, only);
     expect(rejectedWords[rejectedWords.length - 1]).toBe('balked');
   });
 
   it.each([
-    ['compose', compose],
-    ['destination', destination],
+    ['move-compose', moveCompose],
+    ['free-letter', freeLetter],
   ] as const)('R-30 R-38 scene %s: a wrong stated word fails the harness', (_name, fixture) => {
     const scene = clone(fixture);
     (scene.words as unknown as { word: string }[])[0].word = 'XQZXQ';
     expect(() => replayScene(scene, DICT)).toThrow(/stated word XQZXQ/);
   });
 
-  it('R-31 scene destination: setDestinationCount 0 after the drop throws r31-destination-count (cf. replay.test.ts k = 0 on a non-empty destination)', () => {
-    const scene = clone(destination);
+  it('R-31 scene move-compose: setDestinationCount 0 after the drop throws r31-destination-count (cf. replay.test.ts k = 0 on a non-empty destination)', () => {
+    const scene = clone(moveCompose);
     (scene.commands as Command[])[1] = { type: 'setDestinationCount', k: 0 };
     expectEngineError(() => replayScene(scene, DICT), 'r31-destination-count');
   });
@@ -268,8 +392,8 @@ describe('AD-2 How to play scene replay', () => {
     ).not.toThrow();
   });
 
-  it('R-23 scene drag: the drop of E D K A on column 3 reaches Composing with D = B', () => {
-    const { session } = replayScene(dragFixture as unknown as SceneFixture, DICT);
+  it('R-23 scene base-drop: the drop of E D K A on column 3 reaches Composing with D = B', () => {
+    const { session } = replayScene(baseDrop, DICT);
     expect(session.cursor).toStrictEqual({ index: 0, phase: 'composing' });
     expect(session.moves[0]).toMatchObject({
       sourceColumn: 1,
@@ -280,7 +404,7 @@ describe('AD-2 How to play scene replay', () => {
   });
 
   it('R-13 AD-2 an illegal move in a cloned fixture throws its EngineError check code (TABLE R-13, sourceCount 0)', () => {
-    const scene = clone(dragFixture as unknown as SceneFixture);
+    const scene = clone(baseDrop);
     (scene.commands as Command[])[0] = {
       type: 'drop',
       sourceColumn: 1,
@@ -291,14 +415,14 @@ describe('AD-2 How to play scene replay', () => {
   });
 
   it('R-38 AD-2 a non-word in a cloned fixture is the command rejectedWord outcome', () => {
-    const scene = clone(dragFixture as unknown as SceneFixture);
+    const scene = clone(baseDrop);
     (scene.commands as Command[]).push({ type: 'validate' });
     const { rejectedWords } = replayScene(scene, DICT);
     expect(rejectedWords).toStrictEqual([undefined, 'bedka']);
   });
 
   it('R-80 AD-2 a wrong stated score (engine score + 1) fails the harness assertion', () => {
-    const scene = clone(dragFixture as unknown as SceneFixture);
+    const scene = clone(baseDrop);
     const ok = { ...scene, scores: [{ after: 1, score: 6 }] };
     expect(() => replayScene(ok, DICT)).not.toThrow();
     const wrong = { ...scene, scores: [{ after: 1, score: 6 + 1 }] };
@@ -306,7 +430,7 @@ describe('AD-2 How to play scene replay', () => {
   });
 
   it('R-30 AD-2 a stated word is checked against the engine draft word, when present', () => {
-    const scene = clone(dragFixture as unknown as SceneFixture);
+    const scene = clone(baseDrop);
     const base = { ...scene, words: [{ command: 0, word: 'BEDKA' }] };
     expect(() => replayScene(base, DICT)).not.toThrow();
     const wrong = { ...scene, words: [{ command: 0, word: 'BAKED' }] };
@@ -314,7 +438,7 @@ describe('AD-2 How to play scene replay', () => {
   });
 
   it('AD-2 a rejected case states its outcome, citing the TABLE row, and the harness checks it', () => {
-    const scene = clone(dragFixture as unknown as SceneFixture);
+    const scene = clone(baseDrop);
     const row = { id: 'R-13', precondition: 'sourceCount 0' };
     const command: Command = {
       type: 'drop',
@@ -337,7 +461,7 @@ describe('AD-2 How to play scene replay', () => {
   });
 
   it('AD-2 a fixture index out of range or negative fails with the scene-named harness Error', () => {
-    const scene = clone(dragFixture as unknown as SceneFixture);
+    const scene = clone(baseDrop);
     const command: Command = { type: 'undo' };
     const row = { id: 'R-70', precondition: 'nothing to undo' };
     const bad: SceneFixture[] = [
@@ -351,7 +475,7 @@ describe('AD-2 How to play scene replay', () => {
       { ...scene, rejected: [{ after: -1, command, outcome: 'noop', row }] },
     ];
     for (const fixture of bad)
-      expect(() => replayScene(fixture, DICT)).toThrow(/^scene drag: .* out of range 0\.\.\d/);
+      expect(() => replayScene(fixture, DICT)).toThrow(/^scene base-drop: .* out of range 0\.\.\d/);
   });
 
   // Epic 8 ticket 4 (HP-4, HP-5): the Tricky rules scenes.
