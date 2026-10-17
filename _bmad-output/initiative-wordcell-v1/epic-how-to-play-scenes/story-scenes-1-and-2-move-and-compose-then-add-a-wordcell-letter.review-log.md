@@ -1,6 +1,6 @@
 # Review log — ticket 8.7 (Scenes 1 and 2)
 
-State: pass 2: done
+State: pass 3: done
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 198 words. HEAD at start: 0a52938.
 Note: this epic has no SPEC.md (epic file: "goes straight to tickets, no separate spec").
 
@@ -44,3 +44,17 @@ Words (docs): 1453 (7.3 x pass 0, budget 1500)  |  Snapshot: story-scenes-1-and-
 - (pass 1 item stands)
 
 Fixer applied pass 2 items 1-9 (pinned sequence verified against engine and dictionary in a /tmp script). Fixer reported finding 4 only partly (see decision needed).
+
+## Pass 3 — 2026-10-17
+Reviewers: Fix diff, Edge-case hunter, Adversarial, Ref alignment  |  Findings (merged): major 2, minor 10, decision-needed 0  |  Dropped in triage: 0 (reviewer-labelled majors on command notation, scene 2 final frame, reorder test wording and the flip-back invariant reclassified minor: clarifications of a builder-picked, engine-verified default)
+Words (docs): 1495 (7.6 x pass 0, budget 1500)  |  Snapshot: story-scenes-1-and-2-move-and-compose-then-add-a-wordcell-letter.passes/pass3.md
+### Accepted (sent to fixer)
+- [major] Continuity check (c) cannot compare via `words` (AKEDB is not a word; `words` keyed by `command`, `block`/`validatable` by `after`): compare replayed engine views of the prefix and use `block`/`validatable` at `after: opens`
+- [major] No test ties the UI's hand-drawn scene 2 first frame to scene 1's last frame: add an AD-14 script unit test (or build frame 0 from scene 1's final-frame constants)
+- [minor, fixed only if no words added or after cuts] literal command notation (k values, arrange = CardIds A K E D, fixture field names); scene 2 final frame = pressed-Validate tray (as old compose); step order and AC5 wording; scene 2 begins with flip back; `opens` = number of prefix commands; drop the vacuous `rejected` clause; grep narrowed to exact removed identifiers; test-name ids for AC1/2/6; harness file is test support (epic Boundaries); scene 1 Playwright asserts tile order and block; mark the Flip ending a draft for owner
+### Default applied (technical)
+- Continuity compares replayed views; UI-side equality by an AD-14 unit test
+### Decision needed
+- (none new; pass 1 and 2 items stand)
+
+Fixer applied pass 3 items 1-12 (wc 1495, cuts made for room).
