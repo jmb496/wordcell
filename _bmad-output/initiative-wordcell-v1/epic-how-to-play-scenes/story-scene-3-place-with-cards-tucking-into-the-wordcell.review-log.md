@@ -1,6 +1,6 @@
 # Review log — Scene 3: place with cards tucking into the WordCell (ticket 8.8)
 
-State: pass 4: done
+State: pass 5: done
 
 Pass 0: 134 words (pass0.md); budget 1500 words. Pulled from tickets.toml entry 8; toml fields not copied: interface = "scene script and effects under src/ui/scenes/; fixtures; text.ts caption."; tests = "Engine replay (U); play (P6 android); screenshots."; owns = "Scene 3."; verify (as AC); risk low; references (rules R-40 to R-42, R-50 to R-52, R-60).
 
@@ -69,6 +69,20 @@ Words (docs): 1471 (11.0 x pass 0; budget 1500)  |  Snapshot: story-scene-3-plac
 - [minor] Step.tucks cell field/validation, player/effects plumbing, swap keyframes, fade keyframes, mid-tuck poll, R-51 locator → fixer 3-7
 ### Default applied (technical)
 - FACE_MARGIN constant; per-axis scale sx=CARD_W/RICH_TILE_W, sy=1; constant-opacity swap; highlights pop at swap accepted.
+### Decision needed (functionality / UX / gameplay)
+- none new
+### Dropped
+- none
+
+## Pass 5 — 2026-10-17
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 2 (merged), minor 8, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1421 (10.6 x pass 0; budget 1500)  |  Snapshot: story-scene-3-place-with-cards-tucking-into-the-wordcell.passes/pass5.md
+### Applied
+- [major] duplicate stale "Effects and hand-off" bullet (pass 4 left both) → fixer 1
+- [major] step 6 reveal would emit a 0-to-1 fade and dip E; tucks expansion must emit the swap → fixer 2
+- [minor] cellTop boolean, keyframe offsets/easing test wording, mid-tuck poll window, flier `full`, rect widths + glyph note → fixer 3-7
+### Default applied (technical)
+- tucks expansion emits the constant-opacity swap; strip-4/confirm constant hide; ~1 px glyph difference at swap accepted.
 ### Decision needed (functionality / UX / gameplay)
 - none new
 ### Dropped
