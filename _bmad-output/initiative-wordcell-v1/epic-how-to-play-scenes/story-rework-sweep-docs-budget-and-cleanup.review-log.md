@@ -1,6 +1,6 @@
 # Review log — Rework sweep: docs, budget and cleanup (ticket 8.11)
 
-State: pass 3: done
+State: pass 4: done
 Pre-loop: HEAD 7ea1ccf, 135 words, copy at story-rework-sweep-docs-budget-and-cleanup.passes/pass0.md. Budget 1500 words.
 Toml fields to carry into the Description in pass 1: verify (present as Acceptance Criteria), risk low (present), references (present), hitl = false, done_checkpoint = true.
 
@@ -45,3 +45,12 @@ Words (docs): 1308 (9.7 x pass 0; budget 1500)  |  Snapshot: story-rework-sweep-
 - [minor] comments in any file naming removed items; text.ts base wording (68b5c41 changes text.ts); array-valued vs boolean `used` in e2e rows; baselines checked via test:screens
 ### Default applied (technical)
 - Epic annotation wording for HP-1/HP-5/Done-when: ref-alignment flagged as decision-needed (owner decision names only HP-3, HP-4, HP-7 layout). Reclassified technical: documentation traceability only, no product change; default wording "no longer exercised by the five-scene carousel (2026-10-17 rework)" instead of "superseded".
+
+## Pass 4 — 2026-10-17
+Reviewers: fix-diff, edge-case, adversarial, ref alignment  |  Findings: major 1, minor ~7, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1414 (10.5 x pass 0; budget 1500)  |  Snapshot: story-rework-sweep-docs-budget-and-cleanup.passes/pass4.md
+### Applied
+- [major] effects.ts removal wording: "dest-fly branches" is ambiguous; the live `fly('dest', ...)` call (~211) and destHome/trayDest stay; only the `lifts === 'dest'` mover, `carries.dest`, the `undone` restore go; verify `flownAt` by grep (the tail fly sets it at ~198, so it likely stays)
+- [minor] step-carry test: `step.carry ??` read becomes `carryOf(scene)`, assert the throw once; types.ts holds the Step.carry and lifts declarations; baselines check = compare PNG list with spec names (test:screens catches missing only); Orphans bullet joins the list; scene-replay.ts is an engine file, edit limited to deleting rejected support (epic Boundaries)
+### Default applied (technical)
+- all of the above → reviewers' proposed defaults, word-neutral rewording
