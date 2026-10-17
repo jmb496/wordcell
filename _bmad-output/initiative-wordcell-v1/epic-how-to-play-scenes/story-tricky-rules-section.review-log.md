@@ -1,6 +1,6 @@
 # Review log — story-tricky-rules-section.md
 
-State: pass 3: done
+State: pass 4: done
 
 Pre-loop: HEAD 9482609cbbf2f875dbda9facacd20568a2a352bb, 238 words (pass 0 copy: story-tricky-rules-section.passes/pass0.md). Growth budget 2.5x = ~595 words (default). Note: no epic-8 SPEC.md exists under _bmad-output/specs/; the epic file is the requirement source. Ticket toml fields (entry 4: description, verify, covers, interface, tests, owns, unknown, references) are in story-tricky-rules-section.passes/toml-fields.md, passed to reviewers and fixer as intent; fixer adds them to the Description in pass 1.
 
@@ -58,3 +58,20 @@ Words (docs): 935 before fix (over budget)
 ### Dropped
 - none; remaining minors deferred (over budget, or cosmetic): Verify/Tests drift, rejected-`after` negative, Q-31 index clause, loop-restart wording, scene (a) move target id, key-not-position caption lookup, baseline-scope plan check.
 Words (docs): 925 (3.9 x pass 0, over budget)  |  Snapshot: story-tricky-rules-section.passes/pass3.md. validatable values replay-verified; cell/Undo placement unverified (plan time).
+
+## Pass 4 — 2026-10-16 23:00
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 0, minor 2, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 925 (unchanged, no fix pass)
+### Applied
+- none (zero majors; converged)
+### Default applied (technical)
+- none new
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Result — converged after 4 passes
+Majors per pass: 9, 4, 2, 0. Words 238 → 925 (3.9x, over the 2.5x budget; the growth was majors-driven: scene positions, commands, frames and tests the ticket lacked).
+Unapplied minors: scene Undo control carries no `data-testid` (AGENTS.md reserves `undo` for the app button); scene (a) frame-to-step mapping (out-and-back folds into the lifted→dropped frame; plan can settle); stage placement of cells 3–5 and the Undo control (`placeCellX`, header row) unverified until plan time; (b)/(c) loop-restart wording; scene (a) move target id; rejected-`after` negative; Q-31 index clause for SAT; caption lookup by key not position; baseline-scope plan check; Verify/Tests drift; scene (c) empty-column rationale; (c) used-cell id-to-key map in scenes.test.ts.
+Owner to confirm at the plan checkpoint: scene (b) plays its two halves in sequence on one figure, reset by an `undo` step, resting frame = half 2 (a presentation default, not a rule).
