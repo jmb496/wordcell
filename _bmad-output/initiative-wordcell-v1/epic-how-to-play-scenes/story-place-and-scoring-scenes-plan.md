@@ -3,7 +3,7 @@ title: 'Place and scoring scenes'
 type: 'feature'
 ticket: '3'
 created: '2026-10-16'
-status: built
+status: done
 baseline_revision: '76fc0b450254d6032f89f168c08cfdf385a9a208'
 route: 'full'
 route_source: 'auto'

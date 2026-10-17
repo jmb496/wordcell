@@ -42,3 +42,10 @@ Owner answered the scene 4 question: hide B from column 3 (commit e7ecefa).
 Tests: test:all failed, 1 of 2839: `src/ui/how-to-play.test.ts` "AD-3 the example cards are static" expects 159 static cards, now 158. Cause: hiding B from column 3 removed one card (stale count at line 75). Not touched by the orchestrator.
 Next: update the count (and its comment) to 158, rerun test:all and test:screens (scene 4 changed, so baselines may differ: never regenerate unattended).
 Close-out docs: none
+
+## 8.3 Place and scoring scenes — done
+Resumed after the owner's answer (hide B from column 3) and the stale card count fix (81c2c31).
+Tests: all passing (test:all), screenshots passed (42 passed, 18 skipped)
+Tokens: 0.1M input-equivalent (this resume session)
+Worth knowing: open item from the code review: fixtures/how-to-play-place.json cell 6 contents in frames 0–4 are hand-written, not engine-checked; one deferred medium (earlier scene layers showing through on a phone-size screen) carried to the sweep.
+Close-out docs: none
