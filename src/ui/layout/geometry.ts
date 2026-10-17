@@ -154,3 +154,71 @@ export function shouldRecomputeWidth(last: WidthInputs, next: WidthInputs): bool
     Math.abs(next.innerHeight - last.innerHeight) >= RECOMPUTE_DH
   );
 }
+
+// Epic 8 ticket 6 (HP-1, HP-2, HP-6; AD-11): the How to play scene stage. Every scene draws the whole
+// play area on one stage whose layout is authored at the scene base slot (card 40 px + 4 px gap);
+// the fitted card width scales it. These are the base-unit terms the pure fit below needs.
+export const SCENE_BASE = {
+  /** The scene base slot: a 40 px card plus the 4 px gap (`cardMetrics(40).slot`). */
+  slot: 44,
+  /** The strip between stacked cards, and the card height, at the base slot. */
+  strip: 20,
+  cardH: 56,
+  /** The foot row below the columns (the Undo pill), the gaps around the tray, the tray, the labels. */
+  foot: 44,
+  gap: 4,
+  trayFirstRow: 60,
+  trayExtraRow: 44,
+  labels: 16,
+} as const;
+
+/** What the scenes need drawn at most: the tallest column and WordCell stack, and the tray rows. */
+export type SceneStageInputs = {
+  readonly columnCards: number;
+  readonly trayRows: number;
+  readonly cellCards: number;
+};
+
+const stackH = (cards: number): number => (cards - 1) * SCENE_BASE.strip + SCENE_BASE.cardH;
+
+/** The stage height at the scene base slot: columns, foot row, tray, labels and the tallest stack. */
+export function sceneBaseHeight(inputs: SceneStageInputs): number {
+  const { foot, gap, trayFirstRow, trayExtraRow, labels } = SCENE_BASE;
+  return (
+    stackH(inputs.columnCards) +
+    foot +
+    gap +
+    trayFirstRow +
+    (inputs.trayRows - 1) * trayExtraRow +
+    gap +
+    labels +
+    stackH(inputs.cellCards)
+  );
+}
+
+/** The stage height in px for card width `w`: the base height scaled by `cardMetrics(w).slot`. */
+export function sceneStageHeight(w: number, inputs: SceneStageInputs): number {
+  return Math.round((sceneBaseHeight(inputs) * cardMetrics(w).slot) / SCENE_BASE.slot);
+}
+
+export const SCENE_MIN_W = 32;
+
+/**
+ * The card width and stage height of the How to play scenes. widthTerm = `floor(content / 8 - 4)`
+ * (as in `cardWidth`); heightTerm = the largest width whose stage fits `boxHeight`; width =
+ * `min(widthTerm, max(32, heightTerm))`, so the floor never exceeds the width term (below 288 px
+ * content the width term wins) and the height cap applies only when the stage would exceed the box.
+ */
+export function sceneFit(
+  contentWidth: number,
+  boxHeight: number,
+  inputs: SceneStageInputs,
+): { readonly cardWidth: number; readonly stageHeight: number } {
+  const widthTerm = Math.floor(contentWidth / 8 - 4);
+  let heightTerm = 0;
+  while (heightTerm < widthTerm && sceneStageHeight(heightTerm + 1, inputs) <= boxHeight) {
+    heightTerm++;
+  }
+  const cardWidth = Math.min(widthTerm, Math.max(SCENE_MIN_W, heightTerm));
+  return { cardWidth, stageHeight: sceneStageHeight(cardWidth, inputs) };
+}

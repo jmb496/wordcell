@@ -1,10 +1,10 @@
 import {
   CARD_H,
-  CELL6,
   CELLS_TOP,
   CONTROL_BOX,
   CONTROLS_H,
   CONTROLS_TOP,
+  columnRowY,
   columnX,
   placeCellX,
   RICH_INSET,
@@ -27,22 +27,27 @@ interface Carry {
 }
 
 export function carryGeometry(data: SceneFixtureData, carry: Carry) {
+  const sourceLength = data.start.columns[carry.sourceColumn - 1].length;
   const home = {
     x: columnX(carry.sourceColumn),
-    y: (data.start.columns[carry.sourceColumn - 1].length - carry.count) * STRIP,
+    y: columnRowY(sourceLength, sourceLength - carry.count),
   };
   // A drop on the source column (R-21): the tail lands back at its home and the D cards are the
   // bottom ones of what the lift left behind.
   const same = carry.sourceColumn === carry.destinationColumn;
   const destLength = data.start.columns[carry.destinationColumn - 1].length;
-  const landing = same ? home : { x: columnX(carry.destinationColumn), y: destLength * STRIP };
+  const landing = same
+    ? home
+    : { x: columnX(carry.destinationColumn), y: columnRowY(destLength, destLength) };
   const offset = { x: landing.x - home.x, y: landing.y - home.y };
   const destHome = {
     x: landing.x,
-    y:
-      (same
+    y: columnRowY(
+      destLength,
+      same
         ? destLength - carry.count - carry.destinationCount
-        : destLength - carry.destinationCount) * STRIP,
+        : destLength - carry.destinationCount,
+    ),
   };
   const trayDest = { x: RICH_INSET, y: TRAY_TOP + 4 };
   const trayTail = { x: trayDest.x + carry.destinationCount * RICH_SLOT, y: trayDest.y };
@@ -63,7 +68,7 @@ export const trayTargets = {
   plus: controlCentre(CONTROL_BOX.plus),
   flip: controlCentre(CONTROL_BOX.flip),
   validate: controlCentre(CONTROL_BOX.validate),
-  cell6: { x: CELL6.x + SLOT / 2, y: CELL6.y + CARD_H / 2 },
+  cell6: { x: placeCellX(6) + SLOT / 2, y: CELLS_TOP + CARD_H / 2 },
   tiles: { x: RICH_INSET + RICH_SLOT * 3, y: TRAY_TOP + 4 + CARD_H / 2 },
 } as const;
 

@@ -6,14 +6,12 @@ import { overlays } from './overlays.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Panel from './Panel.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
-import { basicScenes, trickyScenes } from './scenes/index';
-// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
-import Scene from './scenes/Scene.svelte';
+import Carousel from './scenes/Carousel.svelte';
 import { bandNames, text } from './text';
 
 // Epic 6 CAP-8 (ticket 6.9) and epic 8 (HP-7; EXPERIENCE.md How to play panel; DESIGN.md Panels): the
 // scrolling rules panel, opened only through `openSurface('howToPlay')` (the Menu's last row). The
-// animated scenes come first (five basic, then Tricky rules), then the text sections, then Controls.
+// animated scenes come first (one at a time in a carousel), then the text sections, then Controls.
 // All prose is in text.ts (AD-3); this file holds markup only. The ☰
 // refocus effect is an interim copy of PreferencesPanel's; Esc closes it through the key handler
 // (keys.ts, ticket 6.10).
@@ -48,11 +46,7 @@ function close(): void {
 
 <Panel title={text.howToPlay} closeLabel={text.closeHowToPlay} onclose={act(close)} {open}>
   <section class="scenes">
-    {#each basicScenes as scene (scene.id)}<Scene {scene} />{/each}
-  </section>
-  <section class="tricky">
-    <h3>{h.tricky}</h3>
-    {#each trickyScenes as scene (scene.id)}<Scene {scene} />{/each}
+    <Carousel />
   </section>
   <section>
     <h3>{h.goal}</h3>

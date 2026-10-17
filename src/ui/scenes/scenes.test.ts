@@ -7,6 +7,7 @@ import placeFixture from '../../../fixtures/how-to-play-place.json';
 import scoringFixture from '../../../fixtures/how-to-play-scoring.json';
 import sourceDropFixture from '../../../fixtures/how-to-play-source-drop.json';
 import topCardFixture from '../../../fixtures/how-to-play-top-card.json';
+import { sceneStageHeight } from '../layout/geometry';
 import { text } from '../text';
 import { composeScene } from './compose';
 import { destinationScene } from './destination';
@@ -14,7 +15,7 @@ import { destinationRuleScene } from './destination-rule';
 import { dragScene } from './drag';
 import { frameDest, sceneEffects } from './effects';
 import effectsSource from './effects.ts?raw';
-import { CARD_W, columnX, LIFT, RICH_SLOT } from './geometry';
+import { CARD_W, columnX, LIFT, MIN_COLUMN_CARDS, RICH_SLOT, STAGE_INPUTS } from './geometry';
 import { placeScene } from './place';
 import { type AnimationHandle, type PlayerDeps, restMs, ScenePlayer } from './player';
 import playerSource from './player.ts?raw';
@@ -22,6 +23,7 @@ import source from './Scene.svelte?raw';
 import { scoringScene } from './scoring';
 import { defineScene } from './script';
 import { sourceDropScene } from './source-drop';
+import { FILLER_LETTERS } from './stage';
 import { topCardScene } from './top-card';
 import type { Scene } from './types';
 
@@ -41,6 +43,9 @@ const need = <T>(value: T | undefined): T => {
   return value;
 };
 const carryOf = (scene: Scene) => need(scene.carry);
+
+// The fitted card width and stage height the carousel passes (ticket 6): 40 px is the base slot.
+const FIT = { cardWidth: 40, stageHeight: sceneStageHeight(40, STAGE_INPUTS) };
 
 const KINDS = ['snap', 'flyBack', 'parting', 'undoRedo', 'flyToCell', 'overlay'];
 
@@ -430,7 +435,7 @@ describe('AD-3 scene figure structure', () => {
     vi.resetModules();
     const { render } = await import('svelte/server');
     const { default: Scene } = await import('./Scene.svelte');
-    return render(Scene, { props: { scene: dragScene } }).body;
+    return render(Scene, { props: { scene: dragScene, ...FIT } }).body;
   }
 
   it('AD-3 a figure named by its visible description, an aria-hidden stage, a tap button outside it', async () => {
@@ -458,7 +463,7 @@ describe('AD-3 scene figure structure', () => {
       vi.resetModules();
       const { render } = await import('svelte/server');
       const { default: Scene } = await import('./Scene.svelte');
-      const body = render(Scene, { props: { scene } }).body;
+      const body = render(Scene, { props: { scene, ...FIT } }).body;
       expect(body).toContain(`>${text.howTo.scenes[name]}</figcaption>`);
       expect(body.match(/data-scene-el="tray-\d"/g)).toHaveLength(layers);
       expect(body).toContain(`>${text.validate}</span>`);
@@ -632,7 +637,7 @@ describe('AD-3 scenes place and scoring figure structure', () => {
     vi.resetModules();
     const { render } = await import('svelte/server');
     const { default: Scene } = await import('./Scene.svelte');
-    return render(Scene, { props: { scene } }).body;
+    return render(Scene, { props: { scene, ...FIT } }).body;
   }
 
   it('AD-3 scene place: six layers, strips on frames 1 to 4, Confirm, no tail, no ids', async () => {
@@ -659,7 +664,8 @@ describe('AD-3 scenes place and scoring figure structure', () => {
       return [...upToTop.matchAll(/class="glyph[^"]*">([^<]+)</g)].map((m) => m[1]);
     };
     expect(topOf(1)).toStrictEqual([]);
-    expect(topOf(3)).toStrictEqual(['L', 'M']);
+    // Column 3 starts with four cards: one filler card on its far end (ticket 6, stage.ts).
+    expect(topOf(3)).toStrictEqual([FILLER_LETTERS[0], 'L', 'M']);
   });
 
   it('AD-3 scene scoring: three stacks with figures, a total, nothing of the start columns', async () => {
@@ -668,7 +674,8 @@ describe('AD-3 scenes place and scoring figure structure', () => {
     for (const figure of ['3 \u00d7 3 = 9', '4 \u00d7 4 = 16', '6 \u00d7 6 = 36'])
       expect(html).toContain(`>${figure}</span>`);
     expect(html).toContain(`>${text.score(61)}</span>`);
-    expect(html.match(/class="card[^"]*static/g)).toHaveLength(12);
+    // Eight columns of filler (5 cards each) and the stacks 3 + 3 + 6.
+    expect(html.match(/class="card[^"]*static/g)).toHaveLength(8 * MIN_COLUMN_CARDS + 12);
     expect(html).not.toContain('>Z<');
     expect(html).not.toContain('data-scene-el="tail');
     expect(html).not.toContain('data-card-id');
@@ -760,10 +767,15 @@ describe.each([
       vi.resetModules();
       const { render } = await import('svelte/server');
       const { default: Scene } = await import('./Scene.svelte');
-      const body = render(Scene, { props: { scene } }).body;
-      const listed = Object.keys(data.start.cells).filter((c) => Number(c) <= 5);
+      const body = render(Scene, { props: { scene, ...FIT } }).body;
+      // The stage's band draws WordCells 3 to 10 from frame 0 (ticket 6), the start's cards in them.
       expect(
-        [...body.matchAll(/class="cell svelte-[^"]*" data-cell="(\d)"/g)].map((m) => m[1]),
+        [...body.matchAll(/class="cell svelte-[^"]*" data-cell="(\d+)"/g)].map((m) => m[1]),
+      ).toStrictEqual(['3', '4', '5', '6', '7', '8', '9', '10']);
+      const band = body.slice(body.indexOf('data-cell="3"'));
+      const listed = Object.values(data.start.cells).flat();
+      expect(
+        [...band.matchAll(/class="glyph[^"]*">([^<]+)</g)].map((m) => m[1]).slice(0, listed.length),
       ).toStrictEqual(listed);
       expect(body).not.toContain('data-testid');
       expect(body).not.toContain('data-card-id');
@@ -782,7 +794,7 @@ describe.each([
         if (frame.order === undefined) continue;
         // Render with frame i as the first (shown) frame; its layer is `tray-0`.
         const body = render(Scene, {
-          props: { scene: { ...scene, frames: scene.frames.slice(i) } },
+          props: { scene: { ...scene, frames: scene.frames.slice(i) }, ...FIT },
         }).body;
         const layer = body.slice(body.indexOf('data-scene-el="tray-0"'));
         const end = layer.indexOf('data-scene-el="tray-', 10);
@@ -898,7 +910,7 @@ describe('AD-14 scene destination-rule', () => {
     vi.resetModules();
     const { render } = await import('svelte/server');
     const { default: Scene } = await import('./Scene.svelte');
-    const body = render(Scene, { props: { scene: destinationRuleScene } }).body;
+    const body = render(Scene, { props: { scene: destinationRuleScene, ...FIT } }).body;
     expect(body).toMatch(new RegExp(`data-scene-el="undo"[^>]*>${text.undo}</span>`));
     expect(body).not.toContain('data-testid');
     const outside = body.slice(body.indexOf('<button'));

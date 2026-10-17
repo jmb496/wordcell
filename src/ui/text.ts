@@ -322,8 +322,6 @@ export const text = Object.freeze({
   closeHowToPlay: 'Close how to play',
   howTo: {
     headings: {
-      // Epic 8 ticket 4: the section after the five basic scenes, above the text sections.
-      tricky: 'Tricky rules',
       goal: 'The goal',
       table: 'The table',
       undo: 'Undo and Redo',
@@ -355,6 +353,14 @@ export const text = Object.freeze({
     // Epic 8 ticket 3 (HP-3e): a scoring scene's per-WordCell figure, letters times the cell number.
     scoreFigure: (letters: number, cell: number, score: number): string =>
       `${letters} \u00d7 ${cell} = ${score}`,
+    // Epic 8 ticket 6 (HP-6): the scene carousel's controls. "Next scene" and `sceneControls.next`
+    // ("Next", the reduced-motion frame control) collide under substring locators: match exactly.
+    carousel: {
+      label: 'Scenes',
+      previous: 'Previous scene',
+      next: 'Next scene',
+      dot: (n: number, total: number): string => `Scene ${n} of ${total}`,
+    },
     sceneControls: {
       pause: 'Pause animation',
       restart: 'Restart animation',

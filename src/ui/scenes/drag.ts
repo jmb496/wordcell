@@ -1,6 +1,6 @@
 import fixture from '../../../fixtures/how-to-play-drag.json';
 import { text } from '../text';
-import { COLUMN_AREA_H, columnX, SLOT, STAGE_W, STRIP, TRAY_TOP } from './geometry';
+import { COLUMN_AREA_H, columnRowY, columnX, SLOT, STAGE_W, STRIP, TRAY_TOP } from './geometry';
 import { defineScene } from './script';
 import type { Scene, SceneFixtureData } from './types';
 
@@ -10,18 +10,20 @@ import type { Scene, SceneFixtureData } from './types';
 const data: SceneFixtureData = fixture;
 const carry = { sourceColumn: 1, count: 4, destinationColumn: 3, destinationCount: 1 } as const;
 
+const sourceLength = data.start.columns[carry.sourceColumn - 1].length;
+const destLength = data.start.columns[carry.destinationColumn - 1].length;
 const home = {
   x: columnX(carry.sourceColumn),
-  y: (data.start.columns[carry.sourceColumn - 1].length - carry.count) * STRIP,
+  y: columnRowY(sourceLength, sourceLength - carry.count),
 };
 const landing = {
   x: columnX(carry.destinationColumn),
-  y: data.start.columns[carry.destinationColumn - 1].length * STRIP,
+  y: columnRowY(destLength, destLength),
 };
 const offset = { x: landing.x - home.x, y: landing.y - home.y };
 const destHome = {
   x: landing.x,
-  y: (data.start.columns[carry.destinationColumn - 1].length - carry.destinationCount) * STRIP,
+  y: columnRowY(destLength, destLength - carry.destinationCount),
 };
 // Where the cards come to rest in the tray row (DESIGN.md tray: 16 px inset, D cards first).
 const trayDest = { x: 16, y: TRAY_TOP + 3 };

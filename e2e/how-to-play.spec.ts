@@ -14,6 +14,32 @@ const menuButton = (page: Page) => page.getByRole('button', { name: 'Menu', exac
 const menu = (page: Page) => page.getByRole('dialog', { name: 'Menu', exact: true });
 const panel = (page: Page) => page.getByRole('dialog', { name: 'How to play', exact: true });
 const h = text.howTo.headings;
+// Epic 8 ticket 6: the scenes in carousel order, by their text.ts keys; the panel shows one at a time.
+const sceneOrder = [
+  'drag',
+  'compose',
+  'destination',
+  'place',
+  'scoring',
+  'sourceDrop',
+  'destinationRule',
+  'topCard',
+] as const;
+type SceneKey = (typeof sceneOrder)[number];
+const carousel = text.howTo.carousel;
+const dotOf = (page: Page, n: number) =>
+  panel(page).getByRole('button', { name: carousel.dot(n, sceneOrder.length), exact: true });
+const arrow = (page: Page, which: 'previous' | 'next') =>
+  panel(page).getByRole('button', { name: carousel[which], exact: true });
+const root = (page: Page) => panel(page).getByRole('group', { name: carousel.label, exact: true });
+
+/** Jumps to a scene by its dot and returns its figure (the only one mounted). */
+async function showScene(page: Page, id: SceneKey) {
+  await dotOf(page, sceneOrder.indexOf(id) + 1).click();
+  const figure = panel(page).getByRole('figure', { name: text.howTo.scenes[id] });
+  await expect(figure).toBeVisible();
+  return figure;
+}
 
 async function openPanel(page: Page): Promise<void> {
   await menuButton(page).click();
@@ -49,7 +75,7 @@ test('AD-3 the menu lists the six rows in order, then How to play opens the outl
   await expect(panel(page)).toBeVisible();
   const headings = panel(page).getByRole('heading');
   await expect(headings).toHaveText([text.howToPlay, ...Object.values(h)]);
-  expect(Object.values(h)).toHaveLength(7);
+  expect(Object.values(h)).toHaveLength(6);
   await expect(panel(page).locator('ul.bands li')).toHaveText(
     [0, 1, 2, 3, 4, 5].map((b) => `${text.bandName(b)}${text.bandScore(b)}`),
   );
@@ -313,8 +339,7 @@ for (const { id, rules, frames } of stepScenes) {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await openFixture(page, 'session-idle-fresh');
     await openPanel(page);
-    const figure = panel(page).getByRole('figure', { name: text.howTo.scenes[id] });
-    await figure.scrollIntoViewIfNeeded();
+    const figure = await showScene(page, id);
     await expect(figure.getByText(text.howTo.scenes[id], { exact: true })).toBeVisible();
     expect(await sceneAnimations(page)).toEqual([]);
     for (const [i, frame] of frames.entries()) {
@@ -348,8 +373,7 @@ for (const { id, rules, frames } of stepScenes) {
   test(`${rules} AD-14 scene ${id} plays on open through its last step`, async ({ page }) => {
     await openFixture(page, 'session-idle-fresh');
     await openPanel(page);
-    const figure = panel(page).getByRole('figure', { name: text.howTo.scenes[id] });
-    await figure.scrollIntoViewIfNeeded();
+    const figure = await showScene(page, id);
     await expect(figure.getByRole('button', { name: controls.pause, exact: true })).toBeVisible();
     const lastStep = frames.filter((f) => f.tiles !== undefined).length + 2;
     await expect
@@ -366,8 +390,7 @@ test('R-40 R-42 R-50 R-51 R-52 R-60 AD-14 with reduced motion scene place steps 
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await openFixture(page, 'session-idle-fresh');
   await openPanel(page);
-  const figure = panel(page).getByRole('figure', { name: text.howTo.scenes.place });
-  await figure.scrollIntoViewIfNeeded();
+  const figure = await showScene(page, 'place');
   expect(await sceneAnimations(page)).toEqual([]);
   // Per frame: strip letters (undefined: none), lit cells, the selected WordCell number, cell 6's cards.
   const frames = [
@@ -391,7 +414,9 @@ test('R-40 R-42 R-50 R-51 R-52 R-60 AD-14 with reduced motion scene place steps 
     expect(await cellNumbers('.stack.target')).toEqual(
       frame.target === undefined ? [] : [frame.target],
     );
-    await expect(layer.locator('.wcell').last().locator('.card')).toHaveText(frame.cell6.split(''));
+    await expect(
+      layer.locator('.wcell', { has: page.locator('.num', { hasText: /^6$/ }) }).locator('.card'),
+    ).toHaveText(frame.cell6.split(''));
     if (frame.button !== undefined) await expect(layer.locator('.ctl')).toHaveText(frame.button);
     else await expect(layer.locator('.ctl')).toHaveCount(0);
     if (i < frames.length - 1)
@@ -408,8 +433,7 @@ test('R-80 R-36 AD-14 with reduced motion scene scoring steps through 5 frames t
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await openFixture(page, 'session-idle-fresh');
   await openPanel(page);
-  const figure = panel(page).getByRole('figure', { name: text.howTo.scenes.scoring });
-  await figure.scrollIntoViewIfNeeded();
+  const figure = await showScene(page, 'scoring');
   expect(await sceneAnimations(page)).toEqual([]);
   const figures = ['3 × 3 = 9', '4 × 4 = 16', '6 × 6 = 36'];
   for (let i = 0; i < 5; i++) {
@@ -436,8 +460,7 @@ for (const [id, rules, lastStep] of [
   test(`${rules} AD-14 scene ${id} plays on open through its last step`, async ({ page }) => {
     await openFixture(page, 'session-idle-fresh');
     await openPanel(page);
-    const figure = panel(page).getByRole('figure', { name: text.howTo.scenes[id] });
-    await figure.scrollIntoViewIfNeeded();
+    const figure = await showScene(page, id);
     await expect(figure.getByRole('button', { name: controls.pause, exact: true })).toBeVisible();
     await expect
       .poll(async () => (await sceneAnimations(page)).map((a) => a.id), { timeout: 30_000 })
@@ -445,33 +468,8 @@ for (const [id, rules, lastStep] of [
   });
 }
 
-// Epic 8 ticket 4 (HP-4, HP-2, HP-6): the Tricky rules section, after the five basic scenes.
-// Captions are looked up by their text.ts key, never by position; the order is asserted separately.
-test('R-21 R-31 R-33 AD-14 the Tricky rules heading and its three scenes follow the five basic scenes, in order', async ({
-  page,
-}) => {
-  await openFixture(page, 'session-idle-fresh');
-  await openPanel(page);
-  const s = text.howTo.scenes;
-  const order = await panel(page).locator('h3, figure.scene > figcaption').allTextContents();
-  expect(order.slice(0, 9)).toStrictEqual([
-    s.drag,
-    s.compose,
-    s.destination,
-    s.place,
-    s.scoring,
-    h.tricky,
-    s.sourceDrop,
-    s.destinationRule,
-    s.topCard,
-  ]);
-  expect(h.tricky).toBe('Tricky rules');
-  expect(order.slice(9)).toStrictEqual([h.goal, h.table, h.undo, h.empty, h.scoring, h.controls]);
-  await expect(panel(page).locator('a, [role="link"], [href]')).toHaveCount(0);
-  for (const caption of [s.sourceDrop, s.destinationRule, s.topCard])
-    await expect(panel(page).getByRole('figure', { name: caption })).toHaveCount(1);
-});
-
+// Epic 8 ticket 4 (HP-4, HP-2, HP-6): the Tricky rules scenes follow the five basic ones in the carousel
+// (ticket 6 removes the stacked list and its heading). Captions are looked up by their text.ts key.
 // Epic 8 ticket 5 (HP-1): a tap pauses scenes 2 to 5 and a second tap restarts them from step 0.
 for (const id of ['compose', 'destination', 'place', 'scoring'] as const) {
   test(`R-10 AD-14 a tap on scene ${id} pauses it and a second tap restarts it from step 0`, async ({
@@ -479,8 +477,7 @@ for (const id of ['compose', 'destination', 'place', 'scoring'] as const) {
   }) => {
     await openFixture(page, 'session-idle-fresh');
     await openPanel(page);
-    const figure = panel(page).getByRole('figure', { name: text.howTo.scenes[id] });
-    await figure.scrollIntoViewIfNeeded();
+    const figure = await showScene(page, id);
     const mine = async () =>
       (await sceneAnimations(page)).filter((a) => a.id.startsWith(`${id}-step-`));
     await expect.poll(async () => (await mine()).map((a) => a.id)).toContain(`${id}-step-1`);
@@ -554,8 +551,7 @@ for (const { id, rules, frames } of trickyScenes) {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await openFixture(page, 'session-idle-fresh');
     await openPanel(page);
-    const figure = panel(page).getByRole('figure', { name: text.howTo.scenes[id] });
-    await figure.scrollIntoViewIfNeeded();
+    const figure = await showScene(page, id);
     await expect(figure.locator('figcaption')).toHaveText(text.howTo.scenes[id]);
     expect(await sceneAnimations(page)).toEqual([]);
     for (const [i, frame] of frames.entries()) {
@@ -599,8 +595,7 @@ for (const { id, rules, frames } of trickyScenes) {
     const row = trickyScenes.find((t) => t.id === id);
     await openFixture(page, 'session-idle-fresh');
     await openPanel(page);
-    const figure = panel(page).getByRole('figure', { name: text.howTo.scenes[id] });
-    await figure.scrollIntoViewIfNeeded();
+    const figure = await showScene(page, id);
     const prefix = `${row?.scene}-step-`;
     await expect(figure.getByRole('button', { name: controls.pause, exact: true })).toBeVisible();
     await expect
@@ -616,3 +611,383 @@ for (const { id, rules, frames } of trickyScenes) {
       .toContain(`${prefix}0`);
   });
 }
+
+// Epic 8 ticket 6 (HP-1, HP-2, HP-6; AD-11): the scene carousel and the fitted whole-play-area stage.
+const sceneIds = [
+  'drag',
+  'compose',
+  'destination',
+  'place',
+  'scoring',
+  'source-drop',
+  'destination-rule',
+  'top-card',
+] as const;
+const current = (page: Page) => panel(page).getByRole('figure');
+const stepIds = async (page: Page) => (await sceneAnimations(page)).map((a) => a.id);
+/** Remembers the live animations so a later check can tell whether the scene was re-entered. */
+const markLive = (page: Page) =>
+  page.evaluate(() => {
+    (window as unknown as { live: Animation[] }).live = document.getAnimations();
+  });
+/** Whether any animation remembered by `markLive` was cancelled since (the scene re-entered). */
+const reEntered = (page: Page) =>
+  page.evaluate(() =>
+    (window as unknown as { live: Animation[] }).live.some((a) => a.playState === 'idle'),
+  );
+
+test('HP-1 HP-6 the panel mounts one playing scene figure, the arrows and eight dots named exactly', async ({
+  page,
+}) => {
+  await openFixture(page, 'session-idle-fresh');
+  await openPanel(page);
+  await expect(current(page)).toHaveCount(1);
+  await expect(root(page)).toBeVisible();
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.drag);
+  await expect.poll(() => stepIds(page)).toContain('drag-step-1');
+  expect(carousel.previous).toBe('Previous scene');
+  expect(carousel.next).toBe('Next scene');
+  for (let n = 1; n <= sceneOrder.length; n++) {
+    await expect(dotOf(page, n)).toBeVisible();
+    if (n === 1) await expect(dotOf(page, n)).toHaveAttribute('aria-current', 'true');
+    else await expect(dotOf(page, n)).not.toHaveAttribute('aria-current', 'true');
+  }
+  await expect(panel(page).locator('[aria-current="true"]')).toHaveCount(1);
+  await expect(arrow(page, 'previous')).toHaveAttribute('aria-disabled', 'true');
+  await expect(arrow(page, 'next')).not.toHaveAttribute('aria-disabled', 'true');
+  await expect(panel(page).locator('[aria-live]')).toHaveCount(0);
+  await expect(panel(page).locator('h3', { hasText: 'Tricky rules' })).toHaveCount(0);
+  await expect(panel(page).locator('a, [role="link"], [href]')).toHaveCount(0);
+});
+
+test('HP-1 the arrows walk all eight scenes in order, one figure at a time, only the current scene animating', async ({
+  page,
+}) => {
+  await openFixture(page, 'session-idle-fresh');
+  await openPanel(page);
+  for (const [i, key] of sceneOrder.entries()) {
+    await expect(current(page)).toHaveCount(1);
+    await expect(current(page)).toHaveAccessibleName(text.howTo.scenes[key]);
+    await expect(current(page).locator('figcaption')).toHaveText(text.howTo.scenes[key]);
+    await expect(dotOf(page, i + 1)).toHaveAttribute('aria-current', 'true');
+    await expect(panel(page).locator('[aria-current="true"]')).toHaveCount(1);
+    await expect.poll(async () => (await stepIds(page)).length > 0).toBe(true);
+    expect((await stepIds(page)).every((id) => id.startsWith(`${sceneIds[i]}-step-`))).toBe(true);
+    if (i < sceneOrder.length - 1) {
+      await arrow(page, 'next').click();
+      await expect(arrow(page, 'next')).toBeFocused();
+    }
+  }
+  await expect(arrow(page, 'next')).toHaveAttribute('aria-disabled', 'true');
+  await expect(arrow(page, 'previous')).not.toHaveAttribute('aria-disabled', 'true');
+  for (let i = sceneOrder.length - 2; i >= 0; i--) {
+    await arrow(page, 'previous').click();
+    await expect(arrow(page, 'previous')).toBeFocused();
+    await expect(current(page)).toHaveAccessibleName(text.howTo.scenes[sceneOrder[i]]);
+  }
+});
+
+test('HP-1 a disabled end is a no-op that keeps focus; a dot jumps to its scene and keeps focus', async ({
+  page,
+}) => {
+  await openFixture(page, 'session-idle-fresh');
+  await openPanel(page);
+  // aria-disabled is not the disabled attribute: the button stays focusable and clickable (forced
+  // here because Playwright treats aria-disabled as not enabled), and the click does nothing.
+  await arrow(page, 'previous').focus();
+  await arrow(page, 'previous').click({ force: true });
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.drag);
+  await expect(arrow(page, 'previous')).toBeFocused();
+  await dotOf(page, 8).click();
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.topCard);
+  await expect(dotOf(page, 8)).toBeFocused();
+  await expect(dotOf(page, 8)).toHaveAttribute('aria-current', 'true');
+  await arrow(page, 'next').focus();
+  await arrow(page, 'next').click({ force: true });
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.topCard);
+  await expect(arrow(page, 'next')).toBeFocused();
+  await dotOf(page, 3).click();
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.destination);
+  await expect(dotOf(page, 3)).toBeFocused();
+});
+
+test('HP-1 Left and Right move between scenes while focus is in the carousel, stop at the ends, and are ignored outside it', async ({
+  page,
+}) => {
+  await openFixture(page, 'session-idle-fresh');
+  await openPanel(page);
+  await arrow(page, 'next').click();
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.compose);
+  await page.keyboard.press('ArrowRight');
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.destination);
+  await expect(arrow(page, 'next')).toBeFocused();
+  await page.keyboard.press('ArrowLeft');
+  await page.keyboard.press('ArrowLeft');
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.drag);
+  await page.keyboard.press('ArrowLeft');
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.drag);
+  await dotOf(page, 8).click();
+  await page.keyboard.press('ArrowRight');
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.topCard);
+  // A modified key is ignored.
+  await page.keyboard.press('Shift+ArrowLeft');
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.topCard);
+  // Outside the carousel (the Close control) the keys do nothing.
+  await panel(page).getByRole('button', { name: 'Close how to play', exact: true }).focus();
+  await page.keyboard.press('ArrowLeft');
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.topCard);
+  // Inside a scene (its pause control) they act.
+  await current(page).getByRole('button', { name: controls.pause, exact: true }).focus();
+  await page.keyboard.press('ArrowLeft');
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.destinationRule);
+  await expect(root(page)).toBeFocused();
+});
+
+test('HP-1 a newly shown scene starts at step 1 and a tap on the current dot does nothing; reopening resets to scene 1', async ({
+  page,
+}) => {
+  await openFixture(page, 'session-idle-fresh');
+  await openPanel(page);
+  await expect.poll(() => stepIds(page)).toContain('drag-step-1');
+  await markLive(page);
+  await dotOf(page, 1).click();
+  expect(await reEntered(page)).toBe(false);
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.drag);
+  await dotOf(page, 4).click();
+  const ids = await stepIds(page);
+  expect(ids).toContain('place-step-0');
+  expect(ids).not.toContain('place-step-2');
+  expect(ids.every((id) => id.startsWith('place-'))).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect(panel(page)).toHaveCount(0);
+  await openPanel(page);
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.drag);
+  await expect(dotOf(page, 1)).toHaveAttribute('aria-current', 'true');
+  await expect.poll(() => stepIds(page)).toContain('drag-step-0');
+});
+
+test('HP-1 a tap pauses and restarts the carousel scene', async ({ page }) => {
+  await openFixture(page, 'session-idle-fresh');
+  await openPanel(page);
+  await arrow(page, 'next').click();
+  await expect.poll(() => stepIds(page)).toContain('compose-step-1');
+  await current(page).getByRole('button', { name: controls.pause, exact: true }).click();
+  const paused = current(page).getByRole('button', { name: controls.restart, exact: true });
+  await expect(paused).toBeVisible();
+  await paused.click();
+  await expect(
+    current(page).getByRole('button', { name: controls.pause, exact: true }),
+  ).toBeVisible();
+  expect(await stepIds(page)).toContain('compose-step-0');
+});
+
+test('HP-1 closed, the carousel keeps no scene and no animation; rapid switching leaves only the current scene animating', async ({
+  page,
+}) => {
+  await openFixture(page, 'session-idle-fresh');
+  await openPanel(page);
+  for (let i = 0; i < 7; i++) await arrow(page, 'next').click();
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.topCard);
+  await expect.poll(() => stepIds(page)).toContain('top-card-step-0');
+  expect((await stepIds(page)).every((id) => id.startsWith('top-card-'))).toBe(true);
+  expect(
+    await page.evaluate(
+      () =>
+        document
+          .getAnimations()
+          .filter(
+            (a) =>
+              !a.id.startsWith('top-card-') &&
+              (a.effect as KeyframeEffect | null)?.target?.closest('figure'),
+          ).length,
+    ),
+  ).toBe(0);
+  await page.keyboard.press('Escape');
+  expect(
+    await page.evaluate(
+      () =>
+        document
+          .getAnimations()
+          .filter((a) => (a.effect as KeyframeEffect | null)?.target?.closest('[role="group"]'))
+          .length,
+    ),
+  ).toBe(0);
+  await expect(panel(page)).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => document.getAnimations().length)).toBe(0);
+});
+
+test('HP-2 with reduced motion Next steps to Replay and Replay returns to Next, each taking focus; a scene change resets the frame', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await openFixture(page, 'session-idle-fresh');
+  await openPanel(page);
+  const next = () => current(page).getByRole('button', { name: controls.next, exact: true });
+  const replay = () => current(page).getByRole('button', { name: controls.replay, exact: true });
+  const tray = () => current(page).locator('[data-scene-el="tray"]');
+  await next().click();
+  await expect(next()).toBeFocused();
+  await next().click();
+  await next().click();
+  await expect(replay()).toBeFocused();
+  await expect(tray()).toHaveCSS('opacity', '1');
+  await replay().click();
+  await expect(next()).toBeFocused();
+  await expect(tray()).toHaveCSS('opacity', '0');
+  for (let i = 0; i < 3; i++) await next().click();
+  await expect(replay()).toBeVisible();
+  await arrow(page, 'next').click();
+  await expect(next()).toBeVisible();
+  await expect(arrow(page, 'next')).toBeFocused();
+  await arrow(page, 'previous').click();
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.drag);
+  await expect(next()).toBeVisible();
+  await expect(tray()).toHaveCSS('opacity', '0');
+  expect(await sceneAnimations(page)).toEqual([]);
+});
+
+test('HP-2 AD-11 toggling reduced motion or resizing re-enters the scene and moves focus from inside the scene to the carousel', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.setViewportSize({ width: 360, height: 740 });
+  await openFixture(page, 'session-idle-fresh');
+  await openPanel(page);
+  const next = current(page).getByRole('button', { name: controls.next, exact: true });
+  await next.click();
+  await next.click();
+  await expect(next).toBeFocused();
+  await page.setViewportSize({ width: 420, height: 740 });
+  await expect(root(page)).toBeFocused();
+  await expect(next).toBeVisible();
+  // Frame 0 again: the transform of the tail is the home one.
+  await expect(current(page).locator('[data-scene-el="tray"]')).toHaveCSS('opacity', '0');
+  await next.click();
+  await expect(next).toBeFocused();
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await expect(root(page)).toBeFocused();
+  await expect(
+    current(page).getByRole('button', { name: controls.pause, exact: true }),
+  ).toBeVisible();
+  await expect.poll(() => stepIds(page)).toContain('drag-step-0');
+});
+
+test('HP-1 AD-11 resize refits the stage; two scenes have equal stage heights; an unchanged card width does not restart the scene', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 360, height: 740 });
+  await openFixture(page, 'session-idle-fresh');
+  await openPanel(page);
+  const stage = () => current(page).locator('[data-scene-el="stage"]');
+  const box = async () => {
+    const b = await stage().boundingBox();
+    if (b === null) throw new Error('no stage box');
+    return b;
+  };
+  const cardWidth = async () => {
+    const b = await current(page).locator('.card').first().boundingBox();
+    if (b === null) throw new Error('no card box');
+    return b.width;
+  };
+  await expect.poll(() => stepIds(page)).toContain('drag-step-1');
+  const first = await box();
+  expect(await cardWidth()).toBeGreaterThanOrEqual(32);
+  await markLive(page);
+  // 361 px: content 329, the floor(content / 8 - 4) card width is still 37: no refit.
+  await page.setViewportSize({ width: 361, height: 740 });
+  await page.waitForTimeout(300);
+  expect(await reEntered(page)).toBe(false);
+  await dotOf(page, 5).click();
+  const other = await box();
+  expect(other.height).toBeCloseTo(first.height, 0);
+  expect(other.width).toBeCloseTo(first.width, 0);
+  await expect.poll(() => stepIds(page)).toContain('scoring-step-1');
+  await markLive(page);
+  await page.setViewportSize({ width: 412, height: 740 });
+  await expect.poll(() => reEntered(page)).toBe(true);
+  const wider = await box();
+  expect(wider.width).toBeGreaterThan(first.width);
+  expect(await cardWidth()).toBeGreaterThanOrEqual(32);
+  await dotOf(page, 2).click();
+  expect((await box()).height).toBeCloseTo(wider.height, 0);
+});
+
+test('HP-1 AD-11 landscape: cards are at least 32 px, the arrows and dots are reachable and at least 44 px, the dots fit two rows', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 740, height: 360 });
+  await openFixture(page, 'session-idle-fresh');
+  await openPanel(page);
+  const cardBox = await current(page).locator('.card').first().boundingBox();
+  expect(cardBox?.width ?? 0).toBeGreaterThanOrEqual(32);
+  // The height cap is wired: the width-only card (content 528 px, w 62) is 60 px on the stage.
+  expect(cardBox?.width ?? 99).toBeLessThan(55);
+  for (const which of ['previous', 'next'] as const) {
+    await arrow(page, which).scrollIntoViewIfNeeded();
+    const b = await arrow(page, which).boundingBox();
+    expect(b?.width ?? 0).toBeGreaterThanOrEqual(44);
+    expect(b?.height ?? 0).toBeGreaterThanOrEqual(44);
+  }
+  await dotOf(page, 8).scrollIntoViewIfNeeded();
+  await dotOf(page, 8).click();
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.topCard);
+  await arrow(page, 'previous').click();
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.destinationRule);
+});
+
+for (const [width, name] of [
+  [360, 'at 360 px'],
+  [300, 'below 288 px of content'],
+] as const) {
+  test(`HP-1 AD-11 ${name} the dots are at least 44 px, in at most two rows inside the content, with no horizontal overflow`, async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-idle-fresh');
+    await openPanel(page);
+    await page.setViewportSize({ width, height: 740 });
+    await expect(dotOf(page, 8)).toBeVisible();
+    const geometry = await page.evaluate(() => {
+      const content = document.querySelector('.panel .content');
+      const inner = document.querySelector('.panel .inner');
+      if (content === null || inner === null) throw new Error('no panel');
+      const rect = inner.getBoundingClientRect();
+      const style = getComputedStyle(inner);
+      const left = rect.left + Number.parseFloat(style.paddingLeft);
+      const right = rect.right - Number.parseFloat(style.paddingRight);
+      const dots = [...document.querySelectorAll('.panel [role="group"] .dot')].map((el) => {
+        const b = el.getBoundingClientRect();
+        return { x: b.x, y: b.y, w: b.width, h: b.height };
+      });
+      return { left, right, dots, overflow: content.scrollWidth > content.clientWidth };
+    });
+    expect(geometry.overflow).toBe(false);
+    expect(geometry.dots).toHaveLength(8);
+    for (const d of geometry.dots) {
+      expect(d.w).toBeGreaterThanOrEqual(44);
+      expect(d.h).toBeGreaterThanOrEqual(44);
+      expect(d.x).toBeGreaterThanOrEqual(geometry.left - 0.5);
+      expect(d.x + d.w).toBeLessThanOrEqual(geometry.right + 0.5);
+    }
+    expect(new Set(geometry.dots.map((d) => Math.round(d.y))).size).toBeLessThanOrEqual(2);
+    const stageBox = await current(page).locator('[data-scene-el="stage"]').boundingBox();
+    expect((stageBox?.x ?? 0) + (stageBox?.width ?? 0)).toBeLessThanOrEqual(geometry.right + 0.5);
+  });
+}
+
+// Animation speed cannot change while the panel is open (LEGAL_TOPS), so a different seeded speed is
+// covered by reopening: the scene keyed on baseMs starts at step 1 with that speed's durations.
+test('HP-1 AD-10 a different Animation speed seeded before opening starts the scene at step 1 with its durations', async ({
+  page,
+}) => {
+  await openFixture(page, 'session-idle-fresh', { prefs: 'prefs-fast' });
+  await openPanel(page);
+  await expect.poll(() => stepIds(page)).toContain('drag-step-0');
+  expect(await stepIds(page)).not.toContain('drag-step-2');
+  const fast = (await sceneAnimations(page)).find((a) => a.id === 'drag-step-0')?.duration ?? 0;
+  await page.keyboard.press('Escape');
+  await expect(panel(page)).toHaveCount(0);
+  await openPanel(page);
+  await expect.poll(() => stepIds(page)).toContain('drag-step-0');
+  expect(await stepIds(page)).not.toContain('drag-step-2');
+  expect((await sceneAnimations(page)).find((a) => a.id === 'drag-step-0')?.duration).toBe(fast);
+});

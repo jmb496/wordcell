@@ -7,6 +7,11 @@ import {
   bands,
   cardMetrics,
   cardWidth,
+  SCENE_BASE,
+  type SceneStageInputs,
+  sceneBaseHeight,
+  sceneFit,
+  sceneStageHeight,
   shouldRecomputeWidth,
   trayGrowth,
 } from './geometry';
@@ -415,5 +420,77 @@ describe('geometry', () => {
     expect(rangeMax(at780, 780)).toBe(0);
     expect(rangeMin(at710, 710)).toBe(0);
     expect(rangeMax(at710, 710)).toBe(28);
+  });
+});
+
+// Epic 8 ticket 6 (HP-1, AD-11): the How to play scene stage fit. Inputs: the scenes' tallest column
+// (9 cards) and WordCell stack (6) and 2 tray rows; the stage height is the base height scaled by
+// the slot ratio.
+describe('AD-11 sceneFit: the card width and stage height of the How to play stage', () => {
+  const inputs: SceneStageInputs = { columnCards: 9, trayRows: 2, cellCards: 6 };
+  const tall = 100_000;
+
+  it('AD-11 the base height sums columns, foot row, tray, labels and the tallest stack', () => {
+    const { strip, cardH, foot, gap, trayFirstRow, trayExtraRow, labels } = SCENE_BASE;
+    expect(sceneBaseHeight(inputs)).toBe(
+      8 * strip +
+        cardH +
+        foot +
+        gap +
+        (trayFirstRow + trayExtraRow) +
+        gap +
+        labels +
+        (5 * strip + cardH),
+    );
+    expect(SCENE_BASE.slot).toBe(cardMetrics(40).slot);
+  });
+
+  it('AD-11 the stage height scales with the slot, identical for any scene at a width', () => {
+    expect(sceneStageHeight(40, inputs)).toBe(sceneBaseHeight(inputs));
+    const h = (w: number) => sceneStageHeight(w, inputs);
+    expect(h(32)).toBeLessThan(h(37));
+    expect(h(37)).toBe(Math.round((sceneBaseHeight(inputs) * cardMetrics(37).slot) / 44));
+  });
+
+  it('AD-11 the width term is floor(content / 8 - 4) when the stage fits the box', () => {
+    for (const content of [328, 360, 528, 288]) {
+      const fit = sceneFit(content, tall, inputs);
+      expect(fit.cardWidth).toBe(Math.floor(content / 8 - 4));
+      expect(fit.stageHeight).toBe(sceneStageHeight(fit.cardWidth, inputs));
+    }
+  });
+
+  it('AD-11 at the 328 px content width of a 360 px viewport the card is at least 32 px', () => {
+    expect(sceneFit(328, 692, inputs).cardWidth).toBeGreaterThanOrEqual(32);
+    expect(sceneFit(328, 100, inputs).cardWidth).toBe(32);
+  });
+
+  it('AD-11 a short box caps the width by height but never below 32 px (landscape)', () => {
+    const wide = sceneFit(528, tall, inputs).cardWidth;
+    const capped = sceneFit(528, 480, inputs);
+    expect(capped.cardWidth).toBeLessThan(wide);
+    expect(capped.cardWidth).toBeGreaterThanOrEqual(32);
+    expect(capped.stageHeight).toBeLessThanOrEqual(480);
+    // One more pixel of card width would not fit the box.
+    expect(sceneStageHeight(capped.cardWidth + 1, inputs)).toBeGreaterThan(480);
+    expect(sceneFit(528, 200, inputs).cardWidth).toBe(32);
+  });
+
+  it('AD-11 below 288 px content the width term wins: no horizontal overflow', () => {
+    for (const content of [287, 280, 240, 200]) {
+      const fit = sceneFit(content, 100, inputs);
+      expect(fit.cardWidth).toBe(Math.floor(content / 8 - 4));
+      expect(fit.cardWidth).toBeLessThan(32);
+      expect(cardMetrics(fit.cardWidth).board).toBeLessThanOrEqual(content);
+    }
+  });
+
+  it('AD-11 the board always fits the content width', () => {
+    for (let content = 200; content <= 528; content += 7) {
+      for (const box of [150, 400, 700, tall]) {
+        const fit = sceneFit(content, box, inputs);
+        expect(cardMetrics(fit.cardWidth).board).toBeLessThanOrEqual(content);
+      }
+    }
   });
 });
