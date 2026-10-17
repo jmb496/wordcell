@@ -1,6 +1,6 @@
 # Review log — story-scene-carousel-and-whole-play-area-stage
 
-State: pass 4: done
+State: pass 5: done
 Pre-loop: HEAD 2a2ae35, words 270, budget 1500 words (stub), copy /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-how-to-play-scenes/story-scene-carousel-and-whole-play-area-stage.passes/pass0.md
 Intent extra (tickets.toml entry 6, not yet in the ticket): interface = "src/ui/scenes/ (carousel, stage), HowToPlayPanel.svelte, text.ts howTo control names."; tests = "Carousel behaviour (P6 android); stage structure (U); screenshots (screens)."; owns = "The carousel and the shared play-area stage."; unknown = "How to fit eight columns plus the tray inside the phone-width panel at readable card size; reuse the layout measuring of src/ui/layout/."; verify = (as in Acceptance Criteria); risk = medium.
 
@@ -63,3 +63,15 @@ Reviewers: fix-diff, edge-case, adversarial, ref-alignment  |  Findings: major 5
 ### Applied
 - 4 majors and 1 minor (fit inputs and floor precedence, filler without unique CardIds, scrollbar-stable no-op re-fit, Animation speed dropped from the in-panel test and covered by reopening, hidden-wait wording) → fixer items 1–5
 Words: 1476 (5.5 x pass 0; budget 1500)  |  Snapshot: _bmad-output/initiative-wordcell-v1/epic-how-to-play-scenes/story-scene-carousel-and-whole-play-area-stage.passes/pass4.md
+
+## Pass 5 — 2026-10-17
+Reviewers: fix-diff, edge-case, adversarial, ref-alignment  |  Findings: major 3, minor 9, decision-needed 0  |  Dropped in triage: 0 (height-reserve and filler-unrelated precision items reclassified minor)
+### Default applied (technical)
+- Same focus rule on every re-entry (resize, reduced-motion toggle) and when Next becomes Replay at the final frame: focus moves to Replay / the carousel root, never body; assertions added.
+- Filler letters: a fixed deterministic sequence constant in src/ui/scenes/, pinned by the stage unit test (no randomness).
+- Minors applied at near-zero words: Panel.svelte named in the interface (shared `.content` gutter; other panel baselines may shift); accessible name stays "Next", "Next frame" is prose.
+### Unapplied minors (over budget / build-plan detail)
+- Height reserve for controls in the card-width function; maxima constant source; getAnimations filtering of non-carousel animations; "idle" wording; position announcement on arrow press; "visible" 5 cards; two visibility sources.
+### Applied
+- 3 majors and 2 minors (focus on every re-entry, focus to Replay at the final frame, deterministic filler letters; Panel.svelte in interface, "Next" name) → fixer items 1–5
+Words: 1483 (5.5 x pass 0; budget 1500)  |  Snapshot: _bmad-output/initiative-wordcell-v1/epic-how-to-play-scenes/story-scene-carousel-and-whole-play-area-stage.passes/pass5.md
