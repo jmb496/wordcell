@@ -1,6 +1,6 @@
 # Review log — story-scene-carousel-and-whole-play-area-stage
 
-State: pass 3: done
+State: pass 4: done
 Pre-loop: HEAD 2a2ae35, words 270, budget 1500 words (stub), copy /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-how-to-play-scenes/story-scene-carousel-and-whole-play-area-stage.passes/pass0.md
 Intent extra (tickets.toml entry 6, not yet in the ticket): interface = "src/ui/scenes/ (carousel, stage), HowToPlayPanel.svelte, text.ts howTo control names."; tests = "Carousel behaviour (P6 android); stage structure (U); screenshots (screens)."; owns = "The carousel and the shared play-area stage."; unknown = "How to fit eight columns plus the tray inside the phone-width panel at readable card size; reuse the layout measuring of src/ui/layout/."; verify = (as in Acceptance Criteria); risk = medium.
 
@@ -49,3 +49,17 @@ Reviewers: fix-diff, edge-case, adversarial, ref-alignment  |  Findings: major 8
 ### Applied
 - 8 majors and 4 minors (hidden-tab per player, focus and keys, keyed re-entry, vertical bounds, static card attributes, layout reuse, fit formula, filler placement; content width, exit placeholder, AC wording, locators) → fixer items 1–12
 Words: 1393 (5.2 x pass 0; budget 1500, nearly reached)  |  Snapshot: _bmad-output/initiative-wordcell-v1/epic-how-to-play-scenes/story-scene-carousel-and-whole-play-area-stage.passes/pass3.md
+
+## Pass 4 — 2026-10-17
+Reviewers: fix-diff, edge-case, adversarial, ref-alignment  |  Findings: major 5 (after merge), minor 9, decision-needed 0  |  Dropped in triage: 0
+### Default applied (technical)
+- Card-width function takes panel content width, visible panel height and the scenes' max column cards / tray rows; the 32 px floor wins over the height cap (below it the panel scrolls); unit cases for a short height.
+- Filler cards need no unique CardId (static cards render no id; the 52-card deck cannot hold 40 filler cards plus scripts): keyed by render key; drop the no-repeat-id assertion.
+- Re-fit is a no-op when the integer card width is unchanged; width measured so a scrollbar appearing does not change it (scrollbar-gutter: stable or the .inner box); test that an idle scene does not restart.
+- Animation speed re-entry test drives the preference through the existing test hook or seeded prefs (Preferences cannot open over How to play, LEGAL_TOPS); verify the mechanism exists, else cover it by reopening.
+- Minors applied at zero added words: paused-during-hidden wording follows player.ts; one 328 px content width named for a 360 px viewport.
+### Unapplied minors (over budget)
+- Keys and no-swipe follow APG research, not named in the owner decision (covered by the decision-needed item of pass 3); position announcement on arrow press; root focus ring; stage extra-height look; cardWidth gutter arithmetic.
+### Applied
+- 4 majors and 1 minor (fit inputs and floor precedence, filler without unique CardIds, scrollbar-stable no-op re-fit, Animation speed dropped from the in-panel test and covered by reopening, hidden-wait wording) → fixer items 1–5
+Words: 1476 (5.5 x pass 0; budget 1500)  |  Snapshot: _bmad-output/initiative-wordcell-v1/epic-how-to-play-scenes/story-scene-carousel-and-whole-play-area-stage.passes/pass4.md
