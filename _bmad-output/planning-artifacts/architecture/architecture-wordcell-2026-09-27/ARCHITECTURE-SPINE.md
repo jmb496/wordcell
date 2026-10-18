@@ -301,8 +301,11 @@ sequenceDiagram
     touches `localStorage`.
   - Formats: JSON. Session = the spec §2 object, exact field names, `version` first, optional
     fields absent (never `null`). History = `{ version, records }`. Prefs = `{ version,
-    animationSpeed: 'fast' | 'normal' | 'slow', showTimer }`, defaults `normal` (A-E8) and
-    `false` (R-76). All start at version `1`.
+    animationSpeed: 'fast' | 'normal' | 'slow', showTimer, theme? }`, defaults `normal` (A-E8),
+    `false` (R-76) and `default` (Charcoal, Q-45). `theme` is optional, one of `default`,
+    `scifi`, `garden`, `steampunk`, `paper`, `plum`; a stored v1 prefs without it is valid and
+    means `default`, and an unknown or non-string value is `contents-unreadable`, so Q-36 applies
+    unchanged. All start at version `1`; adding `theme` does not bump it.
   - `parseSession(text, lang)` returns `{ ok: true, session } | { ok: false, reason }`, `reason` one of
     `version-unreadable`, `version-unknown { version }`, `replay-failed { version }` (schema or
     any replay violation). `parseHistory` returns `{ ok: true, history: ScoreHistory }` (`ScoreHistory` =
@@ -437,7 +440,11 @@ sequenceDiagram
   A-E8; `reduced` from a `matchMedia('(prefers-reduced-motion: reduce)')` listener) and mirrors
   it onto the root as `--wc-base-ms` and `--wc-reduced`. Animations are Web Animations API FLIP
   transitions whose durations come only from `src/ui/motion.ts`, which also produces the
-  reduced-motion 120 ms fade; CSS transitions use `--wc-base-ms`.
+  reduced-motion 120 ms fade; CSS transitions use `--wc-base-ms`. It also exposes `theme`
+  (default `default`, Q-45) and mirrors it onto the root as `data-theme` and onto the
+  `theme-color` meta, from a theme-id to meta-colour table kept in the UI theme module
+  (`src/ui/theme/`, the meta write needs the DOM); a theme change writes through the same
+  immediate path, applies with no animation and never touches the Session.
 
 ### AD-11 — Layout: one band-order definition, pure geometry, two kinds of recompute
 
@@ -724,7 +731,8 @@ sequenceDiagram
 - **Rule:**
   - Boot order: `nav` launch, awaited (rewind, its `popstate`, then `replaceState`, AD-13) →
     font check (AD-15; nothing
-    written yet) → load prefs → load Session and history (AD-7; during boot, a fresh Session is
+    written yet) → load prefs, and apply `data-theme` and the `theme-color` meta synchronously, before mount
+    and first paint (Q-45) → load Session and history (AD-7; during boot, a fresh Session is
     written only at this step) → create the pointer controller (AD-9, AD-12) → register the
     store's lifecycle listeners, then `clock.resume(now)` iff
     `document.visibilityState === 'visible'` (AD-9) → push boot surfaces (without user activation;
@@ -747,7 +755,7 @@ sequenceDiagram
   - Manifest exactly per DESIGN.md A-D5; icons 192/512 `any` and 512 `maskable` rendered from
     committed SVG sources by `scripts/build-icons.mjs` (Playwright Chromium screenshot) and
     committed `[ASSUMPTION A-A7]`. No install prompt handling: Chrome's native install UI only
-    (brief §7). `index.html` carries `viewport-fit=cover`, `theme-color` `#15171B`, title
+    (brief §7). `index.html` carries `viewport-fit=cover`, `theme-color` `#15171B` (the Charcoal value; the prefs apply overwrites it for another theme), title
     `WordCell`, and a preload for the font.
 
 ### AD-17 — Test seams and the test split

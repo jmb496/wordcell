@@ -10,7 +10,7 @@ sources:
   - docs/requirements-carryover.md
   - docs/platform-decision.md
   - CLAUDE.md
-colors:
+colors: # Charcoal, the default theme; every theme sets the same 18 names (see Themes)
   table: '#15171B'
   surface: '#1E2127'
   surface-raised: '#282C34'
@@ -190,9 +190,24 @@ the drop target under a drag, legal WordCells). **Orange** marks commit actions 
 free letter); every primary commit action is listed in Components → Buttons. A muted blue marks
 the destination block, which the player can resize but never rearrange (R-32).
 
-One dark theme in v1. [ASSUMPTION A-D1]
+WordCell ships with six themes (Charcoal, Deep Space, Greenhouse Dusk, Brass and Walnut, Daylight
+Paper, Plum Dusk), chosen by hand in Preferences, never from `prefers-color-scheme` (Q-45).
+Charcoal is the default and is what the token values in this file describe. Every theme is a
+complete set of `--wc-*` tokens (plus optional table and card-face art); components never name a
+colour, so the principles below hold for all of them and only the specific values differ.
+[ASSUMPTION A-D1, amended 2026-10-18]
 
 ## Colors
+
+Theme-neutral rules (every theme): colours come only from `--wc-*` tokens, never a literal in
+`src/**` outside the token files; each token keeps its role below; every theme meets these
+contrast floors, which a unit test computes from the theme's token values: card ink on card face
+≥ 13.1:1; outline on table ≥ 3.8:1 and on surface ≥ 3.4:1; card edge on table ≥ 3.6:1 and on
+surface ≥ 3.2:1; ink secondary on surface ≥ 6.4:1 and on surface raised ≥ 5.6:1; accent teal on
+surface ≥ 7:1 and on card face ≥ 6.6:1; ink on accent orange ≥ 6.4:1; card ink on destination
+fill ≥ 9.9:1; error on surface ≥ 6.7:1. No state relies on hue alone. The token names
+`accent-teal` and `accent-orange` stay in every theme even where the colour is cyan, sage or
+copper. The values and ratios below are **Charcoal's**.
 
 - **Table (`#15171B`)** is the page background behind the board and the top bar. It stays darker
   than every card so the card edges read without shadows.
@@ -203,7 +218,7 @@ One dark theme in v1. [ASSUMPTION A-D1]
 - **Card face (`#23262C`) / card edge (`#6A707C`) / card ink (`#F3EEE4`)** make every card. The
   edge is 3.6:1 on table and 3.2:1 on surface, so a card's outline and a tray tile's outline read
   without shadows (WCAG 1.4.11). Placeholder slots stay distinct from cards by their 2 px dashed
-  outline. Ivory on charcoal is 13.1:1,
+  outline. Charcoal's ivory on charcoal is 13.1:1,
   so letters stay legible at the smallest card (40 px wide at a 360 px viewport).
 - **Ink primary / secondary / disabled** are UI text. Secondary on surface is 6.4:1. Disabled on
   surface raised is 2.49:1; it is used only for inactive controls, which WCAG exempts. In Composing, a disabled Validate
@@ -222,8 +237,28 @@ One dark theme in v1. [ASSUMPTION A-D1]
   error dot and the danger button. 6.7:1 on surface. There is no red fill behind game content.
 - **Scrim (`#000000B3`)** dims the board under dialogs, sheets and the WordCell view.
 
-Avoid: gradients on cards, colour-coded letters, green "success" states (a valid word simply
-advances), any third interaction accent.
+Avoid: colour-coded letters, any third interaction accent, and green "success" states (a valid
+word simply advances and nothing turns green on success). Greenhouse Dusk's green is its "act
+here" accent and its table, never a success signal. Gradients on cards stay out; the card-face
+textures of Deep Space, Greenhouse Dusk and Brass and Walnut are flat tiled patterns at 6 % opacity
+or less, accepted for now and removable after gameplay feel (owner, 2026-10-18).
+
+### Themes
+
+Charcoal is the default; Deep Space (`scifi`), Greenhouse Dusk (`garden`), Brass and Walnut
+(`steampunk`), Daylight Paper (`paper`, the only light theme) and Plum Dusk (`plum`) are
+alternates. Until each theme ticket lands its values here, its token set is the one in
+`_bmad-output/initiative-wordcell-v1/epic-themes/research/brief.md` (data in `research/tools/themes.mjs`).
+
+- A theme may add a **table background** and a **card-face texture**: tileable art that is theme
+  data applied through tokens. Art never changes layout or card size, and letters keep the card-ink
+  floor measured over the worst point of the texture. Card backs are never shown, so they are out
+  of scope.
+- The manifest `theme_color` and `background_color` stay Charcoal's `#15171B`; the `theme-color`
+  meta follows the active theme (AD-16). The scrim stays dark in every theme.
+- A theme also sets `color-scheme` (`light` for Daylight Paper, `dark` otherwise) and the four
+  internal tokens that are not colour roles (`--wc-shadow-drag` and the three `--wc-scene-pointer-*`
+  tokens), so a theme is complete when it defines all 18 roles plus those.
 
 ## Typography
 
@@ -664,7 +699,7 @@ matches the sprite's. [ASSUMPTION A-D6]
 
 | Do | Don't |
 |---|---|
-| Teal only for "act here", orange only for "commit", the ×2 badge and the next-free-letter star | Add a third interaction accent beyond teal and orange (destination blue and error red are status colours; the error fill also marks the danger buttons), or colour-code letters |
+| The act accent (`accent-teal`) only for "act here", the commit accent (`accent-orange`) only for "commit", the ×2 badge and the next-free-letter star | Add a third interaction accent beyond teal and orange (destination blue and error red are status colours; the error fill also marks the danger buttons), or colour-code letters |
 | Pair every colour state with a shape or glyph (lock, hatch, ring, star, ✕) | Signal a state by hue alone |
 | Keep every target ≥ 44 × 44 px, including card strips and the foot pads | Shrink strips below 44 px to fit more; wrap or scroll instead |
 | Keep the tray band's height fixed across Idle, Composing and Place (one exception: a word beyond two compact rows grows it) | Let the columns jump when the tray opens |
@@ -680,7 +715,7 @@ Jared confirmed every assumption below on 2026-09-27; the `[ASSUMPTION]` tags st
 
 | Id | Assumption | Where |
 |---|---|---|
-| A-D1 | One dark theme in v1; no light theme and no `prefers-color-scheme` switch. | Brand & Style |
+| A-D1 | Six themes, chosen by hand in Preferences, Charcoal the default; no `prefers-color-scheme` switch (amended 2026-10-18 from "one dark theme in v1", Q-45). | Brand & Style |
 | A-D2 | Card letters use a bundled static instance subset of Fraunces (SIL OFL) at wght 600, opsz 48, SOFT 0, WONK 0, precached with the app shell with `font-display: block`, not the system serif; the spine's size ratios are set for that face, so a substitute needs a spine change. | Typography |
 | A-D3 | Minimum supported viewport is 360 × 750 CSS px (722 px at H = 53 plus a 24 px inset allowance is 746 px, rounded up to 750, so it covers up to 28 px of insets). The page scrolls exactly when 722 + actual insets > innerHeight; 750 is only the supported-device floor. Below 750 px tall the page may scroll vertically; the exact trigger is the height-rule inequality 722 + actual insets > innerHeight. When the board is wider than the available width (below 360 px wide) the layout keeps 44 px targets and the page pans horizontally. | Layout & Spacing |
 | A-D4 | Long words switch tiles to 44 px compact height and wrap; r compact rows grow the band by max(0, r × 44 + (r − 1) × 4 − max(H, 92)) px (+48 / +96 for 3 / 4 rows on phones, +47 / +95 at H = 93), taken from the leftover band first (the columns and the tray shift up; the top bar, the WordCell row, the 8 px gap and the action bar stay); once the leftover is used up the document grows at the top and the shell adjusts `scrollTop` by the same amount, so the WordCell row, the 8 px gap and the action bar keep their screen position and the columns scroll partly under the sticky top bar; the page scrolls back up from the `pan-y` regions; a Playwright test checks the WordCell row's bounding box is unchanged after the growth. Applied after the edit completes; hit rects are recomputed before the next gesture. | Layout & Spacing |
