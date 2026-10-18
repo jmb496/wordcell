@@ -3,7 +3,7 @@ title: 'Token plumbing and contrast harness'
 type: 'feature'
 ticket: 'story-token-plumbing-and-contrast-harness'
 created: '2026-10-18'
-status: 'built'
+status: done
 baseline_revision: '1e8ea3fb408e4d78c6f32111707dc9b5176a2a9e'
 route: 'full'
 route_source: 'auto'

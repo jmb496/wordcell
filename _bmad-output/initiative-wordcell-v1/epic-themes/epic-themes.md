@@ -65,3 +65,4 @@ The visual layer: `src/ui/app.css` and token files, `src/ui/` components' colour
 - Unknown: whether any `src/**` colour is still a literal beyond `Scene.svelte`; entry 3 finds out with the TH-2 scan.
 - Unknown: whether `Scene.svelte` hex values are scene art that should stay fixed or tokens.
 - Waits on epic-how-to-play-scenes because: the How to play scenes use `Card` and Scene colours, which themes must cover, and epic 8 is accepted done (2026-10-18).
+- Decision (owner, 2026-10-18): entry 7 split per theme once 9.2 closed: 9.6 Daylight Paper (first alternate, light, no art), 9.7 Deep Space, 9.8 Greenhouse Dusk, 9.9 Brass and Walnut, 9.10 Plum Dusk, in sequence (all edit app.css and PreferencesPanel); the refactor sweep is now 9.11. 9.2 and 9.3 marked done.

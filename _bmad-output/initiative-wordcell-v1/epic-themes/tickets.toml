@@ -88,38 +88,76 @@ references = ["design — DESIGN.md Brand & Style, Avoid list (gradients on card
 [[entry]]
 id = 6
 type = "story"
-title = "First alternate theme: colour variation"
-description = "Builds the first owner-chosen simple colour variation of the current look as a token set selectable in Preferences, covering all surfaces, states and the How to play scenes, with its contrast test and a screenshot baseline set (board, tray, a sheet, a scene) generated in the Playwright container."
+title = "Theme: Daylight Paper"
+description = "Builds the Daylight Paper theme (id `paper`, the only light theme, `color-scheme: light`, no art) as the first alternate and the proof of the theme mechanism: a token set selectable in Preferences, covering all surfaces, states and the How to play scenes, with its contrast test and a screenshot baseline set (board, tray, a sheet, a scene) generated in the Playwright container."
 verify = "npm run test:all and npm run test:screens are green with the new theme's baselines committed, the contrast test passes for it, and a Playwright android test switches to it and back with the default baselines unchanged."
 covers = ["TH-5", "TH-6", "TH-3"]
 after = [1, 4]
 hitl = false
 risk = "low"
 done_checkpoint = true
-references = ["design — the entry 1 brief, chosen direction"]
+references = ["design — the entry 1 brief, direction Daylight Paper", "design — DESIGN.md Themes"]
 
 [[entry]]
 id = 7
 type = "story"
-title = "Art themes from the brief (sci-fi, garden, steampunk as chosen)"
-description = "Builds the themed directions the owner chose in entry 1 using the colour tokens and the art layer of entry 5, with a contrast test and a screenshot baseline set each. To be split per theme when entry 2 closes, by revisiting the breakdown with the owner."
-verify = "npm run test:all and npm run test:screens are green with baselines for each chosen theme, the worst-point contrast test passes for each, the size budget holds, and the owner has played each theme on his Android install."
+title = "Theme: Deep Space"
+description = "Builds the Deep Space theme (id `scifi`) from the 9.1 brief and DESIGN.md Themes: its token set in src/ui/app.css, using the art layer of entry 5 for the 48 px grid table and scan-line card face, selectable in Preferences, covering all surfaces, states and the How to play scenes, with its contrast test (worst-point and pixel-sampled over the texture) and a screenshot baseline set (board, tray, a sheet, a scene) generated in the Playwright container."
+verify = "npm run test:all and npm run test:screens are green with the theme's baselines committed, the contrast test passes for it, the size budget holds, a Playwright android test switches to it and back with the default baselines unchanged, and the owner has played it on his Android install."
 covers = ["TH-5", "TH-6", "TH-9", "TH-8"]
 after = [5, 6]
 hitl = false
-risk = "high"
-unknown = "Which themes the owner picks and how much art each needs; the entry is sliced per theme once entry 1 is decided."
+risk = "medium"
 done_checkpoint = true
-references = ["design — the entry 1 brief, chosen directions"]
+references = ["design — the entry 1 brief, direction Deep Space", "design — DESIGN.md Themes"]
 
 [[entry]]
 id = 8
+type = "story"
+title = "Theme: Greenhouse Dusk"
+description = "Builds the Greenhouse Dusk theme (id `garden`) from the 9.1 brief and DESIGN.md Themes: its token set in src/ui/app.css, using the art layer for the leaf-vein table and paper-fibre card face, selectable in Preferences, covering all surfaces, states and the How to play scenes, with its contrast test (worst-point and pixel-sampled over the texture) and a screenshot baseline set (board, tray, a sheet, a scene) generated in the Playwright container."
+verify = "npm run test:all and npm run test:screens are green with the theme's baselines committed, the contrast test passes for it, the size budget holds, a Playwright android test switches to it and back with the default baselines unchanged, and the owner has played it on his Android install."
+covers = ["TH-5", "TH-6", "TH-9", "TH-8"]
+after = [5, 7]
+hitl = false
+risk = "medium"
+done_checkpoint = true
+references = ["design — the entry 1 brief, direction Greenhouse Dusk", "design — DESIGN.md Themes"]
+
+[[entry]]
+id = 9
+type = "story"
+title = "Theme: Brass and Walnut"
+description = "Builds the Brass and Walnut theme (id `steampunk`) from the 9.1 brief and DESIGN.md Themes: its token set in src/ui/app.css, using the art layer for the wood-grain table and leather card face, selectable in Preferences, covering all surfaces, states and the How to play scenes, with its contrast test (worst-point and pixel-sampled over the texture) and a screenshot baseline set (board, tray, a sheet, a scene) generated in the Playwright container."
+verify = "npm run test:all and npm run test:screens are green with the theme's baselines committed, the contrast test passes for it, the size budget holds, a Playwright android test switches to it and back with the default baselines unchanged, and the owner has played it on his Android install."
+covers = ["TH-5", "TH-6", "TH-9", "TH-8"]
+after = [5, 8]
+hitl = false
+risk = "medium"
+done_checkpoint = true
+references = ["design — the entry 1 brief, direction Brass and Walnut", "design — DESIGN.md Themes"]
+
+[[entry]]
+id = 10
+type = "story"
+title = "Theme: Plum Dusk"
+description = "Builds the Plum Dusk theme (id `plum`) from the 9.1 brief and DESIGN.md Themes: its token set in src/ui/app.css, tokens only, no art, selectable in Preferences, covering all surfaces, states and the How to play scenes, with its contrast test and a screenshot baseline set (board, tray, a sheet, a scene) generated in the Playwright container."
+verify = "npm run test:all and npm run test:screens are green with the theme's baselines committed, the contrast test passes for it, the size budget holds, a Playwright android test switches to it and back with the default baselines unchanged, and the owner has played it on his Android install."
+covers = ["TH-5", "TH-6", "TH-9", "TH-8"]
+after = [6, 9]
+hitl = false
+risk = "low"
+done_checkpoint = true
+references = ["design — the entry 1 brief, direction Plum Dusk", "design — DESIGN.md Themes"]
+
+[[entry]]
+id = 11
 type = "story"
 title = "Refactor sweep: docs, budget and cleanup"
 description = "Removes dead tokens and any temporary theme scaffolding, confirms the spec, UX docs and spine match what was built, measures the bundle against the 600,000-byte budget and records the margin, and lists review findings deferred during the epic."
 verify = "npm run test:all and npm run test:screens are green, the build size is under 600,000 bytes with the margin recorded, and no unused token or theme scaffolding remains."
 covers = ["TH-7", "TH-8"]
-after = [3, 4, 5, 6, 7]
+after = [3, 4, 5, 6, 7, 8, 9, 10]
 hitl = false
 risk = "low"
 done_checkpoint = true
