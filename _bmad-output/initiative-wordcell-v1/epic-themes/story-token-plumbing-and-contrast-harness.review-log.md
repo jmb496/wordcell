@@ -1,5 +1,5 @@
 # Review log — story-token-plumbing-and-contrast-harness.md
-State: pass 5: done
+State: pass 6: done
 Mode: docs, thorough, max 7. Pre-loop: HEAD 5438993ba12759a9f9d89ccede9e911753dbc47f, 180 words (growth budget ~1500 words, stub being fleshed out).
 
 ## Pass 1 — 2026-10-18
@@ -66,3 +66,17 @@ Words (docs): 1492 (8.3 x pass 0; budget ~1500)  |  Snapshot: story-token-plumbi
 - all of the above
 ### Decision needed
 - none
+
+## Pass 6 — 2026-10-18
+Reviewers: fix diff, edge-case hunter, builder's reading, ref alignment  |  Findings: major 0, minor 0, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1492 (unchanged; no fix pass)
+
+## Result — converged after 6 passes
+Majors per pass: 10, 9, 5, 3, 2, 0. No decision-needed items; all choices were technical defaults (tokenise Scene colours, UI-layer placement under src/ui/theme/, floor plus round1 threshold rule, scan(path, text, knownTokens), closed runtime allowlist).
+Words 180 → 1492.
+
+Unapplied minors (for the build plan):
+- Colour-function patterns in script strings need a left word/hyphen boundary (`getColor(`).
+- `font` shorthand is not in the named-colour exclusion list (unquoted family names that are colour words).
+- A comma list of several `[data-theme]` ids: one identical record per id; a `:root`-only rule with `--wc-*` declarations should be absent or fail.
+- var() fallback form (`var(--wc-hover-from, 0)`) and case-sensitive NAME match (`--wc-H`) are unstated; both names are allowlisted today.
