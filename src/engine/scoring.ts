@@ -25,7 +25,7 @@ export function finalScore(position: Position, gaveUp: boolean, lang: LangData):
   return liveScore(position.cells, lang) - (gaveUp ? penalty(position.columns, lang) : 0);
 }
 
-/** R-83 band 0–5: count of thresholds met by `score × BAND_DENOMINATOR ≥ t × maxScore`. */
+/** R-83 band 0–9: count of thresholds met by `score × BAND_DENOMINATOR ≥ t × maxScore`. */
 export function band(score: number, lang: LangData): number {
   return BAND_THRESHOLDS.filter((t) => score * BAND_DENOMINATOR >= t * lang.maxScore).length;
 }

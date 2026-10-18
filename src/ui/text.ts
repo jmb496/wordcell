@@ -47,14 +47,24 @@ const phaseComposing = (word: string, n: number): string =>
 const phasePlace = (word: string, n: number): string =>
   `Place. ${word.toUpperCase()}, ${letters(n)}.`;
 
-// EXPERIENCE.md Rating bands (A-E2), keyed by the view's `band` 0–5 (no threshold logic here).
+// EXPERIENCE.md Rating bands (A-E2), keyed by the view's `band` 0–9 (no threshold logic here).
 const BANDS = [
-  { name: 'Alphabet Soup', message: 'Plenty of letters, not much broth. The deck forgives you.' },
+  {
+    name: 'Just Getting Started',
+    message: 'Every word has to start somewhere. Lovely first steps!',
+  },
   { name: 'Warming Up', message: 'The cells are waking up.' },
-  { name: 'Word Nerd', message: 'Halfway to glory, and it shows.' },
+  { name: 'Word Explorer', message: "You're finding your way around the deck." },
+  { name: 'Word Nerd', message: 'The words are flowing now.' },
   { name: 'Wordsmith', message: 'Long words, high cells. Nicely forged.' },
+  { name: 'Word Wizard', message: 'That is some real word magic.' },
+  { name: 'Lexicon Pro', message: 'Impressive: the dictionary is taking notes.' },
   { name: 'Lexicon Legend', message: 'The dictionary is a little afraid of you.' },
-  { name: 'Perfect Deck', message: 'Fifty-two cards, one cell. Nothing left to prove.' },
+  { name: 'Nearly Impossible', message: 'Scores like this are almost unheard of. Astonishing!' },
+  {
+    name: 'You Cheated',
+    message: 'Every single card placed. We have no idea how, but we are very impressed.',
+  },
 ] as const;
 
 function bandOf(band: number): (typeof BANDS)[number] {
@@ -64,57 +74,38 @@ function bandOf(band: number): (typeof BANDS)[number] {
   return entry;
 }
 
-/** The six band names in band 0–5 order (How to play, ticket 6.9; no copy of the table). */
+/** The ten band names in band 0–9 order (How to play, ticket 6.9; no copy of the table). */
 export function bandNames(): readonly string[] {
   return BANDS.map((b) => b.name);
 }
 
-// EXPERIENCE.md Rating bands "English score" column (R-83: ceil(t × 530 / 520); the engine `band`
-// is not exported, AD-2). Static strings, no threshold logic.
+// EXPERIENCE.md Rating bands "English score" column (R-83: thresholds in steps of 50 of the English
+// maximum 530; the engine `band` is not exported, AD-2). Static strings, no threshold logic.
 const BAND_SCORES = [
-  'below 159',
-  '159 or more',
-  '265 or more',
-  '378 or more',
-  '469 or more',
-  '530 (every card placed)',
+  'below 50',
+  '50 or more',
+  '100 or more',
+  '150 or more',
+  '200 or more',
+  '250 or more',
+  '300 or more',
+  '350 or more',
+  '400 to 529',
+  '530 (perfect)',
 ] as const;
 
 // How to play panel (ticket 6.9, CAP-8; EXPERIENCE.md How to play panel; spec §3–§6, §8, §9). The
 // owner reads this text at ticket review. Each section body is a list of paragraphs.
 const howTo = {
   goal: [
-    'Empty all eight columns by placing words on the WordCells. A word placed on a high-numbered cell scores more, so long words on high cells score most.',
-  ],
-  table: [
-    'The table has eight columns of cards, 52 cards in all, and eight WordCells numbered 3 to 10 above them. Only the bottom card of a column can be picked up alone; a stack tail is that card and every card above it that you pick up with it.',
-    'The top card of a WordCell is a free letter: it can join one word, once, and its cell then shows the card beneath. One card, QU, counts as two letters everywhere, including scoring, and carries a \u00d72 badge.',
-  ],
-  move: [
-    'Pick up a stack tail, by dragging it or by tapping a card, and drop it on a column, its own included. The tail goes into the word you are composing.',
-    'If the column you drop on is not empty, at least one of its bottom cards must join the word (the destination block, locked in order). Choose how many with \u2212 and +, or by tapping a card in that column. Flip puts the block at the other end, reversed. Dropping on an empty column adds no destination cards.',
-    'Add free letters by tapping a WordCell\u2019s top card, and arrange the cards you moved and the free letters in any order. The word needs three or more letters and must be in the word list; tap Validate to check it.',
-    'Then choose a WordCell no higher than the word is long (the highest is already chosen), order the cards for placement, and tap Confirm.',
-  ],
-  undo: [
-    'Undo steps back one phase at a time, all the way to the deal. Redo steps forward again until you make a different change.',
-    'There is no Cancel button: Undo is always one tap away.',
-    'There are no hints.',
-  ],
-  empty: [
-    'An empty column is a legal destination, and the only one where no destination cards have to join the word. That is why emptying a column is valuable: a word built from picked-up cards and free letters alone needs one.',
+    'Empty all eight columns by placing words in the WordCells. Bigger words in high-numbered WordCells score more.',
   ],
   scoring: [
     'Your score is the sum, over the WordCells, of the letters in the cell times the cell\u2019s number. A QU card counts as two letters.',
     'If you give up, every letter left in the columns costs 10 points (a QU costs 20), and the score can go below zero. Giving up can be undone.',
     'The rating at the end depends on your score. For this deck:',
   ],
-  exampleIntro: [
-    'Columns, top to bottom: column 1 holds F E D K A, column 2 holds X O R I N, column 3 holds L M F B. Pick up E D K A from column 1 and drop it on column 3: its bottom card B must join, giving BAKED. If WordCell 6 shows L, add it for BALKED. Dropping on column 1 itself leaves F, which must join: FAKED, or with the L, FLAKED. Laying E D K A under column 3 without B is not allowed.',
-  ],
 } as const;
-
-const EXAMPLE_WORDS = ['BAKED', 'BALKED', 'FAKED', 'FLAKED'] as const;
 
 // Epic 6 CAP-10 (6.11): the tooltip label of each command that carries a key (the control's visible
 // label; `−` and `+` are the glyphs). Give up has none.
@@ -334,18 +325,44 @@ export const text = Object.freeze({
   howTo: {
     headings: {
       goal: 'The goal',
-      table: 'The table',
-      move: 'A move',
-      undo: 'Undo and Redo',
-      empty: 'Empty columns',
       scoring: 'Scoring, giving up and bands',
-      example: 'Worked example',
       controls: 'Controls',
     },
     ...howTo,
-    exampleWords: EXAMPLE_WORDS,
-    exampleCaption: (word: string) => `${word}, ${letters(word.length)}`,
     controlCaptions: { touch: 'Touch', mouse: 'Mouse', keyboard: 'Keyboard' },
+    // Epic 8 ticket 1 (HP-6): scene captions (the figure's visible description, its name) and the
+    // scene control names; the owner reads the captions at the epic's text review.
+    scenes: {
+      // Epic 8 ticket 7: the owner-reviewed drafts, kept verbatim (the owner reads them at done).
+      moveCompose:
+        "To form a word, drag one or more cards and drop onto the bottom of a column. The cards in the destination column stay in order and can't be shuffled, but the initial dragged group can. \u2212/+ adds more letters from the destination column; Flip makes the word read upward instead.",
+      freeLetter:
+        'Tap a WordCell to borrow its top card. The top card of each WordCell can be used as a free letter added to the word. Then Validate.',
+      place:
+        "Letters from the formed word are placed in a WordCell of value equal to or less than the length of the word. Order the cards: the last one becomes that cell's free letter. Then Confirm.",
+      scoring:
+        'Each WordCell scores its letters times its number. QU counts as two letters. Bigger words lead to higher scores.',
+      // Epic 8 ticket 10 (HP-4): the one Tricky rule, the owner's wording of 2026-10-17.
+      sourceDrop:
+        'Dropping back on the column you lifted from is allowed. You must use at least 1 letter from the destination column, unless you drag to an empty column.',
+    },
+    // Epic 8 ticket 3 (HP-3e): a scoring scene's per-WordCell figure, letters times the cell number.
+    scoreFigure: (letters: number, cell: number, score: number): string =>
+      `${letters} \u00d7 ${cell} = ${score}`,
+    // Epic 8 ticket 6 (HP-6): the scene carousel's controls. "Next scene" and `sceneControls.next`
+    // ("Next", the reduced-motion frame control) collide under substring locators: match exactly.
+    carousel: {
+      label: 'Scenes',
+      previous: 'Previous scene',
+      next: 'Next scene',
+      dot: (n: number, total: number): string => `Scene ${n} of ${total}`,
+    },
+    sceneControls: {
+      pause: 'Pause animation',
+      restart: 'Restart animation',
+      next: 'Next',
+      replay: 'Replay',
+    },
     // [gesture, effect] rows from EXPERIENCE.md's interaction text.
     touch: [
       ['Drag a card', 'Lifts it and the cards below it; drop on a column to start a word'],

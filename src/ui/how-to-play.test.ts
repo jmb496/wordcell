@@ -4,6 +4,8 @@ import source from './HowToPlayPanel.svelte?raw';
 import { bandNames, text } from './text';
 
 // Ticket 6.9 (CAP-8): the How to play panel by server render (the unit environment has no DOM).
+// Epic 8 ticket 1: the scenes read the Animation speed pref, whose store imports the game store.
+vi.mock('../shell/prefs.svelte', () => ({ prefs: { motion: { baseMs: 180, reduced: false } } }));
 vi.mock('../shell/nav', () => ({ nav: { push: () => undefined, pop: () => undefined } }));
 
 async function html(): Promise<string> {
@@ -25,42 +27,47 @@ function inner(body: string, tag: string): string[] {
 }
 
 describe('AD-3 How to play panel', () => {
-  it('AD-3 the title and the eight h3 headings equal the text.ts strings, in order', async () => {
+  it('AD-3 the title and the three h3 headings equal the text.ts strings, in order', async () => {
     const body = await html();
     expect(inner(body, 'h2')).toEqual([text.howToPlay]);
     expect(inner(body, 'h3')).toEqual(Object.values(text.howTo.headings));
-    expect(Object.values(text.howTo.headings)).toHaveLength(8);
+    expect(Object.values(text.howTo.headings)).toHaveLength(3);
   });
 
   it('AD-3 every body paragraph, caption and band is rendered from text.ts', async () => {
     const body = await html();
     const paragraphs = inner(body, 'p');
-    const expected = [
-      ...text.howTo.goal,
-      ...text.howTo.table,
-      ...text.howTo.move,
-      ...text.howTo.undo,
-      ...text.howTo.empty,
-      ...text.howTo.scoring,
-      ...text.howTo.exampleIntro,
-    ];
+    const expected = [...text.howTo.goal, ...text.howTo.scoring];
     expect(paragraphs).toEqual(expected);
-    expect(inner(body, 'figcaption')).toEqual(
-      text.howTo.exampleWords.map(text.howTo.exampleCaption),
-    );
+    // The carousel mounts a scene only after its first non-zero width measurement (ticket 6), which
+    // a server render never has: the captions are asserted in scenes.test.ts and the e2e specs.
+    expect(inner(body, 'figcaption')).toEqual([]);
     expect(inner(body, 'caption')).toEqual(Object.values(text.howTo.controlCaptions));
     for (const name of bandNames()) expect(body).toContain(name);
-    expect(text.howTo.undo.join(' ')).toContain('no Cancel');
-    expect(text.howTo.undo.join(' ')).toContain('no hints');
   });
 
-  it('AD-3 the example cards are static: no card id, test id, place or mirror-of', async () => {
+  it('AD-3 the scene cards are static: no card id, test id, place or mirror-of', async () => {
     const body = await html();
     expect(body).not.toContain('data-card-id');
     expect(body).not.toContain('data-testid');
     expect(body).not.toContain('data-mirror-of');
     expect(body).not.toContain('data-place');
-    expect(body.match(/class="card[^"]*static/g)).toHaveLength(22);
+    // No scene is mounted before the first width measurement (ticket 6): the cards are counted in
+    // scenes.test.ts and stage.test.ts.
+    expect(body.match(/class="card[^"]*static/g)).toBeNull();
+  });
+
+  it('HP-7 the A move and Worked example headings are absent; the kept sections are present', async () => {
+    const body = await html();
+    const headings = inner(body, 'h3');
+    expect(headings).not.toContain('A move');
+    expect(headings).not.toContain('Worked example');
+    expect(headings).toEqual([
+      text.howTo.headings.goal,
+      text.howTo.headings.scoring,
+      text.howTo.headings.controls,
+    ]);
+    expect(body).not.toContain('class="example"');
   });
 
   it('AD-3 the markup has no prose text node (every string is a text.ts expression)', () => {
@@ -115,11 +122,5 @@ describe('AD-3 How to play panel', () => {
       'Start a new game',
       'Open this page',
     ]);
-  });
-
-  it('AD-3 Q-12 the empty-column paragraph says it is the only column needing no destination cards', () => {
-    const [paragraph] = text.howTo.empty;
-    expect(paragraph).toContain('the only one where no destination cards have to join the word');
-    expect(paragraph).toContain('An empty column is a legal destination');
   });
 });

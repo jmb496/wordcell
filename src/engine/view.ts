@@ -110,7 +110,7 @@ export interface GameView {
   readonly finalScore?: number;
   readonly penalty?: number;
   readonly lettersLeft?: number;
-  /** D3: 0–5. */
+  /** D3: 0–9. */
   readonly band?: number;
   readonly longestWord?: LongestWord;
   readonly wordCount: number;

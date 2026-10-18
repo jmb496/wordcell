@@ -87,41 +87,30 @@ describe('scoring', () => {
   });
 
   it('R-83 EN bands at each boundary and for a negative score', () => {
-    const cases: [number, number][] = [
-      [158, 0],
-      [159, 1],
-      [264, 1],
-      [265, 2],
-      [377, 2],
-      [378, 3],
-      [468, 3],
-      [469, 4],
-      [529, 4],
-      [530, 5],
-      [-530, 0],
-    ];
+    const thresholds = [50, 100, 150, 200, 250, 300, 350, 400, 530];
+    const cases: [number, number][] = [[-530, 0]];
+    thresholds.forEach((t, i) => {
+      cases.push([t - 1, i], [t, i + 1]);
+    });
+    cases.push([529, 8], [530, 9]);
     for (const [score, expected] of cases) expect(band(score, EN), `score ${score}`).toBe(expected);
   });
 
   it('R-83 bands are relative to the language maxScore (synthetic LangData)', () => {
     expect(synthetic.maxScore).toBe(540);
-    const cases: [number, number][] = [
-      [161, 0],
-      [162, 1],
-      [269, 1],
-      [270, 2],
-      [384, 2],
-      [385, 3],
-      [477, 3],
-      [478, 4],
-      [539, 4],
-      [540, 5],
-    ];
+    const thresholds = [50, 100, 150, 200, 250, 300, 350, 400, 530];
+    const cases: [number, number][] = [];
+    thresholds.forEach((t, i) => {
+      const needed = Math.ceil((t * 540) / 530);
+      cases.push([needed - 1, i], [needed, i + 1]);
+    });
+    cases.push([539, 8], [540, 9]);
     for (const [score, expected] of cases)
       expect(band(score, synthetic), `score ${score}`).toBe(expected);
-    expect(band(159, EN)).toBe(1);
-    expect(band(159, synthetic)).toBe(0);
-    expect(band(530, EN)).toBe(5);
-    expect(band(530, synthetic)).toBe(4);
+    expect(band(51, EN)).toBe(1);
+    expect(band(51, synthetic)).toBe(1);
+    expect(band(50, synthetic)).toBe(0);
+    expect(band(530, EN)).toBe(9);
+    expect(band(530, synthetic)).toBe(8);
   });
 });

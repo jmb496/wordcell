@@ -208,7 +208,7 @@ test('A-E9 a win announces the commit text first, then the outcome', async ({ pa
   await expect.poll(async () => (await sets(page)).length).toBe(2);
   const [commit, outcome] = await sets(page);
   expect(commit).toBe('SBRRCU placed on cell 6, plus 36');
-  expect(outcome).toBe(`${WIN} Score 355, Word Nerd.`);
+  expect(outcome).toBe(`${WIN} Score 355, Lexicon Legend.`);
 });
 
 test('A-E9 a Give up announces only the outcome, penalty not read', async ({ page }) => {

@@ -111,7 +111,14 @@ When the owner asks how to run the driver and see this detail, offer both ways:
    (`ToolSearch` `select:Monitor`) and watch that output file, so each new line wakes the
    session; relay each progress line to the owner as one short line (started/finished lines
    always; commit lines may be grouped). The lines cost only the interactive session's context.
-   When the driver exits, read its last lines and the handoff and report as above.
+   Make the monitor end with the driver. Start the driver in a normal (foreground) Bash call that
+   returns at once with its PID: `nohup .claude/skills/epic-autopilot/scripts/loop.sh <epic> >
+   .autopilot/driver.out 2>&1 & echo $!` (`pgrep -f` is unreliable: it also matches the calling
+   shell). Then watch with `tail -n +1 --pid=<that PID> -f .autopilot/driver.out`; never a bare
+   `tail -f`, which only stops at the monitor's timeout. A monitor that times out while the driver
+   still runs is re-armed with `tail -n 0 --pid=<PID> -f ...`; once the driver has exited, never
+   re-arm. Without a background-task notification, the monitor's end is the signal: then read the
+   driver's last lines and the handoff and report as above.
 2. **A separate terminal (live, no context cost).** The owner runs
    `.claude/skills/epic-autopilot/scripts/loop.sh <epic>` in a terminal and tells the session
    when it exits; or, when the session started the driver, follows it with

@@ -2,17 +2,17 @@
 import { tick, untrack } from 'svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { act } from './act';
-// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
-import Card from './Card.svelte';
 import { overlays } from './overlays.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Panel from './Panel.svelte';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import Carousel from './scenes/Carousel.svelte';
 import { bandNames, text } from './text';
 
-// Epic 6 CAP-8 (ticket 6.9; EXPERIENCE.md How to play panel; DESIGN.md Panels): the static
-// scrolling rules page, opened only through `openSurface('howToPlay')` (the Menu's last row). All
-// prose is in text.ts (AD-3); this file holds markup only. The §8 example is drawn with the real
-// card component as `mirror="static"` (aria-hidden, no card id or place attributes, AD-14). The ☰
+// Epic 6 CAP-8 (ticket 6.9) and epic 8 (HP-7; EXPERIENCE.md How to play panel; DESIGN.md Panels): the
+// scrolling rules panel, opened only through `openSurface('howToPlay')` (the Menu's last row). The
+// animated scenes come first (one at a time in a carousel), then the text sections, then Controls.
+// All prose is in text.ts (AD-3); this file holds markup only. The ☰
 // refocus effect is an interim copy of PreferencesPanel's; Esc closes it through the key handler
 // (keys.ts, ticket 6.10).
 const open = $derived(overlays.isOpen('howToPlay'));
@@ -45,25 +45,12 @@ function close(): void {
 </script>
 
 <Panel title={text.howToPlay} closeLabel={text.closeHowToPlay} onclose={act(close)} {open}>
+  <section class="scenes">
+    <Carousel />
+  </section>
   <section>
     <h3>{h.goal}</h3>
     {#each text.howTo.goal as paragraph}<p>{paragraph}</p>{/each}
-  </section>
-  <section>
-    <h3>{h.table}</h3>
-    {#each text.howTo.table as paragraph}<p>{paragraph}</p>{/each}
-  </section>
-  <section>
-    <h3>{h.move}</h3>
-    {#each text.howTo.move as paragraph}<p>{paragraph}</p>{/each}
-  </section>
-  <section>
-    <h3>{h.undo}</h3>
-    {#each text.howTo.undo as paragraph}<p>{paragraph}</p>{/each}
-  </section>
-  <section>
-    <h3>{h.empty}</h3>
-    {#each text.howTo.empty as paragraph}<p>{paragraph}</p>{/each}
   </section>
   <section>
     <h3>{h.scoring}</h3>
@@ -73,20 +60,6 @@ function close(): void {
         <li><span>{name}</span><span class="score">{text.bandScore(band)}</span></li>
       {/each}
     </ul>
-  </section>
-  <section class="example">
-    <h3>{h.example}</h3>
-    {#each text.howTo.exampleIntro as paragraph}<p>{paragraph}</p>{/each}
-    {#each text.howTo.exampleWords as word (word)}
-      <figure>
-        <div class="word">
-          {#each word.split('') as letter, i (i)}
-            <Card id={0} face={{ letter, letterCount: 1 }} place="column" mirror="static" full />
-          {/each}
-        </div>
-        <figcaption>{text.howTo.exampleCaption(word)}</figcaption>
-      </figure>
-    {/each}
   </section>
   <section>
     <h3>{h.controls}</h3>
@@ -109,19 +82,13 @@ function close(): void {
     margin: 0 0 8px; font: 600 1.125rem/1.5rem system-ui, "Roboto", sans-serif;
     color: var(--wc-ink-primary);
   }
-  p, li, td, th, figcaption, caption {
+  p, li, td, th, caption {
     font: 400 1rem/1.5rem system-ui, "Roboto", sans-serif; color: var(--wc-ink-primary);
   }
   p { margin: 0 0 8px; }
   .bands { list-style: none; margin: 0; padding: 0; }
   .bands li { display: flex; justify-content: space-between; gap: 16px; padding: 4px 0; }
   .score { color: var(--wc-ink-secondary); }
-  .example figure { margin: 12px 0 0; }
-  .word {
-    --wc-w: 40px; --wc-slot: 44px; --wc-H: 56px; --wc-strip: 20px;
-    display: flex; flex-wrap: nowrap;
-  }
-  figcaption { color: var(--wc-ink-secondary); }
   table { width: 100%; border-collapse: collapse; margin: 0 0 16px; }
   caption {
     text-align: left; font-weight: 600; padding: 8px 0 4px; color: var(--wc-ink-secondary);

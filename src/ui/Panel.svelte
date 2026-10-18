@@ -69,7 +69,10 @@ function focusStart(heading: HTMLElement): void {
     min-width: 44px; min-height: 44px; border: none; border-radius: 9999px; background: none;
     color: var(--wc-ink-primary); font: 400 1.5rem/1 system-ui, "Roboto", sans-serif;
   }
-  .content { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+  .content {
+    flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
   .inner { box-sizing: border-box; max-width: 560px; margin: 0 auto; padding: 0 16px 16px; }
   @container style(--wc-reduced: 1) {
     .panel { transform: none; transition: opacity var(--wc-fade-ms); }

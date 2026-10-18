@@ -1,0 +1,164 @@
+{
+  "scene": "free-letter",
+  "start": {
+    "columns": [
+      [
+        "O",
+        "R",
+        "I",
+        "K",
+        "B",
+        "A"
+      ],
+      [
+        "X",
+        "O",
+        "R",
+        "I",
+        "N"
+      ],
+      [
+        "M",
+        "F",
+        "N",
+        "D",
+        "E"
+      ]
+    ],
+    "cells": {
+      "6": [
+        "L"
+      ]
+    }
+  },
+  "opens": 6,
+  "commands": [
+    {
+      "type": "drop",
+      "sourceColumn": 1,
+      "sourceCount": 3,
+      "destinationColumn": 3
+    },
+    {
+      "type": "setDestinationCount",
+      "k": 2
+    },
+    {
+      "type": "setDestinationCount",
+      "k": 3
+    },
+    {
+      "type": "setDestinationCount",
+      "k": 2
+    },
+    {
+      "type": "flip"
+    },
+    {
+      "type": "arrange",
+      "arrangement": [
+        3,
+        0,
+        22
+      ]
+    },
+    {
+      "type": "addFreeLetter",
+      "cell": 6,
+      "index": 2
+    },
+    {
+      "type": "validate"
+    }
+  ],
+  "words": [
+    {
+      "command": 5,
+      "word": "BAKED"
+    },
+    {
+      "command": 6,
+      "word": "BALKED"
+    }
+  ],
+  "validatable": [
+    {
+      "after": 0,
+      "canValidate": false
+    },
+    {
+      "after": 1,
+      "canValidate": true
+    },
+    {
+      "after": 2,
+      "canValidate": true
+    },
+    {
+      "after": 3,
+      "canValidate": true
+    },
+    {
+      "after": 4,
+      "canValidate": true
+    },
+    {
+      "after": 5,
+      "canValidate": true
+    },
+    {
+      "after": 6,
+      "canValidate": true
+    },
+    {
+      "after": 7,
+      "canValidate": true
+    },
+    {
+      "after": 8,
+      "canValidate": false
+    }
+  ],
+  "block": [
+    {
+      "after": 1,
+      "k": 1,
+      "side": "left"
+    },
+    {
+      "after": 2,
+      "k": 2,
+      "side": "left"
+    },
+    {
+      "after": 3,
+      "k": 3,
+      "side": "left"
+    },
+    {
+      "after": 4,
+      "k": 2,
+      "side": "left"
+    },
+    {
+      "after": 5,
+      "k": 2,
+      "side": "right"
+    },
+    {
+      "after": 6,
+      "k": 2,
+      "side": "right"
+    },
+    {
+      "after": 7,
+      "k": 2,
+      "side": "right"
+    },
+    {
+      "after": 8,
+      "k": 2,
+      "side": "right"
+    }
+  ]
+}

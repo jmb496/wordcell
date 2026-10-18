@@ -1,0 +1,42 @@
+{
+  "scene": "place",
+  "start": {
+    "columns": [
+      ["F", "E", "D", "K", "A"],
+      ["X", "O", "R", "I", "N"],
+      ["L", "M", "F", "B"]
+    ],
+    "cells": { "6": ["L"] }
+  },
+  "commands": [
+    { "type": "drop", "sourceColumn": 1, "sourceCount": 4, "destinationColumn": 3 },
+    { "type": "arrange", "arrangement": [0, 22, 8, 6] },
+    { "type": "addFreeLetter", "cell": 6, "index": 1 },
+    { "type": "validate" },
+    { "type": "setTarget", "cell": 5 },
+    { "type": "setTarget", "cell": 6 },
+    { "type": "setPlacementOrder", "order": [6, 3, 0, 24, 22, 8] },
+    { "type": "confirm" }
+  ],
+  "words": [
+    { "command": 1, "word": "BAKED" },
+    { "command": 2, "word": "BALKED" }
+  ],
+  "validatable": [
+    { "after": 3, "canValidate": true },
+    { "after": 4, "canValidate": false },
+    { "after": 5, "canValidate": false },
+    { "after": 6, "canValidate": false },
+    { "after": 7, "canValidate": false },
+    { "after": 8, "canValidate": false }
+  ],
+  "place": [
+    { "after": 4, "target": 6, "legalTargets": [3, 4, 5, 6], "order": [3, 0, 24, 22, 8, 6] },
+    { "after": 5, "target": 5, "legalTargets": [3, 4, 5, 6], "order": [3, 0, 24, 22, 8, 6] },
+    { "after": 6, "target": 6, "legalTargets": [3, 4, 5, 6], "order": [3, 0, 24, 22, 8, 6] },
+    { "after": 7, "target": 6, "legalTargets": [3, 4, 5, 6], "order": [6, 3, 0, 24, 22, 8] }
+  ],
+  "cells": [{ "after": 8, "cell": 6, "cards": ["D", "B", "A", "L", "K", "E"] }],
+  "scores": [{ "after": 8, "score": 36 }],
+  "cellScores": [{ "after": 8, "cell": 6, "score": 36 }]
+}
