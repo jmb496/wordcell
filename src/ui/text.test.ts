@@ -274,7 +274,7 @@ describe('AD-3 How to play text', () => {
       '300 or more',
       '350 or more',
       '400 to 529',
-      '530 (every card placed)',
+      '530 (perfect)',
     ]);
     expect(() => text.bandScore(10)).toThrow();
   });
