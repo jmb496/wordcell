@@ -1,6 +1,6 @@
 # Review log — story-theme-preference-and-pre-paint-apply (ticket 9.4)
 
-State: pass 2: done
+State: pass 3: done
 Pre-loop: HEAD 799b7eb, 192 words, copy story-theme-preference-and-pre-paint-apply.review-log.passes/pass0.md
 
 ## Pass 1 — 2026-10-18
@@ -41,3 +41,19 @@ Words: 691 (3.6 x pass 0, over budget; minors only if word-neutral)  |  Snapshot
 - (same as pass 1: first-paint order vs AD-16 spine edit, owner approval)
 ### Dropped
 - none
+
+## Pass 3 — 2026-10-18
+Reviewers: fix-diff, edge-case, adversarial, ref alignment  |  Findings: major 4 (merged from 9 raw), minor 4, decision-needed 0  |  Dropped in triage: 1 (first-paint "fix the default" minor: contradicts the plan_checkpoint/owner gate already recorded)
+Words: 809 (4.2 x pass 0, over budget)  |  Snapshot: story-theme-preference-and-pre-paint-apply.review-log.passes/pass3.md
+### Applied
+- [major] registerTheme hook crossed the shell/ui layer and raced the boot apply → main.ts registers test-only `paper` at module load in test-hook builds; hook dropped
+- [major] Switch test fragment → full assertions
+- [major] meta-colour unit test scoped to production entries (paper exempt)
+- [major] parsePrefs raw shape vs resolved in-memory Prefs
+- [minor] applyTheme always sets data-theme; apply-throws halt looks default
+### Default applied (technical)
+- main.ts owns test-theme registration; raw/resolved Prefs split
+### Decision needed
+- (unchanged: first-paint order vs AD-16 spine edit, owner approval)
+### Dropped
+- "keep AD-16 order, no spine edit" — the ticket already routes that to the plan_checkpoint and owner (rule 7)
