@@ -3,7 +3,7 @@ id: 3
 type: story
 title: "Token plumbing and contrast harness"
 parent: epic-themes
-covers: [TH-2, TH-4, TH-5]
+covers: [TH-2, TH-4, TH-5 (ratio half)]
 risk: medium
 ---
 
@@ -11,29 +11,47 @@ risk: medium
 
 ## Description
 
-Tracer bullet: moves every colour literal in src/** onto --wc-* tokens, gives the default theme one token block `:root, [data-theme="default"]` in app.css (defined once, not duplicated; no attribute is set in this ticket, TH-3 does that), and adds a contrast unit test and a literal scan. No visible change. Delivers the ratio half of TH-5 for the default theme only; "no state relies on hue alone" is left to the per-theme tickets.
+Tracer bullet: moves every colour literal in src/** onto --wc-* tokens, gives the default theme one complete token block in the rule `:root, [data-theme="default"]` in app.css (defined once, not duplicated; no attribute is set in this ticket, TH-3 does that), and adds a contrast unit test and a literal scan. No visible change. Delivers the ratio half of TH-5 for the default theme only; "no state relies on hue alone" is left to the per-theme tickets. The token declarations leave the current `:root` rule; `color-scheme`, `font-family` and `color` stay in a separate `:root` rule, and later theme blocks must follow the default block.
 
-- Inventory (settles the epic's unknowns): exactly 7 literals in 5 non-test files beyond the app.css token block: `box-shadow: 0 6px 16px #0008` at Card.svelte, Column.svelte, WordCellRow.svelte and tray/TileRows.svelte; in Scene.svelte `fill="#fff"`, `stroke="#1a1a1a"` and `filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.45))`. `transparent` and color-mix over tokens are not literals.
-- Decision: all 7 become tokens whose values are the exact current literal text, so the default theme is pixel identical: `--wc-shadow-drag` #0008 (shared by the 4 files), `--wc-scene-pointer-fill` #fff, `--wc-scene-pointer-stroke` #1a1a1a, `--wc-scene-pointer-shadow` rgb(0 0 0 / 0.45). Never reuse a near-match token or round an alpha to another hex. SVG presentation attributes cannot use var(), so the Scene fill and stroke move to CSS (class or style) reading the token. `npm run test:screens` is the arbiter: any diff means revert; never regenerate baselines.
-- Scan: a pure exported function over (path, text) returning violations. Scope: non-test .svelte, .css and .ts under src/**, comments stripped first; only the token block of app.css (or a themes/ token file) is exempt. It flags 3, 4, 6 and 8 digit hex, rgb(a), hsl(a), hwb, lab, lch, oklab, oklch, color(), and CSS named colours in colour properties, fill and stroke; it allows transparent, currentColor, inherit, and color-mix/var() over tokens; `#` in url() fragments and ids is not a colour.
-- Contrast test: reads the default token block as CSS text. Theme data format = a record of --wc-* name to value per theme, parsed from CSS; the test iterates a map of theme id to record. It parses #rgb, #rrggbb, #rrggbbaa and var() (with a cycle check), and fails on an unparseable value or a missing token. Alpha tokens (scrim, shadows) are excluded from ratios. Asserted minimums from DESIGN.md Colors, compared at the stated one-decimal figure: text 4.5 (ink on card face 13.1, ink secondary on surface 6.4 and on surface raised 5.6, ink on destination fill 9.9, error on surface 6.7, teal on surface 7.0 and on card 6.6, ink `#15171B` on orange 6.4); non-text 3 (outline on table 3.8 and surface 3.4, card edge on table 3.6 and surface 3.2). Disabled ink is exempt. A negative case feeds an inline low-contrast record that must fail, so later themes inherit a proven harness.
-- Out of scope: index.html theme-color and the vite.config.ts manifest `#15171B` (outside src/**) stay unchanged (TH-3), with one optional assertion pinning them to --wc-table; `color-scheme: dark` in app.css stays.
+- Inventory (settles the epic's unknowns): exactly 7 literals in 5 non-test files beyond the app.css token block: `box-shadow: 0 6px 16px #0008` at Card.svelte (1, `.lifted .face`), Column.svelte (1), WordCellRow.svelte (1) and tray/TileRows.svelte (1), all `.face.wc-drag-layer` except Card; in Scene.svelte (3) `fill="#fff"`, `stroke="#1a1a1a"` and `filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.45))`. `transparent` and color-mix over tokens are not literals.
+- Decision: all 7 become tokens whose values are the exact current literal text: `--wc-shadow-drag` #0008 (shared by the 4 files), `--wc-scene-pointer-fill` #fff, `--wc-scene-pointer-stroke` #1a1a1a, `--wc-scene-pointer-shadow` rgb(0 0 0 / 0.45). These 4 are internal, not DESIGN.md colour roles (docs are TH-7). Never reuse a near-match token or round an alpha to another hex. Scene: remove the `fill` and `stroke` attributes from the hand `<path>` (keep `stroke-width` and `stroke-linejoin`) and add the scoped rule `.ghost path { fill: var(--wc-scene-pointer-fill); stroke: var(--wc-scene-pointer-stroke); }`; the `.ghost` filter reads the shadow token.
+- Proof: `npm run test:screens` is the arbiter where a baseline covers a site (keyboard-focused-selected covers `.lifted`); no baseline drags a card and the `.ghost` is `opacity: 0`, so the drag-layer shadows and the three Scene sites are not covered by screenshots. For every site the scan test therefore also asserts the default token value equals the old literal text and that the component CSS text reads `var(--wc-…)` of its token. Any screenshot diff means revert; never regenerate baselines.
+- Scan: a pure function over (path, text) returning violations, in a non-test module under src/ui/theme/. Scope: non-test .svelte, .css and .ts under src/**. Comments are stripped first per region: .svelte is split into script, `<style>` and markup with the CJS `svelte/compiler` `parse` loaded via `createRequire` as src/architecture-scan.ts does (never a Vitest import of the compiler, AD-17 budget); `//` and `/* */` are string-aware in script and .ts only, `/* */` only in CSS and `<style>`, `<!-- -->` in markup. Flagged in colour context only: hex of exactly 3, 4, 6 or 8 digits followed by a non-word char, in CSS declaration values (incl. box-shadow and filter arguments and custom properties), SVG presentation attributes (fill, stroke, stop-color, flood-color, color), `style=` / `style:` directives and string or template literals in .ts; rgb(a), hsl(a), hwb, lab, lch, oklab, oklch, color(); whole case-insensitive CSS named-colour words only in colour-valued declarations and attributes and inside color-mix args. Allowed, case-insensitive: transparent, currentColor, inherit, none, initial, unset, revert, `url(#id)` paint servers, color-mix and var() over tokens. Never flagged: selectors, property names, function names, href, id, `&#…;` entities, `url()` fragments, .ts strings for named colours. Exemption: only a `--wc-*` custom-property declaration in a rule whose selector is `:root` or `[data-theme=…]`, in src/ui/app.css (or a file under src/ui/themes/); every other declaration there is scanned. The scan also asserts every `var(--wc-*)` referenced in src is defined in the default block.
+- Contrast test: extracts the `--wc-*` declarations of the rule whose selector list includes `[data-theme="default"]` as the default record. Theme data format = a complete record of --wc-* name to value per theme (no inheritance from default), parsed from CSS; the test iterates a map of theme id to record. No `var()` fallbacks in token values; `var()` to a missing token or a cycle fails, as does an unparseable value. The parser accepts #rgb, #rgba, #rrggbb, #rrggbbaa and rgb()/rgba() with slash alpha into {r,g,b,a}; a token with alpha < 1 (scrim, shadows) is validated but never ratioed. The ratio set is exactly the tokens in this table; the test fails if any of them, or any alpha token, is absent. Ratios are on the unrounded value, computed from app.css and rechecked:
 
-Interface: src/ui/app.css (or a themes/ token file), contrast test and literal scan as src/*.test.ts files; component CSS reads tokens only.
-Tests: Contrast ratios for the default token set (U); literal scan (U, outside the layer scans of AD-1); screenshots unchanged (screens). The scan's own test runs the pure function on inline strings (positive per form incl. an SVG attribute and #0008, negatives, a token file exempt) plus a run over the real tree asserting zero violations. Placement: own root-level files, e.g. src/theme-contrast.test.ts and src/colour-literals.test.ts, not `architecture-*.test.ts` and not added to SELF in src/architecture-scan.ts; the tree scan walks every other src file, so these files must contain none of the AD-1 flagged tokens (history, popstate, console, localStorage and the rest). Test names start with AD-14 or AD-17, never R-ids.
+  | Foreground | Background | Floor | DESIGN.md figure |
+  | --- | --- | --- | --- |
+  | card-ink | card-face | 4.5 | 13.1 |
+  | ink-secondary | surface | 4.5 | 6.4 |
+  | ink-secondary | surface-raised | 4.5 | 5.6 |
+  | ink-primary | destination-fill | 4.5 | 9.9 |
+  | error | surface | 4.5 | 6.7 |
+  | ink-on-accent | accent-orange | 4.5 | 6.4 |
+  | outline | table | 3 | 3.8 |
+  | outline | surface | 3 | 3.4 |
+  | card-edge | table | 3 | 3.6 |
+  | card-edge | surface | 3 | 3.2 |
+  | accent-teal | surface | 3 (non-text: outline and ring) | 7.0 |
+  | accent-teal | card-face | 3 (non-text) | 6.6 |
+
+  The hard assertion is ratio >= floor for every theme. For the default theme only, additionally `round1(ratio) === figure` (catches drift; never assert unrounded >= figure, which several fail). Disabled ink is exempt. A negative case feeds an inline low-contrast record that must fail, so later themes inherit a proven harness.
+- Out of scope: index.html theme-color and the vite.config.ts manifest `#15171B` (outside src/**) stay unchanged (TH-3); `color-scheme: dark` in app.css stays.
+
+Interface: src/ui/app.css (or a themes/ token file); the scan module and the contrast and literal-scan tests under src/ui/theme/; component CSS reads tokens only.
+Tests: Contrast ratios for the default token set (U); literal scan (U); screenshots unchanged where covered (screens). The scan's own test runs the pure function on inline strings (positive per form incl. an SVG attribute and #0008; negatives `#app {}`, `href="#main"`, `&#8722;`, `white-space: nowrap`, `.red {}`, `url(//x/#fff)`, and `// #fff` in .ts; `--wc-x: #fff` in app.css exempt, the same in Card.svelte or `color: #fff` in app.css failing) plus a run over the real tree asserting zero violations. Placement: src/ui/theme/colour-literals.ts, colour-literals.test.ts and contrast.test.ts. Root-level src files fail AD-1 (`layerOf` gives 'stray'); under src/ui/ the UI layer rules apply (no value imports from src/engine; bare node:fs and node:path are fine) and the tree scan walks them like any other UI file (not added to SELF). Test names start with AD-14 or AD-17, never R-ids.
 Owns: The token files and the theme data format.
 Consumers: Every component using colour; epic 8 scene screenshots.
 
 ## Acceptance Criteria
 
-Verify: npm run test:all and npm run test:screens are green with every existing screenshot baseline unchanged, the contrast test passes for the default theme, and the scan fails when a hex literal is added to a component.
+Verify: npm run test:all and npm run test:screens (Docker container only) are green, `git diff --exit-code` over the screenshot baseline directories shows nothing after test:screens, the contrast test passes for the default theme, and the scan fails when a hex literal is added to a component.
 
 ## References
 
 - parent — _bmad-output/initiative-wordcell-v1/epic-themes/epic-themes.md
 - design — DESIGN.md Colors
 - code — src/ui/app.css, src/ui/scenes/Scene.svelte
-- constraint — ARCHITECTURE-SPINE.md AD-1 (scan), AD-10 (tokens), AD-14 (UI), AD-17 (tests); AGENTS.md: never regenerate baselines, all existing .screens.spec.ts baselines, including the how-to-play ones, stay untouched
+- constraint — ARCHITECTURE-SPINE.md AD-1 (scan), AD-10 (root custom properties, later TH-3 mirroring), AD-14 (UI), AD-17 (tests); AGENTS.md: never regenerate baselines, all existing .screens.spec.ts baselines, including the how-to-play ones, stay untouched
 
 ## Notes
 
