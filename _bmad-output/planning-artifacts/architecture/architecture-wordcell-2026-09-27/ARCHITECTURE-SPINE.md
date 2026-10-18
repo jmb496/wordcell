@@ -729,10 +729,11 @@ sequenceDiagram
 - **Prevents:** the precache and the app downloading the dictionary twice; a font failure after a
   first-launch write; boot surfaces in mount order; a new version swapping code under a game.
 - **Rule:**
-  - Boot order: `nav` launch, awaited (rewind, its `popstate`, then `replaceState`, AD-13) →
-    font check (AD-15; nothing
-    written yet) → load prefs, and apply `data-theme` and the `theme-color` meta synchronously, before mount
-    and first paint (Q-45) → load Session and history (AD-7; during boot, a fresh Session is
+  - Boot order: load prefs, and apply `data-theme` and the `theme-color` meta, synchronously
+    before the first `await`, so no frame paints the default under a stored theme (Q-45, owner,
+    2026-10-18; `load()` writes nothing) → `nav` launch, awaited (rewind, its `popstate`, then
+    `replaceState`, AD-13) → font check (AD-15; nothing
+    written yet) → load Session and history (AD-7; during boot, a fresh Session is
     written only at this step) → create the pointer controller (AD-9, AD-12) → register the
     store's lifecycle listeners, then `clock.resume(now)` iff
     `document.visibilityState === 'visible'` (AD-9) → push boot surfaces (without user activation;

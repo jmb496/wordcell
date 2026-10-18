@@ -1,5 +1,5 @@
 // AD-10 preferences store: the owner of `wordcell:prefs` and the motion variables. `load()` (called
-// by `main.ts` between the font check and `game.load()`, AD-16) parses the key once and never
+// by `main.ts` first in boot, before `nav.launch()`, AD-16) parses the key once and never
 // writes; an absent key gives the AD-7 defaults, an unreadable or unknown-version one the defaults
 // silently (Q-36), replaced on the first changing setter call. The setters write at once (AD-10),
 // throwing while the game store is halted or booting (AD-15). `motion` is derived from the prefs
