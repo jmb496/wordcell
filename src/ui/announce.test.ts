@@ -162,21 +162,21 @@ describe('AD-3 announcer', () => {
       finished: 'gaveUp',
     });
     expect(writes).toEqual([]);
-    store.view = view({ status: 'gaveUp', finalScore: -12, band: 3, penalty: 12 });
+    store.view = view({ status: 'gaveUp', finalScore: -12, band: 2, penalty: 12 });
     mod.announceOutcome();
     runFrame();
-    expect(spoken()).toEqual(['Game given up. Score minus 12, Wordsmith.']);
+    expect(spoken()).toEqual(['Game given up. Score minus 12, Word Explorer.']);
   });
 
   it('AD-3 srOutcome for a win and a positive score', () => {
-    store.view = view({ status: 'won', finalScore: 118, band: 3 });
+    store.view = view({ status: 'won', finalScore: 118, band: 2 });
     mod.announceOutcome();
     runFrame();
-    expect(spoken()).toEqual(['Every column cleared. Score 118, Wordsmith.']);
+    expect(spoken()).toEqual(['Every column cleared. Score 118, Word Explorer.']);
   });
 
   it('AD-3 an outcome with a missing finalScore or band throws', () => {
-    store.view = view({ status: 'won', band: 3 });
+    store.view = view({ status: 'won', band: 2 });
     expect(() => mod.announceOutcome()).toThrow(/finalScore/);
     store.view = view({ status: 'won', finalScore: 3 });
     expect(() => mod.announceOutcome()).toThrow(/band/);
@@ -200,7 +200,7 @@ describe('AD-3 announcer', () => {
     store.view = placing('baked', 5, 5, 10);
     store.next = {
       result: { changed: true, finished: 'won' },
-      after: view({ status: 'won', wordCount: 3, finalScore: 118, band: 3 }),
+      after: view({ status: 'won', wordCount: 3, finalScore: 118, band: 2 }),
     };
     mod.dispatchAnnounced({ type: 'confirm' });
     mod.announceOutcome();
@@ -209,7 +209,7 @@ describe('AD-3 announcer', () => {
     runFrame();
     expect(spoken()).toEqual([
       'BAKED placed on cell 5, plus 10',
-      'Every column cleared. Score 118, Wordsmith.',
+      'Every column cleared. Score 118, Word Explorer.',
     ]);
   });
 
@@ -230,12 +230,12 @@ describe('AD-3 announcer', () => {
     store.view = placing('baked', 5, 5, 10);
     store.next = {
       result: { changed: true, finished: 'won' },
-      after: view({ status: 'won', wordCount: 3, finalScore: 118, band: 3 }),
+      after: view({ status: 'won', wordCount: 3, finalScore: 118, band: 2 }),
     };
     mod.dispatchAnnounced({ type: 'confirm' });
     mod.announceOutcome();
     // Undo before the commit frame runs: say() cancels the pending commit and the queued outcome.
-    store.view = view({ status: 'won', wordCount: 3, finalScore: 118, band: 3 });
+    store.view = view({ status: 'won', wordCount: 3, finalScore: 118, band: 2 });
     store.next = { result: { changed: true, unfinished: true }, after: placing('baked', 5) };
     mod.dispatchAnnounced({ type: 'undo' });
     runFrame();

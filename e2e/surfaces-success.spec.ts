@@ -194,9 +194,9 @@ test.describe('android', () => {
     expect(v.status).toBe('won');
     expect(v.finalScore).toBe(355);
     expect(v.finalScore).toBe(319 + 36);
-    expect(v.band).toBe(bandNames().indexOf('Word Nerd'));
+    expect(v.band).toBe(bandNames().indexOf('Lexicon Legend'));
     await expect(sheet(page, WIN).locator('.score')).toHaveText('355');
-    await expect(sheet(page, WIN)).toContainText('Word Nerd');
+    await expect(sheet(page, WIN)).toContainText('Lexicon Legend');
   });
 });
 

@@ -105,7 +105,7 @@ the pending-draft line and the live region.
 | No finished games (R-84) | `Finish or give up a game to see statistics here.` | Statistics panel, under the tiles. |
 | Menu and panel names (epic 6) | `Menu`, `Close menu`, `Replay this deal`, `Preferences`, `Close preferences`, `Animation speed` (`Fast` / `Normal` / `Slow`), `Show timer`, `Statistics`, `Close statistics` | Menu sheet, Preferences and Statistics panels (owner kept the wording, 2026-10-15). |
 | Statistics tiles (R-84, epic 6) | `Games played`, `Games won`, `Games given up`, `Best score`, `Average score`, `Longest word`; the longest word is shown in capitals with a small grey `8 letters` caption below it (`1 letter` for one); `—` where no value exists | Statistics panel (owner, 2026-10-15). |
-| End sheet labels (epic 6) | `Longest word`, `Words placed`, `—` when none; handle `Collapse result`; collapsed bar `Show result: 172, Warming Up` (score with U+2212 if negative, then the band name) | End sheet (owner kept the wording, 2026-10-15). |
+| End sheet labels (epic 6) | `Longest word`, `Words placed`, `—` when none; handle `Collapse result`; collapsed bar `Show result: 172, Word Nerd` (score with U+2212 if negative, then the band name) | End sheet (owner kept the wording, 2026-10-15). |
 | Close how to play (epic 6) | `Close how to play` | How to play panel close control. |
 | Screen-reader names (epic 6, CAP-11) | `{L}, column {c}, card {i} of {n}{, selected}{, destination}`; `{L}, tray, tile {i} of {n}{, selected}`; `{L}, WordCell {c}, top`; `WordCell {c}, top {L}, {n card(s)}{, used}`; `WordCell {c}, empty`; `Column {c} foot`; `Column {c}, here`; `Q U, counts as two letters` | Accessible names of cards, tiles, WordCells and foot pads (`src/ui/text.ts`). |
 | Live region announcements (epic 6, CAP-11) | `Composing. {WORD}, {N letters}.`; `Place. ...`; `Idle.`; `{WORD} placed on cell {c}, plus N`, `minus N` or `no change`; `Undo. {phase}`; `Redo. {phase}`; `New game. Idle.`; `Replay. Idle.`; `{title} Score {N}, {band}.` (`minus N` for a negative score) | The polite live region (`src/ui/text.ts`, `src/ui/announce.ts`). |
@@ -122,16 +122,21 @@ a positive score has no plus sign.
 
 ### Rating bands (R-83, Q-15)
 
-Thresholds are the spec's; names and messages are this step's deliverable (Q-15).
+Ten bands in steps of 50, set by the owner on 2026-10-18 (R-83, Q-15). Thresholds are fractions of
+the language maximum (English max 530); names and messages are kind and light-hearted.
 
-| Threshold t of 520 (applies when finalScore × 520 ≥ t × max, R-83) | English score | Name | Message |
+| Threshold t of 530 (applies when finalScore × 530 ≥ t × max, R-83) | English score | Name | Message |
 |---|---|---|---|
-| below 156 (including negative) | < 159 | Alphabet Soup | Plenty of letters, not much broth. The deck forgives you. |
-| 156 | ≥ 159 | Warming Up | The cells are waking up. |
-| 260 | ≥ 265 | Word Nerd | Halfway to glory, and it shows. |
-| 370 | ≥ 378 | Wordsmith | Long words, high cells. Nicely forged. |
-| 460 | ≥ 469 | Lexicon Legend | The dictionary is a little afraid of you. |
-| 520 (perfect) | = 530 | Perfect Deck | Fifty-two cards, one cell. Nothing left to prove. |
+| below 50 (including negative) | < 50 | Just Getting Started | Every word has to start somewhere. Lovely first steps! |
+| 50 | 50 to 99 | Warming Up | The cells are waking up. |
+| 100 | 100 to 149 | Word Explorer | You're finding your way around the deck. |
+| 150 | 150 to 199 | Word Nerd | The words are flowing now. |
+| 200 | 200 to 249 | Wordsmith | Long words, high cells. Nicely forged. |
+| 250 | 250 to 299 | Word Wizard | That is some real word magic. |
+| 300 | 300 to 349 | Lexicon Pro | Impressive: the dictionary is taking notes. |
+| 350 | 350 to 399 | Lexicon Legend | The dictionary is a little afraid of you. |
+| 400 | 400 to 529 | Nearly Impossible | Scores like this are almost unheard of. Astonishing! |
+| 530 (perfect) | = 530 | You Cheated | Every single card placed. We have no idea how, but we are very impressed. |
 
 [ASSUMPTION A-E2: names and messages]
 
@@ -448,7 +453,7 @@ the end sheet expanded.
 ## How to play panel (brief §7)
 
 One carousel of animated scenes first, then rules text rewritten from the legacy rulebook to match
-spec §3–§6 and §9 (notably Q-12, no Cancel, no hints), then Controls. No anchors or links between
+spec §3–§6 and §9, then Controls. No anchors or links between
 sections; the only in-panel navigation is the carousel's own controls (HP-7, owner decision
 2026-10-17). Sections, in order:
 
@@ -458,13 +463,13 @@ sections; the only in-panel navigation is the carousel's own controls (HP-7, own
    letter; place on a WordCell. Tricky: drop back on the column you lifted from (R-21). Scoring
    last. One scene shows at a time, each a figure with a caption, drawn as the whole play area
    (columns, tray, WordCells 3–10), only as tall as that scene needs.
-2. **The goal**: empty all eight columns by placing words on WordCells; long words on high
-   cells score most.
-3. **The table**: columns, stack tails, WordCells 3–10, free letters, the `QU` card (×2).
-4. **Undo and Redo**: step back one phase at a time, all the way to the deal; there is no Cancel.
-5. **Empty columns** and why they are valuable (R-22).
-6. **Scoring, giving up and bands** (R-80, R-81, R-83), with the band names.
-7. **Controls**: touch, mouse and the keyboard table.
+2. **The goal**: empty all eight columns by placing words in the WordCells; bigger words in
+   high-numbered WordCells score more.
+3. **Scoring, giving up and bands** (R-80, R-81, R-83), with the band names.
+4. **Controls**: touch, mouse and the keyboard table.
+
+The former "The table", "Undo and Redo" and "Empty columns" sections were removed (owner,
+2026-10-18); the scenes and the controls table cover them.
 
 Scenes (HP-1, HP-2, AD-14): the carousel has a previous and a next arrow button ("Previous scene"
 and "Next scene", `text.ts` `carousel`) and one dot per scene that jumps to it; the arrows dim at
@@ -535,7 +540,7 @@ Q-34). Counter-case: a movement under 8 px is a tap and selects the tail.
 ### Flow 4 — Stuck
 
 1. Jared sees no word he can make. He opens the menu and taps **Give up** (Idle, playing).
-2. The end sheet opens: `Game given up.`, `9 letters left: −90`, final score `172` (after the −90 penalty, R-81), band `Warming Up` and its
+2. The end sheet opens: `Game given up.`, `9 letters left: −90`, final score `172` (after the −90 penalty, R-81), band `Word Nerd` and its
    message, longest word, words placed.
 3. He taps **Undo** in the top bar; the sheet closes and he is back in Idle, still playing, the
    record removed (R-75, R-84).
@@ -621,7 +626,7 @@ Jared confirmed every assumption below on 2026-09-27; the `[ASSUMPTION]` tags st
 | Id | Assumption | Where |
 |---|---|---|
 | A-E1 | Android back closes the topmost overlay or clears a selection, never Undoes; on the bare board it leaves the app. | Information Architecture |
-| A-E2 | Band names and messages as listed (Alphabet Soup … Perfect Deck). | Rating bands |
+| A-E2 | Band names and messages as listed (Just Getting Started … You Cheated; reset by the owner 2026-10-18). | Rating bands |
 | A-E3 | Average score shown as a whole number, rounded like `Math.round` (half toward +∞); longest word ever ties go to the earliest record. | Component Patterns |
 | A-E4 | A new app version activates on the next launch with no prompt. | State Patterns |
 | A-E5 | Drag threshold 8 CSS px. | Interaction Primitives |

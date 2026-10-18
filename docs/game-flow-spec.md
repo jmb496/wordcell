@@ -330,15 +330,16 @@ with nothing to undo, Redo without redo data) (CLAUDE.md rule 6).
 - **R-82** Score is shown live during play (current committed score) and on the end screen (UI).
 - **R-83** End screen shows score, a rating band with a light-hearted message, longest word and
   word count (UI). Bands are defined as a fraction of the language's maximum score so they survive
-  letter-value and language changes. Thresholds carried over from the BGA implementation
-  (`material.inc.php`) as exact fractions of 520, with a new lowest band: below 156/520 (name
-  delivered by the UX step), 156/520 "Getting Started", 260/520 "Good Progress", 370/520 "Well
-  Done", 460/520 "Excellent", 520/520 "Perfect Game" (≈ 30 %, 50 %, 71.2 %, 88.5 %, 100 %). A
-  band applies when `finalScore × 520 ≥ threshold × max` (integer comparison; finalScore after
-  R-81, max from R-80, thresholds 156, 260, 370, 460, 520), so no whole-percent rounding shifts
-  a boundary; the highest matching band wins. For English (max 530) this gives ≥ 159, ≥ 265,
-  ≥ 378, ≥ 469 and = 530; the BGA absolutes are not hard-coded. The UX step rewrites the names
-  and messages in a light-hearted tone (Q-15). Longest word shows "—" when no word was committed. (UI)
+  letter-value and language changes. There are ten bands (0 to 9) in steps of about 50 points,
+  set by the owner on 2026-10-18 (Q-15): below 50/530 (including negative scores), 50/530,
+  100/530, 150/530, 200/530, 250/530, 300/530, 350/530, 400/530 (one band, 400 to 529, because a
+  score above 400 is nearly impossible) and 530/530 (every card placed, the maximum). A band
+  applies when `finalScore × 530 ≥ threshold × max` (integer comparison; finalScore after R-81,
+  max from R-80, thresholds 50, 100, 150, 200, 250, 300, 350, 400, 530), so no rounding shifts a
+  boundary; the highest matching band wins. For English (max 530) this gives ≥ 50, ≥ 100, ≥ 150,
+  ≥ 200, ≥ 250, ≥ 300, ≥ 350, ≥ 400 and = 530; the band is derived from the score and never
+  stored. The UX step writes the names and kind, light-hearted messages (the top band, a perfect
+  score, is worded as a kind "You cheated"). Longest word shows "—" when no word was committed. (UI)
 - **R-84** The score history (Q-16) is the single source for statistics: a game record is
   appended when status becomes won or gaveUp and removed again when that finish is undone
   (R-70, R-75), so a game contributes at most once; a game abandoned via R-74 is never recorded
@@ -444,7 +445,7 @@ removing S, col1 is `F`; it must be included → **FAKED**, or with `L` → **FL
 | Q-12 | Zero destination cards on a non-empty column? | **No.** At least one destination card unless the column is empty. New rule vs. the rulebook and the BGA code, chosen as designer. R-22, R-31. |
 | Q-13 | Track duration? | Yes, active time; "Show timer" preference, default off. R-76. |
 | Q-14 | English only, data-driven? | Yes, with room for other languages. R-85. |
-| Q-15 | Rating bands? | BGA thresholds (156/260/370/460/520 of 520) carried over as percentages, plus a band below; light-hearted tone. R-83. |
+| Q-15 | Rating bands? | Superseded by the owner on 2026-10-18: ten bands in steps of 50 (below 50, 50, 100, 150, 200, 250, 300, 350, 400 to 529, 530 of English max 530), kept as fractions of the language maximum; kind, light-hearted tone. Earlier: BGA thresholds (156/260/370/460/520 of 520) plus a band below. R-83. |
 | Q-16 | One game in progress + score history? | Yes. R-84. |
 | Q-17 | Orientation? | Portrait on phone; responsive in browser. |
 | Q-18 | Tap-to-select in addition to drag? | Yes. R-14, §7.1. |

@@ -109,7 +109,7 @@ test.describe('android', () => {
     );
     expect(probe.max).toBeGreaterThan(0); // the glide was observed, so the check is not vacuous
     expect(probe.outside).toBe(0);
-    await expect(sheet(page).locator('.band')).toHaveText('Word Nerd');
+    await expect(sheet(page).locator('.band')).toHaveText('Lexicon Legend');
     expect(await sheetScore(page)).toBe(before + delta);
     await expect(sheet(page).getByText(/letters? left/)).toHaveCount(0);
     await expect(replayButton(page)).toBeFocused();
@@ -176,9 +176,9 @@ test.describe('android', () => {
     const score = await sheetScore(page, GAVE);
     expect(score).toBeLessThan(0);
     await expect(sheet(page, GAVE).locator('.score')).toHaveText(`−${-score}`);
-    await expect(sheet(page, GAVE).locator('.band')).toHaveText('Alphabet Soup');
+    await expect(sheet(page, GAVE).locator('.band')).toHaveText('Just Getting Started');
     await expect(sheet(page, GAVE).locator('.message')).toHaveText(
-      'Plenty of letters, not much broth. The deck forgives you.',
+      'Every word has to start somewhere. Lovely first steps!',
     );
   });
 

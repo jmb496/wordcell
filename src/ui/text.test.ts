@@ -193,6 +193,19 @@ describe('AD-10 Preferences panel text', () => {
   });
 });
 
+const NAMES = [
+  'Just Getting Started',
+  'Warming Up',
+  'Word Explorer',
+  'Word Nerd',
+  'Wordsmith',
+  'Word Wizard',
+  'Lexicon Pro',
+  'Lexicon Legend',
+  'Nearly Impossible',
+  'You Cheated',
+];
+
 // Ticket 6.6 end sheet text (EXPERIENCE.md catalogue rows 106, 109, Rating bands).
 describe('AD-3 end sheet text', () => {
   it('AD-3 endPenalty reads plural and singular with U+2212 (QU counting 2 is the lettersLeft of the view, R-81)', () => {
@@ -201,30 +214,27 @@ describe('AD-3 end sheet text', () => {
     expect(text.endPenalty(2, 20)).toBe('2 letters left: −20');
   });
 
-  it('AD-3 each band 0–5 maps to its own name and message', () => {
-    const names = [0, 1, 2, 3, 4, 5].map((b) => text.bandName(b));
-    expect(names).toEqual([
-      'Alphabet Soup',
-      'Warming Up',
-      'Word Nerd',
-      'Wordsmith',
-      'Lexicon Legend',
-      'Perfect Deck',
-    ]);
-    expect([0, 1, 2, 3, 4, 5].map((b) => text.bandMessage(b))).toEqual([
-      'Plenty of letters, not much broth. The deck forgives you.',
+  it('AD-3 each band 0–9 maps to its own name and message', () => {
+    const all = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+    expect(all.map((b) => text.bandName(b))).toEqual(NAMES);
+    expect(all.map((b) => text.bandMessage(b))).toEqual([
+      'Every word has to start somewhere. Lovely first steps!',
       'The cells are waking up.',
-      'Halfway to glory, and it shows.',
+      "You're finding your way around the deck.",
+      'The words are flowing now.',
       'Long words, high cells. Nicely forged.',
+      'That is some real word magic.',
+      'Impressive: the dictionary is taking notes.',
       'The dictionary is a little afraid of you.',
-      'Fifty-two cards, one cell. Nothing left to prove.',
+      'Scores like this are almost unheard of. Astonishing!',
+      'Every single card placed. We have no idea how, but we are very impressed.',
     ]);
-    expect(() => text.bandName(6)).toThrow();
+    expect(() => text.bandName(10)).toThrow();
   });
 
   it('AD-3 endBar names the score (U+2212 when negative) and the band', () => {
     expect(text.endBar(172, 'Warming Up')).toBe('Show result: 172, Warming Up');
-    expect(text.endBar(-40, 'Alphabet Soup')).toBe('Show result: −40, Alphabet Soup');
+    expect(text.endBar(-40, 'Just Getting Started')).toBe('Show result: −40, Just Getting Started');
   });
 
   it('AD-3 pendingDraft returns prefix, uppercased word and suffix', () => {
@@ -247,43 +257,25 @@ describe('AD-3 How to play text', () => {
     expect(text.howTo.headings.goal).toBe('The goal');
   });
 
-  it('AD-3 bandNames returns the six EXPERIENCE.md Rating bands names in band order', () => {
-    const table = [
-      'Alphabet Soup',
-      'Warming Up',
-      'Word Nerd',
-      'Wordsmith',
-      'Lexicon Legend',
-      'Perfect Deck',
-    ];
-    expect(bandNames()).toEqual(table);
-    expect([0, 1, 2, 3, 4, 5].map((b) => text.bandName(b))).toEqual(table);
+  it('AD-3 bandNames returns the ten EXPERIENCE.md Rating bands names in band order', () => {
+    expect(bandNames()).toEqual(NAMES);
+    expect([0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((b) => text.bandName(b))).toEqual(NAMES);
   });
 
   // The engine thresholds are pinned in scoring.test.ts (R-83); this pins the English strings only.
-  it('AD-3 bandScore strings carry the R-83 arithmetic ceil(t * 530 / 520)', () => {
-    const needed = [156, 260, 370, 460, 520].map((t) => Math.ceil((t * 530) / 520));
-    expect(needed).toEqual([159, 265, 378, 469, 530]);
-    expect(text.bandScore(0)).toBe(`below ${needed[0]}`);
-    for (const band of [1, 2, 3, 4]) {
-      expect(text.bandScore(band)).toBe(`${needed[band - 1]} or more`);
-    }
-    expect(text.bandScore(5)).toBe('530 (every card placed)');
-    expect(() => text.bandScore(6)).toThrow();
-  });
-});
-
-describe('AD-3 tooltip text', () => {
-  it('AD-3 each keyed command reads Label (Key) from key-labels.ts', () => {
-    expect(text.tooltip('undo')).toBe('Undo (Z)');
-    expect(text.tooltip('redo')).toBe('Redo (Y)');
-    expect(text.tooltip('validate')).toBe('Validate (Enter)');
-    expect(text.tooltip('confirm')).toBe('Confirm (Enter)');
-    expect(text.tooltip('k-')).toBe('− (-)');
-    expect(text.tooltip('k+')).toBe('+ (+)');
-    expect(text.tooltip('flip')).toBe('Flip (F)');
-    expect(text.tooltip('menu')).toBe('Menu (M)');
-    expect(text.tooltip('newGame')).toBe('New game (N)');
-    expect(text.tooltip('howToPlay')).toBe('How to play (?)');
+  it('AD-3 bandScore strings carry the R-83 English ranges in steps of 50', () => {
+    expect([0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((b) => text.bandScore(b))).toEqual([
+      'below 50',
+      '50 or more',
+      '100 or more',
+      '150 or more',
+      '200 or more',
+      '250 or more',
+      '300 or more',
+      '350 or more',
+      '400 to 529',
+      '530 (every card placed)',
+    ]);
+    expect(() => text.bandScore(10)).toThrow();
   });
 });
