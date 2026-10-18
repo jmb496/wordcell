@@ -10,7 +10,8 @@ import type { parsePrefs as ParsePrefs } from './prefs.svelte';
 const SESSION = 'wordcell:session';
 const PREFS = 'wordcell:prefs';
 const QUERY = '(prefers-reduced-motion: reduce)';
-const DEFAULTS = { version: 1, animationSpeed: 'normal', showTimer: false };
+const DEFAULTS = { version: 1, animationSpeed: 'normal', showTimer: false, theme: 'default' };
+const STORED_DEFAULTS = { version: 1, animationSpeed: 'normal', showTimer: false };
 const NON_DEFAULT = '{ "version": 1, "animationSpeed": "slow", "showTimer": true }';
 const UNREADABLE = '{"version":1,"animationSpeed":"turbo","showTimer":true}';
 const UNKNOWN = '{"version":2,"animationSpeed":"slow","showTimer":true}';
@@ -168,6 +169,23 @@ describe('parsePrefs', () => {
       prefs: { version: 1, animationSpeed: 'slow', showTimer: true },
     });
   });
+
+  it('AD-7 parsePrefs: a valid theme is kept raw; an absent one stays absent', () => {
+    const paper = parsePrefs(
+      `{"version":1,"animationSpeed":"normal","showTimer":false,"theme":"paper"}`,
+    );
+    expect(paper).toEqual({ ok: true, prefs: { ...STORED_DEFAULTS, theme: 'paper' } });
+    const result = parsePrefs(JSON.stringify(STORED_DEFAULTS));
+    expect(result.ok && 'theme' in result.prefs).toBe(false);
+  });
+
+  for (const theme of ['"neon"', '3', 'null', '""']) {
+    it(`AD-7 parsePrefs: theme ${theme} is contents-unreadable with version 1`, () => {
+      expect(
+        parsePrefs(`{"version":1,"animationSpeed":"normal","showTimer":false,"theme":${theme}}`),
+      ).toEqual({ ok: false, reason: 'contents-unreadable', version: 1 });
+    });
+  }
 });
 
 describe('prefs store', () => {
@@ -203,9 +221,10 @@ describe('prefs store', () => {
   it('AD-10 prefs-non-default.json: value parsed, baseMs 320 and --wc-base-ms 320ms', async () => {
     const env = await setup({ prefs: NON_DEFAULT });
     const parsedPrefs = { version: 1, animationSpeed: 'slow', showTimer: true };
-    expect(env.prefs.value).toEqual(parsedPrefs);
+    const resolved = { ...parsedPrefs, theme: 'default' };
+    expect(env.prefs.value).toEqual(resolved);
     expect(env.prefs.loaded()).toEqual(parsedPrefs);
-    expect(env.game.current()).toMatchObject({ prefs: parsedPrefs });
+    expect(env.game.current()).toMatchObject({ prefs: resolved });
     expect(env.prefs.motion).toEqual({ baseMs: 320, reduced: false });
     expectMirror(env, '320ms', '0');
     expect(env.prefsWrites()).toEqual([]);
@@ -236,7 +255,12 @@ describe('prefs store', () => {
       env.prefs.setAnimationSpeed('fast');
       const full = '{"version":1,"animationSpeed":"fast","showTimer":false}';
       expect(env.prefsWrites()).toEqual([[PREFS, full]]);
-      expect(env.prefs.value).toEqual({ version: 1, animationSpeed: 'fast', showTimer: false });
+      expect(env.prefs.value).toEqual({
+        version: 1,
+        animationSpeed: 'fast',
+        showTimer: false,
+        theme: 'default',
+      });
       expect(env.prefs.loaded()).toEqual({ rejected: reason });
       expectMirror(env, '90ms', '0');
       expect(env.prefs.isStale()).toBe(false);
@@ -249,7 +273,12 @@ describe('prefs store', () => {
     expect(env.prefsWrites()).toEqual([
       [PREFS, '{"version":1,"animationSpeed":"slow","showTimer":false}'],
     ]);
-    expect(env.prefs.value).toEqual({ version: 1, animationSpeed: 'slow', showTimer: false });
+    expect(env.prefs.value).toEqual({
+      version: 1,
+      animationSpeed: 'slow',
+      showTimer: false,
+      theme: 'default',
+    });
     expect(env.prefs.motion).toEqual({ baseMs: 320, reduced: false });
     expectMirror(env, '320ms', '0');
     expect(env.prefs.isStale()).toBe(false);
@@ -262,7 +291,7 @@ describe('prefs store', () => {
       [PREFS, '{"version":1,"animationSpeed":"normal","showTimer":true}'],
     ]);
     expect(env.game.current()).toMatchObject({
-      prefs: { version: 1, animationSpeed: 'normal', showTimer: true },
+      prefs: { version: 1, animationSpeed: 'normal', showTimer: true, theme: 'default' },
     });
     expect(env.prefs.motion).toEqual({ baseMs: 180, reduced: false });
     expectMirror(env, '180ms', '0');
@@ -309,7 +338,12 @@ describe('prefs store', () => {
     expect(env.storage.map.get(PREFS)).toBe(
       '{"version":1,"animationSpeed":"normal","showTimer":true}',
     );
-    expect(env.prefs.value).toEqual({ version: 1, animationSpeed: 'normal', showTimer: true });
+    expect(env.prefs.value).toEqual({
+      version: 1,
+      animationSpeed: 'normal',
+      showTimer: true,
+      theme: 'default',
+    });
   });
 
   it('AD-10 a throwing setter write propagates and leaves storage, value, lastText and the mirror unchanged', async () => {
@@ -337,5 +371,93 @@ describe('prefs store', () => {
     env.media.fire(false);
     expect(env.prefs.motion).toEqual({ baseMs: 180, reduced: false });
     expectMirror(env, '180ms', '0');
+  });
+
+  it('AD-7 a stored theme: raw loaded(), resolved value, nothing written', async () => {
+    const text = '{"version":1,"animationSpeed":"normal","showTimer":false,"theme":"paper"}';
+    const env = await setup({ prefs: text });
+    expect(env.prefs.value).toEqual({ ...DEFAULTS, theme: 'paper' });
+    expect(env.prefs.loaded()).toEqual({ ...STORED_DEFAULTS, theme: 'paper' });
+    expect(env.prefsWrites()).toEqual([]);
+  });
+
+  it('AD-7 an absent theme resolves to default and loaded() stays raw', async () => {
+    const env = await setup({ prefs: JSON.stringify(STORED_DEFAULTS) });
+    expect(env.prefs.value.theme).toBe('default');
+    expect('theme' in (env.prefs.loaded() as object)).toBe(false);
+  });
+
+  it('AD-7 an unknown or non-string theme rejects all prefs silently, key untouched until a setter', async () => {
+    for (const theme of ['"neon"', '3']) {
+      const text = `{"version":1,"animationSpeed":"slow","showTimer":true,"theme":${theme}}`;
+      const env = await setup({ prefs: text });
+      expect(env.prefs.value).toEqual(DEFAULTS);
+      expect(env.prefs.loaded()).toEqual({
+        rejected: { reason: 'contents-unreadable', version: 1 },
+      });
+      expect(env.storage.map.get(PREFS)).toBe(text);
+      expect(env.prefsWrites()).toEqual([]);
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('AD-7 round trip: an explicit stored default is dropped by the next speed change', async () => {
+    const text = '{"version":1,"animationSpeed":"normal","showTimer":false,"theme":"default"}';
+    const env = await setup({ prefs: text });
+    expect(env.prefs.value).toEqual(DEFAULTS);
+    expect(env.prefs.loaded()).toEqual({ ...STORED_DEFAULTS, theme: 'default' });
+    env.prefs.setTheme('default');
+    expect(env.prefsWrites()).toEqual([]);
+    env.prefs.setAnimationSpeed('fast');
+    expect(env.prefsWrites()).toEqual([
+      [PREFS, '{"version":1,"animationSpeed":"fast","showTimer":false}'],
+    ]);
+  });
+
+  it('AD-10 setTheme writes theme iff not default, and the callback follows each successful write', async () => {
+    const env = await setup();
+    const seen: string[] = [];
+    env.prefs.onThemeChange((id) => seen.push(`${id}:${env.storage.map.get(PREFS)}`));
+    env.prefs.setTheme('paper');
+    env.prefs.setTheme('paper');
+    env.prefs.setTheme('default');
+    expect(env.prefsWrites()).toEqual([
+      [PREFS, '{"version":1,"animationSpeed":"normal","showTimer":false,"theme":"paper"}'],
+      [PREFS, '{"version":1,"animationSpeed":"normal","showTimer":false}'],
+    ]);
+    expect(seen).toEqual([
+      'paper:{"version":1,"animationSpeed":"normal","showTimer":false,"theme":"paper"}',
+      'default:{"version":1,"animationSpeed":"normal","showTimer":false}',
+    ]);
+    expect(env.prefs.value.theme).toBe('default');
+  });
+
+  it('AD-10 setTheme: a throwing write skips the callback and changes nothing; speed changes keep the theme', async () => {
+    const env = await setup();
+    const seen: string[] = [];
+    env.prefs.onThemeChange((id) => seen.push(id));
+    env.storage.control.fail = true;
+    expect(() => env.prefs.setTheme('paper')).toThrow('setItem failed');
+    expect(seen).toEqual([]);
+    expect(env.prefs.value.theme).toBe('default');
+    env.storage.control.fail = false;
+    env.prefs.setTheme('paper');
+    env.prefs.setAnimationSpeed('fast');
+    expect(env.storage.map.get(PREFS)).toBe(
+      '{"version":1,"animationSpeed":"fast","showTimer":false,"theme":"paper"}',
+    );
+    expect(seen).toEqual(['paper']);
+  });
+
+  it('AD-10 AD-15 setTheme throws while halted and booting, with no callback', async () => {
+    for (const kind of ['halted', 'booting']) {
+      const env = await setup({ loadGame: kind !== 'booting' });
+      const seen: string[] = [];
+      env.prefs.onThemeChange((id) => seen.push(id));
+      if (kind === 'halted') env.game.halt('fatal', 'boom');
+      expect(() => env.prefs.setTheme('paper')).toThrow(`AD-15 setTheme() while ${kind}`);
+      expect(seen).toEqual([]);
+      vi.unstubAllGlobals();
+    }
   });
 });

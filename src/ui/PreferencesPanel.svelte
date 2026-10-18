@@ -1,16 +1,18 @@
 <script lang="ts">
 import { tick, untrack } from 'svelte';
-import { type AnimationSpeed, prefs } from '../shell/prefs.svelte';
+import { type AnimationSpeed, prefs, type ThemeId } from '../shell/prefs.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { act } from './act';
 import { overlays } from './overlays.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Panel from './Panel.svelte';
 import { text } from './text';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import { entries } from './theme/registry';
 
 // Epic 6 CAP-7 (ticket 6.4, R-82, R-76, spec §7.10, Q-36; DESIGN.md Panels): the Preferences panel,
 // opened only through `openSurface('preferences')` (the Menu row). A radiogroup `Animation speed`
-// (Fast / Normal / Slow) and a `Show timer` switch (default off); each change calls the prefs setter
+// (Fast / Normal / Slow), a `Show timer` switch (default off) and a `Theme` radiogroup (Q-45, the registered themes); each change calls the prefs setter
 // uncaught (rule 6: they throw while halted or booting, AD-10), writes at once, applies to the next
 // glide and never touches the Session. Every control is `act()`-wrapped. Esc closes it through the key
 // handler (keys.ts, ticket 6.10); the back control uses `close`. At close focus goes to the ☰ button after `tick()` (as
@@ -43,6 +45,10 @@ function close(): void {
 
 function setSpeed(speed: AnimationSpeed): void {
   prefs.setAnimationSpeed(speed);
+}
+
+function setTheme(id: ThemeId): void {
+  prefs.setTheme(id);
 }
 
 function toggleTimer(): void {
@@ -80,6 +86,23 @@ function toggleTimer(): void {
       ><span class="thumb"></span></span
     >
   </button>
+  <div class="group" role="radiogroup" aria-labelledby="theme-label">
+    <p id="theme-label" class="label">{text.theme}</p>
+    <div class="segments">
+      {#each entries() as entry (entry.id)}
+        <label class="segment" class:on={prefs.value.theme === entry.id}>
+          <input
+            type="radio"
+            name="theme"
+            value={entry.id}
+            checked={prefs.value.theme === entry.id}
+            onchange={act(() => setTheme(entry.id))}
+          />
+          <span>{entry.label}</span>
+        </label>
+      {/each}
+    </div>
+  </div>
 </Panel>
 
 <style>

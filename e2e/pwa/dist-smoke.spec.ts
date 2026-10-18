@@ -54,3 +54,21 @@ test('AD-11 ?bands= ignored in dist/', async ({ page }) => {
     'actionBar',
   ]);
 });
+
+test('Q-45 AD-10 the production Theme radiogroup offers Charcoal only, applied as default', async ({
+  page,
+}) => {
+  await seedStorage(page, { session: fixture('session-idle-fresh.json') });
+  await page.goto('/');
+  await expect(page.getByTestId(/^card-\d+$/)).toHaveCount(52);
+  expect(await page.evaluate(() => document.documentElement.getAttribute('data-theme'))).toBe(
+    'default',
+  );
+  await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await page.getByRole('button', { name: 'Preferences', exact: true }).click();
+  const group = page
+    .getByRole('dialog', { name: 'Preferences', exact: true })
+    .getByRole('radiogroup', { name: 'Theme' });
+  await expect(group.getByRole('radio')).toHaveCount(1);
+  await expect(group.getByRole('radio', { name: 'Charcoal' })).toBeChecked();
+});

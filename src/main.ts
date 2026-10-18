@@ -25,6 +25,7 @@ import {
   startTracker,
 } from './ui/motion';
 import { overlays } from './ui/overlays.svelte';
+import { applyTheme, defaultTheme, register, testPaper } from './ui/theme/registry';
 // Imported before boot so the `@font-face` the font check loads is registered.
 import './ui/app.css';
 
@@ -121,8 +122,11 @@ async function boot(): Promise<void> {
     depth: () => overlays.depth,
   });
   await fontCheck();
-  // AD-10: prefs and the motion mirror before the Session load, also when halted meanwhile.
+  // AD-10: prefs and the motion mirror before the Session load, also when halted meanwhile. Q-45,
+  // AD-16: the theme applies right after the load (a throw, e.g. an unregistered id, reaches AD-15).
+  prefs.onThemeChange(applyTheme);
   prefs.load();
+  applyTheme(prefs.value.theme);
   initMotion();
   game.load();
   if (game.state.kind === 'halted') {
@@ -209,4 +213,7 @@ async function boot(): Promise<void> {
   await dictionary.load();
 }
 
+// AD-17: the test-only `paper` entry, in builds carrying the test hook, before boot.
+register(defaultTheme);
+if (import.meta.env.DEV || import.meta.env.VITE_TEST_HOOKS === '1') register(testPaper);
 void boot();

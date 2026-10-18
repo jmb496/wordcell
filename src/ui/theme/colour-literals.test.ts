@@ -129,12 +129,26 @@ describe('AD-14 token sites', () => {
   });
 });
 
+// Epic themes TH-3: the theme registry holds the explicit `theme-color` meta colour literals (AD-10).
+const REGISTRY = 'src/ui/theme/registry.ts';
+
+describe('AD-10 theme registry meta colour', () => {
+  it('AD-10 the default entry meta colour equals --wc-table in app.css, read as text (TH-3)', () => {
+    const token = /--wc-table:\s*(#[0-9a-f]{6})/i.exec(read('src/ui/app.css'))?.[1];
+    const meta = /id: 'default'[^}]*meta: '(#[0-9a-f]{6})'/i.exec(read(REGISTRY))?.[1];
+    expect(token).toBeDefined();
+    expect(meta?.toLowerCase()).toBe(token?.toLowerCase());
+  });
+});
+
 describe('AD-14 real tree', () => {
   it('AD-14 src/** has no colour literal outside the tokens', () => {
     const names = defaultTokenNames(read('src/ui/app.css'));
     const violations = walk('src')
       .filter((p) => /\.(svelte|css|ts)$/.test(p))
-      .filter((p) => !/\.test\.ts$/.test(p) && p !== 'src/ui/theme/colour-literals.ts')
+      .filter(
+        (p) => !/\.test\.ts$/.test(p) && p !== 'src/ui/theme/colour-literals.ts' && p !== REGISTRY,
+      )
       .flatMap((p) => scan(p, read(p), names));
     expect(violations).toEqual([]);
   });

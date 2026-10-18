@@ -59,7 +59,7 @@ const CASES: Case[] = [
 // store's never-written default (change together).
 const DEFAULTS = {
   history: { version: 1, records: [] },
-  prefs: { version: 1, animationSpeed: 'normal', showTimer: false },
+  prefs: { version: 1, animationSpeed: 'normal', showTimer: false, theme: 'default' },
 };
 
 const FIELDS = [
@@ -97,7 +97,7 @@ for (const c of CASES) {
         expect(first.current.history).toEqual(JSON.parse(c.seed.history));
       }
       if (c.seed.prefs !== undefined) {
-        expect(first.current.prefs).toEqual(JSON.parse(c.seed.prefs));
+        expect(first.current.prefs).toEqual({ ...DEFAULTS.prefs, ...JSON.parse(c.seed.prefs) });
       }
       const primary = page.getByTestId('primary-action');
       if (c.undo) {
@@ -145,7 +145,10 @@ for (const c of CASES) {
       for (const [field, key] of FIELDS) {
         if (field === 'session') continue;
         if (before.present.includes(key)) {
-          expect(after.loaded[field]).toEqual(before.current[field]);
+          // loaded() is the stored shape; current().prefs resolves `theme` (AD-7).
+          const resolved =
+            field === 'prefs' ? { ...DEFAULTS.prefs, ...after.loaded.prefs } : after.loaded[field];
+          expect(resolved).toEqual(before.current[field]);
         }
       }
 
@@ -160,7 +163,7 @@ for (const c of CASES) {
         activeMsOf(after.loaded.session),
       );
       expect(after.current.history).toEqual(after.loaded.history ?? DEFAULTS.history);
-      expect(after.current.prefs).toEqual(after.loaded.prefs ?? DEFAULTS.prefs);
+      expect(after.current.prefs).toEqual({ ...DEFAULTS.prefs, ...after.loaded.prefs });
 
       if (c.id === 'R-84 AD-17') {
         const { records } = JSON.parse(fixture('history-three-records.json')) as {
