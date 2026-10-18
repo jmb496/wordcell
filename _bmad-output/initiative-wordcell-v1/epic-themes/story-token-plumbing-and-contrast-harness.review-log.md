@@ -1,5 +1,5 @@
 # Review log — story-token-plumbing-and-contrast-harness.md
-State: pass 4: done
+State: pass 5: done
 Mode: docs, thorough, max 7. Pre-loop: HEAD 5438993ba12759a9f9d89ccede9e911753dbc47f, 180 words (growth budget ~1500 words, stub being fleshed out).
 
 ## Pass 1 — 2026-10-18
@@ -50,6 +50,18 @@ Words (docs): 1467 (8.1 x pass 0; budget ~1500)  |  Snapshot: story-token-plumbi
 - [major] named-colour "whole word" vs `var(--wc-accent-teal)` → standalone identifier token, var() args and custom-property names skipped
 - [major] var(--wc-*) definedness undefined "colour-valued" → closed non-colour runtime allowlist
 - [minor] Proof bullet states baseline coverage as fact
+### Default applied (technical)
+- all of the above
+### Decision needed
+- none
+
+## Pass 5 — 2026-10-18
+Reviewers: fix diff, edge-case hunter, builder's reading, ref alignment  |  Findings: major 2, minor 6 (3 applied), decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1492 (8.3 x pass 0; budget ~1500)  |  Snapshot: story-token-plumbing-and-contrast-harness.passes/pass5.md
+### Applied
+- [major] scan was a pure (path, text) function yet checked var() names against token keys → `scan(path, text, knownTokens)`
+- [major] comma-form rgb positive ambiguous vs app.css exemption → positives run on a component path; comma-form rejection belongs to the contrast parser + negative
+- [minor] baseline directory glob named
 ### Default applied (technical)
 - all of the above
 ### Decision needed
