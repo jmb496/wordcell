@@ -1,6 +1,6 @@
 # Review log — story-theme-preference-and-pre-paint-apply (ticket 9.4)
 
-State: pass 1: done
+State: pass 2: done
 Pre-loop: HEAD 799b7eb, 192 words, copy story-theme-preference-and-pre-paint-apply.review-log.passes/pass0.md
 
 ## Pass 1 — 2026-10-18
@@ -22,3 +22,22 @@ Words: 712 (3.7 x pass 0, over the 2.5x budget; from pass 2 only no-added-words 
 - registry of themes with only `default` in production plus test-only second theme; applyTheme in src/ui/theme/ called from main.ts and a prefs change callback; theme optional and omitted while default; plan settles apply-before-awaits
 ### Decision needed (owner gate, not UX choice)
 - First paint order: moving prefs.load()+apply ahead of nav.launch()/fontCheck() departs from AD-16 order and needs a spine edit approved by the owner (rule 7) — proposed default: plan proposes it if the first-frame test fails otherwise
+
+## Pass 2 — 2026-10-18
+Reviewers: fix-diff, edge-case, adversarial, ref alignment  |  Findings: major 7, minor 4 (merged), decision-needed 0  |  Dropped in triage: 0
+Words: 691 (3.6 x pass 0, over budget; minors only if word-neutral)  |  Snapshot: story-theme-preference-and-pre-paint-apply.review-log.passes/pass2.md
+### Applied
+- [major] pre-apply-slot halts and first-paint guarantee merged into one bullet → 1
+- [major] no-flash probe reworded for the static pre-apply state → 2
+- [major] test-only theme `paper` via registerTheme hook, test-hook builds only → 3
+- [major] unregistered-valid id test; prefs-invalid-theme rejection test → 4
+- [major] prefs normalisation (omit iff default) → 5
+- [major] onThemeChange callback API → 6
+- [major] explicit meta colour per registry entry + token-equality test → 7
+- [minor] screenshots wording, Theme row last → 8
+### Default applied (technical)
+- pre-slot halts render static default and are exempt; test theme id `paper`; meta table per AD-10
+### Decision needed
+- (same as pass 1: first-paint order vs AD-16 spine edit, owner approval)
+### Dropped
+- none
