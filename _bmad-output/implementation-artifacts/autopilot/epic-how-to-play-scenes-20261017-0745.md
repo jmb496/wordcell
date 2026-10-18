@@ -78,3 +78,19 @@ Ref to fix upstream: none
 Tokens: Tokens: 5.4M input-equivalent (ticket review 61%, build 26%, code review 6%, orchestrator 4%, other 3%); orchestrator peak context 64k
 Worth knowing: epic file Done-when/HP-4/HP-5 wording still says three Tricky scenes, and tickets.toml entry 11 description needs narrowing; both left for 8.11 or the retro. Code review noted no scene-level test for the R-22 empty-column caption sentence and that the harness's rejected branch is removed in 8.11.
 Close-out docs: none
+
+## 8.11 Rework sweep: docs, budget and cleanup — done
+What it adds: removes the leftover code, text and tests of the replaced How to play scenes, updates the How to play section of EXPERIENCE.md, and records the size margin and the list of new texts for your review.
+Ticket review: 5 passes, converged; majors 9, 5, 5, 1, 1; nothing needed your input
+Build: built; commit 41c209f (committed by the orchestrator: the step was told not to commit)
+Code review: quick, 1 pass, converged; 0 fixes applied
+Tests: all passing, screenshots passed
+Ref to fix upstream: none
+Tokens: 6.0M input-equivalent (ticket review 59%, build 29%, code review 7%, orchestrator 4%, other 2%); orchestrator peak context 67k
+Worth knowing: the build deletes dead code in the engine file src/engine/scene-replay.ts (deletion only, no export change), which the epic's "no engine source change" boundary did not allow for; ticket 8.10 handed it over, so I treated it as a deliberate exception. Say if you disagree. Margin and the new-text table are in the ticket plan's Implementation Notes.
+Close-out docs: none
+
+## Run complete
+Close-out docs:
+- EXPERIENCE.md (How to play carousel behaviours) <- no swipe, no wrap-around, always opens on scene 1, scene restarts on entry (owner, 2026-10-17)
+- epic-how-to-play-scenes SPEC.md / epic file (Scene 4 pacing) <- stacks grow first, then figures, then total (owner, 2026-10-17), if it describes the interleaved order

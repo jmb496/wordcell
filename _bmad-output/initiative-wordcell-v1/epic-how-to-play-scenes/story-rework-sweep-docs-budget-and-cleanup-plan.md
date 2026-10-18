@@ -3,7 +3,7 @@ title: 'Rework sweep: docs, budget and cleanup'
 type: 'chore'
 ticket: '11'
 created: '2026-10-17'
-status: 'built'
+status: done
 baseline_revision: '6926b1f284347bc17ddbbcd39075c11d503da6e3'
 route: 'full'
 route_source: 'auto'
