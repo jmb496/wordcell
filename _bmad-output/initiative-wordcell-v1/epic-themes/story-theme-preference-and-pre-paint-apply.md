@@ -50,3 +50,4 @@ Verify: npm run test:all and npm run test:screens are green, including the crite
 ## Notes
 
 - No open questions.
+- Decision (owner, 2026-10-18): keep the AD-16 boot order (option A). The build's first-frame test decides; only if a flash shows with a non-default theme does the plan propose a spine edit for owner approval.
