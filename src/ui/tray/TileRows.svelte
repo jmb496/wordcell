@@ -116,7 +116,7 @@ function stripPosition(i: number): 'bottom' | 'top' | undefined {
      layer (above the sticky bars 2, the lift 3 and the hover peek's reserved 4, below any scrim)
      with the lift shadow, as Column.svelte's. */
   .tiles:global(.wc-drag-tiles) { overflow: visible; }
-  .tiles :global(.face.wc-drag-layer) { z-index: 5; box-shadow: 0 6px 16px #0008; }
+  .tiles :global(.face.wc-drag-layer) { z-index: 5; box-shadow: 0 6px 16px var(--wc-shadow-drag); }
   /* Epic 5 SPEC CAP-8 (DESIGN.md Layer order): a FLIP-gliding face (flip.ts `wc-glide`, literal
      from gestures/classes.ts) rides above the cards and under the sticky bars (2), no shadow; a
      band-changing glide lifts the clip by `wc-drag-tiles` above. */

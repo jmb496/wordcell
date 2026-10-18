@@ -339,7 +339,7 @@ const inView = $derived.by(() => {
   /* DESIGN.md Elevation & Depth: a tap-selected card's face rises `--wc-select-lift` (Board, from
      SELECTION_LIFT_PX) with the soft shadow, above the sticky bars (z-index 2); the wrapper (hit
      rect) never moves (F26). */
-  .lifted .face { transform: translateY(calc(-1 * var(--wc-select-lift))); box-shadow: 0 6px 16px #0008; z-index: 3; }
+  .lifted .face { transform: translateY(calc(-1 * var(--wc-select-lift))); box-shadow: 0 6px 16px var(--wc-shadow-drag); z-index: 3; }
 
   /* DESIGN.md Tile, tap-selected tile (epic 5 SPEC CAP-4, F2): the face rises 4 px with a 2 px teal
      outline and no shadow; the wrapper (hit rect, slot) never moves. */

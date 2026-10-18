@@ -6,9 +6,8 @@
   font-style: normal;
   font-display: block;
 }
-:root {
-  color-scheme: dark;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+:root,
+[data-theme="default"] {
   /* DESIGN.md colors, in order. */
   --wc-table: #15171b;
   --wc-surface: #1e2127;
@@ -28,6 +27,15 @@
   --wc-destination-fill: #2e3a52;
   --wc-error: #f08a84;
   --wc-scrim: #000000b3;
+  /* Internal tokens, not DESIGN.md colour roles. */
+  --wc-shadow-drag: #0008;
+  --wc-scene-pointer-fill: #fff;
+  --wc-scene-pointer-stroke: #1a1a1a;
+  --wc-scene-pointer-shadow: rgb(0 0 0 / 0.45);
+}
+:root {
+  color-scheme: dark;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   color: var(--wc-ink-primary);
 }
 html,

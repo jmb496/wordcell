@@ -455,8 +455,6 @@ const replay = (): void => {
       >
         <path
           d="M9 1.5c1.4 0 2.5 1.1 2.5 2.5v9l1.2-.4c1.2-.4 2.5.3 2.8 1.5l.3-.1c1.2-.4 2.5.3 2.8 1.5l.2-.1c1.3-.4 2.8.4 3 1.8l.7 6.2c.3 2.8-.9 5.6-3.2 7.2H12.5c-1.5 0-2.9-.7-3.8-1.9L3.4 20.3c-.8-1.1-.5-2.6.6-3.3 1-.6 2.2-.4 3 .4l.5.6V4c0-1.4 1.1-2.5 2.5-2.5z"
-          fill="#fff"
-          stroke="#1a1a1a"
           stroke-width="1.6"
           stroke-linejoin="round"
         />
@@ -543,8 +541,9 @@ const replay = (): void => {
   .validate.off { color: var(--wc-ink-disabled); }
   .ghost {
     position: absolute; top: 0; left: 0; opacity: 0; pointer-events: none;
-    filter: drop-shadow(0 1px 2px rgb(0 0 0 / 0.45));
+    filter: drop-shadow(0 1px 2px var(--wc-scene-pointer-shadow));
   }
+  .ghost path { fill: var(--wc-scene-pointer-fill); stroke: var(--wc-scene-pointer-stroke); }
   .tap {
     position: absolute; inset: 0; padding: 0; border: 0; border-radius: 8px;
     background: transparent; cursor: pointer;
