@@ -91,7 +91,7 @@ const BAND_SCORES = [
   '300 or more',
   '350 or more',
   '400 to 529',
-  '530 (every card placed)',
+  '530 (perfect)',
 ] as const;
 
 // How to play panel (ticket 6.9, CAP-8; EXPERIENCE.md How to play panel; spec §3–§6, §8, §9). The
