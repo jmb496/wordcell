@@ -1,8 +1,10 @@
 outcome: stopped
-ticket: 9.3
-reason: plan checkpoint (rule 4, owner-requested); ticket left built
-next: 9.4 after 9.2 and 9.3 are done (9.1 and 9.2 are hitl, owner)
-updated: 2026-10-18T19:21:37Z
-summary: 9.3 built and verified (test:all and screenshots green, baselines unchanged); waiting for you to read the plan.
+ticket: 9.4
+reason: rule 1, decision needed on theme apply vs AD-16 boot order
+next: 9.4 (resume after your answer)
+updated: 2026-10-18T22:40:00Z
+summary: 9.4 ticket review converged in 4 passes; one question for you about the first-paint order.
 
-Plan: _bmad-output/initiative-wordcell-v1/epic-themes/story-token-plumbing-and-contrast-harness-plan.md. Mark done with tickets.py mark 9.3 done after reading it.
+Question: with a non-default theme chosen, boot order AD-16 could show a brief dark flash on reload. Option A (proposed default): keep AD-16; the build's first-frame test decides, and only if a flash shows does the plan propose a spine edit for your approval. Option B: apply the theme earlier now, which edits AD-16 (spine, yours). Effect: B avoids any possible flash for light-theme players at the cost of a spine change; A changes nothing unless a flash is actually seen.
+Digest: _bmad-output/implementation-artifacts/autopilot/epic-themes-20261018-1343.md
+Resume: record your answer in the ticket Notes, commit, rerun .claude/skills/epic-autopilot/scripts/loop.sh epic-themes

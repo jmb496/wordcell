@@ -1,6 +1,6 @@
 # Review log — story-theme-preference-and-pre-paint-apply (ticket 9.4)
 
-State: pass 3: done
+State: pass 4: done
 Pre-loop: HEAD 799b7eb, 192 words, copy story-theme-preference-and-pre-paint-apply.review-log.passes/pass0.md
 
 ## Pass 1 — 2026-10-18
@@ -57,3 +57,19 @@ Words: 809 (4.2 x pass 0, over budget)  |  Snapshot: story-theme-preference-and-
 - (unchanged: first-paint order vs AD-16 spine edit, owner approval)
 ### Dropped
 - "keep AD-16 order, no spine edit" — the ticket already routes that to the plan_checkpoint and owner (rule 7)
+
+## Pass 4 — 2026-10-18
+Reviewers: fix-diff, edge-case, adversarial, ref alignment  |  Findings: major 0, minor 7, decision-needed 0  |  Dropped in triage: 0
+Words: 809 (4.2 x pass 0, unchanged; no fix pass)
+### Decision needed (owner gate)
+- First paint order: whether prefs.load()+apply move ahead of nav.launch()/fontCheck() (departs from AD-16 order, spine edit needs owner approval, rule 7) — proposed default: keep AD-16 order unless the plan's first-frame test shows a flash; then propose the edit.
+
+## Result — converged after 4 passes
+
+Unapplied minors:
+- registry needs a named registration function (registerTheme-like) for main.ts's test-only `paper` entry
+- pin applyTheme between prefs.load() and game.load(); applyTheme looks up the registry before any DOM write
+- order in setTheme (write, set value, mirror, callback); callback throw goes to AD-15
+- list the Charcoal / Daylight Paper label strings (EXPERIENCE.md) for the switch test
+- add AD-15 and EXPERIENCE.md Preferences rows to References
+- state which build the Preferences baseline is taken in (test build lists `paper`)
