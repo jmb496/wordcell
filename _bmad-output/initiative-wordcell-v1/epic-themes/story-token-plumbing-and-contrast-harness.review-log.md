@@ -1,5 +1,5 @@
 # Review log — story-token-plumbing-and-contrast-harness.md
-State: pass 2: done
+State: pass 3: done
 Mode: docs, thorough, max 7. Pre-loop: HEAD 5438993ba12759a9f9d89ccede9e911753dbc47f, 180 words (growth budget ~1500 words, stub being fleshed out).
 
 ## Pass 1 — 2026-10-18
@@ -27,5 +27,17 @@ Words (docs): 1223 (6.8 x pass 0; stub fleshed out, budget ~1500)  |  Snapshot: 
 - [minor] selector note, AD-10 wording, pin assertion deleted, git diff on baselines, covers note → 11–15
 ### Default applied (technical)
 - UI-layer placement; floor + round1 threshold rule; deterministic unit checks for uncovered pixel sites.
+### Decision needed
+- none
+
+## Pass 3 — 2026-10-18
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 5 (merged), minor 8, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1380 (7.7 x pass 0; budget ~1500)  |  Snapshot: story-token-plumbing-and-contrast-harness.passes/pass3.md
+### Applied
+- [major] var() definedness check failed on 14 non-colour runtime names → restricted to colour-valued contexts
+- [major] scan module self-flag → path exemption; colour-valued declaration definition; script-string rule (whole-string hex); alpha token enumeration
+- [minor] single dir src/ui/theme/, exempt selector forms, theme records keyed by id, rgb forms, parse-error, ghost wording
+### Default applied (technical)
+- all of the above
 ### Decision needed
 - none
