@@ -47,14 +47,24 @@ const phaseComposing = (word: string, n: number): string =>
 const phasePlace = (word: string, n: number): string =>
   `Place. ${word.toUpperCase()}, ${letters(n)}.`;
 
-// EXPERIENCE.md Rating bands (A-E2), keyed by the view's `band` 0–5 (no threshold logic here).
+// EXPERIENCE.md Rating bands (A-E2), keyed by the view's `band` 0–9 (no threshold logic here).
 const BANDS = [
-  { name: 'Alphabet Soup', message: 'Plenty of letters, not much broth. The deck forgives you.' },
+  {
+    name: 'Just Getting Started',
+    message: 'Every word has to start somewhere. Lovely first steps!',
+  },
   { name: 'Warming Up', message: 'The cells are waking up.' },
-  { name: 'Word Nerd', message: 'Halfway to glory, and it shows.' },
+  { name: 'Word Explorer', message: "You're finding your way around the deck." },
+  { name: 'Word Nerd', message: 'The words are flowing now.' },
   { name: 'Wordsmith', message: 'Long words, high cells. Nicely forged.' },
+  { name: 'Word Wizard', message: 'That is some real word magic.' },
+  { name: 'Lexicon Pro', message: 'Impressive: the dictionary is taking notes.' },
   { name: 'Lexicon Legend', message: 'The dictionary is a little afraid of you.' },
-  { name: 'Perfect Deck', message: 'Fifty-two cards, one cell. Nothing left to prove.' },
+  { name: 'Nearly Impossible', message: 'Scores like this are almost unheard of. Astonishing!' },
+  {
+    name: 'You Cheated',
+    message: 'Every single card placed. We have no idea how, but we are very impressed.',
+  },
 ] as const;
 
 function bandOf(band: number): (typeof BANDS)[number] {
@@ -64,19 +74,23 @@ function bandOf(band: number): (typeof BANDS)[number] {
   return entry;
 }
 
-/** The six band names in band 0–5 order (How to play, ticket 6.9; no copy of the table). */
+/** The ten band names in band 0–9 order (How to play, ticket 6.9; no copy of the table). */
 export function bandNames(): readonly string[] {
   return BANDS.map((b) => b.name);
 }
 
-// EXPERIENCE.md Rating bands "English score" column (R-83: ceil(t × 530 / 520); the engine `band`
-// is not exported, AD-2). Static strings, no threshold logic.
+// EXPERIENCE.md Rating bands "English score" column (R-83: thresholds in steps of 50 of the English
+// maximum 530; the engine `band` is not exported, AD-2). Static strings, no threshold logic.
 const BAND_SCORES = [
-  'below 159',
-  '159 or more',
-  '265 or more',
-  '378 or more',
-  '469 or more',
+  'below 50',
+  '50 or more',
+  '100 or more',
+  '150 or more',
+  '200 or more',
+  '250 or more',
+  '300 or more',
+  '350 or more',
+  '400 to 529',
   '530 (every card placed)',
 ] as const;
 
@@ -84,19 +98,7 @@ const BAND_SCORES = [
 // owner reads this text at ticket review. Each section body is a list of paragraphs.
 const howTo = {
   goal: [
-    'Empty all eight columns by placing words on the WordCells. A word placed on a high-numbered cell scores more, so long words on high cells score most.',
-  ],
-  table: [
-    'The table has eight columns of cards, 52 cards in all, and eight WordCells numbered 3 to 10 above them. Only the bottom card of a column can be picked up alone; a stack tail is that card and every card above it that you pick up with it.',
-    'The top card of a WordCell is a free letter: it can join one word, once, and its cell then shows the card beneath. One card, QU, counts as two letters everywhere, including scoring, and carries a \u00d72 badge.',
-  ],
-  undo: [
-    'Undo steps back one phase at a time, all the way to the deal. Redo steps forward again until you make a different change.',
-    'There is no Cancel button: Undo is always one tap away.',
-    'There are no hints.',
-  ],
-  empty: [
-    'An empty column is a legal destination, and the only one where no destination cards have to join the word. That is why emptying a column is valuable: a word built from picked-up cards and free letters alone needs one.',
+    'Empty all eight columns by placing words in the WordCells. Bigger words in high-numbered WordCells score more.',
   ],
   scoring: [
     'Your score is the sum, over the WordCells, of the letters in the cell times the cell\u2019s number. A QU card counts as two letters.',
@@ -323,9 +325,6 @@ export const text = Object.freeze({
   howTo: {
     headings: {
       goal: 'The goal',
-      table: 'The table',
-      undo: 'Undo and Redo',
-      empty: 'Empty columns',
       scoring: 'Scoring, giving up and bands',
       controls: 'Controls',
     },
@@ -336,13 +335,13 @@ export const text = Object.freeze({
     scenes: {
       // Epic 8 ticket 7: the owner-reviewed drafts, kept verbatim (the owner reads them at done).
       moveCompose:
-        "Press a card and drag: it takes every card below it. Drop the stack on a column and arrange the cards into a word. The cards you land on stay in order and can't be shuffled. \u2212/+ choose how many; Flip makes the word read upward instead.",
+        "To form a word, drag one or more cards and drop onto the bottom of a column. The cards in the destination column stay in order and can't be shuffled, but the initial dragged group can. \u2212/+ adds more letters from the destination column; Flip makes the word read upward instead.",
       freeLetter:
         'Tap a WordCell to borrow its top card. The top card of each WordCell can be used as a free letter added to the word. Then Validate.',
       place:
-        "Pick a WordCell no higher than the word is long. Order the cards: the last one becomes that cell's free letter. Then Confirm.",
+        "Letters from the formed word are placed in a WordCell of value equal to or less than the length of the word. Order the cards: the last one becomes that cell's free letter. Then Confirm.",
       scoring:
-        'Each WordCell scores its letters times its number. QU counts as two letters. Long words on high cells score most.',
+        'Each WordCell scores its letters times its number. QU counts as two letters. Bigger words lead to higher scores.',
       // Epic 8 ticket 10 (HP-4): the one Tricky rule, the owner's wording of 2026-10-17.
       sourceDrop:
         'Dropping back on the column you lifted from is allowed. You must use at least 1 letter from the destination column, unless you drag to an empty column.',

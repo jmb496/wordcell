@@ -27,31 +27,23 @@ function inner(body: string, tag: string): string[] {
 }
 
 describe('AD-3 How to play panel', () => {
-  it('AD-3 the title and the six h3 headings equal the text.ts strings, in order', async () => {
+  it('AD-3 the title and the three h3 headings equal the text.ts strings, in order', async () => {
     const body = await html();
     expect(inner(body, 'h2')).toEqual([text.howToPlay]);
     expect(inner(body, 'h3')).toEqual(Object.values(text.howTo.headings));
-    expect(Object.values(text.howTo.headings)).toHaveLength(6);
+    expect(Object.values(text.howTo.headings)).toHaveLength(3);
   });
 
   it('AD-3 every body paragraph, caption and band is rendered from text.ts', async () => {
     const body = await html();
     const paragraphs = inner(body, 'p');
-    const expected = [
-      ...text.howTo.goal,
-      ...text.howTo.table,
-      ...text.howTo.undo,
-      ...text.howTo.empty,
-      ...text.howTo.scoring,
-    ];
+    const expected = [...text.howTo.goal, ...text.howTo.scoring];
     expect(paragraphs).toEqual(expected);
     // The carousel mounts a scene only after its first non-zero width measurement (ticket 6), which
     // a server render never has: the captions are asserted in scenes.test.ts and the e2e specs.
     expect(inner(body, 'figcaption')).toEqual([]);
     expect(inner(body, 'caption')).toEqual(Object.values(text.howTo.controlCaptions));
     for (const name of bandNames()) expect(body).toContain(name);
-    expect(text.howTo.undo.join(' ')).toContain('no Cancel');
-    expect(text.howTo.undo.join(' ')).toContain('no hints');
   });
 
   it('AD-3 the scene cards are static: no card id, test id, place or mirror-of', async () => {
@@ -72,9 +64,6 @@ describe('AD-3 How to play panel', () => {
     expect(headings).not.toContain('Worked example');
     expect(headings).toEqual([
       text.howTo.headings.goal,
-      text.howTo.headings.table,
-      text.howTo.headings.undo,
-      text.howTo.headings.empty,
       text.howTo.headings.scoring,
       text.howTo.headings.controls,
     ]);
@@ -133,11 +122,5 @@ describe('AD-3 How to play panel', () => {
       'Start a new game',
       'Open this page',
     ]);
-  });
-
-  it('AD-3 Q-12 the empty-column paragraph says it is the only column needing no destination cards', () => {
-    const [paragraph] = text.howTo.empty;
-    expect(paragraph).toContain('the only one where no destination cards have to join the word');
-    expect(paragraph).toContain('An empty column is a legal destination');
   });
 });

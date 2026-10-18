@@ -53,18 +53,6 @@ function close(): void {
     {#each text.howTo.goal as paragraph}<p>{paragraph}</p>{/each}
   </section>
   <section>
-    <h3>{h.table}</h3>
-    {#each text.howTo.table as paragraph}<p>{paragraph}</p>{/each}
-  </section>
-  <section>
-    <h3>{h.undo}</h3>
-    {#each text.howTo.undo as paragraph}<p>{paragraph}</p>{/each}
-  </section>
-  <section>
-    <h3>{h.empty}</h3>
-    {#each text.howTo.empty as paragraph}<p>{paragraph}</p>{/each}
-  </section>
-  <section>
     <h3>{h.scoring}</h3>
     {#each text.howTo.scoring as paragraph}<p>{paragraph}</p>{/each}
     <ul class="bands">

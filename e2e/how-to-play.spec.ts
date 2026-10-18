@@ -1,6 +1,6 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
 import { STAGE_W, STRIP } from '../src/ui/scenes/geometry';
-import { text } from '../src/ui/text';
+import { bandNames, text } from '../src/ui/text';
 import { openFixture } from './helpers/board';
 import { wc } from './helpers/dialogs';
 import { onAndroid } from './helpers/project';
@@ -77,18 +77,14 @@ test('AD-3 the menu lists the six rows in order, then How to play opens the outl
   await expect(panel(page)).toBeVisible();
   const headings = panel(page).getByRole('heading');
   await expect(headings).toHaveText([text.howToPlay, ...Object.values(h)]);
-  expect(Object.values(h)).toHaveLength(6);
+  expect(Object.values(h)).toHaveLength(3);
   await expect(panel(page).locator('ul.bands li')).toHaveText(
-    [0, 1, 2, 3, 4, 5].map((b) => `${text.bandName(b)}${text.bandScore(b)}`),
+    bandNames().map((_, b) => `${text.bandName(b)}${text.bandScore(b)}`),
   );
   await expect(panel(page).locator('table')).toHaveCount(3);
   for (const caption of Object.values(text.howTo.controlCaptions)) {
     await expect(panel(page).locator('caption', { hasText: caption })).toHaveCount(1);
   }
-  for (const sentence of text.howTo.undo) {
-    await expect(panel(page).getByText(sentence, { exact: true })).toBeVisible();
-  }
-  await expect(panel(page).getByText(text.howTo.empty[0], { exact: true })).toBeVisible();
   await expect(panel(page).getByRole('button', { name: /^(Cancel|Hint)/ })).toHaveCount(0);
 });
 
