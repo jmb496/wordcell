@@ -15,32 +15,43 @@ const COLUMN_X0 = 0;
 export const COLUMNS = 8;
 /** Every column shows at least this many cards (scripted cards under filler at the far end). */
 export const MIN_COLUMN_CARDS = 5;
-/** The tallest column over any scene (filler, scripted cards and a landed tail); pinned by a test. */
-export const MAX_COLUMN_CARDS = 9;
-/**
- * The tallest WordCell stack over any scene: the scoring scene's stacks (the place scene's last
- * frame draws one top card, R-52).
- */
-export const MAX_CELL_CARDS = 6;
-const TRAY_ROWS = 2;
-export const STAGE_INPUTS: SceneStageInputs = {
-  columnCards: MAX_COLUMN_CARDS,
-  trayRows: TRAY_ROWS,
-  cellCards: MAX_CELL_CARDS,
-};
+export const TRAY_ROWS = 2;
 /** The transform that lifts a stack's top card `lifted` strips up, over the cards below it (ticket 9). */
 export const liftedBy = (lifted: number): string => `translateY(${-lifted * STRIP}px)`;
 const stack = (n: number): number => (n - 1) * STRIP + CARD_H;
-export const COLUMN_AREA_H = stack(MAX_COLUMN_CARDS);
-/** The foot row below the columns. */
 const FOOT_H = SCENE_BASE.foot;
-export const TRAY_TOP = COLUMN_AREA_H + FOOT_H + SCENE_BASE.gap;
 export const TRAY_H = SCENE_BASE.trayFirstRow + (TRAY_ROWS - 1) * SCENE_BASE.trayExtraRow;
 export const STAGE_W = 8 * SLOT;
-/** The labels row and the WordCells under the tray (BAND_ORDER: labels with wordcells). */
-export const LABELS_TOP = TRAY_TOP + TRAY_H + SCENE_BASE.gap;
-export const CELLS_TOP = LABELS_TOP + SCENE_BASE.labels;
-export const STAGE_H = CELLS_TOP + stack(MAX_CELL_CARDS);
+
+/**
+ * The vertical layout of one scene's stage, a pure function of that scene's own inputs (its tallest
+ * column and tallest WordCell stack, `sceneStageInputs`): the stage is only as tall as the scene
+ * needs (owner decision 2026-10-17), so shorter scenes are shorter. `stageH` equals
+ * `sceneBaseHeight(inputs)` (AD-11).
+ */
+export function stageGeometry(inputs: Pick<SceneStageInputs, 'columnCards' | 'cellCards'>) {
+  const columnAreaH = stack(inputs.columnCards);
+  /** The foot row below the columns. */
+  const trayTop = columnAreaH + FOOT_H + SCENE_BASE.gap;
+  /** The labels row and the WordCells under the tray (BAND_ORDER: labels with wordcells). */
+  const labelsTop = trayTop + TRAY_H + SCENE_BASE.gap;
+  const cellsTop = labelsTop + SCENE_BASE.labels;
+  const stageH = cellsTop + stack(inputs.cellCards);
+  return {
+    columnAreaH,
+    trayTop,
+    labelsTop,
+    cellsTop,
+    stageH,
+    /** The place layers cover the tray and the WordCell band (y from `trayTop`). */
+    placeH: stageH - trayTop,
+    /** The scoring scene's figures sit in the tray row above their WordCell, its total mid-tray. */
+    scoreFigureTop: trayTop + 8,
+    scoreTotalBox: { x: (STAGE_W - 100) / 2, w: 100, y: trayTop + 66, h: 30 },
+  };
+}
+export type StageGeometry = ReturnType<typeof stageGeometry>;
+
 /** The tail lifts this far while carried (DESIGN.md Card lift). */
 export const LIFT = 8;
 /** The pointer hand's box and its fingertip inside it (the point the hand targets). */
@@ -78,18 +89,11 @@ export const placeCellX = (cell: number): number => (cell - 3) * SLOT;
 // Epic 8 ticket 3: the place scene's layers cover the tray and the WordCell band (y from the
 // layer's top, TRAY_TOP): the placement strip, Confirm, and the cells. Cards in the strip use the
 // rich pitch (RICH_SLOT) except the WordCells, which keep the full card.
-export const PLACE_H = STAGE_H - TRAY_TOP;
 /** WordCell n (3 to 10): its card's top inside the place layer, and its number's top. */
-export const PLACE_CELL_TOP = CELLS_TOP - TRAY_TOP;
-export const PLACE_LABEL_TOP = LABELS_TOP - TRAY_TOP;
+export const PLACE_LABEL_TOP = TRAY_H + SCENE_BASE.gap;
+export const PLACE_CELL_TOP = PLACE_LABEL_TOP + SCENE_BASE.labels;
 /** The placement strip's tile row: top inside the layer, and tile i's left. */
 export const STRIP_TOP = 4;
 export const stripTileX = (i: number): number => RICH_INSET + i * RICH_SLOT;
 /** Confirm: left, width, top and height inside the layer (the tray's second row). */
 export const CONFIRM_BOX = { x: 78, w: 96, y: 64, h: 30 } as const;
-/**
- * The scoring scene's figures sit in the tray row above their WordCell (stage coordinates), and
- * its total pill in the middle of the tray.
- */
-export const SCORE_FIGURE_TOP = TRAY_TOP + 8;
-export const SCORE_TOTAL_BOX = { x: (STAGE_W - 100) / 2, w: 100, y: TRAY_TOP + 66, h: 30 } as const;

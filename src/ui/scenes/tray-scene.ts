@@ -1,6 +1,5 @@
 import {
   CARD_H,
-  CELLS_TOP,
   CONTROL_BOX,
   CONTROLS_H,
   CONTROLS_TOP,
@@ -11,7 +10,7 @@ import {
   RICH_SLOT,
   SLOT,
   STRIP,
-  TRAY_TOP,
+  type StageGeometry,
 } from './geometry';
 import type { Point, SceneFixtureData } from './types';
 
@@ -25,7 +24,7 @@ interface Carry {
   readonly destinationCount: number;
 }
 
-export function carryGeometry(data: SceneFixtureData, carry: Carry) {
+export function carryGeometry(data: SceneFixtureData, carry: Carry, geo: StageGeometry) {
   const sourceLength = data.start.columns[carry.sourceColumn - 1].length;
   const home = {
     x: columnX(carry.sourceColumn),
@@ -48,7 +47,7 @@ export function carryGeometry(data: SceneFixtureData, carry: Carry) {
         : destLength - carry.destinationCount,
     ),
   };
-  const trayDest = { x: RICH_INSET, y: TRAY_TOP + 4 };
+  const trayDest = { x: RICH_INSET, y: geo.trayTop + 4 };
   const trayTail = { x: trayDest.x + carry.destinationCount * RICH_SLOT, y: trayDest.y };
   const grab = { x: home.x + SLOT / 2, y: home.y + STRIP / 2 };
   return { home, offset, destHome, trayDest, trayTail, grab, over: add(grab, offset) };
@@ -56,17 +55,18 @@ export function carryGeometry(data: SceneFixtureData, carry: Carry) {
 
 const add = (a: Point, b: Point): Point => ({ x: a.x + b.x, y: a.y + b.y });
 
-const controlCentre = (box: { x: number; w: number }): Point => ({
-  x: box.x + box.w / 2,
-  y: TRAY_TOP + CONTROLS_TOP + CONTROLS_H / 2,
-});
-
 /** Pointer targets: the tray controls, WordCell 6, and the middle of the tile row. */
-export const trayTargets = {
-  minus: controlCentre(CONTROL_BOX.minus),
-  plus: controlCentre(CONTROL_BOX.plus),
-  flip: controlCentre(CONTROL_BOX.flip),
-  validate: controlCentre(CONTROL_BOX.validate),
-  cell6: { x: placeCellX(6) + SLOT / 2, y: CELLS_TOP + CARD_H / 2 },
-  tiles: { x: RICH_INSET + RICH_SLOT * 3, y: TRAY_TOP + 4 + CARD_H / 2 },
-} as const;
+export const trayTargets = (geo: StageGeometry) => {
+  const centre = (box: { x: number; w: number }): Point => ({
+    x: box.x + box.w / 2,
+    y: geo.trayTop + CONTROLS_TOP + CONTROLS_H / 2,
+  });
+  return {
+    minus: centre(CONTROL_BOX.minus),
+    plus: centre(CONTROL_BOX.plus),
+    flip: centre(CONTROL_BOX.flip),
+    validate: centre(CONTROL_BOX.validate),
+    cell6: { x: placeCellX(6) + SLOT / 2, y: geo.cellsTop + CARD_H / 2 },
+    tiles: { x: RICH_INSET + RICH_SLOT * 3, y: geo.trayTop + 4 + CARD_H / 2 },
+  } as const;
+};

@@ -5,18 +5,15 @@ import Card from '../Card.svelte';
 import {
   CARD_H,
   CARD_W,
-  COLUMN_AREA_H,
   COLUMNS,
   columnX,
-  LABELS_TOP,
   placeCellX,
   RICH_INSET,
   SLOT,
-  STAGE_H,
   STAGE_W,
   STRIP,
+  type StageGeometry,
   TRAY_H,
-  TRAY_TOP,
 } from './geometry';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { face, growBase } from './stage';
@@ -36,28 +33,30 @@ interface Props {
   cells: Readonly<Record<string, readonly string[]>> | undefined;
   /** Epic 8 ticket 9: WordCells (by number) whose cards sit in growth wrappers, with their card counts. */
   grow?: Readonly<Record<string, number>>;
+  /** This scene's vertical layout (`stageGeometry`). */
+  geometry: StageGeometry;
   scale: number;
   children: Snippet;
 }
-const { columns, filler, cells, grow, scale, children }: Props = $props();
+const { columns, filler, cells, grow, geometry, scale, children }: Props = $props();
 const CELL_NUMBERS = [3, 4, 5, 6, 7, 8, 9, 10] as const;
 const COLUMN_NUMBERS = Array.from({ length: COLUMNS }, (_, i) => i + 1);
 // The geometry for the markup (Biome reads script usage only).
-const geo = {
+const geo = $derived({
   cardH: CARD_H,
   cardW: CARD_W,
-  columnH: COLUMN_AREA_H,
-  labelsTop: LABELS_TOP,
+  columnH: geometry.columnAreaH,
+  labelsTop: geometry.labelsTop,
   inset: RICH_INSET,
   slot: SLOT,
-  stageH: STAGE_H,
+  stageH: geometry.stageH,
   stageW: STAGE_W,
   strip: STRIP,
   trayH: TRAY_H,
-  trayTop: TRAY_TOP,
+  trayTop: geometry.trayTop,
   columnX,
   placeCellX,
-};
+});
 </script>
 
 <div

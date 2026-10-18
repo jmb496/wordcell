@@ -1,7 +1,8 @@
 import fixture from '../../../fixtures/how-to-play-move-compose.json';
 import { text } from '../text';
-import { COLUMN_AREA_H, RICH_SLOT, STAGE_W } from './geometry';
+import { RICH_SLOT, STAGE_W, stageGeometry } from './geometry';
 import { defineScene } from './script';
+import { sceneStageInputs } from './stage';
 import { carryGeometry, trayTargets } from './tray-scene';
 import type { Frame, Scene, SceneFixtureData } from './types';
 
@@ -19,8 +20,6 @@ export const moveComposeCarry = {
   destinationColumn: 3,
   destinationCount: 1,
 } as const;
-const g = carryGeometry(data, moveComposeCarry);
-
 const opened = { tail: 'gone', tray: true, validate: 'lit', cell6: 'top' } as const;
 /** The last frame (BAKED, k 2, side right): scene 2 opens on it (ticket 7 continuity). */
 export const moveComposeFinalFrame: Frame = {
@@ -30,19 +29,35 @@ export const moveComposeFinalFrame: Frame = {
   side: 'right',
 };
 
+const frames: readonly Frame[] = [
+  { tail: 'home', tray: false, validate: 'off', cell6: 'top' },
+  { tail: 'lifted', tray: false, validate: 'off', cell6: 'top' },
+  { ...opened, order: ['E', 'K', 'B', 'A'], k: 1, side: 'left' },
+  { ...opened, order: ['D', 'E', 'K', 'B', 'A'], k: 2, side: 'left' },
+  { ...opened, order: ['N', 'D', 'E', 'K', 'B', 'A'], k: 3, side: 'left' },
+  { ...opened, order: ['D', 'E', 'K', 'B', 'A'], k: 2, side: 'left' },
+  { ...opened, order: ['K', 'B', 'A', 'E', 'D'], k: 2, side: 'right' },
+  moveComposeFinalFrame,
+];
+const stage = sceneStageInputs(data, moveComposeCarry, frames);
+const geo = stageGeometry(stage);
+const g = carryGeometry(data, moveComposeCarry, geo);
+const tray = trayTargets(geo);
+
 export const moveComposeScene: Scene = defineScene({
   id: 'move-compose',
   fixture: data,
+  stage,
   caption: text.howTo.scenes.moveCompose,
   carry: moveComposeCarry,
   targets: {
-    rest: { x: STAGE_W - 24, y: COLUMN_AREA_H - 24 },
+    rest: { x: STAGE_W - 24, y: geo.columnAreaH - 24 },
     grab: g.grab,
     over: g.over,
     tray: g.trayTail,
-    minus: trayTargets.minus,
-    plus: trayTargets.plus,
-    flip: trayTargets.flip,
+    minus: tray.minus,
+    plus: tray.plus,
+    flip: tray.flip,
   },
   elements: [
     'stage',
@@ -119,16 +134,7 @@ export const moveComposeScene: Scene = defineScene({
     },
   ],
   rest: { kind: 'flyToCell', times: 6 },
-  frames: [
-    { tail: 'home', tray: false, validate: 'off', cell6: 'top' },
-    { tail: 'lifted', tray: false, validate: 'off', cell6: 'top' },
-    { ...opened, order: ['E', 'K', 'B', 'A'], k: 1, side: 'left' },
-    { ...opened, order: ['D', 'E', 'K', 'B', 'A'], k: 2, side: 'left' },
-    { ...opened, order: ['N', 'D', 'E', 'K', 'B', 'A'], k: 3, side: 'left' },
-    { ...opened, order: ['D', 'E', 'K', 'B', 'A'], k: 2, side: 'left' },
-    { ...opened, order: ['K', 'B', 'A', 'E', 'D'], k: 2, side: 'right' },
-    moveComposeFinalFrame,
-  ],
+  frames,
   offset: g.offset,
   layout: {
     tailHome: g.home,

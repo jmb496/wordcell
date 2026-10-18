@@ -1,9 +1,10 @@
 import fixture from '../../../fixtures/how-to-play-source-drop.json';
 import { text } from '../text';
-import { COLUMN_AREA_H, RICH_SLOT, STAGE_W } from './geometry';
+import { RICH_SLOT, STAGE_W, stageGeometry } from './geometry';
 import { defineScene } from './script';
+import { sceneStageInputs } from './stage';
 import { carryGeometry, trayTargets } from './tray-scene';
-import type { Scene, SceneFixtureData } from './types';
+import type { Frame, Scene, SceneFixtureData } from './types';
 
 // Epic 8 ticket 4 (HP-4a; docs/game-flow-spec.md §8, R-21, R-13, R-14, Q-11, Q-34): lift E D K A
 // from column 1 and drop it back on column 1; F is left behind and is the destination card that
@@ -13,10 +14,6 @@ import type { Scene, SceneFixtureData } from './types';
 // the out-and-back `move` steps only animate; Validate follows the fixture `validatable` at `n`.
 const data: SceneFixtureData = fixture;
 const carry = { sourceColumn: 1, count: 4, destinationColumn: 1, destinationCount: 1 } as const;
-const g = carryGeometry(data, carry);
-// A point beside the source column, left of it (nothing is drawn there).
-const out = { x: g.grab.x - 34, y: g.grab.y + 24 };
-
 const opened = {
   tail: 'gone',
   dest: 'gone',
@@ -26,16 +23,30 @@ const opened = {
   validate: 'lit',
 } as const;
 
+const frames: readonly Frame[] = [
+  { tail: 'home', tray: false, validate: 'off' },
+  { tail: 'lifted', tray: false, validate: 'off' },
+  { ...opened, order: ['F', 'E', 'D', 'K', 'A'] },
+  { ...opened, order: ['F', 'A', 'K', 'E', 'D'] },
+];
+const stage = sceneStageInputs(data, carry, frames);
+const geo = stageGeometry(stage);
+const g = carryGeometry(data, carry, geo);
+const tray = trayTargets(geo);
+// A point beside the source column, left of it (nothing is drawn there).
+const out = { x: g.grab.x - 34, y: g.grab.y + 24 };
+
 export const sourceDropScene: Scene = defineScene({
   id: 'source-drop',
   fixture: data,
+  stage,
   caption: text.howTo.scenes.sourceDrop,
   carry,
   targets: {
-    rest: { x: STAGE_W - 24, y: COLUMN_AREA_H - 24 },
+    rest: { x: STAGE_W - 24, y: geo.columnAreaH - 24 },
     grab: g.grab,
     out,
-    tiles: trayTargets.tiles,
+    tiles: tray.tiles,
   },
   elements: [
     'stage',
@@ -78,12 +89,7 @@ export const sourceDropScene: Scene = defineScene({
     },
   ],
   rest: { kind: 'flyToCell', times: 6 },
-  frames: [
-    { tail: 'home', tray: false, validate: 'off' },
-    { tail: 'lifted', tray: false, validate: 'off' },
-    { ...opened, order: ['F', 'E', 'D', 'K', 'A'] },
-    { ...opened, order: ['F', 'A', 'K', 'E', 'D'] },
-  ],
+  frames,
   offset: g.offset,
   layout: {
     tailHome: g.home,

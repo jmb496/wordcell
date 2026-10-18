@@ -16,7 +16,7 @@ const menu = (page: Page) => page.getByRole('dialog', { name: 'Menu', exact: tru
 const panel = (page: Page) => page.getByRole('dialog', { name: 'How to play', exact: true });
 const h = text.howTo.headings;
 // Epic 8 ticket 6: the scenes in carousel order, by their text.ts keys; the panel shows one at a time.
-const sceneOrder = ['moveCompose', 'freeLetter', 'place', 'scoring', 'sourceDrop'] as const;
+const sceneOrder = ['moveCompose', 'freeLetter', 'place', 'sourceDrop', 'scoring'] as const;
 type SceneKey = (typeof sceneOrder)[number];
 // A scene's animation ids start with its script id (`move-compose-step-1`), not its text.ts key.
 const stepPrefix: Record<SceneKey, string> = {
@@ -399,7 +399,7 @@ for (const { id, rules, frames, lastStep } of stepScenes) {
   });
 }
 
-// Epic 8 ticket 3 (HP-3d, HP-3e, HP-2): scenes 4 (place) and 5 (scoring) stepped to their last
+// Epic 8 ticket 3 (HP-3d, HP-3e, HP-2): scenes 3 (place) and 5 (scoring) stepped to their last
 // frame under reduced motion; per frame the open layer, the strip, the lit cells and the figures.
 test('R-40 R-42 R-50 R-51 R-52 R-60 AD-14 with reduced motion scene place steps through 6 frames to its last', async ({
   page,
@@ -896,7 +896,7 @@ for (const { id, rules, frames } of sourceDropRows) {
 }
 
 // Epic 8 ticket 6 (HP-1, HP-2, HP-6; AD-11): the scene carousel and the fitted whole-play-area stage.
-const sceneIds = ['move-compose', 'free-letter', 'place', 'scoring', 'source-drop'] as const;
+const sceneIds = ['move-compose', 'free-letter', 'place', 'source-drop', 'scoring'] as const;
 const current = (page: Page) => panel(page).getByRole('figure');
 const stepIds = async (page: Page) => (await sceneAnimations(page)).map((a) => a.id);
 /** Remembers the live animations so a later check can tell whether the scene was re-entered. */
@@ -973,12 +973,12 @@ test('HP-1 a disabled end is a no-op that keeps focus; a dot jumps to its scene 
   await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.moveCompose);
   await expect(arrow(page, 'previous')).toBeFocused();
   await dotOf(page, 5).click();
-  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.sourceDrop);
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.scoring);
   await expect(dotOf(page, 5)).toBeFocused();
   await expect(dotOf(page, 5)).toHaveAttribute('aria-current', 'true');
   await arrow(page, 'next').focus();
   await arrow(page, 'next').click({ force: true });
-  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.sourceDrop);
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.scoring);
   await expect(arrow(page, 'next')).toBeFocused();
   await dotOf(page, 3).click();
   await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.place);
@@ -1021,18 +1021,18 @@ test('HP-1 Left and Right move between scenes while focus is in the carousel, st
   await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.moveCompose);
   await dotOf(page, 5).click();
   await page.keyboard.press('ArrowRight');
-  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.sourceDrop);
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.scoring);
   // A modified key is ignored.
   await page.keyboard.press('Shift+ArrowLeft');
-  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.sourceDrop);
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.scoring);
   // Outside the carousel (the Close control) the keys do nothing.
   await panel(page).getByRole('button', { name: 'Close how to play', exact: true }).focus();
   await page.keyboard.press('ArrowLeft');
-  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.sourceDrop);
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.scoring);
   // Inside a scene (its pause control) they act.
   await current(page).getByRole('button', { name: controls.pause, exact: true }).focus();
   await page.keyboard.press('ArrowLeft');
-  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.scoring);
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.sourceDrop);
   await expect(root(page)).toBeFocused();
 });
 
@@ -1079,7 +1079,7 @@ test('HP-1 closed, the carousel keeps no scene and no animation; rapid switching
 }) => {
   await openFixture(page, 'session-idle-fresh');
   await openPanel(page);
-  for (let i = 0; i < sceneOrder.length - 1; i++) await arrow(page, 'next').click();
+  for (let i = 0; i < sceneOrder.indexOf('sourceDrop'); i++) await arrow(page, 'next').click();
   await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.sourceDrop);
   await expect.poll(() => stepIds(page)).toContain('source-drop-step-0');
   expect((await stepIds(page)).every((id) => id.startsWith('source-drop-'))).toBe(true);
@@ -1164,7 +1164,7 @@ test('HP-2 AD-11 toggling reduced motion or resizing re-enters the scene and mov
   await expect.poll(() => stepIds(page)).toContain('move-compose-step-0');
 });
 
-test('HP-1 AD-11 resize refits the stage; two scenes have equal stage heights; an unchanged card width does not restart the scene', async ({
+test('HP-1 AD-11 resize refits the stage; each scene has the stage height it needs; an unchanged card width does not restart the scene', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 360, height: 740 });
@@ -1189,9 +1189,10 @@ test('HP-1 AD-11 resize refits the stage; two scenes have equal stage heights; a
   await page.setViewportSize({ width: 361, height: 740 });
   await page.waitForTimeout(300);
   expect(await reEntered(page)).toBe(false);
-  await dotOf(page, 4).click();
+  await dotOf(page, 5).click();
   const other = await box();
-  expect(other.height).toBeCloseTo(first.height, 0);
+  // Scoring (tall WordCell stacks) is taller than move-compose, at the same width.
+  expect(other.height).toBeGreaterThan(first.height);
   expect(other.width).toBeCloseTo(first.width, 0);
   await expect.poll(() => stepIds(page), { timeout: 30_000 }).toContain('scoring-step-1');
   await markLive(page);
@@ -1201,7 +1202,8 @@ test('HP-1 AD-11 resize refits the stage; two scenes have equal stage heights; a
   expect(wider.width).toBeGreaterThan(first.width);
   expect(await cardWidth()).toBeGreaterThanOrEqual(32);
   await dotOf(page, 2).click();
-  expect((await box()).height).toBeCloseTo(wider.height, 0);
+  // Free-letter has the shortest columns and a one-card WordCell band.
+  expect((await box()).height).toBeLessThan(wider.height);
 });
 
 test('HP-1 AD-11 landscape: cards are at least 32 px, the arrows and dots are reachable and at least 44 px, the dots fit two rows', async ({
@@ -1222,9 +1224,9 @@ test('HP-1 AD-11 landscape: cards are at least 32 px, the arrows and dots are re
   }
   await dotOf(page, 5).scrollIntoViewIfNeeded();
   await dotOf(page, 5).click();
-  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.sourceDrop);
-  await arrow(page, 'previous').click();
   await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.scoring);
+  await arrow(page, 'previous').click();
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.sourceDrop);
 });
 
 for (const [width, name] of [

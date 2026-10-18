@@ -1,15 +1,8 @@
 import fixture from '../../../fixtures/how-to-play-scoring.json';
 import { text } from '../text';
-import {
-  CARD_H,
-  CELLS_TOP,
-  COLUMN_AREA_H,
-  placeCellX,
-  SCORE_TOTAL_BOX,
-  STAGE_W,
-  STRIP,
-} from './geometry';
+import { CARD_H, placeCellX, STAGE_W, STRIP, stageGeometry } from './geometry';
 import { defineScene } from './script';
+import { sceneStageInputs } from './stage';
 import type { Frame, Scene, SceneFixtureData } from './types';
 
 // Epic 8 tickets 3 and 9 (HP-3, HP-5; docs/game-flow-spec.md R-36, R-65, R-80, Q-06): WordCells 3, 4
@@ -20,15 +13,26 @@ import type { Frame, Scene, SceneFixtureData } from './types';
 // stage's columns are all filler).
 const data: SceneFixtureData = fixture;
 
-const stackPoint = (cell: number, cards: number) => ({
-  x: placeCellX(cell) + 22,
-  y: CELLS_TOP + ((cards - 1) * STRIP + CARD_H) / 2,
-});
 const counting = (stacks: number, numbers: number): Frame => ({
   tail: 'gone',
   tray: false,
   stacks,
   numbers,
+});
+const frames: readonly Frame[] = [
+  counting(0, 0),
+  counting(1, 0),
+  counting(2, 0),
+  counting(3, 0),
+  counting(3, 3),
+  { ...counting(3, 3), total: 61 },
+];
+const stage = sceneStageInputs(data, undefined, frames);
+const geo = stageGeometry(stage);
+
+const stackPoint = (cell: number, cards: number) => ({
+  x: placeCellX(cell) + 22,
+  y: geo.cellsTop + ((cards - 1) * STRIP + CARD_H) / 2,
 });
 const growing = [
   [3, 3],
@@ -39,15 +43,16 @@ const growing = [
 export const scoringScene: Scene = defineScene({
   id: 'scoring',
   fixture: data,
+  stage,
   caption: text.howTo.scenes.scoring,
   targets: {
-    rest: { x: STAGE_W - 24, y: COLUMN_AREA_H - 24 },
+    rest: { x: STAGE_W - 24, y: geo.columnAreaH - 24 },
     cell3: stackPoint(3, 1),
     cell4: stackPoint(4, 1),
     cell6: stackPoint(6, 1),
     total: {
-      x: SCORE_TOTAL_BOX.x + SCORE_TOTAL_BOX.w / 2,
-      y: SCORE_TOTAL_BOX.y + SCORE_TOTAL_BOX.h / 2,
+      x: geo.scoreTotalBox.x + geo.scoreTotalBox.w / 2,
+      y: geo.scoreTotalBox.y + geo.scoreTotalBox.h / 2,
     },
   },
   elements: [
@@ -97,12 +102,5 @@ export const scoringScene: Scene = defineScene({
     },
   ],
   rest: { kind: 'flyToCell', times: 6 },
-  frames: [
-    counting(0, 0),
-    counting(1, 0),
-    counting(2, 0),
-    counting(3, 0),
-    counting(3, 3),
-    { ...counting(3, 3), total: 61 },
-  ],
+  frames,
 });

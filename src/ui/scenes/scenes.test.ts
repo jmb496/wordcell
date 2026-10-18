@@ -4,7 +4,7 @@ import moveComposeFixture from '../../../fixtures/how-to-play-move-compose.json'
 import placeFixture from '../../../fixtures/how-to-play-place.json';
 import scoringFixture from '../../../fixtures/how-to-play-scoring.json';
 import sourceDropFixture from '../../../fixtures/how-to-play-source-drop.json';
-import { sceneStageHeight } from '../layout/geometry';
+import { type SceneStageInputs, sceneStageHeight } from '../layout/geometry';
 import { text } from '../text';
 import { frameDest, ghostStart, sceneEffects, tuckEnd, tuckStart } from './effects';
 import effectsSource from './effects.ts?raw';
@@ -12,14 +12,13 @@ import { freeLetterScene } from './free-letter';
 import {
   CARD_H,
   CARD_W,
-  CELLS_TOP,
   columnX,
   LIFT,
   MIN_COLUMN_CARDS,
   placeCellX,
   RICH_SLOT,
-  STAGE_INPUTS,
   STRIP,
+  stageGeometry,
 } from './geometry';
 import { moveComposeScene } from './move-compose';
 import { placeScene } from './place';
@@ -50,7 +49,10 @@ const need = <T>(value: T | undefined): T => {
 const carryOf = (scene: Scene) => need(scene.carry);
 
 // The fitted card width and stage height the carousel passes (ticket 6): 40 px is the base slot.
-const FIT = { cardWidth: 40, stageHeight: sceneStageHeight(40, STAGE_INPUTS) };
+const fitOf = (scene: { stage: SceneStageInputs }) => ({
+  cardWidth: 40,
+  stageHeight: sceneStageHeight(40, scene.stage),
+});
 
 const KINDS = ['snap', 'flyBack', 'parting', 'undoRedo', 'flyToCell', 'overlay'];
 
@@ -455,7 +457,7 @@ describe('AD-3 scene figure structure', () => {
     vi.resetModules();
     const { render } = await import('svelte/server');
     const { default: Scene } = await import('./Scene.svelte');
-    return render(Scene, { props: { scene: moveComposeScene, ...FIT } }).body;
+    return render(Scene, { props: { scene: moveComposeScene, ...fitOf(moveComposeScene) } }).body;
   }
 
   it('AD-3 a figure named by its visible description, an aria-hidden stage, a tap button outside it', async () => {
@@ -483,7 +485,7 @@ describe('AD-3 scene figure structure', () => {
       vi.resetModules();
       const { render } = await import('svelte/server');
       const { default: Scene } = await import('./Scene.svelte');
-      const body = render(Scene, { props: { scene, ...FIT } }).body;
+      const body = render(Scene, { props: { scene, ...fitOf(scene) } }).body;
       expect(body).toContain(`>${text.howTo.scenes[key]}</figcaption>`);
       expect(body.match(/data-scene-el="tray-\d"/g)).toHaveLength(layers);
       expect(body).toContain(`>${text.validate}</span>`);
@@ -501,7 +503,7 @@ describe('AD-3 scene figure structure', () => {
     const { render } = await import('svelte/server');
     const { default: Scene } = await import('./Scene.svelte');
     const layer = (scene: Scene) => {
-      const body = render(Scene, { props: { scene, ...FIT } }).body;
+      const body = render(Scene, { props: { scene, ...fitOf(scene) } }).body;
       return /<div[^>]*data-scene-el="tray-0"[^>]*>/.exec(body)?.[0];
     };
     expect(layer(freeLetterScene)).toMatch(/opacity:\s*1/);
@@ -781,7 +783,7 @@ describe('AD-14 scene scoring against its fixture', () => {
     ] as const) {
       expect(scoringScene.targets[`cell${cell}`]).toStrictEqual({
         x: placeCellX(cell) + 22,
-        y: CELLS_TOP + CARD_H / 2,
+        y: stageGeometry(scoringScene.stage).cellsTop + CARD_H / 2,
       });
       expect(grown(i, 'ghost').times).toBe(2);
     }
@@ -875,7 +877,7 @@ describe('AD-3 scenes place and scoring figure structure', () => {
     vi.resetModules();
     const { render } = await import('svelte/server');
     const { default: Scene } = await import('./Scene.svelte');
-    return render(Scene, { props: { scene, ...FIT } }).body;
+    return render(Scene, { props: { scene, ...fitOf(scene) } }).body;
   }
 
   it('AD-3 scene place: six layers, strips on frames 1 to 4, Confirm, no tail, no ids', async () => {
@@ -1057,7 +1059,7 @@ describe.each([
       vi.resetModules();
       const { render } = await import('svelte/server');
       const { default: Scene } = await import('./Scene.svelte');
-      const body = render(Scene, { props: { scene, ...FIT } }).body;
+      const body = render(Scene, { props: { scene, ...fitOf(scene) } }).body;
       // The stage's band draws WordCells 3 to 10 from frame 0 (ticket 6), the start's cards in them.
       expect(
         [...body.matchAll(/class="cell svelte-[^"]*" data-cell="(\d+)"/g)].map((m) => m[1]),
@@ -1118,15 +1120,14 @@ describe('AD-14 scene source-drop', () => {
 });
 
 describe('AD-14 the scenes in the panel order', () => {
-  it('AD-14 the one Tricky rule scene follows the four basic scenes', async () => {
+  it('AD-14 the Tricky rule scene follows the three basic scenes and scoring comes last', async () => {
     const { basicScenes, scenes } = await import('./index');
-    expect(basicScenes.map((s) => s.id)).toStrictEqual([
-      'move-compose',
-      'free-letter',
-      'place',
+    expect(basicScenes.map((s) => s.id)).toStrictEqual(['move-compose', 'free-letter', 'place']);
+    expect(scenes.map((s) => s.id)).toStrictEqual([
+      ...basicScenes.map((s) => s.id),
+      'source-drop',
       'scoring',
     ]);
-    expect(scenes.map((s) => s.id)).toStrictEqual([...basicScenes.map((s) => s.id), 'source-drop']);
   });
 });
 
@@ -1161,8 +1162,7 @@ describe('AD-14 frameDest and the source-drop frames', () => {
   });
 
   it('AD-14 the source-drop frames name the D block: gone once the tray is open', async () => {
-    const { scenes } = await import('./index');
-    expect(scenes.at(-1)?.frames.map((f) => f.dest)).toStrictEqual([
+    expect(sourceDropScene.frames.map((f) => f.dest)).toStrictEqual([
       undefined,
       undefined,
       'gone',
@@ -1208,7 +1208,8 @@ describe('AD-14 scene free-letter against its fixture', () => {
     expect(freeLetterScene.frames[0]).toStrictEqual(moveComposeScene.frames.at(-1));
     expect(freeLetterScene.fixture.start).toStrictEqual(moveComposeScene.fixture.start);
     expect(freeLetterScene.carry).toStrictEqual({ ...need(moveComposeScene.carry), landed: true });
-    expect(freeLetterScene.targets.rest).toStrictEqual(moveComposeScene.targets.rest);
+    // The pointer rests in the same corner; only the column area's height differs per scene.
+    expect(freeLetterScene.targets.rest.x).toBe(moveComposeScene.targets.rest.x);
   });
 
   it('AD-14 no move step of either new script names an arrange command', () => {

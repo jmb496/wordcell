@@ -1,3 +1,4 @@
+import type { SceneStageInputs } from '../layout/geometry';
 import type { MotionKind } from '../motion';
 
 // Epic 8 ticket 1 (HP-1, HP-5): the scene script types. A script is data: the fixture it animates
@@ -141,6 +142,8 @@ export interface Frame {
 export interface Scene {
   readonly id: string;
   readonly fixture: SceneFixtureData;
+  /** The tallest column and WordCell stack this scene draws; its stage is only that tall (`sceneStageInputs`). */
+  readonly stage: SceneStageInputs;
   /** The figure's visible description (text.ts). */
   readonly caption: string;
   /**

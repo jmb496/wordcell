@@ -18,27 +18,22 @@ import {
   columnX,
   HAND_H,
   HAND_W,
-  LABELS_TOP,
   PLACE_CELL_TOP,
-  PLACE_H,
   PLACE_LABEL_TOP,
   placeCellX,
   RICH_INSET,
   RICH_SLOT,
   RICH_TILE_W,
-  SCORE_FIGURE_TOP,
-  SCORE_TOTAL_BOX,
   SLOT,
-  STAGE_H,
   STAGE_W,
   STRIP_TOP,
+  stageGeometry,
   TRAY_H,
-  TRAY_TOP,
 } from './geometry';
 import { type RunState, ScenePlayer } from './player';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Stage from './Stage.svelte';
-import { face, fillerColumns } from './stage';
+import { drawnColumns, face, fillerColumns } from './stage';
 import type { Frame, Scene } from './types';
 
 // Epic 8 ticket 1 (HP-1, HP-2, HP-6; EXPERIENCE.md How to play panel): one scene as a <figure>
@@ -63,28 +58,29 @@ const scoreMode = $derived(scene.frames.some((f) => f.numbers !== undefined));
 const cell6Letter = $derived(
   scene.frames[0].cell6 === undefined ? undefined : scene.fixture.start.cells?.['6']?.at(-1),
 );
+const stage = $derived(stageGeometry(scene.stage));
 const slot = $derived(cardMetrics(cardWidth).slot);
 const scale = $derived(slot / SLOT);
 const geo = $derived({
-  stageH: STAGE_H,
+  stageH: stage.stageH,
   stageW: STAGE_W,
-  labelsTop: LABELS_TOP,
-  figureTop: SCORE_FIGURE_TOP,
+  labelsTop: stage.labelsTop,
+  figureTop: stage.scoreFigureTop,
   rich,
   confirm: CONFIRM_BOX,
   placeCellTop: PLACE_CELL_TOP,
   placeLabelTop: PLACE_LABEL_TOP,
   stripTop: STRIP_TOP,
-  totalBox: SCORE_TOTAL_BOX,
+  totalBox: stage.scoreTotalBox,
   richSlot: RICH_SLOT,
   richTileW: RICH_TILE_W,
   inset: RICH_INSET,
   controlsTop: CONTROLS_TOP,
   controlsH: CONTROLS_H,
   box: CONTROL_BOX,
-  trayTop: TRAY_TOP,
+  trayTop: stage.trayTop,
   trayH: TRAY_H,
-  placeH: PLACE_H,
+  placeH: stage.placeH,
   handW: HAND_W,
   handH: HAND_H,
   placeCellX,
@@ -125,11 +121,7 @@ const drawn = $derived.by(() => {
   const landed = c.landed === true;
   return {
     carried: !landed,
-    columns: all.map((cards, i) => {
-      if (i + 1 === c.sourceColumn && c.sourceColumn !== c.destinationColumn) return left;
-      if (i + 1 === c.destinationColumn) return destCards.slice(0, destFrom);
-      return cards;
-    }),
+    columns: drawnColumns(fixture, c),
     tail: landed ? [] : source.slice(-c.count),
     destination: landed ? [] : destCards.slice(destFrom),
     tailTop: columnRowY(source.length, source.length - c.count),
@@ -284,7 +276,7 @@ const replay = (): void => {
 
 <figure class="scene" aria-labelledby="{id}-caption" bind:this={figure}>
   <div class="area" style:width="{geo.stageW * scale}px" style:height="{stageHeight}px">
-    <Stage columns={drawn.columns} {filler} cells={placeMode ? undefined : stageCells} {grow} {scale}>
+    <Stage columns={drawn.columns} {filler} geometry={stage} cells={placeMode ? undefined : stageCells} {grow} {scale}>
       {#if drawn.carried}
       <div
         class="tail"

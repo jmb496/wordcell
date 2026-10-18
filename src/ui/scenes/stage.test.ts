@@ -4,19 +4,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { BAND_ORDER } from '../layout/bands';
 import { sceneBaseHeight } from '../layout/geometry';
 import {
-  CELLS_TOP,
-  COLUMN_AREA_H,
   COLUMNS,
   columnRowY,
   fillerCount,
-  LABELS_TOP,
-  MAX_CELL_CARDS,
-  MAX_COLUMN_CARDS,
   MIN_COLUMN_CARDS,
-  STAGE_H,
-  STAGE_INPUTS,
   STRIP,
-  TRAY_TOP,
+  stageGeometry,
 } from './geometry';
 import { scenes } from './index';
 import Stage from './Stage.svelte';
@@ -26,12 +19,14 @@ import { FILLER_LETTERS, fillerColumns } from './stage';
 vi.mock('../../shell/prefs.svelte', () => ({ prefs: { motion: { baseMs: 180, reduced: false } } }));
 
 const children = createRawSnippet(() => ({ render: () => '<span data-scene-el="x"></span>' }));
+const geometry = stageGeometry({ columnCards: 9, cellCards: 6 });
 const stage = (columns: readonly (readonly string[])[], lengths: readonly number[]) =>
   render(Stage, {
     props: {
       columns,
       filler: fillerColumns(lengths),
       cells: { '6': ['L'] },
+      geometry,
       scale: 1,
       children,
     },
@@ -76,9 +71,9 @@ describe('AD-14 the shared stage structure', () => {
     expect(order.indexOf('tray')).toBeLessThan(order.indexOf('labels'));
     expect(order.indexOf('labels')).toBeLessThan(order.indexOf('wordcells'));
     // The same order in px.
-    expect(COLUMN_AREA_H).toBeLessThan(TRAY_TOP);
-    expect(TRAY_TOP).toBeLessThan(LABELS_TOP);
-    expect(LABELS_TOP).toBeLessThan(CELLS_TOP);
+    expect(geometry.columnAreaH).toBeLessThan(geometry.trayTop);
+    expect(geometry.trayTop).toBeLessThan(geometry.labelsTop);
+    expect(geometry.labelsTop).toBeLessThan(geometry.cellsTop);
   });
 
   it('AD-14 the stage is aria-hidden, its cards are static and none carries a card attribute', () => {
@@ -118,32 +113,43 @@ describe('AD-14 the shared stage structure', () => {
   });
 });
 
-describe('AD-11 the stage height covers every scene', () => {
-  it('AD-11 STAGE_H is the base height of the scenes’ maximum column cards, stack and tray rows', () => {
-    expect(STAGE_H).toBe(sceneBaseHeight(STAGE_INPUTS));
+describe('AD-11 each scene has the stage height it needs', () => {
+  // The tallest column (filler, scripted cards, and a tail that lands) and WordCell stack of each
+  // scene, counted by hand from its fixture and frames (owner decision 2026-10-17: per-scene).
+  const expected: Record<string, { columnCards: number; cellCards: number }> = {
+    'move-compose': { columnCards: 8, cellCards: 1 },
+    'free-letter': { columnCards: 5, cellCards: 1 },
+    place: { columnCards: 5, cellCards: 1 },
+    'source-drop': { columnCards: 5, cellCards: 1 },
+    scoring: { columnCards: 5, cellCards: 6 },
+  };
+
+  it('AD-11 each scene’s inputs are its own tallest column and stack, tray rows 2', () => {
+    expect(scenes.map((s) => s.id).sort()).toStrictEqual(Object.keys(expected).sort());
+    for (const scene of scenes)
+      expect(scene.stage, scene.id).toStrictEqual({ ...expected[scene.id], trayRows: 2 });
   });
 
-  it('AD-11 MAX_COLUMN_CARDS and MAX_CELL_CARDS cover the tallest column and stack of every scene', () => {
-    let tallest = 0;
-    let stack = 0;
+  it('AD-11 stageGeometry height equals the base height of the scene’s inputs and covers every drawn stack', () => {
     for (const scene of scenes) {
-      const { columns, cells } = scene.fixture.start;
-      const lengths = scene.carry === undefined ? [] : columns.map((c) => c.length);
-      for (let i = 0; i < COLUMNS; i++) {
-        const length = lengths[i] ?? 0;
-        let cards = fillerCount(length) + length;
-        // A landed tail makes the destination column that much taller.
-        if (scene.carry !== undefined && scene.carry.destinationColumn === i + 1)
-          cards += scene.carry.count;
-        tallest = Math.max(tallest, cards);
-      }
-      for (const entry of scene.fixture.cells ?? []) stack = Math.max(stack, entry.cards.length);
-      for (const cards of Object.values(cells ?? {})) stack = Math.max(stack, cards.length);
+      const g = stageGeometry(scene.stage);
+      expect(g.stageH, scene.id).toBe(sceneBaseHeight(scene.stage));
+      expect(g.columnAreaH).toBe((scene.stage.columnCards - 1) * STRIP + 56);
+      // Every stack the fixture states or starts with fits the cell band.
+      const stacks = [
+        ...Object.values(scene.fixture.start.cells ?? {}),
+        ...(scene.frames.at(-1)?.cellTop === true
+          ? []
+          : (scene.fixture.cells ?? []).map((e) => e.cards)),
+      ];
+      for (const cards of stacks) expect(cards.length).toBeLessThanOrEqual(scene.stage.cellCards);
     }
-    expect(MAX_COLUMN_CARDS).toBeGreaterThanOrEqual(tallest);
-    expect(MAX_CELL_CARDS).toBeGreaterThanOrEqual(stack);
-    // The tight bound keeps the stage from growing without a scene needing it.
-    expect(MAX_COLUMN_CARDS).toBe(tallest);
-    expect(MAX_CELL_CARDS).toBe(stack);
+  });
+
+  it('AD-11 only scoring has a tall WordCell band, and every other scene is shorter than the old maximum', () => {
+    const max = sceneBaseHeight({ columnCards: 9, trayRows: 2, cellCards: 6 });
+    for (const scene of scenes) expect(stageGeometry(scene.stage).stageH).toBeLessThan(max);
+    const heights = scenes.map((s) => stageGeometry(s.stage).stageH);
+    expect(Math.min(...heights)).toBeLessThan(Math.max(...heights));
   });
 });

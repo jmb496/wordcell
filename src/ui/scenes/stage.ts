@@ -1,4 +1,6 @@
-import { COLUMNS, fillerCount, liftedBy } from './geometry';
+import type { SceneStageInputs } from '../layout/geometry';
+import { COLUMNS, fillerCount, liftedBy, TRAY_ROWS } from './geometry';
+import type { Carry, Frame, SceneFixtureData } from './types';
 
 /** A static card's face from a scene letter (QU counts two letters, R-36). */
 export const face = (letter: string) => ({ letter, letterCount: letter === 'QU' ? 2 : 1 });
@@ -32,3 +34,60 @@ export function fillerColumns(lengths: readonly number[]): string[][] {
  */
 export const growBase = (cards: number, j: number): { opacity?: 0; transform?: string } =>
   j < cards - 1 ? { opacity: 0 } : { transform: liftedBy(cards - 1) };
+
+/**
+ * The columns a scene draws (scripted cards only, far end first): the fixture start, but the
+ * source column without the lifted tail and the destination column without its D block (R-21 for a
+ * drop on the source column). A scene without a carry draws none.
+ */
+export function drawnColumns(
+  fixture: SceneFixtureData,
+  carry: Carry | undefined,
+): readonly (readonly string[])[] {
+  if (carry === undefined) return [];
+  const all = fixture.start.columns;
+  const source = all[carry.sourceColumn - 1];
+  const left = source.slice(0, source.length - carry.count);
+  const destCards =
+    carry.sourceColumn === carry.destinationColumn ? left : all[carry.destinationColumn - 1];
+  const destFrom = destCards.length - carry.destinationCount;
+  return all.map((cards, i) => {
+    if (i + 1 === carry.sourceColumn && carry.sourceColumn !== carry.destinationColumn) return left;
+    if (i + 1 === carry.destinationColumn) return destCards.slice(0, destFrom);
+    return cards;
+  });
+}
+
+/** The scene's stage inputs, from its own data: the tallest column and WordCell stack it draws. */
+export function sceneStageInputs(
+  fixture: SceneFixtureData,
+  carry: Carry | undefined,
+  frames: readonly Frame[],
+): SceneStageInputs {
+  const lengths = carry === undefined ? [] : fixture.start.columns.map((c) => c.length);
+  const drawn = drawnColumns(fixture, carry);
+  const heights = Array.from(
+    { length: COLUMNS },
+    (_, i) => fillerCount(lengths[i] ?? 0) + (drawn[i]?.length ?? 0),
+  );
+  if (carry !== undefined && carry.landed !== true) {
+    // The lifted tail stays over its source column; it lands on the destination column's end.
+    const filler = (column: number) => fillerCount(lengths[column - 1]);
+    const source = filler(carry.sourceColumn) + lengths[carry.sourceColumn - 1];
+    const same = carry.sourceColumn === carry.destinationColumn;
+    heights.push(
+      source,
+      same
+        ? source
+        : filler(carry.destinationColumn) + lengths[carry.destinationColumn - 1] + carry.count,
+    );
+  }
+  // A last frame that draws WordCells as one top card (R-52) shows no stated stack.
+  const stated = frames.at(-1)?.cellTop === true ? [] : (fixture.cells ?? []).map((e) => e.cards);
+  const starts = Object.values(fixture.start.cells ?? {});
+  return {
+    columnCards: Math.max(...heights),
+    trayRows: TRAY_ROWS,
+    cellCards: Math.max(1, ...stated.map((c) => c.length), ...starts.map((c) => c.length)),
+  };
+}

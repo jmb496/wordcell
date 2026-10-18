@@ -2,17 +2,17 @@ import fixture from '../../../fixtures/how-to-play-place.json';
 import { text } from '../text';
 import {
   CARD_H,
-  COLUMN_AREA_H,
   CONFIRM_BOX,
   PLACE_CELL_TOP,
   placeCellX,
   RICH_SLOT,
   STAGE_W,
   STRIP_TOP,
+  stageGeometry,
   stripTileX,
-  TRAY_TOP,
 } from './geometry';
 import { defineScene } from './script';
+import { sceneStageInputs } from './stage';
 import type { Frame, Scene, SceneFixtureData } from './types';
 
 // Epic 8 ticket 3 (HP-3d; docs/game-flow-spec.md §8, R-40, R-42, R-50 to R-52, R-60): after the
@@ -29,19 +29,6 @@ const carry = {
   landed: true,
 } as const;
 
-const cellPoint = (cell: number) => ({
-  x: placeCellX(cell) + 20,
-  y: TRAY_TOP + PLACE_CELL_TOP + CARD_H / 2,
-});
-const tilePoint = (i: number) => ({
-  x: stripTileX(i) + RICH_SLOT / 2,
-  y: TRAY_TOP + STRIP_TOP + CARD_H / 2,
-});
-const confirmPoint = {
-  x: CONFIRM_BOX.x + CONFIRM_BOX.w / 2,
-  y: TRAY_TOP + CONFIRM_BOX.y + CONFIRM_BOX.h / 2,
-};
-
 const lit = [3, 4, 5, 6] as const;
 const dflt = ['B', 'A', 'L', 'K', 'E', 'D'];
 const ordered = ['D', 'B', 'A', 'L', 'K', 'E'];
@@ -53,14 +40,38 @@ const placing = (placeTarget: number, placeOrder: readonly string[]): Frame => (
   placeTarget,
   placeOrder,
 });
+const frames: readonly Frame[] = [
+  { tail: 'gone', tray: false, validate: 'lit' },
+  { ...placing(6, dflt), validate: 'pressed' },
+  placing(5, dflt),
+  placing(6, dflt),
+  placing(6, ordered),
+  { tail: 'gone', tray: false, validate: 'off', lit: [], cellTop: true },
+];
+const stage = sceneStageInputs(data, carry, frames);
+const geo = stageGeometry(stage);
+
+const cellPoint = (cell: number) => ({
+  x: placeCellX(cell) + 20,
+  y: geo.trayTop + PLACE_CELL_TOP + CARD_H / 2,
+});
+const tilePoint = (i: number) => ({
+  x: stripTileX(i) + RICH_SLOT / 2,
+  y: geo.trayTop + STRIP_TOP + CARD_H / 2,
+});
+const confirmPoint = {
+  x: CONFIRM_BOX.x + CONFIRM_BOX.w / 2,
+  y: geo.trayTop + CONFIRM_BOX.y + CONFIRM_BOX.h / 2,
+};
 
 export const placeScene: Scene = defineScene({
   id: 'place',
   fixture: data,
+  stage,
   caption: text.howTo.scenes.place,
   carry,
   targets: {
-    rest: { x: STAGE_W - 24, y: COLUMN_AREA_H - 24 },
+    rest: { x: STAGE_W - 24, y: geo.columnAreaH - 24 },
     validate: confirmPoint,
     cell5: cellPoint(5),
     cell6: cellPoint(6),
@@ -148,12 +159,5 @@ export const placeScene: Scene = defineScene({
     },
   ],
   rest: { kind: 'flyToCell', times: 6 },
-  frames: [
-    { tail: 'gone', tray: false, validate: 'lit' },
-    { ...placing(6, dflt), validate: 'pressed' },
-    placing(5, dflt),
-    placing(6, dflt),
-    placing(6, ordered),
-    { tail: 'gone', tray: false, validate: 'off', lit: [], cellTop: true },
-  ],
+  frames,
 });

@@ -452,11 +452,12 @@ spec §3–§6 and §9 (notably Q-12, no Cancel, no hints), then Controls. No an
 sections; the only in-panel navigation is the carousel's own controls (HP-7, owner decision
 2026-10-17). Sections, in order:
 
-1. **Scene carousel** (five scenes, HP-3, HP-4 as reworked 2026-10-17): four basic scenes, then the
-   one Tricky rule. Basic: drag a tail onto a column, arrange the cards and add destination
-   letters with −/+ and Flip; borrow a WordCell's top card as a free letter; place on a WordCell;
-   scoring. Tricky: drop back on the column you lifted from (R-21). One scene shows at a time,
-   each a figure with a caption, drawn as the whole play area (columns, tray, WordCells 3–10).
+1. **Scene carousel** (five scenes, HP-3, HP-4 as reworked 2026-10-17): three basic scenes, the
+   one Tricky rule, then scoring (order set 2026-10-17). Basic: drag a tail onto a column, arrange
+   the cards and add destination letters with −/+ and Flip; borrow a WordCell's top card as a free
+   letter; place on a WordCell. Tricky: drop back on the column you lifted from (R-21). Scoring
+   last. One scene shows at a time, each a figure with a caption, drawn as the whole play area
+   (columns, tray, WordCells 3–10), only as tall as that scene needs.
 2. **The goal**: empty all eight columns by placing words on WordCells; long words on high
    cells score most.
 3. **The table**: columns, stack tails, WordCells 3–10, free letters, the `QU` card (×2).

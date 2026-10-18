@@ -5,7 +5,6 @@ import { act } from '../act';
 import { sceneFit } from '../layout/geometry';
 import { overlays } from '../overlays.svelte';
 import { text } from '../text';
-import { STAGE_INPUTS } from './geometry';
 import { scenes } from './index';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Scene from './Scene.svelte';
@@ -26,7 +25,7 @@ let boxHeight = $state(0);
 let root: HTMLElement | undefined = $state();
 let host: HTMLElement | undefined = $state();
 
-const fit = $derived(width > 0 ? sceneFit(width, boxHeight, STAGE_INPUTS) : undefined);
+const fit = $derived(width > 0 ? sceneFit(width, boxHeight, scenes[index].stage) : undefined);
 // A scene starts only after the first non-zero width measurement.
 const mounted = $derived(open && fit !== undefined);
 const key = $derived(
