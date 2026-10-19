@@ -1,6 +1,6 @@
 # Review log — story-theme-plum-dusk.md
 
-State: pass 2: done
+State: pass 3: done
 
 Pre-loop: HEAD d4c2643; pass0.md 157 words (budget 1500).
 
@@ -39,3 +39,20 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 - Toml verify wording drift, brief-source cite for thin rows, front-matter `after`/TH-9, back-to-Charcoal --wc-table assert, references additions, plum-unique build marker: stretch/non-gating, not applied.
 Words: 1202 (7.7 x pass 0, within budget 1500)  |  Snapshot: story-theme-plum-dusk.review-log.passes/pass2.md
 Fixer applied items 1-8; applyTheme typing checked (cast needed); theme.spec/dist-smoke title line numbers not re-checked by fixer.
+
+## Pass 3 — 2026-10-19
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1 (merged from 3 reports), minor 6, decision-needed 0  |  Dropped in triage: 2
+### Majors (to apply)
+1. Unregistered example bullet claims the Halted boot path "stays covered" by registry.test.ts and prefs.svelte.test.ts; neither tests boot-time registry-miss → AD-15 Halted, default look, prefs untouched (only the retired e2e did). Fix: state the loss precisely, make it an owner-gate item, do not claim coverage.
+### Minor (to apply)
+- Radio order: only dist-smoke ~l.58 title enumerates themes (theme.spec ~l.125 does not); theme.spec.ts l.9 header comment "five" → "six"; dist-smoke replace the steampunk pick and its assertions.
+- Build output: new title and rewrite the stale "each later theme ticket edits the absent list" comment; plumSelector true.
+- Contrast: "thinnest against the DESIGN.md figures"; plan records smallest margin to enforced floors from the run.
+- Tokens: copy the same literal text the steampunk block uses.
+- Acceptance: note toml "default baselines unchanged" is read as unchanged except the Preferences Theme-group row.
+### Default applied (technical)
+- Halted boot-path coverage — retire e2e, record loss as owner-gate item → default applied
+### Dropped
+- registry.test.ts "only id and message change" (obvious); fix-diff line-number item merged into minor above.
+Words: 1302 (8.3 x pass 0, within budget 1500)  |  Snapshot: story-theme-plum-dusk.review-log.passes/pass3.md
+Fixer applied items 1-6.
