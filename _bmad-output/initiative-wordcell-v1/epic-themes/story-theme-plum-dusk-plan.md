@@ -3,7 +3,7 @@ title: 'Theme: Plum Dusk'
 type: 'feature'
 ticket: 10
 created: '2026-10-19'
-status: built
+status: done
 baseline_revision: '95dd9d1b8a5dbbd02e6a0c9087be7e8ae8b16903'
 route: 'full'
 route_source: 'auto'
