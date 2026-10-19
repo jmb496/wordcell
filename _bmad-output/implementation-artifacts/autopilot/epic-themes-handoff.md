@@ -1,11 +1,11 @@
 outcome: stopped
-ticket: 9.7
-reason: rule 4, owner checkpoint (play Deep Space on Android before done)
-next: 9.7
-updated: 2026-10-19T14:01:47Z
-summary: Ticket 9.7 Deep Space is built, reviewed and tested; it waits for your Android play-through before being marked done.
+ticket: 9.8
+reason: rule 4, owner checkpoint (play Greenhouse Dusk on Android before done)
+next: 9.8
+updated: 2026-10-19T16:53:04Z
+summary: Ticket 9.8 Greenhouse Dusk is built, reviewed and tested; it waits for your Android play-through before being marked done.
 
-Plain report: Deep Space is built (commit f668143), the code review found nothing major, `test:all` and the screenshots pass (one flaky desktop test failed once and passed on rerun). The Daylight Paper Preferences screenshot changed because Deep Space now sits second; please approve it. Please play it on Android.
-Resume: when happy, mark it done with `uv run _bmad/method/scripts/tickets.py mark 9.7 done` and commit, then rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-themes`.
+Plain report: Greenhouse Dusk is built (commit e16bd92). The ticket review took 3 passes and the code review found nothing to fix. `test:all` and the screenshots pass (two desktop tests timed out on the first run, as in 9.7, and passed on rerun). Please play the theme on your Android install and check it looks right.
+Resume: when happy, mark it done with `uv run _bmad/method/scripts/tickets.py mark 9.8 done` and commit, then rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-themes`.
 Close-out docs: none.
 Digest: _bmad-output/implementation-artifacts/autopilot/epic-themes-20261018-1343.md
