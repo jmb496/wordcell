@@ -1,6 +1,6 @@
 # Review log — story-theme-deep-space.md (ticket 9.7)
 
-State: pass 1: done
+State: pass 2: done
 
 Pre-loop: HEAD 4bc178217cde6842ff7dae148c1a03463a76f96d; pass 0 copy /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-themes/story-theme-deep-space.review-log.passes/pass0.md (176 words by wc -w incl. frontmatter); budget 1500 words.
 
@@ -21,3 +21,16 @@ Reviewers: builder's reading, edge-case hunter, adversarial, ref alignment  |  F
 - Theme radio order in Preferences — spec §7.10 lists Charcoal, Deep Space, …, Daylight Paper, but build order registers paper first (9.6), so Deep Space would show third — proposed default: spec order (Deep Space second), at the cost of regenerating the paper-theme Preferences shots; the fixer keeps the ticket order-neutral.
 Words: 1225 (6.96 x pass 0)  |  Snapshot: _bmad-output/initiative-wordcell-v1/epic-themes/story-theme-deep-space.review-log.passes/pass1.md
 Fixer applied items 1–13 (see _bmad-output/initiative-wordcell-v1/epic-themes/story-theme-deep-space.review-log.passes/pass1.fix.diff). Extra: registry.test.ts and theme.spec.ts:217 unregistered-id examples move from `scifi` to `plum`; frontmatter `hitl: false`.
+
+## Pass 2 — 2026-10-19
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings (merged): major 3, minor 8, decision-needed 0 (radio order already logged)  |  Dropped in triage: 8
+### Majors (default applied, technical)
+- Art fallback (line 20) lets the builder lower or drop the scan-line, contradicting Notes/Owner gate (owner call) → builder stops and reports a failed pixel check; look changes go to the owner
+- Build-output retarget cannot discriminate garden's art from scifi's in dist → specify discriminators (garden selector and garden-only art substring absent from dist; scifi selector and art present in both)
+- Registry Vitest bullet claims "registers in the production list", untestable in registry.test.ts → Vitest covers export shape and apply; production list/order lives in dist-smoke
+### Minor (applied; zero or near-zero words)
+- registry.test.ts:65 changes call and expected message; one fallback id `plum` in both places (note it changes when plum is registered); Switch "back" = data-theme attribute removed, meta #15171B, art tokens `none`; Verify split into build items and owner checkpoint; `prefs-theme-scifi` content = prefs-theme-paper with theme scifi, mirror every `prefs-theme-paper` hit (e.g. e2e/helpers.spec.ts:1249); preferences shot asserts the Deep Space radio checked; Verify diff clause "Theme group and whatever it displaces"; pointer visibility on navy goes to the owner gate
+### Dropped
+- frontmatter done_checkpoint (9.5/9.6 omit it; tickets.py falls back to toml); contrast themeRecords handling of art keys (existing mechanism reads app.css records, art keys skipped in key-set check); grid-path half-pixel clip (same as the approved mockups); TH-5 unshown states (as accepted in 9.6); tokens case/placement; pre-paint test; budget wording; fixture text beyond above
+Words: 1334 (7.58 x pass 0)  |  Snapshot: _bmad-output/initiative-wordcell-v1/epic-themes/story-theme-deep-space.review-log.passes/pass2.md
+Fixer applied items 1–9 (diff: _bmad-output/initiative-wordcell-v1/epic-themes/story-theme-deep-space.review-log.passes/pass2.fix.diff). Item 5 deviation: Charcoal sets data-theme to `default` (theme.spec.ts:148), so the ticket says `default`, not "attribute removed".
