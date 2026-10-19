@@ -1,6 +1,6 @@
 # Review log — story-theme-greenhouse-dusk.md (ticket 9.8)
 
-State: pass 1: done
+State: pass 2: done
 
 Pre-loop: HEAD 9947662a4632848bbbdaa02e7d7352b43768a32c; pass 0 copy /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-themes/story-theme-greenhouse-dusk.review-log.passes/pass0.md (171 words by wc -w incl. frontmatter); budget 1500 words (stub being fleshed out, as 9.7).
 Note: no epic-themes SPEC.md exists (no companions); refs are the epic file, spine, AGENTS.md, game-flow-spec, DESIGN/EXPERIENCE, brief, done-ticket plans 9.5-9.7.
@@ -23,3 +23,14 @@ Words: 1501 (8.8 x pass 0; budget 1500)  |  Snapshot: story-theme-greenhouse-dus
 ### Dropped
 - Green accent as decision-needed: epic Notes record the owner decision of 2026-10-18.
 Fixer flagged unverified: attribution of garden's radio position to the 2026-10-19 decision (that decision concerned Deep Space; garden's position follows spec §7.10).
+
+## Pass 2 — 2026-10-19
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings (merged): major 1, minor 8, decision-needed 0  |  Dropped in triage: 2 (minor no-change items: meta hex case, ref-alignment clean)
+Words: 1475 (8.6 x pass 0)  |  Snapshot: story-theme-greenhouse-dusk.review-log.passes/pass2.md
+### Applied (default applied, technical)
+- [major] Default baselines: screenshot suite runs the dev server, which already registers testGarden, so the real change is relabel Garden → Greenhouse Dusk and reorder to third, not an added row → fixer item 1
+- [minor] contrast.test.ts garden-sheet read/merge/two-key assertion deleted; art test renamed → 2
+- [minor] Art conversion pinned to themes.mjs geometry, widths, opacities → 3
+- [minor] Stale test-only-garden comments listed → 4
+- [minor] Optional seed test cut; owner-done duplicates cut; Notes radio-position attribution fixed; build-output list note → 5–8
+Majors so far: 11, 1.
