@@ -1,11 +1,11 @@
-outcome: done
-ticket: 9.6
-reason: done
+outcome: stopped
+ticket: 9.7
+reason: rule 1, decision-needed (Theme radio order in Preferences)
 next: 9.7
-updated: 2026-10-19T11:40:00Z
-summary: Ticket 9.6 Daylight Paper is built, reviewed, fully tested (screenshots too) and marked done.
+updated: 2026-10-19T12:55:00Z
+summary: Ticket 9.7 Deep Space is hardened by a 4-pass review; one order question needs the owner before the build.
 
-Plain report: Daylight Paper now exists as a selectable light theme. Your answer on the dark bar tint was applied (accepted, no boot-order change). The code review found nothing to fix. All test suites and the screenshot check pass. Worth a look by you: the new paper screenshots (board, tray, Preferences, scene 2), especially how the pointer shows on paper.
-Next ready ticket: 9.7 Theme: Deep Space. Resume with `.claude/skills/epic-autopilot/scripts/loop.sh epic-themes`.
-Close-out docs: none for this ticket (AD-16 unchanged by owner decision 2026-10-19).
+Plain report: the ticket review converged with nothing else open. Decision for you: should Deep Space appear second in the Theme choice in Preferences (right after Charcoal, as the spec §7.10 and DESIGN.md list it, proposed) or third (after Daylight Paper, the build order)? Spec order means Deep Space is registered before Daylight Paper, the Daylight Paper Preferences screenshot is regenerated, and the radio-order checks in theme.spec.ts and dist-smoke follow. Third place changes none of that but contradicts the spec order.
+Resume: record your answer in the ticket Notes (story-theme-deep-space.md), commit, then rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-themes`.
+Close-out docs: none yet.
 Digest: _bmad-output/implementation-artifacts/autopilot/epic-themes-20261018-1343.md

@@ -1,6 +1,6 @@
 # Review log — story-theme-deep-space.md (ticket 9.7)
 
-State: pass 3: done
+State: done
 
 Pre-loop: HEAD 4bc178217cde6842ff7dae148c1a03463a76f96d; pass 0 copy /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-themes/story-theme-deep-space.review-log.passes/pass0.md (176 words by wc -w incl. frontmatter); budget 1500 words.
 
@@ -45,3 +45,17 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 - brittle line numbers (already hedged with `~` and names); minifier re-encoding (plan checks against a real dist); tokens placement after paper (cosmetic, dropped in pass 2); TH-5 wording (dropped in pass 2); Switch whitespace (obvious handling)
 Words: 1413 (8.03 x pass 0)  |  Snapshot: _bmad-output/initiative-wordcell-v1/epic-themes/story-theme-deep-space.review-log.passes/pass3.md
 Fixer applied items 1–5 (diff: _bmad-output/initiative-wordcell-v1/epic-themes/story-theme-deep-space.review-log.passes/pass3.fix.diff).
+
+## Pass 4 — 2026-10-19
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 0, minor 4, decision-needed 0  |  Dropped in triage: 1
+Words: 1413 (8.03 x pass 0)  |  Snapshot: unchanged from pass 3 (no fix pass)
+### Unapplied minors
+- Registry bullet: state one default ("after `register(paperTheme)`" unless the owner's order decision says otherwise) instead of "follows the decision"
+- Registry bullet: update the stale main.ts comment above the `register` calls
+- Name the Switch test that carries the reload assertion (stretch)
+### Dropped
+- Art grammar vs stroke attributes: the 9.5 Hooks bullet already allows `fill` and/or `stroke` with `stroke-opacity`/`stroke-width` on each shape
+
+## Result — converged after 4 passes
+Majors per pass: 10, 3, 1, 0. Technical defaults applied: all 14 majors.
+Decision needed: Theme radio order (spec §7.10 puts Deep Space second; build order puts it after Daylight Paper). Proposed default: spec order.
