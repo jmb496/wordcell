@@ -1,6 +1,6 @@
 # Review log — story-theme-daylight-paper (ticket 9.6)
 
-State: pass 3: done
+State: pass 4: done
 
 Pre-loop: HEAD 42fc3b8, copy `story-theme-daylight-paper.review-log.passes/pass0.md`, 150 words (budget 1500). No themes SPEC.md exists under `_bmad-output/specs/`; refs are the epic file (TH-1..TH-9), DESIGN.md Themes, the spine, AGENTS.md and the plans of 9.1-9.5.
 
@@ -48,3 +48,20 @@ Reviewers: fix-diff, builder, adversarial, ref-alignment  |  Findings: major 2, 
 Words: see wc  |  Snapshot: story-theme-daylight-paper.review-log.passes/pass3.md
 ### Decision needed (restated, functionality / UX / gameplay)
 - TH-3 first-paint — on a cold start with Daylight Paper stored, the page paints paper at once, but the browser/status-bar tint (`theme-color` meta) may show Charcoal's `#15171B` for one frame until main.ts sets it, and the installed-PWA splash (manifest `background_color`) stays dark. Accept, or approve an AD-16 edit to set the meta earlier? — proposed default: accept (ticket already says the meta waits for main.ts).
+
+## Pass 4 — 2026-10-19
+Reviewers: fix-diff, builder, adversarial, ref-alignment  |  Findings: major 0, minor 5, decision-needed 0  |  Dropped in triage: 0
+Words: 1244 (8.3 x pass 0, budget 1500)  |  No fix pass (converged).
+
+## Result — converged after 4 passes
+Majors per pass: 7, 3, 2, 0.
+
+### Decision needed (owner)
+- First paint with Daylight Paper stored: page paints paper at once (index.html pre-paint script), but the browser/status-bar tint (`theme-color` meta, static `#15171B`) may show Charcoal for one frame until main.ts sets it, and the installed-PWA splash stays dark. Accept, or approve an AD-16 edit to set the meta earlier? Proposed default: accept (the ticket states it).
+
+### Unapplied minors
+- Screenshots: name the fixture for scene 2 (`session-idle-fresh`) and the helper parameters (fixture, prefs); apply `reducedMotion: 'reduce'` and the 360x740 viewport to the scene/sheet shots and name the viewport of the board and tray shots.
+- Switch return trip: compare `getPropertyValue(...).trim()` case-insensitively, as the scrim check does.
+- colour-literals.test.ts already asserts "default entry meta equals --wc-table" (AD-10); note it stays and relies on the paper block coming after the default block.
+- tickets.toml entry 6 `after = [1, 4]` and its verify wording disagree with the ticket (`[3, 4, 5]`); align at the board step.
+- Earlier unapplied minors from pass 3: list TRANSLUCENT/OPAQUE members next to the four internal tokens; helper signature for scene-reach; native controls follow `color-scheme` (check radios in the Preferences shot); dist-smoke per-test context isolation.
