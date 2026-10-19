@@ -1,6 +1,6 @@
 # Review log — story-theme-art-layer-table-background-and-card-texture (ticket 9.5)
 
-State: pass 1: done
+State: pass 2: done
 Pre-loop: HEAD e922032, 211 words, copy story-theme-art-layer-table-background-and-card-texture.review-log.passes/pass0.md
 
 ## Pass 1
@@ -19,3 +19,17 @@ Reviewers: builder, edge-case, adversarial, ref-alignment  |  Findings: major 9 
 Words: 634 (3.0 x pass 0, over the 2.5x budget; later minors only if word-neutral)  |  Snapshot: story-theme-art-layer-table-background-and-card-texture.review-log.passes/pass1.md
 ### Applied
 - [major] 9 majors (M1-M9) and minor mapping/scope → fixer items 0-10
+
+## Pass 2
+Reviewers: fix-diff, edge-case, adversarial, ref-alignment  |  Findings: major 7 (merged), minor 6, decision-needed 0  |  Dropped in triage: 2 (forced-colors/test:screens wording stretch, optional byte-cost record)
+### Default applied (technical)
+- M1 test-only art theme CSS location → separate test-only stylesheet imported from the test-hook branch of main.ts, read by the Vitest checks, asserted absent from dist
+- M2 fail-fast check site → Vitest only over parsed app.css theme blocks plus the test sheet; drop "or registration" (no runtime check, rule 6)
+- M3 token grammar/opacity source → `none` or exactly one `url("data:image/svg+xml,…")` with a single fill and fill-opacity; no gradient, image, href, script, external url, var(), initial/unset, empty; the test reads colour and alpha from it
+- M4 table-art worst point → same form; lightest/darkest declared colour composited over --wc-table; roles drawn on table (edge, outline, destination outline)
+- M5 card roles enumerated → card-ink on card-face and on destination-fill; texture is background-image over state background-color
+- M6 pixel check method → letter hidden, sample background pixels in letter box on a live card, the QU card and a tray tile, against card-ink
+- M7 surfaces → fixed px tile; table art on body; Scene surfaces named; layout check adds sticky bars and scrollWidth; `:root` declares none
+Words: 678 (3.2 x pass 0)  |  Snapshot: story-theme-art-layer-table-background-and-card-texture.review-log.passes/pass2.md
+### Applied
+- [major] M1-M7 → fixer items 1-7 (destination-outline assertion not added: only outline-on-table row exists)
