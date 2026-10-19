@@ -23,6 +23,44 @@ afterEach(() => {
 });
 
 describe('theme registry', () => {
+  it('AD-10 ThemeId, prefs themes and registry ids agree', async () => {
+    const { defaultTheme, gardenTheme, paperTheme, plumTheme, scifiTheme, steampunkTheme } =
+      await fresh();
+    const records = [
+      defaultTheme,
+      scifiTheme,
+      gardenTheme,
+      steampunkTheme,
+      paperTheme,
+      plumTheme,
+    ] as const;
+    const ids = records.map((record) => record.id);
+    // Exhaustive type check: a ThemeId without a key (or an extra key) fails `npm run check`.
+    const exhaustive: Record<ThemeId, true> = {
+      default: true,
+      scifi: true,
+      garden: true,
+      steampunk: true,
+      paper: true,
+      plum: true,
+    };
+    expect([...ids].sort()).toEqual(Object.keys(exhaustive).sort());
+    vi.stubGlobal('window', new EventTarget());
+    vi.resetModules();
+    const { parsePrefs } = await import('../../shell/prefs.svelte');
+    vi.unstubAllGlobals();
+    for (const id of ids) {
+      const result = parsePrefs(
+        JSON.stringify({ version: 1, animationSpeed: 'normal', showTimer: false, theme: id }),
+      );
+      expect(result.ok).toBe(true);
+    }
+    const foreign = parsePrefs(
+      JSON.stringify({ version: 1, animationSpeed: 'normal', showTimer: false, theme: 'neon' }),
+    );
+    expect(foreign.ok).toBe(false);
+  });
+
   it('AD-10 applyTheme(default) sets data-theme and the meta in place', async () => {
     const { meta, root } = stubDocument();
     const { applyTheme, defaultTheme, register } = await fresh();

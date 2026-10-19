@@ -265,6 +265,25 @@ test('Q-45 AD-10 AD-16 Plum Dusk switches at once with no art, Charcoal restores
   expect(await meta(page)).toBe(CHARCOAL);
 });
 
+test('AD-10 Plum Dusk radio at 360 px lies inside the viewport and the Preferences body, clear of the header', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 360, height: 740 });
+  await openFixture(page, 'session-idle-fresh');
+  await openPrefs(page);
+  expect(page.viewportSize()?.width).toBe(360);
+  const radio = themeGroup(page).getByRole('radio', { name: 'Plum Dusk' });
+  await radio.scrollIntoViewIfNeeded();
+  const box = await radio.boundingBox();
+  const body = await panel(page).locator('.content').boundingBox();
+  const header = await panel(page).locator('header').boundingBox();
+  if (box === null || body === null || header === null) throw new Error('missing box');
+  expect(box.x).toBeGreaterThanOrEqual(0);
+  expect(box.x + box.width).toBeLessThanOrEqual(360);
+  expect(box.y).toBeGreaterThanOrEqual(Math.max(body.y, header.y + header.height));
+  expect(box.y + box.height).toBeLessThanOrEqual(body.y + body.height);
+});
+
 test('Q-45 the choice survives a reload', async ({ page }) => {
   await openFixture(page, 'session-idle-fresh');
   await openPrefs(page);

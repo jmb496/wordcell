@@ -208,6 +208,28 @@ describe('AD-14 theme contrast', () => {
     expect(parseArt(garden.get(CARD_TEXTURE) as string)).not.toBeNull();
   });
 
+  it('AD-14 steampunk sets both art tokens in app.css', () => {
+    const steampunk = themes.get('steampunk') as Record;
+    expect(parseArt(steampunk.get(TABLE_ART) as string)).not.toBeNull();
+    expect(parseArt(steampunk.get(CARD_TEXTURE) as string)).not.toBeNull();
+  });
+
+  it('AD-10 main.ts registers the six theme records in §7.10 order', () => {
+    const main = read('../../main.ts')
+      .split('\n')
+      .filter((line) => !line.trimStart().startsWith('//'))
+      .join('\n');
+    const calls = [...main.matchAll(/^register\((\w+)\);$/gm)].map((m) => m[1]);
+    expect(calls).toEqual([
+      'defaultTheme',
+      'scifiTheme',
+      'gardenTheme',
+      'steampunkTheme',
+      'paperTheme',
+      'plumTheme',
+    ]);
+  });
+
   it('AD-14 the art keys are optional in the key-set check', () => {
     const bare = new Map(defaults);
     bare.delete(TABLE_ART);
