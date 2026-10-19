@@ -43,3 +43,7 @@ Verify: npm run test:all and npm run test:screens are green with the new theme's
 - rules — docs/game-flow-spec.md Q-45
 - siblings — story-token-plumbing-and-contrast-harness.md (9.3), story-theme-preference-and-pre-paint-apply.md (9.4), story-theme-art-layer-table-background-and-card-texture.md (9.5, Notes: contrast floors)
 - code — src/ui/theme/registry.ts, src/ui/app.css, src/main.ts, src/ui/theme/contrast.test.ts, e2e/theme.spec.ts, e2e/pwa/dist-smoke.spec.ts
+
+## Notes
+
+- Decision (owner, 2026-10-19): accept the one-frame dark browser-bar tint (`theme-color` meta) and the dark installed-app splash on a cold start with Daylight Paper stored. AD-16 boot order unchanged, no spine edit.
