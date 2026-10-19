@@ -1,6 +1,6 @@
 # Review log — story-theme-art-layer-table-background-and-card-texture (ticket 9.5)
 
-State: pass 2: done
+State: pass 3: done
 Pre-loop: HEAD e922032, 211 words, copy story-theme-art-layer-table-background-and-card-texture.review-log.passes/pass0.md
 
 ## Pass 1
@@ -33,3 +33,16 @@ Reviewers: fix-diff, edge-case, adversarial, ref-alignment  |  Findings: major 7
 Words: 678 (3.2 x pass 0)  |  Snapshot: story-theme-art-layer-table-background-and-card-texture.review-log.passes/pass2.md
 ### Applied
 - [major] M1-M7 → fixer items 1-7 (destination-outline assertion not added: only outline-on-table row exists)
+
+## Pass 3
+Reviewers: fix-diff, edge-case, adversarial, ref-alignment  |  Findings: major 6 (merged), minor 6, decision-needed 0  |  Dropped in triage: 0 (scan, pixel-method and layout-isolation items classed minor; fixer applies only if word-neutral)
+### Default applied (technical)
+- M1 existing Card.svelte face rules (ghost `background:none`, `.block/.destination` shorthand, `.used` hatch) → ghost carries no texture (DESIGN.md), block/destination convert to `background-color`, `.used` keeps its hatch and drops the texture; contrast/pixel checks cover the states with a texture
+- M2 table art placement → on `html` (canvas) with fixed-px tile, `background-attachment: scroll`; Board.svelte's opaque `--wc-table` background also carries the art (same tile so layers align), or becomes transparent
+- M3 test-only theme id → reuse an existing unshipped ThemeId (as testPaper reuses `paper`), no new ThemeId/THEMES entry (AD-7 closed set, rule 7); registered and its sheet loaded by dynamic import() inside the existing test-hook condition in main.ts; dist-absence check scans for the sheet's selector and art data URI
+- M4 destination-fill contrast → per-pair floor from contrast.test.ts TABLE (card-face 13.1 pinned figure; destination-fill's own pinned figure), not 13.1 for both
+- M5 grammar → allowlist: `none` or exactly one `url("data:image/svg+xml,…")` of rect/circle/path/line, one hex `fill` and one `fill-opacity` shared by all shapes (absent = 1), no stroke/opacity/overlap
+- M6 Scene → backdrop layer stays plain `--wc-table` under the scrim; Scene Cards carry the texture
+Words: 694 (3.3 x pass 0)  |  Snapshot: story-theme-art-layer-table-background-and-card-texture.review-log.passes/pass3.md
+### Applied
+- [major] M1-M6 and word-neutral minors → fixer items 1-6 (Scene has no backdrop/scrim of its own; claim corrected)
