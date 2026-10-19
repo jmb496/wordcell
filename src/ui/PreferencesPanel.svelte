@@ -113,7 +113,7 @@ function toggleTimer(): void {
   }
   .segments { display: flex; border: 1px solid var(--wc-outline); border-radius: 9999px; overflow: hidden; }
   .segment {
-    position: relative; flex: 1; min-height: 44px; display: grid; place-items: center;
+    position: relative; flex: 1; min-height: 44px; display: grid; place-items: center; text-align: center;
     font: 400 1rem/1.5rem system-ui, "Roboto", sans-serif; color: var(--wc-ink-primary);
   }
   .segment + .segment { border-left: 1px solid var(--wc-outline); }
