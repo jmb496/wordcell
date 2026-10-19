@@ -3,7 +3,7 @@ title: 'Theme art layer: table background and card texture'
 type: 'feature'
 ticket: 'story-theme-art-layer-table-background-and-card-texture'
 created: '2026-10-18'
-status: 'built'
+status: done
 route: 'full'
 route_source: 'auto'
 review: 'thorough'
