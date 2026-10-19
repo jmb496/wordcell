@@ -1,6 +1,6 @@
 # Review log — story-theme-art-layer-table-background-and-card-texture (ticket 9.5)
 
-State: pass 5: done
+State: pass 6: done
 Pre-loop: HEAD e922032, 211 words, copy story-theme-art-layer-table-background-and-card-texture.review-log.passes/pass0.md
 
 ## Pass 1
@@ -71,3 +71,16 @@ Reviewers: fix-diff, edge-case, adversarial, ref-alignment (late-pass bar)  |  F
 Words: 720 (3.4 x pass 0)  |  Snapshot: story-theme-art-layer-table-background-and-card-texture.review-log.passes/pass5.md
 ### Applied
 - [major] M1-M5 → fixer items 1-5
+
+## Pass 6
+Reviewers: fix-diff, edge-case, adversarial, ref-alignment (late-pass bar)  |  Findings: major 6 (merged), minor ~12 (applied only if word-neutral), decision-needed 0 (1 reclassified)  |  Dropped in triage: 0
+### Default applied (technical)
+- M1 html/body → `html` carries `background-color: var(--wc-table)` and the art image; `body` has no background; a computed-style assertion covers both
+- M2 grammar too narrow for the owner-approved mockups (research/tools/themes.mjs uses stroked paths for the 48px grid, leaf veins, fibre, wood grain) → the ref reviewer called this decision-needed; reclassified technical: the epic Notes decision (2026-10-18) already says "art as mocked up", so intent is supplied. Widen: rect, circle, path; hex `fill` and/or `stroke` with `fill-opacity`/`stroke-opacity` decimals in [0,1]; worst point per colour = sum of its opacities capped at 1 (bounds overlap, replaces the disjoint-bbox rule); the pixel check confirms
+- M3 restore the new TABLE row card-ink on destination-fill (pass 4 M3 lost in pass 5)
+- M4 AC gap → one AC line (Playwright android computed-style): ghost background-image none, `.used` keeps hatch without texture, html carries the image and body none; build-output spec: dist lacks and dist-test has the garden selector and art URI
+- M5 base `.face` gains `background-color` + `background-image: var(--wc-card-texture)` with intrinsic px tile, default repeat; worst point independent of tile phase
+- M6 table-resting ink → Table side also asserts any TABLE ink row drawn directly on `--wc-table` over the art composite
+Words: 744 (3.5 x pass 0)  |  Snapshot: story-theme-art-layer-table-background-and-card-texture.review-log.passes/pass6.md
+### Applied
+- [major] M1-M6 → fixer items 1-6 (fixer noted the mockup art puts attributes on a <g>, ticket says per shape; left for pass 7 to judge)
