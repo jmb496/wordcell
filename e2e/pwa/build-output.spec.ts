@@ -138,9 +138,9 @@ test('AD-10 the built CSS keeps the @container style(--wc-reduced branch, readin
   }
 });
 
-test('AD-14 TH-9 the garden, scifi and steampunk blocks and art are in dist and dist-test; plum is absent', () => {
-  // Epic themes tickets 7 to 9: the garden, scifi and steampunk blocks live in app.css, so they ship in every build (the
-  // selector may be minified to unquoted form). Each later theme ticket edits the absent list.
+test('AD-14 TH-9 the garden, scifi, steampunk and plum blocks (art for the first three) are in dist and dist-test', () => {
+  // Epic themes tickets 7 to 10: the garden, scifi, steampunk and plum blocks live in app.css, so they ship in every
+  // build (the selector may be minified to unquoted form). Plum has no art marker; no theme is absent.
   const root = buildRoot();
   const files = walk(root).filter((file) => /^assets\/[^/]+\.(css|js)$/.test(file));
   expect(files.length).toBeGreaterThan(0);
@@ -161,6 +161,6 @@ test('AD-14 TH-9 the garden, scifi and steampunk blocks and art are in dist and 
     scifiArt: true,
     steampunkSelector: true,
     steampunkArt: true,
-    plumSelector: false,
+    plumSelector: true,
   });
 });

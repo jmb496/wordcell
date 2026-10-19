@@ -3,7 +3,14 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { type Art, checkTexture, parseArt, worstSurfaces } from './art';
 import { themeRecords } from './colour-literals';
-import { defaultTheme, gardenTheme, paperTheme, scifiTheme, steampunkTheme } from './registry';
+import {
+  defaultTheme,
+  gardenTheme,
+  paperTheme,
+  plumTheme,
+  scifiTheme,
+  steampunkTheme,
+} from './registry';
 
 interface Rgba {
   r: number;
@@ -153,7 +160,7 @@ describe('AD-14 theme contrast', () => {
     expect(check(record, id === 'default', new Set(defaults.keys()))).toEqual([]);
   });
 
-  it.each([defaultTheme, scifiTheme, gardenTheme, steampunkTheme, paperTheme])(
+  it.each([defaultTheme, scifiTheme, gardenTheme, steampunkTheme, paperTheme, plumTheme])(
     'AD-14 the meta of theme $id equals its --wc-table',
     (entry) => {
       const table = (themes.get(entry.id) as Record).get('--wc-table') as string;

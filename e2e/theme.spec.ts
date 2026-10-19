@@ -6,7 +6,7 @@ import { booted, openBoard } from './helpers/restore';
 import { fixture, seedStorage } from './helpers/seed';
 
 // Epic themes ticket 4 (Q-36, Q-45, AD-10, AD-16, AD-17; TH-3): the theme preference and the
-// pre-paint apply, on android (all five themes are registered in every build). Fixtures: `prefs-theme-paper`, `prefs-invalid-theme-unknown`.
+// pre-paint apply, on android (all six themes are registered in every build). Fixtures: `prefs-theme-paper`, `prefs-invalid-theme-unknown`.
 
 test.beforeEach(onAndroid);
 
@@ -129,12 +129,13 @@ test('Q-45 AD-10 the Theme radiogroup switches at once, stores theme, and Charco
   const before = await stored(page, SESSION);
   await openPrefs(page);
   const group = themeGroup(page);
-  await expect(group.getByRole('radio')).toHaveCount(5);
+  await expect(group.getByRole('radio')).toHaveCount(6);
   await expect(group.getByRole('radio').nth(0)).toHaveAccessibleName('Charcoal');
   await expect(group.getByRole('radio').nth(1)).toHaveAccessibleName('Deep Space');
   await expect(group.getByRole('radio').nth(2)).toHaveAccessibleName('Greenhouse Dusk');
   await expect(group.getByRole('radio').nth(3)).toHaveAccessibleName('Brass and Walnut');
   await expect(group.getByRole('radio').nth(4)).toHaveAccessibleName('Daylight Paper');
+  await expect(group.getByRole('radio').nth(5)).toHaveAccessibleName('Plum Dusk');
   await expect(group.getByRole('radio', { name: 'Charcoal' })).toBeChecked();
   const defaults = {
     scrim: await rootVar(page, '--wc-scrim'),
@@ -240,6 +241,30 @@ test('Q-45 AD-10 AD-16 Brass and Walnut switches at once with both art layers, C
   expect(await rootVar(page, '--wc-card-texture')).toBe('none');
 });
 
+test('Q-45 AD-10 AD-16 Plum Dusk switches at once with no art, Charcoal restores, a reload keeps it', async ({
+  page,
+}) => {
+  await openFixture(page, 'session-idle-fresh');
+  await openPrefs(page);
+  const group = themeGroup(page);
+  await group.getByRole('radio', { name: 'Plum Dusk' }).check();
+  expect(await attr(page)).toBe('plum');
+  expect(await colorScheme(page)).toBe('dark');
+  expect(await meta(page)).toBe('#17121C');
+  expect(await rootVar(page, '--wc-table-art')).toBe('none');
+  expect(await rootVar(page, '--wc-card-texture')).toBe('none');
+  await expectNoThemeAnimations(page);
+  await page.reload();
+  await expect(page.getByTestId('card-0')).toBeVisible();
+  expect(await attr(page)).toBe('plum');
+  expect(await meta(page)).toBe('#17121C');
+  await openPrefs(page);
+  await expect(themeGroup(page).getByRole('radio', { name: 'Plum Dusk' })).toBeChecked();
+  await themeGroup(page).getByRole('radio', { name: 'Charcoal' }).check();
+  expect(await attr(page)).toBe('default');
+  expect(await meta(page)).toBe(CHARCOAL);
+});
+
 test('Q-45 the choice survives a reload', async ({ page }) => {
   await openFixture(page, 'session-idle-fresh');
   await openPrefs(page);
@@ -290,24 +315,6 @@ test('Q-45 the apply runs on the rejected-Session path', async ({ page }) => {
   expect(await page.evaluate(() => window.__wordcell?.current().kind)).toBe('rejected');
   expect(await attr(page)).toBe('paper');
   expect(await meta(page)).toBe(PAPER);
-});
-
-test('AD-10 AD-15 an AD-7-valid but unregistered theme reaches Halted with the default look and prefs untouched', async ({
-  page,
-}) => {
-  const text = JSON.stringify({
-    version: 1,
-    animationSpeed: 'normal',
-    showTimer: false,
-    theme: 'plum',
-  });
-  await seedStorage(page, { session: fixture('session-idle-fresh.json'), prefs: text });
-  await page.goto('/');
-  await expect(page.getByRole('alertdialog')).toHaveCount(1);
-  expect(await page.evaluate(() => window.__wordcell?.current().kind)).toBe('halted');
-  expect(await attr(page)).toBeNull();
-  expect(await meta(page)).toBe(CHARCOAL);
-  expect(await storedPrefs(page)).toBe(text);
 });
 
 test('Q-36 an unknown theme value boots the default theme and leaves the key untouched until a setter', async ({

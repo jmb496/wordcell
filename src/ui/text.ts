@@ -217,6 +217,7 @@ export const text = Object.freeze({
   themeDefault: 'Charcoal',
   themeDeepSpace: 'Deep Space',
   themePaper: 'Daylight Paper',
+  themePlumDusk: 'Plum Dusk',
   themeGreenhouseDusk: 'Greenhouse Dusk',
   themeBrassAndWalnut: 'Brass and Walnut',
   // Epic 6 CAP-6 (ticket 6.5, R-84, Q-44, Q-35) Statistics panel (DESIGN.md Panels; the catalogue

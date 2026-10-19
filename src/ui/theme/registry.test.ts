@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { ThemeId } from '../../shell/prefs.svelte';
 
 // AD-10 theme registry over a stubbed document (no DOM library): the root's dataset and one meta.
 
@@ -92,11 +93,26 @@ describe('theme registry', () => {
     expect(meta.content).toBe('#1D1510');
   });
 
+  it('AD-10 plumTheme registers as plum with meta #17121C', async () => {
+    const { meta, root } = stubDocument();
+    const { applyTheme, defaultTheme, entries, register, plumTheme } = await fresh();
+    const { text } = await import('../text');
+    register(defaultTheme);
+    register(plumTheme);
+    expect(entries().map((entry) => entry.id)).toEqual(['default', 'plum']);
+    expect(plumTheme).toEqual({ id: 'plum', label: text.themePlumDusk, meta: '#17121C' });
+    applyTheme('plum');
+    expect(root.dataset.theme).toBe('plum');
+    expect(meta.content).toBe('#17121C');
+  });
+
   it('AD-10 an unregistered id throws and changes nothing', async () => {
     const { meta, root } = stubDocument();
     const { applyTheme, defaultTheme, register } = await fresh();
     register(defaultTheme);
-    expect(() => applyTheme('plum')).toThrow("AD-10 theme 'plum' is not registered");
+    expect(() => applyTheme('nonesuch' as ThemeId)).toThrow(
+      "AD-10 theme 'nonesuch' is not registered",
+    );
     expect(root.dataset.theme).toBeUndefined();
     expect(meta.content).toBe('#15171B');
   });

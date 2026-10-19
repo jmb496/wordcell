@@ -30,6 +30,7 @@ import {
   defaultTheme,
   gardenTheme,
   paperTheme,
+  plumTheme,
   register,
   scifiTheme,
   steampunkTheme,
@@ -224,10 +225,11 @@ async function boot(): Promise<void> {
   await dictionary.load();
 }
 
-// AD-10: `default`, `scifi`, `garden`, `steampunk`, then `paper` in every build (spec §7.10), before boot.
+// AD-10: `default`, `scifi`, `garden`, `steampunk`, `paper`, then `plum` in every build (spec §7.10), before boot.
 register(defaultTheme);
 register(scifiTheme);
 register(gardenTheme);
 register(steampunkTheme);
 register(paperTheme);
+register(plumTheme);
 void boot();
