@@ -27,7 +27,11 @@ export const testPaper: ThemeEntry = { id: 'paper', label: text.themePaper, meta
  * Test-only theme for the TH-9 art hooks; exempt from the token check. It sets only the two art
  * tokens (garden.css), so its table colour is the default's.
  */
-export const testGarden: ThemeEntry = { id: 'garden', label: text.themeGarden, meta: '#15171B' };
+export const testGarden: ThemeEntry = {
+  id: 'garden',
+  label: text.themeGarden,
+  meta: defaultTheme.meta,
+};
 
 const table = new Map<ThemeId, ThemeEntry>();
 

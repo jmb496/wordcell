@@ -255,6 +255,11 @@ function checkDeclValue(
   const value = blankStringsAndUrls(rawValue);
   const hex = hexIn(value, [3, 4, 6, 8]);
   if (hex) out.push({ path, rule: 'hex', detail: `${prop}: ${hex}` });
+  // Art data URIs hold hex paints only in a token file's theme block (scanCss skips those).
+  for (const m of rawValue.matchAll(/url\(\s*["']?data:[^)]*/gi)) {
+    const paint = /(?:#|%23)[0-9a-f]{3,8}(?![\w])/i.exec(m[0]);
+    if (paint) out.push({ path, rule: 'hex', detail: `${prop}: ${paint[0]} in a data URI` });
+  }
   if (COLOUR_FN.test(value))
     out.push({ path, rule: 'colour-function', detail: `${prop}: ${rawValue}` });
   const p = prop.toLowerCase();

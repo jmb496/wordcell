@@ -87,15 +87,23 @@ describe('AD-14 colour-literal scan negatives', () => {
       () => css('[data-theme="garden"] { --wc-x: rgb(0 0 0 / 0.5); }', 'src/ui/theme/garden.css'),
     ],
     [
-      'hex inside an art data URI',
+      'hex inside an art data URI in a token file theme block',
       () =>
         css(
-          `.a { background-image: url("data:image/svg+xml,<svg fill='#fff'/>"); }`,
-          'src/ui/Card.svelte.css',
+          `[data-theme="garden"] { --wc-table-art: url("data:image/svg+xml,<svg fill='#fff'/>"); }`,
+          'src/ui/theme/garden.css',
         ),
     ],
   ])('AD-14 passes %s', (_name, run) => {
     expect(run()).toEqual([]);
+  });
+
+  it('AD-14 hex inside an art data URI is flagged in a component stylesheet', () => {
+    const found = css(
+      `.a { background-image: url("data:image/svg+xml,<svg fill='#fff'/>"); }`,
+      'src/ui/Card.svelte.css',
+    );
+    expect(found.map((v) => v.rule)).toEqual(['hex']);
   });
 
   it('AD-14 a .svelte parse error throws', () => {

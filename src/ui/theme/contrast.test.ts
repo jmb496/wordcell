@@ -235,6 +235,36 @@ describe('AD-14 theme contrast', () => {
     );
   });
 
+  it('AD-14 a texture that drops card-ink below 4.5 on destination-fill fails naming the pair', () => {
+    const bad = new Map(defaults);
+    bad.set('--wc-card-ink', marginalInk('--wc-destination-fill', 4.5));
+    expect(check(bad, false).filter((f) => f.startsWith('card-ink/destination-fill'))).toEqual([]);
+    bad.set(CARD_TEXTURE, art("<rect width='8' height='8' fill='%23fff' fill-opacity='0.06'/>"));
+    expect(
+      check(bad, false).some((f) => f.startsWith('card-ink/destination-fill over texture')),
+    ).toBe(true);
+  });
+
+  it('AD-14 a texture that drops ink-primary below 4.5 on destination-fill fails naming the pair', () => {
+    const bad = new Map(defaults);
+    bad.set('--wc-ink-primary', marginalInk('--wc-destination-fill', 4.5));
+    expect(check(bad, false).filter((f) => f.startsWith('ink-primary/destination-fill'))).toEqual(
+      [],
+    );
+    bad.set(CARD_TEXTURE, art("<rect width='8' height='8' fill='%23fff' fill-opacity='0.06'/>"));
+    expect(
+      check(bad, false).some((f) => f.startsWith('ink-primary/destination-fill over texture')),
+    ).toBe(true);
+  });
+
+  it('AD-14 table art that drops outline below 3 on table fails naming the pair', () => {
+    const bad = new Map(defaults);
+    bad.set('--wc-outline', marginalInk('--wc-table', 3));
+    expect(check(bad, false).filter((f) => f.startsWith('outline/table'))).toEqual([]);
+    bad.set(TABLE_ART, art("<rect width='8' height='8' fill='%23fff' fill-opacity='0.5'/>"));
+    expect(check(bad, false).some((f) => f.startsWith('outline/table over table art'))).toBe(true);
+  });
+
   it('AD-14 a texture over 6 % or a token outside the grammar fails the record', () => {
     const heavy = new Map(defaults);
     heavy.set(CARD_TEXTURE, art("<rect width='8' height='8' fill='%23fff' fill-opacity='0.2'/>"));

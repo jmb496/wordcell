@@ -53,18 +53,23 @@ async function worstOverGlyphBox(page: Page, card: Locator, ink: string): Promis
       const inkLum = lum(ir, ig, ib);
       const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
       let worst = Number.POSITIVE_INFINITY;
+      const first = [data[0], data[1], data[2]].join();
+      let textured = false;
       for (let i = 0; i < data.length; i += 4) {
+        if ([data[i], data[i + 1], data[i + 2]].join() !== first) textured = true;
         const l = lum(data[i] ?? 0, data[i + 1] ?? 0, data[i + 2] ?? 0);
         const r = (Math.max(l, inkLum) + 0.05) / (Math.min(l, inkLum) + 0.05);
         worst = Math.min(worst, r);
       }
+      if (!textured)
+        throw new Error('the sampled region is uniform: no texture reached the pixels');
       return worst;
     },
     { b64: png.toString('base64'), inkColour: ink },
   );
 }
 
-test('TH-9 AD-14 garden: the worst pixel under the letter of a live card, the QU card, a tray tile and a block or destination card meets 4.5 against card-ink', async ({
+test('AD-14 TH-9 garden: the worst pixel under the letter of a live card, the QU card, a tray tile and a block or destination card meets 4.5 against card-ink', async ({
   page,
 }) => {
   await openFixture(page, 'session-composing', { prefs: 'prefs-theme-garden' });
@@ -75,10 +80,10 @@ test('TH-9 AD-14 garden: the worst pixel under the letter of a live card, the QU
   });
 
   const live = page.locator('[data-testid="column-1"] [data-card-id]').first();
-  const qu = page.locator('[data-card-id]:has(.glyph.qu)').first();
+  const qu = page.locator('[data-card-id]:has(.glyph.qu)');
   const trayTile = page.locator('[data-band="tray"] .card.tile').first();
-  const destination = page.locator('[data-testid="column-6"] .card.destination').first();
-  const block = page.locator('[data-band="tray"] .card.block').first();
+  const destination = page.locator('[data-testid="column-6"] .card.destination');
+  const block = page.locator('[data-band="tray"] .card.block');
   for (const [name, card] of [
     ['live', live],
     ['QU', qu],
@@ -93,11 +98,12 @@ test('TH-9 AD-14 garden: the worst pixel under the letter of a live card, the QU
   }
 });
 
-test('TH-9 garden: a used face keeps its hatch and no texture, html carries the table image and body none', async ({
+test('AD-14 TH-9 garden: a used face keeps its hatch and no texture, html carries the table image and body none', async ({
   page,
 }) => {
   await openFixture(page, 'session-place-free-letter-redo-tail', { prefs: 'prefs-theme-garden' });
-  const used = page.getByTestId('wordcell-3').locator('[data-mirror-of="28"] .face');
+  const used = page.locator('.card.used .face');
+  await expect(used).toHaveCount(1);
   const usedImage = await style(used, 'background-image');
   expect(usedImage).toContain('repeating-linear-gradient');
   expect(usedImage).not.toMatch(IMAGE);
@@ -106,18 +112,22 @@ test('TH-9 garden: a used face keeps its hatch and no texture, html carries the 
   expect(await style(page.locator('body'), 'background-color')).toBe('rgba(0, 0, 0, 0)');
 });
 
-test('TH-9 garden: a ghost has no image and the sticky bars stay flat', async ({ page }) => {
+test('AD-14 TH-9 garden: a ghost has no image and the sticky bars stay flat', async ({ page }) => {
   await openFixture(page, 'session-composing', { prefs: 'prefs-theme-garden' });
   const ghost = page.locator('.card.ghost .face').first();
   await expect(ghost).toHaveCount(1);
   expect(await style(ghost, 'background-image')).toBe('none');
-  for (const bar of ['topBar', 'actionBar', 'banner']) {
+  for (const bar of ['topBar', 'actionBar']) {
     const el = page.locator(`[data-band="${bar}"]`);
-    if ((await el.count()) > 0) expect(await style(el, 'background-image'), bar).toBe('none');
+    await expect(el, bar).toHaveCount(1);
+    expect(await style(el, 'background-image'), bar).toBe('none');
+    expect(await style(el, 'background-color'), bar).toMatch(/^rgb\(/);
   }
 });
 
-test('TH-9 default: both art tokens resolve to none and nothing is painted', async ({ page }) => {
+test('AD-14 TH-9 default: both art tokens resolve to none and nothing is painted', async ({
+  page,
+}) => {
   await openFixture(page, 'session-composing');
   expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe('default');
   const tokens = await page.evaluate(() => {
@@ -134,7 +144,7 @@ test('TH-9 default: both art tokens resolve to none and nothing is painted', asy
   );
 });
 
-test('TH-9 P6 a theme switch default to garden changes no rect, nor the document scroll size', async ({
+test('AD-14 TH-9 P6 a theme switch default to garden changes no rect, nor the document scroll size', async ({
   page,
 }) => {
   await openFixture(page, 'session-composing');
@@ -160,9 +170,18 @@ test('TH-9 P6 a theme switch default to garden changes no rect, nor the document
     });
   const before = await measure();
   expect(before.rects.every((group) => group.length > 0)).toBe(true);
-  await page.evaluate(() => {
-    document.documentElement.dataset.theme = 'garden';
-  });
+  await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await page
+    .getByRole('dialog', { name: 'Menu', exact: true })
+    .getByRole('button', { name: 'Preferences', exact: true })
+    .click();
+  const prefs = page.getByRole('dialog', { name: 'Preferences', exact: true });
+  await prefs
+    .getByRole('radiogroup', { name: 'Theme' })
+    .getByRole('radio', { name: 'Garden' })
+    .check();
+  await prefs.getByRole('button', { name: 'Close preferences' }).click();
+  await expect(prefs).toBeHidden();
   expect(await style(page.locator('html'), 'background-image')).toMatch(IMAGE);
   expect(await measure()).toEqual(before);
 });

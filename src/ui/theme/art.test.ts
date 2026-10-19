@@ -22,6 +22,17 @@ describe('AD-14 theme art grammar', () => {
     expect([...colourOpacities(parseArt(GOLDEN) as never)]).toEqual([['#ffffff', 0.04]]);
   });
 
+  it('AD-14 four distinct colours parse', () => {
+    const art = parseArt(
+      wrap(
+        ['fff', '000', 'f00', '0f0']
+          .map((c) => `<rect width='1' height='1' fill='%23${c}'/>`)
+          .join(''),
+      ),
+    );
+    expect(colourOpacities(art as never).size).toBe(4);
+  });
+
   it('AD-14 rect, circle, path, #rgb and #rrggbb parse; opacities default to 1', () => {
     const art = parseArt(
       wrap(
@@ -62,6 +73,11 @@ describe('AD-14 theme art grammar', () => {
     [
       'opacity without paint',
       wrap("<path d='M0 0h4' fill='none' stroke='%23abc' fill-opacity='0.5'/>"),
+    ],
+    ['duplicate attribute', wrap("<rect width='4' height='4' fill='%23abc' fill='%23def'/>")],
+    [
+      'stroke-width without stroke',
+      wrap("<rect width='4' height='4' fill='%23abc' stroke-width='2'/>"),
     ],
     ['no shapes', wrap('')],
     [
@@ -105,6 +121,14 @@ describe('AD-14 theme art texture cap and worst point', () => {
     expect(() => checkTexture(at(0.07))).toThrow('texture colour');
   });
 
+  it('AD-14 parseArt accepts 0.5-opacity table art; only checkTexture caps it', () => {
+    const art = parseArt(
+      wrap("<rect width='4' height='4' fill='%23fff' fill-opacity='0.5'/>"),
+    ) as never;
+    expect(art).not.toBeNull();
+    expect(() => checkTexture(art)).toThrow('texture colour');
+  });
+
   it('AD-14 the cap sums every shape of one colour', () => {
     const art = parseArt(
       wrap(
@@ -114,7 +138,7 @@ describe('AD-14 theme art texture cap and worst point', () => {
     expect(() => checkTexture(art)).toThrow('texture colour');
   });
 
-  it('AD-14 worstSurfaces gives each colour alone and every stacking order', () => {
+  it('AD-14 worstSurfaces gives each colour alone and every stacking order of two', () => {
     const art = parseArt(
       wrap(
         "<rect width='4' height='4' fill='%23fff' fill-opacity='0.5'/><circle cx='5' cy='5' r='2' fill='%23000' fill-opacity='0.5'/>",
@@ -125,5 +149,17 @@ describe('AD-14 theme art texture cap and worst point', () => {
     // black then white -> 25 + 127.5... = (50*.5)+127.5 = 152.5
     const reds = out.map((c) => c.r).sort((a, b) => a - b);
     expect(reds).toEqual([50, 88.75, 152.5, 177.5]);
+  });
+
+  it('AD-14 worstSurfaces covers stacks of proper subsets of three colours', () => {
+    const rect = (colour: string, x: number) =>
+      `<rect x='${x}' width='4' height='4' fill='%23${colour}' fill-opacity='0.5'/>`;
+    const art = parseArt(wrap(rect('fff', 0) + rect('ff0000', 1) + rect('0000ff', 2))) as never;
+    const out = worstSurfaces(art, { r: 0, g: 0, b: 0 });
+    // 3 singles + 3 pairs x 2 orders + 6 full orders = 15 stacks.
+    expect(out).toHaveLength(15);
+    // white then red over black is r 191.25, g 63.75, b 63.75: a pair stack that no stack of all
+    // three layers reproduces (blue always adds to b), so only subset enumeration yields it.
+    expect(out.some((c) => c.r === 191.25 && c.g === 63.75 && c.b === 63.75)).toBe(true);
   });
 });

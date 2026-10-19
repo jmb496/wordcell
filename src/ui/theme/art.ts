@@ -196,15 +196,26 @@ function orderings<T>(items: readonly T[]): T[][] {
   );
 }
 
+/** Every non-empty subset of `items`. */
+function subsets<T>(items: readonly T[]): T[][] {
+  const out: T[][] = [];
+  for (let mask = 1; mask < 1 << items.length; mask++) {
+    out.push(items.filter((_, i) => mask & (1 << i)));
+  }
+  return out;
+}
+
 /**
- * Every surface colour the art can produce over `surface` (sRGB, straight alpha): each colour
- * alone at its capped opacity, and every stacking order of all the art's colours.
+ * Every surface colour the art can produce over `surface` (sRGB, straight alpha): every stack of
+ * any non-empty subset of the art's colours in every order (a single colour is a subset of one).
  */
 export function worstSurfaces(art: Art, surface: Rgb): Rgb[] {
   const layers = [...colourOpacities(art)].map(([colour, a]) => ({ rgb: parseHex(colour), a }));
-  const out = layers.map((l) => over(l.rgb, l.a, surface));
-  for (const order of orderings(layers)) {
-    out.push(order.reduce((below, l) => over(l.rgb, l.a, below), surface));
+  const out: Rgb[] = [];
+  for (const subset of subsets(layers)) {
+    for (const order of orderings(subset)) {
+      out.push(order.reduce((below, l) => over(l.rgb, l.a, below), surface));
+    }
   }
   return out;
 }
