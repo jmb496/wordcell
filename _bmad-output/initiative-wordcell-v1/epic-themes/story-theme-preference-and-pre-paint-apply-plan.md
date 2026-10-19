@@ -3,7 +3,7 @@ title: 'Theme preference and pre-paint apply'
 type: 'feature'
 ticket: 4
 created: '2026-10-18'
-status: 'built'
+status: done
 baseline_revision: 'e89feb4d07d15360b0816be6b03d1db723a09b04'
 route: 'full'
 route_source: 'auto'
