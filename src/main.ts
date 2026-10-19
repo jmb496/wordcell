@@ -25,7 +25,14 @@ import {
   startTracker,
 } from './ui/motion';
 import { overlays } from './ui/overlays.svelte';
-import { applyTheme, defaultTheme, paperTheme, register, testGarden } from './ui/theme/registry';
+import {
+  applyTheme,
+  defaultTheme,
+  paperTheme,
+  register,
+  scifiTheme,
+  testGarden,
+} from './ui/theme/registry';
 // Imported before boot so the `@font-face` the font check loads is registered.
 import './ui/app.css';
 
@@ -216,10 +223,11 @@ async function boot(): Promise<void> {
   await dictionary.load();
 }
 
-// AD-10: `default` then `paper` in every build; AD-17: the test-only `garden` entry, in builds
+// AD-10: `default`, `scifi`, then `paper` in every build; AD-17: the test-only `garden` entry, in builds
 // carrying the test hook, before boot.
 // `garden` (epic themes TH-9) also loads its stylesheet, awaited so source order puts it after app.css.
 register(defaultTheme);
+register(scifiTheme);
 register(paperTheme);
 async function start(): Promise<void> {
   if (import.meta.env.DEV || import.meta.env.VITE_TEST_HOOKS === '1') {

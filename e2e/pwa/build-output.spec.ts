@@ -138,20 +138,21 @@ test('AD-10 the built CSS keeps the @container style(--wc-reduced branch, readin
   }
 });
 
-test('AD-14 TH-9 the test-only garden stylesheet (selector and art URI) is in dist-test and absent from dist', () => {
+test('AD-14 TH-9 the test-only garden stylesheet is in dist-test and absent from dist; the scifi block is in both', () => {
   // Epic themes ticket 5: main.ts imports garden.css only under the test-hook condition, so the
-  // production build must tree-shake it; the selector may be minified to unquoted form.
+  // production build must tree-shake it (the selector may be minified to unquoted form). Ticket 7:
+  // the scifi block is in app.css, so it ships in every build.
   const root = buildRoot();
   const files = walk(root).filter((file) => /^assets\/[^/]+\.(css|js)$/.test(file));
   expect(files.length).toBeGreaterThan(0);
   const all = files.map((file) => readSite(file)).join('\n');
-  const selector = /\[data-theme=["']?garden["']?\]/.test(all);
-  const art = /--wc-table-art:\s*url\(["']?data:image\/svg\+xml/.test(all);
-  const texture = /--wc-card-texture:\s*url\(["']?data:image\/svg\+xml/.test(all);
   const expected = process.env.PW_PREVIEW === 'dist-test';
-  expect({ selector, art, texture }).toEqual({
-    selector: expected,
-    art: expected,
-    texture: expected,
-  });
+  expect({
+    gardenSelector: /\[data-theme=["']?garden["']?\]/.test(all),
+    gardenArt: all.includes('%233b6b4f'),
+  }).toEqual({ gardenSelector: expected, gardenArt: expected });
+  expect({
+    scifiSelector: /\[data-theme=["']?scifi["']?\]/.test(all),
+    scifiArt: all.includes('%2335d0ff'),
+  }).toEqual({ scifiSelector: true, scifiArt: true });
 });

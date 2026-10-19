@@ -1254,4 +1254,9 @@ test.describe('openScene', () => {
     await expect(final.getByRole('button', { name: 'Replay', exact: true })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe('paper');
   });
+
+  test('AD-17 the prefs-theme-scifi fixture seeds the scifi theme', async ({ page }) => {
+    await openFixture(page, 'session-idle-fresh', { prefs: 'prefs-theme-scifi' });
+    expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe('scifi');
+  });
 });

@@ -15,6 +15,7 @@ const PREFS = 'wordcell:prefs';
 const SESSION = 'wordcell:session';
 const PAPER = '#ECE6D8';
 const CHARCOAL = '#15171B';
+const SCIFI = '#0A0F1C';
 
 const menuButton = (page: Page) => page.getByRole('button', { name: 'Menu', exact: true });
 const panel = (page: Page) => page.getByRole('dialog', { name: 'Preferences', exact: true });
@@ -127,7 +128,11 @@ test('Q-45 AD-10 the Theme radiogroup switches at once, stores theme, and Charco
   const before = await stored(page, SESSION);
   await openPrefs(page);
   const group = themeGroup(page);
-  await expect(group.getByRole('radio')).toHaveCount(3);
+  await expect(group.getByRole('radio')).toHaveCount(4);
+  await expect(group.getByRole('radio').nth(0)).toHaveAccessibleName('Charcoal');
+  await expect(group.getByRole('radio').nth(1)).toHaveAccessibleName('Deep Space');
+  await expect(group.getByRole('radio').nth(2)).toHaveAccessibleName('Daylight Paper');
+  await expect(group.getByRole('radio').nth(3)).toHaveAccessibleName('Garden');
   await expect(group.getByRole('radio', { name: 'Charcoal' })).toBeChecked();
   const defaults = {
     scrim: await rootVar(page, '--wc-scrim'),
@@ -153,6 +158,32 @@ test('Q-45 AD-10 the Theme radiogroup switches at once, stores theme, and Charco
   expect((await prefsOf(page)).theme).toBe('default');
   expect(JSON.parse((await storedPrefs(page)) ?? 'null')).not.toHaveProperty('theme');
   expect(await stored(page, SESSION)).toBe(before);
+});
+
+test('Q-45 AD-10 AD-16 Deep Space switches at once with both art layers, Charcoal removes them, a reload keeps it', async ({
+  page,
+}) => {
+  await openFixture(page, 'session-idle-fresh');
+  await openPrefs(page);
+  const group = themeGroup(page);
+  await group.getByRole('radio', { name: 'Deep Space' }).check();
+  expect(await attr(page)).toBe('scifi');
+  expect(await colorScheme(page)).toBe('dark');
+  expect(await meta(page)).toBe(SCIFI);
+  expect(await rootVar(page, '--wc-table-art')).not.toBe('none');
+  expect(await rootVar(page, '--wc-card-texture')).not.toBe('none');
+  await expectNoThemeAnimations(page);
+  await page.reload();
+  await expect(page.getByTestId('card-0')).toBeVisible();
+  expect(await attr(page)).toBe('scifi');
+  expect(await meta(page)).toBe(SCIFI);
+  await openPrefs(page);
+  await expect(themeGroup(page).getByRole('radio', { name: 'Deep Space' })).toBeChecked();
+  await themeGroup(page).getByRole('radio', { name: 'Charcoal' }).check();
+  expect(await attr(page)).toBe('default');
+  expect(await meta(page)).toBe(CHARCOAL);
+  expect(await rootVar(page, '--wc-table-art')).toBe('none');
+  expect(await rootVar(page, '--wc-card-texture')).toBe('none');
 });
 
 test('Q-45 the choice survives a reload', async ({ page }) => {
@@ -214,7 +245,7 @@ test('AD-10 AD-15 an AD-7-valid but unregistered theme reaches Halted with the d
     version: 1,
     animationSpeed: 'normal',
     showTimer: false,
-    theme: 'scifi',
+    theme: 'plum',
   });
   await seedStorage(page, { session: fixture('session-idle-fresh.json'), prefs: text });
   await page.goto('/');

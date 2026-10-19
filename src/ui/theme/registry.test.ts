@@ -46,6 +46,18 @@ describe('theme registry', () => {
     expect(meta.content).toBe(defaultTheme.meta);
   });
 
+  it('AD-10 scifiTheme has id scifi, the Deep Space label and meta #0A0F1C, and applies', async () => {
+    const { meta, root } = stubDocument();
+    const { applyTheme, defaultTheme, register, scifiTheme } = await fresh();
+    const { text } = await import('../text');
+    register(defaultTheme);
+    register(scifiTheme);
+    expect(scifiTheme).toEqual({ id: 'scifi', label: text.themeDeepSpace, meta: '#0A0F1C' });
+    applyTheme('scifi');
+    expect(root.dataset.theme).toBe('scifi');
+    expect(meta.content).toBe('#0A0F1C');
+  });
+
   it('AD-10 testGarden registers as garden with the default table colour as its meta (TH-9)', async () => {
     const { meta, root } = stubDocument();
     const { applyTheme, defaultTheme, entries, register, testGarden } = await fresh();
@@ -62,7 +74,7 @@ describe('theme registry', () => {
     const { meta, root } = stubDocument();
     const { applyTheme, defaultTheme, register } = await fresh();
     register(defaultTheme);
-    expect(() => applyTheme('scifi')).toThrow("AD-10 theme 'scifi' is not registered");
+    expect(() => applyTheme('plum')).toThrow("AD-10 theme 'plum' is not registered");
     expect(root.dataset.theme).toBeUndefined();
     expect(meta.content).toBe('#15171B');
   });

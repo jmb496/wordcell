@@ -1,7 +1,7 @@
 // Q-45, AD-10, AD-16 theme registry (epic themes TH-3): theme id -> label (text.ts) and explicit
 // `theme-color` meta colour. `applyTheme(id)` sets `data-theme` on the root (always, `default`
 // included) and updates the one meta in place; an unregistered id throws to AD-15 (rule 6).
-// Production registers `default` and `paper` (in that order); `testGarden` is the only test-only
+// Production registers `default`, `scifi` and `paper` (in that order); `testGarden` is the only test-only
 // entry, which `main.ts` registers in builds carrying the test hook. Each entry's meta equals its
 // theme's `--wc-table` in app.css.
 import type { ThemeId } from '../../shell/prefs.svelte';
@@ -19,6 +19,13 @@ export const defaultTheme: ThemeEntry = {
   id: 'default',
   label: text.themeDefault,
   meta: '#15171B',
+};
+
+/** Deep Space (epic themes TH-3): equals its `--wc-table` in app.css. */
+export const scifiTheme: ThemeEntry = {
+  id: 'scifi',
+  label: text.themeDeepSpace,
+  meta: '#0A0F1C',
 };
 
 /** Daylight Paper (epic themes TH-3): equals its `--wc-table` in app.css. */

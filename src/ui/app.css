@@ -41,6 +41,34 @@
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   color: var(--wc-ink-primary);
 }
+/* Deep Space (epic themes TH-5): values from research/brief.md section A; art per the 9.5 grammar. */
+[data-theme="scifi"] {
+  color-scheme: dark;
+  --wc-table: #0a0f1c;
+  --wc-surface: #111a2e;
+  --wc-surface-raised: #1a2641;
+  --wc-hairline: #25355a;
+  --wc-outline: #6d7fa6;
+  --wc-card-face: #0f1830;
+  --wc-card-edge: #6a82b8;
+  --wc-card-ink: #e6f4ff;
+  --wc-ink-primary: #e6f4ff;
+  --wc-ink-secondary: #9fb2d4;
+  --wc-ink-disabled: #5e6e92;
+  --wc-ink-on-accent: #0a0f1c;
+  --wc-accent-teal: #35d0ff;
+  --wc-accent-orange: #ffb02e;
+  --wc-destination: #9a8cff;
+  --wc-destination-fill: #2a2860;
+  --wc-error: #ff8f9a;
+  --wc-scrim: #000000b3;
+  --wc-shadow-drag: rgb(0 0 0 / 0.35);
+  --wc-scene-pointer-fill: #fff;
+  --wc-scene-pointer-stroke: #1a1a1a;
+  --wc-scene-pointer-shadow: rgb(0 0 0 / 0.45);
+  --wc-table-art: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'><path d='M48 0H0V48' fill='none' stroke='%2335d0ff' stroke-opacity='0.07'/></svg>");
+  --wc-card-texture: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'><rect width='4' height='1' fill='%2335d0ff' fill-opacity='0.06'/></svg>");
+}
 /* Daylight Paper (epic themes TH-4): values from research/brief.md section D. Placed after the
    default block and the dark `color-scheme` rule so it overrides the latter. */
 [data-theme="paper"] {

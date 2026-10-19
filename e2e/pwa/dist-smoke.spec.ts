@@ -55,7 +55,7 @@ test('AD-11 ?bands= ignored in dist/', async ({ page }) => {
   ]);
 });
 
-test('Q-45 AD-10 the production Theme radiogroup offers Charcoal and Daylight Paper, applied as default', async ({
+test('Q-45 AD-10 the production Theme radiogroup offers Charcoal, Deep Space and Daylight Paper, applied as default', async ({
   page,
 }) => {
   await seedStorage(page, { session: fixture('session-idle-fresh.json') });
@@ -70,17 +70,18 @@ test('Q-45 AD-10 the production Theme radiogroup offers Charcoal and Daylight Pa
     .getByRole('dialog', { name: 'Preferences', exact: true })
     .getByRole('radiogroup', { name: 'Theme' });
   const radios = group.getByRole('radio');
-  await expect(radios).toHaveCount(2);
+  await expect(radios).toHaveCount(3);
   await expect(radios.nth(0)).toHaveAccessibleName('Charcoal');
-  await expect(radios.nth(1)).toHaveAccessibleName('Daylight Paper');
+  await expect(radios.nth(1)).toHaveAccessibleName('Deep Space');
+  await expect(radios.nth(2)).toHaveAccessibleName('Daylight Paper');
   await expect(group.getByRole('radio', { name: 'Charcoal' })).toBeChecked();
-  await group.getByRole('radio', { name: 'Daylight Paper' }).check();
+  await group.getByRole('radio', { name: 'Deep Space' }).check();
   expect(await page.evaluate(() => document.documentElement.getAttribute('data-theme'))).toBe(
-    'paper',
+    'scifi',
   );
   expect(
     await page.evaluate(
       () => document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.content,
     ),
-  ).toBe('#ECE6D8');
+  ).toBe('#0A0F1C');
 });

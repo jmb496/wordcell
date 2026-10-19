@@ -215,6 +215,7 @@ export const text = Object.freeze({
   // Themes ticket 4 (Q-45): the Theme radiogroup and its option labels.
   theme: 'Theme',
   themeDefault: 'Charcoal',
+  themeDeepSpace: 'Deep Space',
   themePaper: 'Daylight Paper',
   themeGarden: 'Garden',
   // Epic 6 CAP-6 (ticket 6.5, R-84, Q-44, Q-35) Statistics panel (DESIGN.md Panels; the catalogue
