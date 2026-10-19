@@ -1,6 +1,6 @@
 # Review log — story-theme-greenhouse-dusk.md (ticket 9.8)
 
-State: pass 2: done
+State: done
 
 Pre-loop: HEAD 9947662a4632848bbbdaa02e7d7352b43768a32c; pass 0 copy /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-themes/story-theme-greenhouse-dusk.review-log.passes/pass0.md (171 words by wc -w incl. frontmatter); budget 1500 words (stub being fleshed out, as 9.7).
 Note: no epic-themes SPEC.md exists (no companions); refs are the epic file, spine, AGENTS.md, game-flow-spec, DESIGN/EXPERIENCE, brief, done-ticket plans 9.5-9.7.
@@ -34,3 +34,17 @@ Words: 1475 (8.6 x pass 0)  |  Snapshot: story-theme-greenhouse-dusk.review-log.
 - [minor] Stale test-only-garden comments listed → 4
 - [minor] Optional seed test cut; owner-done duplicates cut; Notes radio-position attribution fixed; build-output list note → 5–8
 Majors so far: 11, 1.
+
+## Pass 3 — 2026-10-19
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 0, minor 8 (not applied), decision-needed 0  |  Dropped in triage: 0
+Words: 1475 (unchanged; no fix run)
+
+## Result — converged after 3 passes
+Majors per pass: 11, 1, 0. No decision-needed items. Technical defaults applied: 20 (pass 1: 11 majors + 3 minors; pass 2: 1 major + 5 minors).
+### Unapplied minors (for the build's plan)
+- Contrast AC lost the "thin margin 13.25 vs 13.1" clause in pass 2 (the blocked-run rule stands).
+- Registry: replace "the plan decides whether start() stays" with "start() is removed; `void boot()` runs directly".
+- Art: add "single-quoted attributes" (parseArt rejects double quotes); "only their comments say 6 % and 5 %" → "only the themes.mjs comments".
+- Screenshots: name theme-garden-<shot>.png and assert `dataset.theme` 'garden' (plus dictionary ready) before board/tray shots, as theme-scifi.screens.spec.ts; this also covers the otherwise untested prefs-theme-garden fixture.
+- Tokens: write `--wc-shadow-drag` as the literal `rgb(0 0 0 / 0.35)` (the default is `#0008`).
+- Registry: "unregistered-id examples stay `plum` and `steampunk`" is wrong for steampunk (only `plum` is used, registry.test.ts ~77, theme.spec.ts ~248).
