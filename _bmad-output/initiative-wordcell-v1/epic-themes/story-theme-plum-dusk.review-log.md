@@ -1,6 +1,6 @@
 # Review log — story-theme-plum-dusk.md
 
-State: pass 3: done
+State: done
 
 Pre-loop: HEAD d4c2643; pass0.md 157 words (budget 1500).
 
@@ -56,3 +56,16 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 - registry.test.ts "only id and message change" (obvious); fix-diff line-number item merged into minor above.
 Words: 1302 (8.3 x pass 0, within budget 1500)  |  Snapshot: story-theme-plum-dusk.review-log.passes/pass3.md
 Fixer applied items 1-6.
+
+## Pass 4 — 2026-10-19
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 0, minor 5, decision-needed 0  |  Dropped in triage: 0
+Words: 1302 (unchanged, no fix pass)  |  Snapshot: passes/pass3.md
+### Minor (not applied)
+- Remove orphaned helpers/imports in e2e/theme.spec.ts after retiring the Halted test (reviewers found storedPrefs/CHARCOAL still used elsewhere; lint confirms).
+- registry.test.ts retarget: only id literal and message change; title and nothing-changed assertions stay.
+- dist-smoke: give the line range of the steampunk pick (~79-90) or say "the pick that follows".
+- Dropped-coverage statement is repeated in the Unregistered example and Owner gate bullets; keep one.
+
+
+## Result — converged after 4 passes
+Majors per pass: 9, 3, 1, 0. No decision-needed items. Technical defaults applied: 2 (Halted e2e test retired with the loss recorded for the owner gate; plum not added to theme-art ARTS). Words 157 → 1302 (budget 1500).
