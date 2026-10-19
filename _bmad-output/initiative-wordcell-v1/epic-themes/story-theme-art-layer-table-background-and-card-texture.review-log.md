@@ -1,6 +1,6 @@
 # Review log — story-theme-art-layer-table-background-and-card-texture (ticket 9.5)
 
-State: pass 4: done
+State: pass 5: done
 Pre-loop: HEAD e922032, 211 words, copy story-theme-art-layer-table-background-and-card-texture.review-log.passes/pass0.md
 
 ## Pass 1
@@ -59,3 +59,15 @@ Reviewers: fix-diff, edge-case, adversarial, ref-alignment (late-pass bar)  |  F
 Words: 710 (3.4 x pass 0)  |  Snapshot: story-theme-art-layer-table-background-and-card-texture.review-log.passes/pass4.md
 ### Applied
 - [major] M1-M6 → fixer items 1-6 (note: DESIGN.md prose floors for outline/edge/ink exceed the TABLE floor column; ink pairs use TABLE floor, Table side keeps 3.8/3.6)
+
+## Pass 5
+Reviewers: fix-diff, edge-case, adversarial, ref-alignment (late-pass bar)  |  Findings: major 5 (merged), minor ~8 (applied only if word-neutral), decision-needed 0  |  Dropped in triage: 0
+### Default applied (technical)
+- M1 table art double-painted (html and body both carry the tile; body overlays html, doubling alpha) → art on `html` only; `body` gets no background so one layer covers the canvas
+- M2 sheet-ready via test hook would amend AD-17's fixed accessor list (rule 7) → main.ts awaits the dynamic import() of the test sheet before boot inside the test-hook condition; test-hook.ts and globals.d.ts unchanged; label from text.ts
+- M3 grammar contract → root carries xmlns; `#` written `%23`; attributes single-quoted; only rect and circle, fill/fill-opacity on each shape, bounding boxes pairwise disjoint (replaces "no overlap"); colour-resolve loop skips the two art keys
+- M4 floors → art checks use the TABLE floor column for every pair (edge/outline on table 3, ink 4.5); DESIGN.md 3.6/3.8/13.1 are the default theme's figures. Flagged in the report for the owner
+- M5 states → `.ghost .face` sets `background-image: none`; the worst-point composite covers every TABLE row whose background is card-face or destination-fill
+Words: 720 (3.4 x pass 0)  |  Snapshot: story-theme-art-layer-table-background-and-card-texture.review-log.passes/pass5.md
+### Applied
+- [major] M1-M5 → fixer items 1-5
