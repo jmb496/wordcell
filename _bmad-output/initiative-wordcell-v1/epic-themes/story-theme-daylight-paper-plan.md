@@ -3,7 +3,7 @@ title: 'Theme: Daylight Paper'
 type: 'feature'
 ticket: 6
 created: '2026-10-19'
-status: 'built'
+status: done
 baseline_revision: 'c24825ef89b176cc07f75b86b3420e2fae27eef7'
 route: 'full'
 route_source: 'auto'
