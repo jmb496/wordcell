@@ -3,7 +3,7 @@ title: 'Theme: Greenhouse Dusk'
 type: 'feature'
 ticket: 8
 created: '2026-10-19'
-status: built
+status: done
 baseline_revision: 'f793042c53de124f311b302333e8f6e4e60723e0'
 route: 'full'
 route_source: 'auto'
