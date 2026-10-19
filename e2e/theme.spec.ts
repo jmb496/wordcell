@@ -61,15 +61,12 @@ test('Q-45 AD-16 no flash: data-theme is first set to the stored theme and the m
     new MutationObserver(() => {
       seen.push(document.documentElement.getAttribute('data-theme'));
     }).observe(document, { attributes: true, subtree: true, attributeFilter: ['data-theme'] });
-    // Every frame once the board is mounted (the pre-apply frames are the exempt ones).
+    // Every frame from the first one: the inline head script (AD-16) sets data-theme before paint.
     const tick = () => {
-      if (document.querySelector('[data-card-id]') !== null) {
-        frames.push({
-          theme: document.documentElement.getAttribute('data-theme'),
-          meta:
-            document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.content ?? null,
-        });
-      }
+      frames.push({
+        theme: document.documentElement.getAttribute('data-theme'),
+        meta: document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.content ?? null,
+      });
       requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
@@ -78,12 +75,16 @@ test('Q-45 AD-16 no flash: data-theme is first set to the stored theme and the m
   await expect(page.getByTestId('card-0')).toBeVisible();
   await page.evaluate(() => new Promise<void>((r) => requestAnimationFrame(() => r())));
   const recorded = await page.evaluate(() => {
-    const w = window as unknown as { __themeSeen: unknown[]; __themeFrames: unknown[] };
+    const w = window as unknown as {
+      __themeSeen: unknown[];
+      __themeFrames: { theme: string | null; meta: string | null }[];
+    };
     return { seen: w.__themeSeen, frames: w.__themeFrames };
   });
-  expect(recorded.seen).toEqual(['paper']);
+  expect(recorded.seen[0]).toBe('paper');
   expect(recorded.frames.length).toBeGreaterThan(0);
-  for (const frame of recorded.frames) expect(frame).toEqual({ theme: 'paper', meta: PAPER });
+  for (const frame of recorded.frames) expect(frame.theme).toBe('paper');
+  expect(recorded.frames.at(-1)?.meta).toBe(PAPER);
 });
 
 test('Q-45 a first launch applies the default theme', async ({ page }) => {

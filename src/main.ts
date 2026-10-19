@@ -62,6 +62,8 @@ function textOf(reason: unknown, message = ''): string {
 // AD-15: halt first, so nothing runs against a live store after the report.
 function fatal(reason: unknown, message?: string): void {
   game.halt('fatal', textOf(reason, message));
+  // AD-16: the inline head script may have set a theme; the fatal surface wears the default look.
+  delete document.documentElement.dataset.theme;
   console.error(reason);
   showStandalone();
 }

@@ -413,7 +413,7 @@ test.describe('Q-38 single instance', () => {
     expect(await page1.evaluate(() => window.__wordcell?.loaded())).toEqual({
       session: null,
       history: null,
-      prefs: { rejected: { reason: 'version-unreadable' } },
+      prefs: null, // AD-16: prefs load first, before the held font check, so the foreign write comes after it
     });
 
     const dialog = await page1.getByRole('alertdialog').elementHandle();

@@ -729,6 +729,12 @@ sequenceDiagram
 - **Prevents:** the precache and the app downloading the dictionary twice; a font failure after a
   first-launch write; boot surfaces in mount order; a new version swapping code under a game.
 - **Rule:**
+  - Pre-paint theme: `index.html` carries one inline `<script>` in `<head>` that reads
+    `wordcell:prefs`, and if `theme` is a lowercase string sets it as `data-theme` on the root
+    before first paint (Q-45, owner, 2026-10-18). It is read-only and the one place besides
+    `prefs.svelte.ts` that touches the key; any failure (private mode, bad JSON) is swallowed
+    because the boot's own load then validates and applies the theme, so the script never decides
+    what is valid. It does not set the `theme-color` meta.
   - Boot order: load prefs, and apply `data-theme` and the `theme-color` meta, synchronously
     before the first `await`, so no frame paints the default under a stored theme (Q-45, owner,
     2026-10-18; `load()` writes nothing) → `nav` launch, awaited (rewind, its `popstate`, then
