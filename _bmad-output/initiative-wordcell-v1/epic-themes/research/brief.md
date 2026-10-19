@@ -178,8 +178,8 @@ Same dark layout, plum-charcoal surfaces, teal and orange accents nudged warmer.
 
 ![E. Plum Dusk (dark colour variation)](mockups/dusk.png) — live HTML: [`mockups/dusk.html`](mockups/dusk.html)
 
-**Token set** (all 18 colour tokens of `src/ui/app.css`; `color-scheme` noted in the body):
-`--wc-table: #17121c`, `--wc-surface: #211a29`, `--wc-surface-raised: #2d2438`, `--wc-hairline: #3d3249`, `--wc-outline: #807590`, `--wc-card-face: #271f30`, `--wc-card-edge: #7e7290`, `--wc-card-ink: #f6eee6`, `--wc-ink-primary: #f6eee6`, `--wc-ink-secondary: #b5a9bd`, `--wc-ink-disabled: #7b6f85`, `--wc-ink-on-accent: #17121c`, `--wc-accent-teal: #5ed6c2`, `--wc-accent-orange: #f4a14a`, `--wc-destination: #8fb0e8`, `--wc-destination-fill: #2c3655`, `--wc-error: #f59aa0`, `--wc-scrim: #000000b3`
+**Token set** (as shipped; owner deepened the plum, rose act accent and lavender destination on 2026-10-19, so the contrast table below and `mockups/dusk.html` show the original proposal) (all 18 colour tokens of `src/ui/app.css`; `color-scheme` noted in the body):
+`--wc-table: #1d1028`, `--wc-surface: #2a1a3a`, `--wc-surface-raised: #382450`, `--wc-hairline: #4d3568`, `--wc-outline: #9484ad`, `--wc-card-face: #34224a`, `--wc-card-edge: #9582b0`, `--wc-card-ink: #f6eee6`, `--wc-ink-primary: #f6eee6`, `--wc-ink-secondary: #c3b3d1`, `--wc-ink-disabled: #86759a`, `--wc-ink-on-accent: #1d1028`, `--wc-accent-teal: #f08fc0`, `--wc-accent-orange: #f4a14a`, `--wc-destination: #a7a8f2`, `--wc-destination-fill: #33306a`, `--wc-error: #ffa08c`, `--wc-scrim: #000000b3`
 
 **Art:** None (tokens only).
 

@@ -86,5 +86,5 @@ test('Q-45 AD-10 the production Theme radiogroup offers Charcoal, Deep Space, Gr
     await page.evaluate(
       () => document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.content,
     ),
-  ).toBe('#17121C');
+  ).toBe('#1D1028');
 });

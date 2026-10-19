@@ -93,17 +93,17 @@ describe('theme registry', () => {
     expect(meta.content).toBe('#1D1510');
   });
 
-  it('AD-10 plumTheme registers as plum with meta #17121C', async () => {
+  it('AD-10 plumTheme registers as plum with meta #1D1028', async () => {
     const { meta, root } = stubDocument();
     const { applyTheme, defaultTheme, entries, register, plumTheme } = await fresh();
     const { text } = await import('../text');
     register(defaultTheme);
     register(plumTheme);
     expect(entries().map((entry) => entry.id)).toEqual(['default', 'plum']);
-    expect(plumTheme).toEqual({ id: 'plum', label: text.themePlumDusk, meta: '#17121C' });
+    expect(plumTheme).toEqual({ id: 'plum', label: text.themePlumDusk, meta: '#1D1028' });
     applyTheme('plum');
     expect(root.dataset.theme).toBe('plum');
-    expect(meta.content).toBe('#17121C');
+    expect(meta.content).toBe('#1D1028');
   });
 
   it('AD-10 an unregistered id throws and changes nothing', async () => {

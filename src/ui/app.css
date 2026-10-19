@@ -154,26 +154,26 @@
   --wc-table-art: none;
   --wc-card-texture: none;
 }
-/* Plum Dusk (epic themes TH-5): values from research/brief.md section E; tokens only, no art. */
+/* Plum Dusk (epic themes TH-5): brief.md section E, owner-deepened 2026-10-19 (richer plum, rose act accent); tokens only, no art. */
 [data-theme="plum"] {
   color-scheme: dark;
-  --wc-table: #17121c;
-  --wc-surface: #211a29;
-  --wc-surface-raised: #2d2438;
-  --wc-hairline: #3d3249;
-  --wc-outline: #807590;
-  --wc-card-face: #271f30;
-  --wc-card-edge: #7e7290;
+  --wc-table: #1d1028;
+  --wc-surface: #2a1a3a;
+  --wc-surface-raised: #382450;
+  --wc-hairline: #4d3568;
+  --wc-outline: #9484ad;
+  --wc-card-face: #34224a;
+  --wc-card-edge: #9582b0;
   --wc-card-ink: #f6eee6;
   --wc-ink-primary: #f6eee6;
-  --wc-ink-secondary: #b5a9bd;
-  --wc-ink-disabled: #7b6f85;
-  --wc-ink-on-accent: #17121c;
-  --wc-accent-teal: #5ed6c2;
+  --wc-ink-secondary: #c3b3d1;
+  --wc-ink-disabled: #86759a;
+  --wc-ink-on-accent: #1d1028;
+  --wc-accent-teal: #f08fc0;
   --wc-accent-orange: #f4a14a;
-  --wc-destination: #8fb0e8;
-  --wc-destination-fill: #2c3655;
-  --wc-error: #f59aa0;
+  --wc-destination: #a7a8f2;
+  --wc-destination-fill: #33306a;
+  --wc-error: #ffa08c;
   --wc-scrim: #000000b3;
   --wc-shadow-drag: rgb(0 0 0 / 0.35);
   --wc-scene-pointer-fill: #fff;

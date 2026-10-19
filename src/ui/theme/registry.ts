@@ -45,7 +45,7 @@ export const steampunkTheme: ThemeEntry = {
 export const paperTheme: ThemeEntry = { id: 'paper', label: text.themePaper, meta: '#ECE6D8' };
 
 /** Plum Dusk (epic themes TH-3): equals its `--wc-table` in app.css. */
-export const plumTheme: ThemeEntry = { id: 'plum', label: text.themePlumDusk, meta: '#17121C' };
+export const plumTheme: ThemeEntry = { id: 'plum', label: text.themePlumDusk, meta: '#1D1028' };
 
 const table = new Map<ThemeId, ThemeEntry>();
 

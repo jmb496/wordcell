@@ -250,14 +250,14 @@ test('Q-45 AD-10 AD-16 Plum Dusk switches at once with no art, Charcoal restores
   await group.getByRole('radio', { name: 'Plum Dusk' }).check();
   expect(await attr(page)).toBe('plum');
   expect(await colorScheme(page)).toBe('dark');
-  expect(await meta(page)).toBe('#17121C');
+  expect(await meta(page)).toBe('#1D1028');
   expect(await rootVar(page, '--wc-table-art')).toBe('none');
   expect(await rootVar(page, '--wc-card-texture')).toBe('none');
   await expectNoThemeAnimations(page);
   await page.reload();
   await expect(page.getByTestId('card-0')).toBeVisible();
   expect(await attr(page)).toBe('plum');
-  expect(await meta(page)).toBe('#17121C');
+  expect(await meta(page)).toBe('#1D1028');
   await openPrefs(page);
   await expect(themeGroup(page).getByRole('radio', { name: 'Plum Dusk' })).toBeChecked();
   await themeGroup(page).getByRole('radio', { name: 'Charcoal' }).check();
