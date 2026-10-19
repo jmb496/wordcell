@@ -4,7 +4,7 @@ type: story
 title: "Theme: Daylight Paper"
 parent: epic-themes
 covers: [TH-2, TH-3, TH-4, TH-5, TH-6, TH-8]
-after: [3, 4, 5]  # tickets.toml entry 6 still says [1, 4]; aligned at the board step
+after: [3, 4, 5]
 risk: low
 ---
 
