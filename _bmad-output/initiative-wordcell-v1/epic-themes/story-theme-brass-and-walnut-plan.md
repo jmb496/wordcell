@@ -3,7 +3,7 @@ title: 'Theme: Brass and Walnut'
 type: 'feature'
 ticket: 9
 created: '2026-10-19'
-status: 'built'
+status: done
 baseline_revision: 'e4176e6f6f2a62a6f03c795f1de3daca8180ad5a'
 route: 'full'
 route_source: 'auto'
