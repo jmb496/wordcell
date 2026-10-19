@@ -1,6 +1,6 @@
 # Review log — story-theme-art-layer-table-background-and-card-texture (ticket 9.5)
 
-State: pass 6: done
+State: pass 7: done
 Pre-loop: HEAD e922032, 211 words, copy story-theme-art-layer-table-background-and-card-texture.review-log.passes/pass0.md
 
 ## Pass 1
@@ -84,3 +84,17 @@ Reviewers: fix-diff, edge-case, adversarial, ref-alignment (late-pass bar)  |  F
 Words: 744 (3.5 x pass 0)  |  Snapshot: story-theme-art-layer-table-background-and-card-texture.review-log.passes/pass6.md
 ### Applied
 - [major] M1-M6 → fixer items 1-6 (fixer noted the mockup art puts attributes on a <g>, ticket says per shape; left for pass 7 to judge)
+
+## Pass 7 (verify-only)
+Reviewers: fix-diff  |  Findings: major 1, minor 2, decision-needed 0  |  Dropped in triage: 0
+Words: 744 (no fix applied)
+### Open (not fixed, cap reached)
+- [major] Hooks grammar — a stroke-only shape with no `fill` attribute renders with the SVG default black fill, which the worst-point check does not model; the grammar offers no `fill='none'`. Proposed fix: require a `fill` attribute on every shape, allow `fill='none'`, and count only non-none fills plus strokes in the worst-point sum. Related, noticed by the pass-6 fixer: the approved mockup art puts `fill`/`stroke` on a `<g>`; the ticket says attributes are per shape.
+
+## Result — capped at 7 passes (open majors: Hooks grammar fill='none' / stroke-only shapes)
+Majors per pass: 9, 7, 6, 6, 5, 6, 1. Decision-needed: none. Technical defaults applied: about 40 (see passes).
+Unapplied minors:
+- 6 % cap: per shape or per-colour sum; different-colour overlap order (pass 7)
+- Build-output check sits under the Playwright computed-style bullet; give it its own bullet naming its spec project (pass 7)
+- Test sheet cascade order, label via text.ts, sRGB compositing note, non-letter marks exempt per TH-9, tile origin seam html vs board (earlier passes, over budget)
+- DESIGN.md prose floors (3.6/3.8/13.1) exceed the contrast.test.ts TABLE floor column (3/3/4.5); the ticket uses the TABLE floor column for art themes
