@@ -1,6 +1,6 @@
 # Review log — story-refactor-sweep-docs-budget-and-cleanup.md
 
-State: pass 2: done
+State: pass 3: done
 
 Pre-loop: HEAD c2fd7b5; pass0.md 121 words (budget 1200, set by the loop: the default 2.5x of 121 words would be 300, too small for the entry's verify, covers, risk, done_checkpoint and references plus the carried items; sibling tickets used 1200-1500).
 
@@ -40,3 +40,20 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 - 1(b): compare all six records, cite sentence not line, enforced 6 % ceiling in contrast.test.ts; "five themes" = default plus five (six ids); Scope 4 base commit 0f295f2 (verified exists) and final-build figure with hash; AD-17 hooks are not scaffolding; screens check = git status clean, no Docker = left to owner; Scope 7 check every src/ui/theme/*.test.ts in both tsconfigs; Scope 8 name epic-themes.md, clean result valid; references add digest and review-loop logs.
 Words: 1150 (9.5 x pass 0, within budget 1200)  |  Snapshot: story-refactor-sweep-docs-budget-and-cleanup.review-log.passes/pass2.md
 Fixer applied items 1-12; ran ls src/ui/theme, grep tsconfigs, git diff 0f295f2^ -- package.json (empty). Fixer flagged: tsconfig.app.json lists colour-literals/contrast tests in exclude, so Scope 7 "covered by both tsconfigs" wording needs checking.
+
+## Pass 3 — 2026-10-19
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 6 (merged from 38 raw), minor 9, decision-needed 0  |  Dropped in triage: 0 (tsconfig exclude/files, contrast.test.ts:203, prefs.svelte.ts:66 private THEMES, size-budget.mjs output verified; flakiness N and Scope 8 widening reclassified minor: procedural, non-gating)
+### Majors (to apply)
+1. Scope 7 wrong: tsconfig.app.json excludes colour-literals.ts/.test.ts and contrast.test.ts, tsconfig.arch.json lists them; "covered by both" can never pass. Reword: each src/ui/theme/*.ts and *.test.ts is type-checked by one of the two (complementary lists); mapping in the plan; a file in neither is a defect; no tsconfig edited.
+2. 1(a): do not reuse the garden art-token title; default: record the generic per-theme it.each as steampunk's floor coverage; add a steampunk art-token case only if steampunk declares art tokens, stating what it asserts.
+3. Scope 2 "read": comments, the declaring file's own key lists and reads inside an unread token's own declaration do not count (follow chains to a non-declaration read); domain src/**/*.{css,ts,svelte} plus index.html; test-only reads go on the allow-list with owner reading; drop "verify" hedge on the file list; list scaffolding greps.
+4. Scope 5 test home and mechanism: THEMES is private (prefs.svelte.ts:66); a src/ui/theme/registry.test.ts case drives the real parsePrefs with every registry id (accepted) and a foreign id (rejected); registry ids equal the §7.10 order; ThemeId compared via an exhaustive type check; do not export THEMES. Name the existing unknown-theme e2e (prefs-invalid-theme-unknown in theme.spec.ts) as covering the boot and drop "if cheap".
+5. Scope 4: exact dependencies comparison (`git show 0f295f2^:package.json` vs package.json, `dependencies` object equal, via node -p JSON.stringify) added to Verify; margin = 600000 minus printed `total N / 600000`, from a build on a clean tree at the recorded commit (cleanup edits committed first).
+6. 1(c): set/assert the 360 px viewport width first; scroll the radio into view once; box inside [0,360] horizontally and inside the sheet body and clear of the sticky bars vertically.
+### Default applied (technical)
+- Steampunk coverage — loop recorded as coverage unless steampunk declares its own art tokens → default applied
+- Flakiness sample — default N = 10 desktop runs of the two specs, record failures/N and names; Scope 6 grep quoted from the digest headings; align range to 9.3-9.10 digest, 9.1-9.10 logs → default applied
+### Minor (to apply, zero added words)
+- Verify line: test:screens green or recorded as left to the owner (no Docker), `git status --porcelain`; "six ids" gloss in Scope 3; 1(b) read the actual ceiling constant and the 0.06 boundary, "none" = n/a; Scope 8 widen to entries 1-11 with a rule; covers note TH-2/TH-4 as constraints; entry references stay minimal in toml (report only); cite prefs tests by title.
+Words: 1204 (10 x pass 0, at budget 1200)  |  Snapshot: story-refactor-sweep-docs-budget-and-cleanup.review-log.passes/pass3.md
+Fixer applied majors 1-6 and the defaults; ran the dependencies comparison (output "null null": package.json has no dependencies key, so the check is equality of absence). Several zero-word minors skipped (six-ids gloss, 1(b) boundary, Scope 8 widening, covers note): left unapplied.
