@@ -1,6 +1,6 @@
 # Review log — story-theme-art-layer-table-background-and-card-texture (ticket 9.5)
 
-State: pass 3: done
+State: pass 4: done
 Pre-loop: HEAD e922032, 211 words, copy story-theme-art-layer-table-background-and-card-texture.review-log.passes/pass0.md
 
 ## Pass 1
@@ -46,3 +46,16 @@ Reviewers: fix-diff, edge-case, adversarial, ref-alignment  |  Findings: major 6
 Words: 694 (3.3 x pass 0)  |  Snapshot: story-theme-art-layer-table-background-and-card-texture.review-log.passes/pass3.md
 ### Applied
 - [major] M1-M6 and word-neutral minors → fixer items 1-6 (Scene has no backdrop/scrim of its own; claim corrected)
+
+## Pass 4
+Reviewers: fix-diff, edge-case, adversarial, ref-alignment (late-pass bar)  |  Findings: major 6 (merged), minor ~12 (applied only if word-neutral), decision-needed 0  |  Dropped in triage: 0
+### Default applied (technical)
+- M1 table art target (verified: Board.svelte has no board-wide background, only the sticky `.banner`; app.css `html, body` shared rule paints the table) → art on the shared `html, body` rule only, same tile and origin; sticky TopBar, Panel and `.banner` stay flat opaque by intent; Board.svelte not edited for art
+- M2 contrast bar → each pair asserted against its DESIGN.md/TABLE floor column (not the pinned figure)
+- M3 pairs → card-ink on card-face and card-ink on destination-fill (floor 4.5; add a TABLE row), glyph is card-ink on `.block/.destination` faces
+- M4 grammar → percent-encoded (decodeURIComponent) SVG with integer px width/height and viewBox that give the tile `background-size`; `#rgb`/`#rrggbb` fill only; drop `line` (no stroke)
+- M5 partial test record → contrast and key-set checks run on the sheet's tokens merged over the default record; TOKEN_FILE becomes the two paths; art tokens added to the optional/default key set
+- M6 test theme lifecycle → `garden` test registration and sheet are replaced by the real Greenhouse Dusk entry (as testPaper by 9.6); build check: dist has neither the selector nor the art URI, dist-test has both; tests await the sheet via the test hook
+Words: 710 (3.4 x pass 0)  |  Snapshot: story-theme-art-layer-table-background-and-card-texture.review-log.passes/pass4.md
+### Applied
+- [major] M1-M6 → fixer items 1-6 (note: DESIGN.md prose floors for outline/edge/ink exceed the TABLE floor column; ink pairs use TABLE floor, Table side keeps 3.8/3.6)

@@ -12,30 +12,30 @@ risk: high
 
 ## Description
 
-Extends the theme format with a table background and a card-face texture, applied through tokens without changing layout or card size, letter contrast measured over the texture, and a fail-fast check on the art tokens.
+Extends the theme format with a table background and a card-face texture, applied through tokens without changing layout or card size, with letter contrast measured over the texture and a fail-fast token check.
 
 - plan_checkpoint = true
 - interface = "theme data fields for background and texture; Card.svelte and app.css consume tokens only."
 - tests = "Worst-point contrast (U); no layout shift with art on (P6 android); screenshots per art theme come with entries 6 and 7."
 - owns = "The art hooks in the theme format."
 - consumers = "Card.svelte, Scene.svelte, Board background."
-- Hooks: optional custom properties `--wc-table-art` and `--wc-card-texture`, declared `none` in the combined `:root, [data-theme="default"]` rule at the top of app.css so absent means none. Each token is `none` or exactly one `url("data:image/svg+xml,…")` whose decoded SVG uses only rect, circle, path and line, one hex `fill` and one `fill-opacity` shared by all shapes (absent means 1), no stroke, opacity or overlap. Art colours follow TH-2; the colour-literals scan (src/ui/theme/colour-literals.ts) treats the test sheet as a token file and accepts a hex art fill; the complete-theme test accepts the tokens.
-- Delivery: hand-authored inline SVG data URI: no fetch, raster or dependency (TH-8), no runtime check (rule 6). Fail fast (AD-15): a Vitest check over `themeRecords` of app.css plus the test sheet throws outside the allowlist.
-- Texture form: a flat tiled pattern at `fill-opacity` <= 6 % and no gradient functions (DESIGN.md Avoid list), unit-tested; table art has no cap. It is a `background-image` over the state `background-color`, fixed px tile. The `.block`/`.destination` face shorthand becomes `background-color`; `.ghost` (no face fill, DESIGN.md) carries none; `.used` keeps its R-33 hatch and drops the texture.
-- Surfaces: the texture is a background layer in Card.svelte's face on every Card instance (live, mirror, tray). Table art is `background-image` on `html` and on Board.svelte's opaque `--wc-table` background, same fixed px tile, `background-attachment: scroll`. Scene.svelte draws no table layer; its Card instances carry the texture. No new DOM, border or padding.
-- Scope: no shipped theme gains art here. A test-only art theme sets only both tokens in a `[data-theme]` block of a separate stylesheet, never app.css, under the unshipped `ThemeId` `garden` (AD-7), registered like `testPaper`, its sheet loaded by dynamic `import()` inside main.ts's test-hook condition. A build check scans dist for its selector and art data URI. Card backs are out of scope (TH-9); AD-16's pre-paint script is unchanged.
-- Budget gate: scripts/size-budget.mjs (run by `npm run build`); the plan records total and margin.
+- Hooks: optional custom properties `--wc-table-art` and `--wc-card-texture`, declared `none` in the combined `:root, [data-theme="default"]` rule at the top of app.css. Each token is `none` or one `url("data:image/svg+xml,…")` whose SVG, percent-decoded by decodeURIComponent, has integer px `width`, `height` and a `viewBox` (fixing tile and `background-size`), uses only rect, circle and path, one `fill` matching `#rgb` or `#rrggbb` and one `fill-opacity` shared by all shapes (absent means 1), no stroke, opacity or overlap. Art colours follow TH-2; the colour-literals scan (src/ui/theme/colour-literals.ts) lists the test sheet as a token file and accepts a hex art fill; contrast and key-set checks run the sheet's two tokens merged over the default record; the art tokens are optional keys.
+- Delivery: hand-authored inline SVG: no fetch, raster, dependency (TH-8) or runtime check (rule 6); a Vitest check over `themeRecords` of app.css plus the test sheet throws outside the grammar (AD-15).
+- Texture form: a flat tiled pattern, `fill-opacity` <= 6 %, no gradients (DESIGN.md Avoid list), unit-tested; table art uncapped. It is a `background-image` over the state `background-color`. The `.block`/`.destination` face shorthand becomes `background-color`; `.ghost` carries none; `.used` keeps its R-33 hatch and drops the texture.
+- Surfaces: the texture is a background layer in Card.svelte's face on every Card instance (live, mirror, tray). Table art is a `background-image` on the shared `html, body` rule in app.css (same fixed tile, `background-attachment: scroll`); sticky TopBar, Panel and `.banner` stay flat opaque; Board.svelte is not edited. src/ui/scenes/Scene.svelte keeps its flat `--wc-table` fill and no table layer; its Cards carry the texture. No new DOM, border or padding.
+- Scope: no shipped theme gains art. A test-only theme sets only both tokens in a `[data-theme]` block of a separate stylesheet, never app.css, under the unshipped `ThemeId` `garden` (AD-7), registered like `testPaper`, loaded by dynamic `import()` inside main.ts's test-hook condition; Greenhouse Dusk's real entry replaces it when that ticket lands (as 9.6 does testPaper). A build check: dist has neither the `[data-theme="garden"]` selector nor the art URI, dist-test both; Playwright awaits the sheet via the test hook before switching. Card backs are out of scope (TH-9); AD-16's pre-paint script is unchanged.
+- Budget gate: scripts/size-budget.mjs (in `npm run build`); plan records total and margin.
 
 ## Acceptance Criteria
 
-Verify: npm run test:all and npm run test:screens are green and the build stays under the 600,000-byte budget (TH-8).
+Verify: npm run test:all and npm run test:screens are green; build under the 600,000-byte budget (TH-8).
 
-- Contrast, Vitest (extends src/ui/theme/contrast.test.ts), TH-5: composite the texture token over each face fill and hold each ink pair to its own TABLE floor (not below its pinned figure) at the worst point, a pixel fully covered by a shape, on every state carrying the texture; a too-opaque texture fails.
-- Table side, same test: composite the table art's colour at its alpha over `--wc-table`; assert card edge >= 3.6:1 and outline >= 3.8:1 on it (DESIGN.md Colors).
-- Pixel check, Playwright android on the test-only art theme: with the glyph `visibility:hidden`, the worst-contrast pixel over the whole letter-box clip of a live card, the QU card and a tray tile meets the card-ink pair's TABLE floor.
-- Tokens, Vitest: the grammar, the texture-form rules and the fail-fast check (a bad art token throws).
-- Layout, Playwright android (P6): bounding rects of columns, WordCells, cards, tray and the sticky bars, and document scrollHeight and scrollWidth, are exactly equal before and after switching theme in one page.
-- Default: the default theme resolves both tokens to `none` and its baselines are unchanged (TH-4).
+- Contrast, Vitest (extends src/ui/theme/contrast.test.ts), TH-5: texture over each face fill; card-ink on card-face and on destination-fill (`.block`/`.destination`; add a TABLE row) each meet the TABLE floor column (4.5) at the worst point (a pixel fully inside a shape) in every textured state.
+- Table side, same test: table art colour at its alpha over `--wc-table`; card edge >= 3.6:1 and outline >= 3.8:1 on it (DESIGN.md Colors).
+- Pixel check, Playwright android, test-only theme: glyph `visibility:hidden`, the worst pixel over the letter-box clip of a live card, the QU card, a tray tile and a block or destination card meets the same TABLE floor.
+- Tokens, Vitest: the grammar, texture-form rules and fail-fast check (a bad token throws).
+- Layout, Playwright android (P6): rects of columns, WordCells, cards, tray, sticky bars, and document scrollHeight and scrollWidth are equal before and after a theme switch.
+- Default: the default theme resolves both tokens to `none`; baselines unchanged (TH-4).
 
 ## References
 
