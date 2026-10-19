@@ -1,6 +1,6 @@
 # Review log — story-refactor-sweep-docs-budget-and-cleanup.md
 
-State: pass 5: done
+State: done
 
 Pre-loop: HEAD c2fd7b5; pass0.md 121 words (budget 1200, set by the loop: the default 2.5x of 121 words would be 300, too small for the entry's verify, covers, risk, done_checkpoint and references plus the carried items; sibling tickets used 1200-1500).
 
@@ -81,3 +81,19 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 - 1(c) locator names, 1(b) boundary rule, Scope 2 allow-list-is-not-deletion and diff-limited greps, Scope 4 devDependencies/last-test:all figure, Scope 5 anchored scan regex, Scope 6 "hits N, rows M", Scope 7 listFilesOnly, Scope 8 mismatch rule, snapshot directory name.
 Words: 1199 (9.9 x pass 0, within budget 1200)  |  Snapshot: story-refactor-sweep-docs-budget-and-cleanup.review-log.passes/pass5.md
 Fixer applied major 1 (finding: a ?raw import of src/main.ts from a ui test fails the AD-1 cross-layer scan, so the main.ts check now reads it with node:fs in contrast.test.ts or colour-literals.test.ts, both in tsconfig.arch.json files) and the two minors; ran playwright --help (--repeat-each exists), checked spec files and desktop project exist. Also trimmed ~15 phrases to pay words, e.g. "(cite the sentence)", "(both null at last run)", "No screenshot baseline.".
+
+## Pass 6 — 2026-10-19
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 11, decision-needed 0  |  Dropped in triage: 0 (1(b) table-art vs "card-face textures" sentence reclassified minor: it only yields a proposed owner edit, non-gating)
+Words: 1199 (9.9 x pass 0, within budget 1200)  |  Snapshot: unchanged from pass5.md (no fix pass)
+### Open major (not fixed, per the stopping rule)
+1. Scope 4 / Verify `dependencies` comparison is vacuous for TH-8: package.json has no `dependencies` key, so it prints `null null` whatever the epic changed, and Vite bundles devDependencies. Fix when building: compare both `dependencies` and `devDependencies` between `0f295f2^` and HEAD and list any added entry (the bundle total from the 600,000-byte gate is the real weight check).
+
+## Result — converged after 6 passes (open major: Scope 4 dependencies comparison compares only `dependencies`, which is absent, so TH-8's no-runtime-dependency half is not really gated)
+Majors per pass: 8, 7, 6, 3, 1, 1. Decision-needed: none. Technical defaults applied: 5 (Halted path covered by Q-36 plus an agreement test; over-budget stops and reports; 1200-word budget; steampunk coverage via its own art-token case; flakiness N = 10 with --repeat-each).
+### Unapplied minors (for the build's plan or a next loop)
+- 1(b): DESIGN.md's sentence covers card-face textures; table art (0.07, 0.08, 0.25) has no stated ceiling, so report it as an observation, not a mismatch; 0.06 boundary rule (at most 0.06 passes).
+- 1(c): name the sheet-body and sticky-bar locators and compare box edges to header and footer boxes.
+- 1(e): isolated --repeat-each runs may not reproduce load; 0 failures is "not reproduced in isolation".
+- Scope 2: unread token removed from all six records, key lists and tests, else owner list; allow-list is not deletion; greps limited to `git diff 0f295f2^..HEAD`.
+- Scope 5: title the main.ts test 'AD-10 main.ts registers the six theme records in §7.10 order', strip comments and anchor to line starts; ThemeId half is gated by `npm run check`.
+- Scope 4: record the margin from the last build after the final source commit; Scope 6: add `deferred` to the grep, allow "no finding" rows, state hits N and rows M; Scope 7: `tsc -p <config> --listFilesOnly`; Scope 8: a mismatch becomes an owner-call row; Scope 3: repeat the "default plus five, six ids" gloss; name the screenshot directory; Q-xx citations on owner-call rows; tickets.toml entry 11 references stay minimal (report only).
