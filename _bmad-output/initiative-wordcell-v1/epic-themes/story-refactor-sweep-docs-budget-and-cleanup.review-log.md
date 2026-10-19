@@ -1,6 +1,6 @@
 # Review log — story-refactor-sweep-docs-budget-and-cleanup.md
 
-State: pass 4: done
+State: pass 5: done
 
 Pre-loop: HEAD c2fd7b5; pass0.md 121 words (budget 1200, set by the loop: the default 2.5x of 121 words would be 300, too small for the entry's verify, covers, risk, done_checkpoint and references plus the carried items; sibling tickets used 1200-1500).
 
@@ -70,3 +70,14 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 - Locators for 1(c) sticky bars, flakiness load setup and file paths, Scope 6 count rule, Scope 7/8 command and mismatch rule, test:all vs final build figure, dependencies check vacuous (no `dependencies` key), toml references minimal (report only), Q-xx citation on owner-call rows.
 Words: 1200 (9.9 x pass 0, at budget 1200)  |  Snapshot: story-refactor-sweep-docs-budget-and-cleanup.review-log.passes/pass4.md
 Fixer applied majors 1-3 and zero-word minors; no new commands. Dropped from ticket to pay words: "A spec/spine disagreement is reported, not resolved." (AGENTS.md Policy already covers it).
+
+## Pass 5 — 2026-10-19
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 13 (merged), decision-needed 0  |  Dropped in triage: 0 (1(c) locator naming reclassified minor: verify-procedure precision under the pass-4 bar)
+### Majors (to apply)
+1. Scope 5 main.ts-registration assertion in registry.test.ts: tsconfig.app.json has types [svelte, vite/client] and no node types (verified), so `node:fs` would fail `npm run check`; item 7 forbids tsconfig edits. Read main.ts with a Vite `?raw` import (AD-1 scan permits it outside src/engine/; fixer to check).
+### Minor (to apply, zero net words)
+- 1(e): the command is `npx playwright test --project=desktop --repeat-each=10 e2e/board-keys.spec.ts e2e/win-guard.spec.ts`, not flaky-report.mjs (a CI report over retries); 1(a) new `it` beside the garden case.
+### Left unapplied (minor, at budget)
+- 1(c) locator names, 1(b) boundary rule, Scope 2 allow-list-is-not-deletion and diff-limited greps, Scope 4 devDependencies/last-test:all figure, Scope 5 anchored scan regex, Scope 6 "hits N, rows M", Scope 7 listFilesOnly, Scope 8 mismatch rule, snapshot directory name.
+Words: 1199 (9.9 x pass 0, within budget 1200)  |  Snapshot: story-refactor-sweep-docs-budget-and-cleanup.review-log.passes/pass5.md
+Fixer applied major 1 (finding: a ?raw import of src/main.ts from a ui test fails the AD-1 cross-layer scan, so the main.ts check now reads it with node:fs in contrast.test.ts or colour-literals.test.ts, both in tsconfig.arch.json files) and the two minors; ran playwright --help (--repeat-each exists), checked spec files and desktop project exist. Also trimmed ~15 phrases to pay words, e.g. "(cite the sentence)", "(both null at last run)", "No screenshot baseline.".
