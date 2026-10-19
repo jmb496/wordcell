@@ -1,6 +1,6 @@
 # Review log — story-theme-daylight-paper (ticket 9.6)
 
-State: pass 1: done
+State: pass 2: done
 
 Pre-loop: HEAD 42fc3b8, copy `story-theme-daylight-paper.review-log.passes/pass0.md`, 150 words (budget 1500). No themes SPEC.md exists under `_bmad-output/specs/`; refs are the epic file (TH-1..TH-9), DESIGN.md Themes, the spine, AGENTS.md and the plans of 9.1-9.5.
 
@@ -23,3 +23,16 @@ Words: ~880 (5.9 x pass 0, within the 1500 budget)  |  Snapshot: story-theme-day
 ### Default applied (technical)
 - DESIGN.md values for paper — ticket leaves DESIGN.md untouched, brief §D stays the source until 9.11
 - paper `--wc-shadow-drag` / pointer tokens — pointer kept as default, lighter shadow chosen in the plan
+
+## Pass 2 — 2026-10-19
+Reviewers: fix-diff, edge-case, adversarial, ref-alignment  |  Findings: major 3, minor 6 (after merging), decision-needed 0  |  Dropped in triage: 0
+### Findings (triaged)
+- [major] Tokens bullet — "after the default block" can place the paper block before app.css's separate `:root { color-scheme: dark }` rule (line 39), so `color-scheme` stays dark; place it after that rule
+- [major] Meta bullet / Registry AC — meta-equals-`--wc-table` test: single owner (contrast.test.ts, reads app.css records), case-insensitive (`#15171B` vs `#15171b`), garden inherits the default table
+- [major] Screenshots/Hue-alone — scene 2 final frame (BALKED, Validate pressed) is not an error state; the "error state" claim is unsupported
+- [minor] production export name `paperTheme`, registration order default, paper, stale registry.ts/main.ts comments; dist-smoke test rename, count 2, select paper and assert `data-theme` and meta; scrim check by exact literal; `--wc-shadow-drag` default value; "floor (third) column"; pointer-fill visibility; scene-reach helper; tickets.toml `after` note
+### Applied
+- 3 majors, 6 minors (fixer items 1-11); tickets.toml untouched (note in ticket)
+Words: ~1118 (7.5 x pass 0)  |  Snapshot: story-theme-daylight-paper.review-log.passes/pass2.md
+### Default applied (technical)
+- meta-equals-table test owned by contrast.test.ts, case-insensitive; `--wc-shadow-drag: rgb(0 0 0 / 0.35)`; scene-reach helper extracted to e2e/helpers/; error/selected states left to contrast row and owner gate
