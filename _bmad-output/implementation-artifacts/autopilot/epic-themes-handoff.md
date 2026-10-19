@@ -1,13 +1,13 @@
 outcome: stopped
-ticket: 9.10
-reason: rule 4, owner checkpoint (play Plum Dusk on Android before done)
-next: 9.10
-updated: 2026-10-19T20:30:00Z
-summary: Ticket 9.10 Plum Dusk is built, reviewed and tested; it waits for your Android play-through before being marked done.
+ticket: 9.11
+reason: rule 4, owner checkpoint (read the doc-edit proposals, token allow-list, deferred table and play-tests before done)
+next: 9.11
+updated: 2026-10-19T22:50:00Z
+summary: Ticket 9.11 (refactor sweep) is built, reviewed and tested; it waits for you to read its proposals before being marked done.
 
-Plain report: Plum Dusk is built (commit 235f8da). Ticket review took 4 passes, code review 1 pass with nothing to fix. `test:all` and the screenshots pass. Please play the theme on your Android install and judge three things: whether the mild plum palette reads at a glance, the dark first-frame tint (status bar slightly different from the page), and the scene pointer's visibility on the plum table. Also accept or reject the dropped test for an unregistered stored theme reaching Halted.
-Resume: when happy, run `uv run _bmad/method/scripts/tickets.py mark 9.10 done`, commit, then rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-themes` (9.11 is next).
+Plain report: The sweep found the app at 551,996 of 600,000 bytes (48,004 spare) with no new dependencies. It added a few tests (steampunk art colours, theme registry agreement, Plum Dusk at 360 px) and changed no game code. Docs were not edited; the plan lists proposed wording for you: DESIGN.md contrast floors, a stale Themes sentence, an optional table-art opacity limit, and whether to drop the unused `--wc-hairline` token. Ticket review took 6 passes, code review 1 pass; `test:all` and screenshots pass. Please read the plan, then also play-test the themes on Android and decide the status-bar tint difference.
+Resume: `uv run _bmad/method/scripts/tickets.py mark 9.11 done`, commit; the epic then needs `/bmad-retrospective`, applying its approved doc fixes, and marking the epic done.
 Close-out docs: none
 Digest: _bmad-output/implementation-artifacts/autopilot/epic-themes-20261018-1343.md
 Ref to fix upstream: none
-Tokens: 4.7M input-equivalent
+Tokens: 5.9M input-equivalent
