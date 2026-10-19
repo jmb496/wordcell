@@ -1,14 +1,13 @@
 outcome: stopped
 ticket: 9.5
-reason: rule 1, ticket review capped after 7 passes with a late major on owner-owned design text (contrast floors)
+reason: rule 3, npm run test:all failed twice on one different flaky-looking test each time (build is `built`)
 next: 9.5
-updated: 2026-10-19T02:25:00Z
-summary: The 9.5 ticket review hit its pass cap; one open question needs your word before the build.
+updated: 2026-10-19T03:45:00Z
+summary: 9.5 is built but the full test run is not green because of one flaky test each time; it needs your call.
 
 Plain-language report:
-- The ticket review ran 7 passes and was capped (not clean). Nothing is built yet.
-- **Your decision (affects the design doc):** DESIGN.md says the card edge should reach contrast 3.6, the outline 3.8 and card text 13.1, but the automatic contrast check's table only demands 3, 3 and 4.5. The ticket currently follows the lower table figures. Option A: the table figures are the minimum (looser, art themes get more freedom; DESIGN.md prose is just describing the default theme). Option B: DESIGN.md figures are the minimum for every theme (stricter, texture art must stay subtler). Proposed: A.
-- Technical items I recorded for the ticket (no input needed): the art format must require an explicit fill on every shape (fill="none" allowed) so stroke-only shapes are measured correctly; table art is painted on the page background only.
-- To resume: tell me A or B (I record it in the ticket Notes), then rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-themes`. The session resumes from the ticket review log. Note 9.5 has plan_checkpoint: it will stop at the plan after the build.
-Close-out docs: none
+- The art layer (table background and card texture) is built (commit 94bc910) with your option-A decision applied. The plan is `built` and stops at the plan checkpoint for you to read.
+- The full test run failed twice, each time on a single different test (android helpers "captureBoot", then desktop board-keys "Q-24 Composing focus"); 961 others passed. Both pass when run alone. Looks like timing flakiness under load, as in 9.3/9.4. Nothing was marked done.
+- Choice: accept the flakiness and mark 9.5 done after you read the plan (the code review is optional: /review-loop on 94bc910), or ask for a flakiness fix first.
+Close-out docs: DESIGN.md contrast section <- say its figures (3.6, 3.8, 13.1) describe the default theme only (owner, 2026-10-18)
 Digest: _bmad-output/implementation-artifacts/autopilot/epic-themes-20261018-1343.md
