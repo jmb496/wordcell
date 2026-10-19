@@ -40,6 +40,10 @@ describe('AD-14 colour-literal scan positives', () => {
       () => css('@media (x) { :root { --wc-x: #fff; } }', 'src/ui/app.css'),
     ],
     ['--wc-x on another selector in app.css', () => css('.a { --wc-x: #fff; }', 'src/ui/app.css')],
+    [
+      '--wc-x on another selector in garden.css',
+      () => css('.a { --wc-x: #fff; }', 'src/ui/theme/garden.css'),
+    ],
     ['--wc-x in Card.svelte', () => svelte('[data-theme="a"] { --wc-x: #fff; }')],
     ['non-token colour in app.css', () => css(':root { color: #fff; }', 'src/ui/app.css')],
   ])('AD-14 flags %s', (_name, run) => {
@@ -77,6 +81,18 @@ describe('AD-14 colour-literal scan negatives', () => {
     [
       '--wc-x in app.css theme block',
       () => css(':root, [data-theme="default"] { --wc-x: rgb(0 0 0 / 0.5); }', 'src/ui/app.css'),
+    ],
+    [
+      '--wc-x in the garden.css test sheet theme block',
+      () => css('[data-theme="garden"] { --wc-x: rgb(0 0 0 / 0.5); }', 'src/ui/theme/garden.css'),
+    ],
+    [
+      'hex inside an art data URI',
+      () =>
+        css(
+          `.a { background-image: url("data:image/svg+xml,<svg fill='#fff'/>"); }`,
+          'src/ui/Card.svelte.css',
+        ),
     ],
   ])('AD-14 passes %s', (_name, run) => {
     expect(run()).toEqual([]);

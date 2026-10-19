@@ -207,7 +207,8 @@ const inView = $derived.by(() => {
   }
   .face {
     position: relative; box-sizing: border-box; width: var(--wc-w); height: var(--wc-H); margin: 0 2px;
-    background: var(--wc-card-face); border: 1px solid var(--wc-card-edge); border-radius: 6px;
+    background-color: var(--wc-card-face); background-image: var(--wc-card-texture);
+    border: 1px solid var(--wc-card-edge); border-radius: 6px;
     color: var(--wc-card-ink); pointer-events: none;
     /* Epic 5 SPEC CAP-8: the marks' and lock's z-index 1 stay inside their face, so a gliding
        face (z-index 1, flip.ts) layers as one. */
@@ -268,12 +269,12 @@ const inView = $derived.by(() => {
   .compact .glyph.qu { top: 0; height: 100%; font-size: 18px; }
 
   /* DESIGN.md Card ghost: 1 px dashed outline, no face fill, no glyph, no flourish. */
-  .ghost .face { background: none; border: 1px dashed var(--wc-outline); }
+  .ghost .face { background: none; background-image: none; border: 1px dashed var(--wc-outline); }
   .ghost .face::after { content: none; }
 
   /* DESIGN.md Card, in destination block: destination fill, 2 px blue outline, lock top-left. */
   .destination .face,
-  .block .face { background: var(--wc-destination-fill); border: 2px solid var(--wc-destination); }
+  .block .face { background-color: var(--wc-destination-fill); border: 2px solid var(--wc-destination); }
   .lock { position: absolute; top: 0; left: 0; z-index: 1; }
   /* Epic 5 SPEC CAP-6: a block mirror's lock shows on its row segment's start: `.start` at rest,
      `wc-part-start` while the controller marks it `wc-parted` (a free-letter parting moves the

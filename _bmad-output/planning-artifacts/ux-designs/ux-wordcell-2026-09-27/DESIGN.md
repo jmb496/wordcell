@@ -205,7 +205,7 @@ contrast floors, which a unit test computes from the theme's token values: card 
 ≥ 13.1:1; outline on table ≥ 3.8:1 and on surface ≥ 3.4:1; card edge on table ≥ 3.6:1 and on
 surface ≥ 3.2:1; ink secondary on surface ≥ 6.4:1 and on surface raised ≥ 5.6:1; accent teal on
 surface ≥ 7:1 and on card face ≥ 6.6:1; ink on accent orange ≥ 6.4:1; card ink on destination
-fill ≥ 9.9:1; error on surface ≥ 6.7:1. No state relies on hue alone. The token names
+fill ≥ 9.9:1; error on surface ≥ 6.7:1. These figures describe the default theme only; every theme must meet the floors the contrast unit test lists (3:1 for outline and card edge, 4.5:1 for text), measured at the worst point of any table art or card texture. No state relies on hue alone. The token names
 `accent-teal` and `accent-orange` stay in every theme even where the colour is cyan, sage or
 copper. The values and ratios below are **Charcoal's**.
 

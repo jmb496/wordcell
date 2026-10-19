@@ -34,7 +34,8 @@ export const RUNTIME_ALLOWLIST: ReadonlySet<string> = new Set([
   'reduced',
 ]);
 
-export const TOKEN_FILE = 'src/ui/app.css';
+/** The token files: theme blocks of `--wc-*` declarations are exempt here (TH-2, TH-9). */
+export const TOKEN_FILES: readonly string[] = ['src/ui/app.css', 'src/ui/theme/garden.css'];
 
 const NAMED = new Set(
   (
@@ -272,7 +273,7 @@ function scanCss(
 ): void {
   for (const decl of cssDecls(stripComments(css, false))) {
     const exempt =
-      path === TOKEN_FILE &&
+      TOKEN_FILES.includes(path) &&
       decl.stack.length === 1 &&
       !(decl.stack[0] as string).startsWith('@') &&
       decl.name.startsWith('--wc-') &&

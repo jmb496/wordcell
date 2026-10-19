@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { type Art, checkTexture, parseArt, worstSurfaces } from './art';
 import { themeRecords } from './colour-literals';
 
 interface Rgba {
@@ -60,6 +61,7 @@ const TABLE: readonly [string, string, number, number][] = [
   ['ink-secondary', 'surface', 4.5, 6.4],
   ['ink-secondary', 'surface-raised', 4.5, 5.6],
   ['ink-primary', 'destination-fill', 4.5, 9.9],
+  ['card-ink', 'destination-fill', 4.5, 9.9],
   ['error', 'surface', 4.5, 6.7],
   ['ink-on-accent', 'accent-orange', 4.5, 6.4],
   ['outline', 'table', 3, 3.8],
@@ -69,6 +71,12 @@ const TABLE: readonly [string, string, number, number][] = [
   ['accent-teal', 'surface', 3, 7.0],
   ['accent-teal', 'card-face', 3, 6.6],
 ];
+// TH-9: the two art tokens are `none` or an SVG data URI, optional in a non-default record.
+const TABLE_ART = '--wc-table-art';
+const CARD_TEXTURE = '--wc-card-texture';
+const ART_KEYS: readonly string[] = [TABLE_ART, CARD_TEXTURE];
+// The TABLE rows whose background a texture sits on, and the one the table art sits on.
+const TEXTURED = ['card-face', 'destination-fill'];
 const TRANSLUCENT = ['scrim', 'shadow-drag', 'scene-pointer-shadow'];
 const OPAQUE = ['scene-pointer-fill', 'scene-pointer-stroke'];
 
@@ -82,7 +90,26 @@ function check(record: Record, figures: boolean, defaultKeys?: ReadonlySet<strin
       fails.push(`${label}: ${(e as Error).message}`);
     }
   };
-  for (const name of record.keys()) guard(name, () => resolve(record, name));
+  for (const name of record.keys()) {
+    if (!ART_KEYS.includes(name)) guard(name, () => resolve(record, name));
+  }
+  let texture: Art | null = null;
+  let tableArt: Art | null = null;
+  guard(CARD_TEXTURE, () => {
+    texture = parseArt(record.get(CARD_TEXTURE) ?? 'none');
+    if (texture) checkTexture(texture);
+  });
+  guard(TABLE_ART, () => {
+    tableArt = parseArt(record.get(TABLE_ART) ?? 'none');
+  });
+  // Worst point: the foreground against every colour the art can produce over the surface.
+  const overArt = (art: Art | null, fg: Rgba, bg: Rgba, floor: number, label: string) => {
+    if (art === null) return;
+    for (const surface of worstSurfaces(art, bg)) {
+      const r = ratio(fg, { ...surface, a: 1 });
+      if (r < floor) fails.push(`${label}: ${r} < ${floor}`);
+    }
+  };
   for (const [fg, bg, floor, figure] of TABLE) {
     guard(`${fg}/${bg}`, () => {
       const f = resolve(record, `--wc-${fg}`);
@@ -91,6 +118,8 @@ function check(record: Record, figures: boolean, defaultKeys?: ReadonlySet<strin
       const r = ratio(f, b);
       if (r < floor) fails.push(`${fg}/${bg}: ${r} < ${floor}`);
       if (figures && round1(r) !== figure) fails.push(`${fg}/${bg}: ${round1(r)} != ${figure}`);
+      if (TEXTURED.includes(bg)) overArt(texture, f, b, floor, `${fg}/${bg} over texture`);
+      if (bg === 'table') overArt(tableArt, f, b, floor, `${fg}/${bg} over table art`);
     });
   }
   for (const t of TRANSLUCENT) {
@@ -100,17 +129,21 @@ function check(record: Record, figures: boolean, defaultKeys?: ReadonlySet<strin
   }
   for (const t of OPAQUE) guard(t, () => void resolve(record, `--wc-${t}`));
   if (defaultKeys) {
-    const keys = new Set(record.keys());
-    for (const k of defaultKeys) if (!keys.has(k)) fails.push(`missing key ${k}`);
+    const keys = new Set([...record.keys()].filter((k) => !ART_KEYS.includes(k)));
+    for (const k of defaultKeys) {
+      if (!keys.has(k) && !ART_KEYS.includes(k)) fails.push(`missing key ${k}`);
+    }
     for (const k of keys) if (!defaultKeys.has(k)) fails.push(`extra key ${k}`);
   }
   return fails;
 }
 
-const themes = themeRecords(
-  readFileSync(fileURLToPath(new URL('../app.css', import.meta.url)), 'utf8'),
-);
+const read = (name: string) => readFileSync(fileURLToPath(new URL(name, import.meta.url)), 'utf8');
+const themes = themeRecords(read('../app.css'));
 const defaults = themes.get('default') as Record;
+// TH-9: the test sheet's tokens merge over the default record (art tokens only today).
+const sheet = themeRecords(read('./garden.css'));
+for (const [id, tokens] of sheet) themes.set(id, new Map([...defaults, ...tokens]));
 
 describe('AD-14 theme contrast', () => {
   it('AD-14 app.css has a default theme record', () => {
@@ -152,6 +185,63 @@ describe('AD-14 theme contrast', () => {
     const opaque = new Map(defaults);
     opaque.set('--wc-scrim', '#000000');
     expect(check(opaque, false).some((f) => f.startsWith('scrim'))).toBe(true);
+  });
+
+  it('AD-14 the default theme declares both art tokens none; garden sets both from the test sheet', () => {
+    expect(defaults.get(TABLE_ART)).toBe('none');
+    expect(defaults.get(CARD_TEXTURE)).toBe('none');
+    const garden = themes.get('garden') as Record;
+    expect(parseArt(garden.get(TABLE_ART) as string)).not.toBeNull();
+    expect(parseArt(garden.get(CARD_TEXTURE) as string)).not.toBeNull();
+    expect([...(sheet.get('garden') as Record).keys()].sort()).toEqual([CARD_TEXTURE, TABLE_ART]);
+  });
+
+  it('AD-14 the art keys are optional in the key-set check', () => {
+    const bare = new Map(defaults);
+    bare.delete(TABLE_ART);
+    bare.delete(CARD_TEXTURE);
+    expect(check(bare, true, new Set(defaults.keys()))).toEqual([]);
+  });
+
+  // The lightest grey ink that still meets `floor` on `face`: a texture then pushes it under.
+  const marginalInk = (face: string, floor: number): string => {
+    const bg = resolve(defaults, face);
+    for (let g = 0; g < 256; g++) {
+      const h = g.toString(16).padStart(2, '0');
+      if (ratio(parseColour(`#${h}${h}${h}`), bg) >= floor) return `#${h}${h}${h}`;
+    }
+    throw new Error('no grey meets the floor');
+  };
+  const art = (inner: string) =>
+    `url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'>${inner}</svg>")`;
+
+  it('AD-14 a texture that drops card-ink below 4.5 at the worst point fails naming the pair', () => {
+    const bad = new Map(defaults);
+    bad.set('--wc-card-ink', marginalInk('--wc-card-face', 4.5));
+    expect(check(bad, false).filter((f) => f.startsWith('card-ink/card-face'))).toEqual([]);
+    bad.set(CARD_TEXTURE, art("<rect width='8' height='8' fill='%23fff' fill-opacity='0.06'/>"));
+    expect(check(bad, false).some((f) => f.startsWith('card-ink/card-face over texture'))).toBe(
+      true,
+    );
+  });
+
+  it('AD-14 table art that drops card-edge below 3 fails naming the pair', () => {
+    const bad = new Map(defaults);
+    bad.set('--wc-card-edge', marginalInk('--wc-table', 3));
+    expect(check(bad, false).filter((f) => f.startsWith('card-edge/table'))).toEqual([]);
+    bad.set(TABLE_ART, art("<rect width='8' height='8' fill='%23fff' fill-opacity='0.5'/>"));
+    expect(check(bad, false).some((f) => f.startsWith('card-edge/table over table art'))).toBe(
+      true,
+    );
+  });
+
+  it('AD-14 a texture over 6 % or a token outside the grammar fails the record', () => {
+    const heavy = new Map(defaults);
+    heavy.set(CARD_TEXTURE, art("<rect width='8' height='8' fill='%23fff' fill-opacity='0.2'/>"));
+    expect(check(heavy, false).some((f) => f.includes('texture colour'))).toBe(true);
+    const nofill = new Map(defaults);
+    nofill.set(TABLE_ART, art("<path d='M0 4h8' stroke='%23fff'/>"));
+    expect(check(nofill, false).some((f) => f.includes('explicit fill'))).toBe(true);
   });
 
   it('AD-14 a theme record with a different key set fails', () => {

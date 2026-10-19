@@ -46,6 +46,18 @@ describe('theme registry', () => {
     expect(meta.content).toBe(defaultTheme.meta);
   });
 
+  it('AD-10 testGarden registers as garden with the default table colour as its meta (TH-9)', async () => {
+    const { meta, root } = stubDocument();
+    const { applyTheme, defaultTheme, entries, register, testGarden } = await fresh();
+    register(defaultTheme);
+    register(testGarden);
+    expect(entries().map((entry) => entry.id)).toEqual(['default', 'garden']);
+    expect(testGarden.meta).toBe(defaultTheme.meta);
+    applyTheme('garden');
+    expect(root.dataset.theme).toBe('garden');
+    expect(meta.content).toBe(testGarden.meta);
+  });
+
   it('AD-10 an unregistered id throws and changes nothing', async () => {
     const { meta, root } = stubDocument();
     const { applyTheme, defaultTheme, register } = await fresh();

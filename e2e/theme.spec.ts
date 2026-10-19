@@ -102,7 +102,7 @@ test('Q-45 AD-10 the Theme radiogroup switches at once, stores theme, and Charco
   const before = await stored(page, SESSION);
   await openPrefs(page);
   const group = themeGroup(page);
-  await expect(group.getByRole('radio')).toHaveCount(2);
+  await expect(group.getByRole('radio')).toHaveCount(3);
   await expect(group.getByRole('radio', { name: 'Charcoal' })).toBeChecked();
   await group.getByRole('radio', { name: 'Daylight Paper' }).check();
   expect(await attr(page)).toBe('paper');

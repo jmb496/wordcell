@@ -137,3 +137,16 @@ test('AD-10 the built CSS keeps the @container style(--wc-reduced branch, readin
     expect(branch).not.toMatch(/120\s*ms/);
   }
 });
+
+test('TH-9 the test-only garden stylesheet (selector and art URI) is in dist-test and absent from dist', () => {
+  // Epic themes ticket 5: main.ts imports garden.css only under the test-hook condition, so the
+  // production build must tree-shake it; the selector may be minified to unquoted form.
+  const root = buildRoot();
+  const files = walk(root).filter((file) => /^assets\/[^/]+\.(css|js)$/.test(file));
+  expect(files.length).toBeGreaterThan(0);
+  const all = files.map((file) => readSite(file)).join('\n');
+  const selector = /\[data-theme=["']?garden["']?\]/.test(all);
+  const art = /--wc-table-art:\s*url\(["']?data:image\/svg\+xml/.test(all);
+  const expected = process.env.PW_PREVIEW === 'dist-test';
+  expect({ selector, art }).toEqual({ selector: expected, art: expected });
+});

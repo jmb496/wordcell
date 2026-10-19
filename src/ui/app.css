@@ -32,6 +32,9 @@
   --wc-scene-pointer-fill: #fff;
   --wc-scene-pointer-stroke: #1a1a1a;
   --wc-scene-pointer-shadow: rgb(0 0 0 / 0.45);
+  /* Epic themes TH-9: optional art, `none` or one inline SVG data URI (src/ui/theme/art.ts). */
+  --wc-table-art: none;
+  --wc-card-texture: none;
 }
 :root {
   color-scheme: dark;
@@ -43,7 +46,12 @@ body {
   margin: 0;
   overscroll-behavior: none;
   height: 100%;
-  background: var(--wc-table);
+}
+/* TH-9: the table art is painted on the page background only; body has none. */
+html {
+  background-color: var(--wc-table);
+  background-image: var(--wc-table-art);
+  background-attachment: scroll;
 }
 /* build-notes CAP-1: clientWidth stays stable when the page starts scrolling; AD-11: no browser
    scroll anchoring beside the layout's own anchor write. */

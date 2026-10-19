@@ -1,8 +1,8 @@
 // Q-45, AD-10, AD-16 theme registry (epic themes TH-3): theme id -> label (text.ts) and explicit
 // `theme-color` meta colour. `applyTheme(id)` sets `data-theme` on the root (always, `default`
 // included) and updates the one meta in place; an unregistered id throws to AD-15 (rule 6).
-// Production registers only `default`; later theme tickets add entries. `testPaper` is the
-// test-only placeholder `main.ts` registers in builds carrying the test hook.
+// Production registers only `default`; later theme tickets add entries. `testPaper` and `testGarden`
+// are the test-only entries `main.ts` registers in builds carrying the test hook.
 import type { ThemeId } from '../../shell/prefs.svelte';
 import { text } from '../text';
 
@@ -22,6 +22,12 @@ export const defaultTheme: ThemeEntry = {
 
 /** Test-only placeholder for the later Daylight Paper ticket; exempt from the token check. */
 export const testPaper: ThemeEntry = { id: 'paper', label: text.themePaper, meta: '#F4EFE4' };
+
+/**
+ * Test-only theme for the TH-9 art hooks; exempt from the token check. It sets only the two art
+ * tokens (garden.css), so its table colour is the default's.
+ */
+export const testGarden: ThemeEntry = { id: 'garden', label: text.themeGarden, meta: '#15171B' };
 
 const table = new Map<ThemeId, ThemeEntry>();
 
