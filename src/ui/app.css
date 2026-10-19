@@ -97,6 +97,34 @@
   --wc-table-art: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'><path d='M0 52C18 52 22 36 32 32S50 14 64 12' fill='none' stroke='%238fdc9e' stroke-width='1.2' stroke-opacity='0.08'/><path d='M0 12C14 14 24 26 32 32S52 50 64 52' fill='none' stroke='%238fdc9e' stroke-width='1.2' stroke-opacity='0.08'/><path d='M32 0V64' fill='none' stroke='%238fdc9e' stroke-width='1.2' stroke-opacity='0.08'/></svg>");
   --wc-card-texture: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='6' height='6' viewBox='0 0 6 6'><path d='M0 1L3 0M3 4L6 3' fill='none' stroke='%23f6f0dc' stroke-width='1' stroke-opacity='0.03'/></svg>");
 }
+/* Brass and Walnut (epic themes TH-5): values from research/brief.md section C; art per the 9.5 grammar. */
+[data-theme="steampunk"] {
+  color-scheme: dark;
+  --wc-table: #1d1510;
+  --wc-surface: #2a1f17;
+  --wc-surface-raised: #3a2b20;
+  --wc-hairline: #4a382a;
+  --wc-outline: #b09878;
+  --wc-card-face: #231810;
+  --wc-card-edge: #b08d57;
+  --wc-card-ink: #fbf0d6;
+  --wc-ink-primary: #fbf0d6;
+  --wc-ink-secondary: #c8b48f;
+  --wc-ink-disabled: #8a7860;
+  --wc-ink-on-accent: #1d1510;
+  --wc-accent-teal: #5cc8bd;
+  --wc-accent-orange: #e8863a;
+  --wc-destination: #a8b8d8;
+  --wc-destination-fill: #232c46;
+  --wc-error: #f59a8c;
+  --wc-scrim: #000000b3;
+  --wc-shadow-drag: rgb(0 0 0 / 0.35);
+  --wc-scene-pointer-fill: #fff;
+  --wc-scene-pointer-stroke: #1a1a1a;
+  --wc-scene-pointer-shadow: rgb(0 0 0 / 0.45);
+  --wc-table-art: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40' viewBox='0 0 80 40'><path d='M0 6H80M0 13H55M0 22H80M0 29H40M0 35H70' fill='none' stroke='%23b08d57' stroke-opacity='0.07'/><path d='M0 39.5H80' fill='none' stroke='%23000' stroke-opacity='0.25'/></svg>");
+  --wc-card-texture: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'><path d='M1.2 2a.8 .8 0 1 0 1.6 0a.8 .8 0 1 0 -1.6 0M5.2 6a.8 .8 0 1 0 1.6 0a.8 .8 0 1 0 -1.6 0' fill='%23b08d57' fill-opacity='0.04'/></svg>");
+}
 /* Daylight Paper (epic themes TH-4): values from research/brief.md section D. Placed after the
    default block and the dark `color-scheme` rule so it overrides the latter. */
 [data-theme="paper"] {

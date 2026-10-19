@@ -32,6 +32,7 @@ import {
   paperTheme,
   register,
   scifiTheme,
+  steampunkTheme,
 } from './ui/theme/registry';
 // Imported before boot so the `@font-face` the font check loads is registered.
 import './ui/app.css';
@@ -223,9 +224,10 @@ async function boot(): Promise<void> {
   await dictionary.load();
 }
 
-// AD-10: `default`, `scifi`, `garden`, then `paper` in every build (spec §7.10), before boot.
+// AD-10: `default`, `scifi`, `garden`, `steampunk`, then `paper` in every build (spec §7.10), before boot.
 register(defaultTheme);
 register(scifiTheme);
 register(gardenTheme);
+register(steampunkTheme);
 register(paperTheme);
 void boot();

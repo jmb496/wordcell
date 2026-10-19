@@ -11,6 +11,7 @@ test.beforeEach(onAndroid);
 
 const ARTS = [
   { id: 'garden', prefs: 'prefs-theme-garden', radio: 'Greenhouse Dusk' },
+  { id: 'steampunk', prefs: 'prefs-theme-steampunk', radio: 'Brass and Walnut' },
   { id: 'scifi', prefs: 'prefs-theme-scifi', radio: 'Deep Space' },
 ] as const;
 

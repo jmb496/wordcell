@@ -75,6 +75,23 @@ describe('theme registry', () => {
     expect(meta.content).toBe('#101A14');
   });
 
+  it('AD-10 steampunkTheme registers as steampunk with meta #1D1510', async () => {
+    const { meta, root } = stubDocument();
+    const { applyTheme, defaultTheme, entries, register, steampunkTheme } = await fresh();
+    const { text } = await import('../text');
+    register(defaultTheme);
+    register(steampunkTheme);
+    expect(entries().map((entry) => entry.id)).toEqual(['default', 'steampunk']);
+    expect(steampunkTheme).toEqual({
+      id: 'steampunk',
+      label: text.themeBrassAndWalnut,
+      meta: '#1D1510',
+    });
+    applyTheme('steampunk');
+    expect(root.dataset.theme).toBe('steampunk');
+    expect(meta.content).toBe('#1D1510');
+  });
+
   it('AD-10 an unregistered id throws and changes nothing', async () => {
     const { meta, root } = stubDocument();
     const { applyTheme, defaultTheme, register } = await fresh();

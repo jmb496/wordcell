@@ -6,7 +6,7 @@ import { booted, openBoard } from './helpers/restore';
 import { fixture, seedStorage } from './helpers/seed';
 
 // Epic themes ticket 4 (Q-36, Q-45, AD-10, AD-16, AD-17; TH-3): the theme preference and the
-// pre-paint apply, on android (all four themes are registered in every build). Fixtures: `prefs-theme-paper`, `prefs-invalid-theme-unknown`.
+// pre-paint apply, on android (all five themes are registered in every build). Fixtures: `prefs-theme-paper`, `prefs-invalid-theme-unknown`.
 
 test.beforeEach(onAndroid);
 
@@ -16,6 +16,7 @@ const PAPER = '#ECE6D8';
 const CHARCOAL = '#15171B';
 const SCIFI = '#0A0F1C';
 const GARDEN = '#101A14';
+const STEAMPUNK = '#1D1510';
 
 const menuButton = (page: Page) => page.getByRole('button', { name: 'Menu', exact: true });
 const panel = (page: Page) => page.getByRole('dialog', { name: 'Preferences', exact: true });
@@ -128,11 +129,12 @@ test('Q-45 AD-10 the Theme radiogroup switches at once, stores theme, and Charco
   const before = await stored(page, SESSION);
   await openPrefs(page);
   const group = themeGroup(page);
-  await expect(group.getByRole('radio')).toHaveCount(4);
+  await expect(group.getByRole('radio')).toHaveCount(5);
   await expect(group.getByRole('radio').nth(0)).toHaveAccessibleName('Charcoal');
   await expect(group.getByRole('radio').nth(1)).toHaveAccessibleName('Deep Space');
   await expect(group.getByRole('radio').nth(2)).toHaveAccessibleName('Greenhouse Dusk');
-  await expect(group.getByRole('radio').nth(3)).toHaveAccessibleName('Daylight Paper');
+  await expect(group.getByRole('radio').nth(3)).toHaveAccessibleName('Brass and Walnut');
+  await expect(group.getByRole('radio').nth(4)).toHaveAccessibleName('Daylight Paper');
   await expect(group.getByRole('radio', { name: 'Charcoal' })).toBeChecked();
   const defaults = {
     scrim: await rootVar(page, '--wc-scrim'),
@@ -205,6 +207,32 @@ test('Q-45 AD-10 AD-16 Greenhouse Dusk switches at once with both art layers, Ch
   expect(await meta(page)).toBe(GARDEN);
   await openPrefs(page);
   await expect(themeGroup(page).getByRole('radio', { name: 'Greenhouse Dusk' })).toBeChecked();
+  await themeGroup(page).getByRole('radio', { name: 'Charcoal' }).check();
+  expect(await attr(page)).toBe('default');
+  expect(await meta(page)).toBe(CHARCOAL);
+  expect(await rootVar(page, '--wc-table-art')).toBe('none');
+  expect(await rootVar(page, '--wc-card-texture')).toBe('none');
+});
+
+test('Q-45 AD-10 AD-16 Brass and Walnut switches at once with both art layers, Charcoal removes them, a reload keeps it', async ({
+  page,
+}) => {
+  await openFixture(page, 'session-idle-fresh');
+  await openPrefs(page);
+  const group = themeGroup(page);
+  await group.getByRole('radio', { name: 'Brass and Walnut' }).check();
+  expect(await attr(page)).toBe('steampunk');
+  expect(await colorScheme(page)).toBe('dark');
+  expect(await meta(page)).toBe(STEAMPUNK);
+  expect(await rootVar(page, '--wc-table-art')).not.toBe('none');
+  expect(await rootVar(page, '--wc-card-texture')).not.toBe('none');
+  await expectNoThemeAnimations(page);
+  await page.reload();
+  await expect(page.getByTestId('card-0')).toBeVisible();
+  expect(await attr(page)).toBe('steampunk');
+  expect(await meta(page)).toBe(STEAMPUNK);
+  await openPrefs(page);
+  await expect(themeGroup(page).getByRole('radio', { name: 'Brass and Walnut' })).toBeChecked();
   await themeGroup(page).getByRole('radio', { name: 'Charcoal' }).check();
   expect(await attr(page)).toBe('default');
   expect(await meta(page)).toBe(CHARCOAL);
