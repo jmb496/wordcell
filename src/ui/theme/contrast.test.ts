@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { type Art, checkTexture, parseArt, worstSurfaces } from './art';
 import { themeRecords } from './colour-literals';
+import { defaultTheme, paperTheme, testGarden } from './registry';
 
 interface Rgba {
   r: number;
@@ -154,6 +155,14 @@ describe('AD-14 theme contrast', () => {
     const record = themes.get(id) as Record;
     expect(check(record, id === 'default', new Set(defaults.keys()))).toEqual([]);
   });
+
+  it.each([defaultTheme, paperTheme, testGarden])(
+    'AD-14 the meta of theme $id equals its --wc-table',
+    (entry) => {
+      const table = (themes.get(entry.id) as Record).get('--wc-table') as string;
+      expect(entry.meta.toLowerCase()).toBe(table.toLowerCase());
+    },
+  );
 
   it('AD-14 the parser reads #rgb, #rgba, #rrggbbaa and slash-alpha rgb()', () => {
     expect(parseColour('#fff')).toEqual({ r: 255, g: 255, b: 255, a: 1 });

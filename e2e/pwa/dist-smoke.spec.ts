@@ -55,7 +55,7 @@ test('AD-11 ?bands= ignored in dist/', async ({ page }) => {
   ]);
 });
 
-test('Q-45 AD-10 the production Theme radiogroup offers Charcoal only, applied as default', async ({
+test('Q-45 AD-10 the production Theme radiogroup offers Charcoal and Daylight Paper, applied as default', async ({
   page,
 }) => {
   await seedStorage(page, { session: fixture('session-idle-fresh.json') });
@@ -69,6 +69,18 @@ test('Q-45 AD-10 the production Theme radiogroup offers Charcoal only, applied a
   const group = page
     .getByRole('dialog', { name: 'Preferences', exact: true })
     .getByRole('radiogroup', { name: 'Theme' });
-  await expect(group.getByRole('radio')).toHaveCount(1);
+  const radios = group.getByRole('radio');
+  await expect(radios).toHaveCount(2);
+  await expect(radios.nth(0)).toHaveAccessibleName('Charcoal');
+  await expect(radios.nth(1)).toHaveAccessibleName('Daylight Paper');
   await expect(group.getByRole('radio', { name: 'Charcoal' })).toBeChecked();
+  await group.getByRole('radio', { name: 'Daylight Paper' }).check();
+  expect(await page.evaluate(() => document.documentElement.getAttribute('data-theme'))).toBe(
+    'paper',
+  );
+  expect(
+    await page.evaluate(
+      () => document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.content,
+    ),
+  ).toBe('#ECE6D8');
 });

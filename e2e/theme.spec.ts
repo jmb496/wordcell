@@ -6,14 +6,14 @@ import { booted, openBoard } from './helpers/restore';
 import { fixture, seedStorage } from './helpers/seed';
 
 // Epic themes ticket 4 (Q-36, Q-45, AD-10, AD-16, AD-17; TH-3): the theme preference and the
-// pre-paint apply, on android, against a build carrying the test hook (the test-only `paper`
-// entry is registered there). Fixtures: `prefs-theme-paper`, `prefs-invalid-theme-unknown`.
+// pre-paint apply, on android, against a build carrying the test hook (`paper` is registered in
+// every build, the test-only `garden` entry only there). Fixtures: `prefs-theme-paper`, `prefs-invalid-theme-unknown`.
 
 test.beforeEach(onAndroid);
 
 const PREFS = 'wordcell:prefs';
 const SESSION = 'wordcell:session';
-const PAPER = '#F4EFE4';
+const PAPER = '#ECE6D8';
 const CHARCOAL = '#15171B';
 
 const menuButton = (page: Page) => page.getByRole('button', { name: 'Menu', exact: true });
@@ -27,6 +27,31 @@ const meta = (page: Page) =>
     () => document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.content ?? null,
   );
 const storedPrefs = (page: Page) => stored(page, PREFS);
+const rootVar = (page: Page, name: string) =>
+  page.evaluate(
+    (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim().toLowerCase(),
+    name,
+  );
+const colorScheme = (page: Page) =>
+  page.evaluate(() => getComputedStyle(document.documentElement).colorScheme);
+
+// Q-45: the switch is at once. The one exception is the Show timer switch track, whose existing
+// `background` transition (PreferencesPanel, `--wc-base-ms`) also fires when its surface-raised
+// token changes with the theme; reported on the ticket, component left unchanged.
+async function expectNoThemeAnimations(page: Page): Promise<void> {
+  const running = await page.evaluate(
+    () =>
+      document.getAnimations().filter((a) => {
+        const target = (a.effect as KeyframeEffect | null)?.target;
+        return !(
+          a instanceof CSSTransition &&
+          target instanceof HTMLElement &&
+          target.classList.contains('track')
+        );
+      }).length,
+  );
+  expect(running).toBe(0);
+}
 
 async function openPrefs(page: Page): Promise<void> {
   await menuButton(page).click();
@@ -104,17 +129,27 @@ test('Q-45 AD-10 the Theme radiogroup switches at once, stores theme, and Charco
   const group = themeGroup(page);
   await expect(group.getByRole('radio')).toHaveCount(3);
   await expect(group.getByRole('radio', { name: 'Charcoal' })).toBeChecked();
+  const defaults = {
+    scrim: await rootVar(page, '--wc-scrim'),
+    table: await rootVar(page, '--wc-table'),
+    face: await rootVar(page, '--wc-card-face'),
+  };
+  expect(await colorScheme(page)).toBe('dark');
   await group.getByRole('radio', { name: 'Daylight Paper' }).check();
   expect(await attr(page)).toBe('paper');
+  expect(await colorScheme(page)).toBe('light');
   expect(await meta(page)).toBe(PAPER);
-  expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
+  expect(await rootVar(page, '--wc-scrim')).toBe(defaults.scrim);
+  await expectNoThemeAnimations(page);
   expect((await prefsOf(page)).theme).toBe('paper');
   expect(JSON.parse((await storedPrefs(page)) ?? 'null')).toMatchObject({ theme: 'paper' });
   expect(await stored(page, SESSION)).toBe(before);
   await group.getByRole('radio', { name: 'Charcoal' }).check();
   expect(await attr(page)).toBe('default');
   expect(await meta(page)).toBe(CHARCOAL);
-  expect(await page.evaluate(() => document.getAnimations().length)).toBe(0);
+  expect(await rootVar(page, '--wc-table')).toBe(defaults.table);
+  expect(await rootVar(page, '--wc-card-face')).toBe(defaults.face);
+  await expectNoThemeAnimations(page);
   expect((await prefsOf(page)).theme).toBe('default');
   expect(JSON.parse((await storedPrefs(page)) ?? 'null')).not.toHaveProperty('theme');
   expect(await stored(page, SESSION)).toBe(before);

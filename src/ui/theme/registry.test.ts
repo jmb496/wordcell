@@ -34,13 +34,13 @@ describe('theme registry', () => {
 
   it('AD-10 applyTheme switches between registered entries and entries() lists them in order', async () => {
     const { meta, root } = stubDocument();
-    const { applyTheme, defaultTheme, entries, register, testPaper } = await fresh();
+    const { applyTheme, defaultTheme, entries, register, paperTheme } = await fresh();
     register(defaultTheme);
-    register(testPaper);
+    register(paperTheme);
     expect(entries().map((entry) => entry.id)).toEqual(['default', 'paper']);
     applyTheme('paper');
     expect(root.dataset.theme).toBe('paper');
-    expect(meta.content).toBe(testPaper.meta);
+    expect(meta.content).toBe(paperTheme.meta);
     applyTheme('default');
     expect(root.dataset.theme).toBe('default');
     expect(meta.content).toBe(defaultTheme.meta);
