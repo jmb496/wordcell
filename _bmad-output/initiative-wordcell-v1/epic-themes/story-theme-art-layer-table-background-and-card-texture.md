@@ -47,3 +47,5 @@ Verify: npm run test:all and test:screens green; build under the 600,000-byte bu
 ## Notes
 
 - No open questions.
+
+- Owner decision 2026-10-18 (contrast floors): option A. The contrast check table's figures (card edge 3, outline 3, card text 4.5) are the minimum for every theme; DESIGN.md's higher figures (3.6, 3.8, 13.1) describe the default theme only. Technical defaults recorded with it: the art format requires an explicit fill on every shape (`fill="none"` allowed) so stroke-only shapes are measured correctly; table art is painted on the page background only. Close-out doc: DESIGN.md contrast section ← say its figures describe the default theme only (owner, 2026-10-18).
