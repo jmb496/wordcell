@@ -1,6 +1,6 @@
 # Review log — story-theme-daylight-paper (ticket 9.6)
 
-State: pass 2: done
+State: pass 3: done
 
 Pre-loop: HEAD 42fc3b8, copy `story-theme-daylight-paper.review-log.passes/pass0.md`, 150 words (budget 1500). No themes SPEC.md exists under `_bmad-output/specs/`; refs are the epic file (TH-1..TH-9), DESIGN.md Themes, the spine, AGENTS.md and the plans of 9.1-9.5.
 
@@ -36,3 +36,15 @@ Reviewers: fix-diff, edge-case, adversarial, ref-alignment  |  Findings: major 3
 Words: ~1118 (7.5 x pass 0)  |  Snapshot: story-theme-daylight-paper.review-log.passes/pass2.md
 ### Default applied (technical)
 - meta-equals-table test owned by contrast.test.ts, case-insensitive; `--wc-shadow-drag: rgb(0 0 0 / 0.35)`; scene-reach helper extracted to e2e/helpers/; error/selected states left to contrast row and owner gate
+
+## Pass 3 — 2026-10-19
+Reviewers: fix-diff, builder, adversarial, ref-alignment  |  Findings: major 2, minor ~9, decision-needed 0  |  Dropped in triage: 0
+### Findings (triaged)
+- [major] Verify line / Default baselines (TH-4) — the pass 1 fix claimed `preferences-panel.png` changes by the added radio; false: screens run serves `npm run dev`, main.ts already registers `testPaper` (same id, label, order) when `import.meta.env.DEV`, so the panel shows 3 radios today; no default baseline changes (verified in main.ts:223 and playwright.screens.config.ts)
+- [major] Meta bullet — contrast.test.ts does not import the registry (empty Map in Vitest); name the entries it imports (`defaultTheme`, `paperTheme`, `testGarden`) and compare each meta with the record's `--wc-table`
+- [minor] dist-smoke: give the new test name and assert radio order; Switch return-trip properties named (`--wc-table`, `--wc-card-face`); Hue-alone claim: plan fails the ticket if a shot lacks the state; dark-first-frame wording (index.html pre-paint sets data-theme; only meta lags) to be verified; Preferences/TH-4 clause drops with the false claim
+### Applied
+- 2 majors, 4 minors (fixer items 1-6). Finding: index.html's inline pre-paint script (lines 10-16) sets `data-theme` before first paint, so the page is already paper at first paint; only the static `theme-color` meta (`#15171B`) waits for main.ts. The decision-needed item from pass 1 therefore narrows (see Decision needed below).
+Words: see wc  |  Snapshot: story-theme-daylight-paper.review-log.passes/pass3.md
+### Decision needed (restated, functionality / UX / gameplay)
+- TH-3 first-paint — on a cold start with Daylight Paper stored, the page paints paper at once, but the browser/status-bar tint (`theme-color` meta) may show Charcoal's `#15171B` for one frame until main.ts sets it, and the installed-PWA splash (manifest `background_color`) stays dark. Accept, or approve an AD-16 edit to set the meta earlier? — proposed default: accept (ticket already says the meta waits for main.ts).
