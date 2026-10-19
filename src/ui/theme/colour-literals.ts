@@ -35,7 +35,7 @@ export const RUNTIME_ALLOWLIST: ReadonlySet<string> = new Set([
 ]);
 
 /** The token files: theme blocks of `--wc-*` declarations are exempt here (TH-2, TH-9). */
-export const TOKEN_FILES: readonly string[] = ['src/ui/app.css', 'src/ui/theme/garden.css'];
+export const TOKEN_FILES: readonly string[] = ['src/ui/app.css'];
 
 const NAMED = new Set(
   (

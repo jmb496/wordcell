@@ -217,7 +217,7 @@ export const text = Object.freeze({
   themeDefault: 'Charcoal',
   themeDeepSpace: 'Deep Space',
   themePaper: 'Daylight Paper',
-  themeGarden: 'Garden',
+  themeGreenhouseDusk: 'Greenhouse Dusk',
   // Epic 6 CAP-6 (ticket 6.5, R-84, Q-44, Q-35) Statistics panel (DESIGN.md Panels; the catalogue
   // lists only the empty line, so the other strings take that wording, flagged for the owner).
   // `statNone` stands for a value that does not exist; negatives use U+2212.

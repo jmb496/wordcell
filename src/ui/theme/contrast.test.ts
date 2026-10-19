@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { type Art, checkTexture, parseArt, worstSurfaces } from './art';
 import { themeRecords } from './colour-literals';
-import { defaultTheme, paperTheme, scifiTheme, testGarden } from './registry';
+import { defaultTheme, gardenTheme, paperTheme, scifiTheme } from './registry';
 
 interface Rgba {
   r: number;
@@ -142,9 +142,6 @@ function check(record: Record, figures: boolean, defaultKeys?: ReadonlySet<strin
 const read = (name: string) => readFileSync(fileURLToPath(new URL(name, import.meta.url)), 'utf8');
 const themes = themeRecords(read('../app.css'));
 const defaults = themes.get('default') as Record;
-// TH-9: the test sheet's tokens merge over the default record (art tokens only today).
-const sheet = themeRecords(read('./garden.css'));
-for (const [id, tokens] of sheet) themes.set(id, new Map([...defaults, ...tokens]));
 
 describe('AD-14 theme contrast', () => {
   it('AD-14 app.css has a default theme record', () => {
@@ -156,7 +153,7 @@ describe('AD-14 theme contrast', () => {
     expect(check(record, id === 'default', new Set(defaults.keys()))).toEqual([]);
   });
 
-  it.each([defaultTheme, scifiTheme, paperTheme, testGarden])(
+  it.each([defaultTheme, scifiTheme, gardenTheme, paperTheme])(
     'AD-14 the meta of theme $id equals its --wc-table',
     (entry) => {
       const table = (themes.get(entry.id) as Record).get('--wc-table') as string;
@@ -196,13 +193,12 @@ describe('AD-14 theme contrast', () => {
     expect(check(opaque, false).some((f) => f.startsWith('scrim'))).toBe(true);
   });
 
-  it('AD-14 the default theme declares both art tokens none; garden sets both from the test sheet', () => {
+  it('AD-14 the default theme declares both art tokens none; garden sets both art tokens in app.css', () => {
     expect(defaults.get(TABLE_ART)).toBe('none');
     expect(defaults.get(CARD_TEXTURE)).toBe('none');
     const garden = themes.get('garden') as Record;
     expect(parseArt(garden.get(TABLE_ART) as string)).not.toBeNull();
     expect(parseArt(garden.get(CARD_TEXTURE) as string)).not.toBeNull();
-    expect([...(sheet.get('garden') as Record).keys()].sort()).toEqual([CARD_TEXTURE, TABLE_ART]);
   });
 
   it('AD-14 the art keys are optional in the key-set check', () => {

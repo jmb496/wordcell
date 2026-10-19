@@ -1,8 +1,0 @@
-/* Test-only theme `garden` (epic themes entry 5, TH-9): the art hooks end to end. Loaded by
-   main.ts after app.css in test-hook builds only, so source order wins and dist/ never has it.
-   It sets the two art tokens and nothing else; Greenhouse Dusk replaces it later. Grammar and
-   contrast: art.ts, art.test.ts, contrast.test.ts. `#` is written %23. */
-[data-theme="garden"] {
-  --wc-table-art: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'><path d='M0 24C12 10 36 38 48 24M24 0V48' fill='none' stroke='%232e5a40' stroke-opacity='0.1'/><circle cx='12' cy='38' r='3' fill='%233b6b4f' fill-opacity='0.08'/><circle cx='38' cy='10' r='2' fill='%233b6b4f' fill-opacity='0.06'/></svg>");
-  --wc-card-texture: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'><path d='M0 4L8 7M8 12L16 9' fill='none' stroke='%23fff' stroke-opacity='0.03'/><circle cx='5' cy='11' r='1' fill='%23c8d8c0' fill-opacity='0.03'/></svg>");
-}

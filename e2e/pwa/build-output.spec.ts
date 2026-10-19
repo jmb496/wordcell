@@ -138,21 +138,27 @@ test('AD-10 the built CSS keeps the @container style(--wc-reduced branch, readin
   }
 });
 
-test('AD-14 TH-9 the test-only garden stylesheet is in dist-test and absent from dist; the scifi block is in both', () => {
-  // Epic themes ticket 5: main.ts imports garden.css only under the test-hook condition, so the
-  // production build must tree-shake it (the selector may be minified to unquoted form). Ticket 7:
-  // the scifi block is in app.css, so it ships in every build.
+test('AD-14 TH-9 the garden and scifi blocks and art are in dist and dist-test; steampunk and plum are absent', () => {
+  // Epic themes tickets 7 and 8: both blocks live in app.css, so they ship in every build (the
+  // selector may be minified to unquoted form). Each later theme ticket edits the absent list.
   const root = buildRoot();
   const files = walk(root).filter((file) => /^assets\/[^/]+\.(css|js)$/.test(file));
   expect(files.length).toBeGreaterThan(0);
   const all = files.map((file) => readSite(file)).join('\n');
-  const expected = process.env.PW_PREVIEW === 'dist-test';
+  const selector = (id: string) => new RegExp(`\\[data-theme=["']?${id}["']?\\]`).test(all);
   expect({
-    gardenSelector: /\[data-theme=["']?garden["']?\]/.test(all),
-    gardenArt: all.includes('%233b6b4f'),
-  }).toEqual({ gardenSelector: expected, gardenArt: expected });
-  expect({
-    scifiSelector: /\[data-theme=["']?scifi["']?\]/.test(all),
+    gardenSelector: selector('garden'),
+    gardenArt: all.includes('%238fdc9e'),
+    scifiSelector: selector('scifi'),
     scifiArt: all.includes('%2335d0ff'),
-  }).toEqual({ scifiSelector: true, scifiArt: true });
+    steampunkSelector: selector('steampunk'),
+    plumSelector: selector('plum'),
+  }).toEqual({
+    gardenSelector: true,
+    gardenArt: true,
+    scifiSelector: true,
+    scifiArt: true,
+    steampunkSelector: false,
+    plumSelector: false,
+  });
 });

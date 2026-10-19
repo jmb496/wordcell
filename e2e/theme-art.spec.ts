@@ -3,14 +3,14 @@ import { openFixture } from './helpers/board';
 import { onAndroid } from './helpers/project';
 import { tokenColor } from './helpers/style';
 
-// Epic themes ticket 5 (TH-5, TH-9, AD-14): the art hooks end to end on android, against a build
-// carrying the test hook (the test-only `garden` theme, src/ui/theme/garden.css, is registered
-// there). Fixture: `prefs-theme-garden`. Contrast floors: contrast.test.ts TABLE card-ink 4.5.
+// Epic themes ticket 5 (TH-5, TH-9, AD-14): the art hooks end to end on android, against the
+// dev server (Greenhouse Dusk `garden` and Deep Space `scifi` are registered in every build).
+// Fixture: `prefs-theme-garden`. Contrast floors: contrast.test.ts TABLE card-ink 4.5.
 
 test.beforeEach(onAndroid);
 
 const ARTS = [
-  { id: 'garden', prefs: 'prefs-theme-garden', radio: 'Garden' },
+  { id: 'garden', prefs: 'prefs-theme-garden', radio: 'Greenhouse Dusk' },
   { id: 'scifi', prefs: 'prefs-theme-scifi', radio: 'Deep Space' },
 ] as const;
 
