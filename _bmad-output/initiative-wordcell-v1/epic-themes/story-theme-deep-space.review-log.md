@@ -1,6 +1,6 @@
 # Review log — story-theme-deep-space.md (ticket 9.7)
 
-State: pass 2: done
+State: pass 3: done
 
 Pre-loop: HEAD 4bc178217cde6842ff7dae148c1a03463a76f96d; pass 0 copy /mnt/d/CodeProjects/wordcell/_bmad-output/initiative-wordcell-v1/epic-themes/story-theme-deep-space.review-log.passes/pass0.md (176 words by wc -w incl. frontmatter); budget 1500 words.
 
@@ -34,3 +34,14 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings (
 - frontmatter done_checkpoint (9.5/9.6 omit it; tickets.py falls back to toml); contrast themeRecords handling of art keys (existing mechanism reads app.css records, art keys skipped in key-set check); grid-path half-pixel clip (same as the approved mockups); TH-5 unshown states (as accepted in 9.6); tokens case/placement; pre-paint test; budget wording; fixture text beyond above
 Words: 1334 (7.58 x pass 0)  |  Snapshot: _bmad-output/initiative-wordcell-v1/epic-themes/story-theme-deep-space.review-log.passes/pass2.md
 Fixer applied items 1–9 (diff: _bmad-output/initiative-wordcell-v1/epic-themes/story-theme-deep-space.review-log.passes/pass2.fix.diff). Item 5 deviation: Charcoal sets data-theme to `default` (theme.spec.ts:148), so the ticket says `default`, not "attribute removed".
+
+## Pass 3 — 2026-10-19
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 9, decision-needed 0  |  Dropped in triage: 5
+### Majors (default applied, technical)
+- Art bullet: end state after a failed pixel check undefined (hitl false; test:all must pass before built) → plan left blocked, no theme commit, run stops with the measured ratio
+### Minor (applied, near-zero words)
+- "Default baselines" label vs paper shot; radio-order assertions follow the logged decision; name the dark-first-frame tint; `prefs-theme-scifi` needed only by the fixture-registry test in helpers.spec.ts and the screenshot spec
+### Dropped
+- brittle line numbers (already hedged with `~` and names); minifier re-encoding (plan checks against a real dist); tokens placement after paper (cosmetic, dropped in pass 2); TH-5 wording (dropped in pass 2); Switch whitespace (obvious handling)
+Words: 1413 (8.03 x pass 0)  |  Snapshot: _bmad-output/initiative-wordcell-v1/epic-themes/story-theme-deep-space.review-log.passes/pass3.md
+Fixer applied items 1–5 (diff: _bmad-output/initiative-wordcell-v1/epic-themes/story-theme-deep-space.review-log.passes/pass3.fix.diff).
