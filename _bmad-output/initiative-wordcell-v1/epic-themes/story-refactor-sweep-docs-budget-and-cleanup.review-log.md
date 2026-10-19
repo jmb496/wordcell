@@ -1,6 +1,6 @@
 # Review log — story-refactor-sweep-docs-budget-and-cleanup.md
 
-State: pass 3: done
+State: pass 4: done
 
 Pre-loop: HEAD c2fd7b5; pass0.md 121 words (budget 1200, set by the loop: the default 2.5x of 121 words would be 300, too small for the entry's verify, covers, risk, done_checkpoint and references plus the carried items; sibling tickets used 1200-1500).
 
@@ -57,3 +57,16 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 - Verify line: test:screens green or recorded as left to the owner (no Docker), `git status --porcelain`; "six ids" gloss in Scope 3; 1(b) read the actual ceiling constant and the 0.06 boundary, "none" = n/a; Scope 8 widen to entries 1-11 with a rule; covers note TH-2/TH-4 as constraints; entry references stay minimal in toml (report only); cite prefs tests by title.
 Words: 1204 (10 x pass 0, at budget 1200)  |  Snapshot: story-refactor-sweep-docs-budget-and-cleanup.review-log.passes/pass3.md
 Fixer applied majors 1-6 and the defaults; ran the dependencies comparison (output "null null": package.json has no dependencies key, so the check is equality of absence). Several zero-word minors skipped (six-ids gloss, 1(b) boundary, Scope 8 widening, covers note): left unapplied.
+
+## Pass 4 — 2026-10-19
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 3, minor 13 (merged from 20 raw), decision-needed 0  |  Dropped in triage: 0 (main.ts:229-234 registrations, app.css table-art stroke-opacity 0.07/0.08/0.25, contrast.test.ts ceiling on CARD_TEXTURE only verified; precision-in-procedure items reclassified minor under the pass-4 bar)
+### Majors (to apply)
+1. Scope 5 agreement test takes ids from `entries()`, which is empty until `register()` runs (production only in main.ts:229-234), so it checks its own list. Source the ids from the six exported theme records in §7.10 order and tie main.ts to them (a source scan or the existing boot test: main.ts registers exactly those six, in order).
+2. Scope 2 allow-list is builder-only: the owner reads it at the checkpoint; the plan names the exact grep/script and each allow-listed token with its declaring file.
+3. Verify line softened test:screens against tickets.toml entry 11's verify ("test:all and test:screens are green"): restore the entry's wording (no Docker = stop and report), keep the added dependencies comparison.
+### Minor (to apply, zero net words; ticket is over budget at 1204)
+- 1(b): contrast.test.ts enforces the 6 % ceiling on card texture only; table art (0.07, 0.08, 0.25 strokes) is outside it, so compare it and expect rows; Scope 2 grep: the six production registrations in main.ts are not scaffolding; item 4 stray double space and "(both `null` at last run)"; checkpoint line adds the outstanding play-tests (epic Done-when 5); trim to land at or under 1200 words.
+### Left unapplied (minor, over budget)
+- Locators for 1(c) sticky bars, flakiness load setup and file paths, Scope 6 count rule, Scope 7/8 command and mismatch rule, test:all vs final build figure, dependencies check vacuous (no `dependencies` key), toml references minimal (report only), Q-xx citation on owner-call rows.
+Words: 1200 (9.9 x pass 0, at budget 1200)  |  Snapshot: story-refactor-sweep-docs-budget-and-cleanup.review-log.passes/pass4.md
+Fixer applied majors 1-3 and zero-word minors; no new commands. Dropped from ticket to pay words: "A spec/spine disagreement is reported, not resolved." (AGENTS.md Policy already covers it).
