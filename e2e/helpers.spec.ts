@@ -33,6 +33,7 @@ import {
   space,
   targets,
 } from './helpers/gestures';
+import { openScene } from './helpers/how-to-play';
 import { arrangeByKeys, focusedCard, press, tiles, toComposing, tray, where } from './helpers/keys';
 import {
   animationFrames,
@@ -1219,5 +1220,43 @@ test.describe('keys helpers', () => {
     expect(at.place).toBe('tray');
     expect(await focusedCard(page)).toBe(at.card);
     expect(await press(page, 'F9')).toBe(false);
+  });
+});
+
+test.describe('openScene', () => {
+  test('AD-17 openScene reaches a scene by its dot and Next, and returns its figure', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.setViewportSize({ width: 360, height: 740 });
+    const start = await openScene(page, {
+      fixture: 'session-idle-fresh',
+      scene: 2,
+      id: 'freeLetter',
+      last: 0,
+    });
+    await expect(start.getByRole('button', { name: 'Next', exact: true })).toBeVisible();
+    await expect(start.getByRole('button', { name: 'Replay', exact: true })).toHaveCount(0);
+  });
+
+  test('AD-17 openScene seeds prefs and clicks Next `last` times to the Replay frame', async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.setViewportSize({ width: 360, height: 740 });
+    const final = await openScene(page, {
+      fixture: 'session-idle-fresh',
+      prefs: 'prefs-theme-paper',
+      scene: 2,
+      id: 'freeLetter',
+      last: 2,
+    });
+    await expect(final.getByRole('button', { name: 'Replay', exact: true })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe('paper');
+  });
+
+  test('AD-17 the prefs-theme-scifi fixture seeds the scifi theme', async ({ page }) => {
+    await openFixture(page, 'session-idle-fresh', { prefs: 'prefs-theme-scifi' });
+    expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe('scifi');
   });
 });

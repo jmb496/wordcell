@@ -1,0 +1,164 @@
+# Epic 9 — Alternate visual themes. Table order is the build order (TH-1 to TH-9).
+# Requirement source: the epic file's Requirements. Lane A (docs): entries 1, 2. Lane B (code): entries 3, 4, 5, 6, 7 in sequence because they all edit src/ui/app.css and PreferencesPanel.
+# Every UI entry's check includes npm run test:screens in the Playwright container (epic 5 retro L3).
+
+[[entry]]
+id = 1
+type = "spike"
+title = "Theme research and direction brief"
+description = "Runs bmad-deep-recon (competitive and user-voice: card, solitaire and word games with themes) and produces a brief of at least three candidate directions chosen from sci-fi, garden, steampunk and simple colour variations of the current dark look; each is a --wc-* token set plus optional table-background and card-face-texture art, shown as a static mockup of the same representative board in the app's real card sizes, with its contrast ratios computed."
+verify = "The brief and mockups are in the epic folder, every direction lists its computed contrast ratios against the DESIGN.md Colors figures, and the owner has recorded in the epic Notes which themes to build and which art (textures, table backgrounds) each includes, or that none is wanted."
+covers = ["TH-1", "TH-5", "TH-9"]
+after = []
+hitl = true
+risk = "medium"
+unknown = "Whether art (textures, backgrounds) can stay inside the 600,000-byte budget and keep letters legible; the mockups measure it."
+plan_checkpoint = true
+done_checkpoint = true
+references = ["design — DESIGN.md, Colors, Brand & Style, Avoid list", "code — src/ui/app.css (current tokens)"]
+
+[[entry]]
+id = 2
+type = "story"
+title = "Theme decisions into spec, UX and spine"
+description = "Writes the owner-approved changes into the docs: DESIGN.md (A-D1 superseded, Colors split into default tokens and per-theme token sets, the Avoid list relaxed only as the owner approves per theme, texture and background rules), EXPERIENCE.md Preferences (the Theme control), spec §7.10 and a new Q-id (manual choice, default dark, no prefers-color-scheme), AD-7 default and AD-10 prefs shape (optional theme field, version stays 1, Q-36 unchanged), and AD-16 for the pre-paint apply and theme-color meta. Every change is shown to the owner before it lands."
+verify = "The owner has approved each doc change, the spec, UX and spine agree with each other on the theme preference (no remaining 'one dark theme' statement that contradicts them), and bmad-review of the changed sections reports no major finding."
+covers = ["TH-7"]
+after = [1]
+hitl = true
+risk = "medium"
+plan_checkpoint = true
+done_checkpoint = true
+references = ["design — DESIGN.md A-D1, Colors, Avoid list", "architecture — ARCHITECTURE-SPINE.md AD-7, AD-10, AD-16", "rules — docs/game-flow-spec.md §7.10, Q-36", "constraint — AGENTS.md rule 7 (ask before deviating from spec or spine)"]
+
+[[entry]]
+id = 3
+type = "story"
+title = "Token plumbing and contrast harness"
+description = "Tracer bullet: moves every colour literal in src/** (e.g. src/ui/scenes/Scene.svelte) onto --wc-* tokens, gives the default theme an explicit [data-theme] token block with the same values, and adds a unit test that parses each theme's token values and asserts the WCAG ratios DESIGN.md Colors states plus a source scan that fails on a hex, rgb or hsl literal outside the token files. No visible change."
+verify = "npm run test:all and npm run test:screens are green with every existing screenshot baseline unchanged, the contrast test passes for the default theme, and the scan fails when a hex literal is added to a component."
+covers = ["TH-2", "TH-4", "TH-5"]
+after = []
+hitl = false
+risk = "medium"
+unknown = "How many colour literals exist beyond Scene.svelte, and whether scene-art colours should become tokens or stay fixed art."
+plan_checkpoint = true
+interface = "src/ui/app.css (or a themes/ token file), contrast test and literal scan as src/*.test.ts files; component CSS reads tokens only."
+tests = "Contrast ratios for the default token set (U); literal scan (U, outside the layer scans of AD-1); screenshots unchanged (screens)."
+owns = "The token files and the theme data format."
+consumers = "Every component using colour; epic 8 scene screenshots."
+references = ["design — DESIGN.md Colors", "code — src/ui/app.css, src/ui/scenes/Scene.svelte", "constraint — ARCHITECTURE-SPINE.md AD-14 (UI), AD-17 (tests)"]
+
+[[entry]]
+id = 4
+type = "story"
+title = "Theme preference and pre-paint apply"
+description = "Adds the optional theme field to the prefs store (version stays 1, absent means default, unknown theme id handled as Q-36 prescribes), a Theme control in the Preferences panel wrapped in act(), applying the theme as a root attribute before first paint in boot order, mirroring it to the theme-color meta, and the AD-17 test-hook and fixture support."
+verify = "npm run test:all and npm run test:screens are green with a Playwright android test that switches theme in Preferences, sees the root attribute and theme-color meta change, reloads without a flash of the default and keeps the choice, and a Vitest test that a stored v1 prefs without a theme loads with the default."
+covers = ["TH-3", "TH-7"]
+after = [2, 3]
+hitl = false
+risk = "medium"
+unknown = "How to make the first paint match a non-default theme without a blocking script that AD-16 forbids."
+plan_checkpoint = true
+interface = "src/shell/prefs.svelte.ts, src/ui/PreferencesPanel.svelte, text.ts, main.ts boot, index.html, test-hook.ts and e2e/globals.d.ts together."
+tests = "Prefs parse and defaults (U shell, AD-n names); switch, persist, reload (P6 android); screenshot of Preferences."
+owns = "The theme preference and the apply step."
+consumers = "Preferences panel screenshots; fixtures with prefs."
+references = ["architecture — ARCHITECTURE-SPINE.md AD-10, AD-16, AD-17", "rules — docs/game-flow-spec.md §7.10, Q-36", "code — src/shell/prefs.svelte.ts, src/ui/PreferencesPanel.svelte"]
+
+[[entry]]
+id = 5
+type = "story"
+title = "Theme art layer: table background and card texture"
+description = "Extends the theme data so a theme can supply a table background and a card-face texture (CSS or small SVG, lazily or inline per the size finding), applied through tokens, never changing layout or card size, behind Card and the page background, with the letter contrast measured over the texture's worst point and with a fallback-free fail-fast path if a theme's art fails to load."
+verify = "npm run test:all and npm run test:screens are green, a unit test fails when a texture token drops the card-ink contrast below DESIGN.md's ratio at its worst point, the default theme's baselines are unchanged, and the build stays under the 600,000-byte budget with the margin recorded."
+covers = ["TH-9", "TH-5", "TH-8"]
+after = [3]
+hitl = false
+risk = "high"
+unknown = "How the worst-point contrast of a texture is computed in a unit test; whether art is precached or fetched lazily under the AD-8 download-once rule."
+plan_checkpoint = true
+interface = "theme data fields for background and texture; Card.svelte and app.css consume tokens only."
+tests = "Worst-point contrast (U); no layout shift with art on (P6 android); screenshots per art theme come with entries 6 and 7."
+owns = "The art hooks in the theme format."
+consumers = "Card.svelte, Scene.svelte, Board background."
+references = ["design — DESIGN.md Brand & Style, Avoid list (gradients on cards)", "constraint — AGENTS.md Conventions (never override dontCacheBustURLsMatching), brief §6.8 size budget"]
+
+[[entry]]
+id = 6
+type = "story"
+title = "Theme: Daylight Paper"
+description = "Builds the Daylight Paper theme (id `paper`, the only light theme, `color-scheme: light`, no art) as the first alternate and the proof of the theme mechanism: a token set selectable in Preferences, covering all surfaces, states and the How to play scenes, with its contrast test and a screenshot baseline set (board, tray, a sheet, a scene) generated in the Playwright container."
+verify = "npm run test:all and npm run test:screens are green with the new theme's baselines committed, the contrast test passes for it, and a Playwright android test switches to it and back with the default baselines unchanged."
+covers = ["TH-5", "TH-6", "TH-3"]
+after = [3, 4, 5]
+hitl = false
+risk = "low"
+done_checkpoint = true
+references = ["design — the entry 1 brief, direction Daylight Paper", "design — DESIGN.md Themes"]
+
+[[entry]]
+id = 7
+type = "story"
+title = "Theme: Deep Space"
+description = "Builds the Deep Space theme (id `scifi`) from the 9.1 brief and DESIGN.md Themes: its token set in src/ui/app.css, using the art layer of entry 5 for the 48 px grid table and scan-line card face, selectable in Preferences, covering all surfaces, states and the How to play scenes, with its contrast test (worst-point and pixel-sampled over the texture) and a screenshot baseline set (board, tray, a sheet, a scene) generated in the Playwright container."
+verify = "npm run test:all and npm run test:screens are green with the theme's baselines committed, the contrast test passes for it, the size budget holds, a Playwright android test switches to it and back with the default baselines unchanged, and the owner has played it on his Android install."
+covers = ["TH-5", "TH-6", "TH-9", "TH-8"]
+after = [5, 6]
+hitl = false
+risk = "medium"
+done_checkpoint = true
+references = ["design — the entry 1 brief, direction Deep Space", "design — DESIGN.md Themes"]
+
+[[entry]]
+id = 8
+type = "story"
+title = "Theme: Greenhouse Dusk"
+description = "Builds the Greenhouse Dusk theme (id `garden`) from the 9.1 brief and DESIGN.md Themes: its token set in src/ui/app.css, using the art layer for the leaf-vein table and paper-fibre card face, selectable in Preferences, covering all surfaces, states and the How to play scenes, with its contrast test (worst-point and pixel-sampled over the texture) and a screenshot baseline set (board, tray, a sheet, a scene) generated in the Playwright container."
+verify = "npm run test:all and npm run test:screens are green with the theme's baselines committed, the contrast test passes for it, the size budget holds, a Playwright android test switches to it and back with the default baselines unchanged, and the owner has played it on his Android install."
+covers = ["TH-5", "TH-6", "TH-9", "TH-8"]
+after = [5, 7]
+hitl = false
+risk = "medium"
+done_checkpoint = true
+references = ["design — the entry 1 brief, direction Greenhouse Dusk", "design — DESIGN.md Themes"]
+
+[[entry]]
+id = 9
+type = "story"
+title = "Theme: Brass and Walnut"
+description = "Builds the Brass and Walnut theme (id `steampunk`) from the 9.1 brief and DESIGN.md Themes: its token set in src/ui/app.css, using the art layer for the wood-grain table and leather card face, selectable in Preferences, covering all surfaces, states and the How to play scenes, with its contrast test (worst-point and pixel-sampled over the texture) and a screenshot baseline set (board, tray, a sheet, a scene) generated in the Playwright container."
+verify = "npm run test:all and npm run test:screens are green with the theme's baselines committed, the contrast test passes for it, the size budget holds, a Playwright android test switches to it and back with the default baselines unchanged, and the owner has played it on his Android install."
+covers = ["TH-5", "TH-6", "TH-9", "TH-8"]
+after = [5, 8]
+hitl = false
+risk = "medium"
+done_checkpoint = true
+references = ["design — the entry 1 brief, direction Brass and Walnut", "design — DESIGN.md Themes"]
+
+[[entry]]
+id = 10
+type = "story"
+title = "Theme: Plum Dusk"
+description = "Builds the Plum Dusk theme (id `plum`) from the 9.1 brief and DESIGN.md Themes: its token set in src/ui/app.css, tokens only, no art, selectable in Preferences, covering all surfaces, states and the How to play scenes, with its contrast test and a screenshot baseline set (board, tray, a sheet, a scene) generated in the Playwright container."
+verify = "npm run test:all and npm run test:screens are green with the theme's baselines committed, the contrast test passes for it, the size budget holds, a Playwright android test switches to it and back with the default baselines unchanged, and the owner has played it on his Android install."
+covers = ["TH-5", "TH-6", "TH-9", "TH-8"]
+after = [6, 9]
+hitl = false
+risk = "low"
+done_checkpoint = true
+references = ["design — the entry 1 brief, direction Plum Dusk", "design — DESIGN.md Themes"]
+
+[[entry]]
+id = 11
+type = "story"
+title = "Refactor sweep: docs, budget and cleanup"
+description = "Removes dead tokens and any temporary theme scaffolding, confirms the spec, UX docs and spine match what was built, measures the bundle against the 600,000-byte budget and records the margin, and lists review findings deferred during the epic."
+verify = "npm run test:all and npm run test:screens are green, the build size is under 600,000 bytes with the margin recorded, and no unused token or theme scaffolding remains."
+covers = ["TH-7", "TH-8"]
+after = [3, 4, 5, 6, 7, 8, 9, 10]
+hitl = false
+risk = "low"
+done_checkpoint = true
+references = ["constraint — docs/development-methodology.md, Definition of done"]

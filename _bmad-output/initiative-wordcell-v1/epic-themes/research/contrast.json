@@ -1,0 +1,776 @@
+{
+  "default": {
+    "rows": [
+      {
+        "label": "card ink on card face",
+        "fg": "#f3eee4",
+        "bg": "#23262c",
+        "ratio": 13.11,
+        "floor": 13.1,
+        "pass": true
+      },
+      {
+        "label": "outline on table",
+        "fg": "#6e7480",
+        "bg": "#15171b",
+        "ratio": 3.82,
+        "floor": 3.8,
+        "pass": true
+      },
+      {
+        "label": "outline on surface",
+        "fg": "#6e7480",
+        "bg": "#1e2127",
+        "ratio": 3.44,
+        "floor": 3.4,
+        "pass": true
+      },
+      {
+        "label": "card edge on table",
+        "fg": "#6a707c",
+        "bg": "#15171b",
+        "ratio": 3.61,
+        "floor": 3.6,
+        "pass": true
+      },
+      {
+        "label": "card edge on surface",
+        "fg": "#6a707c",
+        "bg": "#1e2127",
+        "ratio": 3.24,
+        "floor": 3.2,
+        "pass": true
+      },
+      {
+        "label": "ink secondary on surface",
+        "fg": "#a9a398",
+        "bg": "#1e2127",
+        "ratio": 6.44,
+        "floor": 6.4,
+        "pass": true
+      },
+      {
+        "label": "ink secondary on surface raised",
+        "fg": "#a9a398",
+        "bg": "#282c34",
+        "ratio": 5.59,
+        "floor": 5.6,
+        "pass": true
+      },
+      {
+        "label": "accent teal on surface",
+        "fg": "#3dbdb5",
+        "bg": "#1e2127",
+        "ratio": 7.02,
+        "floor": 7,
+        "pass": true
+      },
+      {
+        "label": "accent teal on card face",
+        "fg": "#3dbdb5",
+        "bg": "#23262c",
+        "ratio": 6.6,
+        "floor": 6.6,
+        "pass": true
+      },
+      {
+        "label": "ink on accent orange",
+        "fg": "#15171b",
+        "bg": "#ef7a3d",
+        "ratio": 6.43,
+        "floor": 6.4,
+        "pass": true
+      },
+      {
+        "label": "card ink on destination fill",
+        "fg": "#f3eee4",
+        "bg": "#2e3a52",
+        "ratio": 9.85,
+        "floor": 9.9,
+        "pass": true
+      },
+      {
+        "label": "error on surface",
+        "fg": "#f08a84",
+        "bg": "#1e2127",
+        "ratio": 6.66,
+        "floor": 6.7,
+        "pass": true
+      },
+      {
+        "label": "ink primary on table",
+        "fg": "#f3eee4",
+        "bg": "#15171b",
+        "ratio": 15.52,
+        "floor": 4.5,
+        "pass": true
+      },
+      {
+        "label": "destination outline on table",
+        "fg": "#7fa2d6",
+        "bg": "#15171b",
+        "ratio": 6.87,
+        "floor": 3,
+        "pass": true
+      }
+    ],
+    "allPass": true
+  },
+  "scifi": {
+    "rows": [
+      {
+        "label": "card ink on card face",
+        "fg": "#e6f4ff",
+        "bg": "#0f1830",
+        "ratio": 15.71,
+        "floor": 13.1,
+        "pass": true
+      },
+      {
+        "label": "outline on table",
+        "fg": "#6d7fa6",
+        "bg": "#0a0f1c",
+        "ratio": 4.77,
+        "floor": 3.8,
+        "pass": true
+      },
+      {
+        "label": "outline on surface",
+        "fg": "#6d7fa6",
+        "bg": "#111a2e",
+        "ratio": 4.32,
+        "floor": 3.4,
+        "pass": true
+      },
+      {
+        "label": "card edge on table",
+        "fg": "#6a82b8",
+        "bg": "#0a0f1c",
+        "ratio": 5.01,
+        "floor": 3.6,
+        "pass": true
+      },
+      {
+        "label": "card edge on surface",
+        "fg": "#6a82b8",
+        "bg": "#111a2e",
+        "ratio": 4.54,
+        "floor": 3.2,
+        "pass": true
+      },
+      {
+        "label": "ink secondary on surface",
+        "fg": "#9fb2d4",
+        "bg": "#111a2e",
+        "ratio": 8.09,
+        "floor": 6.4,
+        "pass": true
+      },
+      {
+        "label": "ink secondary on surface raised",
+        "fg": "#9fb2d4",
+        "bg": "#1a2641",
+        "ratio": 7.01,
+        "floor": 5.6,
+        "pass": true
+      },
+      {
+        "label": "accent teal on surface",
+        "fg": "#35d0ff",
+        "bg": "#111a2e",
+        "ratio": 9.59,
+        "floor": 7,
+        "pass": true
+      },
+      {
+        "label": "accent teal on card face",
+        "fg": "#35d0ff",
+        "bg": "#0f1830",
+        "ratio": 9.73,
+        "floor": 6.6,
+        "pass": true
+      },
+      {
+        "label": "ink on accent orange",
+        "fg": "#0a0f1c",
+        "bg": "#ffb02e",
+        "ratio": 10.47,
+        "floor": 6.4,
+        "pass": true
+      },
+      {
+        "label": "card ink on destination fill",
+        "fg": "#e6f4ff",
+        "bg": "#2a2860",
+        "ratio": 11.94,
+        "floor": 9.9,
+        "pass": true
+      },
+      {
+        "label": "error on surface",
+        "fg": "#ff8f9a",
+        "bg": "#111a2e",
+        "ratio": 7.97,
+        "floor": 6.7,
+        "pass": true
+      },
+      {
+        "label": "ink primary on table",
+        "fg": "#e6f4ff",
+        "bg": "#0a0f1c",
+        "ratio": 17.08,
+        "floor": 4.5,
+        "pass": true
+      },
+      {
+        "label": "destination outline on table",
+        "fg": "#9a8cff",
+        "bg": "#0a0f1c",
+        "ratio": 6.89,
+        "floor": 3,
+        "pass": true
+      },
+      {
+        "label": "card ink over worst face-texture point",
+        "ratio": 14.1,
+        "floor": 13.1,
+        "pass": true
+      },
+      {
+        "label": "card edge over worst face-texture point (info)",
+        "ratio": 4.14,
+        "floor": 3,
+        "pass": true
+      },
+      {
+        "label": "card edge over worst table-texture point",
+        "ratio": 4.47,
+        "floor": 3.6,
+        "pass": true
+      },
+      {
+        "label": "outline over worst table-texture point",
+        "ratio": 4.26,
+        "floor": 3.8,
+        "pass": true
+      }
+    ],
+    "allPass": true
+  },
+  "garden": {
+    "rows": [
+      {
+        "label": "card ink on card face",
+        "fg": "#f6f0dc",
+        "bg": "#16231a",
+        "ratio": 14.28,
+        "floor": 13.1,
+        "pass": true
+      },
+      {
+        "label": "outline on table",
+        "fg": "#7a9482",
+        "bg": "#101a14",
+        "ratio": 5.41,
+        "floor": 3.8,
+        "pass": true
+      },
+      {
+        "label": "outline on surface",
+        "fg": "#7a9482",
+        "bg": "#18271e",
+        "ratio": 4.74,
+        "floor": 3.4,
+        "pass": true
+      },
+      {
+        "label": "card edge on table",
+        "fg": "#7a9a84",
+        "bg": "#101a14",
+        "ratio": 5.75,
+        "floor": 3.6,
+        "pass": true
+      },
+      {
+        "label": "card edge on surface",
+        "fg": "#7a9a84",
+        "bg": "#18271e",
+        "ratio": 5.03,
+        "floor": 3.2,
+        "pass": true
+      },
+      {
+        "label": "ink secondary on surface",
+        "fg": "#b4bfa6",
+        "bg": "#18271e",
+        "ratio": 8.12,
+        "floor": 6.4,
+        "pass": true
+      },
+      {
+        "label": "ink secondary on surface raised",
+        "fg": "#b4bfa6",
+        "bg": "#223528",
+        "ratio": 6.81,
+        "floor": 5.6,
+        "pass": true
+      },
+      {
+        "label": "accent teal on surface",
+        "fg": "#8fdc9e",
+        "bg": "#18271e",
+        "ratio": 9.57,
+        "floor": 7,
+        "pass": true
+      },
+      {
+        "label": "accent teal on card face",
+        "fg": "#8fdc9e",
+        "bg": "#16231a",
+        "ratio": 10,
+        "floor": 6.6,
+        "pass": true
+      },
+      {
+        "label": "ink on accent orange",
+        "fg": "#101a14",
+        "bg": "#f2a23a",
+        "ratio": 8.48,
+        "floor": 6.4,
+        "pass": true
+      },
+      {
+        "label": "card ink on destination fill",
+        "fg": "#f6f0dc",
+        "bg": "#4a2f48",
+        "ratio": 10.28,
+        "floor": 9.9,
+        "pass": true
+      },
+      {
+        "label": "error on surface",
+        "fg": "#ff9a8a",
+        "bg": "#18271e",
+        "ratio": 7.6,
+        "floor": 6.7,
+        "pass": true
+      },
+      {
+        "label": "ink primary on table",
+        "fg": "#f6f0dc",
+        "bg": "#101a14",
+        "ratio": 15.61,
+        "floor": 4.5,
+        "pass": true
+      },
+      {
+        "label": "destination outline on table",
+        "fg": "#e0a8d0",
+        "bg": "#101a14",
+        "ratio": 9.05,
+        "floor": 3,
+        "pass": true
+      },
+      {
+        "label": "card ink over worst face-texture point",
+        "ratio": 13.25,
+        "floor": 13.1,
+        "pass": true
+      },
+      {
+        "label": "card edge over worst face-texture point (info)",
+        "ratio": 4.88,
+        "floor": 3,
+        "pass": true
+      },
+      {
+        "label": "card edge over worst table-texture point",
+        "ratio": 4.86,
+        "floor": 3.6,
+        "pass": true
+      },
+      {
+        "label": "outline over worst table-texture point",
+        "ratio": 4.58,
+        "floor": 3.8,
+        "pass": true
+      }
+    ],
+    "allPass": true
+  },
+  "steampunk": {
+    "rows": [
+      {
+        "label": "card ink on card face",
+        "fg": "#fbf0d6",
+        "bg": "#231810",
+        "ratio": 15.32,
+        "floor": 13.1,
+        "pass": true
+      },
+      {
+        "label": "outline on table",
+        "fg": "#b09878",
+        "bg": "#1d1510",
+        "ratio": 6.52,
+        "floor": 3.8,
+        "pass": true
+      },
+      {
+        "label": "outline on surface",
+        "fg": "#b09878",
+        "bg": "#2a1f17",
+        "ratio": 5.82,
+        "floor": 3.4,
+        "pass": true
+      },
+      {
+        "label": "card edge on table",
+        "fg": "#b08d57",
+        "bg": "#1d1510",
+        "ratio": 5.82,
+        "floor": 3.6,
+        "pass": true
+      },
+      {
+        "label": "card edge on surface",
+        "fg": "#b08d57",
+        "bg": "#2a1f17",
+        "ratio": 5.2,
+        "floor": 3.2,
+        "pass": true
+      },
+      {
+        "label": "ink secondary on surface",
+        "fg": "#c8b48f",
+        "bg": "#2a1f17",
+        "ratio": 7.94,
+        "floor": 6.4,
+        "pass": true
+      },
+      {
+        "label": "ink secondary on surface raised",
+        "fg": "#c8b48f",
+        "bg": "#3a2b20",
+        "ratio": 6.71,
+        "floor": 5.6,
+        "pass": true
+      },
+      {
+        "label": "accent teal on surface",
+        "fg": "#5cc8bd",
+        "bg": "#2a1f17",
+        "ratio": 8,
+        "floor": 7,
+        "pass": true
+      },
+      {
+        "label": "accent teal on card face",
+        "fg": "#5cc8bd",
+        "bg": "#231810",
+        "ratio": 8.64,
+        "floor": 6.6,
+        "pass": true
+      },
+      {
+        "label": "ink on accent orange",
+        "fg": "#1d1510",
+        "bg": "#e8863a",
+        "ratio": 6.77,
+        "floor": 6.4,
+        "pass": true
+      },
+      {
+        "label": "card ink on destination fill",
+        "fg": "#fbf0d6",
+        "bg": "#232c46",
+        "ratio": 12.19,
+        "floor": 9.9,
+        "pass": true
+      },
+      {
+        "label": "error on surface",
+        "fg": "#f59a8c",
+        "bg": "#2a1f17",
+        "ratio": 7.56,
+        "floor": 6.7,
+        "pass": true
+      },
+      {
+        "label": "ink primary on table",
+        "fg": "#fbf0d6",
+        "bg": "#1d1510",
+        "ratio": 15.88,
+        "floor": 4.5,
+        "pass": true
+      },
+      {
+        "label": "destination outline on table",
+        "fg": "#a8b8d8",
+        "bg": "#1d1510",
+        "ratio": 9.01,
+        "floor": 3,
+        "pass": true
+      },
+      {
+        "label": "card ink over worst face-texture point",
+        "ratio": 14.49,
+        "floor": 13.1,
+        "pass": true
+      },
+      {
+        "label": "card edge over worst face-texture point (info)",
+        "ratio": 5.31,
+        "floor": 3,
+        "pass": true
+      },
+      {
+        "label": "card edge over worst table-texture point",
+        "ratio": 3.93,
+        "floor": 3.6,
+        "pass": true
+      },
+      {
+        "label": "outline over worst table-texture point",
+        "ratio": 4.4,
+        "floor": 3.8,
+        "pass": true
+      }
+    ],
+    "allPass": true
+  },
+  "paper": {
+    "rows": [
+      {
+        "label": "card ink on card face",
+        "fg": "#1d1b17",
+        "bg": "#fffdf7",
+        "ratio": 16.9,
+        "floor": 13.1,
+        "pass": true
+      },
+      {
+        "label": "outline on table",
+        "fg": "#6d6757",
+        "bg": "#ece6d8",
+        "ratio": 4.53,
+        "floor": 3.8,
+        "pass": true
+      },
+      {
+        "label": "outline on surface",
+        "fg": "#6d6757",
+        "bg": "#f6f2e8",
+        "ratio": 5.04,
+        "floor": 3.4,
+        "pass": true
+      },
+      {
+        "label": "card edge on table",
+        "fg": "#6a6455",
+        "bg": "#ece6d8",
+        "ratio": 4.73,
+        "floor": 3.6,
+        "pass": true
+      },
+      {
+        "label": "card edge on surface",
+        "fg": "#6a6455",
+        "bg": "#f6f2e8",
+        "ratio": 5.27,
+        "floor": 3.2,
+        "pass": true
+      },
+      {
+        "label": "ink secondary on surface",
+        "fg": "#55503f",
+        "bg": "#f6f2e8",
+        "ratio": 7.21,
+        "floor": 6.4,
+        "pass": true
+      },
+      {
+        "label": "ink secondary on surface raised",
+        "fg": "#55503f",
+        "bg": "#ffffff",
+        "ratio": 8.06,
+        "floor": 5.6,
+        "pass": true
+      },
+      {
+        "label": "accent teal on surface",
+        "fg": "#065a55",
+        "bg": "#f6f2e8",
+        "ratio": 7.22,
+        "floor": 7,
+        "pass": true
+      },
+      {
+        "label": "accent teal on card face",
+        "fg": "#065a55",
+        "bg": "#fffdf7",
+        "ratio": 7.94,
+        "floor": 6.6,
+        "pass": true
+      },
+      {
+        "label": "ink on accent orange",
+        "fg": "#ffffff",
+        "bg": "#9c3a08",
+        "ratio": 6.95,
+        "floor": 6.4,
+        "pass": true
+      },
+      {
+        "label": "card ink on destination fill",
+        "fg": "#1d1b17",
+        "bg": "#dbe6f7",
+        "ratio": 13.65,
+        "floor": 9.9,
+        "pass": true
+      },
+      {
+        "label": "error on surface",
+        "fg": "#8f1f17",
+        "bg": "#f6f2e8",
+        "ratio": 7.91,
+        "floor": 6.7,
+        "pass": true
+      },
+      {
+        "label": "ink primary on table",
+        "fg": "#1d1b17",
+        "bg": "#ece6d8",
+        "ratio": 13.82,
+        "floor": 4.5,
+        "pass": true
+      },
+      {
+        "label": "destination outline on table",
+        "fg": "#2f5a99",
+        "bg": "#ece6d8",
+        "ratio": 5.55,
+        "floor": 3,
+        "pass": true
+      }
+    ],
+    "allPass": true
+  },
+  "dusk": {
+    "rows": [
+      {
+        "label": "card ink on card face",
+        "fg": "#f6eee6",
+        "bg": "#271f30",
+        "ratio": 13.81,
+        "floor": 13.1,
+        "pass": true
+      },
+      {
+        "label": "outline on table",
+        "fg": "#807590",
+        "bg": "#17121c",
+        "ratio": 4.27,
+        "floor": 3.8,
+        "pass": true
+      },
+      {
+        "label": "outline on surface",
+        "fg": "#807590",
+        "bg": "#211a29",
+        "ratio": 3.91,
+        "floor": 3.4,
+        "pass": true
+      },
+      {
+        "label": "card edge on table",
+        "fg": "#7e7290",
+        "bg": "#17121c",
+        "ratio": 4.12,
+        "floor": 3.6,
+        "pass": true
+      },
+      {
+        "label": "card edge on surface",
+        "fg": "#7e7290",
+        "bg": "#211a29",
+        "ratio": 3.77,
+        "floor": 3.2,
+        "pass": true
+      },
+      {
+        "label": "ink secondary on surface",
+        "fg": "#b5a9bd",
+        "bg": "#211a29",
+        "ratio": 7.53,
+        "floor": 6.4,
+        "pass": true
+      },
+      {
+        "label": "ink secondary on surface raised",
+        "fg": "#b5a9bd",
+        "bg": "#2d2438",
+        "ratio": 6.6,
+        "floor": 5.6,
+        "pass": true
+      },
+      {
+        "label": "accent teal on surface",
+        "fg": "#5ed6c2",
+        "bg": "#211a29",
+        "ratio": 9.54,
+        "floor": 7,
+        "pass": true
+      },
+      {
+        "label": "accent teal on card face",
+        "fg": "#5ed6c2",
+        "bg": "#271f30",
+        "ratio": 8.96,
+        "floor": 6.6,
+        "pass": true
+      },
+      {
+        "label": "ink on accent orange",
+        "fg": "#17121c",
+        "bg": "#f4a14a",
+        "ratio": 8.81,
+        "floor": 6.4,
+        "pass": true
+      },
+      {
+        "label": "card ink on destination fill",
+        "fg": "#f6eee6",
+        "bg": "#2c3655",
+        "ratio": 10.36,
+        "floor": 9.9,
+        "pass": true
+      },
+      {
+        "label": "error on surface",
+        "fg": "#f59aa0",
+        "bg": "#211a29",
+        "ratio": 8.05,
+        "floor": 6.7,
+        "pass": true
+      },
+      {
+        "label": "ink primary on table",
+        "fg": "#f6eee6",
+        "bg": "#17121c",
+        "ratio": 16.05,
+        "floor": 4.5,
+        "pass": true
+      },
+      {
+        "label": "destination outline on table",
+        "fg": "#8fb0e8",
+        "bg": "#17121c",
+        "ratio": 8.37,
+        "floor": 3,
+        "pass": true
+      }
+    ],
+    "allPass": true
+  }
+}

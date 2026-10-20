@@ -317,7 +317,7 @@ test.describe('§2 Session rejected', () => {
         kind: 'active',
         session: after.stored,
         history: historyText !== undefined ? JSON.parse(historyText) : { version: 1, records: [] },
-        prefs: { version: 1, animationSpeed: 'normal', showTimer: false },
+        prefs: { version: 1, animationSpeed: 'normal', showTimer: false, theme: 'default' },
       });
       await expect(page.getByTestId('card-0')).toBeVisible();
       await expect(page.getByRole('alertdialog')).toHaveCount(0);
@@ -383,7 +383,7 @@ test.describe('Q-38 single instance', () => {
       kind: 'active',
       session: session2,
       history: { version: 1, records: [] },
-      prefs: { version: 1, animationSpeed: 'normal', showTimer: false },
+      prefs: { version: 1, animationSpeed: 'normal', showTimer: false, theme: 'default' },
     });
   });
 
@@ -413,7 +413,7 @@ test.describe('Q-38 single instance', () => {
     expect(await page1.evaluate(() => window.__wordcell?.loaded())).toEqual({
       session: null,
       history: null,
-      prefs: { rejected: { reason: 'version-unreadable' } },
+      prefs: null, // AD-16: prefs load first, before the held font check, so the foreign write comes after it
     });
 
     const dialog = await page1.getByRole('alertdialog').elementHandle();

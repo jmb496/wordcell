@@ -11,7 +11,7 @@ test.beforeEach(() => {
 });
 
 const PREFS = 'wordcell:prefs';
-const DEFAULTS = { version: 1, animationSpeed: 'normal', showTimer: false };
+const DEFAULTS = { version: 1, animationSpeed: 'normal', showTimer: false, theme: 'default' };
 
 // AD-10: a root CSS variable as computed.
 function cssVar(page: Page, name: string): Promise<string> {
@@ -54,17 +54,17 @@ test('§7.10 non-default prefs set 320ms and survive New game and reload', async
   await seedStorage(page, { session: fixture('session-gave-up.json'), prefs: text });
   await openBoard(page);
   expect(await cssVar(page, '--wc-base-ms')).toBe('320ms');
-  expect(await prefsOf(page)).toEqual(JSON.parse(text));
+  expect(await prefsOf(page)).toEqual({ ...JSON.parse(text), theme: 'default' });
   const primary = page.getByTestId('primary-action');
   await expect(primary).toHaveText('New game');
   await primary.click();
   await expect(primary).not.toHaveText('New game');
   expect(await storedPrefs(page)).toBe(text);
-  expect(await prefsOf(page)).toEqual(JSON.parse(text));
+  expect(await prefsOf(page)).toEqual({ ...JSON.parse(text), theme: 'default' });
   expect(await cssVar(page, '--wc-base-ms')).toBe('320ms');
   await reload(page);
   expect(await storedPrefs(page)).toBe(text);
-  expect(await prefsOf(page)).toEqual(JSON.parse(text));
+  expect(await prefsOf(page)).toEqual({ ...JSON.parse(text), theme: 'default' });
   expect(await cssVar(page, '--wc-base-ms')).toBe('320ms');
 });
 
@@ -81,7 +81,7 @@ test('§7.10 non-default prefs survive Undo and Redo', async ({ page }) => {
   await expect(page.getByTestId('redo')).toBeDisabled();
   expect(await storedPrefs(page)).toBe(text);
   expect(await cssVar(page, '--wc-base-ms')).toBe('320ms');
-  expect(await prefsOf(page)).toEqual(JSON.parse(text));
+  expect(await prefsOf(page)).toEqual({ ...JSON.parse(text), theme: 'default' });
 });
 
 test('Q-36 unreadable prefs give the defaults silently and stay untouched', async ({ page }) => {

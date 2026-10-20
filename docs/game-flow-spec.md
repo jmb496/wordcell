@@ -1,6 +1,6 @@
 # WordCell – Game flow specification
 
-Status: v0.9, 2026-09-30. Jared answered Q-01…Q-33 on 2026-09-26 (Q-26…Q-33 were raised by the
+Status: v0.10, 2026-10-18. Jared answered Q-01…Q-33 on 2026-09-26 (Q-26…Q-33 were raised by the
 review loop, see `game-flow-spec.review-log.md`); the decisions are recorded in §9 and applied to
 the rules below. There are no open questions. v0.6 only refines the test-coverage rule in this
 preamble, as the product brief's success criterion 4 requires. v0.7 adds Q-34 (a short drag that never leaves its source column is a cancel,
@@ -10,7 +10,7 @@ answered by Jared on 2026-09-27; Q-41 amends the §2 replay paragraph and Q-43 r
 record identity. v0.9 adds Q-44 (best and average score exclude negative given-up games, R-84),
 answered by Jared on 2026-09-30, and tags the R-50 and R-83 UI sentences (UI) (owner-approved
 the same day); on 2026-10-01 Jared amended Q-42's service-worker branch (epic 3
-retrospective). Every rule has an id (R-xx) so
+retrospective). v0.10 adds Q-45 (the look is a manual theme choice in Preferences, default Charcoal, answered by Jared on 2026-10-18) and extends §7.10. Every rule has an id (R-xx) so
 tests, specs and tickets can cite it. A "(UI)" in a rule's id tags the whole rule; a trailing
 "(UI)" tags only the sentence it ends. Tagged rules and sentences are satisfied by a Playwright
 test naming the R-id; every untagged sentence that states engine behaviour by an engine unit test
@@ -403,7 +403,7 @@ This section is how the rules above surface on a touch screen. It is a starting 
    drag, and a drag never triggers the press. On desktop, hovering the cell for the same delay
    opens the same overlay. In Idle with no tail selected, a plain tap on a WordCell may also open
    it, since tap has no other meaning there. UX to confirm.
-10. **Preferences** in v1: animation speed (fast/normal/slow) and Show timer. No sound effects
+10. **Preferences** in v1: animation speed (fast/normal/slow), Show timer and Theme (Charcoal, Deep Space, Greenhouse Dusk, Brass and Walnut, Daylight Paper, Plum Dusk; Q-45). No sound effects
     (Q-20), no hints (Q-19), no auto-confirm (Q-07), no keyboard-shortcuts toggle: shortcuts are
     simply available on desktop (Q-24). Preferences are stored separately from the Session, are
     not part of the move history or undo, and survive New game / Replay this deal.
@@ -427,7 +427,7 @@ currently shows `L` as its top card, add it (R-33) and arrange → **BALKED** (6
 removing S, col1 is `F`; it must be included → **FAKED**, or with `L` → **FLAKED**. Laying
 `DEKA…` under col3 without `B` is not allowed while col3 has cards.
 
-## 9. Decisions (Q-01 … Q-44, answered 2026-09-26, 2026-09-27 and 2026-09-30)
+## 9. Decisions (Q-01 … Q-45, answered 2026-09-26, 2026-09-27, 2026-09-30 and 2026-10-18)
 
 | # | Question | Decision |
 |---|---|---|
@@ -475,3 +475,4 @@ removing S, col1 is `F`; it must be included → **FAKED**, or with `L` → **FL
 | Q-42 | The dictionary banner's Reload after a deploy removed the old word-list file? | Any 404 on the word list makes the banner's next Reload tap reload the page (never automatically); under a controlling service worker, Reload retries the download in place with the banner kept visible during the retry, never reloads the page, and the banner hides when the retry succeeds (owner, 2026-10-01) (answered 2026-09-27). R-38. |
 | Q-43 | How does Undo of a finish find its record without tying the score history to scoring rules? | By seed, outcome and active duration; the history's version changes only when the record's shape changes (answered 2026-09-27). R-84. |
 | Q-44 | Should a given-up game with a negative score pull down best and average score? | No (answered 2026-09-30): best score and average score exclude given-up records whose final score is negative; a given-up record scoring 0 or more and every won record count. Excluded records still count in games played, games given up and longest word ever. When no record qualifies, best and average are absent (shown as —). R-84. |
+| Q-45 | How is the look chosen? | By hand in Preferences only (answered 2026-10-18). The default is Charcoal, the current dark look. The app never follows `prefers-color-scheme`. The choice is stored with the preferences, applies at once and survives New game and Replay. Themes change colours, the table background and card-face textures, never layout, card size, rules or the deal. §7.10. |

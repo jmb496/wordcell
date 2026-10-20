@@ -79,13 +79,15 @@ for (const colorScheme of ['dark', 'light'] as const) {
         };
       }),
     );
-    for (const element of base) {
+    // Epic themes TH-9: the table paints on `html` only; `body` has no background.
+    const backgrounds = ['rgb(21, 23, 27)', 'rgba(0, 0, 0, 0)'];
+    for (const [i, element] of base.entries()) {
       expect(element).toEqual({
         overflowX: 'visible',
         overflowY: 'visible',
         overscrollBehaviorX: 'none',
         overscrollBehaviorY: 'none',
-        backgroundColor: 'rgb(21, 23, 27)',
+        backgroundColor: backgrounds[i],
       });
     }
 

@@ -19,11 +19,17 @@ type HistoryRejectReason = ParseHistoryResult extends infer R
   : never;
 
 // AD-10 prefs (src/shell/prefs.svelte.ts), declared inline.
+type ThemeId = 'default' | 'scifi' | 'garden' | 'steampunk' | 'paper' | 'plum';
+
 type Prefs = {
   readonly version: 1;
   readonly animationSpeed: 'fast' | 'normal' | 'slow';
   readonly showTimer: boolean;
+  readonly theme: ThemeId;
 };
+
+// `loaded().prefs`: the stored shape, `theme` present only when stored.
+type StoredPrefs = Omit<Prefs, 'theme'> & { readonly theme?: ThemeId };
 
 type PrefsRejectReason =
   | { readonly reason: 'version-unreadable' }
@@ -35,7 +41,7 @@ declare global {
       loaded(): {
         readonly session: Session | null | { readonly rejected: RejectReason };
         readonly history: ScoreHistory | null | { readonly rejected: HistoryRejectReason };
-        readonly prefs: Prefs | null | { readonly rejected: PrefsRejectReason };
+        readonly prefs: StoredPrefs | null | { readonly rejected: PrefsRejectReason };
       };
       current():
         | { readonly kind: 'booting' }

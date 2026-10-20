@@ -1,5 +1,5 @@
 // AD-10 preferences store: the owner of `wordcell:prefs` and the motion variables. `load()` (called
-// by `main.ts` between the font check and `game.load()`, AD-16) parses the key once and never
+// by `main.ts` first in boot, before `nav.launch()`, AD-16) parses the key once and never
 // writes; an absent key gives the AD-7 defaults, an unreadable or unknown-version one the defaults
 // silently (Q-36), replaced on the first changing setter call. The setters write at once (AD-10),
 // throwing while the game store is halted or booting (AD-15). `motion` is derived from the prefs
@@ -18,14 +18,27 @@ import {
 
 export type AnimationSpeed = 'fast' | 'normal' | 'slow';
 
+/** AD-7 theme ids (Q-45). */
+export type ThemeId = 'default' | 'scifi' | 'garden' | 'steampunk' | 'paper' | 'plum';
+
+/** AD-7 stored shape: `theme` is present only when stored (a writer omits `default`). */
+export type StoredPrefs = {
+  readonly version: 1;
+  readonly animationSpeed: AnimationSpeed;
+  readonly showTimer: boolean;
+  readonly theme?: ThemeId;
+};
+
+/** The resolved in-memory prefs: `theme` is `default` when not stored. */
 export type Prefs = {
   readonly version: 1;
   readonly animationSpeed: AnimationSpeed;
   readonly showTimer: boolean;
+  readonly theme: ThemeId;
 };
 
 export type ParsePrefsResult =
-  | { readonly ok: true; readonly prefs: Prefs }
+  | { readonly ok: true; readonly prefs: StoredPrefs }
   | { readonly ok: false; readonly reason: 'version-unreadable' }
   | {
       readonly ok: false;
@@ -37,15 +50,21 @@ export type ParsePrefsResult =
 export type PrefsRejectReason = RejectReasonOf<ParsePrefsResult>;
 
 /** AD-17 `loaded().prefs`: stored shape, `null` when absent. */
-export type LoadedPrefs = Prefs | null | { readonly rejected: PrefsRejectReason };
+export type LoadedPrefs = StoredPrefs | null | { readonly rejected: PrefsRejectReason };
 
 export type Motion = { readonly baseMs: number; readonly reduced: boolean };
 
 // AD-7 defaults.
-const DEFAULTS: Prefs = { version: 1, animationSpeed: 'normal', showTimer: false };
+const DEFAULTS: Prefs = {
+  version: 1,
+  animationSpeed: 'normal',
+  showTimer: false,
+  theme: 'default',
+};
 const BASE_MS: Record<AnimationSpeed, number> = { fast: 90, normal: 180, slow: 320 };
 const SPEEDS: readonly string[] = Object.keys(BASE_MS);
-const FIELDS = Object.keys(DEFAULTS).sort();
+const THEMES: readonly string[] = ['default', 'scifi', 'garden', 'steampunk', 'paper', 'plum'];
+const REQUIRED = ['animationSpeed', 'showTimer', 'version'];
 
 /** Q-36: parses stored prefs; the failure reasons mirror `parseHistory`'s. */
 export function parsePrefs(text: string): ParsePrefsResult {
@@ -64,10 +83,15 @@ export function parsePrefs(text: string): ParsePrefsResult {
     return { ok: false, reason: 'version-unreadable' };
   }
   if (version !== 1) return { ok: false, reason: 'version-unknown', version };
-  const keys = Object.keys(record).sort();
+  // AD-7: `theme` is optional; any other key set is unreadable.
+  const hasTheme = Object.hasOwn(record, 'theme');
+  const keys = Object.keys(record)
+    .filter((key) => key !== 'theme')
+    .sort();
   if (
-    keys.length !== FIELDS.length ||
-    keys.some((key, i) => key !== FIELDS[i]) ||
+    keys.length !== REQUIRED.length ||
+    keys.some((key, i) => key !== REQUIRED[i]) ||
+    (hasTheme && (typeof record.theme !== 'string' || !THEMES.includes(record.theme))) ||
     typeof record.animationSpeed !== 'string' ||
     !SPEEDS.includes(record.animationSpeed) ||
     typeof record.showTimer !== 'boolean'
@@ -80,6 +104,7 @@ export function parsePrefs(text: string): ParsePrefsResult {
       version: 1,
       animationSpeed: record.animationSpeed as AnimationSpeed,
       showTimer: record.showTimer,
+      ...(hasTheme ? { theme: record.theme as ThemeId } : {}),
     },
   };
 }
@@ -108,7 +133,7 @@ function load(): void {
     const result = parsePrefs(text);
     if (result.ok) {
       launch.set(result.prefs);
-      value = result.prefs;
+      value = { ...result.prefs, theme: result.prefs.theme ?? 'default' };
     } else {
       launch.set({ rejected: rejectReason(result) });
     }
@@ -125,14 +150,24 @@ function load(): void {
 // AD-10: state check, same-value no-op, write, then memory and the mirror (a throwing write
 // propagates with nothing changed, rule 6).
 function set(
-  setter: 'setAnimationSpeed' | 'setShowTimer',
+  setter: 'setAnimationSpeed' | 'setShowTimer' | 'setTheme',
   animationSpeed: AnimationSpeed,
   showTimer: boolean,
+  theme: ThemeId,
 ): void {
   assertWritable(game.state.kind, setter);
-  if (animationSpeed === value.animationSpeed && showTimer === value.showTimer) return;
-  const next: Prefs = { version: 1, animationSpeed, showTimer };
-  const text = JSON.stringify(next);
+  if (
+    animationSpeed === value.animationSpeed &&
+    showTimer === value.showTimer &&
+    theme === value.theme
+  ) {
+    return;
+  }
+  const next: Prefs = { version: 1, animationSpeed, showTimer, theme };
+  // AD-7: writers omit `theme` iff it is `default`.
+  const stored: StoredPrefs =
+    theme === 'default' ? { version: 1, animationSpeed, showTimer } : next;
+  const text = JSON.stringify(stored);
   write(PREFS_KEY, text);
   lastText.remember(text);
   value = next;
@@ -140,11 +175,25 @@ function set(
 }
 
 function setAnimationSpeed(animationSpeed: AnimationSpeed): void {
-  set('setAnimationSpeed', animationSpeed, value.showTimer);
+  set('setAnimationSpeed', animationSpeed, value.showTimer, value.theme);
 }
 
 function setShowTimer(showTimer: boolean): void {
-  set('setShowTimer', value.animationSpeed, showTimer);
+  set('setShowTimer', value.animationSpeed, showTimer, value.theme);
+}
+
+// AD-10: the UI's theme apply, registered by `main.ts` (shell never imports `src/ui/`).
+let themeChange: ((theme: ThemeId) => void) | null = null;
+
+function onThemeChange(callback: (theme: ThemeId) => void): void {
+  themeChange = callback;
+}
+
+// Q-45: write first, then (only on a changed value after a successful write) the callback.
+function setTheme(theme: ThemeId): void {
+  const before = value.theme;
+  set('setTheme', value.animationSpeed, value.showTimer, theme);
+  if (value.theme !== before) themeChange?.(value.theme);
 }
 
 /** Q-38: whether `wordcell:prefs` differs from the text this store last read or wrote. */
@@ -168,5 +217,7 @@ export const prefs = {
   loaded,
   setAnimationSpeed,
   setShowTimer,
+  setTheme,
+  onThemeChange,
   isStale,
 };

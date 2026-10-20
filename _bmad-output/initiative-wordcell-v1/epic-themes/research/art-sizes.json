@@ -1,0 +1,44 @@
+{
+  "default": {
+    "tokenCssRawBytes": 455,
+    "tokenCssGzipBytes": 257,
+    "svgTilesRawBytes": 0,
+    "svgTilesGzipBytes": 0,
+    "totalGzipBytes": 257
+  },
+  "scifi": {
+    "tokenCssRawBytes": 453,
+    "tokenCssGzipBytes": 259,
+    "svgTilesRawBytes": 287,
+    "svgTilesGzipBytes": 265,
+    "totalGzipBytes": 524
+  },
+  "garden": {
+    "tokenCssRawBytes": 454,
+    "tokenCssGzipBytes": 255,
+    "svgTilesRawBytes": 409,
+    "svgTilesGzipBytes": 332,
+    "totalGzipBytes": 587
+  },
+  "steampunk": {
+    "tokenCssRawBytes": 457,
+    "tokenCssGzipBytes": 260,
+    "svgTilesRawBytes": 434,
+    "svgTilesGzipBytes": 317,
+    "totalGzipBytes": 577
+  },
+  "paper": {
+    "tokenCssRawBytes": 453,
+    "tokenCssGzipBytes": 254,
+    "svgTilesRawBytes": 0,
+    "svgTilesGzipBytes": 0,
+    "totalGzipBytes": 254
+  },
+  "dusk": {
+    "tokenCssRawBytes": 452,
+    "tokenCssGzipBytes": 258,
+    "svgTilesRawBytes": 0,
+    "svgTilesGzipBytes": 0,
+    "totalGzipBytes": 258
+  }
+}

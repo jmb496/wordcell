@@ -6,9 +6,8 @@
   font-style: normal;
   font-display: block;
 }
-:root {
-  color-scheme: dark;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+:root,
+[data-theme="default"] {
   /* DESIGN.md colors, in order. */
   --wc-table: #15171b;
   --wc-surface: #1e2127;
@@ -28,14 +27,170 @@
   --wc-destination-fill: #2e3a52;
   --wc-error: #f08a84;
   --wc-scrim: #000000b3;
+  /* Internal tokens, not DESIGN.md colour roles. */
+  --wc-shadow-drag: #0008;
+  --wc-scene-pointer-fill: #fff;
+  --wc-scene-pointer-stroke: #1a1a1a;
+  --wc-scene-pointer-shadow: rgb(0 0 0 / 0.45);
+  /* Epic themes TH-9: optional art, `none` or one inline SVG data URI (src/ui/theme/art.ts). */
+  --wc-table-art: none;
+  --wc-card-texture: none;
+}
+:root {
+  color-scheme: dark;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   color: var(--wc-ink-primary);
+}
+/* Deep Space (epic themes TH-5): values from research/brief.md section A; art per the 9.5 grammar. */
+[data-theme="scifi"] {
+  color-scheme: dark;
+  --wc-table: #0a0f1c;
+  --wc-surface: #111a2e;
+  --wc-surface-raised: #1a2641;
+  --wc-hairline: #25355a;
+  --wc-outline: #6d7fa6;
+  --wc-card-face: #0f1830;
+  --wc-card-edge: #6a82b8;
+  --wc-card-ink: #e6f4ff;
+  --wc-ink-primary: #e6f4ff;
+  --wc-ink-secondary: #9fb2d4;
+  --wc-ink-disabled: #5e6e92;
+  --wc-ink-on-accent: #0a0f1c;
+  --wc-accent-teal: #35d0ff;
+  --wc-accent-orange: #ffb02e;
+  --wc-destination: #9a8cff;
+  --wc-destination-fill: #2a2860;
+  --wc-error: #ff8f9a;
+  --wc-scrim: #000000b3;
+  --wc-shadow-drag: rgb(0 0 0 / 0.35);
+  --wc-scene-pointer-fill: #fff;
+  --wc-scene-pointer-stroke: #1a1a1a;
+  --wc-scene-pointer-shadow: rgb(0 0 0 / 0.45);
+  --wc-table-art: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'><path d='M48 0H0V48' fill='none' stroke='%2335d0ff' stroke-opacity='0.07'/></svg>");
+  --wc-card-texture: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'><rect width='4' height='1' fill='%2335d0ff' fill-opacity='0.06'/></svg>");
+}
+/* Greenhouse Dusk (epic themes TH-5): values from research/brief.md section B; art per the 9.5 grammar. */
+[data-theme="garden"] {
+  color-scheme: dark;
+  --wc-table: #101a14;
+  --wc-surface: #18271e;
+  --wc-surface-raised: #223528;
+  --wc-hairline: #2f4637;
+  --wc-outline: #7a9482;
+  --wc-card-face: #16231a;
+  --wc-card-edge: #7a9a84;
+  --wc-card-ink: #f6f0dc;
+  --wc-ink-primary: #f6f0dc;
+  --wc-ink-secondary: #b4bfa6;
+  --wc-ink-disabled: #6e7c68;
+  --wc-ink-on-accent: #101a14;
+  --wc-accent-teal: #8fdc9e;
+  --wc-accent-orange: #f2a23a;
+  --wc-destination: #e0a8d0;
+  --wc-destination-fill: #4a2f48;
+  --wc-error: #ff9a8a;
+  --wc-scrim: #000000b3;
+  --wc-shadow-drag: rgb(0 0 0 / 0.35);
+  --wc-scene-pointer-fill: #fff;
+  --wc-scene-pointer-stroke: #1a1a1a;
+  --wc-scene-pointer-shadow: rgb(0 0 0 / 0.45);
+  --wc-table-art: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'><path d='M0 52C18 52 22 36 32 32S50 14 64 12' fill='none' stroke='%238fdc9e' stroke-width='1.2' stroke-opacity='0.08'/><path d='M0 12C14 14 24 26 32 32S52 50 64 52' fill='none' stroke='%238fdc9e' stroke-width='1.2' stroke-opacity='0.08'/><path d='M32 0V64' fill='none' stroke='%238fdc9e' stroke-width='1.2' stroke-opacity='0.08'/></svg>");
+  --wc-card-texture: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='6' height='6' viewBox='0 0 6 6'><path d='M0 1L3 0M3 4L6 3' fill='none' stroke='%23f6f0dc' stroke-width='1' stroke-opacity='0.03'/></svg>");
+}
+/* Brass and Walnut (epic themes TH-5): values from research/brief.md section C; art per the 9.5 grammar. */
+[data-theme="steampunk"] {
+  color-scheme: dark;
+  --wc-table: #1d1510;
+  --wc-surface: #2a1f17;
+  --wc-surface-raised: #3a2b20;
+  --wc-hairline: #4a382a;
+  --wc-outline: #b09878;
+  --wc-card-face: #231810;
+  --wc-card-edge: #b08d57;
+  --wc-card-ink: #fbf0d6;
+  --wc-ink-primary: #fbf0d6;
+  --wc-ink-secondary: #c8b48f;
+  --wc-ink-disabled: #8a7860;
+  --wc-ink-on-accent: #1d1510;
+  --wc-accent-teal: #5cc8bd;
+  --wc-accent-orange: #e8863a;
+  --wc-destination: #a8b8d8;
+  --wc-destination-fill: #232c46;
+  --wc-error: #f59a8c;
+  --wc-scrim: #000000b3;
+  --wc-shadow-drag: rgb(0 0 0 / 0.35);
+  --wc-scene-pointer-fill: #fff;
+  --wc-scene-pointer-stroke: #1a1a1a;
+  --wc-scene-pointer-shadow: rgb(0 0 0 / 0.45);
+  --wc-table-art: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40' viewBox='0 0 80 40'><path d='M0 6H80M0 13H55M0 22H80M0 29H40M0 35H70' fill='none' stroke='%23b08d57' stroke-opacity='0.07'/><path d='M0 39.5H80' fill='none' stroke='%23000' stroke-opacity='0.25'/></svg>");
+  --wc-card-texture: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'><path d='M1.2 2a.8 .8 0 1 0 1.6 0a.8 .8 0 1 0 -1.6 0M5.2 6a.8 .8 0 1 0 1.6 0a.8 .8 0 1 0 -1.6 0' fill='%23b08d57' fill-opacity='0.04'/></svg>");
+}
+/* Daylight Paper (epic themes TH-4): values from research/brief.md section D. Placed after the
+   default block and the dark `color-scheme` rule so it overrides the latter. */
+[data-theme="paper"] {
+  color-scheme: light;
+  --wc-table: #ece6d8;
+  --wc-surface: #f6f2e8;
+  --wc-surface-raised: #ffffff;
+  --wc-hairline: #d6cebb;
+  --wc-outline: #6d6757;
+  --wc-card-face: #fffdf7;
+  --wc-card-edge: #6a6455;
+  --wc-card-ink: #1d1b17;
+  --wc-ink-primary: #1d1b17;
+  --wc-ink-secondary: #55503f;
+  --wc-ink-disabled: #8c8671;
+  --wc-ink-on-accent: #ffffff;
+  --wc-accent-teal: #065a55;
+  --wc-accent-orange: #9c3a08;
+  --wc-destination: #2f5a99;
+  --wc-destination-fill: #dbe6f7;
+  --wc-error: #8f1f17;
+  --wc-scrim: #000000b3;
+  --wc-shadow-drag: rgb(0 0 0 / 0.35);
+  --wc-scene-pointer-fill: #fff;
+  --wc-scene-pointer-stroke: #1a1a1a;
+  --wc-scene-pointer-shadow: rgb(0 0 0 / 0.45);
+  --wc-table-art: none;
+  --wc-card-texture: none;
+}
+/* Plum Dusk (epic themes TH-5): brief.md section E, owner-deepened 2026-10-19 (richer plum, rose act accent); tokens only, no art. */
+[data-theme="plum"] {
+  color-scheme: dark;
+  --wc-table: #1d1028;
+  --wc-surface: #2a1a3a;
+  --wc-surface-raised: #382450;
+  --wc-hairline: #4d3568;
+  --wc-outline: #9484ad;
+  --wc-card-face: #34224a;
+  --wc-card-edge: #9582b0;
+  --wc-card-ink: #f6eee6;
+  --wc-ink-primary: #f6eee6;
+  --wc-ink-secondary: #c3b3d1;
+  --wc-ink-disabled: #86759a;
+  --wc-ink-on-accent: #1d1028;
+  --wc-accent-teal: #f08fc0;
+  --wc-accent-orange: #f4a14a;
+  --wc-destination: #a7a8f2;
+  --wc-destination-fill: #33306a;
+  --wc-error: #ffa08c;
+  --wc-scrim: #000000b3;
+  --wc-shadow-drag: rgb(0 0 0 / 0.35);
+  --wc-scene-pointer-fill: #fff;
+  --wc-scene-pointer-stroke: #1a1a1a;
+  --wc-scene-pointer-shadow: rgb(0 0 0 / 0.45);
 }
 html,
 body {
   margin: 0;
   overscroll-behavior: none;
   height: 100%;
-  background: var(--wc-table);
+}
+/* TH-9: the table art is painted on the page background only; body has none. */
+html {
+  background-color: var(--wc-table);
+  background-image: var(--wc-table-art);
+  background-attachment: scroll;
 }
 /* build-notes CAP-1: clientWidth stays stable when the page starts scrolling; AD-11: no browser
    scroll anchoring beside the layout's own anchor write. */

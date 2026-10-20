@@ -47,3 +47,10 @@ slug = "epic-how-to-play-scenes"
 title = "How to play with animated scenes"
 covers = []
 after = [{ epic = 6, needs = "the How to play panel and its text.ts howTo block, the panel shell, act(), motion.ts durations and the Animation speed preference" }]
+
+[[epic]]
+id = 9
+slug = "epic-themes"
+title = "Alternate visual themes"
+covers = []
+after = [{ epic = 8, needs = "the accepted How to play scenes (Scene.svelte colours and their screenshot baselines) that themes must cover" }]

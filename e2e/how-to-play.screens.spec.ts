@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { text } from '../src/ui/text';
-import { openFixture } from './helpers/board';
+import { openScene } from './helpers/how-to-play';
 
 // Epic 8: the How to play scene final frames at 360 px. android; baselines are generated and
 // compared only in the Playwright container (npm run test:screens).
@@ -28,15 +28,12 @@ for (const [n, id, last] of [
   test(`AD-17 how to play scene ${n} final frame screenshot at 360 px`, async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.setViewportSize({ width: 360, height: 740 });
-    await openFixture(page, 'session-idle-fresh');
-    await page.getByRole('button', { name: 'Menu', exact: true }).click();
-    await page.getByRole('button', { name: 'How to play', exact: true }).click();
-    const panel = page.getByRole('dialog', { name: 'How to play', exact: true });
-    await panel.getByRole('button', { name: text.howTo.carousel.dot(n, 5), exact: true }).click();
-    const scene = panel.getByRole('figure', { name: text.howTo.scenes[id] });
-    await expect(scene).toBeVisible();
-    for (let i = 0; i < last; i++)
-      await scene.getByRole('button', { name: next, exact: true }).click();
+    const scene = await openScene(page, {
+      fixture: 'session-idle-fresh',
+      scene: n,
+      id,
+      last,
+    });
     await expect(scene.getByRole('button', { name: replay, exact: true })).toBeVisible();
     await expect(scene).toHaveScreenshot(`how-to-play-scene-${n}-final.png`);
   });
@@ -47,13 +44,12 @@ for (const [n, id, last] of [
 test('AD-17 how to play scene 5 start frame screenshot at 360 px', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width: 360, height: 740 });
-  await openFixture(page, 'session-idle-fresh');
-  await page.getByRole('button', { name: 'Menu', exact: true }).click();
-  await page.getByRole('button', { name: 'How to play', exact: true }).click();
-  const panel = page.getByRole('dialog', { name: 'How to play', exact: true });
-  await panel.getByRole('button', { name: text.howTo.carousel.dot(5, 5), exact: true }).click();
-  const scene = panel.getByRole('figure', { name: text.howTo.scenes.scoring });
-  await expect(scene).toBeVisible();
+  const scene = await openScene(page, {
+    fixture: 'session-idle-fresh',
+    scene: 5,
+    id: 'scoring',
+    last: 0,
+  });
   await expect(scene.getByRole('button', { name: next, exact: true })).toBeVisible();
   await expect(scene).toHaveScreenshot('how-to-play-scene-5-start.png');
 });

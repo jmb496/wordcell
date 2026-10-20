@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en" data-theme="paper"><head><meta charset="utf-8"><meta name="viewport" content="width=360">
+<title>WordCell mockup: Colour variation: Daylight Paper (light)</title>
+<style>
+@font-face{font-family:"WordCell Serif";src:url("../../../../../src/ui/assets/wordcell-serif.woff2") format("woff2");font-weight:600}
+:root{color-scheme:light;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--wc-table:#ece6d8;--wc-surface:#f6f2e8;--wc-surface-raised:#ffffff;--wc-hairline:#d6cebb;--wc-outline:#6d6757;--wc-card-face:#fffdf7;--wc-card-edge:#6a6455;--wc-card-ink:#1d1b17;--wc-ink-primary:#1d1b17;--wc-ink-secondary:#55503f;--wc-ink-disabled:#8c8671;--wc-ink-on-accent:#ffffff;--wc-accent-teal:#065a55;--wc-accent-orange:#9c3a08;--wc-destination:#2f5a99;--wc-destination-fill:#dbe6f7;--wc-error:#8f1f17;--wc-scrim:#000000b3;color:var(--wc-ink-primary)}
+html,body{margin:0;background:var(--wc-table);}
+body{width:360px;min-height:740px;position:relative}
+.bar{width:352px;margin:0 auto;height:44px;display:flex;align-items:center;gap:8px;background:var(--wc-table)}
+.bar b{flex:1;text-align:center;font-weight:600}.bar span{width:44px;text-align:center;color:var(--wc-ink-secondary)}
+.board{width:352px;margin:0 auto;display:flex}
+.col{width:44px}
+.slot{width:44px;height:44px;flex:none}.slot.full{height:53px}
+.face{position:relative;box-sizing:border-box;width:40px;height:53px;margin:0 2px;background:var(--wc-card-face);border:1px solid var(--wc-card-edge);border-radius:6px;color:var(--wc-card-ink);isolation:isolate}
+.face::after{content:'';position:absolute;left:20%;width:60%;top:calc(86% - 3px);height:3px;border-bottom:1px solid var(--wc-card-edge);border-radius:0 0 50% 50%}
+.glyph{position:absolute;left:0;right:0;top:0;height:72%;display:flex;align-items:center;justify-content:center;font-family:"WordCell Serif",serif;font-weight:600;line-height:1;font-size:22.4px}
+.glyph.qu{top:12px;height:calc(72% - 12px);font-size:17.6px}
+.badge{position:absolute;top:1px;right:1px;width:18px;height:12px;display:grid;place-items:center;border-radius:9999px;background:var(--wc-accent-orange);color:var(--wc-ink-on-accent);font:700 11px/1 system-ui}
+.mark{position:absolute;z-index:1;bottom:2px;right:3px;font:700 11px/1 system-ui;color:var(--wc-card-ink)}.star{color:var(--wc-accent-orange)}
+.sel .face{outline:2px solid var(--wc-accent-teal);outline-offset:-2px;transform:translateY(-6px);box-shadow:0 6px 16px #0008}
+.ghost{background:none;border:1px dashed var(--wc-outline)}.ghost::after{content:none}
+.foot{width:352px;margin:0 auto;display:flex;height:44px}.foot i{width:44px;display:block;position:relative}
+.foot i::before{content:'';position:absolute;inset:6px 2px;border:1px dashed var(--wc-outline);border-radius:6px}
+.tray{width:352px;margin:4px auto 0;background:var(--wc-surface);border-radius:8px;padding:6px 0 6px}
+.tray .word{padding:0 8px;font-size:12px;color:var(--wc-ink-secondary);letter-spacing:.08em}
+.tiles{display:flex;padding:4px 4px}
+.tiles .block .face{background:var(--wc-destination-fill);border:2px solid var(--wc-destination)}
+.tiles .block .face::after{content:none}
+.ctl{display:flex;justify-content:space-between;padding:4px 8px 0;font-size:12px;color:var(--wc-ink-secondary)}
+.cellrow{width:352px;margin:6px auto 0;display:flex}
+.cellcol{width:44px}.num{display:block;text-align:center;font-size:11px;color:var(--wc-ink-secondary);height:14px}
+.action{width:352px;margin:8px auto 0}
+.btn{height:44px;border-radius:8px;background:var(--wc-accent-orange);color:var(--wc-ink-on-accent);display:grid;place-items:center;font-weight:700}
+.msg{width:352px;margin:6px auto 0;font-size:12px;color:var(--wc-error)}
+.label{position:absolute;right:4px;top:4px;font-size:9px;color:var(--wc-ink-disabled)}
+</style></head><body>
+<div class="bar"><span>☰</span><b>Score 124</b><span>↶ ↷</span></div>
+<div class="board"><div class="col"><div class="slot"><div class="face"><span class="glyph">F</span></div></div><div class="slot"><div class="face"><span class="glyph">R</span></div></div><div class="slot"><div class="face"><span class="glyph">O</span></div></div><div class="slot"><div class="face"><span class="glyph">S</span></div></div><div class="slot full"><div class="face"><span class="glyph">T</span></div></div></div><div class="col"><div class="slot"><div class="face"><span class="glyph">L</span></div></div><div class="slot"><div class="face"><span class="glyph">A</span></div></div><div class="slot"><div class="face"><span class="glyph">M</span></div></div><div class="slot full"><div class="face"><span class="glyph">P</span></div></div></div><div class="col"><div class="slot"><div class="face"><span class="glyph">E</span></div></div><div class="slot"><div class="face"><span class="glyph">N</span></div></div><div class="slot"><div class="face"><span class="glyph qu">Qu</span><span class="badge">×2</span></div></div><div class="slot"><div class="face"><span class="glyph">I</span></div></div><div class="slot"><div class="face"><span class="glyph">D</span></div></div><div class="slot full"><div class="face"><span class="glyph">K</span></div></div></div><div class="col"><div class="slot"><div class="face"><span class="glyph">W</span></div></div><div class="slot"><div class="face"><span class="glyph">H</span></div></div><div class="slot"><div class="face"><span class="glyph">Y</span></div></div><div class="slot full"><div class="face"><span class="glyph">R</span><span class="mark star">★</span></div></div></div><div class="col"><div class="slot"><div class="face"><span class="glyph">T</span></div></div><div class="slot"><div class="face"><span class="glyph">O</span></div></div><div class="slot"><div class="face"><span class="glyph">B</span></div></div><div class="slot"><div class="face"><span class="glyph">E</span></div></div><div class="slot full"><div class="face"><span class="glyph">A</span></div></div></div><div class="col"><div class="slot"><div class="face"><span class="glyph">G</span></div></div><div class="slot"><div class="face"><span class="glyph">U</span></div></div><div class="slot"><div class="face"><span class="glyph">S</span></div></div><div class="slot"><div class="face"><span class="glyph">T</span></div></div><div class="slot"><div class="face"><span class="glyph">E</span></div></div><div class="slot full sel"><div class="face"><span class="glyph">V</span></div></div></div><div class="col"><div class="slot"><div class="face"><span class="glyph">C</span></div></div><div class="slot"><div class="face"><span class="glyph">N</span></div></div><div class="slot"><div class="face"><span class="glyph">I</span></div></div><div class="slot full"><div class="face"><span class="glyph">Z</span></div></div></div><div class="col"><div class="slot"><div class="face"><span class="glyph">J</span></div></div><div class="slot"><div class="face"><span class="glyph">E</span></div></div><div class="slot"><div class="face"><span class="glyph">L</span></div></div><div class="slot"><div class="face"><span class="glyph">X</span></div></div><div class="slot full"><div class="face"><span class="glyph">D</span></div></div></div></div>
+<div class="foot"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+<div class="tray"><div class="word">BAKED</div>
+<div class="tiles"><div class="slot full block"><div class="face"><span class="glyph">B</span><span class="mark lock">🔒︎</span></div></div><div class="slot full block"><div class="face"><span class="glyph">A</span></div></div><div class="slot full block"><div class="face"><span class="glyph">K</span></div></div><div class="slot full"><div class="face"><span class="glyph">E</span></div></div><div class="slot full"><div class="face"><span class="glyph">D</span></div></div></div>
+<div class="ctl"><span>− 3 +</span><span>⇄ Flip</span><span>5 letters</span></div></div>
+<div class="cellrow"><div class="cellcol"><span class="num">3</span><div class="slot full"><div class="face"><span class="glyph">F</span></div></div></div><div class="cellcol"><span class="num">4</span><div class="slot full"><div class="face ghost"></div></div></div><div class="cellcol"><span class="num">5</span><div class="slot full"><div class="face"><span class="glyph">L</span></div></div></div><div class="cellcol"><span class="num">6</span><div class="slot full"><div class="face ghost"></div></div></div><div class="cellcol"><span class="num">7</span><div class="slot full"><div class="face ghost"></div></div></div><div class="cellcol"><span class="num">8</span><div class="slot full"><div class="face ghost"></div></div></div><div class="cellcol"><span class="num">9</span><div class="slot full"><div class="face ghost"></div></div></div><div class="cellcol"><span class="num">10</span><div class="slot full"><div class="face ghost"></div></div></div></div>
+<div class="msg">✕ QUIJO is not a word</div>
+<div class="action"><div class="btn">Validate</div></div>
+<div class="label">Colour variation: Daylight Paper (light) · 360 px · cards 40×53</div>
+</body></html>

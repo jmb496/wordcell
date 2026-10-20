@@ -139,7 +139,7 @@ const inPlace = $derived(place !== undefined);
     width: var(--wc-w); height: var(--wc-H); border: 1px dashed var(--wc-outline);
     border-radius: 6px; pointer-events: none;
   }
-  .wordcell :global(.face.wc-drag-layer) { z-index: 5; box-shadow: 0 6px 16px #0008; }
+  .wordcell :global(.face.wc-drag-layer) { z-index: 5; box-shadow: 0 6px 16px var(--wc-shadow-drag); }
   /* Epic 5 SPEC CAP-8 (DESIGN.md Layer order): a FLIP-gliding face (flip.ts `wc-glide`, literal
      from gestures/classes.ts) rides above the cards and under the sticky bars (2), no shadow. */
   .wordcell :global(.face.wc-glide) { z-index: 1; }

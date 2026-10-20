@@ -137,3 +137,30 @@ test('AD-10 the built CSS keeps the @container style(--wc-reduced branch, readin
     expect(branch).not.toMatch(/120\s*ms/);
   }
 });
+
+test('AD-14 TH-9 the garden, scifi, steampunk and plum blocks (art for the first three) are in dist and dist-test', () => {
+  // Epic themes tickets 7 to 10: the garden, scifi, steampunk and plum blocks live in app.css, so they ship in every
+  // build (the selector may be minified to unquoted form). Plum has no art marker; no theme is absent.
+  const root = buildRoot();
+  const files = walk(root).filter((file) => /^assets\/[^/]+\.(css|js)$/.test(file));
+  expect(files.length).toBeGreaterThan(0);
+  const all = files.map((file) => readSite(file)).join('\n');
+  const selector = (id: string) => new RegExp(`\\[data-theme=["']?${id}["']?\\]`).test(all);
+  expect({
+    gardenSelector: selector('garden'),
+    gardenArt: all.includes('%238fdc9e'),
+    scifiSelector: selector('scifi'),
+    scifiArt: all.includes('%2335d0ff'),
+    steampunkSelector: selector('steampunk'),
+    steampunkArt: all.includes('%23b08d57'),
+    plumSelector: selector('plum'),
+  }).toEqual({
+    gardenSelector: true,
+    gardenArt: true,
+    scifiSelector: true,
+    scifiArt: true,
+    steampunkSelector: true,
+    steampunkArt: true,
+    plumSelector: true,
+  });
+});

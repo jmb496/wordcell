@@ -25,6 +25,16 @@ import {
   startTracker,
 } from './ui/motion';
 import { overlays } from './ui/overlays.svelte';
+import {
+  applyTheme,
+  defaultTheme,
+  gardenTheme,
+  paperTheme,
+  plumTheme,
+  register,
+  scifiTheme,
+  steampunkTheme,
+} from './ui/theme/registry';
 // Imported before boot so the `@font-face` the font check loads is registered.
 import './ui/app.css';
 
@@ -61,6 +71,8 @@ function textOf(reason: unknown, message = ''): string {
 // AD-15: halt first, so nothing runs against a live store after the report.
 function fatal(reason: unknown, message?: string): void {
   game.halt('fatal', textOf(reason, message));
+  // AD-16: the inline head script may have set a theme; the fatal surface wears the default look.
+  delete document.documentElement.dataset.theme;
   console.error(reason);
   showStandalone();
 }
@@ -109,11 +121,16 @@ function halted(): boolean {
   return game.state.kind === 'halted';
 }
 
-// AD-16: nav launch, font check, prefs and game load, lifecycle, boot surfaces, mount, then (only
+// AD-16: prefs load and theme apply, nav launch, font check, game load, lifecycle, boot surfaces, mount, then (only
 // on the path that mounts App) the dictionary fetch once painted and visible, unless halted
 // meanwhile. Not awaited: a failure is an unhandledrejection that writes nothing (AD-8 outcomes
 // never reject).
 async function boot(): Promise<void> {
+  // AD-10, AD-16, Q-45: prefs load and the theme applies first, synchronously, before the first await, so
+  // no frame paints the default under a stored theme (a throw, e.g. an unregistered id, reaches AD-15).
+  prefs.onThemeChange(applyTheme);
+  prefs.load();
+  applyTheme(prefs.value.theme);
   // AD-13: rewind and stamp the base entry, then register the overlays before any push.
   await nav.launch();
   nav.register({
@@ -121,8 +138,7 @@ async function boot(): Promise<void> {
     depth: () => overlays.depth,
   });
   await fontCheck();
-  // AD-10: prefs and the motion mirror before the Session load, also when halted meanwhile.
-  prefs.load();
+  // AD-10: the motion mirror before the Session load, also when halted meanwhile.
   initMotion();
   game.load();
   if (game.state.kind === 'halted') {
@@ -209,4 +225,11 @@ async function boot(): Promise<void> {
   await dictionary.load();
 }
 
+// AD-10: `default`, `scifi`, `garden`, `steampunk`, `paper`, then `plum` in every build (spec §7.10), before boot.
+register(defaultTheme);
+register(scifiTheme);
+register(gardenTheme);
+register(steampunkTheme);
+register(paperTheme);
+register(plumTheme);
 void boot();

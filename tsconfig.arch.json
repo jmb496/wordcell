@@ -1,7 +1,7 @@
 {
   "extends": "./tsconfig.app.json",
   "compilerOptions": {
-    "types": ["node"],
+    "types": ["node", "vite/client"],
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.arch.tsbuildinfo"
   },
   "files": [
@@ -9,7 +9,10 @@
     "src/architecture-tree-scan.test.ts",
     "src/architecture-ad1.test.ts",
     "src/architecture-ad2-ad12-ad17.test.ts",
-    "src/architecture-new-game.test.ts"
+    "src/architecture-new-game.test.ts",
+    "src/ui/theme/colour-literals.ts",
+    "src/ui/theme/colour-literals.test.ts",
+    "src/ui/theme/contrast.test.ts"
   ],
   "include": []
 }

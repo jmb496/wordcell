@@ -25,7 +25,7 @@ const PREFS = 'wordcell:prefs';
 // AD-17 `current().history` for a never-written history.
 const EMPTY = { version: 1, records: [] };
 // AD-7 defaults: `current().prefs` for never-written prefs.
-const DEFAULT_PREFS = { version: 1, animationSpeed: 'normal', showTimer: false };
+const DEFAULT_PREFS = { version: 1, animationSpeed: 'normal', showTimer: false, theme: 'default' };
 // Q-39 harness: a fake storage `control.fail` that throws on every setItem.
 const FAIL_SETS = (op: 'set' | 'remove') =>
   op === 'set' ? new Error('setItem failed') : undefined;
