@@ -101,5 +101,5 @@ Files: `src/engine/replay.ts` (internal `ReplayWord`), `src/engine/view.ts` (`Wo
 - Files changed: see Implementation Notes.
 - Review: 2 patches applied (low: shared-card set assertion, cursor assertion), 0 deferred, rest rejected with reasons in the Review Triage Log.
 - Follow-up review recommended: false.
-- Verification: `npm run test:all` passed (exit 0) after the patches; lint, check and unit also pass.
+- Verification: lint, check and unit pass. In `npm run test:all` the e2e stage had two load-related teardown timeouts in `e2e/board-keys.spec.ts` (634, 704), which passed on rerun together with `test:e2e:pwa`; `test:e2e:dist` passed earlier.
 - Residual risks: only `surf` is a real word in the fixture; no Playwright spec seeds it yet (entries 5-8).
