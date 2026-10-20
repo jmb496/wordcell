@@ -86,8 +86,8 @@ All are proposals; none is applied. "Docs" means an owner-visible document.
 
 | # | Action | Owner | Kind | Source |
 |---|---|---|---|---|
-| A1 | Read the five scene captions and the carousel once in the real app and say "fine" or give wording changes (Done when 5; the combined scene 1 and scene 2 captions are the newest) | Owner | Review (changes on-screen text only if wording is changed) | F-2 |
-| A2 | Reword the epic Boundaries so `src/engine/scene-replay.ts` is named as a test-support file in `src/engine/`, and record the 8.11 deletion as an accepted exception; confirm you do not disagree with that deletion | Owner (docs) | Spec reconciliation | F-1, handoff |
+| A1 | (Resolved: owner read them, 2026-10-20) Read the five scene captions and the carousel once in the real app and say "fine" or give wording changes (Done when 5; the combined scene 1 and scene 2 captions are the newest) | Owner | Review (changes on-screen text only if wording is changed) | F-2 |
+| A2 | (Resolved: Boundaries reworded and deletion accepted, owner 2026-10-20) Reword the epic Boundaries so `src/engine/scene-replay.ts` is named as a test-support file in `src/engine/`, and record the 8.11 deletion as an accepted exception; confirm you do not disagree with that deletion | Owner (docs) | Spec reconciliation | F-1, handoff |
 | A3 | Add a test for the scoring script's `cards < 2` throw and a check that each stack's top letter is what the fixture states (`src/ui/scenes/script.ts:96`, `scenes.test.ts`) | Dev (small) | Remediation, low | F-4 |
 | A4 | Sync `tickets.toml` entries 7 and 11 with their tickets (interface, references, description) | Owner/Dev | Docs, bookkeeping | F-7 |
 | A5 | For the next visual epic, put a done checkpoint on the first full composition of the shared stage, before building the rest of the scenes | Owner (process) | Process lesson | F-8 |

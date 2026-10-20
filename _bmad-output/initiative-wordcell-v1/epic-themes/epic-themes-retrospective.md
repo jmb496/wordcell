@@ -46,8 +46,8 @@ Previous epic: `epic-how-to-play-scenes` (its retro).
 
 | Item (owner) | Landed? | Evidence |
 |---|---|---|
-| A1 read the five scene captions (Owner) | No evidence found | nothing in this epic's files records it |
-| A2 reword epic 8 Boundaries for `scene-replay.ts` (Owner) | No evidence found | |
+| A1 read the five scene captions (Owner) | Yes: owner read them in the app | epic 8 Notes, Decision 2026-10-20 |
+| A2 reword epic 8 Boundaries for `scene-replay.ts` (Owner) | Yes | epic 8 file Boundaries and Notes, 2026-10-20 |
 | A3 scoring-script tests (Dev) | No evidence found | not checked in code |
 | A4 sync `tickets.toml` entries 7 and 11 (Owner/Dev) | No evidence found for 7 and 11; entry 6 of this epic was synced in `39eff1e` | |
 | A5 done checkpoint on first full composition (process) | Not applicable to this epic's shape; 9.3 and 9.4 carried a plan checkpoint | digest 9.3, 9.4 |
@@ -60,15 +60,15 @@ All are proposals; none is applied.
 
 | # | Action | Owner | Kind |
 |---|---|---|---|
-| A1 | Mark epic 9 done with `bmad-preview-ticketing` if you accept the verdict | Owner | Gate |
-| A2 | Answer epic 8's open A1 (caption read) and A2 (Boundaries wording), or drop them, so they stop appearing | Owner | Docs |
+| A1 | Mark epic 9 done (owner accepted, 2026-10-20: done) | Owner | Gate, resolved |
+| A2 | Epic 8's A1 (caption read) and A2 (Boundaries wording): resolved by the owner 2026-10-20 | Owner | Docs, resolved |
 | A3 | For stub tickets (under about 300 words) keep the review budget cap of 1500 in the autopilot prompt, and consider capping ticket review passes at 4 when majors have fallen to 0 | Process | Lesson |
 | A4 | Have the autopilot append the ticket review's unapplied minors to every build prompt (second time seen) | Process | Lesson |
 | A5 | Confirm the unknown-stored-theme boot path is covered after the Halted test was retired (`e2e/theme.spec.ts:339` looks sufficient) | Dev, small | Remediation, low |
-| A6 | Merge `main` into `epic-9-themes` (or the reverse) and deploy only on your go-ahead; the retro does nothing here | Owner | Gate |
+| A6 | Merge `epic-9-themes` to `main` and deploy (owner go-ahead 2026-10-20) | Owner | Gate, resolved |
 | A7 | Next visual epic: budget for the 48,004-byte margin before adding art | Owner | Process note |
 
-Needs the owner: A1, A2, A6. A3 to A5 and A7 are technical defaults.
+Resolved by the owner on 2026-10-20: A1, A2, A6. A3 to A5 and A7 are technical defaults for the dev loop.
 
 ## Acceptance verdict
 
@@ -84,8 +84,8 @@ Open items carried: F-2, F-5, F-6, F-11 and the process lessons. None is a faili
 
 ## Open questions
 
-1. Do you accept this verdict and mark epic 9 done (A1)?
-2. Merge `epic-9-themes` with `main` and deploy: when (A6)?
+1. Accept the verdict and mark epic 9 done: answered yes, 2026-10-20.
+2. Merge `epic-9-themes` with `main` and deploy: answered go, 2026-10-20.
 
 ## Assumptions
 
