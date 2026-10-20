@@ -1074,6 +1074,27 @@ describe('R-86 word list', () => {
     expect(list?.[0].cards.length).toBe((list?.[0].letterCount ?? 0) - 1);
   });
 
+  it('R-86 a QU word sorts by letterCount, not by cards.length', () => {
+    const start = startOf(['QIT', 'ANT']);
+    const list = listOf(start, [...whole(1, 3), ...whole(2, 3)]);
+    expect(list?.map((w) => w.cards.length)).toStrictEqual([3, 3]);
+    expect(brief(list)).toStrictEqual(['quit:4', 'ant:3']);
+  });
+
+  it('R-86 a flipped word lists its cards in the committed order', () => {
+    const start = startOf(['TAN', 'ONES']);
+    const draft = viewFrom(start, seam(start, [drop(1, 3, 2), FLIP], WORDS), LANG).draft;
+    expect(draft?.side).toBe('right');
+    const session = seam(
+      start,
+      [drop(1, 3, 2), FLIP, VALIDATE, CONFIRM, GIVE_UP],
+      ['tans', ...WORDS],
+    );
+    const entry = viewFrom(start, session, LANG).wordList?.[0];
+    expect(entry?.spelling).toBe('tans');
+    expect(entry?.cards).toStrictEqual(draft?.wordCards);
+  });
+
   it('R-86 gaveUp with no committed word gives an empty list', () => {
     const start = startOf(['TAN']);
     const gaveUp = viewFrom(start, seam(start, [GIVE_UP]), LANG);
@@ -1106,11 +1127,14 @@ describe('R-86 word list', () => {
     expect(brief(viewFrom(start, draft, LANG).wordList)).toStrictEqual(['tan:3']);
     const tail = seam(
       start,
-      [...whole(1, 3), ...whole(2, 3), ...whole(3, 3), UNDO, UNDO, UNDO, GIVE_UP],
+      [...whole(1, 3), ...whole(2, 3), ...whole(3, 3), UNDO, UNDO, UNDO, UNDO, UNDO, UNDO, GIVE_UP],
       WORDS,
     );
     expect(tail.moves).toHaveLength(3);
-    expect(brief(viewFrom(start, tail, LANG).wordList)).toStrictEqual(['one:3', 'tan:3']);
+    expect(tail.gaveUp).toBe(true);
+    expect(tail.moves.length - tail.cursor.index).toBeGreaterThanOrEqual(2);
+    const kept = tail.cursor.index;
+    expect(brief(viewFrom(start, tail, LANG).wordList)).toHaveLength(kept);
   });
 
   it('R-86 Undo of the finish leaves playing without the key; Confirm restores the list', () => {

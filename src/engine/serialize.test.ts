@@ -246,6 +246,7 @@ import {
   view,
 } from './index';
 import { replay } from './replay';
+import { wordLetterCount } from './rules';
 import { checkActiveMsHeadroom, checkContainer, checkRecord, checkSchema } from './serialize';
 import { DICT, deepFreeze, drop, play } from './test-helpers';
 import { winSeed } from './win-seed';
@@ -989,8 +990,17 @@ describe('defining properties (§2, CAP-9)', () => {
       expect(won.status).toBe('won');
       expect(won.wordList).toStrictEqual(WON_WORDS_LIST);
       const shared = (won.wordList ?? []).flatMap((w) => w.cards);
-      const twice = [...new Set(shared)].filter((c) => shared.filter((x) => x === c).length === 2);
-      expect(twice.sort((a, b) => a - b)).toStrictEqual([0, 13, 39]);
+      const shared2 = [...new Set(shared)].filter((c) => shared.filter((x) => x === c).length >= 2);
+      expect(shared2.sort((a, b) => a - b)).toStrictEqual([0, 13, 39]);
+      const list = won.wordList ?? [];
+      for (const w of list) expect(w.letterCount).toBe(wordLetterCount(w.cards, EN));
+      for (let i = 1; i < list.length; i++) {
+        const [a, b] = [list[i - 1], list[i]];
+        expect(
+          a.letterCount > b.letterCount ||
+            (a.letterCount === b.letterCount && a.spelling <= b.spelling),
+        ).toBe(true);
+      }
       const undone = play(s, [UNDO]);
       expect(view(undone, EN).status).toBe('playing');
       expect('wordList' in view(undone, EN)).toBe(false);
