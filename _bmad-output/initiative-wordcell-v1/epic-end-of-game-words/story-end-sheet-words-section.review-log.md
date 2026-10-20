@@ -1,5 +1,5 @@
 # Review log — story-end-sheet-words-section.md
-State: pass 2: done
+State: pass 3: done
 Pre-loop: HEAD d8828a2; pass0.md 209 words; budget 1500 words.
 
 ## Pass 1 — 2026-10-20
@@ -36,3 +36,15 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 Words: 1017 (4.9 x pass 0)  |  Snapshot: story-end-sheet-words-section.passes/pass2.md
 ### Applied
 - [major] items 1-7 and 13 minors → fixer items 1-13 (unverified: array form of `toHaveAccessibleName` on Playwright 1.63; nine-row give-up literal parses)
+
+## Pass 3 — 2026-10-20
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (ref alignment: none)  |  Findings: major 1, minor 4, decision-needed 0  |  Dropped in triage: 0
+### Majors (technical, default applied)
+1. Won bullet: `toHaveAccessibleName([...])` array form is not in Playwright 1.63 (single string/RegExp only, verified in test.d.ts) → read `aria-label`s via `evaluateAll` and `toEqual`, or loop `items.nth(i)`.
+### Minor (applied)
+- localStorage: session byte-equality to fixture text only for the `session-won-words` run (parse-compare if seedStorage does not store verbatim); for the `{ literal }` give-up compare snapshots before/after only.
+- Layout: give a tolerance (centres within 2 px); drop the 14 px claim from tested set.
+- Heading and empty line left-aligned like `.penalty`/`.unreadable`.
+Words: 1055 (5.0 x pass 0)  |  Snapshot: story-end-sheet-words-section.passes/pass3.md
+### Applied
+- [major] array `toHaveAccessibleName` → `evaluateAll` aria-labels + `toEqual`; minors: localStorage scoping, 2 px tolerance, left-aligned heading/empty line
