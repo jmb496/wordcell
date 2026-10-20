@@ -61,7 +61,7 @@ playerIdle → selectDestinationColumn → formWord → selectWordCell
 
 - Win: all 52 cards are in WordCells. Score = Σ over cells (cards in cell × cell number).
 - Give up / stuck: score as above minus 10 per card still in the columns.
-- TODO from rulebook: rating scale with encouraging messages, low ≈ 156, high ≈ 520.
+- Rating scale with encouraging messages: carried over from the BGA rulebook (low ≈ 156, high ≈ 520) and replaced by the owner on 2026-10-18 with ten bands in steps of 50 (spec R-83).
 
 ## 5. UI / UX requirements
 
