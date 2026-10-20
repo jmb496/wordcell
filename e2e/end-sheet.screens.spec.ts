@@ -58,6 +58,9 @@ for (const [prefs, file] of [
     await openFixture(page, 'session-won-words', { endSheet: 'expanded', prefs });
     await expect(page.getByRole('list', { name: 'Words', exact: true })).toBeVisible();
     await page.locator('.content').evaluate((el) => el.scrollTo(0, el.scrollHeight));
+    await expect
+      .poll(() => page.locator('.content').evaluate((el) => el.scrollTop))
+      .toBeGreaterThan(0);
     await expect(page).toHaveScreenshot(file);
   });
 }

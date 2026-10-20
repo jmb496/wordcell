@@ -776,11 +776,16 @@ test.describe('android words', () => {
     expect(await fixed()).toEqual(before);
     expect(await wordsList(page).evaluate((el) => getComputedStyle(el).overflowY)).toBe('visible');
     for (const item of await wordsList(page).getByRole('listitem').all()) {
-      expect((await item.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+      expect((await item.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     }
     expect(await content.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
     const long = page.getByRole('listitem', { name: 'EHNPBNTFSA, 10 letters', exact: true });
     expect(await long.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+    const wordSize = await long
+      .locator('.word')
+      .evaluate((e) => parseFloat(getComputedStyle(e).fontSize));
+    expect(wordSize).toBeGreaterThanOrEqual(14);
+    expect(await page.locator('.words button, .words a, .words [tabindex]').count()).toBe(0);
     const centres = await long.locator('span').evaluateAll((els) =>
       els.map((e) => {
         const r = e.getBoundingClientRect();

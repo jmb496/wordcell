@@ -169,7 +169,10 @@ function focusOnMount(button: HTMLButtonElement): void {
           {:else}
             <ul aria-labelledby="end-words">
               {#each wordsOf(result) as entry}
-                <li aria-label={text.wordRow(entry.spelling, entry.letterCount)}>
+                <li
+                  aria-label={text.wordRow(entry.spelling, entry.letterCount)}
+                  style:--letters={entry.letterCount}
+                >
                   <span class="word" aria-hidden="true">{entry.spelling.toUpperCase()}</span>
                   <span class="count" aria-hidden="true">{text.wordCount(entry.letterCount)}</span>
                 </li>
@@ -249,9 +252,14 @@ function focusOnMount(button: HTMLButtonElement): void {
   .words li {
     display: flex; align-items: center; justify-content: space-between; gap: 16px;
     min-height: 44px; box-sizing: border-box; border-top: 1px solid var(--wc-outline);
+    container-type: inline-size;
   }
   .words li:first-child { border-top: none; }
-  .word { min-width: 0; overflow-wrap: anywhere; color: var(--wc-ink-primary); }
+  /* DESIGN.md Words: ui-body (1rem) shrinking to 14 px before it wraps. */
+  .word {
+    min-width: 0; overflow-wrap: anywhere; color: var(--wc-ink-primary);
+    font-size: clamp(14px, calc((100cqw - 6.5rem) / (var(--letters) * 0.75)), 1rem);
+  }
   .count {
     flex: none; color: var(--wc-ink-secondary); font: 500 0.875rem/1.25rem system-ui, "Roboto", sans-serif;
   }

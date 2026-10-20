@@ -207,7 +207,7 @@ describe('AD-3 end sheet Words section', () => {
   }
   const base = { status: 'won', finalScore: 100, band: 3, wordCount: 1, longestWord: undefined };
 
-  it('AD-3 the rows come from view.wordList, not a replay', async () => {
+  it('AD-3 the rows equal the stubbed view.wordList', async () => {
     const html = await sheetHtml({
       ...base,
       wordList: [
