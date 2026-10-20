@@ -18,7 +18,7 @@ import {
   wordLetterCount,
 } from './rules';
 import { assertSeed, type Session } from './session';
-import type { CardId } from './types';
+import type { CardId, WordCellNumber } from './types';
 
 type Eight<T> = readonly [T, T, T, T, T, T, T, T];
 
@@ -127,6 +127,12 @@ export interface CommittedWord {
   readonly letterCount: number;
 }
 
+/** Internal replay word: a `CommittedWord` plus its cards (word order) and placement cell. */
+export interface ReplayWord extends CommittedWord {
+  readonly cards: readonly CardId[];
+  readonly cell: WordCellNumber;
+}
+
 /**
  * Replays `session` from `start` (§2): every committed move, then the draft or pending draft at
  * its `reached`, then each redo-tail move at its own `reached` on a scratch position. Returns the
@@ -138,7 +144,7 @@ export function replayWords(
   start: Start,
   session: Session,
   lang: LangData,
-): { readonly position: Position; readonly words: readonly CommittedWord[] } {
+): { readonly position: Position; readonly words: readonly ReplayWord[] } {
   checkStart(start);
   checkSession(session);
   const { moves, cursor } = session;
@@ -146,11 +152,16 @@ export function replayWords(
     columns: start.columns.map((column) => [...column]),
     cells: start.cells.map((cell) => [...cell]),
   };
-  const words: CommittedWord[] = [];
+  const words: ReplayWord[] = [];
   for (let i = 0; i < cursor.index; i++) {
     checkMove(position, moves[i], i, lang);
     const { cards, spelling } = word(position, moves[i], lang);
-    words.push({ spelling, letterCount: wordLetterCount(cards, lang) });
+    words.push({
+      spelling,
+      letterCount: wordLetterCount(cards, lang),
+      cards: [...cards],
+      cell: placed(moves[i]).targetCell,
+    });
     position = commitMove(position, placed(moves[i]));
   }
   const draft = moves[cursor.index];

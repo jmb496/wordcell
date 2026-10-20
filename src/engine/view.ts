@@ -96,6 +96,14 @@ export interface PlaceView {
 /** AD-6 longest-word shape. */
 export type LongestWord = CommittedWord;
 
+/** R-86 end-of-game word list entry: R-37 lowercase spelling, R-85 count, cards in word order, cell. */
+export interface WordListEntry {
+  readonly spelling: string;
+  readonly letterCount: number;
+  readonly cards: readonly CardId[];
+  readonly cell: WordCellNumber;
+}
+
 /** AD-3: the only derived game state; plain data, absent optional fields omitted. */
 export interface GameView {
   readonly status: Status;
@@ -114,6 +122,8 @@ export interface GameView {
   readonly band?: number;
   readonly longestWord?: LongestWord;
   readonly wordCount: number;
+  /** R-86: won or gaveUp only; letterCount desc, spelling asc, stable. */
+  readonly wordList?: readonly WordListEntry[];
   /** R-37 lowercase. */
   readonly pendingDraftWord?: string;
   readonly inProgress: boolean;
@@ -267,6 +277,21 @@ export function viewFrom(start: Start, session: Session, lang: LangData): GameVi
     view.lettersLeft = lettersLeft(position.columns, lang);
     view.band = band(final, lang);
   }
+  if (!playing)
+    view.wordList = words
+      .map(
+        (w): WordListEntry => ({
+          spelling: w.spelling,
+          letterCount: w.letterCount,
+          cards: [...w.cards],
+          cell: w.cell,
+        }),
+      )
+      .sort(
+        (a, b) =>
+          b.letterCount - a.letterCount ||
+          (a.spelling < b.spelling ? -1 : a.spelling > b.spelling ? 1 : 0),
+      );
   const longest = longestWord(words);
   if (longest !== undefined) view.longestWord = longest;
   if (idle && move !== undefined) view.pendingDraftWord = word(position, move, lang).spelling;
