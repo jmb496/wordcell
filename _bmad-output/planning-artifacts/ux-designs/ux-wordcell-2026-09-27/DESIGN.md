@@ -3,7 +3,7 @@ name: WordCell
 description: Solo FreeCell-style word card game. Dark card table, ivory serif letters, one teal for "you can act here" and one orange for "commit". Portrait phone first.
 status: final
 created: 2026-09-27
-updated: 2026-09-27
+updated: 2026-10-20
 sources:
   - _bmad-output/planning-artifacts/briefs/brief-wordcell-2026-09-26/brief.md
   - docs/game-flow-spec.md
@@ -181,7 +181,7 @@ WordCell is a quiet card table for one. It borrows the posture of a good solitai
 are the interface, chrome recedes, and nothing moves unless the player moved it. The letters are
 the only thing with presence, so they get a real serif face on a dark card, the way the BGA
 quilled-letter art put a letter on charcoal. There are no hints (Q-19), no sound (Q-20), no
-celebration beyond a short fly-to-cell animation and the end screen's light-hearted band message.
+celebration beyond a short fly-to-cell animation, the end screen's light-hearted band message and, on a win only, the bouncing-words finale (Components → Win celebration; owner, 2026-10-19, Q-46).
 
 Two accents carry interaction meaning; destination blue and error red are status colours, each
 paired with a glyph. The error fill also marks a destructive action (the danger buttons); otherwise
@@ -476,8 +476,9 @@ Depth is tonal, not shadowed, with two exceptions that mimic physical cards:
 - **Overlays** (WordCell view, sheets, dialogs, end screen) sit above `{colors.scrim}`.
 
 Layer order: table → board surfaces → cards → sticky bars (top bar, dictionary-failed banner,
-action bar, collapsed end-sheet bar) → selection/lift → hover peek → drag layer → scrim →
-overlay. A lifted or dragged tail passes over the bars.
+action bar, collapsed end-sheet bar) → selection/lift → hover peek → drag layer → win celebration
+(copies clipped to the band between the top bar and the action bar, so they never overlap
+either bar, which stay usable; no scrim) → scrim → overlay. A lifted or dragged tail passes over the bars.
 The top bar and the action bar additionally sit above the end sheet's scrim. They sit below every
 other scrim and overlay (dialogs, panels, the menu sheet, the sticky view), so while one of those is open ☰, Undo and Redo are covered and unreachable: the player closes it first (owner, 2026-10-15).
 
@@ -672,6 +673,8 @@ pills (`{rounded.full}`); among badges only the error dot is a circle. The 44 ×
   band, over the tray band (empty in Game over), directly above the WordCell labels; tapping the
   bar expands it. While collapsed there is no scrim, and the WordCells stay fully tappable to
   view.
+  **Words section** (R-88; owner, 2026-10-20): the last block of the expanded sheet, below the buttons, and part of the sheet's own scroll (no inner scroll area). A `Words` heading (ui-label, ink-secondary) over rows at least 44 px high separated by `{colors.hairline}` lines. Each row holds the word in capitals (ui-body, ink-primary, `overflow-wrap: anywhere`) left and `5 letters` (ui-label, ink-secondary) right-aligned, the two on one line at 360 px (the word shrinks to 14 px before it wraps). Rows are text only: no card art, no glyph, nothing tappable. With no word, one ui-body ink-secondary line `No words were played.`.
+- **Win celebration** (R-87; owner, 2026-10-20). No chrome. Each word is a row of card copies in the normal card state of the live theme (card face, edge, letter, `QU` with its ×2 badge), at the board's card size `{components.card.width}`; a row wider than 90 % of the band scales down uniformly, to a floor of 40 % of card size (a 23-letter word at 360 px is then readable as a word, not as individual cards). Consecutive cards of one group overlap by 50 % of the card width so that a long word stays compact. Copies carry the lifted-card shadow `0 6px 16px #0008` so they read against the board; there is no trail, glow or colour change. The floor is the top edge of the action bar; the ceiling and side limits are the viewport band between the bars. The board underneath stays undimmed. Motion values and the cap are in EXPERIENCE.md Motion.
 - **Panels** (Statistics, Preferences, How to play). Full-screen on table, back arrow and title in
   a 48 px header, content max 560 px wide centred. Statistics is a 2 × 3 grid of stat tiles
   (label ui-label ink-secondary, value in `{typography.score}`). The longest-word tile's word
@@ -729,6 +732,7 @@ Jared confirmed every assumption below on 2026-09-27; the `[ASSUMPTION]` tags st
 | A-D9 | All text on the Board surface, everything inside the height rule including the dictionary-failed banner, foot row, control row, badges and messages, is fixed px so the height rule holds; text in panels, sheets and dialogs is in rem and scales with the browser font size. | Typography |
 | A-D10 | In Place, a full-height free-letter tile's origin tag moves to the top-left corner so the bottom band holds the `bottom` / `top` tag and the star; a compact tile puts the position mark (`▼` / `★`) top-left, the ×2 badge top-right and the origin tag bottom-left. | Components |
 | A-D11 | The height rule measures `window.innerHeight` with `viewport-fit=cover`; w is recomputed on `resize` and `orientationchange`, deferred until no gesture or animation is in progress; page scrolling counts as a gesture; a resize that changes only innerHeight by less than 80 px does not recompute w. | Layout & Spacing |
+| A-D12 | The win celebration's copies scale to at least 40 % of card size and overlap by 50 % of the card width; a 23-letter word stays readable at 360 px (to confirm on device, epic 10). | Components |
 
 ### Open questions
 

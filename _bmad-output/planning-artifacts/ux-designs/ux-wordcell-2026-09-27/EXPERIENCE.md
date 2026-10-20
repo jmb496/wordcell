@@ -2,7 +2,7 @@
 name: WordCell
 status: final
 created: 2026-09-27
-updated: 2026-09-27
+updated: 2026-10-20
 sources:
   - _bmad-output/planning-artifacts/briefs/brief-wordcell-2026-09-26/brief.md
   - docs/game-flow-spec.md
@@ -45,7 +45,8 @@ spine, the spines win.
 | **WordCell view** | Long-press a WordCell; tap in Idle or Game over; hover (desktop); `Space` on a focused cell | See every card of one cell (R-65). |
 | **Menu sheet** | ☰ in the top bar; `M` | New game, Replay this deal, Give up, Statistics, Preferences, How to play, app version. |
 | **Confirm dialog** | New game or Replay this deal while a game is in progress (§2); Reset history | Stop an unrecorded abandon, or an irreversible delete. |
-| **End sheet** | Status becomes won or gaveUp | Score, band, longest word, words placed (R-83). |
+| **End sheet** | Status becomes won or gaveUp | Score, band, longest word, words placed (R-83), and the list of every word played, longest first (R-88). |
+| **Win celebration** | Status becomes won (Confirm or Redo), after the commit animation settles | A skippable finale: every word bounces across the board as a group of cards (R-87). Not a surface: it owns one history entry while it runs (back skips it) and does not move focus. |
 | **Statistics panel** | Menu; end sheet | The six R-84 statistics, or the unreadable-history message. |
 | **Preferences panel** | Menu | Animation speed, Show timer, Theme (spec §7.10, R-76, Q-45). |
 | **How to play panel** | Menu; `?` | A carousel of animated scenes, rules text, controls. |
@@ -54,7 +55,7 @@ spine, the spines win.
 
 No routes beyond these. Panels, sheets, dialogs and the sticky WordCell view (tap or `Space`) each
 push one browser history entry; the long-press peek and the hover peek push none. So the Android
-back gesture closes the topmost one (the end sheet collapses to its bar instead). Expanding the
+back gesture closes the topmost one (the end sheet collapses to its bar instead; the win celebration, which owns one entry while it runs, is skipped). Expanding the
 end sheet pushes one entry and collapsing it pops it; with the sheet collapsed, back behaves as on
 the bare Board. Every tail selection, by tap or key, owns exactly one history entry; re-selecting
 or resizing it pushes none. The entry is popped when the selection ends any other
@@ -110,6 +111,9 @@ the pending-draft line and the live region.
 | Screen-reader names (epic 6, CAP-11) | `{L}, column {c}, card {i} of {n}{, selected}{, destination}`; `{L}, tray, tile {i} of {n}{, selected}`; `{L}, WordCell {c}, top`; `WordCell {c}, top {L}, {n card(s)}{, used}`; `WordCell {c}, empty`; `Column {c} foot`; `Column {c}, here`; `Q U, counts as two letters` | Accessible names of cards, tiles, WordCells and foot pads (`src/ui/text.ts`). |
 | Live region announcements (epic 6, CAP-11) | `Composing. {WORD}, {N letters}.`; `Place. ...`; `Idle.`; `{WORD} placed on cell {c}, plus N`, `minus N` or `no change`; `Undo. {phase}`; `Redo. {phase}`; `New game. Idle.`; `Replay. Idle.`; `{title} Score {N}, {band}.` (`minus N` for a negative score) | The polite live region (`src/ui/text.ts`, `src/ui/announce.ts`). |
 | Win outcome | `Every column cleared.` | End sheet title. |
+| Word list (R-88, epic 10) | Section heading `Words`; each entry shows the word in capitals (`QU` as `QU`) and, right-aligned, `5 letters` (`1 letter` for one; a `QU` counts as 2, R-36); no words: `No words were played.` | End sheet, section under the buttons (owner, 2026-10-20). |
+| Word list screen-reader names (R-88) | The list is named `Words`; an entry reads `BAKED, 5 letters`; a repeated word is a separate entry | End sheet word list. |
+| Win celebration (R-87) | No visible text and no announcement of its own; the copies are `aria-hidden`; the outcome is announced when the end sheet opens, as today | Win celebration. |
 | Hover peek, more than 14 cards (R-65) | `+n older cards`; for one, `+1 older card` | Hover peek, a line above the first row. |
 | WordCell view and peek title (R-65) | `WordCell 6 · 7 cards`; for one card, `WordCell 6 · 1 card` | View sheet title (peek and sticky view). |
 | Give-up outcome (R-81) | `Game given up.` and `12 letters left: −120`; for one letter, `1 letter left: −10` (a lone `QU` is 2 letters, plural) | End sheet title and penalty line. |
@@ -165,7 +169,7 @@ Behavioural. Visual specs live in `DESIGN.md` → Components.
 | **Menu sheet** | Opening it clears any tap-selection. Give up is enabled only in Idle while playing (R-75); New game and Replay this deal always. Give up acts at once, no confirmation [ASSUMPTION A-E10]. Items close the sheet before acting. While a sticky WordCell view is open its dim layer covers the top bar, so ☰ does nothing until the view is closed (owner, 2026-10-15). |
 | **Confirm dialog** | Focus starts on the dismissive button; `Esc`, back and scrim tap dismiss. |
 | **History notice** | Focus starts on `Not now`; back acts as `Not now`; a scrim tap does nothing. Only `Not now`, `Reset history` (through its confirm, which closes both) or back close it (owner, 2026-10-01). |
-| **End sheet** | Any transition into won, by Confirm or by Redo, opens it after the commit animation settles; Give up opens it at once. Relaunch with status won or gaveUp opens the Board in Game over with the sheet expanded and no animation. A transition into Game over closes any open WordCell view before the sheet opens. When the sheet opens, focus moves to its first action. The grab handle, back, `Esc` and a scrim tap collapse it to its bar (they do not close it; the scrim tap is consumed), and focus returns to the board; tapping the bar expands it. Expanded, the top bar (with Undo) and the action bar (with New game) stay above the scrim and usable; collapsed, there is no scrim and its bar sits over the tray band (empty in Game over), directly above the WordCell labels, so WordCells stay fully tappable to view. The large number is the final score after R-81. Longest word ties go to the earliest committed word (R-84); it shows `—` when no word was committed (R-83). The game record holds the word's spelling and its letter count (R-84, Q-35). After Reset history from the end sheet, the finished game stays unrecorded (§2): the history block and its Reset history button are replaced by the line `This game wasn't added to your statistics.`, and a later Undo of that finish removes nothing (R-84). The line shows only on the sheet that was open when the history was reset, from its block or from the notice over it; it stays through collapse and expand and is gone after a reload or a new game; a later Undo then a new finish records normally with no line; a reset from the Statistics panel leaves the sheet with neither block nor line (owner, 2026-10-15). Undo in the top bar closes it and resumes play (R-70, R-75). |
+| **End sheet** | Any transition into won, by Confirm or by Redo, opens it after the commit animation settles; Give up opens it at once. Relaunch with status won or gaveUp opens the Board in Game over with the sheet expanded and no animation. A transition into Game over closes any open WordCell view before the sheet opens. When the sheet opens, focus moves to its first action. The grab handle, back, `Esc` and a scrim tap collapse it to its bar (they do not close it; the scrim tap is consumed), and focus returns to the board; tapping the bar expands it. Expanded, the top bar (with Undo) and the action bar (with New game) stay above the scrim and usable; collapsed, there is no scrim and its bar sits over the tray band (empty in Game over), directly above the WordCell labels, so WordCells stay fully tappable to view. The large number is the final score after R-81. Longest word ties go to the earliest committed word (R-84); it shows `—` when no word was committed (R-83). The game record holds the word's spelling and its letter count (R-84, Q-35). After Reset history from the end sheet, the finished game stays unrecorded (§2): the history block and its Reset history button are replaced by the line `This game wasn't added to your statistics.`, and a later Undo of that finish removes nothing (R-84). The line shows only on the sheet that was open when the history was reset, from its block or from the notice over it; it stays through collapse and expand and is gone after a reload or a new game; a later Undo then a new finish records normally with no line; a reset from the Statistics panel leaves the sheet with neither block nor line (owner, 2026-10-15). Undo in the top bar closes it and resumes play (R-70, R-75). A win opens it only after the win celebration finishes or is skipped (Win celebration); a give-up opens it at once. Below the buttons it holds the **Words** section (R-88): every committed word of the finished game, one row each, longest first (letter count, then alphabetical; a word played twice has two rows), the word in capitals on the left and `5 letters` on the right; the sheet's content area scrolls (its handle stays fixed), never the list inside it. It is built from the finished `GameView`, so a relaunch into Game over shows it and Undo of the finish, New game and Replay remove it (owner, 2026-10-20). Focus on open stays on Replay this deal. |
 | **Statistics panel** | Reads the score history; shows games played, won, given up, best score, average score (both leave out given-up games with a negative score, R-84, Q-44; whole number, rounded like `Math.round`, half toward +∞), longest word ever as the word and its letter count, ties to the earliest record (R-84). The record holds the word's spelling (R-84, Q-35). `—` where no value exists. [ASSUMPTION A-E3: average rounding, longest-word ties] |
 | **Preferences panel** | Changes apply immediately and persist outside the Session; not undoable; survive New game and Replay this deal (spec §7.10, brief §7). Show timer defaults to off (R-76). Theme is a single-choice list below Animation speed; it applies immediately with no animation, is stored with the preferences, survives New game, Replay and reload, and is applied before first paint so a reload never flashes Charcoal. Changing it never touches the board state, and no theme follows the device's light or dark setting (Q-45). |
 | **How to play panel** | Scrolling panel with a carousel of animated scenes, then text; see its section below. |
@@ -369,13 +373,13 @@ tail selection (`1`–`8`, `↑`/`↓`) focus moves to the selected tail's top c
 | `3`–`9`, `0` (= 10) | — | Add that WordCell's top card as a free letter (append). Used or empty cell: no-op. Removal only via the focused tile: `Space` to select, `Space` again to return | Set that cell as target if legal | — |
 | `←` / `→` | — | Move focus between tray tiles; no wrap | Move focus along the strip; no wrap | — |
 | `Shift`+`←` / `→` | — | Move the focused movable tile one place; at either end of M: no-op, not an edit | Move the focused card one place; at either end of the strip: no-op, not an edit | — |
-| `Space` | Focused column card: tap equivalent; focused WordCell: open the sticky view | Focused tile: select / swap / return (tap equivalent); focused column card: tap equivalent; focused WordCell: view | Focused strip card: select / swap; focused column card: tap equivalent; focused WordCell: view | Focused column card: tap equivalent (inert); focused WordCell: view |
+| `Space` | Focused column card: tap equivalent; focused WordCell: open the sticky view | Focused tile: select / swap / return (tap equivalent); focused column card: tap equivalent; focused WordCell: view | Focused strip card: select / swap; focused column card: tap equivalent; focused WordCell: view | Focused column card: tap equivalent (inert); focused WordCell: view; while the win celebration plays: skip it (consumed) |
 | `+` or `=` / `-` | — | k + 1 / k − 1 (empty destination column: no-op, R-31) | — | — |
 | `F` | — | Flip (empty destination column: no-op, R-31) | — | — |
 | `Enter` | Focused column card or WordCell: tap equivalent | Focused column card or WordCell: tap equivalent; otherwise Validate (when enabled) | Focused column card or WordCell: tap equivalent; otherwise Confirm | Focused column card: tap equivalent (inert); focused WordCell: open view |
 | `Z`, `Ctrl/Cmd+Z` | Undo | Undo | Undo | Undo |
 | `Y`, `Ctrl/Cmd+Y`, `Ctrl/Cmd+Shift+Z` | Redo | Redo | Redo | — |
-| `Esc` | Close the topmost overlay; otherwise clear the selection | Close the topmost overlay; otherwise clear the tile selection | Same | Close the topmost overlay; collapse the end sheet |
+| `Esc` | Close the topmost overlay; otherwise clear the selection | Close the topmost overlay; otherwise clear the tile selection | Same | Close the topmost overlay; collapse the end sheet; skip the win celebration while it plays |
 | `M` | Menu | Menu | Menu | Menu |
 | `N` | New game (confirm if in progress) | same | same | New game |
 | `?` | How to play | same | same | same |
@@ -405,6 +409,7 @@ One preference, **Animation speed** (spec §7.10): Fast, **Normal (default)**, S
 | Cards returning on Undo, re-entering on Redo | 1 × base |
 | Fly-to-cell on Confirm, or on a Redo that commits | 2 × base, 30 ms stagger per card, bottom card first |
 | Overlays and sheets | 1 × base |
+| Win celebration (R-87) | The whole run, including the closing fade-out, ends within 6 s at Normal (cap = 6 s × base / 180 ms: 3 s Fast, 6 s Normal, 10.7 s Slow); groups still moving fade out over the last 1 × base of the cap, then the end sheet opens |
 
 Every other card move of a word (tray → strip on Validate, Flip, a k change, tap-add, removal,
 tap-swap, a drag release with or without an edit) glides at 1 × base; a tile or free letter
@@ -417,6 +422,17 @@ opacity fade, whatever the preference. Finger tracking during a drag stays; tile
 any of its key aliases) completes it and then undoes; the end sheet does not open. Every other
 pointer or key input during the winning commit animation, and for at least 300 ms after the win whatever the speed, only completes it and is consumed; the settled state is Game over with
 the end sheet expanded.
+
+### Win celebration (R-87, Q-46, Q-48; owner, 2026-10-20)
+
+A win, by Confirm or by Redo, ends with a finale before the end sheet. It is decoration: the game is already in Game over.
+
+- **What plays.** Each word of the list (R-86, longest first) is a group of its card faces, drawn at the board's card size in one row and scaled down together when the row is wider than the band; it launches from the WordCell it was placed in and follows an arcing, falling-and-rebounding path: it rises and drifts toward the side with more room, bounces on the bottom of the visible band between the top bar and the action bar, and leaves past a side edge. No trail, no copies left behind, no colour change. Groups launch in overlapping waves in list order, so the longest words go first; the speed of the waves and the physics constants are tuning values for the ticket. A group still moving at the cap fades out (Motion).
+- **When.** After the winning commit animation settles and the 300 ms guard window ends (epic 5 SPEC F23). The board stays visible and inert, with no scrim; the top bar and the action bar stay above it and usable.
+- **Skip.** A press outside the top bar, the action bar and the dictionary banner ends it at once (it must begin after the celebration started, so a finger held from before the win cannot skip it) and is consumed (it does not also tap what is under it, like the end sheet's scrim); `Space` or `Esc` on desktop and the Android back gesture do the same (back pops the celebration's own history entry and does not leave the app; owner, 2026-10-20). Hiding the app or resizing or rotating the window ends it the same way. A press on a top-bar or action-bar button works as usual and also ends the celebration: Undo, New game and Replay this deal continue as they do today, and ☰ (or `M`) ends it, opens the end sheet expanded behind the menu as if skipped, then the menu on top (owner, 2026-10-20, A-E16). Ending it by skip, back, hide or resize opens the end sheet expanded with focus on Replay this deal (End sheet), exactly as a normal finish does.
+- **Never plays.** After Give up; on a relaunch into a won game (R-73: the sheet is open at first paint); under reduced motion (the end sheet opens after the commit animation, as today). Undo of the win ends it with no end sheet. It cannot be replayed from the end sheet or the menu, but a Redo that restores the win plays it again, because that is a new win (owner, 2026-10-20).
+- **Keys while it runs.** `Space` and `Esc` skip; `M` and `N` act as usual (`M` ends it first, A-E16); Undo's keys undo; `?`, `Enter` on a WordCell, a WordCell tap and every other game key do nothing, because the game is already over (spine AD-13; to confirm at ticket review).
+- **Focus and reading.** Focus does not move during the celebration. The copies are not focusable and are `aria-hidden`; nothing is announced until the end sheet opens.
 
 ## Accessibility Floor
 
@@ -433,7 +449,7 @@ the end sheet expanded.
   plus 30`) and the end outcome. Full screen-reader play is not a v1 test target.
   [ASSUMPTION A-E9]
 - **Not colour alone**: every state has a glyph or shape (DESIGN.md Do's and Don'ts).
-- **Motion**: reduced-motion honoured (Motion).
+- **Motion**: reduced-motion honoured (Motion); the win celebration never plays under it and is always skippable (Win celebration).
 - **Text size**: board text is fixed px; panels, sheets and dialogs scale with the browser font
   size (DESIGN.md A-D9). Card size follows the layout, not the font size.
 - **Disabled controls explain themselves**: In Composing a disabled Validate always says why, in
@@ -580,6 +596,13 @@ Q-34). Counter-case: a movement under 8 px is a tap and selects the tail.
 5. **Climax:** he resets, confirms the delete, and Statistics starts clean. The finished game
    stays unrecorded (§2); the end sheet now shows only `This game wasn't added to your statistics.`
 
+### Flow 8 — Clearing the table
+
+1. Maya plays her last word on cell 9 with a seeded near-won game; the cards fly to the cell (2 × base, F23 guard).
+2. Once they land, each word she played lifts off the table as a row of cards from the cell it was placed in, arcs, bounces on the floor above the action bar and exits past the side; waves overlap, the longest first.
+3. She taps the felt halfway through; the cards vanish and the end sheet opens expanded, `Every column cleared.`, focus on Replay this deal.
+4. **Climax:** she scrolls to **Words** and reads BREAKFAST, 9 letters, at the top and the two `ATE` rows at the bottom, then taps **Undo**; the sheet closes and play resumes, the list gone.
+
 ## Rule coverage
 
 Where each player-visible rule surfaces, for the Playwright tests that bind to it (brief §6.4).
@@ -611,6 +634,9 @@ Where each player-visible rule surfaces, for the Playwright tests that bind to i
 | R-80, R-81 | Place points preview; end-sheet penalty line |
 | R-82 (UI) | Top bar score |
 | R-83 (UI) | End sheet; rating bands |
+| R-86 | Word list: order, ties, duplicates (End sheet row, Message catalogue) |
+| R-87 (UI) | Win celebration; Motion; Keyboard; Flow 8 |
+| R-88 (UI) | End sheet Words section; Message catalogue; Flow 8 |
 | R-84, Q-35 | Statistics panel; end sheet longest word |
 | §2 version / history messages, Q-33 | Session-rejected message; history notice; end-sheet line |
 | Q-06 | `QU` ×2 badge (DESIGN.md) |
@@ -640,6 +666,7 @@ Jared confirmed every assumption below on 2026-09-27; the `[ASSUMPTION]` tags st
 | A-E13 | The pending-draft line appears in Idle when a pending draft exists. | State Patterns |
 | A-E14 | The Place control row previews the net score change on commit (`+30` for BALKED on cell 6 with cell 6's `L`). | Component Patterns |
 | A-E15 | The hover view (desktop) is a non-modal peek that takes no clicks; a tap- or `Space`-opened sticky view is modal and consumes the tap that closes it. | Component Patterns |
+| A-E16 | During the win celebration a press on ☰ (or `M`) ends it, opens the end sheet expanded as if skipped, then the menu on top; Undo, New game and Replay end it and continue as today. Confirmed by the owner 2026-10-20; the spine's AD-13 and AD-19 carry it. | Win celebration |
 
 ### Open questions
 
