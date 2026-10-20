@@ -7,8 +7,8 @@ paradigm: 'functional core / imperative shell, event-sourced'
 scope: 'WordCell v1: pure rules engine, event-sourced Session, app shell services, Svelte UI, PWA packaging, CI and deploy'
 status: final
 created: '2026-09-27'
-updated: '2026-10-08'
-binds: ['spec R-01…R-85, §2, Q-01…Q-44', 'brief §6, §7, §9', 'DESIGN.md', 'EXPERIENCE.md']
+updated: '2026-10-20'
+binds: ['spec R-01…R-88, §2, Q-01…Q-48', 'brief §6, §7, §9', 'DESIGN.md', 'EXPERIENCE.md']
 sources:
   - _bmad-output/planning-artifacts/briefs/brief-wordcell-2026-09-26/brief.md
   - docs/game-flow-spec.md (v0.9)
@@ -151,7 +151,7 @@ flowchart LR
     `GameView` flags (AD-3); a throw always means a bug.
   - `accrue(session, elapsedMs, lang): Session` (status derivation needs the deck) adds to `activeMs` only while status = playing
     (R-76); while status ≠ playing, and for `0`, it returns the input reference; an `elapsedMs` that is not a non-negative safe integer throws, and so does a sum that leaves the safe-integer range.
-  - `view(session, lang): GameView` (AD-3); `letterCount(card, lang)` (R-85); the history
+  - `view(session, lang): GameView` (AD-3; its types `GameView`, `LongestWord` and, amended 2026-10-20 for epic 10, `WordListEntry` are the exported type names); `letterCount(card, lang)` (R-85); the history
     functions of AD-6; `serializeSession`, `parseSession(text, lang)`, `serializeHistory`,
     `parseHistory(text)` (AD-7); `SESSION_VERSION`, `HISTORY_VERSION`; `EN: LangData` (distribution, letter values,
     R-85).
@@ -175,7 +175,7 @@ flowchart LR
   faces and marks D cards by the draft's D list without computing the word; amended 2026-10-08,
   epic 5 SPEC), letter count, structural check result with its reason); Place data (legal targets,
   target, placement order, score delta per EXPERIENCE.md Word line); `liveScore` (R-80 over committed WordCells), `displayScore` (top bar: `liveScore`
-  while playing, the final score after R-81 when status ≠ playing), final score, penalty, `lettersLeft` and band (all absent while status = playing), longest word, word count, pending-draft word (present only while status = playing and phase = Idle); and `canUndo`,
+  while playing, the final score after R-81 when status ≠ playing), final score, penalty, `lettersLeft` and band (all absent while status = playing), longest word, word count, `wordList` (R-86, amended 2026-10-20, epic 10: present exactly when status ≠ playing, else absent; one `WordListEntry { spelling, letterCount, cards, cell }` per committed-prefix move: the R-37 lowercase spelling, the R-85 letter count, the word's `CardId`s in R-30 word order and the WordCell 3–10 it was placed in; ordered by `letterCount` descending then `spelling` ascending, equal entries in move order; a pending draft and the redo tail are excluded; the same `CardId` may appear in several entries), pending-draft word (present only while status = playing and phase = Idle); and `canUndo`,
   `canRedo`, `canGiveUp`, `canValidate` (structural), `canConfirm`, `canFlip`, `canDecK`,
   `canIncK`; `inProgress` (status = playing and `moves.length > 0`, spec §2), the only flag the
   New game / Replay confirmation (including the `N` key) reads. A component combines a `GameView` flag only with state outside the engine (shell:
@@ -288,6 +288,11 @@ sequenceDiagram
     not `recorded` → the line `This game wasn't added to your statistics.`; `recorded` → nothing
     (EXPERIENCE.md End sheet, Flow 7). While unreadable a finish writes no record and
     nothing is removed (spec §2); Reset writes `{ version: HISTORY_VERSION, records: [] }`.
+  - Epic 10 (amended 2026-10-20, R-86): the word list is a `view` field built from the same
+    `replayWords` pass as `wordCount` and `longestWord` (that pass's internal return widens to carry each move's `cards` and `cell`; `CommittedWord` does not change), with its own entry type. `CommittedWord`,
+    `LongestWord` and `GameRecord.longestWord` keep the exact key set `{ spelling, letterCount }`
+    (AD-7 parser checks unchanged), and nothing about the word list is stored, so neither
+    `SESSION_VERSION` nor `HISTORY_VERSION` changes.
 
 ### AD-7 — Persistence and versioning
 
@@ -647,6 +652,7 @@ sequenceDiagram
     until the commit animation settles (AD-14), then re-checks the store and opens only if status
     is still won; an Undo during the animation cancels the pending open (order per AD-14), so no
     entry is pushed (Playwright test). Boot pushes in a fixed order (AD-16).
+  - The win celebration owns one overlay entry (AD-19, amended 2026-10-20, epic 10; owner, 2026-10-20): id `celebration`, pushed when it starts (`overlays.startCelebration()`, legal only with no other entry and the end sheet `hidden`) and popped when it ends, so the Android back gesture lands on `closedByBack`. It draws no surface, has no scrim and does not make the Board `inert`; while it runs the end sheet stays `hidden`. `celebration` joins `SUSPENDING` (`attempt()` ignores game keys) and appears in no `LEGAL_TOPS` list, so no surface can open over it: `?`, a WordCell tap or `Enter`, and every other game key do nothing while it runs; the ☰ button, `M`, `N` and Undo take their own paths below. **Sequencing:** a removal of the entry (by `closedByBack`, `close('celebration')` or `resetForNewSession()`) only records why it was removed and calls the callback `celebration.svelte.ts` registered with `overlays` at boot (no circular import, as `nav` receives UI callbacks); that callback runs `done` in a microtask, after the removal loop has finished, so the end sheet's push can never be swept up by `closedByBack`'s `while (stack.length > depth)` loop. The winning case's deferred open waits for that `done` instead of the commit animation's settle; the pop is queued before the sheet's push (nav). Undo, New game and Replay cancel it: `unfinished` handling and `resetForNewSession()` close the entry top-down and cancel the token, so no `done` opens a sheet. A menu press (button or `M`, EXPERIENCE.md A-E16) calls the celebration's `end()` first, so the sheet opens expanded, and `openSurface('menu')` then runs after that push settles (`nav.whenSettled`, epic 6 F8). A reload mid-run is a relaunch into Game over (R-73): no celebration, the sheet opens at boot. Playwright: win → back → sheet expanded and the app still open, then back collapses the sheet; win → menu → sheet expanded behind the menu, then back closes the menu only; win → `?` and WordCell `Enter` do nothing.
   - New game and Replay this deal (and New game from `rejected`) call
     `overlays.resetForNewSession()`, which cancels any pending deferred end-sheet open, closes
     every entry top-down through `overlays.close` (the confirm dialog and menu first), sets the
@@ -697,6 +703,7 @@ sequenceDiagram
   then undoes. Playwright: tap a WordCell during the winning animation → no view opens;
   double-tap Confirm on the winning word → end sheet expanded, same seed, no new Session
   written; tap the menu during the animation → no menu.
+  (Amended 2026-10-20, epic 10: the guard window ends, as stated, before the win celebration starts; copies drawn by the celebration are neither live elements nor mirrors (AD-19), carry no `data-card-id`, `data-testid` or `data-mirror-of`, and take no part in a FLIP glide.)
 
 ### AD-15 — Errors fail fast to one visible surface
 
@@ -823,6 +830,7 @@ sequenceDiagram
     `loaded().history` and `.prefs` equal the snapshot's `current()` values only for keys present
     in `localStorage` at snapshot time; when a post-reload `loaded()` field is `null`, `current()`
     reports the in-memory defaults.
+  - **Celebration seam** (amended 2026-10-20, epic 10, AD-19). The celebration lives in `src/ui/`, which shell never imports. `window.__wordcell` is frozen at creation with exactly the keys `current`, `dictionaryState`, `loaded` and, new, `celebration`; `celebration` is created at import as `{ setEnabled(on), running(), advance(ms) }` whose methods delegate to a late-bound seam, and `main.ts`, only when `import.meta.env.DEV` or `VITE_TEST_HOOKS=1`, calls `testHook.registerCelebrationSeam(...)` in the step that registers `registerBeforeBack` (AD-16), as the gesture controller registers with `nav`. `src/shell/test-hook.ts`, `e2e/globals.d.ts`, `e2e/test-hook.spec.ts` and `e2e/pwa/test-hook.spec.ts` (frozen-object and exact-key-list assertions) change together. `celebration` is the one writable part of the otherwise read-only hook. In hook builds, including `dist-test/` (the `pwa` project), the celebration is **off** until a test calls `setEnabled(true)`, so the existing win-and-sheet specs stay unchanged (a disabled celebration takes the reduced-motion path); with it on, no `requestAnimationFrame` is scheduled and `advance` steps the pure `step` in fixed 16 ms sub-steps, rendering once. Only `dist-smoke` (`dist/`, hook-free) runs the real rAF loop, so every `dist-smoke` spec that wins a game ends the run by a press outside the bars; the CAP-6 ticket audits them.
   - **Time and hide.** Playwright `page.clock` controls `performance.now` for R-76 tests.
     `e2e/helpers/lifecycle.ts` `hidePage(page)` / `showPage(page)` override
     `document.visibilityState` and dispatch `visibilitychange`, exercising the store's real
@@ -942,6 +950,24 @@ sequenceDiagram
     tested by Playwright; desktop Firefox and Safari best-effort; iOS untested. Vite's default
     `build.target` stands.
 
+### AD-19 — The win celebration is a presentation layer over a finished game
+
+*Added 2026-10-20 (epic 10; R-87, Q-46, Q-48; EXPERIENCE.md Win celebration, DESIGN.md Win celebration).*
+
+- **Binds:** `src/ui/celebration/**`, `src/ui/overlays.svelte.ts`, `src/ui/end-sheet.ts`, `src/ui/motion.ts`, `src/main.ts`, `src/shell/test-hook.ts`, R-87, AD-3, AD-9, AD-10, AD-13, AD-14, AD-17.
+- **Prevents:** the celebration reusing live card elements (a card can belong to several words, R-41); holding game state or blocking Undo; a second owner of overlay state; a won game left with no end sheet after a hide, resize or back; wall-clock-dependent tests; a canvas that needs per-theme bitmaps of the card art.
+- **Rule:**
+  - `src/ui/celebration/step.ts` is a pure `step(state, dtMs) → state` over groups of faces (position, velocity, bounce count, exited, fading), with the floor, ceiling and walls passed in as data and `dtMs` clamped to 50 ms; launch time, side and speed derive from the entry index and the band size, with no clock, no `Math.random` and no DOM.
+  - The run's open state is the `celebration` entry in `overlays.svelte.ts` (AD-13); `src/ui/celebration/celebration.svelte.ts` holds the run data and is its only writer. `start(view, done)` takes the finished `GameView` (`wordList`, `faces`) and a callback. `end()` pops the entry and calls `done` once (idempotent; `done` runs in a microtask after the removal, AD-13); it is what finish, the cap, a skip press or key, back (`closedByBack`, through the callback registered with `overlays`), the menu handlers and a `resize`/`orientationchange` call. `cancel()` pops the entry and never calls `done`; Undo, New game and Replay reach it through the `unfinished` handling and `overlays.resetForNewSession()`. A stale `done` is harmless because it runs the token-guarded open. `act()` is unchanged (it still only cancels the pointer controller); the ☰ button and `M` handler call `end()` explicitly before `openSurface('menu')`.
+  - Hide: `main.ts` registers a second callback with the store's `registerBeforeHide` (AD-9 accepts several; it dispatches nothing and changes nothing written) that calls `end()` in its hide mode. The flush runs on `visibilitychange` and again on `pagehide`, so `end()` is idempotent; nav and rAF are unreliable on a hidden page, so the hide mode only stops the run and removes the entry, and the end sheet's open is queued for the store's next `whenVisible()`. A won game therefore never resumes without its sheet, and a long hidden gap cannot produce a huge step. Playwright lifecycle test (`hidePage`/`showPage`): hide mid-run, show → sheet expanded, then back and the menu still work. A theme or speed change cannot occur mid-run (Preferences sits behind the menu).
+  - `Celebration.svelte` renders one container above the board, clipped to the visible band between the top bar and the action bar (AD-12 geometry), so it never overlaps either bar: per entry, a row of copies of the card faces from `view.faces` in the live theme's CSS, 50 % card-width overlap, scaled to fit (DESIGN.md), with `data-celebration`, `aria-hidden`, no `data-card-id`, no `data-testid`, no `data-mirror-of`. Each frame writes `transform` directly to the groups (rule 3) and never touches live card elements or the FLIP module. DOM face copies, not canvas: no trail means no persistent surface, and themes' card art applies unchanged.
+  - Start: `end-sheet.ts` `onDispatched`, in the existing winning `whenSettled` callback (after the commit animation and the 300 ms guard, AD-14), pushes the entry and starts; it goes straight to `done` when `prefs.motion.reduced` or when the test seam is disabled (a win always has at least one word). A relaunch opens the sheet at boot with no celebration (R-73). Give up never starts it. A Redo that restores the win starts it again.
+  - Duration: `src/shell/prefs.svelte.ts` exports `BASE_MS` (today module-private) and `src/ui/motion.ts` exports the cap `6000 × prefs.motion.baseMs / BASE_MS.normal` ms; the run, including the last 1 × base fade-out of groups still moving, ends within it. No other module holds a duration.
+  - Skip: while running, capture-phase `pointerdown`, `pointerup` and `click` listeners on `document` consume a press whose target is outside the top bar, the action bar and the dictionary banner (one-shot click swallow like epic 5's) and whose `pointerdown` happened after the run started (a finger held from before the win cannot skip it), and `keydown` for `Space` and `Esc` is consumed unless a bar or banner control holds focus; each calls `end()`. A press on a bar or banner control passes through `act()` and its own path (the banner's Retry/Reload is an App button).
+  - Focus is not moved while it runs; the end sheet's open then moves focus as today (AD-13, EXPERIENCE.md Focus).
+  - Tests: UI Vitest `AD-19` for `step` (floor contact, wall exit, determinism, dt clamp, completion within the cap, empty list) and for start/skip/cancel/hide/resize wiring; Playwright through AD-17's celebration seam.
+- **Amends:** AD-3 (`wordList`), AD-13 (the `celebration` entry), AD-14 (copies are neither live nor mirrors), AD-17 (celebration seam), AD-9 (the registered before-hide callback also ends the run).
+
 ## Consistency Conventions
 
 | Concern | Convention |
@@ -988,6 +1014,7 @@ src/
                      # layout.svelte.ts, tray.ts); gestures/ (controller.ts, classify.ts,
                      # intent.ts, targeting.ts, drop-target.ts, gate.ts, click-swallow.ts, classes.ts, fly-back.ts, hover-peek-timer.ts, lookup.ts, tile.ts,
                      # visible-band.ts); tray/ (WordLine, TileRows, ControlRow .svelte, tags.ts);
+                     # celebration/ (step.ts, celebration.svelte.ts, Celebration.svelte; AD-19);
                      # act.ts; hover-peek.ts; motion.ts; flip.ts; keys.ts; text.ts;
                      # assets/ (font, OFL.txt)
   main.ts            # boot order (AD-16), global error handler (AD-15)
@@ -1069,6 +1096,8 @@ Changes the first epic makes to commit `785c0f6`:
 | Layout and band order | `ui/layout/` | AD-11 |
 | Drag, tap, overlap targeting, R-14, Q-34 | `ui/gestures/` | AD-12 |
 | Overlays, back handling | `ui/overlays.svelte.ts`, `shell/nav.ts` | AD-13 |
+| End-of-game word list, R-86 (engine) and R-88 (end-sheet section) | `engine/view.ts`, `ui/EndSheet.svelte`, `ui/text.ts` | AD-3, AD-6 |
+| Win celebration, R-87 | `ui/celebration/`, `ui/overlays.svelte.ts`, `ui/end-sheet.ts`, `ui/motion.ts` | AD-19, AD-13, AD-14, AD-17 |
 | PWA, offline, install, manifest | `vite.config.ts`, `shell/sw.ts`, `scripts/build-icons.mjs` | AD-16 |
 | Engine purity, brief §6.5 | `src/engine/tsconfig.json`, `architecture-*.test.ts`, `architecture-scan.ts` | AD-1 |
 | Test seams, brief §6.2–§6.4 | `e2e/helpers/`, `fixtures/`, `shell/test-hook.ts` | AD-17 |
@@ -1089,6 +1118,7 @@ the per-ticket loop of `docs/development-methodology.md`.
 | 5 | Tray and Place | Tray interactions (tiles, destination block, D-block controls); free letters (tap and drag); arrange and tap-swap; Validate states and invalid-word line; placement strip; Confirm; FLIP and fly-to-cell (AD-14); tray growth; the winning-animation guard (AD-14; its pending end-sheet open, menu case and Undo key aliases move to epic 6, epic 5 SPEC F8) | 4 |
 | 6 | Game surfaces and keyboard | Menu sheet, confirm dialogs, end sheet, Statistics, Preferences, How to play, the history-unreadable end-sheet block, Statistics message and menu dot, pending-draft line, keyboard map, screen-reader labels and live region; `__APP_VERSION__` injection and menu footer (Consistency Conventions) | 5 |
 | 7 | PWA and release | SW registration, update policy, offline test (AD-16, AD-17); `requestPersistence()`; test-hook `swState()` and `precacheComplete()` (AD-17); device checks (brief §6.2 force-stop, §6.3 ten qualifying games, relaunch into Game over → Android back collapses the end sheet, A-A11) | 3 (SW), 5 (offline test), 6 (release checks) |
+| 10 | End-of-game word list and win celebration | `wordList` in `view` (AD-3) and its R-86 tests; the Words section of the end sheet (R-88); the celebration layer, wiring, skip and test seam (AD-19, AD-17); screenshots (amended 2026-10-20; spec `spec-epic-10-end-of-game-words`) | 6, 9 |
 
 Play Store (Bubblewrap TWA) stays out of v1 (brief §8).
 
