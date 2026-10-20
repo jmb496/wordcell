@@ -677,3 +677,178 @@ test.describe('desktop', () => {
     await expect(bar(page)).toBeVisible();
   });
 });
+
+// Ticket 10.2 (R-88): the Words section of the expanded sheet. Rows are `WON_WORDS_LIST` in
+// src/engine/serialize.test.ts (session-won-words, seed 2089).
+const WON_ROWS = [
+  'EHNPBNTFSA, 10 letters',
+  'JDAQUYE, 7 letters',
+  'EIOGKD, 6 letters',
+  'TMXRWO, 6 letters',
+  'AECCP, 5 letters',
+  'LHVIA, 5 letters',
+  'NMIHZ, 5 letters',
+  'LTOS, 4 letters',
+  'SURF, 4 letters',
+  'SURF, 4 letters',
+];
+const GAVE_ROWS = WON_ROWS.slice(1);
+
+// The won fixture with its last move dropped and gaveUp set (a `{ literal }` session).
+function gaveUpLiteral(): string {
+  const session = JSON.parse(fixture('session-won-words.json')) as {
+    moves: unknown[];
+    cursor: { index: number };
+    gaveUp: boolean;
+  };
+  session.moves = session.moves.slice(0, 9);
+  session.cursor.index = 9;
+  session.gaveUp = true;
+  return JSON.stringify(session);
+}
+
+const wordsList = (page: Page) => page.getByRole('list', { name: 'Words', exact: true });
+const rows = (page: Page) =>
+  wordsList(page)
+    .getByRole('listitem')
+    .evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')));
+const wordcellKeys = (page: Page) =>
+  page.evaluate(() =>
+    JSON.stringify(
+      Object.keys(localStorage)
+        .filter((k) => k.startsWith('wordcell:'))
+        .sort()
+        .map((k) => [k, localStorage.getItem(k)]),
+    ),
+  );
+
+test.describe('android words', () => {
+  test.beforeEach(onAndroid);
+
+  test('R-88 a won sheet lists the ten words in order, SURF twice', async ({ page }) => {
+    await openFixture(page, 'session-won-words', { endSheet: 'expanded' });
+    await expect(wordsList(page)).toBeVisible();
+    expect(await rows(page)).toEqual(WON_ROWS);
+    await expect(page.getByRole('listitem', { name: 'SURF, 4 letters', exact: true })).toHaveCount(
+      2,
+    );
+    await expect(page.getByRole('heading', { name: 'Words', level: 3 })).toBeVisible();
+    await expect(replayButton(page)).toBeFocused();
+  });
+
+  test('R-88 a give-up with words lists the nine remaining words', async ({ page }) => {
+    await openFixture(page, { literal: gaveUpLiteral() }, { endSheet: 'expanded' });
+    await expect(sheet(page, GAVE)).toBeVisible();
+    expect(await rows(page)).toEqual(GAVE_ROWS);
+    await expect(page.getByRole('listitem', { name: /^EHNPBNTFSA/ })).toHaveCount(0);
+  });
+
+  test('R-88 a zero-move give-up shows the heading and the empty line, no list', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-idle-fresh');
+    await giveUpFromMenu(page);
+    await expect(sheet(page, GAVE)).toBeVisible();
+    await expect(sheet(page, GAVE).getByRole('heading', { name: 'Words', level: 3 })).toBeVisible();
+    await expect(sheet(page, GAVE).getByText('No words were played.')).toBeVisible();
+    await expect(wordsList(page)).toHaveCount(0);
+  });
+
+  test('R-88 the section scrolls with the sheet, rows are 44 px, nothing overflows at 360 px', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 360, height: 480 });
+    await openFixture(page, 'session-won-words', { endSheet: 'expanded' });
+    const content = page.locator('.content');
+    const dims = await content.evaluate((el) => ({
+      scroll: el.scrollHeight,
+      client: el.clientHeight,
+    }));
+    expect(dims.scroll).toBeGreaterThan(dims.client);
+    const fixed = async () => [
+      await handle(page).boundingBox(),
+      await page.locator('.top-bar').boundingBox(),
+      await page.getByTestId('primary-action').boundingBox(),
+    ];
+    const before = await fixed();
+    await content.evaluate((el) => el.scrollTo(0, el.scrollHeight));
+    expect(await content.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+    expect(await fixed()).toEqual(before);
+    expect(await wordsList(page).evaluate((el) => getComputedStyle(el).overflowY)).toBe('visible');
+    for (const item of await wordsList(page).getByRole('listitem').all()) {
+      expect((await item.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+    }
+    expect(await content.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+    const long = page.getByRole('listitem', { name: 'EHNPBNTFSA, 10 letters', exact: true });
+    expect(await long.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+    const centres = await long.locator('span').evaluateAll((els) =>
+      els.map((e) => {
+        const r = e.getBoundingClientRect();
+        return r.top + r.height / 2;
+      }),
+    );
+    expect(centres).toHaveLength(2);
+    expect(Math.abs(centres[0] - centres[1])).toBeLessThanOrEqual(2);
+  });
+
+  test('R-88 scrolling, collapsing and expanding leave localStorage untouched', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-won-words', { endSheet: 'expanded' });
+    const before = await wordcellKeys(page);
+    const session = (JSON.parse(before) as [string, string][]).find(([k]) => k === SESSION);
+    expect(session?.[1]).toBe(fixture('session-won-words.json'));
+    await page.locator('.content').evaluate((el) => el.scrollTo(0, el.scrollHeight));
+    await handle(page).click();
+    await expect(anySheet(page)).toHaveCount(0);
+    await expect(wordsList(page)).toHaveCount(0);
+    await bar(page).click();
+    await expect(wordsList(page)).toBeVisible();
+    expect(await rows(page)).toEqual(WON_ROWS);
+    expect(await wordcellKeys(page)).toBe(before);
+  });
+
+  test('R-88 the won list survives a reload', async ({ page }) => {
+    await openFixture(page, 'session-won-words', { endSheet: 'expanded' });
+    await page.reload();
+    await expect(sheet(page)).toBeVisible();
+    expect(await rows(page)).toEqual(WON_ROWS);
+  });
+
+  test('R-88 the give-up list survives a reload', async ({ page }) => {
+    await openFixture(page, { literal: gaveUpLiteral() }, { endSheet: 'expanded' });
+    await page.reload();
+    await expect(sheet(page, GAVE)).toBeVisible();
+    expect(await rows(page)).toEqual(GAVE_ROWS);
+  });
+
+  test('R-88 Undo of the finish removes the list and a later Give up lists the other words', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-won-words', { endSheet: 'expanded' });
+    await page.getByTestId('undo').click();
+    await expect(wordsList(page)).toHaveCount(0);
+    // Give up needs Idle (giveUpAvailable): undo the last word's Place and Composing phases too.
+    for (let i = 0; i < 2; i++) {
+      await page.getByTestId('undo').click();
+      await glidesSettled(page);
+    }
+    await giveUpFromMenu(page);
+    await expect(sheet(page, GAVE)).toBeVisible();
+    const gave = await rows(page);
+    expect(gave).not.toEqual(WON_ROWS);
+    expect(gave).toHaveLength(9);
+  });
+
+  test('R-88 New game removes the list', async ({ page }) => {
+    await openFixture(page, 'session-won-words', { endSheet: 'expanded' });
+    await primary(page).click();
+    await expect(wordsList(page)).toHaveCount(0);
+  });
+
+  test('R-88 Replay removes the list', async ({ page }) => {
+    await openFixture(page, 'session-won-words', { endSheet: 'expanded' });
+    await replayButton(page).click();
+    await expect(wordsList(page)).toHaveCount(0);
+  });
+});

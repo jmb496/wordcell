@@ -191,3 +191,47 @@ describe('AD-3 end sheet result mapping', () => {
     expect(() => resultOf(view({ band: 1 }))).toThrow('AD-3');
   });
 });
+
+// R-88 / ticket 10.2: the Words section by server render (the unit environment has no DOM).
+describe('AD-3 end sheet Words section', () => {
+  async function sheetHtml(view: object): Promise<string> {
+    vi.resetModules();
+    store.view = { status: (view as { status: string }).status };
+    const { render } = await import('svelte/server');
+    const { overlays } = await import('./overlays.svelte');
+    overlays.resetForNewSession();
+    const sheet = await import('./end-sheet');
+    sheet.openAtBoot();
+    const { default: EndSheet } = await import('./EndSheet.svelte');
+    return render(EndSheet, { props: { view: view as never } }).body;
+  }
+  const base = { status: 'won', finalScore: 100, band: 3, wordCount: 1, longestWord: undefined };
+
+  it('AD-3 the rows come from view.wordList, not a replay', async () => {
+    const html = await sheetHtml({
+      ...base,
+      wordList: [
+        { spelling: 'baked', letterCount: 5, cards: [], cell: 5 },
+        { spelling: 'cat', letterCount: 1, cards: [], cell: 3 },
+      ],
+    });
+    expect(html).toContain('aria-label="BAKED, 5 letters"');
+    expect(html).toContain('aria-label="CAT, 1 letter"');
+    expect(html).toContain('aria-labelledby="end-words"');
+    expect(html.indexOf('BAKED')).toBeLessThan(html.indexOf('CAT'));
+  });
+
+  it('AD-3 an empty wordList renders the heading and the empty line, no list', async () => {
+    const html = await sheetHtml({ ...base, wordList: [] });
+    expect(html).toContain('>Words</h3>');
+    expect(html).toContain('No words were played.');
+    expect(html).not.toContain('<ul');
+  });
+
+  it('AD-3 an undefined wordList on a finished view throws', async () => {
+    await expect(sheetHtml({ ...base })).rejects.toThrow('AD-3');
+    await expect(
+      sheetHtml({ ...base, status: 'gaveUp', lettersLeft: 1, penalty: 1 }),
+    ).rejects.toThrow('AD-3');
+  });
+});

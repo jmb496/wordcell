@@ -66,6 +66,12 @@ const collapse = (event: MouseEvent): void => {
 const replay = (event: MouseEvent): void => {
   if (first(event) && !requestReplay(view)) void tick().then(focusBoard);
 };
+// R-88: a finished view always carries `wordList` (R-86); absent is a bug, never the empty line.
+function wordsOf(v: GameView) {
+  if (v.wordList === undefined) throw new Error('AD-3 end sheet Words section with no wordList');
+  return v.wordList;
+}
+
 function unreadableReason() {
   const current = scoreHistory.state;
   if (current.status !== 'unreadable')
@@ -156,6 +162,21 @@ function focusOnMount(button: HTMLButtonElement): void {
           >
           <button type="button" class="secondary" onclick={act(statistics)}>{text.statistics}</button>
         </div>
+        <section class="words">
+          <h3 id="end-words">{text.wordsHeading}</h3>
+          {#if wordsOf(result).length === 0}
+            <p class="words-empty">{text.wordsEmpty}</p>
+          {:else}
+            <ul aria-labelledby="end-words">
+              {#each wordsOf(result) as entry}
+                <li aria-label={text.wordRow(entry.spelling, entry.letterCount)}>
+                  <span class="word" aria-hidden="true">{entry.spelling.toUpperCase()}</span>
+                  <span class="count" aria-hidden="true">{text.wordCount(entry.letterCount)}</span>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </section>
       </div>
     </div>
   </div>
@@ -218,6 +239,21 @@ function focusOnMount(button: HTMLButtonElement): void {
     flex: 1; min-height: 44px; padding: 0 16px; border-radius: 9999px;
     background: var(--wc-surface-raised); border: 1px solid var(--wc-outline);
     color: var(--wc-ink-primary); font: 600 1rem/1.5rem system-ui, "Roboto", sans-serif;
+  }
+  .words { margin-top: 16px; text-align: left; }
+  .words h3 {
+    margin: 0; color: var(--wc-ink-secondary); font: 500 0.875rem/1.25rem system-ui, "Roboto", sans-serif;
+  }
+  .words-empty { margin: 4px 0 0; color: var(--wc-ink-secondary); }
+  .words ul { margin: 4px 0 0; padding: 0; list-style: none; overflow-y: visible; }
+  .words li {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    min-height: 44px; box-sizing: border-box; border-top: 1px solid var(--wc-outline);
+  }
+  .words li:first-child { border-top: none; }
+  .word { min-width: 0; overflow-wrap: anywhere; color: var(--wc-ink-primary); }
+  .count {
+    flex: none; color: var(--wc-ink-secondary); font: 500 0.875rem/1.25rem system-ui, "Roboto", sans-serif;
   }
   @container style(--wc-reduced: 1) {
     .scrim, .sheet { transition: opacity var(--wc-fade-ms); }

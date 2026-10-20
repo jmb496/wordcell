@@ -241,6 +241,12 @@ export const text = Object.freeze({
   // names are not in the catalogue and take this wording, flagged for the owner.
   endWinTitle: 'Every column cleared.',
   endGaveUpTitle: 'Game given up.',
+  // R-88 / DESIGN.md Words section: the end-sheet list; the word is uppercased here, never by CSS,
+  // and `n` is the entry's `letterCount` (QU = 2).
+  wordsHeading: 'Words',
+  wordsEmpty: 'No words were played.',
+  wordRow: (spelling: string, n: number) => `${spelling.toUpperCase()}, ${letters(n)}`,
+  wordCount: letters,
   endPenalty: (n: number, p: number) => `${letters(n)} left: \u2212${p}`,
   endLongestWord: 'Longest word',
   endWordsPlaced: 'Words placed',
