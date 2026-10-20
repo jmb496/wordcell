@@ -201,11 +201,15 @@ colour, so the principles below hold for all of them and only the specific value
 
 Theme-neutral rules (every theme): colours come only from `--wc-*` tokens, never a literal in
 `src/**` outside the token files; each token keeps its role below; every theme meets these
-contrast floors, which a unit test computes from the theme's token values: card ink on card face
-≥ 13.1:1; outline on table ≥ 3.8:1 and on surface ≥ 3.4:1; card edge on table ≥ 3.6:1 and on
-surface ≥ 3.2:1; ink secondary on surface ≥ 6.4:1 and on surface raised ≥ 5.6:1; accent teal on
-surface ≥ 7:1 and on card face ≥ 6.6:1; ink on accent orange ≥ 6.4:1; card ink on destination
-fill ≥ 9.9:1; error on surface ≥ 6.7:1. These figures describe the default theme only. No state relies on hue alone. The token names
+contrast floors, which a unit test computes from the theme's token values: text pairs
+(card ink on card face and on destination fill, ink primary on destination fill, ink secondary on
+surface and on surface raised, error on surface, ink on accent orange) ≥ 4.5:1; outline on table
+and on surface, card edge on table and on surface, and accent teal on surface and on card face
+≥ 3:1. Charcoal's own figures are higher (card ink on card face 13.1:1; outline on table 3.8:1 and
+on surface 3.4:1; card edge on table 3.6:1 and on surface 3.2:1; ink secondary on surface 6.4:1 and
+on surface raised 5.6:1; accent teal on surface 7:1 and on card face 6.6:1; ink on accent orange
+6.4:1; card ink on destination fill 9.9:1; error on surface 6.7:1) and describe the default theme
+only; the test pins them for Charcoal. No state relies on hue alone. The token names
 `accent-teal` and `accent-orange` stay in every theme even where the colour is cyan, sage or
 copper. The values and ratios below are **Charcoal's**.
 
@@ -247,8 +251,8 @@ or less, accepted for now and removable after gameplay feel (owner, 2026-10-18).
 
 Charcoal is the default; Deep Space (`scifi`), Greenhouse Dusk (`garden`), Brass and Walnut
 (`steampunk`), Daylight Paper (`paper`, the only light theme) and Plum Dusk (`plum`) are
-alternates. Until each theme ticket lands its values here, its token set is the one in
-`_bmad-output/initiative-wordcell-v1/epic-themes/research/brief.md` (data in `research/tools/themes.mjs`).
+alternates. Each theme's values are in `src/ui/app.css`; the research brief
+(`_bmad-output/initiative-wordcell-v1/epic-themes/research/brief.md`) is history.
 
 - A theme may add a **table background** and a **card-face texture**: tileable art that is theme
   data applied through tokens. Art never changes layout or card size, and letters keep the card-ink

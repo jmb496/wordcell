@@ -3,7 +3,7 @@ title: 'Refactor sweep: docs, budget and cleanup'
 type: 'chore'
 ticket: 11
 created: '2026-10-19'
-status: 'built'
+status: done
 baseline_revision: 'e701292090e471b2de503732e8fc47bb052dd7a4'
 route: 'full'
 route_source: 'auto'
