@@ -1,5 +1,5 @@
 # Review log — story-end-sheet-words-section.md
-State: pass 3: done
+State: pass 4: done
 Pre-loop: HEAD d8828a2; pass0.md 209 words; budget 1500 words.
 
 ## Pass 1 — 2026-10-20
@@ -48,3 +48,14 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (ref alignment
 Words: 1055 (5.0 x pass 0)  |  Snapshot: story-end-sheet-words-section.passes/pass3.md
 ### Applied
 - [major] array `toHaveAccessibleName` → `evaluateAll` aria-labels + `toEqual`; minors: localStorage scoping, 2 px tolerance, left-aligned heading/empty line
+
+## Pass 4 — 2026-10-20
+Reviewers: fix diff, edge-case + adversarial (combined), ref alignment  |  Findings: major 0, minor 2, decision-needed 0  |  Dropped in triage: 0
+Words: 1055 (5.0 x pass 0), unchanged (no fix pass)
+### Unapplied minors
+- `1 letter` is covered by the `AD-3` Vitest stub only, while rule-coverage.md assigns that row to P6: note it as exempt from P6 (min word 3) at close-out.
+- AD-3 bullet: reword "binds to `result` snapshot" to "reads EndSheet's existing `result` (live `view` while open, retained `shown` on exit)".
+- Residual risk: the session byte-equality check assumes the app does not rewrite `wordcell:session` while the sheet is open; it fails fast if wrong. Unverified: the nine-row give-up literal parses.
+
+## Result — converged after 4 passes
+Majors per pass: 8, 7, 1, 0. No decision-needed items. Technical defaults applied: ~16 (markup, locators, fixtures, test recipes, layout measurements).
