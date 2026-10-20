@@ -54,3 +54,10 @@ slug = "epic-themes"
 title = "Alternate visual themes"
 covers = []
 after = [{ epic = 8, needs = "the accepted How to play scenes (Scene.svelte colours and their screenshot baselines) that themes must cover" }]
+
+[[epic]]
+id = 10
+slug = "epic-end-of-game-words"
+title = "End-of-game word list and win celebration"
+covers = []
+after = [{ epic = 9, needs = "the theme layer the celebration's card-face copies are drawn in, and the Charcoal and light-theme screenshot baselines the Words section extends" }]
