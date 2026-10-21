@@ -79,14 +79,21 @@ watch_progress() { # <start-marker> <base-commit>
   trap 'poll; exit 0' TERM
   while :; do poll; sleep "${PROGRESS_SECS:-15}" & wait $!; done
 }
-# The workflow is tuned for Opus/Fable; warn (never pin) when the selected model is something else.
+# The workflow is tuned for Opus/Fable; pause for confirmation (never pin) when the selected model is something else.
 MODEL=${ANTHROPIC_MODEL:-}
 for f in .claude/settings.local.json .claude/settings.json "$HOME/.claude/settings.json"; do
   [ -n "$MODEL" ] && break
   [ -f "$f" ] && MODEL=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("model",""))' "$f" 2>/dev/null)
 done
-if ! echo "$MODEL" | grep -qiE 'opus|fable'; then
-  echo "WARNING: selected model is '${MODEL:-unknown (not set in env or settings)}', not Opus or Fable. This workflow was tuned on Opus 5.5; results may differ."
+if ! echo "$MODEL" | grep -qiE 'opus|fable' && [ "${ALLOW_MODEL:-}" != 1 ]; then
+  echo "Selected model is '${MODEL:-unknown (not set in env or settings)}', not Opus or Fable. This workflow was tuned on Opus 5.5."
+  if [ -t 0 ]; then
+    read -r -p "Continue with this model? [y/N] " ans
+    case "$ans" in y|Y|yes) ;; *) echo "Paused. Select Opus or Fable (/model) and rerun."; exit 7 ;; esac
+  else
+    echo "Paused for confirmation. Select Opus or Fable (/model) and rerun, or rerun with ALLOW_MODEL=1 to continue anyway."
+    exit 7
+  fi
 fi
 LOGS=$AP/loop-$EPIC-$(date +%Y%m%d-%H%M)
 mkdir -p "$LOGS"

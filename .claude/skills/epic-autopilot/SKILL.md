@@ -31,7 +31,7 @@ is one fresh orchestrator session per ticket, started by the driver:
 The driver runs `claude -p "Run the epic-autopilot skill with arguments: <epic> one-ticket handoff=<path>"` (path ends `.json`) once
 per ticket and continues while each session's handoff says `outcome: done`. It exits 0 when the
 epic is complete (or max-tickets is reached), 2 when a session stopped (read the handoff), 3 on a
-usage limit (rerun after the reset), 4 when a session made no progress (read its log). Before
+usage limit (rerun after the reset), 4 when a session made no progress (read its log), 7 when the model needs the owner's confirmation (Model). Before
 each ticket it runs `scripts/limits.py`, which reads the plan's 5-hour and weekly utilization
 from the local cache of the owner's "Claude Code Usage" VS Code extension (no network call), and
 exits 5, asking the owner to rerun it by hand, when either is at or over its threshold
@@ -128,8 +128,10 @@ When the owner asks how to run the driver and see this detail, offer both ways:
 ## Model
 
 Never pin a model: every session and step uses the model the owner selected in Claude Code. The
-workflow's patterns were tested with Opus 5.5, so the driver warns (it does not stop) when the
-selected model is not Opus or Fable, or cannot be read.
+workflow's patterns were tested with Opus 5.5, so the driver pauses for the owner's confirmation when
+the selected model is not Opus or Fable, or cannot be read: it asks `[y/N]` in a terminal, and
+otherwise exits 7 (rerun after `/model`, or with `ALLOW_MODEL=1` to continue anyway). An
+interactive session that gets exit 7 asks the owner, never sets `ALLOW_MODEL` itself.
 
 ## Stop rule
 
