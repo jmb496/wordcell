@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GameView } from '../../engine/index';
-import { createCelebration } from './celebration.svelte';
+import { createCelebration } from './celebration.svelte.ts';
 import { launch, step } from './step';
 
 // AD-19 (R-87): the run controller over a fake document and rAF (the unit environment is `node`).
@@ -101,6 +101,23 @@ const tick = (t: number) => {
   cb(t);
 };
 
+// The pure `step.ts` result for cell 3's origin (150, 432), applying `dts` in order.
+const pureTransform = (dts: readonly number[]): string => {
+  let state = launch({
+    groups: [{ x: 150, y: 432, letters: 3 }],
+    cardW: 40,
+    cardH: 53,
+    floor: 500,
+    ceiling: 0,
+    walls: { left: 0, right: 360 },
+    capMs: 6000,
+    baseMs: 180,
+  });
+  for (const dt of dts) state = step(state, dt);
+  const g = state.groups[0];
+  return `translate(${(g?.x ?? 0) - (g?.w ?? 0) / 2}px, ${(g?.y ?? 0) - (g?.h ?? 0) / 2}px) scale(${g?.scale})`;
+};
+
 describe('AD-19 celebration controller', () => {
   it('AD-19 an empty or absent list ends at once: onEnd then done once, no rAF; start after and inside done is legal', () => {
     const c = createCelebration();
@@ -153,6 +170,7 @@ describe('AD-19 celebration controller', () => {
     expect(t20).not.toBe(t0);
     tick(1020 + 400); // clamped to 50 ms
     const t50 = at();
+    expect(t50).toBe(pureTransform([0, 0, 20, 50]));
     tick(1020 + 400 - 30); // negative difference: clamped to 0
     expect(at()).toBe(t50);
     c.cancel();
@@ -168,7 +186,7 @@ describe('AD-19 celebration controller', () => {
     c.register(asEls(els));
     expect(els[0]?.style.transform).toBe('');
     tick(32);
-    expect(els[0]?.style.transform).not.toBe('');
+    expect(els[0]?.style.transform).toBe(pureTransform([0, 16, 16]));
   });
 
   it('AD-19 a stubbed-rAF run ends at the cap with no frame pending, calling onEnd then done once', () => {
@@ -266,15 +284,16 @@ describe('AD-19 celebration controller', () => {
       c.advance(100);
       c.start(viewOf([3]), () => undefined);
       c.advance(100);
-      expect(els[0]?.style.transform).toBe('');
+      expect(els[0]?.style.opacity).toBe('');
       c.cancel();
       c.setManual(true);
       c.start(viewOf([3]), () => undefined);
       c.advance(0);
       c.advance(-5);
-      expect(els[0]?.style.transform).toBe('');
+      expect(els[0]?.style.opacity).toBe('');
       // Remainder untouched: 10 + 10 ms makes one 16 ms step (two renders, one step).
       c.advance(10);
+      expect(els[0]?.style.opacity).toBe('0'); // rendered once, zero steps
       expect(els[0]?.style.transform).toBe('');
       c.advance(10);
       expect(els[0]?.style.transform).not.toBe('');
@@ -287,9 +306,10 @@ describe('AD-19 celebration controller', () => {
       const els = fakeEls(1);
       c.register(asEls(els));
       c.start(viewOf([3]), () => undefined);
+      expect(els[0]?.style.opacity).toBe('');
       c.advance(10); // zero steps, one render
-      const before = els[0]?.style.transform;
-      expect(before).toBe('');
+      expect(els[0]?.style.opacity).toBe('0');
+      expect(els[0]?.style.transform).toBe('');
       c.advance(10); // carried 10 + 10: one step
       const one = els[0]?.style.transform;
       expect(one).not.toBe('');
@@ -299,6 +319,7 @@ describe('AD-19 celebration controller', () => {
       const fresh = fakeEls(1);
       c.register(asEls(fresh));
       c.advance(12);
+      expect(fresh[0]?.style.opacity).toBe('0');
       expect(fresh[0]?.style.transform).toBe('');
       c.advance(4);
       expect(fresh[0]?.style.transform).not.toBe('');
@@ -319,6 +340,15 @@ describe('AD-19 celebration controller', () => {
       c.advance(1000);
       expect(done).toHaveBeenCalledTimes(1);
       expect(frames.size).toBe(0);
+    });
+
+    it('AD-19 advance throws on a non-finite ms', () => {
+      const c = createCelebration();
+      c.setManual(true);
+      c.start(viewOf([3]), () => undefined);
+      expect(() => c.advance(Number.NaN)).toThrow(/not finite/);
+      expect(() => c.advance(Number.POSITIVE_INFINITY)).toThrow(/not finite/);
+      c.cancel();
     });
 
     it('AD-19 nothing happens after end(): advance is idle', () => {

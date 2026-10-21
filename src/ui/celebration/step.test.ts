@@ -173,6 +173,18 @@ describe('AD-19 step', () => {
     });
   }
 
+  for (const n of [41, 42]) {
+    it(`AD-19 the last launch is within half the cap with ${n} entries`, () => {
+      const groups = Array.from({ length: n }, (_, i) => ({
+        x: 40 + (i % 8) * 40,
+        y: 420,
+        letters: 3,
+      }));
+      const s0 = make({ groups, capMs: 6000, baseMs: 180 });
+      expect(Math.max(...s0.groups.map((g) => g.launchMs))).toBeLessThanOrEqual(6000 * 0.5 + 1e-6);
+    });
+  }
+
   it('AD-19 one entry finishes by the cap too, with a single group at Normal', () => {
     const s = run(make(), 7000);
     expect(s.finished).toBe(true);

@@ -1,5 +1,6 @@
 import { render } from 'svelte/server';
 import { describe, expect, it, vi } from 'vitest';
+import { text } from '../text';
 import Celebration from './Celebration.svelte';
 import source from './Celebration.svelte?raw';
 
@@ -34,9 +35,8 @@ describe('AD-19 Celebration', () => {
 
   it('AD-19 cards overlap by 50 % of the card width and the faces carry the drag shadow', () => {
     const body = html([[face('C'), face('A'), face('T')]]);
-    expect(body).toContain('left: 0px');
-    expect(body).toContain('left: 20px');
-    expect(body).toContain('left: 40px');
+    const lefts = [...body.matchAll(/class="face[^"]*" style="left: ([\d.]+)px/g)].map((m) => m[1]);
+    expect(lefts).toEqual(['0', '20', '40']);
     expect(body).toContain('width: 80px');
     // DESIGN.md Win celebration: the lifted-card shadow, read from --wc-shadow-drag (#0008 by default).
     expect(source).toContain('box-shadow: 0 6px 16px var(--wc-shadow-drag)');
@@ -45,7 +45,7 @@ describe('AD-19 Celebration', () => {
   it('AD-19 a QU copy shows Qu with its badge, other letters have none', () => {
     const body = html([[face('QU')]]);
     expect(body).toMatch(/class="glyph[^"]* qu[^"]*">Qu</);
-    expect(body).toContain('class="badge');
+    expect(body).toMatch(new RegExp(`class="badge[^"]*">${text.quBadge}<`));
     expect(html([[face('A')]])).not.toContain('class="badge');
   });
 

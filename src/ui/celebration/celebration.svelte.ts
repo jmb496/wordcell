@@ -174,6 +174,7 @@ export function createCelebration() {
     },
     /** Manual clock: whole 16 ms steps, the remainder carried; one render; `end()` when finished. */
     advance(ms: number): void {
+      if (!Number.isFinite(ms)) throw new Error(`AD-19 celebration: advance(${ms}) is not finite`);
       const current = run;
       if (current === null || !current.manual || ms <= 0) return;
       const total = remainder + ms;

@@ -88,9 +88,10 @@ export function launch(input: LaunchInput): StepState {
   const bandH = floor - ceiling;
   const count = input.groups.length;
   const lastWave = Math.floor((Math.max(count, 1) - 1) / WAVE_SIZE);
+  const lastSlot = (Math.max(count, 1) - 1) % WAVE_SIZE;
   const waveGap = Math.min(
     WAVE_GAP_FRAC * capMs,
-    (LAUNCH_SPAN_FRAC * capMs) / Math.max(lastWave, 1),
+    (LAUNCH_SPAN_FRAC * capMs) / Math.max(lastWave + lastSlot / WAVE_SIZE, 1),
   );
   const fallMs = FALL_FRAC * capMs;
   const gravity = (2 * bandH) / (fallMs * fallMs);
