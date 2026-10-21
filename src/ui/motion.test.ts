@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import {
+  celebrationCapMs,
   duration,
   finishGuard,
   guardInstalled,
@@ -17,6 +18,7 @@ import {
 const mocked = vi.hoisted(() => ({ motion: { baseMs: 180, reduced: false } }));
 
 vi.mock('../shell/prefs.svelte', () => ({
+  BASE_MS: { fast: 90, normal: 180, slow: 320 },
   prefs: {
     get motion() {
       return mocked.motion;
@@ -38,6 +40,16 @@ beforeEach(() => {
 });
 
 describe('motion', () => {
+  it('AD-19 celebrationCapMs is 3000, 6000 and 10666.67 at Fast, Normal and Slow', () => {
+    const caps = [90, 180, 320].map((baseMs) => {
+      mocked.motion = { baseMs, reduced: false };
+      return celebrationCapMs();
+    });
+    expect(caps[0]).toBe(3000);
+    expect(caps[1]).toBe(6000);
+    expect(caps[2]).toBeCloseTo(10666.67, 2);
+  });
+
   for (const baseMs of [90, 180, 320]) {
     it(`AD-10 motion durations at baseMs ${baseMs}: each kind is its factor × baseMs`, () => {
       mocked.motion = { baseMs, reduced: false };

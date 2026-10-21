@@ -1,7 +1,7 @@
 // AD-10: the only source of WAAPI animation durations, after EXPERIENCE.md Motion: each kind is a
 // multiple of `prefs.motion.baseMs`; under reduced motion every kind is the 120 ms fade except
 // parting, which snaps (0), and there is no stagger.
-import { prefs } from '../shell/prefs.svelte';
+import { BASE_MS, prefs } from '../shell/prefs.svelte';
 
 export type MotionKind = 'snap' | 'flyBack' | 'parting' | 'undoRedo' | 'flyToCell' | 'overlay';
 
@@ -36,6 +36,11 @@ export function initMotion(): void {
 /** AD-10: the delay in ms between staggered animations. */
 export function stagger(): number {
   return prefs.motion.reduced ? 0 : STAGGER_MS;
+}
+
+/** AD-19: the win celebration's cap in ms, 6000 × baseMs / the Normal base (3 s, 6 s, 10.7 s). */
+export function celebrationCapMs(): number {
+  return (6000 * prefs.motion.baseMs) / BASE_MS.normal;
 }
 
 // AD-14 winning guard (epic 5 SPEC F8, F23). The tracker, started once from main.ts, owns the open

@@ -61,7 +61,7 @@ const DEFAULTS: Prefs = {
   showTimer: false,
   theme: 'default',
 };
-const BASE_MS: Record<AnimationSpeed, number> = { fast: 90, normal: 180, slow: 320 };
+export const BASE_MS: Record<AnimationSpeed, number> = { fast: 90, normal: 180, slow: 320 };
 const SPEEDS: readonly string[] = Object.keys(BASE_MS);
 const THEMES: readonly string[] = ['default', 'scifi', 'garden', 'steampunk', 'paper', 'plum'];
 const REQUIRED = ['animationSpeed', 'showTimer', 'version'];
