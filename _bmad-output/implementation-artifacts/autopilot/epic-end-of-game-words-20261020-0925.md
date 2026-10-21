@@ -17,13 +17,13 @@ Tokens: Tokens: 4.8M input-equivalent (build 48%, ticket review 26%, code review
 Worth knowing: nothing
 Close-out docs: none
 
-## 10.2 End-sheet Words section — stopped (screenshot baselines)
+## 10.2 End-sheet Words section — done
 What it adds: The end-of-game sheet shows a Words list (longest first) below its buttons, with an empty-game line.
 Ticket review: 4 passes, converged; nothing needed your input
 Build: built; commits 02b125b
 Code review: quick, 2 passes, converged; fixes applied in 5068d95
-Tests: test:all passing (first run had 8 unrelated timeout flakes in dictionary and drag-interruptions specs, which passed alone and on a full rerun). Screenshots FAILED: the 3 existing end-sheet baselines (expanded, history-unreadable, not-added; android and desktop) differ by about 4% of pixels because the sheet now has a Words section. All other 60 screenshot checks passed.
+Tests: test:all passing (first run had 8 unrelated timeout flakes in dictionary and drag-interruptions specs, which passed alone and on a full rerun). Screenshots: the 3 given-up end-sheet baselines (expanded, history-unreadable, not-added; android and desktop) differed by about 4% because the sheet now has a Words section; owner reviewed the full-list screenshots, approved, and the baselines were regenerated in the container (full suite then 66 passed).
 Ref to fix upstream: none
 Tokens: Tokens: 4.6M input-equivalent (ticket review 50%, build 26%, code review 13%, other 7%, orchestrator 5%); orchestrator peak context 67k
-Worth knowing: ticket stays "built"; not marked done. Unapplied minors were handed to the build. The 1-letter row is covered by the Vitest AD-3 test only (exempt from P6, min word 3).
+Worth knowing: Unapplied minors were handed to the build. The 1-letter row is covered by the Vitest AD-3 test only (exempt from P6, min word 3).
 Close-out docs: none

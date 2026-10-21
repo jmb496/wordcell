@@ -3,7 +3,7 @@ title: 'End-sheet Words section'
 type: 'feature'
 ticket: 'story-end-sheet-words-section'
 created: '2026-10-20'
-status: 'built'
+status: done
 baseline_revision: '1190a6ff78335905c38dd0fea8bdae0c71ec98d8'
 route: 'full'
 route_source: 'auto'
