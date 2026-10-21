@@ -15,7 +15,7 @@ import { text } from '../text';
 // live strip tiles (place `strip`) in `placementOrder`, the first marked `bottom` and the last
 // `top` (R-50). A free-letter tile carries its origin-cell `tag` in both phases and modes; Card
 // places every mark and, from `gaps`, the compact hit rect's row-gap halves (F2). The tile area
-// keeps the reserved height and clips (F2); its clip's top edge alone is raised 6 px (the 4 px
+// keeps the reserved height, grown per A-D4 (`sizing.area`), and clips (F2); its clip's top edge alone is raised 6 px (the 4 px
 // selected-tile lift + its 2 px outline, epic 5 SPEC CAP-4) by a padding-top the negative margin
 // cancels, so rows and the bottom edge stay put. The live tile that is `overlays.tileSelection` is
 // `selected` (and shows `↩` when it is a free letter; Card hides it in the strip). Keys stay
@@ -105,7 +105,8 @@ function stripPosition(i: number): 'bottom' | 'top' | undefined {
 </div>
 
 <style>
-  /* DESIGN.md Tray band: tile area max(H, 92), rows top-aligned, 4 px row gap in compact mode. */
+  /* DESIGN.md Tray band: tile area max(H, 92) grown per A-D4 (`sizing.area`), rows top-aligned, 4 px
+     row gap in compact mode. */
   .tiles {
     position: relative; flex: none; display: grid; grid-auto-rows: max-content;
     align-content: start; overflow: hidden; box-sizing: content-box; padding-top: 6px;
@@ -119,7 +120,8 @@ function stripPosition(i: number): 'bottom' | 'top' | undefined {
   .tiles :global(.face.wc-drag-layer) { z-index: 5; box-shadow: 0 6px 16px var(--wc-shadow-drag); }
   /* Epic 5 SPEC CAP-8 (DESIGN.md Layer order): a FLIP-gliding face (flip.ts `wc-glide`, literal
      from gestures/classes.ts) rides above the cards and under the sticky bars (2), no shadow; a
-     band-changing glide lifts the clip by `wc-drag-tiles` above. */
+     band-changing glide, or a tray glide that starts outside the tile area (A-D4), lifts the clip
+     by `wc-drag-tiles` above. */
   .tiles :global(.face.wc-glide) { z-index: 1; }
   /* Epic 5 SPEC CAP-6, F16: the caret, above the tiles' marks (1), out of the grid flow. */
   .wc-caret {

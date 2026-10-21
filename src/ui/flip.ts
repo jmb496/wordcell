@@ -17,8 +17,9 @@
 // at once. `inFlight` (read-only reactive, AD-14 presentation only) tells WordCellRow to keep the
 // committed cards, the previous top and (own cell) the used mirror drawn until the last landing,
 // which hides the non-top committed cards together. Durations only from the injected `duration`
-// (motion.ts, AD-10). A translating face takes `wc-glide`, and a band-changing translate lifts the
-// tile area's clip (`wc-drag-tiles`, F22), both removed at the last settle. Each animation holds one gate count
+// (motion.ts, AD-10). A translating face takes `wc-glide`, and a band-changing translate, or a tray
+// translate that starts outside the tile area (A-D4), lifts the tile area's clip (`wc-drag-tiles`,
+// F22), both removed at the last settle. Each animation holds one gate count
 // (AD-11) until its idempotent settle: its `onfinish`, or `finishAll()` (finish, then settle
 // synchronously); a `cancel` event throws (rule 6). Installed once from main.ts through `setFlip`
 // (as act.ts's `setController`); the module-level `capture`, `play` and `finishAll` serve the
@@ -211,6 +212,8 @@ type Measure = {
   readonly bands: Readonly<Record<BandKey, Box>>;
   /** Each WordCell's used-mirror CardId (R-52). */
   readonly mirrors: ReadonlyMap<number, CardId>;
+  /** The tile area's (`.tiles`) rect, its clip (A-D4: it grows and shrinks with the compact rows). */
+  readonly tiles: Box;
 };
 
 type Running = { readonly animation: Animation; settled: boolean };
@@ -259,7 +262,30 @@ function measure(root: HTMLElement): Measure {
       );
     }
   }
-  return { placed, faces, bands, mirrors };
+  const tiles = boxOf(
+    found(root.querySelector('[data-band="tray"] .tiles'), 'AD-14 FLIP tile area missing'),
+  );
+  return { placed, faces, bands, mirrors, tiles };
+}
+
+// F22: a translate lifts the tile area's clip when it changes band, or when it stays in the tray
+// band and its face, inverted to its band-relative start (planGlides), is not fully inside the
+// after-move tile area (A-D4: a removed compact row, or compact → card mode).
+function lifts(glide: Glide, band: BandKey, before: Measure, after: Measure): boolean {
+  if (!glide.translate) return false;
+  if (glide.bandChange) return true;
+  if (band !== 'tray') return false;
+  const from = found(before.placed.get(glide.id), `AD-14 FLIP card ${glide.id} missing`).rect;
+  const to = found(after.placed.get(glide.id), `AD-14 FLIP card ${glide.id} missing`).rect;
+  const left = from.left - before.bands.tray.left + after.bands.tray.left;
+  const top = from.top - before.bands.tray.top + after.bands.tray.top;
+  const clip = after.tiles;
+  return (
+    left < clip.left - MIN_DELTA_PX ||
+    top < clip.top - MIN_DELTA_PX ||
+    left + to.width > clip.left + clip.width + MIN_DELTA_PX ||
+    top + to.height > clip.top + clip.height + MIN_DELTA_PX
+  );
 }
 
 function cellOf(wrapper: HTMLElement): number {
@@ -349,7 +375,8 @@ export function createFlip(deps: FlipDeps): Flip {
     const ms = deps.duration(kind);
     for (const glide of glides) {
       const face = found(after.faces.get(glide.id), `AD-14 FLIP card ${glide.id} has no face`);
-      start(face, glide, root, { duration: ms });
+      const band = (after.placed.get(glide.id) as Placed).band;
+      start(face, glide, root, { duration: ms }, lifts(glide, band, before, after));
     }
   }
 
@@ -390,11 +417,13 @@ export function createFlip(deps: FlipDeps): Flip {
             translate: true,
             bandChange: from.band !== to.band,
           };
-      start(face, glide, root, {
-        duration: ms,
-        delay: i * step,
-        fill: 'backwards',
-      });
+      start(
+        face,
+        glide,
+        root,
+        { duration: ms, delay: i * step, fill: 'backwards' },
+        lifts(glide, to.band, before, after),
+      );
     });
   }
 
@@ -403,6 +432,7 @@ export function createFlip(deps: FlipDeps): Flip {
     glide: Glide,
     root: HTMLElement,
     options: KeyframeAnimationOptions,
+    lift: boolean,
   ): void {
     gate.enter();
     // 5-10 #4: the reduced-motion fade is linear, as fly-back.ts's; only a translate eases out.
@@ -415,7 +445,7 @@ export function createFlip(deps: FlipDeps): Flip {
     if (glide.translate) {
       face.classList.add(GLIDE);
       gliding.add(face);
-      if (glide.bandChange && tiles === null) {
+      if (lift && tiles === null) {
         tiles = found(
           root.querySelector<HTMLElement>('[data-band="tray"] .tiles'),
           'AD-14 FLIP tile area missing',

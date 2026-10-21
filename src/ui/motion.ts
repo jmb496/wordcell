@@ -60,6 +60,8 @@ type Tracker = {
   readonly timers: GuardTimers;
   /** Open gestures: `p<pointerId>` / `k<code>` → consumed. */
   readonly open: Map<string, boolean>;
+  /** Open keys left unconfirmed by a Meta keyup (their keyup may be lost); see `onEvent`. */
+  readonly unconfirmed: Set<string>;
   installed: boolean;
   complete: (() => void) | null;
   completed: boolean;
@@ -194,6 +196,7 @@ function scheduleRelease(t: Tracker): void {
 function clearOpen(t: Tracker, hide: boolean): void {
   const consumed = [...t.open.values()].some((c) => c);
   t.open.clear();
+  t.unconfirmed.clear();
   clearHold(t);
   if (!t.installed) return;
   if (consumed) t.lastEnd = t.now();
@@ -205,7 +208,7 @@ function clearOpen(t: Tracker, hide: boolean): void {
 }
 
 function consumedOpen(t: Tracker): boolean {
-  for (const consumed of t.open.values()) if (consumed) return true;
+  for (const [id, consumed] of t.open) if (consumed && !t.unconfirmed.has(id)) return true;
   return false;
 }
 
@@ -273,24 +276,51 @@ function gestureId(event: Event): string | null {
   return null;
 }
 
+// F8: one open gesture's end bookkeeping (its end event, or an end the browser never sent).
+function endOpen(t: Tracker, id: string, consumed: boolean, pointerup: boolean): void {
+  if (t.hold && t.holdId === id) scheduleRelease(t);
+  t.open.delete(id);
+  t.unconfirmed.delete(id);
+  if (consumed) {
+    t.lastEnd = t.now();
+    if (pointerup) t.owedClick = true;
+  }
+}
+
 function onEvent(t: Tracker, event: Event): void {
   evaluate(t);
   const type = event.type;
   const id = gestureId(event);
   const isEnd = type === 'pointerup' || type === 'pointercancel' || type === 'keyup';
   const isStart = type === 'pointerdown' || type === 'keydown';
+  const key = event as KeyboardEvent;
+  if (
+    type === 'keyup' &&
+    (key.key === 'Meta' || key.code === 'MetaLeft' || key.code === 'MetaRight')
+  ) {
+    // Review default under AD-14 (F8 tracker), not an F8 sentence: macOS sends no keyup for a key
+    // released while Meta is held, so Meta's keyup leaves every other open key unconfirmed. It stays
+    // open (its repeats, keyup and a fresh keydown still follow its consumed flag; its keyup or that
+    // keydown ends it), but neither the guard nor an Undo hold waits on it and it sets no backstop
+    // until that real end. Install marks it consumed and it stays unconfirmed; nothing re-confirms
+    // it (uninstall keeps the set: a later install must not wait on a lost keyup either).
+    for (const other of t.open.keys()) {
+      if (other === id || !other.startsWith('k')) continue;
+      t.unconfirmed.add(other);
+      if (t.hold && t.holdId === other) scheduleRelease(t);
+    }
+    evaluate(t);
+  }
   if (id !== null) {
     const consumed = t.open.get(id);
-    if (consumed !== undefined) {
+    // Review default under AD-14 (F8 tracker), not an F8 sentence: a fresh (non-repeat) keydown of
+    // an open key means its keyup was lost: the stale entry ends here and the keydown starts a new
+    // gesture below. Pointers keep the duplicate-down rule.
+    const lost = consumed !== undefined && type === 'keydown' && !key.repeat;
+    if (lost) endOpen(t, id, consumed, false);
+    if (consumed !== undefined && !lost) {
       // A tracked gesture: its events (duplicate down, repeats, end) follow its consumed flag.
-      if (isEnd) {
-        if (t.hold && t.holdId === id) scheduleRelease(t);
-        t.open.delete(id);
-        if (consumed) {
-          t.lastEnd = t.now();
-          if (type === 'pointerup') t.owedClick = true;
-        }
-      }
+      if (isEnd) endOpen(t, id, consumed, type === 'pointerup');
       if (consumed) consume(event);
       evaluate(t);
       return;
@@ -364,6 +394,7 @@ export function startTracker(
     now,
     timers,
     open: new Map(),
+    unconfirmed: new Set(),
     installed: false,
     complete: null,
     completed: false,

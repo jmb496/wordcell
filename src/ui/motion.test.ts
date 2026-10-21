@@ -190,6 +190,9 @@ describe('AD-14 winning guard', () => {
   const key = (code: string, repeat = false, undo = false) =>
     send(make('keydown', { code, repeat }, undo));
   const keyup = (code: string) => send(make('keyup', { code }));
+  const meta = (type: 'keydown' | 'keyup') =>
+    send(make(type, { code: 'MetaLeft', key: 'Meta', metaKey: type === 'keydown' }));
+  const metaZ = () => send(make('keydown', { code: 'KeyZ', key: 'z', metaKey: true }));
   const click = (undo = false) => send(make('click', {}, undo));
   const win1 = () => install(true, complete);
 
@@ -569,12 +572,101 @@ describe('AD-14 winning guard', () => {
     expect(guardInstalled()).toBe(false);
   });
 
-  it('AD-14 a keydown inside Undo for a key code already consumed is still consumed', () => {
+  it('AD-14 a repeat keydown inside Undo for a key code already consumed is still consumed', () => {
     key('Enter');
     win1();
-    expect(consumed(key('Enter', false, true))).toBe(true);
+    expect(consumed(key('Enter', true, true))).toBe(true);
     expect(guardInstalled()).toBe(true);
     expect(complete).not.toHaveBeenCalled();
+  });
+
+  it('AD-14 a Meta+Z keydown whose keyup macOS never sends, held over the win: the next Meta+Z keydown ends it, passes and undoes, and is not consumed after the uninstall', () => {
+    metaZ();
+    win1();
+    notifySettled();
+    vi.advanceTimersByTime(1000);
+    expect(guardInstalled()).toBe(true);
+    expect(passed(metaZ())).toBe(true);
+    expect(complete).toHaveBeenCalledTimes(1);
+    releaseHold();
+    expect(guardInstalled()).toBe(false);
+    expect(passed(metaZ())).toBe(true);
+  });
+
+  it('AD-14 a Meta+Z with no Z keyup and Meta released after the win: the Meta keyup leaves it unconfirmed, the guard uninstalls after its floor and a later Meta+Z keydown is not consumed', () => {
+    meta('keydown');
+    metaZ();
+    win1();
+    notifySettled();
+    expect(consumed(meta('keyup'))).toBe(true);
+    vi.advanceTimersByTime(299);
+    expect(guardInstalled()).toBe(true);
+    vi.advanceTimersByTime(1);
+    expect(guardInstalled()).toBe(false);
+    expect(passed(meta('keydown'))).toBe(true);
+    expect(passed(metaZ())).toBe(true);
+    expect(complete).not.toHaveBeenCalled();
+  });
+
+  it('AD-14 Meta down, Z down, Meta up with no Z keyup, then a win: the guard uninstalls on settle and the floor as with no open gesture', () => {
+    meta('keydown');
+    metaZ();
+    meta('keyup');
+    win1();
+    notifySettled();
+    vi.advanceTimersByTime(299);
+    expect(guardInstalled()).toBe(true);
+    vi.advanceTimersByTime(1);
+    expect(guardInstalled()).toBe(false);
+  });
+
+  it('AD-14 Enter held through the win, Meta tapped: the Meta keyup leaves Enter open, its repeats and keyup stay consumed after the Undo uninstall', () => {
+    key('Enter');
+    win1();
+    expect(consumed(meta('keydown'))).toBe(true);
+    expect(consumed(meta('keyup'))).toBe(true);
+    expect(passed(down(1, true))).toBe(true);
+    releaseHold();
+    expect(guardInstalled()).toBe(false);
+    expect(consumed(key('Enter', true))).toBe(true);
+    expect(consumed(keyup('Enter'))).toBe(true);
+  });
+
+  it('AD-14 Enter down, win, Meta down and up with no Enter keyup: the guard uninstalls on its backstop with no further event', () => {
+    key('Enter');
+    win1();
+    notifySettled();
+    vi.advanceTimersByTime(400);
+    expect(consumed(meta('keydown'))).toBe(true);
+    expect(consumed(meta('keyup'))).toBe(true);
+    vi.advanceTimersByTime(duration('snap') - 1);
+    expect(guardInstalled()).toBe(true);
+    vi.advanceTimersByTime(1);
+    expect(guardInstalled()).toBe(false);
+  });
+
+  it('AD-14 Enter down, win, Meta down and up, the guard uninstalls on its backstop: the real Enter keyup that then arrives is consumed', () => {
+    key('Enter');
+    win1();
+    notifySettled();
+    vi.advanceTimersByTime(400);
+    meta('keydown');
+    meta('keyup');
+    vi.advanceTimersByTime(duration('snap'));
+    expect(guardInstalled()).toBe(false);
+    expect(consumed(keyup('Enter'))).toBe(true);
+    expect(complete).not.toHaveBeenCalled();
+  });
+
+  it('AD-14 an untracked Meta keyup that leaves the last consumed key unconfirmed (Meta+A at the win, Meta keydown unseen) uninstalls the guard at once, its backstop counted from install, and A keeps its consumed keyup', () => {
+    send(make('keydown', { code: 'KeyA', key: 'a', metaKey: true }));
+    win1();
+    notifySettled();
+    vi.advanceTimersByTime(500);
+    expect(guardInstalled()).toBe(true);
+    expect(passed(meta('keyup'))).toBe(true);
+    expect(guardInstalled()).toBe(false);
+    expect(consumed(keyup('KeyA'))).toBe(true);
   });
 
   it('AD-14 blur after install clears the open gestures: their ends pass, the backstop counts from the blur', () => {
