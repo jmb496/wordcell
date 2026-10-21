@@ -371,6 +371,9 @@ src/ui/
   `main.ts` registers the hide-clear through `game.registerBeforeHide`, AD-9, beside
   `controller.cancel` and `gate.scrollReset`, `main.ts:136-137`). Undo is recognised by
   `[data-testid="undo"]` (the key aliases are epic 6).
+- Lost keyups (SPEC F29, owner 2026-10-21): a fresh non-repeat keydown on a tracked key ends its
+  stale entry; a Meta keyup marks every other open key unconfirmed, so it cannot hold the guard
+  while its own repeats and keyup stay consumed (`motion.ts`).
 - The second Confirm tap's `pointerdown` settles the animation and its `click` would land on
   `New game`; the guard consumes it, so `current().session.seed` is unchanged and the stored
   `seed`, `moves` and `cursor` equal those of the `wordcell:session` value read right after the
