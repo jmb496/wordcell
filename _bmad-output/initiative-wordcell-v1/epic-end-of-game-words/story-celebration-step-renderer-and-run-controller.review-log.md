@@ -1,5 +1,5 @@
 # Review log — story-celebration-step-renderer-and-run-controller.md
-State: pass 3: done
+State: pass 4: done
 Pre-loop: HEAD 4efc910; pass0.md 276 words; budget default 2.5x (~690 words).
 
 ## Pass 1 — 2026-10-21
@@ -45,3 +45,15 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 - Name `step.ts`; Slow cap compared with tolerance (10666.67); `advance` stops stepping/rendering after `end()` and ms ≤ 0 is a no-op. Registration API name and a 10-letter rowScale case left to the plan.
 Words: 789 (2.9 x pass 0)  |  Snapshot: story-celebration-step-renderer-and-run-controller.passes/pass3.md
 Fixer applied majors 1–2 and the word-neutral minors.
+
+## Pass 4 — 2026-10-21
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 2, minor ~6, decision-needed 0  |  Dropped in triage: 0 (1 major reclassified to minor)
+### Majors (technical, default applied)
+1. `cancel()` mid-run contract unstated (clears the run so `running()` is false and `start` legal, cancels the frame, does not call `onEnd` or `done` because the overlay's removal callback already popped the entry, AD-19) and untested.
+2. The stated "missing `wordcell-<n>` element throws" rule had no Verify clause (and no run left active).
+### Reclassified to minor
+- Floor/ceiling clamp and heading-into-surface guard: standard handling, constants tuned at entry 6.
+### Minor (word-neutral only)
+- Restore `onEnd` replace/keep and empty-path "starts then ends" wording; drop "(EXPERIENCE)" attribution of the tie rule (ticket default); `rowScale` 150 px case names n; order step, render, then `end()`.
+Words: 823 (3.0 x pass 0)  |  Snapshot: story-celebration-step-renderer-and-run-controller.passes/pass4.md
+Fixer applied majors 1–2 and the word-neutral minors; the "Ticket fields" interface line was cut for room (every function is named in the Description bullets).
