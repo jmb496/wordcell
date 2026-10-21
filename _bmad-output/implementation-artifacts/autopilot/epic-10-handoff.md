@@ -1,9 +1,11 @@
-outcome: stopped
-ticket: 10.2
-reason: rule 3 — screenshot check failed (3 existing end-sheet baselines differ, expected from the new Words section)
-next: 10.2 (resume at Step D: owner reviews and regenerates baselines)
-updated: 2026-10-20T17:24:00Z
-summary: 10.2 is built, reviewed and test:all passes, but the end-sheet screenshots changed and need your approval to update.
+outcome: done
+ticket: 10.3
+reason: done
+next: 10.4
+updated: 2026-10-21T10:00:00Z
+summary: Ticket 10.3 (celebration step, renderer and run controller) is built, reviewed, tested and marked done.
 
-Plain language: the end sheet now has a Words list, so the old screenshots of the sheet no longer match. I do not update reference screenshots on my own. Please look at the diffs (end-sheet.screens.spec.ts, test-results/*/-diff.png after `npm run test:screens`). If the new look is right, run the screenshot update in the Docker container (baselines only inside mcr.microsoft.com/playwright:v1.63.0-noble), commit, then rerun the driver: it resumes at Step D (verify, mark done). If the look is wrong, tell me what to change.
+Plain language: the win celebration's engine room now exists (motion rules, the row of card copies, the start/end/cancel controller) but is not shown in the game yet; ticket 10.4 attaches it to the overlay. All tests and screenshots pass.
+Two things to know: (1) the checkout's drvfs mount ignores letter case, which broke an import; the review fixed it with explicit `.ts` import paths and one new line in `tsconfig.app.json` (`allowImportingTsExtensions`). (2) The ticket's Verify text lacks two small clauses the build covers in the plan; harmless.
 Close-out docs: none
+Resume: `.claude/skills/epic-autopilot/scripts/loop.sh 10`

@@ -3,7 +3,7 @@ title: 'Celebration step, renderer and run controller'
 type: 'feature'
 ticket: 'story-celebration-step-renderer-and-run-controller'
 created: '2026-10-21'
-status: 'built'
+status: done
 route: 'full'
 route_source: 'auto'
 review: 'thorough'

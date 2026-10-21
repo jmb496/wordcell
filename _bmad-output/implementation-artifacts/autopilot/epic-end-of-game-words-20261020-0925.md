@@ -27,3 +27,14 @@ Ref to fix upstream: none
 Tokens: Tokens: 4.6M input-equivalent (ticket review 50%, build 26%, code review 13%, other 7%, orchestrator 5%); orchestrator peak context 67k
 Worth knowing: Unapplied minors were handed to the build. The 1-letter row is covered by the Vitest AD-3 test only (exempt from P6, min word 3).
 Close-out docs: none
+
+## 10.3 Celebration step, renderer and run controller — done
+What it adds: The behind-the-scenes pieces of the win celebration: the motion rules for the bouncing word cards, the drawing of one row of card copies per word, and the controller that starts, ends and cancels a run. Nothing shows in the game yet; later tickets mount and trigger it.
+Ticket review: 7 passes, converged; nothing needed your input
+Build: built; commit e161c3c
+Code review: thorough, 2 passes, converged; fixes applied in 4c9f853 (majors 2, 0)
+Tests: all passing, screenshots passed
+Ref to fix upstream: none
+Tokens: 6.7M input-equivalent (ticket review 54%, build 24%, code review 19%, orchestrator 3%); orchestrator peak context 64k
+Worth knowing: The ticket review left one open major (Verify lacks clauses for `advance` being a no-op when idle/not manual/ms<=0 and `setManual` read only at `start`); the build covered both in the plan and tests, the ticket text itself was not changed. This checkout is on a case-insensitive drvfs mount, so `./celebration.svelte` resolved to `Celebration.svelte` and 19 tests failed; the code review fixed it with explicit `.ts` import paths and added `allowImportingTsExtensions` to `tsconfig.app.json` (a root config change you may want to glance at).
+Close-out docs: none
