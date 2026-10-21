@@ -1,5 +1,5 @@
 # Review log — story-celebration-step-renderer-and-run-controller.md
-State: pass 6: done
+State: done
 Pre-loop: HEAD 4efc910; pass0.md 276 words; budget default 2.5x (~690 words).
 
 ## Pass 1 — 2026-10-21
@@ -80,3 +80,14 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 - Box height is `rowScale` × card height; active-run throw checked before the empty-list path; exited groups hidden and no longer written; `advance` breaks at the first `finished` step and clears the remainder. Resize mid-run (AD-19, entry 4) and a realistic 10-letter rowScale case left to the plan.
 Words: 841 (3.0 x pass 0)  |  Snapshot: story-celebration-step-renderer-and-run-controller.passes/pass6.md
 Fixer applied major 1 and the minors; to stay word-neutral it cut two Verify items added in pass 5 (`advance` no-ops; `setManual` read at `start`), which the pass 7 verify-only lens may flag.
+
+## Pass 7 — 2026-10-21 (verify-only)
+Reviewers: fix diff  |  Findings: major 1, minor 0, decision-needed 0  |  Dropped in triage: 0
+### Open major (recorded, not fixed)
+- Verify: pass 6 cut the `advance` no-op clause (idle, not manual, ms ≤ 0) and the `setManual` read-at-`start` clause that pass 5 added; both rules stay in the Description with no Verify clause. Fix: restore both, e.g. "`advance` no-ops (idle, not manual, ms ≤ 0)" and "`setManual` read only at `start`", trimming other Verify wording.
+
+## Result — converged after 7 passes
+open major: Verify lacks the `advance` no-op and `setManual`-read-at-`start` clauses (see pass 7).
+Majors per pass: 10, 6, 2, 2, 2, 1, 1. Decision-needed: none. Technical defaults applied: about 30 (all majors and applied minors above).
+Unapplied minors: perf-fallback note; registration API name and unmount counterpart; cap counts simulated time (one sentence); resize mid-run (AD-19, entry 4); a realistic 10-letter `rowScale` case; stagger formula and "large list" size.
+Words: 276 → 841 (3.0 x pass 0; budget 2.5x exceeded from pass 2 on because the Description absorbed the tickets.toml fields and the Verify list).
