@@ -1,5 +1,5 @@
 # Review log — story-celebration-step-renderer-and-run-controller.md
-State: pass 4: done
+State: pass 5: done
 Pre-loop: HEAD 4efc910; pass0.md 276 words; budget default 2.5x (~690 words).
 
 ## Pass 1 — 2026-10-21
@@ -57,3 +57,15 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 - Restore `onEnd` replace/keep and empty-path "starts then ends" wording; drop "(EXPERIENCE)" attribution of the tie rule (ticket default); `rowScale` 150 px case names n; order step, render, then `end()`.
 Words: 823 (3.0 x pass 0)  |  Snapshot: story-celebration-step-renderer-and-run-controller.passes/pass4.md
 Fixer applied majors 1–2 and the word-neutral minors; the "Ticket fields" interface line was cut for room (every function is named in the Description bullets).
+
+## Pass 5 — 2026-10-21
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 2, minor ~5, decision-needed 0  |  Dropped in triage: 0 (1 major reclassified to minor)
+### Majors (technical, default applied)
+1. Unlaunched groups: hidden (opacity 0) until their launch time; the component renders them hidden; test.
+2. Verify lacks clauses for stated drive-loop rules: `advance` no-ops (idle, non-manual, ms ≤ 0), no rAF while manual, `setManual` read at `start`, `advance` stopping after `end()`.
+### Reclassified to minor
+- Box anchor (centred on the origin): obvious handling, constants tuned at entry 6.
+### Minor (word-neutral only)
+- Contact applies only when vy points into the surface and clamps the box (raised in passes 4 and 5); bounce count informational; box centred on origin. Cap-in-simulated-time sentence and registration API name left to the plan.
+Words: 840 (3.0 x pass 0)  |  Snapshot: story-celebration-step-renderer-and-run-controller.passes/pass5.md
+Fixer applied majors 1–2 and the minors; it also dropped the "second `start` throwing" Verify item (to be caught by the pass 6 fix-diff lens).
