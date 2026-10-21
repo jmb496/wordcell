@@ -66,10 +66,14 @@ With the argument `one-ticket` (always headless):
   `.autopilot/*/*.pid` names a live process (a step an earlier session left running), stop
   (rule 5) and name it; never start a second copy.
 - Startup checklist (before anything else): read the handoff JSON, `git log -5`, `git status --short`
-  and the newest digest's last section; they must agree on which ticket is next.
+  and the newest digest's last section, and check they agree on which ticket is next. When they
+  disagree, the ticket files win (`tickets.py` status, plan status, review logs, per the resume
+  rule in Per ticket); note the mismatch in the digest. If the files themselves do not settle it,
+  stop (rule 5) and name the mismatch.
 - Handoff (committed, overwritten each session): the JSON file at the path given as
-  `handoff=<path>` in the arguments (the driver parses exactly that file and fails loudly when it
-  is missing or malformed; never invent another name). Exactly these keys:
+  `handoff=<path>` in the arguments. The driver parses exactly that file and treats the session
+  as having made no progress unless the file changed in a commit made during the session, so
+  never invent another name and always commit it. Exactly these keys:
 
   ```json
   {"outcome": "done|stopped|complete", "ticket": "<ref>", "reason": "<stop rule number and short reason, or done>",
@@ -130,8 +134,14 @@ When the owner asks how to run the driver and see this detail, offer both ways:
 Never pin a model: every session and step uses the model the owner selected in Claude Code. The
 workflow's patterns were tested with Opus 5.5, so the driver pauses for the owner's confirmation when
 the selected model is not Opus or Fable, or cannot be read: it asks `[y/N]` in a terminal, and
-otherwise exits 7 (rerun after `/model`, or with `ALLOW_MODEL=1` to continue anyway). An
-interactive session that gets exit 7 asks the owner, never sets `ALLOW_MODEL` itself.
+otherwise exits 7 (rerun after `/model`, or with `ALLOW_MODEL=1` to continue anyway). Settings
+can be overridden, so after each session the driver also checks which models actually answered
+in its headless transcripts (`scripts/models-used.py`) and exits 7 the same way when one is not
+Opus or Fable. An interactive session that gets exit 7 asks the owner, never sets `ALLOW_MODEL`
+itself.
+
+The owner pauses a running driver cleanly with `touch .autopilot/STOP`: the current ticket
+finishes, then the driver exits 2 before the next one (remove the file to resume).
 
 ## Stop rule
 
@@ -328,9 +338,11 @@ committed there.
    `fixtures/`, a `*.screens.spec.ts` or its baselines, also run `npm run test:screens`
    (Docker, never skipped: `docker info` must succeed first; background, wait, after
    `test:all`). Docker unavailable → stop (rule 3).
-   A differing screenshot is evaluated without the owner: run a fresh headless step
-   (result JSON `{"verdict": "approve"|"escalate", "reasons": [...]}`)
-   that opens each actual, expected and diff image and the ticket's stated UI change. Approve only
+   A differing screenshot is evaluated without the owner: run a fresh, read-only headless step
+   (`claude -p "<prompt>" --disallowedTools "Edit,Write,NotebookEdit" ...`, step name `S`, result
+   JSON `{"verdict": "approve"|"escalate", "reasons": [...]}`, written by you from its output)
+   that opens each actual, expected and diff image and the ticket's stated UI change; it never
+   regenerates baselines itself. Approve only
    when every difference lies inside the area the ticket says it changes and nothing else moved
    (layout shifts, other screens, colours and fonts outside it). Escalate when anything unexpected
    changed or the ticket introduces a new visual design or first motion the owner has not seen

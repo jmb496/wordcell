@@ -15,7 +15,9 @@
 # watch_progress and SKILL.md "Watching progress").
 # Exit codes: 0 complete or max reached, 2 stopped (see handoff), 3 usage limit hit, 4 no
 # progress (or a dirty tree, a live leftover step, or another driver running), 5 limit threshold
-# reached before a ticket, 6 limits could not be read (after the one unchecked ticket).
+# reached before a ticket, 6 limits could not be read (after the one unchecked ticket), 7 the
+# selected model, or a model that answered in the session, is not Opus or Fable (ALLOW_MODEL=1
+# continues anyway). `touch .autopilot/STOP` pauses cleanly before the next ticket (exit 2).
 set -u
 if [ $# -lt 1 ]; then echo "usage: $0 <epic-slug> [max-tickets]"; exit 4; fi
 EPIC=$1; MAX=${2:-99}
@@ -99,6 +101,10 @@ LOGS=$AP/loop-$EPIC-$(date +%Y%m%d-%H%M)
 mkdir -p "$LOGS"
 echo "loop logs: $LOGS"
 for i in $(seq 1 "$MAX"); do
+  if [ -e "$AP/STOP" ]; then
+    echo "Paused before the next ticket: $AP/STOP exists (the owner's pause). Remove it and rerun $0 $EPIC."
+    exit 2
+  fi
   for pidf in "$AP"/*/*.pid; do
     [ -e "$pidf" ] || continue
     if kill -0 "$(cat "$pidf" 2>/dev/null)" 2>/dev/null; then
@@ -131,14 +137,20 @@ for i in $(seq 1 "$MAX"); do
     echo "Rerun after the reset: $0 $EPIC"
     exit 3
   fi
+  # Evidence, not narration: check which models actually answered (transcripts), and that the
+  # session committed a new handoff (git), rather than trusting the handoff's own timestamp.
+  if ! used=$(python3 "$HERE/models-used.py" --since "$start" 2>&1) && [ "${ALLOW_MODEL:-}" != 1 ]; then
+    echo "Session $i ran on a model other than Opus or Fable:"; echo "$used"
+    echo "Paused for confirmation. Select Opus or Fable (/model) and rerun, or rerun with ALLOW_MODEL=1 to continue anyway."
+    exit 7
+  fi
   hf() { python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))[sys.argv[2]])' "$H" "$1" 2>/dev/null; }
-  updated=$(hf updated)
-  if [ -z "$updated" ]; then
-    echo "Session $i: handoff $H is missing or malformed JSON (or lacks 'updated'). Log: $LOGS/session-$i.log"
+  if [ -z "$(hf outcome)" ]; then
+    echo "Session $i: handoff $H is missing or malformed JSON (or lacks 'outcome'). Log: $LOGS/session-$i.log"
     exit 4
   fi
-  if [ "$(git rev-parse HEAD)" = "$before" ] || [[ "$updated" < "$start" ]]; then
-    echo "Session $i made no progress (no commit or stale handoff; e.g. a dirty tree or wrong branch). Log: $LOGS/session-$i.log"
+  if [ "$(git rev-parse HEAD)" = "$before" ] || git diff --quiet "$before" HEAD -- "$H"; then
+    echo "Session $i made no progress (no commit, or the handoff was not committed anew; e.g. a dirty tree or wrong branch). Log: $LOGS/session-$i.log"
     exit 4
   fi
   outcome=$(hf outcome)
