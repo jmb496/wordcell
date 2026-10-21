@@ -107,7 +107,7 @@ for i in $(seq 1 "$MAX"); do
   touch "$LOGS/session-$i.start"
   watch_progress "$LOGS/session-$i.start" "$before" &
   watcher=$!
-  claude -p "Run the epic-autopilot skill with arguments: $EPIC one-ticket" \
+  claude -p "Run the epic-autopilot skill with arguments: $EPIC one-ticket handoff=$H" \
     --permission-mode bypassPermissions --output-format text < /dev/null > "$LOGS/session-$i.log" 2>&1
   sleep 1; kill "$watcher" 2>/dev/null; wait "$watcher" 2>/dev/null
   if grep -qiE 'hit your [a-z]+ limit' "$LOGS/session-$i.log"; then

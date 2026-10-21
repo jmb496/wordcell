@@ -28,7 +28,7 @@ is one fresh orchestrator session per ticket, started by the driver:
 .claude/skills/epic-autopilot/scripts/loop.sh <epic> [max-tickets]
 ```
 
-The driver runs `claude -p "Run the epic-autopilot skill with arguments: <epic> one-ticket"` once
+The driver runs `claude -p "Run the epic-autopilot skill with arguments: <epic> one-ticket handoff=<path>"` once
 per ticket and continues while each session's handoff says `outcome: done`. It exits 0 when the
 epic is complete (or max-tickets is reached), 2 when a session stopped (read the handoff), 3 on a
 usage limit (rerun after the reset), 4 when a session made no progress (read its log). Before
@@ -66,7 +66,7 @@ With the argument `one-ticket` (always headless):
   `.autopilot/*/*.pid` names a live process (a step an earlier session left running), stop
   (rule 5) and name it; never start a second copy.
 - Handoff (committed, overwritten each session):
-  `_bmad-output/implementation-artifacts/autopilot/<epic>-handoff.md`, starting with these lines,
+  the path given as `handoff=<path>` in the arguments (the driver reads exactly that file; never invent another name; default `_bmad-output/implementation-artifacts/autopilot/<epic>-handoff.md` with `<epic>` as passed), starting with these lines,
   then the plain-language report for the owner (Final report) and how to resume:
 
   ```
