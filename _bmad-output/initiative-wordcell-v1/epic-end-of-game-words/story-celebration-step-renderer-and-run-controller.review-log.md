@@ -1,5 +1,5 @@
 # Review log — story-celebration-step-renderer-and-run-controller.md
-State: pass 2: done
+State: pass 3: done
 Pre-loop: HEAD 4efc910; pass0.md 276 words; budget default 2.5x (~690 words).
 
 ## Pass 1 — 2026-10-21
@@ -33,3 +33,15 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 - `setManual` during a run throws; `advance` idle is the specified no-op; remainder cleared at `start`; `onEnd` replaced by a second call, persists; dt clamped to [0, 50]; stagger formula and "large list" size (not applied, over budget).
 Words: 765 (2.8 x pass 0, over the 2.5x budget: minors now word-neutral only)  |  Snapshot: story-celebration-step-renderer-and-run-controller.passes/pass2.md
 Fixer applied majors 1–6 and the word-neutral minors; rowScale expected value 0.675 (card width 40 per DESIGN) rather than the floor.
+
+## Pass 3 — 2026-10-21
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 2, minor ~6, decision-needed 0  |  Dropped in triage: 1
+### Majors (technical, default applied)
+1. Group geometry undefined: per-group width/height in state (from `rowScale` and card size), `exited` = whole box beyond the wall it drifts toward, floor/ceiling contact edges, origin x and y relative to the band measured from the `wordcell-<n>` label, missing element throws (rule 6), tie at band centre drifts right.
+2. Several stated rules had no Verify clause (onEnd replace/keep, setManual throw, advance remainder/no-op, rAF first-frame dt and clamp, pre-registration frames, no-op end/cancel).
+### Dropped
+- "cancel() vs onEnd ambiguous": the ticket says `onEnd` is called by `end()` only; an explicit test clause is covered by major 2.
+### Minor (word-neutral only)
+- Name `step.ts`; Slow cap compared with tolerance (10666.67); `advance` stops stepping/rendering after `end()` and ms ≤ 0 is a no-op. Registration API name and a 10-letter rowScale case left to the plan.
+Words: 789 (2.9 x pass 0)  |  Snapshot: story-celebration-step-renderer-and-run-controller.passes/pass3.md
+Fixer applied majors 1–2 and the word-neutral minors.
