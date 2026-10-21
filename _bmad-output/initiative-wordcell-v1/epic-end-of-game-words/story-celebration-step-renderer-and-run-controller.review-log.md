@@ -1,5 +1,5 @@
 # Review log — story-celebration-step-renderer-and-run-controller.md
-State: pass 5: done
+State: pass 6: done
 Pre-loop: HEAD 4efc910; pass0.md 276 words; budget default 2.5x (~690 words).
 
 ## Pass 1 — 2026-10-21
@@ -69,3 +69,14 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 - Contact applies only when vy points into the surface and clamps the box (raised in passes 4 and 5); bounce count informational; box centred on origin. Cap-in-simulated-time sentence and registration API name left to the plan.
 Words: 840 (3.0 x pass 0)  |  Snapshot: story-celebration-step-renderer-and-run-controller.passes/pass5.md
 Fixer applied majors 1–2 and the minors; it also dropped the "second `start` throwing" Verify item (to be caught by the pass 6 fix-diff lens).
+
+## Pass 6 — 2026-10-21
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor ~5, decision-needed 0  |  Dropped in triage: 0 (1 major reclassified to minor)
+### Majors (technical, default applied)
+1. The "second `start` throwing" Verify item dropped in pass 5 → restored (word-neutral: "`start` and `setManual` throwing mid-run").
+### Reclassified to minor
+- Box height × `rowScale` (the row scales uniformly per DESIGN; obvious handling).
+### Minor (word-neutral only)
+- Box height is `rowScale` × card height; active-run throw checked before the empty-list path; exited groups hidden and no longer written; `advance` breaks at the first `finished` step and clears the remainder. Resize mid-run (AD-19, entry 4) and a realistic 10-letter rowScale case left to the plan.
+Words: 841 (3.0 x pass 0)  |  Snapshot: story-celebration-step-renderer-and-run-controller.passes/pass6.md
+Fixer applied major 1 and the minors; to stay word-neutral it cut two Verify items added in pass 5 (`advance` no-ops; `setManual` read at `start`), which the pass 7 verify-only lens may flag.
