@@ -28,7 +28,7 @@ is one fresh orchestrator session per ticket, started by the driver:
 .claude/skills/epic-autopilot/scripts/loop.sh <epic> [max-tickets]
 ```
 
-The driver runs `claude -p "Run the epic-autopilot skill with arguments: <epic> one-ticket handoff=<path>"` once
+The driver runs `claude -p "Run the epic-autopilot skill with arguments: <epic> one-ticket handoff=<path>"` (path ends `.json`) once
 per ticket and continues while each session's handoff says `outcome: done`. It exits 0 when the
 epic is complete (or max-tickets is reached), 2 when a session stopped (read the handoff), 3 on a
 usage limit (rerun after the reset), 4 when a session made no progress (read its log). Before
@@ -57,7 +57,7 @@ With the argument `one-ticket` (always headless):
   (rule 5):
 
   ```bash
-  .claude/skills/epic-autopilot/scripts/detach.sh "$W/<ref>-<step>.done" "$W/<ref>-<step>.log" -- claude -p "<prompt>" --permission-mode bypassPermissions --output-format text
+  .claude/skills/epic-autopilot/scripts/detach.sh "$W/<ref>-<step>.done" "$W/<ref>-<step>.log" -- claude -p "<prompt>" --model claude-opus-5-5 --permission-mode bypassPermissions --output-format text
   .claude/skills/epic-autopilot/scripts/wait-for.sh "$W/<ref>-<step>.done" 540
   ```
 
@@ -65,19 +65,20 @@ With the argument `one-ticket` (always headless):
   command is `npm run test:all` and the done file holds its exit code.) Before Setup 2, if any
   `.autopilot/*/*.pid` names a live process (a step an earlier session left running), stop
   (rule 5) and name it; never start a second copy.
-- Handoff (committed, overwritten each session):
-  the path given as `handoff=<path>` in the arguments (the driver reads exactly that file; never invent another name; default `_bmad-output/implementation-artifacts/autopilot/<epic>-handoff.md` with `<epic>` as passed), starting with these lines,
-  then the plain-language report for the owner (Final report) and how to resume:
+- Startup checklist (before anything else): read the handoff JSON, `git log -5`, `git status --short`
+  and the newest digest's last section; they must agree on which ticket is next.
+- Handoff (committed, overwritten each session): the JSON file at the path given as
+  `handoff=<path>` in the arguments (the driver parses exactly that file and fails loudly when it
+  is missing or malformed; never invent another name). Exactly these keys:
 
-  ```
-  outcome: done | stopped | complete
-  ticket: <ref>
-  reason: <stop rule number and short reason, or "done">
-  next: <next ready ref, or none>
-  updated: <date -u +%Y-%m-%dT%H:%M:%SZ>
-  summary: <one plain sentence>
+  ```json
+  {"outcome": "done|stopped|complete", "ticket": "<ref>", "reason": "<stop rule number and short reason, or done>",
+   "next": "<next ready ref, or none>", "updated": "<date -u +%Y-%m-%dT%H:%M:%SZ>",
+   "summary": "<one plain sentence>"}
   ```
 
+  The plain-language report for the owner (Final report) and how to resume go in the sibling
+  file with `.md` instead of `.json`.
   The report includes the run's **Close-out docs** (Step D.4); when the outcome is `complete`,
   list them all, since the retrospective applies them.
   `complete` when no tickets remain after this one (Stop rule 6); then also append
@@ -208,7 +209,7 @@ wait for its completion notification (builds can take a long time; never poll wi
 `one-ticket` mode use `detach.sh` and `wait-for.sh` instead (One ticket per session):
 
 ```bash
-claude -p "<prompt>" --permission-mode bypassPermissions --output-format text < /dev/null > "$W/<ref>-<step>.log" 2>&1
+claude -p "<prompt>" --model claude-opus-5-5 --permission-mode bypassPermissions --output-format text < /dev/null > "$W/<ref>-<step>.log" 2>&1
 ```
 
 Every step prompt ends with the result-file contract: *"When finished, write
@@ -318,8 +319,17 @@ committed there.
    **Screenshots:** when the ticket's diff (baseline..HEAD) touches `src/ui/**`, `index.html`,
    `fixtures/`, a `*.screens.spec.ts` or its baselines, also run `npm run test:screens`
    (Docker, never skipped: `docker info` must succeed first; background, wait, after
-   `test:all`). Docker unavailable or any screenshot differing → stop (rule 3), name the cause;
-   never regenerate baselines unattended, and never mark the ticket done on a skipped check.
+   `test:all`). Docker unavailable → stop (rule 3).
+   A differing screenshot is evaluated without the owner: run a fresh headless step
+   (`--model claude-opus-5-5`, result JSON `{"verdict": "approve"|"escalate", "reasons": [...]}`)
+   that opens each actual, expected and diff image and the ticket's stated UI change. Approve only
+   when every difference lies inside the area the ticket says it changes and nothing else moved
+   (layout shifts, other screens, colours and fonts outside it). Escalate when anything unexpected
+   changed or the ticket introduces a new visual design or first motion the owner has not seen
+   (stop rule 3, name the images). On approve, regenerate only those specs
+   (`npm run test:screens -- e2e/<spec> --update-snapshots=changed`, in the container), rerun
+   `npm run test:screens` to green, commit the baselines (`test(<area>): update baselines (ticket
+   <ref>)`) and record the reasons in the digest. Never mark the ticket done on a skipped check.
    Record the outcome in the digest's Tests line ("screenshots: passed | not needed: no UI
    change").
 2. If Step C left uncommitted code changes: commit them with the review log,

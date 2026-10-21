@@ -27,7 +27,7 @@ AP=$PWD/.autopilot
 mkdir -p "$AP" || exit 4
 exec 9> "$AP/$EPIC.lock"
 flock -n 9 || { echo "Another loop.sh for $EPIC is already running."; exit 4; }
-H=_bmad-output/implementation-artifacts/autopilot/$EPIC-handoff.md
+H=_bmad-output/implementation-artifacts/autopilot/$EPIC-handoff.json
 
 # Progress lines for the console while a session runs, read only from what the session leaves
 # on disk (detached step logs and done files under .autopilot/<run>/, and new
@@ -108,21 +108,26 @@ for i in $(seq 1 "$MAX"); do
   watch_progress "$LOGS/session-$i.start" "$before" &
   watcher=$!
   claude -p "Run the epic-autopilot skill with arguments: $EPIC one-ticket handoff=$H" \
-    --permission-mode bypassPermissions --output-format text < /dev/null > "$LOGS/session-$i.log" 2>&1
+    --model claude-opus-5-5 --permission-mode bypassPermissions --output-format text < /dev/null > "$LOGS/session-$i.log" 2>&1
   sleep 1; kill "$watcher" 2>/dev/null; wait "$watcher" 2>/dev/null
   if grep -qiE 'hit your [a-z]+ limit' "$LOGS/session-$i.log"; then
     echo "USAGE LIMIT: $(grep -iE 'hit your [a-z]+ limit' "$LOGS/session-$i.log" | tail -1)"
     echo "Rerun after the reset: $0 $EPIC"
     exit 3
   fi
-  updated=$(sed -n 's/^updated: //p' "$H" 2>/dev/null | head -1)
-  if [ "$(git rev-parse HEAD)" = "$before" ] || [ -z "$updated" ] || [[ "$updated" < "$start" ]]; then
-    echo "Session $i made no progress (no commit or no fresh handoff; e.g. a dirty tree or wrong branch). Log: $LOGS/session-$i.log"
+  hf() { python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))[sys.argv[2]])' "$H" "$1" 2>/dev/null; }
+  updated=$(hf updated)
+  if [ -z "$updated" ]; then
+    echo "Session $i: handoff $H is missing or malformed JSON (or lacks 'updated'). Log: $LOGS/session-$i.log"
     exit 4
   fi
-  outcome=$(sed -n 's/^outcome: //p' "$H" | head -1)
-  reason=$(sed -n 's/^reason: //p' "$H" | head -1)
-  echo "[$(date +%H:%M)] session $i: $outcome — $(sed -n 's/^summary: //p' "$H" | head -1)"
+  if [ "$(git rev-parse HEAD)" = "$before" ] || [[ "$updated" < "$start" ]]; then
+    echo "Session $i made no progress (no commit or stale handoff; e.g. a dirty tree or wrong branch). Log: $LOGS/session-$i.log"
+    exit 4
+  fi
+  outcome=$(hf outcome)
+  reason=$(hf reason)
+  echo "[$(date +%H:%M)] session $i: $outcome — $(hf summary)"
   case "$outcome" in
     done)
       if [ -n "${unchecked:-}" ]; then
