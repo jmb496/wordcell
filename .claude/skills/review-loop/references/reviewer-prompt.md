@@ -1,7 +1,7 @@
 # Reviewer prompt template
 
 Fill every placeholder. Send one such prompt per lens, all in the same message so they run in
-parallel. The subagent type is `general-purpose`.
+parallel. The subagent type is `reviewer` (`.claude/agents/reviewer.md`, read-only tools).
 
 ```
 You are an independent reviewer with no prior context. Your lens:

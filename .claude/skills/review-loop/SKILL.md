@@ -75,7 +75,7 @@ not applied: list them in the result for the next build or loop.
    **fix diff** lens (the pass N−1 fix diff plus the prior Applied lists) replaces the first
    lens at `thorough` and is added at `quick`; the other lenses stay full-target.
 3. **Pass N (N = 1..max; pass `max` verify-only):**
-   a. **Review.** Launch one `general-purpose` subagent per lens **in parallel, in a single
+   a. **Review.** Launch one `reviewer` subagent (read-only) per lens **in parallel, in a single
       message**. Build each prompt from `references/reviewer-prompt.md`: lens instruction, the
       target path, the ref paths, a one-line target context (what the target is for and its
       stage, e.g. "stub ticket being fleshed out before build"), the severity definitions for
