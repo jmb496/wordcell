@@ -4,6 +4,7 @@
 // roving.svelte.ts), so no card is made focusable here. Programmatic focus never scrolls: the
 // layout anchors its own scroll (AD-11).
 import type { CardId } from '../engine/index';
+import { text } from './text';
 
 const FOCUS = { preventScroll: true } as const;
 
@@ -16,6 +17,17 @@ export function focusBoard(): void {
     return;
   }
   document.querySelector<HTMLElement>('main')?.focus(FOCUS);
+}
+
+/**
+ * Focus return to the ☰ button after a surface a Menu row opened closes (its opener row left with
+ * the menu; open-surface.ts `takeMenuOrigin`). The button always exists on the active board, so its
+ * absence is a bug (rule 6).
+ */
+export function focusMenuButton(): void {
+  const button = document.querySelector<HTMLElement>(`button[aria-label="${text.menu}"]`);
+  if (button === null) throw new Error('AD-13 focusMenuButton with no menu button');
+  button.focus();
 }
 
 /** Focuses the live element of card `id` (a column card, tray tile or strip card). */

@@ -4,9 +4,12 @@ import { tick, untrack } from 'svelte';
 import { act } from './act';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Dialog from './Dialog.svelte';
+import { focusMenuButton } from './focus-board';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
-import { clearConfirmOrigin, confirmOrigin, newGame, replayDeal } from './new-game';
+import { newGame, replayDeal } from './new-game';
+import { takeMenuOrigin } from './open-surface';
 import { type OverlayId, overlays } from './overlays.svelte';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { text } from './text';
 
 // Epic 6 CAP-3 (6.3, R-74, Q-29; EXPERIENCE.md catalogue rows 97, 98): the New game and Replay
@@ -15,8 +18,9 @@ import { text } from './text';
 // confirm, and Dialog's `firstClick` makes a double tap act once. Esc closes the
 // confirm through the key handler (keys.ts, ticket 6.10).
 // Focus: an accept sets `accepted` and focus goes to `main` at close; otherwise a confirm opened
-// from a menu row returns focus to the ☰ button (presence's restoreFocus aims at the exiting menu
-// row, so this effect, run after `tick()`, wins); skipped when a menu was reopened during the exit.
+// from a menu row (open-surface.ts `takeMenuOrigin`) returns focus to the ☰ button (presence's
+// restoreFocus aims at the exiting menu row, so this effect, run after `tick()`, wins); skipped
+// when a menu was reopened during the exit.
 // Other openers keep Dialog's default return.
 const IDS = ['newGameConfirm', 'replayConfirm'] as const satisfies readonly OverlayId[];
 type ConfirmId = (typeof IDS)[number];
@@ -24,16 +28,13 @@ type ConfirmId = (typeof IDS)[number];
 let accepted = false;
 const wasOpen: Record<ConfirmId, boolean> = { newGameConfirm: false, replayConfirm: false };
 
-function onClosed(): void {
+function onClosed(id: ConfirmId): void {
   const fromAccept = accepted;
-  const fromMenu = confirmOrigin() === 'menu';
+  const fromMenu = takeMenuOrigin(id);
   accepted = false;
-  clearConfirmOrigin();
   void tick().then(() => {
     if (fromAccept) document.querySelector('main')?.focus();
-    else if (fromMenu && !overlays.isOpen('menu')) {
-      document.querySelector<HTMLElement>(`button[aria-label="${text.menu}"]`)?.focus();
-    }
+    else if (fromMenu && !overlays.isOpen('menu')) focusMenuButton();
   });
 }
 
@@ -41,7 +42,7 @@ $effect(() => {
   const now = IDS.map((id) => overlays.isOpen(id));
   untrack(() => {
     IDS.forEach((id, i) => {
-      if (wasOpen[id] && !now[i]) onClosed();
+      if (wasOpen[id] && !now[i]) onClosed(id);
       wasOpen[id] = now[i] ?? false;
     });
   });

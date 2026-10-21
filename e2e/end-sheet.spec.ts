@@ -133,11 +133,13 @@ test.describe('android', () => {
     page,
   }) => {
     await openFixture(page, 'session-idle-fresh');
+    const before = await topBarScore(page);
     await giveUpFromMenu(page);
     await expect(sheet(page, GAVE)).toBeVisible();
     await expect(
       sheet(page, GAVE).getByText('53 letters left: −530', { exact: true }),
     ).toBeVisible();
+    expect(await sheetScore(page, GAVE)).toBe(before - 530);
     await expect(sheet(page, GAVE).getByText('Longest word')).toBeVisible();
     await expect(replayButton(page)).toBeFocused();
     await expect.poll(() => wcOf(page)).toBe(1);
@@ -172,10 +174,9 @@ test.describe('android', () => {
   test('R-83 the sheet shows the final score, band name and message from the view', async ({
     page,
   }) => {
+    // session-gave-up: no word committed (score 0) minus the R-81 penalty for 53 letters left.
     await openFixture(page, 'session-gave-up', { endSheet: 'expanded' });
-    const score = await sheetScore(page, GAVE);
-    expect(score).toBeLessThan(0);
-    await expect(sheet(page, GAVE).locator('.score')).toHaveText(`−${-score}`);
+    await expect(sheet(page, GAVE).locator('.score')).toHaveText('−530');
     await expect(sheet(page, GAVE).locator('.band')).toHaveText('Just Getting Started');
     await expect(sheet(page, GAVE).locator('.message')).toHaveText(
       'Every word has to start somewhere. Lovely first steps!',
@@ -234,6 +235,29 @@ test.describe('android', () => {
     await expect(sheet(page)).toBeVisible();
     await expect.poll(() => wc(page)).toEqual({ wc: 1, launch });
     await expect(replayButton(page)).toBeFocused();
+  });
+
+  test('R-75 expanded, the board under the scrim is inert and both bars are live; collapsed, the board is live again', async ({
+    page,
+  }) => {
+    // build-notes Per-surface behaviour: End sheet expanded, board inert, bars live.
+    await openFixture(page, 'session-gave-up', { endSheet: 'expanded' });
+    const underInert = (testId: string) =>
+      page.getByTestId(testId).evaluate((el) => el.closest('[inert]') !== null);
+    const card = page.locator('[data-column="1"] [data-card-id]').first();
+    const cardInert = () => card.evaluate((el) => el.closest('[inert]') !== null);
+    await expect(sheet(page, GAVE)).toBeVisible();
+    await expect(primary(page)).toHaveAccessibleName('New game');
+    expect(await cardInert()).toBe(true);
+    expect(await underInert('wordcell-6')).toBe(true);
+    expect(await underInert('column-1')).toBe(true);
+    expect(await underInert('undo')).toBe(false);
+    expect(await underInert('primary-action')).toBe(false);
+    await handle(page).click();
+    await expect(anySheet(page)).toHaveCount(0);
+    expect(await cardInert()).toBe(false);
+    expect(await underInert('wordcell-6')).toBe(false);
+    expect(await underInert('column-1')).toBe(false);
   });
 
   test('R-75 a scrim tap collapses and is consumed: a tap on a column card selects nothing, opens no view and pushes no entry', async ({
@@ -344,6 +368,35 @@ test.describe('android', () => {
     expect((await parsed(page)).gaveUp).toBe(false);
   });
 
+  test('R-75 R-71 Redo after an undone Give up with a redo tail re-applies the move and does not reopen the sheet', async ({
+    page,
+  }) => {
+    // Undo clears the flag, then three Undos step the one committed move back to Idle at index 0,
+    // leaving it as the redo tail; Give up leaves the tail untouched (R-75).
+    await openFixture(page, 'session-gave-up-after-commit', {
+      steps: ['undo', 'undo', 'undo', 'undo'],
+    });
+    expect((await parsed(page)).cursor).toEqual({ index: 0, phase: 'idle' });
+    await giveUpFromMenu(page);
+    await expect(sheet(page, GAVE)).toBeVisible();
+    await page.getByTestId('undo').click();
+    await expect(anySheet(page)).toHaveCount(0);
+    const redo = page.getByTestId('redo');
+    await expect(redo).toBeEnabled();
+    for (let step = 0; step < 3; step += 1) {
+      await redo.click();
+      await glidesSettled(page);
+    }
+    expect(await parsed(page)).toMatchObject({
+      cursor: { index: 1, phase: 'idle' },
+      gaveUp: false,
+    });
+    await page.waitForTimeout(400);
+    await expect(anySheet(page)).toHaveCount(0);
+    await expect(bar(page)).toHaveCount(0);
+    await expect.poll(() => wcOf(page)).toBe(0);
+  });
+
   test('R-74 Replay this deal from the expanded sheet acts at once: same seed, empty moves, sheet hidden, wc 0', async ({
     page,
   }) => {
@@ -416,10 +469,11 @@ test.describe('android', () => {
     expect((await parsed(page)).seed).not.toBe(seed);
   });
 
-  test('AD-13 Statistics over the sheet: wc 2, Esc closes only the panel, the top bar is inert under it', async ({
+  test('AD-13 Statistics over the sheet: wc 2, Esc closes only the panel, the top bar is inert under it; Esc and back return focus to the Statistics button of the sheet', async ({
     page,
   }) => {
     await openFixture(page, 'session-won', { endSheet: 'expanded' });
+    const opener = sheet(page).getByRole('button', { name: 'Statistics', exact: true });
     await statisticsButton(page).click();
     const panel = page.getByRole('dialog', { name: 'Statistics', exact: true });
     await expect(panel).toBeVisible();
@@ -433,12 +487,15 @@ test.describe('android', () => {
     await expect(panel).toHaveCount(0);
     await expect(sheet(page)).toBeVisible();
     await expect.poll(() => wcOf(page)).toBe(1);
+    // build-notes Per-surface: a panel returns focus to its opener (not the ☰ button).
+    await expect(opener).toBeFocused();
     await statisticsButton(page).click();
     await expect(panel).toBeVisible();
     await page.goBack();
     await expect(panel).toHaveCount(0);
     await expect(sheet(page)).toBeVisible();
     await expect.poll(() => wcOf(page)).toBe(1);
+    await expect(opener).toBeFocused();
   });
 
   // Ticket 6.7 (SPEC CAP-4, F4, F8; R-84; owner 2026-10-15). History fixtures are §2 rejection
@@ -616,6 +673,8 @@ test.describe('android', () => {
     await expect(resetButton(page)).toHaveCount(0);
     await expect.poll(() => wcOf(page)).toBe(1);
     expect(await stored(page, HISTORY)).toBe(EMPTY);
+    // EXPERIENCE.md End sheet: the sheet's open focus, a relaunch included.
+    await expect(replayButton(page)).toBeFocused();
   });
 
   test('AD-13 Reset history from the Statistics panel leaves the sheet with neither block nor line', async ({

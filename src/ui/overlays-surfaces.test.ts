@@ -284,6 +284,20 @@ describe('AD-13 openSurface', () => {
     expect(overlays.depth).toBe(1);
   });
 
+  it('AD-13 a sticky view promoted over a tail selection closes first, then the selection pops, then the surface pushes', async () => {
+    const { overlays, openSurface } = await load();
+    overlays.select(2, 3);
+    overlays.openPeek(4);
+    overlays.peekToSticky();
+    calls.length = 0;
+    openSurface('menu');
+    expect(calls).toEqual(['pop', 'pop', 'push']);
+    expect(overlays.viewCell).toBeNull();
+    expect(overlays.selection).toBeNull();
+    expect(overlays.depth).toBe(1);
+    expect(overlays.top).toBe('menu');
+  });
+
   it('AD-13 a peek and a hover peek are cleared without a throw', async () => {
     const { overlays, openSurface } = await load();
     overlays.openPeek(4);
@@ -339,5 +353,28 @@ describe('AD-13 openSurface', () => {
       'AD-13 open(statistics) while menu is the top entry',
     );
     expect(calls).toEqual(['pop', 'push']);
+  });
+});
+
+describe('AD-13 menu origin record', () => {
+  it('AD-13 set only by an open from a menu row, taken once at close, rewritten by a non-menu open after a reset or back close', async () => {
+    const { overlays, openSurface } = await load();
+    const { takeMenuOrigin } = await import('./open-surface');
+    openSurface('statistics', { from: 'menu' });
+    overlays.close('statistics');
+    expect(takeMenuOrigin('statistics')).toBe(true);
+    expect(takeMenuOrigin('statistics')).toBe(false);
+    // A menu-row open closed by a reset, then the end sheet's button: not from the menu.
+    openSurface('preferences', { from: 'menu' });
+    overlays.resetForNewSession();
+    withEndSheet(overlays);
+    openSurface('preferences');
+    overlays.closedByBack(1);
+    expect(takeMenuOrigin('preferences')).toBe(false);
+    // Per id: a menu-row confirm does not mark another surface.
+    openSurface('newGameConfirm', { from: 'menu' });
+    expect(takeMenuOrigin('statistics')).toBe(false);
+    expect(takeMenuOrigin('replayConfirm')).toBe(false);
+    expect(takeMenuOrigin('newGameConfirm')).toBe(true);
   });
 });

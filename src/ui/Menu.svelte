@@ -67,14 +67,14 @@ function giveUp(): void {
 function preferences(): void {
   close();
   skipFocus = true;
-  openSurface('preferences');
+  openSurface('preferences', { from: 'menu' });
 }
 
 // Ticket 6.5: Statistics closes the menu, then opens the panel, which owns the focus (as above).
 function statistics(): void {
   close();
   skipFocus = true;
-  openSurface('statistics');
+  openSurface('statistics', { from: 'menu' });
 }
 
 // Ticket 6.9: How to play closes the menu, then opens the panel, which owns the focus (as above).

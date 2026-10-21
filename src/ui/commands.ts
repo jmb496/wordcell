@@ -5,19 +5,11 @@ import { flushSync } from 'svelte';
 import type { Command } from '../engine/index';
 import { dispatchAnnounced } from './announce';
 import { capture, play } from './flip';
-import { overlays } from './overlays.svelte';
+import { closeTransient } from './open-surface';
 
-/**
- * F39: closes the sticky WordCell view and any peek, so a command that changes the phase or the
- * word data never meets an open view; a tail selection pops its entry next (`overlays.deselect()`,
- * which throws only with a modal on top).
- */
-function closeTransient(): void {
-  if (overlays.viewCell !== null) overlays.close('wordcellView');
-  if (overlays.peek !== null) overlays.closePeek();
-  overlays.closeHoverPeek();
-  overlays.deselect();
-}
+// F39: every command closes the sticky WordCell view and any peek first (`closeTransient`,
+// shared with openSurface), so a command that changes the phase or the word data never meets an
+// open view.
 
 export function undo(): void {
   closeTransient();

@@ -80,7 +80,7 @@ function unreadableReason() {
 }
 
 const resetHistory = (event: MouseEvent): void => {
-  if (first(event)) overlays.open('resetConfirm');
+  if (first(event)) openSurface('resetConfirm');
 };
 const statistics = (event: MouseEvent): void => {
   if (first(event)) openSurface('statistics');
@@ -105,9 +105,21 @@ $effect(() => {
   });
 });
 
-function focusOnMount(button: HTMLButtonElement): void {
-  if (overlays.top === 'endSheet') button.focus();
-}
+// EXPERIENCE.md End sheet "focus moves to its first action": once per expansion, the first time
+// the sheet is the top entry (at open, or when a notice over a relaunched sheet closes); collapse
+// and hide re-arm it. After that, the top returning to the sheet (a panel or confirm opened from it
+// closing) leaves focus to that surface's own return (its opener).
+let openFocused = false;
+$effect(() => {
+  const ready = open && overlays.top === 'endSheet' ? replayButton : null;
+  untrack(() => {
+    if (!open) openFocused = false;
+    else if (ready !== null && !openFocused) {
+      openFocused = true;
+      ready.focus();
+    }
+  });
+});
 </script>
 
 {#if presence.present && result !== null}
@@ -157,7 +169,7 @@ function focusOnMount(button: HTMLButtonElement): void {
           <p class="unrecorded">{text.endNotAdded}</p>
         {/if}
         <div class="actions">
-          <button type="button" class="secondary" bind:this={replayButton} onclick={act(replay)} {@attach focusOnMount}
+          <button type="button" class="secondary" bind:this={replayButton} onclick={act(replay)}
             >{text.replayDeal}</button
           >
           <button type="button" class="secondary" onclick={act(statistics)}>{text.statistics}</button>

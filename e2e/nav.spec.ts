@@ -231,16 +231,24 @@ test('AD-13 Undo then Redo into won on session-won reopens the end sheet: histor
   expect(await page.evaluate(() => history.length)).toBe(length);
 });
 
-test('AD-16 a relaunch into won with an unreadable history shows the notice over the sheet: wc 2, then dismissing leaves the sheet at wc 1', async ({
-  page,
-}) => {
-  await start(page, { history: VERSION_UNKNOWN, session: 'session-won.json' });
-  await boardReady(page);
-  await expect(notice(page)).toBeVisible();
-  await expect(page.getByRole('dialog', { name: 'Every column cleared.' })).toHaveCount(1);
-  await expect.poll(() => wc(page).then((state) => state?.wc)).toBe(2);
-  await button(page, 'Not now').click();
-  await expect(notice(page)).toHaveCount(0);
-  await expect(page.getByRole('dialog', { name: 'Every column cleared.' })).toBeVisible();
-  await expect.poll(() => wc(page).then((state) => state?.wc)).toBe(1);
-});
+for (const how of ['Not now', 'back'] as const) {
+  test(`AD-16 a relaunch into won with an unreadable history shows the notice over the sheet: wc 2, then dismissing (${how}) leaves the sheet at wc 1, focus on Replay this deal`, async ({
+    page,
+  }) => {
+    await start(page, { history: VERSION_UNKNOWN, session: 'session-won.json' });
+    await boardReady(page);
+    await expect(notice(page)).toBeVisible();
+    const sheet = page.getByRole('dialog', { name: 'Every column cleared.' });
+    await expect(sheet).toHaveCount(1);
+    await expect.poll(() => wc(page).then((state) => state?.wc)).toBe(2);
+    if (how === 'Not now') await button(page, 'Not now').click();
+    else await page.goBack();
+    await expect(notice(page)).toHaveCount(0);
+    await expect(sheet).toBeVisible();
+    await expect.poll(() => wc(page).then((state) => state?.wc)).toBe(1);
+    // EXPERIENCE.md End sheet: the sheet's open focus, a relaunch included.
+    await expect(
+      sheet.getByRole('button', { name: 'Replay this deal', exact: true }),
+    ).toBeFocused();
+  });
+}

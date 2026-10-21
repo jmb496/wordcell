@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import { buildRoot, linkTags, readSite, relOf, tags, walk } from '../helpers/dist-test';
@@ -114,16 +114,23 @@ test("AD-18 the build's .vite/manifest.json has the index.html entry under asset
 
 test('AD-10 the built CSS keeps the @container style(--wc-reduced branch, reading var(--wc-fade-ms) with no literal 120ms', () => {
   // Epic 6 CAP-1 (6.1, SPEC F7): the surface components' reduced-motion branch must survive the
-  // CSS pipeline (minification may rewrite spacing, never drop the query); the dev-server spec
-  // e2e/wordcell-view.spec.ts proves the computed style.
+  // CSS pipeline (minification may rewrite spacing, never drop the query); the dev-server specs
+  // e2e/wordcell-view.spec.ts and e2e/menu.spec.ts prove the computed style.
   const root = buildRoot();
   const files = walk(root).filter((file) => /^assets\/[^/]+\.css$/.test(file));
   expect(files.length).toBeGreaterThan(0);
   const css = files.map((file) => readSite(file)).join('\n');
-  const starts = [...css.matchAll(/@container\s+style\(\s*--wc-reduced\s*:\s*1\s*\)/g)];
-  // Dialog and WordCellView are bundled today; Sheet and Panel have no opener until ticket 6.2 and
-  // are tree-shaken, and their branches join this scan once bundled.
-  expect(starts.length).toBeGreaterThanOrEqual(2);
+  const query = /@container\s+style\(\s*--wc-reduced\s*:\s*1\s*\)/g;
+  const starts = [...css.matchAll(query)];
+  // Every src/ui component carrying the branch is bundled (today Sheet, Panel, Dialog,
+  // WordCellView and EndSheet), so dist holds at least one branch per source occurrence.
+  const ui = path.resolve(import.meta.dirname, '../../src/ui');
+  const sources = readdirSync(ui, { recursive: true, encoding: 'utf8' })
+    .filter((file) => file.endsWith('.svelte'))
+    .map((file) => readFileSync(path.join(ui, file), 'utf8'));
+  const expected = sources.reduce((n, source) => n + [...source.matchAll(query)].length, 0);
+  expect(expected).toBeGreaterThanOrEqual(5);
+  expect(starts.length).toBeGreaterThanOrEqual(expected);
   for (const start of starts) {
     let depth = 0;
     let end = css.indexOf('{', start.index);

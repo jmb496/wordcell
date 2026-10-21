@@ -4,6 +4,7 @@ import { act } from './act';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Dialog from './Dialog.svelte';
 import { noticeReason } from './history-notice.svelte';
+import { openSurface } from './open-surface';
 import { overlays } from './overlays.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import ResetConfirm from './ResetConfirm.svelte';
@@ -21,7 +22,7 @@ const body = $derived.by(() => {
 });
 
 function openConfirm(): void {
-  overlays.open('resetConfirm');
+  openSurface('resetConfirm');
 }
 
 function notNow(): void {

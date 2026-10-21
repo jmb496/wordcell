@@ -45,6 +45,18 @@ async function closePanel(page: Page): Promise<void> {
 
 const mss = text.timer;
 
+// R-76 forced re-read: Show timer off, `ms` of clock time with no timer mounted (so no interval),
+// then on again, which remounts the timer and reads `game.elapsedMs` fresh; the panel then closes.
+async function rereadAfter(page: Page, ms: number): Promise<void> {
+  await openPanel(page);
+  await showTimerSwitch(page).click();
+  await expect(timer(page)).toHaveCount(0);
+  await page.clock.runFor(ms);
+  await showTimerSwitch(page).click();
+  await expect(timer(page)).toHaveCount(1);
+  await closePanel(page);
+}
+
 const cssBase = (page: Page) =>
   page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--wc-base-ms'));
 
@@ -147,8 +159,20 @@ test.describe('panel (android)', () => {
       await expect(timer(page)).toHaveText(expected);
       await page.clock.runFor(5000);
       await expect(timer(page)).toHaveText(expected);
+      await rereadAfter(page, 5000);
+      await expect(timer(page)).toHaveText(expected);
     });
   }
+
+  test('R-76 the forced re-read shows the advanced time while playing (control for the freeze tests)', async ({
+    page,
+  }) => {
+    await paused(page);
+    await openFixture(page, 'session-composing', { prefs: 'prefs-non-default' });
+    await expect(timer(page)).toHaveText('0:00');
+    await rereadAfter(page, 5000);
+    await expect(timer(page)).toHaveText('0:05');
+  });
 
   test('R-76 advancing the clock then a forced re-derive leaves the gave-up timer unchanged', async ({
     page,
@@ -161,6 +185,8 @@ test.describe('panel (android)', () => {
     await page.clock.runFor(3000);
     await showPage(page);
     await page.clock.runFor(2000);
+    await expect(timer(page)).toHaveText('0:01');
+    await rereadAfter(page, 2000);
     await expect(timer(page)).toHaveText('0:01');
   });
 
@@ -198,6 +224,8 @@ test.describe('panel (android)', () => {
     await hidePage(page);
     await showPage(page);
     await page.clock.runFor(2000);
+    await expect(timer(page)).toHaveText(frozen ?? '');
+    await rereadAfter(page, 2000);
     await expect(timer(page)).toHaveText(frozen ?? '');
     expect(frozen).toBe(mss((await session(page)).activeMs));
   });

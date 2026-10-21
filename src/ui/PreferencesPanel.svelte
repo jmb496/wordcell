@@ -3,6 +3,8 @@ import { tick, untrack } from 'svelte';
 import { type AnimationSpeed, prefs, type ThemeId } from '../shell/prefs.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { act } from './act';
+import { focusMenuButton } from './focus-board';
+import { takeMenuOrigin } from './open-surface';
 import { overlays } from './overlays.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Panel from './Panel.svelte';
@@ -15,7 +17,8 @@ import { entries } from './theme/registry';
 // (Fast / Normal / Slow), a `Show timer` switch (default off) and a `Theme` radiogroup (Q-45, the registered themes); each change calls the prefs setter
 // uncaught (rule 6: they throw while halted or booting, AD-10), writes at once, applies to the next
 // glide and never touches the Session. Every control is `act()`-wrapped. Esc closes it through the key
-// handler (keys.ts, ticket 6.10); the back control uses `close`. At close focus goes to the ☰ button after `tick()` (as
+// handler (keys.ts, ticket 6.10); the back control uses `close`. At close, when the Menu row opened
+// it (open-surface.ts `takeMenuOrigin`), focus goes to the ☰ button after `tick()` (as
 // ConfirmDialogs does; Panel's own return aims at the exiting menu row).
 const open = $derived(overlays.isOpen('preferences'));
 let wasOpen = false;
@@ -23,10 +26,9 @@ let wasOpen = false;
 $effect(() => {
   const now = open;
   untrack(() => {
-    if (wasOpen && !now) {
+    if (wasOpen && !now && takeMenuOrigin('preferences')) {
       void tick().then(() => {
-        if (overlays.isOpen('menu')) return;
-        document.querySelector<HTMLElement>(`button[aria-label="${text.menu}"]`)?.focus();
+        if (!overlays.isOpen('menu')) focusMenuButton();
       });
     }
     wasOpen = now;

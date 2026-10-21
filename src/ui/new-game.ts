@@ -32,23 +32,10 @@ export function replayDeal(): void {
   roving.reset();
 }
 
-// Where the open confirm came from: only a menu row sets it (ConfirmDialogs returns focus to ☰ then,
-// else Dialog's default applies). Cleared by ConfirmDialogs when the confirm closes.
-let origin: 'menu' | undefined;
-
-export function confirmOrigin(): 'menu' | undefined {
-  return origin;
-}
-
-export function clearConfirmOrigin(): void {
-  origin = undefined;
-}
-
 /** Opens the New game confirm and returns true while a game is in progress, else acts at once. */
 export function requestNewGame(view: GameView, from?: 'menu'): boolean {
   if (view.inProgress) {
-    origin = from;
-    openSurface('newGameConfirm');
+    openSurface('newGameConfirm', { from });
     return true;
   }
   newGame();
@@ -58,8 +45,7 @@ export function requestNewGame(view: GameView, from?: 'menu'): boolean {
 /** Opens the Replay confirm and returns true while a game is in progress, else acts at once. */
 export function requestReplay(view: GameView, from?: 'menu'): boolean {
   if (view.inProgress) {
-    origin = from;
-    openSurface('replayConfirm');
+    openSurface('replayConfirm', { from });
     return true;
   }
   replayDeal();
