@@ -79,6 +79,15 @@ watch_progress() { # <start-marker> <base-commit>
   trap 'poll; exit 0' TERM
   while :; do poll; sleep "${PROGRESS_SECS:-15}" & wait $!; done
 }
+# The workflow is tuned for Opus/Fable; warn (never pin) when the selected model is something else.
+MODEL=${ANTHROPIC_MODEL:-}
+for f in .claude/settings.local.json .claude/settings.json "$HOME/.claude/settings.json"; do
+  [ -n "$MODEL" ] && break
+  [ -f "$f" ] && MODEL=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("model",""))' "$f" 2>/dev/null)
+done
+if ! echo "$MODEL" | grep -qiE 'opus|fable'; then
+  echo "WARNING: selected model is '${MODEL:-unknown (not set in env or settings)}', not Opus or Fable. This workflow was tuned on Opus 5.5; results may differ."
+fi
 LOGS=$AP/loop-$EPIC-$(date +%Y%m%d-%H%M)
 mkdir -p "$LOGS"
 echo "loop logs: $LOGS"
@@ -108,7 +117,7 @@ for i in $(seq 1 "$MAX"); do
   watch_progress "$LOGS/session-$i.start" "$before" &
   watcher=$!
   claude -p "Run the epic-autopilot skill with arguments: $EPIC one-ticket handoff=$H" \
-    --model claude-opus-5-5 --permission-mode bypassPermissions --output-format text < /dev/null > "$LOGS/session-$i.log" 2>&1
+    --permission-mode bypassPermissions --output-format text < /dev/null > "$LOGS/session-$i.log" 2>&1
   sleep 1; kill "$watcher" 2>/dev/null; wait "$watcher" 2>/dev/null
   if grep -qiE 'hit your [a-z]+ limit' "$LOGS/session-$i.log"; then
     echo "USAGE LIMIT: $(grep -iE 'hit your [a-z]+ limit' "$LOGS/session-$i.log" | tail -1)"

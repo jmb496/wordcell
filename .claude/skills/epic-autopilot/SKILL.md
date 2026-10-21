@@ -57,7 +57,7 @@ With the argument `one-ticket` (always headless):
   (rule 5):
 
   ```bash
-  .claude/skills/epic-autopilot/scripts/detach.sh "$W/<ref>-<step>.done" "$W/<ref>-<step>.log" -- claude -p "<prompt>" --model claude-opus-5-5 --permission-mode bypassPermissions --output-format text
+  .claude/skills/epic-autopilot/scripts/detach.sh "$W/<ref>-<step>.done" "$W/<ref>-<step>.log" -- claude -p "<prompt>" --permission-mode bypassPermissions --output-format text
   .claude/skills/epic-autopilot/scripts/wait-for.sh "$W/<ref>-<step>.done" 540
   ```
 
@@ -124,6 +124,12 @@ When the owner asks how to run the driver and see this detail, offer both ways:
    `.claude/skills/epic-autopilot/scripts/loop.sh <epic>` in a terminal and tells the session
    when it exits; or, when the session started the driver, follows it with
    `tail -f <output file>`, using the output file path the session gives them.
+
+## Model
+
+Never pin a model: every session and step uses the model the owner selected in Claude Code. The
+workflow's patterns were tested with Opus 5.5, so the driver warns (it does not stop) when the
+selected model is not Opus or Fable, or cannot be read.
 
 ## Stop rule
 
@@ -209,7 +215,7 @@ wait for its completion notification (builds can take a long time; never poll wi
 `one-ticket` mode use `detach.sh` and `wait-for.sh` instead (One ticket per session):
 
 ```bash
-claude -p "<prompt>" --model claude-opus-5-5 --permission-mode bypassPermissions --output-format text < /dev/null > "$W/<ref>-<step>.log" 2>&1
+claude -p "<prompt>" --permission-mode bypassPermissions --output-format text < /dev/null > "$W/<ref>-<step>.log" 2>&1
 ```
 
 Every step prompt ends with the result-file contract: *"When finished, write
@@ -321,7 +327,7 @@ committed there.
    (Docker, never skipped: `docker info` must succeed first; background, wait, after
    `test:all`). Docker unavailable → stop (rule 3).
    A differing screenshot is evaluated without the owner: run a fresh headless step
-   (`--model claude-opus-5-5`, result JSON `{"verdict": "approve"|"escalate", "reasons": [...]}`)
+   (result JSON `{"verdict": "approve"|"escalate", "reasons": [...]}`)
    that opens each actual, expected and diff image and the ticket's stated UI change. Approve only
    when every difference lies inside the area the ticket says it changes and nothing else moved
    (layout shifts, other screens, colours and fonts outside it). Escalate when anything unexpected
