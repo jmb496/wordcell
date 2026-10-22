@@ -110,6 +110,8 @@ class FakeTarget {
 type Fake = {
   type: string;
   pointerId?: number;
+  button?: number;
+  pointerType?: string;
   code?: string;
   key?: string;
   repeat?: boolean;
@@ -131,6 +133,7 @@ function make(type: string, extra: Partial<Fake> = {}, undo = false): Fake {
   const e: Fake = {
     type,
     key: '',
+    button: 0,
     target: undo ? UNDO_TARGET : PLAIN,
     prevented: 0,
     stopped: 0,
@@ -398,15 +401,13 @@ describe('AD-14 winning guard', () => {
     expect(guardInstalled()).toBe(false);
   });
 
-  it('AD-14 a duplicate pointerdown of a tracked pointerId is the same gesture', () => {
+  it('AD-14 a fresh pointerdown of a tracked pointerId is a lost end: the stale gesture ends and the down starts a new gesture', () => {
     win1();
     down(1);
     notifySettled();
     vi.advanceTimersByTime(400);
     const dup = down(1);
-    expect(consumed(dup)).toBe(true);
-    up(1);
-    vi.advanceTimersByTime(180);
+    expect(passed(dup)).toBe(true);
     expect(guardInstalled()).toBe(false);
   });
 
@@ -860,6 +861,16 @@ describe('AD-14 winning guard', () => {
       expect(opened).toHaveBeenCalledTimes(1);
     });
 
+    it('AD-14 at Fast a bare Control keydown between settle and 300 ms is consumed and the open still fires at 300 ms', () => {
+      armed(90);
+      vi.advanceTimersByTime(60);
+      expect(consumed(keyOf('keydown', 'ControlLeft', 'Control', { ctrlKey: true }))).toBe(true);
+      vi.advanceTimersByTime(149);
+      expect(opened).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(1);
+      expect(opened).toHaveBeenCalledTimes(1);
+    });
+
     it('AD-14 Undo between settle and 300 ms cancels the open', () => {
       armed(90);
       vi.advanceTimersByTime(60);
@@ -953,15 +964,155 @@ describe('AD-14 winning guard', () => {
       expect(opened).not.toHaveBeenCalled();
     });
 
-    it('AD-14 touch pointerup on Undo with no click: the open fires one tick later', () => {
+    const touchUp = (id: number) =>
+      send(make('pointerup', { pointerId: id, pointerType: 'touch' }, true));
+
+    it('AD-14 touch pointerup on Undo with no click: the open fires after the click grace', () => {
       armed();
       vi.advanceTimersByTime(400);
       down(1, true);
+      touchUp(1);
+      vi.advanceTimersByTime(299);
+      expect(opened).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(1);
+      expect(opened).toHaveBeenCalledTimes(1);
+      expect(guardInstalled()).toBe(false);
+    });
+
+    it('AD-14 touch pointerup on Undo, its click 50 ms later: no open before the dispatch', () => {
+      for (const reduced of [false, true]) {
+        opened = vi.fn();
+        mocked.motion = { baseMs: 180, reduced };
+        armed();
+        vi.advanceTimersByTime(400);
+        down(1, true);
+        touchUp(1);
+        vi.advanceTimersByTime(50);
+        expect(opened).not.toHaveBeenCalled();
+        expect(passed(click(true))).toBe(true);
+        releaseHold();
+        vi.advanceTimersByTime(1000);
+        expect(opened).not.toHaveBeenCalled();
+      }
+    });
+
+    it('AD-14 mouse pointerup on Undo with no click: the open fires one tick later', () => {
+      armed();
+      vi.advanceTimersByTime(400);
+      down(1, true);
+      send(make('pointerup', { pointerId: 1, pointerType: 'mouse' }, true));
+      vi.advanceTimersByTime(0);
+      expect(opened).toHaveBeenCalledTimes(1);
+    });
+
+    it('AD-14 a non-primary pointerdown on Undo is an ordinary consumed input: no hold, the open fires at 300 ms', () => {
+      armed();
+      expect(consumed(send(make('pointerdown', { pointerId: 1, button: 2 }, true)))).toBe(true);
+      expect(complete).toHaveBeenCalledTimes(1);
+      vi.advanceTimersByTime(300);
+      expect(opened).toHaveBeenCalledTimes(1);
+    });
+
+    it('AD-14 a fresh pointerdown after a lost Undo pointerup ends the stale hold: the open fires one tick later', () => {
+      armed();
+      vi.advanceTimersByTime(400);
+      down(1, true);
+      expect(consumed(down(1))).toBe(true);
+      vi.advanceTimersByTime(0);
+      expect(opened).toHaveBeenCalledTimes(1);
+    });
+
+    it('AD-14 a fresh Undo pointerdown after a lost Undo pointerup keeps the hold to its click', () => {
+      armed();
+      vi.advanceTimersByTime(400);
+      down(1, true);
+      expect(passed(down(1, true))).toBe(true);
+      vi.advanceTimersByTime(1000);
+      expect(opened).not.toHaveBeenCalled();
       up(1, true);
+      click(true);
+      releaseHold();
+      vi.advanceTimersByTime(1000);
+      expect(opened).not.toHaveBeenCalled();
+    });
+
+    for (const [name, k, code] of [
+      ['Control', 'Control', 'ControlLeft'],
+      ['Meta', 'Meta', 'MetaLeft'],
+      ['Shift', 'Shift', 'ShiftLeft'],
+    ] as const) {
+      it(`AD-14 Normal, after the floor before settle: ${name} down then Z: no open before the Undo`, () => {
+        armed();
+        vi.advanceTimersByTime(400);
+        const mod = { ctrlKey: k === 'Control', metaKey: k === 'Meta', shiftKey: k === 'Shift' };
+        expect(consumed(keyOf('keydown', code, k, mod))).toBe(true);
+        expect(complete).toHaveBeenCalledTimes(1);
+        vi.advanceTimersByTime(299);
+        expect(opened).not.toHaveBeenCalled();
+        expect(passed(keyOf('keydown', 'KeyZ', k === 'Shift' ? 'Z' : 'z', mod))).toBe(true);
+        releaseHold();
+        expect(guardInstalled()).toBe(false);
+        expect(opened).not.toHaveBeenCalled();
+      });
+
+      it(`AD-14 Normal, after the floor before settle: ${name} down then its keyup alone: the open fires one tick after the keyup`, () => {
+        armed();
+        vi.advanceTimersByTime(400);
+        keyOf('keydown', code, k);
+        vi.advanceTimersByTime(200);
+        expect(opened).not.toHaveBeenCalled();
+        expect(consumed(keyOf('keyup', code, k))).toBe(true);
+        expect(opened).not.toHaveBeenCalled();
+        vi.advanceTimersByTime(0);
+        expect(opened).toHaveBeenCalledTimes(1);
+      });
+    }
+
+    it('AD-14 Control down, keyup lost, then a pointerdown: the open fires', () => {
+      armed();
+      vi.advanceTimersByTime(400);
+      keyOf('keydown', 'ControlLeft', 'Control', { ctrlKey: true });
+      vi.advanceTimersByTime(100);
+      expect(consumed(down(1))).toBe(true);
       expect(opened).not.toHaveBeenCalled();
       vi.advanceTimersByTime(0);
       expect(opened).toHaveBeenCalledTimes(1);
       expect(guardInstalled()).toBe(false);
+    });
+
+    it('AD-14 Control held past the bound: the open fires at the bound', () => {
+      armed();
+      vi.advanceTimersByTime(400);
+      keyOf('keydown', 'ControlLeft', 'Control', { ctrlKey: true });
+      for (let i = 0; i < 2; i++) {
+        vi.advanceTimersByTime(140);
+        expect(consumed(keyOf('keydown', 'ControlLeft', 'Control', { ctrlKey: true }, true))).toBe(
+          true,
+        );
+      }
+      vi.advanceTimersByTime(19);
+      expect(opened).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(1);
+      expect(opened).toHaveBeenCalledTimes(1);
+      expect(guardInstalled()).toBe(false);
+    });
+
+    it('AD-14 Shift down, Control down, Shift up, then z: no open before the Undo', () => {
+      armed();
+      vi.advanceTimersByTime(400);
+      keyOf('keydown', 'ShiftLeft', 'Shift', { shiftKey: true });
+      vi.advanceTimersByTime(200);
+      keyOf('keydown', 'ControlLeft', 'Control', { ctrlKey: true, shiftKey: true });
+      vi.advanceTimersByTime(200);
+      expect(consumed(keyOf('keyup', 'ShiftLeft', 'Shift', { ctrlKey: true }))).toBe(true);
+      vi.advanceTimersByTime(50);
+      expect(opened).not.toHaveBeenCalled();
+      expect(passed(keyOf('keydown', 'KeyZ', 'z', { ctrlKey: true }))).toBe(true);
+      vi.advanceTimersByTime(1000);
+      expect(opened).not.toHaveBeenCalled();
+      releaseHold();
+      expect(guardInstalled()).toBe(false);
+      expect(opened).not.toHaveBeenCalled();
     });
 
     it('AD-14 a dispatch before the release tick cancels the re-arm', () => {

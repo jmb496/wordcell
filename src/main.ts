@@ -6,6 +6,7 @@ import { nav } from './shell/nav';
 import { prefs } from './shell/prefs.svelte';
 import App from './ui/App.svelte';
 import { setController } from './ui/act';
+import { cancelAnnounce } from './ui/announce';
 import { onDispatched, openAtBoot } from './ui/end-sheet';
 import { createFlip, setFlip } from './ui/flip';
 import { createController } from './ui/gestures/controller';
@@ -204,6 +205,8 @@ async function boot(): Promise<void> {
   game.registerBeforeHide(() => gate.scrollReset());
   game.registerBeforeHide(() => finishGuard());
   game.registerBeforeHide(() => hideClear());
+  // Ticket 6.13 (A-E9): a pending live-region set is never spoken on return.
+  game.registerBeforeHide(() => cancelAnnounce());
   nav.registerBeforeBack(() => {
     controller.cancel({ byBack: true });
     finishGuard();

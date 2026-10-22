@@ -52,6 +52,7 @@ import {
   showPage,
   startHidden,
 } from './helpers/lifecycle';
+import { recordRegion, recordRegionFromBoot, resetRegion, sets } from './helpers/live-region';
 import { onAndroid, onDesktop } from './helpers/project';
 import {
   booted,
@@ -1302,5 +1303,67 @@ test.describe('openScene', () => {
   test('AD-17 the prefs-theme-scifi fixture seeds the scifi theme', async ({ page }) => {
     await openFixture(page, 'session-idle-fresh', { prefs: 'prefs-theme-scifi' });
     expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe('scifi');
+  });
+});
+
+test.describe('live-region recorders', () => {
+  // Writes `text` to the element matching `selector`, one task per write.
+  const write = (page: Page, selector: string, text: string) =>
+    page.evaluate(
+      async ([sel, value]) => {
+        (document.querySelector(sel) as HTMLElement).textContent = value;
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      },
+      [selector, text] as const,
+    );
+  const REGION = '[role="status"][aria-live="polite"]';
+
+  test('AD-17 recordRegion records one set per write, a clear then the same text again as a second set, and ignores text outside the region', async ({
+    page,
+  }) => {
+    await page.setContent('<div role="status" aria-live="polite"></div><p id="out"></p>');
+    await recordRegion(page);
+    await write(page, REGION, 'one');
+    await write(page, REGION, '');
+    await write(page, REGION, 'two');
+    await write(page, REGION, '');
+    await write(page, REGION, 'two');
+    await write(page, '#out', 'outside');
+    expect(await sets(page)).toEqual(['one', 'two', 'two']);
+  });
+
+  test('AD-17 recordRegionFromBoot records text the region has when it is added, later writes, and ignores text outside it', async ({
+    page,
+  }) => {
+    await recordRegionFromBoot(page);
+    await page.route('**/region-probe', (route) =>
+      route.fulfill({
+        contentType: 'text/html',
+        body:
+          '<!doctype html><body><p id="out">before</p><script>' +
+          // A wrapper holding the region and its text is added at once, as a mount does.
+          'const w = document.createElement("main");' +
+          'w.innerHTML = \'<div role="status" aria-live="polite">at boot</div>\';' +
+          'document.body.append(w);</script></body>',
+      }),
+    );
+    await page.goto('/region-probe');
+    await write(page, REGION, '');
+    await write(page, REGION, 'later');
+    await write(page, '#out', 'outside');
+    expect(await sets(page)).toEqual(['at boot', 'later']);
+  });
+
+  test('AD-17 resetRegion empties the recorded list; later sets are recorded again', async ({
+    page,
+  }) => {
+    await page.setContent('<div role="status" aria-live="polite"></div>');
+    await recordRegion(page);
+    await write(page, REGION, 'one');
+    expect(await sets(page)).toEqual(['one']);
+    await resetRegion(page);
+    expect(await sets(page)).toEqual([]);
+    await write(page, REGION, 'two');
+    expect(await sets(page)).toEqual(['two']);
   });
 });

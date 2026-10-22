@@ -28,6 +28,9 @@ Window = from the win's guard install until the end sheet opens, which fires at 
 | --- | --- |
 | Undo button or key (Z, Ctrl/Cmd+Z), Undo enabled | animation completes, undo applies, no sheet; before the sheet opens it cancels the pending open |
 | Undo between animation settled and 300 ms (Fast, reduced motion) | cancels the pending open, undoes, no sheet |
+| Undo button by touch or pen (as built, Opus review (epic 6 part C) default) | its pointerup holds the open for its later click up to `CLICK_GRACE_MS` (300 ms); with no click the sheet opens at the grace's end (mouse, pointercancel, a pointerup off Undo: one tick) |
+| Non-primary button (`button` ≠ 0) on Undo (as built, Opus review (epic 6 part C) default) | an ordinary consumed input: completes, no hold, sheet opens |
+| Bare Ctrl, Cmd or Shift keydown, Undo enabled (as built, Opus review (epic 6 part C) default; supersedes ticket 6.12's "ordinary consumed input" for the chord modifier) | completes and is consumed; holds the open so the chord's Z still undoes with no sheet, up to `CLICK_GRACE_MS` (300 ms) from the latest bare modifier keydown, capped at 300 ms after guard install while that has not passed (so the row below still holds); the hold ends early one tick after every held modifier is up or at the next start that is not an Undo alias, then the sheet opens |
 | Any other input between settled and 300 ms | consumed, the open still fires at 300 ms |
 | Fast speed or reduced motion, no input | sheet opens at 300 ms after guard install, not at settle |
 | Undo after the sheet opened | sheet closes, play resumes |
@@ -41,13 +44,15 @@ Window = from the win's guard install until the end sheet opens, which fires at 
 
 Mechanism: an `event.key` match in the guard beside the existing target match in `motion.ts` (`inUndo` is already `typeof`-free and matches by target only). A Redo win follows the Confirm path.
 
+As built (Opus review (epic 6 part C) default): a pointerdown with the `pointerId` of an open pointer gesture means its end was lost, like a fresh keydown of an open key: the stale entry ends (releasing an Undo hold it carried) and the down starts a new gesture.
+
 ## Key handler details (CAP-10)
 
 Repeats ignored for toggles; Space/Enter on a focused button stays native; `?` matched by `event.key` (shifted, non-US layouts); tests use `keyboard.press`; letter keys case-insensitive.
 
 ## Live region strings (CAP-11)
 
-Ticket 6.13 built this; `src/ui/text.ts` holds every string, `src/ui/announce.ts` the one setter. One polite region (`role="status"`, clipped) mounted once at the App root; announcements replace (clear, then set in the next rAF; latest wins; the outcome queues behind a pending commit set; a set falling due while `document.hidden` is skipped).
+Ticket 6.13 built this; `src/ui/text.ts` holds every string, `src/ui/announce.ts` the one setter. One polite region (`role="status"`, clipped) mounted once at the App root; announcements replace (clear, then set in the next rAF; latest wins; the outcome queues behind a pending commit set; nothing is scheduled while `document.hidden`, and the AD-9 hide flush drops a pending set and a queued outcome through `cancelAnnounce`, registered in `main.ts` (as built, Opus review (epic 6 part C) default: rAF does not run while hidden, so the set would otherwise be spoken on return)).
 
 Names: column card `{L}, column {c}, card {i} of {n}{, selected}{, destination}`; tray tile `{L}, tray, tile {i} of {n}{, selected}` (live tiles only); WordCell top card `{L}, WordCell {c}, top`; WordCell `WordCell {c}, top {L}, {n card(s)}{, used}`; empty `WordCell {c}, empty`; foot `Column {c} foot` (`role="group"`), source foot `Column {c}, here`. QU reads `Q U, counts as two letters`. Buried WordCell cards are `aria-hidden` (owner decision 2026-10-15).
 
@@ -99,5 +104,5 @@ Listed by ticket 6.17 and applied by no ticket; applying the list is the owner's
 ## Carry-ins (ticket 6.14, epic 4 retro A8)
 
 - Wheel during a mouse drag (F3): the Vitest and Playwright cases failed first (faces stayed at the pointer delta, highlight and drop target stale), so the fix landed: a passive `window` `scroll` listener in `controller.ts`, added at a mouse press and removed in `end()`; `drag.scroll` holds `scrollY` at the drag start and the applied delta; `dragMove` adds the delta to `dy`, the release re-reads the live offset first, and the tile and free-letter gap pick measures the dragged rect in the drag-start frame (`inStartFrame`). Touch and pen presses add no listener; `gate.ts` is untouched. The `[data-view-scroll]` sheet and the tray rows are not drag-scroll cases.
-- Hover-peek re-anchor (F6): passes without a fix (`e2e/hover-peek-reanchor.spec.ts`, desktop). A width change shifts the column; the banner scrolls the page by its height (layout's anchor write) so the cell holds its viewport place and the peek moves in the document. Non-vacuity asserts the peek's x (width change) and document top (banner) changed; no `HoverPeek.svelte` change.
+- Hover-peek re-anchor (F6): passes without a fix (`e2e/hover-peek-reanchor.spec.ts`, desktop). A width change shifts the column; the banner scrolls the page by its height (layout's anchor write) so the cell holds its viewport place and the peek moves in the document. Non-vacuity asserts the peek's x (width change) and document top (banner) changed; no `HoverPeek.svelte` change. As built (Opus review (epic 6 part C)): the width case resizes 700×1000 to 600×1000 so `layout.w` changes (75 to 67), uses cell 7 (its clamped x depends on the slot), and checks the peek's left against the cell's grid unit plus `placeHoverPeek`'s x.
 - Bfcache hide flush (F7): not reproduced, no test committed. Attempt 1 (`pageHide` / `pageShow({ persisted: true })` helpers, android) passed for all three variants (menu open, mouse drag live, stale-owner halt). Attempt 2 (a real bfcache navigation: `channel: 'chromium'` with `ignoreDefaultArgs: ['--disable-back-forward-cache']` against `dist-test`, `page.goto('about:blank')` then `page.goBack({ waitUntil: 'commit' })`, `pageshow.persisted` asserted true; the stale variant wrote `wordcell:session` from a second page while the first sat in the cache) also passed: the next Back popped the menu (depth 1 to 0), the drag was cancelled with nothing swallowed, and the halted page's Back raised no pending-back fault. CAP-12 "not a bug" (SPEC Assumptions). Playwright's default Chromium cannot run bfcache (`BackForwardCacheDisabledForDelegate`, headless shell), which is why attempt 2 needs the full `chromium` channel.

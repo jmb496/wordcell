@@ -48,6 +48,11 @@ export function celebrationCapMs(): number {
 // a flag plus deadline logic layered on it. All clocks use the injected `now` and timers, never
 // `event.timeStamp`. No listener exists at module load.
 const MIN_GUARD_MS = 300;
+/**
+ * Ticket 6.12 review default: how long a touch or pen pointerup on Undo holds for its later click,
+ * and the bound of a bare-modifier hold from its latest modifier keydown.
+ */
+const CLICK_GRACE_MS = 300;
 const UNDO = '[data-testid="undo"]';
 
 export type GuardTimers = {
@@ -79,9 +84,12 @@ type Tracker = {
   pending: (() => void)[];
   /** An accepted Undo gesture holds the open back until its dispatch or its end. */
   hold: boolean;
-  /** The gesture id whose end releases the hold (null: a click, released at once). */
+  /** The gesture id whose end releases the hold (null: a click or a modifier hold). */
   holdId: string | null;
   holdTimer: unknown;
+  /** The hold is a bare-modifier hold; `mods` are its modifier keys not yet up. */
+  modHold: boolean;
+  readonly mods: Set<string>;
 };
 
 let tracker: Tracker | null = null;
@@ -178,19 +186,43 @@ export function releaseHold(): void {
 function clearHold(t: Tracker): void {
   t.hold = false;
   t.holdId = null;
+  t.modHold = false;
+  t.mods.clear();
   if (t.holdTimer !== null) t.timers.clearTimer(t.holdTimer);
   t.holdTimer = null;
 }
 
-// The hold ends one tick after its gesture's end/click unless a dispatch got there first.
-function scheduleRelease(t: Tracker): void {
+// The hold ends one tick (or `ms`) after its gesture's end/click unless a dispatch got there first.
+function scheduleRelease(t: Tracker, ms = 0): void {
   if (!t.hold || t.holdTimer !== null) return;
   t.holdTimer = t.timers.setTimer(() => {
     t.holdTimer = null;
-    t.hold = false;
-    t.holdId = null;
+    clearHold(t);
     evaluate(t);
-  }, 0);
+  }, ms);
+}
+
+// Ticket 6.12 review default (bounded modifier hold): a bare modifier keydown holds the open for at
+// most CLICK_GRACE_MS from the latest one, so a following Z (the Undo chord) claims it; a further
+// bare modifier keydown restarts the bound and joins the hold. Before the floor the bound is the
+// floor, so the open still fires at 300 ms (build-notes CAP-5).
+function holdModifier(t: Tracker, id: string): void {
+  if (t.holdTimer !== null) t.timers.clearTimer(t.holdTimer);
+  t.holdTimer = null;
+  t.hold = true;
+  t.holdId = null;
+  t.modHold = true;
+  t.mods.add(id);
+  const floor = t.installAt + MIN_GUARD_MS - t.now();
+  scheduleRelease(t, floor > 0 ? floor : CLICK_GRACE_MS);
+}
+
+// The modifier hold ends one tick later: every held modifier is up, or a start that is not an Undo
+// alias arrived.
+function endModifierHold(t: Tracker): void {
+  if (t.holdTimer !== null) t.timers.clearTimer(t.holdTimer);
+  t.holdTimer = null;
+  scheduleRelease(t);
 }
 
 function clearOpen(t: Tracker, hide: boolean): void {
@@ -270,6 +302,19 @@ function undoKey(event: Event): boolean {
   return !((e.ctrlKey || e.metaKey) && e.shiftKey);
 }
 
+// Ticket 6.12 review default: a bare Ctrl, Meta or Shift keydown may be the start of an Undo chord.
+function modifierKey(event: Event): boolean {
+  const k = (event as KeyboardEvent).key;
+  return event.type === 'keydown' && (k === 'Control' || k === 'Meta' || k === 'Shift');
+}
+
+// Ticket 6.12 review default: a touch or pen tap's click is a separate, later input than its
+// pointerup, so a pointerup inside Undo holds for it (up to CLICK_GRACE_MS).
+function clickFollows(event: Event): boolean {
+  const type = (event as PointerEvent).pointerType;
+  return event.type === 'pointerup' && (type === 'touch' || type === 'pen') && inUndo(event);
+}
+
 function gestureId(event: Event): string | null {
   if (event.type.startsWith('pointer')) return `p${(event as PointerEvent).pointerId}`;
   if (event.type.startsWith('key')) return `k${(event as KeyboardEvent).code}`;
@@ -277,8 +322,9 @@ function gestureId(event: Event): string | null {
 }
 
 // F8: one open gesture's end bookkeeping (its end event, or an end the browser never sent).
-function endOpen(t: Tracker, id: string, consumed: boolean, pointerup: boolean): void {
-  if (t.hold && t.holdId === id) scheduleRelease(t);
+function endOpen(t: Tracker, id: string, consumed: boolean, pointerup: boolean, ms = 0): void {
+  if (t.hold && t.holdId === id) scheduleRelease(t, ms);
+  if (t.modHold && t.mods.delete(id) && t.mods.size === 0) endModifierHold(t);
   t.open.delete(id);
   t.unconfirmed.delete(id);
   if (consumed) {
@@ -313,25 +359,31 @@ function onEvent(t: Tracker, event: Event): void {
   }
   if (id !== null) {
     const consumed = t.open.get(id);
-    // Review default under AD-14 (F8 tracker), not an F8 sentence: a fresh (non-repeat) keydown of
-    // an open key means its keyup was lost: the stale entry ends here and the keydown starts a new
-    // gesture below. Pointers keep the duplicate-down rule.
-    const lost = consumed !== undefined && type === 'keydown' && !key.repeat;
+    // Review default under AD-14 (F8 tracker), not an F8 sentence: a fresh (non-repeat) keydown or
+    // a pointerdown of an open gesture means its end was lost: the stale entry ends here and the
+    // down starts a new gesture below.
+    const lost =
+      consumed !== undefined && (type === 'pointerdown' || (type === 'keydown' && !key.repeat));
     if (lost) endOpen(t, id, consumed, false);
     if (consumed !== undefined && !lost) {
-      // A tracked gesture: its events (duplicate down, repeats, end) follow its consumed flag.
-      if (isEnd) endOpen(t, id, consumed, type === 'pointerup');
+      // A tracked gesture: its events (repeats, end) follow its consumed flag.
+      if (isEnd) {
+        endOpen(t, id, consumed, type === 'pointerup', clickFollows(event) ? CLICK_GRACE_MS : 0);
+      }
       if (consumed) consume(event);
       evaluate(t);
       return;
     }
   }
-  const undo = (inUndo(event) || undoKey(event)) && t.canUndo();
+  // Ticket 6.12 review default: only a primary-button press is an Undo press.
+  const primary = type !== 'pointerdown' || (event as PointerEvent).button === 0;
+  const undo = (inUndo(event) || undoKey(event)) && primary && t.canUndo();
   if (t.installed && undo && (isStart || type === 'click')) {
     // Untracked ends (pointerup/pointercancel/keyup) inside Undo pass through with no side effect.
     // The hold is set before finish drains the open callbacks; the dispatch (releaseHold) or the
-    // gesture's end ends it.
-    if (!t.hold) {
+    // gesture's end ends it. A hold already being released is taken over by this press.
+    if (!t.hold || t.holdTimer !== null) {
+      clearHold(t);
       t.hold = true;
       t.holdId = isStart ? id : null;
     }
@@ -361,6 +413,8 @@ function onEvent(t: Tracker, event: Event): void {
     t.open.set(id, false);
     return;
   }
+  const modifier = modifierKey(event) && t.canUndo();
+  if (t.modHold && !modifier) endModifierHold(t);
   const windowPassed = t.settled && t.now() >= t.installAt + MIN_GUARD_MS;
   if (windowPassed && !consumedOpen(t) && !t.hold) {
     // First start in the backstop window: the guard ends and the event passes through.
@@ -369,6 +423,9 @@ function onEvent(t: Tracker, event: Event): void {
     return;
   }
   t.open.set(id, true);
+  // Ticket 6.12 review default: the bounded modifier hold (holdModifier); the dispatch
+  // (releaseHold) ends it too. An Undo press's hold is left as it is.
+  if (modifier && (!t.hold || t.modHold)) holdModifier(t, id);
   if (!windowPassed) finish(t);
   consume(event);
   evaluate(t);
@@ -409,6 +466,8 @@ export function startTracker(
     hold: false,
     holdId: null,
     holdTimer: null,
+    modHold: false,
+    mods: new Set(),
   };
   tracker = t;
   const onDoc = (event: Event) => onEvent(t, event);

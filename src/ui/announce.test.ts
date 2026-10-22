@@ -213,9 +213,29 @@ describe('AD-3 announcer', () => {
     ]);
   });
 
-  it('AD-3 a hidden page drops the pending set', () => {
-    mod.announceReset('New game');
+  it('AD-3 AD-9 the hide flush drops the pending set and a queued outcome: nothing is set when the frame runs visible', () => {
+    store.view = placing('baked', 5, 5, 10);
+    store.next = {
+      result: { changed: true, finished: 'won' },
+      after: view({ status: 'won', wordCount: 3, finalScore: 118, band: 2 }),
+    };
+    mod.dispatchAnnounced({ type: 'confirm' });
+    mod.announceOutcome();
     hidden = true;
+    mod.cancelAnnounce();
+    hidden = false;
+    runFrame();
+    runFrame();
+    expect(spoken()).toEqual([]);
+  });
+
+  it('AD-3 a set or an outcome requested while hidden schedules no frame and is never set', () => {
+    hidden = true;
+    mod.announceReset('New game');
+    store.view = view({ status: 'won', finalScore: 118, band: 2 });
+    mod.announceOutcome();
+    expect(frames).toEqual([]);
+    hidden = false;
     runFrame();
     expect(spoken()).toEqual([]);
   });
