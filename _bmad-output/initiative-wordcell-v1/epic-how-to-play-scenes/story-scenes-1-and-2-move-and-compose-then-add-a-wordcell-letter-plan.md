@@ -107,3 +107,4 @@ Summary: scenes `move-compose` and `free-letter` replace drag/compose/destinatio
 Review: 1 patch applied (tray-0 test); the rest rejected as low or false (see triage log). Follow-up review recommended: false.
 Verification: `npm run test:all` and `npm run test:screens` both green: test:all re-run after the patch (exit 0); test:screens passed in Docker by the implementer before the test-only patch.
 Residual risks / for the owner: the captions are drafts; ticket Description ("flips back") and AC3 text are stale against the owner Content; `tickets.toml` entry 7 needs a sync at done.
+- Post-close follow-up (owner decisions D1–D12, 2026-10-22, `011935c`; see the epic Notes and the ticket's Notes): the scene this plan built changed after it.

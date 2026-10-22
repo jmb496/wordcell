@@ -105,3 +105,4 @@ deferred: []
 - Follow-up review recommended: false (no high, one patched medium pair is test and guard hardening only).
 - Verification: lint, check, unit (2933), build, dist smoke, `test:e2e` (946 passed; one unrelated `board-keys` Q-24 desktop teardown timeout, passed 3/3 on rerun), `test:e2e:pwa` (13) green; `test:screens` 43 passed before the three small patches (none visual).
 - Residual risks: baseline refresh for this scene needs the file deleted first (tolerance 0.01 hides a six-card to one-card change); the board-keys Q-24 desktop test is flaky under load.
+- Post-close follow-up (owner decisions D1–D12, 2026-10-22, `011935c`; see the epic Notes and the ticket's Notes): the scene this plan built changed after it.

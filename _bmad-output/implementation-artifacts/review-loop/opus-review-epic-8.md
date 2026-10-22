@@ -137,7 +137,7 @@ Reviewers: fix diff, edge cases, verification gap, intent alignment (late-pass b
 Snapshot: unchanged from tree 5 82fa599d563736cc57907a28d5bef3059e468d0a (no fix pass). Final verify: npm test 86 / 3181 pass, lint pass (1 pre-existing warning, e2e/end-sheet.spec.ts:846), check pass (0 errors).
 
 ## Result — converged after 6 passes
-Majors per pass: 5, 4, 2, 3, 1, 0. Open major: none. Decision-needed: 12 (passes 1–5 above), none applied. Unapplied minors: every "Minors (listed …)" entry in passes 1–6 above (owner rule: minors never sent to the fixer). Screenshot baselines stale for the orchestrator: scene-1-final (pass 2 item 4) and the scene-5 caption PNGs (pass 1 minor).
+Majors per pass: 5, 4, 2, 3, 1, 0. Open major: none. Decision-needed: 12 (passes 1–5 above), none applied. The owner answered all 12 on 2026-10-22 (proposed defaults, D1–D12 in the epic Notes); implemented and reviewed in `opus-review-epic-8-decisions.md`, commits `011935c`, `8c6b012`. Unapplied minors: every "Minors (listed …)" entry in passes 1–6 above (owner rule: minors never sent to the fixer). Screenshot baselines stale for the orchestrator: scene-1-final (pass 2 item 4) and the scene-5 caption PNGs (pass 1 minor).
 
 ## Gates (orchestrator, 2026-10-22)
 - Run: first attempt stopped at a usage limit during pass 6 (`.autopilot/opus-review-20261022-0748/e8-review-attempt1.log`); resumed with the resume rule, pass 6 completed with 0 majors.

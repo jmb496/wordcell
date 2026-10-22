@@ -121,3 +121,4 @@ Open items carried: A1 to A7. None is a failing criterion; A1 is the only one th
 - The previous epic is taken as `epic-game-surfaces-and-keyboard` (named by the epic's `after`); epic 7 does not exist as a folder.
 - Each action item above is a proposal made without the owner; A3 to A6 take the technical default.
 - Test counts and the android how-to-play run were observed by me; `test:all`, `test:screens` and the size margin are taken from the 8.11 plan and digest.
+- Post-close follow-through (Opus review, 2026-10-22, `b6272b0`): A3 landed (scoring top-letter checks and the `cards < 2` throw test); A4 (tickets.toml entries 7 and 11 sync) is still open, listed as a minor in `opus-review-epic-8.md`.
