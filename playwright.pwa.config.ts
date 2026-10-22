@@ -1,5 +1,5 @@
 import { defineConfig, devices, type Project } from '@playwright/test';
-import { forbidOnly, fullyParallel, reporter, retries, use } from './playwright.base';
+import { forbidOnly, fullyParallel, outputDir, reporter, retries, use } from './playwright.base';
 
 /**
  * D5: serves a production-shaped build with `vite preview`. `PW_PREVIEW` picks the build and the
@@ -30,6 +30,7 @@ const project: Project =
 
 export default defineConfig({
   testDir: 'e2e/pwa',
+  outputDir: outputDir(preview),
   fullyParallel,
   forbidOnly,
   retries,
