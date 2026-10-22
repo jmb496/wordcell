@@ -46,3 +46,4 @@ Verify, all of:
 - FAKED is in the dictionary (`grep -n '^faked$' generated/dictionary/en.txt` finds line 53432).
 - Known consequence of the owner's verbatim caption: the figcaption no longer names F or FAKED and the stage is `aria-hidden`; accepted per owner, no behaviour change.
 - Default taken (technical, 2026-10-17): 8.10 deletes the removed scenes' own files and entries, 8.11 the code they leave unused.
+- Post-close follow-up (owner decisions D1–D12, 2026-10-22, `011935c`; see the epic Notes): D3 the rearrangement to FAKED is a tile glide; D8 the drag-out point stays on the stage.

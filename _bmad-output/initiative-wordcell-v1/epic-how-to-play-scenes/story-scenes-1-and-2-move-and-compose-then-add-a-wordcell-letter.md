@@ -70,3 +70,4 @@ Verify: npm run test:all and npm run test:screens are green.
 ## Notes
 
 - Decision: 2026-10-17, owner: Flip must end on a real word. Scene 1 shows the + up to 3 destination cards, the − back down to 2, Flip, then the animated rearrangement of the moved cards, ending on BAKED; scene 2 continues from that state and adds the WordCell 6 top card L (BALKED). Scene 1 lifts the three cards K B A onto a column ending D E (the Description's owner-set content). Captions stay drafts for the owner's review at done.
+- Post-close follow-up (owner decisions D1–D12, 2026-10-22, `011935c`; see the epic Notes): D4 the tap on WordCell 6 appends L (Q-31), then an arrange gives BALKED; D10 column 3 trimmed by k; D1 filler reordered.

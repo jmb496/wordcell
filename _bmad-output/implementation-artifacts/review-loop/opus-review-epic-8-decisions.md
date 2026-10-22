@@ -90,3 +90,9 @@ Verdict: ok. `src/ui/scenes/stage.test.ts` 15/15. The look-class match is symmet
 
 ### Post-loop fix 2 check (fresh read-only reviewer, 2026-10-22)
 Verdict: ok, no minors. `finalFrame(n)` = frames − 1 for every scene (7, 3, 5, 3, 5; scene 2 was 2 before D4), used by every final-frame caller; the helper test still fails on a wrong click count; the JSON import attributes are build-neutral and pass the architecture tests (304) and `check`; `tsconfig.e2e.json`'s added types need no Scaffold-deltas record (scope unchanged, types mirror `tsconfig.app.json`); screenshot test and file names unchanged. Scene 2 baselines (how-to-play and the five themes) need regenerating in the container.
+
+## Gates (orchestrator, 2026-10-22)
+- `npm run test:all`: first run failed only `e2e/helpers.spec.ts` 'AD-17 openScene … to the Replay frame' (stale `last: 2` after D4; post-loop fix 2); rerun pass (1044 + 14 + 17).
+- `npm run test:screens`: passed within tolerance before any update; the 11 scene baselines were regenerated (`--update-snapshots=all` on the how-to-play and theme specs), three game baselines that moved by at most 1/255 on ≤ 12 px were restored unchanged; a read-only evaluator matched every scene difference to D1–D12 and escalated only the scene 5 caption, which is the owner's 2026-10-18 rewording (`2dbbccf`, recorded in the epic Notes) on a stale baseline: accepted. Rerun 66/66.
+- Models: only `claude-opus-5-5`.
+- Commits: `011935c` (code), `8c6b012` (baselines).
