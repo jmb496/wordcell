@@ -24,6 +24,7 @@ describe('AD-17 valid session fixtures', () => {
       'session-idle-empty-column.json',
       'session-idle-fresh.json',
       'session-idle-pending-draft-long.json',
+      'session-idle-pending-draft-overflow.json',
       'session-idle-pending-draft.json',
       'session-one-letter-left.json',
       'session-place-compact.json',

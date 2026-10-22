@@ -1,4 +1,5 @@
 <script lang="ts">
+import { tick, untrack } from 'svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import type { CellView, Face, GameView } from '../engine/index';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
@@ -34,6 +35,41 @@ $effect.pre(() => {
 });
 const shownCell = $derived(open === null ? lastCell : cellOf(open));
 
+// build-notes Per-surface behaviour (WordCell view | Focus start: the view | Focus return: the
+// cell): once the sticky view (`viewCell`, never a held peek) is rendered its sheet takes focus
+// (AD-11: no scroll). At close the sheet gives focus up at once, before the Board's focus-follow
+// effect runs, so a phase change (an Undo with the view open) still focuses the phase's target
+// there; after `tick()` the cell gets it unless a surface opened or focus moved on meanwhile.
+let sheet = $state<HTMLElement | null>(null);
+let stickyCell: number | null = null;
+$effect.pre(() => {
+  const now = overlays.viewCell;
+  untrack(() => {
+    const was = stickyCell;
+    stickyCell = now;
+    if (now !== null && was === null) {
+      void tick().then(() => {
+        if (overlays.viewCell !== now) return;
+        if (sheet === null) throw new Error('AD-13 sticky WordCell view with no sheet');
+        sheet.focus({ preventScroll: true });
+      });
+    } else if (now === null && was !== null) {
+      const active = document.activeElement;
+      if (active instanceof HTMLElement && sheet?.contains(active)) active.blur();
+      void tick().then(() => returnFocus(was));
+    }
+  });
+});
+
+function returnFocus(n: number): void {
+  if (overlays.top !== undefined) return;
+  const active = document.activeElement;
+  if (active !== null && active !== document.body) return;
+  const target = document.querySelector<HTMLElement>(`[data-wordcell="${n}"]`);
+  if (target === null) throw new Error(`AD-13 WordCell view closed with no cell ${n}`);
+  target.focus({ preventScroll: true });
+}
+
 function cellOf(n: number): CellView {
   return cellIn(view.cells, n, `AD-13 WordCell view of unknown cell ${n}`);
 }
@@ -57,6 +93,8 @@ function cellOf(n: number): CellView {
     data-view-sheet
     role="dialog"
     aria-label={title}
+    tabindex="-1"
+    bind:this={sheet}
     inert={open === null}
     data-mode={open === null ? lastMode : overlays.peek !== null ? 'peek' : 'sticky'}
   >
@@ -99,6 +137,7 @@ function cellOf(n: number): CellView {
     touch-action: pan-y; overscroll-behavior: contain;
     user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
   }
+  .sheet:focus { outline: none; }
   .title {
     flex: none; margin: 0; padding: 16px 16px 8px;
     font: 600 1.25rem/1.75rem system-ui, "Roboto", sans-serif; color: var(--wc-ink-primary);

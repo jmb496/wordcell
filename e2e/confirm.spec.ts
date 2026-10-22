@@ -2,6 +2,7 @@ import { expect, type Page, test } from '@playwright/test';
 import { stored } from './helpers/blocking';
 import { openFixture } from './helpers/board';
 import { expectLeaves, type NavState, wc } from './helpers/dialogs';
+import { expectBoardFocus } from './helpers/keys';
 import { onAndroid, onDesktop } from './helpers/project';
 import { fixture, seedStorage } from './helpers/seed';
 
@@ -39,14 +40,14 @@ test.describe('on android', () => {
 
   test.describe('the gate', () => {
     for (const [name, row, dialog] of CONFIRMS) {
-      test(`R-74 ${name} acts at once on a fresh deal: no dialog, focus on main`, async ({
+      test(`R-74 ${name} acts at once on a fresh deal: no dialog, focus on the board`, async ({
         page,
       }) => {
         await openFixture(page, 'session-idle-fresh');
         await openRow(page, row);
         await expect(dialog(page)).toHaveCount(0);
         await expect(menu(page)).toHaveCount(0);
-        await expect(page.locator('main')).toBeFocused();
+        await expectBoardFocus(page);
         expect((await parsed(page)).moves).toHaveLength(0);
       });
 
@@ -68,7 +69,7 @@ test.describe('on android', () => {
           await openFixture(page, fixtureName);
           await openRow(page, row);
           await expect(dialog(page)).toHaveCount(0);
-          await expect(page.locator('main')).toBeFocused();
+          await expectBoardFocus(page);
         });
       }
     }
@@ -161,6 +162,8 @@ test.describe('on android', () => {
       await expect(newGameConfirm(page)).toBeVisible();
       await newGameConfirm(page).getByRole('button', { name: 'New game', exact: true }).dblclick();
       await expect(newGameConfirm(page)).toHaveCount(0);
+      // The accept returns focus to the board (focus-board.ts `focusBoard`); the double tap's
+      // second tap then lands on the board under the exiting dialog and focuses `main` (tabindex -1).
       await expect(page.locator('main')).toBeFocused();
       await expect.poll(async () => (await parsed(page)).seed).not.toBe(SEED);
       expect((await parsed(page)).moves).toHaveLength(0);
@@ -183,6 +186,8 @@ test.describe('on android', () => {
       await openRow(page, 'Replay this deal');
       await replayConfirm(page).getByRole('button', { name: 'Replay', exact: true }).dblclick();
       await expect(replayConfirm(page)).toHaveCount(0);
+      // The accept returns focus to the board (focus-board.ts `focusBoard`); the double tap's
+      // second tap then lands on the board under the exiting dialog and focuses `main` (tabindex -1).
       await expect(page.locator('main')).toBeFocused();
       await expect.poll(async () => (await parsed(page)).moves.length).toBe(0);
       expect((await parsed(page)).seed).toBe(SEED);

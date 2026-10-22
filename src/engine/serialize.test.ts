@@ -72,6 +72,9 @@ import validIdlePendingDraft from '../../fixtures/session-idle-pending-draft.jso
 import validIdlePendingDraftLong from '../../fixtures/session-idle-pending-draft-long.json' with {
   type: 'json',
 };
+import validIdlePendingDraftOverflow from '../../fixtures/session-idle-pending-draft-overflow.json' with {
+  type: 'json',
+};
 import invalidAd7ActiveMs from '../../fixtures/session-invalid-ad7-active-ms.json' with {
   type: 'json',
 };
@@ -308,6 +311,7 @@ type ValidName =
   | 'place-long'
   | 'one-letter-left'
   | 'idle-pending-draft-long'
+  | 'idle-pending-draft-overflow'
   | 'won-words';
 
 /** The CAP-9 round-trip fixtures (generator record: the plan's Implementation Notes). */
@@ -330,6 +334,7 @@ const VALID: readonly (readonly [ValidName, unknown])[] = [
   ['place-long', validPlaceLong],
   ['one-letter-left', validOneLetterLeft],
   ['idle-pending-draft-long', validIdlePendingDraftLong],
+  ['idle-pending-draft-overflow', validIdlePendingDraftOverflow],
   ['won-words', validWonWords],
 ];
 
@@ -978,6 +983,13 @@ describe('defining properties (§2, CAP-9)', () => {
     'idle-pending-draft-long': (s) => {
       expect(s.cursor).toStrictEqual({ index: 1, phase: 'idle' });
       expect(view(s, EN).pendingDraftWord).toBe('vimldxomiw');
+    },
+    // R-72: a pending draft is any undone Composing draft, so it can be longer than a placeable
+    // word: 7 source + 7 destination cards + 3 free letters (cells 3-5) after three commits.
+    'idle-pending-draft-overflow': (s) => {
+      expect(s.cursor).toStrictEqual({ index: 3, phase: 'idle' });
+      expect(s.moves[3]?.reached).toBe('composing');
+      expect(view(s, EN).pendingDraftWord).toBe('tnpdvimldxomiwnoz');
     },
     // Epic 10 entry 1 (R-86, Q-47; seed 2089): the whole word list, a won Session. `surf` twice in
     // cells 4 and 3 (moves 0 and 2), a 5-letter tie played in reverse alphabetical order (nmihz before lhvia), a
@@ -1949,6 +1961,33 @@ const REBUILDS: readonly (readonly [string, unknown, () => Session])[] = [
           UNDO,
         ],
         ['tan', 'vimldxomiw'],
+      ),
+  ],
+  [
+    'session-idle-pending-draft-overflow',
+    validIdlePendingDraftOverflow,
+    () =>
+      play(
+        createSession(1),
+        [
+          drop(3, 2, 6),
+          FLIP,
+          VALIDATE,
+          CONFIRM,
+          drop(4, 3, 7),
+          VALIDATE,
+          CONFIRM,
+          drop(5, 4, 8),
+          VALIDATE,
+          CONFIRM,
+          drop(1, 7, 2),
+          { type: 'addFreeLetter', cell: 3 },
+          { type: 'addFreeLetter', cell: 4 },
+          { type: 'addFreeLetter', cell: 5 },
+          { type: 'setDestinationCount', k: 7 },
+          UNDO,
+        ],
+        ['tan', 'fhio', 'ucfsz'],
       ),
   ],
   [

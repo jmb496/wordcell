@@ -10,7 +10,7 @@
 // Menu row records that its opener left with the menu, so the surface returns focus to the ☰
 // button (focus-board.ts `focusMenuButton`). One record per id, rewritten by every open of that id
 // and taken once by the surface's close effect, which runs on every close path (close, back,
-// `resetForNewSession`); How to play keeps its own copy (ticket 6.9).
+// `resetForNewSession`).
 import { type OverlayId, overlays } from './overlays.svelte';
 
 export type SurfaceId = Extract<

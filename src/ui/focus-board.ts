@@ -3,7 +3,7 @@
 // every column is empty, as after a win. Cards are Tab stops under the roving model (Card.svelte,
 // roving.svelte.ts), so no card is made focusable here. Programmatic focus never scrolls: the
 // layout anchors its own scroll (AD-11).
-import type { CardId } from '../engine/index';
+import type { CardId, GameView } from '../engine/index';
 import { text } from './text';
 
 const FOCUS = { preventScroll: true } as const;
@@ -50,6 +50,17 @@ export function focusFirstStrip(): void {
   const first = document.querySelector<HTMLElement>('[data-card-id][data-place="strip"]');
   if (first === null) focusBoard();
   else first.focus(FOCUS);
+}
+
+/**
+ * EXPERIENCE.md Focus, the phase's focus target: Composing -> the first movable tile, Place -> the
+ * first strip card, otherwise (Idle, a Game over) the board. Shared by focus-follow.ts, the end
+ * sheet's Undo path (end-sheet.ts) and the History notice's close (App.svelte).
+ */
+export function focusByPhase(view: GameView): void {
+  if (view.phase === 'composing') focusFirstTile();
+  else if (view.phase === 'place') focusFirstStrip();
+  else focusBoard();
 }
 
 /**

@@ -4,7 +4,7 @@ import { tick, untrack } from 'svelte';
 import { act } from './act';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Dialog from './Dialog.svelte';
-import { focusMenuButton } from './focus-board';
+import { focusBoard, focusMenuButton } from './focus-board';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { newGame, replayDeal } from './new-game';
 import { takeMenuOrigin } from './open-surface';
@@ -17,7 +17,8 @@ import { text } from './text';
 // (only the confirm closes); accept calls the ungated action, whose `resetForNewSession()` pops the
 // confirm, and Dialog's `firstClick` makes a double tap act once. Esc closes the
 // confirm through the key handler (keys.ts, ticket 6.10).
-// Focus: an accept sets `accepted` and focus goes to `main` at close; otherwise a confirm opened
+// Focus: an accept sets `accepted` and focus goes to the board at close (focus-board.ts
+// `focusBoard`); otherwise a confirm opened
 // from a menu row (open-surface.ts `takeMenuOrigin`) returns focus to the ☰ button (presence's
 // restoreFocus aims at the exiting menu row, so this effect, run after `tick()`, wins); skipped
 // when a menu was reopened during the exit.
@@ -33,7 +34,7 @@ function onClosed(id: ConfirmId): void {
   const fromMenu = takeMenuOrigin(id);
   accepted = false;
   void tick().then(() => {
-    if (fromAccept) document.querySelector('main')?.focus();
+    if (fromAccept) focusBoard();
     else if (fromMenu && !overlays.isOpen('menu')) focusMenuButton();
   });
 }

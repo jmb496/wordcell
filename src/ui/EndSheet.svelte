@@ -28,7 +28,7 @@ import { text } from './text';
 // `--wc-base-ms` (`--wc-fade-ms` under reduced motion), none when it is open at mount (R-73
 // relaunch: no animation, final state at first paint). The content is a snapshot of the last
 // finished view, so the exit keeps its text after Undo. Focus: Replay this deal on open; the board
-// on collapse, Undo, New game and Replay (EXPERIENCE.md Focus).
+// on collapse, New game and Replay; on Undo the phase's target (end-sheet.ts; EXPERIENCE.md Focus).
 let { view }: { view: GameView } = $props();
 
 const finishedStatus = (v: GameView): boolean => v.status === 'won' || v.status === 'gaveUp';
@@ -46,7 +46,7 @@ $effect.pre(() => {
 });
 const result = $derived(open && finishedStatus(view) ? view : shown);
 
-// Collapse (handle, scrim, Esc, back): focus goes to the board. Undo does the same (end-sheet.ts);
+// Collapse (handle, scrim, Esc, back): focus goes to the board. Undo goes by the phase (end-sheet.ts);
 // New game and Replay leave focus to their own paths.
 let previous: EndSheetState = untrack(() => overlays.endSheet);
 $effect(() => {

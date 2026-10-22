@@ -34,6 +34,36 @@ export const where = (page: Page): Promise<Where> =>
   });
 
 export const focusedCard = async (page: Page): Promise<string | null> => (await where(page)).card;
+
+// EXPERIENCE.md Keyboard "the board" (focus-board.ts `focusBoard`): the bottom live card of the
+// lowest-numbered non-empty board column is focused; `main` only when every column is empty.
+// `timeout` shortens the poll (the helper's negative self-tests).
+export async function expectBoardFocus(
+  page: Page,
+  { timeout }: { timeout?: number } = {},
+): Promise<void> {
+  await expect
+    .poll(
+      () =>
+        page.evaluate(() => {
+          const columns = [...document.querySelectorAll<HTMLElement>('main [data-column]')].sort(
+            (a, b) => Number(a.dataset.column) - Number(b.dataset.column),
+          );
+          if (columns.length !== 8) return `${columns.length} board columns`;
+          const bottom = columns
+            .map((c) => [...c.querySelectorAll('[data-card-id][data-place="column"]')].at(-1))
+            .find((el) => el !== undefined);
+          const target = bottom ?? document.querySelector('main');
+          const active = document.activeElement;
+          if (active === target) return 'board';
+          const name = (el: Element | null | undefined) =>
+            `${el?.tagName} ${el?.getAttribute('data-card-id') ?? ''}`.trim();
+          return `focused ${name(active)}, expected ${name(target)}`;
+        }),
+      timeout === undefined ? {} : { timeout },
+    )
+    .toBe('board');
+}
 // Records each keydown's final `defaultPrevented` (the app's handler is registered first).
 export async function track(page: Page): Promise<void> {
   await page.evaluate(() => {

@@ -1,5 +1,5 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
-import { stored } from './helpers/blocking';
+import { expectAnotherWindow, stored } from './helpers/blocking';
 import {
   button,
   CONFIRM_TITLE as CONFIRM,
@@ -10,6 +10,8 @@ import {
   NOTICE_TITLE as TITLE,
   wc,
 } from './helpers/dialogs';
+import { expectBoardFocus } from './helpers/keys';
+import { animationFrames } from './helpers/lifecycle';
 import { openBoard } from './helpers/restore';
 import { fixture, seedStorage } from './helpers/seed';
 
@@ -339,6 +341,63 @@ test.describe('§2 History notice flows (history-invalid-version-unknown.json)',
     await expect(notice(page)).toBeVisible();
     expect(await stored(page, HISTORY)).toBe(text);
   });
+
+  // build-notes Per-surface behaviour (History notice: focus returns to the board); EXPERIENCE.md
+  // Focus: a relaunch into Composing or Place focuses the phase's first item once the notice closes.
+  const closers: readonly [string, (page: Page) => Promise<void>][] = [
+    ['Not now', (page) => button(page, 'Not now').click()],
+    ['back', async (page) => void (await page.goBack())],
+    [
+      'Delete history',
+      async (page) => {
+        await openConfirm(page);
+        await button(page, 'Delete history').click();
+      },
+    ],
+  ];
+  for (const [name, close] of closers) {
+    test(`§2 closing the notice by ${name} on an Idle relaunch (session-idle-fresh.json) focuses the board`, async ({
+      page,
+    }) => {
+      await start(page, VERSION_UNKNOWN, 'session-idle-fresh.json');
+      await expectNotice(page, SENTENCE);
+      await close(page);
+      await expect(notice(page)).toHaveCount(0);
+      await expectBoardFocus(page);
+    });
+  }
+
+  // Q-38: the halted surface owns the screen; closing the notice under it (back) moves no focus and
+  // keeps the halt's cause and text (no AD-15 fatal replaces them).
+  test('Q-38 AD-13 back after another window halts the app under the notice keeps the another-window message', async ({
+    page,
+  }) => {
+    await start(page, VERSION_UNKNOWN, 'session-idle-fresh.json');
+    await expectNotice(page, SENTENCE);
+    const page2 = await page.context().newPage();
+    await page2.goto('/favicon.svg');
+    await page2.evaluate(() => localStorage.setItem('wordcell:prefs', '{}'));
+    await expectAnotherWindow(page);
+    await page.goBack();
+    await expect.poll(() => wc(page).then((state) => state?.wc)).toBe(0);
+    await animationFrames(page, 5);
+    await expectAnotherWindow(page);
+  });
+
+  for (const [session, place] of [
+    ['session-composing.json', 'tray'],
+    ['session-place.json', 'strip'],
+  ] as const) {
+    test(`§2 Not now on a relaunch into ${session} focuses the phase's first ${place} item`, async ({
+      page,
+    }) => {
+      await start(page, VERSION_UNKNOWN, session);
+      await expectNotice(page, SENTENCE);
+      await button(page, 'Not now').click();
+      await expect(notice(page)).toHaveCount(0);
+      await expect(page.locator(`[data-card-id][data-place="${place}"]`).first()).toBeFocused();
+    });
+  }
 });
 
 // The shortest notice body puts the confirm's Delete history over Reset history's top edge.

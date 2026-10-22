@@ -1,4 +1,5 @@
 <script lang="ts">
+import { tick, untrack } from 'svelte';
 import { game, type RejectReason } from '../shell/game.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { act } from './act';
@@ -12,6 +13,7 @@ import Board from './Board.svelte';
 import ConfirmDialogs from './ConfirmDialogs.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import EndSheet from './EndSheet.svelte';
+import { focusByPhase } from './focus-board';
 import type { Controller } from './gestures/controller';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Halted from './Halted.svelte';
@@ -47,6 +49,28 @@ const board = $derived(game.view);
 // surface is on the stack. The expanded end sheet and the WordCell view are not in the list (their
 // entries own their exceptions). HistoryNotice, rendered below, keeps its own markup.
 const mainInert = $derived(SUSPENDING.some((id) => overlays.isOpen(id)));
+
+// build-notes Per-surface behaviour (History notice: focus returns to the board): the notice
+// unmounts at close (Not now, back, Delete history), so its Dialog has no opener to return to, and
+// the phase focus (focus-follow.ts) yielded to it at boot. With no other surface on top (the
+// relaunched expanded end sheet focuses its own first action), focus goes by the phase
+// (focus-board.ts `focusByPhase`): the board, the first movable tile or the first strip card.
+// A halt (Q-38, AD-15) or the rejected root owns the screen, so a close under it moves no focus.
+let noticeWasOpen = false;
+$effect(() => {
+  const now = overlays.isOpen('historyNotice');
+  untrack(() => {
+    if (noticeWasOpen && !now) {
+      void tick().then(() => {
+        if (game.state.kind !== 'active' || overlays.top !== undefined) return;
+        const view = game.view;
+        if (view === undefined) throw new Error('AD-13 History notice closed with no GameView');
+        focusByPhase(view);
+      });
+    }
+    noticeWasOpen = now;
+  });
+});
 
 // Epic 4 SPEC CAP-6: one reaction recomputes the desktop hover classes at the last pointer
 // point whenever the selection or the GameView changes (tap, drop, Undo, Redo, Reload, back).

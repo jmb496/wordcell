@@ -201,6 +201,36 @@ test.describe('Idle', () => {
     await expect(sheet(page)).toHaveCount(0);
   });
 
+  // build-notes Per-surface behaviour (WordCell view: focus start the view, focus return the cell).
+  test('Q-24 Space on a WordCell moves focus into the sticky view; Esc returns it to the cell and Tab goes on to the next cell', async ({
+    page,
+  }) => {
+    await open(page, 'session-idle-empty-column');
+    await cell(page, 7).focus();
+    expect(await press(page, 'Space')).toBe(true);
+    await expect(sheet(page)).toBeVisible();
+    await expect
+      .poll(() => page.evaluate(() => document.activeElement?.closest('[data-view-sheet]') != null))
+      .toBe(true);
+    await page.keyboard.press('Escape');
+    await expect(sheet(page)).toHaveCount(0);
+    await expect(cell(page, 7)).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(cell(page, 8)).toBeFocused();
+  });
+
+  test('Q-24 Z with the focused sticky view open closes it and focus follows the phase to the first strip card', async ({
+    page,
+  }) => {
+    await open(page, { literal: SESSIONS.flow6 });
+    await cell(page, 7).focus();
+    await page.keyboard.press('Space');
+    await expect(sheet(page)).toBeVisible();
+    await page.keyboard.press('z');
+    await expect(sheet(page)).toHaveCount(0);
+    await expect(strip(page).first()).toBeFocused();
+  });
+
   test('R-65 a tail selection is cleared first: Space on a non-empty WordCell pops its entry and opens the view; Enter or Space on an empty one only deselects', async ({
     page,
   }) => {
@@ -313,6 +343,24 @@ test.describe('Tab order', () => {
     await page.keyboard.press('ArrowUp');
     await expect(cards(page, 3).nth(4)).toHaveAttribute('tabindex', '0');
     await expect(cards(page, 3).nth(4)).toBeFocused();
+  });
+
+  // Ticket 6.11 Focus: a remembered card that is not live falls back to the region's first live
+  // item, a column's bottom card (Column.svelte).
+  test('Q-24 a column whose remembered card became a ghost keeps one Tab stop, its bottom live card', async ({
+    page,
+  }) => {
+    await open(page, 'session-idle-fresh');
+    const remembered = await lowest(page, 1).getAttribute('data-card-id');
+    await lowest(page, 1).focus();
+    await page.keyboard.press('1');
+    await expectSelection(page, { column: 1, count: 1 }, 1);
+    await page.keyboard.press('2');
+    await expect(tiles(page).first()).toBeFocused();
+    const column1 = page.getByTestId('column-1');
+    await expect(column1.locator(`[data-card-id="${remembered}"]`)).toHaveCount(0);
+    expect(await stops(column1.locator('*'))).toBe(1);
+    await expect(lowest(page, 1)).toHaveAttribute('tabindex', '0');
   });
 
   test('Q-24 the tray is one Tab stop; the arrows move within it without wrapping and skip the destination block', async ({
@@ -520,6 +568,30 @@ test.describe('Composing', () => {
         }, key)
         .toBe(true);
     }
+  });
+
+  // EXPERIENCE.md Keyboard: focus survives Flip. With more destination cards than movable tiles
+  // (D > M) the keyed tile list re-inserts the movable tiles' nodes, which blurs the focused one.
+  test('Q-24 F with more destination cards than movable tiles keeps focus on the focused tile, and the arrows still move it', async ({
+    page,
+  }) => {
+    await toComposing(page);
+    const k = async () => (await draftDetail(page)).destinationCount;
+    for (const want of [2, 3, 4, 5]) {
+      expect(await press(page, '+')).toBe(true);
+      await expect.poll(k).toBe(want);
+    }
+    await expect(tiles(page)).toHaveCount(4);
+    await tiles(page).first().focus();
+    const first = await focusedCard(page);
+    const ids = await tiles(page).evaluateAll((els) =>
+      els.map((el) => el.getAttribute('data-card-id')),
+    );
+    expect(await press(page, 'f')).toBe(true);
+    await expect.poll(async () => (await draftDetail(page)).destinationSide).toBe('right');
+    await expect.poll(() => focusedCard(page)).toBe(first);
+    expect(await press(page, 'ArrowRight')).toBe(true);
+    await expect.poll(() => focusedCard(page)).toBe(ids[1]);
   });
 
   test('Q-24 Enter and Space on a focused top-bar button belong to the button: the board Enter row does not fire', async ({

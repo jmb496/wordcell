@@ -10,7 +10,7 @@ vi.mock('../shell/nav', () => ({
   nav: { push: () => calls.push('push'), pop: () => calls.push('pop') },
 }));
 vi.mock('./announce', () => ({ announceOutcome: () => outcomes.push('outcome') }));
-vi.mock('./focus-board', () => ({ focusBoard: () => calls.push('focusBoard') }));
+vi.mock('./focus-board', () => ({ focusByPhase: () => calls.push('focusByPhase') }));
 vi.mock('../shell/game.svelte', () => ({
   game: {
     get view() {

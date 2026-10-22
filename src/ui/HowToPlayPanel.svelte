@@ -2,6 +2,8 @@
 import { tick, untrack } from 'svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { act } from './act';
+import { focusMenuButton } from './focus-board';
+import { takeMenuOrigin } from './open-surface';
 import { overlays } from './overlays.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Panel from './Panel.svelte';
@@ -12,19 +14,19 @@ import { bandNames, text } from './text';
 // Epic 6 CAP-8 (ticket 6.9) and epic 8 (HP-7; EXPERIENCE.md How to play panel; DESIGN.md Panels): the
 // scrolling rules panel, opened only through `openSurface('howToPlay')` (the Menu's last row). The
 // animated scenes come first (one at a time in a carousel), then the text sections, then Controls.
-// All prose is in text.ts (AD-3); this file holds markup only. The ☰
-// refocus effect is an interim copy of PreferencesPanel's; Esc closes it through the key handler
-// (keys.ts, ticket 6.10).
+// All prose is in text.ts (AD-3); this file holds markup only. At close, when the Menu row opened
+// it (open-surface.ts `takeMenuOrigin`), focus goes to the ☰ button after `tick()`, as in
+// PreferencesPanel; other openers (the `?` key) keep Panel's opener return. Esc closes it through
+// the key handler (keys.ts, ticket 6.10).
 const open = $derived(overlays.isOpen('howToPlay'));
 let wasOpen = false;
 
 $effect(() => {
   const now = open;
   untrack(() => {
-    if (wasOpen && !now) {
+    if (wasOpen && !now && takeMenuOrigin('howToPlay')) {
       void tick().then(() => {
-        if (overlays.isOpen('menu')) return;
-        document.querySelector<HTMLElement>(`button[aria-label="${text.menu}"]`)?.focus();
+        if (!overlays.isOpen('menu')) focusMenuButton();
       });
     }
     wasOpen = now;

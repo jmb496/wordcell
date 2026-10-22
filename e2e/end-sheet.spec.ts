@@ -2,6 +2,7 @@ import { expect, type Page, test } from '@playwright/test';
 import { stored } from './helpers/blocking';
 import { centre, glidesSettled, openFixture, tapAt } from './helpers/board';
 import { button, confirmDialog, expectLeaves, type NavState, notice, wc } from './helpers/dialogs';
+import { expectBoardFocus } from './helpers/keys';
 import { onAndroid, onDesktop } from './helpers/project';
 import { fixture, seedStorage } from './helpers/seed';
 
@@ -56,10 +57,17 @@ async function launchOf(page: Page): Promise<number> {
   return state.launch;
 }
 
-async function expectBoardFocus(page: Page): Promise<void> {
-  const last = page.locator('[data-column="1"] [data-card-id][data-place="column"]').last();
-  if ((await last.count()) > 0) await expect(last).toBeFocused();
-  else await expect(page.locator('main')).toBeFocused();
+// EXPERIENCE.md Focus after an Undo of the finish: a win's Undo enters Place (Q-01), the first
+// strip card; a Give up's resumes Idle, the board.
+async function expectPhaseFocus(
+  page: Page,
+  name: 'session-won' | 'session-gave-up',
+): Promise<void> {
+  if (name === 'session-won') {
+    await expect(page.locator('[data-card-id][data-place="strip"]').first()).toBeFocused();
+  } else {
+    await expectBoardFocus(page);
+  }
 }
 
 // Started just before Confirm (the fixture has booted, the sheet is absent): records the most
@@ -304,7 +312,7 @@ test.describe('android', () => {
     ['session-won', WIN],
     ['session-gave-up', GAVE],
   ] as const) {
-    test(`R-70 R-75 Undo from the expanded sheet (${name}) pops its entry, resumes play, board focus`, async ({
+    test(`R-70 R-75 Undo from the expanded sheet (${name}) pops its entry, resumes play, phase focus`, async ({
       page,
     }) => {
       await openFixture(page, name, { endSheet: 'expanded' });
@@ -315,7 +323,7 @@ test.describe('android', () => {
       await expect(primary(page)).not.toHaveAccessibleName('New game');
       await expect(bar(page)).toHaveCount(0);
       await expect(page.locator('main')).not.toHaveJSProperty('inert', true);
-      await expectBoardFocus(page);
+      await expectPhaseFocus(page, name);
       if (name === 'session-gave-up') {
         const gaveUp = (await parsed(page)).gaveUp;
         expect(gaveUp).toBe(false);
@@ -333,7 +341,7 @@ test.describe('android', () => {
       await expect(primary(page)).not.toHaveAccessibleName('New game');
       await expect.poll(() => wcOf(page)).toBe(0);
       expect(await page.evaluate(() => history.length)).toBe(length);
-      await expectBoardFocus(page);
+      await expectPhaseFocus(page, name);
     });
   }
 

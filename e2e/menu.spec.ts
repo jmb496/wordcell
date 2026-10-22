@@ -2,6 +2,7 @@ import { expect, type Page, test } from '@playwright/test';
 import { stored } from './helpers/blocking';
 import { centre, openFixture, tapAt } from './helpers/board';
 import { wc } from './helpers/dialogs';
+import { expectBoardFocus } from './helpers/keys';
 import { onAndroid } from './helpers/project';
 import { select } from './helpers/selection';
 import { touchHold } from './helpers/touch';
@@ -229,7 +230,7 @@ test.describe('closing', () => {
       await close(page);
       await expectClosed(page);
       expect(await stored(page, SESSION)).toBe(before);
-      await expect(page.locator('main')).toBeFocused();
+      await expectBoardFocus(page);
     });
   }
 });
@@ -288,7 +289,7 @@ test.describe('New game and Replay', () => {
           .click();
       }
       await expectClosed(page);
-      await expect(page.locator('main')).toBeFocused();
+      await expectBoardFocus(page);
       await expect.poll(async () => (await parsed(page)).moves.length).toBe(0);
       expect((await parsed(page)).seed).toBe(seed);
       expect((await parsed(page)).gaveUp).toBe(false);
@@ -297,7 +298,7 @@ test.describe('New game and Replay', () => {
       await row(page, 'New game').click();
       // The Replayed deal has no moves, so New game now acts at once.
       await expectClosed(page);
-      await expect(page.locator('main')).toBeFocused();
+      await expectBoardFocus(page);
       await expect.poll(async () => (await parsed(page)).seed).not.toBe(seed);
       expect((await parsed(page)).moves).toHaveLength(0);
     });

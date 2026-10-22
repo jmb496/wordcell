@@ -1,7 +1,9 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
-import { centre, END_SHEET, openFixture, tapAt } from './helpers/board';
-import { wc } from './helpers/dialogs';
+import { cards, centre, END_SHEET, openFixture, tapAt } from './helpers/board';
+import { notice, wc } from './helpers/dialogs';
+import { expectBoardFocus } from './helpers/keys';
 import { onDesktop } from './helpers/project';
+import { fixture, seedStorage } from './helpers/seed';
 import { select } from './helpers/selection';
 import { cursorIndex, game } from './helpers/session';
 
@@ -23,6 +25,10 @@ const newGameConfirm = (page: Page) =>
   page.getByRole('dialog', { name: 'Start a new game?', exact: true });
 const sheet = (page: Page) => page.locator('[data-view-sheet]');
 const storedText = (page: Page) => page.evaluate((key) => localStorage.getItem(key), SESSION);
+type Stored = { seed: number; moves: unknown[]; gaveUp: boolean };
+const parsed = async (page: Page) => JSON.parse((await storedText(page)) ?? 'null') as Stored;
+const menuButton = (page: Page) => page.getByRole('button', { name: 'Menu', exact: true });
+const resultBar = (page: Page) => page.getByRole('button', { name: /^Show result:/ });
 
 function trackErrors(page: Page): string[] {
   const errors: string[] = [];
@@ -65,9 +71,38 @@ test.describe('opening and closing surfaces', () => {
 
   test('Q-24 N with nothing to lose starts a new game at once', async ({ page }) => {
     await openFixture(page, 'session-idle-fresh');
+    const { seed } = await parsed(page);
     await page.keyboard.press('n');
+    await expect.poll(async () => (await parsed(page)).seed).not.toBe(seed);
     await expect(newGameConfirm(page)).toHaveCount(0);
+    expect((await parsed(page)).moves).toEqual([]);
     await expect(page.getByTestId('undo')).toBeDisabled();
+  });
+
+  // Ticket 6.11 Focus: a New game that acts at once focuses the new deal's board (focus-board.ts).
+  test('Q-24 N with nothing to lose and a column card focused focuses the new deal board', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-idle-fresh');
+    const { seed } = await parsed(page);
+    await cards(page, 1).last().focus();
+    await page.keyboard.press('n');
+    await expect.poll(async () => (await parsed(page)).seed).not.toBe(seed);
+    await expectBoardFocus(page);
+  });
+
+  test('AD-13 ? with a column card focused: Esc closes How to play and returns focus to that card, not the menu button', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-idle-fresh');
+    const card = cards(page, 1).last();
+    await card.focus();
+    await page.keyboard.press('?');
+    await expect(howTo(page)).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(howTo(page)).toHaveCount(0);
+    await expect(card).toBeFocused();
+    await expect(menuButton(page)).not.toBeFocused();
   });
 
   test('Q-24 game keys do nothing under an open panel while Tab still works; Esc closes it', async ({
@@ -211,7 +246,7 @@ test.describe('peeks, tile selection and the end sheet', () => {
     expect(errors).toEqual([]);
   });
 
-  test('Q-24 a tile selection survives a key that does not act and clears when Z changes the phase; Esc clears it', async ({
+  test('Q-24 a tile selection survives a key that does not act; Esc clears it', async ({
     page,
   }) => {
     await openFixture(page, 'session-composing');
@@ -223,12 +258,27 @@ test.describe('peeks, tile selection and the end sheet', () => {
     await expect(selectedTiles(page)).toHaveCount(1);
     await page.keyboard.press('Escape');
     await expect(selectedTiles(page)).toHaveCount(0);
-    await tapAt(page, await centre(trayTiles(page).first()));
+  });
+
+  // From Place (session-place, strip 42 0 28): Z goes to Composing, where the selected strip card
+  // 42 is a tray tile again, so a stale selection would show there.
+  test('Q-24 a tile selection clears when Z changes the phase (Place to Composing); one tap then selects one tile', async ({
+    page,
+  }) => {
+    const errors = trackErrors(page);
+    await openFixture(page, 'session-place');
+    const strip = page.locator('[data-band="tray"] [data-card-id][data-place="strip"]');
+    await tapAt(page, await centre(strip.first()));
     await expect(selectedTiles(page)).toHaveCount(1);
     const before = await game(page);
     await page.keyboard.press('z');
     await expect.poll(() => game(page)).not.toBe(before);
+    const tile = page.locator('[data-band="tray"] [data-card-id="42"][data-place="tray"]');
+    await expect(tile).toHaveCount(1);
     await expect(selectedTiles(page)).toHaveCount(0);
+    await tapAt(page, await centre(tile));
+    await expect(selectedTiles(page)).toHaveCount(1);
+    expect(errors).toEqual([]);
   });
 
   test('R-75 Esc collapses the expanded end sheet; M and ? stay live over it', async ({ page }) => {
@@ -257,8 +307,29 @@ test.describe('peeks, tile selection and the end sheet', () => {
     await openFixture(page, 'session-won', { endSheet: 'expanded' });
     const sheet = page.getByRole('dialog', { name: END_SHEET });
     await expect(sheet).toBeVisible();
+    const { seed } = await parsed(page);
     await page.keyboard.press('n');
+    await expect.poll(async () => (await parsed(page)).seed).not.toBe(seed);
     await expect(sheet).toHaveCount(0);
+    await expect(resultBar(page)).toHaveCount(0);
+    await expect(newGameConfirm(page)).toHaveCount(0);
+    const after = await parsed(page);
+    expect(after.moves).toEqual([]);
+    expect(after.gaveUp).toBe(false);
+  });
+
+  test('AD-13 ? over the expanded end sheet: Esc closes How to play and returns focus to Replay this deal', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-won', { endSheet: 'expanded' });
+    const replay = page.getByRole('button', { name: 'Replay this deal', exact: true });
+    await expect(replay).toBeFocused();
+    await page.keyboard.press('?');
+    await expect(howTo(page)).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(howTo(page)).toHaveCount(0);
+    await expect(page.getByRole('dialog', { name: END_SHEET })).toBeVisible();
+    await expect(replay).toBeFocused();
   });
 
   test('I-68 Esc on the New game confirm opened from the menu closes only the confirm: the menu is not reopened', async ({
@@ -272,5 +343,29 @@ test.describe('peeks, tile selection and the end sheet', () => {
     await expect(newGameConfirm(page)).toHaveCount(0);
     await expect(menu(page)).toHaveCount(0);
     await expect.poll(() => wc(page).then((s) => s?.wc)).toBe(0);
+  });
+
+  // A History-notice flow (AGENTS.md fixtures): a relaunch into session-won with an unreadable
+  // history puts the notice over the expanded end sheet at wc 2 (nav.spec.ts, Not now and back).
+  test('I-68 Esc on the History notice over the expanded end sheet closes only the notice: the sheet stays expanded at wc 1, focus on Replay this deal', async ({
+    page,
+  }) => {
+    await seedStorage(page, {
+      session: fixture('session-won.json'),
+      history: fixture('history-invalid-version-unknown.json'),
+    });
+    await page.goto('/');
+    await expect(notice(page)).toBeVisible();
+    const sheet = page.getByRole('dialog', { name: END_SHEET });
+    await expect(sheet).toHaveCount(1);
+    await expect.poll(() => wc(page).then((s) => s?.wc)).toBe(2);
+    await page.keyboard.press('Escape');
+    await expect(notice(page)).toHaveCount(0);
+    await expect(sheet).toBeVisible();
+    await expect(resultBar(page)).toHaveCount(0);
+    await expect.poll(() => wc(page).then((s) => s?.wc)).toBe(1);
+    await expect(
+      sheet.getByRole('button', { name: 'Replay this deal', exact: true }),
+    ).toBeFocused();
   });
 });

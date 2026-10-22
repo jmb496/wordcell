@@ -7,7 +7,7 @@ import { tick } from 'svelte';
 import type { GameView } from '../engine/index';
 import { type DispatchResult, game } from '../shell/game.svelte';
 import { announceOutcome } from './announce';
-import { focusBoard } from './focus-board';
+import { focusByPhase } from './focus-board';
 import { overlays } from './overlays.svelte';
 import { text } from './text';
 
@@ -18,8 +18,10 @@ export function onDispatched(result: DispatchResult, whenSettled: WhenSettled): 
   if (result.unfinished === true) {
     const shown = overlays.endSheet !== 'hidden';
     overlays.onUnfinished();
-    // EXPERIENCE.md Focus: Undo from the sheet resumes play with focus on the board.
-    if (shown) void tick().then(focusBoard);
+    // EXPERIENCE.md Focus: Undo from the sheet resumes play with focus on the phase's target (the
+    // first strip card after a win's Undo, Q-01; the board after a Give up's). After `tick()`:
+    // focus-follow.ts yields while focus is still inside the exiting sheet.
+    if (shown) void tick().then(() => focusByPhase(viewNow()));
     return;
   }
   if (result.finished === 'won') {
@@ -31,6 +33,12 @@ export function onDispatched(result: DispatchResult, whenSettled: WhenSettled): 
   } else if (result.finished === 'gaveUp') {
     if (overlays.openDeferred(overlays.deferEndSheetOpen())) announceOutcome();
   }
+}
+
+function viewNow(): GameView {
+  const view = game.view;
+  if (view === undefined) throw new Error('AD-13 end sheet Undo with no GameView');
+  return view;
 }
 
 /** R-73: a relaunch with status won or gaveUp opens the sheet expanded (AD-16, before the notice). */

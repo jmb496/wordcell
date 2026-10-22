@@ -411,7 +411,20 @@ describe('AD-12 key table per surface', () => {
   it('AD-12 Halted: no key acts', () => {
     mocks.game.state = { kind: 'halted' };
     mocks.game.view = undefined;
+    // An open menu over a tile selection: Esc closes neither (keys.ts pressEscape's halted guard).
+    overlays.selectTile(9);
+    overlays.open('menu');
     for (const key of ['m', 'n', '?', 'z', 'y', 'Escape']) expect(press(key)).toBe(false);
+    expect(overlays.top).toBe('menu');
+    expect(overlays.tileSelection).toBe(9);
+    overlays.close('menu');
+    settle();
+    // Nothing open: only attempt's halted check stops M, N, ?, Z and Y (a defined view, so
+    // `view === undefined` cannot mask it); Esc keeps the tile selection.
+    setView();
+    for (const key of ['z', 'y', 'n', '?', 'm', 'Escape']) expect(press(key)).toBe(false);
+    expect(overlays.top).toBeUndefined();
+    expect(overlays.tileSelection).toBe(9);
     expect(mocks.log).toEqual([]);
   });
 });
@@ -536,6 +549,28 @@ describe('AD-12 clearTile and tileTap stale selection', () => {
     overlays.clearTile = original;
     expect(order[0]).toBe('clearTile');
     expect(mocks.log).toEqual(['cancel', 'undo']);
+  });
+
+  it('AD-12 Enter on a tile (Validate) and on a strip card (Confirm) clears the tile selection before its row runs', () => {
+    const original = overlays.clearTile;
+    overlays.clearTile = () => {
+      mocks.log.push('clearTile');
+      original();
+    };
+    board({ phase: 'composing', flags: { canValidate: true } });
+    onTile(2, 1, 3);
+    overlays.selectTile(1);
+    press('Enter');
+    expect(overlays.tileSelection).toBeNull();
+    expect(mocks.log).toEqual(['cancel', 'clearTile', 'validate']);
+    mocks.log.length = 0;
+    board({ phase: 'place', flags: { canConfirm: true } });
+    onTile(5, 4, null, 'strip');
+    overlays.selectTile(4);
+    press('Enter');
+    overlays.clearTile = original;
+    expect(overlays.tileSelection).toBeNull();
+    expect(mocks.log).toEqual(['cancel', 'clearTile', 'confirm']);
   });
 });
 

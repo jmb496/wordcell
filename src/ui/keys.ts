@@ -153,6 +153,22 @@ function tileFocusPlan(card: CardId, place: 'tray' | 'strip'): () => void {
   };
 }
 
+/**
+ * `F` keeps focus on the focused tile (EXPERIENCE.md Keyboard): Flip never removes it, but with
+ * D > M the keyed tile list moves its node, which blurs it while it stays connected, so
+ * focus-follow.ts (which recovers only a removed one) cannot. Re-focus it after the DOM update.
+ * (`+`/`-` only insert or remove mirrors and leave the tile nodes in place.)
+ */
+function keepTileFocus(run: () => void): void {
+  const focus = readFocus();
+  run();
+  if (focus.kind !== 'tile') return;
+  const { card, place } = focus;
+  void tick().then(() => {
+    if (liveTiles(place).includes(card)) focusCard(card);
+  });
+}
+
 function stepOrder(order: readonly CardId[], card: CardId, dir: number): CardId[] | undefined {
   const at = order.indexOf(card);
   const to = at + dir;
@@ -220,7 +236,7 @@ export const ROWS: Readonly<Record<CommandId, Row>> = {
   flip: {
     gate: (view) => view.canFlip,
     single: true,
-    run: flip,
+    run: () => keepTileFocus(flip),
     label: KEY_LABELS.flip,
     changesPhase: true,
   },
@@ -246,11 +262,14 @@ export const ROWS: Readonly<Record<CommandId, Row>> = {
     label: KEY_LABELS.menu,
     changesPhase: true,
   },
-  // CAP-3: a confirm while a game is in progress, else New game acts at once.
+  // CAP-3: a confirm while a game is in progress, else New game acts at once and focus goes to the
+  // new deal's board after the DOM update (focus-board.ts `focusBoard`, as the Menu row does).
   newGame: {
     gate: () => true,
     single: true,
-    run: (view) => void requestNewGame(view),
+    run: (view) => {
+      if (!requestNewGame(view)) void tick().then(focusBoard);
+    },
     label: KEY_LABELS.newGame,
     changesPhase: true,
   },

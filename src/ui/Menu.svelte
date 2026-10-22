@@ -5,6 +5,7 @@ import type { GameView } from '../engine/index';
 import { act } from './act';
 import { dispatchAnnounced } from './announce';
 import { onDispatched } from './end-sheet';
+import { focusBoard } from './focus-board';
 import { requestNewGame, requestReplay } from './new-game';
 import { openSurface } from './open-surface';
 import { overlays } from './overlays.svelte';
@@ -18,8 +19,10 @@ import { text } from './text';
 // up; each closes the sheet first, then acts once (no push); New game and Replay go through the
 // CAP-3 gates (a confirm while a game is in progress, else at once). Give up is `disabled` from
 // `view.canGiveUp` only (AD-3, R-75). Every handler is wrapped in `act()`. After the menu closes by
-// any path, focus goes to the board (build-notes Menu row); that return stays on `main`
-// (tabindex -1), the overlay focus return that the phase-focus effect (focus-follow.ts) yields to.
+// any path, focus goes to the board (build-notes Menu row, focus-board.ts `focusBoard`), the
+// overlay focus return that the phase-focus effect (focus-follow.ts) yields to. Over the expanded
+// end sheet (the board is inert under it) the return stays on `main` as before: the owner's
+// decision on that case is pending (Opus review of epic 6 part A).
 // `Esc` closes it through the key handler (keys.ts).
 // Epic 6 CAP-10: on a desktop (`hoverFine`) New game and How to play carry `Label (Key)` titles.
 let { view, hoverFine }: { view: GameView; hoverFine: boolean } = $props();
@@ -34,7 +37,12 @@ $effect(() => {
   untrack(() => {
     if (wasOpen && !now) {
       if (skipFocus) skipFocus = false;
-      else void tick().then(() => document.querySelector('main')?.focus());
+      else
+        void tick().then(() => {
+          // Pending owner decision (above): over the expanded end sheet, `main` as before.
+          if (overlays.endSheet === 'expanded') document.querySelector('main')?.focus();
+          else focusBoard();
+        });
     }
     wasOpen = now;
   });
@@ -81,7 +89,7 @@ function statistics(): void {
 function howToPlay(): void {
   close();
   skipFocus = true;
-  openSurface('howToPlay');
+  openSurface('howToPlay', { from: 'menu' });
 }
 </script>
 

@@ -34,7 +34,16 @@ import {
   targets,
 } from './helpers/gestures';
 import { openScene } from './helpers/how-to-play';
-import { arrangeByKeys, focusedCard, press, tiles, toComposing, tray, where } from './helpers/keys';
+import {
+  arrangeByKeys,
+  expectBoardFocus,
+  focusedCard,
+  press,
+  tiles,
+  toComposing,
+  tray,
+  where,
+} from './helpers/keys';
 import {
   animationFrames,
   hidePage,
@@ -1220,6 +1229,41 @@ test.describe('keys helpers', () => {
     expect(at.place).toBe('tray');
     expect(await focusedCard(page)).toBe(at.card);
     expect(await press(page, 'F9')).toBe(false);
+  });
+});
+
+test.describe('expectBoardFocus', () => {
+  test('AD-17 expectBoardFocus resolves on the bottom card of the lowest non-empty column, and on main when every column is empty', async ({
+    page,
+    browser,
+  }) => {
+    await openFixture(page, 'session-idle-fresh');
+    await cards(page, 1).last().focus();
+    await expectBoardFocus(page);
+    const second = await browser.newPage();
+    await openFixture(second, 'session-idle-empty-column');
+    await expect(cards(second, 1)).toHaveCount(0);
+    await cards(second, 2).last().focus();
+    await expectBoardFocus(second);
+    await second.close();
+    const won = await browser.newPage();
+    await openFixture(won, 'session-won');
+    await expect(won.locator('main [data-card-id][data-place="column"]')).toHaveCount(0);
+    await won.locator('main').focus();
+    await expectBoardFocus(won);
+    await won.close();
+  });
+
+  test('AD-17 expectBoardFocus rejects with another card or the Menu button focused', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-idle-fresh');
+    await cards(page, 1).first().focus();
+    await expect(expectBoardFocus(page, { timeout: 300 })).rejects.toThrow(/expected DIV/);
+    await cards(page, 2).last().focus();
+    await expect(expectBoardFocus(page, { timeout: 300 })).rejects.toThrow(/expected DIV/);
+    await page.getByRole('button', { name: 'Menu', exact: true }).focus();
+    await expect(expectBoardFocus(page, { timeout: 300 })).rejects.toThrow(/focused BUTTON/);
   });
 });
 
