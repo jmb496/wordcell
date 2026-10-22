@@ -42,7 +42,7 @@
   color: var(--wc-ink-primary);
 }
 /* Deep Space (epic themes TH-5): values from research/brief.md section A; art per the 9.5 grammar. */
-[data-theme="scifi"] {
+:root[data-theme="scifi"] {
   color-scheme: dark;
   --wc-table: #0a0f1c;
   --wc-surface: #111a2e;
@@ -70,7 +70,7 @@
   --wc-card-texture: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'><rect width='4' height='1' fill='%2335d0ff' fill-opacity='0.06'/></svg>");
 }
 /* Greenhouse Dusk (epic themes TH-5): values from research/brief.md section B; art per the 9.5 grammar. */
-[data-theme="garden"] {
+:root[data-theme="garden"] {
   color-scheme: dark;
   --wc-table: #101a14;
   --wc-surface: #18271e;
@@ -98,7 +98,7 @@
   --wc-card-texture: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='6' height='6' viewBox='0 0 6 6'><path d='M0 1L3 0M3 4L6 3' fill='none' stroke='%23f6f0dc' stroke-width='1' stroke-opacity='0.03'/></svg>");
 }
 /* Brass and Walnut (epic themes TH-5): values from research/brief.md section C; art per the 9.5 grammar. */
-[data-theme="steampunk"] {
+:root[data-theme="steampunk"] {
   color-scheme: dark;
   --wc-table: #1d1510;
   --wc-surface: #2a1f17;
@@ -125,9 +125,10 @@
   --wc-table-art: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40' viewBox='0 0 80 40'><path d='M0 6H80M0 13H55M0 22H80M0 29H40M0 35H70' fill='none' stroke='%23b08d57' stroke-opacity='0.07'/><path d='M0 39.5H80' fill='none' stroke='%23000' stroke-opacity='0.25'/></svg>");
   --wc-card-texture: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'><path d='M1.2 2a.8 .8 0 1 0 1.6 0a.8 .8 0 1 0 -1.6 0M5.2 6a.8 .8 0 1 0 1.6 0a.8 .8 0 1 0 -1.6 0' fill='%23b08d57' fill-opacity='0.04'/></svg>");
 }
-/* Daylight Paper (epic themes TH-4): values from research/brief.md section D. Placed after the
-   default block and the dark `color-scheme` rule so it overrides the latter. */
-[data-theme="paper"] {
+/* Daylight Paper (epic themes TH-4): values from research/brief.md section D. Its
+   `:root[data-theme]` selector (0,2,0) outranks the default block and the dark `color-scheme`
+   rule (0,1,0) in any source order, as every alternate block's does. */
+:root[data-theme="paper"] {
   color-scheme: light;
   --wc-table: #ece6d8;
   --wc-surface: #f6f2e8;
@@ -155,7 +156,7 @@
   --wc-card-texture: none;
 }
 /* Plum Dusk (epic themes TH-5): brief.md section E, owner-deepened 2026-10-19 (richer plum, rose act accent); tokens only, no art. */
-[data-theme="plum"] {
+:root[data-theme="plum"] {
   color-scheme: dark;
   --wc-table: #1d1028;
   --wc-surface: #2a1a3a;

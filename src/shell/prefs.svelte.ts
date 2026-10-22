@@ -63,7 +63,15 @@ const DEFAULTS: Prefs = {
 };
 export const BASE_MS: Record<AnimationSpeed, number> = { fast: 90, normal: 180, slow: 320 };
 const SPEEDS: readonly string[] = Object.keys(BASE_MS);
-const THEMES: readonly string[] = ['default', 'scifi', 'garden', 'steampunk', 'paper', 'plum'];
+// `satisfies` pins the accepted ids to ThemeId both ways (a missing or extra id fails the check).
+const THEMES: readonly string[] = Object.keys({
+  default: true,
+  scifi: true,
+  garden: true,
+  steampunk: true,
+  paper: true,
+  plum: true,
+} satisfies Record<ThemeId, true>);
 const REQUIRED = ['animationSpeed', 'showTimer', 'version'];
 
 /** Q-36: parses stored prefs; the failure reasons mirror `parseHistory`'s. */

@@ -1,4 +1,7 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { expect, type Page, test } from '@playwright/test';
+import { cssDecls, themeRecords } from '../src/ui/theme/colour-literals';
 import { stored } from './helpers/blocking';
 import { openFixture } from './helpers/board';
 import { onAndroid } from './helpers/project';
@@ -63,6 +66,33 @@ async function openPrefs(page: Page): Promise<void> {
     .click();
   await expect(panel(page)).toBeVisible();
 }
+
+// AD-10: what app.css declares for one theme id: its `--wc-*` record over the default record (an
+// alternate record may omit the optional art tokens) and its `color-scheme`, else the `:root` one.
+const APP_CSS = readFileSync(path.resolve(import.meta.dirname, '../src/ui/app.css'), 'utf8');
+const RECORDS = themeRecords(APP_CSS);
+const SCHEMES = cssDecls(APP_CSS.replace(/\/\*[\s\S]*?\*\//g, ''))
+  .filter((decl) => decl.stack.length === 1 && decl.name === 'color-scheme')
+  .map((decl) => ({ parts: (decl.stack[0] as string).split(',').map((p) => p.trim()), decl }));
+function declared(id: string): { vars: Map<string, string>; scheme: string } {
+  const record = RECORDS.get(id);
+  if (record === undefined) throw new Error(`app.css has no record for theme '${id}'`);
+  const own = SCHEMES.find(({ parts }) =>
+    parts.some((p) => p === `[data-theme="${id}"]` || p === `:root[data-theme="${id}"]`),
+  );
+  const root = SCHEMES.find(({ parts }) => parts.includes(':root'));
+  const scheme = (own ?? root)?.decl.value;
+  if (scheme === undefined) throw new Error(`app.css sets no color-scheme for theme '${id}'`);
+  return { vars: new Map([...(RECORDS.get('default') ?? []), ...record]), scheme };
+}
+const computedRoot = (page: Page, names: string[]) =>
+  page.evaluate((list) => {
+    const style = getComputedStyle(document.documentElement);
+    return {
+      vars: Object.fromEntries(list.map((n) => [n, style.getPropertyValue(n).trim()])),
+      scheme: style.colorScheme,
+    };
+  }, names);
 
 async function prefsOf(page: Page) {
   return await page.evaluate(() => {
@@ -263,6 +293,31 @@ test('Q-45 AD-10 AD-16 Plum Dusk switches at once with no art, Charcoal restores
   await themeGroup(page).getByRole('radio', { name: 'Charcoal' }).check();
   expect(await attr(page)).toBe('default');
   expect(await meta(page)).toBe(CHARCOAL);
+});
+
+test('AD-10 Q-45 every registered theme computes its app.css record on the root, in any source order', async ({
+  page,
+}) => {
+  await openFixture(page, 'session-idle-fresh');
+  await openPrefs(page);
+  const radios = themeGroup(page).getByRole('radio');
+  const count = await radios.count();
+  expect(count).toBeGreaterThan(0);
+  const ids: string[] = [];
+  for (let i = 0; i < count; i++) {
+    await radios.nth(i).check();
+    const id = await attr(page);
+    if (id === null) throw new Error('no data-theme after choosing a theme');
+    ids.push(id);
+    const expected = declared(id);
+    const actual = await computedRoot(page, [...expected.vars.keys()]);
+    expect({ id, ...actual }).toEqual({
+      id,
+      vars: Object.fromEntries(expected.vars),
+      scheme: expected.scheme,
+    });
+  }
+  expect([...ids].sort()).toEqual([...RECORDS.keys()].sort());
 });
 
 test('AD-10 Plum Dusk radio at 360 px lies inside the viewport and the Preferences body, clear of the header', async ({

@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { type Art, checkTexture, parseArt, worstSurfaces } from './art';
 import { themeRecords } from './colour-literals';
+import * as registry from './registry';
 import {
   defaultTheme,
   gardenTheme,
@@ -214,12 +215,17 @@ describe('AD-14 theme contrast', () => {
     expect(parseArt(steampunk.get(CARD_TEXTURE) as string)).not.toBeNull();
   });
 
-  it('AD-10 main.ts registers the six theme records in §7.10 order', () => {
+  // The registry exports main.ts passes to register(), in call order.
+  const registerCalls = (): (string | undefined)[] => {
     const main = read('../../main.ts')
       .split('\n')
       .filter((line) => !line.trimStart().startsWith('//'))
       .join('\n');
-    const calls = [...main.matchAll(/^register\((\w+)\);$/gm)].map((m) => m[1]);
+    return [...main.matchAll(/^register\((\w+)\);$/gm)].map((m) => m[1]);
+  };
+
+  it('AD-10 main.ts registers the six theme records in §7.10 order', () => {
+    const calls = registerCalls();
     expect(calls).toEqual([
       'defaultTheme',
       'scifiTheme',
@@ -228,6 +234,12 @@ describe('AD-14 theme contrast', () => {
       'paperTheme',
       'plumTheme',
     ]);
+  });
+
+  it('AD-10 the app.css theme record ids equal the registered theme ids', () => {
+    const exported = registry as unknown as Readonly<{ [name: string]: { id?: string } }>;
+    const registered = registerCalls().map((name) => exported[name as string]?.id);
+    expect([...registered].sort()).toEqual([...themes.keys()].sort());
   });
 
   it('AD-14 the art keys are optional in the key-set check', () => {

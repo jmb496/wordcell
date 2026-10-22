@@ -80,6 +80,29 @@ test('AD-16 the built head carries the title, theme colour, viewport, manifest a
   expect(icons.map((link) => link.get('href'))).toEqual(['/favicon.svg']);
 });
 
+test('AD-16 Q-45 the inline pre-paint theme script precedes the stylesheet and the module script in the built head', () => {
+  const head = /<head>([\s\S]*?)<\/head>/i.exec(readSite('index.html'))?.[1] ?? '';
+  const scripts = [...head.matchAll(/<script(\s[^>]*)?>([\s\S]*?)<\/script>/gi)];
+  const prePaint = scripts.filter((m) => {
+    const body = m[2] ?? '';
+    return (
+      !/\ssrc\s*=/i.test(m[1] ?? '') &&
+      body.includes('localStorage.getItem') &&
+      body.includes('wordcell:prefs') &&
+      body.includes('dataset.theme')
+    );
+  });
+  expect(prePaint).toHaveLength(1);
+  const prePaintAt = prePaint[0]?.index ?? -1;
+  const stylesheets = [...head.matchAll(/<link\b[^>]*>/gi)].filter((m) =>
+    relOf(linkTags(m[0])[0] ?? new Map()).includes('stylesheet'),
+  );
+  const modules = scripts.filter((m) => tags(m[0], 'script')[0]?.get('type') === 'module');
+  expect(stylesheets.length).toBeGreaterThan(0);
+  expect(modules.length).toBeGreaterThan(0);
+  for (const m of [...stylesheets, ...modules]) expect(m.index).toBeGreaterThan(prePaintAt);
+});
+
 // PNG signature, then the IHDR chunk: type at bytes 12–15, big-endian width at 16, height at 20.
 function pngSize(file: string): { width: number; height: number } {
   const bytes = readFileSync(path.join(buildRoot(), file));
