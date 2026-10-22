@@ -17,8 +17,9 @@ import { text } from './text';
 // opened only through `openSurface('statistics')` (the Menu row, the end sheet's button). It
 // formats `scoreHistory`'s `statistics` unchanged (AD-3): six tiles in a 2 x 3 grid, `—` where no
 // value exists, the empty line under them only with no games played. While the history is
-// unreadable (`historyUnreadable()`, SPEC F4) it shows the History message (the shared
-// reason-to-sentence mapping over the live `scoreHistory.state` reason) and Reset history instead.
+// unreadable (`historyUnreadable()`, SPEC F4) it shows the History notice's text (its headline,
+// then the shared reason-to-sentence mapping over the live `scoreHistory.state` reason and the
+// reset hint; SPEC F9) and Reset history instead.
 // Reset history opens the shared ResetConfirm: Delete history leaves the
 // panel open showing the fresh view, Keep it leaves the message. Esc closes the topmost
 // overlay through the key handler (keys.ts, ticket 6.10). Focus after the confirm closes
@@ -104,6 +105,7 @@ const tiles = $derived.by(() => {
 >
   <div bind:this={content}>
     {#if historyUnreadable()}
+      <p class="headline">{text.historyTitle}</p>
       <p class="message">{text.historySentence(unreadableReason())} {text.historyResetHint}</p>
       <button type="button" class="reset" bind:this={resetButton} onclick={act(openConfirm)}
         >{text.resetHistory}</button
@@ -152,8 +154,12 @@ const tiles = $derived.by(() => {
   }
   .word { overflow-wrap: anywhere; }
   .empty { margin-top: 16px; }
+  .headline {
+    margin: 8px 0 0; font: 600 1rem/1.5rem system-ui, "Roboto", sans-serif;
+    color: var(--wc-ink-primary);
+  }
   .message {
-    margin: 8px 0 16px; font: 400 1rem/1.5rem system-ui, "Roboto", sans-serif;
+    margin: 4px 0 16px; font: 400 1rem/1.5rem system-ui, "Roboto", sans-serif;
     color: var(--wc-ink-primary);
   }
   .reset {

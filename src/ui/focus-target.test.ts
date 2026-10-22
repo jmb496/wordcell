@@ -59,6 +59,11 @@ describe('AD-14 readFocus', () => {
     expect(readFocus()).toEqual({ kind: 'cell', cell: 7 });
   });
 
+  it('AD-14 the sticky WordCell view sheet is a view target with its cell', () => {
+    doc.activeElement = new FakeEl({ viewCell: '6' });
+    expect(readFocus()).toEqual({ kind: 'view', cell: 6 });
+  });
+
   it('AD-14 the body, a null focus and a non-card element are the board', () => {
     doc.activeElement = doc.body;
     expect(readFocus()).toEqual({ kind: 'board' });

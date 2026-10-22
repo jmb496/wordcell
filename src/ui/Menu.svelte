@@ -5,7 +5,7 @@ import type { GameView } from '../engine/index';
 import { act } from './act';
 import { dispatchAnnounced } from './announce';
 import { onDispatched } from './end-sheet';
-import { focusBoard } from './focus-board';
+import { focusByPhase, focusMenuButton } from './focus-board';
 import { requestNewGame, requestReplay } from './new-game';
 import { openSurface } from './open-surface';
 import { overlays } from './overlays.svelte';
@@ -19,10 +19,10 @@ import { text } from './text';
 // up; each closes the sheet first, then acts once (no push); New game and Replay go through the
 // CAP-3 gates (a confirm while a game is in progress, else at once). Give up is `disabled` from
 // `view.canGiveUp` only (AD-3, R-75). Every handler is wrapped in `act()`. After the menu closes by
-// any path, focus goes to the board (build-notes Menu row, focus-board.ts `focusBoard`), the
-// overlay focus return that the phase-focus effect (focus-follow.ts) yields to. Over the expanded
-// end sheet (the board is inert under it) the return stays on `main` as before: the owner's
-// decision on that case is pending (Opus review of epic 6 part A).
+// any path, focus goes by the phase (build-notes Menu row, SPEC F12, focus-board.ts
+// `focusByPhase`: the board, the first movable tile or the first strip card), the overlay focus
+// return that the phase-focus effect (focus-follow.ts) yields to. Over the expanded end sheet (the
+// board is inert under it) it returns to the ☰ button, the opener (SPEC F10).
 // `Esc` closes it through the key handler (keys.ts).
 // Epic 6 CAP-10: on a desktop (`hoverFine`) New game and How to play carry `Label (Key)` titles.
 let { view, hoverFine }: { view: GameView; hoverFine: boolean } = $props();
@@ -39,9 +39,8 @@ $effect(() => {
       if (skipFocus) skipFocus = false;
       else
         void tick().then(() => {
-          // Pending owner decision (above): over the expanded end sheet, `main` as before.
-          if (overlays.endSheet === 'expanded') document.querySelector('main')?.focus();
-          else focusBoard();
+          if (overlays.endSheet === 'expanded') focusMenuButton();
+          else focusByPhase(view);
         });
     }
     wasOpen = now;
@@ -177,8 +176,8 @@ function howToPlay(): void {
   }
   .row:not(:disabled):active { background: var(--wc-surface-raised); }
   .row:disabled { color: var(--wc-ink-disabled); }
-  /* DESIGN.md Focus ring, drawn inset: the full-width rows sit flush in Sheet's scrolling content,
-     which clips an outset ring. */
+  /* DESIGN.md Focus ring (SPEC F14), drawn inset: the full-width rows sit flush in Sheet's
+     scrolling content, which clips an outset ring. */
   .row:focus-visible { outline-offset: -2px; }
   .row svg { flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .version {

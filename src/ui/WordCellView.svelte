@@ -40,6 +40,7 @@ const shownCell = $derived(open === null ? lastCell : cellOf(open));
 // (AD-11: no scroll). At close the sheet gives focus up at once, before the Board's focus-follow
 // effect runs, so a phase change (an Undo with the view open) still focuses the phase's target
 // there; after `tick()` the cell gets it unless a surface opened or focus moved on meanwhile.
+// The sticky sheet carries `data-view-cell`, so `Space` with focus in it closes it (keys.ts `view`).
 let sheet = $state<HTMLElement | null>(null);
 let stickyCell: number | null = null;
 $effect.pre(() => {
@@ -95,6 +96,7 @@ function cellOf(n: number): CellView {
     aria-label={title}
     tabindex="-1"
     bind:this={sheet}
+    data-view-cell={overlays.viewCell ?? undefined}
     inert={open === null}
     data-mode={open === null ? lastMode : overlays.peek !== null ? 'peek' : 'sticky'}
   >

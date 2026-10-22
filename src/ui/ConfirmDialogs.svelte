@@ -1,10 +1,11 @@
 <script lang="ts">
 import { tick, untrack } from 'svelte';
+import type { GameView } from '../engine/index';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { act } from './act';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Dialog from './Dialog.svelte';
-import { focusBoard, focusMenuButton } from './focus-board';
+import { focusBoard, focusByPhase, focusMenuButton } from './focus-board';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { newGame, replayDeal } from './new-game';
 import { takeMenuOrigin } from './open-surface';
@@ -22,10 +23,13 @@ import { text } from './text';
 // from a menu row (open-surface.ts `takeMenuOrigin`) returns focus to the ☰ button (presence's
 // restoreFocus aims at the exiting menu row, so this effect, run after `tick()`, wins); skipped
 // when a menu was reopened during the exit.
-// Any other dismissal (the N key; build-notes surface table) also returns focus to the board,
+// Any other dismissal (the N key; build-notes surface table) moves focus by the phase (SPEC F12,
+// focus-board.ts `focusByPhase`: the board, the first movable tile or the first strip card),
 // skipped when another entry is now on top (the end sheet or a panel keeps Dialog's default return).
 const IDS = ['newGameConfirm', 'replayConfirm'] as const satisfies readonly OverlayId[];
 type ConfirmId = (typeof IDS)[number];
+
+let { view }: { view: GameView } = $props();
 
 let accepted = false;
 const wasOpen: Record<ConfirmId, boolean> = { newGameConfirm: false, replayConfirm: false };
@@ -37,7 +41,7 @@ function onClosed(id: ConfirmId): void {
   void tick().then(() => {
     if (fromAccept) focusBoard();
     else if (fromMenu && !overlays.isOpen('menu')) focusMenuButton();
-    else if (!fromMenu && overlays.top === undefined) focusBoard();
+    else if (!fromMenu && overlays.top === undefined) focusByPhase(view);
   });
 }
 

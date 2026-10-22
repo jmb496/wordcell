@@ -15,6 +15,8 @@ export type FocusTarget =
       readonly right: CardId | null;
     }
   | { readonly kind: 'cell'; readonly cell: number }
+  /** The open sticky WordCell view's sheet (`data-view-cell`, WordCellView.svelte) and its cell. */
+  | { readonly kind: 'view'; readonly cell: number }
   /** A native control that keeps Enter and Space (button, link, input). */
   | { readonly kind: 'control' }
   /** The Board container, `body`, or anything else. */
@@ -55,5 +57,6 @@ export function readFocus(): FocusTarget {
     return { kind: 'board' };
   }
   if (el.dataset.wordcell !== undefined) return { kind: 'cell', cell: Number(el.dataset.wordcell) };
+  if (el.dataset.viewCell !== undefined) return { kind: 'view', cell: Number(el.dataset.viewCell) };
   return { kind: 'board' };
 }

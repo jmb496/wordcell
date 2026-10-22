@@ -219,6 +219,26 @@ test.describe('Idle', () => {
     await expect(cell(page, 8)).toBeFocused();
   });
 
+  // EXPERIENCE.md Keyboard (owner, 2026-10-16), SPEC F11: the second Space arrives in the open
+  // view, which holds focus, and only closes it; focus returns to the cell, nothing reopens.
+  test('R-65 Space, Space on a WordCell opens the sticky view, then closes it with focus back on the cell', async ({
+    page,
+  }) => {
+    await open(page, 'session-idle-empty-column');
+    const before = await game(page);
+    await cell(page, 7).focus();
+    expect(await press(page, 'Space')).toBe(true);
+    await expect(sheet(page)).toHaveAttribute('data-mode', 'sticky');
+    await expect
+      .poll(() => page.evaluate(() => document.activeElement?.closest('[data-view-sheet]') != null))
+      .toBe(true);
+    expect(await press(page, 'Space')).toBe(true);
+    await expect(sheet(page)).toHaveCount(0);
+    await expect(cell(page, 7)).toBeFocused();
+    await expect.poll(() => wc(page).then((s) => s?.wc)).toBe(0);
+    expect(await game(page)).toBe(before);
+  });
+
   test('Q-24 Z with the focused sticky view open closes it and focus follows the phase to the first strip card', async ({
     page,
   }) => {

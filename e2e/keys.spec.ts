@@ -10,7 +10,8 @@ import { cursorIndex, game } from './helpers/session';
 // Epic 6 entry 10 (ticket 6.10, SPEC CAP-10; Q-24, A-E7, F39, I-68): the overlay and undo keys on
 // desktop. Fixtures (seed 1): `session-idle-fresh` (Idle, no moves), `session-idle-empty-column`
 // (Idle, one move, Undo enabled, cell 7 holds 7 cards), `session-place-free-letter-redo-tail`
-// (Place, a Redo tail), `session-composing` (a tile can be selected).
+// (Place, a Redo tail), `session-composing` (a tile can be selected), `session-place`,
+// `session-won`.
 
 test.beforeEach(onDesktop);
 
@@ -29,6 +30,24 @@ type Stored = { seed: number; moves: unknown[]; gaveUp: boolean };
 const parsed = async (page: Page) => JSON.parse((await storedText(page)) ?? 'null') as Stored;
 const menuButton = (page: Page) => page.getByRole('button', { name: 'Menu', exact: true });
 const resultBar = (page: Page) => page.getByRole('button', { name: /^Show result:/ });
+
+type Closer = readonly [string, (page: Page) => Promise<void>];
+const MENU_CLOSERS: readonly Closer[] = [
+  ['Esc', (page) => page.keyboard.press('Escape')],
+  ['back', async (page) => void (await page.goBack())],
+  ['a scrim tap', (page) => page.mouse.click(5, 5)],
+  ['Close menu', (page) => page.getByRole('button', { name: 'Close menu', exact: true }).click()],
+];
+const CONFIRM_CLOSERS: readonly Closer[] = [
+  [
+    'Keep playing',
+    (page) =>
+      newGameConfirm(page).getByRole('button', { name: 'Keep playing', exact: true }).click(),
+  ],
+  ['Esc', (page) => page.keyboard.press('Escape')],
+  ['back', async (page) => void (await page.goBack())],
+  ['a scrim tap', (page) => page.mouse.click(5, 5)],
+];
 
 function trackErrors(page: Page): string[] {
   const errors: string[] = [];
@@ -144,6 +163,51 @@ test.describe('opening and closing surfaces', () => {
     await expect(menu(page)).toHaveCount(0);
   });
 });
+
+// SPEC F12: dismissing the menu or an N-opened New game confirm focuses by the phase
+// (focus-board.ts `focusByPhase`), the same target as the History notice's close (SPEC F13), not
+// the opener or a column card. Each round starts from a focused column card.
+for (const [fixture, place] of [
+  ['session-composing', 'tray'],
+  ['session-place', 'strip'],
+] as const) {
+  test.describe(`phase focus after a dismissal in ${fixture}`, () => {
+    const first = (page: Page) => page.locator(`[data-card-id][data-place="${place}"]`).first();
+    const columnCard = (page: Page) => page.locator('[data-card-id][data-place="column"]').first();
+
+    test(`AD-13 M then Esc, back, a scrim tap or Close menu focuses the first ${place} item`, async ({
+      page,
+    }) => {
+      await openFixture(page, fixture);
+      const before = await storedText(page);
+      for (const [how, close] of MENU_CLOSERS) {
+        await columnCard(page).focus();
+        await page.keyboard.press('m');
+        await expect(menu(page)).toBeVisible();
+        await close(page);
+        await expect(menu(page), how).toHaveCount(0);
+        await expect(first(page), how).toBeFocused();
+      }
+      expect(await storedText(page)).toBe(before);
+    });
+
+    test(`AD-13 N then Keep playing, Esc, back or a scrim tap focuses the first ${place} item`, async ({
+      page,
+    }) => {
+      await openFixture(page, fixture);
+      const before = await storedText(page);
+      for (const [how, close] of CONFIRM_CLOSERS) {
+        await columnCard(page).focus();
+        await page.keyboard.press('n');
+        await expect(newGameConfirm(page)).toBeVisible();
+        await close(page);
+        await expect(newGameConfirm(page), how).toHaveCount(0);
+        await expect(first(page), how).toBeFocused();
+      }
+      expect(await storedText(page)).toBe(before);
+    });
+  });
+}
 
 test.describe('Undo and Redo keys', () => {
   test('Q-24 Z and Ctrl+Z undo; Y, Ctrl+Y and Ctrl+Shift+Z redo, only when the control is enabled', async ({
@@ -393,6 +457,23 @@ test.describe('peeks, tile selection and the end sheet', () => {
     await expect(howTo(page)).toHaveCount(0);
     await expect(page.getByRole('dialog', { name: END_SHEET })).toBeVisible();
     await expect(replay).toBeFocused();
+  });
+
+  // SPEC F10: the board is inert under the expanded end sheet, so the menu returns focus to ☰.
+  test('AD-13 the menu over the expanded end sheet, closed by Esc, back, a scrim tap or Close menu, returns focus to the menu button', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-won', { endSheet: 'expanded' });
+    const endSheet = page.getByRole('dialog', { name: END_SHEET });
+    for (const [, close] of MENU_CLOSERS) {
+      await page.keyboard.press('m');
+      await expect(menu(page)).toBeVisible();
+      await close(page);
+      await expect(menu(page)).toHaveCount(0);
+      await expect(endSheet).toBeVisible();
+      await expect(menuButton(page)).toBeFocused();
+    }
+    await expect.poll(() => wc(page).then((s) => s?.wc)).toBe(1);
   });
 
   test('I-68 Esc on the New game confirm opened from the menu closes only the confirm: the menu is not reopened', async ({

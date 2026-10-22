@@ -116,7 +116,7 @@ function rejectedBody(reason: RejectReason): string {
   <PreferencesPanel />
   <StatisticsPanel />
   <HowToPlayPanel />
-  <ConfirmDialogs />
+  <ConfirmDialogs view={board} />
   {#if overlays.isOpen('historyNotice')}
     <HistoryNotice />
   {/if}

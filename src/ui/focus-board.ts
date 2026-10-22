@@ -55,7 +55,8 @@ export function focusFirstStrip(): void {
 /**
  * EXPERIENCE.md Focus, the phase's focus target: Composing -> the first movable tile, Place -> the
  * first strip card, otherwise (Idle, a Game over) the board. Shared by focus-follow.ts, the end
- * sheet's Undo path (end-sheet.ts) and the History notice's close (App.svelte).
+ * sheet's Undo path (end-sheet.ts), the History notice's close (App.svelte) and the menu's and an
+ * N-opened New game confirm's dismissal (Menu.svelte, ConfirmDialogs.svelte; SPEC F12, F13).
  */
 export function focusByPhase(view: GameView): void {
   if (view.phase === 'composing') focusFirstTile();

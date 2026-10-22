@@ -519,7 +519,7 @@ pills (`{rounded.full}`); among badges only the error dot is a circle. The 44 ×
   drawn under the S ghosts, as during the drag); *inert*
   (Composing: every column except the destination column; Place: all columns; Game over: all
   columns (R-75); R-39): unchanged look, no hover. S ghosts are inert too.
-- **Focus ring.** A 2 px `{colors.accent-teal}` ring. On a card it is drawn inside the card edge (2 px in), with no offset or gap; on other controls it keeps the 2 px offset and the `{colors.table}` gap
+- **Focus ring.** A 2 px `{colors.accent-teal}` ring. On a card it is drawn inside the card edge (2 px in), with no offset or gap; on a full-width menu row it is likewise drawn inside the row edge (the rows sit flush in the sheet's scrolling content, which would clip an offset ring; owner, 2026-10-22); on other controls it keeps the 2 px offset and the `{colors.table}` gap
   between the ring and the element. It is distinct from the selection outline (outline plus lift);
   when both apply, both are drawn. On a fanned column card the focus ring encloses the card's
   visible strip; the selection outline encloses the whole lifted tail.

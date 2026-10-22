@@ -394,18 +394,22 @@ export const ROWS: Readonly<Record<CommandId, Row>> = {
   },
   // `Space` on a WordCell opens the sticky view in every phase (a tail selection is popped first);
   // with a tail selected and the cell empty it only deselects; with that cell's view already open
-  // it only closes it (owner, 2026-10-16).
+  // it only closes it (owner, 2026-10-16). The open view holds focus (the `view` target), so that
+  // second Space arrives there and closes it; focus returns to the cell (WordCellView.svelte; SPEC
+  // F11).
   // The close-view, deselect, closePeek, openView sequence mirrors Controller.activate
   // (gestures/controller.ts) and must change with it.
   view: {
     gate: (view, ctx) => {
+      if (ctx.focus.kind === 'view') return overlays.viewCell === ctx.focus.cell;
       if (ctx.focus.kind !== 'cell' || overlays.top === 'endSheet') return false;
       const cell = cellOf(view, ctx.focus.cell);
       return cell !== undefined && (cell.cards.length > 0 || overlays.selection !== null);
     },
     single: true,
     run: (view, ctx) => {
-      if (ctx.focus.kind !== 'cell') throw new Error('AD-12 view key without a focused cell');
+      if (ctx.focus.kind !== 'cell' && ctx.focus.kind !== 'view')
+        throw new Error('AD-12 view key without a focused cell or view');
       const cell = required(cellOf(view, ctx.focus.cell), 'cell');
       // An open sticky view sits above a tail selection (AD-13): close it before deselecting.
       const reopen = overlays.viewCell !== cell.cell;
@@ -505,7 +509,7 @@ function match(event: KeyboardEvent): Resolved | undefined {
       if (focus.kind === 'control') return undefined;
       if (key === ' ') {
         if (focus.kind === 'column' || focus.kind === 'tile') return { id: 'tap', ctx };
-        return focus.kind === 'cell' ? { id: 'view', ctx } : undefined;
+        return focus.kind === 'cell' || focus.kind === 'view' ? { id: 'view', ctx } : undefined;
       }
       if (focus.kind === 'column' || focus.kind === 'cell') return { id: 'tap', ctx };
       const view = game.view;

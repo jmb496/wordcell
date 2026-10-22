@@ -77,4 +77,5 @@ Verify: npm run test:all and npm run test:screens are green.
 ## Notes
 
 - Defaults beyond the SPEC examples, flagged for the owner: tray tile, foot and source foot strings; `selected` and `destination` and their join order; Place/Idle/Undo/Redo/New game/Replay prefixes; the `srOutcome` sentence; the top-card button name, empty-WordCell string and `role="button"`; silent Composing edits and sheet re-expand.
+- Owner decision (2026-10-22, epic 6 SPEC F16; Opus re-review of epic 6 part C): a player who wins and leaves the page during the win animation (or before the 300 ms open) returns to the open end sheet with nothing spoken: the silent return from hidden wins over the outcome announcement; the result is on the open sheet.
 - Owner decision (2026-10-15): cards buried under a WordCell's top card stay hidden from screen readers (`aria-hidden`, not focusable); the cell name gives the top card and the count. Close-out docs: EXPERIENCE.md Accessibility Floor and SPEC CAP-11 ("every card is a button") need an exception for buried WordCell cards.

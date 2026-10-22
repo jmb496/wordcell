@@ -10,13 +10,13 @@ Menu, end sheet, panels, dialogs, timer bar at 360 px. The version footer is fix
 
 | Surface | Board inert | Bars live | Shortcuts active | Focus start | Focus return |
 | --- | --- | --- | --- | --- | --- |
-| Menu | yes | no (top bar `inert`, SPEC F6) | Tab, Enter, Space, Esc only | first row | the board; confirm dismissal returns to the ☰ button |
+| Menu | yes | no (top bar `inert`, SPEC F6) | Tab, Enter, Space, Esc only | first row | by the phase (`focusByPhase`: the board in Idle, the first movable tile in Composing, the first strip card in Place; SPEC F12); over the expanded end sheet the ☰ button (SPEC F10); confirm dismissal returns to the ☰ button |
 | Panel | yes | no (top bar `inert`, SPEC F6) | Tab, Enter, Space, Esc only | panel heading or close | opener |
-| Confirm dialog | yes | no (top bar `inert`, SPEC F6) | Tab, Enter, Space, Esc only | Keep playing / Keep it | the board (from the menu: ☰) |
-| History notice | yes | no (top bar `inert`, SPEC F6) | Tab, Enter, Space, Esc only | its action | the board |
+| Confirm dialog | yes | no (top bar `inert`, SPEC F6) | Tab, Enter, Space, Esc only | Keep playing / Keep it | accept: the board; an `N`-opened dismissal (Keep playing, Esc, back, scrim): by the phase (`focusByPhase`, SPEC F12); from the menu: ☰ |
+| History notice | yes | no (top bar `inert`, SPEC F6) | Tab, Enter, Space, Esc only | its action | by the phase (`focusByPhase`; a relaunch into Composing or Place: the first movable tile or strip card; SPEC F13); over a relaunched expanded end sheet: its first action |
 | End sheet expanded | yes | yes | M, N, ?, Z, Y, Esc | first action | the board on collapse |
 | End sheet collapsed | no | yes | M, N, ?, Z, Y, Esc | the bar | n/a |
-| WordCell view | no | no (scrim covers them; owner 2026-10-15) | M, N, ?, Z, Y, Esc | the view | the cell |
+| WordCell view | no | no (scrim covers them; owner 2026-10-15) | M, N, ?, Z, Y, Esc; Space in the open view closes it (SPEC F11) | the view | the cell |
 
 Check each cell against EXPERIENCE.md when building; a mismatch stops the ticket.
 
@@ -26,7 +26,7 @@ Window = from the win's guard install until the end sheet opens, which fires at 
 
 | Input | End state |
 | --- | --- |
-| Undo button or key (Z, Ctrl/Cmd+Z), Undo enabled | animation completes, undo applies, no sheet; before the sheet opens it cancels the pending open |
+| Undo button or key (Z, Ctrl/Cmd+Z), Undo enabled | animation completes, undo applies, no sheet; before the sheet opens it cancels the pending open, except a chord straddling the floor (Ctrl/Cmd down before 300 ms, Z after): the sheet opens at 300 ms, then the Undo closes it ("Undo after the sheet opened"; owner, SPEC F15) |
 | Undo between animation settled and 300 ms (Fast, reduced motion) | cancels the pending open, undoes, no sheet |
 | Undo button by touch or pen (as built, Opus review (epic 6 part C) default) | its pointerup holds the open for its later click up to `CLICK_GRACE_MS` (300 ms); with no click the sheet opens at the grace's end (mouse, pointercancel, a pointerup off Undo: one tick) |
 | Non-primary button (`button` ≠ 0) on Undo (as built, Opus review (epic 6 part C) default) | an ordinary consumed input: completes, no hold, sheet opens |
@@ -56,7 +56,7 @@ Ticket 6.13 built this; `src/ui/text.ts` holds every string, `src/ui/announce.ts
 
 Names: column card `{L}, column {c}, card {i} of {n}{, selected}{, destination}`; tray tile `{L}, tray, tile {i} of {n}{, selected}` (live tiles only); WordCell top card `{L}, WordCell {c}, top`; WordCell `WordCell {c}, top {L}, {n card(s)}{, used}`; empty `WordCell {c}, empty`; foot `Column {c} foot` (`role="group"`), source foot `Column {c}, here`. QU reads `Q U, counts as two letters`. Buried WordCell cards are `aria-hidden` (owner decision 2026-10-15).
 
-Announcements: phase change `Composing. {WORD}, {N letters}.` / `Place. ...`; invalid word `{WORD} isn't in the word list.`; commit `{WORD} placed on cell {c}, plus N|minus N|no change` (from the pre-dispatch view); Undo `Undo. {phase}`; Redo `Redo. {phase}` (idle phase `Idle.`); New game `New game. Idle.`; Replay `Replay. Idle.`; outcome `{title} Score {N|minus N}, {band}.` (title is the end sheet's: `Every column cleared.` or `Game given up.`), set only when `openDeferred` returns true. Give up sets no other string. Silent: relaunch, sheet re-expand, hidden return, word edits inside Composing, no-op dispatches (`changed` false).
+Announcements: phase change `Composing. {WORD}, {N letters}.` / `Place. ...`; invalid word `{WORD} isn't in the word list.`; commit `{WORD} placed on cell {c}, plus N|minus N|no change` (from the pre-dispatch view); Undo `Undo. {phase}`; Redo `Redo. {phase}` (idle phase `Idle.`); New game `New game. Idle.`; Replay `Replay. Idle.`; outcome `{title} Score {N|minus N}, {band}.` (title is the end sheet's: `Every column cleared.` or `Game given up.`), set only when `openDeferred` returns true. Give up sets no other string. Silent: relaunch, sheet re-expand, hidden return, word edits inside Composing, no-op dispatches (`changed` false). A win whose sheet opens while the page is hidden (the player leaves during the win animation or before the 300 ms open) is silent on return too: the silent hidden return wins over the outcome announcement and the result is on the open sheet (owner decision 2026-10-22, SPEC F16).
 
 ## Close-out edits (owner-visible docs; the spec wins)
 

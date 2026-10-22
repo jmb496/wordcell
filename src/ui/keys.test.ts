@@ -1202,6 +1202,20 @@ describe('AD-12 board keys: WordCell Enter and Space', () => {
     expect(overlays.viewCell).toBeNull();
   });
 
+  it('AD-12 Space with focus in the open sticky view closes it; Enter there does not (SPEC F11)', () => {
+    board({ cellCards: { 4: [40] } });
+    overlays.openView(4);
+    mocks.focus = { kind: 'view', cell: 4 };
+    expect(press('Enter')).toBe(false);
+    expect(overlays.viewCell).toBe(4);
+    expect(press(' ')).toBe(true);
+    expect(overlays.viewCell).toBeNull();
+    settle();
+    expect(overlays.viewCell).toBeNull();
+    mocks.focus = { kind: 'view', cell: 5 };
+    expect(press(' ')).toBe(false);
+  });
+
   it('AD-12 there is no giveUp key row', () => {
     expect(Object.keys(keys.ROWS)).not.toContain('giveUp');
   });
