@@ -43,3 +43,4 @@ Verify: `npm run test:all` and `npm run test:screens` are green. Playwright test
 ## Notes
 
 - Decision: 2026-10-17, owner: confirmed the carousel behaviours as written in the Description: buttons, dots and Left/Right keys only (no swipe or drag), no wrap-around at the first and last scene, the panel always opens on scene 1, and every scene entry restarts the scene at step 1.
+- Post-close review (Opus, 2026-10-22, `b6272b0`, log `opus-review-epic-8.md`): the hidden-page restart now uses a UI hide counter registered with `game.registerBeforeHide` in `src/main.ts`, so a step that finishes only after the page is visible again still restarts at step 1; the carousel index resets when the open flag rises (not falls) so the exit placeholder keeps the closing scene's height; desktop keyboard, pause-icon and dimmed-arrow tests added.

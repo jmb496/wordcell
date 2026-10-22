@@ -138,3 +138,13 @@ Snapshot: unchanged from tree 5 82fa599d563736cc57907a28d5bef3059e468d0a (no fix
 
 ## Result — converged after 6 passes
 Majors per pass: 5, 4, 2, 3, 1, 0. Open major: none. Decision-needed: 12 (passes 1–5 above), none applied. Unapplied minors: every "Minors (listed …)" entry in passes 1–6 above (owner rule: minors never sent to the fixer). Screenshot baselines stale for the orchestrator: scene-1-final (pass 2 item 4) and the scene-5 caption PNGs (pass 1 minor).
+
+## Gates (orchestrator, 2026-10-22)
+- Run: first attempt stopped at a usage limit during pass 6 (`.autopilot/opus-review-20261022-0748/e8-review-attempt1.log`); resumed with the resume rule, pass 6 completed with 0 majors.
+- `npm run test:all`: pass (exit 0; Playwright dev 1041 passed, PWA 14 passed).
+- `npm run test:screens` (container): pass, 66 passed; no baseline differs beyond tolerance, so no baseline update (the scene-1-final and scene-5 caption drift noted above sits inside `maxDiffPixelRatio`).
+- Models: `models-used.py --since 2026-10-22T11:48:10` shows only `claude-opus-5-5`.
+- Fixes committed: `b6272b0` fix(how-to-play): Opus review of epic 8.
+- Behaviour changes the loop applied (each restores a ticket sentence, none a new design): pass 2 item 4 (reduced-motion scene 1 no longer draws E in both the D block and the tray; revert: drop `dest: 'gone'` from the `opened` frames in `src/ui/scenes/move-compose.ts`), pass 4 item 2 (the carousel resets to scene 1 when the panel opens, not when it closes, so the exit placeholder keeps the closing scene's height per ticket 8.6; revert: the `$effect.pre`/`wasOpen` block in `src/ui/scenes/Carousel.svelte`).
+- Tracking: epic Notes (Post-close review line, pending decisions and close-out line); ticket pointers 8.1, 8.6 (+ plan), 8.9. No change: build-notes and rule-coverage (epic 8 has no spec folder; epic 6 `rule-coverage.md` CAP-8 row already covered), fixtures (no new file; `drafts`/`columns` are optional fields read only by `scene-replay.ts`), baselines.
+- Owner docs checked against the applied fixes and the 12 pending decisions: `docs/game-flow-spec.md` no change (decision 4 is code against Q-31, decision 9 code against R-50 (UI); the spec stands); ARCHITECTURE-SPINE.md no change (AD-9 accepts several `registerBeforeHide` callbacks); EXPERIENCE.md no change (arrows dim at the ends, now tested); DESIGN.md no change now, but decisions 11 and 12 either align the scenes with it or need a recorded miniature exception there; AGENTS.md and `docs/requirements-carryover.md` no change.
