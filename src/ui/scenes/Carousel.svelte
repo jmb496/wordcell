@@ -12,11 +12,12 @@ import Scene from './Scene.svelte';
 // Epic 8 ticket 6 (HP-1, HP-2, HP-6; EXPERIENCE.md How to play panel): one scene at a time with
 // previous and next arrows, dots that jump to a scene, and Left and Right keys. Only the current
 // scene is mounted, and only while the howToPlay open flag is true (Panel keeps its children
-// mounted while it animates out). The index is component state and resets when the flag goes
-// false. The scene is keyed on (index, reduced motion, Animation speed, fitted card width), so a
-// change of any re-enters it at step 1. The fit reads the panel content width and box height (the
-// `.inner` box and its `.content` scroller), never the live game layout store (AD-11). All text is
-// text.ts (AD-3); the scenes read no GameView.
+// mounted while it animates out). The index is component state and resets when the flag rises, so
+// the empty host keeps the closing scene's stage height during the Panel exit. The scene is keyed
+// on (index, reduced motion, Animation speed, fitted card width), so a change of any re-enters it at
+// step 1. The fit reads the panel content width and box height (the `.inner` box and its `.content`
+// scroller), never the live game layout store (AD-11). All text is text.ts (AD-3); the scenes read
+// no GameView.
 const labels = text.howTo.carousel;
 const open = $derived(overlays.isOpen('howToPlay'));
 let index = $state(0);
@@ -36,8 +37,10 @@ const key = $derived(
 const atStart = $derived(index === 0);
 const atEnd = $derived(index === scenes.length - 1);
 
-$effect(() => {
-  if (!open) index = 0;
+let wasOpen = false;
+$effect.pre(() => {
+  if (open && !wasOpen) index = 0;
+  wasOpen = open;
 });
 
 function measure(node: HTMLElement): () => void {

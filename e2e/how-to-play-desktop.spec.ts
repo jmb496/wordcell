@@ -43,3 +43,115 @@ test('AD-11 at 1920 x 1080 each scene’s caption is inside the panel without sc
   // The scenes differ in height (no shared worst case): the shortest is below the tallest.
   expect(Math.min(...heights)).toBeLessThan(Math.max(...heights));
 });
+
+// Epic 8 ticket 6 (HP-1, HP-6; EXPERIENCE.md How to play panel: "Left and Right keys on the
+// carousel do the same as the arrows"): the carousel by keyboard alone.
+const carousel = text.howTo.carousel;
+const controls = text.howTo.sceneControls;
+const figure = (page: Page) => panel(page).getByRole('figure');
+const arrow = (page: Page, which: 'previous' | 'next') =>
+  panel(page).getByRole('button', { name: carousel[which], exact: true });
+const dotOf = (page: Page, n: number) =>
+  panel(page).getByRole('button', { name: carousel.dot(n, keys.length), exact: true });
+
+async function expectScene(page: Page, n: number): Promise<void> {
+  await expect(figure(page)).toHaveAccessibleName(text.howTo.scenes[keys[n - 1]]);
+  await expect(dotOf(page, n)).toHaveAttribute('aria-current', 'true');
+  await expect(panel(page).locator('[aria-current="true"]')).toHaveCount(1);
+}
+
+async function openByKeyboard(page: Page): Promise<void> {
+  await openFixture(page, 'session-idle-fresh');
+  await page.keyboard.press('?');
+  await expect(panel(page)).toBeVisible();
+  await expect(panel(page).getByRole('heading', { name: text.howToPlay })).toBeFocused();
+}
+
+test('HP-1 HP-6 Tab walks the previous arrow, the five dots, the next arrow, then the scene pause control', async ({
+  page,
+}) => {
+  await openByKeyboard(page);
+  const order = [
+    arrow(page, 'previous'),
+    ...keys.map((_, i) => dotOf(page, i + 1)),
+    arrow(page, 'next'),
+    figure(page).getByRole('button', { name: controls.pause, exact: true }),
+  ];
+  for (const control of order) {
+    await page.keyboard.press('Tab');
+    await expect(control).toBeFocused();
+  }
+  await expectScene(page, 1);
+});
+
+test('HP-1 Enter and Space activate an arrow and the pause control; Left and Right move scenes, stop at the ends with focus kept, ignore modifiers', async ({
+  page,
+}) => {
+  await openByKeyboard(page);
+  // Previous arrow, five dots, next arrow.
+  for (let i = 0; i < 7; i++) await page.keyboard.press('Tab');
+  await expect(arrow(page, 'next')).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expectScene(page, 2);
+  await page.keyboard.press('Space');
+  await expectScene(page, 3);
+  await expect(arrow(page, 'next')).toBeFocused();
+  await page.keyboard.press('ArrowRight');
+  await expectScene(page, 4);
+  await page.keyboard.press('ArrowRight');
+  await expectScene(page, 5);
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('Enter');
+  await expectScene(page, 5);
+  await expect(arrow(page, 'next')).toBeFocused();
+  for (const key of ['Shift+ArrowLeft', 'Control+ArrowLeft']) {
+    await page.keyboard.press(key);
+    await expectScene(page, 5);
+  }
+  for (let n = 4; n >= 1; n--) {
+    await page.keyboard.press('ArrowLeft');
+    await expectScene(page, n);
+  }
+  await page.keyboard.press('ArrowLeft');
+  await expectScene(page, 1);
+  await expect(arrow(page, 'next')).toBeFocused();
+  for (const key of ['Shift+ArrowRight', 'Control+ArrowRight']) {
+    await page.keyboard.press(key);
+    await expectScene(page, 1);
+  }
+  // The scene's pause control: Enter pauses, Space restarts, focus stays on it.
+  await page.keyboard.press('Tab');
+  const tap = figure(page).locator('button.tap');
+  await expect(tap).toBeFocused();
+  await expect(tap).toHaveAccessibleName(controls.pause);
+  await page.keyboard.press('Enter');
+  await expect(tap).toHaveAccessibleName(controls.restart);
+  await expect(tap).toBeFocused();
+  await page.keyboard.press('Space');
+  await expect(tap).toHaveAccessibleName(controls.pause);
+  await expect(tap).toBeFocused();
+  await expectScene(page, 1);
+  // Shift+Tab back to the previous arrow: Enter at the start is a no-op that keeps focus.
+  for (let i = 0; i < 7; i++) await page.keyboard.press('Shift+Tab');
+  await expect(arrow(page, 'previous')).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expectScene(page, 1);
+  await expect(arrow(page, 'previous')).toBeFocused();
+});
+
+test('HP-1 Right with focus outside the carousel (the Close control) does not change the scene', async ({
+  page,
+}) => {
+  await openByKeyboard(page);
+  await page.keyboard.press('Shift+Tab');
+  const close = panel(page).getByRole('button', { name: text.closeHowToPlay, exact: true });
+  await expect(close).toBeFocused();
+  await page.keyboard.press('ArrowRight');
+  await expectScene(page, 1);
+  await expect(close).toBeFocused();
+  // The same key inside the carousel moves on.
+  await page.keyboard.press('Tab');
+  await expect(arrow(page, 'previous')).toBeFocused();
+  await page.keyboard.press('ArrowRight');
+  await expectScene(page, 2);
+});

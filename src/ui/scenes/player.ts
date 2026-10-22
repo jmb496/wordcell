@@ -5,8 +5,10 @@ import type { Scene } from './types';
 // Epic 8 ticket 1 (HP-1): runs a scene's steps as WAAPI animations in a loop with a rest, pausing
 // on a tap and restarting on the next (owner decision 2026-10-16). The player is DOM-free: the
 // component injects `deps`. Hidden pages (AD-9): no listener here; at every step and loop boundary
-// the player reads `deps.hidden()`, cancels and waits on `deps.whenVisible()` (the game store's),
-// then restarts at step 1.
+// the player reads `deps.hidden()` and `deps.hides()` (the hide flush count of `hide-count.ts`,
+// recorded when the step or rest began: a hidden tab does not advance WAAPI, so the step in flight
+// may finish only once visible again), cancels, waits on `deps.whenVisible()` (the game store's)
+// while still hidden, then restarts at step 1.
 
 export interface AnimationHandle {
   readonly finished: Promise<unknown>;
@@ -25,6 +27,8 @@ export interface PlayerDeps {
   ): AnimationHandle;
   duration(kind: MotionKind): number;
   hidden(): boolean;
+  /** How many times the page turned hidden so far. */
+  hides(): number;
   whenVisible(): Promise<void>;
 }
 
@@ -92,11 +96,14 @@ export class ScenePlayer {
     await Promise.all(animations.map((a) => a.finished));
   }
 
-  /** True when the page is hidden: stops, then restarts once visible again. */
-  private async hiddenStop(run: number): Promise<boolean> {
-    if (!this.deps.hidden()) return false;
+  /**
+   * True when the page is hidden or was hidden since `seen` was recorded: stops, then restarts once
+   * visible again.
+   */
+  private async hiddenStop(run: number, seen: number): Promise<boolean> {
+    if (!this.deps.hidden() && this.deps.hides() === seen) return false;
     this.cancelAll();
-    await this.deps.whenVisible();
+    if (this.deps.hidden()) await this.deps.whenVisible();
     // A tap during the wait paused the scene: it stays paused until the next tap.
     if (run === this.run && this.state === 'playing') this.start();
     return true;
@@ -116,9 +123,11 @@ export class ScenePlayer {
 
   private async loop(run: number): Promise<void> {
     try {
+      let seen = this.deps.hides();
       for (;;) {
         for (let i = 0; i < this.scene.steps.length; i++) {
-          if (await this.hiddenStop(run)) return;
+          if (await this.hiddenStop(run, seen)) return;
+          seen = this.deps.hides();
           const id = `${this.scene.id}-step-${i}`;
           const wait = this.scene.steps[i].wait;
           if (wait) await this.hold(id, this.deps.duration(wait.kind) * wait.times);
@@ -128,7 +137,8 @@ export class ScenePlayer {
               await this.play(items, id, (e) => this.deps.duration(e.kind) * e.times);
           }
         }
-        if (await this.hiddenStop(run)) return;
+        if (await this.hiddenStop(run, seen)) return;
+        seen = this.deps.hides();
         await this.hold(`${this.scene.id}-rest`, restMs(this.scene, this.deps.duration));
         this.cancelAll();
       }

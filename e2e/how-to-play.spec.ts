@@ -178,6 +178,61 @@ const sceneAnimations = (page: Page) =>
       })),
   );
 
+// Every animation created on a scene element since the page loaded (an init script, so call it
+// before `openFixture`): `document.getAnimations()` omits an unmounted scene's detached elements,
+// which a player that was never destroyed keeps animating.
+const recordSceneAnimations = (page: Page) =>
+  page.addInitScript(() => {
+    const all: Animation[] = [];
+    (window as unknown as { recordedScene: Animation[] }).recordedScene = all;
+    const animate = Element.prototype.animate;
+    Element.prototype.animate = function (this: Element, ...args) {
+      const animation = animate.apply(this, args);
+      if (this.closest('[data-scene-el]') !== null) all.push(animation);
+      return animation;
+    };
+  });
+
+/**
+ * After scene `sceneId` (its script id) left the page: within its longest animation no new one
+ * starts, and every animation it created is cancelled (`idle`), none still running or finished.
+ */
+async function expectSceneStopped(page: Page, sceneId: string): Promise<void> {
+  const mine = () =>
+    page.evaluate(
+      (prefix) =>
+        (window as unknown as { recordedScene: Animation[] }).recordedScene
+          .filter((a) => a.id.startsWith(prefix))
+          .map((a) => ({
+            id: a.id,
+            playState: a.playState,
+            duration: Number(a.effect?.getTiming().duration),
+          })),
+      `${sceneId}-`,
+    );
+  const before = await mine();
+  expect(before.length).toBeGreaterThan(0);
+  await page.waitForTimeout(Math.max(...before.map((a) => a.duration)));
+  const after = await mine();
+  expect(after).toHaveLength(before.length);
+  expect(after.filter((a) => a.playState !== 'idle')).toEqual([]);
+}
+
+/**
+ * The WAAPI durations of scene 1's step-0 tail lift, in creation order (recorded, so call
+ * `recordSceneAnimations` first): an effect, not the step's wait hold, which animates the stage.
+ */
+const tailLiftMs = (page: Page) =>
+  page.evaluate(() =>
+    (window as unknown as { recordedScene: Animation[] }).recordedScene
+      .filter(
+        (a) =>
+          a.id === 'move-compose-step-0' &&
+          (a.effect as KeyframeEffect).target?.getAttribute('data-scene-el') === 'tail',
+      )
+      .map((a) => Number(a.effect?.getTiming().duration)),
+  );
+
 // Only scene 1's animations (ids `move-compose-...`): the other scenes keep playing meanwhile.
 const sceneOneAnimations = async (page: Page) =>
   (await sceneAnimations(page)).filter((a) => a.id.startsWith('move-compose-'));
@@ -196,6 +251,15 @@ test('R-10 R-20 R-23 AD-14 the scene plays on open, a tap pauses it and a tap re
   await scene(page).getByRole('button', { name: controls.pause, exact: true }).click();
   const paused = scene(page).getByRole('button', { name: controls.restart, exact: true });
   await expect(paused).toBeVisible();
+  // HP-1: the icon shows the state: two bars while playing, the play triangle while paused.
+  const icon = scene(page).locator('.tap .icon');
+  const glyph = () =>
+    icon.evaluate((el) => ({
+      triangle: getComputedStyle(el, '::before').borderLeftWidth,
+      bar: getComputedStyle(el, '::after').content,
+    }));
+  await expect(icon).toHaveClass(/\bpaused\b/);
+  expect(await glyph()).toEqual({ triangle: '10px', bar: 'none' });
   const frozen = await sceneOneAnimations(page);
   expect(frozen.length).toBeGreaterThan(0);
   expect(frozen.every((a) => a.playState === 'paused' || a.playState === 'finished')).toBe(true);
@@ -205,6 +269,8 @@ test('R-10 R-20 R-23 AD-14 the scene plays on open, a tap pauses it and a tap re
   await expect(
     scene(page).getByRole('button', { name: controls.pause, exact: true }),
   ).toBeVisible();
+  await expect(icon).not.toHaveClass(/\bpaused\b/);
+  expect(await glyph()).toEqual({ triangle: '0px', bar: '""' });
   const ids = (await sceneOneAnimations(page)).map((a) => a.id);
   expect(ids).toContain('move-compose-step-0');
   expect(ids).not.toContain('move-compose-step-2');
@@ -216,12 +282,14 @@ test('R-10 R-20 R-23 AD-14 the scene plays on open, a tap pauses it and a tap re
 test('R-10 AD-14 closed, the scene animates nothing; reopened, it starts again at step 1', async ({
   page,
 }) => {
+  await recordSceneAnimations(page);
   await openFixture(page, 'session-idle-fresh');
   await openPanel(page);
   await expect.poll(async () => (await sceneAnimations(page)).length).toBeGreaterThan(0);
   await page.keyboard.press('Escape');
   await expect(panel(page)).toHaveCount(0);
   expect(await sceneAnimations(page)).toEqual([]);
+  await expectSceneStopped(page, 'move-compose');
   await openPanel(page);
   await expect
     .poll(async () => (await sceneAnimations(page)).map((a) => a.id))
@@ -271,19 +339,19 @@ test('R-10 AD-10 Animation speed Slow runs a scene step longer than Fast', async
   context,
 }) => {
   const stepMs = async (p: Page, prefs: string): Promise<number> => {
+    await recordSceneAnimations(p);
     await openFixture(p, 'session-idle-fresh', { prefs });
     await openPanel(p);
-    await expect
-      .poll(async () => (await sceneAnimations(p)).some((a) => a.id === 'move-compose-step-0'))
-      .toBe(true);
-    const step = (await sceneAnimations(p)).find((a) => a.id === 'move-compose-step-0');
-    return step?.duration ?? 0;
+    await expect.poll(async () => (await tailLiftMs(p)).length).toBeGreaterThan(0);
+    return (await tailLiftMs(p))[0];
   };
   const slow = await stepMs(page, 'prefs-non-default');
   const fastPage = await context.newPage();
   const fast = await stepMs(fastPage, 'prefs-fast');
   expect(fast).toBeGreaterThan(0);
   expect(slow).toBeGreaterThan(fast);
+  // BASE_MS: Slow 320 against Fast 90.
+  expect(slow / fast).toBeCloseTo(320 / 90);
 });
 
 test('AD-9 a hidden page stops the scene and a visible one restarts it at step 1', async ({
@@ -294,23 +362,64 @@ test('AD-9 a hidden page stops the scene and a visible one restarts it at step 1
   await expect
     .poll(async () => (await sceneAnimations(page)).map((a) => a.id))
     .toContain('move-compose-step-1');
+  // This page keeps rendering, but a hidden tab does not advance WAAPI: while "hidden" the scene's
+  // running animations are paused, so the step in flight finishes only once visible again. Every
+  // animation started from then on is recorded. A pause applies on the next frame (its `ready`
+  // resolves once the currentTime is held), and a phase finishing in that frame starts the next
+  // phase: pause again until no scene animation runs.
   const setHidden = (hidden: boolean) =>
-    page.evaluate((h) => {
+    page.evaluate(async (h) => {
+      const held = window as unknown as { heldScene?: Animation[]; startedScene?: Animation[] };
       Object.defineProperty(document, 'hidden', { configurable: true, get: () => h });
       Object.defineProperty(document, 'visibilityState', {
         configurable: true,
         get: () => (h ? 'hidden' : 'visible'),
       });
       document.dispatchEvent(new Event('visibilitychange'));
+      if (h) {
+        const started: Animation[] = [];
+        held.startedScene = started;
+        const animate = Element.prototype.animate;
+        Element.prototype.animate = function (...args) {
+          const animation = animate.apply(this, args);
+          started.push(animation);
+          return animation;
+        };
+        held.heldScene = [];
+        for (;;) {
+          const running = document
+            .getAnimations()
+            .filter((a) => a.playState === 'running')
+            .filter((a) => (a.effect as KeyframeEffect | null)?.target?.closest('figure'));
+          if (running.length === 0) break;
+          for (const a of running) a.pause();
+          held.heldScene.push(...running);
+          await Promise.all(running.map((a) => a.ready));
+        }
+        return held.heldScene.map((a) => a.id);
+      }
+      for (const a of held.heldScene ?? []) a.play();
+      return [];
     }, hidden);
-  await setHidden(true);
-  await expect.poll(async () => (await sceneAnimations(page)).length).toBe(0);
+  const inFlight = await setHidden(true);
+  expect(inFlight.length).toBeGreaterThan(0);
+  const frozen = await sceneAnimations(page);
   await page.waitForTimeout(400);
-  expect(await sceneAnimations(page)).toEqual([]);
+  expect(await sceneAnimations(page)).toEqual(frozen);
   await setHidden(false);
+  // The first animation after the step in flight is step 1's, not the next step's.
   await expect
-    .poll(async () => (await sceneAnimations(page)).map((a) => a.id))
-    .toContain('move-compose-step-0');
+    .poll(() =>
+      page.evaluate(
+        (ids) =>
+          (window as unknown as { startedScene: Animation[] }).startedScene
+            .filter((a) => (a.effect as KeyframeEffect | null)?.target?.closest('figure'))
+            .map((a) => a.id)
+            .find((id) => !ids.includes(id)),
+        inFlight,
+      ),
+    )
+    .toBe('move-compose-step-0');
 });
 
 // Epic 8 tickets 2 and 7 (HP-3, HP-2): scenes 1 and 2 stepped to their last frame under reduced
@@ -320,16 +429,17 @@ const stepScenes = [
     id: 'moveCompose' as const,
     rules: 'R-10 R-13 R-20 R-23 R-30 R-31 R-32',
     lastStep: 8,
-    // Per frame: the open layer's tiles (undefined: no tray), Validate class, cell 6 covered.
+    // Per frame: the open layer's tiles (undefined: no tray), Validate class, cell 6 covered, and
+    // the D block (E on column 3): at home, or gone once it is a tray tile.
     frames: [
-      { tiles: undefined, validate: undefined, used: false, k: 0, side: 'left' },
-      { tiles: undefined, validate: undefined, used: false, k: 0, side: 'left' },
-      { tiles: 'EKBA', validate: 'lit', used: false, k: 1, side: 'left' },
-      { tiles: 'DEKBA', validate: 'lit', used: false, k: 2, side: 'left' },
-      { tiles: 'NDEKBA', validate: 'lit', used: false, k: 3, side: 'left' },
-      { tiles: 'DEKBA', validate: 'lit', used: false, k: 2, side: 'left' },
-      { tiles: 'KBAED', validate: 'lit', used: false, k: 2, side: 'right' },
-      { tiles: 'BAKED', validate: 'lit', used: false, k: 2, side: 'right' },
+      { tiles: undefined, validate: undefined, used: false, k: 0, side: 'left', dest: 'home' },
+      { tiles: undefined, validate: undefined, used: false, k: 0, side: 'left', dest: 'home' },
+      { tiles: 'EKBA', validate: 'lit', used: false, k: 1, side: 'left', dest: 'gone' },
+      { tiles: 'DEKBA', validate: 'lit', used: false, k: 2, side: 'left', dest: 'gone' },
+      { tiles: 'NDEKBA', validate: 'lit', used: false, k: 3, side: 'left', dest: 'gone' },
+      { tiles: 'DEKBA', validate: 'lit', used: false, k: 2, side: 'left', dest: 'gone' },
+      { tiles: 'KBAED', validate: 'lit', used: false, k: 2, side: 'right', dest: 'gone' },
+      { tiles: 'BAKED', validate: 'lit', used: false, k: 2, side: 'right', dest: 'gone' },
     ],
   },
   {
@@ -375,6 +485,12 @@ for (const { id, rules, frames, lastStep } of stepScenes) {
         );
         await expect(layer.and(figure.locator('[style*="opacity: 1"]'))).toHaveCount(1);
       }
+      // Scene.svelte destState (a scene that draws a D block): `gone` hides it, home shows it.
+      if ('dest' in frame)
+        await expect(figure.locator('[data-scene-el="dest"]')).toHaveCSS(
+          'visibility',
+          frame.dest === 'gone' ? 'hidden' : 'visible',
+        );
       if (i < frames.length - 1)
         await figure.getByRole('button', { name: controls.next, exact: true }).click();
     }
@@ -930,9 +1046,23 @@ test('HP-1 HP-6 the panel mounts one playing scene figure, the arrows and five d
   await expect(panel(page).locator('a, [role="link"], [href]')).toHaveCount(0);
 });
 
-test('HP-1 the arrows walk all five scenes in order, one figure at a time, only the current scene animating', async ({
+const arrowOpacity = (page: Page, which: 'previous' | 'next') =>
+  arrow(page, which).evaluate((el) => getComputedStyle(el).opacity);
+/** HP-1 ticket 8.6 Controls: a disabled end arrow carries the dimmed style, an enabled one does not. */
+async function expectDimmed(page: Page, dimmed: 'previous' | 'next' | 'none') {
+  for (const which of ['previous', 'next'] as const) {
+    if (which === dimmed) await expect(arrow(page, which)).toContainClass('dim');
+    else await expect(arrow(page, which)).not.toContainClass('dim');
+  }
+  const [previous, next] = [await arrowOpacity(page, 'previous'), await arrowOpacity(page, 'next')];
+  if (dimmed === 'none') expect(previous).toBe(next);
+  else expect(previous).not.toBe(next);
+}
+
+test('HP-1 the arrows walk all five scenes in order, one figure at a time, only the current scene animating, the end arrows aria-disabled and dimmed', async ({
   page,
 }) => {
+  await recordSceneAnimations(page);
   await openFixture(page, 'session-idle-fresh');
   await openPanel(page);
   for (const [i, key] of sceneOrder.entries()) {
@@ -941,6 +1071,8 @@ test('HP-1 the arrows walk all five scenes in order, one figure at a time, only 
     await expect(current(page).locator('figcaption')).toHaveText(text.howTo.scenes[key]);
     await expect(dotOf(page, i + 1)).toHaveAttribute('aria-current', 'true');
     await expect(panel(page).locator('[aria-current="true"]')).toHaveCount(1);
+    if (i > 0) await expectSceneStopped(page, sceneIds[i - 1]);
+    await expectDimmed(page, i === 0 ? 'previous' : i === sceneOrder.length - 1 ? 'next' : 'none');
     await expect.poll(async () => (await stepIds(page)).length > 0).toBe(true);
     expect((await stepIds(page)).every((id) => id.startsWith(`${sceneIds[i]}-step-`))).toBe(true);
     if (i < sceneOrder.length - 1) {
@@ -955,6 +1087,8 @@ test('HP-1 the arrows walk all five scenes in order, one figure at a time, only 
     await expect(arrow(page, 'previous')).toBeFocused();
     await expect(current(page)).toHaveAccessibleName(text.howTo.scenes[sceneOrder[i]]);
   }
+  await expect(arrow(page, 'previous')).toHaveAttribute('aria-disabled', 'true');
+  await expectDimmed(page, 'previous');
 });
 
 test('HP-1 a disabled end is a no-op that keeps focus; a dot jumps to its scene and keeps focus', async ({
@@ -1073,11 +1207,14 @@ test('HP-1 a tap pauses and restarts the carousel scene', async ({ page }) => {
 test('HP-1 closed, the carousel keeps no scene and no animation; rapid switching leaves only the current scene animating', async ({
   page,
 }) => {
+  await recordSceneAnimations(page);
   await openFixture(page, 'session-idle-fresh');
   await openPanel(page);
   for (let i = 0; i < sceneOrder.indexOf('sourceDrop'); i++) await arrow(page, 'next').click();
   await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.sourceDrop);
   await expect.poll(() => stepIds(page)).toContain('source-drop-step-0');
+  for (const passed of sceneIds.slice(0, sceneOrder.indexOf('sourceDrop')))
+    await expectSceneStopped(page, passed);
   expect((await stepIds(page)).every((id) => id.startsWith('source-drop-'))).toBe(true);
   expect(
     await page.evaluate(
@@ -1103,6 +1240,50 @@ test('HP-1 closed, the carousel keeps no scene and no animation; rapid switching
   ).toBe(0);
   await expect(panel(page)).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => document.getAnimations().length)).toBe(0);
+  await expectSceneStopped(page, 'source-drop');
+});
+
+test('HP-1 during the panel exit the empty carousel keeps the closing scene and its stage height; reopening starts at scene 1', async ({
+  page,
+}) => {
+  await openFixture(page, 'session-idle-fresh');
+  await openPanel(page);
+  const stageHeight = () =>
+    current(page)
+      .locator('.area')
+      .evaluate((el) => el.getBoundingClientRect().height);
+  const first = await stageHeight();
+  await showScene(page, 'scoring');
+  const closing = await stageHeight();
+  expect(Math.abs(closing - first)).toBeGreaterThan(1);
+  await page.keyboard.press('Escape');
+  // Read in the frame the figure unmounts, while the panel still animates out.
+  const exit = await page.evaluate(
+    () =>
+      new Promise<{ panel: boolean; host: number; current: number }>((resolve) => {
+        const read = (): void => {
+          if (document.querySelector('.panel figure') !== null) {
+            requestAnimationFrame(read);
+            return;
+          }
+          const host = document.querySelector('.panel [role="group"] .host');
+          const dots = [...document.querySelectorAll('.panel [role="group"] .dot')];
+          resolve({
+            panel: host !== null,
+            host: host?.getBoundingClientRect().height ?? 0,
+            current: dots.findIndex((d) => d.getAttribute('aria-current') === 'true') + 1,
+          });
+        };
+        read();
+      }),
+  );
+  expect(exit.panel).toBe(true);
+  expect(exit.host).toBeCloseTo(closing, 0);
+  expect(exit.current).toBe(sceneOrder.length);
+  await expect(panel(page)).toHaveCount(0);
+  await openPanel(page);
+  await expect(current(page)).toHaveAccessibleName(text.howTo.scenes.moveCompose);
+  await expect(dotOf(page, 1)).toHaveAttribute('aria-current', 'true');
 });
 
 test('HP-2 with reduced motion Next steps to Replay and Replay returns to Next, each taking focus; a scene change resets the frame', async ({
@@ -1270,28 +1451,30 @@ test('HP-1 AD-10 a different Animation speed seeded before opening starts the sc
   page,
   context,
 }) => {
+  await recordSceneAnimations(page);
   await openFixture(page, 'session-idle-fresh', { prefs: 'prefs-fast' });
   await openPanel(page);
   await expect.poll(() => stepIds(page)).toContain('move-compose-step-0');
   expect(await stepIds(page)).not.toContain('move-compose-step-2');
-  const fast =
-    (await sceneAnimations(page)).find((a) => a.id === 'move-compose-step-0')?.duration ?? 0;
+  await expect.poll(async () => (await tailLiftMs(page)).length).toBeGreaterThan(0);
+  const fast = (await tailLiftMs(page))[0];
   await page.keyboard.press('Escape');
   await expect(panel(page)).toHaveCount(0);
   await openPanel(page);
   await expect.poll(() => stepIds(page)).toContain('move-compose-step-0');
   expect(await stepIds(page)).not.toContain('move-compose-step-2');
-  const reopened = (await sceneAnimations(page)).find(
-    (a) => a.id === 'move-compose-step-0',
-  )?.duration;
+  await expect.poll(async () => (await tailLiftMs(page)).length).toBeGreaterThan(1);
+  const reopened = (await tailLiftMs(page))[1];
   expect(reopened).toBe(fast);
   // The slower seeded speed's step is longer, so the scene key carries baseMs.
   const slowPage = await context.newPage();
+  await recordSceneAnimations(slowPage);
   await openFixture(slowPage, 'session-idle-fresh', { prefs: 'prefs-non-default' });
   await openPanel(slowPage);
-  await expect.poll(() => stepIds(slowPage)).toContain('move-compose-step-0');
-  const slow =
-    (await sceneAnimations(slowPage)).find((a) => a.id === 'move-compose-step-0')?.duration ?? 0;
+  await expect.poll(async () => (await tailLiftMs(slowPage)).length).toBeGreaterThan(0);
+  const slow = (await tailLiftMs(slowPage))[0];
   expect(fast).toBeGreaterThan(0);
   expect(slow).toBeGreaterThan(fast);
+  // BASE_MS: Slow 320 against Fast 90.
+  expect(slow / fast).toBeCloseTo(320 / 90);
 });

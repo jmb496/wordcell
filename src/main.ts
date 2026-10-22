@@ -26,6 +26,7 @@ import {
   startTracker,
 } from './ui/motion';
 import { overlays } from './ui/overlays.svelte';
+import { noteSceneHide } from './ui/scenes/hide-count';
 import {
   applyTheme,
   defaultTheme,
@@ -207,6 +208,8 @@ async function boot(): Promise<void> {
   game.registerBeforeHide(() => hideClear());
   // Ticket 6.13 (A-E9): a pending live-region set is never spoken on return.
   game.registerBeforeHide(() => cancelAnnounce());
+  // Epic 8 (AD-9): the How to play scene player restarts a step that began before a hide.
+  game.registerBeforeHide(() => noteSceneHide());
   nav.registerBeforeBack(() => {
     controller.cancel({ byBack: true });
     finishGuard();

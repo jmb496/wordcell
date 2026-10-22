@@ -160,5 +160,39 @@
       "k": 2,
       "side": "right"
     }
+  ],
+  "drafts": [
+    {
+      "after": 1,
+      "letters": ["E", "K", "B", "A"]
+    },
+    {
+      "after": 2,
+      "letters": ["D", "E", "K", "B", "A"]
+    },
+    {
+      "after": 3,
+      "letters": ["N", "D", "E", "K", "B", "A"]
+    },
+    {
+      "after": 4,
+      "letters": ["D", "E", "K", "B", "A"]
+    },
+    {
+      "after": 5,
+      "letters": ["K", "B", "A", "E", "D"]
+    },
+    {
+      "after": 6,
+      "letters": ["B", "A", "K", "E", "D"]
+    },
+    {
+      "after": 7,
+      "letters": ["B", "A", "L", "K", "E", "D"]
+    },
+    {
+      "after": 8,
+      "letters": ["B", "A", "L", "K", "E", "D"]
+    }
   ]
 }

@@ -20,7 +20,7 @@ export const moveComposeCarry = {
   destinationColumn: 3,
   destinationCount: 1,
 } as const;
-const opened = { tail: 'gone', tray: true, validate: 'lit', cell6: 'top' } as const;
+const opened = { tail: 'gone', dest: 'gone', tray: true, validate: 'lit', cell6: 'top' } as const;
 /** The last frame (BAKED, k 2, side right): scene 2 opens on it (ticket 7 continuity). */
 export const moveComposeFinalFrame: Frame = {
   ...opened,

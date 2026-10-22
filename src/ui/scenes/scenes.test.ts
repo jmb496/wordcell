@@ -5,6 +5,7 @@ import placeFixture from '../../../fixtures/how-to-play-place.json';
 import scoringFixture from '../../../fixtures/how-to-play-scoring.json';
 import sourceDropFixture from '../../../fixtures/how-to-play-source-drop.json';
 import { type SceneStageInputs, sceneStageHeight } from '../layout/geometry';
+import type { MotionKind } from '../motion';
 import { text } from '../text';
 import { frameDest, ghostStart, sceneEffects, tuckEnd, tuckStart } from './effects';
 import effectsSource from './effects.ts?raw';
@@ -20,6 +21,7 @@ import {
   STRIP,
   stageGeometry,
 } from './geometry';
+import { scenes } from './index';
 import { moveComposeScene } from './move-compose';
 import { placeScene } from './place';
 import { type AnimationHandle, type PlayerDeps, restMs, ScenePlayer } from './player';
@@ -28,8 +30,8 @@ import source from './Scene.svelte?raw';
 import { scoringScene } from './scoring';
 import { defineScene } from './script';
 import { sourceDropScene } from './source-drop';
-import { FILLER_LETTERS } from './stage';
-import type { Scene } from './types';
+import { FILLER_LETTERS, fillerColumns } from './stage';
+import type { Point, Scene, Step } from './types';
 
 // Epic 8 ticket 1 (HP-1, HP-5, HP-6): the scene script, player and figure structure.
 const mocked = vi.hoisted(() => ({ motion: { baseMs: 180, reduced: false } }));
@@ -288,9 +290,56 @@ describe('AD-10 scene durations', () => {
     }
     mocked.motion = { baseMs: 180, reduced: false };
   });
+
+  it('AD-10 the player times each effect, step wait hold and the rest by duration(kind) × times, at two speeds', async () => {
+    for (const baseMs of [90, 320])
+      for (const scene of scenes) {
+        const { animations, deps } = fakes(false, baseMs);
+        const ms = (kind: MotionKind, times: number): number => baseMs * KIND_FACTOR[kind] * times;
+        const effects = sceneEffects(scene);
+        const expected: { id: string; element: string; ms: number }[] = [];
+        scene.steps.forEach((step, i) => {
+          const id = `${scene.id}-step-${i}`;
+          if (step.wait)
+            expected.push({ id, element: 'stage', ms: ms(step.wait.kind, step.wait.times) });
+          for (const phase of [0, 1])
+            for (const e of effects[i].filter((x) => x.phase === phase))
+              expected.push({ id, element: e.element, ms: ms(e.kind, e.times) });
+        });
+        const rest = ms(scene.rest.kind, scene.rest.times);
+        expect(restMs(scene, deps.duration)).toBe(rest);
+        expected.push({ id: `${scene.id}-rest`, element: 'stage', ms: rest });
+        const player = new ScenePlayer(scene, deps, () => undefined);
+        player.start();
+        await flush();
+        for (let guard = 0; guard < 200 && animations.length <= expected.length; guard++) {
+          for (const a of animations) a.done();
+          await flush();
+        }
+        player.destroy();
+        // One full loop, then the next starts again at step 1.
+        expect(
+          animations
+            .slice(0, expected.length)
+            .map((a) => ({ id: a.id, element: a.element, ms: a.ms })),
+        ).toStrictEqual(expected);
+        expect(animations[expected.length]?.id).toBe(`${scene.id}-step-0`);
+      }
+  });
 });
 
-function fakes(initiallyHidden = false) {
+// A distinct ms per MotionKind (× baseMs), so a duration read for the wrong kind or without `times`
+// shows in the recorded animate calls.
+const KIND_FACTOR: Record<MotionKind, number> = {
+  snap: 1,
+  flyBack: 2,
+  parting: 3,
+  undoRedo: 5,
+  flyToCell: 7,
+  overlay: 11,
+};
+
+function fakes(initiallyHidden = false, baseMs = 100) {
   const animations: {
     id: string;
     element: string;
@@ -301,6 +350,7 @@ function fakes(initiallyHidden = false) {
     paused: boolean;
   }[] = [];
   let hidden = initiallyHidden;
+  let hides = initiallyHidden ? 1 : 0;
   let visible: (() => void) | undefined;
   const deps: PlayerDeps = {
     animate: (element, _keyframes, ms, id, easing) => {
@@ -324,8 +374,9 @@ function fakes(initiallyHidden = false) {
       };
       return handle;
     },
-    duration: () => 100,
+    duration: (kind) => baseMs * KIND_FACTOR[kind],
     hidden: () => hidden,
+    hides: () => hides,
     whenVisible: () =>
       new Promise<void>((resolve) => {
         visible = () => {
@@ -334,7 +385,18 @@ function fakes(initiallyHidden = false) {
         };
       }),
   };
-  return { animations, deps, show: () => visible?.() };
+  return {
+    animations,
+    deps,
+    hide: () => {
+      hidden = true;
+      hides++;
+    },
+    show: () => {
+      hidden = false;
+      visible?.();
+    },
+  };
 }
 const flush = async (): Promise<void> => {
   for (let i = 0; i < 10; i++) await Promise.resolve();
@@ -404,6 +466,24 @@ describe('AD-14 scene player', () => {
     expect(animations.every((a) => a.cancelled)).toBe(true);
   });
 
+  it('AD-14 destroy() cancels every animation and no animate call follows it; the Scene effect teardown calls it', async () => {
+    const { animations, deps } = fakes();
+    const player = new ScenePlayer(moveComposeScene, deps, () => undefined);
+    player.start();
+    await flush();
+    animations[0].done();
+    await flush();
+    const before = animations.length;
+    expect(before).toBeGreaterThan(1);
+    player.destroy();
+    for (const a of animations) a.done();
+    await flush();
+    expect(animations).toHaveLength(before);
+    expect(animations.every((a) => a.cancelled)).toBe(true);
+    // An unmounted scene (closed panel, another carousel scene) keeps no player running.
+    expect(source).toMatch(/return \(\) => \{\s*next\.destroy\(\);/);
+  });
+
   it('AD-9 a hidden page runs no step until visible again, then restarts at step 1, with no listener', async () => {
     const { animations, deps, show } = fakes(true);
     const player = new ScenePlayer(moveComposeScene, deps, () => undefined);
@@ -447,6 +527,29 @@ describe('AD-14 scene player', () => {
     expect(f.animations.every((a) => a.cancelled || a.id === 'move-compose-step-0')).toBe(true);
     expect(f.animations.filter((a) => a.id === 'move-compose-step-1')).toHaveLength(0);
     hidden.mockRestore();
+    player.destroy();
+  });
+
+  it('AD-9 a step that finishes only after the page turned visible again restarts at step 1', async () => {
+    const f = fakes();
+    const player = new ScenePlayer(moveComposeScene, f.deps, () => undefined);
+    player.start();
+    await flush();
+    // A hidden tab does not advance WAAPI: the step in flight resolves only once visible again.
+    f.hide();
+    await flush();
+    f.show();
+    await flush();
+    for (let guard = 0; guard < 5 && !f.animations.some((a) => a.cancelled); guard++) {
+      for (const a of f.animations) a.done();
+      await flush();
+    }
+    const restart = f.animations.findLastIndex((a) => a.cancelled) + 1;
+    expect(restart).toBeGreaterThan(0);
+    expect(f.animations.slice(0, restart).every((a) => a.cancelled)).toBe(true);
+    expect(f.animations[restart].id).toBe('move-compose-step-0');
+    expect(f.animations.filter((a) => a.id === 'move-compose-step-1')).toHaveLength(0);
+    expect(player.state).toBe('playing');
     player.destroy();
   });
 });
@@ -819,6 +922,15 @@ describe('AD-14 scene scoring against its fixture', () => {
     expect(() => redefine(0, { type: 'move' })).toThrow(/grows only on a tap/);
     expect(() => redefine(0, { grows: { cell: 5, cards: 3 } })).toThrow(/fixture start lacks/);
     expect(() => redefine(0, { grows: { cell: 3, cards: 2 } })).toThrow(/not the fixture's 3/);
+    const { start } = scoringScene.fixture;
+    const oneCard = { ...start, cells: { ...start.cells, '3': ['T'] } };
+    expect(() =>
+      defineScene({
+        ...scoringScene,
+        fixture: { ...scoringScene.fixture, start: oneCard },
+        steps: steps.map((s, k) => (k === 0 ? { ...s, grows: { cell: 3, cards: 1 } } : s)),
+      }),
+    ).toThrow(/grows 1 cards, not the fixture's 1 \(at least 2\)/);
     expect(() => redefine(1, { grows: { cell: 3, cards: 3 } })).toThrow(/cell 3 twice/);
     expect(() =>
       redefine(
@@ -986,12 +1098,33 @@ describe('AD-3 scenes place and scoring figure structure', () => {
         expect(style).not.toContain('opacity');
       }
     }
+    // Each wrapper draws the fixture card at its place (`QU` as the Qu glyph); the one visible at
+    // the t=0 base (no opacity 0) is the fixture top card (R-65).
+    const glyphs = (segment: string) =>
+      [...segment.matchAll(/class="glyph[^"]*">([^<]+)</g)].map((m) => m[1]);
+    const shown = (letter: string) => (letter === 'QU' ? 'Qu' : letter);
+    const cells = scoringFixture.start.cells;
+    const pieces = html.split('<div data-scene-el="grow-').slice(1);
+    expect(pieces.map((piece) => glyphs(piece)[0])).toStrictEqual(
+      [cells['3'], cells['4'], cells['6']].flat().map(shown),
+    );
+    for (const cell of ['3', '4', '6'] as const) {
+      const visible = pieces.filter(
+        (piece) => piece.startsWith(`${cell}-`) && !px(piece.split('>')[0]).includes('opacity:0'),
+      );
+      expect(
+        visible.map((piece) => glyphs(piece)[0]),
+        cell,
+      ).toStrictEqual([shown(need(cells[cell].at(-1)))]);
+    }
     const reduced = await body(scoringScene, true);
     expect(reduced).not.toContain('data-scene-el="grow-');
     // Frame 0 draws only the top cards (R-65): fixture-listed top letters T, T, E.
     const mini = (cell: number) =>
       (reduced.split(`data-cell="${cell}"`)[1] ?? '').split('class="cell')[0];
     for (const cell of [3, 4, 6]) expect((mini(cell).match(/class="card /g) ?? []).length).toBe(1);
+    for (const cell of ['3', '4', '6'] as const)
+      expect(glyphs(mini(Number(cell))), cell).toStrictEqual([shown(need(cells[cell].at(-1)))]);
   });
 });
 
@@ -1150,6 +1283,316 @@ describe('AD-14 frame k and side against the engine-checked fixture block', () =
   );
 });
 
+describe('AD-14 frame tray letters against the engine-checked fixture drafts', () => {
+  // The commands applied in each frame (the frame's `n`); the engine replay checks `drafts` (R-30,
+  // R-51). A frame shows tray letters exactly where the fixture states them.
+  it.each([
+    ['move-compose', moveComposeScene, moveComposeFixture.drafts, [0, 0, 1, 2, 3, 4, 5, 6]],
+    ['free-letter', freeLetterScene, freeLetterFixture.drafts, [6, 7, 8]],
+    ['place', placeScene, placeFixture.drafts, [3, 4, 5, 6, 7, 8]],
+    ['source-drop', sourceDropScene, sourceDropFixture.drafts, [0, 0, 1, 2]],
+  ] as const)(
+    'AD-14 R-30 R-51 scene %s: every frame order and placement order equal the fixture drafts entry',
+    (_n, scene, drafts, applied) => {
+      expect(scene.frames).toHaveLength(applied.length);
+      for (const [i, frame] of scene.frames.entries()) {
+        const stated = drafts.find((d) => d.after === applied[i])?.letters;
+        expect(frame.order ?? frame.placeOrder, `frame ${i}`).toStrictEqual(stated);
+      }
+    },
+  );
+
+  it('AD-14 R-51 scene place: the tucked letters equal the fixture drafts entry at Confirm', () => {
+    const confirm = placeScene.steps.find((s) => s.tucks !== undefined);
+    const command = placeScene.steps[placeScene.steps.indexOf(need(confirm)) - 1].command;
+    expect(placeFixture.commands[need(command)].type).toBe('confirm');
+    const stated = placeFixture.drafts.find((d) => d.after === need(command))?.letters;
+    expect(confirm?.tucks?.letters).toStrictEqual(need(stated));
+  });
+});
+
+// Motion on, the steps are what the player sees: each command step must aim the pointer at the
+// control its fixture command names and reveal the layer of the frame that command produces.
+describe('AD-14 command steps against their fixture commands', () => {
+  // The commands applied in each frame (the frame's `n`, as the reduced-motion tests above).
+  const APPLIED: Record<string, readonly number[]> = {
+    'move-compose': [0, 0, 1, 2, 3, 4, 5, 6],
+    'free-letter': [6, 7, 8],
+    place: [3, 4, 5, 6, 7, 8],
+    'source-drop': [0, 0, 1, 2],
+    scoring: [0, 0, 0, 0, 0, 0],
+  };
+  type Command = Scene['fixture']['commands'][number];
+  const onColumn = (p: Point, column: number): boolean =>
+    p.x >= columnX(column) && p.x <= columnX(column) + CARD_W;
+  // The one table: the target a step carrying each fixture command type aims at (a name, or a
+  // test of the point for a drop). `kBefore` is the fixture block's k before the command (R-31).
+  const AIM: Record<
+    string,
+    (
+      c: Command,
+      step: Step,
+      previous: Step | undefined,
+      kBefore: number,
+    ) => string | ((p: Point) => boolean)
+  > = {
+    drop: (c, step) => (p) =>
+      onColumn(p, Number(step.type === 'grab' ? c.sourceColumn : c.destinationColumn)),
+    setDestinationCount: (c, _step, _previous, kBefore) =>
+      Number(c.k) > kBefore ? 'plus' : 'minus',
+    flip: () => 'flip',
+    validate: () => 'validate',
+    addFreeLetter: (c) => `cell${c.cell}`,
+    setTarget: (c) => `cell${c.cell}`,
+    confirm: () => 'confirm',
+    setPlacementOrder: () => 'front',
+    // An arrange step's pointer fades where it is (effects.ts); a move drags in the tiles.
+    arrange: (_c, step, previous) => (step.type === 'arrange' ? need(previous).target : 'tiles'),
+  };
+
+  function aimProblems(scene: Scene): string[] {
+    const problems: string[] = [];
+    scene.steps.forEach((step, i) => {
+      if (step.command === undefined) return;
+      const command = scene.fixture.commands[step.command];
+      const aim = AIM[command.type];
+      if (aim === undefined) {
+        problems.push(`step ${i}: no aim for ${command.type}`);
+        return;
+      }
+      const kBefore =
+        scene.fixture.block?.find((b) => b.after === step.command)?.k ??
+        scene.carry?.destinationCount ??
+        0;
+      const expected = aim(command, step, scene.steps[i - 1], kBefore);
+      const ok =
+        typeof expected === 'string'
+          ? step.target === expected
+          : expected(scene.targets[step.target]);
+      if (!ok) problems.push(`step ${i} (${command.type}) aims at ${step.target}`);
+    });
+    return problems;
+  }
+
+  // The frame layers a step reveals: its `tray-N` / `place-N` show, or the last place layer a tucks
+  // step swaps in (effects.ts).
+  const layersOf = (scene: Scene, step: Step): string[] =>
+    step.tucks !== undefined
+      ? [`place-${scene.frames.length - 1}`]
+      : [step.reveal?.show ?? []].flat().filter((id) => /^(tray|place)-\d+$/.test(id));
+
+  // Command c's layers: those revealed from the last step naming c up to the next command step;
+  // they must be exactly the first frame whose `n` is c + 1. No other step reveals a frame layer.
+  function revealProblems(scene: Scene): string[] {
+    const applied = APPLIED[scene.id];
+    const prefix = scene.frames.some((f) => f.lit !== undefined) ? 'place' : 'tray';
+    const problems: string[] = [];
+    const revealed = new Map<number, string[]>();
+    scene.steps.forEach((step, i) => {
+      const owner = scene.steps.slice(0, i + 1).findLast((s) => s.command !== undefined)?.command;
+      const done =
+        owner !== undefined && !scene.steps.slice(i + 1).some((s) => s.command === owner);
+      const layers = layersOf(scene, step);
+      if (!done) {
+        if (layers.length > 0) problems.push(`step ${i} reveals ${layers} before its command ends`);
+        return;
+      }
+      revealed.set(owner, [...(revealed.get(owner) ?? []), ...layers]);
+    });
+    for (const c of new Set(
+      scene.steps.flatMap((s) => (s.command === undefined ? [] : [s.command])),
+    )) {
+      const expected = [`${prefix}-${applied.indexOf(c + 1)}`];
+      const got = revealed.get(c) ?? [];
+      if (got.join() !== expected.join())
+        problems.push(`command ${c} reveals ${got.join() || 'nothing'}, not ${expected}`);
+    }
+    return problems;
+  }
+
+  const restep = (scene: Scene, i: number, patch: Partial<Step>): Scene => ({
+    ...scene,
+    steps: scene.steps.map((s, j) => (j === i ? { ...s, ...patch } : s)),
+  });
+  const stepOf = (scene: Scene, command: number, type?: string): number =>
+    scene.steps.findIndex((s) => s.command === command && (type === undefined || s.type === type));
+
+  it('AD-14 every scene: the APPLIED table covers its frames', () => {
+    expect(scenes.map((s) => s.id).sort()).toStrictEqual(Object.keys(APPLIED).sort());
+    for (const scene of scenes)
+      expect(scene.frames, scene.id).toHaveLength(APPLIED[scene.id].length);
+  });
+
+  it.each(scenes.map((s) => [s.id, s] as const))(
+    'AD-14 scene %s: each command step aims at the control its fixture command names and reveals the frame after it',
+    (_id, scene) => {
+      expect(aimProblems(scene)).toStrictEqual([]);
+      expect(revealProblems(scene)).toStrictEqual([]);
+    },
+  );
+
+  it.each([
+    [
+      'setDestinationCount up, plus → minus',
+      moveComposeScene,
+      stepOf(moveComposeScene, 1),
+      'minus',
+    ],
+    [
+      'setDestinationCount down, minus → plus',
+      moveComposeScene,
+      stepOf(moveComposeScene, 3),
+      'plus',
+    ],
+    ['flip → plus', moveComposeScene, stepOf(moveComposeScene, 4), 'plus'],
+    ['validate → cell6', freeLetterScene, stepOf(freeLetterScene, 7), 'cell6'],
+    ['addFreeLetter cell 6 → validate', freeLetterScene, stepOf(freeLetterScene, 6), 'validate'],
+    ['setTarget cell 5 → cell6', placeScene, stepOf(placeScene, 4), 'cell6'],
+    ['confirm → validate', placeScene, stepOf(placeScene, 7), 'validate'],
+    ['setPlacementOrder → dtile', placeScene, stepOf(placeScene, 6), 'dtile'],
+    ['grab over the destination', moveComposeScene, stepOf(moveComposeScene, 0, 'grab'), 'over'],
+    ['drop over the source', moveComposeScene, stepOf(moveComposeScene, 0, 'drop'), 'grab'],
+    ['arrange step moving the pointer', moveComposeScene, stepOf(moveComposeScene, 5), 'plus'],
+    ['arrange move off the tiles', sourceDropScene, stepOf(sourceDropScene, 1), 'grab'],
+  ] as const)('AD-14 a mutated copy fails the aim check: %s', (_name, scene, i, target) => {
+    expect(i).toBeGreaterThanOrEqual(0);
+    // (Moving the step before an arrange step also moves where that arrange's pointer must stay.)
+    expect(aimProblems(restep(scene, i, { target }))).toContainEqual(
+      expect.stringMatching(new RegExp(`^step ${i} \\(`)),
+    );
+  });
+
+  it('AD-14 a mutated copy fails the reveal check: a shifted, a missing or an early layer', () => {
+    const shown = (scene: Scene, i: number, show: string): Partial<Step> => ({
+      reveal: { ...need(scene.steps[i].reveal), show },
+    });
+    const tray3 = stepOf(moveComposeScene, 1);
+    expect(moveComposeScene.steps[tray3].reveal?.show).toBe('tray-3');
+    expect(
+      revealProblems(restep(moveComposeScene, tray3, shown(moveComposeScene, tray3, 'tray-4'))),
+    ).toStrictEqual(['command 1 reveals tray-4, not tray-3']);
+    const place2 = stepOf(placeScene, 4);
+    expect(
+      revealProblems(restep(placeScene, place2, shown(placeScene, place2, 'place-3'))),
+    ).toStrictEqual(['command 4 reveals place-3, not place-2']);
+    const cell6 = stepOf(freeLetterScene, 6);
+    expect(revealProblems(restep(freeLetterScene, cell6, { reveal: undefined }))).toStrictEqual([
+      'command 6 reveals nothing, not tray-1',
+    ]);
+    // The tray opens on the fly after the drop: shown on the grab instead, it opens too early.
+    const fly = sourceDropScene.steps.findIndex((s) => s.type === 'fly');
+    const grab = stepOf(sourceDropScene, 0, 'grab');
+    const early = restep(restep(sourceDropScene, fly, { reveal: undefined }), grab, {
+      reveal: need(sourceDropScene.steps[fly].reveal),
+    });
+    expect(revealProblems(early)).toStrictEqual([
+      `step ${grab} reveals tray-2 before its command ends`,
+      'command 0 reveals nothing, not tray-2',
+    ]);
+    // The Confirm tap's frame is the last place layer, which the tucks step swaps in.
+    const tucks = placeScene.steps.findIndex((s) => s.tucks !== undefined);
+    expect(revealProblems(restep(placeScene, tucks, { tucks: undefined }))).toStrictEqual([
+      'command 7 reveals nothing, not place-5',
+    ]);
+  });
+});
+
+// The board a carried scene draws on frame 0 (columns, tail, D block) is the fixture start; the
+// place scene's board is the engine's after Confirm (R-60).
+describe('AD-14 the drawn board against the fixture', () => {
+  async function render(scene: Scene, reduced: boolean): Promise<string> {
+    mocked.motion = { baseMs: 180, reduced };
+    try {
+      vi.resetModules();
+      const { render: ssr } = await import('svelte/server');
+      const { default: Scene } = await import('./Scene.svelte');
+      return ssr(Scene, { props: { scene, ...fitOf(scene) } }).body;
+    } finally {
+      mocked.motion = { baseMs: 180, reduced: false };
+    }
+  }
+  const glyphs = (segment: string): string[] =>
+    [...segment.matchAll(/class="glyph[^"]*">([^<]+)</g)].map((m) => (m[1] === 'Qu' ? 'QU' : m[1]));
+  // Each stage column's glyphs, far end first, with its filler (stage.ts) split off.
+  function columnsOf(body: string, scene: Scene) {
+    const filler = fillerColumns(scene.fixture.start.columns.map((c) => c.length));
+    const segments = body
+      .slice(0, body.indexOf('class="tray-frame'))
+      .split('<div class="column ')
+      .slice(1);
+    expect(segments).toHaveLength(8);
+    return segments.map((segment, i) => {
+      expect(segment).toContain(`data-column="${i + 1}"`);
+      const all = glyphs(segment);
+      expect(all.slice(0, filler[i].length), `column ${i + 1} filler`).toStrictEqual(filler[i]);
+      return { rows: all.length, scripted: all.slice(filler[i].length) };
+    });
+  }
+  // A wrapper's glyphs and its left and top px, up to the next scene element that is not its own.
+  function wrapper(body: string, id: string) {
+    const from = body.indexOf(`data-scene-el="${id}"`);
+    expect(from).toBeGreaterThan(0);
+    const rest = body.slice(from + 1);
+    const next = rest.search(new RegExp(`data-scene-el="(?!${id}-)`));
+    const tag = rest.slice(0, rest.indexOf('>'));
+    const px = (prop: string) => Number(new RegExp(`${prop}: (-?[\\d.]+)px`).exec(tag)?.[1]);
+    return { glyphs: glyphs(rest.slice(0, next)), left: px('left'), top: px('top'), tag };
+  }
+
+  const carried = scenes.filter((s) => s.carry !== undefined && s.carry.landed !== true);
+
+  it('AD-14 the carried scenes are move-compose and source-drop', () => {
+    expect(carried.map((s) => s.id)).toStrictEqual(['move-compose', 'source-drop']);
+  });
+
+  it.each(carried.map((s) => [s.id, s] as const))(
+    'AD-14 R-21 scene %s: frame 0 draws each start column whole: its scripted cards, the D block, then the tail, in stage order',
+    async (_id, scene) => {
+      const body = await render(scene, true);
+      const c = carryOf(scene);
+      const columns = columnsOf(body, scene);
+      const dest = wrapper(body, 'dest');
+      const tail = wrapper(body, 'tail');
+      for (const { tag } of [dest, tail]) expect(tag).not.toContain('visibility');
+      columns.forEach(({ scripted }, i) => {
+        const column = i + 1;
+        const drawn = [
+          ...scripted,
+          ...(column === c.destinationColumn ? dest.glyphs : []),
+          ...(column === c.sourceColumn ? tail.glyphs : []),
+        ];
+        expect(drawn, `column ${column}`).toStrictEqual(scene.fixture.start.columns[i] ?? []);
+      });
+      // Stage order: the D block sits right under its column's cards, the tail under its column's
+      // (and, on the source column, R-21, under the D block too).
+      const same = c.sourceColumn === c.destinationColumn;
+      expect([dest.left, dest.top]).toStrictEqual([
+        columnX(c.destinationColumn),
+        columns[c.destinationColumn - 1].rows * STRIP,
+      ]);
+      expect([tail.left, tail.top]).toStrictEqual([
+        columnX(c.sourceColumn),
+        (columns[c.sourceColumn - 1].rows + (same ? dest.glyphs.length : 0)) * STRIP,
+      ]);
+    },
+  );
+
+  it('AD-14 R-60 scene place: the drawn columns equal the fixture columns entry after Confirm', async () => {
+    const entry = need(placeFixture.columns.at(-1));
+    expect(entry.after).toBe(placeFixture.commands.length);
+    expect(placeFixture.commands[entry.after - 1].type).toBe('confirm');
+    // The stage's columns are drawn once for every frame (not per frame), so the post-Confirm frame
+    // shows the board every render shows.
+    expect(source).toContain('<Stage columns={drawn.columns}');
+    for (const reduced of [true, false]) {
+      const columns = columnsOf(await render(placeScene, reduced), placeScene);
+      expect(columns.map((c) => c.scripted)).toStrictEqual(
+        Array.from({ length: 8 }, (_, i) => entry.columns[i] ?? []),
+      );
+    }
+  });
+});
+
 describe('AD-14 frameDest and the source-drop frames', () => {
   it('AD-14 frameDest: lifted raises by LIFT and is shown, gone is hidden, absent stays at home', () => {
     const frame = { tail: 'home', tray: false } as const;
@@ -1168,6 +1611,22 @@ describe('AD-14 frameDest and the source-drop frames', () => {
       'gone',
       'gone',
     ]);
+  });
+
+  it('AD-14 every scene: from the frame a step reveal hides the D block on (its tray-N), each reduced-motion frame hides it', () => {
+    const checked: string[] = [];
+    for (const scene of scenes) {
+      for (const step of scene.steps) {
+        if (step.reveal?.hide.includes('dest') !== true) continue;
+        const layer = [step.reveal.show ?? []].flat().find((el) => /^tray-\d+$/.test(el));
+        const from = Number(need(layer).slice('tray-'.length));
+        scene.frames.forEach((frame, i) => {
+          if (i >= from) expect(frameDest(frame).hidden, `${scene.id} frame ${i}`).toBe(true);
+        });
+        checked.push(scene.id);
+      }
+    }
+    expect(checked).toStrictEqual(['move-compose', 'source-drop']);
   });
 });
 

@@ -30,6 +30,7 @@ import {
   stageGeometry,
   TRAY_H,
 } from './geometry';
+import { sceneHides } from './hide-count';
 import { type RunState, ScenePlayer } from './player';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Stage from './Stage.svelte';
@@ -227,6 +228,8 @@ $effect(() => {
       },
       duration,
       hidden: () => document.hidden,
+      // AD-9: counted by main.ts's registerBeforeHide callback (no listener here).
+      hides: sceneHides,
       // AD-9: the game store owns the visibility listeners; loaded lazily (it needs a window).
       whenVisible: async () => (await import('../../shell/game.svelte')).game.whenVisible(),
     },
