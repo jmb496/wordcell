@@ -3,6 +3,7 @@
 // the whole play area (eight columns, the foot row, the tray, WordCells 3 to 10; BAND_ORDER) at the
 // scene base slot SLOT; the component scales it by the fitted card width (`sceneFit`, AD-11).
 import { SCENE_BASE, type SceneStageInputs } from '../layout/geometry';
+import { trayLayout } from '../layout/tray';
 
 export const CARD_W = 40;
 export const SLOT = SCENE_BASE.slot;
@@ -87,13 +88,27 @@ export const CONTROL_BOX = {
 export const placeCellX = (cell: number): number => (cell - 3) * SLOT;
 
 // Epic 8 ticket 3: the place scene's layers cover the tray and the WordCell band (y from the
-// layer's top, TRAY_TOP): the placement strip, Confirm, and the cells. Cards in the strip use the
-// rich pitch (RICH_SLOT) except the WordCells, which keep the full card.
+// layer's top, TRAY_TOP): the placement strip, Confirm, and the cells. Owner decision D9
+// (2026-10-22): its tray and strip tiles are the game's card-mode tiles for the scene's card
+// (DESIGN.md Tile; layout/tray.ts `trayLayout`, the game's one sizing rule), so the game's
+// bottom/top marks fit their face as they do in the game.
+export const PLACE_TILES = trayLayout(1, CARD_W, STAGE_W - 2 * RICH_INSET);
+/** The place scene's tile pitch: the tile face plus the 4 px gap. */
+export const PLACE_SLOT = PLACE_TILES.tileWidth + 4;
 /** WordCell n (3 to 10): its card's top inside the place layer, and its number's top. */
 export const PLACE_LABEL_TOP = TRAY_H + SCENE_BASE.gap;
 export const PLACE_CELL_TOP = PLACE_LABEL_TOP + SCENE_BASE.labels;
 /** The placement strip's tile row: top inside the layer, and tile i's left. */
 export const STRIP_TOP = 4;
-export const stripTileX = (i: number): number => RICH_INSET + i * RICH_SLOT;
+export const stripTileX = (i: number): number => RICH_INSET + i * PLACE_SLOT;
 /** Confirm: left, width, top and height inside the layer (the tray's second row). */
 export const CONFIRM_BOX = { x: 78, w: 96, y: 64, h: 30 } as const;
+
+/** DESIGN.md: no text under 11 px. */
+export const TEXT_FLOOR = 11;
+/**
+ * Owner decision D12 (2026-10-22): the stage is drawn at the base slot and scaled by `scale`, so its
+ * text is counter-scaled by this factor (`--wc-scene-up`): an `authored` px size renders at
+ * max(authored × scale, TEXT_FLOOR), never under the floor, and is unchanged when scale >= 1.
+ */
+export const sceneTextUp = (scale: number): number => Math.max(1, 1 / scale);

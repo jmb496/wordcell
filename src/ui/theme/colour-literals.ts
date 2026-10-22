@@ -32,6 +32,7 @@ export const RUNTIME_ALLOWLIST: ReadonlySet<string> = new Set([
   'base-ms',
   'fade-ms',
   'reduced',
+  'scene-up',
 ]);
 
 /** The token files: theme blocks of `--wc-*` declarations are exempt here (TH-2, TH-9). */

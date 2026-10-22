@@ -44,6 +44,49 @@ test('AD-11 at 1920 x 1080 each scene’s caption is inside the panel without sc
   expect(Math.min(...heights)).toBeLessThan(Math.max(...heights));
 });
 
+// Owner decision D6 (2026-10-22; AD-11): at 1280 x 720 the height cap applies, and every scene's
+// whole stage fits below the carousel's arrows and dots without scrolling (per-scene card widths,
+// owner decision D7).
+test('AD-11 at 1280 x 720 each scene’s whole stage fits below the carousel controls without scrolling', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await openFixture(page, 'session-idle-fresh');
+  await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await page.getByRole('button', { name: 'How to play', exact: true }).click();
+  await expect(panel(page)).toBeVisible();
+  const content = panel(page).locator('.content');
+  const widths = new Map<string, number>();
+  for (const [i, key] of keys.entries()) {
+    await panel(page)
+      .getByRole('button', { name: text.howTo.carousel.dot(i + 1, keys.length), exact: true })
+      .click();
+    const figure = panel(page).getByRole('figure', { name: text.howTo.scenes[key] });
+    await expect(figure).toBeVisible();
+    await content.evaluate((el) => {
+      el.scrollTop = 0;
+    });
+    const stage = figure.locator('[data-scene-el="stage"]');
+    const box = await stage.boundingBox();
+    const scroller = await content.boundingBox();
+    if (box === null || scroller === null) throw new Error('no box');
+    expect(box.y + box.height, key).toBeLessThanOrEqual(scroller.y + scroller.height + 0.5);
+    // The fitted card width: the stage is the base slot (44 px) scaled to the card's slot (w + 4).
+    const w = await stage.evaluate(
+      (el) =>
+        Math.round((el.getBoundingClientRect().width / (el as HTMLElement).offsetWidth) * 44) - 4,
+    );
+    widths.set(key, w);
+    expect(w, key).toBeGreaterThanOrEqual(32);
+    await expect(stage).toBeInViewport({ ratio: 1 });
+  }
+  // The tall scenes are capped below the 62 px the 528 px content alone gives; the short
+  // free-letter scene is not (per-scene card widths, owner decision D7).
+  expect(widths.get('moveCompose')).toBeLessThan(62);
+  expect(widths.get('scoring')).toBeLessThan(62);
+  expect(widths.get('freeLetter')).toBeGreaterThan(widths.get('scoring') ?? 0);
+});
+
 // Epic 8 ticket 6 (HP-1, HP-6; EXPERIENCE.md How to play panel: "Left and Right keys on the
 // carousel do the same as the arrows"): the carousel by keyboard alone.
 const carousel = text.howTo.carousel;

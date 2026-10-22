@@ -444,11 +444,13 @@ const stepScenes = [
   },
   {
     id: 'freeLetter' as const,
-    rules: 'R-33 R-34 R-38',
+    rules: 'R-33 R-34 R-38 Q-31',
     // The last step index (Validate); the rest after it is `freeLetter-rest`, not a step id.
-    lastStep: 1,
+    lastStep: 2,
+    // The tap appends L at the right end of the arranged cards (Q-31), then an arrange gives BALKED.
     frames: [
       { tiles: 'BAKED', validate: 'lit', used: false, k: 2, side: 'right' },
+      { tiles: 'BAKLED', validate: 'lit', used: true, k: 2, side: 'right' },
       { tiles: 'BALKED', validate: 'lit', used: true, k: 2, side: 'right' },
       { tiles: 'BALKED', validate: 'pressed', used: true, k: 2, side: 'right' },
     ],
@@ -465,7 +467,14 @@ for (const { id, rules, frames, lastStep } of stepScenes) {
     const figure = await showScene(page, id);
     await expect(figure.getByText(text.howTo.scenes[id], { exact: true })).toBeVisible();
     expect(await sceneAnimations(page)).toEqual([]);
+    // Owner decision D10: column 3's cards that join the D block (D at k 2, N at k 3) leave it.
+    const joins = figure.locator('[data-column="3"] [data-scene-el^="join-"]');
+    await expect(joins).toHaveCount(id === 'moveCompose' ? 2 : 1);
     for (const [i, frame] of frames.entries()) {
+      for (const el of await joins.all()) {
+        const depth = Number((await el.getAttribute('data-scene-el'))?.slice('join-'.length));
+        await expect(el).toHaveCSS('opacity', frame.k > depth ? '0' : '1');
+      }
       const layer = figure.locator(trayLayers);
       if (frame.tiles === undefined) {
         for (const el of await layer.all()) await expect(el).toHaveCSS('opacity', '0');
@@ -475,6 +484,12 @@ for (const { id, rules, frames, lastStep } of stepScenes) {
         await expect(open.locator('.tiles .card')).toHaveText(frame.tiles.split(''));
         await expect(open.locator('.validate')).toHaveClass(new RegExp(frame.validate ?? ''));
         await expect(open.locator('.cell6.used')).toHaveCount(frame.used ? 1 : 0);
+        // R-33 owner decision D11: the used top card is the game's look (face 40 %, 45° hatch).
+        if (frame.used) {
+          const face = open.locator('.cell6.used .card.used .face');
+          await expect(face).toHaveCSS('opacity', '0.4');
+          await expect(face).toHaveCSS('background-image', /repeating-linear-gradient/);
+        }
         const n = frame.tiles.length;
         const locked = frame.side === 'left' ? [0, frame.k] : [n - frame.k, n];
         const marked = await open
@@ -521,21 +536,111 @@ test('R-40 R-42 R-50 R-51 R-52 R-60 AD-14 with reduced motion scene place steps 
   await openPanel(page);
   const figure = await showScene(page, 'place');
   expect(await sceneAnimations(page)).toEqual([]);
-  // Per frame: strip letters (undefined: none), lit cells, the selected WordCell number, cell 6's cards.
+  // Per frame: tray or strip letters (undefined: none), lit cells, the selected WordCell number,
+  // cell 6's cards and whether its top card is used (R-33), the not-legal (dimmed) cells (R-40).
+  // Frame 0 is the composed word in the tray (owner decision D5); a strip marks its first card
+  // bottom and its last top (R-50 (UI), owner decision D9).
   const frames = [
-    { strip: undefined, lit: [], target: undefined, cell6: 'L', button: text.validate },
-    { strip: 'BALKED', lit: [3, 4, 5], target: 6, cell6: 'L', button: text.confirm },
-    { strip: 'BALKED', lit: [3, 4, 6], target: 5, cell6: 'L', button: text.confirm },
-    { strip: 'BALKED', lit: [3, 4, 5], target: 6, cell6: 'L', button: text.confirm },
-    { strip: 'DBALKE', lit: [3, 4, 5], target: 6, cell6: 'L', button: text.confirm },
-    { strip: undefined, lit: [], target: undefined, cell6: 'E', button: undefined },
+    {
+      tiles: 'BALKED',
+      strip: false,
+      lit: [],
+      target: undefined,
+      cell6: 'L',
+      used: true,
+      dim: [],
+      button: text.validate,
+    },
+    {
+      tiles: 'BALKED',
+      strip: true,
+      lit: [3, 4, 5],
+      target: 6,
+      cell6: 'L',
+      used: true,
+      dim: [7, 8, 9, 10],
+      button: text.confirm,
+    },
+    {
+      tiles: 'BALKED',
+      strip: true,
+      lit: [3, 4, 6],
+      target: 5,
+      cell6: 'L',
+      used: true,
+      dim: [7, 8, 9, 10],
+      button: text.confirm,
+    },
+    {
+      tiles: 'BALKED',
+      strip: true,
+      lit: [3, 4, 5],
+      target: 6,
+      cell6: 'L',
+      used: true,
+      dim: [7, 8, 9, 10],
+      button: text.confirm,
+    },
+    {
+      tiles: 'DBALKE',
+      strip: true,
+      lit: [3, 4, 5],
+      target: 6,
+      cell6: 'L',
+      used: true,
+      dim: [7, 8, 9, 10],
+      button: text.confirm,
+    },
+    {
+      tiles: undefined,
+      strip: false,
+      lit: [],
+      target: undefined,
+      cell6: 'E',
+      used: false,
+      dim: [],
+      button: undefined,
+    },
   ];
   for (const [i, frame] of frames.entries()) {
     const layer = figure.locator(`[data-scene-el="place-${i}"]`);
     await expect(layer).toHaveCSS('opacity', '1');
     await expect(figure.locator('[data-scene-el^="place-"][style*="opacity: 1"]')).toHaveCount(1);
-    if (frame.strip === undefined) await expect(layer.locator('.tiles')).toHaveCount(0);
-    else await expect(layer.locator('.tiles .card')).toHaveText(frame.strip.split(''));
+    if (frame.tiles === undefined) await expect(layer.locator('.tiles')).toHaveCount(0);
+    else {
+      const cards = layer.locator('.tiles .card');
+      await expect(cards.locator('.glyph')).toHaveText(frame.tiles.split(''));
+      const marks = await cards.evaluateAll((els) =>
+        els.map((el) => [...el.querySelectorAll('.mark')].map((m) => m.textContent)),
+      );
+      expect(marks).toEqual(
+        [...frame.tiles].map((_, j) =>
+          !frame.strip
+            ? []
+            : j === 0
+              ? [text.stripBottom]
+              : j === frame.tiles.length - 1
+                ? [text.stripTop, text.star]
+                : [],
+        ),
+      );
+      // The marks sit inside their card's face, visible (R-50 (UI)).
+      if (frame.strip)
+        for (const card of [cards.first(), cards.last()])
+          await expect(card.locator('.position.mark')).toBeVisible();
+    }
+    const dimmed = await layer
+      .locator('.wcell.wc-dim .num')
+      .allTextContents()
+      .then((n) => n.map(Number));
+    expect(dimmed).toEqual(frame.dim);
+    for (const n of frame.dim)
+      await expect(
+        layer.locator('.wcell', { has: page.locator('.num', { hasText: new RegExp(`^${n}$`) }) }),
+      ).toHaveCSS('opacity', '0.35');
+    const cell6 = layer.locator('.wcell', { has: page.locator('.num', { hasText: /^6$/ }) });
+    await expect(cell6.locator('.card.used')).toHaveCount(frame.used ? 1 : 0);
+    if (frame.used) await expect(cell6.locator('.card.used .face')).toHaveCSS('opacity', '0.4');
     // The WordCell numbers of the lit stacks and of the selected one (R-40 R-42).
     const cellNumbers = async (selector: string): Promise<number[]> =>
       (await layer.locator(`.wcell:has(${selector}) .num`).allTextContents()).map(Number);
@@ -543,9 +648,7 @@ test('R-40 R-42 R-50 R-51 R-52 R-60 AD-14 with reduced motion scene place steps 
     expect(await cellNumbers('.stack.target')).toEqual(
       frame.target === undefined ? [] : [frame.target],
     );
-    await expect(
-      layer.locator('.wcell', { has: page.locator('.num', { hasText: /^6$/ }) }).locator('.card'),
-    ).toHaveText(frame.cell6.split(''));
+    await expect(cell6.locator('.card')).toHaveText(frame.cell6.split(''));
     if (frame.button !== undefined) await expect(layer.locator('.ctl')).toHaveText(frame.button);
     else await expect(layer.locator('.ctl')).toHaveCount(0);
     if (i < frames.length - 1)
@@ -1368,7 +1471,8 @@ test('HP-1 AD-11 resize refits the stage; each scene has the stage height it nee
   expect(await reEntered(page)).toBe(false);
   await dotOf(page, 5).click();
   const other = await box();
-  // Scoring (tall WordCell stacks) is taller than move-compose, at the same width.
+  // Scoring (tall WordCell stacks) is taller than move-compose, at the same width: at 360 x 740
+  // neither is capped by height (on a short window each scene fits its own width, decision D7).
   expect(other.height).toBeGreaterThan(first.height);
   expect(other.width).toBeCloseTo(first.width, 0);
   await expect.poll(() => stepIds(page), { timeout: 30_000 }).toContain('scoring-step-1');
@@ -1477,4 +1581,89 @@ test('HP-1 AD-10 a different Animation speed seeded before opening starts the sc
   expect(slow).toBeGreaterThan(fast);
   // BASE_MS: Slow 320 against Fast 90.
   expect(slow / fast).toBeCloseTo(320 / 90);
+});
+
+// Owner decision D6 (2026-10-22; AD-11): on a short window the stage fits the height left below
+// the arrows and dots, so every scene's whole stage shows in the panel without scrolling; each
+// scene keeps its own card width (owner decision D7).
+test('HP-1 AD-11 on a short window every scene’s whole stage fits below the carousel controls without scrolling, at its own card width', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 480, height: 560 });
+  await openFixture(page, 'session-idle-fresh');
+  await openPanel(page);
+  const content = panel(page).locator('.content');
+  const widths = new Map<SceneKey, number>();
+  for (const [i, key] of sceneOrder.entries()) {
+    await dotOf(page, i + 1).click();
+    const figure = panel(page).getByRole('figure', { name: text.howTo.scenes[key] });
+    await expect(figure).toBeVisible();
+    await content.evaluate((el) => {
+      el.scrollTop = 0;
+    });
+    const stage = figure.locator('[data-scene-el="stage"]');
+    const box = await stage.boundingBox();
+    const scroller = await content.boundingBox();
+    if (box === null || scroller === null) throw new Error('no box');
+    expect(box.y + box.height, key).toBeLessThanOrEqual(scroller.y + scroller.height + 0.5);
+    // The fitted card width: the stage is the base slot (44 px) scaled to the card's slot (w + 4).
+    const w = await stage.evaluate(
+      (el) =>
+        Math.round((el.getBoundingClientRect().width / (el as HTMLElement).offsetWidth) * 44) - 4,
+    );
+    expect(w, key).toBeGreaterThanOrEqual(32);
+    expect(w, key).toBeLessThanOrEqual(52);
+    widths.set(key, w);
+  }
+  // The width alone gives 52 px cards (448 px content); the tall scenes are capped below it by
+  // the height left under the controls, the short free-letter one is not (per-scene widths, D7).
+  expect(widths.get('scoring')).toBeLessThan(52);
+  expect(widths.get('moveCompose')).toBeLessThan(52);
+  expect(widths.get('freeLetter')).toBeGreaterThan(widths.get('scoring') ?? 0);
+});
+
+// Owner decision D12 (2026-10-22; DESIGN.md: no text under 11 px): at the 32 px landscape floor the
+// stage is scaled below its base size, and its text (WordCell numbers, score figures, controls, the
+// ×2 badge, the strip marks) is counter-scaled to render at 11 px or more.
+test('HP-1 AD-11 at the 32 px landscape floor every scene’s text renders at 11 px or more', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 740, height: 360 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await openFixture(page, 'session-idle-fresh');
+  await openPanel(page);
+  const seen = new Set<string>();
+  for (const [i, key] of sceneOrder.entries()) {
+    await dotOf(page, i + 1).click();
+    const figure = panel(page).getByRole('figure', { name: text.howTo.scenes[key] });
+    await expect(figure).toBeVisible();
+    // The fitted card is the 32 px floor: the stage is scaled to a 36 px slot over its 44 px base.
+    const scale = await figure
+      .locator('[data-scene-el="stage"]')
+      .evaluate((el) => el.getBoundingClientRect().width / (el as HTMLElement).offsetWidth);
+    expect(scale * 44 - 4, key).toBeCloseTo(32, 1);
+    // Step through every frame: each draws its own layer's text.
+    for (;;) {
+      const sizes = await figure.locator('[data-scene-el="stage"]').evaluate((stage) => {
+        const scale = stage.getBoundingClientRect().width / (stage as HTMLElement).offsetWidth;
+        const texts = stage.querySelectorAll('.num, .figure, .ctl, .badge, .mark');
+        return [...texts]
+          .filter((el) => el.textContent?.trim() && getComputedStyle(el).display !== 'none')
+          .map((el) => ({
+            what: `${['num', 'figure', 'ctl', 'badge', 'mark'].find((c) => el.classList.contains(c))} ${el.textContent}`,
+            px: Number.parseFloat(getComputedStyle(el).fontSize) * scale,
+            scale,
+          }));
+      });
+      for (const { what, px, scale } of sizes) {
+        expect(scale).toBeLessThan(1);
+        expect(px, `${key} ${what}`).toBeGreaterThanOrEqual(10.99);
+        seen.add(what.split(' ')[0]);
+      }
+      const next = figure.getByRole('button', { name: controls.next, exact: true });
+      if ((await next.count()) === 0) break;
+      await next.click();
+    }
+  }
+  expect([...seen].sort()).toEqual(['badge', 'ctl', 'figure', 'mark', 'num']);
 });

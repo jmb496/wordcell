@@ -33,7 +33,7 @@ import {
   space,
   targets,
 } from './helpers/gestures';
-import { openScene } from './helpers/how-to-play';
+import { finalFrame, openScene } from './helpers/how-to-play';
 import {
   arrangeByKeys,
   expectBoardFocus,
@@ -1294,7 +1294,7 @@ test.describe('openScene', () => {
       prefs: 'prefs-theme-paper',
       scene: 2,
       id: 'freeLetter',
-      last: 2,
+      last: finalFrame(2),
     });
     await expect(final.getByRole('button', { name: 'Replay', exact: true })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe('paper');

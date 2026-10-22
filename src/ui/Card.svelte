@@ -36,6 +36,7 @@ let {
   onfocus,
   name,
   silent = false,
+  used = false,
 }: {
   id: CardId;
   face: Face;
@@ -84,6 +85,11 @@ let {
   name?: string;
   /** Epic 6 CAP-11 (6.13): a buried WordCell card, hidden from screen readers (no role). */
   silent?: boolean;
+  /**
+   * A `static` card drawn in the WordCell used look (R-33) without being a `used` mirror (the How
+   * to play scenes carry no data-mirror-of, AD-14; owner decision D11).
+   */
+  used?: boolean;
 } = $props();
 
 // Epic 6 CAP-10 (6.11): only a live column, tray or strip card takes focus (a Tab stop, or -1 for
@@ -135,7 +141,7 @@ const inView = $derived.by(() => {
   class:hidden
   class:destination
   class:ghost
-  class:used={mirror === 'used'}
+  class:used={mirror === 'used' || (mirror === 'static' && used)}
   class:static={mirror === 'static'}
   class:block
   class:start={segment?.start}
@@ -337,6 +343,8 @@ const inView = $derived.by(() => {
     )
     .face { width: calc(var(--tile-w) + 3px); }
 
+  /* DESIGN.md WordCell used this word (R-33): `.card.used .face` is the shared rule in app.css. */
+
   /* DESIGN.md Elevation & Depth: a tap-selected card's face rises `--wc-select-lift` (Board, from
      SELECTION_LIFT_PX) with the soft shadow, above the sticky bars (z-index 2); the wrapper (hit
      rect) never moves (F26). */
@@ -348,11 +356,4 @@ const inView = $derived.by(() => {
     transform: translateY(-4px); outline: 2px solid var(--wc-accent-teal); z-index: 3;
   }
 
-  /* DESIGN.md WordCell used this word (R-33): the top card at 40 % with a 45° hatch. */
-  .used .face {
-    opacity: 0.4;
-    background-image: repeating-linear-gradient(
-      45deg, var(--wc-outline) 0 1px, transparent 1px 6px
-    );
-  }
 </style>

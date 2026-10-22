@@ -1,4 +1,4 @@
-import fixture from '../../../fixtures/how-to-play-scoring.json';
+import fixture from '../../../fixtures/how-to-play-scoring.json' with { type: 'json' };
 import { text } from '../text';
 import { CARD_H, placeCellX, STAGE_W, STRIP, stageGeometry } from './geometry';
 import { defineScene } from './script';

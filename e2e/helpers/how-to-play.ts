@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page } from '@playwright/test';
+import { scenes } from '../../src/ui/scenes/index';
 import { text } from '../../src/ui/text';
 import { openFixture } from './board';
 
@@ -32,4 +33,10 @@ export async function openScene(
     await figure.getByRole('button', { name: text.howTo.sceneControls.next, exact: true }).click();
   }
   return figure;
+}
+
+// The Next clicks from scene `scene`'s first reduced-motion frame to its final (Replay) one, from
+// the scene definition (src/ui/scenes/), so a caller's `last` never goes stale.
+export function finalFrame(scene: number): number {
+  return scenes[scene - 1].frames.length - 1;
 }

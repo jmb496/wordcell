@@ -64,8 +64,16 @@
     },
     {
       "type": "addFreeLetter",
-      "cell": 6,
-      "index": 2
+      "cell": 6
+    },
+    {
+      "type": "arrange",
+      "arrangement": [
+        3,
+        0,
+        23,
+        22
+      ]
     },
     {
       "type": "validate"
@@ -77,7 +85,7 @@
       "word": "BAKED"
     },
     {
-      "command": 6,
+      "command": 7,
       "word": "BALKED"
     }
   ],
@@ -116,6 +124,10 @@
     },
     {
       "after": 8,
+      "canValidate": true
+    },
+    {
+      "after": 9,
       "canValidate": false
     }
   ],
@@ -159,40 +171,106 @@
       "after": 8,
       "k": 2,
       "side": "right"
+    },
+    {
+      "after": 9,
+      "k": 2,
+      "side": "right"
     }
   ],
   "drafts": [
     {
       "after": 1,
-      "letters": ["E", "K", "B", "A"]
+      "letters": [
+        "E",
+        "K",
+        "B",
+        "A"
+      ]
     },
     {
       "after": 2,
-      "letters": ["D", "E", "K", "B", "A"]
+      "letters": [
+        "D",
+        "E",
+        "K",
+        "B",
+        "A"
+      ]
     },
     {
       "after": 3,
-      "letters": ["N", "D", "E", "K", "B", "A"]
+      "letters": [
+        "N",
+        "D",
+        "E",
+        "K",
+        "B",
+        "A"
+      ]
     },
     {
       "after": 4,
-      "letters": ["D", "E", "K", "B", "A"]
+      "letters": [
+        "D",
+        "E",
+        "K",
+        "B",
+        "A"
+      ]
     },
     {
       "after": 5,
-      "letters": ["K", "B", "A", "E", "D"]
+      "letters": [
+        "K",
+        "B",
+        "A",
+        "E",
+        "D"
+      ]
     },
     {
       "after": 6,
-      "letters": ["B", "A", "K", "E", "D"]
+      "letters": [
+        "B",
+        "A",
+        "K",
+        "E",
+        "D"
+      ]
     },
     {
       "after": 7,
-      "letters": ["B", "A", "L", "K", "E", "D"]
+      "letters": [
+        "B",
+        "A",
+        "K",
+        "L",
+        "E",
+        "D"
+      ]
     },
     {
       "after": 8,
-      "letters": ["B", "A", "L", "K", "E", "D"]
+      "letters": [
+        "B",
+        "A",
+        "L",
+        "K",
+        "E",
+        "D"
+      ]
+    },
+    {
+      "after": 9,
+      "letters": [
+        "B",
+        "A",
+        "L",
+        "K",
+        "E",
+        "D"
+      ]
     }
   ]
 }

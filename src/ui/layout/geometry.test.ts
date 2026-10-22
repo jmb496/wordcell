@@ -445,7 +445,7 @@ describe('AD-11 sceneFit: the card width and stage height of the How to play sta
     expect(SCENE_BASE.slot).toBe(cardMetrics(40).slot);
   });
 
-  it('AD-11 the stage height scales with the slot, identical for any scene at a width', () => {
+  it('AD-11 the stage height is the base height of the inputs scaled by the slot ratio', () => {
     expect(sceneStageHeight(40, inputs)).toBe(sceneBaseHeight(inputs));
     const h = (w: number) => sceneStageHeight(w, inputs);
     expect(h(32)).toBeLessThan(h(37));

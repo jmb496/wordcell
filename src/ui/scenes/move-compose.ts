@@ -1,4 +1,4 @@
-import fixture from '../../../fixtures/how-to-play-move-compose.json';
+import fixture from '../../../fixtures/how-to-play-move-compose.json' with { type: 'json' };
 import { text } from '../text';
 import { RICH_SLOT, STAGE_W, stageGeometry } from './geometry';
 import { defineScene } from './script';
@@ -10,7 +10,8 @@ import type { Frame, Scene, SceneFixtureData } from './types';
 // lift K B A from column 1, drop them on column 3 (E is the locked block), + twice (k 2, k 3: a
 // non-word draft), − back to k 2, Flip (the block reads right, reversed), then the cards are
 // rearranged in the tray with an animated reorder (the pointer does not drag every card), ending
-// on BAKED. Frame i is the state after step i's visible change; the fixture commands applied are
+// on BAKED. Column 3 loses the cards + adds to the block (D, then N) and gets back the one − drops,
+// each fading with its tray layer (owner decision D10, `join-<depth>`). Frame i is the state after step i's visible change; the fixture commands applied are
 // 0, 0, 1, 2, 3, 4, 5, 6, so Validate is lit exactly where the fixture's `validatable` is true.
 const data: SceneFixtureData = fixture;
 /** The column move. `destinationCount` is the k the drop opens with (R-31, default 1). */
@@ -66,6 +67,8 @@ export const moveComposeScene: Scene = defineScene({
     'tail-1',
     'tail-2',
     'dest',
+    'join-1',
+    'join-2',
     'ghost',
     ...[2, 3, 4, 5, 6, 7].map((i) => `tray-${i}`),
     ...[0, 1, 2, 3, 4].map((j) => `tray-7-tile-${j}`),

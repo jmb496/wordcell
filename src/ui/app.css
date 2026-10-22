@@ -207,3 +207,14 @@ button:focus-visible {
   outline: 2px solid var(--wc-accent-teal);
   outline-offset: 2px;
 }
+/* DESIGN.md WordCell (R-33, R-40; owner decision D11, 2026-10-22): the one source of the WordCell
+   state looks the game (WordCellRow.svelte, Card.svelte) and the How to play scenes
+   (scenes/Scene.svelte) share: a not-legal cell in Place, label and slot, at 35 %; the top card of
+   a cell the word uses at 40 % with a 45° hatch. */
+.wc-dim {
+  opacity: 0.35;
+}
+.card.used .face {
+  opacity: 0.4;
+  background-image: repeating-linear-gradient(45deg, var(--wc-outline) 0 1px, transparent 1px 6px);
+}

@@ -100,17 +100,36 @@ describe('AD-2 How to play scene replay', () => {
     }
   });
 
-  it('R-33 R-34 R-38 scene free-letter: WordCell 6 L joins M between A and K (BALKED), then validate leaves Composing; validatable matches the engine', () => {
+  it('R-33 R-34 R-38 scene free-letter: WordCell 6 L joins M, an arrange gives BALKED, then validate leaves Composing; validatable matches the engine', () => {
     const { session, rejectedWords } = replayScene(freeLetter, DICT);
     expect(rejectedWords.every((w) => w === undefined)).toBe(true);
     expect(session.cursor.phase).toBe('place');
     expect(freeLetter.commands[freeLetter.commands.length - 1]).toStrictEqual({ type: 'validate' });
     expect(freeLetter.words).toStrictEqual([
       { command: 5, word: 'BAKED' },
-      { command: 6, word: 'BALKED' },
+      { command: 7, word: 'BALKED' },
     ]);
     expect(freeLetter.validatable).toHaveLength(freeLetter.commands.length + 1);
     expect(freeLetter.validatable?.at(-1)?.canValidate).toBe(false);
+  });
+
+  it('Q-31 R-33 R-30 scene free-letter: the tap on WordCell 6 names no index, so L lands at the right end of M (BAKLED); the arrange then gives BALKED', () => {
+    const tap = freeLetter.commands[freeLetter.opens ?? -1];
+    expect(tap).toStrictEqual({ type: 'addFreeLetter', cell: 6 });
+    const start = sceneStart(freeLetter);
+    const wordAfter = (commands: number) => {
+      const view = viewFrom(start, replayScene(without(freeLetter, commands), DICT).session, EN);
+      return {
+        word: view.draft?.wordCards.map((id) => view.faces[id].letter).join(''),
+        arrangement: view.draft?.arrangement.map((id) => view.faces[id].letter).join(''),
+      };
+    };
+    const opens = freeLetter.opens ?? 0;
+    expect(wordAfter(opens)).toStrictEqual({ word: 'BAKED', arrangement: 'BAK' });
+    // Q-31: appended at the right end of M (the D block E D stays on the right, R-30).
+    expect(wordAfter(opens + 1)).toStrictEqual({ word: 'BAKLED', arrangement: 'BAKL' });
+    expect(freeLetter.commands[opens + 1].type).toBe('arrange');
+    expect(wordAfter(opens + 2)).toStrictEqual({ word: 'BALKED', arrangement: 'BALK' });
   });
 
   // The continuity helper (ticket 7 AC2): scene `two` provably opens on scene `one`'s final board.
@@ -209,10 +228,10 @@ describe('AD-2 How to play scene replay', () => {
   });
 
   it('AD-2 scene free-letter: opens outside 1..commands.length-1 or not an integer fails the harness', () => {
-    for (const opens of [0, 8, 2.5, -1]) {
+    for (const opens of [0, 9, 2.5, -1]) {
       const scene = clone(freeLetter);
       (scene as { opens?: number }).opens = opens;
-      expect(() => replayScene(scene, DICT)).toThrow(/opens .* is out of range 1\.\.7/);
+      expect(() => replayScene(scene, DICT)).toThrow(/opens .* is out of range 1\.\.8/);
     }
   });
 
@@ -231,7 +250,7 @@ describe('AD-2 How to play scene replay', () => {
   it('R-38 scene free-letter: BALKED missing from the dictionary fails the fixture; without validatable the last rejectedWord is balked', () => {
     const only = new Set(['baked']);
     expect(() => replayScene(freeLetter, only)).toThrow(
-      /after 8 commands stated canValidate false/,
+      /after 9 commands stated canValidate false/,
     );
     const scene = clone(freeLetter);
     delete (scene as { validatable?: unknown }).validatable;

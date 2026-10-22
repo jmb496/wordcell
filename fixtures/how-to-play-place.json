@@ -22,6 +22,7 @@
     { "command": 1, "word": "BAKED" },
     { "command": 2, "word": "BALKED" }
   ],
+  "block": [{ "after": 3, "k": 1, "side": "left" }],
   "validatable": [
     { "after": 3, "canValidate": true },
     { "after": 4, "canValidate": false },
@@ -40,6 +41,7 @@
   "scores": [{ "after": 8, "score": 36 }],
   "cellScores": [{ "after": 8, "cell": 6, "score": 36 }],
   "drafts": [
+    { "after": 3, "letters": ["B", "A", "L", "K", "E", "D"] },
     { "after": 4, "letters": ["B", "A", "L", "K", "E", "D"] },
     { "after": 5, "letters": ["B", "A", "L", "K", "E", "D"] },
     { "after": 6, "letters": ["B", "A", "L", "K", "E", "D"] },

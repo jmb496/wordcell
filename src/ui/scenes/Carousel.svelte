@@ -15,9 +15,11 @@ import Scene from './Scene.svelte';
 // mounted while it animates out). The index is component state and resets when the flag rises, so
 // the empty host keeps the closing scene's stage height during the Panel exit. The scene is keyed
 // on (index, reduced motion, Animation speed, fitted card width), so a change of any re-enters it at
-// step 1. The fit reads the panel content width and box height (the `.inner` box and its `.content`
-// scroller), never the live game layout store (AD-11). All text is text.ts (AD-3); the scenes read
-// no GameView.
+// step 1. The fit reads the panel content width and the height left below the arrows and dots (the
+// `.inner` box and its `.content` scroller, less the host's offset in it: owner decision D6,
+// 2026-10-22, so the whole stage shows without scrolling), never the live game layout store
+// (AD-11). Each scene fits its own stage, so on a short window the card width differs per scene
+// (owner decision D7). All text is text.ts (AD-3); the scenes read no GameView.
 const labels = text.howTo.carousel;
 const open = $derived(overlays.isOpen('howToPlay'));
 let index = $state(0);
@@ -47,8 +49,12 @@ function measure(node: HTMLElement): () => void {
   const content = node.closest<HTMLElement>('.content');
   if (content === null) throw new Error('the scene carousel must sit in a Panel .content');
   const read = (): void => {
+    if (host === undefined) throw new Error('the carousel host is not bound');
     width = node.clientWidth;
-    boxHeight = content.clientHeight;
+    // The host's top inside the scroller's content, whatever its scroll position.
+    const above =
+      host.getBoundingClientRect().top - content.getBoundingClientRect().top + content.scrollTop;
+    boxHeight = content.clientHeight - above;
   };
   read();
   const observer = new ResizeObserver(read);

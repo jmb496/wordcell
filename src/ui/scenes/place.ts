@@ -1,11 +1,13 @@
-import fixture from '../../../fixtures/how-to-play-place.json';
+import fixture from '../../../fixtures/how-to-play-place.json' with { type: 'json' };
 import { text } from '../text';
 import {
   CARD_H,
   CONFIRM_BOX,
+  HAND_H,
+  HAND_TIP,
   PLACE_CELL_TOP,
+  PLACE_SLOT,
   placeCellX,
-  RICH_SLOT,
   STAGE_W,
   STRIP_TOP,
   stageGeometry,
@@ -19,7 +21,9 @@ import type { Frame, Scene, SceneFixtureData } from './types';
 // compose scene's word, tap Validate (cells 3 to 6 light, 6 pre-selected, R-42), tap WordCell 5 then
 // 6, drag D to the front (order D B A L K E, R-51), Confirm, and the cards fly to cell 6. Commands
 // 0 to 2 are set-up (the fixture's drop, arrange and free letter); frame i = the state after
-// fixture command 3 + i, Confirm and the fly share the final frame.
+// fixture command 3 + i, Confirm and the fly share the final frame. Owner decision D5 (2026-10-22):
+// frame 0 is the composed word as the tray shows it (B A L K E D, the D block B locked) and
+// WordCell 6, whose top card L is in the word (R-33), is drawn used from frame 0 until Confirm.
 const data: SceneFixtureData = fixture;
 const carry = {
   sourceColumn: 1,
@@ -39,24 +43,34 @@ const placing = (placeTarget: number, placeOrder: readonly string[]): Frame => (
   lit,
   placeTarget,
   placeOrder,
+  cell6: 'used',
 });
 const frames: readonly Frame[] = [
-  { tail: 'gone', tray: false, validate: 'lit' },
+  {
+    tail: 'gone',
+    tray: true,
+    validate: 'lit',
+    order: dflt,
+    k: 1,
+    side: 'left',
+    cell6: 'used',
+  },
   { ...placing(6, dflt), validate: 'pressed' },
   placing(5, dflt),
   placing(6, dflt),
   placing(6, ordered),
-  { tail: 'gone', tray: false, validate: 'off', lit: [], cellTop: true },
+  { tail: 'gone', tray: false, validate: 'off', lit: [], cellTop: true, cell6: 'top' },
 ];
 const stage = sceneStageInputs(data, carry, frames);
 const geo = stageGeometry(stage);
 
+// A WordCell is tapped just high enough on its card that the whole hand stays on the stage (D8).
 const cellPoint = (cell: number) => ({
   x: placeCellX(cell) + 20,
-  y: geo.trayTop + PLACE_CELL_TOP + CARD_H / 2,
+  y: geo.trayTop + PLACE_CELL_TOP + CARD_H - (HAND_H - HAND_TIP.y),
 });
 const tilePoint = (i: number) => ({
-  x: stripTileX(i) + RICH_SLOT / 2,
+  x: stripTileX(i) + PLACE_SLOT / 2,
   y: geo.trayTop + STRIP_TOP + CARD_H / 2,
 });
 const confirmPoint = {

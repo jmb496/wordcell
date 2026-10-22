@@ -6,14 +6,15 @@ import {
   LIFT,
   liftedBy,
   PLACE_CELL_TOP,
+  PLACE_TILES,
   placeCellX,
   RICH_SLOT,
-  RICH_TILE_W,
   SLOT,
   STRIP,
   STRIP_TOP,
   stripTileX,
 } from './geometry';
+import { joinCards, joinHidden } from './stage';
 import type { Frame, Point, Scene } from './types';
 
 /** One element's keyframes inside a step; `phase` 1 runs after every phase 0 effect finished. */
@@ -31,9 +32,9 @@ export interface Effect {
 /** Where tuck flier `k` starts: the strip tile's place in the place layers' frame (ticket 8). */
 export const tuckStart = (k: number): string =>
   `translate(${stripTileX(k)}px, ${STRIP_TOP}px) scale(1, 1)`;
-/** Where every flier ends: WordCell `cell`'s top-card face (only x scales, tile face 36 to 40). */
+/** Where every flier ends: WordCell `cell`'s top-card face (only x scales, tile face to card face). */
 export const tuckEnd = (cell: number): string => {
-  const sx = CARD_W / RICH_TILE_W;
+  const sx = CARD_W / PLACE_TILES.tileWidth;
   return `translate(${placeCellX(cell) + FACE_MARGIN - FACE_MARGIN * sx}px, ${PLACE_CELL_TOP}px) scale(${sx}, 1)`;
 };
 
@@ -59,8 +60,10 @@ export function sceneEffects(scene: Scene): readonly (readonly Effect[])[] {
   // After the fly the carried cards are in the tray: later moves are only the pointer's. A landed or
   // carry-less scene draws no tail at all.
   let flown = scene.carry === undefined || scene.carry.landed === true;
-  // The ghost fades in with its first movement.
+  // The ghost fades in with its first movement, and again with the first movement after a step
+  // that faded it out (an arrange or a tuck).
   let shown = false;
+  const joins = joinCards(scene.fixture, scene.carry, scene.frames).cards;
   return scene.steps.map((step): Effect[] => {
     const to = scene.targets[step.target];
     const from = pointer;
@@ -136,6 +139,7 @@ export function sceneEffects(scene: Scene): readonly (readonly Effect[])[] {
             times: 1,
             phase: 0,
           });
+          shown = false;
           effects.push(hold('tuck', 1), hold(stripId, 0), hold('confirm', 0));
           letters.forEach((_, k) => {
             const start = tuckStart(k);
@@ -248,6 +252,7 @@ export function sceneEffects(scene: Scene): readonly (readonly Effect[])[] {
             `scene ${scene.id}: an arrange step needs tray frames ${frame - 1}, ${frame}`,
           );
         const times = step.times ?? 1;
+        shown = false;
         effects.push(
           {
             element: 'ghost',
@@ -302,6 +307,24 @@ export function sceneEffects(scene: Scene): readonly (readonly Effect[])[] {
           times: 1,
           phase: 1,
         });
+      // Owner decision D10: a frame whose k differs from the previous one's fades the destination
+      // cards that join or leave the D block out of or back into their column with the reveal.
+      for (const layer of [step.reveal.show ?? []].flat()) {
+        const n = /^tray-(\d+)$/.exec(layer)?.[1];
+        if (n === undefined || Number(n) === 0) continue;
+        const [before, after] = [scene.frames[Number(n) - 1], scene.frames[Number(n)]];
+        for (const { depth } of joins) {
+          const [was, is] = [joinHidden(before, depth), joinHidden(after, depth)];
+          if (was !== is)
+            effects.push({
+              element: `join-${depth}`,
+              keyframes: [{ opacity: was ? 0 : 1 }, { opacity: is ? 0 : 1 }],
+              kind: step.reveal.kind,
+              times: 1,
+              phase: 1,
+            });
+        }
+      }
     }
     return effects;
   });
