@@ -105,11 +105,11 @@ Listed by ticket 6.17 and applied by no ticket; applying the list is the owner's
     - Old: "On a card it is drawn inside the card edge (2 px in), with no offset or gap; on other controls it keeps the 2 px offset and the `{colors.table}` gap"
     - New: "On a card it is drawn inside the card edge (2 px in), with no offset or gap; on a full-width menu row it is likewise drawn inside the row edge (the rows sit flush in the sheet's scrolling content, which would clip an offset ring; owner, 2026-10-22); on other controls it keeps the 2 px offset and the `{colors.table}` gap"
     - Reason: the menu rows' offset ring was clipped by the scrolling sheet (Opus review part B, second loop).
-  - (pending, owner) **EXPERIENCE.md Motion, winning-guard sentence** (F15, owner 2026-10-22).
+  - (applied 2026-10-22, owner) **EXPERIENCE.md Motion, winning-guard sentence** (F15, owner 2026-10-22).
     - Old: "An Undo during the winning guard window (…) (the button or \ any of its key aliases) completes it and then undoes; the end sheet does not open."
     - New: the same, plus "A Ctrl/Cmd+Z whose modifier goes down before the 300 ms floor and whose Z lands after it may show the end sheet for an instant before the Undo closes it."
     - Reason: the bounded bare-modifier hold (CAP-5, Opus review part C) opens the sheet at the floor; waiting for the Z would delay the sheet after any bare modifier press.
-  - (pending, owner) **EXPERIENCE.md Message catalogue row "Win celebration (R-87)" and Accessibility Floor, Screen readers bullet** (F16, owner 2026-10-22).
+  - (applied 2026-10-22, owner) **EXPERIENCE.md Message catalogue row "Win celebration (R-87)" and Accessibility Floor, Screen readers bullet** (F16, owner 2026-10-22).
     - Old: "the outcome is announced when the end sheet opens, as today" (catalogue); the Screen readers bullet lists the end outcome among the announcements.
     - New: add "except when the sheet opens while the page is hidden: a return from hidden is silent, and the result is on the open end sheet".
     - Reason: ticket 6.13's "silent on return from hidden" wins over the outcome announcement (CAP-11, Opus review part C).

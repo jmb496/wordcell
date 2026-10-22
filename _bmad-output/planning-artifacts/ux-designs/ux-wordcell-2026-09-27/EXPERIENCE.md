@@ -113,7 +113,7 @@ the pending-draft line and the live region.
 | Win outcome | `Every column cleared.` | End sheet title. |
 | Word list (R-88, epic 10) | Section heading `Words`; each entry shows the word in capitals (`QU` as `QU`) and, right-aligned, `5 letters` (`1 letter` for one; a `QU` counts as 2, R-36); no words: `No words were played.` | End sheet, section under the buttons (owner, 2026-10-20). |
 | Word list screen-reader names (R-88) | The list is named `Words`; an entry reads `BAKED, 5 letters`; a repeated word is a separate entry | End sheet word list. |
-| Win celebration (R-87) | No visible text and no announcement of its own; the copies are `aria-hidden`; the outcome is announced when the end sheet opens, as today | Win celebration. |
+| Win celebration (R-87) | No visible text and no announcement of its own; the copies are `aria-hidden`; the outcome is announced when the end sheet opens, as today, except when the sheet opens while the page is hidden: a return from hidden is silent and the result is on the open end sheet (epic 6 SPEC F16) | Win celebration. |
 | Hover peek, more than 14 cards (R-65) | `+n older cards`; for one, `+1 older card` | Hover peek, a line above the first row. |
 | WordCell view and peek title (R-65) | `WordCell 6 · 7 cards`; for one card, `WordCell 6 · 1 card` | View sheet title (peek and sticky view). |
 | Give-up outcome (R-81) | `Game given up.` and `12 letters left: −120`; for one letter, `1 letter left: −10` (a lone `QU` is 2 letters, plural) | End sheet title and penalty line. |
@@ -419,7 +419,9 @@ SPEC F17).
 
 `prefers-reduced-motion: reduce` replaces the timed animations in the table above with a 120 ms
 opacity fade, whatever the preference. Finger tracking during a drag stays; tile parting snaps. The invalid-word line has no shake. An Undo during the winning guard window (the animation and the 300 ms minimum after the win, epic 5 SPEC F8) (the button or
-any of its key aliases) completes it and then undoes; the end sheet does not open. Every other
+any of its key aliases) completes it and then undoes; the end sheet does not open, except that a Ctrl/Cmd+Z whose
+modifier goes down before the 300 ms floor and whose Z lands after it may show the sheet for an instant before
+the Undo closes it (epic 6 SPEC F15). Every other
 pointer or key input during the winning commit animation, and for at least 300 ms after the win whatever the speed, only completes it and is consumed; the settled state is Game over with
 the end sheet expanded.
 
@@ -446,7 +448,8 @@ A win, by Confirm or by Redo, ends with a finale before the end sheet. It is dec
   card 2 of 5, selected`); a card buried under a WordCell's top card is `aria-hidden`, and the WordCell's name gives its top card and count; WordCells by number, top card and count (`WordCell 6, top L, 4 cards,
   used`); `QU` is read "Q U, counts as two letters". A polite live region announces phase changes
   (`Composing. BAKED, 5 letters.`), the invalid-word message, commits (`BALKED placed on cell 6,
-  plus 30`) and the end outcome. Full screen-reader play is not a v1 test target.
+  plus 30`) and the end outcome (not when the end sheet opened while the page was hidden: a return from hidden
+  is silent, epic 6 SPEC F16). Full screen-reader play is not a v1 test target.
   [ASSUMPTION A-E9]
 - **Not colour alone**: every state has a glyph or shape (DESIGN.md Do's and Don'ts).
 - **Motion**: reduced-motion honoured (Motion); the win celebration never plays under it and is always skippable (Win celebration).
