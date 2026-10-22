@@ -100,6 +100,19 @@ Listed by ticket 6.17 and applied by no ticket; applying the list is the owner's
   - Spine AD-9: the shell's read-only `elapsedMs(now)` accessor for the top-bar timer (checked against `src/shell/game.svelte.ts`). Applied.
   - EXPERIENCE.md Keyboard: `Space` on a WordCell with an open view now only closes the view; it no longer closes and reopens (owner 2026-10-16). Docs only; code is separate. Applied.
 - Already satisfied, no edit: SPEC F6 and DESIGN.md Elevation & Depth carry the 2026-10-15 owner answer (☰ covered by a sticky WordCell view); EXPERIENCE.md Rating bands carries the English score column How to play lists; the Statistics and end-sheet strings are catalogue rows.
+- **Opus re-review close-out (owner decisions F9–F16, 2026-10-22).** F9–F13 match the owner docs as written (F9 is the EXPERIENCE.md catalogue row "History unreadable"; F11 is the 2026-10-16 Keyboard addition above; F10, F12 and F13 refine only the Per-surface behaviour rows here). Entries:
+  - (applied) **DESIGN.md Components, Focus ring bullet** (F14, owner 2026-10-22, applied in `354a14f`).
+    - Old: "On a card it is drawn inside the card edge (2 px in), with no offset or gap; on other controls it keeps the 2 px offset and the `{colors.table}` gap"
+    - New: "On a card it is drawn inside the card edge (2 px in), with no offset or gap; on a full-width menu row it is likewise drawn inside the row edge (the rows sit flush in the sheet's scrolling content, which would clip an offset ring; owner, 2026-10-22); on other controls it keeps the 2 px offset and the `{colors.table}` gap"
+    - Reason: the menu rows' offset ring was clipped by the scrolling sheet (Opus review part B, second loop).
+  - (pending, owner) **EXPERIENCE.md Motion, winning-guard sentence** (F15, owner 2026-10-22).
+    - Old: "An Undo during the winning guard window (…) (the button or \ any of its key aliases) completes it and then undoes; the end sheet does not open."
+    - New: the same, plus "A Ctrl/Cmd+Z whose modifier goes down before the 300 ms floor and whose Z lands after it may show the end sheet for an instant before the Undo closes it."
+    - Reason: the bounded bare-modifier hold (CAP-5, Opus review part C) opens the sheet at the floor; waiting for the Z would delay the sheet after any bare modifier press.
+  - (pending, owner) **EXPERIENCE.md Message catalogue row "Win celebration (R-87)" and Accessibility Floor, Screen readers bullet** (F16, owner 2026-10-22).
+    - Old: "the outcome is announced when the end sheet opens, as today" (catalogue); the Screen readers bullet lists the end outcome among the announcements.
+    - New: add "except when the sheet opens while the page is hidden: a return from hidden is silent, and the result is on the open end sheet".
+    - Reason: ticket 6.13's "silent on return from hidden" wins over the outcome announcement (CAP-11, Opus review part C).
 
 ## Carry-ins (ticket 6.14, epic 4 retro A8)
 
