@@ -481,7 +481,10 @@ sections; the only in-panel navigation is the carousel's own controls (HP-7, own
    the cards and add destination letters with −/+ and Flip; borrow a WordCell's top card as a free
    letter; place on a WordCell. Tricky: drop back on the column you lifted from (R-21). Scoring
    last. One scene shows at a time, each a figure with a caption, drawn as the whole play area
-   (columns, tray, WordCells 3–10), only as tall as that scene needs.
+   (columns, tray, WordCells 3–10), only as tall as that scene needs. On short windows the stage
+   fits below the carousel controls at its own card width, so cards may differ in size between
+   scenes and the caption (and, with reduced motion, the Next/Replay control) may need a scroll
+   (owner, 2026-10-22).
 2. **The goal**: empty all eight columns by placing words in the WordCells; bigger words in
    high-numbered WordCells score more.
 3. **Scoring, giving up and bands** (R-80, R-81, R-83), with the band names.
