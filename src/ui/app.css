@@ -201,3 +201,9 @@ html {
 #app {
   height: 100%;
 }
+/* DESIGN.md Focus ring (ticket 6.11): every button off the cards; the cards, WordCells and scene
+   controls draw their own (more specific) ring. */
+button:focus-visible {
+  outline: 2px solid var(--wc-accent-teal);
+  outline-offset: 2px;
+}

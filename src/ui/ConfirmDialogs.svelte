@@ -22,7 +22,8 @@ import { text } from './text';
 // from a menu row (open-surface.ts `takeMenuOrigin`) returns focus to the ☰ button (presence's
 // restoreFocus aims at the exiting menu row, so this effect, run after `tick()`, wins); skipped
 // when a menu was reopened during the exit.
-// Other openers keep Dialog's default return.
+// Any other dismissal (the N key; build-notes surface table) also returns focus to the board,
+// skipped when another entry is now on top (the end sheet or a panel keeps Dialog's default return).
 const IDS = ['newGameConfirm', 'replayConfirm'] as const satisfies readonly OverlayId[];
 type ConfirmId = (typeof IDS)[number];
 
@@ -36,6 +37,7 @@ function onClosed(id: ConfirmId): void {
   void tick().then(() => {
     if (fromAccept) focusBoard();
     else if (fromMenu && !overlays.isOpen('menu')) focusMenuButton();
+    else if (!fromMenu && overlays.top === undefined) focusBoard();
   });
 }
 

@@ -5652,7 +5652,7 @@ describe('AD-12 epic 6 key activation', () => {
     expect(t.overlays.hoverPeek).toBe(3);
   });
 
-  it('AD-12 a hover peek closes when the tap swaps a tile, drops a tail, adds a free letter, sets the target, sets k or opens the view', async () => {
+  it('AD-12 a hover peek closes when the tap swaps or returns a tile, swaps the strip, drops a tail, adds a free letter, sets the target, sets k or opens the view', async () => {
     const taps: [
       string,
       'idle' | 'composing' | 'place',
@@ -5664,6 +5664,22 @@ describe('AD-12 epic 6 key activation', () => {
         (t) => {
           t.overlays.selectTile(3);
           t.controller.activate({ kind: 'tile', card: 4 });
+        },
+      ],
+      [
+        'return',
+        'composing',
+        (t) => {
+          t.overlays.selectTile(4);
+          t.controller.activate({ kind: 'tile', card: 4 });
+        },
+      ],
+      [
+        'strip swap',
+        'place',
+        (t) => {
+          t.overlays.selectTile(6);
+          t.controller.activate({ kind: 'tile', card: 3 });
         },
       ],
       [

@@ -48,7 +48,8 @@ test.describe('opening and closing surfaces', () => {
     await page.keyboard.press('Escape');
     await expect(menu(page)).toHaveCount(0);
     await expect.poll(() => wc(page).then((s) => s?.wc)).toBe(0);
-    await page.keyboard.press('?');
+    // `?` as a US layout produces it: Shift+/ (key `?`, shiftKey true).
+    await page.keyboard.press('Shift+Slash');
     await expect(howTo(page)).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(howTo(page)).toHaveCount(0);
@@ -66,6 +67,25 @@ test.describe('opening and closing surfaces', () => {
     await page.keyboard.press('Escape');
     await expect(newGameConfirm(page)).toHaveCount(0);
     await expect(menu(page)).toHaveCount(0);
+    expect(await storedText(page)).toBe(before);
+    await expectBoardFocus(page);
+  });
+
+  // build-notes surface table, Confirm dialog focus return: the board, not the opener. Column 1 is
+  // empty, so the board is column 2's bottom card, not the column 8 card focused before N.
+  test('Q-24 N with a column card focused, then Keep playing, returns focus to the board, not that card', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-idle-empty-column');
+    const before = await storedText(page);
+    const card = cards(page, 8).last();
+    await card.focus();
+    await page.keyboard.press('n');
+    await expect(newGameConfirm(page)).toBeVisible();
+    await newGameConfirm(page).getByRole('button', { name: 'Keep playing', exact: true }).click();
+    await expect(newGameConfirm(page)).toHaveCount(0);
+    await expectBoardFocus(page);
+    await expect(card).not.toBeFocused();
     expect(await storedText(page)).toBe(before);
   });
 
@@ -243,6 +263,49 @@ test.describe('peeks, tile selection and the end sheet', () => {
     await page.keyboard.press('m');
     await expect(menu(page)).toBeVisible();
     await expect(hoverPeek(page)).toHaveCount(0);
+    expect(errors).toEqual([]);
+  });
+
+  // A mouse long press (classify.ts `longPressTimed` is pointer-type agnostic) on the paused page
+  // clock, as e2e/wordcell-view.spec.ts drives it.
+  test('F39 M during a long-press peek closes the peek and opens the menu; the release and its click leave the menu open, no page error', async ({
+    page,
+  }) => {
+    const errors = trackErrors(page);
+    await page.clock.install({ time: 0 });
+    await page.clock.pauseAt(1000);
+    await openFixture(page, 'session-idle-empty-column');
+    const before = await storedText(page);
+    await page.mouse.move(...(await pointOf(page.getByTestId('wordcell-7'))));
+    await page.mouse.down();
+    await page.clock.runFor(400);
+    await expect(sheet(page)).toHaveAttribute('data-mode', 'peek');
+    await page.keyboard.press('m');
+    await expect(menu(page)).toBeVisible();
+    await expect(sheet(page)).toHaveCount(0);
+    await page.mouse.up();
+    await page.clock.runFor(1000);
+    await expect(menu(page)).toBeVisible();
+    await expect(sheet(page)).toHaveCount(0);
+    expect(await storedText(page)).toBe(before);
+    expect(errors).toEqual([]);
+  });
+
+  // The fixture's Undo is enabled (one committed move), so its disabled history control is Redo
+  // (no redo tail): Y is the key that does not act with a sticky view open.
+  test('F39 Y with Redo disabled and a sticky WordCell view open does nothing: the view stays open, no page error', async ({
+    page,
+  }) => {
+    const errors = trackErrors(page);
+    await openFixture(page, 'session-idle-empty-column');
+    const before = await storedText(page);
+    await tapAt(page, await centre(page.getByTestId('wordcell-7')));
+    await expect(sheet(page)).toHaveAttribute('data-mode', 'sticky');
+    await expect(page.getByTestId('redo')).toBeDisabled();
+    await page.keyboard.press('y');
+    await expect(sheet(page)).toHaveAttribute('data-mode', 'sticky');
+    expect((await wc(page))?.wc).toBe(1);
+    expect(await storedText(page)).toBe(before);
     expect(errors).toEqual([]);
   });
 

@@ -380,6 +380,97 @@ test.describe('Tab order', () => {
   });
 });
 
+// DESIGN.md Focus ring (ticket 6.11 Ring): on a button, 2 px accent-teal with a 2 px offset; the
+// colour is the current theme's computed `--wc-accent-teal`.
+const ring = (page: Page) =>
+  page.evaluate(() => {
+    const el = document.activeElement as HTMLElement;
+    const probe = document.createElement('span');
+    probe.style.color = 'var(--wc-accent-teal)';
+    document.body.append(probe);
+    const teal = getComputedStyle(probe).color;
+    probe.remove();
+    const style = getComputedStyle(el);
+    return {
+      visible: el.matches(':focus-visible'),
+      style: style.outlineStyle,
+      width: style.outlineWidth,
+      offset: style.outlineOffset,
+      teal: style.outlineColor === teal,
+    };
+  });
+
+test.describe('Focus ring', () => {
+  test('Q-24 Tab onto the Menu button, Undo and the primary action draws the 2 px accent-teal ring at a 2 px offset', async ({
+    page,
+  }) => {
+    await open(page, 'session-place-free-letter-two-cards');
+    await expect(primary(page)).toBeEnabled();
+    await page.locator('body').click({ position: { x: 1, y: 1 } });
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+    const seen: string[] = [];
+    for (let i = 0; i < 40 && !seen.includes('primary-action'); i++) {
+      await page.keyboard.press('Tab');
+      const at = await where(page);
+      const name = at.testid ?? at.name ?? '';
+      if (!['Menu', 'undo', 'primary-action'].includes(name)) continue;
+      seen.push(name);
+      expect(await ring(page), name).toEqual({
+        visible: true,
+        style: 'solid',
+        width: '2px',
+        offset: '2px',
+        teal: true,
+      });
+    }
+    expect(seen).toEqual(['Menu', 'undo', 'primary-action']);
+  });
+
+  // The menu rows sit flush in Sheet's scrolling `.content`, which clips descendant outlines: the
+  // ring's outer edge (the row rect grown by max(0, offset + width)) must lie inside its client
+  // rect (the scrollbar excluded).
+  test('Q-24 M focuses the first menu row; its ring and the next rows rings are drawn whole, not clipped by the scrolling sheet content', async ({
+    page,
+  }) => {
+    await open(page, 'session-place-free-letter-two-cards');
+    await page.keyboard.press('m');
+    const rows = page.getByRole('dialog', { name: 'Menu', exact: true }).locator('.row');
+    await expect(rows.first()).toBeFocused();
+    const clipped = () =>
+      page.evaluate(() => {
+        const el = document.activeElement as HTMLElement;
+        const content = el.closest<HTMLElement>('.content');
+        if (!el.classList.contains('row') || content === null) return null;
+        const style = getComputedStyle(el);
+        const grow = Math.max(0, parseFloat(style.outlineOffset) + parseFloat(style.outlineWidth));
+        const r = el.getBoundingClientRect();
+        const c = content.getBoundingClientRect();
+        const left = c.left + content.clientLeft;
+        const top = c.top + content.clientTop;
+        const sides = {
+          left: left - (r.left - grow),
+          top: top - (r.top - grow),
+          right: r.right + grow - (left + content.clientWidth),
+          bottom: r.bottom + grow - (top + content.clientHeight),
+        };
+        return {
+          ring: el.matches(':focus-visible') && style.outlineStyle === 'solid',
+          clipped: Object.entries(sides)
+            .filter(([, over]) => over > 0.01)
+            .map(([side]) => side),
+        };
+      });
+    const checked: string[] = [];
+    for (let i = 0; i < 3; i++) {
+      if (i > 0) await page.keyboard.press('Tab');
+      const name = (await page.evaluate(() => document.activeElement?.textContent?.trim())) ?? '';
+      expect(await clipped(), name).toEqual({ ring: true, clipped: [] });
+      checked.push(name);
+    }
+    expect(checked).toEqual(['New game', 'Replay this deal', 'Statistics']);
+  });
+});
+
 test.describe('Mirrors', () => {
   test('Q-24 AD-14 no mirror is focusable and exactly one element per data-card-id is', async ({
     page,
@@ -619,6 +710,65 @@ test.describe('Composing', () => {
     await expect(primary(page)).toBeDisabled();
     await expectNoop(page, 'Enter');
   });
+
+  // EXPERIENCE.md Keyboard, Composing: `Space`/`Enter` on a focused column card is the tap on it;
+  // on a destination-column card it becomes the top of D (column 5, k = 1 after toComposing).
+  test('R-31 Space and Enter on a focused destination-column card set k (the tap on it)', async ({
+    page,
+  }) => {
+    await toComposing(page);
+    const k = async () => (await draftDetail(page)).destinationCount;
+    expect(await k()).toBe(1);
+    const n = await cards(page, 5).count();
+    await cards(page, 5)
+      .nth(n - 3)
+      .focus();
+    expect(await press(page, 'Space')).toBe(true);
+    await expect.poll(k).toBe(3);
+    await cards(page, 5)
+      .nth(n - 2)
+      .focus();
+    expect(await press(page, 'Enter')).toBe(true);
+    await expect.poll(k).toBe(2);
+    expect(await phaseOf(page)).toBe('composing');
+  });
+
+  // The phase matrix: a card of another column is inert in Composing (R-39), so Enter on it does
+  // nothing, never Validate, even with Validate enabled.
+  test('R-39 Q-24 Enter on a focused non-destination column card with Validate enabled does nothing (never Validate)', async ({
+    page,
+  }) => {
+    await toComposing(page);
+    await expect(primary(page)).toBeEnabled();
+    await lowest(page, 4).focus();
+    await expectNoop(page, 'Enter');
+    await expectNoop(page, 'Space');
+    expect(await phaseOf(page)).toBe('composing');
+  });
+
+  test('R-33 Enter on a focused WordCell adds its top card as a free letter and focuses the new tile', async ({
+    page,
+  }) => {
+    await toComposing(page);
+    await cell(page, 8).focus();
+    expect(await press(page, 'Enter')).toBe(true);
+    await expect(tiles(page)).toHaveCount(5);
+    await expect(tiles(page).last()).toBeFocused();
+    await expect.poll(async () => (await game(page)).includes('"freeLetters":[8]')).toBe(true);
+    await expect(sheet(page)).toHaveCount(0);
+  });
+
+  test('R-65 Space on a focused non-empty WordCell in Composing opens the sticky view and adds no free letter', async ({
+    page,
+  }) => {
+    await toComposing(page);
+    const before = await game(page);
+    await cell(page, 8).focus();
+    expect(await press(page, 'Space')).toBe(true);
+    await expect(sheet(page)).toHaveAttribute('data-mode', 'sticky');
+    await expect(tiles(page)).toHaveCount(4);
+    expect(await game(page)).toBe(before);
+  });
 });
 
 test.describe('Flow 6', () => {
@@ -699,6 +849,28 @@ test.describe('Place', () => {
     await expect(cell(page, 4)).toHaveClass(/target/);
     await cell(page, 7).focus();
     await expectNoop(page, 'Enter');
+  });
+
+  // The phase matrix: a column card is inert in Place (R-39).
+  test('R-39 Space and Enter on a focused column card in Place do nothing', async ({ page }) => {
+    await open(page, 'session-place-free-letter-two-cards');
+    await lowest(page, 1).focus();
+    await expectNoop(page, 'Space');
+    await expectNoop(page, 'Enter');
+    expect(await phaseOf(page)).toBe('place');
+  });
+
+  // Cell 9 holds the fixture's second word and is not a legal target.
+  test('R-65 Space on a focused non-empty WordCell in Place opens the sticky view and keeps the target', async ({
+    page,
+  }) => {
+    await open(page, 'session-place-free-letter-two-cards');
+    const before = await game(page);
+    await cell(page, 9).focus();
+    expect(await press(page, 'Space')).toBe(true);
+    await expect(sheet(page)).toHaveAttribute('data-mode', 'sticky');
+    expect(await game(page)).toBe(before);
+    await expect(cell(page, 5)).toHaveClass(/target/);
   });
 });
 

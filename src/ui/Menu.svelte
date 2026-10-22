@@ -177,6 +177,9 @@ function howToPlay(): void {
   }
   .row:not(:disabled):active { background: var(--wc-surface-raised); }
   .row:disabled { color: var(--wc-ink-disabled); }
+  /* DESIGN.md Focus ring, drawn inset: the full-width rows sit flush in Sheet's scrolling content,
+     which clips an outset ring. */
+  .row:focus-visible { outline-offset: -2px; }
   .row svg { flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .version {
     margin: 0; padding: 12px 16px 16px;

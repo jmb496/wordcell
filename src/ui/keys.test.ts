@@ -156,6 +156,11 @@ describe('AD-12 key-event filtering', () => {
     expect(mocks.log).not.toContain('undo');
   });
 
+  it('AD-12 Shift is allowed: ? as a US layout sends it (Shift+/, key ?) opens How to play', () => {
+    expect(press('?', { shift: true })).toBe(true);
+    expect(overlays.top).toBe('howToPlay');
+  });
+
   it('AD-12 any other Ctrl/Cmd/Alt chord is ignored and not default-prevented', () => {
     for (const key of ['m', 'n', '?', 'Escape']) {
       expect(press(key, { ctrl: true })).toBe(false);
@@ -507,6 +512,29 @@ describe('AD-12 pending pop', () => {
     settle();
     expect(ACTED(mocks.log)).toEqual(['redo']);
     expect(overlays.top).toBe('howToPlay');
+  });
+
+  it('AD-12 M waits for the pending pop, then opens the menu', () => {
+    mocks.pending = true;
+    expect(press('m')).toBe(false);
+    expect(overlays.depth).toBe(0);
+    settle();
+    expect(overlays.top).toBe('menu');
+  });
+
+  it('AD-12 N waits for the pending pop, then opens the New game confirm in progress, else starts a new game', () => {
+    mocks.pending = true;
+    expect(press('n')).toBe(false);
+    expect(mocks.log).toEqual([]);
+    settle();
+    expect(ACTED(mocks.log)).toEqual(['newGameConfirm']);
+    mocks.log.length = 0;
+    setView({ inProgress: false });
+    mocks.pending = true;
+    expect(press('n')).toBe(false);
+    expect(mocks.log).toEqual([]);
+    settle();
+    expect(ACTED(mocks.log)).toEqual(['newGame']);
   });
 
   it('AD-12 Esc is dropped while a pop is pending and queues nothing', () => {
