@@ -56,3 +56,4 @@ Verify: npm run test:all and npm run test:screens (Docker container only) are gr
 ## Notes
 
 - The epic's open question (literal count, scene colours as tokens or fixed art) is settled in the Description: 7 literals, all tokens.
+- Post-close (Opus review, owner decisions D1–D6, 2026-10-22, `5210279`, `a88cf67`, `45f6a13`; see the epic Notes): the TH-2 colour-literal scan is rewritten as one AST visitor (script, markup, .ts; per-declaration colour properties); alternate theme blocks use `:root[data-theme]` with a computed-token e2e; D6 adds washed drop-target rows to the contrast harness.

@@ -47,3 +47,4 @@ Verify: npm run test:all and npm run test:screens are green with the new theme's
 ## Notes
 
 - Decision (owner, 2026-10-19): accept the one-frame dark browser-bar tint (`theme-color` meta) and the dark installed-app splash on a cold start with Daylight Paper stored. AD-16 boot order unchanged, no spine edit.
+- Post-close (Opus review, owner decisions D1–D6, 2026-10-22, `5210279`, `a88cf67`, `45f6a13`; see the epic Notes): D1 the Theme control is a vertical single-choice list (DESIGN.md Panels); D5 the focused segment shows a table-coloured gap; Daylight Paper keeps its lighter drag shadow (D3).

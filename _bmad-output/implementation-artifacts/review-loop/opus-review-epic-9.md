@@ -94,3 +94,11 @@ Applied (6 majors): order-independent theme selectors + computed-token e2e + id-
 Decision needed: 6 (Theme picker at 360 px; fatal() theme and status bar; dark themes' drag shadow; drop-target texture; focus ring on the checked segment; Greenhouse Dusk target outline contrast).
 Suspected stale baseline: e2e/preferences.screens.spec.ts-snapshots/preferences-panel-android-linux.png.
 Unapplied minors: 22 (passes 1–4 lists above).
+
+## Orchestrator: loops, gates and close-out (2026-10-22)
+- Loop 1 (this log): diverging after 4 passes, 6 fixes, committed `5210279` after `test:all` (first run: one load flake, `e2e/nav.spec.ts:162` double tap, passed alone 8/8; rerun green) and `test:screens` (66 passed).
+- Loop 2 (`opus-review-epic-9b.md`, resumed once after a session limit; attempt log kept): converged after 5 passes (3, 3, 3, 1, 1), 10 fixes, committed `a88cf67` after `test:all` and `test:screens` green; its open major (rune shapes in the TH-2 scan) went to the decisions step.
+- Owner decisions D1–D6 (`e6443fd`, every proposed default taken; follow-ups Q1–Q2 kept as built): built by a fresh step (break-checked: each decision's test failed with its code removed), reviewed by `opus-review-epic-9-decisions.md` (2 passes, 5, 0), committed `45f6a13` after `test:all` green.
+- Screenshots: all baselines regenerated in the container and pixel-diffed against HEAD; 6 noise-only images (max channel diff ≤ 2) restored; 32 real changes evaluated by a read-only step: approve (8 from D1/D6, 24 stale baselines from epic 6 and the 2026-10-18 rating rework). Root cause of the staleness: Playwright's default per-pixel `threshold` 0.2 compared the old 4-item menu with the current 6-item menu as 0.8 % changed (pass); at 0.05 it is 15 %. Fixed in `fc3c20c`; baselines `ecb01d8`; `test:screens` green at 0.05.
+- Models: every step Opus (`models-used.py --since 2026-10-22T17:37`).
+- Process slip (loop 1 pass 2): a fixer used `pkill -f` once on a stray vitest probe; no lasting effect.
