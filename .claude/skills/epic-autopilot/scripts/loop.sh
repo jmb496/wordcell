@@ -19,6 +19,8 @@
 # selected model, or a model that answered in the session, is not Opus or Fable (ALLOW_MODEL=1
 # continues anyway). `touch .autopilot/STOP` pauses cleanly before the next ticket (exit 2).
 set -u
+# Print mode otherwise kills background subagents 10 minutes after the last turn.
+export CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0
 if [ $# -lt 1 ]; then echo "usage: $0 <epic-slug> [max-tickets]"; exit 4; fi
 EPIC=$1; MAX=${2:-99}
 HERE=$(cd "$(dirname "$0")" && pwd)
