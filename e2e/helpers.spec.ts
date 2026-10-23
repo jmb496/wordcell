@@ -17,6 +17,16 @@ import {
   tapAt,
   trayIds,
 } from './helpers/board';
+import {
+  enableCelebration,
+  FAST_CAP_STEP_MS,
+  finishCelebration,
+  NORMAL_CAP_STEP_MS,
+  running,
+  SLOW_CAP_STEP_MS,
+  watchAdded,
+  watchAddedFromBoot,
+} from './helpers/celebration';
 import { button, expectLeaves, hitAt, wc } from './helpers/dialogs';
 import { buildRoot } from './helpers/dist-test';
 import { dragResidue, expectNoResidue } from './helpers/drag';
@@ -1384,5 +1394,35 @@ test.describe('live-region recorders', () => {
     expect(await sets(page)).toEqual([]);
     await write(page, REGION, 'two');
     expect(await sets(page)).toEqual(['two']);
+  });
+});
+
+test.describe('celebration helpers', () => {
+  test('AD-17 the cap constants are the AD-19 caps rounded up to a 16 ms step', () => {
+    expect([FAST_CAP_STEP_MS, NORMAL_CAP_STEP_MS, SLOW_CAP_STEP_MS]).toEqual([3008, 6000, 10672]);
+  });
+
+  test('AD-17 enableCelebration then Confirm runs the celebration; finishCelebration ends it with the sheet expanded', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-won-words', { steps: ['undo'] });
+    await enableCelebration(page);
+    expect(await running(page)).toBe(false);
+    const added = await watchAdded(page, '[data-celebration-root]');
+    await page.getByTestId('primary-action').click();
+    await expect.poll(() => running(page)).toBe(true);
+    expect(await added()).toBe(true);
+    await finishCelebration(page);
+    expect(await running(page)).toBe(false);
+    await expect(page.getByRole('dialog', { name: 'Every column cleared.' })).toBeVisible();
+    await expect(page.locator('[data-celebration-root]')).toHaveCount(0);
+  });
+
+  test('AD-17 watchAddedFromBoot attaches before the app runs: a node the boot adds is recorded', async ({
+    page,
+  }) => {
+    const added = await watchAddedFromBoot(page, '[data-testid="column-1"]');
+    await openFixture(page, 'session-idle-fresh');
+    expect(await added()).toBe(true);
   });
 });

@@ -1015,3 +1015,25 @@ describe('AD-13 overlays celebration entry', () => {
     expect(source).not.toMatch(/['"][^'"]*celebration\.svelte(\.ts)?['"]/);
   });
 });
+
+// Epic 10 entry 5 (AD-19 Start): the non-consuming token check the celebration's start reads.
+describe('AD-13 isLiveToken', () => {
+  it('AD-13 isLiveToken is true for the live token without consuming it, false after its open, a cancel or a newer defer', async () => {
+    const overlays = await load();
+    const token = overlays.deferEndSheetOpen();
+    expect(overlays.isLiveToken(token)).toBe(true);
+    expect(overlays.isLiveToken(token)).toBe(true);
+    expect(overlays.openDeferred(token)).toBe(true);
+    expect(overlays.isLiveToken(token)).toBe(false);
+
+    const fresh = await load();
+    const dead = fresh.deferEndSheetOpen();
+    fresh.cancelEndSheetOpen();
+    expect(fresh.isLiveToken(dead)).toBe(false);
+
+    const older = fresh.deferEndSheetOpen();
+    const newer = fresh.deferEndSheetOpen();
+    expect(fresh.isLiveToken(older)).toBe(false);
+    expect(fresh.isLiveToken(newer)).toBe(true);
+  });
+});

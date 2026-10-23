@@ -1,6 +1,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { stored } from './helpers/blocking';
 import { centre, glidesSettled, openFixture, tapAt } from './helpers/board';
+import { WON_ROWS } from './helpers/celebration';
 import { button, confirmDialog, expectLeaves, type NavState, notice, wc } from './helpers/dialogs';
 import { expectBoardFocus } from './helpers/keys';
 import { onAndroid, onDesktop } from './helpers/project';
@@ -746,20 +747,7 @@ test.describe('desktop', () => {
   });
 });
 
-// Ticket 10.2 (R-88): the Words section of the expanded sheet. Rows are `WON_WORDS_LIST` in
-// src/engine/serialize.test.ts (session-won-words, seed 2089).
-const WON_ROWS = [
-  'EHNPBNTFSA, 10 letters',
-  'JDAQUYE, 7 letters',
-  'EIOGKD, 6 letters',
-  'TMXRWO, 6 letters',
-  'AECCP, 5 letters',
-  'LHVIA, 5 letters',
-  'NMIHZ, 5 letters',
-  'LTOS, 4 letters',
-  'SURF, 4 letters',
-  'SURF, 4 letters',
-];
+// Ticket 10.2 (R-88): the Words section of the expanded sheet (`WON_ROWS` in helpers/celebration.ts).
 const GAVE_ROWS = WON_ROWS.slice(1);
 
 // The won fixture with its last move dropped and gaveUp set (a `{ literal }` session).

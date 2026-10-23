@@ -1,9 +1,9 @@
-// AD-19 (R-87): the win celebration's run controller, the only owner of the run data. Unmounted and
-// untriggered until entries 4-8 wire it (overlay entry, end sheet, skip). `start` measures once;
-// frames then step the pure `step.ts` state and write `transform`/opacity straight to the group
-// elements Celebration.svelte registered (rule 3, no reactive per-frame state); only the active
-// run's props are reactive, so a mount can follow the run. Two drivers: real rAF, and a manual
-// clock (`setManual`, `advance`) for Playwright (AD-17).
+// AD-19 (R-87): the win celebration's run controller, the only owner of the run data. App.svelte
+// mounts its run and end-sheet.ts starts it (entry 5); skip and hide follow (entries 6-7).
+// `start` measures once; frames then step the pure `step.ts` state and write `transform`/opacity
+// straight to the group elements Celebration.svelte registered (rule 3, no reactive per-frame
+// state); only the active run's props are reactive, so a mount can follow the run. Two drivers:
+// real rAF, and a manual clock (`setManual`, `advance`) for Playwright (AD-17).
 // Entry 4 (AD-13 celebration bullet): `attachOverlays()` registers the exported singleton's removal
 // callback with `overlays` (this module imports `overlays`, never the reverse). While attached the
 // callback is the only caller of `done`, once, in a microtask after the removal: a run-driven end
@@ -11,6 +11,9 @@
 // back and Esc remove the entry first, so the callback takes the live run's `done`; Undo and New
 // game (`cancelled`) drop it. Every removal stops the run internally, without `onEnd`. Unattached
 // `createCelebration()` instances call `done` synchronously.
+// Entry 5 (AD-17 Celebration seam): the enabled flag, on by default (the hook-free `dist/` and
+// Vitest play); end-sheet.ts reads it at the win's settle, and only main.ts's hook-build block turns
+// it off and hands `setCelebrationEnabled` to the test hook. Plain, not `$state`: read once per win.
 import type { Face, GameView } from '../../engine/index';
 import { createVisibleBand } from '../gestures/visible-band';
 import { cardMetrics } from '../layout/geometry';
@@ -250,6 +253,18 @@ function build(attachment: Attachment | null) {
 
 export function createCelebration() {
   return build(null);
+}
+
+let enabled = true;
+
+/** AD-17: whether a win starts the celebration (off in hook builds until a test enables it). */
+export function celebrationEnabled(): boolean {
+  return enabled;
+}
+
+/** AD-17: main.ts's hook-build block and the test hook's `setEnabled` only. */
+export function setCelebrationEnabled(on: boolean): void {
+  enabled = on;
 }
 
 const attachment: Attachment = { attached: false, removed: null };

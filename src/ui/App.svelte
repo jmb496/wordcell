@@ -12,6 +12,9 @@ import Board from './Board.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import ConfirmDialogs from './ConfirmDialogs.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import Celebration from './celebration/Celebration.svelte';
+import { celebration } from './celebration/celebration.svelte.ts';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import EndSheet from './EndSheet.svelte';
 import { focusByPhase } from './focus-board';
 import type { Controller } from './gestures/controller';
@@ -44,6 +47,10 @@ function pointerRoot(node: HTMLElement): { destroy: () => void } {
 }
 
 const board = $derived(game.view);
+
+// AD-19 (epic 10 entry 5): the active run's props; the mount below is keyed on them, so each run
+// mounts once and registers its own group elements with the controller.
+const run = $derived(celebration.props());
 
 // Epic 6 CAP-1 (6.1, SPEC F5, F6): `main` (Board, top bar, action bar) is inert while any modal
 // surface is on the stack. The expanded end sheet and the WordCell view are not in the list (their
@@ -114,6 +121,16 @@ function rejectedBody(reason: RejectReason): string {
   </main>
   <Menu view={board} hoverFine={layout.hoverFine} />
   <EndSheet view={board} />
+  {#if run}
+    {#key run}
+      <Celebration
+        groups={run.groups}
+        band={run.band}
+        cardW={run.cardW}
+        register={celebration.register}
+      />
+    {/key}
+  {/if}
   <PreferencesPanel />
   <StatisticsPanel />
   <HowToPlayPanel />

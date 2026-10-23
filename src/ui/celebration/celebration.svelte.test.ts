@@ -653,3 +653,16 @@ describe('AD-19 celebration controller', () => {
     }
   });
 });
+
+// AD-17 Celebration seam (epic 10 entry 5): the enabled flag, on a fresh module.
+describe('AD-17 celebration enabled flag', () => {
+  it('AD-17 the flag defaults on and setCelebrationEnabled toggles it', async () => {
+    vi.resetModules();
+    const module = await import('./celebration.svelte.ts');
+    expect(module.celebrationEnabled()).toBe(true);
+    module.setCelebrationEnabled(false);
+    expect(module.celebrationEnabled()).toBe(false);
+    module.setCelebrationEnabled(true);
+    expect(module.celebrationEnabled()).toBe(true);
+  });
+});

@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
+import { END_SHEET } from '../helpers/board';
+import { watchAddedFromBoot } from '../helpers/celebration';
 import { walk } from '../helpers/dist-test';
 import { fixture, seedStorage } from '../helpers/seed';
 
@@ -31,6 +33,19 @@ test('AD-18 no file in dist/ contains __wordcell', () => {
     readFileSync(path.join(root, file), 'latin1').includes('__wordcell'),
   );
   expect(hits).toEqual([]);
+});
+
+// R-87 (AD-13 "a reload mid-run is a relaunch"): the hook-free build keeps the celebration on (real
+// rAF), and a relaunch into a won game opens the sheet at boot without starting it.
+test('R-87 a relaunch into a won game plays no celebration in the hook-free build', async ({
+  page,
+}) => {
+  await seedStorage(page, { session: fixture('session-won-words.json') });
+  const added = await watchAddedFromBoot(page, '[data-celebration-root]');
+  await page.goto('/');
+  await expect(page.getByRole('dialog', { name: END_SHEET })).toBeVisible();
+  await expect(page.locator('[data-card-id]')).toHaveCount(52);
+  expect(await added()).toBe(false);
 });
 
 test('AD-11 ?bands= ignored in dist/', async ({ page }) => {

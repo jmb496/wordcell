@@ -1,12 +1,17 @@
 import { mount } from 'svelte';
-import './shell/test-hook';
 import { dictionary } from './shell/dictionary.svelte';
 import { game } from './shell/game.svelte';
 import { nav } from './shell/nav';
 import { prefs } from './shell/prefs.svelte';
+import { registerCelebrationSeam } from './shell/test-hook';
 import App from './ui/App.svelte';
 import { setController } from './ui/act';
 import { cancelAnnounce } from './ui/announce';
+import {
+  attachOverlays,
+  celebration,
+  setCelebrationEnabled,
+} from './ui/celebration/celebration.svelte.ts';
 import { onDispatched, openAtBoot } from './ui/end-sheet';
 import { createFlip, setFlip } from './ui/flip';
 import { createController } from './ui/gestures/controller';
@@ -141,6 +146,8 @@ async function boot(): Promise<void> {
     closedByBack: (depth) => overlays.closedByBack(depth),
     depth: () => overlays.depth,
   });
+  // AD-13, AD-19: the celebration's removal callback, every build, before any push.
+  attachOverlays();
   await fontCheck();
   // AD-10: the motion mirror before the Session load, also when halted meanwhile.
   initMotion();
@@ -216,6 +223,19 @@ async function boot(): Promise<void> {
     controller.cancel({ byBack: true });
     finishGuard();
   });
+  // AD-17 Celebration seam (AD-16, beside registerBeforeBack): hook builds only, so the hook-free
+  // `dist/` keeps the flag on (real rAF) and no `__wordcell` name leaves the gate (AD-18). The
+  // celebration is off until a test enables it. Invariant: no `await` between `game.load()` and
+  // this block, so a page that reads `current().kind === 'active'` finds the seam registered.
+  if (import.meta.env.DEV || import.meta.env.VITE_TEST_HOOKS === '1') {
+    setCelebrationEnabled(false);
+    registerCelebrationSeam({
+      running: () => celebration.running(),
+      advance: (ms) => celebration.advance(ms),
+      setManual: (on) => celebration.setManual(on),
+      setEnabled: setCelebrationEnabled,
+    });
+  }
   setController(controller);
   // AD-16 order: lifecycle listeners (and the visible-time clock) right after the load, before mount.
   game.registerLifecycle();

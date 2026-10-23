@@ -1,12 +1,46 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // Ticket 6.6 AD-13 end-sheet entry: the wiring of DispatchResult to the real overlays store, with
-// nav and the game store stubbed.
+// nav and the game store stubbed. Epic 10 entry 5 (AD-19 Start): the celebration controller, the
+// pointer controller's cancel and the reduced-motion pref are stubbed too; `load()` turns the
+// celebration flag off (as main.ts does in hook builds), so the earlier win cases run today's open.
 const calls: string[] = [];
 const outcomes: string[] = [];
 /** The view each `focusByPhase` call received. */
 const focused: unknown[] = [];
 const store: { view: { status: string } | undefined } = { view: undefined };
+/** The test-controlled celebration flag and reduced-motion pref. */
+const flags = { enabled: true, reduced: false };
+/** Each stub `celebration.start` call: the view and the `done` it received. */
+const starts: { view: unknown; done: () => void }[] = [];
+/** The pending `game.whenVisible()` resolvers. */
+const visibleWaiters: (() => void)[] = [];
+
+vi.mock('./celebration/celebration.svelte.ts', () => ({
+  celebration: {
+    start: (view: unknown, done: () => void) => {
+      calls.push('start');
+      starts.push({ view, done });
+    },
+  },
+  celebrationEnabled: () => flags.enabled,
+  setCelebrationEnabled: (on: boolean) => {
+    flags.enabled = on;
+  },
+}));
+vi.mock('./act', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./act')>()),
+  cancelGesture: () => calls.push('cancel'),
+}));
+vi.mock('../shell/prefs.svelte', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../shell/prefs.svelte')>();
+  return {
+    ...original,
+    prefs: Object.create(original.prefs, {
+      motion: { get: () => ({ baseMs: 180, reduced: flags.reduced }) },
+    }),
+  };
+});
 
 vi.mock('../shell/nav', () => ({
   nav: { push: () => calls.push('push'), pop: () => calls.push('pop') },
@@ -23,19 +57,29 @@ vi.mock('../shell/game.svelte', () => ({
     get view() {
       return store.view;
     },
+    whenVisible: () =>
+      new Promise<void>((resolve) => {
+        visibleWaiters.push(resolve);
+      }),
   },
 }));
 
 async function load(status?: string) {
   vi.resetModules();
+  flags.enabled = false;
+  flags.reduced = false;
   calls.length = 0;
   outcomes.length = 0;
   focused.length = 0;
+  starts.length = 0;
+  visibleWaiters.length = 0;
   store.view = status === undefined ? undefined : { status };
   const { overlays } = await import('./overlays.svelte');
   const sheet = await import('./end-sheet');
   return { overlays, ...sheet };
 }
+
+afterEach(() => vi.unstubAllGlobals());
 
 const settleNow = (callback: () => void) => callback();
 
@@ -193,6 +237,107 @@ describe('AD-13 end sheet entry', () => {
       expect(overlays.endSheet).toBe('hidden');
       expect(calls).toEqual([]);
     }
+  });
+});
+
+// Epic 10 entry 5 (AD-19 Start, AD-13 celebration bullet): the winning settle starts the run when
+// enabled, not reduced and visible; `done` runs the token-guarded open.
+describe('AD-19 win trigger', () => {
+  /** Loads `won` with the celebration on and the page `visibility`; registers a removal stub. */
+  async function enabled(visibility: 'visible' | 'hidden' = 'visible') {
+    const loaded = await load('won');
+    flags.enabled = true;
+    vi.stubGlobal('document', { visibilityState: visibility });
+    loaded.overlays.onCelebrationRemoved(() => undefined);
+    return loaded;
+  }
+  const flush = () => new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+  it('AD-19 enabled, visible and not reduced: the press is cancelled, the entry pushed and the run started after settle; the sheet opens only on done, once, announced', async () => {
+    const { overlays, onDispatched } = await enabled();
+    const pending: (() => void)[] = [];
+    onDispatched({ changed: true, finished: 'won' }, (cb) => pending.push(cb));
+    expect(calls).toEqual([]);
+    pending[0]?.();
+    expect(calls).toEqual(['cancel', 'push', 'start']);
+    expect(overlays.top).toBe('celebration');
+    expect(starts).toHaveLength(1);
+    expect(starts[0]?.view).toBe(store.view);
+    expect(overlays.endSheet).toBe('hidden');
+    expect(outcomes).toEqual([]);
+    overlays.close('celebration');
+    starts[0]?.done();
+    expect(calls).toEqual(['cancel', 'push', 'start', 'pop', 'push']);
+    expect(overlays.endSheet).toBe('expanded');
+    expect(outcomes).toEqual(['outcome']);
+    starts[0]?.done();
+    expect(calls).toEqual(['cancel', 'push', 'start', 'pop', 'push']);
+    expect(outcomes).toEqual(['outcome']);
+  });
+
+  it("AD-19 reduced motion, the flag off or a hidden page at settle run today's open only", async () => {
+    for (const no of ['reduced', 'disabled', 'hidden'] as const) {
+      const { overlays, onDispatched } = await enabled(no === 'hidden' ? 'hidden' : 'visible');
+      if (no === 'reduced') flags.reduced = true;
+      if (no === 'disabled') flags.enabled = false;
+      onDispatched({ changed: true, finished: 'won' }, settleNow);
+      expect([no, calls]).toEqual([no, ['push']]);
+      expect(overlays.endSheet).toBe('expanded');
+      expect(starts).toEqual([]);
+      if (no !== 'hidden') expect(outcomes).toEqual(['outcome']);
+    }
+  });
+
+  it('AD-19 not won or a dead token at settle does nothing: no cancel, no push, no start', async () => {
+    const notWon = await enabled();
+    const pending: (() => void)[] = [];
+    notWon.onDispatched({ changed: true, finished: 'won' }, (cb) => pending.push(cb));
+    store.view = { status: 'playing' };
+    pending[0]?.();
+    expect(calls).toEqual([]);
+    expect(starts).toEqual([]);
+
+    const dead = await enabled();
+    const later: (() => void)[] = [];
+    dead.onDispatched({ changed: true, finished: 'won' }, (cb) => later.push(cb));
+    dead.overlays.cancelEndSheetOpen();
+    later[0]?.();
+    expect(calls).toEqual([]);
+    expect(starts).toEqual([]);
+    expect(dead.overlays.endSheet).toBe('hidden');
+  });
+
+  it('AD-19 Give up and openAtBoot never start the celebration (the relaunch guard)', async () => {
+    const gave = await enabled();
+    store.view = { status: 'gaveUp' };
+    gave.onDispatched({ changed: true, finished: 'gaveUp' }, settleNow);
+    expect(calls).toEqual(['push']);
+    expect(starts).toEqual([]);
+
+    const boot = await enabled();
+    boot.openAtBoot();
+    expect(calls).toEqual(['push']);
+    expect(boot.overlays.endSheet).toBe('expanded');
+    expect(starts).toEqual([]);
+  });
+
+  it('AD-19 done on a hidden page opens nothing until whenVisible resolves, then expanded with no announce', async () => {
+    const { overlays, onDispatched } = await enabled();
+    onDispatched({ changed: true, finished: 'won' }, settleNow);
+    expect(calls).toEqual(['cancel', 'push', 'start']);
+    overlays.close('celebration');
+    vi.stubGlobal('document', { visibilityState: 'hidden' });
+    starts[0]?.done();
+    await flush();
+    expect(overlays.endSheet).toBe('hidden');
+    expect(calls).toEqual(['cancel', 'push', 'start', 'pop']);
+    expect(visibleWaiters).toHaveLength(1);
+    vi.stubGlobal('document', { visibilityState: 'visible' });
+    visibleWaiters[0]?.();
+    await flush();
+    expect(overlays.endSheet).toBe('expanded');
+    expect(calls).toEqual(['cancel', 'push', 'start', 'pop', 'push']);
+    expect(outcomes).toEqual([]);
   });
 });
 

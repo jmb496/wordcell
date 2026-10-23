@@ -313,6 +313,11 @@ function openDeferred(token: number): boolean {
   return true;
 }
 
+/** AD-19: whether `token` is the live deferred open; never consumes it (the celebration's start). */
+function isLiveToken(token: number): boolean {
+  return liveToken !== null && token === liveToken;
+}
+
 /** AD-13: one removal callback; a later registration replaces the earlier. */
 function onCelebrationRemoved(fn: (reason: CelebrationRemoval) => void): void {
   celebrationRemoved = fn;
@@ -410,6 +415,7 @@ export const overlays = {
   onUnfinished,
   deferEndSheetOpen,
   openDeferred,
+  isLiveToken,
   cancelEndSheetOpen,
   startCelebration,
   onCelebrationRemoved,
