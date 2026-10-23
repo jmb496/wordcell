@@ -29,6 +29,7 @@ import { overlays } from './ui/overlays.svelte';
 import { noteSceneHide } from './ui/scenes/hide-count';
 import {
   applyTheme,
+  clearTheme,
   defaultTheme,
   gardenTheme,
   paperTheme,
@@ -73,8 +74,9 @@ function textOf(reason: unknown, message = ''): string {
 // AD-15: halt first, so nothing runs against a live store after the report.
 function fatal(reason: unknown, message?: string): void {
   game.halt('fatal', textOf(reason, message));
-  // AD-16: the inline head script may have set a theme; the fatal surface wears the default look.
-  delete document.documentElement.dataset.theme;
+  // AD-16: the inline head script or the boot may have set a theme; the fatal surface wears the
+  // default look, status bar included (owner decision D2, 2026-10-22).
+  clearTheme();
   console.error(reason);
   showStandalone();
 }

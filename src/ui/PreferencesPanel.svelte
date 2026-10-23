@@ -90,7 +90,7 @@ function toggleTimer(): void {
   </button>
   <div class="group" role="radiogroup" aria-labelledby="theme-label">
     <p id="theme-label" class="label">{text.theme}</p>
-    <div class="segments">
+    <div class="list">
       {#each entries() as entry (entry.id)}
         <label class="segment" class:on={prefs.value.theme === entry.id}>
           <input
@@ -113,15 +113,29 @@ function toggleTimer(): void {
     margin: 0 0 8px; font: 400 0.875rem/1.25rem system-ui, "Roboto", sans-serif;
     color: var(--wc-ink-secondary);
   }
+  /* DESIGN.md Panels: Animation speed is a three-way segmented pill; Theme a vertical
+     single-choice list, one row of at least 44 px per theme (owner decision D1, 2026-10-22). */
   .segments { display: flex; border: 1px solid var(--wc-outline); border-radius: 9999px; overflow: hidden; }
+  .list {
+    display: flex; flex-direction: column; border: 1px solid var(--wc-outline); border-radius: 12px;
+    overflow: hidden;
+  }
   .segment {
     position: relative; flex: 1; min-height: 44px; display: grid; place-items: center; text-align: center;
     font: 400 1rem/1.5rem system-ui, "Roboto", sans-serif; color: var(--wc-ink-primary);
   }
-  .segment + .segment { border-left: 1px solid var(--wc-outline); }
+  .list .segment { place-items: center start; padding: 10px 16px; text-align: start; }
+  .segments .segment + .segment { border-left: 1px solid var(--wc-outline); }
+  .list .segment + .segment { border-top: 1px solid var(--wc-outline); }
   .segment.on { background: var(--wc-accent-teal); color: var(--wc-ink-on-accent); }
   .segment input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; }
-  .segment:has(input:focus-visible) { outline: 2px solid var(--wc-accent-teal); outline-offset: -4px; }
+  /* DESIGN.md Focus ring, drawn inside the segment (the group clips its edge): the 2 px ring with a
+     `{colors.table}` gap on both sides, so it shows on the teal checked fill too (owner decision
+     D5, 2026-10-22). */
+  .segment:has(input:focus-visible) {
+    outline: 2px solid var(--wc-accent-teal); outline-offset: -4px;
+    box-shadow: inset 0 0 0 6px var(--wc-table);
+  }
   .switch-row {
     box-sizing: border-box; width: 100%; min-height: 52px; margin-top: 16px; padding: 0;
     display: flex; align-items: center; justify-content: space-between; text-align: left;

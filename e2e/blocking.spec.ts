@@ -1,4 +1,8 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { expect, type Page, type Route, test } from '@playwright/test';
+import { themeRecords } from '../src/ui/theme/colour-literals';
+import { defaultTheme, paperTheme } from '../src/ui/theme/registry';
 import { expectAnotherWindow, expectOnlyButton, kind, stored } from './helpers/blocking';
 import { animationFrames } from './helpers/lifecycle';
 import { waitForDictionary } from './helpers/restore';
@@ -160,6 +164,53 @@ test.describe('AD-15 fatal handler', () => {
       window.dispatchEvent(new ErrorEvent('error', { message: 'AD-15 message only' }));
     });
     await expectFatal(page, 'AD-15 message only');
+  });
+
+  // Owner decision D2 (2026-10-22): the Halted screen wears Charcoal, status bar included, whatever
+  // theme is stored. Expected colours from the app.css default record, the meta from the registry.
+  test('AD-15 AD-16 a fatal under a stored Daylight Paper shows Charcoal Halted colours and resets the theme-color meta', async ({
+    page,
+  }) => {
+    const charcoal = themeRecords(
+      readFileSync(path.resolve(import.meta.dirname, '../src/ui/app.css'), 'utf8'),
+    ).get('default');
+    if (charcoal === undefined) throw new Error('app.css has no default theme record');
+    const rgb = (token: string) => {
+      const hex = charcoal.get(token)?.match(/^#([0-9a-f]{6})$/i)?.[1];
+      if (hex === undefined) throw new Error(`${token} is not #rrggbb in the default record`);
+      const byte = (i: number) => Number.parseInt(hex.slice(i, i + 2), 16);
+      return `rgb(${byte(0)}, ${byte(2)}, ${byte(4)})`;
+    };
+    const metaContent = () =>
+      page.evaluate(
+        () => document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.content,
+      );
+    const bg = (selector: string) =>
+      page.locator(selector).evaluate((el) => getComputedStyle(el).backgroundColor);
+    await seedStorage(page, {
+      session: fixture('session-idle-fresh.json'),
+      prefs: fixture('prefs-theme-paper.json'),
+    });
+    await page.goto('/');
+    await expect(page.getByTestId('card-0')).toBeVisible();
+    expect(await metaContent()).toBe(paperTheme.meta);
+    expect(await bg('html')).not.toBe(rgb('--wc-table'));
+    await page.evaluate(() => {
+      window.dispatchEvent(new ErrorEvent('error', { message: 'AD-15 themed fatal' }));
+    });
+    await expectFatal(page, 'AD-15 themed fatal');
+    expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBeUndefined();
+    expect(await metaContent()).toBe(defaultTheme.meta);
+    expect(defaultTheme.meta.toLowerCase()).toBe(charcoal.get('--wc-table'));
+    expect(await bg('html')).toBe(rgb('--wc-table'));
+    expect(await bg('[role="alertdialog"]')).toBe(rgb('--wc-surface-raised'));
+    const reload = page.getByRole('button', { name: 'Reload', exact: true });
+    expect(await reload.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(
+      rgb('--wc-accent-orange'),
+    );
+    expect(await reload.evaluate((el) => getComputedStyle(el).color)).toBe(
+      rgb('--wc-ink-on-accent'),
+    );
   });
 
   test('AD-15 a fatal halts the store before console.error reports it', async ({ page }) => {

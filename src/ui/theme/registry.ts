@@ -67,3 +67,12 @@ export function applyTheme(id: ThemeId): void {
   document.documentElement.dataset.theme = id;
   meta.content = entry.meta;
 }
+
+/** AD-15 (owner decision D2, 2026-10-22): the fatal surface wears Charcoal: no `data-theme` (the
+ * app.css default block) and the default theme's meta, registered or not. It runs inside the AD-15
+ * handler, so it never throws: a missing meta is applyTheme's AD-16 error at boot. */
+export function clearTheme(): void {
+  delete document.documentElement.dataset.theme;
+  const meta = document.head.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+  if (meta !== null) meta.content = defaultTheme.meta;
+}

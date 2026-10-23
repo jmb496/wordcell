@@ -215,6 +215,27 @@ describe('AD-14 colour-literal scan positives', () => {
       'short hex in a $derived under a colour name',
       () => svelte('', '', "const stroke = $derived(on ? '#000' : 'none');"),
     ],
+    [
+      'short hex in a $derived.by arrow under a colour name',
+      () => svelte('', '', "const stroke = $derived.by(() => (on ? '#000' : 'none'));"),
+    ],
+    [
+      'named in a $state.raw under a colour name',
+      () => svelte('', '', "let fill = $state.raw('white');"),
+    ],
+    [
+      'short hex in an expression-bodied arrow under a colour name',
+      () => ts("const stroke = (on: boolean) => (on ? '#000' : 'none');"),
+    ],
+    [
+      'short hex returned from a block-bodied $derived.by arrow under a colour name',
+      () =>
+        svelte('', '', "const stroke = $derived.by(() => {\n  return on ? '#000' : 'none';\n});"),
+    ],
+    [
+      'short hex returned from a block-bodied function expression under a colour name',
+      () => ts("const fill = function () {\n  return '#000';\n};"),
+    ],
     ['short hex in a colour-named const', () => ts("const fill = '#fff';")],
     ['short hex in a colour-named let', () => ts("let stroke = '#000';")],
     ['named in a colour-named const', () => ts("const color = 'red';")],
@@ -291,6 +312,25 @@ describe('AD-14 colour-literal scan negatives', () => {
       () => svelte('', '', "let { label = 'Plum Dusk' } = $props();"),
     ],
     ['WAAPI fill mode under a fill-named variable', () => ts("const fillMode = 'forwards';")],
+    [
+      'a $derived.by arrow under a fillMode binding',
+      () => svelte('', '', "const fillMode = $derived.by(() => (on ? 'red' : '#abc'));"),
+    ],
+    [
+      'a colour-named arrow whose block body returns a theme id',
+      () => ts("const fill = () => {\n  const id = 'plum';\n  return id;\n};"),
+    ],
+    [
+      "a nested function's return inside a colour-named block-bodied arrow",
+      () =>
+        ts(
+          "const fill = () => {\n  const pick = () => {\n    return 'red';\n  };\n  return pick;\n};",
+        ),
+    ],
+    [
+      'an arrow passed to a non-rune call under a colour name',
+      () => ts("const color = items.map((i) => (i ? 'red' : 'tan'));"),
+    ],
     ['letters under a FILLER-named const', () => ts("const FILLER_LETTERS = 'RED TAN GOLD';")],
     [
       'prose under an outline-named key',

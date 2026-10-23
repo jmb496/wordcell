@@ -389,8 +389,10 @@ interface Node {
 }
 
 // The keys of a node inside a colour context whose children stay in a value position: the context's
-// value, an expression tag's expression, a ternary's branches (not its test), logical operands and
-// a TS cast's expression; every other child (a comparison operand, a call argument) leaves it.
+// value, an expression tag's expression, a ternary's branches (not its test), logical operands, a
+// TS cast's expression and an arrow's body (an expression body is the value; a block body leaves
+// it, and FUNCTIONS below makes its own returns the value); every other child (a comparison
+// operand, a call argument) leaves it.
 const VALUE_KEYS: Readonly<Record<string, readonly string[]>> = {
   StyleDirective: ['value'],
   Attribute: ['value'],
@@ -401,14 +403,32 @@ const VALUE_KEYS: Readonly<Record<string, readonly string[]>> = {
   TSSatisfiesExpression: ['expression'],
   TSNonNullExpression: ['expression'],
   AssignmentPattern: ['right'],
+  ArrowFunctionExpression: ['body'],
 };
 
-/** The value keys of `node` in a colour context: VALUE_KEYS, plus a `$derived(…)` / `$state(…)`
- * rune's argument. */
+// The value-taking runes: their argument is the binding's value (`$derived.by`'s is a function
+// whose expression body or own returns are, through ArrowFunctionExpression above and FUNCTIONS).
+const RUNES = new Set(['$derived', '$state', '$derived.by', '$state.raw']);
+
+// A function in a value position: the argument of each of its own return statements (not a
+// nested function's) is a value position too.
+const FUNCTIONS = new Set(['ArrowFunctionExpression', 'FunctionExpression', 'FunctionDeclaration']);
+
+/** A call's callee as a rune name: `$derived`, or `$derived.by` for a non-computed member. */
+function calleeName(callee: Node): string | undefined {
+  if (callee.type === 'Identifier') return callee.name as string;
+  const object = callee.object as Node | undefined;
+  if (callee.type !== 'MemberExpression' || object?.type !== 'Identifier') return undefined;
+  const property = staticName(callee.property, callee.computed);
+  return property === undefined ? undefined : `${object.name as string}.${property}`;
+}
+
+/** The value keys of `node` in a colour context: VALUE_KEYS, plus a `$derived(…)`, `$state(…)`,
+ * `$derived.by(…)` or `$state.raw(…)` rune's argument. */
 function valueKeys(node: Node): readonly string[] | undefined {
-  const callee = node.callee as Node | undefined;
-  if (node.type === 'CallExpression' && callee?.type === 'Identifier') {
-    return callee.name === '$derived' || callee.name === '$state' ? ['arguments'] : undefined;
+  if (node.type === 'CallExpression') {
+    const name = calleeName(node.callee as Node);
+    return name !== undefined && RUNES.has(name) ? ['arguments'] : undefined;
   }
   return typeof node.type === 'string' ? VALUE_KEYS[node.type] : undefined;
 }
@@ -514,11 +534,12 @@ function scanTree(
       visit(expression, decl === undefined ? colour : colourName(decl));
     });
   };
-  const visit = (node: unknown, colour: boolean): void => {
+  // `returns`: inside the body of a function in a value position, outside any nested function.
+  const visit = (node: unknown, colour: boolean, returns = false): void => {
     if (typeof node !== 'object' || node === null || seen.has(node)) return;
     seen.add(node);
     if (Array.isArray(node)) {
-      for (const child of node) visit(child, colour);
+      for (const child of node) visit(child, colour, returns);
       return;
     }
     const n = node as Node;
@@ -538,11 +559,13 @@ function scanTree(
     }
     const opens = colourChildren(n);
     const keys = valueKeys(n);
+    const inner = typeof n.type === 'string' && FUNCTIONS.has(n.type) ? colour : returns;
+    const returned = returns && n.type === 'ReturnStatement';
     for (const [key, child] of Object.entries(n)) {
-      const value = colour && keys?.includes(key) === true;
+      const value = (colour && keys?.includes(key) === true) || (returned && key === 'argument');
       if (Array.isArray(child)) {
-        for (const c of child) visit(c, value || opens.includes(child) || opens.includes(c));
-      } else visit(child, value || opens.includes(child));
+        for (const c of child) visit(c, value || opens.includes(child) || opens.includes(c), inner);
+      } else visit(child, value || opens.includes(child), inner);
     }
   };
   for (const root of roots) visit(root, false);

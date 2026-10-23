@@ -155,6 +155,12 @@ const liftStart = $derived(column.cards.length - count);
   .column {
     grid-row: 1 / -1; display: grid; grid-template-rows: subgrid; min-width: 0;
     touch-action: var(--wc-pan);
+    /* DESIGN.md Card states: the 12 % teal drop wash, the one declaration every drop target below
+       (card faces, the placeholder, the foot) inherits. */
+    --drop-wash: linear-gradient(
+      color-mix(in srgb, var(--wc-accent-teal) 12%, transparent),
+      color-mix(in srgb, var(--wc-accent-teal) 12%, transparent)
+    );
   }
   .cards { position: relative; display: flex; flex-direction: column; }
   .placeholder {
@@ -206,15 +212,16 @@ const liftStart = $derived(column.cards.length - count);
   @media (hover: hover) and (pointer: fine) {
     .column:global(.wc-hover-tail) .hover-outline { display: block; }
     .column:global(.wc-grab) .cards :global(.card) { cursor: grab; }
+    /* A card face keeps its theme texture under the wash (owner decision D4, 2026-10-22). */
     .column:global(.wc-drop) .cards :global(.card.full) > :global(.face),
+    .column:global(.wc-drop-self) .cards :global(.remainder-top) > :global(.face) {
+      outline: 3px solid var(--wc-accent-teal);
+      background-image: var(--drop-wash), var(--wc-card-texture);
+    }
     .column:global(.wc-drop) .placeholder.shown,
-    .column:global(.wc-drop-self) .cards :global(.remainder-top) > :global(.face),
     .column:global(.wc-drop-self) .foot.whole {
       outline: 3px solid var(--wc-accent-teal);
-      background-image: linear-gradient(
-        color-mix(in srgb, var(--wc-accent-teal) 12%, transparent),
-        color-mix(in srgb, var(--wc-accent-teal) 12%, transparent)
-      );
+      background-image: var(--drop-wash);
     }
     .column:global(.wc-drop-self) .foot.whole { outline-offset: -3px; }
   }
@@ -242,14 +249,16 @@ const liftStart = $derived(column.cards.length - count);
   /* Epic 5 SPEC CAP-8 (DESIGN.md Layer order): a FLIP-gliding face (flip.ts `wc-glide`, literal
      from gestures/classes.ts) rides above the cards and under the sticky bars (2), no shadow. */
   .cards :global(.face.wc-glide) { z-index: 1; }
-  /* DESIGN.md Card states, drop target under a drag: 3 px teal outline and 12 % teal wash. */
-  .cards :global(.card.wc-drag-target) > :global(.face),
+  /* DESIGN.md Card states, drop target under a drag: 3 px teal outline and 12 % teal wash, over
+     the card face's theme texture (owner decision D4, 2026-10-22). */
+  .cards :global(.card.wc-drag-target) > :global(.face) {
+    visibility: visible;
+    outline: 3px solid var(--wc-accent-teal);
+    background-image: var(--drop-wash), var(--wc-card-texture);
+  }
   .placeholder:global(.wc-drag-target) {
     visibility: visible;
     outline: 3px solid var(--wc-accent-teal);
-    background-image: linear-gradient(
-      color-mix(in srgb, var(--wc-accent-teal) 12%, transparent),
-      color-mix(in srgb, var(--wc-accent-teal) 12%, transparent)
-    );
+    background-image: var(--drop-wash);
   }
 </style>

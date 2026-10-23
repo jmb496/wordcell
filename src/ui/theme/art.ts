@@ -210,9 +210,15 @@ const luminance = ({ r, g, b }: Rgb) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.07
  * stacking order of its colours, each layer at every alpha from 0 (absent, so every subset) to its
  * capped sum, sampled in ALPHA_STEP steps plus each shape's own opacity. The painted luminances
  * form one interval (every stack shares the bare surface), so when `fg`'s luminance lies inside
- * the sampled range some pixel matches it and the ratio is 1.
+ * the sampled range some pixel matches it and the ratio is 1. An optional `wash` is one flat
+ * colour at a fixed alpha painted over the art (a drop-target wash, owner decision D6).
  */
-export function worstRatio(art: Art, surface: Rgb, fg: Rgb): number {
+export function worstRatio(
+  art: Art,
+  surface: Rgb,
+  fg: Rgb,
+  wash?: { readonly colour: Rgb; readonly alpha: number },
+): number {
   const own = new Map<string, number[]>();
   const add = (colour: string | null, a: number) => {
     if (colour !== null) own.set(colour, [...(own.get(colour) ?? []), a]);
@@ -231,7 +237,7 @@ export function worstRatio(art: Art, surface: Rgb, fg: Rgb): number {
   const paint = (order: readonly (typeof layers)[number][], below: Rgb): void => {
     const [top, ...rest] = order;
     if (top === undefined) {
-      const l = luminance(below);
+      const l = luminance(wash === undefined ? below : over(wash.colour, wash.alpha, below));
       lo = Math.min(lo, l);
       hi = Math.max(hi, l);
       return;

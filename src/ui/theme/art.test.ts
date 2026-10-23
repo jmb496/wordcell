@@ -185,4 +185,21 @@ describe('AD-14 theme art texture cap and worst point', () => {
     expect(r).toBeGreaterThanOrEqual(3.9389);
     expect(r).toBeLessThan(3.9389 + 0.02);
   });
+
+  // A white wash at 0.5 over a black surface with no shapes is the one grey (127.5): 3.9767:1
+  // against white ink; over a black 0.5 rect it stays the brightest stack (the rect only darkens).
+  // A black wash at 0.5 over a white 0.5 rect on black halves the brightest stack to 63.75:
+  // 10.4088:1 against white ink, where a wash under the art would leave 127.5 (3.9767:1).
+  it('AD-14 worstRatio paints the wash over the art before measuring', () => {
+    const wash = { colour: WHITE, alpha: 0.5 };
+    expect(worstRatio({ width: 1, height: 1, shapes: [] }, BLACK, WHITE, wash)).toBeCloseTo(
+      3.9767,
+      4,
+    );
+    expect(worstRatio(art(rect('000000', 0.5)), BLACK, WHITE, wash)).toBeCloseTo(3.9767, 4);
+    expect(worstRatio(art(rect('000000', 0.5)), BLACK, WHITE)).toBe(21);
+    expect(
+      worstRatio(art(rect('ffffff', 0.5)), BLACK, WHITE, { colour: BLACK, alpha: 0.5 }),
+    ).toBeCloseTo(10.4088, 4);
+  });
 });

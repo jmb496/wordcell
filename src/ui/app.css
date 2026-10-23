@@ -27,7 +27,9 @@
   --wc-destination-fill: #2e3a52;
   --wc-error: #f08a84;
   --wc-scrim: #000000b3;
-  /* Internal tokens, not DESIGN.md colour roles. */
+  /* Internal tokens, not DESIGN.md colour roles. The lifted-card shadow (DESIGN.md Elevation &
+     Depth) is Charcoal's in every dark alternate block too (owner decision D3, 2026-10-22);
+     Daylight Paper declares its lighter one. */
   --wc-shadow-drag: #0008;
   --wc-scene-pointer-fill: #fff;
   --wc-scene-pointer-stroke: #1a1a1a;
@@ -62,14 +64,15 @@
   --wc-destination-fill: #2a2860;
   --wc-error: #ff8f9a;
   --wc-scrim: #000000b3;
-  --wc-shadow-drag: rgb(0 0 0 / 0.35);
+  --wc-shadow-drag: #0008;
   --wc-scene-pointer-fill: #fff;
   --wc-scene-pointer-stroke: #1a1a1a;
   --wc-scene-pointer-shadow: rgb(0 0 0 / 0.45);
   --wc-table-art: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'><path d='M48 0H0V48' fill='none' stroke='%2335d0ff' stroke-opacity='0.07'/></svg>");
   --wc-card-texture: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'><rect width='4' height='1' fill='%2335d0ff' fill-opacity='0.06'/></svg>");
 }
-/* Greenhouse Dusk (epic themes TH-5): values from research/brief.md section B; art per the 9.5 grammar. */
+/* Greenhouse Dusk (epic themes TH-5): values from research/brief.md section B; art per the 9.5 grammar,
+   its table-art strokes at 4.5 % so a washed drop-target outline keeps 3:1 (owner decision D6, 2026-10-22). */
 :root[data-theme="garden"] {
   color-scheme: dark;
   --wc-table: #101a14;
@@ -90,11 +93,11 @@
   --wc-destination-fill: #4a2f48;
   --wc-error: #ff9a8a;
   --wc-scrim: #000000b3;
-  --wc-shadow-drag: rgb(0 0 0 / 0.35);
+  --wc-shadow-drag: #0008;
   --wc-scene-pointer-fill: #fff;
   --wc-scene-pointer-stroke: #1a1a1a;
   --wc-scene-pointer-shadow: rgb(0 0 0 / 0.45);
-  --wc-table-art: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'><path d='M0 52C18 52 22 36 32 32S50 14 64 12' fill='none' stroke='%238fdc9e' stroke-width='1.2' stroke-opacity='0.08'/><path d='M0 12C14 14 24 26 32 32S52 50 64 52' fill='none' stroke='%238fdc9e' stroke-width='1.2' stroke-opacity='0.08'/><path d='M32 0V64' fill='none' stroke='%238fdc9e' stroke-width='1.2' stroke-opacity='0.08'/></svg>");
+  --wc-table-art: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'><path d='M0 52C18 52 22 36 32 32S50 14 64 12' fill='none' stroke='%238fdc9e' stroke-width='1.2' stroke-opacity='0.045'/><path d='M0 12C14 14 24 26 32 32S52 50 64 52' fill='none' stroke='%238fdc9e' stroke-width='1.2' stroke-opacity='0.045'/><path d='M32 0V64' fill='none' stroke='%238fdc9e' stroke-width='1.2' stroke-opacity='0.045'/></svg>");
   --wc-card-texture: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='6' height='6' viewBox='0 0 6 6'><path d='M0 1L3 0M3 4L6 3' fill='none' stroke='%23f6f0dc' stroke-width='1' stroke-opacity='0.03'/></svg>");
 }
 /* Brass and Walnut (epic themes TH-5): values from research/brief.md section C; art per the 9.5 grammar. */
@@ -118,7 +121,7 @@
   --wc-destination-fill: #232c46;
   --wc-error: #f59a8c;
   --wc-scrim: #000000b3;
-  --wc-shadow-drag: rgb(0 0 0 / 0.35);
+  --wc-shadow-drag: #0008;
   --wc-scene-pointer-fill: #fff;
   --wc-scene-pointer-stroke: #1a1a1a;
   --wc-scene-pointer-shadow: rgb(0 0 0 / 0.45);
@@ -176,7 +179,7 @@
   --wc-destination-fill: #33306a;
   --wc-error: #ffa08c;
   --wc-scrim: #000000b3;
-  --wc-shadow-drag: rgb(0 0 0 / 0.35);
+  --wc-shadow-drag: #0008;
   --wc-scene-pointer-fill: #fff;
   --wc-scene-pointer-stroke: #1a1a1a;
   --wc-scene-pointer-shadow: rgb(0 0 0 / 0.45);

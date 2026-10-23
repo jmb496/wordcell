@@ -162,4 +162,22 @@ describe('theme registry', () => {
     expect(() => applyTheme('default')).toThrow('AD-16 theme-color meta is missing');
     expect(() => register(defaultTheme)).toThrow('registered twice');
   });
+
+  it('AD-15 clearTheme removes data-theme and sets the default meta, with nothing registered', async () => {
+    const { meta, root } = stubDocument();
+    const { clearTheme, defaultTheme } = await fresh();
+    root.dataset.theme = 'paper';
+    meta.content = '#ECE6D8';
+    clearTheme();
+    expect(root.dataset).not.toHaveProperty('theme');
+    expect(meta.content).toBe(defaultTheme.meta);
+  });
+
+  it('AD-15 clearTheme never throws without a theme-color meta', async () => {
+    const { root } = stubDocument(false);
+    const { clearTheme } = await fresh();
+    root.dataset.theme = 'paper';
+    expect(() => clearTheme()).not.toThrow();
+    expect(root.dataset).not.toHaveProperty('theme');
+  });
 });

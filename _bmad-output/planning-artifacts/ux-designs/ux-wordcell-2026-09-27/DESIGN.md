@@ -519,7 +519,7 @@ pills (`{rounded.full}`); among badges only the error dot is a circle. The 44 ×
   drawn under the S ghosts, as during the drag); *inert*
   (Composing: every column except the destination column; Place: all columns; Game over: all
   columns (R-75); R-39): unchanged look, no hover. S ghosts are inert too.
-- **Focus ring.** A 2 px `{colors.accent-teal}` ring. On a card it is drawn inside the card edge (2 px in), with no offset or gap; on a full-width menu row it is likewise drawn inside the row edge (the rows sit flush in the sheet's scrolling content, which would clip an offset ring; owner, 2026-10-22); on other controls it keeps the 2 px offset and the `{colors.table}` gap
+- **Focus ring.** A 2 px `{colors.accent-teal}` ring. On a card it is drawn inside the card edge (2 px in), with no offset or gap; on a full-width menu row it is likewise drawn inside the row edge (the rows sit flush in the sheet's scrolling content, which would clip an offset ring; owner, 2026-10-22); a segmented-control segment or a Theme list row draws the 2 px ring inside its edge with a `{colors.table}` gap on both sides of the ring, so it shows on the teal selected fill (owner, 2026-10-22); on other controls it keeps the 2 px offset and the `{colors.table}` gap
   between the ring and the element. It is distinct from the selection outline (outline plus lift);
   when both apply, both are drawn. On a fanned column card the focus ring encloses the card's
   visible strip; the selection outline encloses the whole lifted tail.
@@ -679,8 +679,11 @@ pills (`{rounded.full}`); among badges only the error dot is a circle. The 44 ×
   a 48 px header, content max 560 px wide centred. Statistics is a 2 × 3 grid of stat tiles
   (label ui-label ink-secondary, value in `{typography.score}`). The longest-word tile's word
   shrinks to 14 px first, then wraps with `overflow-wrap: anywhere`. Preferences uses a three-way segmented control
-  (Fast / Normal / Slow) and a switch (Show timer). The selected segment and the switch's on state
-  use a `{colors.accent-teal}` fill with `{colors.ink-on-accent}` text and thumb.
+  (Fast / Normal / Slow), a switch (Show timer) and, for Theme, a vertical single-choice list: one
+  row of at least 44 px per theme, label left with 16 px side padding, rows separated by
+  `{colors.outline}` lines in a `{rounded.md}` box with a `{colors.outline}` edge, every label fully
+  visible and tappable at 360 px (owner, 2026-10-22). The selected segment or row and the switch's
+  on state use a `{colors.accent-teal}` fill with `{colors.ink-on-accent}` text and thumb.
 - **Blocking message** (session rejected, spec §2; unexpected failure, Q-37; open in another
   window, Q-38). Replaces the board: a dialog-styled card centred on the table, no scrim, one
   primary button (`Reload`, or `New game` on the session-rejected message; AD-15).
