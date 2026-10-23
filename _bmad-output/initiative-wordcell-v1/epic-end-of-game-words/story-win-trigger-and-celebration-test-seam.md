@@ -43,3 +43,4 @@ Verify: `npm run test:all` is green with every existing win-and-sheet assertion 
 
 - Open question: How the seam's disabled path interacts with the existing winning guard in every existing win spec. Answered by construction (Start); the unchanged-specs run confirms it.
 - Until entry 7, ☰ or `M` during a run throws (`open(menu)` guard) to AD-15; no entry 5 test presses them; the branch must not merge before entry 7.
+- Decision (owner standing rule, 2026-10-23, code review): the plan checkpoint items stand as built (SPEC F16): a win that settles while hidden opens the end sheet without the celebration; reduced motion or the seam off pushes no `celebration` history entry.

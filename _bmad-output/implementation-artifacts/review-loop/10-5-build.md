@@ -25,3 +25,4 @@ Snapshot: tree 26959aad72ee0178d9af63d0bc83b5b752f81b50 (no fix pass)
 ## Result — converged after 1 pass
 Final state (HEAD 691c8e6, no fix pass): `npm test` pass, `npm run lint` pass (1 pre-existing warning), `npm run check` pass. No checkpoint commit (no fix pass); this log is left uncommitted for the caller.
 Unapplied minors: the five listed under Pass 1.
+Decision needed: resolved 2026-10-23 under the owner's standing rule (accept the proposed default): keep as built, recorded as SPEC F16 (ticket and epic Notes, spec memlog).

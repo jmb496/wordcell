@@ -101,5 +101,6 @@ Technical defaults under the standing rule; none changes functionality, UX or ga
 | F13 | Back, menu, hide, Redo (owner, 2026-10-20). | Back skips it (the run owns one history entry, AD-13); ☰ or `M` ends it, then the sheet, then the menu; hiding or resizing ends it; a Redo that restores the win plays it again. Reverses the earlier "not an overlay" call. |
 | F14 | Words row separators (Opus review, 2026-10-23; owner standing rule: accept the proposed default). | `--wc-hairline` lines as DESIGN.md Words section says, not `--wc-outline` as built in 10.2; the separators are fainter in every theme (`7352e29`, baselines `4e0d813`). |
 | F15 | Keys while it runs (ticket 10.4 review, 2026-10-23; owner standing rule: accept the proposed default). | While the celebration runs only Undo, `N`, `M`, the ☰ button, `Space`/`Esc` (skip) and back act; `?`, a WordCell tap or `Enter` and every other game key do nothing (AD-13). |
+| F16 | Background win and reduced-motion history (ticket 10.5 code review, 2026-10-23; owner standing rule: accept the proposed default). | A win whose board settles while the page is hidden opens the end sheet on return without the celebration; with reduced motion (or the seam off) no `celebration` history entry is pushed and back behaves as before the epic (AD-19 Start, EXPERIENCE.md "Never plays"; entry 9 syncs the docs). |
 
-Next owner answer takes F16.
+Next owner answer takes F17.
