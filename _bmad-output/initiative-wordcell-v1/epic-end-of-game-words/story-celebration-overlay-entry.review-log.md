@@ -1,5 +1,5 @@
 # Review log — story-celebration-overlay-entry.md
-State: pass 3: done
+State: pass 4: done
 Pre-loop: HEAD 2222705; pass0.md 247 words; budget stated 1500 words.
 
 ## Pass 1 — 2026-10-23
@@ -77,3 +77,29 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 - "Point entry 5's plan at the ☰ interim halt" — the Notes already record it; entry 5 reads this ticket
 Words (docs): 1426 (5.8 x pass 0; budget 1500)  |  Snapshot: story-celebration-overlay-entry.passes/pass3.md
 Fixer applied findings 1–14 (2 majors, 12 minors); the pass-2 decision-needed Keys item left as awaiting the owner.
+
+## Pass 4 — 2026-10-23
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 1, minor 11 (merged), decision-needed 0  |  Dropped in triage: 3
+### Applied
+- [major] Removal callback / AC preamble — Undo during the run: `flip.ts` `play()` flushes focus-follow's `sync` while `celebration` is still on top (it yields, `SUSPENDING`), and `onDispatched` refocuses only when the sheet was shown (`hidden` during the run), so focus never reaches the phase target (EXPERIENCE.md "continue as today", Q-01) → fixer item 1
+- [minor] AC focus-follow row — drive a sync that would move focus (tracked card left the DOM) → fixer item 2
+- [minor] AC Gestures — `peekToSticky` hits its no-peek throw first, proves nothing: drop → fixer item 3
+- [minor] Removal callback — "otherwise" reads as "not open" (every Undo would throw): limit to open-but-not-top → fixer item 4
+- [minor] Keys bullet — `Space` is a skip (SPEC, entry 6): WordCell `Space` an interim no-op like `M`; confirmation is at ticket review (SPEC Open Questions; epic Notes owner decision 2026-10-20) → fixer item 5
+- [minor] AC Keys row — drop `M` (entry 7 owns it); phrase WordCell `Enter`/`Space` as running no `attempt()` row → fixer item 6
+- [minor] AC — the `mainInert` check lives in surfaces.test.ts `AD-13 App main inert` → fixer item 7
+- [minor] `done` ownership — attached flag mechanism → fixer item 8
+- [minor] Keys bullet — carve-out applies when `celebration` is the only `SUSPENDING` entry open → fixer item 9
+- [minor] AC Verify — add `npm run test:all` green → fixer item 10
+- [minor] Start / AC Legal start — all checks before any close (as `openDeferred`); "one push, after one pop when a sticky view was on top" → fixer item 11
+### Default applied (technical)
+- Undo refocus — `onDispatched`'s `shown` also counts an open `celebration` (read before `onUnfinished()`), so the existing `tick().then(focusByPhase)` runs; end-sheet.test.ts `AD-13` case
+- attached flag — module-private `let attached` in `celebration.svelte.ts`, honoured only by the exported singleton; no public member
+### Decision needed (functionality / UX / gameplay)
+- none new
+### Dropped
+- `SUSPENDING` comment wording — the ticket already requires the comment to name the `celebration` exceptions
+- ☰ interim halt pointer for entry 5 — already in Notes (also dropped pass 3)
+- duplicate onUnfinished / peekToSticky findings merged
+Words (docs): 1500 (6.1 x pass 0; budget 1500)  |  Snapshot: story-celebration-overlay-entry.passes/pass4.md
+Fixer applied findings 1–11 (1 major, 10 minors), offsetting additions with cuts of repeated wording; at budget, so later minors go to the fixer only when word-neutral.
