@@ -36,3 +36,4 @@ Verify: UI Vitest `AD-19 …` tests pass for floor contact (bounce count, vy rev
 ## Notes
 
 - Open question: the constants are initial, tuned at entry 6's checkpoint, which also judges DOM-copy cost on a mid-range Android.
+- Post-close (Opus review, 2026-10-23, `c84a1df`; see the epic Notes): side and horizontal speed now derive from the launch origin too (AD-19/CAP-2 wording carried by entry 9), copies carry `data-celebration`, the band comes from the AD-12 visible band, the layer is z-index 6, `start()` throws without a `wordList`, and the per-run mount moved to entry 5.

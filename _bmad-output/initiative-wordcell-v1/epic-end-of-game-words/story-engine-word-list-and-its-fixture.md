@@ -31,3 +31,4 @@ Verify: The engine unit tests named R-86 pass for order, ties, duplicates (equal
 ## Notes
 
 - Open question: Finding a seed and move partition that gives a duplicate, a tie, a long word and a shared card is a search; real words are best-effort.
+- Post-close (Opus review, 2026-10-23, `c84a1df`; see the epic Notes): the R-86 tests now pin word order after a non-default placement order and the duplicate tie-break with move order distinct from cell and card-id order.

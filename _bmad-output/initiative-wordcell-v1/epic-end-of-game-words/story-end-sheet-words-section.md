@@ -38,3 +38,4 @@ Verify: Playwright functional tests on `android` named `R-88 …`, Vitest `AD-3 
 - parent — _bmad-output/initiative-wordcell-v1/epic-end-of-game-words/epic-end-of-game-words.md
 - design — EXPERIENCE.md End sheet, Message catalogue; DESIGN.md Words section
 - code — src/ui/EndSheet.svelte, src/ui/text.ts, src/ui/end-sheet.test.ts
+- Post-close (Opus review, 2026-10-23, `c84a1df`, `7352e29`; see the epic Notes): the tests read the visible word and count text and pin the 14 px shrink with a real 20-letter word; F14 changed the row separators to `--wc-hairline` (baselines `4e0d813`, now visually reviewed).

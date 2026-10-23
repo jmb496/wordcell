@@ -12,6 +12,8 @@ E = engine Vitest. P6 = Playwright (`android`; `desktop` where noted). U = UI Vi
 | R-86 derived by replay, never stored: Session and history shapes and versions unchanged | CAP-1 | E (existing serialize and fixture tests stay green; `index.test.ts` pins) |
 | AD-1 scan, AD-2 export list (`WordListEntry`), runtime-key pin | CAP-1 | E (architecture tests) |
 | AD-19 `step`: floor bounce, wall exit, determinism, dt clamp, cap, empty list | CAP-2 | U |
+| AD-19 `step` (Opus review 2026-10-23): waves overlap in list order (F6); the launch rises then falls; every group bounces on the floor, then leaves past a side edge on the side with more room before the cap (portrait, desktop, landscape); physics and launches scale with the cap (F7); closing fade 1 × base at each speed | CAP-2 | U |
+| AD-19 renderer and controller (Opus review 2026-10-23): band from the AD-12 visible band (a shown dictionary banner tops it); container fixed to and clipping the band at DESIGN.md layer order (above the drag layer); rows wider than the band drawn scaled; each group launches from its own WordCell (F8); each copy shows its own letter in word order at the board card height | CAP-2 | U |
 | AD-19 copies carry `data-celebration`, no `data-card-id`/`data-testid`/`data-mirror-of`; live card count unchanged | CAP-2 | U, P6 |
 | R-87 win by Confirm → celebration → end sheet expanded | CAP-3 | P6 |
 | R-87 copies are separate from the board: a card used in two words appears in two groups | CAP-3 | P6 |
@@ -35,6 +37,7 @@ E = engine Vitest. P6 = Playwright (`android`; `desktop` where noted). U = UI Vi
 | R-88 relaunch into a finished game shows it | CAP-4 | P6 |
 | R-88 adds nothing stored: Session and history unchanged (localStorage compare) | CAP-4 | P6 |
 | AD-3 the list renders only from `view.wordList` | CAP-4 | U |
+| DESIGN.md Words section: a 20-letter word shrinks to no less than 14 px and stays on one line beside its count at 360 px (Opus review 2026-10-23) | CAP-4 | P6 |
 | Words section at 360 px, Charcoal and one light theme | CAP-4 | S |
 
 ## Exempt

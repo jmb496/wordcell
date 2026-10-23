@@ -99,3 +99,6 @@ Technical defaults under the standing rule; none changes functionality, UX or ga
 | F11 | Skip press scope (owner, 2026-10-20). | A press outside the bars skips and is consumed; a bar button acts normally and stops the celebration. |
 | F12 | Test seam default (review, 2026-10-20). | In hook builds the celebration is off until a test enables it, so existing win specs keep passing; hook-free builds always run it and their winning specs skip by press (CAP-6). Trade-off: the disabled path is test-only code in a seam, as AD-17 allows. |
 | F13 | Back, menu, hide, Redo (owner, 2026-10-20). | Back skips it (the run owns one history entry, AD-13); ☰ or `M` ends it, then the sheet, then the menu; hiding or resizing ends it; a Redo that restores the win plays it again. Reverses the earlier "not an overlay" call. |
+| F14 | Words row separators (Opus review, 2026-10-23; owner standing rule: accept the proposed default). | `--wc-hairline` lines as DESIGN.md Words section says, not `--wc-outline` as built in 10.2; the separators are fainter in every theme (`7352e29`, baselines `4e0d813`). |
+
+Next owner answer takes F15.
