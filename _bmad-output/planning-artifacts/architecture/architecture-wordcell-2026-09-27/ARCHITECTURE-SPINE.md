@@ -434,8 +434,9 @@ sequenceDiagram
 
 ### AD-10 — Preferences and motion
 
-- **Binds:** `src/shell/prefs.svelte.ts`, `src/ui/motion.ts`, spec §7.10, R-76, EXPERIENCE.md
-  Motion.
+- **Binds:** `src/shell/prefs.svelte.ts`, `src/ui/motion.ts`, `src/ui/theme/` (the registry, the
+  art grammar, the TH-2 colour-literal gate and the contrast harness), spec §7.10, R-76,
+  EXPERIENCE.md Motion, epic themes TH-1…TH-9.
 - **Prevents:** preferences in the Session or undo history; JS and CSS animations reading speed
   or reduced motion differently.
 - **Rule:** `prefs.svelte.ts` is the only reader and writer of `wordcell:prefs`; writes are
@@ -716,7 +717,11 @@ sequenceDiagram
   `halted` if it exists (no further writes, AD-4/AD-10; the store module is created at import in
   `booting` (AD-4), which can be set `halted`, and nothing is written before the font check), then show one blocking fatal-error surface: the DESIGN.md Blocking message component, title
   `Something went wrong.`, body the error message, one primary `Reload`, storage untouched
-  (Q-37); when the failure comes before the UI is mounted, the handler mounts a standalone
+  (Q-37); the fatal surface wears Charcoal whatever theme is stored: the handler removes
+  `data-theme` and resets the `theme-color` meta to the default theme's colour (`clearTheme()` in
+  `src/ui/theme/registry.ts`; owner, 2026-10-18, and D2 2026-10-22; for the fatal cause this
+  supersedes ticket 9.4's "halts after it wear the stored theme"; the other Blocking causes keep
+  the stored theme); when the failure comes before the UI is mounted, the handler mounts a standalone
   fatal component into the root. At boot, `document.fonts.load('600 1em "WordCell Serif"', 'W')`
   resolving to an empty list or rejecting is such a failure; the check blocks mount and has a
   30 s timeout that throws to this handler `[ASSUMPTION A-A10]` (fatal by this rule; AD-8's fetch
@@ -1070,6 +1075,13 @@ Changes the first epic makes to commit `785c0f6`:
   `src/app-version.d.ts`; the override is set to `0.0.0 (test)` in the `webServer` `env` of
   `playwright.config.ts` and `playwright.screens.config.ts`, in `build:test`, in the `test:screens`
   docker run (`-e`) and in the `ci.yml` screens job `env`.
+- Epic 9 (close-out edits, not deviations; owner go-ahead 2026-10-23): `tsconfig.arch.json` also
+  type-checks the Node-only theme harness (`src/ui/theme/colour-literals.ts` and its test,
+  `src/ui/theme/contrast.test.ts`) and carries `types: ["node", "vite/client"]` (tickets 9.3,
+  9.6; 9.11 recorded no change on a misreading); `playwright.screens.config.ts` sets
+  `toHaveScreenshot` `threshold: 0.05` beside `maxDiffPixelRatio: 0.01`, because Playwright's
+  default per-pixel threshold (0.2) let dark-on-dark changes pass (`fc3c20c`, Opus review of
+  epic 9).
 - CLAUDE.md: rule 5 path and the Commands and Testing expectations lines already updated with
   this spine (AD-8, AD-17; Docker in WSL2 only for screenshot baselines and the actionlint proof
   (ticket 1.11, 2026-09-28), uv/Python only for regenerating the font).
@@ -1093,6 +1105,7 @@ Changes the first epic makes to commit `785c0f6`:
 | Language data, R-85 | `engine/lang/en.ts` | AD-2 |
 | Dictionary, R-37, R-38 | `scripts/build-dictionary.mjs`, `shell/dictionary.svelte.ts` | AD-8 |
 | Preferences and motion, spec §7.10 | `shell/prefs.svelte.ts`, `ui/motion.ts` | AD-10 |
+| Themes, Q-45, epic themes TH-1–TH-9 | `ui/theme/` (registry, art, TH-2 colour-literal gate, contrast harness), `ui/app.css` theme blocks, `index.html` pre-paint script | AD-10, AD-16, AD-15 (Halted in Charcoal) |
 | Layout and band order | `ui/layout/` | AD-11 |
 | Drag, tap, overlap targeting, R-14, Q-34 | `ui/gestures/` | AD-12 |
 | Overlays, back handling | `ui/overlays.svelte.ts`, `shell/nav.ts` | AD-13 |

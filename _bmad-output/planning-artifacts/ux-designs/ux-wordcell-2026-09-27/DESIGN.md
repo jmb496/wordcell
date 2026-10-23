@@ -200,7 +200,20 @@ colour, so the principles below hold for all of them and only the specific value
 ## Colors
 
 Theme-neutral rules (every theme): colours come only from `--wc-*` tokens, never a literal in
-`src/**` outside the token files; each token keeps its role below; every theme meets these
+`src/**` outside the token files (`src/ui/app.css`; the TH-2 gate is
+`src/ui/theme/colour-literals.ts`, run by `npm test`). In script and markup a colour function
+(`rgb()`, `hsl()`, `oklch()` and the like) or a 6/8-digit hex fails anywhere in a string; a short
+hex (`#rgb`, `#rgba`) or a named colour fails only in a colour value position: the value of a
+colour-bearing CSS property (colours of `color`, `background*`, `border*`, `outline*`, `fill`,
+`stroke`, the `*-color` properties, `box-shadow`, `text-shadow`, `filter`, `mask*`,
+`text-emphasis`, vendor prefixes) or of any custom property `--*`, whether in a declaration
+string, a style directive or attribute, an object key, a `.style`, `cssText` or canvas paint
+assignment, or `setProperty`/`setAttribute`, `var()` fallbacks included; or the initializer of a
+binding (variable, parameter or destructuring default, `$props()` default, class field,
+`$derived`/`$state` argument) whose name or last word is a colour word (color, colour, fill,
+stroke, background, shadow, border, outline). Only value positions count (ternary branches,
+logical operands), never conditions or comparison operands, and prose (`Word: sentence`) is never
+a declaration (Opus review of epic 9, 2026-10-22). Each token keeps its role below; every theme meets these
 contrast floors, which a unit test computes from the theme's token values: text pairs
 (card ink on card face and on destination fill, ink primary on destination fill, ink secondary on
 surface and on surface raised, error on surface, ink on accent orange) ≥ 4.5:1; outline on table
@@ -259,7 +272,9 @@ alternates. Each theme's values are in `src/ui/app.css`; the research brief
   floor measured over the worst point of the texture. Card backs are never shown, so they are out
   of scope.
 - The manifest `theme_color` and `background_color` stay Charcoal's `#15171B`; the `theme-color`
-  meta follows the active theme (AD-16). The scrim stays dark in every theme.
+  meta follows the active theme (AD-16). The fatal-error Blocking message always shows Charcoal
+  and resets the meta to `#15171B`, whatever theme is stored (AD-15; owner, 2026-10-18 and D2 2026-10-22).
+  The scrim stays dark in every theme.
 - A theme also sets `color-scheme` (`light` for Daylight Paper, `dark` otherwise) and the four
   internal tokens that are not colour roles (`--wc-shadow-drag` and the three `--wc-scene-pointer-*`
   tokens), so a theme is complete when it defines all 18 roles plus those.
