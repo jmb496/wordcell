@@ -1,5 +1,5 @@
 # Review log — story-win-trigger-and-celebration-test-seam.md
-State: pass 3: done
+State: pass 4: done
 Pre-loop: HEAD 8d5147f; pass0.md 373 words; growth budget 2.5x (~930 words); tickets.toml entry 5 fields interface, tests, owns, consumers, unknown, plan_checkpoint passed as intent, added to Description in pass 1.
 
 ## Pass 1 — 2026-10-23
@@ -99,3 +99,28 @@ Fixer: all 12 applied; majors ~+115 words, minors net −3 (cut the screens pare
 - adversarial: relaunch limit to entry 8 — merged into the item 5 major
 - edge: copy count via `cards.length` — merged into item 4 (literal 55)
 - adversarial: hook-free relaunch belongs to entry 8 — entry 8 owns the real-win suite; a seeded relaunch is CAP-3 (rule-coverage R-87 no-start row), kept here
+
+## Pass 4 — 2026-10-23
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 1, minor 10, decision-needed 0  |  Dropped in triage: 2
+Words (docs): 1106 (2.97 x pass 0)  |  Snapshot: _bmad-output/initiative-wordcell-v1/epic-end-of-game-words/story-win-trigger-and-celebration-test-seam.passes/pass4.md
+Fixer: all 7 applied; major +5 words, minors −15; the close-out marker sits at the end of the Start no-start sentence (entry 9 syncs AD-19 Start and EXPERIENCE.md "Never plays"); nothing run (no commands touched).
+### Applied
+- [major] AC R-87 run — pass-3 item 9's "`history.length` = before Confirm + 1" fails on correct code and passes on the bug: `nav.pop` is `history.back()`, the fixture's Undo leaves a forward slot, so a correct run leaves the length unchanged (e2e/nav.spec.ts "Undo then Redo into won … history.length as at boot, wc 1") → fixer item 1
+- [minor] AC AD-19 — "today's open, no push" reads as no nav push at all (today's open pushes `endSheet`) → fixer item 2
+- [minor] AC Verify line — "every existing win-and-sheet spec unchanged" vs the `WON_ROWS` move: "assertion unchanged" → fixer item 3
+- [minor] Start bullet — the no-push reduced/disabled path and the hidden-at-settle no-start refine AD-19 Start / EXPERIENCE.md "Never plays"; mark for the close-out sync (SPEC Constraints, rule 7) at zero net words → fixer item 4
+- [minor] AC no-start — name the hook-free relaunch check `R-87` (rule-coverage needs the id in the name) → fixer item 5
+- [minor] AC copies — name the `WON_ROWS` home `e2e/helpers/celebration.ts` → fixer item 6
+- [minor] AC — cut two unrun tool claims ("Playwright rejects spec-to-spec imports", "Celebration.svelte fills the root before inserting it"); the checks do not depend on them → fixer item 7
+### Default applied (technical)
+- pop-before-push check — `history.length` after the sheet opens equals its value while `running()`; `history.state.wc` is 1 at both
+### Decision needed (functionality / UX / gameplay)
+- none
+### Unapplied minors (over budget; for the build plan)
+- end-sheet.test.ts: disable the flag after each `load()` (`vi.resetModules()`), check the flag before `document.visibilityState`, stub `document` per case (Vitest `environment: 'node'`)
+- the hook's `advance` throws `AD-17 …` when `running()` is false (rule 6), built in test-hook.ts like `setEnabled`
+- the Slow-cap "still running after the Fast cap" check depends on entry 6 keeping the last Slow launch after 3 s
+- References: add `Celebration.svelte`, `e2e/end-sheet.spec.ts`, `e2e/pwa/dist-smoke.spec.ts`, `src/shell/game.svelte.ts`
+### Dropped
+- adversarial: the second-run disconnect check does not prove `{#key}` — already dropped in pass 2; `{#key}` stays as design
+- adversarial (stretch): `pagehide` before `visibilitychange` on other engines — Android Chrome fires `visibilitychange` first; plan note at most
