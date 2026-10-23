@@ -22,7 +22,9 @@ export default defineConfig({
   updateSnapshots: process.env.CI ? 'none' : 'missing',
   use: { ...use, baseURL: 'http://localhost:5173' },
   expect: {
-    toHaveScreenshot: { maxDiffPixelRatio: 0.01 },
+    // threshold: Playwright's default per-pixel tolerance (0.2) reads most dark-on-dark changes as
+    // equal, so a whole new menu layout counted as 0.8 % changed and passed (Opus review, epic 9).
+    toHaveScreenshot: { maxDiffPixelRatio: 0.01, threshold: 0.05 },
   },
   projects: deviceProjects,
   webServer: {
