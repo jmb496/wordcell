@@ -79,3 +79,16 @@ Close-out docs: pending your answer (AD-19 Start and EXPERIENCE.md "Never plays"
 
 ## Stopped — decision needed
 Ticket 10.5, Step C: the code review converged, and its log `_bmad-output/implementation-artifacts/review-loop/10-5-build.md` is committed with `## Result`. Question (plan Design Notes, owner checkpoint item 1): if the app is in the background at the moment a winning board settles, the end sheet shows with no celebration; and with reduced motion (or the test seam off) no celebration step is added to back-button history. Keep both? Proposed default: keep as built (the ticket's Start bullet specifies both); 10.9 syncs AD-19 Start and EXPERIENCE.md "Never plays". Resume: record the answer (ticket Notes, epic Notes, SPEC memlog), commit, rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-end-of-game-words`; the next session continues at Step D (test:all, screenshots, mark done).
+
+## 10.5 Win trigger and celebration test seam — done
+What it adds: Winning a game now starts the word celebration, and the end sheet opens when it finishes. It does not play after a relaunch, with reduced motion, after Give up, or when the win happens while the app is in the background. Tests get a switch (off by default) that turns the celebration on and steps through it frame by frame.
+Ticket review: 5 passes, converged (majors 13, 5, 5, 1, 1); nothing needed your input
+Build: built; commit 691c8e6
+Code review: thorough (risk high), 1 pass, converged (majors 0); no fixes applied; your answer on background wins and reduced-motion history (accept the default, SPEC F16, 2026-10-23) was recorded between sessions in 7fc287b
+Tests: all passing (unit 3461, e2e 1068, dist 19, pwa 17; the e2e/nav.spec.ts:162 flake did not recur), screenshots passed (66)
+Ref to fix upstream: none
+Tokens: 0.1M input-equivalent this session (orchestrator 69%, other 31%); orchestrator peak context 60k (earlier sessions: 15.9M, see the stopped entry above)
+Worth knowing: Until ticket 10.7, pressing ☰ or M during a running celebration halts the app, so the epic branch must not be merged before 10.7. Deferred (medium) to 10.8: a test that a real win in the hook-free production build starts the celebration. Celebration.svelte logs a harmless Svelte dev warning (binding_property_non_reactive), a candidate for the 10.10 sweep. 5 code-review minors are left in `_bmad-output/implementation-artifacts/review-loop/10-5-build.md`.
+Close-out docs:
+- ARCHITECTURE-SPINE.md AD-19 Rule, Start bullet ← F16: a win whose board settles while the page is hidden opens the end sheet on return with no celebration; reduced motion or the seam off pushes no `celebration` history entry (owner, 2026-10-23); 10.9 syncs it
+- EXPERIENCE.md § celebration "Never plays" ← F16: add the background (hidden-page) win (owner, 2026-10-23); 10.9 syncs it (SPEC.md already records F16)
