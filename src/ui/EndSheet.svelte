@@ -263,7 +263,7 @@ $effect(() => {
   .words ul { margin: 4px 0 0; padding: 0; list-style: none; overflow-y: visible; }
   .words li {
     display: flex; align-items: center; justify-content: space-between; gap: 16px;
-    min-height: 44px; box-sizing: border-box; border-top: 1px solid var(--wc-outline);
+    min-height: 44px; box-sizing: border-box; border-top: 1px solid var(--wc-hairline);
     container-type: inline-size;
   }
   .words li:first-child { border-top: none; }
