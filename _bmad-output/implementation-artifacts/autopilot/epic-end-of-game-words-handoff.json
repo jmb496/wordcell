@@ -1,8 +1,1 @@
-{
- "outcome": "done",
- "ticket": "10.3",
- "reason": "done",
- "next": "10.4",
- "updated": "2026-10-21T10:39:00Z",
- "summary": "Ticket 10.3 (celebration step, renderer and run controller) is built, reviewed, tested and marked done."
-}
+{"outcome": "stopped", "ticket": "10.4", "reason": "rule 1: decision needed at ticket review (which keys act during the win celebration)", "next": "10.4", "updated": "2026-10-23T16:27:02Z", "summary": "Ticket 10.4's review converged in 5 passes but needs the owner to confirm which keys still work while the win celebration plays."}

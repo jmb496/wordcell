@@ -38,3 +38,18 @@ Ref to fix upstream: none
 Tokens: 6.7M input-equivalent (ticket review 54%, build 24%, code review 19%, orchestrator 3%); orchestrator peak context 64k
 Worth knowing: The ticket review left one open major (Verify lacks clauses for `advance` being a no-op when idle/not manual/ms<=0 and `setManual` read only at `start`); the build covered both in the plan and tests, the ticket text itself was not changed. This checkout is on a case-insensitive drvfs mount, so `./celebration.svelte` resolved to `Celebration.svelte` and 19 tests failed; the code review fixed it with explicit `.ts` import paths and added `allowImportingTsExtensions` to `tsconfig.app.json` (a root config change you may want to glance at).
 Close-out docs: none
+
+## 10.4 Celebration overlay entry — stopped
+What it adds: Hooks the win celebration into the game's overlay system: when it may start, what ends or cancels it (back, Undo, New game), and which keys and taps still work while it plays.
+Ticket review: 5 passes, converged (majors 8, 6, 2, 1, 0); one item needs your input (below)
+Build: not started
+Code review: not started
+Tests: not run
+Ref to fix upstream: none
+Paused: usage limit at Step A pass 2 (previous session), reset 11:50am (America/New_York), resumed 2026-10-23 15:52 UTC. That session ended without writing a Stopped section; the review log and WIP commits settled the resume point (mismatch noted here).
+Tokens: 6.0M input-equivalent (ticket review 97%, orchestrator 2%, other 1%); orchestrator peak context 63k
+Worth knowing: The ticket lists five readings of AD-13/AD-19 (start closes a sticky WordCell view first; Undo and N still work during the run; the top and action bars stay usable; the removal pops the entry before the run stops; "inert board" means no input, not HTML `inert`), flagged for the build's plan checkpoint and the entry 9 close-out. Three word-neutral minors were left for the build (review log `## Result`).
+Close-out docs: none yet
+
+## Stopped — decision needed
+Ticket 10.4, Step A (ticket review converged; Step A's "harden" commit not yet made). Question (SPEC Open Questions, ticket Keys bullet): while the celebration plays, do `?`, a WordCell tap or `Enter`, and every other game key (Redo, column digits, …) do nothing, with only Undo, `N`, `M`, the ☰ button, `Space`/`Esc` (skip) and back acting? Proposed default: yes, as the SPEC states. Resume: record the answer (ticket Keys bullet, epic Notes, SPEC Open Questions/memlog), commit, rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-end-of-game-words`; the next session continues at Step B.

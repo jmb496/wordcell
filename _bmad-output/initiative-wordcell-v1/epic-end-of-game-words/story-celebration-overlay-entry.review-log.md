@@ -1,5 +1,5 @@
 # Review log — story-celebration-overlay-entry.md
-State: pass 4: done
+State: pass 5: done
 Pre-loop: HEAD 2222705; pass0.md 247 words; budget stated 1500 words.
 
 ## Pass 1 — 2026-10-23
@@ -103,3 +103,30 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar
 - duplicate onUnfinished / peekToSticky findings merged
 Words (docs): 1500 (6.1 x pass 0; budget 1500)  |  Snapshot: story-celebration-overlay-entry.passes/pass4.md
 Fixer applied findings 1–11 (1 major, 10 minors), offsetting additions with cuts of repeated wording; at budget, so later minors go to the fixer only when word-neutral.
+
+## Pass 5 — 2026-10-23
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 0, minor 13, decision-needed 0  |  Dropped in triage: 2
+Words (docs): 1500 (6.1 x pass 0; budget 1500)  |  Snapshot: story-celebration-overlay-entry.passes/pass4.md (no fix pass)
+### Applied
+- none (converged: zero majors)
+### Dropped
+- "Name `M` in the Keys AC no-row assertion" — reverses pass 4 item 6 (entry 7 owns `M` and its test)
+- "Note `celebration.svelte.ts` importers need the `.ts` extension" — Scaffold deltas already bind the builder (AGENTS.md)
+
+## Result — converged after 5 passes
+Majors per pass: 8, 6, 2, 1, 0. Decision needed (owner): the pass-2 Keys item — the SPEC Open Questions default ("`?`, a WordCell tap or `Enter` and the other game keys do nothing while it runs") awaits confirmation at ticket review; the epic Notes already record the owner's 2026-10-20 "`?`/WordCell keys do nothing while it runs".
+
+Unapplied minors (for the build plan or a later loop; the ticket is at its 1500-word budget, so only word-neutral fixes fit):
+- Gestures bullet — cut `/peekToSticky` from "a slipped-through call to `openView`/`openPeek`/`peekToSticky` throws" (unreachable; it throws on its no-peek guard first)
+- AC `onUnfinished()` row — end-sheet.test.ts mocks `./focus-board`: assert "calls `focusByPhase` after a tick", not "moves focus"
+- `done` ownership — "the live run's `done` when the removal came from back or Esc" → "else the live run's `done`" (the callback sees only the reason)
+- `done` ownership — the channel from module-level `attachOverlays()` to the singleton's closure state: default a private `build(hooks)` builder (`createCelebration = () => build(null)`, singleton `build(hooks)`)
+- AC Verify — "New game's `resetForNewSession()` path is unchanged" → "New game's callers of `resetForNewSession()` are unchanged" (its body now removes `celebration` with `cancelled`)
+- AC Legal start — "each illegal start, including with a sticky view on top, throws with no state or nav change" (tests "every check before any close")
+- AC Keys — table-driven over `ROWS`: every id except `undo`/`newGame` runs no `attempt()` row (covers Redo, digits, arrows)
+- Gestures bullet — a marked press also starts no drag ("view" → "view or drag")
+- Start — entry 5 starts only from the still-pending `whenOpenAllowed` callback (release-hold drops it on Undo), so no start runs with a dead token; record at the plan checkpoint
+- `done` ownership vs entry 7 — the hide end (`end(hide-mode)`, sheet open queued for the next visible) needs an amendment of "the removal callback is the only caller of `done`, via `queueMicrotask`", or entry 5's `done` wraps the visibility wait; decide at the plan checkpoint
+- Notes ☰ — the interim ☰ halt (entries 5–7) means the epic branch must not merge before entry 7
+- Removal callback — cite EXPERIENCE.md Focus instead of Q-01 for the Undo refocus
+- Tests — each AD-19 wiring test re-imports `overlays` and `celebration.svelte.ts` after `vi.resetModules()` (the `attached` flag is module-wide)
