@@ -1,1 +1,1 @@
-{"outcome": "stopped", "ticket": "10.4", "reason": "rule 1: decision needed at ticket review (which keys act during the win celebration)", "next": "10.4", "updated": "2026-10-23T16:27:02Z", "summary": "Ticket 10.4's review converged in 5 passes but needs the owner to confirm which keys still work while the win celebration plays."}
+{"outcome": "done", "ticket": "10.4", "reason": "done", "next": "10.5", "updated": "2026-10-23T18:19:46Z", "summary": "Ticket 10.4 (celebration overlay entry) was built, code-reviewed, passed every test and screenshot check, and is marked done."}

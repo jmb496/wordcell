@@ -53,3 +53,15 @@ Close-out docs: none yet
 
 ## Stopped — decision needed
 Ticket 10.4, Step A (ticket review converged; Step A's "harden" commit not yet made). Question (SPEC Open Questions, ticket Keys bullet): while the celebration plays, do `?`, a WordCell tap or `Enter`, and every other game key (Redo, column digits, …) do nothing, with only Undo, `N`, `M`, the ☰ button, `Space`/`Esc` (skip) and back acting? Proposed default: yes, as the SPEC states. Resume: record the answer (ticket Keys bullet, epic Notes, SPEC Open Questions/memlog), commit, rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-end-of-game-words`; the next session continues at Step B.
+
+## 10.4 Celebration overlay entry — done
+What it adds: Hooks the win celebration into the game's overlay system: when it may start, what ends or cancels it (back ends it; Undo and New game cancel it), and which keys and taps still work while it plays. Nothing shows yet; ticket 10.5 triggers it on a win.
+Ticket review: 5 passes, converged (majors 8, 6, 2, 1, 0); your keys-while-it-runs answer (accept the default, SPEC F15, 2026-10-23) was recorded and the harden commit a194a2e made between sessions
+Build: built; commit 6dc0018
+Code review: thorough (risk high, one deferred medium), 2 passes, converged (majors 1, 0); fixes in 3d29683, log 03766db
+Tests: all passing (unit 3448, e2e 1054, pwa 16, dist 18), screenshots passed (66)
+Ref to fix upstream: none
+Tokens: 9.0M input-equivalent (build 51%, code review 43%, orchestrator 3%, other 2%); orchestrator peak context 70k
+Worth knowing: The ticket had `plan_checkpoint: true`; the build planned it unattended (as for 10.3), so the plan's Design Notes owner items are worth a read. Handed to ticket 10.5: start the run only from the still-pending winning `whenSettled` callback, and cancel any in-progress press before `startCelebration()` (deferred medium: a long-press held on a WordCell by a second finger while the win is confirmed would hit an internal error; the same case exists today when the end sheet opens). Until ticket 10.7, pressing ☰ during a running celebration halts the app, so the epic branch must not be merged before 10.7. A one-off flake in e2e/nav.spec.ts:162 occurred during the build and did not recur. Five spine readings (ticket Notes a–e) wait for the 10.9 close-out.
+Close-out docs:
+- EXPERIENCE.md § Keyboard ← F15: while the celebration plays only Undo, N, M, ☰, Space/Esc and back act; ?, a WordCell tap or Enter and every other game key do nothing (owner, 2026-10-23); the table states only the Space skip, so check it states the rest (SPEC.md already records F15)

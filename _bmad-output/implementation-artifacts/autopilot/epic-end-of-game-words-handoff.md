@@ -1,16 +1,19 @@
-outcome: stopped
+outcome: done
 ticket: 10.4
-reason: rule 1, decision needed at ticket review
-next: 10.4
-updated: 2026-10-23T16:27:02Z
-summary: Ticket 10.4's review converged in 5 passes but needs the owner to confirm which keys still work while the win celebration plays.
+reason: done
+next: 10.5
+updated: 2026-10-23T18:19:46Z
+summary: Ticket 10.4 (celebration overlay entry) was built, code-reviewed, passed every test and screenshot check, and is marked done.
 
-Plain language: the ticket that plugs the win celebration into the game's overlays has been reviewed to a clean state (5 passes). Before it is built, one gameplay detail needs your yes or no.
+Plain language: the win celebration is now part of the game's overlay system. It knows when it may start, Back ends it, and Undo or New game cancel it. While it plays, only Undo, N, M, ☰, Space/Esc and Back do anything. Nothing shows on screen yet; ticket 10.5 makes a win start it. All tests passed, and the screenshots did not change.
 
-Question: while the celebration plays (a few seconds), should `?` (How to play), tapping a WordCell or pressing Enter on it, and every other shortcut (Redo, column digits and so on) do nothing? Only Undo, N (new game), M and the ☰ button, Space/Esc (skip) and back would act.
-- Yes (proposed default, as the spec says): the celebration can't be covered by How to play or a WordCell view, and stray keys can't change the game under it. Undo and New game still work at once; a tap, Space/Esc or back skips to the end sheet.
-- No: name which extra keys should act; the ticket's Keys bullet and tests change accordingly, and some may need a later ticket (opening a surface over the run is not designed).
-You already decided `?` and the WordCell keys on 2026-10-20 (epic Notes); this confirms the rest ("every other game key").
+Worth a look (nothing blocks the run):
+- The ticket asked for a plan checkpoint, but the plan was built unattended (as for 10.3), so its Design Notes are worth a read.
+- Until ticket 10.7, pressing ☰ during a running celebration halts the app. Don't merge the epic branch before 10.7.
+- Handed to 10.5: start the celebration only from the winning move's pending callback, and cancel any press in progress first.
 
-Close-out docs: none yet (if you confirm, SPEC.md Open Questions loses its "awaits confirmation" line at the retro).
-Resume: record the answer in the ticket's Keys bullet, the epic Notes and the SPEC memlog, commit, then rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-end-of-game-words`; it continues at the build.
+Close-out docs:
+- EXPERIENCE.md § Keyboard ← F15: while the celebration plays only Undo, N, M, ☰, Space/Esc and back act (owner, 2026-10-23); check the table says the other keys do nothing (SPEC.md already records F15).
+
+Digest: _bmad-output/implementation-artifacts/autopilot/epic-end-of-game-words-20261020-0925.md
+Resume: the driver continues with 10.5.
