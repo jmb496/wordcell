@@ -1,5 +1,5 @@
 # Review log — story-win-trigger-and-celebration-test-seam.md
-State: pass 4: done
+State: pass 5: done
 Pre-loop: HEAD 8d5147f; pass0.md 373 words; growth budget 2.5x (~930 words); tickets.toml entry 5 fields interface, tests, owns, consumers, unknown, plan_checkpoint passed as intent, added to Description in pass 1.
 
 ## Pass 1 — 2026-10-23
@@ -124,3 +124,35 @@ Fixer: all 7 applied; major +5 words, minors −15; the close-out marker sits at
 ### Dropped
 - adversarial: the second-run disconnect check does not prove `{#key}` — already dropped in pass 2; `{#key}` stays as design
 - adversarial (stretch): `pagehide` before `visibilitychange` on other engines — Android Chrome fires `visibilitychange` first; plan note at most
+
+## Pass 5 — 2026-10-23
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 1, minor 11, decision-needed 0  |  Dropped in triage: 1
+Words (docs): 1106 (2.97 x pass 0), unchanged (no fix pass)  |  Snapshot: _bmad-output/initiative-wordcell-v1/epic-end-of-game-words/story-win-trigger-and-celebration-test-seam.passes/pass4.md
+### Open (not fixed; stopping rule: passes 4 and 5 each ≤ 1 major)
+- [major] AC R-87 cap row — at Fast the check (`running()` false and sheet expanded after the cap advance) also passes when no run started (the controller's `advance` silently returns with no run); only Slow asserts a live run. Fix for the build: assert `running()` true before the cap advance at both speeds ("once `running()` is true, after advancing by the cap …").
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- edge: "non-exported" duplicate of the fix-diff minor (kept once below)
+
+## Result — converged after 5 passes
+open major: AC R-87 cap row — at Fast the post-advance check passes on a run that never started; assert `running()` true before the cap advance at both speeds.
+
+Majors per pass: 13, 5, 5, 1, 1. Words 373 → 1106 (over the ~930 budget; pass-4 and pass-5 minors held back for the plan).
+
+### Unapplied minors (for the build plan)
+- AC copies: "non-exported" reads as describing `e2e/helpers/celebration.ts`; the helper exports `WON_ROWS` (`GAVE_ROWS` in end-sheet.spec.ts depends on it).
+- Start bullet: the hidden-at-settle no-start is justified by R-87 "the app being hidden … ends it the same way"; list it, with the reduced/disabled no-push path, as plan-checkpoint items (rule 7); entry 9 syncs AD-19 Start and EXPERIENCE.md "Never plays".
+- Start / AD-19 U: hidden at settle runs today's open, whose `announceOutcome()` is silent only because `say()` returns on `document.hidden`; the U case asserts the open, not the announce call.
+- Flag API: name the module exports in the plan, e.g. `celebrationEnabled()` / `setCelebrationEnabled(on)` in celebration.svelte.ts (not `setEnabled`, which the hook owns).
+- AD-19 U start case: "enabled, visible and not reduced"; stub `document.visibilityState` per case (Vitest `environment: 'node'`); disable the flag after each `load()` (`vi.resetModules()`); check the flag before visibility.
+- `src/shell/test-hook.test.ts`: stub `window` (`vi.stubGlobal`) and import a fresh module per case (one-shot registration).
+- The hook's `advance` throws `AD-17 …` when `running()` is false (rule 6), built in test-hook.ts like `setEnabled`.
+- Observers: install before the finishing action (Give up has no Confirm); observe `document` with `subtree: true` and test `matches(sel) || querySelector(sel)` per added element.
+- R-87 copies P6: also count zero `[data-celebration]:is([data-card-id],[data-testid],[data-mirror-of])` (rule-coverage AD-19 copies row, P6).
+- `enableCelebration` relies on no `await` between `game.load()` and the seam registration in `main.ts`; record the invariant or poll until the hook stops throwing.
+- Relaunch: the failable check runs in `dist-smoke` (same Pixel 7 emulation as `android`); entry 9's rule-coverage audit records it as row "none … on relaunch" coverage.
+- Hidden-at-settle P6 coverage: entry 7's hide row or a `hidePage` during the guard window (`e2e/helpers/lifecycle.ts`) gives it a P6 test name.
+- R-87 run history check: poll until nav settles (wc back to 1 after 0) before comparing lengths.
+- The Slow "still running after the Fast cap" check depends on entry 6 keeping the last Slow launch after 3 s.
+- References: add `Celebration.svelte`, `e2e/end-sheet.spec.ts`, `e2e/pwa/dist-smoke.spec.ts`, `src/shell/game.svelte.ts`.
