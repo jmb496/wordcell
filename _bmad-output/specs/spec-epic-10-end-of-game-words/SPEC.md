@@ -78,7 +78,7 @@ On `android`, in a seeded near-won position: confirm the last word, see the word
 
 ## Open Questions
 
-One default awaits the owner's confirmation (ticket review, not blocking): while the celebration runs, `?`, a WordCell tap or `Enter` and the other game keys do nothing (AD-13), while ☰, `M`, `N`, Undo, `Space`, `Esc` and back act as stated. Otherwise none for the owner: Jared answered the UX items on 2026-10-20 (F6…F11). Process only (done 2026-10-20): the spine amendments (AD-3 `wordList`, AD-19, Map row, AD-17 seam) go through `bmad-architecture`; the EXPERIENCE.md/DESIGN.md additions through `bmad-ux`. Wave size, stagger and exact physics constants are tuning values within the F6/F7 bounds, adjusted at the first device read (epic 10 entry 6).
+None for the owner: the keys-while-it-runs default is confirmed (F15).  Jared answered the UX items on 2026-10-20 (F6…F11). Process only (done 2026-10-20): the spine amendments (AD-3 `wordList`, AD-19, Map row, AD-17 seam) go through `bmad-architecture`; the EXPERIENCE.md/DESIGN.md additions through `bmad-ux`. Wave size, stagger and exact physics constants are tuning values within the F6/F7 bounds, adjusted at the first device read (epic 10 entry 6).
 
 ## Decisions
 
@@ -100,5 +100,6 @@ Technical defaults under the standing rule; none changes functionality, UX or ga
 | F12 | Test seam default (review, 2026-10-20). | In hook builds the celebration is off until a test enables it, so existing win specs keep passing; hook-free builds always run it and their winning specs skip by press (CAP-6). Trade-off: the disabled path is test-only code in a seam, as AD-17 allows. |
 | F13 | Back, menu, hide, Redo (owner, 2026-10-20). | Back skips it (the run owns one history entry, AD-13); ☰ or `M` ends it, then the sheet, then the menu; hiding or resizing ends it; a Redo that restores the win plays it again. Reverses the earlier "not an overlay" call. |
 | F14 | Words row separators (Opus review, 2026-10-23; owner standing rule: accept the proposed default). | `--wc-hairline` lines as DESIGN.md Words section says, not `--wc-outline` as built in 10.2; the separators are fainter in every theme (`7352e29`, baselines `4e0d813`). |
+| F15 | Keys while it runs (ticket 10.4 review, 2026-10-23; owner standing rule: accept the proposed default). | While the celebration runs only Undo, `N`, `M`, the ☰ button, `Space`/`Esc` (skip) and back act; `?`, a WordCell tap or `Enter` and every other game key do nothing (AD-13). |
 
-Next owner answer takes F15.
+Next owner answer takes F16.

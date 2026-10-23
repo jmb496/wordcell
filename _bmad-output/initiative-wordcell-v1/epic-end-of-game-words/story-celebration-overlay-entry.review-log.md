@@ -114,7 +114,7 @@ Words (docs): 1500 (6.1 x pass 0; budget 1500)  |  Snapshot: story-celebration-o
 - "Note `celebration.svelte.ts` importers need the `.ts` extension" — Scaffold deltas already bind the builder (AGENTS.md)
 
 ## Result — converged after 5 passes
-Majors per pass: 8, 6, 2, 1, 0. Decision needed (owner): the pass-2 Keys item — the SPEC Open Questions default ("`?`, a WordCell tap or `Enter` and the other game keys do nothing while it runs") awaits confirmation at ticket review; the epic Notes already record the owner's 2026-10-20 "`?`/WordCell keys do nothing while it runs".
+Majors per pass: 8, 6, 2, 1, 0. Decision needed (owner): the pass-2 Keys item — the SPEC Open Questions default ("`?`, a WordCell tap or `Enter` and the other game keys do nothing while it runs") awaits confirmation at ticket review; the epic Notes already record the owner's 2026-10-20 "`?`/WordCell keys do nothing while it runs". Resolved 2026-10-23: default accepted under the owner's standing rule (SPEC F15; ticket and epic Notes).
 
 Unapplied minors (for the build plan or a later loop; the ticket is at its 1500-word budget, so only word-neutral fixes fit):
 - Gestures bullet — cut `/peekToSticky` from "a slipped-through call to `openView`/`openPeek`/`peekToSticky` throws" (unreachable; it throws on its no-peek guard first)
