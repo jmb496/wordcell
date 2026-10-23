@@ -1,5 +1,5 @@
 # Review log — story-win-trigger-and-celebration-test-seam.md
-State: pass 2: done
+State: pass 3: done
 Pre-loop: HEAD 8d5147f; pass0.md 373 words; growth budget 2.5x (~930 words); tickets.toml entry 5 fields interface, tests, owns, consumers, unknown, plan_checkpoint passed as intent, added to Description in pass 1.
 
 ## Pass 1 — 2026-10-23
@@ -69,3 +69,33 @@ Fixer: all 11 applied; majors +75 words, minors net −4 (cut a duplicate consum
 - adversarial: how `end-sheet.ts` reads visibility / Vitest env node — plan detail
 - adversarial (stretch): reduced/disabled path keeps entry 4's pre-existing press hazard — today's behaviour, plan residual risk
 - adversarial (stretch): `finishCelebration` bound — merged into item 10
+
+## Pass 3 — 2026-10-23
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 5, minor 7, decision-needed 0  |  Dropped in triage: 3
+Words (docs): 1116 (2.99 x pass 0)  |  Snapshot: _bmad-output/initiative-wordcell-v1/epic-end-of-game-words/story-win-trigger-and-celebration-test-seam.passes/pass3.md
+Fixer: all 12 applied; majors ~+115 words, minors net −3 (cut the screens parenthetical and a Notes restatement); nothing run (no commands touched).
+### Applied
+- [major] Start bullet — a page already hidden when the winning callback runs (the hide flush's `finishGuard()` drains `whenOpenAllowed`; the floor timer fires in the background) would start a run that survives the hide, against AD-19 Hide and EXPERIENCE.md → fixer item 1
+- [major] Hook bullet / AC AD-17 — the mid-run `setEnabled` throw sits on the UI side, which a shell test cannot import (AD-1); the shell test would only test a stub → fixer item 2
+- [major] AC AD-17 default-off — the observer sees the added `[data-celebration-root]`, not the nested `[data-celebration]` copies, so the pass-2 check can still pass with the flag on → fixer item 3
+- [major] AC R-87 copies — `WON_ROWS` is a non-exported const in a spec file (Playwright rejects spec-to-spec imports); no R-87 spec file named; copy total unreadable at runtime → fixer item 4
+- [major] AC R-87 relaunch — still has no P6 check that can fail (pass-1 item 9, pass-2 item 3 unresolved; U is never R-id coverage) → fixer item 5
+- [minor] Enabled flag bullet — `main.ts` has no gate today; `registerBeforeBack` is unconditional → fixer item 6
+- [minor] Hook bullet — the hook object is created inside test-hook.ts's existing gate (AD-18 scan) → fixer item 7
+- [minor] Helper bullet — `finishCelebration` advances past the Slow cap; `enableCelebration` waits for `active` → fixer item 8
+- [minor] AC R-87 run — measure the pop as `history.length` = before Confirm + 1 → fixer item 9
+- [minor] AC R-87 run — Replay this deal focused after the run (EXPERIENCE.md Skip "exactly as a normal finish") → fixer item 10
+- [minor] AC last row — cut "(screens run with the seam off)"; test:screens does not run for entry 5 → fixer item 11
+- [minor] AC copies — read the copies' `.glyph` texts → fixer item 12
+### Default applied (technical)
+- hidden at settle — joins the no-start list (today's open unchanged); AD-19 U case
+- seam contract — `registerCelebrationSeam` takes the controller's `running`, `advance`, `setManual` and a flag setter; test-hook.ts builds `setEnabled` (throws if `running()`, else sets flag and manual)
+- observers — watch for `[data-celebration-root]`
+- R-87 rows — new `e2e/celebration.spec.ts`; `WON_ROWS` moves to `e2e/helpers/` (end-sheet.spec.ts imports it, assertions unchanged); copy total literal 55 (QU one copy)
+- relaunch P6 — hook-free check in `e2e/pwa/dist-smoke.spec.ts` (flag on, real rAF): seeded won session, observer via `addInitScript`, no `[data-celebration-root]` ever added, sheet expanded; the dev-server mid-run reload stays as the outcome check
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- adversarial: relaunch limit to entry 8 — merged into the item 5 major
+- edge: copy count via `cards.length` — merged into item 4 (literal 55)
+- adversarial: hook-free relaunch belongs to entry 8 — entry 8 owns the real-win suite; a seeded relaunch is CAP-3 (rule-coverage R-87 no-start row), kept here
