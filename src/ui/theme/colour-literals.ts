@@ -61,12 +61,11 @@ const NAMED = new Set(
 const COLOUR_FN = /(?<![\w-])(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color)\(/i;
 const HEX = /#([0-9a-f]+)(?!\w)/gi;
 const VAR_WC = /var\(\s*--wc-([\w-]+)/g;
-const PRESENTATION = 'fill|stroke|stop-color|flood-color|color';
 
 // --- comment stripping ---------------------------------------------------------------------
 
-/** Blank comments to spaces, string-aware; `line` also strips `//` (script and .ts only). */
-function stripComments(text: string, line: boolean): string {
+/** Blank CSS comments to spaces, string-aware. */
+function stripComments(text: string): string {
   let out = '';
   let i = 0;
   let quote: string | null = null;
@@ -82,7 +81,7 @@ function stripComments(text: string, line: boolean): string {
       }
       if (c === quote) quote = null;
       i++;
-    } else if (c === '"' || c === "'" || (line && c === '`')) {
+    } else if (c === '"' || c === "'") {
       quote = c;
       out += c;
       i++;
@@ -90,11 +89,6 @@ function stripComments(text: string, line: boolean): string {
       const end = text.indexOf('*/', i + 2);
       const stop = end < 0 ? text.length : end + 2;
       out += text.slice(i, stop).replace(/[^\n]/g, ' ');
-      i = stop;
-    } else if (line && c === '/' && n === '/') {
-      let stop = text.indexOf('\n', i);
-      if (stop < 0) stop = text.length;
-      out += ' '.repeat(stop - i);
       i = stop;
     } else {
       out += c;
@@ -165,7 +159,7 @@ function exemptSelector(selector: string): boolean {
  * `--wc-*` name to value. */
 export function themeRecords(css: string): Map<string, Map<string, string>> {
   const records = new Map<string, Map<string, string>>();
-  for (const decl of cssDecls(stripComments(css, false))) {
+  for (const decl of cssDecls(stripComments(css))) {
     if (decl.stack.length !== 1 || !decl.name.startsWith('--wc-')) continue;
     for (const part of (decl.stack[0] as string).split(',')) {
       const id = /^(?::root)?\[data-theme="([^"]*)"\]$/.exec(part.trim())?.[1];
@@ -194,29 +188,12 @@ function blankStringsAndUrls(value: string): string {
     .replace(/url\(([^)]*)\)/gi, (_m, inner: string) => `url(${blank(inner)})`);
 }
 
-/** Blank the arguments of every var() call. */
-function blankVars(value: string): string {
-  let out = '';
-  let i = 0;
-  while (i < value.length) {
-    const m = /var\(/i.exec(value.slice(i));
-    if (!m) {
-      out += value.slice(i);
-      break;
-    }
-    const open = i + m.index + m[0].length;
-    out += value.slice(i, open);
-    let depth = 1;
-    let j = open;
-    while (j < value.length && depth > 0) {
-      if (value[j] === '(') depth++;
-      if (value[j] === ')') depth--;
-      j++;
-    }
-    out += blank(value.slice(open, j - 1)) + (depth === 0 ? ')' : '');
-    i = j;
-  }
-  return out;
+/** Blank the custom-property name of every var() call; its fallback stays a value. */
+function blankVarNames(value: string): string {
+  return value.replace(
+    /(var\(\s*)(--[\w-]+)/gi,
+    (_m, open: string, name: string) => open + blank(name),
+  );
 }
 
 function hexIn(text: string, lengths: readonly number[]): string | undefined {
@@ -247,6 +224,9 @@ function checkVars(
   }
 }
 
+/** The one TH-2 value check (CSS declarations, static style attributes and directives, the
+ * colour-bearing parts of a script or markup string, and a string in a colour context): hex, art
+ * data-URI paints, colour functions and named colours, var() fallbacks included. */
 function checkDeclValue(
   prop: string,
   rawValue: string,
@@ -266,7 +246,7 @@ function checkDeclValue(
     out.push({ path, rule: 'colour-function', detail: `${prop}: ${rawValue}` });
   const p = prop.toLowerCase();
   if (p !== 'font-family' && p !== 'content') {
-    const named = namedIn(blankVars(value));
+    const named = namedIn(blankVarNames(value));
     if (named) out.push({ path, rule: 'named-colour', detail: `${prop}: ${named}` });
   }
   checkVars(value, known, path, out);
@@ -278,7 +258,7 @@ function scanCss(
   path: string,
   out: ColourViolation[],
 ): void {
-  for (const decl of cssDecls(stripComments(css, false))) {
+  for (const decl of cssDecls(stripComments(css))) {
     const exempt =
       TOKEN_FILES.includes(path) &&
       decl.stack.length === 1 &&
@@ -292,61 +272,90 @@ function scanCss(
 
 // --- script and markup ---------------------------------------------------------------------
 
-const STRING_LITERAL = /"((?:\\.|[^"\\\n])*)"|'((?:\\.|[^'\\\n])*)'|`((?:\\.|[^`\\])*)`/g;
+const SIDE = '(?:-(?:top|right|bottom|left|block|inline)(?:-(?:start|end))?)?';
 
-// A colour context before a string, read from the statement it is in (back to the last `;`, `{`
-// or `}`, across lines): a colour property set (`=`, `:`), the value argument of setProperty() or
-// of setAttribute() on a colour attribute, each optionally through `?` / `:` branches. In markup a
-// `style` attribute, a `style:` directive or a colour attribute (MARKUP_COLOUR_ATTR) around the
-// string is one too. A string that is wholly a `#rgb` / `#rgba` value or a named colour counts as
-// a colour only there (elsewhere it is an id such as '#add' or a theme id such as 'plum').
-const COLOUR_ATTRS = 'fill|stroke|stop-color|flood-color|lighting-color|color|background';
-const MARKUP_COLOUR_ATTR = new RegExp(`^(?:${COLOUR_ATTRS})$`, 'i');
-const COLOUR_CONTEXT = new RegExp(
-  String.raw`(?:(?:colou?r|fill|stroke|background|border|outline|shadow)[\w-]*\s*[=:]` +
-    String.raw`|setProperty\(\s*(["'\x60])[^"'\x60]*\1\s*,` +
-    String.raw`|setAttribute\(\s*(["'\x60])(?:${COLOUR_ATTRS})\2\s*,)` +
-    String.raw`\s*(?:[^;,?]*\?[^;,]*)?$`,
-  'i',
+// The one colour-name rule: a CSS declaration, object key, assignment target, setProperty() /
+// setAttribute() name or markup attribute is colour-bearing iff its kebab-case form is a real
+// colour-bearing CSS property name (optionally vendor-prefixed), a custom property, or a canvas 2D
+// paint (`fillStyle`, `strokeStyle`, `shadowColor`). Prose such as 'Tip: drag a red card' or a key
+// such as `outlineLabel` is never one.
+const COLOUR_PROP = new RegExp(
+  `^(?:-?(?:webkit|moz)-)?(?:${[
+    'color',
+    `(?:accent|background|caret|column-rule|flood|lighting|outline|scrollbar|shadow|stop|tap-highlight|text-decoration|text-emphasis|text-fill|text-stroke|border${SIDE})-color`,
+    'background(?:-image)?',
+    `border${SIDE}`,
+    'border-image(?:-source)?',
+    'outline',
+    '(?:box|text)-shadow',
+    'fill(?:-style)?',
+    'stroke(?:-style)?',
+    'text-stroke',
+    '(?:backdrop-)?filter',
+    'text-decoration',
+    'text-emphasis',
+    'column-rule',
+    'mask(?:-image|-border(?:-source)?)?',
+    '--[\\w-]+',
+  ].join('|')})$`,
 );
 
-function colourContext(text: string, at: number): boolean {
-  const from =
-    Math.max(
-      text.lastIndexOf(';', at - 1),
-      text.lastIndexOf('{', at - 1),
-      text.lastIndexOf('}', at - 1),
-    ) + 1;
-  return COLOUR_CONTEXT.test(text.slice(from, at).replace(/\s+/g, ' '));
-}
+const colourName = (name: string): boolean =>
+  COLOUR_PROP.test(name.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`));
+
+const COLOUR_WORDS = new Set([
+  'color',
+  'colour',
+  'fill',
+  'stroke',
+  'background',
+  'shadow',
+  'border',
+  'outline',
+]);
+
+/** A binding (variable, assignment target, parameter or destructuring default, class field) is
+ * colour-bearing when its name passes the colour-name rule or its last camelCase / snake_case
+ * word is a colour word (`inkColour`, `POINTER_FILL`; not `shadowHint`, `fillMode`). */
+const colourBinding = (name: string): boolean =>
+  colourName(name) ||
+  COLOUR_WORDS.has(
+    (
+      name
+        .split(/_|(?<=[a-z0-9])(?=[A-Z])/)
+        .filter(Boolean)
+        .at(-1) ?? ''
+    ).toLowerCase(),
+  );
 
 const DECL_PART = /^\s*-{0,2}[a-z][\w-]*\s*:(?!\/\/)/i;
 
-// Unhyphenated CSS property names that make a `word: …` string a declaration outside a colour
-// context; any hyphenated name counts too. Prose such as 'Tip: drag a red card' does not.
-const CSS_PROPS = new Set(
-  (
-    'color background border outline fill stroke filter opacity margin padding width height ' +
-    'inset top right bottom left display position transform transition animation font'
-  ).split(' '),
-);
-const cssProperty = (name: string): boolean =>
-  name.includes('-') || CSS_PROPS.has(name.toLowerCase());
-
-/** The declarations of a CSS-declaration-shaped string (`prop: value[; …]`), else undefined. */
-function declarations(s: string): [string, string][] | undefined {
-  const parts = s
-    .replace(/\$\{[^}]*\}/g, blank)
-    .split(';')
-    .filter((part) => part.trim() !== '');
-  if (parts.length === 0 || !parts.every((part) => DECL_PART.test(part))) return undefined;
-  return parts.map((part) => {
-    const at = part.indexOf(':');
-    return [part.slice(0, at).trim(), part.slice(at + 1)];
-  });
+/** The `name: value` parts of `s` split at `;` with each part's span in `s`, and whether every
+ * non-empty part is one. */
+function declarations(s: string): { parts: [string, string, number, number][]; all: boolean } {
+  const parts: [string, string, number, number][] = [];
+  let all = true;
+  let any = false;
+  let start = 0;
+  for (const part of s.split(';')) {
+    const end = start + part.length;
+    if (part.trim() !== '') {
+      any = true;
+      if (DECL_PART.test(part)) {
+        const at = part.indexOf(':');
+        parts.push([part.slice(0, at).trim(), part.slice(at + 1), start, end]);
+      } else all = false;
+    }
+    start = end + 1;
+  }
+  return { parts, all: any && all };
 }
 
-/** One script or markup-expression string `s`; `context` is a colour context around it. */
+/** One string `s` (a template's substitutions blanked); `context` is a colour context around it.
+ * In a colour context the string is a colour value (each declaration's value when it is all
+ * declarations); elsewhere each colour-bearing part is one, and the rest only fails for a colour
+ * function or a 6/8-digit hex (elsewhere `#rgb` / `#rgba` and named colours are ids such as '#add'
+ * or a theme id such as 'plum'). Each check sees its text once. */
 function checkString(
   s: string,
   context: boolean,
@@ -355,75 +364,188 @@ function checkString(
   out: ColourViolation[],
 ): void {
   const decls = declarations(s);
-  if (decls && (context || decls.every(([prop]) => cssProperty(prop)))) {
-    for (const [prop, value] of decls) checkDeclValue(prop, value, known, path, out);
+  if (context) {
+    if (decls.all) {
+      for (const [prop, value] of decls.parts) checkDeclValue(prop, value, known, path, out);
+    } else checkDeclValue('value', s, known, path, out);
     return;
   }
-  if (COLOUR_FN.test(s)) out.push({ path, rule: 'colour-function', detail: s });
-  const hex = hexIn(s, [6, 8]);
-  if (hex) out.push({ path, rule: 'hex', detail: s });
-  else if (/(?:^|;)\s*[a-z-]+\s*:[^;]*#/i.test(s) && hexIn(s, [3, 4])) {
-    out.push({ path, rule: 'hex', detail: s });
-  } else if (/^\s*#(?:[0-9a-f]{3}|[0-9a-f]{4})\s*$/i.test(s) && context) {
-    out.push({ path, rule: 'hex', detail: s });
+  let rest = s;
+  for (const [prop, value, start, end] of decls.parts) {
+    if (!colourName(prop)) continue;
+    checkDeclValue(prop, value, known, path, out);
+    rest = rest.slice(0, start) + blank(rest.slice(start, end)) + rest.slice(end);
   }
-  if (NAMED.has(s.trim().toLowerCase()) && context) {
-    out.push({ path, rule: 'named-colour', detail: s });
-  }
-  if (s.includes('var(--wc-')) checkVars(s, known, path, out);
+  if (COLOUR_FN.test(rest)) out.push({ path, rule: 'colour-function', detail: s });
+  if (hexIn(rest, [6, 8])) out.push({ path, rule: 'hex', detail: s });
+  if (rest.includes('var(--wc-')) checkVars(rest, known, path, out);
 }
 
-function scanScript(
-  script: string,
-  known: ReadonlySet<string>,
-  path: string,
-  out: ColourViolation[],
-): void {
-  const text = stripComments(script, true);
-  for (const m of text.matchAll(STRING_LITERAL)) {
-    const s = m[1] ?? m[2] ?? m[3] ?? '';
-    checkString(s, colourContext(text, m.index), known, path, out);
-  }
-}
-
-interface Located {
+interface Node {
+  readonly [key: string]: unknown;
   readonly type?: unknown;
-  readonly name?: unknown;
   readonly start?: unknown;
   readonly end?: unknown;
 }
 
-/** Every string and template literal in the markup's expressions (attribute values, `style:`
- * directives, text and block expressions), checked as script strings are; the colour context
- * also comes from the AST ancestors (a `style:` directive, a `style` or colour attribute). */
-function scanMarkupExpressions(
-  fragment: unknown,
+// The keys of a node inside a colour context whose children stay in a value position: the context's
+// value, an expression tag's expression, a ternary's branches (not its test), logical operands and
+// a TS cast's expression; every other child (a comparison operand, a call argument) leaves it.
+const VALUE_KEYS: Readonly<Record<string, readonly string[]>> = {
+  StyleDirective: ['value'],
+  Attribute: ['value'],
+  ExpressionTag: ['expression'],
+  ConditionalExpression: ['consequent', 'alternate'],
+  LogicalExpression: ['left', 'right'],
+  TSAsExpression: ['expression'],
+  TSSatisfiesExpression: ['expression'],
+  TSNonNullExpression: ['expression'],
+  AssignmentPattern: ['right'],
+};
+
+/** The value keys of `node` in a colour context: VALUE_KEYS, plus a `$derived(…)` / `$state(…)`
+ * rune's argument. */
+function valueKeys(node: Node): readonly string[] | undefined {
+  const callee = node.callee as Node | undefined;
+  if (node.type === 'CallExpression' && callee?.type === 'Identifier') {
+    return callee.name === '$derived' || callee.name === '$state' ? ['arguments'] : undefined;
+  }
+  return typeof node.type === 'string' ? VALUE_KEYS[node.type] : undefined;
+}
+
+/** The static name of a member property or object key: a plain identifier, a string literal or
+ * an expression-free template literal. */
+function staticName(key: unknown, computed: unknown): string | undefined {
+  const k = key as Node | null | undefined;
+  if (k?.type === 'Identifier' && !computed) return k.name as string;
+  if (k?.type === 'Literal' && typeof k.value === 'string') return k.value;
+  if (k?.type === 'TemplateLiteral' && (k.expressions as unknown[]).length === 0) {
+    return ((k.quasis as Node[])[0]?.value as { cooked?: string } | undefined)?.cooked;
+  }
+  return undefined;
+}
+
+/** The children of `node` that open a colour context, by the one colour-name rule: a `style:`
+ * directive's value, a `style` or colour attribute's value, the value assigned to a colour
+ * member (`.style.color`, `.style['color']`, `ctx.fillStyle`) or to `cssText`, a colour key's
+ * value, and the value argument of setProperty() / setAttribute() on a colour (or `style`) name;
+ * and by colourBinding, the value of a colour-named binding (variable, assignment target,
+ * parameter or destructuring default, `$props()` default, class field). */
+function colourChildren(node: Node): unknown[] {
+  switch (node.type) {
+    case 'StyleDirective':
+      return [node.value];
+    case 'Attribute': {
+      const name = node.name as string;
+      return name.toLowerCase() === 'style' || colourName(name) ? [node.value] : [];
+    }
+    case 'VariableDeclarator': {
+      const id = node.id as Node;
+      return id.type === 'Identifier' && colourBinding(id.name as string) ? [node.init] : [];
+    }
+    case 'AssignmentPattern': {
+      const left = node.left as Node;
+      return left.type === 'Identifier' && colourBinding(left.name as string) ? [node.right] : [];
+    }
+    case 'PropertyDefinition': {
+      const name = staticName(node.key, node.computed);
+      return name !== undefined && colourBinding(name) ? [node.value] : [];
+    }
+    case 'AssignmentExpression': {
+      const left = node.left as Node;
+      if (left.type === 'Identifier') {
+        return colourBinding(left.name as string) ? [node.right] : [];
+      }
+      if (left.type !== 'MemberExpression') return [];
+      const name = staticName(left.property, left.computed);
+      return name !== undefined && (name === 'cssText' || colourName(name)) ? [node.right] : [];
+    }
+    case 'Property': {
+      // An object-pattern default (`{ fill: f = '#fff' }`) is a binding of the key's name.
+      const name = staticName(node.key, node.computed);
+      const binding = (node.value as Node | null)?.type === 'AssignmentPattern';
+      return name !== undefined && (binding ? colourBinding(name) : colourName(name))
+        ? [node.value]
+        : [];
+    }
+    case 'CallExpression': {
+      const callee = node.callee as Node;
+      const method =
+        callee.type === 'MemberExpression'
+          ? staticName(callee.property, callee.computed)
+          : undefined;
+      if (method !== 'setProperty' && method !== 'setAttribute') return [];
+      const [first, value] = node.arguments as unknown[];
+      const name = staticName(first, true);
+      if (name === undefined) return [];
+      return colourName(name) || (method === 'setAttribute' && name === 'style') ? [value] : [];
+    }
+    default:
+      return [];
+  }
+}
+
+/** Every string and template literal in the script ASTs and the markup's expressions; the colour
+ * context comes from the AST ancestors (colourChildren) through value positions only
+ * (VALUE_KEYS). A template's substitution sits in the context of the declaration it is the value
+ * of (`color: ${…}`), or else in the template's own. */
+function scanTree(
+  roots: readonly unknown[],
   text: string,
   known: ReadonlySet<string>,
   path: string,
   out: ColourViolation[],
 ): void {
   const seen = new WeakSet<object>();
-  const visit = (node: unknown, inColour: boolean): void => {
+  const template = (node: Node, colour: boolean): void => {
+    const from = (node.start as number) + 1;
+    const quasis = node.quasis as Node[];
+    let s = text.slice(from, (node.end as number) - 1);
+    for (let i = 0; i + 1 < quasis.length; i++) {
+      const a = (quasis[i]?.end as number) - from;
+      const b = (quasis[i + 1]?.start as number) - from;
+      s = s.slice(0, a) + blank(s.slice(a, b)) + s.slice(b);
+    }
+    checkString(s, colour, known, path, out);
+    (node.expressions as unknown[]).forEach((expression, i) => {
+      const before = s.slice(0, (quasis[i]?.end as number) - from);
+      const part = before.slice(before.lastIndexOf(';') + 1);
+      const decl = DECL_PART.test(part) ? part.slice(0, part.indexOf(':')).trim() : undefined;
+      visit(expression, decl === undefined ? colour : colourName(decl));
+    });
+  };
+  const visit = (node: unknown, colour: boolean): void => {
     if (typeof node !== 'object' || node === null || seen.has(node)) return;
     seen.add(node);
-    const { type, name, start, end } = node as Located;
-    const colour =
-      inColour ||
-      type === 'StyleDirective' ||
-      (type === 'Attribute' &&
-        typeof name === 'string' &&
-        (name.toLowerCase() === 'style' || MARKUP_COLOUR_ATTR.test(name)));
-    const isString =
-      (type === 'Literal' && typeof (node as { value?: unknown }).value === 'string') ||
-      type === 'TemplateLiteral';
-    if (isString && typeof start === 'number' && typeof end === 'number') {
-      const context = colour || colourContext(text, start);
-      checkString(text.slice(start + 1, end - 1), context, known, path, out);
+    if (Array.isArray(node)) {
+      for (const child of node) visit(child, colour);
+      return;
     }
-    for (const child of Object.values(node)) visit(child, colour);
+    const n = node as Node;
+    if (n.type === 'Literal' && typeof n.value === 'string') {
+      checkString(
+        text.slice((n.start as number) + 1, (n.end as number) - 1),
+        colour,
+        known,
+        path,
+        out,
+      );
+      return;
+    }
+    if (n.type === 'TemplateLiteral') {
+      template(n, colour);
+      return;
+    }
+    const opens = colourChildren(n);
+    const keys = valueKeys(n);
+    for (const [key, child] of Object.entries(n)) {
+      const value = colour && keys?.includes(key) === true;
+      if (Array.isArray(child)) {
+        for (const c of child) visit(c, value || opens.includes(child) || opens.includes(c));
+      } else visit(child, value || opens.includes(child));
+    }
   };
-  visit(fragment, false);
+  for (const root of roots) visit(root, false);
 }
 
 function checkAttrValue(
@@ -436,18 +558,19 @@ function checkAttrValue(
   checkDeclValue(prop, value, known, path, out);
 }
 
+/** Static markup values: colour attributes (the one colour-name rule), `style` attributes and
+ * `style:` directives. */
 function scanMarkup(
   markup: string,
   known: ReadonlySet<string>,
   path: string,
   out: ColourViolation[],
 ): void {
-  const presentation = new RegExp(
-    `(?<![\\w:.-])(${PRESENTATION})\\s*=\\s*(?:"([^"]*)"|'([^']*)')`,
-    'g',
-  );
-  for (const m of markup.matchAll(presentation)) {
-    checkAttrValue(m[1] as string, (m[2] ?? m[3]) as string, known, path, out);
+  for (const m of markup.matchAll(/(?<![\w:.-])([a-z][\w-]*)\s*=\s*(?:"([^"]*)"|'([^']*)')/gi)) {
+    const name = m[1] as string;
+    if (name.toLowerCase() !== 'style' && colourName(name)) {
+      checkAttrValue(name, (m[2] ?? m[3]) as string, known, path, out);
+    }
   }
   for (const m of markup.matchAll(/(?<![\w:.-])style\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) {
     for (const part of ((m[1] ?? m[2]) as string).split(';')) {
@@ -460,7 +583,10 @@ function scanMarkup(
   }
 }
 
-/** Scan one non-test file's text for colour literals; a .svelte parse error throws. */
+/** Scan one non-test file's text for colour literals; a .ts or .svelte parse error throws. A .ts
+ * file is parsed as the TypeScript instance script of a Svelte wrapper (the compiler is loaded
+ * already), so script and markup share one AST visitor; a `</script` in it would end the wrapper,
+ * so it throws. */
 export function scan(
   path: string,
   text: string,
@@ -470,16 +596,16 @@ export function scan(
   if (path.endsWith('.css')) {
     scanCss(text, knownTokens, path, out);
   } else if (path.endsWith('.ts')) {
-    scanScript(text, knownTokens, path, out);
+    if (text.includes('</script')) throw new Error(`${path}: '</script' ends the scan wrapper`);
+    const wrapped = `<script lang="ts">${text}</script>`;
+    const ast: AST.Root = parseSvelte(wrapped, { modern: true });
+    scanTree([ast.instance?.content], wrapped, knownTokens, path, out);
   } else if (path.endsWith('.svelte')) {
     const ast: AST.Root = parseSvelte(text, { modern: true });
     let markup = text;
     const blanks: [number, number][] = [];
     for (const script of [ast.module, ast.instance]) {
-      if (!script) continue;
-      const content = script.content as unknown as { start: number; end: number };
-      scanScript(text.slice(content.start, content.end), knownTokens, path, out);
-      blanks.push([script.start, script.end]);
+      if (script) blanks.push([script.start, script.end]);
     }
     if (ast.css) {
       scanCss(text.slice(ast.css.content.start, ast.css.content.end), knownTokens, path, out);
@@ -489,7 +615,13 @@ export function scan(
       markup = markup.slice(0, a) + blank(markup.slice(a, b)) + markup.slice(b);
     markup = markup.replace(/<!--[\s\S]*?-->/g, blank);
     scanMarkup(markup, knownTokens, path, out);
-    scanMarkupExpressions(ast.fragment, text, knownTokens, path, out);
+    scanTree(
+      [ast.module?.content, ast.instance?.content, ast.fragment],
+      text,
+      knownTokens,
+      path,
+      out,
+    );
   }
   return out;
 }

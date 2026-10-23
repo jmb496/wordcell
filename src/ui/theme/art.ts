@@ -196,26 +196,50 @@ function orderings<T>(items: readonly T[]): T[][] {
   );
 }
 
-/** Every non-empty subset of `items`. */
-function subsets<T>(items: readonly T[]): T[][] {
-  const out: T[][] = [];
-  for (let mask = 1; mask < 1 << items.length; mask++) {
-    out.push(items.filter((_, i) => mask & (1 << i)));
-  }
-  return out;
-}
+/** The alpha step of worstRatio's sampling of each layer. */
+const ALPHA_STEP = 0.05;
+
+const lin = (c: number) => {
+  const s = c / 255;
+  return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+};
+const luminance = ({ r, g, b }: Rgb) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
 
 /**
- * Every surface colour the art can produce over `surface` (sRGB, straight alpha): every stack of
- * any non-empty subset of the art's colours in every order (a single colour is a subset of one).
+ * The lowest WCAG contrast of `fg` against any surface the art can paint over `surface`: every
+ * stacking order of its colours, each layer at every alpha from 0 (absent, so every subset) to its
+ * capped sum, sampled in ALPHA_STEP steps plus each shape's own opacity. The painted luminances
+ * form one interval (every stack shares the bare surface), so when `fg`'s luminance lies inside
+ * the sampled range some pixel matches it and the ratio is 1.
  */
-export function worstSurfaces(art: Art, surface: Rgb): Rgb[] {
-  const layers = [...colourOpacities(art)].map(([colour, a]) => ({ rgb: parseHex(colour), a }));
-  const out: Rgb[] = [];
-  for (const subset of subsets(layers)) {
-    for (const order of orderings(subset)) {
-      out.push(order.reduce((below, l) => over(l.rgb, l.a, below), surface));
-    }
+export function worstRatio(art: Art, surface: Rgb, fg: Rgb): number {
+  const own = new Map<string, number[]>();
+  const add = (colour: string | null, a: number) => {
+    if (colour !== null) own.set(colour, [...(own.get(colour) ?? []), a]);
+  };
+  for (const s of art.shapes) {
+    add(s.fill, s.fillOpacity);
+    add(s.stroke, s.strokeOpacity);
   }
-  return out;
+  const layers = [...colourOpacities(art)].map(([colour, sum]) => {
+    const alphas = new Set([0, sum, ...(own.get(colour) ?? []).filter((a) => a <= sum)]);
+    for (let a = ALPHA_STEP; a < sum; a += ALPHA_STEP) alphas.add(a);
+    return { rgb: parseHex(colour), alphas: [...alphas] };
+  });
+  let lo = Number.POSITIVE_INFINITY;
+  let hi = Number.NEGATIVE_INFINITY;
+  const paint = (order: readonly (typeof layers)[number][], below: Rgb): void => {
+    const [top, ...rest] = order;
+    if (top === undefined) {
+      const l = luminance(below);
+      lo = Math.min(lo, l);
+      hi = Math.max(hi, l);
+      return;
+    }
+    for (const a of top.alphas) paint(rest, over(top.rgb, a, below));
+  };
+  for (const order of orderings(layers)) paint(order, surface);
+  const f = luminance(fg);
+  const nearest = Math.min(hi, Math.max(lo, f));
+  return (Math.max(f, nearest) + 0.05) / (Math.min(f, nearest) + 0.05);
 }

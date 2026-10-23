@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { type Art, checkTexture, parseArt, worstSurfaces } from './art';
+import { type Art, checkTexture, parseArt, worstRatio } from './art';
 import { themeRecords } from './colour-literals';
 import * as registry from './registry';
 import {
@@ -114,10 +114,8 @@ function check(record: Record, figures: boolean, defaultKeys?: ReadonlySet<strin
   // Worst point: the foreground against every colour the art can produce over the surface.
   const overArt = (art: Art | null, fg: Rgba, bg: Rgba, floor: number, label: string) => {
     if (art === null) return;
-    for (const surface of worstSurfaces(art, bg)) {
-      const r = ratio(fg, { ...surface, a: 1 });
-      if (r < floor) fails.push(`${label}: ${r} < ${floor}`);
-    }
+    const r = worstRatio(art, bg, fg);
+    if (r < floor) fails.push(`${label}: ${r} < ${floor}`);
   };
   for (const [fg, bg, floor, figure] of TABLE) {
     guard(`${fg}/${bg}`, () => {
@@ -308,6 +306,17 @@ describe('AD-14 theme contrast', () => {
     bad.set('--wc-outline', marginalInk('--wc-table', 3));
     expect(check(bad, false).filter((f) => f.startsWith('outline/table'))).toEqual([]);
     bad.set(TABLE_ART, art("<rect width='8' height='8' fill='%23fff' fill-opacity='0.5'/>"));
+    expect(check(bad, false).some((f) => f.startsWith('outline/table over table art'))).toBe(true);
+  });
+
+  it('AD-14 table art painting outline/table at a shape alpha under its colour sum fails naming the pair', () => {
+    const bad = new Map(defaults);
+    bad.set(
+      TABLE_ART,
+      art(
+        "<path d='M0 2h8' fill='none' stroke='%23fff' stroke-opacity='0.45'/><path d='M0 6h8' fill='none' stroke='%23fff' stroke-opacity='0.45'/>",
+      ),
+    );
     expect(check(bad, false).some((f) => f.startsWith('outline/table over table art'))).toBe(true);
   });
 

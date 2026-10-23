@@ -69,6 +69,170 @@ describe('AD-14 colour-literal scan positives', () => {
     ['named in cssText', () => ts("el.style.cssText = 'color: red';")],
     ['named in setAttribute fill', () => ts("el.setAttribute('fill', 'red');")],
     ['short hex in setAttribute stroke', () => ts("el.setAttribute('stroke', '#fff');")],
+    ['named after a non-colour declaration', () => ts("const s = 'cursor: grab; color: red';")],
+    ['named background after gap', () => ts("const s = 'gap: 4px; background: white';")],
+    [
+      'named in a probe-shaped declaration string',
+      () => ts("const s = 'position: fixed; top: 0; visibility: hidden; background: red;';"),
+    ],
+    [
+      'short hex in a border declaration string',
+      () => ts("const s = 'gap: 0; border: 1px solid #fff';"),
+    ],
+    ['named var() fallback in a declaration string', () => ts("const s = 'color: var(--x, red)';")],
+    [
+      'named in a filter declaration string',
+      () => ts("const s = 'filter: drop-shadow(0 0 2px red)';"),
+    ],
+    [
+      'named in a text-decoration declaration string',
+      () => ts("const s = 'text-decoration: underline red';"),
+    ],
+    [
+      'named in a prefixed fill-color declaration string',
+      () => ts("const s = '-webkit-text-fill-color: red';"),
+    ],
+    [
+      'named in a column-rule declaration string',
+      () => ts("const s = 'column-rule: 1px solid red';"),
+    ],
+    [
+      'named in a scrollbar-color declaration string',
+      () => ts("const s = 'scrollbar-color: red blue';"),
+    ],
+    [
+      'named in a text-emphasis-color declaration string',
+      () => ts("const s = 'text-emphasis-color: red';"),
+    ],
+    [
+      'named in a mask declaration string',
+      () => ts("const s = 'mask: linear-gradient(red, blue)';"),
+    ],
+    [
+      'encoded hex in a custom property data URI string',
+      () => ts(`const s = "--wc-x: url('data:image/svg+xml,%3Csvg fill=%22%23ff0000%22/%3E')";`),
+    ],
+    [
+      'encoded hex in a background-image data URI string',
+      () =>
+        ts(`const s = "background-image: url('data:image/svg+xml,%3Csvg fill=%22%23f00%22/%3E')";`),
+    ],
+    ['named in a multi-token style assignment', () => ts("el.style.border = '1px solid red';")],
+    [
+      'short hex in a multi-token style assignment',
+      () => ts("el.style.border = '1px solid #fff';"),
+    ],
+    ['short hex in a box-shadow assignment', () => ts("el.style.boxShadow = '0 0 2px #fff';")],
+    [
+      'named in a gradient assignment',
+      () => ts("el.style.background = 'linear-gradient(red, blue)';"),
+    ],
+    [
+      'named in a multi-token setProperty',
+      () => ts("el.style.setProperty('border', '1px solid red');"),
+    ],
+    [
+      'named in a custom-property setProperty',
+      () => ts("el.style.setProperty('--wc-x', '0 0 4px gold');"),
+    ],
+    ['named in a multi-token template assignment', () => ts('el.style.border = `1px solid red`;')],
+    [
+      'named in a multi-token style directive expression',
+      () => svelte('', "<div style:border={'1px solid red'}></div>"),
+    ],
+    [
+      'named in a multi-token conditional style directive',
+      () => svelte('', "<div style:border={cond ? '1px solid red' : 'none'}></div>"),
+    ],
+    [
+      'named in a multi-token conditional style attr expression',
+      () => svelte('', `<div style="border: {cond ? '1px solid red' : 'none'}"></div>`),
+    ],
+    [
+      'named var() fallback in a component stylesheet',
+      () => svelte('.a { color: var(--foo, red); }'),
+    ],
+    ['named var() fallback in a css file', () => css('.a { color: var(--foo, red); }')],
+    [
+      'named var() fallback in a style attr',
+      () => svelte('', '<div style="color: var(--foo, red)"></div>'),
+    ],
+    [
+      'named var() fallback in a style directive',
+      () => svelte('', '<div style:color="var(--wc-table, red)"></div>'),
+    ],
+    ['named var() fallback in a style assignment', () => ts("el.style.color = 'var(--foo, red)';")],
+    [
+      'named var() fallback in setProperty',
+      () => ts("el.style.setProperty('color', 'var(--foo, red)');"),
+    ],
+    [
+      'named in a conditional template substitution assignment',
+      () => ts(`el.style.color = \`\${cond ? 'red' : 'blue'}\`;`),
+    ],
+    [
+      'short hex in a template substitution assignment',
+      () => ts(`el.style.color = \`\${'#fff'}\`;`),
+    ],
+    [
+      'named in a cssText template substitution',
+      () => ts(`el.style.cssText = \`position: fixed; color: \${ok ? 'green' : 'red'}\`;`),
+    ],
+    [
+      'named in a declaration template substitution',
+      () => ts(`const s = \`color: \${dark ? 'red' : 'blue'}\`;`),
+    ],
+    [
+      'named in a template substitution in a component script',
+      () => svelte('', '', `const s = \`color: \${dark ? 'red' : 'blue'}\`;`),
+    ],
+    ['named in a filter assignment', () => ts("el.style.filter = 'drop-shadow(0 0 2px red)';")],
+    [
+      'named in a text-decoration assignment',
+      () => ts("el.style.textDecoration = 'underline red';"),
+    ],
+    ['named in a column-rule assignment', () => ts("el.style.columnRule = '1px solid red';")],
+    ['named in a mask assignment', () => ts("el.style.mask = 'linear-gradient(red, blue)';")],
+    ['named in a bracketed style assignment', () => ts("el.style['color'] = 'red';")],
+    ['named under a colour object key', () => ts("const s = { backgroundColor: 'red' };")],
+    [
+      'named in a static background attr',
+      () => svelte('', '<table><tr><td background="red"></td></tr></table>'),
+    ],
+    [
+      'named in a static lighting-color attr',
+      () => svelte('', '<svg><rect lighting-color="white"/></svg>'),
+    ],
+    [
+      'short hex and named in $props() defaults',
+      () => svelte('', '<path {fill} />', "let { fill = '#fff', color = 'white' } = $props();"),
+    ],
+    [
+      'named in a typed $props() default',
+      () => svelte('', '', "let { color = 'white' }: { color?: string } = $props();"),
+    ],
+    [
+      'short hex in a $derived under a colour name',
+      () => svelte('', '', "const stroke = $derived(on ? '#000' : 'none');"),
+    ],
+    ['short hex in a colour-named const', () => ts("const fill = '#fff';")],
+    ['short hex in a colour-named let', () => ts("let stroke = '#000';")],
+    ['named in a colour-named const', () => ts("const color = 'red';")],
+    ['short hex in a SCREAMING_SNAKE fill const', () => ts("const POINTER_FILL = '#fff';")],
+    ['short hex in an exported colour const', () => ts("export const SHADOW_COLOR = '#0008';")],
+    ['short hex in a camelCase shadow colour const', () => ts("const shadowColor = '#0008';")],
+    ['named in a colour-word const', () => ts("const inkColour = 'white';")],
+    ['named in a parameter default', () => ts("function paint(fill = 'red') {}")],
+    [
+      'short hex in a destructured parameter default',
+      () => ts("function paint({ fill = '#fff' } = {}) {}"),
+    ],
+    ['named in a class field', () => ts("class P { color = 'red'; }")],
+    ['named assigned to a colour-named variable', () => ts("stroke = '#000';")],
+    [
+      'named in a template-literal setProperty name',
+      () => ts("el.style.setProperty(`--wc-x`, 'red');"),
+    ],
   ])('AD-14 flags %s', (_name, run) => {
     expect(run().length).toBeGreaterThan(0);
   });
@@ -95,6 +259,60 @@ describe('AD-14 colour-literal scan negatives', () => {
       () => svelte('', "<button aria-label={'Theme: Plum Dusk'}>x</button>"),
     ],
     ['prose text expression with a colour word', () => svelte('', "<p>{'Note: white wins'}</p>")],
+    ['hyphenated prose prefix', () => ts("const tip = 'Long-press: drag a red card';")],
+    ['prose prefix named like a property', () => ts("const tip = 'Top: the red card';")],
+    ['prose with a short hex-like id after a colon', () => ts("const tip = 'Tip: drag #abc';")],
+    ['prose with a short number after a colon', () => ts("const m = 'Deal: #123 of the week';")],
+    ['hyphenated prose with a hex-like id', () => ts("const tip = 'Long-press: card #add';")],
+    [
+      'the real insets probe declaration string',
+      () =>
+        ts(
+          "const PROBE_CSS = 'position: fixed; top: 0; left: 0; width: 0; height: 0; visibility: hidden; ' +\n" +
+            "  'pointer-events: none; padding-top: env(safe-area-inset-top); ' +\n" +
+            "  'padding-bottom: env(safe-area-inset-bottom);';",
+        ),
+    ],
+    [
+      'theme id compared in a conditional style directive',
+      () =>
+        svelte(
+          '',
+          "<div style:color={theme === 'plum' ? 'var(--wc-table)' : 'var(--wc-table)'}></div>",
+        ),
+    ],
+    [
+      'theme id compared in a nested conditional assignment',
+      () => ts("el.style.color = cond ? (theme === 'plum' ? a : b) : c;"),
+    ],
+    ['prose under a shadow-named variable', () => ts("const shadowHint = 'Drag a red card';")],
+    [
+      'theme name in a $props() default',
+      () => svelte('', '', "let { label = 'Plum Dusk' } = $props();"),
+    ],
+    ['WAAPI fill mode under a fill-named variable', () => ts("const fillMode = 'forwards';")],
+    ['letters under a FILLER-named const', () => ts("const FILLER_LETTERS = 'RED TAN GOLD';")],
+    [
+      'prose under an outline-named key',
+      () => ts("const t = { outlineLabel: 'Outline the red card' };"),
+    ],
+    [
+      'theme names in a ternary after a comparison',
+      () => ts("const label = colour === x ? 'Plum Dusk' : 'Charcoal';"),
+    ],
+    [
+      'theme name in a ternary else branch',
+      () => ts("const label = cond ? fill : 'Plum Dusk theme';"),
+    ],
+    [
+      'prose under a background-named export',
+      () => ts("export const backgroundTip = 'Tip: gold cards score more';"),
+    ],
+    [
+      'prose under a shadow-named variable in a component script',
+      () => svelte('', '', "const shadowHint = 'Drag a red card';"),
+    ],
+    ['theme id compared with a style colour', () => ts("if (el.style.color === 'plum') go();")],
     ['token outline', () => css('.a { outline: 2px solid var(--wc-accent-teal); }')],
     ['allowlisted width', () => css('.a { width: var(--wc-w); }')],
     ['allowlisted transform', () => css('.a { transform: translateY(var(--wc-select-lift)); }')],
@@ -140,8 +358,26 @@ describe('AD-14 colour-literal scan negatives', () => {
     expect(found.map((v) => v.rule)).toEqual(['hex']);
   });
 
+  it.each([
+    "const s = 'gap: 0; border: 1px solid #fff';",
+    "const s = 'color: #ffffff';",
+    "el.style.border = '1px solid #ffffff';",
+  ])('AD-14 each hex is reported once: %s', (body) => {
+    expect(ts(body).map((v) => v.rule)).toEqual(['hex']);
+  });
+
+  it('AD-14 each $props() default is reported', () => {
+    const found = svelte('', '', "let { fill = '#fff', color = 'white' } = $props();");
+    expect(found.map((v) => v.rule)).toEqual(['hex', 'named-colour']);
+  });
+
   it('AD-14 a .svelte parse error throws', () => {
     expect(() => scan('src/ui/Bad.svelte', '<div', known)).toThrow();
+  });
+
+  it('AD-14 a .ts parse error throws, and so does a </script that would end the wrapper', () => {
+    expect(() => ts('const a = ;')).toThrow();
+    expect(() => ts("// </script>\nel.style.color = 'red';")).toThrow('</script');
   });
 });
 
