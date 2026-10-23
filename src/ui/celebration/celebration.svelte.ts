@@ -4,10 +4,18 @@
 // elements Celebration.svelte registered (rule 3, no reactive per-frame state); only the active
 // run's props are reactive, so a mount can follow the run. Two drivers: real rAF, and a manual
 // clock (`setManual`, `advance`) for Playwright (AD-17).
+// Entry 4 (AD-13 celebration bullet): `attachOverlays()` registers the exported singleton's removal
+// callback with `overlays` (this module imports `overlays`, never the reverse). While attached the
+// callback is the only caller of `done`, once, in a microtask after the removal: a run-driven end
+// (finish, cap, `end()`, the empty-list `start()`) parks `done`, runs `onEnd` and closes the entry;
+// back and Esc remove the entry first, so the callback takes the live run's `done`; Undo and New
+// game (`cancelled`) drop it. Every removal stops the run internally, without `onEnd`. Unattached
+// `createCelebration()` instances call `done` synchronously.
 import type { Face, GameView } from '../../engine/index';
 import { createVisibleBand } from '../gestures/visible-band';
 import { cardMetrics } from '../layout/geometry';
 import { celebrationCapMs, celebrationFadeMs } from '../motion';
+import { type CelebrationRemoval, overlays } from '../overlays.svelte';
 import { launch, type StepState, step } from './step';
 
 /** The manual clock's sub-step. */
@@ -36,8 +44,16 @@ function find(selector: string): Element {
   return el;
 }
 
-export function createCelebration() {
+/** The singleton's link to `overlays`: its removal callback, and whether `attachOverlays()` ran. */
+type Attachment = {
+  attached: boolean;
+  removed: ((reason: CelebrationRemoval) => void) | null;
+};
+
+function build(attachment: Attachment | null) {
   let run: Run | null = null;
+  /** Attached only: the `done` a run-driven end parked for the removal callback. */
+  let pending: (() => void) | null = null;
   /** The active run's props: reactive, set and cleared with `run` (the step state stays plain). */
   let active = $state.raw<RunProps | null>(null);
   let handler: (() => void) | null = null;
@@ -78,10 +94,31 @@ export function createCelebration() {
     }
   }
 
-  function finish(done: () => void): void {
-    handler?.();
-    done();
+  function attached(): boolean {
+    return attachment?.attached === true;
   }
+
+  function finish(done: () => void): void {
+    if (!attached()) {
+      handler?.();
+      done();
+      return;
+    }
+    pending = done;
+    handler?.();
+    overlays.close('celebration');
+  }
+
+  // AD-13: the removal callback; the entry is already off the stack.
+  function removed(reason: CelebrationRemoval): void {
+    const live = clear();
+    const done = pending ?? live?.done ?? null;
+    pending = null;
+    if (reason === 'cancelled') return;
+    if (done === null) throw new Error('AD-19 celebration: ended removal with no done');
+    queueMicrotask(done);
+  }
+  if (attachment !== null) attachment.removed = removed;
 
   function end(): void {
     const current = clear();
@@ -111,6 +148,9 @@ export function createCelebration() {
     },
     start(view: GameView, done: () => void): void {
       if (run !== null) throw new Error('AD-19 celebration: start() while a run is active');
+      if (attached() && overlays.top !== 'celebration') {
+        throw new Error(`AD-19 celebration: start() while the top is ${overlays.top ?? 'nothing'}`);
+      }
       const list = view.wordList;
       if (list === undefined) {
         throw new Error(
@@ -168,8 +208,14 @@ export function createCelebration() {
       if (!current.manual) current.frame = requestAnimationFrame((t) => frame(current, t));
     },
     end,
-    /** Clears the run and its pending frame; calls neither `onEnd` nor `done` (AD-19). */
+    /**
+     * Clears the run and its pending frame; calls neither `onEnd` nor `done` (AD-19). Attached, it
+     * throws while the entry is open: Undo and New game cancel through the entry's removal.
+     */
     cancel(): void {
+      if (attached() && overlays.isOpen('celebration')) {
+        throw new Error('AD-19 celebration: cancel() while the celebration entry is open');
+      }
       clear();
     },
     /** One handler, replaced by a later call, kept across runs. */
@@ -202,4 +248,18 @@ export function createCelebration() {
   };
 }
 
-export const celebration = createCelebration();
+export function createCelebration() {
+  return build(null);
+}
+
+const attachment: Attachment = { attached: false, removed: null };
+
+export const celebration = build(attachment);
+
+/** AD-13, AD-19: registers the singleton's removal callback with `overlays` (main.ts at boot). */
+export function attachOverlays(): void {
+  const removed = attachment.removed;
+  if (removed === null) throw new Error('AD-19 celebration: attachOverlays() before the singleton');
+  overlays.onCelebrationRemoved(removed);
+  attachment.attached = true;
+}

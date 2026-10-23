@@ -47,8 +47,9 @@ const board = $derived(game.view);
 
 // Epic 6 CAP-1 (6.1, SPEC F5, F6): `main` (Board, top bar, action bar) is inert while any modal
 // surface is on the stack. The expanded end sheet and the WordCell view are not in the list (their
-// entries own their exceptions). HistoryNotice, rendered below, keeps its own markup.
-const mainInert = $derived(SUSPENDING.some((id) => overlays.isOpen(id)));
+// entries own their exceptions); `celebration` is, but leaves `main` usable (AD-13: the bars stay
+// usable while it runs). HistoryNotice, rendered below, keeps its own markup.
+const mainInert = $derived(SUSPENDING.some((id) => id !== 'celebration' && overlays.isOpen(id)));
 
 // build-notes Per-surface behaviour (History notice: focus returns to the board): the notice
 // unmounts at close (Not now, back, Delete history), so its Dialog has no opener to return to, and

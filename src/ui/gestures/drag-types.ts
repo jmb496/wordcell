@@ -147,6 +147,8 @@ export type Press<H> = {
   /** Ticket 6.14 (F3): the last own pointer point, the origin of a scroll-driven recompute. */
   lastX: number;
   lastY: number;
+  /** AD-13: begun while `celebration` was open; it performs no action whatever the top later. */
+  readonly celebrating: boolean;
 };
 
 export type Resolved = {

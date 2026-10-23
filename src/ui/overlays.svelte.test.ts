@@ -795,3 +795,216 @@ describe('AD-13 overlays epic 5: tile selection', () => {
     expect(calls).toEqual(['push']);
   });
 });
+
+// Epic 10 entry 4 (AD-13 celebration bullet, AD-19): the `celebration` entry, its start and its
+// removal reasons. The removal callback here is a recording stub; the controller wiring is in
+// celebration/attached.test.ts.
+describe('AD-13 overlays celebration entry', () => {
+  async function loadWith() {
+    const overlays = await load();
+    const reasons: string[] = [];
+    overlays.onCelebrationRemoved((reason) => reasons.push(reason));
+    return { overlays, reasons };
+  }
+
+  function snapshot(overlays: Awaited<ReturnType<typeof load>>) {
+    return {
+      depth: overlays.depth,
+      top: overlays.top,
+      endSheet: overlays.endSheet,
+      peek: overlays.peek,
+      viewCell: overlays.viewCell,
+      hoverPeek: overlays.hoverPeek,
+      selection: overlays.selection,
+    };
+  }
+
+  it('AD-13 a legal start on an empty stack pushes one entry and clears the hover peek', async () => {
+    const { overlays, reasons } = await loadWith();
+    overlays.openHoverPeek(4);
+    overlays.startCelebration();
+    expect(calls).toEqual(['push']);
+    expect(overlays.top).toBe('celebration');
+    expect(overlays.depth).toBe(1);
+    expect(overlays.hoverPeek).toBeNull();
+    expect(overlays.endSheet).toBe('hidden');
+    expect(reasons).toEqual([]);
+  });
+
+  it('AD-13 a legal start with a sticky view on top pops the view, then pushes once', async () => {
+    const { overlays, reasons } = await loadWith();
+    overlays.openView(5);
+    calls.length = 0;
+    overlays.startCelebration();
+    expect(calls).toEqual(['pop', 'push']);
+    expect(overlays.viewCell).toBeNull();
+    expect(overlays.top).toBe('celebration');
+    expect(overlays.depth).toBe(1);
+    expect(reasons).toEqual([]);
+  });
+
+  type Overlays = Awaited<ReturnType<typeof load>>;
+  const ILLEGAL: readonly [string, (o: Overlays) => void][] = [
+    ['a peek', (o) => o.openPeek(3)],
+    ['historyNotice', (o) => o.open('historyNotice')],
+    ['menu', (o) => o.open('menu')],
+    ['a tail selection', (o) => o.select(2, 1)],
+    ['the expanded end sheet', (o) => o.openDeferred(o.deferEndSheetOpen())],
+    [
+      'the collapsed end sheet',
+      (o) => {
+        o.openDeferred(o.deferEndSheetOpen());
+        o.collapseEndSheet();
+      },
+    ],
+    ['celebration itself', (o) => o.startCelebration()],
+    [
+      'a view over a tail selection',
+      (o) => {
+        o.select(2, 1);
+        o.openView(4);
+      },
+    ],
+    [
+      'a view over the collapsed end sheet',
+      (o) => {
+        o.openDeferred(o.deferEndSheetOpen());
+        o.collapseEndSheet();
+        o.openView(4);
+      },
+    ],
+  ];
+
+  for (const [name, arrange] of ILLEGAL) {
+    it(`AD-13 startCelebration with ${name} throws with no state or nav change`, async () => {
+      const { overlays, reasons } = await loadWith();
+      arrange(overlays);
+      const before = snapshot(overlays);
+      calls.length = 0;
+      expect(() => overlays.startCelebration()).toThrow(/^AD-13 startCelebration /);
+      expect(snapshot(overlays)).toEqual(before);
+      expect(calls).toEqual([]);
+      expect(reasons).toEqual([]);
+    });
+  }
+
+  it('AD-13 on a fresh module startCelebration with no callback registered throws with no push, also with a view on top', async () => {
+    const overlays = await load();
+    expect(() => overlays.startCelebration()).toThrow(
+      /^AD-13 startCelebration with no removal callback/,
+    );
+    expect(overlays.depth).toBe(0);
+    overlays.openView(4);
+    calls.length = 0;
+    expect(() => overlays.startCelebration()).toThrow(
+      /^AD-13 startCelebration with no removal callback/,
+    );
+    expect(overlays.top).toBe('wordcellView');
+    expect(overlays.viewCell).toBe(4);
+    expect(calls).toEqual([]);
+  });
+
+  it('AD-13 after two registrations only the second callback runs', async () => {
+    const overlays = await load();
+    const first: string[] = [];
+    const second: string[] = [];
+    overlays.onCelebrationRemoved((reason) => first.push(reason));
+    overlays.onCelebrationRemoved((reason) => second.push(reason));
+    overlays.startCelebration();
+    overlays.close('celebration');
+    expect(first).toEqual([]);
+    expect(second).toEqual(['ended']);
+  });
+
+  it('AD-13 open(celebration) throws: it has its own operation', async () => {
+    const { overlays } = await loadWith();
+    expect(() => overlays.open('celebration')).toThrow(/^AD-13 open\(celebration\)/);
+    expect(overlays.depth).toBe(0);
+    expect(calls).toEqual([]);
+  });
+
+  it('AD-13 close(celebration) is an end: one pop, the callback gets ended once', async () => {
+    const { overlays, reasons } = await loadWith();
+    overlays.startCelebration();
+    calls.length = 0;
+    overlays.close('celebration');
+    expect(calls).toEqual(['pop']);
+    expect(topAtPop).toEqual([undefined]);
+    expect(reasons).toEqual(['ended']);
+  });
+
+  it('AD-13 closedByBack removing celebration is an end with no nav call', async () => {
+    const { overlays, reasons } = await loadWith();
+    overlays.startCelebration();
+    calls.length = 0;
+    overlays.closedByBack(0);
+    expect(calls).toEqual([]);
+    expect(overlays.depth).toBe(0);
+    expect(reasons).toEqual(['ended']);
+  });
+
+  it('AD-13 onUnfinished with celebration open cancels the token first, then closes it as cancelled with one pop', async () => {
+    const { overlays, reasons } = await loadWith();
+    const token = overlays.deferEndSheetOpen();
+    overlays.startCelebration();
+    calls.length = 0;
+    overlays.onUnfinished();
+    expect(calls).toEqual(['pop']);
+    expect(overlays.depth).toBe(0);
+    expect(reasons).toEqual(['cancelled']);
+    expect(overlays.openDeferred(token)).toBe(false);
+    expect(overlays.endSheet).toBe('hidden');
+  });
+
+  it('AD-13 onUnfinished with celebration open but not the top entry throws close()’s AD-13 error, the token already dead', async () => {
+    const { overlays, reasons } = await loadWith();
+    const token = overlays.deferEndSheetOpen();
+    overlays.startCelebration();
+    overlays.open('historyNotice');
+    calls.length = 0;
+    expect(() => overlays.onUnfinished()).toThrow(
+      /^AD-13 close\(celebration\) while the top is historyNotice/,
+    );
+    expect(calls).toEqual([]);
+    expect(reasons).toEqual([]);
+    expect(overlays.openDeferred(token)).toBe(false);
+  });
+
+  it('AD-13 resetForNewSession with celebration open closes it as cancelled with one pop and kills the token', async () => {
+    const { overlays, reasons } = await loadWith();
+    const token = overlays.deferEndSheetOpen();
+    overlays.startCelebration();
+    calls.length = 0;
+    overlays.resetForNewSession();
+    expect(calls).toEqual(['pop']);
+    expect(reasons).toEqual(['cancelled']);
+    expect(overlays.openDeferred(token)).toBe(false);
+  });
+
+  it('AD-13 with celebration on top openView and openPeek throw, openHoverPeek is a no-op, a deferred open throws', async () => {
+    const { overlays } = await loadWith();
+    const token = overlays.deferEndSheetOpen();
+    overlays.startCelebration();
+    calls.length = 0;
+    expect(() => overlays.openView(4)).toThrow(/^AD-13 openView while celebration is the top/);
+    expect(() => overlays.openPeek(4)).toThrow(/^AD-13 openPeek while celebration is the top/);
+    overlays.openHoverPeek(4);
+    expect(overlays.hoverPeek).toBeNull();
+    expect(() => overlays.openDeferred(token)).toThrow(/^AD-13 openDeferred while celebration/);
+    expect(() => overlays.open('menu')).toThrow(/^AD-13 open\(menu\) while celebration/);
+    expect(calls).toEqual([]);
+    expect(overlays.top).toBe('celebration');
+  });
+
+  it('AD-13 celebration is in SUSPENDING', async () => {
+    vi.resetModules();
+    const { SUSPENDING } = await import('./overlays.svelte');
+    expect(SUSPENDING).toContain('celebration');
+  });
+
+  it('AD-13 overlays.svelte.ts imports nothing from ./celebration/', async () => {
+    const { default: source } = await import('./overlays.svelte.ts?raw');
+    expect(source).not.toMatch(/['"]\.\/celebration\//);
+    expect(source).not.toMatch(/['"][^'"]*celebration\.svelte(\.ts)?['"]/);
+  });
+});

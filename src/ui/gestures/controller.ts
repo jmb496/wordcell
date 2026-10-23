@@ -152,6 +152,9 @@
 // throw through lookup.ts and the DOM class names come from classes.ts. The tile drag, the
 // free-letter drag, the parting set, press resolution and the shared state types live in
 // tile-drag.ts, free-letter-drag.ts, parting.ts, resolve.ts and drag-types.ts (epic 5 retro A1).
+// Win celebration (AD-13): a press begun while `celebration` is open is marked; it arms no
+// long-press timer, its moves start no drag and its `pointerup` only ends it, whatever the top by
+// then (the run may have ended and the end sheet opened), so it performs no action and never throws.
 import { flushSync } from 'svelte';
 import type { Command } from '../../engine/index';
 import { type DispatchResult, game } from '../../shell/game.svelte';
@@ -705,6 +708,7 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       mouse: event.pointerType === 'mouse',
       lastX: event.clientX,
       lastY: event.clientY,
+      celebrating: overlays.isOpen('celebration'),
     };
     press = p;
     if (p.mouse) window.addEventListener('scroll', rescroll, { passive: true });
@@ -712,14 +716,14 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
       menuSlot = null;
       p.captured.setPointerCapture(p.pointerId);
     }
-    if (longPressTimed(resolved.target)) {
+    if (!p.celebrating && longPressTimed(resolved.target)) {
       p.timer = { handle: deps.setTimer(() => onTimer(p), LONG_PRESS_MS) };
     }
   }
 
   function pointermove(event: PointerEvent): void {
     const p = press;
-    if (p === null || !own(event)) return;
+    if (p === null || !own(event) || p.celebrating) return;
     const next = classify(p.state, { type: 'move', x: event.clientX, y: event.clientY });
     if (typeof next === 'string') throw new Error(`AD-12 move classified as ${next}`);
     const crossing = next.kind === 'drag' && p.state.kind !== 'drag';
@@ -850,6 +854,11 @@ export function createController<H>(gate: Gate, deps: ControllerDeps<H>): Contro
     if (event.pointerId === menuSlot) menuSlot = null;
     const p = press;
     if (p === null || !own(event)) return;
+    // AD-13: a press begun under the celebration only ends (no tap, drag-as-tap or peek).
+    if (p.celebrating) {
+      end({ kind: 'up' });
+      return;
+    }
     // F3: the live scroll offset decides the release target, scroll event or not.
     rescroll();
     const outcome = classify(p.state, { type: 'up' });

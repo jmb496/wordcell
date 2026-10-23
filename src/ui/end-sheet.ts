@@ -16,11 +16,13 @@ export type WhenSettled = (callback: () => void) => void;
 
 export function onDispatched(result: DispatchResult, whenSettled: WhenSettled): void {
   if (result.unfinished === true) {
-    const shown = overlays.endSheet !== 'hidden';
+    // AD-13: an open celebration counts as shown (focus-follow yielded under it).
+    const shown = overlays.endSheet !== 'hidden' || overlays.isOpen('celebration');
     overlays.onUnfinished();
-    // EXPERIENCE.md Focus: Undo from the sheet resumes play with focus on the phase's target (the
-    // first strip card after a win's Undo, Q-01; the board after a Give up's). After `tick()`:
-    // focus-follow.ts yields while focus is still inside the exiting sheet.
+    // EXPERIENCE.md Focus: Undo from the sheet or the celebration resumes play with focus on the
+    // phase's target (the first strip card after a win's Undo; the board after a Give up's). After
+    // `tick()`: focus-follow.ts yields while focus is still inside the exiting sheet, and it yielded
+    // under the celebration (`SUSPENDING`), so neither case moves focus without this call.
     if (shown) void tick().then(() => focusByPhase(viewNow()));
     return;
   }

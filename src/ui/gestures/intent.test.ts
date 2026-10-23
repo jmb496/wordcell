@@ -463,3 +463,22 @@ describe('AD-12 entry 10 hoverAction k preview', () => {
     }
   });
 });
+
+// Epic 10 entry 4 (AD-13 celebration bullet): the board takes no input while the celebration runs.
+describe('AD-13 tapAction under the celebration', () => {
+  it('AD-13 with celebration on top every hit resolves to none, before any throw', () => {
+    const hits = [
+      card(1, 12),
+      space(3),
+      { kind: 'wordcell', cell: 3 },
+      { kind: 'outside' },
+      { kind: 'sheet' },
+      { kind: 'tile', card: 3 },
+    ] as Hit[];
+    for (const v of [view({ status: 'won' }), view(), view({ phase: 'composing' })]) {
+      for (const hit of hits) {
+        expect(tapAction(hit, v, null, 'celebration')).toEqual({ kind: 'none' });
+      }
+    }
+  });
+});

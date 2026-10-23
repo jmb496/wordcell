@@ -133,6 +133,35 @@ describe('AD-13 end sheet entry', () => {
     expect(overlays.endSheet).toBe('hidden');
   });
 
+  // Epic 10 entry 4 (AD-13 celebration bullet): Undo mid-run cancels the run and refocuses as from
+  // the shown sheet (EXPERIENCE.md Focus; focus-follow yielded under the celebration).
+  it('AD-13 an unfinished onDispatched with the celebration open closes it (one pop), kills the token and calls focusByPhase after a tick', async () => {
+    const { overlays, onDispatched } = await load('won');
+    const reasons: string[] = [];
+    overlays.onCelebrationRemoved((reason) => reasons.push(reason));
+    const pending: (() => void)[] = [];
+    onDispatched({ changed: true, finished: 'won' }, (cb) => pending.push(cb));
+    overlays.startCelebration();
+    calls.length = 0;
+    store.view = { status: 'playing' };
+    onDispatched({ changed: true, unfinished: true }, settleNow);
+    expect(overlays.depth).toBe(0);
+    expect(reasons).toEqual(['cancelled']);
+    expect(calls).toEqual(['pop']);
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(calls).toEqual(['pop', 'focusByPhase']);
+    store.view = { status: 'won' };
+    pending[0]?.();
+    expect(overlays.endSheet).toBe('hidden');
+  });
+
+  it('AD-13 an unfinished onDispatched with nothing shown moves no focus', async () => {
+    const { onDispatched } = await load('playing');
+    onDispatched({ changed: true, unfinished: true }, settleNow);
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(calls).toEqual([]);
+  });
+
   it('AD-13 a result with neither flag changes nothing', async () => {
     const { overlays, onDispatched } = await load('playing');
     onDispatched({ changed: true }, settleNow);

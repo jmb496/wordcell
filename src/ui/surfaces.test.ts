@@ -260,6 +260,17 @@ describe('AD-13 App main inert', () => {
     expect(await mountApp(noop)).not.toMatch(/<main[^>]*inert/);
   });
 
+  // Epic 10 entry 4 (AD-13 celebration bullet): `celebration` is in SUSPENDING but leaves `main`
+  // (board, top bar, action bar) usable.
+  it('AD-13 main is not inert while only celebration is on the stack', async () => {
+    const html = await mountApp((o) => {
+      o.onCelebrationRemoved(noop);
+      o.startCelebration();
+      expect(o.top).toBe('celebration');
+    });
+    expect(html).not.toMatch(/<main[^>]*inert/);
+  });
+
   for (const id of INERT_IDS) {
     it(`AD-13 main is inert while ${id} is on the stack`, async () => {
       const html = await mountApp((o) => {

@@ -522,10 +522,19 @@ function match(event: KeyboardEvent): Resolved | undefined {
   }
 }
 
+/**
+ * AD-13: while only `celebration` suspends, Undo and `N` still act (EXPERIENCE.md Win celebration).
+ * `menu` (`M`) and WordCell `Space` (a skip) stay ignored here: interim gaps until entry 6's capture
+ * listener and entry 7's `end()` first (ticket Keys bullet).
+ */
+const CELEBRATION_KEYS: readonly CommandId[] = ['undo', 'newGame'];
+
 /** Runs one command now if it acts; returns whether it did. */
 function attempt(id: CommandId, ctx: KeyContext): boolean {
   const kind = game.state.kind;
-  if (SUSPENDING.some((entry) => overlays.isOpen(entry))) return false;
+  const suspending = SUSPENDING.filter((entry) => overlays.isOpen(entry));
+  const celebrationOnly = suspending.length === 1 && suspending[0] === 'celebration';
+  if (suspending.length > 0 && !(celebrationOnly && CELEBRATION_KEYS.includes(id))) return false;
   if (kind === 'rejected') {
     if (id !== 'newGame') return false;
     act(newGame)();

@@ -82,6 +82,8 @@ vi.mock('svelte', async (importOriginal) => {
 });
 
 vi.mock('../../shell/prefs.svelte', () => ({
+  // Epic 10 entry 4: the celebration's cap reads BASE_MS (motion.ts).
+  BASE_MS: { fast: 90, normal: 180, slow: 320 },
   prefs: {
     get motion() {
       return motion.value;
@@ -6020,5 +6022,183 @@ describe('AD-12 wheel during a mouse drag', () => {
       t.fire('pointerup');
       expect(navCalls).toEqual([dispatched({ type: 'addFreeLetter', cell: 3, index: 1 })]);
     });
+  });
+});
+
+// Epic 10 entry 4 (AD-13 celebration bullet): while `celebration` is open the gesture path does
+// nothing: `tapAction` answers none, and a press begun under it is marked (no long-press timer, no
+// drag, a release that only ends it), whatever the top by its timer or release. The removal
+// callback is the attached run controller (celebration.svelte.ts) for the live-run rows, else a
+// stub.
+describe('AD-13 gestures while the celebration runs', () => {
+  type T = Awaited<ReturnType<typeof setup>>;
+  const wonView = () => {
+    shared.view = {
+      status: 'won',
+      phase: 'idle',
+      columns: [1, 2, 3, 4, 5, 6, 7, 8].map((column) => ({
+        column,
+        cards: column === 1 ? [0, 5] : column === 2 ? [1] : [],
+        canPickUp: false,
+        canDropOn: false,
+      })),
+      cells: [
+        { cell: 3, cards: [2] },
+        { cell: 4, cards: [] },
+      ],
+    };
+  };
+  const state = (t: T) => ({
+    depth: t.overlays.depth,
+    top: t.overlays.top,
+    peek: t.overlays.peek,
+    viewCell: t.overlays.viewCell,
+    selection: t.overlays.selection,
+    hoverPeek: t.overlays.hoverPeek,
+  });
+  const celebrateStub = (t: T) => {
+    t.overlays.onCelebrationRemoved(() => {});
+    t.overlays.startCelebration();
+    navCalls.length = 0;
+  };
+
+  // The attached singleton with a live manual-clock run over a fake document; its `done` is entry
+  // 5's sheet open (a token issued before the start).
+  async function celebrateLive(t: T) {
+    const { celebration, attachOverlays } = await import('../celebration/celebration.svelte.ts');
+    attachOverlays();
+    const token = t.overlays.deferEndSheetOpen();
+    t.overlays.startCelebration();
+    const box = (left: number, top: number, width: number, height: number) => ({
+      getBoundingClientRect: () => ({
+        left,
+        top,
+        width,
+        height,
+        right: left + width,
+        bottom: top + height,
+      }),
+    });
+    const querySelector = (selector: string) => {
+      if (selector.includes('topBar')) return box(0, 0, 400, 44);
+      if (selector.includes('banner')) return box(0, 44, 400, 0);
+      if (selector.includes('actionBar')) return box(0, 1200, 400, 60);
+      return box(0, 450, 50, 16);
+    };
+    vi.stubGlobal('document', {
+      documentElement: { clientWidth: 400 },
+      body: { querySelector },
+      querySelector,
+    });
+    vi.stubGlobal('getComputedStyle', () => ({ getPropertyValue: () => '40px' }));
+    celebration.setManual(true);
+    let dones = 0;
+    celebration.start(
+      {
+        faces: Array.from({ length: 52 }, () => ({ letter: 'A', letterCount: 1 })),
+        wordList: [{ spelling: 'abc', letterCount: 3, cards: [2, 0, 1], cell: 3 }],
+      } as never,
+      () => {
+        dones += 1;
+        t.overlays.openDeferred(token);
+      },
+    );
+    vi.stubGlobal('getComputedStyle', (el: FakeEl) => ({ transform: el.computedTransform() }));
+    vi.stubGlobal('document', undefined);
+    navCalls.length = 0;
+    return { celebration, dones: () => dones };
+  }
+
+  it('AD-13 a tap and a long-press (with its release) on a WordCell change nothing, make no nav call and do not throw', async () => {
+    const t = await setup();
+    t.detach();
+    wonView();
+    celebrateStub(t);
+    const before = state(t);
+    expect(() => t.tap(t.b.cellCard)).not.toThrow();
+    expect(state(t)).toEqual(before);
+    t.down(t.b.cellCard);
+    expect(t.setTimer).not.toHaveBeenCalled();
+    expect(t.advance(1000)).toBe(0);
+    expect(() => t.fire('pointerup', { target: t.b.cellCard })).not.toThrow();
+    expect(state(t)).toEqual(before);
+    expect(navCalls).toEqual([]);
+    expect(t.active()).toBe(0);
+  });
+
+  it('AD-13 a marked press starts no drag: a crossed move then a release on a pickable card changes nothing', async () => {
+    const t = await setup();
+    t.detach();
+    celebrateStub(t);
+    const before = state(t);
+    t.down(t.b.card1, { clientX: 20, clientY: 10 });
+    t.fire('pointermove', { clientX: 20, clientY: 200 });
+    t.fire('pointermove', { clientX: 120, clientY: 200 });
+    expect(t.b.root.classes.size).toBe(0);
+    expect(t.b.card1.classes.size).toBe(0);
+    t.fire('pointerup', { target: t.b.column3 });
+    expect(state(t)).toEqual(before);
+    expect(navCalls).toEqual([]);
+    expect(t.active()).toBe(0);
+  });
+
+  it('AD-13 with the entry open openView and openPeek throw AD-13 and openHoverPeek is a no-op', async () => {
+    const t = await setup();
+    t.detach();
+    celebrateStub(t);
+    expect(() => t.overlays.openView(3)).toThrow(/^AD-13 openView while celebration/);
+    expect(() => t.overlays.openPeek(3)).toThrow(/^AD-13 openPeek while celebration/);
+    t.overlays.openHoverPeek(3);
+    expect(t.overlays.hoverPeek).toBeNull();
+    expect(navCalls).toEqual([]);
+  });
+
+  it('AD-13 a WordCell press under a live run, then end() and the sheet open, then the release: no throw, only the pop and the sheet push', async () => {
+    const t = await setup();
+    t.detach();
+    wonView();
+    const live = await celebrateLive(t);
+    t.down(t.b.cellCard);
+    live.celebration.end();
+    await Promise.resolve();
+    expect(live.dones()).toBe(1);
+    expect(t.overlays.top).toBe('endSheet');
+    expect(() => t.fire('pointerup', { target: t.b.cellCard })).not.toThrow();
+    expect(t.overlays.top).toBe('endSheet');
+    expect(t.overlays.depth).toBe(1);
+    expect(t.overlays.viewCell).toBeNull();
+    expect(t.overlays.peek).toBeNull();
+    expect(navCalls).toEqual(['pop', 'push']);
+  });
+
+  it('AD-13 a WordCell press under a live run held past the long-press time, then end() and the sheet open, then the release: no throw, no peek', async () => {
+    const t = await setup();
+    t.detach();
+    wonView();
+    const live = await celebrateLive(t);
+    t.down(t.b.cellCard);
+    expect(t.advance(400)).toBe(0);
+    live.celebration.end();
+    await Promise.resolve();
+    expect(t.advance(400)).toBe(0);
+    expect(t.overlays.peek).toBeNull();
+    expect(() => t.fire('pointerup', { target: t.b.cellCard })).not.toThrow();
+    expect(t.overlays.top).toBe('endSheet');
+    expect(t.overlays.viewCell).toBeNull();
+    expect(t.overlays.peek).toBeNull();
+    expect(navCalls).toEqual(['pop', 'push']);
+    expect(t.active()).toBe(0);
+  });
+
+  it('AD-13 a press begun after the run ended acts again (the mark is per press)', async () => {
+    const t = await setup();
+    t.detach();
+    wonView();
+    celebrateStub(t);
+    t.overlays.close('celebration');
+    navCalls.length = 0;
+    t.tap(t.b.cellCard);
+    expect(t.overlays.viewCell).toBe(3);
+    expect(navCalls).toEqual(['push']);
   });
 });

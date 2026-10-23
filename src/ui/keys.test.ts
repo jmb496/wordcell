@@ -1436,3 +1436,106 @@ describe('AD-12 board keys: a pending pop', () => {
     expect(mocks.log).toEqual([]);
   });
 });
+
+// Epic 10 entry 4 (AD-13 celebration bullet; EXPERIENCE.md Win celebration "Keys while it runs"):
+// with only `celebration` open, `attempt()` runs the `undo` and `newGame` rows and no other. Each
+// row's gate is spied (answering false, so nothing runs): the key reaches it with nothing open, and
+// not while the celebration runs. The removal callback is a recording stub.
+type Spec = { key: string; mods?: Mods; arrange?: () => void };
+const KEY_OF: Record<Exclude<keyof Keys['ROWS'], 'undo' | 'newGame'>, Spec> = {
+  redo: { key: 'y' },
+  validate: { key: 'Enter', arrange: () => board({ phase: 'composing' }) },
+  confirm: { key: 'Enter', arrange: () => board({ phase: 'place' }) },
+  flip: { key: 'f' },
+  'k+': { key: '+' },
+  'k-': { key: '-' },
+  menu: { key: 'm' },
+  howToPlay: { key: '?', mods: { shift: true } },
+  column: { key: '1', arrange: () => board() },
+  tailUp: { key: 'ArrowUp' },
+  tailDown: { key: 'ArrowDown' },
+  cell: { key: '3', arrange: () => board({ phase: 'composing' }) },
+  focusMove: { key: 'ArrowRight' },
+  tileMove: { key: 'ArrowRight', mods: { shift: true } },
+  // WordCell Enter (the tap) and WordCell Space (the view) on a won board.
+  tap: {
+    key: 'Enter',
+    arrange: () => {
+      board({ status: 'won', cellCards: { 4: [40] } });
+      onCell(4);
+    },
+  },
+  view: {
+    key: ' ',
+    arrange: () => {
+      board({ status: 'won', cellCards: { 4: [40] } });
+      onCell(4);
+    },
+  },
+};
+
+describe('AD-13 keys while the celebration runs', () => {
+  const reasons: string[] = [];
+  function celebrate(): void {
+    reasons.length = 0;
+    overlays.onCelebrationRemoved((reason) => reasons.push(reason));
+    overlays.startCelebration();
+  }
+
+  it('AD-13 the KEY_OF table covers every ROWS id but undo and newGame', () => {
+    expect(Object.keys(KEY_OF).sort()).toEqual(
+      Object.keys(keys.ROWS)
+        .filter((id) => id !== 'undo' && id !== 'newGame')
+        .sort(),
+    );
+  });
+
+  for (const [id, spec] of Object.entries(KEY_OF)) {
+    it(`AD-13 ${id} (${JSON.stringify(spec.key)}) runs no attempt() row while only celebration is open`, () => {
+      spec.arrange?.();
+      const gate = vi.spyOn(keys.ROWS[id as keyof Keys['ROWS']], 'gate').mockReturnValue(false);
+      press(spec.key, spec.mods);
+      expect(gate).toHaveBeenCalledOnce();
+      gate.mockClear();
+      celebrate();
+      expect(press(spec.key, spec.mods)).toBe(false);
+      expect(gate).not.toHaveBeenCalled();
+      expect(mocks.log).toEqual([]);
+      expect(overlays.top).toBe('celebration');
+      expect(overlays.depth).toBe(1);
+      expect(reasons).toEqual([]);
+    });
+  }
+
+  it('AD-13 Z, Ctrl+Z and N act while only celebration is open', () => {
+    setView({ inProgress: false });
+    celebrate();
+    expect(press('z')).toBe(true);
+    expect(press('z', { ctrl: true })).toBe(true);
+    expect(press('n')).toBe(true);
+    expect(ACTED(mocks.log)).toEqual(['undo', 'undo', 'newGame']);
+  });
+
+  it('AD-13 Undo still gates under the celebration: a disabled Undo does nothing', () => {
+    setView({ canUndo: false });
+    celebrate();
+    expect(press('z')).toBe(false);
+    expect(mocks.log).toEqual([]);
+  });
+
+  it('AD-13 with another suspending entry over the celebration Z and N do nothing', () => {
+    celebrate();
+    overlays.open('historyNotice');
+    expect(press('z')).toBe(false);
+    expect(press('n')).toBe(false);
+    expect(mocks.log).toEqual([]);
+  });
+
+  it('AD-13 Esc on the celebration closes it (one pop): the callback gets ended', () => {
+    celebrate();
+    expect(press('Escape')).toBe(true);
+    expect(overlays.depth).toBe(0);
+    expect(mocks.pending).toBe(true);
+    expect(reasons).toEqual(['ended']);
+  });
+});
