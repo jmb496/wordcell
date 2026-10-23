@@ -1,5 +1,5 @@
 # Review log — story-celebration-skip.md
-State: pass 2: done
+State: pass 3: done
 Pre-loop: HEAD 75ccb28; pass0.md 230 words; growth budget stated 1500 words; tickets.toml entry 6 fields interface, tests, owns, consumers, plan_checkpoint, done_checkpoint passed as intent, added to Description in pass 1.
 
 ## Pass 1 — 2026-10-23
@@ -68,3 +68,31 @@ Fixer: all 15 applied (plus: clear site data first, since `dist/sw.js` Navigatio
 ### Dropped
 - edge (decision-needed): a second quick Space/tap after the skip acting on the just-opened sheet — refs answer it: the sheet opens "exactly as a normal finish does" (EXPERIENCE.md Skip); only the skipping input is consumed
 - duplicates across lenses (release tail ×4, Reload ×3, screens regen ×3) merged
+
+## Pass 3 — 2026-10-23
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 7, minor 10, decision-needed 0  |  Dropped in triage: 1 (edge-case hunter arrived after triage: its major duplicated items 2 and 4; three new minors sent to the same fixer as items 15–17)
+Words (docs): 1519 (6.60 x pass 0; budget 1500, offset by cuts: the opening paragraph compressed, duplicate Press/Keys/Tuning phrases merged, entry 7's row list dropped from the Verify line)  |  Snapshot: _bmad-output/initiative-wordcell-v1/epic-end-of-game-words/story-celebration-skip.passes/pass3.md
+Fixer: all 17 applied; names checked in code (`disarm()`, motion.ts window blur, attached.test.ts L253, step.test.ts L254 offsets, step.ts OVERLAP/FIT_SHARE/MIN_SCALE, `readyToWin` Undo → `focusByPhase` first strip card); no commands added.
+### Applied
+- [major] Press bullet — whether the skipping `pointerdown` is stopped is unstated; unstopped, the controller marks a celebrating press whose `pointerup` the tail then eats, leaving the gate entered; the tail does not clear on the next `pointerdown`; run-scoped `pointerup`/`click` listeners have no job → fixer item 1
+- [major] Keys bullet — "clears on it or on blur": an element blur fires when the sheet moves focus to Replay this deal, clearing the tail before the keyup → fixer item 2
+- [major] Keys bullet — `src/ui/celebration/attached.test.ts` "AD-13 pressEscape with the entry on top…" also pins the old Esc path and is not named for rewriting → fixer item 3
+- [major] U list / AC keys row — no gate fails if the tails consume nothing (`keyboard.press` releases before the sheet opens; U checks only removal) → fixer item 4
+- [major] AC held-finger row — touch location unstated; a touch held on a bar control passes whatever the logic → fixer item 5
+- [major] Helper — "returns once the expanded end sheet is visible" also succeeds on a natural finish in hook-free real time → fixer item 6
+- [major] Tuning — "values win" vs "AD-19 `step` tests stay green" when step.test.ts pins entry 3's literal offsets; a value breaking a behaviour row unhandled → fixer item 7
+- [minor] Tuning — Slow-cap trigger is the Slow run ending before 3008 ms, not the last launch → fixer item 8
+- [minor] Keys — name one call: `cancelGesture()` → fixer item 9
+- [minor] Helper — press the centre of `[data-celebration-root]`'s rect (no bar testids) → fixer item 10
+- [minor] Keys — the Space tail also consumes that key's repeats → fixer item 11
+- [minor] AC keys row — "focus the board" may land on a column card (`Enter` → `tap`); use the focus the Undo step leaves → fixer item 12
+- [minor] Press — "resize (entry 7)" → fixer item 13
+- [minor] Tuning — the 90 % fit share is also a DESIGN.md value → fixer item 14
+- [minor] U list — Shift+Space, Shift+Esc, non-primary button cases → fixer item 15
+- [minor] AC banner case — observable that Reload acted (refetch) → fixer item 16
+- [minor] Helper — "touch projects" undefined (`dist-smoke` is a Pixel 7) → `navigator.maxTouchPoints > 0` → fixer item 17
+### Default applied (technical)
+- Skipping `pointerdown` — `stopPropagation()` + `preventDefault()` at the document capture phase, so the controller never opens a press; run listeners are `pointerdown`/`keydown` only; tails own `pointerup`/`click`/`keyup` and also clear on the next `pointerdown`
+- Tuning pins — literal pins take the new values; the rule-coverage AD-19 behaviour rows and R-87 cap rows stay green; a value that breaks a behaviour row stops for the owner
+### Dropped
+- fix diff "observe the pointerup without consuming it" — superseded by stopping the skipping pointerdown (item 1), which keeps AD-19's "consume a press"
