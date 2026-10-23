@@ -1,5 +1,5 @@
 # Review log — story-celebration-skip.md
-State: pass 1: done
+State: pass 2: done
 Pre-loop: HEAD 75ccb28; pass0.md 230 words; growth budget stated 1500 words; tickets.toml entry 6 fields interface, tests, owns, consumers, plan_checkpoint, done_checkpoint passed as intent, added to Description in pass 1.
 
 ## Pass 1 — 2026-10-23
@@ -36,3 +36,35 @@ Fixer: all 16 applied; `npx vite preview --help` (vite 8.3.1) lists `--host`; `n
 ### Dropped
 - builder: blocking dialog / Halted Reload swallowed by the document listener — speculative; Halted replaces the app and has no run
 - duplicates across lenses (fields, Esc, helper, device route, back, screens) merged
+
+## Pass 2 — 2026-10-23
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 8 (merged from ~20 raw), minor 9, decision-needed 0  |  Dropped in triage: 2
+Words (docs): 1481 (6.44 x pass 0; budget 1500 — at budget, later additions are minor)  |  Snapshot: _bmad-output/initiative-wordcell-v1/epic-end-of-game-words/story-celebration-skip.passes/pass2.md
+Fixer: all 15 applied (plus: clear site data first, since `dist/sw.js` NavigationRoute would serve the app at the manifest URL); ran `npm run build` (557778/600000), `ls dist` (manifest.webmanifest present), `npm run preview` + curl manifest 200; `npx playwright test --help` lists `--update-snapshots [mode]` (all/changed/missing/none); `npm run test:screens -- e2e/end-sheet.screens.spec.ts --update-snapshots=changed --list` in the container listed 12 tests; device handoff marked `unverified` in the ticket.
+### Applied
+- [major] Press/Keys bullets, U list — "listeners detach on the internal stop" contradicts the skipping press's `pointerup`/`click` and Space `keyup` staying consumed after the run; `createClickSwallower` handles only `click` and arms at pointerup; "(the finish or the cap)" cannot apply to a skipping press → fixer item 1
+- [major] AC Device read — the AD-9 `pagehide` flush rewrites `wordcell:session` on reload, so the DevTools-written fixture never loads; LAN http is not a secure context → fixer item 2
+- [major] AC banner row / Press bullet — the banner button is `Reload` (`text.reload`), not Retry; a 404 route makes Reload reload the page (relaunch, no run); the banner hides on press → fixer item 3
+- [major] AC `Space`/`Esc` and held-finger rows — no setup or observable; fixture routes leave focus on a bar button (focus exception: no skip; `Enter` activates the button); keyup protection unasserted → fixer item 4
+- [major] AC press row — a plain tap releases before the sheet opens, so "after release the sheet is still expanded" passes on broken code → fixer item 5
+- [major] Tuning — owner values vs entry 5's Slow-cap test assumption: values win, the row is retargeted → fixer item 6
+- [major] Tuning/Screens — a tuning change breaks this ticket's own mid-run baseline; regeneration path unstated → fixer item 7
+- [major] Press bullet / R-87 — R-87 names only the two bars; SPEC CAP-3, AD-19, EXPERIENCE.md (owner 2026-10-20) exclude the whole banner; record the resolution so the builder does not stop on "spec wins" → fixer item 8
+- [minor] Keys — Shift handling explicit (Ctrl/Cmd/Alt never; Shift+Space no; Shift+Esc yes, as keys.ts) → fixer item 9
+- [minor] Keys — `pressEscape`'s `celebration` branch: capture listener is the only Esc skip; branch returns false; keys.test.ts entry-4 Esc test rewritten → fixer item 10
+- [minor] Tuning — 50 % overlap and 40 % floor are A-D12/CAP-2, changed only as an owner amendment for entry 9 → fixer item 11
+- [minor] Device read — deferral to entry 9 contradicts the epic Notes (copy cost settled at entry 6); reword and record the carried items in epic Notes → fixer item 12
+- [minor] U list — second-finger, repeat, chord, banner-hidden-mid-run cases (merged into items 1, 4, 9)
+- [minor] AC Screens — `android` project only, test-name id → fixer item 13
+- [minor] Keys/Press — skip before the celebration's push settles: `end()` at once, nav queue (AD-13); one U case → fixer item 14
+- [minor] AC lead-in — "keys rows" ambiguous; name entry 7's rows → fixer item 15
+- [minor] Device read — mark the device steps `unverified` (merged into item 2)
+### Default applied (technical)
+- Release tail — a one-shot per-`pointerId` tail outlives the run: consumes that `pointerup`, arms a `createClickSwallower` there (300 ms from release), clears on `pointercancel`; Space keyup tail clears on keyup or blur
+- Device route — same-origin non-app URL (e.g. the web manifest) to write the key, then open `/`; chrome://inspect port forwarding to `localhost:4173`
+- Banner route — 500 response (in-place retry), button `Reload` by role and name
+- Key route — focus moved off every bar control before the keyboard Confirm
+- Banner scope — follow SPEC CAP-3/AD-19/EXPERIENCE.md; R-87 wording reported for entry 9's doc sync
+### Dropped
+- edge (decision-needed): a second quick Space/tap after the skip acting on the just-opened sheet — refs answer it: the sheet opens "exactly as a normal finish does" (EXPERIENCE.md Skip); only the skipping input is consumed
+- duplicates across lenses (release tail ×4, Reload ×3, screens regen ×3) merged
