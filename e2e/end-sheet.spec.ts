@@ -5,6 +5,7 @@ import { button, confirmDialog, expectLeaves, type NavState, notice, wc } from '
 import { expectBoardFocus } from './helpers/keys';
 import { onAndroid, onDesktop } from './helpers/project';
 import { fixture, seedStorage } from './helpers/seed';
+import { SESSIONS } from './helpers/sessions';
 
 // Epic 6 entry 6 (ticket 6.6, SPEC CAP-4; R-62, R-73, R-75, R-81, R-83, R-84; AD-13, AD-16): the
 // end sheet. `launch: new` in the comments is the launch id nav stamps (`NavState.launch`, a
@@ -796,6 +797,16 @@ test.describe('android words', () => {
     await openFixture(page, 'session-won-words', { endSheet: 'expanded' });
     await expect(wordsList(page)).toBeVisible();
     expect(await rows(page)).toEqual(WON_ROWS);
+    // The visible spans carry the same pairs: capitals with `QU` as `QU`, `n letters` by letterCount.
+    const shown = await wordsList(page)
+      .getByRole('listitem')
+      .evaluateAll((els) =>
+        els.map((e) =>
+          ['.word', '.count'].map((s) => (e.querySelector(s) as HTMLElement).innerText),
+        ),
+      );
+    expect(shown.map(([word, count]) => `${word}, ${count}`)).toEqual(WON_ROWS);
+    expect(shown[1]).toEqual(['JDAQUYE', '7 letters']);
     await expect(page.getByRole('listitem', { name: 'SURF, 4 letters', exact: true })).toHaveCount(
       2,
     );
@@ -861,6 +872,41 @@ test.describe('android words', () => {
     );
     expect(centres).toHaveLength(2);
     expect(Math.abs(centres[0] - centres[1])).toBeLessThanOrEqual(2);
+  });
+
+  // DESIGN.md Words section: at 360 px the word shrinks (to 14 px at the least) before it wraps,
+  // so a 20-letter word sits on one line beside its count.
+  test('R-88 a 20-letter word shrinks below 16 px but not under 14 px and stays on one line beside its count at 360 px', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await openFixture(page, { literal: SESSIONS.longWord }, { endSheet: 'expanded' });
+    const long = page.getByRole('listitem', {
+      name: 'TNPDVIMLDXOMIWRNZOAF, 20 letters',
+      exact: true,
+    });
+    await expect(long).toBeVisible();
+    const word = long.locator('.word');
+    await expect(word).toHaveText('TNPDVIMLDXOMIWRNZOAF');
+    const size = await word.evaluate((e) => parseFloat(getComputedStyle(e).fontSize));
+    expect(size).toBeGreaterThanOrEqual(14);
+    expect(size).toBeLessThan(16);
+    // One line: every line box of the word's text shares one top.
+    const lines = await word.evaluate((e) => {
+      const range = document.createRange();
+      range.selectNodeContents(e);
+      return new Set([...range.getClientRects()].map((r) => Math.round(r.top))).size;
+    });
+    expect(lines).toBe(1);
+    const centres = await long.locator('span').evaluateAll((els) =>
+      els.map((e) => {
+        const r = e.getBoundingClientRect();
+        return r.top + r.height / 2;
+      }),
+    );
+    expect(centres).toHaveLength(2);
+    expect(Math.abs(centres[0] - centres[1])).toBeLessThanOrEqual(2);
+    expect(await long.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
   });
 
   test('R-88 scrolling, collapsing and expanding leave localStorage untouched', async ({

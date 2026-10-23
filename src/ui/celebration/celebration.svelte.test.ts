@@ -1,7 +1,9 @@
+import ts from 'typescript';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GameView } from '../../engine/index';
 import { createCelebration } from './celebration.svelte.ts';
-import { launch, step } from './step';
+import source from './celebration.svelte.ts?raw';
+import { launch, rowScale, rowWidth, step } from './step';
 
 // AD-19 (R-87): the run controller over a fake document and rAF (the unit environment is `node`).
 const mocked = vi.hoisted(() => ({ motion: { baseMs: 180, reduced: false } }));
@@ -32,6 +34,8 @@ const rect = (left: number, top: number, width: number, height: number): Rect =>
 });
 
 let present: Set<string>;
+/** The dictionary banner wrapper (AD-12): always rendered, zero height unless shown. */
+let banner: Rect;
 let frames: Map<number, (t: number) => void>;
 let nextFrame: number;
 let cancelled: number[];
@@ -43,25 +47,30 @@ function el(r: Rect, extra: object = {}) {
 beforeEach(() => {
   mocked.motion = { baseMs: 180, reduced: false };
   present = new Set(['topBar', 'actionBar', 'board', ...[3, 4, 5, 6].map((n) => `cell${n}`)]);
+  banner = rect(0, 56, 360, 0);
   frames = new Map();
   nextFrame = 1;
   cancelled = [];
+  const querySelector = (selector: string) => {
+    const box = /wordcell-(\d+)/.exec(selector)?.[1];
+    const cell = box ?? /data-wordcell-label="(\d+)"/.exec(selector)?.[1];
+    if (selector.includes('topBar')) return present.has('topBar') ? el(rect(0, 0, 360, 56)) : null;
+    if (selector.includes('banner')) return el(banner);
+    if (selector.includes('actionBar'))
+      return present.has('actionBar') ? el(rect(0, 556, 360, 56)) : null;
+    if (selector === '.board-root') return present.has('board') ? el(rect(0, 0, 360, 600)) : null;
+    if (cell !== undefined) {
+      if (!present.has(`cell${cell}`)) return null;
+      // The WordCell box (below its label) differs from the label: origins come from the label.
+      if (box !== undefined) return el(rect(Number(cell) * 40, 500, 40, 53));
+      return el(rect(20 + Number(cell) * 40, 480, 20, 16));
+    }
+    return null;
+  };
   vi.stubGlobal('document', {
     documentElement: { clientWidth: 360 },
-    querySelector(selector: string) {
-      const cell =
-        /wordcell-(\d+)/.exec(selector)?.[1] ?? /data-wordcell-label="(\d+)"/.exec(selector)?.[1];
-      if (selector.includes('topBar'))
-        return present.has('topBar') ? el(rect(0, 0, 360, 56)) : null;
-      if (selector.includes('actionBar'))
-        return present.has('actionBar') ? el(rect(0, 556, 360, 56)) : null;
-      if (selector === '.board-root') return present.has('board') ? el(rect(0, 0, 360, 600)) : null;
-      if (cell !== undefined) {
-        if (!present.has(`cell${cell}`)) return null;
-        return el(rect(20 + Number(cell) * 40, 480, 20, 16));
-      }
-      return null;
-    },
+    body: { querySelector },
+    querySelector,
   });
   vi.stubGlobal('getComputedStyle', () => ({ getPropertyValue: () => '40px' }));
   vi.stubGlobal('requestAnimationFrame', (cb: (t: number) => void) => {
@@ -119,11 +128,16 @@ const pureTransform = (dts: readonly number[]): string => {
 };
 
 describe('AD-19 celebration controller', () => {
-  it('AD-19 an empty or absent list ends at once: onEnd then done once, no rAF; start after and inside done is legal', () => {
+  it('AD-19 an empty list ends at once: onEnd then done once, no rAF; start after and inside done is legal; an absent list throws', () => {
     const c = createCelebration();
     const order: string[] = [];
     c.onEnd(() => order.push('onEnd'));
-    c.start(empty, () => order.push('done'));
+    // AD-3: wordList is absent only while playing; start takes the finished GameView (rule 6).
+    expect(() => c.start(empty, () => order.push('done'))).toThrow(/AD-19.*AD-3/);
+    expect(order).toEqual([]);
+    expect(frames.size).toBe(0);
+    expect(c.running()).toBe(false);
+    c.start({ ...empty, wordList: [] } as unknown as GameView, () => order.push('done'));
     expect(order).toEqual(['onEnd', 'done']);
     expect(frames.size).toBe(0);
     expect(c.running()).toBe(false);
@@ -326,6 +340,20 @@ describe('AD-19 celebration controller', () => {
       c.cancel();
     });
 
+    it('AD-19 advance carries the remainder after a call that stepped: 20 then 12 ms is two 16 ms steps', () => {
+      const c = createCelebration();
+      c.setManual(true);
+      const els = fakeEls(1);
+      c.register(asEls(els));
+      c.start(viewOf([3]), () => undefined);
+      c.advance(20); // one step, 4 ms carried
+      expect(els[0]?.style.transform).toBe(pureTransform([16]));
+      c.advance(12); // 4 + 12: a second step
+      expect(els[0]?.style.transform).toBe(pureTransform([16, 16]));
+      expect(els[0]?.style.transform).not.toBe(pureTransform([16]));
+      c.cancel();
+    });
+
     it('AD-19 advance past the cap ends the run once, then does nothing', () => {
       const c = createCelebration();
       c.setManual(true);
@@ -391,6 +419,94 @@ describe('AD-19 celebration controller', () => {
     c.cancel();
   });
 
+  // The pure state for the stubbed geometry (band 360 x 500 below a 56 px top bar, card 40 x 53).
+  const pureState = (
+    groups: readonly { x: number; y: number; letters: number }[],
+    steps: number,
+    capMs = 6000,
+    baseMs = 180,
+  ) => {
+    let state = launch({
+      groups,
+      cardW: 40,
+      cardH: 53,
+      floor: 500,
+      ceiling: 0,
+      walls: { left: 0, right: 360 },
+      capMs,
+      baseMs,
+    });
+    for (let i = 0; i < steps; i++) state = step(state, 16);
+    return state;
+  };
+  const transformOf = (g: { x: number; y: number; w: number; h: number; scale: number }) =>
+    `translate(${g.x - g.w / 2}px, ${g.y - g.h / 2}px) scale(${g.scale})`;
+  /** Label n's rect is (20 + 40n, 480, 20 x 16): its centre in band coordinates. */
+  const labelOrigin = (cell: number, letters: number) => ({
+    x: 20 + cell * 40 + 10,
+    y: 480 + 8 - 56,
+    letters,
+  });
+
+  it('AD-19 a 23-letter row is drawn scaled to fit the 360 px band, its box centred on the step position', () => {
+    const c = createCelebration();
+    c.setManual(true);
+    const els = fakeEls(1);
+    c.register(asEls(els));
+    c.start(viewOf([3], 23), () => undefined);
+    c.advance(32);
+    const scale = rowScale(23, 40, 360);
+    expect(scale).toBeLessThan(1);
+    const g = pureState([labelOrigin(3, 23)], 2).groups[0];
+    if (g === undefined) throw new Error('no group');
+    expect(g.scale).toBe(scale);
+    expect(g.w).toBeCloseTo(rowWidth(23, 40) * scale, 9);
+    expect(g.h).toBeCloseTo(53 * scale, 9);
+    const transform = els[0]?.style.transform ?? '';
+    expect(transform.endsWith(`scale(${scale})`)).toBe(true);
+    expect(transform).toBe(transformOf(g));
+    c.cancel();
+  });
+
+  it('AD-19 each group launches from its own WordCell label (SPEC F8): group i follows entry i', () => {
+    const c = createCelebration();
+    c.setManual(true);
+    const els = fakeEls(3);
+    c.register(asEls(els));
+    // The first entry is not the leftmost cell; the WordCell boxes differ from their labels.
+    const cells = [6, 3, 5];
+    c.start(viewOf(cells), () => undefined);
+    c.advance(400); // past the third launch (320 ms at Normal)
+    const state = pureState(
+      cells.map((cell) => labelOrigin(cell, 3)),
+      25,
+    );
+    expect(state.groups.every((g) => g.opacity === 1)).toBe(true);
+    expect(els.map((e) => e.style.transform)).toEqual(state.groups.map(transformOf));
+    c.cancel();
+  });
+
+  it('AD-19 at Slow the closing fade lasts 320 ms: opacity 1 before the last 320 ms, between 0 and 1 within them', () => {
+    mocked.motion = { baseMs: 320, reduced: false };
+    const c = createCelebration();
+    c.setManual(true);
+    // 31 entries: the last launches at half the cap (wave 10, slot 0) and is still moving at the cap.
+    const cells = Array.from({ length: 31 }, (_, i) => 3 + (i % 4));
+    const els = fakeEls(31);
+    c.register(asEls(els));
+    c.start(viewOf(cells), () => undefined);
+    const capMs = (6000 * 320) / 180;
+    const last = () => els[30]?.style.opacity;
+    c.advance(10336); // cap − 330.67 ms
+    expect(last()).toBe('1');
+    c.advance(80); // cap − 250.67 ms: within the last 320 ms, before the last 180
+    const opacity = Number(last());
+    expect(opacity).toBeGreaterThan(0);
+    expect(opacity).toBeLessThan(1);
+    expect(opacity).toBeCloseTo((capMs - 10416) / 320, 9);
+    c.cancel();
+  });
+
   it('AD-19 at Slow (baseMs 320) the run is not finished at 6000 ms and finishes by about 10667 ms', () => {
     mocked.motion = { baseMs: 320, reduced: false };
     const c = createCelebration();
@@ -429,7 +545,7 @@ describe('AD-19 celebration controller', () => {
       });
     }
     c.register(asEls(els));
-    // Cell 3 drifts left, cell 6 right; both exit well before the cap.
+    // Cell 3 (left of centre) drifts right, cell 6 left; both exit well before the cap.
     c.start(viewOf([3, 6]), () => undefined);
     for (let t = 0; t < 5000 && c.running(); t += 16) c.advance(16);
     expect(c.running()).toBe(false);
@@ -454,5 +570,86 @@ describe('AD-19 celebration controller', () => {
     expect(props?.cardW).toBe(40);
     c.cancel();
     expect(c.props()).toBeNull();
+  });
+
+  it('AD-19 a shown dictionary banner tops the band: the ceiling is the banner bottom (AD-12)', () => {
+    banner = rect(0, 56, 360, 40);
+    const c = createCelebration();
+    c.start(viewOf([3]), () => undefined);
+    expect(c.props()?.band).toEqual({ left: 0, top: 96, width: 360, height: 460 });
+    c.cancel();
+  });
+
+  it('AD-19 a zero-height banner does not count: the band starts at the top bar bottom (AD-12)', () => {
+    banner = rect(0, 120, 360, 0);
+    const c = createCelebration();
+    c.start(viewOf([3]), () => undefined);
+    expect(c.props()?.band).toEqual({ left: 0, top: 56, width: 360, height: 500 });
+    c.cancel();
+  });
+
+  it('AD-19 props() and running() are reactive: both getters read the $state.raw active binding; their values follow start, end and cancel', () => {
+    const c = createCelebration();
+    // Under Vitest this module compiles for the server, where runes are plain values and a
+    // $derived re-derives on every read (AGENTS.md pitfall): this sequence checks values only.
+    const band = $derived(c.props()?.band.top ?? null);
+    const isRunning = $derived(c.running());
+    const seen: unknown[] = [[band, isRunning]];
+    c.start(viewOf([3]), () => undefined);
+    seen.push([band, isRunning]);
+    c.end();
+    seen.push([band, isRunning]);
+    c.start(viewOf([3, 4]), () => undefined);
+    seen.push([band, isRunning]);
+    c.cancel();
+    seen.push([band, isRunning]);
+    expect(seen).toEqual([
+      [null, false],
+      [56, true],
+      [null, false],
+      [56, true],
+      [null, false],
+    ]);
+    // The reactivity itself, from the source structure (TypeScript compiler API): `active` is a
+    // `let` initialised with `$state.raw(...)` (or `$state(...)`), and the bodies of `props()` and
+    // `running()` read `active`, never the plain `run`.
+    const file = ts.createSourceFile('celebration.svelte.ts', source, ts.ScriptTarget.Latest, true);
+    const found: { init?: string; isLet?: boolean; reads: Map<string, Set<string>> } = {
+      reads: new Map(),
+    };
+    const identifiers = (node: ts.Node, into: Set<string>): void => {
+      if (ts.isIdentifier(node)) into.add(node.text);
+      ts.forEachChild(node, (child) => identifiers(child, into));
+    };
+    const visit = (node: ts.Node): void => {
+      if (
+        ts.isVariableDeclaration(node) &&
+        ts.isIdentifier(node.name) &&
+        node.name.text === 'active'
+      ) {
+        const init = node.initializer;
+        found.init =
+          init !== undefined && ts.isCallExpression(init) ? init.expression.getText(file) : '';
+        found.isLet = (node.parent.flags & ts.NodeFlags.Let) !== 0;
+      }
+      if (
+        ts.isMethodDeclaration(node) &&
+        ts.isIdentifier(node.name) &&
+        (node.name.text === 'props' || node.name.text === 'running') &&
+        node.body !== undefined
+      ) {
+        const into = new Set<string>();
+        identifiers(node.body, into);
+        found.reads.set(node.name.text, into);
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(file);
+    expect(found.isLet).toBe(true);
+    expect(['$state.raw', '$state']).toContain(found.init);
+    for (const name of ['props', 'running']) {
+      const reads = found.reads.get(name);
+      expect([name, reads?.has('active'), reads?.has('run')]).toEqual([name, true, false]);
+    }
   });
 });

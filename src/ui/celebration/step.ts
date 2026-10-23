@@ -1,14 +1,17 @@
 // AD-19 (R-87): the win celebration's pure physics. `step(state, dtMs)` moves groups of card faces
-// (one per word-list entry) over plain data: no DOM, no clock, no `Math.random`. Launch time, side
-// and speed derive from the entry index and the band size. The constants are initial values, tuned
-// at epic 10's checkpoint; each is a fraction of the cap so the run scales with the speed pref.
+// (one per word-list entry) over plain data: no DOM, no clock, no `Math.random`. Launch time derives
+// from the entry index; side and horizontal speed derive from the entry index, the launch origin and
+// the band size (each group reaches its exit wall after EXIT_AFTER_CONTACTS first-contact times, so
+// it bounces before it leaves; AD-19 Rule bullet 1 and SPEC CAP-2/F3 still say "entry index", see
+// the 10.3 plan's Plan Change Log). The constants are initial values, tuned at epic 10's
+// checkpoint; timing is a fraction of the cap so the run scales with the speed pref.
 // Coordinates are band-relative px (the band is the area between the top bar and the action bar),
 // y grows downward, velocities are px per ms; a group's position is the centre of its box.
 
 /** AD-19: one `step` never advances more than this. */
 export const DT_MAX_MS = 50;
 /** DESIGN.md Win celebration: consecutive cards overlap by half a card width. */
-const OVERLAP = 0.5;
+export const OVERLAP = 0.5;
 /** DESIGN.md Win celebration: a row wider than this share of the band scales down. */
 const FIT_SHARE = 0.9;
 /** A-D12: the smallest scale of a row. */
@@ -18,11 +21,16 @@ const WAVE_SIZE = 3;
 /** Cap fraction between two waves, shrunk so the last launch is within LAUNCH_SPAN_FRAC. */
 const WAVE_GAP_FRAC = 0.08;
 const LAUNCH_SPAN_FRAC = 0.5;
-/** Cap fractions: a full-band fall, and the horizontal crossing of the band, for gravity and speed. */
+/** Cap fraction of a full-band fall, for gravity. */
 const FALL_FRAC = 0.2;
-const CROSS_FRAC = 0.4;
 /** Share of the room above the origin the launch rises through. */
-const RISE_SHARE = 0.5;
+export const RISE_SHARE = 0.5;
+/**
+ * EXPERIENCE.md Win celebration (bounce, then leave past a side edge): a group reaches its exit
+ * wall this many times its first floor contact after launch, divided by its slot's speed variety,
+ * so even the fastest slot (1 + 2 x SPEED_STEP) exits after 2 / 1.3 ≈ 1.5 first-contact times.
+ */
+const EXIT_AFTER_CONTACTS = 2;
 /** Per wave-slot speed variety. */
 const SPEED_STEP = 0.15;
 
@@ -99,15 +107,22 @@ export function launch(input: LaunchInput): StepState {
     const scale = rowScale(entry.letters, input.cardW, bandW);
     const w = rowWidth(entry.letters, input.cardW) * scale;
     const h = input.cardH * scale;
-    const side: -1 | 1 = entry.x - walls.left < walls.right - entry.x ? -1 : 1;
+    // EXPERIENCE.md Win celebration: toward the side with more room, right on a tie.
+    const side: -1 | 1 = entry.x - walls.left > walls.right - entry.x ? -1 : 1;
     const slot = i % WAVE_SIZE;
-    const speed = (bandW / (CROSS_FRAC * capMs)) * (1 + SPEED_STEP * slot);
     const rise = RISE_SHARE * Math.max(0, entry.y - h / 2 - ceiling);
+    const vy = -Math.sqrt(2 * gravity * rise);
+    // First floor contact: y + vy t + gravity t² / 2 reaches the floor (box bottom), then the
+    // horizontal speed takes the whole box past the exit wall EXIT_AFTER_CONTACTS times later.
+    const drop = Math.max(0, floor - h / 2 - entry.y);
+    const contactMs = (-vy + Math.sqrt(vy * vy + 2 * gravity * drop)) / gravity;
+    const distance = side === 1 ? walls.right + w / 2 - entry.x : entry.x - walls.left + w / 2;
+    const speed = (distance / (EXIT_AFTER_CONTACTS * contactMs)) * (1 + SPEED_STEP * slot);
     return {
       x: entry.x,
       y: entry.y,
       vx: side * speed,
-      vy: -Math.sqrt(2 * gravity * rise),
+      vy,
       w,
       h,
       scale,

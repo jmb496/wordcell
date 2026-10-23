@@ -217,6 +217,11 @@ describe('AD-3 end sheet Words section', () => {
     });
     expect(html).toContain('aria-label="BAKED, 5 letters"');
     expect(html).toContain('aria-label="CAT, 1 letter"');
+    // The visible spans: the word in capitals and `n letters`, singular for one.
+    expect(html).toMatch(/class="word[^"]*" aria-hidden="true">BAKED</);
+    expect(html).toMatch(/class="count[^"]*" aria-hidden="true">5 letters</);
+    expect(html).toMatch(/class="word[^"]*" aria-hidden="true">CAT</);
+    expect(html).toMatch(/class="count[^"]*" aria-hidden="true">1 letter</);
     expect(html).toContain('aria-labelledby="end-words"');
     expect(html.indexOf('BAKED')).toBeLessThan(html.indexOf('CAT'));
   });

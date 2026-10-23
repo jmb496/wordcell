@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { type Group, type LaunchInput, launch, rowScale, type StepState, step } from './step';
+import { cardMetrics, cardWidth } from '../layout/geometry';
+import {
+  type Group,
+  type LaunchInput,
+  launch,
+  RISE_SHARE,
+  rowScale,
+  type StepState,
+  step,
+} from './step';
 
 // AD-19 (R-87): the pure step. Band 360 x 500, card 40 x 53.
 const BASE: LaunchInput = {
@@ -111,13 +120,13 @@ describe('AD-19 step', () => {
     ]);
   });
 
-  it('AD-19 drifts toward the side with more room: left of centre goes left, right goes right, centre goes right', () => {
+  it('AD-19 drifts toward the side with more room: left of centre goes right, right goes left, centre goes right', () => {
     const side = (x: number) => first(make({ groups: [{ x, y: 300, letters: 3 }] })).side;
-    expect(side(100)).toBe(-1);
-    expect(side(260)).toBe(1);
+    expect(side(100)).toBe(1);
+    expect(side(260)).toBe(-1);
     expect(side(180)).toBe(1);
-    const g = first(make({ groups: [{ x: 100, y: 300, letters: 3 }] }));
-    expect(g.vx).toBeLessThan(0);
+    expect(first(make({ groups: [{ x: 100, y: 300, letters: 3 }] })).vx).toBeGreaterThan(0);
+    expect(first(make({ groups: [{ x: 260, y: 300, letters: 3 }] })).vx).toBeLessThan(0);
   });
 
   it('AD-19 a pre-launch group is hidden, then shown after its stagger offset', () => {
@@ -152,6 +161,28 @@ describe('AD-19 step', () => {
     expect(first(half).opacity).toBeGreaterThan(0);
     expect(first(half).opacity).toBeLessThan(1);
   });
+
+  for (const [name, capMs, baseMs] of [
+    ['Fast', 3000, 90],
+    ['Slow', 10666.67, 320],
+  ] as const) {
+    it(`AD-19 the closing fade lasts baseMs at ${name}: 1 just before cap − baseMs, half at cap − baseMs/2`, () => {
+      // Steps of at most 50 ms that land exactly on `at`.
+      const until = (state: StepState, at: number): StepState => {
+        let t = state;
+        while (t.elapsedMs < at) t = step(t, Math.min(50, at - t.elapsedMs));
+        return t;
+      };
+      let s = withGroup(make({ capMs, baseMs }), { launchMs: 0, vx: 0 });
+      s = until(s, capMs - baseMs - 1);
+      expect(first(s).exited).toBe(false);
+      expect(first(s).opacity).toBe(1);
+      s = until(s, capMs - baseMs / 2);
+      expect(first(s).opacity).toBeGreaterThan(0);
+      expect(first(s).opacity).toBeLessThan(1);
+      expect(first(s).opacity).toBeCloseTo(0.5, 6);
+    });
+  }
 
   for (const [name, capMs, baseMs] of [
     ['Fast', 3000, 90],
@@ -208,5 +239,121 @@ describe('AD-19 step', () => {
     expect(g.scale).toBeCloseTo(0.675, 10);
     expect(g.w).toBeCloseTo(0.9 * 360, 10);
     expect(g.h).toBeCloseTo(53 * 0.675, 10);
+  });
+
+  // SPEC F6: overlapping waves, in word-list order. Origins along the WordCell row.
+  const row = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({ x: 22.5 + (i % 8) * 45, y: 420, letters: 3 + (i % 5) }));
+
+  it('AD-19 launchMs strictly increases with the entry index (list order, longest first)', () => {
+    const launches = make({ groups: row(7) }).groups.map((g) => g.launchMs);
+    for (let i = 1; i < launches.length; i++)
+      expect(launches[i]).toBeGreaterThan(launches[i - 1] as number);
+  });
+
+  it('AD-19 the launch offsets of the first entries at Normal are 0, 160, 320 and 480 ms (7 entries)', () => {
+    const launches = make({ groups: row(7) }).groups.map((g) => g.launchMs);
+    expect(launches.slice(0, 4)).toEqual([0, 160, 320, 480]);
+  });
+
+  for (const [name, capMs, baseMs] of [
+    ['Fast', 3000, 90],
+    ['Normal', 6000, 180],
+    ['Slow', 10666.67, 320],
+  ] as const) {
+    it(`AD-19 waves overlap at ${name}: every later group launches while an earlier one is shown`, () => {
+      let s = make({ groups: row(6), capMs, baseMs });
+      const launches = s.groups.map((g) => g.launchMs);
+      for (let i = 1; i < launches.length; i++) {
+        while (s.elapsedMs < (launches[i] as number) && !s.finished) s = step(s, 16);
+        expect(s.elapsedMs).toBeGreaterThanOrEqual(launches[i] as number);
+        const shown = s.groups
+          .slice(0, i)
+          .some((g) => g.launchMs < (launches[i] as number) && !g.exited && g.opacity > 0);
+        expect([i, shown]).toEqual([i, true]);
+      }
+    });
+  }
+
+  it('AD-19 the launch rises: vy < 0, y peaks near origin minus RISE_SHARE x the room above, before the floor', () => {
+    // Near the left wall: the group drifts right across the band and meets the floor first.
+    let s = make({ groups: [{ x: 20, y: 300, letters: 3 }] });
+    const origin = first(s);
+    expect(origin.vy).toBeLessThan(0);
+    s = step(step(s, 16), 16);
+    expect(first(s).y).toBeLessThan(origin.y);
+    let minY = first(s).y;
+    while (first(s).bounces === 0 && !s.finished) {
+      s = step(s, 16);
+      minY = Math.min(minY, first(s).y);
+    }
+    expect(first(s).bounces).toBe(1);
+    const expected = origin.y - RISE_SHARE * (origin.y - origin.h / 2 - s.ceiling);
+    expect(Math.abs(minY - expected)).toBeLessThan(5);
+  });
+
+  it('AD-19 a floor bounce keeps vx: the horizontal drift is constant', () => {
+    const s = withGroup(make(), { launchMs: 0, y: 470, vy: 0.5, vx: 0.1, x: 100 });
+    const after = first(step(s, 50));
+    expect(after.bounces).toBe(1);
+    expect(after.vx).toBe(0.1);
+    expect(after.x).toBeCloseTo(105, 10);
+  });
+
+  // EXPERIENCE.md Win celebration: each group bounces on the floor before it leaves past a side
+  // edge. Real layouts (AD-11 card width, no insets): the band lies between the 44 px top bar and
+  // the 60 px action bar, the board is centred and the WordCell labels row (16 px) sits above the
+  // WordCells (H) and the 8 px action gap; label n is centred over column n − 2.
+  const scene = (clientWidth: number, innerHeight: number, hoverFine: boolean) => {
+    const cardW = cardWidth(clientWidth, innerHeight, { top: 0, bottom: 0 }, hoverFine);
+    const { H, slot, board } = cardMetrics(cardW);
+    const floor = innerHeight - 44 - 60;
+    const boardLeft = (clientWidth - board) / 2;
+    const letters = [23, 17, 12, 10, 9, 8, 7, 6, 5, 4, 3, 3];
+    const groups = letters.map((n, i) => {
+      const cell = 3 + ((i * 3) % 8);
+      return { x: boardLeft + (cell - 3) * slot + slot / 2, y: floor - 8 - H - 8, letters: n };
+    });
+    return { groups, cardW, cardH: H, floor, ceiling: 0, walls: { left: 0, right: clientWidth } };
+  };
+  for (const [geometry, clientWidth, innerHeight, hoverFine] of [
+    ['portrait 360x740', 360, 740, false],
+    ['desktop 1280x720', 1280, 720, true],
+    ['landscape 839x412', 839, 412, false],
+  ] as const) {
+    for (const [name, capMs, baseMs] of [
+      ['Fast', 3000, 90],
+      ['Normal', 6000, 180],
+      ['Slow', 10666.67, 320],
+    ] as const) {
+      it(`AD-19 every group bounces on the floor, then exits before the cap (${geometry}, ${name}, 12 groups)`, () => {
+        let s = launch({ ...scene(clientWidth, innerHeight, hoverFine), capMs, baseMs });
+        const exitedAt: number[] = [];
+        while (!s.finished) {
+          const next = step(s, 16);
+          next.groups.forEach((g, i) => {
+            if (!g.exited || (s.groups[i] as Group).exited) return;
+            exitedAt.push(i);
+            expect([i, g.bounces >= 1]).toEqual([i, true]);
+          });
+          s = next;
+        }
+        expect(s.elapsedMs).toBeLessThan(capMs);
+        expect(exitedAt.sort((a, b) => a - b)).toEqual([...Array(12).keys()]);
+      });
+    }
+  }
+
+  it('AD-19 the physics scales with the cap: half the cap doubles |vx| and |vy|, quadruples gravity, halves launches', () => {
+    const groups = row(4);
+    const fast = make({ groups, capMs: 3000 });
+    const normal = make({ groups, capMs: 6000 });
+    expect(fast.gravity).toBeCloseTo(4 * normal.gravity, 12);
+    fast.groups.forEach((g, i) => {
+      const n = normal.groups[i] as Group;
+      expect(Math.abs(g.vx)).toBeCloseTo(2 * Math.abs(n.vx), 12);
+      expect(Math.abs(g.vy)).toBeCloseTo(2 * Math.abs(n.vy), 12);
+      expect(g.launchMs).toBeCloseTo(n.launchMs / 2, 9);
+    });
   });
 });

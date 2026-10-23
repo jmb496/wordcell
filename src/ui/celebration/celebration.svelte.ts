@@ -1,12 +1,13 @@
 // AD-19 (R-87): the win celebration's run controller, the only owner of the run data. Unmounted and
 // untriggered until entries 4-8 wire it (overlay entry, end sheet, skip). `start` measures once;
 // frames then step the pure `step.ts` state and write `transform`/opacity straight to the group
-// elements Celebration.svelte registered (rule 3, no reactive per-frame state). Two drivers: real
-// rAF, and a manual clock (`setManual`, `advance`) for Playwright (AD-17).
+// elements Celebration.svelte registered (rule 3, no reactive per-frame state); only the active
+// run's props are reactive, so a mount can follow the run. Two drivers: real rAF, and a manual
+// clock (`setManual`, `advance`) for Playwright (AD-17).
 import type { Face, GameView } from '../../engine/index';
-import { prefs } from '../../shell/prefs.svelte';
+import { createVisibleBand } from '../gestures/visible-band';
 import { cardMetrics } from '../layout/geometry';
-import { celebrationCapMs } from '../motion';
+import { celebrationCapMs, celebrationFadeMs } from '../motion';
 import { launch, type StepState, step } from './step';
 
 /** The manual clock's sub-step. */
@@ -37,6 +38,8 @@ function find(selector: string): Element {
 
 export function createCelebration() {
   let run: Run | null = null;
+  /** The active run's props: reactive, set and cleared with `run` (the step state stays plain). */
+  let active = $state.raw<RunProps | null>(null);
   let handler: (() => void) | null = null;
   let manualNext = false;
   let remainder = 0;
@@ -45,6 +48,7 @@ export function createCelebration() {
   function clear(): Run | null {
     const current = run;
     run = null;
+    active = null;
     remainder = 0;
     if (current !== null && current.frame !== null) cancelAnimationFrame(current.frame);
     return current;
@@ -99,7 +103,7 @@ export function createCelebration() {
   return {
     /** The Celebration.svelte props of the active run, else `null`. */
     props(): RunProps | null {
-      return run === null ? null : run.props;
+      return active;
     },
     /** Celebration.svelte on mount (the group elements) and on destroy (`[]`). */
     register(next: readonly HTMLElement[]): void {
@@ -108,12 +112,19 @@ export function createCelebration() {
     start(view: GameView, done: () => void): void {
       if (run !== null) throw new Error('AD-19 celebration: start() while a run is active');
       const list = view.wordList;
-      if (list === undefined || list.length === 0) {
+      if (list === undefined) {
+        throw new Error(
+          'AD-19 celebration: start() needs a finished GameView (AD-3 wordList absent)',
+        );
+      }
+      if (list.length === 0) {
         finish(done);
         return;
       }
-      const bandTop = find('[data-band="topBar"]').getBoundingClientRect().bottom;
-      const bandBottom = find('[data-band="actionBar"]').getBoundingClientRect().top;
+      // AD-12 visible band: below the top bar and a shown dictionary banner, above the action bar.
+      const { top: bandTop, bottom: bandBottom } = createVisibleBand(
+        () => document.body,
+      ).visibleBand();
       const width = document.documentElement.clientWidth;
       const cardW = Number.parseFloat(
         getComputedStyle(find('.board-root')).getPropertyValue('--wc-w'),
@@ -136,7 +147,7 @@ export function createCelebration() {
         ceiling: 0,
         walls: { left: 0, right: width },
         capMs: celebrationCapMs(),
-        baseMs: prefs.motion.baseMs,
+        baseMs: celebrationFadeMs(),
       });
       const current: Run = {
         state,
@@ -152,6 +163,7 @@ export function createCelebration() {
         frame: null,
       };
       run = current;
+      active = current.props;
       remainder = 0;
       if (!current.manual) current.frame = requestAnimationFrame((t) => frame(current, t));
     },
@@ -165,7 +177,7 @@ export function createCelebration() {
       handler = fn;
     },
     running(): boolean {
-      return run !== null;
+      return active !== null;
     },
     /** Read at `start`; throws while a run is active. */
     setManual(on: boolean): void {

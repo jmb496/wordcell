@@ -760,6 +760,25 @@ test.describe('SESSIONS literals', () => {
   });
 });
 
+test.describe('SESSIONS long word', () => {
+  test('AD-17 SESSIONS.longWord parses and replays to a won game led by its 20-letter word', () => {
+    const parsed = parseSession(SESSIONS.longWord, EN);
+    if (!parsed.ok) throw new Error(`longWord does not parse: ${parsed.reason}`);
+    expect(parsed.session.seed).toBe(1);
+    const current = view(parsed.session, EN);
+    expect(current.status).toBe('won');
+    expect(current.wordList?.map((w) => [w.spelling, w.letterCount, w.cell])).toEqual([
+      ['tnpdvimldxomiwrnzoaf', 20, 10],
+      ['cuyeurhf', 8, 8],
+      ['lquejata', 8, 7],
+      ['ekghhio', 7, 6],
+      ['opnaen', 6, 4],
+      ['tscfsz', 6, 5],
+      ['sbrr', 4, 3],
+    ]);
+  });
+});
+
 test.describe('blocking helpers', () => {
   test('AD-17 kind and stored read the hook and localStorage; expectOnlyButton and expectAnotherWindow pass on the another-window message', async ({
     page,

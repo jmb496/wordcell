@@ -1055,12 +1055,15 @@ describe('R-86 word list', () => {
   });
 
   it('R-86 a duplicate word gives equal entries in move order with different cards and cell', () => {
-    const start = startOf(['ONES', 'TAN', 'ONES']);
-    const list = listOf(start, [...whole(1, 4), ...whole(2, 3), ...whole(3, 4, 3)]);
+    // Move order (columns 2, 1, 3 on cells 4, 3, 4) differs from cell order either way and from
+    // card-id order (startOf takes lower ids for earlier columns).
+    const start = startOf(['ONES', 'ONES', 'ONES', 'BAKED']);
+    const list = listOf(start, [...whole(2, 4), ...whole(1, 4, 3), ...whole(3, 4), ...whole(4, 5)]);
     expect(list).toStrictEqual([
-      { spelling: 'ones', letterCount: 4, cards: start.columns[0], cell: 4 },
-      { spelling: 'ones', letterCount: 4, cards: start.columns[2], cell: 3 },
-      { spelling: 'tan', letterCount: 3, cards: start.columns[1], cell: 3 },
+      { spelling: 'baked', letterCount: 5, cards: start.columns[3], cell: 5 },
+      { spelling: 'ones', letterCount: 4, cards: start.columns[1], cell: 4 },
+      { spelling: 'ones', letterCount: 4, cards: start.columns[0], cell: 3 },
+      { spelling: 'ones', letterCount: 4, cards: start.columns[2], cell: 4 },
     ]);
     expect(start.columns[0]).not.toStrictEqual(start.columns[2]);
   });
@@ -1093,6 +1096,19 @@ describe('R-86 word list', () => {
     const entry = viewFrom(start, session, LANG).wordList?.[0];
     expect(entry?.spelling).toBe('tans');
     expect(entry?.cards).toStrictEqual(draft?.wordCards);
+  });
+
+  it('R-86 cards stay in R-30 word order after a non-word setPlacementOrder before Confirm', () => {
+    // QU_TOP: placementOrder [8, 21, 2, 42, 0, 35] (QU last) confirmed onto cell 7.
+    const wordOrder = [35, 8, 21, 2, 42, 0];
+    const gameView = v(play(QU_TOP, [GIVE_UP]));
+    const entry = gameView.wordList?.[0];
+    expect(gameView.wordList).toHaveLength(1);
+    expect(entry?.cards).toStrictEqual(wordOrder);
+    expect(entry?.cards).not.toStrictEqual([8, 21, 2, 42, 0, 35]);
+    const spelled = entry?.cards.map((card) => gameView.faces[card]?.letter.toLowerCase()).join('');
+    expect(spelled).toBe(entry?.spelling);
+    expect(entry?.spelling).toBe('quejata');
   });
 
   it('R-86 gaveUp with no committed word gives an empty list', () => {

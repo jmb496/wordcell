@@ -4,14 +4,17 @@ import type { Face } from '../../engine/index';
 import { cardMetrics } from '../layout/geometry';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { text } from '../text';
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import { OVERLAP, rowWidth } from './step';
 
 // AD-19 (R-87; DESIGN.md Win celebration): one container clipped to the band between the bars, one
 // group element per word-list entry, each a row of card face copies (50 % overlap) in the live
 // theme's normal card at the board's card size. Every group renders hidden; the run controller
 // registers the group elements on mount and writes `transform`/opacity to them directly each frame
 // (rule 3), so nothing here is reactive per frame. The copies are neither live cards nor mirrors
-// (AD-14): `data-celebration` and `aria-hidden`, never `data-card-id`, `data-testid` or
-// `data-mirror-of`. The look follows Card.svelte's `.face`/`.glyph`/`.badge`.
+// (AD-14): each copy carries `data-celebration` and `aria-hidden`, never `data-card-id`,
+// `data-testid` or `data-mirror-of`; a group element carries `data-celebration-group`. The look
+// follows Card.svelte's `.face`/`.glyph`/`.badge`.
 let {
   groups,
   band,
@@ -49,16 +52,15 @@ onMount(() => {
   {#each groups as faces, g (g)}
     <div
       class="group"
-      data-celebration
-      aria-hidden="true"
+      data-celebration-group
       bind:this={elements[g]}
-      style:width="{cardW * (1 + 0.5 * (faces.length - 1))}px"
+      style:width="{rowWidth(faces.length, cardW)}px"
       style:height="{cardH}px"
       style:opacity="0"
     >
       {#each faces as face, i (i)}
         {@const qu = face.letter === 'QU'}
-        <div class="face" style:left="{i * 0.5 * cardW}px">
+        <div class="face" data-celebration aria-hidden="true" style:left="{i * OVERLAP * cardW}px">
           <span class="glyph" class:qu>{qu ? 'Qu' : face.letter}</span>
           {#if qu}<span class="badge">{text.quBadge}</span>{/if}
         </div>
@@ -69,7 +71,8 @@ onMount(() => {
 
 <style>
   .celebration {
-    position: fixed; overflow: hidden; pointer-events: none; z-index: 1;
+    /* DESIGN.md Layer order: above the drag layer (5), below the scrim and overlays (10+). */
+    position: fixed; overflow: hidden; pointer-events: none; z-index: 6;
   }
   .group {
     position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform, opacity;

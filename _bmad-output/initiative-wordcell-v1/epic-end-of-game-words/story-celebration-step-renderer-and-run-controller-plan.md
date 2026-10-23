@@ -63,15 +63,17 @@ Open major from the ticket review log (pass 7): the ticket's Verify lacks the tw
 
 ## Plan Change Log
 
+- 2026-10-23 — Opus review: side and horizontal speed derive from the entry index, the launch origin and the band size (each group reaches its exit wall after `EXIT_AFTER_CONTACTS` first-contact times, so it bounces before it leaves), as EXPERIENCE.md Win celebration needs. AD-19 Rule bullet 1 and SPEC CAP-2/F3 should read "entry index, launch origin and band size"; the spine and SPEC are not edited here — for entry 9's close-out (owner, via `bmad-architecture` / `bmad-spec`).
+
 ## Review Triage Log
 
 ### 2026-10-21 — Review pass
 - verdicts: 27 findings — high 0, medium 3, low 14, false 8, maybe-false 2
 - findings:
-  - `[false]` `[reject]` blind: reduced motion ignored — AD-19 sends reduced motion straight to `done` in `end-sheet.ts` (entry 4), not in this unmounted layer.
+  - `[false]` `[reject]` blind: reduced motion ignored — AD-19 sends reduced motion straight to `done` in `end-sheet.ts` (entry 5), not in this unmounted layer.
   - `[false]` `[reject]` blind: frame-rate dependent physics — rAF uses real dt clamped to 50 ms and manual uses fixed 16 ms by the ticket's own Description.
-  - `[low]` `[reject]` blind: register/elements bookkeeping brittle — a count mismatch throwing is rule 6; the component is mounted fresh per run (entry 4).
-  - `[low]` `[reject]` blind: band measured once — resize ends the run via entry 4's wiring (AD-19), logged in the ticket review as unapplied.
+  - `[low]` `[reject]` blind: register/elements bookkeeping brittle — a count mismatch throwing is rule 6; the component is mounted fresh per run (entry 5).
+  - `[low]` `[reject]` blind: band measured once — resize ends the run via entry 7's wiring (AD-19), logged in the ticket review as unapplied.
   - `[low]` `[reject]` blind: `as` casts / undefined `wordList` ends silently — the ticket specifies "empty or absent" ends at once.
   - `[low]` `[reject]` blind: `onEnd` throwing skips `done` — engine-style fail-fast to the AD-15 handler (rule 6).
   - `[low]` `[reject]` blind: CSS duplicates Card.svelte; source-text shadow test — copies must not use `Card` (emits mirror/id attributes); cosmetic.
@@ -84,14 +86,14 @@ Open major from the ticket review log (pass 7): the ticket's Verify lacks the tw
   - `[low]` `[reject]` edge: render throw leaves run active — fail fast to AD-15 halts the store.
   - `[false]` `[reject]` edge: onEnd throw loses `done` — as above.
   - `[low]` `[reject]` edge: origin outside band / zero rect — not reachable with the real row.
-  - `[low]` `[reject]` edge: resize mid-run — entry 4.
+  - `[low]` `[reject]` edge: resize mid-run — entry 7.
   - `[low]` `[reject]` edge: empty band, step on finished state, baseMs 0 — unreachable (`baseMs` ≥ 90).
   - `[medium]` `[patch]` gap: controller-to-step wiring unpinned — wiring test and Slow cap test added.
-  - `[defer-equivalent]` `[reject]` gap: component mount/register contract — nothing mounts it yet; entry 4 closes it.
+  - `[defer-equivalent]` `[reject]` gap: component mount/register contract — nothing mounts it yet; entry 5 closes it.
   - `[medium]` `[patch]` gap: count-mismatch throw untested — test added.
   - `[low]` `[patch]` gap: post-exit opacity unobserved — assertions added.
   - `[false]` `[reject]` gap other: source-text shadow assertion — cosmetic, value is the DESIGN token.
-  - `[maybe-false]` `[reject]` intent: layout measured with direct rects, not `src/ui/layout/` helpers — no such rect helper exists; settles at entry 4 mount.
+  - `[maybe-false]` `[reject]` intent: layout measured with direct rects, not `src/ui/layout/` helpers — no such rect helper exists; settles at entry 5 mount.
   - `[maybe-false]` `[reject]` intent: shadow via `var(--wc-shadow-drag)` — equals `#0008` in the default theme.
   - `[false]` `[reject]` intent: added public surface (`props`, `register`, factory) — needed by the renderer.
 
@@ -115,4 +117,4 @@ Status: built. Blocking condition: none.
 
 **Verification:** on the `/mnt` drvfs checkout `npm test` fails (15 tests in `celebration.svelte.test.ts`): `./celebration.svelte` resolves case-insensitively to `Celebration.svelte`. In a Linux-filesystem copy `npm run test:all` exits 0 (3091+ unit tests, e2e suites). The `Celebration.svelte` / `celebration.svelte.ts` pair is the ticket's and AD-19's naming; owner decision needed on a rename or explicit imports.
 
-**Residual risks:** physics constants untuned (entry 6); component-to-controller mount wiring untested until entry 4.
+**Residual risks:** physics constants untuned (entry 6); component-to-controller mount wiring untested until entry 5.

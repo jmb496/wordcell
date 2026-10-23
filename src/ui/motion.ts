@@ -43,6 +43,11 @@ export function celebrationCapMs(): number {
   return (6000 * prefs.motion.baseMs) / BASE_MS.normal;
 }
 
+/** AD-19: the win celebration's closing fade in ms, 1 × the base (90, 180, 320 ms). */
+export function celebrationFadeMs(): number {
+  return prefs.motion.baseMs;
+}
+
 // AD-14 winning guard (epic 5 SPEC F8, F23). The tracker, started once from main.ts, owns the open
 // gestures (pointerIds, keys by `code`) and the consumed flags and outlives the guard; the guard is
 // a flag plus deadline logic layered on it. All clocks use the injected `now` and timers, never

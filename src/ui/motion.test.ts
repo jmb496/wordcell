@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import {
   celebrationCapMs,
+  celebrationFadeMs,
   duration,
   finishGuard,
   guardInstalled,
@@ -48,6 +49,14 @@ describe('motion', () => {
     expect(caps[0]).toBe(3000);
     expect(caps[1]).toBe(6000);
     expect(caps[2]).toBeCloseTo(10666.67, 2);
+  });
+
+  it('AD-19 celebrationFadeMs is 90, 180 and 320 at Fast, Normal and Slow', () => {
+    const fades = [90, 180, 320].map((baseMs) => {
+      mocked.motion = { baseMs, reduced: false };
+      return celebrationFadeMs();
+    });
+    expect(fades).toEqual([90, 180, 320]);
   });
 
   for (const baseMs of [90, 180, 320]) {
