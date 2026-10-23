@@ -43,4 +43,5 @@ E = engine Vitest. P6 = Playwright (`android`; `desktop` where noted). U = UI Vi
 ## Exempt
 
 - R-86 and R-87 sentences that describe ownership or provenance (for example "drawn from copies, never from live elements" is covered by the copy-count row; the AD-14 wording itself is not a test).
+- R-88 `1 letter` from P6: unreachable in a real game (minimum letter count 3, R-36); covered by the `AD-3` Vitest stub in `src/ui/end-sheet.test.ts` (10.2 plan, Opus review 2026-10-23).
 - "No trail, no colour change" (R-87, Q-48): visual; checked in the ticket's screenshot or owner review, not an automated assertion.
