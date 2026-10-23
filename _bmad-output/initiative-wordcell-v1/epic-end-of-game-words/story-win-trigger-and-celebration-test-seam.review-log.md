@@ -1,5 +1,5 @@
 # Review log — story-win-trigger-and-celebration-test-seam.md
-State: pass 1: done
+State: pass 2: done
 Pre-loop: HEAD 8d5147f; pass0.md 373 words; growth budget 2.5x (~930 words); tickets.toml entry 5 fields interface, tests, owns, consumers, unknown, plan_checkpoint passed as intent, added to Description in pass 1.
 
 ## Pass 1 — 2026-10-23
@@ -39,3 +39,33 @@ Fixer: all 20 applied; lead paragraph trimmed where bullets replace it; nothing 
 ### Dropped
 - adversarial: dev server never shows a real-time run (manual viewing note) — owner viewing is entry 6's device read on `dist/`; not this ticket's contract
 - builder: tickets.toml header says entry 5 changes end-sheet baselines — with the seam off in hook builds nothing visible changes; kept "no baseline modified" (item 15)
+
+## Pass 2 — 2026-10-23
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 5, minor 6, decision-needed 0  |  Dropped in triage: 4
+Words (docs): 1004 (2.69 x pass 0)  |  Snapshot: _bmad-output/initiative-wordcell-v1/epic-end-of-game-words/story-win-trigger-and-celebration-test-seam.passes/pass2.md
+Fixer: all 11 applied; majors +75 words, minors net −4 (cut a duplicate consumer line and a duplicate Notes clause); item 11 corrected: the e2e constant is `WON_ROWS` in `e2e/end-sheet.spec.ts` (`WON_WORDS_LIST` is in `src/engine/serialize.test.ts`); nothing run (no commands touched).
+### Applied
+- [major] Start bullet / AC AD-19 — `done` on a hidden page then `announceOutcome()` speaks on return, against EXPERIENCE.md Win celebration row ("a return from hidden is silent", epic 6 SPEC F16) → fixer item 1
+- [major] AC AD-17 default-off — end-state check passes even with the flag left on (a real rAF run removes its copies before the sheet opens) → fixer item 2
+- [major] AC R-87 relaunch — still cannot fail (reload resets the seam to off before `openAtBoot`); pass-1 item 9 unresolved → fixer item 3
+- [major] Hook bullet / AC AD-17 — nested freeze and keys, throw before registration, second-registration throw, `setEnabled` mid-run throw untested → fixer item 4
+- [major] AC R-87 run — R-87 "the end sheet opens only after the celebration" not asserted in P6 (Vitest is never R-id coverage) → fixer item 5
+- [minor] Start bullet — `isLiveToken` is new; say so and list it in Interface → fixer item 6
+- [minor] Start bullet — "as `act()` does" ambiguous (act also clears the tile); name `cancelGesture()` → fixer item 7
+- [minor] Hook bullet — `setEnabled` check before any change → fixer item 8
+- [minor] Description — `attachOverlays()` boot position → fixer item 9
+- [minor] Helper bullet — `finishCelebration` advance amount unbounded → fixer item 10
+- [minor] AC copies — source of the expected list in e2e (`WON_WORDS_LIST`) → fixer item 11
+### Default applied (technical)
+- default-off — a MutationObserver installed before Confirm records that no `[data-celebration]` node was ever added
+- relaunch — P6 proves the sheet expanded at boot after a mid-run reload (`running()` true before it); the no-start guard is the U `openAtBoot` case
+- hook throws — shell Vitest `AD-17` in a new `src/shell/test-hook.test.ts`; hook specs assert the nested freeze and keys
+- hidden `done` — opens after `whenVisible()` without `announceOutcome()`
+- `attachOverlays()` — right after `nav.register(...)` in `boot()`
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- edge: second-run check does not prove `{#key}` — the check is a valid Redo-restart check; `{#key}` stays as design
+- adversarial: how `end-sheet.ts` reads visibility / Vitest env node — plan detail
+- adversarial (stretch): reduced/disabled path keeps entry 4's pre-existing press hazard — today's behaviour, plan residual risk
+- adversarial (stretch): `finishCelebration` bound — merged into item 10
