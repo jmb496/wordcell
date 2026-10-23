@@ -256,7 +256,12 @@ const attachment: Attachment = { attached: false, removed: null };
 
 export const celebration = build(attachment);
 
-/** AD-13, AD-19: registers the singleton's removal callback with `overlays` (main.ts at boot). */
+/**
+ * AD-13, AD-19: registers the singleton's removal callback with `overlays` (main.ts at boot). It
+ * must be the app's only `onCelebrationRemoved` registration (main.ts at boot, entry 5): a later one
+ * replaces this callback while the singleton stays attached. Tests register stubs only on a fresh
+ * module.
+ */
 export function attachOverlays(): void {
   const removed = attachment.removed;
   if (removed === null) throw new Error('AD-19 celebration: attachOverlays() before the singleton');

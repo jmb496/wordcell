@@ -135,11 +135,11 @@ function removed(reason) {         // registered by attachOverlays()
 
 Review-log minors for the build (all resolved here): `/peekToSticky` cut (it throws on its no-peek guard first; only `openView`/`openPeek` are tested); "else the live run's `done`" (the callback sees only the reason, sketch above); the `build(hooks)` channel; the AC wording fixes (New game callers, illegal start with a view, `ROWS` table, `focusByPhase` after a tick, view or drag); `vi.resetModules()` re-imports; the `end-sheet.ts` comment cites EXPERIENCE.md Focus, not Q-01, for the Undo refocus.
 
-Owner checkpoint items (rule 7; not built here, recorded for entries 5–7 and entry 9's spine close-out):
+Owner checkpoint items (rule 7; items 1–3 are not built here, recorded for entries 5–7; item 4 is built here):
 1. Hide end (entry 7) — decision taken, recommended default: keep "the removal callback is the only caller of `done`, via `queueMicrotask`"; entry 5's `done` closure itself waits for visibility (opens via the store's `whenVisible()` when hidden), so `end(hide-mode)` needs no second `done` path.
 2. Entry 5 starts the run only from the still-pending winning `whenSettled` callback, which the release-hold drops on Undo, so no start runs with a dead token.
 3. Until entry 7, ☰ over a running celebration hits the `open(menu)` guard and halts: the epic branch must not merge before entry 7.
-4. Spine refinements (a)–(e) from the ticket Notes stand for entry 9.
+4. Spine refinements (a)–(e) from the ticket Notes are built here (sticky-view close in `startCelebration`, Undo/`N` keys, the `mainInert` filter, removal-driven stop, no-input board), awaiting the owner's nod and entry 9's spine amendment.
 
 ## Verification
 

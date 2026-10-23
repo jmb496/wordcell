@@ -848,13 +848,20 @@ describe('AD-13 overlays celebration entry', () => {
     ['a peek', (o) => o.openPeek(3)],
     ['historyNotice', (o) => o.open('historyNotice')],
     ['menu', (o) => o.open('menu')],
-    ['a tail selection', (o) => o.select(2, 1)],
+    [
+      'a tail selection',
+      (o) => {
+        o.select(2, 1);
+        o.openHoverPeek(6);
+      },
+    ],
     ['the expanded end sheet', (o) => o.openDeferred(o.deferEndSheetOpen())],
     [
       'the collapsed end sheet',
       (o) => {
         o.openDeferred(o.deferEndSheetOpen());
         o.collapseEndSheet();
+        o.openHoverPeek(6);
       },
     ],
     ['celebration itself', (o) => o.startCelebration()],

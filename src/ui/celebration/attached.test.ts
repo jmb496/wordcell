@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GameView } from '../../engine/index';
+import { celebrationCapMs } from '../motion';
 
 // AD-19 wiring (entry 4, AD-13 celebration bullet): the exported singleton attached to the real
 // overlays store with nav stubbed (one call-order log shared with the stub `done` and `onEnd`).
@@ -95,6 +96,7 @@ async function load() {
     overlays,
     celebration,
     attachOverlays: module.attachOverlays,
+    createCelebration: module.createCelebration,
     begin,
     done,
     dones: () => dones,
@@ -120,6 +122,19 @@ describe('AD-19 celebration attached to overlays', () => {
     expect(log).toEqual(['onEnd', 'done']);
   });
 
+  it('AD-19 after attachOverlays() an unattached createCelebration() instance keeps the synchronous done, and start() needs no entry', async () => {
+    const t = await load();
+    t.attachOverlays();
+    let dones = 0;
+    expect(() =>
+      t.createCelebration().start(EMPTY, () => {
+        dones += 1;
+      }),
+    ).not.toThrow();
+    expect(dones).toBe(1);
+    expect(log).toEqual([]);
+  });
+
   it('AD-19 attached cancel() with the entry open throws; the run stays live', async () => {
     const t = await load();
     t.begin();
@@ -134,6 +149,21 @@ describe('AD-19 celebration attached to overlays', () => {
     expect(log).toEqual(['push']);
     log.length = 0;
     t.celebration.end();
+    expect(t.celebration.running()).toBe(false);
+    expect(t.overlays.depth).toBe(0);
+    expect(t.dones()).toBe(0);
+    expect(log).toEqual(['onEnd', 'pop']);
+    await Promise.resolve();
+    expect(t.dones()).toBe(1);
+    expect(log).toEqual(['onEnd', 'pop', 'done', 'push']);
+    expect(t.overlays.top).toBe('endSheet');
+  });
+
+  it('AD-19 a run driven past the cap on the manual clock: onEnd, one pop; done not called synchronously, once after a microtask', async () => {
+    const t = await load();
+    t.begin();
+    log.length = 0;
+    t.celebration.advance(celebrationCapMs());
     expect(t.celebration.running()).toBe(false);
     expect(t.overlays.depth).toBe(0);
     expect(t.dones()).toBe(0);

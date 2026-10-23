@@ -4,13 +4,20 @@ import { describe, expect, it, vi } from 'vitest';
 // nav and the game store stubbed.
 const calls: string[] = [];
 const outcomes: string[] = [];
+/** The view each `focusByPhase` call received. */
+const focused: unknown[] = [];
 const store: { view: { status: string } | undefined } = { view: undefined };
 
 vi.mock('../shell/nav', () => ({
   nav: { push: () => calls.push('push'), pop: () => calls.push('pop') },
 }));
 vi.mock('./announce', () => ({ announceOutcome: () => outcomes.push('outcome') }));
-vi.mock('./focus-board', () => ({ focusByPhase: () => calls.push('focusByPhase') }));
+vi.mock('./focus-board', () => ({
+  focusByPhase: (view: unknown) => {
+    calls.push('focusByPhase');
+    focused.push(view);
+  },
+}));
 vi.mock('../shell/game.svelte', () => ({
   game: {
     get view() {
@@ -23,6 +30,7 @@ async function load(status?: string) {
   vi.resetModules();
   calls.length = 0;
   outcomes.length = 0;
+  focused.length = 0;
   store.view = status === undefined ? undefined : { status };
   const { overlays } = await import('./overlays.svelte');
   const sheet = await import('./end-sheet');
@@ -143,13 +151,16 @@ describe('AD-13 end sheet entry', () => {
     onDispatched({ changed: true, finished: 'won' }, (cb) => pending.push(cb));
     overlays.startCelebration();
     calls.length = 0;
-    store.view = { status: 'playing' };
+    const afterUndo = { status: 'playing' };
+    store.view = afterUndo;
     onDispatched({ changed: true, unfinished: true }, settleNow);
     expect(overlays.depth).toBe(0);
     expect(reasons).toEqual(['cancelled']);
     expect(calls).toEqual(['pop']);
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
     expect(calls).toEqual(['pop', 'focusByPhase']);
+    expect(focused).toHaveLength(1);
+    expect(focused[0]).toBe(afterUndo);
     store.view = { status: 'won' };
     pending[0]?.();
     expect(overlays.endSheet).toBe('hidden');
