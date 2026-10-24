@@ -6085,10 +6085,14 @@ describe('AD-13 gestures while the celebration runs', () => {
       if (selector.includes('actionBar')) return box(0, 1200, 400, 60);
       return box(0, 450, 50, 16);
     };
+    // The run's AD-19 Skip listeners attach here; these rows never dispatch on the document.
+    const docListeners = new Set<unknown>();
     vi.stubGlobal('document', {
       documentElement: { clientWidth: 400 },
       body: { querySelector },
       querySelector,
+      addEventListener: (_type: string, fn: unknown) => docListeners.add(fn),
+      removeEventListener: (_type: string, fn: unknown) => docListeners.delete(fn),
     });
     vi.stubGlobal('getComputedStyle', () => ({ getPropertyValue: () => '40px' }));
     celebration.setManual(true);

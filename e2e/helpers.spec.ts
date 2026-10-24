@@ -1,7 +1,7 @@
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { expect, type Page, type Request, test } from '@playwright/test';
+import { devices, expect, type Page, type Request, test } from '@playwright/test';
 import { EN, parseSession, view } from '../src/engine/index';
 import { expectAnotherWindow, expectOnlyButton, kind, stored } from './helpers/blocking';
 import {
@@ -24,6 +24,7 @@ import {
   NORMAL_CAP_STEP_MS,
   running,
   SLOW_CAP_STEP_MS,
+  skipByPress,
   watchAdded,
   watchAddedFromBoot,
 } from './helpers/celebration';
@@ -1416,6 +1417,37 @@ test.describe('celebration helpers', () => {
     expect(await running(page)).toBe(false);
     await expect(page.getByRole('dialog', { name: 'Every column cleared.' })).toBeVisible();
     await expect(page.locator('[data-celebration-root]')).toHaveCount(0);
+  });
+
+  // The touch path on this android page; the mouse path on a Desktop Chrome page
+  // (`navigator.maxTouchPoints` 0), since these self-tests run on android only.
+  test('AD-17 skipByPress ends a run by a band press, by touch and by mouse: running() false, the sheet expanded', async ({
+    page,
+    browser,
+  }) => {
+    const skipOn = async (target: Page, touch: boolean) => {
+      await openFixture(target, 'session-won-words', { steps: ['undo'] });
+      await enableCelebration(target);
+      expect(await target.evaluate(() => navigator.maxTouchPoints > 0)).toBe(touch);
+      await target.getByTestId('primary-action').click();
+      await expect.poll(() => running(target)).toBe(true);
+      await skipByPress(target);
+      expect(await running(target)).toBe(false);
+      await expect(target.getByRole('dialog', { name: 'Every column cleared.' })).toBeVisible();
+      await expect(
+        target.getByRole('button', { name: 'Replay this deal', exact: true }),
+      ).toBeFocused();
+    };
+    await skipOn(page, true);
+    const desktop = await browser.newContext({
+      ...devices['Desktop Chrome'],
+      baseURL: test.info().project.use.baseURL,
+    });
+    try {
+      await skipOn(await desktop.newPage(), false);
+    } finally {
+      await desktop.close();
+    }
   });
 
   test('AD-17 watchAddedFromBoot attaches before the app runs: a node the boot adds is recorded', async ({

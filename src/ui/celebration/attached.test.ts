@@ -7,17 +7,79 @@ import { celebrationCapMs } from '../motion';
 // The attachment is module-wide, so every test re-imports `overlays` and the controller after
 // `vi.resetModules()`. A run starts on the manual clock (no rAF) over a fake document; the stub
 // `done` stands in for entry 5's sheet open (`openDeferred` with a token issued before the start).
+// Entry 6 (AD-19 Skip): the fake document and window record their listeners, and `fire` sends a
+// plain event to a snapshot of one type's listeners (as a DOM dispatch: a listener added during it
+// is not called for it).
 const log: string[] = [];
-const store = vi.hoisted(() => ({ game: { state: { kind: 'active' }, view: {} as unknown } }));
+const store = vi.hoisted(() => ({
+  game: { state: { kind: 'active' }, view: {} as unknown },
+  settled: true,
+}));
 
 vi.mock('../../shell/nav', () => ({
   nav: {
     push: () => log.push('push'),
     pop: () => log.push('pop'),
-    settled: () => true,
+    settled: () => store.settled,
     whenSettled: (fn: () => void) => fn(),
   },
 }));
+
+type Listener = (event: unknown) => void;
+type Entry = { at: string; type: string; fn: Listener; capture: boolean };
+let listeners: Entry[] = [];
+const capture = (options: unknown) =>
+  (options as { capture?: boolean } | undefined)?.capture === true;
+const recorder = (at: string) => ({
+  addEventListener: (type: string, fn: Listener, options: unknown) =>
+    listeners.push({ at, type, fn, capture: capture(options) }),
+  removeEventListener: (type: string, fn: Listener, options: unknown) => {
+    const i = listeners.findIndex(
+      (l) => l.at === at && l.type === type && l.fn === fn && l.capture === capture(options),
+    );
+    if (i >= 0) listeners.splice(i, 1);
+  },
+});
+/** The live listeners as `<at> <type>`, sorted. */
+const live = () => listeners.map((l) => `${l.at} ${l.type}`).sort();
+type Fired = { stopped: boolean; prevented: boolean };
+function fire(type: string, init: Record<string, unknown>): Fired {
+  const event = {
+    type,
+    stopped: false,
+    prevented: false,
+    stopPropagation() {
+      event.stopped = true;
+    },
+    preventDefault() {
+      event.prevented = true;
+    },
+    ...init,
+  };
+  for (const l of listeners.filter((entry) => entry.at === 'document' && entry.type === type)) {
+    l.fn(event);
+  }
+  return { stopped: event.stopped, prevented: event.prevented };
+}
+/** A plain keydown with no modifiers on the board. */
+const keydown = (key: string) =>
+  fire('keydown', {
+    key,
+    repeat: false,
+    shiftKey: false,
+    ctrlKey: false,
+    metaKey: false,
+    altKey: false,
+    target: { closest: () => null },
+  });
+/** A primary press on the band (no bar ancestor). */
+const press = (pointerId = 1) =>
+  fire('pointerdown', {
+    button: 0,
+    pointerId,
+    pointerType: 'touch',
+    target: { closest: () => null },
+  });
 vi.mock('../../shell/prefs.svelte', () => ({
   BASE_MS: { fast: 90, normal: 180, slow: 320 },
   prefs: { motion: { baseMs: 180, reduced: false } },
@@ -43,6 +105,9 @@ const rect = (left: number, top: number, width: number, height: number): Rect =>
 });
 
 beforeEach(() => {
+  listeners = [];
+  store.settled = true;
+  store.game.state = { kind: 'active' };
   const querySelector = (selector: string) => {
     const box = (r: Rect) => ({ getBoundingClientRect: () => r });
     if (selector.includes('topBar')) return box(rect(0, 0, 360, 56));
@@ -56,7 +121,9 @@ beforeEach(() => {
     documentElement: { clientWidth: 360 },
     body: { querySelector },
     querySelector,
+    ...recorder('document'),
   });
+  vi.stubGlobal('window', recorder('window'));
   vi.stubGlobal('getComputedStyle', () => ({ getPropertyValue: () => '40px' }));
 });
 afterEach(() => vi.unstubAllGlobals());
@@ -73,6 +140,14 @@ async function load() {
   vi.resetModules();
   log.length = 0;
   const { overlays } = await import('../overlays.svelte');
+  // A recording controller behind act.ts (`cancelGesture` → `cancel`, as `act()`).
+  const act = await import('../act');
+  act.setController({
+    cancel: () => log.push('cancel'),
+    attach: () => () => {},
+    refreshHover: () => {},
+    activate: () => {},
+  } as unknown as Parameters<typeof act.setController>[0]);
   const module = await import('./celebration.svelte.ts');
   const { celebration } = module;
   celebration.setManual(true);
@@ -250,15 +325,8 @@ describe('AD-19 celebration attached to overlays', () => {
     expect(t.overlays.depth).toBe(0);
   });
 
-  it('AD-13 pressEscape with the entry on top: one pop, the callback gets ended, done once after a microtask', async () => {
+  it('AD-13 pressEscape with the entry on top does nothing: not prevented, no act(), the run and the entry stay', async () => {
     const t = await load();
-    const act = await import('../act');
-    act.setController({
-      cancel: () => log.push('cancel'),
-      attach: () => () => {},
-      refreshHover: () => {},
-      activate: () => {},
-    } as unknown as Parameters<typeof act.setController>[0]);
     const keys = await import('../keys');
     t.begin();
     log.length = 0;
@@ -275,13 +343,132 @@ describe('AD-19 celebration attached to overlays', () => {
         prevented = true;
       },
     } as KeyboardEvent);
-    expect(prevented).toBe(true);
-    expect(log).toEqual(['cancel', 'pop']);
+    expect(prevented).toBe(false);
+    expect(log).toEqual([]);
+    expect(t.celebration.running()).toBe(true);
+    expect(t.overlays.depth).toBe(1);
+    expect(t.overlays.top).toBe('celebration');
+    await Promise.resolve();
+    expect(t.dones()).toBe(0);
+  });
+});
+
+describe('AD-19 Skip on the attached run', () => {
+  const RUN = ['document keydown', 'document pointerdown'];
+
+  it('AD-19 a skip press: consumed, the controller cancel, onEnd and one pop, done once after a microtask; a second press adds nothing', async () => {
+    const t = await load();
+    t.begin();
+    expect(live()).toEqual(RUN);
+    log.length = 0;
+    expect(press()).toEqual({ stopped: true, prevented: true });
     expect(t.celebration.running()).toBe(false);
+    expect(log).toEqual(['cancel', 'onEnd', 'pop']);
     expect(t.dones()).toBe(0);
     await Promise.resolve();
     expect(t.dones()).toBe(1);
-    expect(log).toEqual(['cancel', 'pop', 'done', 'push']);
+    expect(log).toEqual(['cancel', 'onEnd', 'pop', 'done', 'push']);
     expect(t.overlays.top).toBe('endSheet');
+    // Only the press tail is left (its pointerup, pointercancel and pointerdown).
+    expect(live()).toEqual([
+      'document pointercancel',
+      'document pointerdown',
+      'document pointerup',
+    ]);
+    expect(press(2)).toEqual({ stopped: false, prevented: false });
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(t.dones()).toBe(1);
+    expect(log).toEqual(['cancel', 'onEnd', 'pop', 'done', 'push']);
   });
+
+  it('AD-19 a skip press before the push settles still ends at once (nav orders the pop)', async () => {
+    const t = await load();
+    store.settled = false;
+    t.begin();
+    log.length = 0;
+    press();
+    expect(t.celebration.running()).toBe(false);
+    expect(log).toEqual(['cancel', 'onEnd', 'pop']);
+    await Promise.resolve();
+    expect(t.dones()).toBe(1);
+  });
+
+  const skips: [string, () => { stopped: boolean; prevented: boolean }][] = [
+    ['an Esc keydown', () => keydown('Escape')],
+    ['a Space keydown', () => keydown(' ')],
+    ['a band press', () => press()],
+  ];
+  for (const [name, skip] of skips) {
+    it(`AD-19 ${name} skips through the controller: consumed, its cancel() before onEnd and the pop`, async () => {
+      const t = await load();
+      t.begin();
+      log.length = 0;
+      expect(skip()).toEqual({ stopped: true, prevented: true });
+      expect(t.celebration.running()).toBe(false);
+      expect(log).toEqual(['cancel', 'onEnd', 'pop']);
+      await Promise.resolve();
+      expect(t.dones()).toBe(1);
+    });
+  }
+
+  it('AD-19 halted (AD-15, the store’s state): a band press, Space and Esc pass untouched and the run stays live', async () => {
+    const t = await load();
+    t.begin();
+    log.length = 0;
+    store.game.state = { kind: 'halted' };
+    try {
+      for (const [, skip] of skips) expect(skip()).toEqual({ stopped: false, prevented: false });
+      expect(t.celebration.running()).toBe(true);
+      expect(log).toEqual([]);
+      expect(live()).toEqual(RUN);
+    } finally {
+      store.game.state = { kind: 'active' };
+    }
+  });
+
+  it('AD-19 no listeners before start() or after the empty-list start()', async () => {
+    const t = await load();
+    t.attachOverlays();
+    expect(live()).toEqual([]);
+    t.begin(EMPTY);
+    expect(live()).toEqual([]);
+    await Promise.resolve();
+    expect(live()).toEqual([]);
+  });
+
+  it('AD-19 the run listeners are gone after the rAF-driven end', async () => {
+    const t = await load();
+    const frames: ((time: number) => void)[] = [];
+    vi.stubGlobal('requestAnimationFrame', (cb: (time: number) => void) => frames.push(cb));
+    vi.stubGlobal('cancelAnimationFrame', () => {});
+    t.celebration.setManual(false);
+    t.begin();
+    expect(live()).toEqual(RUN);
+    let time = 0;
+    for (let i = 0; i < 1000 && frames.length > 0; i++) {
+      time += 50;
+      (frames.shift() as (time: number) => void)(time);
+    }
+    expect(t.celebration.running()).toBe(false);
+    expect(live()).toEqual([]);
+  });
+
+  const ends: [string, (t: Awaited<ReturnType<typeof load>>) => void][] = [
+    ['the cap', (t) => t.celebration.advance(celebrationCapMs())],
+    ['end()', (t) => t.celebration.end()],
+    ['back (closedByBack)', (t) => t.overlays.closedByBack(0)],
+    ['an Undo cancel (onUnfinished)', (t) => t.overlays.onUnfinished()],
+  ];
+  for (const [name, stop] of ends) {
+    it(`AD-19 the run listeners are gone after ${name}, and nothing was consumed`, async () => {
+      const t = await load();
+      t.begin();
+      expect(live()).toEqual(RUN);
+      stop(t);
+      expect(t.celebration.running()).toBe(false);
+      expect(live()).toEqual([]);
+      await Promise.resolve();
+      expect(live()).toEqual([]);
+    });
+  }
 });

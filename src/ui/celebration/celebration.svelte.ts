@@ -1,5 +1,5 @@
 // AD-19 (R-87): the win celebration's run controller, the only owner of the run data. App.svelte
-// mounts its run and end-sheet.ts starts it (entry 5); skip and hide follow (entries 6-7).
+// mounts its run and end-sheet.ts starts it (entry 5); the skips (entry 6); hide follows (entry 7).
 // `start` measures once; frames then step the pure `step.ts` state and write `transform`/opacity
 // straight to the group elements Celebration.svelte registered (rule 3, no reactive per-frame
 // state); only the active run's props are reactive, so a mount can follow the run. Two drivers:
@@ -7,18 +7,25 @@
 // Entry 4 (AD-13 celebration bullet): `attachOverlays()` registers the exported singleton's removal
 // callback with `overlays` (this module imports `overlays`, never the reverse). While attached the
 // callback is the only caller of `done`, once, in a microtask after the removal: a run-driven end
-// (finish, cap, `end()`, the empty-list `start()`) parks `done`, runs `onEnd` and closes the entry;
-// back and Esc remove the entry first, so the callback takes the live run's `done`; Undo and New
-// game (`cancelled`) drop it. Every removal stops the run internally, without `onEnd`. Unattached
-// `createCelebration()` instances call `done` synchronously.
+// (finish, cap, `end()` (the entry-6 skips included), the empty-list `start()`) parks `done`, runs
+// `onEnd` and closes the entry; back removes the entry first, so the callback takes the live run's
+// `done`; Undo and New game (`cancelled`) drop it. Every removal stops the run internally, without
+// `onEnd`. Unattached `createCelebration()` instances call `done` synchronously.
 // Entry 5 (AD-17 Celebration seam): the enabled flag, on by default (the hook-free `dist/` and
 // Vitest play); end-sheet.ts reads it at the win's settle, and only main.ts's hook-build block turns
 // it off and hands `setCelebrationEnabled` to the test hook. Plain, not `$state`: read once per win.
+// Entry 6 (AD-19 Skip): each instance owns a `skip.ts` skip; `start()` attaches its run listeners
+// to the real `document`/`window`/timers (read there) once a run is live, and the internal stop
+// every removal reaches (`clear()`: `end()`, `removed()`, `cancel()`) detaches them; its post-run
+// tails outlive the run.
 import type { Face, GameView } from '../../engine/index';
+import { game } from '../../shell/game.svelte';
+import { cancelGesture } from '../act';
 import { createVisibleBand } from '../gestures/visible-band';
 import { cardMetrics } from '../layout/geometry';
 import { celebrationCapMs, celebrationFadeMs } from '../motion';
 import { type CelebrationRemoval, overlays } from '../overlays.svelte';
+import { createSkip } from './skip';
 import { launch, type StepState, step } from './step';
 
 /** The manual clock's sub-step. */
@@ -63,13 +70,21 @@ function build(attachment: Attachment | null) {
   let manualNext = false;
   let remainder = 0;
   let elements: readonly HTMLElement[] = [];
+  const skip = createSkip({
+    end,
+    cancelGesture,
+    halted: () => game.state.kind === 'halted',
+  });
 
   function clear(): Run | null {
     const current = run;
     run = null;
     active = null;
     remainder = 0;
-    if (current !== null && current.frame !== null) cancelAnimationFrame(current.frame);
+    if (current !== null) {
+      skip.detach();
+      if (current.frame !== null) cancelAnimationFrame(current.frame);
+    }
     return current;
   }
 
@@ -208,6 +223,12 @@ function build(attachment: Attachment | null) {
       run = current;
       active = current.props;
       remainder = 0;
+      skip.attach({
+        doc: document,
+        win: window,
+        setTimer: (callback, ms) => setTimeout(callback, ms),
+        clearTimer: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
+      });
       if (!current.manual) current.frame = requestAnimationFrame((t) => frame(current, t));
     },
     end,

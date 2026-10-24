@@ -524,8 +524,8 @@ function match(event: KeyboardEvent): Resolved | undefined {
 
 /**
  * AD-13: while only `celebration` suspends, Undo and `N` still act (EXPERIENCE.md Win celebration).
- * `menu` (`M`) and WordCell `Space` (a skip) stay ignored here: interim gaps until entry 6's capture
- * listener and entry 7's `end()` first (ticket Keys bullet).
+ * `Space` and `Esc` are the run's skip (celebration/skip.ts, a capture listener that consumes them);
+ * `menu` (`M`) stays ignored here: an interim gap until entry 7's `end()` first.
  */
 const CELEBRATION_KEYS: readonly CommandId[] = ['undo', 'newGame'];
 
@@ -558,6 +558,8 @@ function pressEscape(): boolean {
     act(() => overlays.clearTile())();
     return true;
   }
+  // AD-19 Skip: the run's capture listener is the only Esc path while the celebration is on top.
+  if (top === 'celebration') return false;
   act(() => {
     if (top === 'tailSelection') overlays.deselect();
     else if (top === 'endSheet') overlays.collapseEndSheet();

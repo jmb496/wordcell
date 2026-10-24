@@ -1531,11 +1531,13 @@ describe('AD-13 keys while the celebration runs', () => {
     expect(mocks.log).toEqual([]);
   });
 
-  it('AD-13 Esc on the celebration closes it (one pop): the callback gets ended', () => {
+  it('AD-13 Esc with the celebration on top does nothing here (the AD-19 skip listener owns it): not prevented, no act(), depth unchanged', () => {
     celebrate();
-    expect(press('Escape')).toBe(true);
-    expect(overlays.depth).toBe(0);
-    expect(mocks.pending).toBe(true);
-    expect(reasons).toEqual(['ended']);
+    expect(press('Escape')).toBe(false);
+    expect(overlays.top).toBe('celebration');
+    expect(overlays.depth).toBe(1);
+    expect(mocks.pending).toBe(false);
+    expect(mocks.log).toEqual([]);
+    expect(reasons).toEqual([]);
   });
 });

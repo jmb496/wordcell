@@ -16,6 +16,9 @@ vi.mock('../../shell/prefs.svelte', () => ({
   },
 }));
 
+// AD-15: `skip.ts` reads the halt; the real store registers window listeners at import.
+vi.mock('../../shell/game.svelte', () => ({ game: { state: { kind: 'active' } } }));
+
 type Rect = {
   left: number;
   top: number;
@@ -39,6 +42,20 @@ let banner: Rect;
 let frames: Map<number, (t: number) => void>;
 let nextFrame: number;
 let cancelled: number[];
+/** The fake document's and window's live listeners (`type`, capture flag), recorded (AD-19 Skip). */
+let listening: Map<unknown, string>;
+
+function recorder(name: string) {
+  const key = (type: string, options: unknown) =>
+    `${name} ${type}${(options as { capture?: boolean } | undefined)?.capture === true ? ' capture' : ''}`;
+  return {
+    addEventListener: (type: string, fn: unknown, options: unknown) =>
+      listening.set(fn, key(type, options)),
+    removeEventListener: (type: string, fn: unknown, options: unknown) => {
+      if (listening.get(fn) === key(type, options)) listening.delete(fn);
+    },
+  };
+}
 
 function el(r: Rect, extra: object = {}) {
   return { getBoundingClientRect: () => r, ...extra };
@@ -51,6 +68,7 @@ beforeEach(() => {
   frames = new Map();
   nextFrame = 1;
   cancelled = [];
+  listening = new Map();
   const querySelector = (selector: string) => {
     const box = /wordcell-(\d+)/.exec(selector)?.[1];
     const cell = box ?? /data-wordcell-label="(\d+)"/.exec(selector)?.[1];
@@ -71,7 +89,9 @@ beforeEach(() => {
     documentElement: { clientWidth: 360 },
     body: { querySelector },
     querySelector,
+    ...recorder('document'),
   });
+  vi.stubGlobal('window', recorder('window'));
   vi.stubGlobal('getComputedStyle', () => ({ getPropertyValue: () => '40px' }));
   vi.stubGlobal('requestAnimationFrame', (cb: (t: number) => void) => {
     frames.set(nextFrame, cb);
@@ -254,6 +274,30 @@ describe('AD-19 celebration controller', () => {
     expect(c.running()).toBe(true);
     expect(frames.size).toBe(1);
     c.cancel();
+  });
+
+  it('AD-19 Skip: a run attaches the document capture pointerdown and keydown listeners; end(), cancel() and the cap remove them; an empty list attaches none', () => {
+    const c = createCelebration();
+    const run = ['document keydown capture', 'document pointerdown capture'];
+    const live = () => [...listening.values()].sort();
+    c.start({ ...empty, wordList: [] } as unknown as GameView, () => {});
+    expect(live()).toEqual([]);
+    c.start(viewOf([3]), () => {});
+    expect(live()).toEqual(run);
+    c.end();
+    expect(live()).toEqual([]);
+    c.start(viewOf([3]), () => {});
+    expect(live()).toEqual(run);
+    c.cancel();
+    expect(live()).toEqual([]);
+    c.start(viewOf([3]), () => {});
+    let t = 0;
+    for (let i = 0; i < 1000 && frames.size > 0; i++) {
+      t += 50;
+      tick(t);
+    }
+    expect(c.running()).toBe(false);
+    expect(live()).toEqual([]);
   });
 
   it('AD-19 onEnd is one handler, replaced by a later call and kept across runs', () => {

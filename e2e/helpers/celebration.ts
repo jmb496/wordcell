@@ -1,10 +1,11 @@
 import { expect, type Page } from '@playwright/test';
 import { END_SHEET } from './board';
 
-// AD-17 Celebration seam helpers (epic 10 entry 5; used by entries 6 and 7). In hook builds the
-// celebration is off until `enableCelebration`, which also puts the run on the manual clock; the
-// hook's `advance` steps it in whole 16 ms sub-steps (`advance(cap)` stops short of a cap that is
-// not a multiple of 16, so the cap constants are rounded up to the next 16 ms step).
+// AD-17 Celebration seam helpers (epic 10 entry 5; used by entries 6 and 7) and the hook-free
+// `skipByPress` (entry 6). In hook builds the celebration is off until `enableCelebration`, which
+// also puts the run on the manual clock; the hook's `advance` steps it in whole 16 ms sub-steps
+// (`advance(cap)` stops short of a cap that is not a multiple of 16, so the cap constants are
+// rounded up to the next 16 ms step).
 
 /** The manual clock's sub-step (celebration.svelte.ts `MANUAL_STEP_MS`). */
 export const MANUAL_STEP_MS = 16;
@@ -67,6 +68,23 @@ export async function finishCelebration(page: Page): Promise<void> {
   await advance(page, SLOW_CAP_STEP_MS);
   expect(await running(page)).toBe(false);
   await expect(page.getByRole('dialog', { name: END_SHEET })).toBeVisible();
+}
+
+/**
+ * AD-17, AD-19 Skip (entry 6; entry 8 runs it hook-free against `dist/`): DOM only, no
+ * `window.__wordcell`. Waits for the run's mounted groups, presses the centre of the
+ * `[data-celebration-root]` rect (the band, AD-12) by touch when `navigator.maxTouchPoints > 0`,
+ * else by mouse, and returns once the expanded end sheet is visible within 1 s of the press.
+ */
+export async function skipByPress(page: Page): Promise<void> {
+  await expect.poll(() => page.locator('[data-celebration-group]').count()).toBeGreaterThan(0);
+  const b = await page.locator('[data-celebration-root]').boundingBox();
+  if (b === null) throw new Error('skipByPress: [data-celebration-root] has no box');
+  const x = b.x + b.width / 2;
+  const y = b.y + b.height / 2;
+  if (await page.evaluate(() => navigator.maxTouchPoints > 0)) await page.touchscreen.tap(x, y);
+  else await page.mouse.click(x, y);
+  await expect(page.getByRole('dialog', { name: END_SHEET })).toBeVisible({ timeout: 1000 });
 }
 
 type Added = { __added?: Record<string, boolean> };
