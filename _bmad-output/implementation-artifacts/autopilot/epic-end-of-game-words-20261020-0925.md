@@ -132,3 +132,20 @@ Close-out docs:
 - ARCHITECTURE-SPINE.md AD-19 Skip ← F17 keys skip whatever holds focus (owner standing rule, 2026-10-23); F18 300 ms press guard after a press skip (2026-10-24); F19 press-point bar test, chorded or repeat Space never activates a control (2026-10-24); the post-run tails and pass-through while halted (plan Design Notes); synced by 10.9
 - docs/game-flow-spec.md R-87 ← the whole dictionary banner is exempt from skipping, as well as the two bars (plan Design Notes; owner to confirm at 10.9)
 - From 10.5 (F16, 2026-10-23): ARCHITECTURE-SPINE.md AD-19 Start; EXPERIENCE.md "Never plays"
+
+## 10.6 Celebration skip — done
+What it adds: Skipping the win celebration (a tap on the board, Space or Esc on desktop, the back gesture), plus the owner's tuning of the celebration from six Android reads: cards spaced 35 % apart, each card following the one ahead along its word's arc so the word reads as a rainbow, evenly spaced and stacked so letters stay visible, one steady speed per word, cards appearing at their WordCell in turn, and words crossing the screen toward the far side.
+Ticket review: 5 passes, converged; F17 (Space/Esc skip whatever holds focus) accepted under the standing rule
+Build: built; commits 5f67795; F18 guard 2af38ac; tuning 0f0ef0d, d9119fc, c448180, 1b464a7 (superseded), 3d8366c, 96f3cc5
+Code review: thorough, 4 passes, converged (F18, F19 accepted); tuning review 1: thorough, 2 passes, converged (F22 accepted); tuning review 2: thorough, 1 pass, converged (F25 wording kept as built)
+Tests: all passing (unit 3572, e2e 1083, pwa 19, dist 17), screenshots passed (67; celebration mid-run baseline regenerated per Tuning)
+Ref to fix upstream: none
+Tokens: 16.0M input-equivalent since 00:41Z (other 64%, code review 35%, orchestrator 1%)
+Worth knowing: Device reads ran over Tailscale (node scripts/device-preview.mjs, docs/device-testing.md, fe9744a). Open for the sweep (10.10): a second finger pressed before the skipping finger lifts still reaches the end sheet; a band no taller than a card gives NaN physics. Carried to 10.9's long-list read: the 40 % floor, a 23-letter row, hundreds of copies, per-word tempo when the pace fit engages (portrait fixture's last word 1.44x).
+Close-out docs:
+- ARCHITECTURE-SPINE.md AD-19 Skip ← F17 keys skip whatever holds focus (2026-10-23); F18 300 ms press guard after a skip; F19 bar test by press point, chorded/repeat Space blocked (2026-10-24)
+- ARCHITECTURE-SPINE.md AD-19 Rule bullet 1 (per-group transform) ← F21/F23/F26 per-card motion, trail, appear at the WordCell (owner, 2026-10-24)
+- SPEC CAP-2 ("moves groups") and F25 wording ← F21–F27 (owner, 2026-10-24)
+- DESIGN.md Win celebration (50 % overlap, row) ← F20 35 % overlap, F26 no launch row (owner, 2026-10-24)
+- EXPERIENCE.md Win celebration ← F27 words cross toward the far wall (owner, 2026-10-24)
+- docs/game-flow-spec.md R-87 ← the dictionary banner is exempt from press skips, as the two bars
