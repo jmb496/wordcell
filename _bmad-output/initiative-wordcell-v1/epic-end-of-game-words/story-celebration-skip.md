@@ -50,3 +50,4 @@ Verify: `npm run test:all` and `npm run test:screens` are green, and the four R-
 - Decision (owner, 2026-10-24, third device read): spacing and stacking look great; SPEC F24, retime the motion along the path for a more consistent speed (only a slight slowdown at the apex).
 - Decision (owner, 2026-10-24, fourth device read): F24 too fast; SPEC F25, constant speed along the path, each lap as long as the physical one.
 - Decision (owner, 2026-10-24, fifth device read): SPEC F26, cards appear at the WordCell in turn (no launch row or sideways slide); SPEC F27, words drift toward the farther wall and cross the screen.
+- Device read (owner, 2026-10-24): approved after six Android reads over Tailscale (F20, F21, F23–F27; F24 superseded by F25); frame rate good; the F7 6 s cap stays (owner asked, then kept it). Gate 4 device check passed.
