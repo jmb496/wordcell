@@ -4,14 +4,14 @@ import type { Face } from '../../engine/index';
 import { cardMetrics } from '../layout/geometry';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { text } from '../text';
-// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
-import { OVERLAP, rowWidth } from './step';
 
 // AD-19 (R-87; DESIGN.md Win celebration): one container clipped to the band between the bars, one
-// group element per word-list entry, each a row of card face copies (50 % overlap) in the live
-// theme's normal card at the board's card size. Every group renders hidden; the run controller
-// registers the group elements on mount and writes `transform`/opacity to them directly each frame
-// (rule 3), so nothing here is reactive per frame. The copies are neither live cards nor mirrors
+// group element per word-list entry, each holding its row's card face copies (and nothing else) in
+// the live theme's normal card at the board's card size. Every group renders hidden; the run
+// controller registers the group elements on mount and writes opacity to them and a `transform` to
+// each copy directly each frame (rule 3), so nothing here is reactive per frame: the row's layout
+// (SPEC F20's 35 % overlap) and each card's place on the path (SPEC F21) are `step.ts`'s, every copy
+// sits at the container's top left until then. The copies are neither live cards nor mirrors
 // (AD-14): each copy carries `data-celebration` and `aria-hidden`, never `data-card-id`,
 // `data-testid` or `data-mirror-of`; a group element carries `data-celebration-group`. The look
 // follows Card.svelte's `.face`/`.glyph`/`.badge`.
@@ -54,13 +54,11 @@ onMount(() => {
       class="group"
       data-celebration-group
       bind:this={elements[g]}
-      style:width="{rowWidth(faces.length, cardW)}px"
-      style:height="{cardH}px"
       style:opacity="0"
     >
       {#each faces as face, i (i)}
         {@const qu = face.letter === 'QU'}
-        <div class="face" data-celebration aria-hidden="true" style:left="{i * OVERLAP * cardW}px">
+        <div class="face" data-celebration aria-hidden="true">
           <span class="glyph" class:qu>{qu ? 'Qu' : face.letter}</span>
           {#if qu}<span class="badge">{text.quBadge}</span>{/if}
         </div>
@@ -74,11 +72,10 @@ onMount(() => {
     /* DESIGN.md Layer order: above the drag layer (5), below the scrim and overlays (10+). */
     position: fixed; overflow: hidden; pointer-events: none; z-index: 6;
   }
-  .group {
-    position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform, opacity;
-  }
+  .group { position: absolute; left: 0; top: 0; will-change: opacity; }
   .face {
-    position: absolute; top: 0; box-sizing: border-box; width: var(--wc-w); height: var(--wc-H);
+    position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform;
+    box-sizing: border-box; width: var(--wc-w); height: var(--wc-H);
     background-color: var(--wc-card-face); background-image: var(--wc-card-texture);
     border: 1px solid var(--wc-card-edge); border-radius: 6px;
     color: var(--wc-card-ink); box-shadow: 0 6px 16px var(--wc-shadow-drag); isolation: isolate;

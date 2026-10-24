@@ -1,8 +1,9 @@
 // AD-19 (R-87): the win celebration's run controller, the only owner of the run data. App.svelte
 // mounts its run and end-sheet.ts starts it (entry 5); the skips (entry 6); hide follows (entry 7).
-// `start` measures once; frames then step the pure `step.ts` state and write `transform`/opacity
-// straight to the group elements Celebration.svelte registered (rule 3, no reactive per-frame
-// state); only the active run's props are reactive, so a mount can follow the run. Two drivers:
+// `start` measures once; frames then step the pure `step.ts` state and write opacity straight to
+// the group elements Celebration.svelte registered and a `transform` to each of their face copies
+// (SPEC F21, rule 3, no reactive per-frame state); only the active run's props are reactive, so a
+// mount can follow the run. Two drivers:
 // real rAF, and a manual clock (`setManual`, `advance`) for Playwright (AD-17).
 // Entry 4 (AD-13 celebration bullet): `attachOverlays()` registers the exported singleton's removal
 // callback with `overlays` (this module imports `overlays`, never the reverse). While attached the
@@ -26,7 +27,7 @@ import { cardMetrics } from '../layout/geometry';
 import { celebrationCapMs, celebrationFadeMs } from '../motion';
 import { type CelebrationRemoval, overlays } from '../overlays.svelte';
 import { createSkip } from './skip';
-import { launch, type StepState, step } from './step';
+import { cardX, cardY, type Group, launch, type StepState, step } from './step';
 
 /** The manual clock's sub-step. */
 const MANUAL_STEP_MS = 16;
@@ -90,11 +91,14 @@ function build(attachment: Attachment | null) {
 
   function render(current: Run): void {
     if (elements.length === 0) return;
-    const { groups } = current.state;
+    const { state } = current;
+    const { groups } = state;
     if (elements.length !== groups.length) {
       throw new Error(`AD-19 celebration: ${elements.length} elements for ${groups.length} groups`);
     }
-    for (const [i, group] of groups.entries()) {
+    // Index loops: a frame allocates only the transform strings (ticket 10.6 device read).
+    for (let i = 0; i < groups.length; i++) {
+      const group = groups[i] as Group;
       const el = elements[i] as HTMLElement;
       if (group.exited || group.opacity === 0) {
         // Hidden once, then no longer written (AD-19); a launch shows it again.
@@ -105,9 +109,18 @@ function build(attachment: Attachment | null) {
         continue;
       }
       current.hidden[i] = false;
-      const x = group.x - group.w / 2;
-      const y = group.y - group.h / 2;
-      el.style.transform = `translate(${x}px, ${y}px) scale(${group.scale})`;
+      // SPEC F21: each face copy on its own point of the group's path; an exited card keeps
+      // moving past its wall, clipped by the band, until the whole group has exited.
+      const faces = el.children;
+      if (faces.length !== group.cards) {
+        throw new Error(`AD-19 celebration: ${faces.length} faces for ${group.cards} cards`);
+      }
+      const left = group.cardW / 2;
+      const top = group.cardH / 2;
+      for (let j = 0; j < group.cards; j++) {
+        const face = faces[j] as HTMLElement;
+        face.style.transform = `translate(${cardX(state, group, j) - left}px, ${cardY(state, group, j) - top}px) scale(${group.scale})`;
+      }
       el.style.opacity = String(group.opacity);
     }
   }

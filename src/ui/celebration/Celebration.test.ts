@@ -7,7 +7,7 @@ import { text } from '../text';
 import wordCellViewSource from '../WordCellView.svelte?raw';
 import Celebration from './Celebration.svelte';
 import source from './Celebration.svelte?raw';
-import { OVERLAP, rowWidth } from './step';
+import { CARD_STEP, rowWidth } from './step';
 
 vi.mock('../../shell/prefs.svelte', () => ({ prefs: { motion: { baseMs: 180, reduced: false } } }));
 
@@ -46,20 +46,26 @@ describe('AD-19 Celebration', () => {
         .match(/<div class="group[^>]*>/g)
         ?.every((t) => t.includes('data-celebration-group=""') && t.includes('opacity: 0')),
     ).toBe(true);
+    // SPEC F21: a group element holds its copies and nothing else (the controller writes a
+    // transform to each of its children).
+    for (const g of body.split(/<div class="group/).slice(1))
+      expect(g.match(/<div class="face/g)?.length).toBe(g.match(/<div/g)?.length);
     const root = /<div class="celebration[^>]*>/.exec(body)?.[0] ?? '';
     expect(root).toContain('data-celebration-root=""');
     expect(root).toContain('aria-hidden="true"');
     expect(body).not.toMatch(/data-card-id|data-testid|data-mirror-of/);
   });
 
-  it('AD-19 the container is fixed to the band and clips to it; groups scale from their top left', () => {
+  it('AD-19 the container is fixed to the band and clips to it; each copy scales from its top left', () => {
     const body = html([[face('A')]], { left: 12, top: 96, width: 336, height: 460 });
     const root = /<div class="celebration[^>]*style="([^"]*)"/.exec(body)?.[1] ?? '';
     for (const decl of ['left: 12px', 'top: 96px', 'width: 336px', 'height: 460px'])
       expect(root).toContain(decl);
     expect(rules(source, '.celebration').get('position')).toBe('fixed');
     expect(rules(source, '.celebration').get('overflow')).toBe('hidden');
-    expect(rules(source, '.group').get('transform-origin')).toBe('0 0');
+    expect(rules(source, '.face').get('transform-origin')).toBe('0 0');
+    expect(rules(source, '.face').get('left')).toBe('0');
+    expect(rules(source, '.face').get('top')).toBe('0');
     // DESIGN.md Layer order: drag layer → win celebration → scrim → overlay.
     const z = Number(rules(source, '.celebration').get('z-index'));
     expect(z).toBe(6);
@@ -81,31 +87,24 @@ describe('AD-19 Celebration', () => {
     expect(glyphs(groups[1] ?? '')).toEqual(['Qu', 'O', 'T', 'E']);
     const { H } = cardMetrics(40);
     expect(H).not.toBe(40 * 1.2);
-    for (const g of groups)
-      expect(/^[^>]*style="[^"]*height: ([\d.]+)px/.exec(g)?.[1]).toBe(`${H}`);
+    expect(rules(source, '.face').get('height')).toBe('var(--wc-H)');
     const root = /<div class="celebration[^>]*style="([^"]*)"/.exec(body)?.[1] ?? '';
     expect(root).toContain(`--wc-H: ${H}px`);
   });
 
-  it('AD-19 cards overlap by 50 % of the card width and the faces carry the drag shadow', () => {
-    const body = html([[face('C'), face('A'), face('T')]]);
-    const lefts = [...body.matchAll(/class="face[^"]*"[^>]*style="left: ([\d.]+)px/g)].map(
-      (m) => m[1],
-    );
-    expect(lefts).toEqual(['0', '20', '40']);
-    expect(body).toContain('width: 80px');
+  it('AD-19 SPEC F20: the copies carry no row layout (step.ts places each card, CARD_STEP 0.65 apart) and the faces carry the drag shadow', () => {
+    const body = html([[face('W'), face('O'), face('R'), face('D')]]);
+    // Every copy starts at its group's top left; each frame's per-card transform places it.
+    expect(body.match(/<div class="face[^>]*style=/g)).toBeNull();
+    expect(/<div class="group[^>]*style="([^"]*)"/.exec(body)?.[1]).toBe('opacity: 0;');
+    expect(CARD_STEP).toBe(0.65);
+    expect(rowWidth(4, 40)).toBeCloseTo(40 + 3 * 26, 10);
+    // Per-card transforms: each copy is its own composited layer, the group only fades.
+    expect(rules(source, '.face').get('will-change')).toBe('transform');
+    expect(rules(source, '.group').get('will-change')).toBe('opacity');
+    expect(rules(source, '.group').get('transform-origin')).toBeUndefined();
     // DESIGN.md Win celebration: the lifted-card shadow, read from --wc-shadow-drag (#0008 by default).
     expect(source).toContain('box-shadow: 0 6px 16px var(--wc-shadow-drag)');
-  });
-
-  it('AD-19 the group width is rowWidth and each face sits at i x OVERLAP x the card width (4 letters)', () => {
-    const body = html([[face('W'), face('O'), face('R'), face('D')]]);
-    const lefts = [...body.matchAll(/class="face[^"]*"[^>]*style="left: ([\d.]+)px/g)].map((m) =>
-      Number(m[1]),
-    );
-    expect(lefts).toEqual([0, 1, 2, 3].map((i) => i * OVERLAP * 40));
-    const width = /<div class="group[^>]*style="width: ([\d.]+)px/.exec(body)?.[1];
-    expect(Number(width)).toBe(rowWidth(4, 40));
   });
 
   it('AD-19 a QU copy shows Qu with its badge, other letters have none', () => {
@@ -141,11 +140,21 @@ describe('AD-19 Celebration', () => {
     [...new Set([...a.keys(), ...b.keys()])].filter(
       (p) => a.get(p) !== b.get(p) && !allowed.includes(p),
     );
-  // The intended differences only. `.face`: a copy sits absolutely in its group row (`position`,
-  // `top`) and carries the drag elevation (`box-shadow`, DESIGN.md Win celebration); the board's
+  // The intended differences only. `.face`: a copy sits absolutely at its group's top left and is
+  // placed by its own transform (`position`, `left`, `top`, `transform-origin`, `will-change`,
+  // SPEC F21) and carries the drag elevation (`box-shadow`, DESIGN.md Win celebration); the board's
   // card has its wrapper margin and `pointer-events: none` (the copies' container already has it).
   const ALLOWED: Record<string, readonly string[]> = {
-    '.face': ['position', 'top', 'box-shadow', 'margin', 'pointer-events'],
+    '.face': [
+      'position',
+      'left',
+      'top',
+      'transform-origin',
+      'will-change',
+      'box-shadow',
+      'margin',
+      'pointer-events',
+    ],
     '.face::after': [],
     '.glyph': [],
     '.glyph.qu': [],

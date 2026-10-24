@@ -135,7 +135,8 @@ async function expectSkipped(page: Page): Promise<void> {
 }
 
 // Steps the manual clock 16 ms at a time, at most `cap` ms, until a group of the live run is shown
-// (computed opacity > 0 and a written transform); returns its index, -1 if none was.
+// (computed opacity > 0 and a transform written to its first copy, SPEC F21); returns its index,
+// -1 if none was.
 function stepUntilShown(page: Page, cap: number): Promise<number> {
   return page.evaluate(
     ([max, stepMs]) => {
@@ -145,7 +146,9 @@ function stepUntilShown(page: Page, cap: number): Promise<number> {
       for (let t = 0; t < max && hook.celebration.running(); t += stepMs) {
         hook.celebration.advance(stepMs);
         const shown = groups.findIndex(
-          (g) => Number(getComputedStyle(g).opacity) > 0 && g.style.transform !== '',
+          (g) =>
+            Number(getComputedStyle(g).opacity) > 0 &&
+            (g.firstElementChild as HTMLElement | null)?.style.transform !== '',
         );
         if (shown >= 0) return shown;
       }
