@@ -3,7 +3,7 @@ title: 'Close-out: documents, AGENTS pitfall and device check'
 type: 'chore'
 ticket: '9'
 created: '2026-10-24'
-status: 'built'
+status: done
 baseline_revision: '91d1f550c94bb47be6f567386d55e41c7e78ab76'
 route: 'full'
 route_source: 'auto'

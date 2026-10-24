@@ -223,3 +223,6 @@ Stopped by rule 4: the ticket's only hands-on part, your Android read, is left. 
 Tokens: 0.2M input-equivalent (other 53%, orchestrator 47%); orchestrator peak context 60k
 Close-out docs: docs/game-flow-spec.md R-87 + preamble amendment ← dictionary banner exempt from press-skip (owner standing rule, 2026-10-24; applied in 52d5aa5); DESIGN.md Win celebration / A-D12 ← your Android verdict (pending, at done); tickets.toml entry 7 `interface` and the epic References F-range (F1…F29), also at done
 Resume: run the phone check (below), record it and your A-D12 verdict in the epic Notes, mark 10.9 done, then rerun `LIMIT_CHECK=off .claude/skills/epic-autopilot/scripts/loop.sh epic-end-of-game-words` for 10.10 (refactor sweep).
+
+## 10.9 Close-out: documents, AGENTS pitfall and device check — done
+Owner's Android read passed 2026-10-24 ("Phone tests look great"): long list, hide path, Words section, interruptions; A-D12 accepted. test:all (after the doubleTap flake fix 169c6bc) and screenshots passed at 6c2042d; only docs changed since. Close-out docs: DESIGN.md Win celebration / A-D12 ← accepted (owner, 2026-10-24); ARCHITECTURE-SPINE.md AD-17 Touch ← `doubleTap`; tickets.toml entry 7 `interface`; epic References F-range F1…F29.

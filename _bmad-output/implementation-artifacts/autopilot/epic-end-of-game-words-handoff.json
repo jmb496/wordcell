@@ -1,1 +1,1 @@
-{"outcome": "stopped", "ticket": "10.9", "reason": "4: built and verified; waiting for the owner's Android read before done", "next": "10.9", "updated": "2026-10-24T23:38:57Z", "summary": "Ticket 10.9 passed all its final checks and screenshots after the double-tap test fix, and now waits only for your phone check before it can be marked done."}
+{"outcome": "done", "ticket": "10.9", "reason": "done", "next": "10.10", "updated": "2026-10-24T23:54:41Z", "summary": "Ticket 10.9 (close-out) passed the owner's Android read and is marked done; 10.10 (refactor sweep) is next."}
