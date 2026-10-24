@@ -1,5 +1,5 @@
 # Review log — story-celebration-interruptions.md
-State: pass 3: done
+State: pass 4: done
 Pre-loop: HEAD 765affe; pass0.md 216 words; growth budget stated 1500 words; tickets.toml entry 7 fields interface, tests, owns, consumers, plan_checkpoint passed as intent, to be added to Description in pass 1.
 
 ## Pass 1 — 2026-10-24
@@ -82,3 +82,32 @@ Fixer: all 10 applied; no commands added; keys.test.ts title, EXPERIENCE.md row,
 - none
 ### Dropped
 - Duplicates of the fallback and U-test findings across lenses
+
+## Pass 4 — 2026-10-24
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 0, minor 15, decision-needed 0  |  Dropped in triage: 2 (duplicates merged)
+Words (docs): 1471 (6.81 x pass 0; budget 1500)  |  Snapshot: _bmad-output/initiative-wordcell-v1/epic-end-of-game-words/story-celebration-interruptions.passes/pass3.md (no fix pass)
+### Applied
+- none (converged)
+### Default applied (technical)
+- none new
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- Duplicate resize-toolbar and keys.test.ts `M` observable findings (raised by two lenses each)
+
+## Result — converged after 4 passes
+Majors per pass: 10, 3, 2, 0. Words 216 → 1471 (budget 1500). Decision-needed: none. Technical defaults applied: 9 (hide via plain `end()` as a rule 7 checkpoint item; decline stops for a ticket revision; `installInterruptions` module; halted guard in its callbacks; permanent resize/orientationchange listeners, no size compare; `openMenu()` in open-surface.ts with the guarded deferred open; `menu` in `CELEBRATION_KEYS`; U-test harness with the real attached `end()` and mocked nav).
+
+Unapplied minors (for the build's plan or a later loop):
+- Menu bullet — pass 3 tightening dropped pass 2's "listed at the plan checkpoint" for the dropped deferred open; the plan lists it at the checkpoint beside the Hide rule 7 item.
+- Menu bullet keys.test.ts — `celebrate()` starts no run and open-surface is real, so `M`'s effect is unobservable; spy/mock `openMenu()` or `celebration.end()` and assert it is logged.
+- Interface — `openMenu()` in open-surface.ts pulls celebration.svelte.ts (and game.svelte.ts's import-time `window` listener) into every importer's tests; overlays-surfaces.test.ts needs a game.svelte mock and `whenSettled`/`settled` on its nav mock; confirm the 5 s unit budget, else move `openMenu()` to a small module.
+- keys.test.ts — removing `menu` from `KEY_OF` also needs `menu` in its `Exclude<…>` type.
+- Resize — "no size compare" ends the run on a mobile-browser toolbar resize (AD-11 / A-D11 innerHeight-only < 80 px); keep the default, record as a residual for entry 9's Android read.
+- AC ☰ row — the double ☰ tap's timing is unstated; use the `doubleTap` pattern (e2e/history-notice.spec.ts) and say which branch it exercises (the drop branch is the U test's).
+- AC keys/Cancel — `Z`, Ctrl+Z and `N` each need their own run (Redo or a separate test).
+- AC resize — reuse the hide sub-case's outcome assertions (`running()` false, no copies, entry count) for both resize events; say how the second run is reached.
+- Halted bullet — reword to "the injected `halted()` check" so interruptions.ts does not import `game`.
+- Entry 9 sync — the tickets.toml entry 7 `interface` field (`end(hide-mode)`, main.ts registrations) is stale; add to entry 9's sync or the plan's owner note.
+- Hide bullet — a bfcache navigation away may keep the visible branch's announce (scheduled after this flush's `cancelAnnounce()`); add to the bfcache residual for entry 9.
+- References — add src/ui/Menu.svelte (its comment changes; tickets.toml lists it).
