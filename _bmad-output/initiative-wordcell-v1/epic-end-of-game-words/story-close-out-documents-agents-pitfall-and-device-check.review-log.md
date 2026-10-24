@@ -1,6 +1,6 @@
 # Review log — story-close-out-documents-agents-pitfall-and-device-check (ticket 10.9)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7. Pre-loop: HEAD 18eefff, copy `story-close-out-documents-agents-pitfall-and-device-check.passes/pass0.md`, 431 words.
 Intent carried from `tickets.toml` entry 9: `done_checkpoint = true` (not copied into the ticket; fixer adds it to the Description in pass 1). The Notes' owner authorisations (doc syncs incl. owner docs listed there, R-87 wording) are decided, not decision-needed.
@@ -86,3 +86,38 @@ Words (docs): 1201 (2.79 x pass 0)  |  Snapshot: story-close-out-documents-agent
 - A-D12 second edit owner (minor) — over budget and adds words; listed as an unapplied minor
 ### Fix outcome
 - Fixer applied items 1–16, no conflicts; 1070 → 1201 words (majors only; minors 12–16 word-neutral). Only command added: `git status e2e/` (run, git 2.43.0: clean tree).
+
+## Pass 3 — 2026-10-24 16:05
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 8, minor 3, decision-needed 0  |  Dropped in triage: 6 (plus duplicates merged)
+Words (docs): 1270 (2.95 x pass 0)  |  Snapshot: story-close-out-documents-agents-pitfall-and-device-check.passes/pass3.md (fix diff pass3.fix.diff)
+### Applied
+- [major] Notes, AGENTS.md write — `record` only notes a single occurrence (a line needs "recurring or costly"); a `refresh` re-verifies the whole block since 7e8dd28 and will propose more, so "writes less or proposes more → HALT" stops an authorised change; AC and Notes disagree on the HALT trigger → fixer item 1
+- [major] Notes, doc syncs — tickets.toml entry 7 / epic References "plan-listed for the autopilot at mark-done": the autopilot stops at D.3 for this hitl ticket and the owner marks it done, so nobody makes them → item 2
+- [major] Notes, doc syncs — pass 2's "likewise" (EXPERIENCE.md Keys, SPEC CAP-3/F15, rule-coverage row) points at the wrong antecedent and undoes pass 1's explicit WordCell-press wording → item 3
+- [major] Notes, rule-coverage — "(F22/F24 if uncovered)": F24 (and F21's delay, F23's row line) are superseded, so their rows could have no passing test → item 4
+- [major] Notes, fixture — `PACES` holds paces only and is read in a loop over three geometries; a portrait-only entry makes desktop/landscape throw and cannot pin the smallest scale → item 5
+- [major] Notes, Epic SPEC F25 — "full laps within 8.1 %" was measured under F25, before F26/F27; no test pins it, so the SPEC would state an unverified figure → item 6
+- [major] Notes, fixture — the epic Notes and 10.6 digest carry "a 23-letter row, hundreds of copies" to this read; the ticket targets ≥15 letters and drops them with no owner item → item 7
+- [major] AC, CAP-5 sections — a doc/build mismatch with no F-row or ticket record behind the build has no outcome (rule 7) → item 8
+- [minor] Notes, last bullet — `git status e2e/` also lists spec edits; done tickets used `git status --porcelain | grep -- -snapshots` → item 9
+- [minor] Notes, checklist — "per-word tempo where the F22 pace fit engages": the owner cannot tell which entries → item 10
+- [minor] Notes, AGENTS.md HALT — a line already written stays in a dirty tree → folded into item 1 ("revert AGENTS.md and HALT")
+### Default applied (technical)
+- AGENTS.md write — one `record` run writes both lines: evidence states the costly ground (shipped through 10.1–10.3, a post-close Opus review finding, fixed in c84a1df) and the Conventions-line exception as the same mistake's fix; HALT (AGENTS.md reverted) only when the skill will not write the two lines; anything else it proposes stays unwritten, an owner item in the plan
+- tickets.toml/epic edits — plan-listed owner items, applied when the owner marks the ticket done (with the A-D12 verdict)
+- rule-coverage — rows cover only unsuperseded parts; F22 only if uncovered
+- step.test.ts — the new list joins both scene loops with PACES entries for all three geometries; one separate AD-19 test pins the smallest `g.scale` at portrait 360x740
+- F25 — drop the lap percentage
+- fixture — longest word 23 letters (R-36) targeted; the plan lists every carried item the fixture does not reach (23-letter row, a few hundred copies) as an owner item for the read
+- CAP-5 mismatch without an F-row or ticket record — plan checklist "owner item"; neither doc nor code edited
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- "15 letters" → "15 cards" (minor) — superseded by item 7 (23 letters per R-36)
+- Bullet 1 authorisation names only the pitfall (minor) — adds words over budget; unapplied
+- Which session applies read changes / tuning review loop (minor) — adds words; unapplied
+- Read in Chrome tab vs installed PWA (minor) — adds words; unapplied
+- Long fixture failing the bounce/exit loop → owner item and HALT (minor) — adds words; unapplied
+- Duplicate F24/likewise minors merged into items 3 and 4
+### Fix outcome
+- Fixer applied items 1–10, no conflicts; 1201 → 1270 words (majors; minors 9–10 word-neutral). Item 7 cites the dictionary maximum (23 letters, checked in generated/dictionary/en.txt) instead of R-36. Command changed: `git status --porcelain | grep -- -snapshots` (run, git 2.43.0: no output, exit 1).
