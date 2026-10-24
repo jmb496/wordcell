@@ -1,6 +1,6 @@
 # Review log — story-close-out-documents-agents-pitfall-and-device-check (ticket 10.9)
 
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7. Pre-loop: HEAD 18eefff, copy `story-close-out-documents-agents-pitfall-and-device-check.passes/pass0.md`, 431 words.
 Intent carried from `tickets.toml` entry 9: `done_checkpoint = true` (not copied into the ticket; fixer adds it to the Description in pass 1). The Notes' owner authorisations (doc syncs incl. owner docs listed there, R-87 wording) are decided, not decision-needed.
@@ -48,3 +48,41 @@ Words (docs): 1070 (2.48 x pass 0)  |  Snapshot: story-close-out-documents-agent
 - Device checklist "per-word tempo of late long words" — R-86 order puts the longest word first; kept only as "per-word tempo where the pace fit engages"
 ### Fix outcome
 - Fixer applied items 1–14, no conflicts; target 431 → 1070 words. Only command claim touched: `node scripts/device-preview.mjs session-won-long-words` — usage header read (takes a `fixtures/session-*.json` name without `.json`); not run (the fixture does not exist yet; the ticket creates it).
+
+## Pass 2 — 2026-10-24 15:20
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 11, minor 6, decision-needed 0  |  Dropped in triage: 3 (plus duplicates merged)
+Words (docs): 1201 (2.79 x pass 0)  |  Snapshot: story-close-out-documents-agents-pitfall-and-device-check.passes/pass2.md (fix diff pass2.fix.diff)
+### Applied
+- [major] Notes, AGENTS.md write — `record` admits one observed mistake and writes one line; ticket gives spec evidence and asks two lines (one an edit); refusal fallback contradicts the AC → fixer item 1
+- [major] AC vs last Notes bullet — "no baseline regenerated in this ticket" vs read changes applied "as 10.6's Tuning was" (which regenerated the mid-run baseline) → item 2
+- [major] Notes, fixture — "its fixture test" unnamed (serialize.test.ts cannot import src/ui, AD-1); "`android` geometry" ambiguous (Pixel 7 412x839 vs step.test.ts portrait 360x740) → item 3
+- [major] Notes, fixture — "more entries and copies than session-won-words.json" too weak for SPEC Assumptions' longest realistic list (tens of words, a few hundred cards) → item 4
+- [major] Notes, rule-coverage — new-row list omits F17, F20/F21 (story-celebration-skip-plan.md:180 "Entry 9 adds the F20/F21 rows"), F23, F25–F27; existing AD-19 rows still describe the launch row / groups → item 5
+- [major] Notes, rule-coverage — the new rows' id is unspecified; existing tests are titled R-87/AD-19, not F-ids (bare F-ids collide with other epics) → item 6
+- [major] Notes, doc syncs — WordCell-tap rewording (story-celebration-interruptions.md:22) only applied to rule-coverage; AD-13 (spine:656), EXPERIENCE.md Keys while it runs, SPEC CAP-3 and F15 still say "a WordCell tap … do nothing" → item 7
+- [major] Notes, rule-coverage F29 vs checklist — the ☰-then-immediate-back race has no test (interruptions plan:183) yet every row needs one → item 8
+- [major] Notes, handoff — outcomes "accepted or a 10.10 item" vs next bullet; entry 10 is cleanup only → item 9
+- [major] Notes, doc syncs — tickets.toml entry 7 and epic References edits assigned to bmad-build-auto, which never writes a ticket file (step-01:34; skip plan:173) → item 10
+- [major] Notes, EXPERIENCE.md — Flow 8 step 2 still describes the launch row and side exit (F26/F27) and is on no list → item 11
+- [minor] Notes, Epic SPEC F25 — trailing "As built …" sentence duplicates the reworded clause; its "about 7 %" differs from epic Notes' 8.1 % → item 12
+- [minor] Notes, rule-coverage check — "non-skipped" ambiguous for project-specific rows → item 13
+- [minor] Notes, spine/EXPERIENCE — refinement (e) is an EXPERIENCE.md "When" edit, filed under the spine → item 14
+- [minor] Notes, checklist — "no trail" vs the rainbow string-out; R-87's trail is copies left behind → item 15
+- [minor] AC — "is covered by" → "is read under" → item 16
+- [minor] Notes, fixture — "a 23-letter row" also not a fixture target (pinned by step.test.ts's long scene) → folded into item 4
+### Default applied (technical)
+- AGENTS.md write — pitfall via `record` with the observed mistake (2026-10-23 Opus review: `data-celebration` on groups, not copies) as evidence; the Conventions-line amendment as a `refresh` ledger rewrite entry; the Notes authorisation approves both; if the skill writes neither or anything else, the build HALTs for the owner (no `built` with the AC unmet)
+- baselines — the unattended build regenerates none; a change from the read regenerates in the container only the baselines it touches (story-celebration-skip-plan.md:179 command), `git status e2e/` shows no other
+- fixture tests — serialize.test.ts asserts entry/copy counts; step.test.ts adds an inline row list and PACES entry at portrait 360x740 pinning smallest scale and per-entry pace
+- fixture floors — at least 20 entries and 100 copies; the plan records the counts reached and names a shortfall as an owner item for the read
+- new rule-coverage rows — begin with the test's id (R-87 or AD-19) and cite "(SPEC Fnn)"; no test renamed
+- F29 back race — listed in rule-coverage Exempt as the device read's; the menu-already-open half rows on the existing P6 tests
+- tickets.toml/epic edits — handed off in the plan to the autopilot orchestrator at mark-done
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- Device-preview command unverified (fix diff) — the pass 1 fix outcome already records it as not run (fixture not yet created); the owner runs it at handoff
+- Banner-topped band in the spine `Celebration.svelte` bullet and DESIGN.md (minor) — over budget and adds words; listed as an unapplied minor
+- A-D12 second edit owner (minor) — over budget and adds words; listed as an unapplied minor
+### Fix outcome
+- Fixer applied items 1–16, no conflicts; 1070 → 1201 words (majors only; minors 12–16 word-neutral). Only command added: `git status e2e/` (run, git 2.43.0: clean tree).
