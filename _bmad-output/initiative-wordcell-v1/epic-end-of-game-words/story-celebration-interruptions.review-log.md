@@ -1,5 +1,5 @@
 # Review log — story-celebration-interruptions.md
-State: pass 1: done
+State: pass 2: done
 Pre-loop: HEAD 765affe; pass0.md 216 words; growth budget stated 1500 words; tickets.toml entry 7 fields interface, tests, owns, consumers, plan_checkpoint passed as intent, to be added to Description in pass 1.
 
 ## Pass 1 — 2026-10-24
@@ -32,3 +32,30 @@ Fixer: all 16 applied; no runnable commands added; test titles checked in e2e/ce
 - none
 ### Dropped
 - Duplicates of the contract, hide-mode, rows and WordCell-tap findings across lenses (kept the clearest)
+
+## Pass 2 — 2026-10-24
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 3, minor 10, decision-needed 0  |  Dropped in triage: 5 (duplicates merged)
+Words (docs): 1353 (6.26 x pass 0; budget 1500)  |  Snapshot: _bmad-output/initiative-wordcell-v1/epic-end-of-game-words/story-celebration-interruptions.passes/pass2.md
+Fixer: all 13 applied; no commands added; keys.test.ts titles, `animationFrames` (e2e/helpers/lifecycle.ts), main.ts `halted()` and `cancelAnnounce` registration checked; no import cycle for open-surface.ts `openMenu()`; fixer flagged item 12 rests on a later flush (cancelAnnounce runs before the new callback in the same flush).
+### Applied
+- [major] Hide/Resize/AC U tests — wiring inline in `main.ts` cannot be unit-tested (main.ts boots on import); name a UI module the U tests drive with fakes → fixer item 1
+- [major] Halted bullet — bare `registerBeforeHide(() => celebration.end())` contradicts the halted rule (flush runs in every state); check location (callbacks only, never `end()`) and no test → fixer item 2
+- [major] Plan checkpoint / Hide — plain `end()` (queued `nav.pop` on a hidden page) departs from AD-19 Hide's "hide mode" wording; make it an explicit rule 7 checkpoint item with the rationale and the conforming alternative → fixer item 3
+- [minor] Menu — shared helper has no home → fixer item 4
+- [minor] Menu — deferred branch must run `openSurface('menu')`; "menu not open" redundant → fixer item 5
+- [minor] Menu — the dropped open is the ticket's own default, not a spec-prescribed outcome; list it at the checkpoint for a SPEC F-row at entry 9 → fixer item 6
+- [minor] Keys — doc-sync hand-off also covers EXPERIENCE.md Keys while it runs, AD-13 celebration sentence, SPEC F15 → fixer item 7
+- [minor] Menu — keys.test.ts `KEY_OF` `menu` row and its coverage assertion, overlays.svelte.ts `SUSPENDING` comment change too → fixer item 8
+- [minor] AC hide row — ☰ pressed after back collapsed the sheet; fix the order → fixer item 9
+- [minor] AC keys row — `Enter` on an empty WordCell proves nothing; use non-empty `wordcell-3` → fixer item 10
+- [minor] Cancel — "advancing the hook clock past the cap" cannot fail with no live run → fixer item 11
+- [minor] Hide — any visible `pagehide` (navigation away too), the announce dropped by the next flush's `cancelAnnounce()` → fixer item 12
+- [minor] AC ☰ row — assert `running()` false, no copies, entry counts → fixer item 13
+### Default applied (technical)
+- Wiring module — `src/ui/celebration/interruptions.ts` `installInterruptions({ win, registerBeforeHide, halted, end })`, called by main.ts after its existing `registerBeforeHide` calls; U tests with fakes
+- Halted guard — in the hide and resize callbacks only (`game.state.kind === 'halted'`), never in `end()`
+- Menu helper — `openMenu()` exported from `src/ui/open-surface.ts`
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- Duplicates of the wiring-module and halted findings across the four lenses; the "openSurface" wording minor raised twice
