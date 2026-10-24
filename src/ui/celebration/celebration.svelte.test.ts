@@ -516,12 +516,12 @@ describe('AD-19 celebration controller', () => {
     expect(CARD_STEP * 40).toBe(26);
     const ys = written(els[0]).map((t) => /, ([-\d.e]+)px\)/.exec(t)?.[1]);
     expect(new Set(ys).size).toBe(1);
-    // Cell 3 is left of centre: the group drifts right, the rightmost copy leads.
-    for (let t = 1016; t <= 1800; t += 16) tick(t);
+    // Cell 3 is left of centre: the group drifts right, the rightmost copy leads, still rising.
+    for (let t = 1016; t <= 1320; t += 16) tick(t);
     // SPEC F23: each copy at its own point of the pure path, in letter order, no chord between
     // neighbours longer than the row step of arc, CARD_STEP card units (x over 40 px, y over 53 px;
     // step.test.ts measures the arc).
-    const state = pureState([labelOrigin(3, 4)], 50);
+    const state = pureState([labelOrigin(3, 4)], 20);
     expect(written(els[0])).toEqual(transformsOf(state, state.groups[0] as Group));
     const later = xs(els[0]);
     const lifted = written(els[0]).map((t) => Number(/, ([-\d.e]+)px\)/.exec(t)?.[1]));
@@ -681,26 +681,37 @@ describe('AD-19 celebration controller', () => {
     c.cancel();
   });
 
-  it('AD-19 at Slow the trail is fitted to cap − 320 ms (1 x base): the last group shows until then and is out by it', () => {
+  it('AD-19 at Slow the run takes base 320 ms (1 x base): 31 groups are out before cap − 320 ms; a group kept on screen fades over the last 320 ms', () => {
     mocked.motion = { baseMs: 320, reduced: false };
     const c = createCelebration();
     c.setManual(true);
-    // 31 entries: the last launches at half the cap (wave 10, slot 0); its fitted drift takes its
-    // last card past the wall at cap − 320 ms, before the closing fade (a 180 ms base would leave
-    // it on screen until cap − 180 ms).
+    // 31 entries: the last launches at half the cap (wave 10, slot 0). SPEC F24's even speed
+    // brings its last card past the wall at its natural pace, inside the cap − 320 ms fit.
     const cells = Array.from({ length: 31 }, (_, i) => 3 + (i % 4));
     const els = fakeEls(31);
     c.register(asEls(els));
     const done = vi.fn();
     c.start(viewOf(cells), done);
-    const last = () => els[30]?.style.opacity;
     c.advance(10336); // cap − 330.67 ms
-    expect(last()).toBe('1');
-    expect(c.running()).toBe(true);
-    c.advance(32); // cap − 298.67 ms: past cap − 320, before cap − 180
-    expect(last()).toBe('0');
+    expect(els[30]?.style.opacity).toBe('0');
     expect(c.running()).toBe(false);
     expect(done).toHaveBeenCalledTimes(1);
+    // The launch's base is the speed's: kept on screen (no drift, as the step fade tests do), the
+    // group's opacity at cap − 170.67 ms is 170.67 / 320, not the 180 ms base's 0.95.
+    mocked.relaunch = (state) => ({
+      ...state,
+      groups: state.groups.map((g) => ({ ...g, vx: 0 })),
+    });
+    const kept = createCelebration();
+    kept.setManual(true);
+    const one = fakeEls(1);
+    kept.register(asEls(one));
+    kept.start(viewOf([3]), () => undefined);
+    kept.advance(10496); // 656 steps
+    const g = pureState([labelOrigin(3, 3)], 656, 6000 * (320 / 180), 320).groups[0] as Group;
+    expect(g.opacity).toBeCloseTo(170.67 / 320, 4);
+    expect(one[0]?.style.opacity).toBe(String(g.opacity));
+    kept.cancel();
   });
 
   it('AD-19 a group still shown inside the last baseMs gets the closing fade: its element opacity is the step opacity, between 0 and 1', () => {
