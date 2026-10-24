@@ -128,6 +128,7 @@ Words (docs): 1530 (no fix pass)  |  Snapshot: _bmad-output/initiative-wordcell-
 ## Result — converged after 5 passes
 Majors per pass: 10, 8, 7, 2, 0. Words 230 → 1530 (budget 1500). No open major.
 Decision needed (owner): Pass 1 — `Space`/`Esc` while a bar control holds focus (after the winning Confirm, focus stays on the primary button, now New game): AD-19's exception makes `Space` start a new game and `Esc` do nothing; R-87, EXPERIENCE.md Keyboard and F9 say both skip. Proposed default: both skip whatever holds focus; AD-19's exception dropped at entry 9's doc sync.
+Resolved 2026-10-23 under the owner's standing rule (accept the proposed default): recorded as SPEC F17; the ticket's Keys bullet and U list now say both keys skip whatever holds focus.
 Unapplied minors (for the plan or the next loop):
 - AC Verify line says all four skip rows pass on `android`; the `Space`/`Esc` row is `desktop` (reword "pass on their rule-coverage projects") — flagged by all four pass-5 lenses
 - AC press row: "within the tap window" undefined; use "before `LONG_PRESS_MS` (400 ms) from the press" or "at once (a tap, so a click follows)"
