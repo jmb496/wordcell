@@ -9,9 +9,11 @@ import { text } from '../text';
 // group element per word-list entry, each holding its row's card face copies (and nothing else) in
 // the live theme's normal card at the board's card size. Every group renders hidden; the run
 // controller registers the group elements on mount and writes opacity to them and a `transform` to
-// each copy directly each frame (rule 3), so nothing here is reactive per frame: the row's layout
-// (SPEC F20's 35 % overlap) and each card's place on the path (SPEC F21, F23) are `step.ts`'s,
-// every copy sits at the container's top left until then. The copies are neither live cards nor
+// each copy directly each frame (rule 3), plus a copy's `z-index` when its place in the group's
+// stack changes (SPEC F23 stacking: the lower card above; the group element is the stacking
+// context), so nothing here is reactive per frame: the row's layout (SPEC F20's 35 % overlap), each
+// card's place on the path (SPEC F21, F23) and the stacking order are `step.ts`'s, every copy sits
+// at the container's top left in row order until then. The copies are neither live cards nor
 // mirrors (AD-14): each copy carries `data-celebration` and `aria-hidden`, never `data-card-id`,
 // `data-testid` or `data-mirror-of`; a group element carries `data-celebration-group`. The look
 // follows Card.svelte's `.face`/`.glyph`/`.badge`.

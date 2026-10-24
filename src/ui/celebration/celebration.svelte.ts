@@ -2,7 +2,8 @@
 // mounts its run and end-sheet.ts starts it (entry 5); the skips (entry 6); hide follows (entry 7).
 // `start` measures once; frames then step the pure `step.ts` state and write opacity straight to
 // the group elements Celebration.svelte registered and a `transform` to each of their face copies
-// (SPEC F21, rule 3, no reactive per-frame state); only the active run's props are reactive, so a
+// (SPEC F21, rule 3, no reactive per-frame state) and, when a card's place in its group's stack
+// changes, its `z-index` (`stackOrder`: the lower card above); only the active run's props are reactive, so a
 // mount can follow the run. Two drivers:
 // real rAF, and a manual clock (`setManual`, `advance`) for Playwright (AD-17).
 // Entry 4 (AD-13 celebration bullet): `attachOverlays()` registers the exported singleton's removal
@@ -27,7 +28,7 @@ import { cardMetrics } from '../layout/geometry';
 import { celebrationCapMs, celebrationFadeMs } from '../motion';
 import { type CelebrationRemoval, overlays } from '../overlays.svelte';
 import { createSkip } from './skip';
-import { cardX, cardY, type Group, launch, type StepState, step } from './step';
+import { cardX, cardY, type Group, launch, type StepState, stackOrder, step } from './step';
 
 /** The manual clock's sub-step. */
 const MANUAL_STEP_MS = 16;
@@ -38,6 +39,12 @@ export type RunProps = {
   readonly cardW: number;
 };
 
+/**
+ * Per group, preallocated at start: `order` the cards bottom of the stack first (`stackOrder`),
+ * `z` each card's written z-index (-1 none yet), `ys` this frame's centre y per card.
+ */
+type Stack = { readonly order: Int32Array; readonly z: Int32Array; readonly ys: Float64Array };
+
 type Run = {
   state: StepState;
   readonly props: RunProps;
@@ -46,6 +53,7 @@ type Run = {
   last: number | null;
   /** Per group: opacity 0 was written and nothing since. */
   readonly hidden: boolean[];
+  readonly stacks: readonly Stack[];
   frame: number | null;
 };
 
@@ -96,7 +104,8 @@ function build(attachment: Attachment | null) {
     if (elements.length !== groups.length) {
       throw new Error(`AD-19 celebration: ${elements.length} elements for ${groups.length} groups`);
     }
-    // Index loops: a frame allocates only the transform strings (ticket 10.6 device read).
+    // Index loops: a frame allocates only the transform strings and a changed z-index's string
+    // (ticket 10.6 device read).
     for (let i = 0; i < groups.length; i++) {
       const group = groups[i] as Group;
       const el = elements[i] as HTMLElement;
@@ -117,9 +126,21 @@ function build(attachment: Attachment | null) {
       }
       const left = group.cardW / 2;
       const top = group.cardH / 2;
+      const { order, z, ys } = current.stacks[i] as Stack;
       for (let j = 0; j < group.cards; j++) {
         const face = faces[j] as HTMLElement;
-        face.style.transform = `translate(${cardX(state, group, j) - left}px, ${cardY(state, group, j) - top}px) scale(${group.scale})`;
+        const y = cardY(state, group, j);
+        ys[j] = y;
+        face.style.transform = `translate(${cardX(state, group, j) - left}px, ${y - top}px) scale(${group.scale})`;
+      }
+      // SPEC F23 stacking: a z-index is written only when that card's place in the stack changed
+      // (the group element is a stacking context, so the order stays within the group).
+      stackOrder(order, ys);
+      for (let k = 0; k < order.length; k++) {
+        const j = order[k] as number;
+        if (z[j] === k) continue;
+        z[j] = k;
+        (faces[j] as HTMLElement).style.zIndex = String(k);
       }
       el.style.opacity = String(group.opacity);
     }
@@ -176,6 +197,8 @@ function build(attachment: Attachment | null) {
     /** Celebration.svelte on mount (the group elements) and on destroy (`[]`). */
     register(next: readonly HTMLElement[]): void {
       elements = next;
+      // New elements carry no z-index yet: the next render writes every card's.
+      if (run !== null) for (const stack of run.stacks) stack.z.fill(-1);
     },
     start(view: GameView, done: () => void): void {
       if (run !== null) throw new Error('AD-19 celebration: start() while a run is active');
@@ -231,6 +254,11 @@ function build(attachment: Attachment | null) {
         done,
         last: null,
         hidden: [],
+        stacks: state.groups.map((g) => ({
+          order: Int32Array.from({ length: g.cards }, (_, j) => j),
+          z: new Int32Array(g.cards).fill(-1),
+          ys: new Float64Array(g.cards),
+        })),
         frame: null,
       };
       run = current;

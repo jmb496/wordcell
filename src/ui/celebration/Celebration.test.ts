@@ -107,6 +107,23 @@ describe('AD-19 Celebration', () => {
     expect(source).toContain('box-shadow: 0 6px 16px var(--wc-shadow-drag)');
   });
 
+  it('AD-19 SPEC F23 stacking: the copies carry no z-index of their own; the letter and badge sit in the top of the face, so a lower copy drawn above covers only the bottom', () => {
+    const body = html([[face('QU'), face('A'), face('T')]]);
+    // The controller writes each copy's z-index (`stackOrder`); the markup starts in row order.
+    expect(body).not.toMatch(/z-index/);
+    expect(rules(source, '.face').get('z-index')).toBeUndefined();
+    // The group element is a stacking context (will-change: opacity), so a copy's z-index orders
+    // it only among its own group's copies.
+    expect(rules(source, '.group').get('will-change')).toBe('opacity');
+    // The glyph fills the top 72 % (its letter centred at 36 %), the QU badge the top 13 px: a copy
+    // drawn above, at least as low on screen, never reaches either from above.
+    expect(rules(source, '.glyph').get('top')).toBe('0');
+    expect(rules(source, '.glyph').get('height')).toBe('72%');
+    expect(rules(source, '.glyph.qu').get('top')).toBe('12px');
+    expect(rules(source, '.badge').get('top')).toBe('1px');
+    expect(rules(source, '.badge').get('height')).toBe('12px');
+  });
+
   it('AD-19 a QU copy shows Qu with its badge, other letters have none', () => {
     const body = html([[face('QU')]]);
     expect(body).toMatch(/class="glyph[^"]* qu[^"]*">Qu</);

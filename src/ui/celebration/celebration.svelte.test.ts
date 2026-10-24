@@ -519,7 +519,8 @@ describe('AD-19 celebration controller', () => {
     // Cell 3 is left of centre: the group drifts right, the rightmost copy leads.
     for (let t = 1016; t <= 1800; t += 16) tick(t);
     // SPEC F23: each copy at its own point of the pure path, in letter order, no chord between
-    // neighbours longer than the 26 px row step of arc (step.test.ts measures the arc).
+    // neighbours longer than the row step of arc, CARD_STEP card units (x over 40 px, y over 53 px;
+    // step.test.ts measures the arc).
     const state = pureState([labelOrigin(3, 4)], 50);
     expect(written(els[0])).toEqual(transformsOf(state, state.groups[0] as Group));
     const later = xs(els[0]);
@@ -530,9 +531,79 @@ describe('AD-19 celebration controller', () => {
         (lifted[j] as number) - (lifted[j - 1] as number),
       ];
       expect(dx).toBeGreaterThan(0);
-      expect(Math.hypot(dx, dy)).toBeLessThanOrEqual(26 + 1e-9);
+      expect(Math.hypot(dx / 40, dy / 53)).toBeLessThanOrEqual(CARD_STEP + 1e-9);
     }
     expect(lifted[3]).toBeLessThan(lifted[0] as number);
+    c.cancel();
+  });
+
+  it('AD-19 SPEC F23 stacking: each copy gets the z-index of its place by y (the lower card above, equal y the row order), written only when that place changes', () => {
+    const c = createCelebration();
+    const els = fakeEls(1, 4);
+    // Each copy's z-index, recorded per write.
+    const writes = [0, 0, 0, 0];
+    for (const [j, f] of (els[0] as FakeEl).children.entries()) {
+      let z = '';
+      Object.defineProperty(f.style, 'zIndex', {
+        get: () => z,
+        set: (v: string) => {
+          z = v;
+          writes[j] = (writes[j] as number) + 1;
+        },
+      });
+    }
+    const zs = () =>
+      (els[0] as FakeEl).children.map((f) => (f.style as { zIndex?: string }).zIndex);
+    const lifted = () => written(els[0]).map((t) => Number(/, ([-\d.e]+)px\)/.exec(t)?.[1]));
+    // The place of each card when sorted by (y, letter order), bottom first.
+    const ranks = (ys: number[]) => {
+      const order = [...ys.keys()].sort((a, b) => (ys[a] as number) - (ys[b] as number) || a - b);
+      return ys.map((_, j) => String(order.indexOf(j)));
+    };
+    c.register(asEls(els));
+    c.start(viewOf([3], 4), () => undefined);
+    // The first frame (dt 0): the flat row keeps the row order, every copy written once.
+    tick(1000);
+    expect(zs()).toEqual(['0', '1', '2', '3']);
+    expect(writes).toEqual([1, 1, 1, 1]);
+    const seen = new Set<string>();
+    let previous = zs();
+    for (let t = 1016; frames.size > 0; t += 16) {
+      const before = [...writes];
+      tick(t);
+      if ((els[0] as FakeEl).style.opacity === '0') break;
+      expect(zs()).toEqual(ranks(lifted()));
+      // Only the copies whose place changed were written.
+      const now = zs();
+      for (let j = 0; j < 4; j++)
+        expect([j, (writes[j] as number) - (before[j] as number)]).toEqual([
+          j,
+          now[j] === previous[j] ? 0 : 1,
+        ]);
+      previous = now;
+      seen.add(now.join());
+    }
+    // Cell 3 drifts right, the rightmost copy leading: rising, the trail is above the leader;
+    // falling, the leader is above the trail.
+    expect(seen).toContain('3,2,1,0');
+    expect(seen).toContain('0,1,2,3');
+    c.cancel();
+  });
+
+  it("AD-19 SPEC F23 stacking: a re-registration writes every copy's z-index again on the next render", () => {
+    const c = createCelebration();
+    c.setManual(true);
+    const els = fakeEls(1, 3);
+    c.register(asEls(els));
+    c.start(viewOf([3]), () => undefined);
+    c.advance(16);
+    const zs = (e: FakeEl[]) => e[0]?.children.map((f) => (f.style as { zIndex?: string }).zIndex);
+    // Cell 3 drifts right: the leading copy 2 rose first, so it is at the bottom.
+    expect(zs(els)).toEqual(['1', '2', '0']);
+    const fresh = fakeEls(1, 3);
+    c.register(asEls(fresh));
+    c.advance(1);
+    expect(zs(fresh)).toEqual(['1', '2', '0']);
     c.cancel();
   });
 

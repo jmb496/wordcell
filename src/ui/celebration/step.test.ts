@@ -13,6 +13,7 @@ import {
   rowScale,
   rowWidth,
   type StepState,
+  stackOrder,
   step,
 } from './step';
 
@@ -61,19 +62,21 @@ const paceOf = (s: StepState, g: Group): number =>
 /** The leading card's centre at `elapsedMs` (it runs the path exactly, no arc-length lookup). */
 const leader = (s: StepState, g: Group, elapsedMs: number) =>
   card(s, g, travel(g)[0] as number, elapsedMs);
+/** SPEC F23: a step between two centres in card units (x over the card width, y its height). */
+const units = (g: Group, dx: number, dy: number): number => Math.hypot(dx / g.cardW, dy / g.cardH);
 /**
- * SPEC F23, measured independently of step.ts's tables: the arc length along the group's path
- * between the path points with centre x `xa` and `xb` (xb ahead): the row's line behind the launch
- * point, then the leader's path as a polyline of 2000 chords.
+ * SPEC F23, measured independently of step.ts's tables: the arc length in card units along the
+ * group's path between the path points with centre x `xa` and `xb` (xb ahead): the row's line
+ * behind the launch point, then the leader's path as a polyline of 2000 chords.
  */
 const arcBetween = (s: StepState, g: Group, xa: number, xb: number): number => {
   const [da, db] = [g.side * (xa - g.x), g.side * (xb - g.x)];
   const [ta, tb] = [Math.max(da, 0) / Math.abs(g.vx), Math.max(db, 0) / Math.abs(g.vx)];
-  let arc = Math.min(db, 0) - Math.min(da, 0);
+  let arc = (Math.min(db, 0) - Math.min(da, 0)) / g.cardW;
   let prev = leader(s, g, g.launchMs + ta);
   for (let i = 1; i <= 2000; i++) {
     const p = leader(s, g, g.launchMs + ta + ((tb - ta) * i) / 2000);
-    arc += Math.hypot(p.x - prev.x, p.y - prev.y);
+    arc += units(g, p.x - prev.x, p.y - prev.y);
     prev = p;
   }
   return arc;
@@ -82,7 +85,7 @@ const arcBetween = (s: StepState, g: Group, xa: number, xb: number): number => {
 const arcTo = (s: StepState, g: Group, x: number): number => arcBetween(s, g, g.x, x);
 /**
  * SPEC F23: at `elapsedMs`, each card sits on the path (on the leader's earlier point with its x,
- * or on the row's line behind the launch point) one `gap` of arc behind the card ahead.
+ * or on the row's line behind the launch point) CARD_STEP card units of arc behind the card ahead.
  */
 const expectTrail = (s: StepState, g: Group, elapsedMs: number): void => {
   let ahead = Number.NaN;
@@ -93,12 +96,20 @@ const expectTrail = (s: StepState, g: Group, elapsedMs: number): void => {
     expect([elapsedMs, j, c.y]).toEqual([elapsedMs, j, expect.closeTo(onPath, 6)]);
     if (k > 0) {
       const arc = arcBetween(s, g, c.x, ahead);
-      // Within 0.05 px: a chord across a bounce cuts its corner by up to one chord (0.013 px).
-      expect([elapsedMs, j, arc]).toEqual([elapsedMs, j, expect.closeTo(g.gap, 1)]);
+      // Within 0.0005 card units: a chord across a bounce cuts its corner by up to one chord.
+      expect([elapsedMs, j, arc]).toEqual([elapsedMs, j, expect.closeTo(CARD_STEP, 3)]);
     }
     ahead = c.x;
   }
 };
+
+/** Every card of `g` past the apex and before its own first contact (each one falling). */
+const pathFalling = (s: StepState, g: Group): boolean =>
+  cards(g).every((j) => {
+    const now = card(s, g, j);
+    const next = card(s, g, j, s.elapsedMs + 1);
+    return now.bounces === 0 && next.bounces === 0 && next.y > now.y;
+  });
 
 describe('AD-19 step', () => {
   it('AD-19 floor contact: each card meets the floor at its own first contact, in travel order, rebounds and counts one bounce', () => {
@@ -258,7 +269,7 @@ describe('AD-19 step', () => {
     }
   });
 
-  it('AD-19 SPEC F23: consecutive cards are one row step apart along the path (arc length) at launch, mid-rise, near the bounce and in the fall', () => {
+  it('AD-19 SPEC F23: consecutive cards are CARD_STEP card units apart along the path (arc length) at launch, mid-rise, near the bounce and in the fall', () => {
     const s = make({
       groups: [
         { x: 100, y: 380, letters: 5 },
@@ -266,9 +277,9 @@ describe('AD-19 step', () => {
       ],
     });
     for (const g of s.groups) {
-      expect(g.gap).toBeCloseTo(CARD_STEP * g.cardW, 12);
       const apexMs = -g.vy / g.gravity;
-      const trailMs = (g.cards * g.gap) / Math.abs(g.vx);
+      // An upper bound: the card-unit arc runs at least |vx| / cardW per ms.
+      const trailMs = (g.cards * CARD_STEP * g.cardW) / Math.abs(g.vx);
       for (const leaderMs of [
         0, // at launch: the row
         apexMs / 2, // mid-rise, the trail partly still on the row's line
@@ -292,15 +303,20 @@ describe('AD-19 step', () => {
     for (const t of [10, 40, 100, 160]) {
       const run = arcTo(s, g, leader(s, g, t).x);
       for (const [k, j] of order.entries()) {
-        if (run >= k * g.gap) continue;
+        if (run >= k * CARD_STEP) continue;
         const c = card(s, g, j, t);
         expect([t, j, c.y]).toEqual([t, j, 380]);
-        expect([t, j, g.side * (c.x - (row[k] as number))]).toEqual([t, j, expect.closeTo(run, 2)]);
+        // The row's line is horizontal: a card unit of arc there is one card width.
+        expect([t, j, g.side * (c.x - (row[k] as number))]).toEqual([
+          t,
+          j,
+          expect.closeTo(run * g.cardW, 2),
+        ]);
       }
     }
     // The last card leaves the row's line once the leader has run its four steps.
     let t = 0;
-    while (arcTo(s, g, leader(s, g, t).x) < 4 * g.gap + 1) t += 1;
+    while (arcTo(s, g, leader(s, g, t).x) < 4 * CARD_STEP + 0.02) t += 1;
     expect(card(s, g, order[4] as number, t).y).toBeLessThan(380);
   });
 
@@ -320,12 +336,112 @@ describe('AD-19 step', () => {
         for (let j = 1; j < g.cards; j++) {
           const [a, b] = [card(s, g, j - 1), card(s, g, j)];
           expect(b.x).toBeGreaterThan(a.x);
-          // A chord is never longer than its arc.
-          expect(Math.hypot(b.x - a.x, b.y - a.y)).toBeLessThanOrEqual(g.gap + 1e-9);
+          // A chord is never longer than its arc (both in card units).
+          expect(units(g, b.x - a.x, b.y - a.y)).toBeLessThanOrEqual(CARD_STEP + 1e-9);
         }
         if (frame % 5 === 0 && !g.exited) expectTrail(s, g, s.elapsedMs);
       }
     }
+  });
+
+  it('AD-19 SPEC F23: the gap is in card units: the row line keeps the row step in px, a steep stretch spaces cards by card heights, the apex by card widths', () => {
+    const s = make({ groups: [{ x: 100, y: 380, letters: 5 }] });
+    const g = first(s);
+    const order = travel(g);
+    const pair = (k: number, elapsedMs: number) => {
+      const [a, b] = [
+        card(s, g, order[k] as number, elapsedMs),
+        card(s, g, order[k - 1] as number, elapsedMs),
+      ];
+      return { dx: g.side * (b.x - a.x), dy: a.y - b.y };
+    };
+    // Horizontal: at launch, and on the row's line behind the launch point, CARD_STEP card widths.
+    for (let k = 1; k < g.cards; k++)
+      expect(pair(k, 0)).toEqual({ dx: CARD_STEP * g.cardW, dy: 0 });
+    const early = pair(4, g.launchMs + 60);
+    expect([early.dx, early.dy]).toEqual([expect.closeTo(CARD_STEP * g.cardW, 9), 0]);
+    // Mid-rise, mostly vertical: more than 0.6 card heights between centres (a pixel arc of
+    // 0.65 card widths gave 0.49 card heights), the chord just inside its CARD_STEP of arc.
+    const apexMs = -g.vy / g.gravity;
+    for (let k = 1; k < g.cards; k++) {
+      const { dx, dy } = pair(k, g.launchMs + apexMs / 2);
+      expect([k, dy / g.cardH]).toEqual([k, expect.toSatisfy((v: number) => v > 0.6)]);
+      expect(units(g, dx, dy)).toBeGreaterThan(CARD_STEP - 0.02);
+      expect(units(g, dx, dy)).toBeLessThanOrEqual(CARD_STEP + 1e-9);
+    }
+    // The pair across the apex, when both are level: near a row step apart in x (the chord of a
+    // tight apex is shorter than its CARD_STEP of arc: 0.55 card widths here).
+    let [lo, hi] = [
+      g.launchMs + apexMs,
+      g.launchMs + apexMs + (CARD_STEP * g.cardW) / Math.abs(g.vx),
+    ];
+    while (hi - lo > 1e-6)
+      if (pair(1, (lo + hi) / 2).dy > 0) lo = (lo + hi) / 2;
+      else hi = (lo + hi) / 2;
+    const level = pair(1, lo);
+    expect(level.dy).toBeCloseTo(0, 6);
+    expect(level.dx / g.cardW).toBeGreaterThan(0.5);
+    expect(level.dx / g.cardW).toBeLessThanOrEqual(CARD_STEP + 1e-9);
+  });
+
+  it('AD-19 SPEC F23 stacking: stackOrder puts the lower card (greater y) above; equal y keeps the row order (the later letter above)', () => {
+    const sorted = (ys: readonly number[], from: readonly number[] = ys.map((_, j) => j)) => {
+      const order = Int32Array.from(from);
+      stackOrder(order, Float64Array.from(ys));
+      return [...order];
+    };
+    expect(sorted([5, 5, 5, 5])).toEqual([0, 1, 2, 3]);
+    expect(sorted([5, 5, 5, 5], [3, 1, 0, 2])).toEqual([0, 1, 2, 3]);
+    expect(sorted([40, 30, 20, 10])).toEqual([3, 2, 1, 0]);
+    expect(sorted([10, 30, 20, 30], [3, 2, 1, 0])).toEqual([0, 2, 1, 3]);
+    expect(sorted([7])).toEqual([0]);
+  });
+
+  it('AD-19 SPEC F23 stacking: each frame the stack follows y over a whole run (both sides): rising, the trail is above its leader; falling, the leader is above its trail', () => {
+    let s = make({
+      groups: [
+        { x: 60, y: 420, letters: 7 },
+        { x: 300, y: 420, letters: 6 },
+      ],
+    });
+    // As the controller keeps it: one order per group, re-sorted from the previous frame's.
+    const orders = s.groups.map((g) => Int32Array.from(cards(g)));
+    const ys = s.groups.map((g) => new Float64Array(g.cards));
+    const sortedByY = (g: Group, i: number): boolean =>
+      [...(orders[i] as Int32Array)].every((j, k, o) => {
+        if (k === 0) return true;
+        const a = o[k - 1] as number;
+        const [ya, yj] = [
+          (ys[i] as Float64Array)[a] as number,
+          (ys[i] as Float64Array)[j] as number,
+        ];
+        return ya < yj || (ya === yj && a < j);
+      }) && g.cards === (orders[i] as Int32Array).length;
+    const phases = new Set<string>();
+    while (!s.finished) {
+      s = step(s, 16);
+      s.groups.forEach((g, i) => {
+        const y = ys[i] as Float64Array;
+        for (const j of cards(g)) y[j] = card(s, g, j).y;
+        stackOrder(orders[i] as Int32Array, y);
+        expect([s.elapsedMs, i, sortedByY(g, i)]).toEqual([s.elapsedMs, i, true]);
+        const t = s.elapsedMs - g.launchMs;
+        const top = (orders[i] as Int32Array)[g.cards - 1] as number;
+        const lead = travel(g)[0] as number;
+        const tail = travel(g)[g.cards - 1] as number;
+        // The whole trail rising (leader not yet at the apex, the tail off the row's line).
+        if (t > 0 && t < -g.vy / g.gravity && card(s, g, tail).y < g.y) {
+          expect(top).toBe(tail);
+          phases.add(`${i} rise`);
+        }
+        // The whole trail falling to its first contact.
+        if (t < g.contactMs && pathFalling(s, g)) {
+          expect(top).toBe(lead);
+          phases.add(`${i} fall`);
+        }
+      });
+    }
+    expect([...phases].sort()).toEqual(['0 fall', '0 rise', '1 fall', '1 rise']);
   });
 
   it('AD-19 drifts toward the side with more room: left of centre goes right, right goes left, centre goes right', () => {
@@ -599,16 +715,22 @@ describe('AD-19 step', () => {
       ['desktop 1280x720', 1280, 720, true],
       ['landscape 839x412', 839, 412, false],
     ] as const) {
-      it(`AD-19 SPEC F23: the arc-length trail fits without a pace-up: every group plays its natural tempo, pace 1 (${geometry}, Normal, ${list})`, () => {
+      it(`AD-19 SPEC F22, F23: the card-unit trail fits at the natural tempo, pace 1, except the 23-letter row in landscape (${geometry}, Normal, ${list})`, () => {
         const s = launch({
           ...scene(clientWidth, innerHeight, hoverFine, rows),
           capMs: 6000,
           baseMs: 180,
         });
-        // Measured 2026-10-24 (SPEC F23): 1.00 for every group (the F21 time lag needed up to 1.11
-        // on the fixture and 2.7 on the long scene).
+        // Measured 2026-10-24 (SPEC F23, card-unit arc): 1.00 for every group but the long scene's
+        // 23-letter row in landscape, 1.093 (its steep trail is longer in card units; the pixel arc
+        // needed 1.00 everywhere, the F21 time lag up to 1.11 on the fixture and 2.7 on the long
+        // scene).
+        const paced = list === '12 groups up to 23 letters' && geometry === 'landscape 839x412';
         for (const [i, g] of s.groups.entries())
-          expect(paceOf(s, g), `group ${i}`).toBeCloseTo(1, 9);
+          expect(paceOf(s, g), `group ${i}`).toBeCloseTo(
+            paced && i === 0 ? 1.093 : 1,
+            paced && i === 0 ? 3 : 9,
+          );
       });
     }
   }

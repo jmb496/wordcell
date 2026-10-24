@@ -7,9 +7,11 @@
 // (ticket 10.6 device reads: SPEC F20, F21, F23); timing is a fraction of the cap so the run
 // scales with the speed pref.
 // SPEC F21, F23 (follow the leader): every card of a group runs the group's one path, an arc
-// that falls and rebounds off the floor with a constant horizontal drift, one row step (`gap`)
-// behind the card ahead measured along the path (arc length), so the word reads as its row bent
-// onto the arc.
+// that falls and rebounds off the floor with a constant horizontal drift, one row step
+// (CARD_STEP) behind the card ahead measured along the path (arc length), so the word reads as its
+// row bent onto the arc. The arc is measured in card units (x over the scaled card width, y over
+// the scaled card height): a horizontal stretch keeps the row's 0.65-width spacing, a vertical one
+// gets 0.65 card heights, so a card never hides the letter of the card above it.
 // The path and its arc length are closed-form; `launch` samples the arc length of the first fall
 // and of one bounce once (`ARC_SAMPLES`), and a trailing card's path time is found by a binary
 // search of those samples plus one Newton step, so a frame allocates nothing. Behind the launch
@@ -47,16 +49,24 @@ const SPEED_STEP = 0.15;
 /** SPEC F23: arc-length samples per path segment (the first fall, one bounce). */
 const ARC_SAMPLES = 64;
 
+/** SPEC F23: what the card-unit arc length depends on. */
+type Metric = {
+  /** The constant drift and the group's gravity (px/ms, px/ms²). */
+  readonly vx: number;
+  readonly gravity: number;
+  /** One card's box: the card width and height, both times `scale`. */
+  readonly cardW: number;
+  readonly cardH: number;
+};
+
 /**
- * SPEC F23: a group's path after launch. The arc-length tables hold the cumulative length (px) at
- * ARC_SAMPLES + 1 even times over the first segment (to `contactMs`) and over one bounce
+ * SPEC F23: a group's path after launch. The arc-length tables hold the cumulative length (card
+ * units) at ARC_SAMPLES + 1 even times over the first segment (to `contactMs`) and over one bounce
  * (`periodMs`); a pace fit leaves them unchanged (the same arc in less time).
  */
-type Path = {
-  /** The constant drift, the launch's vertical speed and the group's gravity (px/ms, px/ms²). */
-  readonly vx: number;
+type Path = Metric & {
+  /** The launch's vertical speed (px/ms). */
   readonly vy: number;
-  readonly gravity: number;
   /** The first floor contact, the rebound speed and the bounce period. */
   readonly contactMs: number;
   readonly reboundVy: number;
@@ -68,12 +78,7 @@ type Path = {
 export type Group = Path & {
   /** Cards in the row, in letter order. */
   readonly cards: number;
-  /** One card's box: the card width and height, both times `scale`. */
-  readonly cardW: number;
-  readonly cardH: number;
   readonly scale: number;
-  /** SPEC F20: the distance between consecutive card centres in the row (CARD_STEP x `cardW`). */
-  readonly gap: number;
   /** The leading card's centre at launch (the row's end toward `side`). */
   readonly x: number;
   readonly y: number;
@@ -121,31 +126,34 @@ export function rowScale(n: number, cardW: number, bandW: number): number {
 }
 
 /**
- * SPEC F23: the arc length from vertical speed 0 to `u` at drift `vx` and gravity `g`, the
- * antiderivative of the speed |(vx, u)| over time (u = v0 + g t); odd in `u`.
+ * SPEC F23: the card-unit drift, |vx| x cardH / cardW: the drift in px/ms of a card height, so the
+ * card-unit speed |(vx / cardW, u / cardH)| is |(drift, u)| / cardH.
  */
-function arcAt(u: number, vx: number, g: number): number {
-  return (u * Math.hypot(vx, u) + vx * vx * Math.asinh(u / Math.abs(vx))) / (2 * g);
+function drift(m: Metric): number {
+  return (Math.abs(m.vx) * m.cardH) / m.cardW;
+}
+
+/**
+ * SPEC F23: the arc length in card units from vertical speed 0 to `u`, the antiderivative of the
+ * card-unit speed |(drift, u)| / cardH over time (u = v0 + gravity t); odd in `u`. A pace fit (vx
+ * and u x pace, gravity x pace²) leaves it unchanged.
+ */
+function arcAt(m: Metric, u: number): number {
+  const d = drift(m);
+  return (u * Math.hypot(d, u) + d * d * Math.asinh(u / d)) / (2 * m.gravity * m.cardH);
 }
 
 /** SPEC F23: a segment's cumulative arc length at ARC_SAMPLES + 1 even times over `durMs`. */
-function arcTable(vx: number, v0: number, g: number, durMs: number): Float64Array {
+function arcTable(m: Metric, v0: number, durMs: number): Float64Array {
   const table = new Float64Array(ARC_SAMPLES + 1);
-  const start = arcAt(v0, vx, g);
+  const start = arcAt(m, v0);
   for (let i = 1; i <= ARC_SAMPLES; i++)
-    table[i] = arcAt(v0 + (g * durMs * i) / ARC_SAMPLES, vx, g) - start;
+    table[i] = arcAt(m, v0 + (m.gravity * durMs * i) / ARC_SAMPLES) - start;
   return table;
 }
 
 /** SPEC F23: the time into a segment at which its arc is `arc` (binary search, a Newton step). */
-function segmentMs(
-  table: Float64Array,
-  durMs: number,
-  vx: number,
-  v0: number,
-  g: number,
-  arc: number,
-): number {
+function segmentMs(m: Metric, table: Float64Array, durMs: number, v0: number, arc: number): number {
   let lo = 0;
   let hi = ARC_SAMPLES;
   while (hi - lo > 1) {
@@ -157,38 +165,38 @@ function segmentMs(
   const b = table[hi] as number;
   const dt = durMs / ARC_SAMPLES;
   const guess = (lo + (b > a ? (arc - a) / (b - a) : 0)) * dt;
-  const u = v0 + g * guess;
-  const t = guess - (arcAt(u, vx, g) - arcAt(v0, vx, g) - arc) / Math.hypot(vx, u);
+  const u = v0 + m.gravity * guess;
+  const speed = Math.hypot(drift(m), u) / m.cardH;
+  const t = guess - (arcAt(m, u) - arcAt(m, v0) - arc) / speed;
   return Math.min(hi * dt, Math.max(lo * dt, t));
 }
 
-/** SPEC F23: the arc length along `path` from its start to path time `t` ≥ 0. */
+/** SPEC F23: the arc length (card units) along `path` from its start to path time `t` ≥ 0. */
 function pathArc(path: Path, t: number): number {
-  const { vx, vy, gravity: g } = path;
-  if (t <= path.contactMs) return arcAt(vy + g * t, vx, g) - arcAt(vy, vx, g);
+  const { vy, gravity: g } = path;
+  if (t <= path.contactMs) return arcAt(path, vy + g * t) - arcAt(path, vy);
   const s = t - path.contactMs;
   const laps = Math.floor(s / path.periodMs);
   const r = s - laps * path.periodMs;
   return (
     (path.firstArc[ARC_SAMPLES] as number) +
     laps * (path.bounceArc[ARC_SAMPLES] as number) +
-    arcAt(g * r - path.reboundVy, vx, g) -
-    arcAt(-path.reboundVy, vx, g)
+    arcAt(path, g * r - path.reboundVy) -
+    arcAt(path, -path.reboundVy)
   );
 }
 
-/** SPEC F23: the path time at which `path` has run `arc` ≥ 0 px (the inverse of `pathArc`). */
+/** SPEC F23: the path time at which `path` has run `arc` ≥ 0 card units (`pathArc`'s inverse). */
 function pathTime(path: Path, arc: number): number {
   const first = path.firstArc[ARC_SAMPLES] as number;
-  if (arc <= first)
-    return segmentMs(path.firstArc, path.contactMs, path.vx, path.vy, path.gravity, arc);
+  if (arc <= first) return segmentMs(path, path.firstArc, path.contactMs, path.vy, arc);
   const lap = path.bounceArc[ARC_SAMPLES] as number;
   const laps = Math.floor((arc - first) / lap);
   const rest = arc - first - laps * lap;
   return (
     path.contactMs +
     laps * path.periodMs +
-    segmentMs(path.bounceArc, path.periodMs, path.vx, -path.reboundVy, path.gravity, rest)
+    segmentMs(path, path.bounceArc, path.periodMs, -path.reboundVy, rest)
   );
 }
 
@@ -197,8 +205,8 @@ function pathTime(path: Path, arc: number): number {
  * entry index. The drift is fitted so the group's last card is past its wall by `capMs - baseMs`
  * (before the closing fade): a group whose trail would overrun plays its whole path faster
  * (`pace`: drift and launch speed x pace, gravity x pace²), the same arc in less time. SPEC F23:
- * the trail is `trail` px of arc behind the leader, so the leader must run the arc to the last
- * card's exit point plus `trail` (SPEC F22's fit on that arc).
+ * the trail is `trail` card units of arc behind the leader, so the leader must run the arc to the last
+ * card's exit point plus `trail` (SPEC F22's fit on that arc, in card units).
  */
 export function launch(input: LaunchInput): StepState {
   const { walls, floor, ceiling, capMs, baseMs } = input;
@@ -230,25 +238,25 @@ export function launch(input: LaunchInput): StepState {
     const drop = Math.max(0, floor - h / 2 - entry.y);
     const rebound = Math.sqrt(vy * vy + 2 * gravity * drop);
     const contactMs = (-vy + rebound) / gravity;
-    // The leading card travels `lead` in x to be wholly past its wall; the last card, `trail` px of
-    // arc behind it, reaches that point later. A row wider than the band (A-D12 floor) can start
+    // The leading card travels `lead` in x to be wholly past its wall; the last card, `trail` card
+    // units of arc behind it, reaches that point later. A row wider than the band (A-D12 floor) can start
     // its leader at or past the wall: its drift then takes at least a card width per
     // EXIT_AFTER_CONTACTS first-contact times.
     const x = entry.x + (side * (rowW - w)) / 2;
     const lead = side === 1 ? walls.right + w / 2 - x : x + w / 2 - walls.left;
-    const trail = (n - 1) * CARD_STEP * w;
+    const trail = (n - 1) * CARD_STEP;
     const natural =
       (Math.max(lead, w) / (EXIT_AFTER_CONTACTS * contactMs)) * (1 + SPEED_STEP * slot);
     const periodMs = (2 * rebound) / gravity;
+    const metric: Metric = { vx: side * natural, gravity, cardW: w, cardH: h };
     const unpaced: Path = {
-      vx: side * natural,
+      ...metric,
       vy,
-      gravity,
       contactMs,
       reboundVy: rebound,
       periodMs,
-      firstArc: arcTable(natural, vy, gravity, contactMs),
-      bounceArc: arcTable(natural, -rebound, gravity, periodMs),
+      firstArc: arcTable(metric, vy, contactMs),
+      bounceArc: arcTable(metric, -rebound, periodMs),
     };
     const outMs = pathTime(unpaced, pathArc(unpaced, Math.max(lead, 0) / natural) + trail);
     const pace = Math.max(1, outMs / (capMs - baseMs - launchMs));
@@ -257,7 +265,6 @@ export function launch(input: LaunchInput): StepState {
       cardW: w,
       cardH: h,
       scale,
-      gap: CARD_STEP * w,
       x,
       y: entry.y,
       vx: side * natural * pace,
@@ -278,16 +285,17 @@ export function launch(input: LaunchInput): StepState {
 }
 
 /**
- * SPEC F21, F23: card `j`'s (letter order) time on the path, `behind` row steps of arc behind the
- * leader. On the row's line behind the launch point it is negative, that arc read at the drift
- * speed (so `x + vx t` places it on the line); the row stands still before launch.
+ * SPEC F21, F23: card `j`'s (letter order) time on the path, `behind` row steps (CARD_STEP card
+ * units) of arc behind the leader. On the row's line behind the launch point it is negative, that
+ * arc read at the drift speed (so `x + vx t` places it on the line); the row stands still before
+ * launch.
  */
 function pathMs(group: Group, j: number, elapsedMs: number): number {
   const behind = group.side === 1 ? group.cards - 1 - j : j;
   const leaderMs = Math.max(elapsedMs, group.launchMs) - group.launchMs;
   if (behind === 0) return leaderMs;
-  const arc = pathArc(group, leaderMs) - behind * group.gap;
-  return arc <= 0 ? arc / Math.abs(group.vx) : pathTime(group, arc);
+  const arc = pathArc(group, leaderMs) - behind * CARD_STEP;
+  return arc <= 0 ? (arc * group.cardW) / Math.abs(group.vx) : pathTime(group, arc);
 }
 
 /** AD-19: card `j`'s (letter order) centre x in `state`. */
@@ -318,6 +326,28 @@ export function cardExited(state: StepState, group: Group, j: number): boolean {
   return group.side === 1
     ? x - group.cardW / 2 >= state.walls.right
     : x + group.cardW / 2 <= state.walls.left;
+}
+
+/**
+ * Ticket 10.6 (SPEC F23 stacking): re-sorts `order` (a group's card indices, bottom of the stack
+ * first) in place by `ys` (each card's centre y): the card lower on screen is drawn above, so a
+ * card only ever covers the bottom of the card above it, never its letter or badge; equal y keeps
+ * the row's stacking (the later letter above, DOM order). An insertion sort that starts from the
+ * previous frame's order: O(cards) while nothing swaps, and it allocates nothing.
+ */
+export function stackOrder(order: Int32Array, ys: Float64Array): void {
+  for (let i = 1; i < order.length; i++) {
+    const j = order[i] as number;
+    const y = ys[j] as number;
+    let k = i - 1;
+    for (; k >= 0; k--) {
+      const a = order[k] as number;
+      const ya = ys[a] as number;
+      if (ya < y || (ya === y && a < j)) break;
+      order[k + 1] = a;
+    }
+    order[k + 1] = j;
+  }
 }
 
 function advance(group: Group, state: StepState): Group {
