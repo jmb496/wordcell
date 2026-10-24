@@ -1,5 +1,5 @@
 # Review log — story-celebration-skip.md
-State: pass 4: done
+State: pass 5: done
 Pre-loop: HEAD 75ccb28; pass0.md 230 words; growth budget stated 1500 words; tickets.toml entry 6 fields interface, tests, owns, consumers, plan_checkpoint, done_checkpoint passed as intent, added to Description in pass 1.
 
 ## Pass 1 — 2026-10-23
@@ -118,3 +118,29 @@ Fixer: all 13 applied; checked keys.ts:570 `defaultPrevented` early return and m
 ### Default applied (technical)
 - Press-row observable — touch press released within the tap window; a page-side window bubble-phase `pointerup`/`click` recorder sees nothing from the skipping press; the WordCell case releases where it pressed (over the sheet panel), no sheet action activated
 - Space tail — no expiry; clears on its keyup, a fresh `Space` keydown or window `blur`
+
+## Pass 5 — 2026-10-23
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 0, minor 17 (merged from 19 raw), decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1530 (no fix pass)  |  Snapshot: _bmad-output/initiative-wordcell-v1/epic-end-of-game-words/story-celebration-skip.passes/pass4.md
+### Applied
+- none (converged)
+
+## Result — converged after 5 passes
+Majors per pass: 10, 8, 7, 2, 0. Words 230 → 1530 (budget 1500). No open major.
+Decision needed (owner): Pass 1 — `Space`/`Esc` while a bar control holds focus (after the winning Confirm, focus stays on the primary button, now New game): AD-19's exception makes `Space` start a new game and `Esc` do nothing; R-87, EXPERIENCE.md Keyboard and F9 say both skip. Proposed default: both skip whatever holds focus; AD-19's exception dropped at entry 9's doc sync.
+Unapplied minors (for the plan or the next loop):
+- AC Verify line says all four skip rows pass on `android`; the `Space`/`Esc` row is `desktop` (reword "pass on their rule-coverage projects") — flagged by all four pass-5 lenses
+- AC press row: "within the tap window" undefined; use "before `LONG_PRESS_MS` (400 ms) from the press" or "at once (a tap, so a click follows)"
+- U list "a later `pointerdown`" vs Press bullet (same-id before the release, any after) — align the U wording
+- Tuning: "(an owner amendment, applied here …)" lost its subject → "changing one is an owner amendment, applied here with the values"
+- Notes: flag the AD-19 Skip refinement (post-run tails) and the R-87 banner wording at the plan checkpoint (rule 7), not only for entry 9
+- Press: an AD-15 halt mid-run leaves the run's listeners attached, so the first press on Halted's Reload is eaten as a skip; pass everything through while `game.state.kind` is `halted` (one U case)
+- Press: "pointers held from before the start never are" consumed is true of these listeners only (motion.ts's tracker may consume them) → "these listeners never consume …"
+- U list: "after a press or key skip the controller holds no press" (key skip's `cancelGesture()`)
+- AC `Space` row: send the key once `running()` (the AD-14 guard eats earlier keys)
+- Device read: Android Chrome may download `manifest.webmanifest`; use a same-origin file shown inline (e.g. a dist icon PNG); install from `localhost:4173` or record the read as tab-only, with Remove animations off
+- Device read: the long-list fixture deferred to entry 9 has no owner; record it as entry 9's deliverable in the epic Notes
+- Device checklist: ☰ and `M` during the run are entry 7 (☰ throws until then)
+- Repeats, Shift+`Space`, chords, non-primary buttons "pass untouched" rather than "do not call `end()`"
+- Bar/banner target test: `[data-band=topBar|actionBar|banner]` ancestor
+- Tuning: if tuned values make the run shorter than the Fast cap, stop for the owner rather than retarget; the post-read application path (session, plan record) belongs in the plan's done-checkpoint section
