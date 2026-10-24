@@ -82,7 +82,7 @@ import { cursorIndex, draft, draftDetail, game, storedGame, storedText } from '.
 import { SESSIONS } from './helpers/sessions';
 import { armStorageSpy, storageWrites } from './helpers/storage-spy';
 import { tokenColor } from './helpers/style';
-import { longPress, touchDrag, touchHold } from './helpers/touch';
+import { doubleTap, longPress, touchDrag, touchHold } from './helpers/touch';
 
 // AD-17 helper self-tests. The direct `page.evaluate` writes to `wordcell:*` below stand in for the
 // app's own writes during a prior load; they are not seeding and are allowed only in this file.
@@ -895,7 +895,7 @@ test.describe('storage spy', () => {
   });
 });
 
-test.describe('touchDrag / longPress / touchHold', () => {
+test.describe('touchDrag / longPress / touchHold / doubleTap', () => {
   async function installProbe(page: Page): Promise<void> {
     await page.evaluate(() => {
       const w = window as unknown as { __probeEvents: ProbeEvent[] };
@@ -1071,6 +1071,41 @@ test.describe('touchDrag / longPress / touchHold', () => {
     const viewport = page.viewportSize();
     if (viewport === null) throw new Error('no viewport');
     await expect(touchHold(page, { x: 100, y: viewport.height })).rejects.toThrow(/outside the/);
+    await animationFrames(page, 2);
+    expect(await probed(page)).toEqual([]);
+  });
+
+  test('AD-17 doubleTap gives two touch taps whose clicks have detail 1 then 2, even 600 ms apart in real time', async ({
+    page,
+  }) => {
+    const at = { x: 200, y: 400 };
+    await page.goto('/');
+    await installProbe(page);
+    // 600 ms is past Chromium's 400 ms repeat-tap window; the stamped gap (DOUBLE_TAP_GAP_MS) is not.
+    await doubleTap(page, at, { between: () => page.waitForTimeout(600) });
+    const events = (await probed(page)).filter((e) => e.type !== 'contextmenu');
+    for (const e of events) expect(e.pointerType).toBe('touch');
+    expect(events.map((e) => e.type)).toEqual([
+      'pointerdown',
+      'pointerup',
+      'pointerdown',
+      'pointerup',
+    ]);
+    expect(
+      (events[2]?.timeStamp ?? Number.NaN) - (events[1]?.timeStamp ?? Number.NaN),
+    ).toBeLessThan(400);
+    for (const e of events) {
+      expect(Math.abs(e.clientX - at.x)).toBeLessThanOrEqual(1);
+      expect(Math.abs(e.clientY - at.y)).toBeLessThanOrEqual(1);
+    }
+  });
+
+  test('AD-17 doubleTap outside the viewport rejects with no touch events', async ({ page }) => {
+    await page.goto('/');
+    await installProbe(page);
+    const viewport = page.viewportSize();
+    if (viewport === null) throw new Error('no viewport');
+    await expect(doubleTap(page, { x: viewport.width, y: 100 })).rejects.toThrow(/outside the/);
     await animationFrames(page, 2);
     expect(await probed(page)).toEqual([]);
   });

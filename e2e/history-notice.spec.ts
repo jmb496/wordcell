@@ -14,6 +14,7 @@ import { expectBoardFocus } from './helpers/keys';
 import { animationFrames } from './helpers/lifecycle';
 import { openBoard } from './helpers/restore';
 import { fixture, seedStorage } from './helpers/seed';
+import { doubleTap } from './helpers/touch';
 
 // §2/Q-33 History notice and its Reset confirm over the AD-13 nav adapter, on android. History-
 // notice flows are §2 rejection flows and seed history-invalid-* fixtures. Each page opens the
@@ -56,13 +57,6 @@ async function openConfirm(page: Page): Promise<void> {
   await expect(confirmDialog(page)).toHaveAccessibleDescription("This can't be undone.");
   await expect(button(page, 'Keep it')).toBeFocused();
   await expect.poll(() => wc(page).then((state) => state?.wc)).toBe(2);
-}
-
-// A touch double tap: two taps ~80 ms apart (the second click has detail 2).
-async function doubleTap(page: Page, x: number, y: number): Promise<void> {
-  await page.touchscreen.tap(x, y);
-  await page.waitForTimeout(80);
-  await page.touchscreen.tap(x, y);
 }
 
 // The undo button's centre, asserted outside `box` (a scrim tap point; no new test id).
@@ -252,7 +246,7 @@ test.describe('§2 History notice flows (history-invalid-version-unknown.json)',
     if (top >= box.y + box.height - 2) throw new Error('the confirm card covers Reset history');
     const x = box.x + box.width / 2;
     const y = (top + box.y + box.height) / 2;
-    await doubleTap(page, x, y);
+    await doubleTap(page, { x, y });
     await expect(confirmDialog(page)).toBeVisible();
     expect(await hitAt(page, x, y)).toEqual({ kind: 'scrim', name: null, dialog: CONFIRM });
     await expect.poll(() => wc(page).then((state) => state?.wc)).toBe(2);
@@ -411,7 +405,7 @@ test('§2 a double tap near the top edge of Reset history (history-invalid-null.
   if (box === null) throw new Error('no Reset history box');
   const x = box.x + box.width / 2;
   const y = box.y + 2;
-  await doubleTap(page, x, y);
+  await doubleTap(page, { x, y });
   await expect(confirmDialog(page)).toBeVisible();
   expect(await hitAt(page, x, y)).toEqual({
     kind: 'button',

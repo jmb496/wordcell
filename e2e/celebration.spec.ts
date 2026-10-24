@@ -28,7 +28,7 @@ import { animationFrames, hidePage, pageHide, showPage } from './helpers/lifecyc
 import { recordRegion, sets } from './helpers/live-region';
 import { onAndroid, onDesktop } from './helpers/project';
 import { isList, waitForDictionary } from './helpers/restore';
-import { touchHold } from './helpers/touch';
+import { doubleTap, touchHold } from './helpers/touch';
 
 // Epic 10 entry 5 (R-87; AD-13 celebration bullet, AD-17 Celebration seam, AD-19 Start): the win
 // trigger, driven through the hook's manual clock. session-won-words (seed 2089, ten words, QU in
@@ -168,13 +168,6 @@ const menuButton = (page: Page) => page.getByRole('button', { name: 'Menu', exac
 const menu = (page: Page) => page.getByRole('dialog', { name: 'Menu' });
 const fatal = (page: Page) => page.getByRole('heading', { name: FATAL, exact: true });
 const collapsedBar = (page: Page) => page.getByRole('button', { name: /^Show result:/ });
-
-// A touch double tap: two taps ~80 ms apart (as e2e/history-notice.spec.ts).
-async function doubleTap(page: Page, x: number, y: number): Promise<void> {
-  await page.touchscreen.tap(x, y);
-  await page.waitForTimeout(80);
-  await page.touchscreen.tap(x, y);
-}
 
 // The run over with no sheet: no copies, the end sheet not open, history back at the base entry.
 async function expectEndedNoSheet(page: Page): Promise<void> {
@@ -702,7 +695,7 @@ test.describe('android', () => {
     await readyToWin(page);
     await winIntoRun(page);
     const point = await centre(menuButton(page));
-    await doubleTap(page, point.x, point.y);
+    await doubleTap(page, point);
     await expectOneMenu(page);
     await page.goBack();
     await expect(menu(page)).toHaveCount(0);

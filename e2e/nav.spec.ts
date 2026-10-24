@@ -11,6 +11,7 @@ import {
 } from './helpers/dialogs';
 import { waitForDictionary } from './helpers/restore';
 import { fixture, seedStorage } from './helpers/seed';
+import { doubleTap } from './helpers/touch';
 
 // AD-13 nav adapter: reload, Forward, stale launch, the deferred History-notice push and the
 // win → New game → back smoke, on android. The History notice (seeded history-invalid-*, a §2
@@ -168,9 +169,8 @@ test('§2 AD-13 a double tap on New game on the rejected root opens the notice a
   if (box === null) throw new Error('no New game box');
   const x = box.x + box.width / 2;
   const y = box.y + box.height / 2;
-  await page.touchscreen.tap(x, y);
-  await page.waitForTimeout(80);
-  await page.touchscreen.tap(x, y);
+  // doubleTap checks that the second click has detail 2, the click presence.ts `firstClick` drops.
+  await doubleTap(page, { x, y });
   await boardReady(page);
   await expect(notice(page)).toBeVisible();
   await expect(confirmDialog(page)).toHaveCount(0);
