@@ -1,7 +1,8 @@
 // Epic 6 CAP-1 (6.1, SPEC F8, AD-13): the one way a menu item, button or key opens a surface. It
 // clears a tile selection, closes a sticky view and any peek or hover peek, then clears a tail
 // selection (`closeTransient`; a tail selection pops its entry), then opens `id`. Synchronous: the wait for a pop is nav's op queue (a pop
-// settles before the next push, nav.ts), so there is no second wait here. Over a modal notice
+// settles before the next push, nav.ts), so there is no second wait here (the one deferred caller
+// is open-menu.ts `openMenu()`, which waits for a running celebration's end). Over a modal notice
 // (historyNotice or resetConfirm on top) it throws the store's `AD-13 open(...)` before clearing
 // anything, except for resetConfirm itself, which stacks on the History notice as it is (whatever
 // sits beneath the notice stays, and clearing it would close a non-top entry); every other illegal

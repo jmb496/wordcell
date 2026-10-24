@@ -58,6 +58,10 @@ vi.mock('./focus-board', async (importOriginal) => ({
   focusBoard: () => mocks.log.push('focusBoard'),
   focusCard: (id: number) => mocks.log.push(`focusCard ${id}`),
 }));
+// Ticket 10.7: the run controller, reached only through open-menu.ts with `celebration` on top.
+vi.mock('./celebration/celebration.svelte.ts', () => ({
+  celebration: { end: () => mocks.log.push('celebration.end') },
+}));
 vi.mock('./new-game', () => ({
   newGame: () => mocks.log.push('newGame'),
   requestNewGame: (view: { inProgress: boolean }) => {
@@ -1438,18 +1442,17 @@ describe('AD-12 board keys: a pending pop', () => {
 });
 
 // Epic 10 entry 4 (AD-13 celebration bullet; EXPERIENCE.md Win celebration "Keys while it runs"):
-// with only `celebration` open, `attempt()` runs the `undo` and `newGame` rows and no other. Each
-// row's gate is spied (answering false, so nothing runs): the key reaches it with nothing open, and
-// not while the celebration runs. The removal callback is a recording stub.
+// with only `celebration` open, `attempt()` runs the `undo`, `newGame` and `menu` rows (ticket 10.7)
+// and no other. Each row's gate is spied (answering false, so nothing runs): the key reaches it with
+// nothing open, and not while the celebration runs. The removal callback is a recording stub.
 type Spec = { key: string; mods?: Mods; arrange?: () => void };
-const KEY_OF: Record<Exclude<keyof Keys['ROWS'], 'undo' | 'newGame'>, Spec> = {
+const KEY_OF: Record<Exclude<keyof Keys['ROWS'], 'undo' | 'newGame' | 'menu'>, Spec> = {
   redo: { key: 'y' },
   validate: { key: 'Enter', arrange: () => board({ phase: 'composing' }) },
   confirm: { key: 'Enter', arrange: () => board({ phase: 'place' }) },
   flip: { key: 'f' },
   'k+': { key: '+' },
   'k-': { key: '-' },
-  menu: { key: 'm' },
   howToPlay: { key: '?', mods: { shift: true } },
   column: { key: '1', arrange: () => board() },
   tailUp: { key: 'ArrowUp' },
@@ -1482,10 +1485,10 @@ describe('AD-13 keys while the celebration runs', () => {
     overlays.startCelebration();
   }
 
-  it('AD-13 the KEY_OF table covers every ROWS id but undo and newGame', () => {
+  it('AD-13 the KEY_OF table covers every ROWS id but undo, newGame and menu', () => {
     expect(Object.keys(KEY_OF).sort()).toEqual(
       Object.keys(keys.ROWS)
-        .filter((id) => id !== 'undo' && id !== 'newGame')
+        .filter((id) => id !== 'undo' && id !== 'newGame' && id !== 'menu')
         .sort(),
     );
   });
@@ -1507,13 +1510,15 @@ describe('AD-13 keys while the celebration runs', () => {
     });
   }
 
-  it('AD-13 Z, Ctrl+Z and N act while only celebration is open', () => {
+  it('AD-13 Z, Ctrl+Z, N and M act while only celebration is open', () => {
     setView({ inProgress: false });
     celebrate();
     expect(press('z')).toBe(true);
     expect(press('z', { ctrl: true })).toBe(true);
     expect(press('n')).toBe(true);
-    expect(ACTED(mocks.log)).toEqual(['undo', 'undo', 'newGame']);
+    // M runs open-menu.ts `openMenu()`: the (mocked) run's end first.
+    expect(press('m')).toBe(true);
+    expect(ACTED(mocks.log)).toEqual(['undo', 'undo', 'newGame', 'celebration.end']);
   });
 
   it('AD-13 Undo still gates under the celebration: a disabled Undo does nothing', () => {

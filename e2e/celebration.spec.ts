@@ -23,8 +23,9 @@ import {
   WON_ROWS,
   watchAdded,
 } from './helpers/celebration';
-import { button, wc } from './helpers/dialogs';
-import { animationFrames, hidePage, showPage } from './helpers/lifecycle';
+import { button, expectLeaves, wc } from './helpers/dialogs';
+import { animationFrames, hidePage, pageHide, showPage } from './helpers/lifecycle';
+import { recordRegion, sets } from './helpers/live-region';
 import { onAndroid, onDesktop } from './helpers/project';
 import { isList, waitForDictionary } from './helpers/restore';
 import { touchHold } from './helpers/touch';
@@ -156,6 +157,59 @@ function stepUntilShown(page: Page, cap: number): Promise<number> {
     },
     [cap, MANUAL_STEP_MS] as const,
   );
+}
+
+// Ticket 10.7 (R-87 interruption rows; AD-19 Hide, Resize; SPEC F13).
+const COPIES = '[data-celebration]';
+/** The AD-15 Halted surface's heading (e2e/blocking.spec.ts `FATAL`). */
+const FATAL = 'Something went wrong.';
+const WIN_TITLE = 'Every column cleared.';
+const menuButton = (page: Page) => page.getByRole('button', { name: 'Menu', exact: true });
+const menu = (page: Page) => page.getByRole('dialog', { name: 'Menu' });
+const fatal = (page: Page) => page.getByRole('heading', { name: FATAL, exact: true });
+const collapsedBar = (page: Page) => page.getByRole('button', { name: /^Show result:/ });
+
+// A touch double tap: two taps ~80 ms apart (as e2e/history-notice.spec.ts).
+async function doubleTap(page: Page, x: number, y: number): Promise<void> {
+  await page.touchscreen.tap(x, y);
+  await page.waitForTimeout(80);
+  await page.touchscreen.tap(x, y);
+}
+
+// The run over with no sheet: no copies, the end sheet not open, history back at the base entry.
+async function expectEndedNoSheet(page: Page): Promise<void> {
+  expect(await running(page)).toBe(false);
+  await expect(page.locator(COPIES)).toHaveCount(0);
+  await expect(sheet(page)).toHaveCount(0);
+  await expect.poll(() => wcOf(page)).toBe(0);
+}
+
+// The Cancel outcome (Undo, New game, `N`): as above, and still no sheet a few frames later.
+async function expectCancelled(page: Page): Promise<void> {
+  await expectEndedNoSheet(page);
+  await animationFrames(page, 3);
+  await expect(sheet(page)).toHaveCount(0);
+  expect(await wcOf(page)).toBe(0);
+}
+
+// The run ended into the expanded sheet: no copies, Replay this deal focused, one overlay entry.
+async function expectEndedIntoSheet(page: Page): Promise<void> {
+  expect(await running(page)).toBe(false);
+  await expect(page.locator(COPIES)).toHaveCount(0);
+  await expect(sheet(page)).toBeVisible();
+  await expect(replay(page)).toBeFocused();
+  await expect.poll(() => wcOf(page)).toBe(1);
+}
+
+// One menu over the expanded sheet, two overlay entries, no Halted surface.
+async function expectOneMenu(page: Page): Promise<void> {
+  await expect(menu(page)).toBeVisible();
+  await animationFrames(page, 3);
+  await expect(menu(page)).toHaveCount(1);
+  await expect.poll(() => wcOf(page)).toBe(2);
+  await expect(fatal(page)).toHaveCount(0);
+  expect(await running(page)).toBe(false);
+  await expect(page.locator(COPIES)).toHaveCount(0);
 }
 
 test.describe('android', () => {
@@ -555,6 +609,117 @@ test.describe('android', () => {
     await expect(page.locator('[data-celebration]')).toHaveCount(55);
     expect(await stepUntilShown(page, NORMAL_CAP_STEP_MS)).toBeGreaterThanOrEqual(0);
   });
+
+  test('R-87 hiding the app mid-run ends it with no sheet and no overlay entry; a second flush changes nothing; on return the sheet is expanded with Replay this deal focused and no outcome announced; ☰ opens the menu over it and back closes only the menu; back again collapses the sheet, the app still open', async ({
+    page,
+  }) => {
+    await readyToWin(page);
+    await winIntoRun(page);
+    await recordRegion(page);
+    await hidePage(page);
+    await expectEndedNoSheet(page);
+    // The `pagehide` flush after the hide: no run left, so nothing changes and nothing throws.
+    await pageHide(page);
+    await animationFrames(page, 3);
+    await expect(fatal(page)).toHaveCount(0);
+    await expectEndedNoSheet(page);
+    await showPage(page);
+    await expectEndedIntoSheet(page);
+    // Epic 6 SPEC F16: a return from hidden is silent.
+    await animationFrames(page, 3);
+    expect((await sets(page)).filter((set) => set.startsWith(WIN_TITLE))).toEqual([]);
+    await menuButton(page).tap();
+    await expect(menu(page)).toBeVisible();
+    await expect.poll(() => wcOf(page)).toBe(2);
+    await page.goBack();
+    await expect(menu(page)).toHaveCount(0);
+    await expect(sheet(page)).toBeVisible();
+    await expect.poll(() => wcOf(page)).toBe(1);
+    await page.goBack();
+    await expect(sheet(page)).toHaveCount(0);
+    await expect(collapsedBar(page)).toBeVisible();
+    await expect.poll(() => wcOf(page)).toBe(0);
+    expect(page.url()).not.toBe('about:blank');
+  });
+
+  for (const [name, trigger] of [
+    ['a resize', (page: Page) => page.setViewportSize({ width: 412, height: 800 })],
+    [
+      'an orientationchange',
+      (page: Page) => page.evaluate(() => window.dispatchEvent(new Event('orientationchange'))),
+    ],
+  ] as const) {
+    test(`R-87 ${name} mid-run ends it: no copies, the sheet expanded with Replay this deal focused`, async ({
+      page,
+    }) => {
+      await readyToWin(page);
+      await winIntoRun(page);
+      await recordRegion(page);
+      await trigger(page);
+      await expect.poll(() => running(page)).toBe(false);
+      await expectEndedIntoSheet(page);
+      // Positive control for the hide row's silence: the visible branch announces the outcome.
+      await animationFrames(page, 3);
+      expect((await sets(page)).some((set) => set.startsWith(WIN_TITLE))).toBe(true);
+    });
+  }
+
+  test('R-87 ☰ ends the run, the sheet expanded behind the menu; back closes the menu only', async ({
+    page,
+  }) => {
+    await readyToWin(page);
+    await winIntoRun(page);
+    await menuButton(page).tap();
+    await expectOneMenu(page);
+    await page.goBack();
+    await expect(menu(page)).toHaveCount(0);
+    await expect(sheet(page)).toBeVisible();
+    await expect.poll(() => wcOf(page)).toBe(1);
+  });
+
+  test('R-87 a double ☰ tap mid-run gives one menu and no Halted surface', async ({ page }) => {
+    await readyToWin(page);
+    await winIntoRun(page);
+    const point = await centre(menuButton(page));
+    await doubleTap(page, point.x, point.y);
+    await expectOneMenu(page);
+    await page.goBack();
+    await expect(menu(page)).toHaveCount(0);
+    await expect(sheet(page)).toBeVisible();
+    await expect.poll(() => wcOf(page)).toBe(1);
+  });
+
+  test('R-87 the Undo button stops the run: no end sheet, no overlay entry', async ({ page }) => {
+    await readyToWin(page);
+    await winIntoRun(page);
+    await page.getByTestId('undo').tap();
+    await expectCancelled(page);
+  });
+
+  test('R-87 New game stops the run: no end sheet, no overlay entry; back leaves the app', async ({
+    page,
+  }) => {
+    await readyToWin(page);
+    await winIntoRun(page);
+    await primary(page).tap();
+    await expectCancelled(page);
+    await expectLeaves(page);
+  });
+
+  test('R-87 Undo mid-run, then a Redo that restores the win, then the run’s end: exactly one end sheet, expanded', async ({
+    page,
+  }) => {
+    await readyToWin(page);
+    await winIntoRun(page);
+    await page.getByTestId('undo').tap();
+    await expectCancelled(page);
+    await page.getByTestId('redo').tap();
+    await expect.poll(() => running(page)).toBe(true);
+    await finishCelebration(page);
+    await expect(sheet(page)).toHaveCount(1);
+    await expect(sheet(page)).toBeVisible();
+    await expect.poll(() => wcOf(page)).toBe(1);
+  });
 });
 
 test.describe('desktop', () => {
@@ -660,5 +825,38 @@ test.describe('desktop', () => {
     expect(await inputs()).toEqual([]);
     await expect(page.locator('[data-hover-peek]')).toHaveCount(0);
     await expectSkipped(page);
+  });
+
+  test('R-87 M twice mid-run gives one menu over the expanded sheet and no Halted surface', async ({
+    page,
+  }) => {
+    await enterIntoRun(page);
+    await page.keyboard.press('m');
+    await page.keyboard.press('m');
+    await expectOneMenu(page);
+    await page.goBack();
+    await expect(menu(page)).toHaveCount(0);
+    await expect(sheet(page)).toBeVisible();
+    await expect.poll(() => wcOf(page)).toBe(1);
+  });
+
+  test('R-87 ? and WordCell Enter do nothing while it runs; Z, Ctrl+Z and N cancel it, each its own run (Y restores the win)', async ({
+    page,
+  }) => {
+    await enterIntoRun(page);
+    await page.keyboard.press('Shift+?');
+    await page.getByTestId('wordcell-3').focus();
+    await page.keyboard.press('Enter');
+    await animationFrames(page, 3);
+    await expect(page.getByRole('dialog', { name: 'How to play' })).toHaveCount(0);
+    await expect(viewSheet(page)).toHaveCount(0);
+    expect(await running(page)).toBe(true);
+    for (const key of ['z', 'Control+z', 'n']) {
+      await page.keyboard.press(key);
+      await expectCancelled(page);
+      if (key === 'n') break;
+      await page.keyboard.press('y');
+      await expect.poll(() => running(page)).toBe(true);
+    }
   });
 });

@@ -480,3 +480,183 @@ describe('AD-19 Skip on the attached run', () => {
     });
   }
 });
+
+// Ticket 10.7 (AD-19 Hide, Resize; SPEC F13): `installInterruptions` over the attached singleton
+// with a fake `win` (its listeners by type), a fake `registerBeforeHide` (the collected callbacks)
+// and `halted` from a variable; `end` is the singleton's real `end()`. `openMenu()` over the real
+// overlays, open-surface and act() (the recording controller logs `cancel`).
+describe('AD-19 interruptions and the menu end', () => {
+  async function install() {
+    const t = await load();
+    const { installInterruptions } = await import('./interruptions');
+    const on: Record<string, (() => void)[]> = {};
+    const hides: (() => void)[] = [];
+    let isHalted = false;
+    installInterruptions({
+      win: {
+        addEventListener: (type: string, fn: EventListenerOrEventListenerObject | null) => {
+          on[type] = [...(on[type] ?? []), fn as () => void];
+        },
+      },
+      registerBeforeHide: (fn) => hides.push(fn),
+      halted: () => isHalted,
+      end: t.celebration.end,
+    });
+    const emit = (type: string) => {
+      for (const fn of on[type] ?? []) fn();
+    };
+    return {
+      ...t,
+      on,
+      hides,
+      hide: () => {
+        for (const fn of hides) fn();
+      },
+      emit,
+      halt: (value: boolean) => {
+        isHalted = value;
+      },
+      installInterruptions,
+    };
+  }
+
+  it('AD-19 installInterruptions registers one hide callback and one resize and one orientationchange listener', async () => {
+    const t = await install();
+    expect(t.hides).toHaveLength(1);
+    expect(Object.keys(t.on).sort()).toEqual(['orientationchange', 'resize']);
+    expect(t.on.resize).toHaveLength(1);
+    expect(t.on.orientationchange).toHaveLength(1);
+  });
+
+  it('AD-19 the hide callback twice gives one pop and one done (after a microtask); the second is a no-op', async () => {
+    const t = await install();
+    t.begin();
+    log.length = 0;
+    t.hide();
+    expect(t.celebration.running()).toBe(false);
+    expect(log).toEqual(['onEnd', 'pop']);
+    expect(t.dones()).toBe(0);
+    t.hide();
+    expect(log).toEqual(['onEnd', 'pop']);
+    await Promise.resolve();
+    expect(t.dones()).toBe(1);
+    expect(log).toEqual(['onEnd', 'pop', 'done', 'push']);
+    t.hide();
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(t.dones()).toBe(1);
+    expect(log).toEqual(['onEnd', 'pop', 'done', 'push']);
+  });
+
+  it('AD-19 with no run the hide callback, resize and orientationchange are no-ops', async () => {
+    const t = await install();
+    t.attachOverlays();
+    t.hide();
+    t.emit('resize');
+    t.emit('orientationchange');
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(log).toEqual([]);
+    expect(t.dones()).toBe(0);
+    expect(t.overlays.depth).toBe(0);
+  });
+
+  for (const type of ['resize', 'orientationchange']) {
+    it(`AD-19 ${type} ends a live run once; a second event adds nothing`, async () => {
+      const t = await install();
+      t.begin();
+      log.length = 0;
+      t.emit(type);
+      expect(t.celebration.running()).toBe(false);
+      expect(log).toEqual(['onEnd', 'pop']);
+      t.emit(type);
+      await Promise.resolve();
+      expect(t.dones()).toBe(1);
+      expect(t.overlays.top).toBe('endSheet');
+      t.emit(type);
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      expect(t.dones()).toBe(1);
+      expect(log).toEqual(['onEnd', 'pop', 'done', 'push']);
+    });
+  }
+
+  it('AD-19 while halted the hide callback, resize and orientationchange leave a live run running (no pop, no done)', async () => {
+    const t = await install();
+    t.begin();
+    log.length = 0;
+    t.halt(true);
+    t.hide();
+    t.emit('resize');
+    t.emit('orientationchange');
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(t.celebration.running()).toBe(true);
+    expect(log).toEqual([]);
+    expect(t.dones()).toBe(0);
+    expect(t.overlays.top).toBe('celebration');
+  });
+
+  it('AD-19 installInterruptions() twice throws', async () => {
+    const t = await install();
+    expect(() =>
+      t.installInterruptions({
+        win: { addEventListener: () => {} },
+        registerBeforeHide: () => {},
+        halted: () => false,
+        end: () => {},
+      }),
+    ).toThrow(/^AD-19 installInterruptions\(\) called twice/);
+  });
+
+  it('AD-19 openMenu() mid-run: end first (onEnd, pop), done after a microtask pushes endSheet, the menu opens only at the settle, inside act()', async () => {
+    const t = await load();
+    const { openMenu } = await import('../open-menu');
+    t.begin();
+    log.length = 0;
+    store.settled = false;
+    openMenu();
+    expect(t.celebration.running()).toBe(false);
+    expect(log).toEqual(['onEnd', 'pop']);
+    expect(store.waiters).toHaveLength(1);
+    await Promise.resolve();
+    expect(t.dones()).toBe(1);
+    expect(log).toEqual(['onEnd', 'pop', 'done', 'push']);
+    expect(t.overlays.top).toBe('endSheet');
+    expect(t.overlays.isOpen('menu')).toBe(false);
+    store.settled = true;
+    for (const waiter of store.waiters.splice(0)) waiter();
+    expect(log).toEqual(['onEnd', 'pop', 'done', 'push', 'cancel', 'push']);
+    expect(t.overlays.top).toBe('menu');
+    expect(t.overlays.depth).toBe(2);
+  });
+
+  it('AD-19 openMenu() drops the deferred open when the top is not endSheet at the settle', async () => {
+    const t = await load();
+    const { openMenu } = await import('../open-menu');
+    t.begin();
+    log.length = 0;
+    store.settled = false;
+    openMenu();
+    await Promise.resolve();
+    expect(t.overlays.top).toBe('endSheet');
+    // A second press before the settle opens the menu directly over endSheet.
+    openMenu();
+    expect(t.overlays.top).toBe('menu');
+    store.settled = true;
+    expect(() => {
+      for (const waiter of store.waiters.splice(0)) waiter();
+    }).not.toThrow();
+    expect(log.filter((entry) => entry === 'push')).toHaveLength(2);
+    expect(log).toEqual(['onEnd', 'pop', 'done', 'push', 'push', 'cancel']);
+    expect(t.overlays.depth).toBe(2);
+    expect(t.overlays.top).toBe('menu');
+  });
+
+  it('AD-19 openMenu() with no celebration opens the menu at once', async () => {
+    const t = await load();
+    const { openMenu } = await import('../open-menu');
+    t.attachOverlays();
+    openMenu();
+    expect(log).toEqual(['push']);
+    expect(t.overlays.top).toBe('menu');
+    expect(t.overlays.depth).toBe(1);
+    expect(t.dones()).toBe(0);
+  });
+});

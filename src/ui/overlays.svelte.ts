@@ -72,8 +72,8 @@ const LEGAL_TOPS: Partial<Record<OverlayId, readonly (OverlayId | undefined)[]>>
 // Epic 6 CAP-10: the entries under which `main` is inert and the game keys are suspended (only
 // Tab, Enter, Space and Esc act), and focus-follow yields. The expanded end sheet and the WordCell
 // view are not in the list. `celebration` (AD-13) has two exceptions: `main` is not inert under it
-// (App.svelte `mainInert`), and keys.ts `attempt()` still runs the `undo` and `newGame` rows
-// (EXPERIENCE.md Win celebration, "Keys while it runs").
+// (App.svelte `mainInert`), and keys.ts `attempt()` still runs the `undo`, `newGame` and `menu` rows
+// (EXPERIENCE.md Win celebration, "Keys while it runs"; `menu` ends the run first, open-menu.ts).
 export const SUSPENDING: readonly OverlayId[] = [
   'celebration',
   'historyNotice',

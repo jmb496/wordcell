@@ -29,6 +29,7 @@ import { type FocusTarget, liveTiles, readFocus } from './focus-target';
 import { type Hit, tapAction } from './gestures/intent';
 import { KEY_LABELS } from './key-labels';
 import { newGame, requestNewGame } from './new-game';
+import { openMenu } from './open-menu';
 import { openSurface } from './open-surface';
 import { overlays, SUSPENDING } from './overlays.svelte';
 
@@ -258,7 +259,7 @@ export const ROWS: Readonly<Record<CommandId, Row>> = {
   menu: {
     gate: () => true,
     single: true,
-    run: () => openSurface('menu'),
+    run: () => openMenu(),
     label: KEY_LABELS.menu,
     changesPhase: true,
   },
@@ -523,11 +524,11 @@ function match(event: KeyboardEvent): Resolved | undefined {
 }
 
 /**
- * AD-13: while only `celebration` suspends, Undo and `N` still act (EXPERIENCE.md Win celebration).
- * `Space` and `Esc` are the run's skip (celebration/skip.ts, a capture listener that consumes them);
- * `menu` (`M`) stays ignored here: an interim gap until entry 7's `end()` first.
+ * AD-13: while only `celebration` suspends, Undo, `N` and `M` still act (EXPERIENCE.md Win
+ * celebration). `Space` and `Esc` are the run's skip (celebration/skip.ts, a capture listener that
+ * consumes them); `M` ends the run, then opens the menu (open-menu.ts, ticket 10.7).
  */
-const CELEBRATION_KEYS: readonly CommandId[] = ['undo', 'newGame'];
+const CELEBRATION_KEYS: readonly CommandId[] = ['undo', 'newGame', 'menu'];
 
 /** Runs one command now if it acts; returns whether it did. */
 function attempt(id: CommandId, ctx: KeyContext): boolean {

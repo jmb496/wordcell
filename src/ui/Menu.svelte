@@ -15,11 +15,12 @@ import Sheet from './Sheet.svelte';
 import { text } from './text';
 
 // Epic 6 CAP-2 (SPEC F5, F6, F8; DESIGN.md Menu sheet; EXPERIENCE.md Menu sheet): the menu sheet,
-// opened only through `openSurface('menu')` (the ☰ button). Rows: New game, Replay this deal, Give
-// up; each closes the sheet first, then acts once (no push); New game and Replay go through the
-// CAP-3 gates (a confirm while a game is in progress, else at once). Give up is `disabled` from
-// `view.canGiveUp` only (AD-3, R-75). Every handler is wrapped in `act()`. After the menu closes by
-// any path, focus goes by the phase (build-notes Menu row, SPEC F12, focus-board.ts
+// opened only through open-menu.ts `openMenu()` (the ☰ button and `M`), which ends a running
+// celebration first. Rows: New game, Replay this deal, Give up; each closes the sheet first, then
+// acts once (no push); New game and Replay go through the CAP-3 gates (a confirm while a game is
+// in progress, else at once). Give up is `disabled` from `view.canGiveUp` only (AD-3, R-75). Every
+// handler is wrapped in `act()`. After the menu closes by any path, focus goes by the phase
+// (build-notes Menu row, SPEC F12, focus-board.ts
 // `focusByPhase`: the board, the first movable tile or the first strip card), the overlay focus
 // return that the phase-focus effect (focus-follow.ts) yields to. Over the expanded end sheet (the
 // board is inert under it) it returns to the ☰ button, the opener (SPEC F10).

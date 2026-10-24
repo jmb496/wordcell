@@ -12,6 +12,7 @@ import {
   celebration,
   setCelebrationEnabled,
 } from './ui/celebration/celebration.svelte.ts';
+import { installInterruptions } from './ui/celebration/interruptions';
 import { onDispatched, openAtBoot } from './ui/end-sheet';
 import { createFlip, setFlip } from './ui/flip';
 import { createController } from './ui/gestures/controller';
@@ -219,6 +220,13 @@ async function boot(): Promise<void> {
   game.registerBeforeHide(() => cancelAnnounce());
   // Epic 8 (AD-9): the How to play scene player restarts a step that began before a hide.
   game.registerBeforeHide(() => noteSceneHide());
+  // AD-19 Hide, Resize (ticket 10.7): a hide flush, `resize` or `orientationchange` ends a live run.
+  installInterruptions({
+    win: window,
+    registerBeforeHide: game.registerBeforeHide,
+    halted,
+    end: celebration.end,
+  });
   nav.registerBeforeBack(() => {
     controller.cancel({ byBack: true });
     finishGuard();
