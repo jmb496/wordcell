@@ -1,5 +1,5 @@
 # Review log — story-hook-free-celebration-suite.md
-State: pass 2: done
+State: pass 3: done
 Pre-loop: HEAD 5cf7d71; pass0.md 156 words; growth budget stated 1500 words; tickets.toml entry 8 fields tests, owns, consumers passed as intent, added to Description in pass 1; 10.5 deferral (a real win in the hook-free production build starts the celebration) passed as intent.
 
 ## Pass 1 — 2026-10-24
@@ -56,3 +56,28 @@ Words (docs): 859 (5.5x pass 0; budget 1500)  |  Snapshot: story-hook-free-celeb
 - none
 ### Dropped
 - edge minor "check-then-act window before the press" — folded into item 7 (root count 0 after the skip); timing margin left to the plan
+
+## Pass 3 — 2026-10-24
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 11, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+Words (docs): 859 (5.5x pass 0; budget 1500; no fix this pass)  |  Snapshot: story-hook-free-celebration-suite.passes/pass2.md (unchanged)
+### Open (not fixed; stopping rule: passes 2 and 3 each at most one major)
+- [major] Description (b) / Real time — after `page.goBack()` the won dialog has no time bound, so a natural finish inside Playwright's default 5 s expect timeout (playwright.pwa.config.ts sets none; the Normal run ends ≈5.8 s, step.test.ts) can stand in for the back skip; (a) is bounded only by skipByPress's 1 s (celebration.ts:87). Proposed fix: (b) asserts the exact-name dialog visible with `{ timeout: 1000 }` after `page.goBack()`; the Real time bullet says the 1 s bound plus the attached check rule out a natural finish.
+### Minors (not applied; for the build)
+- Start proof copy — the letter-order first copy leads only when its group drifts left (step.ts cardArc `behind`); for session-won-words group 0 is WordCell 10's word, side −1, so copy 0 leads (edge reviewer), but read the first shown copy (visibility not hidden, transform non-empty) to be layout-independent, or state why copy 0 leads.
+- Start proof `n` — use `animationFrames(page, 2)` (a run's first frame has dt 0); one `expect.poll` callback: read, `animationFrames(page, 2)`, read, return `a !== '' && a !== b`, `.toBe(true)`.
+- Setup reduced motion — "the project's default" is Playwright's context default (the project does not set it); pin with `page.emulateMedia({ reducedMotion: 'no-preference' })` before `openFixture`, or reword.
+- Negative control — plan records `git diff --exit-code src/main.ts` after the revert, then `npm run test:all` (rebuilds dist/) as the green run.
+- (a)/(b) focus — scope the locator: the "Every column cleared." dialog's `getByRole('button', { name: 'Replay this deal', exact: true })` `toBeFocused()`.
+- Start proof `added()` — redundant once groups (children of the root) are counted; label it the 10.5 deferral's literal assertion or check it first.
+- (a) — the hook-free press is a touch tap (Pixel 7, `hasTouch`); the mouse branch stays covered by the dev-server helper self-test; say so.
+- (b) — optionally a second `page.goBack()` collapses the sheet (AD-13 "then back collapses the sheet"), or state e2e/celebration.spec.ts owns the depth check.
+- Real time — plan records the measured Confirm-to-skip gap against the Normal run's natural length (fullyParallel, CI retries 2 would hide erosion).
+- Setup — "primary-action reads Confirm" → `await expect(page.getByTestId('primary-action')).toHaveText('Confirm')`.
+- (b) citation — back ending the run is AD-19's `end()` bullet (`closedByBack`) and the AD-13 celebration entry, not AD-19 Skip (capture listeners, Space/Esc).
+### Decision needed (functionality / UX / gameplay)
+- none
+
+## Result — converged after 3 passes
+open major: (b) has no 1 s bound on the won dialog after `page.goBack()`, so a natural run end inside the 5 s expect timeout could pass for the back skip (Pass 3 Open; proposed fix there).
+Majors per pass: 5, 1, 1. Decision-needed: none. Technical defaults applied: 7. Words: 156 → 859 (budget 1500).
+Unapplied minors: the 11 listed under Pass 3 Minors.
