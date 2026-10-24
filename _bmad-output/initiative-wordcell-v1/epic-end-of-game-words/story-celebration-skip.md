@@ -49,3 +49,4 @@ Verify: `npm run test:all` and `npm run test:screens` are green, and the four R-
 - Decision (owner, 2026-10-24, second device read): motion good, but the time-lagged cards spread too far apart to read as a word; SPEC F23, each card stays one row step behind the card ahead measured along the path (arc length).
 - Decision (owner, 2026-10-24, third device read): spacing and stacking look great; SPEC F24, retime the motion along the path for a more consistent speed (only a slight slowdown at the apex).
 - Decision (owner, 2026-10-24, fourth device read): F24 too fast; SPEC F25, constant speed along the path, each lap as long as the physical one.
+- Decision (owner, 2026-10-24, fifth device read): SPEC F26, cards appear at the WordCell in turn (no launch row or sideways slide); SPEC F27, words drift toward the farther wall and cross the screen.
