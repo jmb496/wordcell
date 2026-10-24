@@ -208,3 +208,10 @@ Close-out docs: docs/game-flow-spec.md R-87 + preamble amendment ← dictionary 
 
 ## Stopped — test:all failed
 Ticket 10.9, Step D.1: `npm run test:all` failed on `[android] e2e/nav.spec.ts:162` (above). Ticket 10.9 is `built` with its ticket review, build and code review committed; only the verification is left. Resume: rerun `LIMIT_CHECK=off .claude/skills/epic-autopilot/scripts/loop.sh epic-end-of-game-words`. The next session resumes at Step D: it reruns test:all and the screenshot check, then stops with 10.9 `built` for your Android read.
+
+## Stopped — test:all failed again
+Ticket 10.9, Step D.1 (rerun): `npm run test:all` failed again on the same single test, `[android] e2e/nav.spec.ts:162 §2 AD-13 a double tap on New game on the rejected root opens the notice at wc 1 and no Reset confirm` (line 176: the "Delete the score history?" confirm was still showing). Lint, check, unit (3597), build and dist (21) passed; 1093 android e2e passed; the desktop e2e and pwa suites were skipped after the failure. Screenshots not run. Earlier log kept as `10.9-T-attempt1.log`.
+Startup note: the handoff, git log (d47269c) and digest agreed (10.9 at Step D: plan `built`, `10-9-build.md` has `## Result`). The stale `10.6-C3.done.pid` again named no live process.
+Worth knowing: This is now 2 of 2 full runs for 10.9's verification and 5 failures across 10.4–10.9, always this one test, always in the full run, never alone. It is no longer a rare flake: it blocks every full run, so it needs a fix (a timing race in the test or in the double-tap handling on the rejected-save screen) before 10.9 can pass its checks. The autopilot does not fix code itself.
+Resume: fix or stabilise `e2e/nav.spec.ts:162` (a small fix commit on this branch, or your call to quarantine it until 10.10), then rerun `LIMIT_CHECK=off .claude/skills/epic-autopilot/scripts/loop.sh epic-end-of-game-words`; the next session resumes at Step D (test:all, screenshots), then stops with 10.9 `built` for your Android read.
+Tokens: 0.2M input-equivalent (other 59%, orchestrator 41%); orchestrator peak context 56k
