@@ -171,3 +171,7 @@ Ticket 10.7, Step D: test:all and screenshots green on 717f92b; code review log 
 1. Hide (rule 7 vs AD-19 Hide): when the app goes to the background mid-celebration, the build ends the run the ordinary way (removes its back-history step with a queued pop) instead of AD-19's separate "hide mode". Proposed default: approve; 10.9 syncs AD-19 Hide and the EXPERIENCE.md row; Android proof at 10.9's read. A no means a ticket revision (new nav operations).
 2. ☰/M when something else lands on top before the sheet opens (a back gesture in that instant, or a second press that already opened the menu): the menu open is dropped. Proposed default: keep; 10.9 adds a SPEC F-row.
 Resume: record the answers (ticket Notes, epic Notes, SPEC memlog), commit, rerun `LIMIT_CHECK=off .claude/skills/epic-autopilot/scripts/loop.sh epic-end-of-game-words`; the next session finds the review log with `## Result` and goes to Step D (test:all, screenshots, mark done).
+
+## 10.7 Celebration interruptions — done
+Owner checkpoint items 1–2 accepted under the standing rule as SPEC F28 (hide ends the run the ordinary way) and F29 (a raced ☰/M menu open is skipped); no player-visible change. test:all and screenshots passed on eae5179/717f92b (above); marked done without a rerun since only docs changed after. The ☰/M merge blocker is closed.
+Close-out docs: ARCHITECTURE-SPINE.md AD-19 Hide ← F28 (2026-10-24); EXPERIENCE.md Win celebration message row ← F28; SPEC ← F29 row (added); AD-13/AD-19 naming `open-menu.ts`.

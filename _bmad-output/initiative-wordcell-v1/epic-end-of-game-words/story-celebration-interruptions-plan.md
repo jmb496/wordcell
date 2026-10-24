@@ -3,7 +3,7 @@ title: 'Celebration interruptions'
 type: 'feature'
 ticket: '7'
 created: '2026-10-24'
-status: 'built'
+status: done
 route: 'full'
 route_source: 'auto'
 review: 'thorough'

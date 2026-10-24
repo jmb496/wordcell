@@ -47,3 +47,4 @@ Verify: `npm run test:all` and `npm run test:screens` are green, no screenshot b
 - Open question: How Android treats the sheet's history push after the hide callback; the lifecycle test proves the app-level behaviour, entry 9's final Android read (tickets.toml entry 9, the hide path) the platform; the epic 7 device check is later and platform-wide.
 - This ticket closes the ☰/`M` merge blocker (story-celebration-overlay-entry-plan.md owner item 3): the epic branch may merge after it.
 - Accepted residual, for the device read: a back gesture landing between ☰'s queued pop and the sheet push is absorbed by nav as its own pending pop (AD-13); a bfcache restore after navigating away mid-run may leave nav's pending pop unsettled (the first back absorbed).
+- Decision (owner standing rule, 2026-10-24, plan checkpoint items 1–2): SPEC F28 hide ends the run the ordinary way; SPEC F29 the raced ☰/M menu open is skipped. Both kept as built.
