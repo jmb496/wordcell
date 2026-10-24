@@ -215,3 +215,11 @@ Startup note: the handoff, git log (d47269c) and digest agreed (10.9 at Step D: 
 Worth knowing: This is now 2 of 2 full runs for 10.9's verification and 5 failures across 10.4–10.9, always this one test, always in the full run, never alone. It is no longer a rare flake: it blocks every full run, so it needs a fix (a timing race in the test or in the double-tap handling on the rejected-save screen) before 10.9 can pass its checks. The autopilot does not fix code itself.
 Resume: fix or stabilise `e2e/nav.spec.ts:162` (a small fix commit on this branch, or your call to quarantine it until 10.10), then rerun `LIMIT_CHECK=off .claude/skills/epic-autopilot/scripts/loop.sh epic-end-of-game-words`; the next session resumes at Step D (test:all, screenshots), then stops with 10.9 `built` for your Android read.
 Tokens: 0.2M input-equivalent (other 59%, orchestrator 41%); orchestrator peak context 56k
+
+## 10.9 Close-out: documents, AGENTS pitfall and device check — built, waiting for you
+Tests: all passing on 169c6bc (unit 3597, e2e 1096, pwa 17, dist 21), screenshots passed (67; 39 project skips as usual), no baseline regenerated. The `e2e/nav.spec.ts` double-tap failure is fixed by your commit 169c6bc (the `doubleTap` helper with stamped tap times), and it passed this time in the full run.
+Startup note: the handoff, git log (169c6bc) and digest agreed (10.9 at Step D: plan `built`, `10-9-build.md` has `## Result`). The stale `10.6-C3.done.pid` again named no live process. The earlier test logs are kept as `10.9-T-attempt1.log` and `10.9-T-attempt2.log`.
+Stopped by rule 4: the ticket's only hands-on part, your Android read, is left. 10.9 stays `built` until you mark it done.
+Tokens: 0.2M input-equivalent (other 53%, orchestrator 47%); orchestrator peak context 60k
+Close-out docs: docs/game-flow-spec.md R-87 + preamble amendment ← dictionary banner exempt from press-skip (owner standing rule, 2026-10-24; applied in 52d5aa5); DESIGN.md Win celebration / A-D12 ← your Android verdict (pending, at done); tickets.toml entry 7 `interface` and the epic References F-range (F1…F29), also at done
+Resume: run the phone check (below), record it and your A-D12 verdict in the epic Notes, mark 10.9 done, then rerun `LIMIT_CHECK=off .claude/skills/epic-autopilot/scripts/loop.sh epic-end-of-game-words` for 10.10 (refactor sweep).
