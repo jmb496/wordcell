@@ -9,9 +9,11 @@
 // from before the start, the controller's hover-peek upkeep) and `end()`, so the bubble-phase
 // pointer controller never opens a press for it and keys.ts sees a prevented key. Only the skipping
 // input is consumed: a pointer held from before the start never is (its `pointerup` is not the
-// run's), and a finish or the cap consumes nothing. A non-repeat chorded `Space` (Shift, Ctrl, Meta
-// or Alt) does not skip, but is `preventDefault()`ed only, so it never activates a focused button
-// (SPEC F17; preventing the keydown is enough in Chromium, its keyup then clicks nothing).
+// run's), and a finish or the cap consumes nothing. Every other `Space` keydown of the run, a
+// chorded one (Shift, Ctrl, Meta or Alt) or a repeat (a chord held past the repeat delay, or one
+// whose modifier was released), does not skip, but is `preventDefault()`ed only, so it never
+// activates a focused button (SPEC F17; preventing the keydowns is enough in Chromium, the keyup
+// then clicks nothing).
 // Each skip leaves a one-shot post-run tail (AD-19 Skip refinement, see the ticket plan):
 // - press tail, for the skipping `pointerId`: before release it consumes that pointer's
 //   `pointerup` and arms its own `createClickSwallower` there (300 ms from the release); a same-id
@@ -179,14 +181,14 @@ export function createSkip(deps: SkipDeps): Skip {
     };
     const onKey = (event: Event): void => {
       const e = event as KeyboardEvent;
-      if (deps.halted() || e.repeat) return;
+      if (deps.halted()) return;
       const chord = e.ctrlKey || e.metaKey || e.altKey;
-      if (e.key === ' ' && (chord || e.shiftKey)) {
+      const space = e.key === ' ';
+      if (space && (e.repeat || chord || e.shiftKey)) {
         event.preventDefault();
         return;
       }
-      if (chord) return;
-      const space = e.key === ' ';
+      if (e.repeat || chord) return;
       if (!space && e.key !== 'Escape') return;
       consume(event);
       if (space) armSpaceTail(env);

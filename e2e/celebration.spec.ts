@@ -278,7 +278,7 @@ test.describe('android', () => {
     ['an empty band point', emptyPoint],
     ['a non-empty WordCell', (page: Page) => centre(page.getByTestId('wordcell-3'))],
   ] as const) {
-    test(`R-87 a touch press on ${name} skips the run, consumed: held until the sheet is expanded and released within the tap window, no pointerup or click reaches the page, nothing activated, Session unchanged`, async ({
+    test(`R-87 a touch press on ${name} skips the run, consumed: held until the sheet is expanded and released within the tap window, no pointerdown, pointerup or click reaches the page, nothing activated, Session unchanged`, async ({
       page,
     }) => {
       await readyToWin(page);
@@ -561,6 +561,62 @@ test.describe('desktop', () => {
     await enterIntoRun(page);
     await page.keyboard.press('Escape');
     await animationFrames(page, 3);
+    await expectSkipped(page);
+  });
+
+  // The run still live, the sheet hidden and the focused New game not activated (SPEC F17).
+  async function expectNotSkipped(page: Page): Promise<void> {
+    await animationFrames(page, 3);
+    expect(await running(page)).toBe(true);
+    await expect(sheet(page)).toHaveCount(0);
+    await expect(primary(page)).toBeFocused();
+    expect(await sameSession(page)).toBe(true);
+  }
+
+  test('R-87 Shift+Space, Ctrl+Space, Alt+Space and Meta+Space do not skip the run and never activate the focused New game; Esc then skips it', async ({
+    page,
+  }) => {
+    await enterIntoRun(page);
+    for (const chord of ['Shift+Space', 'Control+Space', 'Alt+Space', 'Meta+Space']) {
+      await page.keyboard.press(chord);
+      await expectNotSkipped(page);
+    }
+    await page.keyboard.press('Escape');
+    await animationFrames(page, 3);
+    expect(await running(page)).toBe(false);
+    await expect(sheet(page)).toBeVisible();
+  });
+
+  test('R-87 a Shift+Space held past the repeat delay, its Shift released before the Space, does not skip the run and never activates the focused New game', async ({
+    page,
+  }) => {
+    await enterIntoRun(page);
+    await page.keyboard.down('Shift');
+    await page.keyboard.down('Space');
+    // A second `down` of a held key is a repeat keydown.
+    await page.keyboard.down('Space');
+    await page.keyboard.up('Shift');
+    await page.keyboard.down('Space');
+    await page.keyboard.up('Space');
+    await expectNotSkipped(page);
+  });
+
+  test('R-87 a mouse click on a non-empty WordCell hovered past the long-press time skips the run, consumed: no pointerdown, pointerup or click reaches the page, no hover peek, nothing activated, Session unchanged', async ({
+    page,
+  }) => {
+    await enterIntoRun(page);
+    const point = await centre(page.getByTestId('wordcell-3'));
+    await page.mouse.move(point.x, point.y);
+    await page.waitForTimeout(LONG_PRESS_MS + 100);
+    // No hover peek opens during the run: `overlays.openHoverPeek` opens none under the
+    // `celebration` top (MODAL_TOP), nor while the winning guard starts no timer (F8).
+    await expect(page.locator('[data-hover-peek]')).toHaveCount(0);
+    const inputs = await recordInputs(page);
+    await page.mouse.click(point.x, point.y);
+    await expect(sheet(page)).toBeVisible();
+    await animationFrames(page, 3);
+    expect(await inputs()).toEqual([]);
+    await expect(page.locator('[data-hover-peek]')).toHaveCount(0);
     await expectSkipped(page);
   });
 });

@@ -1,5 +1,5 @@
 # Review loop — ticket 10.6 build (celebration skip, code mode)
-State: pass 2: done
+State: pass 3: done
 
 Target: commit range `d404cae..HEAD` (5f67795), code only (`_bmad-output/` excluded). Staged diff: `10-6-build.passes/pass0.diff` (1505 lines).
 Mode: code, thorough, max 7. Pre-loop: HEAD 5f67795e0b910c8bbc32eb6f3a8654fafc441aad, tree 0 f133377259c5f2810601f6e9b05d9a8951eb054d.
@@ -53,3 +53,24 @@ Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings
 Fixer runs: npm test 3528 passed; lint 1 pre-existing warning (e2e/end-sheet.spec.ts:845); check 0 errors; `playwright test e2e/celebration.spec.ts e2e/helpers.spec.ts` 92 passed; six android touch rows `--repeat-each=5` 30 passed; throwaway repro spec deleted.
 Orchestrator verify: npm test 89 files / 3528 passed; lint pass (1 pre-existing warning); check 0 errors.
 Snapshot: tree 2 008b392b94c6bdecf334d8317171444d57284eae; fix diff `10-6-build.passes/pass2.fix.diff` (360 lines); restaged `pass2.diff`.
+
+## Pass 3 — 2026-10-24
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 1, minor 4, decision-needed 0 (+1 owner/spine-sync item)  |  Dropped in triage: 1 (merged: chorded-Space browser test ×2 (1 major, 1 minor → major)); reclassified: intent "press point departs from AD-19 Skip 'target'" (reviewer: major) → owner/spine-sync item (code follows R-87, the spec wins; AGENTS.md Policy: report the spine bug)
+### Applied
+- [major] e2e/celebration.spec.ts desktop describe — SPEC F17 / ticket Keys "during the run `Space` never activates a focused control" for Shift/Ctrl/Alt/Meta+Space is covered only by a node fake asserting `preventDefault()`; the browser half (Chromium then not clicking the focused New game) rests on a deleted throwaway repro → fixer item 1 (default applied: desktop R-87 row, New game focused, each chord, running stays true, sheet 0, sameSession, then Esc ends it)
+- [minor] src/ui/celebration/skip.ts run onKey — repeat Space keydowns return before the chord check, so a held chorded Space past the auto-repeat delay (or a modifier released while Space stays down) can set a focused button active and its keyup click it, against SPEC F17 → fixer item 2 (default applied: preventDefault only on every non-skipping Space keydown, repeats included)
+- [minor] e2e/celebration.spec.ts — no desktop mouse press-skip row; the mouse path and the press skip's `cancel()` over a hovered WordCell (caller focus; plan follow-up) are proven only by fakes and the helper self-test → fixer item 3
+- [minor] e2e/celebration.spec.ts:281 — touch-press row title still says "no pointerup or click" though pointerdown is now recorded → fixer item 4
+- [minor] src/ui/celebration/skip.test.ts:10 — 155-column header line → fixer item 5
+### Owner / spine sync (recorded, not a code change)
+- src/ui/celebration/skip.ts `inBars` — the bar test is now the press point (`elementFromPoint`, as epic 4 SPEC F13) where AD-19 Skip (spine L971) and the plan Code Map say the press *target*; R-87 "a pointer press outside the top and action bars" is a location and the spec wins. Player-visible versus the spine wording: a touch just beside Undo / Menu / Redo / New game that Chromium retargets onto that button now skips to the end sheet instead of un-winning, opening the menu or dealing. Carried to entry 9's AD-19 Skip sync.
+- src/ui/celebration/skip.ts onKey — chorded (and, after item 2, repeat) non-skipping Space is now `preventDefault()`ed per SPEC F17, where the plan matrix says "chord: untouched"; carried to entry 9's AD-19 Skip sync.
+### Fixer outcome
+1. `expectNotSkipped` helper; desktop row 'R-87 Shift+Space, Ctrl+Space, Alt+Space and Meta+Space do not skip the run and never activate the focused New game; Esc then skips it' (Meta works on Linux Chromium); fails with the chord `preventDefault()` removed, and per modifier for each of Shift, Ctrl, Alt, Meta (restored).
+2. Run `onKey`: every non-skipping Space keydown (chord or repeat) is `preventDefault()` only; repeat Esc untouched; Space tail unchanged. skip.test.ts: the repeat-Space case joins the prevented-not-stopped loop ('AD-19 a repeat Space does not end the run and is only default-prevented, not stopped, …'), `PREVENTED` constant, new 'AD-19 a held Shift+Space whose Shift is released before the Repeats: …'. New desktop row 'R-87 a Shift+Space held past the repeat delay, its Shift released before the Space, does not skip the run and never activates the focused New game' (fails on the pass-2 skip.ts).
+3. Desktop row 'R-87 a mouse click on a non-empty WordCell hovered past the long-press time skips the run, consumed: …' (hover wordcell-3 for LONG_PRESS_MS + 100, recorder empty, no `[data-hover-peek]`, `expectSkipped`). Finding: a hover peek can never open during the run (`openHoverPeek` refuses under the `celebration` top; the winning guard blocks the hover timer), so the peek asserts hold regardless of `cancelGesture()`.
+4. Touch-press title now "no pointerdown, pointerup or click reaches the page".
+5. skip.test.ts:10 re-wrapped.
+Fixer runs: npm test 3529 passed; lint 1 pre-existing warning; check 0 errors; `playwright test e2e/celebration.spec.ts e2e/helpers.spec.ts` 95 passed; new desktop rows `--repeat-each=5` 15 passed; with the touch-press rows, all projects 25 passed.
+Orchestrator verify: npm test 89 files / 3529 passed; lint pass (1 pre-existing warning); check 0 errors.
+Snapshot: tree 3 b0b81e0f7abfabb8216fa5aafbc9860fc25e08e2; fix diff `10-6-build.passes/pass3.fix.diff` (173 lines); restaged `pass3.diff`.

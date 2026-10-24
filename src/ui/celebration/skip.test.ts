@@ -7,7 +7,8 @@ import { createSkip, type SkipEnv } from './skip';
 // listener runs even after `stopPropagation`, and one added during the dispatch is not called for
 // it), and fake timers. The fake `document`'s `elementFromPoint` answers the element under a
 // press point (`barAt` puts a point in a bar or the banner; any other point is on the board). The
-// fake `end` detaches the run listeners, as the controller's internal stop does. An event is "untouched" when it is neither stopped nor default-prevented.
+// fake `end` detaches the run listeners, as the controller's internal stop does. An event is
+// "untouched" when it is neither stopped nor default-prevented.
 
 type Listener = (event: unknown) => void;
 type Entry = { at: string; type: string; fn: Listener; capture: boolean };
@@ -125,6 +126,7 @@ const PRESS_TAIL = ['document pointercancel', 'document pointerdown', 'document 
 const SPACE_TAIL = ['document keydown', 'document keyup', 'window blur'];
 const UNTOUCHED = { stopped: false, prevented: false };
 const CONSUMED = { stopped: true, prevented: true };
+const PREVENTED = { stopped: false, prevented: true };
 /** A press point in a bar (`barAt`), away from `down`'s default board point. */
 const BAR_POINT = { clientX: 100, clientY: 20 };
 
@@ -249,7 +251,6 @@ describe('AD-19 Skip run listeners', () => {
   });
 
   for (const [name, k, init] of [
-    ['a repeat Space', ' ', { repeat: true }],
     ['a repeat Esc', 'Escape', { repeat: true }],
     ['Ctrl+Esc', 'Escape', { ctrlKey: true }],
     ['Meta+Esc', 'Escape', { metaKey: true }],
@@ -271,15 +272,28 @@ describe('AD-19 Skip run listeners', () => {
     ['Ctrl+Space', { ctrlKey: true }],
     ['Meta+Space', { metaKey: true }],
     ['Alt+Space', { altKey: true }],
+    ['a repeat Space', { repeat: true }],
   ] as const) {
     it(`AD-19 ${name} does not end the run and is only default-prevented, not stopped, so it never activates a focused button (SPEC F17)`, () => {
       const t = setup();
       t.skip.attach(t.env);
-      expect(t.key(' ', init)).toEqual({ stopped: false, prevented: true });
+      expect(t.key(' ', init)).toEqual(PREVENTED);
       expect(t.order).toEqual([]);
       expect(t.live()).toEqual(RUN);
     });
   }
+
+  it('AD-19 a held Shift+Space whose Shift is released before the repeats: every keydown only default-prevented, the run not ended (SPEC F17)', () => {
+    const t = setup();
+    t.skip.attach(t.env);
+    expect(t.key(' ', { shiftKey: true })).toEqual(PREVENTED);
+    expect(t.key(' ', { shiftKey: true, repeat: true })).toEqual(PREVENTED);
+    expect(t.key('Shift', {}, 'keyup')).toEqual(UNTOUCHED);
+    expect(t.key(' ', { repeat: true })).toEqual(PREVENTED);
+    expect(t.key(' ', { repeat: true })).toEqual(PREVENTED);
+    expect(t.order).toEqual([]);
+    expect(t.live()).toEqual(RUN);
+  });
 
   it('AD-19 an Esc skip leaves no tail', () => {
     const t = setup();
