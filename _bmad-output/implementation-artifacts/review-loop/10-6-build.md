@@ -1,5 +1,5 @@
 # Review loop — ticket 10.6 build (celebration skip, code mode)
-State: pass 3: done
+State: pass 4: done (result written)
 
 Target: commit range `d404cae..HEAD` (5f67795), code only (`_bmad-output/` excluded). Staged diff: `10-6-build.passes/pass0.diff` (1505 lines).
 Mode: code, thorough, max 7. Pre-loop: HEAD 5f67795e0b910c8bbc32eb6f3a8654fafc441aad, tree 0 f133377259c5f2810601f6e9b05d9a8951eb054d.
@@ -74,3 +74,20 @@ Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings
 Fixer runs: npm test 3529 passed; lint 1 pre-existing warning; check 0 errors; `playwright test e2e/celebration.spec.ts e2e/helpers.spec.ts` 95 passed; new desktop rows `--repeat-each=5` 15 passed; with the touch-press rows, all projects 25 passed.
 Orchestrator verify: npm test 89 files / 3529 passed; lint pass (1 pre-existing warning); check 0 errors.
 Snapshot: tree 3 b0b81e0f7abfabb8216fa5aafbc9860fc25e08e2; fix diff `10-6-build.passes/pass3.fix.diff` (173 lines); restaged `pass3.diff`.
+
+## Pass 4 — 2026-10-24
+Reviewers: fix diff, edge cases, verification gap, intent alignment (late-pass bar)  |  Findings: major 0, minor 6, decision-needed 1  |  Dropped in triage: 2 (merged: residual hold window in the touch rows ×3; plan `deferred[0]` stale ×3, plan doc not the target)
+Snapshot: tree 3 b0b81e0f7abfabb8216fa5aafbc9860fc25e08e2 (no fix pass)
+### Decision needed (functionality / UX / gameplay)
+- src/ui/celebration/skip.ts press tail; end-sheet open path — after a press skip the expanded end sheet opens under the finger at once; only the skipping press is consumed, so the second tap of an impatient double-tap (or a second finger) lands on the just-opened sheet and can hit Replay this deal or New game, which act at once on a finished game (the commit path has motion.ts's 300 ms guard; the skip path has none). Should the sheet ignore new presses for a moment after a skip? — proposed default: yes, consume any new press for 300 ms (SWALLOW_MS) after the skipping press's release.
+### Minors (not applied; converged)
+- src/ui/celebration/skip.ts:12-16 header — the repeat-Space enumeration omits a plain Space held from before the start (also prevented).
+- src/ui/celebration/skip.ts:8-10 header — "keys.ts sees a prevented key" is wrong for a skipping key (stopped in document capture; keys.ts listens on window bubble); only the non-skipping Space keydowns reach it, prevented.
+- e2e/celebration.spec.ts touch-press rows — the pointerdown→pointerup window still spans the 16 ms Node `isVisible` poll and the touchEnd CDP round trip; default if it flakes: record sheet presence in the capture-phase `pointerup` listener and end the hold at once (or an in-page rAF wait).
+- e2e/helpers.spec.ts 'AD-17 skipByPress …' — does not assert the pointer type, so an always-mouse helper passes on android; record `pointerType` and assert `['touch']` / `['mouse']`.
+- e2e/celebration.spec.ts 'R-87 a mouse click on a non-empty WordCell hovered …' — "no hover peek" is structural (`MODAL_TOP` holds `celebration` and `endSheet`), not evidence about `cancelGesture()`; drop it from the name or comment it.
+- Plan (not the target) — matrix "Press skip" row and Design Notes sketch lack `cancelGesture()`; `deferred[0]` describes the pre-pass-1 timing mechanism (now page `timeStamp`s and a 16 ms poll inside the hold).
+
+## Result — converged after 4 passes
+Majors per pass: 2, 2, 1, 0. Applied: 6 majors (tap-window timing ×2, bar-press P6 row, press-point bar test (a touch beside Undo/Menu/Redo/New game was retargeted onto the button and acted instead of skipping), chorded-Space browser row) and 15 minors over 3 fix passes; commits 527de08, 4384a07, 800364c. Technical defaults applied: all of them. Decision needed: 1 (double-tap after a press skip). Owner / spine sync for entry 9 (AD-19 Skip): the bar test uses the press point, not the target (R-87 wins); non-skipping Space keydowns (chords, repeats) are `preventDefault()`ed per SPEC F17, not "untouched" as the plan matrix says. Final state (tree 3 = HEAD 800364c): npm test 89 files / 3529 passed; lint pass (1 pre-existing warning, e2e/end-sheet.spec.ts:845); check 0 errors; fixer-run Playwright `e2e/celebration.spec.ts e2e/helpers.spec.ts` 95 passed. `npm run test:all` not run by the loop.
+Unapplied minors: listed under Pass 4.
