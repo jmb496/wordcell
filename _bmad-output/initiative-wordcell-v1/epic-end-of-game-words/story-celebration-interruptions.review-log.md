@@ -1,5 +1,5 @@
 # Review log — story-celebration-interruptions.md
-State: pass 2: done
+State: pass 3: done
 Pre-loop: HEAD 765affe; pass0.md 216 words; growth budget stated 1500 words; tickets.toml entry 7 fields interface, tests, owns, consumers, plan_checkpoint passed as intent, to be added to Description in pass 1.
 
 ## Pass 1 — 2026-10-24
@@ -59,3 +59,26 @@ Fixer: all 13 applied; no commands added; keys.test.ts titles, `animationFrames`
 - none
 ### Dropped
 - Duplicates of the wiring-module and halted findings across the four lenses; the "openSurface" wording minor raised twice
+
+## Pass 3 — 2026-10-24
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 2, minor 8, decision-needed 0  |  Dropped in triage: 6 (duplicates merged)
+Words (docs): 1471 (6.81 x pass 0; budget 1500)  |  Snapshot: _bmad-output/initiative-wordcell-v1/epic-end-of-game-words/story-celebration-interruptions.passes/pass3.md
+Fixer: all 10 applied; no commands added; keys.test.ts title, EXPERIENCE.md row, open-surface.ts/Menu.svelte comments and the four reference paths checked; tightened Interface/Halted/Menu wording (the Menu dropped-open default no longer says "listed at the plan checkpoint"; it still goes to entry 9's SPEC F-row).
+### Applied
+- [major] Hide rule 7 fallback — "remove without `nav.pop`, sheet push reuses the stale entry" is unbuildable (nav has no reuse op; next back swallowed) and contradicts the ticket's own AC; a decline stops the build for a ticket revision → fixer item 1
+- [major] AC U tests — with `end` faked, pop/`done` counts and idempotence are unobservable; real attached `end()` with nav mocked (attached.test.ts pattern), nav unsettled until after the microtask for the menu case → fixer item 2
+- [minor] Hide visible `pagehide` — reload makes it moot; event-order claim unverified; bfcache restore may leave a pending pop (first back absorbed) → Notes residual for entry 9 → fixer item 3
+- [minor] Menu keys.test.ts — `M` loses all unit coverage; extend "AD-13 Z, Ctrl+Z and N act while only celebration is open" to `M` → fixer item 4
+- [minor] Menu — deferred open runs outside `act()`; the plan wraps it in `act()` or says why no gesture can start → fixer item 5
+- [minor] AC resize — `orientationchange` needs its own run → fixer item 6
+- [minor] AC hide — "no throw" has no observable; no Halted surface → fixer item 7
+- [minor] Entry 9 sync — who registers the hide callback (AD-19 says main.ts); silent return cites epic 6 F16 / entry 5, EXPERIENCE.md row to sync → fixer item 8
+- [minor] Comments — open-surface.ts header and Menu.svelte comment change with the code → fixer item 9
+- [minor] References — layout.svelte.ts, announce.ts, e2e/helpers/live-region.ts, attached.test.ts → fixer item 10
+### Default applied (technical)
+- Declined hide default → the build stops for a ticket revision (no fallback mechanism named)
+- U-test harness — fake `win`, `registerBeforeHide`, `halted`; real attached `celebration.end()` with nav mocked
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- Duplicates of the fallback and U-test findings across lenses
