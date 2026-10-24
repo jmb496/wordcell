@@ -1,5 +1,5 @@
 # Review loop — ticket 10.6 tuning (F20 overlap, F21 follow-the-leader; code mode)
-State: pass 1: done
+State: pass 2: done (result written)
 
 Target: commit range `6647a53..HEAD` (0f0ef0d), code only (`_bmad-output/` excluded; WIP review-pass commits of this loop excluded from later restaging by diffing against 6647a53 at the working tree). Staged diff: `10-6-tune.passes/pass0.diff` (1361 lines).
 Mode: code, thorough, max 7. Pre-loop: HEAD 0f0ef0d4a756c9a204a154e445f755a41b588fe9, tree 0 88b597b10953b4f97d370710d719343647f550d8.
@@ -25,3 +25,18 @@ Snapshot: tree 0 88b597b10953b4f97d370710d719343647f550d8 (pre-fix)
 4. Plan bullet names the F20/F21 tests (step.test.ts SPEC F20/F21 cases, the bounce-then-exit matrix, the pace bound; the controller first-frame test; Celebration.test.ts 'SPEC F20: the copies carry no row layout'); entry 9 adds the rule-coverage rows.
 Orchestrator verify: npm test 89 files / 3554 passed; lint pass (1 pre-existing warning, e2e/end-sheet.spec.ts); check 0 errors.
 Snapshot: tree 1 916ac01aceea6a4d103b4e541c9e1181f628ef96; fix diff `10-6-tune.passes/pass1.fix.diff` (152 lines); restaged `pass1.diff` (1438 lines).
+
+## Pass 2 — 2026-10-24
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 0, minor 4, decision-needed 0  |  Dropped in triage: 0
+Snapshot: tree 1 916ac01aceea6a4d103b4e541c9e1181f628ef96 (no fix pass)
+### Minors (not applied, stopping rule)
+- `step.test.ts` `paceOf` — copies step.ts's `FALL_FRAC` 0.2 as a literal; a retune raising FALL_FRAC under-reports pace (default: export FALL_FRAC or take the reference gravity from a 1-letter group in the same band and cap).
+- `step.test.ts` pace bound — no lower bound: removing `Math.max(1, …)` from `pace` leaves every step test green (two controller tests fail) (default: assert pace ≥ 1 for every group and 1 for the desktop/landscape fixture groups).
+- `step.ts` `launch()` `Math.max(lead, w)` — the row-wider-than-the-band guard is untested and unreachable on real layouts (23-letter rows scale 0.53–1, never the 0.4 floor) (default: a synthetic floor-scaled step test asserting each card bounces before it exits, or drop the guard per rule 6; the 23-letter read is entry 9's).
+- `e2e/celebration.spec.ts:149-151` `stepUntilShown` — `firstElementChild?.style.transform !== ''` is true for a group with no child (default: require the child non-null).
+
+## Result — converged after 2 passes
+Majors per pass: 1, 0. Fixed in pass 1 (commit a9e021e): the pace record and bound, plus 3 minors. Decision needed: the pace fit's per-word bounce tempo (pass 1). Technical defaults applied: 4.
+Unapplied minors: the four pass 2 minors above; carried: a band no taller than a card gives NaN physics (entry 10).
+Final state (tree 1): npm test 89 files / 3554 passed; lint pass (1 pre-existing warning); check 0 errors.
+Decision needed: resolved 2026-10-24 under the owner's standing rule (accept the proposed default): kept as built, SPEC F22; per-word bounce tempo goes to entry 9's long-list device read.
