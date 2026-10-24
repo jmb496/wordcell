@@ -1,5 +1,5 @@
 # Review log — story-hook-free-celebration-suite.md
-State: pass 1: done
+State: pass 2: done
 Pre-loop: HEAD 5cf7d71; pass0.md 156 words; growth budget stated 1500 words; tickets.toml entry 8 fields tests, owns, consumers passed as intent, added to Description in pass 1; 10.5 deferral (a real win in the hook-free production build starts the celebration) passed as intent.
 
 ## Pass 1 — 2026-10-24
@@ -31,3 +31,28 @@ Words (docs): 675 (4.3x pass 0; budget 1500)  |  Snapshot: story-hook-free-celeb
 - builder's reading #3 (Undo over the relaunch's expanded sheet fails / must collapse first) — disproved: EXPERIENCE.md End sheet "Expanded, the top bar (with Undo) … stay above the scrim and usable"; e2e/pwa/test-hook.spec.ts:36 and celebration.spec.ts use `steps: ['undo']` the same way; the remainder merged into item 6
 - edge #4 / adversarial #5 / ref #2 back-assertion duplicates — merged into items 1 and 8
 - builder's reading minor "seed prefs-non-default (Slow)" — Normal cap 6 s with a skip on first group mount is ample margin; covered by item 7
+
+## Pass 2 — 2026-10-24
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 10, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+Words (docs): 859 (5.5x pass 0; budget 1500)  |  Snapshot: story-hook-free-celebration-suite.passes/pass2.md
+### Applied
+- [major] Description Start proof — "a group's transform changes": the run writes only `opacity` to `[data-celebration-group]` and `transform` to each shown `[data-celebration]` copy (celebration.svelte.ts render(); SPEC F21/F26; AD-19's "transform … to the groups" is stale, entry 9 syncs) → read a shown copy's `style.transform`, non-empty and different across `animationFrames` (lifecycle.ts) → fixer item 1 (all four reviewers)
+- [minor] Real time — "first group mounts" is not observable (all groups mount at start) and conflicts with the multi-frame start proof → "skip right after the start proof" → fixer item 2
+- [minor] Start proof — `added()` read right after Confirm reads false (run starts in whenSettled after the 300 ms guard) → poll first → fixer item 3
+- [minor] Start proof — negative control procedure unstated → temporary main.ts gate move, build + test:e2e:dist, record, revert → fixer item 4
+- [minor] Setup — error listeners must attach before `openFixture` (it calls goto); assert at end → fixer item 5
+- [minor] Setup — helper list reads exhaustive; omits `openFixture`, `animationFrames` → fixer item 6
+- [minor] (a) vs (b) — (a) lacks root count 0 and Replay focus → fixer item 7
+- [minor] (a)/(b) — `END_SHEET` also matches "Game given up." → exact "Every column cleared." → fixer item 8
+- [minor] AC (b) name — omits "plays" though mapped to both → rename → fixer item 9
+- [minor] Real time — "(AD-17: …end the run early)" is a paraphrase → point to the Notes reading → fixer item 10
+- [minor] Notes — entry 9 scope (tickets.toml) names the spine and rule-coverage, not SPEC.md; handoff only in this ticket → plan records it as a deferred item to entry 9 → fixer item 11
+### Fixer outcome
+- All 11 applied, no conflicts. Extra consistency edit: References board.ts list now `openFixture`, `glidesSettled`; lifecycle.ts (`animationFrames`) added. Negative-control commands not run (unverified; names checked: package.json scripts, src/main.ts:239).
+### Default applied (technical)
+- Start proof element → first group's first `[data-celebration]` copy, `style.transform`, two reads `animationFrames` apart
+- Error assertion timing → listeners before `openFixture`; assert empty at the end after `waitForLoadState('networkidle')` (the AD-18 precedent)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- edge minor "check-then-act window before the press" — folded into item 7 (root count 0 after the skip); timing margin left to the plan
