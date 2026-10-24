@@ -18,6 +18,10 @@ plans after build when a second pass is wanted.
 ticket of an epic through review loop → build → code review loop → `test:all` → mark done, stopping
 only when Jared's input is needed (methodology § Autopilot, owner-authorised 2026-09-28).
 
+Device reads on the owner's Android phone go through `node scripts/device-preview.mjs <fixture>`
+(Tailscale HTTPS share of `vite preview`, one-tap seed page); see `docs/device-testing.md`. Ticket
+handoffs for a device read point there instead of chrome://inspect port forwarding.
+
 Skills are installed in `.claude/skills/bmad-*`; runtime in `_bmad/`; artifacts in
 `_bmad-output/` (planning-artifacts, implementation-artifacts, specs). Legacy inputs are in
 `_bmad-output/planning-artifacts/legacy/`. Workflow: product brief → ux → architecture spine →
