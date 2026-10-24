@@ -1,0 +1,33 @@
+# Review log — story-hook-free-celebration-suite.md
+State: pass 1: done
+Pre-loop: HEAD 5cf7d71; pass0.md 156 words; growth budget stated 1500 words; tickets.toml entry 8 fields tests, owns, consumers passed as intent, added to Description in pass 1; 10.5 deferral (a real win in the hook-free production build starts the celebration) passed as intent.
+
+## Pass 1 — 2026-10-24
+Reviewers: builder's reading, edge-case hunter, adversarial, ref alignment  |  Findings: major 5, minor 6, decision-needed 0  |  Dropped in triage: 3
+Words (docs): 675 (4.3x pass 0; budget 1500)  |  Snapshot: story-hook-free-celebration-suite.passes/pass1.md
+### Applied
+- [major] Description / AC — one run can be skipped once; "the new hook-free test" (singular) vs press and back → two tests, fresh page each, names start `R-87` → fixer item 1
+- [major] Description "plays … in real time" / AC — no hook-free observable proves the run started (10.5 deferral; 10.5 plan line 22 asks to assert `[data-celebration-root]` added after a real Confirm) → state the start proof, name the deferral closed, plan records a negative control → fixer item 2
+- [major] whole ticket — tickets.toml entry 8 tests/owns/consumers not copied; no rule-coverage row → test-name mapping → fixer item 3
+- [major] Description "and by back" vs AD-17 Celebration seam ("every `dist-smoke` spec that wins a game ends the run by a press outside the bars") and SPEC CAP-6/F12 (press only); rule-coverage R-87 hook-free row adds back → Note: spec companion row wins, spine read as "ends the run early by a skip (press or back)", 10.9 syncs AD-17 / CAP-6 wording → fixer item 4
+- [major] AC Verify — omits `npm run test:all` (AGENTS.md, methodology DoD, tickets.toml header) → fixer item 5
+- [minor] Description setup — "seedStorage (or openFixture …)" offers two routes; hook readers not forbidden → one route, DOM-only helpers → fixer item 6
+- [minor] Description — real-time conditions implicit (Normal speed, reduced motion off; a natural finish could stand in for the skip) → fixer item 7
+- [minor] Description back — back trigger and post-assertions unstated → fixer item 8
+- [minor] Description — no AD-15 / pageerror check during the real rAF run → fixer item 9
+- [minor] References — missing SPEC CAP-6, rule-coverage row, AD-19, AD-13, helpers, fixture, 10.5 deferral → fixer item 10
+- [minor] Description audit — audited set unnamed → fixer item 11
+### Fixer outcome
+- All 11 applied (no conflicts). Unverified (left to the build): `page.goBack()` from the celebration entry keeps the app URL; a group's transform changes between two reads in `dist/`. Script/helper names checked against package.json and e2e/helpers. Out of scope: tickets.toml entry 8 `verify` still reads build + test:e2e:dist (ticket wins).
+### Default applied (technical)
+- Description — test count → two tests (press, back), fresh page each
+- Description — setup → `openFixture(page, 'session-won-words', { booted: false, steps: ['undo'] })` (Undo acts with the relaunch sheet expanded, EXPERIENCE.md End sheet), then `primary-action` reads Confirm, then click
+- Description — start proof → `watchAdded` before Confirm true; groups mounted while END_SHEET count 0; a group's transform changes across real frames
+- Notes — back skip in a winning dist-smoke spec → allowed, 10.9 sync note for AD-17 / SPEC CAP-6, F12
+- Description — speed → no prefs seeded (Normal), Playwright default reducedMotion `no-preference` stated
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- builder's reading #3 (Undo over the relaunch's expanded sheet fails / must collapse first) — disproved: EXPERIENCE.md End sheet "Expanded, the top bar (with Undo) … stay above the scrim and usable"; e2e/pwa/test-hook.spec.ts:36 and celebration.spec.ts use `steps: ['undo']` the same way; the remainder merged into item 6
+- edge #4 / adversarial #5 / ref #2 back-assertion duplicates — merged into items 1 and 8
+- builder's reading minor "seed prefs-non-default (Slow)" — Normal cap 6 s with a skip on first group mount is ample margin; covered by item 7
