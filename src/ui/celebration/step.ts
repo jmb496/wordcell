@@ -4,7 +4,7 @@
 // origin and the band size (each card reaches its exit wall after EXIT_AFTER_CONTACTS first-contact
 // times, so it bounces before it leaves; AD-19 Rule bullet 1 and SPEC CAP-2/F3 still say "entry
 // index", see the 10.3 plan's Plan Change Log). The constants are tuned at epic 10's checkpoint
-// (ticket 10.6 device reads: SPEC F20, F21, F23, F24); timing is a fraction of the cap so the run
+// (ticket 10.6 device reads: SPEC F20, F21, F23, F25); timing is a fraction of the cap so the run
 // scales with the speed pref.
 // SPEC F21, F23 (follow the leader): every card of a group runs the group's one path, an arc
 // that falls and rebounds off the floor with a constant horizontal drift, one row step
@@ -13,15 +13,15 @@
 // the scaled card height): a horizontal stretch keeps the row's 0.65-width spacing, a vertical one
 // gets 0.65 card heights, so a card never hides the letter of the card above it.
 // The path and its arc length are closed-form; `launch` samples the arc length of the first fall
-// and of one bounce once (`ARC_SAMPLES`), and a trailing card's path time is found by a binary
-// search of those samples plus Newton steps, so a frame allocates nothing. Behind the launch
-// point the path continues as the row's line: until the leader has travelled `k` steps, trailing
-// card `k` slides along that line, so at launch the cards sit as the row.
-// SPEC F24 (even speed): the leader runs the path on its own clock, not the path's time: its
-// speed along the path (px/ms) is the path's speed v blended toward the peak P (a floor
-// contact), P x v / (physical x P + (1 - physical) x v), so its apex runs at MIN_SPEED_SHARE of P
-// and its floor contacts at P; the path, the trail and the stacking are unchanged. The clock is
-// closed-form too, sampled and inverted like the arc.
+// and of one bounce once (`ARC_SAMPLES`), and a card's path time is found by a binary search of
+// those samples plus Newton steps, so a frame allocates nothing. Behind the launch point the path
+// continues as the row's line: until the leader has travelled `k` steps, trailing card `k` slides
+// along that line, so at launch the cards sit as the row.
+// SPEC F25 (constant speed): the leader runs the unchanged path at one constant speed per word in
+// card units (the trail's measure, so every card of the word shares it), its arc `speed` x the
+// time since launch: the arc to the group's exit over the path's own time to it, so the run takes
+// as long as the path did. One speed per word, not per lap: the full laps' speeds agree within
+// about 3 %, but the last partial lap to the exit differs by up to 1.8 x (more than F25's 10 %).
 // Coordinates are band-relative px (the band is the area between the top bar and the action bar),
 // y grows downward, velocities are px per ms; a card's position is the centre of its box.
 
@@ -51,14 +51,9 @@ export const RISE_SHARE = 0.5;
 const EXIT_AFTER_CONTACTS = 2;
 /** Per wave-slot speed variety. */
 const SPEED_STEP = 0.15;
-/** SPEC F23, F24: arc-length and clock samples per path segment (the first fall, one bounce). */
+/** SPEC F23: arc-length samples per path segment (the first fall, one bounce). */
 const ARC_SAMPLES = 64;
-/**
- * SPEC F24: the leader's slowest speed along the path (an apex) as a share of its fastest (a floor
- * contact); a path already that even keeps its own timing.
- */
-export const MIN_SPEED_SHARE = 0.67;
-/** SPEC F23, F24: Newton steps after a sample lookup (the second takes the error under 1e-6 ms). */
+/** SPEC F23, F25: Newton steps after a sample lookup (the second takes the error under 1e-6 ms). */
 const NEWTON_STEPS = 2;
 
 /** SPEC F23: what the card-unit arc length depends on. */
@@ -71,19 +66,6 @@ type Metric = {
   readonly cardH: number;
 };
 
-/**
- * SPEC F24: the leader's clock. Its run along the path in px, `clockAt`, grows at
- * physical x peak + (1 - physical) x |(drift, u)| per ms of path time; the leader's elapsed time
- * is that run over `peak`.
- */
-type Clock = {
-  /** The drift |vx| and the leader's fastest speed along the path, at a floor contact (px/ms). */
-  readonly drift: number;
-  readonly peak: number;
-  /** The share of the path's own timing kept: 1 keeps it, 0 is an even speed. */
-  readonly physical: number;
-};
-
 /** A group's path after launch, without its sample tables. */
 type Flight = Metric & {
   /** The launch's vertical speed (px/ms). */
@@ -92,26 +74,21 @@ type Flight = Metric & {
   readonly contactMs: number;
   readonly reboundVy: number;
   readonly periodMs: number;
-  readonly clock: Clock;
 };
 
 /**
- * SPEC F23, F24: a group's path after launch. The arc-length tables hold the cumulative length
- * (card units), the clock tables the leader's cumulative clock run (px), at ARC_SAMPLES + 1 even
- * times over the first segment (to `contactMs`) and over one bounce (`periodMs`); a pace fit
- * leaves them unchanged (the same arc in less time).
+ * SPEC F23: a group's path after launch. The arc-length tables hold the cumulative length (card
+ * units) at ARC_SAMPLES + 1 even times over the first segment (to `contactMs`) and over one bounce
+ * (`periodMs`); a pace fit leaves them unchanged (the same arc in less time).
  */
 type Path = Flight & {
   readonly firstArc: Float64Array;
   readonly bounceArc: Float64Array;
-  readonly firstClock: Float64Array;
-  readonly bounceClock: Float64Array;
 };
 
-/** SPEC F23, F24: a measure along the path as a function of the vertical speed `u`. */
-type Measure = (flight: Flight, u: number) => number;
-
 export type Group = Path & {
+  /** SPEC F25: the leader's constant speed along the path (card units per ms since launch). */
+  readonly speed: number;
   /** Cards in the row, in letter order. */
   readonly cards: number;
   readonly scale: number;
@@ -184,123 +161,72 @@ function arcRate(m: Metric, u: number): number {
   return Math.hypot(drift(m), u) / m.cardH;
 }
 
-/**
- * SPEC F24: the leader's clock run (px) from vertical speed 0 to `u`, the antiderivative over path
- * time of physical x peak + (1 - physical) x |(drift, u)|; a pace fit (drift, peak and u x pace,
- * gravity x pace²) leaves it unchanged.
- */
-function clockAt(f: Flight, u: number): number {
-  const { drift: d, peak, physical } = f.clock;
-  const even = (u * Math.hypot(d, u) + d * d * Math.asinh(u / d)) / 2;
-  return (physical * peak * u + (1 - physical) * even) / f.gravity;
-}
-
-/** SPEC F24: the clock run's growth per ms of path time at vertical speed `u`. */
-function clockRate(f: Flight, u: number): number {
-  const { drift: d, peak, physical } = f.clock;
-  return physical * peak + (1 - physical) * Math.hypot(d, u);
-}
-
-/** SPEC F23, F24: a segment's cumulative `at` at ARC_SAMPLES + 1 even times over `durMs`. */
-function table(f: Flight, at: Measure, v0: number, durMs: number): Float64Array {
+/** SPEC F23: a segment's cumulative arc at ARC_SAMPLES + 1 even times over `durMs`. */
+function table(f: Flight, v0: number, durMs: number): Float64Array {
   const samples = new Float64Array(ARC_SAMPLES + 1);
-  const start = at(f, v0);
+  const start = arcAt(f, v0);
   for (let i = 1; i <= ARC_SAMPLES; i++)
-    samples[i] = at(f, v0 + (f.gravity * durMs * i) / ARC_SAMPLES) - start;
+    samples[i] = arcAt(f, v0 + (f.gravity * durMs * i) / ARC_SAMPLES) - start;
   return samples;
 }
 
 /**
- * SPEC F23, F24: the time into a segment at which its `at` has grown by `value` (binary search of
- * its samples, NEWTON_STEPS Newton steps on `rate`).
+ * SPEC F23: the time into a segment at which its arc has grown by `arc` (binary search of its
+ * samples, NEWTON_STEPS Newton steps on `arcRate`).
  */
 function segmentMs(
   f: Flight,
-  at: Measure,
-  rate: Measure,
   samples: Float64Array,
   durMs: number,
   v0: number,
-  value: number,
+  arc: number,
 ): number {
   let lo = 0;
   let hi = ARC_SAMPLES;
   while (hi - lo > 1) {
     const mid = (lo + hi) >> 1;
-    if ((samples[mid] as number) <= value) lo = mid;
+    if ((samples[mid] as number) <= arc) lo = mid;
     else hi = mid;
   }
   const a = samples[lo] as number;
   const b = samples[hi] as number;
   const dt = durMs / ARC_SAMPLES;
-  const start = at(f, v0);
-  let t = (lo + (b > a ? (value - a) / (b - a) : 0)) * dt;
+  const start = arcAt(f, v0);
+  let t = (lo + (b > a ? (arc - a) / (b - a) : 0)) * dt;
   for (let i = 0; i < NEWTON_STEPS; i++) {
     const u = v0 + f.gravity * t;
-    t = Math.min(hi * dt, Math.max(lo * dt, t - (at(f, u) - start - value) / rate(f, u)));
+    t = Math.min(hi * dt, Math.max(lo * dt, t - (arcAt(f, u) - start - arc) / arcRate(f, u)));
   }
   return t;
 }
 
-/** SPEC F23, F24: `at`'s growth along `f` from its start to path time `t` ≥ 0. */
-function along(
-  f: Flight,
-  at: Measure,
-  first: Float64Array,
-  bounce: Float64Array,
-  t: number,
-): number {
-  const { vy, gravity: g } = f;
-  if (t <= f.contactMs) return at(f, vy + g * t) - at(f, vy);
-  const s = t - f.contactMs;
-  const laps = Math.floor(s / f.periodMs);
-  const r = s - laps * f.periodMs;
-  return (
-    (first[ARC_SAMPLES] as number) +
-    laps * (bounce[ARC_SAMPLES] as number) +
-    at(f, g * r - f.reboundVy) -
-    at(f, -f.reboundVy)
-  );
-}
-
-/** SPEC F23, F24: the path time at which `at` has grown by `value` ≥ 0 (`along`'s inverse). */
-function invert(
-  f: Flight,
-  at: Measure,
-  rate: Measure,
-  first: Float64Array,
-  bounce: Float64Array,
-  value: number,
-): number {
-  const once = first[ARC_SAMPLES] as number;
-  if (value <= once) return segmentMs(f, at, rate, first, f.contactMs, f.vy, value);
-  const lap = bounce[ARC_SAMPLES] as number;
-  const laps = Math.floor((value - once) / lap);
-  const rest = value - once - laps * lap;
-  return (
-    f.contactMs + laps * f.periodMs + segmentMs(f, at, rate, bounce, f.periodMs, -f.reboundVy, rest)
-  );
-}
-
 /** SPEC F23: the arc length (card units) along `path` from its start to path time `t` ≥ 0. */
 function pathArc(path: Path, t: number): number {
-  return along(path, arcAt, path.firstArc, path.bounceArc, t);
+  const { vy, gravity: g } = path;
+  if (t <= path.contactMs) return arcAt(path, vy + g * t) - arcAt(path, vy);
+  const s = t - path.contactMs;
+  const laps = Math.floor(s / path.periodMs);
+  const r = s - laps * path.periodMs;
+  return (
+    (path.firstArc[ARC_SAMPLES] as number) +
+    laps * (path.bounceArc[ARC_SAMPLES] as number) +
+    arcAt(path, g * r - path.reboundVy) -
+    arcAt(path, -path.reboundVy)
+  );
 }
 
 /** SPEC F23: the path time at which `path` has run `arc` ≥ 0 card units (`pathArc`'s inverse). */
 function pathTime(path: Path, arc: number): number {
-  return invert(path, arcAt, arcRate, path.firstArc, path.bounceArc, arc);
-}
-
-/** SPEC F24: the leader's elapsed time (ms since launch) at path time `t` ≥ 0. */
-function leaderElapsed(path: Path, t: number): number {
-  return along(path, clockAt, path.firstClock, path.bounceClock, t) / path.clock.peak;
-}
-
-/** SPEC F24: the leader's path time `ms` ≥ 0 after launch (`leaderElapsed`'s inverse). */
-function leaderPathMs(path: Path, ms: number): number {
-  const run = ms * path.clock.peak;
-  return invert(path, clockAt, clockRate, path.firstClock, path.bounceClock, run);
+  const once = path.firstArc[ARC_SAMPLES] as number;
+  if (arc <= once) return segmentMs(path, path.firstArc, path.contactMs, path.vy, arc);
+  const lap = path.bounceArc[ARC_SAMPLES] as number;
+  const laps = Math.floor((arc - once) / lap);
+  const rest = arc - once - laps * lap;
+  return (
+    path.contactMs +
+    laps * path.periodMs +
+    segmentMs(path, path.bounceArc, path.periodMs, -path.reboundVy, rest)
+  );
 }
 
 /**
@@ -308,9 +234,9 @@ function leaderPathMs(path: Path, ms: number): number {
  * entry index. The drift is fitted so the group's last card is past its wall by `capMs - baseMs`
  * (before the closing fade): a group whose trail would overrun plays its whole path faster
  * (`pace`: drift and launch speed x pace, gravity x pace²), the same arc in less time. SPEC F23:
- * the trail is `trail` card units of arc behind the leader, so the leader must run the arc to the last
- * card's exit point plus `trail` (SPEC F22's fit on that arc, in card units), timed by the leader's
- * SPEC F24 clock.
+ * the trail is `trail` card units of arc behind the leader, so the leader must run the arc to the
+ * last card's exit point plus `trail` (SPEC F22's fit on that arc, in card units). SPEC F25: the
+ * leader's constant speed is that arc over the path's own time to it, times `pace`.
  */
 export function launch(input: LaunchInput): StepState {
   const { walls, floor, ceiling, capMs, baseMs } = input;
@@ -352,13 +278,6 @@ export function launch(input: LaunchInput): StepState {
     const natural =
       (Math.max(lead, w) / (EXIT_AFTER_CONTACTS * contactMs)) * (1 + SPEED_STEP * slot);
     const periodMs = (2 * rebound) / gravity;
-    // SPEC F24: the path is slowest at an apex (the drift alone) and fastest at a floor contact;
-    // `physical` blends its timing toward an even speed just enough that the apex runs at
-    // MIN_SPEED_SHARE of the peak (`slow` x (1 / share - 1) / (1 - `slow`) solves
-    // P x slow / (physical + (1 - physical) x slow) = share x P).
-    const peak = Math.hypot(natural, rebound);
-    const slow = natural / peak;
-    const physical = Math.min(1, (slow * (1 / MIN_SPEED_SHARE - 1)) / (1 - slow));
     const flight: Flight = {
       vx: side * natural,
       gravity,
@@ -368,17 +287,14 @@ export function launch(input: LaunchInput): StepState {
       contactMs,
       reboundVy: rebound,
       periodMs,
-      clock: { drift: natural, peak, physical },
     };
     const unpaced: Path = {
       ...flight,
-      firstArc: table(flight, arcAt, vy, contactMs),
-      bounceArc: table(flight, arcAt, -rebound, periodMs),
-      firstClock: table(flight, clockAt, vy, contactMs),
-      bounceClock: table(flight, clockAt, -rebound, periodMs),
+      firstArc: table(flight, vy, contactMs),
+      bounceArc: table(flight, -rebound, periodMs),
     };
-    const outPathMs = pathTime(unpaced, pathArc(unpaced, Math.max(lead, 0) / natural) + trail);
-    const outMs = leaderElapsed(unpaced, outPathMs);
+    const outArc = pathArc(unpaced, Math.max(lead, 0) / natural) + trail;
+    const outMs = pathTime(unpaced, outArc);
     const pace = Math.max(1, outMs / (capMs - baseMs - launchMs));
     return {
       cards: n,
@@ -395,11 +311,9 @@ export function launch(input: LaunchInput): StepState {
       contactMs: contactMs / pace,
       reboundVy: rebound * pace,
       periodMs: periodMs / pace,
-      clock: { drift: natural * pace, peak: peak * pace, physical },
       firstArc: unpaced.firstArc,
       bounceArc: unpaced.bounceArc,
-      firstClock: unpaced.firstClock,
-      bounceClock: unpaced.bounceClock,
+      speed: (outArc / outMs) * pace,
       exited: false,
       opacity: 0,
     };
@@ -408,16 +322,15 @@ export function launch(input: LaunchInput): StepState {
 }
 
 /**
- * SPEC F21, F23, F24: card `j`'s (letter order) time on the path, `behind` row steps (CARD_STEP
- * card units) of arc behind the leader, which runs the path on its clock. On the row's line behind
- * the launch point it is negative, that arc read at the drift speed (so `x + vx t` places it on
- * the line); the row stands still before launch.
+ * SPEC F21, F23, F25: card `j`'s (letter order) time on the path, `behind` row steps (CARD_STEP
+ * card units) of arc behind the leader, which has run `speed` card units per ms since launch. On
+ * the row's line behind the launch point it is negative, that arc read at the drift speed (so
+ * `x + vx t` places it on the line); the row stands still before launch.
  */
 function pathMs(group: Group, j: number, elapsedMs: number): number {
   const behind = group.side === 1 ? group.cards - 1 - j : j;
-  const leaderMs = leaderPathMs(group, Math.max(elapsedMs, group.launchMs) - group.launchMs);
-  if (behind === 0) return leaderMs;
-  const arc = pathArc(group, leaderMs) - behind * CARD_STEP;
+  const ran = group.speed * (Math.max(elapsedMs, group.launchMs) - group.launchMs);
+  const arc = ran - behind * CARD_STEP;
   return arc <= 0 ? (arc * group.cardW) / Math.abs(group.vx) : pathTime(group, arc);
 }
 

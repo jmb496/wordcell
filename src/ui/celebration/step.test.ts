@@ -9,7 +9,6 @@ import {
   type Group,
   type LaunchInput,
   launch,
-  MIN_SPEED_SHARE,
   RISE_SHARE,
   rowScale,
   rowWidth,
@@ -60,11 +59,11 @@ const cards = (g: Group): number[] => [...Array(g.cards).keys()];
 // (FALL_FRAC x cap)² with step.ts's FALL_FRAC 0.2 (gravity x pace², so the square root).
 const paceOf = (s: StepState, g: Group): number =>
   Math.sqrt((g.gravity * (0.2 * s.capMs) ** 2) / (2 * (s.floor - s.ceiling)));
-/** The leading card's centre at `elapsedMs` (on its SPEC F24 clock, no arc-length lookup). */
+/** The leading card's centre at `elapsedMs` (SPEC F25: at the word's constant speed). */
 const leader = (s: StepState, g: Group, elapsedMs: number) =>
   card(s, g, travel(g)[0] as number, elapsedMs);
 /**
- * The group's path at path time `t` ms, the closed form SPEC F24 retimes (the leader's centre at
+ * The group's path at path time `t` ms, the closed form SPEC F25 retimes (the leader's centre at
  * `launchMs + t` before F24): drift, launch arc, elastic rebounds; the row's line behind it.
  */
 const pathPoint = (s: StepState, g: Group, t: number) => {
@@ -78,12 +77,13 @@ const pathPoint = (s: StepState, g: Group, t: number) => {
         : lowest - g.reboundVy * r + (g.gravity * r * r) / 2;
   return { x: g.x + g.vx * t, y: Math.min(lowest, y) };
 };
-/** SPEC F24: the leader's path time at `elapsedMs` (its x is the drift times its path time). */
+/** SPEC F25: the leader's path time at `elapsedMs` (its x is the drift times its path time). */
 const leaderPathMs = (s: StepState, g: Group, elapsedMs: number): number =>
   (leader(s, g, elapsedMs).x - g.x) / g.vx;
-/** SPEC F24: the elapsed time at which the leader is at path time `t` (bisection; it runs ahead). */
+/** SPEC F25: the elapsed time at which the leader is at path time `t` (bisection). */
 const when = (s: StepState, g: Group, t: number): number => {
   let [lo, hi] = [g.launchMs, g.launchMs + t + 1];
+  while (leaderPathMs(s, g, hi) < t) hi += t + 1;
   for (let i = 0; i < 80; i++)
     if (leaderPathMs(s, g, (lo + hi) / 2) < t) lo = (lo + hi) / 2;
     else hi = (lo + hi) / 2;
@@ -209,10 +209,11 @@ describe('AD-19 step', () => {
   it('AD-19 exited needs the whole box beyond its wall, then the group is hidden and no longer written', () => {
     const one = make({ groups: [{ x: 180, y: 250, letters: 1 }] });
     const s = withGroup(one, { launchMs: 0, x: 350, vx: 0.1, cardW: 80 });
-    // Box left edge 311.6 < 360: still inside.
+    // Box left edge about 311.6 < 360: still inside.
     expect(first(step(s, 16)).exited).toBe(false);
-    const past = withGroup(s, { x: 405, vx: 0 });
-    // Box left edge 365 >= 360: wholly past.
+    // SPEC F25: the drift stays (the leader's path time comes from its arc, which needs one).
+    const past = withGroup(s, { x: 405 });
+    // Box left edge 365 + 0.1 x its path time >= 360: wholly past.
     const gone = step(past, 16);
     expect(first(gone).exited).toBe(true);
     expect(first(gone).opacity).toBe(0);
@@ -473,28 +474,26 @@ describe('AD-19 step', () => {
   });
 
   /**
-   * SPEC F24: the leader's speed along the path (px/ms) every 2 ms from launch until it has left,
-   * by a central difference that never straddles a floor contact, with its path time.
+   * SPEC F25: card `j`'s speed along the path in card units per ms at `ms`, by a ±0.05 ms central
+   * difference; null across a floor contact or the launch point (a corner of the path).
    */
-  const speeds = (s: StepState, g: Group) => {
-    const lead = travel(g)[0] as number;
-    const out: { t: number; v: number }[] = [];
-    for (let ms = g.launchMs + 0.01; !card(s, g, lead, ms).exited; ms += 2) {
-      const [a, b] = [card(s, g, lead, ms - 0.01), card(s, g, lead, ms + 0.01)];
-      if (a.bounces === b.bounces)
-        out.push({ t: leaderPathMs(s, g, ms), v: Math.hypot(b.x - a.x, b.y - a.y) / 0.02 });
-    }
-    return out;
+  const unitSpeed = (s: StepState, g: Group, j: number, ms: number): number | null => {
+    const [a, b] = [card(s, g, j, ms - 0.05), card(s, g, j, ms + 0.05)];
+    if (a.bounces !== b.bounces || (a.x - g.x) * g.side <= 0 !== (b.x - g.x) * g.side <= 0)
+      return null;
+    return units(g, b.x - a.x, b.y - a.y) / 0.1;
   };
-  /** SPEC F24: the distance in path ms from path time `t` to the nearest apex of `g`'s path. */
-  const fromApex = (g: Group, t: number): number => {
-    const first = -g.vy / g.gravity;
-    if (t < g.contactMs) return Math.abs(t - first);
-    return Math.abs(((t - g.contactMs) % g.periodMs) - g.periodMs / 2);
+  /** SPEC F25: the elapsed time of the leader's `n`th floor contact (bisection on its bounces). */
+  const contactAt = (s: StepState, g: Group, n: number): number => {
+    const lead = travel(g)[0] as number;
+    let [lo, hi] = [g.launchMs, g.launchMs + 20000];
+    for (let i = 0; i < 80; i++)
+      if (card(s, g, lead, (lo + hi) / 2).bounces < n) lo = (lo + hi) / 2;
+      else hi = (lo + hi) / 2;
+    return hi;
   };
 
-  it('AD-19 SPEC F24: MIN_SPEED_SHARE is 0.67; over a whole flight the leader is never slower than that share of its fastest, slowest at an apex, fastest at a floor contact (both sides, real layouts)', () => {
-    expect(MIN_SPEED_SHARE).toBe(0.67);
+  it('AD-19 SPEC F25: one constant speed per word: every card moves the same card units per ms from launch to its exit, through apexes, floor contacts and the row line (both sides, real layouts)', () => {
     const band = make({
       groups: [
         { x: 100, y: 380, letters: 5 },
@@ -502,31 +501,67 @@ describe('AD-19 step', () => {
         { x: 20, y: 40, letters: 3 },
       ],
     });
-    const real = launch({ ...scene(360, 740, false, FIXTURE), capMs: 6000, baseMs: 180 });
-    const flights = [band, real].flatMap((s) => s.groups.map((g) => [s, g] as const));
-    for (const [i, [s, g]] of flights.entries()) {
-      const v = speeds(s, g);
-      const slow = v.reduce((m, p) => (p.v < m.v ? p : m));
-      const fast = v.reduce((m, p) => (p.v > m.v ? p : m));
-      // Within the 2 ms sampling: the share, and a slowdown kept (not an even speed).
-      expect([i, slow.v / fast.v]).toEqual([i, expect.closeTo(MIN_SPEED_SHARE, 2)]);
-      expect([i, slow.v / fast.v >= MIN_SPEED_SHARE - 1e-3]).toEqual([i, true]);
-      // The samples are 2 ms apart, up to 8 ms of path time at an apex (the leader runs ahead).
-      expect([i, fromApex(g, slow.t) < 10]).toEqual([i, true]);
-      const contact =
-        fast.t < g.contactMs
-          ? g.contactMs - fast.t
-          : Math.min(
-              (fast.t - g.contactMs) % g.periodMs,
-              g.periodMs - ((fast.t - g.contactMs) % g.periodMs),
-            );
-      expect([i, contact < 10]).toEqual([i, true]);
-      // Before F24 the apex ran at the drift alone, |vx| over the contact's |(vx, reboundVy)|.
-      expect(Math.abs(g.vx) / Math.hypot(g.vx, g.reboundVy)).toBeLessThan(0.5);
-    }
+    const real = [
+      launch({ ...scene(360, 740, false, FIXTURE), capMs: 6000, baseMs: 180 }),
+      launch({ ...scene(1280, 720, true, FIXTURE), capMs: 6000, baseMs: 180 }),
+    ];
+    for (const [i, s] of [band, ...real].entries())
+      for (const [k, g] of s.groups.entries()) {
+        const speed = unitSpeed(s, g, travel(g)[0] as number, g.launchMs + 0.1) as number;
+        let [slow, fast] = [speed, speed];
+        for (const j of cards(g))
+          for (let ms = g.launchMs + 0.1; !card(s, g, j, ms).exited; ms += 23) {
+            const v = unitSpeed(s, g, j, ms);
+            if (v === null) continue;
+            slow = Math.min(slow, v);
+            fast = Math.max(fast, v);
+          }
+        expect([i, k, fast / slow - 1 < 2e-5]).toEqual([i, k, true]);
+      }
   });
 
-  it("AD-19 SPEC F24: the retime keeps the path: every card is where the F23 path put it, read at the leader's path time (literals from the pre-F24 step)", () => {
+  it("AD-19 SPEC F25: one speed per word, not per lap: the last partial lap's own speed differs by over 10 %, so each run to the exit takes the path's own time (literals from the pre-F24 step) and full laps stay within 9 % of the path's", () => {
+    const s = launch({ ...scene(360, 740, false, FIXTURE), capMs: 6000, baseMs: 180 });
+    // Pre-F24 (`git show c448180:src/ui/celebration/step.ts`), Normal, portrait 360 x 740: each
+    // group's last card wholly past its wall (ms since the start).
+    const exits = [
+      3810.535, 3342.054, 3392.774, 3983.139, 3763.173, 3791.917, 4404.794, 4178.887, 4177.467,
+      4830.532,
+    ];
+    let spread = 1;
+    for (const [i, g] of s.groups.entries()) {
+      const exit = exits[i] as number;
+      const tail = travel(g)[g.cards - 1] as number;
+      expect([
+        i,
+        card(s, g, tail, exit - 0.01).exited,
+        card(s, g, tail, exit + 0.01).exited,
+      ]).toEqual([i, false, true]);
+      // At the exit the leader is where the path's own timing put it.
+      const out = leaderPathMs(s, g, exit);
+      expect([i, out]).toEqual([i, expect.closeTo(exit - g.launchMs, 1)]);
+      // Laps at the word's speed: launch to the first contact, then contact to contact (within
+      // 8.1 %, measured 2026-10-24).
+      const [c1, c2] = [contactAt(s, g, 1), contactAt(s, g, 2)];
+      for (const share of [(c1 - g.launchMs) / g.contactMs, (c2 - c1) / g.periodMs])
+        expect([i, Math.abs(share - 1) < 0.09]).toEqual([i, true]);
+      // Per-lap speeds on the path's own timing (independent arcs): the first lap, the last partial
+      // lap (from the last contact before the exit).
+      const x = (t: number) => pathPoint(s, g, t).x;
+      const last = g.contactMs + Math.floor((out - g.contactMs) / g.periodMs) * g.periodMs;
+      const firstLap = arcTo(s, g, x(g.contactMs)) / g.contactMs;
+      const partial = arcBetween(s, g, x(last), x(out)) / (out - last);
+      spread = Math.max(spread, partial / firstLap, firstLap / partial);
+    }
+    // Measured 2026-10-24: 1.83 (the fourth 6-letter group's last 196 ms after a contact).
+    expect(spread).toBeCloseTo(1.83, 2);
+    // The run ends with the last group, as before F24 (4.83 s; 8.59 s at Slow).
+    expect(run(s, 7000).elapsedMs).toBe(4832);
+    const slow = launch({ ...scene(360, 740, false, FIXTURE), capMs: 10666.67, baseMs: 320 });
+    expect(run(slow, 12000).elapsedMs).toBe(8592);
+  });
+
+  it("AD-19 SPEC F25: the constant speed keeps the path: every card is where the F23 path put it, read at the leader's path time (literals from the pre-F24 step)", () => {
     // Pre-F24 (`git show a1671ab:src/ui/celebration/step.ts`), elapsed = path time, Normal, band
     // 360 x 500: each card's centre at the leader's path times 0, 150, 400 and 900 ms and 5 and
     // 300 ms after its first contact.
@@ -640,24 +675,6 @@ describe('AD-19 step', () => {
           ]),
         );
       }
-    }
-  });
-
-  it("AD-19 SPEC F24: the leader runs ahead of the path's own timing, never behind it, and a path already even enough keeps its timing", () => {
-    const s = make({ groups: [{ x: 100, y: 380, letters: 5 }] });
-    const g = first(s);
-    expect(g.clock.physical).toBeGreaterThan(0);
-    expect(g.clock.physical).toBeLessThan(1);
-    for (const t of [16, 200, 700, 1500, 2000]) expect(leaderPathMs(s, g, t)).toBeGreaterThan(t);
-    // A wide band and an origin near the ceiling: the drift is over 0.67 of the contact speed.
-    const wide = make({ walls: { left: 0, right: 3000 }, groups: [{ x: 40, y: 40, letters: 3 }] });
-    const w = first(wide);
-    expect(Math.abs(w.vx) / Math.hypot(w.vx, w.reboundVy)).toBeGreaterThan(MIN_SPEED_SHARE);
-    expect(w.clock.physical).toBe(1);
-    for (const t of [16, 300, w.contactMs + 40]) {
-      const p = pathPoint(wide, w, t);
-      const c = leader(wide, w, t);
-      expect([c.x, c.y]).toEqual([expect.closeTo(p.x, 6), expect.closeTo(p.y, 6)]);
     }
   });
 
@@ -838,7 +855,7 @@ describe('AD-19 step', () => {
     expect(Math.abs(minY - expected)).toBeLessThan(5);
   });
 
-  it('AD-19 a floor bounce keeps the drift: x moves vx per ms of path time across a contact, and the leader keeps its x speed through it (SPEC F24)', () => {
+  it('AD-19 a floor bounce keeps the drift: x moves vx per ms of path time across a contact, and the leader keeps its x speed through it (SPEC F25)', () => {
     const s = make({ groups: [{ x: 100, y: 300, letters: 3 }] });
     const g = first(s);
     const lead = travel(g)[0] as number;
@@ -937,22 +954,27 @@ describe('AD-19 step', () => {
       ['desktop 1280x720', 1280, 720, true],
       ['landscape 839x412', 839, 412, false],
     ] as const) {
-      it(`AD-19 SPEC F22, F23, F24: the card-unit trail fits at the natural tempo, pace 1 (${geometry}, Normal, ${list})`, () => {
+      it(`AD-19 SPEC F22, F23, F25: the card-unit trail fits at the natural tempo, pace 1, except the 23-letter row in landscape (${geometry}, Normal, ${list})`, () => {
         const s = launch({
           ...scene(clientWidth, innerHeight, hoverFine, rows),
           capMs: 6000,
           baseMs: 180,
         });
-        // Measured 2026-10-24 (SPEC F24's even speed): 1.00 for every group (under F23's path
-        // timing the long scene's 23-letter row in landscape needed 1.093; the F21 time lag up to
-        // 1.11 on the fixture and 2.7 on the long scene).
+        // Measured 2026-10-24 (SPEC F25, the path's own run length, as F23): 1.00 for every group
+        // but the long scene's 23-letter row in landscape, 1.093 (its steep trail is longer in card
+        // units; SPEC F24's faster run needed 1.00 everywhere, the F21 time lag up to 1.11 on the
+        // fixture and 2.7 on the long scene).
+        const paced = list === '12 groups up to 23 letters' && geometry === 'landscape 839x412';
         for (const [i, g] of s.groups.entries())
-          expect(paceOf(s, g), `group ${i}`).toBeCloseTo(1, 9);
+          expect(paceOf(s, g), `group ${i}`).toBeCloseTo(
+            paced && i === 0 ? 1.093 : 1,
+            paced && i === 0 ? 3 : 9,
+          );
       });
     }
   }
 
-  it('AD-19 the physics scales with the speed: half the cap and base double |vx| and |vy|, quadruple gravity, halve launches and contacts, the same arc and leader clock (SPEC F23, F24)', () => {
+  it('AD-19 the physics scales with the speed: half the cap and base double |vx| and |vy|, quadruple gravity, halve launches and contacts, the same arc at twice the speed along it (SPEC F23, F25)', () => {
     const groups = row(4);
     const fast = make({ groups, capMs: 3000, baseMs: 90 });
     const normal = make({ groups, capMs: 6000, baseMs: 180 });
@@ -966,21 +988,15 @@ describe('AD-19 step', () => {
       expect(g.periodMs).toBeCloseTo(n.periodMs / 2, 9);
       expect(g.firstArc).toEqual(n.firstArc);
       expect(g.bounceArc).toEqual(n.bounceArc);
-      expect(g.firstClock).toEqual(n.firstClock);
-      expect(g.bounceClock).toEqual(n.bounceClock);
-      expect(g.clock.peak).toBeCloseTo(2 * n.clock.peak, 12);
-      expect(g.clock.physical).toBe(n.clock.physical);
+      expect(g.speed).toBeCloseTo(2 * n.speed, 12);
     });
   });
 
   it('AD-19 a trail that would overrun is fitted: the group plays its arc faster, the last card out by cap − baseMs', () => {
-    // A 23-letter row from the left edge of an 800 px band launching at half the cap (the 31st
-    // entry): at its natural pace (SPEC F24's even speed) its last card would leave after
-    // cap − baseMs.
-    const walls = { left: 0, right: 800 };
+    // A 23-letter row from the left edge launching at half the cap (the 31st entry): at its natural
+    // pace its last card would leave after cap − baseMs.
     const lone = { x: 20, y: 420, letters: 23 };
     const s = make({
-      walls,
       groups: [...Array.from({ length: 30 }, () => ({ x: 20, y: 420, letters: 3 })), lone],
     });
     const g = s.groups[30] as Group;
@@ -989,12 +1005,14 @@ describe('AD-19 step', () => {
     expect(card(s, g, last, 6000 - 180 - 0.01).exited).toBe(false);
     expect(card(s, g, last, 6000 - 180 + 0.01).exited).toBe(true);
     // The same row alone (launch 0, the same slot) keeps its natural pace: the fitted arc is the
-    // same shape (equal apex, slope vy / vx, curvature gravity / vx² and arc and clock tables), in
-    // less time (pace 1.167, measured 2026-10-24).
-    const relaxed = first(make({ walls, groups: [lone] }));
+    // same shape (equal apex, slope vy / vx, curvature gravity / vx² and arc tables), in less time,
+    // at the pace times its SPEC F25 speed (pace 1.64, measured 2026-10-24, as before F24).
+    const relaxed = first(make({ groups: [lone] }));
     expect(paceOf(s, relaxed)).toBe(1);
-    expect(paceOf(s, g)).toBeCloseTo(1.167, 3);
-    expect(g.contactMs).toBeLessThan(relaxed.contactMs / 1.15);
+    const pace = paceOf(s, g);
+    expect(pace).toBeCloseTo(1.64, 2);
+    expect(g.contactMs).toBeLessThan(relaxed.contactMs / 1.3);
+    expect(g.speed).toBeCloseTo(pace * relaxed.speed, 12);
     expect((g.vy * g.vy) / (2 * g.gravity)).toBeCloseTo(
       (relaxed.vy * relaxed.vy) / (2 * relaxed.gravity),
       6,
@@ -1003,7 +1021,5 @@ describe('AD-19 step', () => {
     expect(g.gravity / g.vx ** 2).toBeCloseTo(relaxed.gravity / relaxed.vx ** 2, 12);
     expect(g.firstArc).toEqual(relaxed.firstArc);
     expect(g.bounceArc).toEqual(relaxed.bounceArc);
-    expect(g.firstClock).toEqual(relaxed.firstClock);
-    expect(g.bounceClock).toEqual(relaxed.bounceClock);
   });
 });
