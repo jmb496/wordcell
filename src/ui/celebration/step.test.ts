@@ -1009,9 +1009,35 @@ describe('AD-19 step', () => {
     [4, 4],
     [4, 3],
   ] as const;
+  // session-won-long-words' word list (story Notes, device-read fixture): card counts and WordCells,
+  // the rows serialize.test.ts pins in its won-long-words property.
+  const LONG_WORDS = [
+    [22, 10],
+    [10, 10],
+    [9, 9],
+    [8, 6],
+    [8, 8],
+    [8, 8],
+    [8, 7],
+    [8, 5],
+    [8, 4],
+    [8, 3],
+    [7, 7],
+    [7, 4],
+    [7, 6],
+    [7, 3],
+    [7, 5],
+    [6, 6],
+    [6, 4],
+    [5, 3],
+    [5, 5],
+    [4, 4],
+    [3, 3],
+  ] as const;
   for (const [list, rows] of [
     ['12 groups up to 23 letters', LONG],
     ['the session-won-words list', FIXTURE],
+    ['the session-won-long-words list', LONG_WORDS],
   ] as const) {
     for (const [geometry, clientWidth, innerHeight, hoverFine] of [
       ['portrait 360x740', 360, 740, false],
@@ -1059,10 +1085,24 @@ describe('AD-19 step', () => {
     '12 groups up to 23 letters landscape 839x412': [
       1.156, 1, 1, 1, 1, 1, 1, 1, 1.017, 1.043, 1.04, 1,
     ],
+    // Epic 10 entry 9, measured 2026-10-24: the device-read list; later words launch nearer the cap
+    // and words from an edge WordCell cross the whole band, so they play under the pace fit.
+    'the session-won-long-words list portrait 360x740': [
+      1.19, 1.173, 1, 1, 1, 1, 1, 1.02, 1.052, 1.466, 1, 1.152, 1.198, 1.678, 1.293, 1.332, 1.387,
+      1.427, 1.501, 1.548, 1.594,
+    ],
+    'the session-won-long-words list desktop 1280x720': [
+      1, 1, 1, 1, 1, 1, 1, 1, 1, 1.066, 1, 1, 1, 1.216, 1, 1, 1, 1, 1.47, 1, 1,
+    ],
+    'the session-won-long-words list landscape 839x412': [
+      1.139, 1, 1, 1, 1, 1, 1.011, 1, 1, 1.097, 1, 1, 1.214, 1.244, 1, 1.341, 1.387, 1.412, 1.495,
+      1.523, 1.549,
+    ],
   };
   for (const [list, rows] of [
     ['the session-won-words list', FIXTURE],
     ['12 groups up to 23 letters', LONG],
+    ['the session-won-long-words list', LONG_WORDS],
   ] as const) {
     for (const [geometry, clientWidth, innerHeight, hoverFine] of [
       ['portrait 360x740', 360, 740, false],
@@ -1083,6 +1123,11 @@ describe('AD-19 step', () => {
       });
     }
   }
+
+  it("AD-19 the session-won-long-words list's smallest copy scale at portrait 360x740 is 0.553 (A-D12; the device read judges it)", () => {
+    const s = launch({ ...scene(360, 740, false, LONG_WORDS), capMs: 6000, baseMs: 180 });
+    expect(Math.min(...s.groups.map((g) => g.scale))).toBeCloseTo(0.553, 3);
+  });
 
   it('AD-19 the physics scales with the speed: half the cap and base double |vx| and |vy|, quadruple gravity, halve launches and contacts, the same arc at twice the speed along it (SPEC F23, F25)', () => {
     const groups = row(4);

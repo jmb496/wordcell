@@ -33,6 +33,7 @@ describe('AD-17 valid session fixtures', () => {
       'session-place-long.json',
       'session-place-onto-committed.json',
       'session-place.json',
+      'session-won-long-words.json',
       'session-won-words.json',
       'session-won.json',
     ]);

@@ -227,6 +227,7 @@ import validPlaceOntoCommitted from '../../fixtures/session-place-onto-committed
   type: 'json',
 };
 import validWon from '../../fixtures/session-won.json' with { type: 'json' };
+import validWonLongWords from '../../fixtures/session-won-long-words.json' with { type: 'json' };
 import validWonWords from '../../fixtures/session-won-words.json' with { type: 'json' };
 import { EngineError } from './errors';
 import {
@@ -247,6 +248,7 @@ import {
   serializeHistory,
   serializeSession,
   view,
+  type WordCellNumber,
 } from './index';
 import { replay } from './replay';
 import { wordLetterCount } from './rules';
@@ -312,7 +314,8 @@ type ValidName =
   | 'one-letter-left'
   | 'idle-pending-draft-long'
   | 'idle-pending-draft-overflow'
-  | 'won-words';
+  | 'won-words'
+  | 'won-long-words';
 
 /** The CAP-9 round-trip fixtures (generator record: the plan's Implementation Notes). */
 const VALID: readonly (readonly [ValidName, unknown])[] = [
@@ -336,6 +339,7 @@ const VALID: readonly (readonly [ValidName, unknown])[] = [
   ['idle-pending-draft-long', validIdlePendingDraftLong],
   ['idle-pending-draft-overflow', validIdlePendingDraftOverflow],
   ['won-words', validWonWords],
+  ['won-long-words', validWonLongWords],
 ];
 
 /**
@@ -369,6 +373,38 @@ const WON_WORDS_LIST = [
   { spelling: 'ltos', letterCount: 4, cards: [24, 42, 30, 39], cell: 4 },
   { spelling: 'surf', letterCount: 4, cards: [40, 45, 38, 12], cell: 4 },
   { spelling: 'surf', letterCount: 4, cards: [41, 46, 37, 13], cell: 3 },
+];
+
+/**
+ * Epic 10 entry 9 (seed 1): `session-won-long-words` is the device-read list (story Notes), the
+ * scripted game below, found by a throwaway search (plan Implementation Notes). The strings are
+ * inline-dictionary words (R-37 trusts committed words), not English: the read judges letter
+ * legibility. An opening 10-card word (column 5 whole onto 4 cards of column 6) fills WordCell 10,
+ * nineteen one- or two-card source words reuse every WordCell top they can (R-33, R-41), then
+ * columns 3 and 1 go whole with all eight free letters: 7 + 7 + 8 cards, QU among them.
+ */
+const WON_LONG_WORDS_DICTIONARY = [
+  'naentscfsz',
+  'poz',
+  'misz',
+  'hifzo',
+  'fcpso',
+  'rhozsi',
+  'vstmif',
+  'huifnsp',
+  'dcuipcze',
+  'rmhosea',
+  'pzfntah',
+  'ochsrfe',
+  'nseviap',
+  'tkgtpofui',
+  'eihruhan',
+  'efucinms',
+  'rhfarvsz',
+  'yocemzph',
+  'bpnshuso',
+  'svtnorpi',
+  'ldxomiwlquejatazirshcgn',
 ];
 
 // --- rejection table ------------------------------------------------------------------------
@@ -1017,6 +1053,53 @@ describe('defining properties (§2, CAP-9)', () => {
       expect(view(undone, EN).status).toBe('playing');
       expect('wordList' in view(undone, EN)).toBe(false);
       expect(view(play(undone, [CONFIRM]), EN).wordList).toStrictEqual(WON_WORDS_LIST);
+    },
+    // Epic 10 entry 9 (seed 1; story Notes, device-read fixture): at least 20 entries and 100 copies,
+    // the longest word 23 letters in 22 cards with the QU card (35, R-37's longest reachable word).
+    'won-long-words': (s) => {
+      expect(s.gaveUp).toBe(false);
+      expect(s.cursor).toStrictEqual({ index: 21, phase: 'idle' });
+      expect(s.moves).toHaveLength(21);
+      const won = view(s, EN);
+      expect(won.status).toBe('won');
+      const list = won.wordList;
+      if (list === undefined) throw new Error('won-long-words: a won view has no wordList');
+      expect(list.length).toBeGreaterThanOrEqual(20);
+      expect(list.reduce((n, w) => n + w.cards.length, 0)).toBeGreaterThanOrEqual(100);
+      expect([list[0].letterCount, list[0].cards.length, list[0].cell]).toStrictEqual([23, 22, 10]);
+      expect(list[0].cards).toContain(35);
+      // The rows step.test.ts copies as LONG_WORDS (card count, WordCell), so they cannot drift.
+      expect(list.map((w) => [w.cards.length, w.cell])).toStrictEqual([
+        [22, 10],
+        [10, 10],
+        [9, 9],
+        [8, 6],
+        [8, 8],
+        [8, 8],
+        [8, 7],
+        [8, 5],
+        [8, 4],
+        [8, 3],
+        [7, 7],
+        [7, 4],
+        [7, 6],
+        [7, 3],
+        [7, 5],
+        [6, 6],
+        [6, 4],
+        [5, 3],
+        [5, 5],
+        [4, 4],
+        [3, 3],
+      ]);
+      for (const w of list) expect(w.letterCount).toBe(wordLetterCount(w.cards, EN));
+      for (let i = 1; i < list.length; i++) {
+        const [a, b] = [list[i - 1], list[i]];
+        expect(
+          a.letterCount > b.letterCount ||
+            (a.letterCount === b.letterCount && a.spelling <= b.spelling),
+        ).toBe(true);
+      }
     },
   };
 
@@ -2027,6 +2110,54 @@ const REBUILDS: readonly (readonly [string, unknown, () => Session])[] = [
           CONFIRM,
         ],
         WON_WORDS_DICTIONARY,
+      );
+    },
+  ],
+  [
+    'session-won-long-words',
+    validWonLongWords,
+    () => {
+      const word = (
+        sourceColumn: number,
+        sourceCount: number,
+        destinationColumn: number,
+        free: readonly WordCellNumber[],
+        target?: WordCellNumber,
+        k?: number,
+      ): Command[] => [
+        drop(sourceColumn, sourceCount, destinationColumn),
+        ...(k === undefined ? [] : [{ type: 'setDestinationCount', k } as const]),
+        ...free.map((cell) => ({ type: 'addFreeLetter', cell }) as const),
+        VALIDATE,
+        ...(target === undefined ? [] : [{ type: 'setTarget', cell: target } as const]),
+        CONFIRM,
+      ];
+      return play(
+        createSession(1),
+        [
+          ...word(5, 6, 6, [], undefined, 4),
+          ...word(4, 1, 6, [10]),
+          ...word(4, 1, 2, [10, 3]),
+          ...word(2, 1, 4, [10, 4, 3]),
+          ...word(7, 1, 5, [10, 3, 4, 5], 3),
+          ...word(7, 1, 7, [3, 5, 10, 4]),
+          ...word(2, 1, 5, [3, 10, 4, 6, 5], 4),
+          ...word(7, 1, 4, [5, 4, 10, 6, 3]),
+          ...word(8, 2, 2, [4, 7, 3, 6, 10]),
+          ...word(8, 1, 5, [4, 5, 6, 7, 8, 10], 5),
+          ...word(2, 1, 5, [8, 3, 7, 4, 5, 6], 3),
+          ...word(6, 1, 6, [8, 3, 4, 6, 7, 5], 6),
+          ...word(2, 1, 6, [5, 6, 4, 7, 3, 8], 4),
+          ...word(4, 2, 2, [3, 4, 5, 6, 7, 8]),
+          ...word(4, 1, 2, [9, 5, 6, 8, 7, 4, 3], 7),
+          ...word(7, 1, 6, [3, 9, 8, 4, 7, 5, 6]),
+          ...word(8, 1, 4, [6, 9, 7, 5, 4, 8, 3], 5),
+          ...word(7, 1, 6, [9, 6, 4, 8, 5, 3, 7], 3),
+          ...word(8, 1, 6, [9, 8, 4, 3, 7, 5, 6], 6),
+          ...word(8, 1, 7, [5, 9, 4, 6, 7, 3, 8], 4),
+          ...word(3, 7, 1, [3, 4, 5, 6, 7, 8, 9, 10], undefined, 7),
+        ],
+        WON_LONG_WORDS_DICTIONARY,
       );
     },
   ],

@@ -10,7 +10,7 @@ answered by Jared on 2026-09-27; Q-41 amends the §2 replay paragraph and Q-43 r
 record identity. v0.9 adds Q-44 (best and average score exclude negative given-up games, R-84),
 answered by Jared on 2026-09-30, and tags the R-50 and R-83 UI sentences (UI) (owner-approved
 the same day); on 2026-10-01 Jared amended Q-42's service-worker branch (epic 3
-retrospective). v0.10 adds Q-45 (the look is a manual theme choice in Preferences, default Charcoal, answered by Jared on 2026-10-18) and extends §7.10. v0.11 adds Q-46…Q-48 (the end-of-game word list and the win celebration, answered by Jared on 2026-10-19 and 2026-10-20), R-86…R-88 and §7.12. Every rule has an id (R-xx) so
+retrospective). v0.10 adds Q-45 (the look is a manual theme choice in Preferences, default Charcoal, answered by Jared on 2026-10-18) and extends §7.10. v0.11 adds Q-46…Q-48 (the end-of-game word list and the win celebration, answered by Jared on 2026-10-19 and 2026-10-20), R-86…R-88 and §7.12. On 2026-10-24 the owner amended R-87's press skip to exempt the dictionary banner as well (epic 10 close-out). Every rule has an id (R-xx) so
 tests, specs and tickets can cite it. A "(UI)" in a rule's id tags the whole rule; a trailing
 "(UI)" tags only the sentence it ends. Tagged rules and sentences are satisfied by a Playwright
 test naming the R-id; every untagged sentence that states engine behaviour by an engine unit test
@@ -373,7 +373,7 @@ with nothing to undo, Redo without redo data) (CLAUDE.md rule 6).
   Solitaire, with no trail of copies and no colour change (Q-48). A card can belong to several
   words (a WordCell's top card reused as a free letter, R-41), so each group is drawn from its own
   copies of the card faces, never from the board's live card elements (AD-14). A pointer press
-  outside the top and action bars, `Space` or `Esc` on desktop, or the Android back gesture
+  outside the top and action bars and the dictionary banner, `Space` or `Esc` on desktop, or the Android back gesture
   (which does not leave the app) skips it at once to the end sheet; the app being hidden or the
   window resized ends it the same way. It cannot be replayed from the end sheet or the menu
   (Q-48) and does not play on a relaunch into a won game (R-73), under reduced motion, or after

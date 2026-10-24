@@ -456,9 +456,12 @@ test.describe('android', () => {
   const CONTROL =
     'button, a[href], input, select, textarea, [role="button"], [tabindex]:not([tabindex="-1"])';
 
-  // A point inside the `band` bar whose `elementFromPoint` is in that bar and under no control (so a
-  // press there activates nothing): the first of a few candidates (its centre, then its padding).
-  async function quietBarPoint(page: Page, band: 'topBar' | 'actionBar'): Promise<Point> {
+  // A point inside the `band` (a bar or the dictionary banner) whose `elementFromPoint` is in it and
+  // under no control (so a press there activates nothing): the first of a few candidates (its centre, then its padding).
+  async function quietBarPoint(
+    page: Page,
+    band: 'topBar' | 'actionBar' | 'banner',
+  ): Promise<Point> {
     const b = await box(page.locator(`[data-band="${band}"]`));
     const candidates = [
       { x: b.x + b.w / 2, y: b.y + b.h / 2 },
@@ -587,6 +590,24 @@ test.describe('android', () => {
     await winIntoRun(page);
     await button(page, 'Reload').tap();
     await expect.poll(() => requests.length).toBe(2);
+    expect(await running(page)).toBe(true);
+    await expect(sheet(page)).toHaveCount(0);
+  });
+
+  // The standing rule of 2026-10-24 (R-87, story Notes): the whole dictionary banner is exempt.
+  test('R-87 a press on the dictionary banner where no control lies does not skip the run', async ({
+    page,
+  }) => {
+    await page.route('**/en*.txt', (route) => route.fulfill({ status: 500, body: '' }));
+    await readyToWin(page);
+    await waitForDictionary(page, 'failed');
+    await expect(page.getByText("Word list didn't load.", { exact: true })).toBeVisible();
+    await winIntoRun(page);
+    const pressed = await recordPressTargets(page);
+    const point = await quietBarPoint(page, 'banner');
+    await page.touchscreen.tap(point.x, point.y);
+    await animationFrames(page, 3);
+    expect(await pressed()).toEqual(['touch banner no control']);
     expect(await running(page)).toBe(true);
     await expect(sheet(page)).toHaveCount(0);
   });
