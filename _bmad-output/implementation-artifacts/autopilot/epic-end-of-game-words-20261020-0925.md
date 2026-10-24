@@ -96,16 +96,24 @@ Close-out docs:
 ## 10.6 Celebration skip — stopped
 What it adds: Lets the player skip the win celebration: a tap on the board (outside the top bar, action bar and dictionary banner) that starts after the celebration began, Space or Esc on desktop, or the Android back gesture. Each one opens the end sheet straight away. The tap that skips does nothing else. A finger already down when the win happened, or a tap on a banner button, does not skip. The ticket also lets your Android read adjust the bounce timing and size.
 Ticket review: 5 passes, converged (majors 10, 8, 7, 2, 0); one item needs your input (below); 15 minors handed to the build in the log's Result
-Build: not started
-Code review: not started
-Tests: not run
+Build: built (resumed after the usage limit); commit 5f67795
+Code review: thorough (risk high, one deferred medium), 4 passes, converged (majors 2, 2, 1, 0); 6 majors and 15 minors fixed in 527de08, 4384a07, 800364c; log d0e93bb; two items need your input (below)
+Tests: the review loop's unit run passed (3529), lint and check pass, celebration and helper e2e specs pass (95); the orchestrator's test:all and screenshot check not run yet (Step D)
 Ref to fix upstream: none
-Tokens: 11.1M input-equivalent (ticket review 97%, orchestrator 1%, other 1%); orchestrator peak context 64k
+Tokens: 11.1M input-equivalent (ticket review 97%, orchestrator 1%, other 1%); orchestrator peak context 64k. Build and code review session: 14.9M input-equivalent (code review 65%, build 32%, orchestrator 2%, other 1%); orchestrator peak context 67k
 Worth knowing: The ticket has `done_checkpoint = true` (your Android read of a real win with the long-word fixture settles the copy cost, the initial constants and A-D12), so once built and verified it stays `built` for your check rather than being marked done. Also `plan_checkpoint = true`, so the plan's Design Notes owner items will be worth a read. Two minors to fix first: the Verify line puts the Space/Esc row on `android` when it runs on `desktop`, and if the app halts during a celebration, the first tap on the error screen's Reload would be taken as a skip.
-Close-out docs: pending your answer (AD-19 Skip, synced by 10.9)
+Startup note: the handoff JSON still showed the Step A stop after the usage-limit stop commit; the ticket files (plan `in-progress`) settled it, and Step B resumed.
+Also built unattended (plan checkpoint, Design Notes): run listeners pass everything through while the app is halted; the skipping press and Space are consumed by short post-run tails (an AD-19 Skip refinement); the whole dictionary banner is exempt from skipping where R-87 names only the bars; entry 9 syncs both. One deferred unverified flake risk: the e2e tap must land before the 400 ms long-press time.
+Close-out docs: pending your answers (AD-19 Skip; R-87 bar and banner wording; synced by 10.9)
 
 ## Stopped — decision needed
 Ticket 10.6, Step A: the ticket review converged and the ticket and its log (with `## Result`) are committed (69c9ca6). Question (log Pass 1): on desktop, after the winning word is confirmed by a click or Enter, focus stays on the action bar's primary button, which then reads New game. AD-19 Skip says Space/Esc skip "unless a bar or banner control holds focus", so in that usual flow Space would start a new game and Esc would do nothing. R-87, EXPERIENCE.md Keyboard and SPEC F9 give no focus exception. Proposed default: Space and Esc skip whatever holds focus while the celebration plays; AD-19's focus exception is dropped at 10.9's doc sync. Resume: record the answer (ticket Notes, epic Notes, SPEC memlog), commit, rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-end-of-game-words`; the next session continues at Step B (build).
 
 ## Stopped — usage limit
 Ticket 10.6, Step B (build): the F17 answer is recorded (2a0bfbd); the build started 20:24 and hit the session limit at 20:32 (`You've hit your session limit · resets 9:50pm (America/New_York)`); the orchestrator was limited too. The build's own uncommitted plan `story-celebration-skip-plan.md` (status `in-progress`) is left in the tree for bmad-build-auto's resume (Setup 2 exception); step log kept as `10.6-B-attempt1.log`. Resume after the reset: `LIMIT_CHECK=off .claude/skills/epic-autopilot/scripts/loop.sh epic-end-of-game-words`.
+
+## Stopped — decision needed
+Ticket 10.6, Step C: the code review converged (4 passes) and its log `_bmad-output/implementation-artifacts/review-loop/10-6-build.md` is committed with `## Result` (d0e93bb); every technical fix is in the WIP commits 527de08, 4384a07, 800364c. Two questions (log Result and Pass 4):
+1. Double-tap after a press skip: the end sheet opens under the finger and only the skipping press is consumed, so a second quick tap can hit Replay this deal or New game. Proposed default: after a press skip, ignore new presses for 300 ms (the existing SWALLOW_MS) from the skipping press's release. Not built; a yes needs a small code change before Step D.
+2. Confirm two spec-over-spine changes the review made: the bar test uses the press point (a touch just beside a bar button skips instead of pressing it), and chorded or held Space never presses a focused button during the run (SPEC F17). Proposed default: keep both; entry 9 rewrites AD-19 Skip.
+Resume: record the answers (ticket Notes, epic Notes, SPEC memlog) and, if item 1 is yes, apply the 300 ms guard with its test and commit; then rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-end-of-game-words`. The next session continues at Step D (test:all, screenshots), and the ticket then stays `built` for your Android read (done checkpoint).

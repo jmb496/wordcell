@@ -1,22 +1,24 @@
-outcome: stopped
-ticket: 10.6
-reason: rule 1, decision needed
-next: 10.6 (Celebration skip), at Step B (build) once you answer
+# Epic end-of-game-words: handoff (ticket 10.6, stopped for your input)
 
-Plain language: ticket 10.6 adds the ways to skip the win celebration: a tap on the board, Space or Esc on desktop, or the Android back gesture. Its ticket review finished cleanly in 5 passes. One question needs your answer before the build starts.
+**What happened.** Ticket 10.6 (skipping the win celebration) is built. The build picked up where the usage limit stopped it. The code review then ran 4 passes and fixed 6 important and 15 small issues. The final full test run has not happened yet. The review raised two questions that are yours to answer.
 
-The question: on desktop, after you confirm the winning word with a click or Enter, keyboard focus stays on the action bar's main button, which now reads "New game". The architecture says Space and Esc skip "unless a bar control has focus". In that usual case, then, Space would start a new game (you would never see the end sheet) and Esc would do nothing. The game rules (R-87) and EXPERIENCE.md just say Space and Esc skip, with no exception.
+**Question 1: a quick second tap after skipping.** When you tap to skip the celebration, the end sheet opens right under your finger. Only that first tap is ignored. If you double-tap out of impatience, the second tap can land on "Replay this deal" or "New game" and trigger it.
+- *Proposed:* for 0.3 s after the skipping tap, ignore any new tap (the same guard the winning move already uses).
+- *Effect:* an accidental double-tap can't throw away the finished game. A deliberate tap on the end sheet within 0.3 s of skipping does nothing.
+- This is not built yet. A "yes" means a small code change before the final tests.
 
-- Proposed default: Space and Esc always skip while the celebration plays, whatever has focus. Effect: a desktop player can always press Space or Esc to jump to the end sheet. For those few seconds, Space no longer presses a focused Undo or New game button. Clicks and the Z, N and M keys still work. The exception is removed from the architecture doc at 10.9's doc sync.
-- Alternative: keep the exception as the architecture states it. Effect: right after a win by click or Enter, Space starts a new game and Esc does nothing, so on desktop only a tap on the board skips.
+**Question 2: two changes where the review followed the spec over the architecture doc.**
+1. Whether a tap counts as "on a bar" is now judged by where the finger lands, not by which button the browser snaps the touch to. A touch just beside Undo, Menu, Redo or New game now skips the celebration instead of pressing that button.
+2. Shift/Ctrl/Alt+Space, or a held-down Space, never presses a focused button while the celebration plays.
+- *Proposed:* keep both. Ticket 10.9 updates the architecture doc (AD-19 Skip) to match.
 
-After the build: the ticket has an owner check at gate 4 (your Android read of a real win with the long-word fixture settles the copy cost, the starting bounce constants and A-D12). Once it is built and verified, it stops as `built` and waits for you instead of being marked done.
+**To resume.** Record your answers in the ticket Notes, epic Notes and SPEC memlog. If question 1 is "yes", add the 0.3 s guard and its test, then commit. Then rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-end-of-game-words`. The next session runs the full tests and screenshots (Step D). The ticket then stays `built` for your Android read of a real win (done checkpoint), not `done`.
 
-Close-out docs (applied at the retro or by 10.9):
-- ARCHITECTURE-SPINE.md AD-19 Skip ← pending your answer above
-- ARCHITECTURE-SPINE.md AD-19 Rule, Start bullet ← F16 (owner, 2026-10-23), from 10.5
-- EXPERIENCE.md celebration "Never plays" ← F16 (owner, 2026-10-23), from 10.5
-- EXPERIENCE.md § Keyboard ← F15 (owner, 2026-10-23), from 10.4
+**Close-out docs (pending your answers; 10.9 syncs them):**
+- ARCHITECTURE-SPINE.md AD-19 Skip ← how presses are judged on bars, Space chords and repeats, the post-run tails, passing everything while halted
+- docs/game-flow-spec.md R-87 ← the dictionary banner is exempt from skipping, as well as the two bars
+- From 10.5 (already decided, F16, 2026-10-23): AD-19 Start; EXPERIENCE.md "Never plays"
 
-Digest: _bmad-output/implementation-artifacts/autopilot/epic-end-of-game-words-20261020-0925.md
-Resume: record your answer (ticket Notes, epic Notes, SPEC memlog), commit, then rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-end-of-game-words`. The next session starts the build.
+**Still true:** pressing ☰ or M during a celebration halts the app until ticket 10.7, so don't merge the branch before 10.7.
+
+Digest: `_bmad-output/implementation-artifacts/autopilot/epic-end-of-game-words-20261020-0925.md`
