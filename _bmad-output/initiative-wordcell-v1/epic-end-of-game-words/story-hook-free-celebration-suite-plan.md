@@ -3,7 +3,7 @@ title: 'Hook-free celebration suite'
 type: 'feature'
 ticket: '8'
 created: '2026-10-24'
-status: 'built'
+status: done
 route: 'oneshot'
 route_source: 'auto'
 review: 'quick'

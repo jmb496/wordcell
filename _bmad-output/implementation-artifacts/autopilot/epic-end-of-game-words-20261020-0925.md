@@ -175,3 +175,14 @@ Resume: record the answers (ticket Notes, epic Notes, SPEC memlog), commit, reru
 ## 10.7 Celebration interruptions — done
 Owner checkpoint items 1–2 accepted under the standing rule as SPEC F28 (hide ends the run the ordinary way) and F29 (a raced ☰/M menu open is skipped); no player-visible change. test:all and screenshots passed on eae5179/717f92b (above); marked done without a rerun since only docs changed after. The ☰/M merge blocker is closed.
 Close-out docs: ARCHITECTURE-SPINE.md AD-19 Hide ← F28 (2026-10-24); EXPERIENCE.md Win celebration message row ← F28; SPEC ← F29 row (added); AD-13/AD-19 naming `open-menu.ts`.
+
+## 10.8 Hook-free celebration suite — done
+What it adds: Two automatic tests that win a real game in the finished, shippable build of the app (the one without test shortcuts) and check that the celebration really plays there, and that a tap or the back button skips it straight to the end sheet. This closes the gap left open by 10.5.
+Ticket review: 3 passes, converged; nothing needed your input (one open technical point and 11 small suggestions handed to the build, which resolved them all in its plan)
+Build: built; commits a10bbbe
+Code review: thorough (ticket risk medium), 1 pass, converged; 0 fixes applied
+Tests: all passing; screenshots not needed (no UI change: only e2e/pwa/dist-smoke.spec.ts changed)
+Ref to fix upstream: none
+Tokens: 6.7M input-equivalent (ticket review 64%, code review 14%, build 12%, other 7%, orchestrator 4%); orchestrator peak context 69k
+Worth knowing: The build checked the tests can fail: with the celebration switched off in the shipped build, both new tests failed as they should, then the change was reverted. The skip happens about 1 s after Confirm against a natural celebration length of about 5.8 s, so a much slower test machine (about 5× slower) would be needed before a natural finish could pass for a skip. One small code-review suggestion is left for the 10.10 sweep (`review-loop/10-8-build.md`): a check in the new test that cannot fail, which should instead assert that no celebration is on screen before Confirm. Startup note: a stale `10.6-C3.done.pid` from an earlier session named no live process and was ignored. Next is 10.9, which is a hands-on ticket for you (`hitl`), so the next session will stop before it.
+Close-out docs: none
