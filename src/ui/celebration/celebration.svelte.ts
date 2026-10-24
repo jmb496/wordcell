@@ -109,7 +109,7 @@ function build(attachment: Attachment | null) {
         continue;
       }
       current.hidden[i] = false;
-      // SPEC F21: each face copy on its own point of the group's path; an exited card keeps
+      // SPEC F21, F23: each face copy on its own point of the group's path; an exited card keeps
       // moving past its wall, clipped by the band, until the whole group has exited.
       const faces = el.children;
       if (faces.length !== group.cards) {

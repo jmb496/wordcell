@@ -502,7 +502,7 @@ describe('AD-19 celebration controller', () => {
     c.cancel();
   });
 
-  it('AD-19 SPEC F20, F21: the first frame writes each copy at its row place, CARD_STEP card widths apart; later each copy trails the one ahead', () => {
+  it('AD-19 SPEC F20, F21, F23: the first frame writes each copy at its row place, CARD_STEP card widths apart; later each copy trails the one ahead on the path', () => {
     const c = createCelebration();
     const els = fakeEls(1, 4);
     c.register(asEls(els));
@@ -518,10 +518,20 @@ describe('AD-19 celebration controller', () => {
     expect(new Set(ys).size).toBe(1);
     // Cell 3 is left of centre: the group drifts right, the rightmost copy leads.
     for (let t = 1016; t <= 1800; t += 16) tick(t);
+    // SPEC F23: each copy at its own point of the pure path, in letter order, no chord between
+    // neighbours longer than the 26 px row step of arc (step.test.ts measures the arc).
+    const state = pureState([labelOrigin(3, 4)], 50);
+    expect(written(els[0])).toEqual(transformsOf(state, state.groups[0] as Group));
     const later = xs(els[0]);
-    for (let j = 1; j < 4; j++)
-      expect((later[j] as number) - (later[j - 1] as number)).toBeCloseTo(26, 9);
     const lifted = written(els[0]).map((t) => Number(/, ([-\d.e]+)px\)/.exec(t)?.[1]));
+    for (let j = 1; j < 4; j++) {
+      const [dx, dy] = [
+        (later[j] as number) - (later[j - 1] as number),
+        (lifted[j] as number) - (lifted[j - 1] as number),
+      ];
+      expect(dx).toBeGreaterThan(0);
+      expect(Math.hypot(dx, dy)).toBeLessThanOrEqual(26 + 1e-9);
+    }
     expect(lifted[3]).toBeLessThan(lifted[0] as number);
     c.cancel();
   });
