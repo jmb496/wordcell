@@ -4,9 +4,11 @@ import {
   CARD_STEP,
   cardBounces,
   cardExited,
+  cardShown,
   cardX,
   cardY,
   type Group,
+  HOP_SHARE,
   type LaunchInput,
   launch,
   RISE_SHARE,
@@ -49,8 +51,12 @@ const card = (state: StepState, group: Group, j: number, elapsedMs = state.elaps
     y: cardY(s, group, j),
     bounces: cardBounces(s, group, j),
     exited: cardExited(s, group, j),
+    shown: cardShown(s, group, j),
   };
 };
+/** SPEC F26: the elapsed time at which card `j` appears (the leader has run its row steps). */
+const appearAt = (g: Group, j: number): number =>
+  g.launchMs + ((g.side === 1 ? g.cards - 1 - j : j) * CARD_STEP) / g.speed;
 /** The cards in travel order: the leading end first (SPEC F21). */
 const travel = (g: Group): number[] =>
   [...Array(g.cards).keys()].map((k) => (g.side === 1 ? g.cards - 1 - k : k));
@@ -64,7 +70,7 @@ const leader = (s: StepState, g: Group, elapsedMs: number) =>
   card(s, g, travel(g)[0] as number, elapsedMs);
 /**
  * The group's path at path time `t` ms, the closed form SPEC F25 retimes (the leader's centre at
- * `launchMs + t` before F24): drift, launch arc, elastic rebounds; the row's line behind it.
+ * `launchMs + t` before F24): drift, launch arc, elastic rebounds; the launch point at t ≤ 0.
  */
 const pathPoint = (s: StepState, g: Group, t: number) => {
   const lowest = s.floor - g.cardH / 2;
@@ -93,13 +99,15 @@ const when = (s: StepState, g: Group, t: number): number => {
 const units = (g: Group, dx: number, dy: number): number => Math.hypot(dx / g.cardW, dy / g.cardH);
 /**
  * SPEC F23, measured independently of step.ts's tables: the arc length in card units along the
- * group's path between the path points with centre x `xa` and `xb` (xb ahead): the row's line
- * behind the launch point, then the path as a polyline of 2000 chords.
+ * group's path between the path points with centre x `xa` and `xb` (xb ahead, neither behind the
+ * launch point, SPEC F26), the path as a polyline of 2000 chords.
  */
 const arcBetween = (s: StepState, g: Group, xa: number, xb: number): number => {
-  const [da, db] = [g.side * (xa - g.x), g.side * (xb - g.x)];
-  const [ta, tb] = [Math.max(da, 0) / Math.abs(g.vx), Math.max(db, 0) / Math.abs(g.vx)];
-  let arc = (Math.min(db, 0) - Math.min(da, 0)) / g.cardW;
+  const [ta, tb] = [g.side * (xa - g.x), g.side * (xb - g.x)].map((d) => {
+    expect(d).toBeGreaterThanOrEqual(0);
+    return d / Math.abs(g.vx);
+  }) as [number, number];
+  let arc = 0;
   let prev = pathPoint(s, g, ta);
   for (let i = 1; i <= 2000; i++) {
     const p = pathPoint(s, g, ta + ((tb - ta) * i) / 2000);
@@ -108,18 +116,24 @@ const arcBetween = (s: StepState, g: Group, xa: number, xb: number): number => {
   }
   return arc;
 };
-/** SPEC F23: the arc from the launch point to the path point at centre x `x` (negative behind). */
+/** SPEC F23: the arc from the launch point to the path point at centre x `x`. */
 const arcTo = (s: StepState, g: Group, x: number): number => arcBetween(s, g, g.x, x);
 /**
- * SPEC F23: at `elapsedMs`, each card sits on the path (on the leader's earlier point with its x,
- * or on the row's line behind the launch point) CARD_STEP card units of arc behind the card ahead.
+ * SPEC F23, F26: at `elapsedMs`, each shown card sits on the path (on the leader's earlier point
+ * with its x) CARD_STEP card units of arc behind the card ahead; a card not yet shown waits at the
+ * launch point.
  */
 const expectTrail = (s: StepState, g: Group, elapsedMs: number): void => {
   let ahead = Number.NaN;
   for (const [k, j] of travel(g).entries()) {
     const c = card(s, g, j, elapsedMs);
+    if (!c.shown) {
+      expect([elapsedMs, j, c.x, c.y]).toEqual([elapsedMs, j, g.x, g.y]);
+      continue;
+    }
     const d = g.side * (c.x - g.x);
-    const onPath = d <= 0 ? g.y : pathPoint(s, g, d / Math.abs(g.vx)).y;
+    expect([elapsedMs, j, d >= 0]).toEqual([elapsedMs, j, true]);
+    const onPath = pathPoint(s, g, d / Math.abs(g.vx)).y;
     expect([elapsedMs, j, c.y]).toEqual([elapsedMs, j, expect.closeTo(onPath, 6)]);
     if (k > 0) {
       const arc = arcBetween(s, g, c.x, ahead);
@@ -263,39 +277,87 @@ describe('AD-19 step', () => {
     expect(step(s, -20).elapsedMs).toBe(0);
   });
 
-  it('AD-19 per-cell origins: each row starts centred on its own origin, hidden', () => {
+  it('AD-19 per-cell origins (SPEC F8, F26): every card of a word waits at its own origin, hidden', () => {
     const s = make({
       groups: [
         { x: 30, y: 400, letters: 3 },
         { x: 300, y: 410, letters: 4 },
       ],
     });
-    const rows = s.groups.map((g) => {
-      const xs = cards(g).map((j) => card(s, g, j).x);
-      return [
-        ((xs[0] as number) + (xs.at(-1) as number)) / 2,
-        cards(g).map((j) => card(s, g, j).y),
-      ];
-    });
-    expect(rows[0]?.[0]).toBeCloseTo(30, 9);
-    expect(rows[1]?.[0]).toBeCloseTo(300, 9);
-    expect(rows.map((r) => r[1])).toEqual([
-      [400, 400, 400],
-      [410, 410, 410, 410],
+    expect(s.groups.map((g) => [g.x, g.y])).toEqual([
+      [30, 400],
+      [300, 410],
     ]);
+    // At elapsed 0 only the first group's leader is shown (its launch); its group is still hidden.
+    for (const g of s.groups)
+      for (const j of cards(g))
+        expect(card(s, g, j)).toMatchObject({
+          x: g.x,
+          y: g.y,
+          shown: g.launchMs === 0 && j === travel(g)[0],
+        });
     expect(s.groups.map((g) => g.opacity)).toEqual([0, 0]);
   });
 
-  it('AD-19 SPEC F20: at launch consecutive cards sit CARD_STEP (0.65) card widths apart in letter order, the row rowWidth wide', () => {
+  it('AD-19 SPEC F20, F26: card k is hidden at the launch point until the leader has run k row steps (CARD_STEP card units), then appears exactly there', () => {
     expect(CARD_STEP).toBe(0.65);
-    expect(rowWidth(4, 40)).toBeCloseTo(118, 10);
     for (const x of [100, 260]) {
       const s = make({ groups: [{ x, y: 300, letters: 4 }] });
       const g = first(s);
-      const xs = cards(g).map((j) => card(s, g, j).x);
-      for (const [j, v] of xs.entries()) expect(v - (xs[0] as number)).toBeCloseTo(j * 26, 9);
-      expect((xs[3] as number) - (xs[0] as number) + g.cardW).toBeCloseTo(118, 9);
+      const order = travel(g);
+      // Before launch nothing is shown; at launch the leader alone, at the origin.
+      for (const j of order) expect(card(s, g, j, g.launchMs - 1).shown).toBe(false);
+      for (const [k, j] of order.entries()) {
+        const turn = appearAt(g, j);
+        expect([x, k, turn]).toEqual([x, k, k === 0 ? g.launchMs : expect.any(Number)]);
+        const before = card(s, g, j, turn - 1e-6);
+        const on = card(s, g, j, turn);
+        const after = card(s, g, j, turn + 30);
+        expect([x, j, before.shown, before.x, before.y]).toEqual([x, j, false, g.x, g.y]);
+        expect([x, j, on.shown, on.x, on.y]).toEqual([
+          x,
+          j,
+          true,
+          expect.closeTo(g.x, 9),
+          expect.closeTo(g.y, 9),
+        ]);
+        // Then it leaves the launch point along the path, toward the exit wall.
+        expect([x, j, g.side * (after.x - g.x) > 0, after.y < g.y]).toEqual([x, j, true, true]);
+        // The card ahead is one row step of arc along the path when this one appears.
+        if (k > 0) {
+          const ahead = card(s, g, order[k - 1] as number, turn);
+          expect(arcTo(s, g, ahead.x)).toBeCloseTo(CARD_STEP, 3);
+        }
+      }
     }
+  });
+
+  it('AD-19 SPEC F26: no card is ever on the old row line: a card not shown waits at the launch point, a shown one is never behind it (both sides, whole runs)', () => {
+    let s = make({
+      groups: [
+        { x: 60, y: 420, letters: 7 },
+        { x: 300, y: 420, letters: 6 },
+        { x: 180, y: 300, letters: 23 },
+      ],
+    });
+    const shown = new Set<string>();
+    while (!s.finished) {
+      s = step(s, 16);
+      s.groups.forEach((g, i) => {
+        for (const j of cards(g)) {
+          const c = card(s, g, j);
+          if (!c.shown) {
+            expect([i, j, c.x, c.y]).toEqual([i, j, g.x, g.y]);
+            continue;
+          }
+          shown.add(`${i}:${j}`);
+          expect([i, j, g.side * (c.x - g.x) >= 0]).toEqual([i, j, true]);
+          // Off the launch point a card is above the origin's line until the path comes down.
+          if (c.y === g.y) expect([i, j, c.x]).toEqual([i, j, expect.closeTo(g.x, 9)]);
+        }
+      });
+    }
+    expect(shown.size).toBe(7 + 6 + 23);
   });
 
   it('AD-19 SPEC F23: consecutive cards are CARD_STEP card units apart along the path (arc length) at launch, mid-rise, near the bounce and in the fall', () => {
@@ -310,8 +372,8 @@ describe('AD-19 step', () => {
       // Leader path times; an upper bound: the card-unit arc runs at least |vx| / cardW per ms.
       const trailMs = (g.cards * CARD_STEP * g.cardW) / Math.abs(g.vx);
       for (const leaderMs of [
-        0, // at launch: the row
-        apexMs / 2, // mid-rise, the trail partly still on the row's line
+        0, // at launch: the leader alone, at the launch point (SPEC F26)
+        apexMs / 2, // mid-rise, the trail partly still waiting at the launch point (SPEC F26)
         apexMs + trailMs, // past the apex, the whole trail on the arc
         (apexMs + g.contactMs) / 2 + trailMs, // in the fall
         g.contactMs - 5, // the leader just before the bounce, its trail falling
@@ -322,31 +384,6 @@ describe('AD-19 step', () => {
       ])
         expectTrail(s, g, when(s, g, leaderMs));
     }
-  });
-
-  it('AD-19 SPEC F23: before the leader has run k row steps, trailing card k slides on the row line behind the launch point', () => {
-    const s = make({ groups: [{ x: 100, y: 380, letters: 5 }] });
-    const g = first(s);
-    const order = travel(g);
-    const row = order.map((j) => card(s, g, j, 0).x);
-    for (const t of [10, 40, 100, 160]) {
-      const run = arcTo(s, g, leader(s, g, t).x);
-      for (const [k, j] of order.entries()) {
-        if (run >= k * CARD_STEP) continue;
-        const c = card(s, g, j, t);
-        expect([t, j, c.y]).toEqual([t, j, 380]);
-        // The row's line is horizontal: a card unit of arc there is one card width.
-        expect([t, j, g.side * (c.x - (row[k] as number))]).toEqual([
-          t,
-          j,
-          expect.closeTo(run * g.cardW, 2),
-        ]);
-      }
-    }
-    // The last card leaves the row's line once the leader has run its four steps.
-    let t = 0;
-    while (arcTo(s, g, leader(s, g, t).x) < 4 * CARD_STEP + 0.02) t += 1;
-    expect(card(s, g, order[4] as number, t).y).toBeLessThan(380);
   });
 
   it('AD-19 SPEC F23: letter order holds all run, each card one row step of arc behind the card ahead (both sides)', () => {
@@ -364,7 +401,9 @@ describe('AD-19 step', () => {
       for (const g of s.groups) {
         for (let j = 1; j < g.cards; j++) {
           const [a, b] = [card(s, g, j - 1), card(s, g, j)];
-          expect(b.x).toBeGreaterThan(a.x);
+          // SPEC F26: a card waiting at the launch point shares its x with a card appearing there.
+          if (a.shown && b.shown) expect(b.x).toBeGreaterThan(a.x);
+          else expect(b.x).toBeGreaterThanOrEqual(a.x);
           // A chord is never longer than its arc (both in card units).
           expect(units(g, b.x - a.x, b.y - a.y)).toBeLessThanOrEqual(CARD_STEP + 1e-9);
         }
@@ -373,7 +412,7 @@ describe('AD-19 step', () => {
     }
   });
 
-  it('AD-19 SPEC F23: the gap is in card units: the row line keeps the row step in px, a steep stretch spaces cards by card heights, the apex by card widths', () => {
+  it('AD-19 SPEC F23: the gap is in card units: a steep stretch spaces cards by card heights, the apex by card widths', () => {
     const s = make({ groups: [{ x: 100, y: 380, letters: 5 }] });
     const g = first(s);
     const order = travel(g);
@@ -384,18 +423,13 @@ describe('AD-19 step', () => {
       ];
       return { dx: g.side * (b.x - a.x), dy: a.y - b.y };
     };
-    // Horizontal: at launch, and on the row's line behind the launch point, CARD_STEP card widths.
-    for (let k = 1; k < g.cards; k++)
-      expect(pair(k, 0)).toEqual({ dx: CARD_STEP * g.cardW, dy: 0 });
-    const early = pair(4, g.launchMs + 60);
-    expect([early.dx, early.dy]).toEqual([expect.closeTo(CARD_STEP * g.cardW, 9), 0]);
     // Mid-rise, mostly vertical: more than 0.6 card heights between centres (a pixel arc of
     // 0.65 card widths gave 0.49 card heights), the chord just inside its CARD_STEP of arc.
     const apexMs = -g.vy / g.gravity;
     for (let k = 1; k < g.cards; k++) {
       const { dx, dy } = pair(k, when(s, g, apexMs / 2));
       expect([k, dy / g.cardH]).toEqual([k, expect.toSatisfy((v: number) => v > 0.6)]);
-      expect(units(g, dx, dy)).toBeGreaterThan(CARD_STEP - 0.02);
+      expect(units(g, dx, dy)).toBeGreaterThan(CARD_STEP - 0.04);
       expect(units(g, dx, dy)).toBeLessThanOrEqual(CARD_STEP + 1e-9);
     }
     // The pair across the apex, when both are level: near a row step apart in x (the chord of a
@@ -458,7 +492,8 @@ describe('AD-19 step', () => {
         const top = (orders[i] as Int32Array)[g.cards - 1] as number;
         const lead = travel(g)[0] as number;
         const tail = travel(g)[g.cards - 1] as number;
-        // The whole trail rising (leader not yet at the apex, the tail off the row's line).
+        // The whole trail rising (leader not yet at the apex, the tail shown and off the launch
+        // point).
         if (t > 0 && t < -g.vy / g.gravity && card(s, g, tail).y < g.y) {
           expect(top).toBe(tail);
           phases.add(`${i} rise`);
@@ -475,12 +510,12 @@ describe('AD-19 step', () => {
 
   /**
    * SPEC F25: card `j`'s speed along the path in card units per ms at `ms`, by a ±0.05 ms central
-   * difference; null across a floor contact or the launch point (a corner of the path).
+   * difference; null across a floor contact (a corner of the path) or before the card is shown
+   * (SPEC F26: it waits at the launch point).
    */
   const unitSpeed = (s: StepState, g: Group, j: number, ms: number): number | null => {
     const [a, b] = [card(s, g, j, ms - 0.05), card(s, g, j, ms + 0.05)];
-    if (a.bounces !== b.bounces || (a.x - g.x) * g.side <= 0 !== (b.x - g.x) * g.side <= 0)
-      return null;
+    if (a.bounces !== b.bounces || !a.shown || !b.shown) return null;
     return units(g, b.x - a.x, b.y - a.y) / 0.1;
   };
   /** SPEC F25: the elapsed time of the leader's `n`th floor contact (bisection on its bounces). */
@@ -493,7 +528,7 @@ describe('AD-19 step', () => {
     return hi;
   };
 
-  it('AD-19 SPEC F25: one constant speed per word: every card moves the same card units per ms from launch to its exit, through apexes, floor contacts and the row line (both sides, real layouts)', () => {
+  it('AD-19 SPEC F25: one constant speed per word: every card moves the same card units per ms from its turn to its exit, through apexes and floor contacts (both sides, real layouts)', () => {
     const band = make({
       groups: [
         { x: 100, y: 380, letters: 5 },
@@ -510,7 +545,7 @@ describe('AD-19 step', () => {
         const speed = unitSpeed(s, g, travel(g)[0] as number, g.launchMs + 0.1) as number;
         let [slow, fast] = [speed, speed];
         for (const j of cards(g))
-          for (let ms = g.launchMs + 0.1; !card(s, g, j, ms).exited; ms += 23) {
+          for (let ms = appearAt(g, j) + 0.1; !card(s, g, j, ms).exited; ms += 23) {
             const v = unitSpeed(s, g, j, ms);
             if (v === null) continue;
             slow = Math.min(slow, v);
@@ -520,31 +555,25 @@ describe('AD-19 step', () => {
       }
   });
 
-  it("AD-19 SPEC F25: one speed per word, not per lap: the last partial lap's own speed differs by over 10 %, so each run to the exit takes the path's own time (literals from the pre-F24 step) and full laps stay within 9 % of the path's", () => {
+  it("AD-19 SPEC F25, F27: one speed per word, not per lap: each run to the exit takes the path's own time (paced), full laps stay near the path's, and the fixture run ends at the fit (portrait)", () => {
     const s = launch({ ...scene(360, 740, false, FIXTURE), capMs: 6000, baseMs: 180 });
-    // Pre-F24 (`git show c448180:src/ui/celebration/step.ts`), Normal, portrait 360 x 740: each
-    // group's last card wholly past its wall (ms since the start).
-    const exits = [
-      3810.535, 3342.054, 3392.774, 3983.139, 3763.173, 3791.917, 4404.794, 4178.887, 4177.467,
-      4830.532,
-    ];
-    let spread = 1;
+    let [spread, lapOff] = [1, 0];
     for (const [i, g] of s.groups.entries()) {
-      const exit = exits[i] as number;
+      // The group's exit: its last card wholly past its wall (bisection).
       const tail = travel(g)[g.cards - 1] as number;
-      expect([
-        i,
-        card(s, g, tail, exit - 0.01).exited,
-        card(s, g, tail, exit + 0.01).exited,
-      ]).toEqual([i, false, true]);
-      // At the exit the leader is where the path's own timing put it.
+      let [lo, hi] = [g.launchMs, s.capMs];
+      for (let k = 0; k < 80; k++)
+        if (card(s, g, tail, (lo + hi) / 2).exited) hi = (lo + hi) / 2;
+        else lo = (lo + hi) / 2;
+      const exit = hi;
+      expect([i, exit <= s.capMs - s.baseMs + 1e-6]).toEqual([i, true]);
+      // At the exit the leader is where the path's own (paced) timing put it.
       const out = leaderPathMs(s, g, exit);
       expect([i, out]).toEqual([i, expect.closeTo(exit - g.launchMs, 1)]);
-      // Laps at the word's speed: launch to the first contact, then contact to contact (within
-      // 8.1 %, measured 2026-10-24).
+      // Laps at the word's speed: launch to the first contact, then contact to contact.
       const [c1, c2] = [contactAt(s, g, 1), contactAt(s, g, 2)];
       for (const share of [(c1 - g.launchMs) / g.contactMs, (c2 - c1) / g.periodMs])
-        expect([i, Math.abs(share - 1) < 0.09]).toEqual([i, true]);
+        lapOff = Math.max(lapOff, Math.abs(share - 1));
       // Per-lap speeds on the path's own timing (independent arcs): the first lap, the last partial
       // lap (from the last contact before the exit).
       const x = (t: number) => pathPoint(s, g, t).x;
@@ -553,18 +582,26 @@ describe('AD-19 step', () => {
       const partial = arcBetween(s, g, x(last), x(out)) / (out - last);
       spread = Math.max(spread, partial / firstLap, firstLap / partial);
     }
-    // Measured 2026-10-24: 1.83 (the fourth 6-letter group's last 196 ms after a contact).
-    expect(spread).toBeCloseTo(1.83, 2);
-    // The run ends with the last group, as before F24 (4.83 s; 8.59 s at Slow).
-    expect(run(s, 7000).elapsedMs).toBe(4832);
-    const slow = launch({ ...scene(360, 740, false, FIXTURE), capMs: 10666.67, baseMs: 320 });
-    expect(run(slow, 12000).elapsedMs).toBe(8592);
+    // Measured 2026-10-24 (SPEC F27): the last partial lap's speed differs from the first lap's by
+    // up to 1.136 x, more than F25's 10 %, so one speed per word; full laps run within 7.1 % of the
+    // path's.
+    expect(spread).toBeCloseTo(1.136, 3);
+    expect(lapOff).toBeCloseTo(0.071, 3);
+    // SPEC F27 crossings are longer: the last word, from WordCell 3 at the left edge, is fitted
+    // (pace 1.44), so the run ends at cap − baseMs (step granularity 16 ms) at every speed.
+    for (const [capMs, baseMs, end] of [
+      [3000, 90, 2912],
+      [6000, 180, 5824],
+      [10666.67, 320, 10352],
+    ] as const)
+      expect(
+        run(launch({ ...scene(360, 740, false, FIXTURE), capMs, baseMs }), 12000).elapsedMs,
+      ).toBe(end);
   });
 
-  it("AD-19 SPEC F25: the constant speed keeps the path: every card is where the F23 path put it, read at the leader's path time (literals from the pre-F24 step)", () => {
-    // Pre-F24 (`git show a1671ab:src/ui/celebration/step.ts`), elapsed = path time, Normal, band
-    // 360 x 500: each card's centre at the leader's path times 0, 150, 400 and 900 ms and 5 and
-    // 300 ms after its first contact.
+  it("AD-19 SPEC F25, F26, F27: each card's place at the leader's path times (regression literals from the F27 step, 2026-10-24; a card at its origin is not yet shown)", () => {
+    // Normal, band 360 x 500: each card's centre at the leader's path times 0, 150, 400 and 900 ms
+    // and 5 and 300 ms after its first contact.
     const pins: readonly (readonly [
       { x: number; y: number; letters: number },
       readonly (readonly (readonly [number, number])[])[],
@@ -573,46 +610,46 @@ describe('AD-19 step', () => {
         { x: 100, y: 380, letters: 5 },
         [
           [
-            [48, 380],
-            [74, 380],
             [100, 380],
-            [126, 380],
-            [152, 380],
+            [100, 380],
+            [100, 380],
+            [100, 380],
+            [100, 380],
           ],
           [
-            [99.330379843, 380],
-            [125.330379843, 380],
-            [151.330379843, 380],
-            [156.988748017, 347.095169593],
-            [162.716334622, 313.492667519],
+            [100, 380],
+            [100, 380],
+            [100, 380],
+            [104.590981386, 347.2157493],
+            [109.900130695, 313.492667519],
           ],
           [
-            [153.438740311, 370.162879808],
-            [158.725688067, 336.433373291],
-            [164.6979762, 302.906090586],
-            [171.7097985, 269.736625572],
-            [180.576892325, 237.369335606],
+            [101.232170888, 370.871167011],
+            [106.121011341, 337.036290403],
+            [111.647765575, 303.374927273],
+            [118.146686567, 270.022047208],
+            [126.40034852, 237.369335606],
           ],
           [
-            [164.813767184, 302.304019218],
-            [171.849544178, 269.14354662],
-            [180.764544398, 236.799946631],
-            [194.641869419, 207.970547812],
-            [216.298007732, 215.331005114],
+            [111.307342375, 305.307585542],
+            [117.735966831, 271.93057101],
+            [125.848355156, 239.214238163],
+            [138.40246639, 209.265447301],
+            [159.40078417, 215.331005114],
           ],
           [
-            [247.961817263, 340.947980269],
-            [253.173520216, 374.69810205],
-            [257.909351347, 408.571417621],
-            [262.278859824, 442.531201916],
-            [266.357211154, 470.445401176],
+            [188.605683291, 340.635061142],
+            [193.438732317, 374.484048979],
+            [197.826527516, 408.439600994],
+            [201.872490514, 442.469727149],
+            [205.647254986, 470.445401176],
           ],
           [
-            [268.037808039, 456.307194496],
-            [272.281199931, 422.319305356],
-            [276.857947571, 388.407554462],
-            [281.860357613, 354.601725166],
-            [287.432669244, 320.953237243],
+            [207.160702885, 456.658953465],
+            [211.085993846, 422.603990229],
+            [215.32129518, 388.614397868],
+            [219.953174761, 354.715934825],
+            [225.11751202, 320.953237243],
           ],
         ],
       ],
@@ -620,40 +657,40 @@ describe('AD-19 step', () => {
         { x: 280, y: 400, letters: 4 },
         [
           [
-            [241, 400],
-            [267, 400],
-            [293, 400],
-            [319, 400],
+            [280, 400],
+            [280, 400],
+            [280, 400],
+            [280, 400],
           ],
           [
-            [228.758922916, 331.419192047],
-            [235.071975737, 364.836967314],
-            [240.751794975, 398.454230394],
-            [265.807269559, 400],
+            [271.589309442, 324.950701646],
+            [275.67060597, 358.973004576],
+            [279.306290715, 393.084224542],
+            [280, 400],
           ],
           [
-            [208.357127775, 251.840067681],
-            [217.947969545, 283.844106444],
-            [225.700224837, 316.722694917],
-            [232.368697277, 350.018551024],
+            [257.571491845, 242.491381743],
+            [264.353782472, 275.735111151],
+            [269.529277022, 309.493094904],
+            [273.876090986, 343.457326048],
           ],
           [
-            [167.553537495, 222.890152282],
-            [190.498941893, 217.805724758],
-            [205.908569162, 245.206353432],
-            [216.086716525, 276.883132995],
+            [229.535856652, 237.408407013],
+            [245.161970532, 213.952873598],
+            [257.77573243, 243.310338842],
+            [264.497799508, 276.576249021],
           ],
           [
-            [110.091964097, 470.502610308],
-            [114.823468979, 442.622840389],
-            [119.902892136, 408.836996988],
-            [125.422603048, 375.17283874],
+            [198.790475283, 470.180100929],
+            [201.754551385, 442.59458093],
+            [204.943985132, 408.404905916],
+            [208.422079609, 374.264777164],
           ],
           [
-            [86.017845832, 324.385785146],
-            [92.493649705, 357.748632446],
-            [98.291742458, 391.330343733],
-            [103.586347158, 425.058040165],
+            [182.249450519, 312.027272695],
+            [186.549137057, 346.002091066],
+            [190.336835399, 380.084173386],
+            [193.760144423, 414.234043779],
           ],
         ],
       ],
@@ -678,13 +715,77 @@ describe('AD-19 step', () => {
     }
   });
 
-  it('AD-19 drifts toward the side with more room: left of centre goes right, right goes left, centre goes right', () => {
-    const side = (x: number) => first(make({ groups: [{ x, y: 300, letters: 3 }] })).side;
-    expect(side(100)).toBe(1);
-    expect(side(260)).toBe(-1);
-    expect(side(180)).toBe(1);
+  it('AD-19 SPEC F27: drifts toward the farther wall: left of centre goes right, right of centre goes left, the exact centre goes right', () => {
+    const side = (x: number, right = 360) =>
+      first(make({ groups: [{ x, y: 300, letters: 3 }], walls: { left: 0, right } })).side;
+    expect([20, 100, 179.999, 180].map((x) => side(x))).toEqual([1, 1, 1, 1]);
+    expect([180.001, 260, 340].map((x) => side(x))).toEqual([-1, -1, -1]);
+    expect([side(640, 1280), side(640.5, 1280)]).toEqual([1, -1]);
     expect(first(make({ groups: [{ x: 100, y: 300, letters: 3 }] })).vx).toBeGreaterThan(0);
     expect(first(make({ groups: [{ x: 260, y: 300, letters: 3 }] })).vx).toBeLessThan(0);
+  });
+
+  it('AD-19 SPEC F27: a word crosses the band and exits past the far wall, every card wholly past it and never past the near one (left edge, right edge, centre)', () => {
+    for (const x of [20, 340, 180]) {
+      let s = make({ groups: [{ x, y: 420, letters: 5 }] });
+      const g = first(s);
+      const far = g.side === 1 ? s.walls.right : s.walls.left;
+      const near = g.side === 1 ? s.walls.left : s.walls.right;
+      while (!s.finished) {
+        s = step(s, 16);
+        for (const j of cards(g)) {
+          const c = card(s, g, j);
+          // Never wholly past the near wall: its box keeps a part inside it.
+          expect([x, j, g.side * (c.x - near) + g.cardW / 2 > 0]).toEqual([x, j, true]);
+        }
+      }
+      expect(first(s).exited).toBe(true);
+      for (const j of cards(g)) {
+        const c = card(s, g, j);
+        expect([x, j, c.exited, g.side * (c.x - far) >= g.cardW / 2]).toEqual([x, j, true, true]);
+      }
+    }
+  });
+
+  it("AD-19 SPEC F27: every card makes the word's `contacts` floor contacts before it exits; the count grows with the crossing, each hop near HOP_SHARE of the band (x its slot's variety)", () => {
+    for (const right of [360, 839, 1280]) {
+      const walls = { left: 0, right };
+      let previous = 0;
+      const counts: number[] = [];
+      // From the centre out to the left edge: the crossing to the right wall grows.
+      for (let f = 0.5; f >= 0.02; f -= 0.04) {
+        const s = make({ groups: [{ x: f * right, y: 420, letters: 4 }], walls });
+        const g = first(s);
+        expect(g.contacts).toBeGreaterThanOrEqual(Math.max(previous, 1));
+        previous = g.contacts;
+        counts.push(g.contacts);
+        // The hop, the x travel per bounce, near the target (slot 0): rounding the count keeps it
+        // within 0.8 to 1.3 of it (measured 0.81 to 1.30).
+        const hop = Math.abs(g.vx) * g.periodMs;
+        expect([right, f, hop / (HOP_SHARE * right)]).toEqual([
+          right,
+          f,
+          expect.toSatisfy((v: number) => v > 0.8 && v < 1.31),
+        ]);
+        // Each card's bounces when it is first wholly past the wall (bisection on its exit).
+        for (const j of cards(g)) {
+          let [lo, hi] = [appearAt(g, j), s.capMs];
+          for (let k = 0; k < 60; k++)
+            if (card(s, g, j, (lo + hi) / 2).exited) hi = (lo + hi) / 2;
+            else lo = (lo + hi) / 2;
+          expect([right, f, j, card(s, g, j, hi).bounces]).toEqual([right, f, j, g.contacts]);
+        }
+      }
+      // A word from the edge makes more contacts than one from the centre (measured 1 or 2, then 3).
+      expect([right, (counts.at(-1) as number) > (counts[0] as number)]).toEqual([right, true]);
+      expect(counts.at(-1)).toBe(3);
+    }
+    // The slot variety lengthens the hop: the third entry of a wave (slot 2) has fewer contacts
+    // than the first from the same edge origin.
+    const wave = make({
+      groups: Array.from({ length: 3 }, () => ({ x: 20, y: 420, letters: 3 })),
+    });
+    expect(wave.groups.map((g) => g.contacts)).toEqual([3, 3, 2]);
   });
 
   it('AD-19 a pre-launch group is hidden, then shown after its stagger offset', () => {
@@ -794,13 +895,14 @@ describe('AD-19 step', () => {
     expect(rowScale(1, 40, 3600)).toBe(1);
   });
 
-  it('AD-19 a 23-letter row is scaled, its cards spanning 90 % of the band at launch', () => {
+  it('AD-19 a 23-letter word is scaled as its row would span 90 % of the band (A-D12; SPEC F26: no row is drawn)', () => {
     const s = make({ groups: [{ x: 180, y: 300, letters: 23 }] });
     const g = first(s);
+    expect(rowWidth(4, 40)).toBeCloseTo(40 + 3 * 26, 10);
     expect(g.scale).toBeCloseTo(324 / 612, 10);
     expect(g.cardW).toBeCloseTo(40 * g.scale, 10);
     expect(g.cardH).toBeCloseTo(53 * g.scale, 10);
-    expect(card(s, g, 22).x - card(s, g, 0).x + g.cardW).toBeCloseTo(0.9 * 360, 9);
+    expect(rowWidth(23, 40) * g.scale).toBeCloseTo(0.9 * 360, 9);
   });
 
   // SPEC F6: overlapping waves, in word-list order. Origins along the WordCell row.
@@ -945,6 +1047,19 @@ describe('AD-19 step', () => {
     }
   }
 
+  // SPEC F22, F27: each group's pace at Normal, measured 2026-10-24 (1 = the natural tempo).
+  const PACES: Record<string, readonly number[]> = {
+    'the session-won-words list portrait 360x740': [1.143, 1, 1, 1, 1, 1, 1, 1, 1.013, 1.436],
+    'the session-won-words list desktop 1280x720': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1.023],
+    'the session-won-words list landscape 839x412': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1.028],
+    '12 groups up to 23 letters portrait 360x740': [
+      1.192, 1, 1, 1.246, 1, 1, 1, 1.011, 1.028, 1.053, 1.067, 1.109,
+    ],
+    '12 groups up to 23 letters desktop 1280x720': [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    '12 groups up to 23 letters landscape 839x412': [
+      1.156, 1, 1, 1, 1, 1, 1, 1, 1.017, 1.043, 1.04, 1,
+    ],
+  };
   for (const [list, rows] of [
     ['the session-won-words list', FIXTURE],
     ['12 groups up to 23 letters', LONG],
@@ -954,22 +1069,17 @@ describe('AD-19 step', () => {
       ['desktop 1280x720', 1280, 720, true],
       ['landscape 839x412', 839, 412, false],
     ] as const) {
-      it(`AD-19 SPEC F22, F23, F25: the card-unit trail fits at the natural tempo, pace 1, except the 23-letter row in landscape (${geometry}, Normal, ${list})`, () => {
+      it(`AD-19 SPEC F22, F27: the card-unit trail fits each word on the real layouts, at the natural tempo or a measured pace (${geometry}, Normal, ${list})`, () => {
         const s = launch({
           ...scene(clientWidth, innerHeight, hoverFine, rows),
           capMs: 6000,
           baseMs: 180,
         });
-        // Measured 2026-10-24 (SPEC F25, the path's own run length, as F23): 1.00 for every group
-        // but the long scene's 23-letter row in landscape, 1.093 (its steep trail is longer in card
-        // units; SPEC F24's faster run needed 1.00 everywhere, the F21 time lag up to 1.11 on the
-        // fixture and 2.7 on the long scene).
-        const paced = list === '12 groups up to 23 letters' && geometry === 'landscape 839x412';
-        for (const [i, g] of s.groups.entries())
-          expect(paceOf(s, g), `group ${i}`).toBeCloseTo(
-            paced && i === 0 ? 1.093 : 1,
-            paced && i === 0 ? 3 : 9,
-          );
+        // Measured 2026-10-24 (SPEC F27: words cross to the farther wall, so late words from an
+        // edge WordCell and long words need a pace; under F23/F25 only the long scene's 23-letter
+        // landscape row had one, 1.093).
+        const paces = PACES[`${list} ${geometry}`] as readonly number[];
+        expect(s.groups.map((g) => paceOf(s, g))).toEqual(paces.map((p) => expect.closeTo(p, 3)));
       });
     }
   }
@@ -993,9 +1103,9 @@ describe('AD-19 step', () => {
   });
 
   it('AD-19 a trail that would overrun is fitted: the group plays its arc faster, the last card out by cap − baseMs', () => {
-    // A 23-letter row from the left edge launching at half the cap (the 31st entry): at its natural
-    // pace its last card would leave after cap − baseMs.
-    const lone = { x: 20, y: 420, letters: 23 };
+    // A 23-letter row launching at half the cap (the 31st entry): at its natural pace its last card
+    // would leave after cap − baseMs.
+    const lone = { x: 100, y: 420, letters: 23 };
     const s = make({
       groups: [...Array.from({ length: 30 }, () => ({ x: 20, y: 420, letters: 3 })), lone],
     });
@@ -1006,11 +1116,11 @@ describe('AD-19 step', () => {
     expect(card(s, g, last, 6000 - 180 + 0.01).exited).toBe(true);
     // The same row alone (launch 0, the same slot) keeps its natural pace: the fitted arc is the
     // same shape (equal apex, slope vy / vx, curvature gravity / vx² and arc tables), in less time,
-    // at the pace times its SPEC F25 speed (pace 1.64, measured 2026-10-24, as before F24).
+    // at the pace times its SPEC F25 speed (pace 1.91, measured 2026-10-24 under SPEC F27).
     const relaxed = first(make({ groups: [lone] }));
     expect(paceOf(s, relaxed)).toBe(1);
     const pace = paceOf(s, g);
-    expect(pace).toBeCloseTo(1.64, 2);
+    expect(pace).toBeCloseTo(1.91, 2);
     expect(g.contactMs).toBeLessThan(relaxed.contactMs / 1.3);
     expect(g.speed).toBeCloseTo(pace * relaxed.speed, 12);
     expect((g.vy * g.vy) / (2 * g.gravity)).toBeCloseTo(

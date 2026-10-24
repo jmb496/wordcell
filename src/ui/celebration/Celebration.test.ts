@@ -92,10 +92,13 @@ describe('AD-19 Celebration', () => {
     expect(root).toContain(`--wc-H: ${H}px`);
   });
 
-  it('AD-19 SPEC F20: the copies carry no row layout (step.ts places each card, CARD_STEP 0.65 apart) and the faces carry the drag shadow', () => {
+  it('AD-19 SPEC F20, F26: the copies carry no layout or visibility of their own (step.ts places each card, CARD_STEP 0.65 apart, and decides its turn) and the faces carry the drag shadow', () => {
     const body = html([[face('W'), face('O'), face('R'), face('D')]]);
-    // Every copy starts at its group's top left; each frame's per-card transform places it.
+    // Every copy starts at its group's top left; each frame's per-card transform places it, and
+    // the controller hides a copy until its turn (SPEC F26).
     expect(body.match(/<div class="face[^>]*style=/g)).toBeNull();
+    expect(body).not.toMatch(/visibility/);
+    expect(rules(source, '.face').get('visibility')).toBeUndefined();
     expect(/<div class="group[^>]*style="([^"]*)"/.exec(body)?.[1]).toBe('opacity: 0;');
     expect(CARD_STEP).toBe(0.65);
     expect(rowWidth(4, 40)).toBeCloseTo(40 + 3 * 26, 10);

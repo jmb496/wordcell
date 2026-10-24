@@ -135,8 +135,8 @@ async function expectSkipped(page: Page): Promise<void> {
 }
 
 // Steps the manual clock 16 ms at a time, at most `cap` ms, until a group of the live run is shown
-// (computed opacity > 0 and a transform written to its first copy, SPEC F21); returns its index,
-// -1 if none was.
+// (computed opacity > 0 and a transform written to its first copy, SPEC F21, once that copy has
+// had its turn, SPEC F26); returns its index, -1 if none was.
 function stepUntilShown(page: Page, cap: number): Promise<number> {
   return page.evaluate(
     ([max, stepMs]) => {

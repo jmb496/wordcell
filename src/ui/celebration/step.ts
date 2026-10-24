@@ -1,11 +1,14 @@
 // AD-19 (R-87): the win celebration's pure physics. `step(state, dtMs)` advances groups of card
 // faces (one per word-list entry) over plain data: no DOM, no clock, no `Math.random`. Launch time
 // derives from the entry index; side and horizontal speed derive from the entry index, the launch
-// origin and the band size (each card reaches its exit wall after EXIT_AFTER_CONTACTS first-contact
-// times, so it bounces before it leaves; AD-19 Rule bullet 1 and SPEC CAP-2/F3 still say "entry
-// index", see the 10.3 plan's Plan Change Log). The constants are tuned at epic 10's checkpoint
-// (ticket 10.6 device reads: SPEC F20, F21, F23, F25); timing is a fraction of the cap so the run
-// scales with the speed pref.
+// origin and the band size (AD-19 Rule bullet 1 and SPEC CAP-2/F3 still say "entry index", see the
+// 10.3 plan's Plan Change Log). The constants are tuned at epic 10's checkpoint (ticket 10.6 device
+// reads: SPEC F20, F21, F23, F25, F26, F27); timing is a fraction of the cap so the run scales with
+// the speed pref.
+// SPEC F27 (cross the screen): a word drifts toward the wall farther from its launch point and
+// leaves past it; its drift is fitted so each hop (the x travel per floor contact) is near
+// HOP_SHARE of the band width, so a longer crossing takes more contacts (`contacts`, at least one,
+// so every card bounces before it leaves).
 // SPEC F21, F23 (follow the leader): every card of a group runs the group's one path, an arc
 // that falls and rebounds off the floor with a constant horizontal drift, one row step
 // (CARD_STEP) behind the card ahead measured along the path (arc length), so the word reads as its
@@ -14,14 +17,16 @@
 // gets 0.65 card heights, so a card never hides the letter of the card above it.
 // The path and its arc length are closed-form; `launch` samples the arc length of the first fall
 // and of one bounce once (`ARC_SAMPLES`), and a card's path time is found by a binary search of
-// those samples plus Newton steps, so a frame allocates nothing. Behind the launch point the path
-// continues as the row's line: until the leader has travelled `k` steps, trailing card `k` slides
-// along that line, so at launch the cards sit as the row.
+// those samples plus Newton steps, so a frame allocates nothing.
+// SPEC F26 (pour out of the cell): there is no launch row; the launch point is the word's origin in
+// its WordCell (SPEC F8). Card `k` behind the leader is not shown (`cardShown`) until the leader has
+// run `k` steps, and then appears at the launch point, so the word leaves its cell one card at a
+// time; a card not yet shown waits at the launch point.
 // SPEC F25 (constant speed): the leader runs the unchanged path at one constant speed per word in
 // card units (the trail's measure, so every card of the word shares it), its arc `speed` x the
 // time since launch: the arc to the group's exit over the path's own time to it, so the run takes
-// as long as the path did. One speed per word, not per lap: the full laps' speeds agree within
-// about 3 %, but the last partial lap to the exit differs by up to 1.8 x (more than F25's 10 %).
+// as long as the path did. One speed per word, not per lap: the last partial lap to the exit
+// differs from the first lap by up to 1.14 x on the portrait fixture (more than F25's 10 %).
 // Coordinates are band-relative px (the band is the area between the top bar and the action bar),
 // y grows downward, velocities are px per ms; a card's position is the centre of its box.
 
@@ -43,13 +48,17 @@ const FALL_FRAC = 0.2;
 /** Share of the room above the origin the launch rises through. */
 export const RISE_SHARE = 0.5;
 /**
- * EXPERIENCE.md Win celebration (bounce, then leave past a side edge): a card reaches its exit
- * wall this many times its first floor contact after its start, divided by its slot's speed
- * variety, so even the fastest slot (1 + 2 x SPEED_STEP) exits after 2 / 1.3 ≈ 1.5 first-contact
- * times.
+ * SPEC F27: the target hop, the x travel between two floor contacts, as a share of the band width
+ * (before a slot's speed variety); the F23–F25 fixed two-first-contact exit gave hops of 0.11 to
+ * 0.57 of the band on the real layouts, about 0.3 typical.
  */
-const EXIT_AFTER_CONTACTS = 2;
-/** Per wave-slot speed variety. */
+export const HOP_SHARE = 0.28;
+/**
+ * SPEC F27, EXPERIENCE.md Win celebration (bounce, then leave past a side edge): a card is wholly
+ * past its exit wall this share of a bounce after its last floor contact (0.5: at the hop's apex).
+ */
+const EXIT_PHASE = 0.5;
+/** Per wave-slot speed variety: a slot's target hop is HOP_SHARE x (1 + SPEED_STEP x slot). */
 const SPEED_STEP = 0.15;
 /** SPEC F23: arc-length samples per path segment (the first fall, one bounce). */
 const ARC_SAMPLES = 64;
@@ -89,14 +98,16 @@ type Path = Flight & {
 export type Group = Path & {
   /** SPEC F25: the leader's constant speed along the path (card units per ms since launch). */
   readonly speed: number;
-  /** Cards in the row, in letter order. */
+  /** Cards in the word, in letter order. */
   readonly cards: number;
   readonly scale: number;
-  /** The leading card's centre at launch (the row's end toward `side`). */
+  /** SPEC F26: the launch point (the word's origin, SPEC F8), where every card appears. */
   readonly x: number;
   readonly y: number;
-  /** The wall the group drifts toward: -1 left, 1 right. */
+  /** SPEC F27: the wall the group drifts toward, the farther one: -1 left, 1 right. */
   readonly side: -1 | 1;
+  /** SPEC F27: each card's floor contacts before it is wholly past the exit wall. */
+  readonly contacts: number;
   readonly launchMs: number;
   /** Its last card is wholly past the exit wall. */
   readonly exited: boolean;
@@ -230,8 +241,10 @@ function pathTime(path: Path, arc: number): number {
 }
 
 /**
- * The initial state: every group waiting as its row centred on its origin, hidden, launching by
- * entry index. The drift is fitted so the group's last card is past its wall by `capMs - baseMs`
+ * The initial state: every group waiting at its origin, hidden, launching by entry index. SPEC
+ * F27: the drift puts the leader wholly past the farther wall at the hop's apex after `contacts`
+ * floor contacts, the count that makes a hop nearest the slot's target. The drift is also fitted
+ * so the group's last card is past its wall by `capMs - baseMs`
  * (before the closing fade): a group whose trail would overrun plays its whole path faster
  * (`pace`: drift and launch speed x pace, gravity x pace²), the same arc in less time. SPEC F23:
  * the trail is `trail` card units of arc behind the leader, so the leader must run the arc to the
@@ -256,8 +269,8 @@ export function launch(input: LaunchInput): StepState {
     const scale = rowScale(n, input.cardW, bandW);
     const w = input.cardW * scale;
     const h = input.cardH * scale;
-    const rowW = rowWidth(n, input.cardW) * scale;
-    // EXPERIENCE.md Win celebration: toward the side with more room, right on a tie.
+    // SPEC F27, EXPERIENCE.md Win celebration: toward the farther wall (the side with more room);
+    // an origin exactly at the band's centre goes right.
     const side: -1 | 1 = entry.x - walls.left > walls.right - entry.x ? -1 : 1;
     const slot = i % WAVE_SIZE;
     const launchMs = Math.floor(i / WAVE_SIZE) * waveGap + (slot * waveGap) / WAVE_SIZE;
@@ -268,16 +281,17 @@ export function launch(input: LaunchInput): StepState {
     const drop = Math.max(0, floor - h / 2 - entry.y);
     const rebound = Math.sqrt(vy * vy + 2 * gravity * drop);
     const contactMs = (-vy + rebound) / gravity;
-    // The leading card travels `lead` in x to be wholly past its wall; the last card, `trail` card
-    // units of arc behind it, reaches that point later. A row wider than the band (A-D12 floor) can start
-    // its leader at or past the wall: its drift then takes at least a card width per
-    // EXIT_AFTER_CONTACTS first-contact times.
-    const x = entry.x + (side * (rowW - w)) / 2;
+    // SPEC F26, F27: every card starts at the origin and travels `lead` in x to be wholly past the
+    // farther wall; the last card, `trail` card units of arc behind the leader, reaches that point
+    // later. The leader is out at path time contactMs + (contacts - 1 + EXIT_PHASE) x periodMs,
+    // so a hop (drift x periodMs) is lead over contacts - 1 + EXIT_PHASE + contactMs / periodMs.
+    const x = entry.x;
     const lead = side === 1 ? walls.right + w / 2 - x : x + w / 2 - walls.left;
     const trail = (n - 1) * CARD_STEP;
-    const natural =
-      (Math.max(lead, w) / (EXIT_AFTER_CONTACTS * contactMs)) * (1 + SPEED_STEP * slot);
     const periodMs = (2 * rebound) / gravity;
+    const hop = HOP_SHARE * bandW * (1 + SPEED_STEP * slot);
+    const contacts = Math.max(1, Math.round(lead / hop + 1 - EXIT_PHASE - contactMs / periodMs));
+    const natural = lead / (contactMs + (contacts - 1 + EXIT_PHASE) * periodMs);
     const flight: Flight = {
       vx: side * natural,
       gravity,
@@ -293,7 +307,7 @@ export function launch(input: LaunchInput): StepState {
       firstArc: table(flight, vy, contactMs),
       bounceArc: table(flight, -rebound, periodMs),
     };
-    const outArc = pathArc(unpaced, Math.max(lead, 0) / natural) + trail;
+    const outArc = pathArc(unpaced, lead / natural) + trail;
     const outMs = pathTime(unpaced, outArc);
     const pace = Math.max(1, outMs / (capMs - baseMs - launchMs));
     return {
@@ -307,6 +321,7 @@ export function launch(input: LaunchInput): StepState {
       vy: vy * pace,
       gravity: gravity * pace * pace,
       side,
+      contacts,
       launchMs,
       contactMs: contactMs / pace,
       reboundVy: rebound * pace,
@@ -322,16 +337,28 @@ export function launch(input: LaunchInput): StepState {
 }
 
 /**
- * SPEC F21, F23, F25: card `j`'s (letter order) time on the path, `behind` row steps (CARD_STEP
- * card units) of arc behind the leader, which has run `speed` card units per ms since launch. On
- * the row's line behind the launch point it is negative, that arc read at the drift speed (so
- * `x + vx t` places it on the line); the row stands still before launch.
+ * SPEC F21, F23, F25, F26: card `j`'s (letter order) arc along the path (card units), `behind`
+ * row steps (CARD_STEP) behind the leader, which has run `speed` card units per ms since launch;
+ * negative while the card waits for its turn.
  */
-function pathMs(group: Group, j: number, elapsedMs: number): number {
+function cardArc(group: Group, j: number, elapsedMs: number): number {
   const behind = group.side === 1 ? group.cards - 1 - j : j;
   const ran = group.speed * (Math.max(elapsedMs, group.launchMs) - group.launchMs);
-  const arc = ran - behind * CARD_STEP;
-  return arc <= 0 ? (arc * group.cardW) / Math.abs(group.vx) : pathTime(group, arc);
+  return ran - behind * CARD_STEP;
+}
+
+/** SPEC F26: card `j`'s time on the path; a card not yet shown waits at the launch point (0). */
+function pathMs(group: Group, j: number, elapsedMs: number): number {
+  const arc = cardArc(group, j, elapsedMs);
+  return arc <= 0 ? 0 : pathTime(group, arc);
+}
+
+/**
+ * SPEC F26: card `j` (letter order) is shown once its group has launched and the leader has run
+ * its `behind` row steps; it appears at the launch point.
+ */
+export function cardShown(state: StepState, group: Group, j: number): boolean {
+  return state.elapsedMs >= group.launchMs && cardArc(group, j, state.elapsedMs) >= 0;
 }
 
 /** AD-19: card `j`'s (letter order) centre x in `state`. */

@@ -5,6 +5,7 @@ import { createCelebration } from './celebration.svelte.ts';
 import source from './celebration.svelte.ts?raw';
 import {
   CARD_STEP,
+  cardShown,
   cardX,
   cardY,
   type Group,
@@ -158,8 +159,13 @@ const fakeEls = (n: number, cards = 3): FakeEl[] =>
 /** SPEC F21: what the controller writes to card `j` of `g`. */
 const cardTransform = (state: StepState, g: Group, j: number): string =>
   `translate(${cardX(state, g, j) - g.cardW / 2}px, ${cardY(state, g, j) - g.cardH / 2}px) scale(${g.scale})`;
+/** SPEC F26: each copy's transform on fresh elements: none until the card has been shown. */
 const transformsOf = (state: StepState, g: Group): string[] =>
-  Array.from({ length: g.cards }, (_, j) => cardTransform(state, g, j));
+  Array.from({ length: g.cards }, (_, j) =>
+    cardShown(state, g, j) ? cardTransform(state, g, j) : '',
+  );
+/** Cell 3 (left of centre) drifts right: its last letter (copy 2 of 3) leads, shown first. */
+const LEAD = 2;
 const written = (e: FakeEl | undefined): string[] =>
   e?.children.map((f) => f.style.transform) ?? [];
 const asEls = (e: FakeEl[]) => e as unknown as HTMLElement[];
@@ -169,7 +175,7 @@ const tick = (t: number) => {
   cb(t);
 };
 
-// The pure `step.ts` result for cell 3's origin (150, 432), applying `dts` in order.
+// The pure `step.ts` result for cell 3's origin (150, 432), applying `dts` in order: the leader.
 const pureTransform = (dts: readonly number[]): string => {
   let state = launch({
     groups: [{ x: 150, y: 432, letters: 3 }],
@@ -182,7 +188,7 @@ const pureTransform = (dts: readonly number[]): string => {
     baseMs: 180,
   });
   for (const dt of dts) state = step(state, dt);
-  return cardTransform(state, state.groups[0] as Group, 0);
+  return cardTransform(state, state.groups[0] as Group, LEAD);
 };
 
 describe('AD-19 celebration controller', () => {
@@ -232,7 +238,7 @@ describe('AD-19 celebration controller', () => {
     c.start(viewOf([3]), () => undefined);
     const els = fakeEls(1);
     c.register(asEls(els));
-    const at = () => els[0]?.children[0]?.style.transform;
+    const at = () => els[0]?.children[LEAD]?.style.transform;
     tick(1000);
     const t0 = at(); // dt 0: the group sits at its origin
     tick(1000);
@@ -256,9 +262,9 @@ describe('AD-19 celebration controller', () => {
     tick(16);
     const els = fakeEls(1);
     c.register(asEls(els));
-    expect(els[0]?.children[0]?.style.transform).toBe('');
+    expect(els[0]?.children[LEAD]?.style.transform).toBe('');
     tick(32);
-    expect(els[0]?.children[0]?.style.transform).toBe(pureTransform([0, 16, 16]));
+    expect(els[0]?.children[LEAD]?.style.transform).toBe(pureTransform([0, 16, 16]));
   });
 
   it('AD-19 a stubbed-rAF run ends at the cap with no frame pending, calling onEnd then done once', () => {
@@ -390,9 +396,9 @@ describe('AD-19 celebration controller', () => {
       // Remainder untouched: 10 + 10 ms makes one 16 ms step (two renders, one step).
       c.advance(10);
       expect(els[0]?.style.opacity).toBe('0'); // rendered once, zero steps
-      expect(els[0]?.children[0]?.style.transform).toBe('');
+      expect(els[0]?.children[LEAD]?.style.transform).toBe('');
       c.advance(10);
-      expect(els[0]?.children[0]?.style.transform).not.toBe('');
+      expect(els[0]?.children[LEAD]?.style.transform).not.toBe('');
       c.cancel();
     });
 
@@ -405,9 +411,9 @@ describe('AD-19 celebration controller', () => {
       expect(els[0]?.style.opacity).toBe('');
       c.advance(10); // zero steps, one render
       expect(els[0]?.style.opacity).toBe('0');
-      expect(els[0]?.children[0]?.style.transform).toBe('');
+      expect(els[0]?.children[LEAD]?.style.transform).toBe('');
       c.advance(10); // carried 10 + 10: one step
-      const one = els[0]?.children[0]?.style.transform;
+      const one = els[0]?.children[LEAD]?.style.transform;
       expect(one).not.toBe('');
       c.cancel();
       // A fresh run: the carried 4 ms is gone, so 12 ms is still zero steps.
@@ -416,9 +422,9 @@ describe('AD-19 celebration controller', () => {
       c.register(asEls(fresh));
       c.advance(12);
       expect(fresh[0]?.style.opacity).toBe('0');
-      expect(fresh[0]?.children[0]?.style.transform).toBe('');
+      expect(fresh[0]?.children[LEAD]?.style.transform).toBe('');
       c.advance(4);
-      expect(fresh[0]?.children[0]?.style.transform).not.toBe('');
+      expect(fresh[0]?.children[LEAD]?.style.transform).not.toBe('');
       c.cancel();
     });
 
@@ -429,10 +435,10 @@ describe('AD-19 celebration controller', () => {
       c.register(asEls(els));
       c.start(viewOf([3]), () => undefined);
       c.advance(20); // one step, 4 ms carried
-      expect(els[0]?.children[0]?.style.transform).toBe(pureTransform([16]));
+      expect(els[0]?.children[LEAD]?.style.transform).toBe(pureTransform([16]));
       c.advance(12); // 4 + 12: a second step
-      expect(els[0]?.children[0]?.style.transform).toBe(pureTransform([16, 16]));
-      expect(els[0]?.children[0]?.style.transform).not.toBe(pureTransform([16]));
+      expect(els[0]?.children[LEAD]?.style.transform).toBe(pureTransform([16, 16]));
+      expect(els[0]?.children[LEAD]?.style.transform).not.toBe(pureTransform([16]));
       c.cancel();
     });
 
@@ -469,7 +475,7 @@ describe('AD-19 celebration controller', () => {
       c.start(viewOf([3]), () => undefined);
       c.end();
       c.advance(500);
-      expect(els[0]?.children[0]?.style.transform).toBe('');
+      expect(els[0]?.children[LEAD]?.style.transform).toBe('');
     });
   });
 
@@ -479,7 +485,7 @@ describe('AD-19 celebration controller', () => {
     const els = fakeEls(1);
     c.register(asEls(els));
     c.start(viewOf([3]), () => undefined);
-    c.advance(32);
+    c.advance(400);
     // Cell 3's label rect is (140, 480, 20 x 16) and the band top 56: origin (150, 432).
     let state = launch({
       groups: [{ x: 150, y: 432, letters: 3 }],
@@ -491,10 +497,12 @@ describe('AD-19 celebration controller', () => {
       capMs: 6000,
       baseMs: 180,
     });
-    state = step(step(state, 16), 16);
+    for (let i = 0; i < 25; i++) state = step(state, 16);
     const g = state.groups[0] as Group;
     expect(g.opacity).toBe(1);
-    // SPEC F21: one transform per copy, none on the group element.
+    // SPEC F21: one transform per copy (all three shown by 400 ms, SPEC F26), none on the group
+    // element.
+    expect([0, 1, 2].map((j) => cardShown(state, g, j))).toEqual([true, true, true]);
     expect(written(els[0])).toEqual(transformsOf(state, g));
     expect(new Set(written(els[0])).size).toBe(3);
     expect(els[0]?.style.transform).toBe('');
@@ -502,26 +510,66 @@ describe('AD-19 celebration controller', () => {
     c.cancel();
   });
 
-  it('AD-19 SPEC F20, F21, F23: the first frame writes each copy at its row place, CARD_STEP card widths apart; later each copy trails the one ahead on the path', () => {
+  it('AD-19 SPEC F21, F23, F26: the first frame shows only the leading copy, at the launch point; each copy appears there in its turn (visibility written only on a change), then trails the one ahead on the path', () => {
     const c = createCelebration();
     const els = fakeEls(1, 4);
+    // Each copy's visibility writes, in order.
+    const shows: string[][] = [[], [], [], []];
+    for (const [j, f] of (els[0] as FakeEl).children.entries()) {
+      let v = '';
+      Object.defineProperty(f.style, 'visibility', {
+        get: () => v,
+        set: (next: string) => {
+          v = next;
+          (shows[j] as string[]).push(next);
+        },
+      });
+    }
     c.register(asEls(els));
     c.start(viewOf([3], 4), () => undefined);
-    tick(1000); // dt 0: the row as launched
+    tick(1000); // dt 0: the launch
     const xs = (e: FakeEl | undefined) =>
       written(e).map((t) => Number(/^translate\(([-\d.e]+)px/.exec(t)?.[1]));
-    const row = xs(els[0]);
-    // Cell 3's origin x 150, the row 40 + 3 x 26 = 118 px wide, centred on it.
-    expect(row).toEqual([91, 117, 143, 169]);
-    expect(CARD_STEP * 40).toBe(26);
-    const ys = written(els[0]).map((t) => /, ([-\d.e]+)px\)/.exec(t)?.[1]);
-    expect(new Set(ys).size).toBe(1);
-    // Cell 3 is left of centre: the group drifts right, the rightmost copy leads, still rising.
-    for (let t = 1016; t <= 1320; t += 16) tick(t);
+    const lifts = (e: FakeEl | undefined) =>
+      written(e).map((t) => Number(/, ([-\d.e]+)px\)/.exec(t)?.[1]));
+    // Cell 3's origin (150, 432) is left of centre: the group drifts right, its last letter (copy 3)
+    // leads. No launch row: only the leader is shown, its box centred on the origin.
+    expect(written(els[0])).toEqual(['', '', '', 'translate(130px, 405.5px) scale(1)']);
+    expect(shows).toEqual([['hidden'], ['hidden'], ['hidden'], ['']]);
+    // The pure state alongside (16 ms frames): each trailing copy appears, in travel order, within
+    // one frame's travel (`speed` x 16 ms of arc) of the launch point, never on a row line.
+    let pure = pureState([labelOrigin(3, 4)], 0);
+    const appeared: number[] = [];
+    let [t, n] = [1000, 0];
+    while (appeared.length < 3) {
+      [t, n] = [t + 16, n + 1];
+      tick(t);
+      pure = step(pure, 16);
+      const g = pure.groups[0] as Group;
+      for (const j of [2, 1, 0]) {
+        if (appeared.includes(j) || shows[j]?.at(-1) !== '') continue;
+        appeared.push(j);
+        const [x, y] = [xs(els[0])[j] as number, lifts(els[0])[j] as number];
+        expect([j, Math.hypot((x - 130) / 40, (y - 405.5) / 53)]).toEqual([
+          j,
+          expect.toSatisfy((v: number) => v <= g.speed * 16),
+        ]);
+      }
+      // A copy not yet shown has no transform.
+      for (const j of [0, 1, 2]) if (!appeared.includes(j)) expect(written(els[0])[j]).toBe('');
+    }
+    expect(appeared).toEqual([2, 1, 0]);
+    expect(shows).toEqual([['hidden', ''], ['hidden', ''], ['hidden', ''], ['']]);
+    expect(n).toBeLessThan(30);
+    for (; n < 30; n++) {
+      t += 16;
+      tick(t);
+      pure = step(pure, 16);
+    }
     // SPEC F23: each copy at its own point of the pure path, in letter order, no chord between
     // neighbours longer than the row step of arc, CARD_STEP card units (x over 40 px, y over 53 px;
     // step.test.ts measures the arc).
-    const state = pureState([labelOrigin(3, 4)], 20);
+    const state = pure;
     expect(written(els[0])).toEqual(transformsOf(state, state.groups[0] as Group));
     const later = xs(els[0]);
     const lifted = written(els[0]).map((t) => Number(/, ([-\d.e]+)px\)/.exec(t)?.[1]));
@@ -534,6 +582,8 @@ describe('AD-19 celebration controller', () => {
       expect(Math.hypot(dx / 40, dy / 53)).toBeLessThanOrEqual(CARD_STEP + 1e-9);
     }
     expect(lifted[3]).toBeLessThan(lifted[0] as number);
+    // Shown once each: no visibility write after the turn.
+    expect(shows.map((w) => w.length)).toEqual([2, 2, 2, 1]);
     c.cancel();
   });
 
@@ -554,7 +604,10 @@ describe('AD-19 celebration controller', () => {
     }
     const zs = () =>
       (els[0] as FakeEl).children.map((f) => (f.style as { zIndex?: string }).zIndex);
-    const lifted = () => written(els[0]).map((t) => Number(/, ([-\d.e]+)px\)/.exec(t)?.[1]));
+    // Each card's centre y in the pure state alongside (16 ms frames); a card not yet shown waits at
+    // the launch point (SPEC F26).
+    let pure = pureState([labelOrigin(3, 4)], 0);
+    const lifted = () => [0, 1, 2, 3].map((j) => cardY(pure, pure.groups[0] as Group, j));
     // The place of each card when sorted by (y, letter order), bottom first.
     const ranks = (ys: number[]) => {
       const order = [...ys.keys()].sort((a, b) => (ys[a] as number) - (ys[b] as number) || a - b);
@@ -562,7 +615,8 @@ describe('AD-19 celebration controller', () => {
     };
     c.register(asEls(els));
     c.start(viewOf([3], 4), () => undefined);
-    // The first frame (dt 0): the flat row keeps the row order, every copy written once.
+    // The first frame (dt 0): every card at the launch point keeps the row order, every copy
+    // written once.
     tick(1000);
     expect(zs()).toEqual(['0', '1', '2', '3']);
     expect(writes).toEqual([1, 1, 1, 1]);
@@ -571,6 +625,7 @@ describe('AD-19 celebration controller', () => {
     for (let t = 1016; frames.size > 0; t += 16) {
       const before = [...writes];
       tick(t);
+      pure = step(pure, 16);
       if ((els[0] as FakeEl).style.opacity === '0') break;
       expect(zs()).toEqual(ranks(lifted()));
       // Only the copies whose place changed were written.
@@ -590,7 +645,7 @@ describe('AD-19 celebration controller', () => {
     c.cancel();
   });
 
-  it("AD-19 SPEC F23 stacking: a re-registration writes every copy's z-index again on the next render", () => {
+  it("AD-19 SPEC F23 stacking, F26: a re-registration writes every copy's z-index and visibility again on the next render", () => {
     const c = createCelebration();
     c.setManual(true);
     const els = fakeEls(1, 3);
@@ -600,10 +655,14 @@ describe('AD-19 celebration controller', () => {
     const zs = (e: FakeEl[]) => e[0]?.children.map((f) => (f.style as { zIndex?: string }).zIndex);
     // Cell 3 drifts right: the leading copy 2 rose first, so it is at the bottom.
     expect(zs(els)).toEqual(['1', '2', '0']);
+    const vis = (e: FakeEl[]) =>
+      e[0]?.children.map((f) => (f.style as { visibility?: string }).visibility);
+    expect(vis(els)).toEqual(['hidden', 'hidden', '']);
     const fresh = fakeEls(1, 3);
     c.register(asEls(fresh));
     c.advance(1);
     expect(zs(fresh)).toEqual(['1', '2', '0']);
+    expect(vis(fresh)).toEqual(['hidden', 'hidden', '']);
     c.cancel();
   });
 
@@ -649,17 +708,20 @@ describe('AD-19 celebration controller', () => {
     const els = fakeEls(1, 23);
     c.register(asEls(els));
     c.start(viewOf([3], 23), () => undefined);
-    c.advance(32);
+    c.advance(320);
     const scale = rowScale(23, 40, 360);
     expect(scale).toBeLessThan(1);
-    const state = pureState([labelOrigin(3, 23)], 2);
+    const state = pureState([labelOrigin(3, 23)], 20);
     const g = state.groups[0] as Group;
     expect(g.scale).toBe(scale);
     expect(g.cardW).toBeCloseTo(40 * scale, 9);
     expect(g.cardH).toBeCloseTo(53 * scale, 9);
-    const transforms = written(els[0]);
+    // SPEC F26: the copies shown so far (the leading end first), each scaled.
+    const transforms = written(els[0]).filter((t) => t !== '');
+    expect(transforms.length).toBeGreaterThan(1);
     expect(transforms.every((t) => t.endsWith(`scale(${scale})`))).toBe(true);
-    expect(transforms).toEqual(transformsOf(state, g));
+    expect(written(els[0]).slice(-transforms.length)).toEqual(transforms);
+    expect(written(els[0])).toEqual(transformsOf(state, g));
     c.cancel();
   });
 
