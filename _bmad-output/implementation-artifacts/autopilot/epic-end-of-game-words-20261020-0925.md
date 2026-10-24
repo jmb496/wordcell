@@ -117,3 +117,18 @@ Ticket 10.6, Step C: the code review converged (4 passes) and its log `_bmad-out
 1. Double-tap after a press skip: the end sheet opens under the finger and only the skipping press is consumed, so a second quick tap can hit Replay this deal or New game. Proposed default: after a press skip, ignore new presses for 300 ms (the existing SWALLOW_MS) from the skipping press's release. Not built; a yes needs a small code change before Step D.
 2. Confirm two spec-over-spine changes the review made: the bar test uses the press point (a touch just beside a bar button skips instead of pressing it), and chorded or held Space never presses a focused button during the run (SPEC F17). Proposed default: keep both; entry 9 rewrites AD-19 Skip.
 Resume: record the answers (ticket Notes, epic Notes, SPEC memlog) and, if item 1 is yes, apply the 300 ms guard with its test and commit; then rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-end-of-game-words`. The next session continues at Step D (test:all, screenshots), and the ticket then stays `built` for your Android read (done checkpoint).
+
+## 10.6 Celebration skip — built, waiting for you
+What it adds: Lets the player skip the win celebration by tapping the board, pressing Space or Esc on desktop, or using the Android back gesture; each opens the end sheet straight away. After a tap skips, any other tap in the next 0.3 s is ignored, so a double-tap can't hit Replay this deal or New game on the sheet that just opened.
+Ticket review: 5 passes, converged (entry above)
+Build: built; commit 5f67795; your answers applied in 2af38ac (F18 double-tap guard with its tests; F19 kept the press-point bar test and Space chord blocking)
+Code review: thorough, 4 passes, converged (entry above); 6 majors and 15 minors fixed
+Tests: test:all passing (1083 + 17 e2e, exit 0) on 2af38ac, screenshots passed (67 passed, 39 project skips as usual)
+Ref to fix upstream: none
+Tokens: 0.1M input-equivalent (orchestrator 57%, other 43%); orchestrator peak context 55k
+Startup note: handoff, git log and digest agreed (10.6 at Step D after the owner's answers in 2af38ac).
+Worth knowing: Stopped by rule 4: the ticket's done checkpoint is your Android read of a real win with the long-word fixture (ticket AC "Device read" lists the setup and checklist). The ticket stays `built`; 10.7 is next once you mark 10.6 done. Pressing ☰ or M during a celebration still halts the app until 10.7, so don't merge the branch before 10.7. The two minors noted earlier (the Verify line's Space/Esc project, a first tap on Reload after a halt during a celebration) and the deferred 400 ms long-press flake risk stay recorded in the plan and the review log.
+Close-out docs:
+- ARCHITECTURE-SPINE.md AD-19 Skip ← F17 keys skip whatever holds focus (owner standing rule, 2026-10-23); F18 300 ms press guard after a press skip (2026-10-24); F19 press-point bar test, chorded or repeat Space never activates a control (2026-10-24); the post-run tails and pass-through while halted (plan Design Notes); synced by 10.9
+- docs/game-flow-spec.md R-87 ← the whole dictionary banner is exempt from skipping, as well as the two bars (plan Design Notes; owner to confirm at 10.9)
+- From 10.5 (F16, 2026-10-23): ARCHITECTURE-SPINE.md AD-19 Start; EXPERIENCE.md "Never plays"

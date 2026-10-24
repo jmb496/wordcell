@@ -1,24 +1,19 @@
-# Epic end-of-game-words: handoff (ticket 10.6, stopped for your input)
+# Epic end-of-game-words: handoff (ticket 10.6, built, waiting for your phone check)
 
-**What happened.** Ticket 10.6 (skipping the win celebration) is built. The build picked up where the usage limit stopped it. The code review then ran 4 passes and fixed 6 important and 15 small issues. The final full test run has not happened yet. The review raised two questions that are yours to answer.
+**What happened.** Your two answers are in (commit 2af38ac): a quick second tap within 0.3 s of skipping is now ignored, and the "judge by where the finger lands" bar test and the Space-chord blocking stay. The full test run passed and the screenshot check passed. Nothing else changed.
 
-**Question 1: a quick second tap after skipping.** When you tap to skip the celebration, the end sheet opens right under your finger. Only that first tap is ignored. If you double-tap out of impatience, the second tap can land on "Replay this deal" or "New game" and trigger it.
-- *Proposed:* for 0.3 s after the skipping tap, ignore any new tap (the same guard the winning move already uses).
-- *Effect:* an accidental double-tap can't throw away the finished game. A deliberate tap on the end sheet within 0.3 s of skipping does nothing.
-- This is not built yet. A "yes" means a small code change before the final tests.
+**What you need to do.** Ticket 10.6 has a done checkpoint: it is marked done only after you play a real win on your Android phone. It is `built` now.
+- Setup (from the ticket's "Device read" line): `npm run build`, `npm run preview`, then chrome://inspect port forwarding `4173` → `localhost:4173`. On the phone, clear the site data. Open `localhost:4173/manifest.webmanifest`, and from that tab's console write `fixtures/session-won-words.json` to `localStorage['wordcell:session']`. Then open `/`, tap Undo, then Confirm.
+- Check: the copy cost and frame rate, how the bounce timing and size feel, whether the long words stay readable at the fixture's sizes, no trail and no colour change, the tap skip, back to skip and then a second back to collapse the sheet.
+- What the fixture can't show (the 40 % floor, a 23-letter row, hundreds of copies) is carried to ticket 10.9's final check.
 
-**Question 2: two changes where the review followed the spec over the architecture doc.**
-1. Whether a tap counts as "on a bar" is now judged by where the finger lands, not by which button the browser snaps the touch to. A touch just beside Undo, Menu, Redo or New game now skips the celebration instead of pressing that button.
-2. Shift/Ctrl/Alt+Space, or a held-down Space, never presses a focused button while the celebration plays.
-- *Proposed:* keep both. Ticket 10.9 updates the architecture doc (AD-19 Skip) to match.
-
-**To resume.** Record your answers in the ticket Notes, epic Notes and SPEC memlog. If question 1 is "yes", add the 0.3 s guard and its test, then commit. Then rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-end-of-game-words`. The next session runs the full tests and screenshots (Step D). The ticket then stays `built` for your Android read of a real win (done checkpoint), not `done`.
-
-**Close-out docs (pending your answers; 10.9 syncs them):**
-- ARCHITECTURE-SPINE.md AD-19 Skip ← how presses are judged on bars, Space chords and repeats, the post-run tails, passing everything while halted
-- docs/game-flow-spec.md R-87 ← the dictionary banner is exempt from skipping, as well as the two bars
-- From 10.5 (already decided, F16, 2026-10-23): AD-19 Start; EXPERIENCE.md "Never plays"
+**To resume.** If the read is fine: `uv run _bmad/method/scripts/tickets.py mark 10.6 done`, commit, and rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-end-of-game-words`. The next ticket is 10.7 (celebration interruptions). If you want the timing or size changed, record it in the ticket Notes first.
 
 **Still true:** pressing ☰ or M during a celebration halts the app until ticket 10.7, so don't merge the branch before 10.7.
+
+**Close-out docs (for the retrospective; 10.9 syncs them):**
+- ARCHITECTURE-SPINE.md AD-19 Skip ← F17 keys skip whatever holds focus (2026-10-23); F18 0.3 s tap guard after a skip (2026-10-24); F19 bar test by press point, Space chords and repeats never press a button (2026-10-24); the post-run tails and passing everything through while halted
+- docs/game-flow-spec.md R-87 ← the whole dictionary banner is exempt from skipping, as well as the two bars
+- From 10.5 (F16, 2026-10-23): AD-19 Start; EXPERIENCE.md "Never plays"
 
 Digest: `_bmad-output/implementation-artifacts/autopilot/epic-end-of-game-words-20261020-0925.md`
