@@ -92,3 +92,17 @@ Worth knowing: Until ticket 10.7, pressing ☰ or M during a running celebration
 Close-out docs:
 - ARCHITECTURE-SPINE.md AD-19 Rule, Start bullet ← F16: a win whose board settles while the page is hidden opens the end sheet on return with no celebration; reduced motion or the seam off pushes no `celebration` history entry (owner, 2026-10-23); 10.9 syncs it
 - EXPERIENCE.md § celebration "Never plays" ← F16: add the background (hidden-page) win (owner, 2026-10-23); 10.9 syncs it (SPEC.md already records F16)
+
+## 10.6 Celebration skip — stopped
+What it adds: Lets the player skip the win celebration: a tap on the board (outside the top bar, action bar and dictionary banner) that starts after the celebration began, Space or Esc on desktop, or the Android back gesture. Each one opens the end sheet straight away. The tap that skips does nothing else. A finger already down when the win happened, or a tap on a banner button, does not skip. The ticket also lets your Android read adjust the bounce timing and size.
+Ticket review: 5 passes, converged (majors 10, 8, 7, 2, 0); one item needs your input (below); 15 minors handed to the build in the log's Result
+Build: not started
+Code review: not started
+Tests: not run
+Ref to fix upstream: none
+Tokens: 11.1M input-equivalent (ticket review 97%, orchestrator 1%, other 1%); orchestrator peak context 64k
+Worth knowing: The ticket has `done_checkpoint = true` (your Android read of a real win with the long-word fixture settles the copy cost, the initial constants and A-D12), so once built and verified it stays `built` for your check rather than being marked done. Also `plan_checkpoint = true`, so the plan's Design Notes owner items will be worth a read. Two minors to fix first: the Verify line puts the Space/Esc row on `android` when it runs on `desktop`, and if the app halts during a celebration, the first tap on the error screen's Reload would be taken as a skip.
+Close-out docs: pending your answer (AD-19 Skip, synced by 10.9)
+
+## Stopped — decision needed
+Ticket 10.6, Step A: the ticket review converged and the ticket and its log (with `## Result`) are committed (69c9ca6). Question (log Pass 1): on desktop, after the winning word is confirmed by a click or Enter, focus stays on the action bar's primary button, which then reads New game. AD-19 Skip says Space/Esc skip "unless a bar or banner control holds focus", so in that usual flow Space would start a new game and Esc would do nothing. R-87, EXPERIENCE.md Keyboard and SPEC F9 give no focus exception. Proposed default: Space and Esc skip whatever holds focus while the celebration plays; AD-19's focus exception is dropped at 10.9's doc sync. Resume: record the answer (ticket Notes, epic Notes, SPEC memlog), commit, rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-end-of-game-words`; the next session continues at Step B (build).
