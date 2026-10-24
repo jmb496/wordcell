@@ -75,13 +75,16 @@ async function emptyPoint(page: Page): Promise<Point> {
 
 type Recorded = { __inputs?: string[] };
 
-// A page-side window bubble-phase `pointerup`/`click` recorder, from now on (no `__wordcell`).
+// A page-side window bubble-phase `pointerdown`/`pointerup`/`click` recorder, from now on (no
+// `__wordcell`).
 async function recordInputs(page: Page): Promise<() => Promise<string[]>> {
   await page.evaluate(() => {
     const w = window as unknown as Recorded;
     const seen: string[] = [];
     w.__inputs = seen;
-    for (const type of ['pointerup', 'click']) window.addEventListener(type, () => seen.push(type));
+    for (const type of ['pointerdown', 'pointerup', 'click']) {
+      window.addEventListener(type, () => seen.push(type));
+    }
   });
   return () => page.evaluate(() => [...((window as unknown as Recorded).__inputs ?? [])]);
 }
@@ -286,10 +289,12 @@ test.describe('android', () => {
       const captured = await recordCaptured(page);
       const hold = await touchHold(page, point);
       try {
-        await expect(sheet(page)).toBeVisible();
+        // At frame rate, not toBeVisible's retry backoff, so the hold stays within the tap window.
+        await expect.poll(() => sheet(page).isVisible(), { intervals: [16] }).toBe(true);
       } finally {
         await hold.end();
       }
+      await expect(sheet(page)).toBeVisible();
       // The browser made the press a tap (its click dispatched) and released it within the
       // long-press time, by the page's event clock: fail rather than prove nothing.
       await expect
@@ -305,7 +310,7 @@ test.describe('android', () => {
       const empty = await emptyPoint(page);
       await page.waitForTimeout(300);
       await page.touchscreen.tap(empty.x, empty.y);
-      await expect.poll(inputs).toEqual(['pointerup', 'click']);
+      await expect.poll(inputs).toEqual(['pointerdown', 'pointerup', 'click']);
     });
   }
 
@@ -423,6 +428,54 @@ test.describe('android', () => {
     await expect(sheet(page)).toHaveCount(0);
   });
 
+  // A point 2 px below the top bar under Undo, and 1 px above the action bar over the primary
+  // button: outside the bar's rect (elementFromPoint is in the band), where Chromium's touch
+  // adjustment retargets the touch onto that bar control (its click would un-win or deal).
+  for (const [name, beside] of [
+    [
+      'the top bar',
+      async (page: Page): Promise<Point> => {
+        const b = await box(page.locator('[data-band="topBar"]'));
+        const undo = await box(page.getByTestId('undo'));
+        return { x: undo.x + undo.w / 2, y: b.y + b.h + 2 };
+      },
+    ],
+    [
+      'the action bar',
+      async (page: Page): Promise<Point> => {
+        const b = await box(page.locator('[data-band="actionBar"]'));
+        const p = await box(primary(page));
+        return { x: p.x + p.w / 2, y: b.y - 1 };
+      },
+    ],
+  ] as const) {
+    test(`R-87 a touch just beside ${name}, outside its rect, skips the run, consumed: no pointerdown, pointerup or click reaches the page, nothing activated, Session unchanged`, async ({
+      page,
+    }) => {
+      await readyToWin(page);
+      await winIntoRun(page);
+      await stashSession(page);
+      const point = await beside(page);
+      const outside = await page.evaluate(
+        ({ x, y }) =>
+          document.elementFromPoint(x, y)?.closest('[data-band]')?.getAttribute('data-band'),
+        point,
+      );
+      expect(['topBar', 'actionBar']).not.toContain(outside);
+      const pressed = await recordPressTargets(page);
+      const inputs = await recordInputs(page);
+      await page.touchscreen.tap(point.x, point.y);
+      await expect(sheet(page)).toBeVisible();
+      await animationFrames(page, 3);
+      // The touch was retargeted onto the bar control: fail rather than prove nothing.
+      expect(await pressed()).toEqual([
+        `touch ${name === 'the top bar' ? 'topBar' : 'actionBar'} control`,
+      ]);
+      expect(await inputs()).toEqual([]);
+      await expectSkipped(page);
+    });
+  }
+
   test('R-87 the dictionary banner’s Reload pressed mid-run refetches and does not skip the run', async ({
     page,
   }) => {
@@ -472,17 +525,33 @@ test.describe('desktop', () => {
     await page.keyboard.press('Enter');
     await expect.poll(() => running(page)).toBe(true);
     await stashSession(page);
+    // Focus is on the body once the strip card is gone: a bar control holds it for the skip keys,
+    // which read no focus (SPEC F17).
+    await primary(page).focus();
+    await expect(primary(page)).toBeFocused();
   }
 
   test('R-87 Space skips the run: its repeat once Replay this deal has focus and its release activate nothing', async ({
     page,
   }) => {
     await enterIntoRun(page);
+    // A page-side window bubble-phase Space `keydown`/`keyup` recorder (no `__wordcell`).
+    await page.evaluate(() => {
+      const w = window as unknown as Recorded;
+      const seen: string[] = [];
+      w.__inputs = seen;
+      for (const type of ['keydown', 'keyup']) {
+        window.addEventListener(type, (event) => {
+          if ((event as KeyboardEvent).key === ' ') seen.push(type);
+        });
+      }
+    });
     await page.keyboard.down('Space');
     await expect(replay(page)).toBeFocused();
     await page.keyboard.down('Space');
     await page.keyboard.up('Space');
     await animationFrames(page, 3);
+    expect(await page.evaluate(() => (window as unknown as Recorded).__inputs)).toEqual([]);
     await expectSkipped(page);
   });
 

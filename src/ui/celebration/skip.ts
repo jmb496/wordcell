@@ -1,13 +1,17 @@
 // AD-19 Skip (R-87; epic 10 entry 6): the win celebration's skips. While a run is live,
 // run-scoped capture-phase `pointerdown` and `keydown` listeners on `document` (attached at the
 // run's `start()`, removed at its internal stop) end it: a primary-button press of any pointer type
-// whose target is outside the top bar, the action bar and the dictionary banner, and a non-repeat
+// whose press point (`elementFromPoint(clientX, clientY)`, never `event.target`, which Chromium's
+// touch adjustment moves onto a bar control for a touch just beside a bar; as the controller, epic
+// 4 SPEC F13) is outside the top bar, the action bar and the dictionary banner, and a non-repeat
 // `Space` (no Shift) or `Esc` (Shift allowed) with no Ctrl/Meta/Alt, whatever holds focus (SPEC
 // F17). A skip is `stopPropagation()` + `preventDefault()`, then `cancelGesture()` (a press held
 // from before the start, the controller's hover-peek upkeep) and `end()`, so the bubble-phase
 // pointer controller never opens a press for it and keys.ts sees a prevented key. Only the skipping
 // input is consumed: a pointer held from before the start never is (its `pointerup` is not the
-// run's), and a finish or the cap consumes nothing.
+// run's), and a finish or the cap consumes nothing. A non-repeat chorded `Space` (Shift, Ctrl, Meta
+// or Alt) does not skip, but is `preventDefault()`ed only, so it never activates a focused button
+// (SPEC F17; preventing the keydown is enough in Chromium, its keyup then clicks nothing).
 // Each skip leaves a one-shot post-run tail (AD-19 Skip refinement, see the ticket plan):
 // - press tail, for the skipping `pointerId`: before release it consumes that pointer's
 //   `pointerup` and arms its own `createClickSwallower` there (300 ms from the release); a same-id
@@ -25,7 +29,7 @@ type ListenTarget = Pick<EventTarget, 'addEventListener' | 'removeEventListener'
 
 /** The environment a run attaches to (the real `document`, `window` and timers in the app). */
 export type SkipEnv = {
-  readonly doc: ListenTarget;
+  readonly doc: ListenTarget & Pick<Document, 'elementFromPoint'>;
   readonly win: ListenTarget;
   setTimer(callback: () => void, ms: number): unknown;
   clearTimer(handle: unknown): void;
@@ -55,8 +59,8 @@ function consume(event: Event): void {
   event.preventDefault();
 }
 
-function inBars(event: Event): boolean {
-  return ((event.target as Element | null)?.closest(BARS) ?? null) !== null;
+function inBars(doc: SkipEnv['doc'], event: PointerEvent): boolean {
+  return (doc.elementFromPoint(event.clientX, event.clientY)?.closest(BARS) ?? null) !== null;
 }
 
 type Tail = { clear(): void };
@@ -167,7 +171,7 @@ export function createSkip(deps: SkipDeps): Skip {
     if (run !== null) throw new Error('AD-19 skip: attach() while attached');
     const onDown = (event: Event): void => {
       const e = event as PointerEvent;
-      if (deps.halted() || e.button !== 0 || inBars(event)) return;
+      if (deps.halted() || e.button !== 0 || inBars(env.doc, e)) return;
       consume(event);
       armPressTail(env, e.pointerId);
       deps.cancelGesture();
@@ -175,8 +179,14 @@ export function createSkip(deps: SkipDeps): Skip {
     };
     const onKey = (event: Event): void => {
       const e = event as KeyboardEvent;
-      if (deps.halted() || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
-      const space = e.key === ' ' && !e.shiftKey;
+      if (deps.halted() || e.repeat) return;
+      const chord = e.ctrlKey || e.metaKey || e.altKey;
+      if (e.key === ' ' && (chord || e.shiftKey)) {
+        event.preventDefault();
+        return;
+      }
+      if (chord) return;
+      const space = e.key === ' ';
       if (!space && e.key !== 'Escape') return;
       consume(event);
       if (space) armSpaceTail(env);

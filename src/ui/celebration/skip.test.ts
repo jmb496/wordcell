@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { SWALLOW_MS } from '../gestures/click-swallow';
-import { createSkip } from './skip';
+import { createSkip, type SkipEnv } from './skip';
 
 // AD-19 Skip (epic 10 entry 6) in node: a recording fake `document` and `window` whose `fire`
 // sends a plain event to a snapshot of one type's listeners (as a DOM dispatch: every same-node
 // listener runs even after `stopPropagation`, and one added during the dispatch is not called for
-// it), and fake timers. The fake `end` detaches the run listeners, as the controller's internal
-// stop does. An event is "untouched" when it is neither stopped nor default-prevented.
+// it), and fake timers. The fake `document`'s `elementFromPoint` answers the element under a
+// press point (`barAt` puts a point in a bar or the banner; any other point is on the board). The
+// fake `end` detaches the run listeners, as the controller's internal stop does. An event is "untouched" when it is neither stopped nor default-prevented.
 
 type Listener = (event: unknown) => void;
 type Entry = { at: string; type: string; fn: Listener; capture: boolean };
@@ -30,6 +31,8 @@ function setup() {
   let nextHandle = 1;
   const order: string[] = [];
   const state = { halted: false };
+  /** The bar or banner under each `x,y` press point set by `barAt`. */
+  const bars = new Map<string, string>();
   const skip = createSkip({
     end: () => {
       order.push('end');
@@ -38,8 +41,16 @@ function setup() {
     cancelGesture: () => order.push('cancelGesture'),
     halted: () => state.halted,
   });
+  /** An element under `band` (a bar or the banner), or on the board when `band` is undefined. */
+  const target = (band?: string) => ({
+    closest: (selector: string) =>
+      band !== undefined && selector.split(',').includes(`[data-band="${band}"]`) ? {} : null,
+  });
   const env = {
-    doc: recorder('document') as unknown as EventTarget,
+    doc: {
+      ...recorder('document'),
+      elementFromPoint: (x: number, y: number) => target(bars.get(`${x},${y}`)),
+    } as unknown as SkipEnv['doc'],
     win: recorder('window') as unknown as EventTarget,
     setTimer: (fn: () => void, ms: number) => {
       const handle = nextHandle++;
@@ -71,16 +82,16 @@ function setup() {
     }
     return { stopped: event.stopped, prevented: event.prevented };
   };
-  /** An element under `band` (a bar or the banner), or on the board when `band` is undefined. */
-  const target = (band?: string) => ({
-    closest: (selector: string) =>
-      band !== undefined && selector.split(',').includes(`[data-band="${band}"]`) ? {} : null,
-  });
+  const barAt = (point: { clientX: number; clientY: number }, band: string) => {
+    bars.set(`${point.clientX},${point.clientY}`, band);
+  };
   const down = (init: Record<string, unknown> = {}) =>
     fire('pointerdown', {
       button: 0,
       pointerId: 1,
       pointerType: 'touch',
+      clientX: 100,
+      clientY: 300,
       target: target(),
       ...init,
     });
@@ -106,7 +117,7 @@ function setup() {
       }
     }
   };
-  return { skip, env, fire, down, up, key, live, order, state, timers, elapse, target };
+  return { skip, env, fire, down, up, key, live, order, state, timers, elapse, target, barAt };
 }
 
 const RUN = ['document keydown', 'document pointerdown'];
@@ -114,6 +125,8 @@ const PRESS_TAIL = ['document pointercancel', 'document pointerdown', 'document 
 const SPACE_TAIL = ['document keydown', 'document keyup', 'window blur'];
 const UNTOUCHED = { stopped: false, prevented: false };
 const CONSUMED = { stopped: true, prevented: true };
+/** A press point in a bar (`barAt`), away from `down`'s default board point. */
+const BAR_POINT = { clientX: 100, clientY: 20 };
 
 describe('AD-19 Skip run listeners', () => {
   it('AD-19 attach() adds only the document capture pointerdown and keydown; detach() removes them; misuse throws', () => {
@@ -159,9 +172,18 @@ describe('AD-19 Skip run listeners', () => {
     it(`AD-19 a press on a ${band} target passes through untouched and does not end the run`, () => {
       const t = setup();
       t.skip.attach(t.env);
-      expect(t.down({ target: t.target(band) })).toEqual(UNTOUCHED);
+      t.barAt(BAR_POINT, band);
+      // The press point decides, not `event.target` (here on the board).
+      expect(t.down({ ...BAR_POINT, target: t.target() })).toEqual(UNTOUCHED);
       expect(t.order).toEqual([]);
       expect(t.live()).toEqual(RUN);
+    });
+
+    it(`AD-19 a press whose point is beside the ${band} but whose target is retargeted onto it (touch adjustment) skips: consumed, cancelGesture() then end()`, () => {
+      const t = setup();
+      t.skip.attach(t.env);
+      expect(t.down({ target: t.target(band) })).toEqual(CONSUMED);
+      expect(t.order).toEqual(['cancelGesture', 'end']);
     });
   }
 
@@ -229,10 +251,6 @@ describe('AD-19 Skip run listeners', () => {
   for (const [name, k, init] of [
     ['a repeat Space', ' ', { repeat: true }],
     ['a repeat Esc', 'Escape', { repeat: true }],
-    ['Shift+Space', ' ', { shiftKey: true }],
-    ['Ctrl+Space', ' ', { ctrlKey: true }],
-    ['Meta+Space', ' ', { metaKey: true }],
-    ['Alt+Space', ' ', { altKey: true }],
     ['Ctrl+Esc', 'Escape', { ctrlKey: true }],
     ['Meta+Esc', 'Escape', { metaKey: true }],
     ['Alt+Esc', 'Escape', { altKey: true }],
@@ -243,6 +261,21 @@ describe('AD-19 Skip run listeners', () => {
       const t = setup();
       t.skip.attach(t.env);
       expect(t.key(k, init)).toEqual(UNTOUCHED);
+      expect(t.order).toEqual([]);
+      expect(t.live()).toEqual(RUN);
+    });
+  }
+
+  for (const [name, init] of [
+    ['Shift+Space', { shiftKey: true }],
+    ['Ctrl+Space', { ctrlKey: true }],
+    ['Meta+Space', { metaKey: true }],
+    ['Alt+Space', { altKey: true }],
+  ] as const) {
+    it(`AD-19 ${name} does not end the run and is only default-prevented, not stopped, so it never activates a focused button (SPEC F17)`, () => {
+      const t = setup();
+      t.skip.attach(t.env);
+      expect(t.key(' ', init)).toEqual({ stopped: false, prevented: true });
       expect(t.order).toEqual([]);
       expect(t.live()).toEqual(RUN);
     });

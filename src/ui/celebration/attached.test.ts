@@ -124,6 +124,8 @@ beforeEach(() => {
     documentElement: { clientWidth: 360 },
     body: { querySelector },
     querySelector,
+    // AD-19 Skip: every press point is on the board (no bar ancestor).
+    elementFromPoint: () => ({ closest: () => null }),
     ...recorder('document'),
   });
   vi.stubGlobal('window', recorder('window'));

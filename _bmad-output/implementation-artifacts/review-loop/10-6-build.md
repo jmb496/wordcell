@@ -1,5 +1,5 @@
 # Review loop — ticket 10.6 build (celebration skip, code mode)
-State: pass 1: done
+State: pass 2: done
 
 Target: commit range `d404cae..HEAD` (5f67795), code only (`_bmad-output/` excluded). Staged diff: `10-6-build.passes/pass0.diff` (1505 lines).
 Mode: code, thorough, max 7. Pre-loop: HEAD 5f67795e0b910c8bbc32eb6f3a8654fafc441aad, tree 0 f133377259c5f2810601f6e9b05d9a8951eb054d.
@@ -29,3 +29,27 @@ Fixer note (not changed): a touch on the action bar mid-run can land on the prim
 Fixer runs: npm test 3525 passed; lint 1 pre-existing warning; check 0 errors; `playwright test e2e/celebration.spec.ts e2e/helpers.spec.ts` 90 passed; celebration.spec.ts `--repeat-each=3` 51 passed; touch and bar rows `--repeat-each=8` 32 passed.
 Orchestrator verify: npm test 89 files / 3525 passed; lint pass (1 pre-existing warning); check 0 errors.
 Snapshot: tree 1 c4437179f922d29dd488ae48cd9d7da1a809e29e; fix diff `10-6-build.passes/pass1.fix.diff` (297 lines); restaged `pass1.diff`.
+
+## Pass 2 — 2026-10-23
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 2, minor 4, decision-needed 0  |  Dropped in triage: 3 (merged: hold-spans-toBeVisible-backoff ×4 (1 major, 3 minor → major))
+### Applied
+- [major] e2e/celebration.spec.ts R-87 touch-press rows — pass 1 item 1 only half-resolved: the pointerdown→pointerup window still spans `expect(sheet).toBeVisible()`'s retry backoff (pinned playwright-core `retryWithProgressAndBackoff` [20,50,100,100,500]: checks ≈0/20/70/170/270 then ≈770 ms), so a sheet later than ≈270 ms fails the 400 ms check on a loaded runner → fixer item 1 (default applied: frame-rate wait inside the hold)
+- [major] src/ui/celebration/skip.ts `inBars()` — the bar test reads `event.target`, which Chromium touch adjustment can move onto a bar control (pass 1 fixer observed every margin touch retargeted onto the primary button); a band touch beside a bar (actionGap above the action bar, leftover spacer under the top bar) could then pass through and its click act (New game deals at once on a finished game; Undo un-wins), against R-87's location reading ("a pointer press outside the top and action bars") and the controller's own `elementFromPoint` resolution (epic 4 SPEC F13) → fixer item 2 (default applied: decide by the press point, after reproducing)
+- [minor] src/ui/celebration/skip.ts onKey — chorded Space (Shift/Ctrl/Alt) passes untouched, so a focused bar button (New game after a mouse Confirm) may activate mid-run, against SPEC F17 "During the run `Space` never activates a focused button" → fixer item 3 (default applied: preventDefault only, no skip, after verifying Chromium activates)
+- [minor] e2e/celebration.spec.ts `recordInputs` — bubble recorder omits `pointerdown`, so a skip that leaked its pointerdown passes the P6 rows → fixer item 4
+- [minor] e2e/celebration.spec.ts 'R-87 Space skips the run …' — no page recorder for Space keydown/keyup, so a tail dropping either half still passes → fixer item 5
+- [minor] e2e/celebration.spec.ts `enterIntoRun` / desktop rows — no assertion of what holds focus during the run, so a skip reading `document.activeElement` (AD-19's dropped focus exception) passes → fixer item 6
+### Dropped
+- Plan matrix "Press skip" and Design Notes sketch lack the press skip's `cancelGesture()` (intent, again) — plan is the build's record, not the code target; carried to entry 9's AD-19 Skip sync in the result.
+- Plan frontmatter `deferred[0]` describes the pre-pass-1 mechanism (×2) — plan doc, not the code target; this log records the replacement (carried in the result).
+- Pass 1 fixer note: the action bar's primary button mid-run ends the run — at game over it is New game (ActionBar.svelte `status !== 'playing'`), the `N` command, which SPEC F15 lets act during the run; specified, pre-existing.
+### Fixer outcome
+1. Touch-press rows wait inside the hold with `expect.poll(() => sheet(page).isVisible(), { intervals: [16] })`; post-release toBeVisible, captured-event and `expectSkipped` checks kept.
+2. Reproduced (android, raw CDP touch, window capture listener): clientX/Y are the true touch point, but `event.target` is retargeted — 2 px below the top bar under Undo → Undo button (the click un-won the game); (26,46)/(26,49) → Menu button, click fired, no skip; (384,46) → Redo; 1 px above the action bar → primary button (New game), click fired. Fixed: `inBars` uses `doc.elementFromPoint(e.clientX, e.clientY)?.closest(BARS)` (`SkipEnv.doc` gains `elementFromPoint`); skip.test.ts fakes answer `elementFromPoint` from a `barAt` map, bar cases put the point in the bar, three new cases (target retargeted onto a bar, point outside) skip and consume; attached.test.ts fake doc gains `elementFromPoint`. New android rows 'R-87 a touch just beside the top bar / the action bar, outside its rect, skips the run, consumed: …' (assert the point is outside every bar, the target really was retargeted onto a bar control, bubble recorder empty, `expectSkipped`); both fail with the old `event.target` test restored.
+3. Verified (desktop): Shift/Ctrl/Alt/Meta+Space each click a focused button; mid-run with New game focused Shift/Ctrl/Alt+Space dealt a new game. Fixed: a non-repeat chorded Space (Shift, Ctrl, Meta or Alt) gets `preventDefault()` only (no stop, no `end()`, no tail); keydown prevention alone blocks the click for all four chords (keyup left alone: covering it would add a run keyup listener). skip.test.ts chord cases moved to 'AD-19 <chord> does not end the run and is only default-prevented, not stopped, so it never activates a focused button (SPEC F17)'.
+4. `recordInputs` records `pointerdown`; skip rows expect `[]`, positive control `['pointerdown','pointerup','click']`.
+5. Space row: window bubble keydown/keyup Space recorder expected empty.
+6. After the winning Enter focus is on BODY, so `enterIntoRun` focuses `primary-action` (New game) and asserts `toBeFocused()` before the skip key.
+Fixer runs: npm test 3528 passed; lint 1 pre-existing warning (e2e/end-sheet.spec.ts:845); check 0 errors; `playwright test e2e/celebration.spec.ts e2e/helpers.spec.ts` 92 passed; six android touch rows `--repeat-each=5` 30 passed; throwaway repro spec deleted.
+Orchestrator verify: npm test 89 files / 3528 passed; lint pass (1 pre-existing warning); check 0 errors.
+Snapshot: tree 2 008b392b94c6bdecf334d8317171444d57284eae; fix diff `10-6-build.passes/pass2.fix.diff` (360 lines); restaged `pass2.diff`.
