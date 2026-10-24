@@ -17,15 +17,19 @@
 // Each skip leaves a one-shot post-run tail (AD-19 Skip refinement, see the ticket plan):
 // - press tail, for the skipping `pointerId`: before release it consumes that pointer's
 //   `pointerup` and arms its own `createClickSwallower` there (300 ms from the release); a same-id
-//   `pointercancel` or `pointerdown` is a lost release (tail gone, nothing consumed). After release
-//   any `pointerdown` disarms the swallower (as the controller's `disarm()`); its click or expiry
-//   ends the tail too.
+//   `pointercancel` or `pointerdown` is a lost release (tail gone, nothing consumed), other ids pass.
+//   The release opens the `SWALLOW_MS` guard (SPEC F18): until it expires every new `pointerdown`,
+//   any id, is consumed and held like the skipping press (its `pointerup` consumed, the swallower
+//   re-armed from that release for its click), so a double-tap's second tap never reaches the end
+//   sheet. After the guard any `pointerdown` disarms the swallower (as the controller's `disarm()`)
+//   and is a lost release for its id. The tail ends once the guard has expired, no held press is
+//   left and the swallower is disarmed (its click, expiry or `disarm()`).
 // - Space tail: consumes the skipping `Space`'s repeats and its `keyup`, gone on that keyup; a
 //   fresh `Space` keydown (a lost keyup, as motion.ts) or a window `blur` clears it, no expiry.
 // Every listener sits behind motion.ts's boot-time tracker on the same node and never reads
 // `defaultPrevented` (the tracker may consume first; its `stopPropagation` does not stop
 // same-node listeners). While halted (AD-15) the run listeners and both tails pass everything.
-import { createClickSwallower } from '../gestures/click-swallow';
+import { createClickSwallower, SWALLOW_MS } from '../gestures/click-swallow';
 
 type ListenTarget = Pick<EventTarget, 'addEventListener' | 'removeEventListener'>;
 
@@ -80,8 +84,14 @@ export function createSkip(deps: SkipDeps): Skip {
       setTimer: env.setTimer,
       clearTimer: env.clearTimer,
     });
+    /** The consumed presses not yet released: the skipping one, then the guard's (SPEC F18). */
+    const held = new Set([pointerId]);
+    let released = false;
+    /** The guard's expiry timer, live from the skipping release for `SWALLOW_MS`. */
+    let guard: unknown = null;
+    let ended = false;
     // The swallower's click listener, gated on the halt; its removal (click, expiry or `disarm()`)
-    // ends the tail.
+    // may end the tail.
     let gated: EventListener | null = null;
     const target = {
       addEventListener(type: string, listener: EventListener, options: AddEventListenerOptions) {
@@ -93,46 +103,68 @@ export function createSkip(deps: SkipDeps): Skip {
       removeEventListener(type: string, _listener: EventListener, options: EventListenerOptions) {
         if (gated !== null) doc.removeEventListener(type, gated, options);
         gated = null;
-        if (pressTail === tail) pressTail = null;
-        doc.removeEventListener('pointerdown', onLaterDown, CAPTURE);
+        settle();
       },
     } as unknown as EventTarget;
 
-    function removeHeld(): void {
-      doc.removeEventListener('pointerup', onHeld, CAPTURE);
-      doc.removeEventListener('pointercancel', onHeld, CAPTURE);
-      doc.removeEventListener('pointerdown', onHeld, CAPTURE);
+    function settle(): void {
+      if (guard === null && held.size === 0 && gated === null) tail.clear();
     }
 
-    function onHeld(event: Event): void {
-      if (deps.halted() || (event as PointerEvent).pointerId !== pointerId) return;
-      removeHeld();
-      if (event.type !== 'pointerup') {
+    function onGuardEnd(): void {
+      guard = null;
+      settle();
+    }
+
+    function onPointer(event: Event): void {
+      if (deps.halted()) return;
+      const id = (event as PointerEvent).pointerId;
+      if (event.type === 'pointerdown') {
+        if (guard !== null) {
+          consume(event);
+          held.add(id);
+          return;
+        }
+        held.delete(id);
+        swallower.disarm();
+        settle();
+        return;
+      }
+      if (!held.has(id)) return;
+      if (event.type === 'pointercancel') {
         // A lost release: nothing consumed.
-        if (pressTail === tail) pressTail = null;
+        held.delete(id);
+        settle();
         return;
       }
       consume(event);
-      doc.addEventListener('pointerdown', onLaterDown, CAPTURE);
+      if (!released) {
+        released = true;
+        guard = env.setTimer(onGuardEnd, SWALLOW_MS);
+      }
+      // Armed before the id leaves `held`, so the re-arm's own removal never ends the tail.
       swallower.arm(target);
-    }
-
-    function onLaterDown(): void {
-      swallower.disarm();
+      held.delete(id);
     }
 
     const tail: Tail = {
       clear() {
-        removeHeld();
+        if (ended) return;
+        ended = true;
+        doc.removeEventListener('pointerdown', onPointer, CAPTURE);
+        doc.removeEventListener('pointerup', onPointer, CAPTURE);
+        doc.removeEventListener('pointercancel', onPointer, CAPTURE);
+        if (guard !== null) env.clearTimer(guard);
+        guard = null;
+        held.clear();
         swallower.disarm();
-        doc.removeEventListener('pointerdown', onLaterDown, CAPTURE);
         if (pressTail === tail) pressTail = null;
       },
     };
     pressTail = tail;
-    doc.addEventListener('pointerup', onHeld, CAPTURE);
-    doc.addEventListener('pointercancel', onHeld, CAPTURE);
-    doc.addEventListener('pointerdown', onHeld, CAPTURE);
+    doc.addEventListener('pointerdown', onPointer, CAPTURE);
+    doc.addEventListener('pointerup', onPointer, CAPTURE);
+    doc.addEventListener('pointercancel', onPointer, CAPTURE);
   }
 
   function armSpaceTail(env: SkipEnv): void {

@@ -47,7 +47,7 @@ baseline_revision: '2a0bfbd54aec16ad8bca1cf4d0fdf698d75e9b99'
 | Press skip | run live; primary `pointerdown` (any type), target outside `[data-band="topBar"]`, `[data-band="actionBar"]`, `[data-band="banner"]` | stopped + prevented, `end()` once, run listeners removed; press tail for that `pointerId` | — |
 | Pass-through press | target inside a bar or the banner; `button !== 0`; a `pointerup` of a pre-start pointer | untouched, no `end()` | — |
 | Press tail, before release | same-id `pointerup` | stopped + prevented; arms its own `createClickSwallower` on `document` (300 ms from this release) | same-id `pointercancel` or same-id `pointerdown`: tail gone, nothing consumed; other ids ignored |
-| Press tail, after release | its trailing click (`detail ≥ 1`) | stopped + prevented, tail gone | expiry or any `pointerdown`: disarmed, gone |
+| Press tail, after release | its trailing click (`detail ≥ 1`); SPEC F18: any new `pointerdown` (any id) within `SWALLOW_MS` of the release, its `pointerup` and click | stopped + prevented (swallower re-armed from each consumed release); gone once the guard expired, no consumed press held and the swallower disarmed | after the guard any `pointerdown`: passes, disarms the swallower |
 | Key skip | non-repeat `Space` (no Shift) or `Esc` (Shift allowed), no Ctrl/Meta/Alt, any focus | stopped + prevented, `cancelGesture()` then `end()`; `Space` leaves the Space tail | repeat, Shift+`Space`, chord: untouched |
 | Space tail | `Space` repeats; `Space` `keyup` | stopped + prevented; gone on the keyup | fresh non-repeat `Space` keydown or window `blur`: gone, that keydown untouched; no expiry |
 | Halted | `game.state.kind === 'halted'` | run listeners and tails pass everything | — |

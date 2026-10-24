@@ -1,5 +1,6 @@
 import { expect, type Page, type Request, test } from '@playwright/test';
 import { LONG_PRESS_MS } from '../src/ui/gestures/classify';
+import { SWALLOW_MS } from '../src/ui/gestures/click-swallow';
 import {
   box,
   centre,
@@ -313,6 +314,44 @@ test.describe('android', () => {
       await expect.poll(inputs).toEqual(['pointerdown', 'pointerup', 'click']);
     });
   }
+
+  test('R-87 a quick second tap on Replay this deal after a touch press skip is consumed (SPEC F18): no pointerdown, pointerup or click reaches the page, nothing activated, Session unchanged', async ({
+    page,
+  }) => {
+    await readyToWin(page);
+    await winIntoRun(page);
+    await stashSession(page);
+    const point = await emptyPoint(page);
+    const inputs = await recordInputs(page);
+    const captured = await recordCaptured(page);
+    await page.touchscreen.tap(point.x, point.y);
+    // At frame rate, so the second tap lands within the guard.
+    await expect.poll(() => replay(page).isVisible(), { intervals: [16] }).toBe(true);
+    const second = await centre(replay(page));
+    const hit = await page.evaluate(
+      ({ x, y }) => document.elementFromPoint(x, y)?.closest('button')?.textContent?.trim(),
+      second,
+    );
+    expect(hit).toBe(REPLAY);
+    await page.touchscreen.tap(second.x, second.y);
+    // Both presses were taps, the second pressed within the guard after the first's release, by
+    // the page's event clock: fail rather than prove nothing.
+    await expect
+      .poll(async () => (await captured()).map((e) => `${e.type} ${e.pointerType}`))
+      .toEqual([
+        'pointerdown touch',
+        'pointerup touch',
+        'click touch',
+        'pointerdown touch',
+        'pointerup touch',
+        'click touch',
+      ]);
+    const [, firstUp, , secondDown] = (await captured()).map((e) => e.timeStamp);
+    expect((secondDown as number) - (firstUp as number)).toBeLessThan(SWALLOW_MS);
+    await animationFrames(page, 3);
+    expect(await inputs()).toEqual([]);
+    await expectSkipped(page);
+  });
 
   test('R-87 back skips the run: the sheet expanded and the app open; back again collapses the sheet, the app still open', async ({
     page,

@@ -118,7 +118,29 @@ function setup() {
       }
     }
   };
-  return { skip, env, fire, down, up, key, live, order, state, timers, elapse, target, barAt };
+  /** Fires one timer by its handle (to expire one of several same-length timers). */
+  const expire = (handle: number) => {
+    const timer = timers.get(handle);
+    if (timer === undefined) throw new Error(`no timer ${handle}`);
+    timers.delete(handle);
+    timer.fn();
+  };
+  return {
+    skip,
+    env,
+    fire,
+    down,
+    up,
+    key,
+    live,
+    order,
+    state,
+    timers,
+    elapse,
+    expire,
+    target,
+    barAt,
+  };
 }
 
 const RUN = ['document keydown', 'document pointerdown'];
@@ -335,17 +357,19 @@ describe('AD-19 Skip press tail', () => {
     return t;
   }
 
-  it('AD-19 the tail consumes its pointerup and arms a 300 ms swallower from the release; its click is consumed, then the tail is gone', () => {
+  it('AD-19 the tail consumes its pointerup and arms a 300 ms swallower and the 300 ms guard from the release; its click is consumed, the tail gone at the guard’s expiry', () => {
     const t = skipped();
     expect(t.timers.size).toBe(0);
     expect(t.up()).toEqual(CONSUMED);
-    expect([...t.timers.values()].map((timer) => timer.ms)).toEqual([SWALLOW_MS]);
-    expect(t.live()).toEqual(['document click', 'document pointerdown']);
+    expect([...t.timers.values()].map((timer) => timer.ms)).toEqual([SWALLOW_MS, SWALLOW_MS]);
+    expect(t.live()).toEqual([...PRESS_TAIL, 'document click'].sort());
     expect(t.fire('click', { detail: 1 })).toEqual(CONSUMED);
-    expect(t.live()).toEqual([]);
-    expect(t.timers.size).toBe(0);
+    expect(t.live()).toEqual(PRESS_TAIL);
     expect(t.fire('click', { detail: 1 })).toEqual(UNTOUCHED);
     expect(t.up()).toEqual(UNTOUCHED);
+    t.elapse(SWALLOW_MS);
+    expect(t.live()).toEqual([]);
+    expect(t.timers.size).toBe(0);
   });
 
   it('AD-19 a press held over 300 ms before its release still swallows its click', () => {
@@ -355,6 +379,7 @@ describe('AD-19 Skip press tail', () => {
     expect(t.up()).toEqual(CONSUMED);
     t.elapse(SWALLOW_MS - 1);
     expect(t.fire('click', { detail: 1 })).toEqual(CONSUMED);
+    t.elapse(SWALLOW_MS);
     expect(t.live()).toEqual([]);
   });
 
@@ -393,15 +418,97 @@ describe('AD-19 Skip press tail', () => {
   });
 
   for (const pointerId of [1, 2]) {
-    it(`AD-19 after the release any pointerdown (id ${pointerId}) disarms: untouched, the tail gone`, () => {
+    it(`AD-19 a new press (id ${pointerId}) within 300 ms after the release is consumed: its pointerdown, pointerup and click (SPEC F18)`, () => {
       const t = skipped();
       t.up();
-      expect(t.fire('pointerdown', { pointerId, button: 0 })).toEqual(UNTOUCHED);
+      expect(t.fire('click', { detail: 1 })).toEqual(CONSUMED);
+      t.elapse(SWALLOW_MS - 1);
+      expect(t.down({ pointerId })).toEqual(CONSUMED);
+      expect(t.up(pointerId)).toEqual(CONSUMED);
+      expect(t.fire('click', { detail: 1 })).toEqual(CONSUMED);
+      expect(t.order).toEqual(['cancelGesture', 'end']);
+      t.elapse(SWALLOW_MS);
       expect(t.live()).toEqual([]);
       expect(t.timers.size).toBe(0);
-      expect(t.fire('click', { detail: 1 })).toEqual(UNTOUCHED);
     });
   }
+
+  it('AD-19 a new press within 300 ms after a release whose click was lost is consumed, its click too (SPEC F18)', () => {
+    const t = skipped();
+    t.up();
+    expect(t.down({ pointerId: 2 })).toEqual(CONSUMED);
+    expect(t.up(2)).toEqual(CONSUMED);
+    expect(t.fire('click', { detail: 1 })).toEqual(CONSUMED);
+    expect(t.fire('click', { detail: 1 })).toEqual(UNTOUCHED);
+  });
+
+  it('AD-19 a press at or after 300 ms from the release passes through untouched: pointerdown, pointerup and click (SPEC F18)', () => {
+    const t = skipped();
+    t.up();
+    t.fire('click', { detail: 1 });
+    t.elapse(SWALLOW_MS);
+    expect(t.live()).toEqual([]);
+    expect(t.down()).toEqual(UNTOUCHED);
+    expect(t.up()).toEqual(UNTOUCHED);
+    expect(t.fire('click', { detail: 1 })).toEqual(UNTOUCHED);
+  });
+
+  it('AD-19 a second finger pressed during the window, while a first new finger is still down, is consumed too; both releases consumed (SPEC F18)', () => {
+    const t = skipped();
+    t.up();
+    expect(t.down({ pointerId: 2 })).toEqual(CONSUMED);
+    expect(t.down({ pointerId: 3, clientX: 200 })).toEqual(CONSUMED);
+    expect(t.up(3)).toEqual(CONSUMED);
+    expect(t.up(2)).toEqual(CONSUMED);
+    expect(t.fire('click', { detail: 1 })).toEqual(CONSUMED);
+  });
+
+  it('AD-19 a press consumed by the window but released after it: its pointerup and click still consumed; a press after the window passes and disarms (SPEC F18)', () => {
+    const t = skipped();
+    t.up();
+    expect(t.down({ pointerId: 2 })).toEqual(CONSUMED);
+    t.elapse(SWALLOW_MS);
+    expect(t.timers.size).toBe(0);
+    expect(t.live()).toEqual(PRESS_TAIL);
+    // Pointer 2 still held; a new press now passes.
+    expect(t.down({ pointerId: 3 })).toEqual(UNTOUCHED);
+    expect(t.up(3)).toEqual(UNTOUCHED);
+    expect(t.up(2)).toEqual(CONSUMED);
+    expect(t.fire('click', { detail: 1 })).toEqual(CONSUMED);
+    expect(t.live()).toEqual([]);
+    // A window press released inside the window re-arms the swallower; once the window is over a
+    // new pointerdown passes and disarms it.
+    const u = skipped();
+    u.up();
+    // The guard is the first timer set at the release.
+    const [guard] = [...u.timers.keys()];
+    u.down({ pointerId: 2 });
+    u.up(2);
+    u.expire(guard as number);
+    expect(u.live()).toEqual([...PRESS_TAIL, 'document click'].sort());
+    expect(u.down({ pointerId: 4 })).toEqual(UNTOUCHED);
+    expect(u.live()).toEqual([]);
+    expect(u.timers.size).toBe(0);
+    expect(u.fire('click', { detail: 1 })).toEqual(UNTOUCHED);
+  });
+
+  it('AD-19 a same-id pointercancel of a window press is a lost release: untouched, its release no longer consumed (SPEC F18)', () => {
+    const t = skipped();
+    t.up();
+    t.down({ pointerId: 2 });
+    expect(t.fire('pointercancel', { pointerId: 2 })).toEqual(UNTOUCHED);
+    t.elapse(SWALLOW_MS);
+    expect(t.live()).toEqual([]);
+    expect(t.up(2)).toEqual(UNTOUCHED);
+  });
+
+  it('AD-19 halted (AD-15): a new press within the window passes through untouched (SPEC F18)', () => {
+    const t = skipped();
+    t.up();
+    t.state.halted = true;
+    expect(t.down({ pointerId: 2 })).toEqual(UNTOUCHED);
+    expect(t.up(2)).toEqual(UNTOUCHED);
+  });
 
   it('AD-19 halted (AD-15): the tail passes its pointerup and its click', () => {
     const t = skipped();
