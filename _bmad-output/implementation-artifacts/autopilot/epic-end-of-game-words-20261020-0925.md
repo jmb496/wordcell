@@ -149,3 +149,25 @@ Close-out docs:
 - DESIGN.md Win celebration (50 % overlap, row) ← F20 35 % overlap, F26 no launch row (owner, 2026-10-24)
 - EXPERIENCE.md Win celebration ← F27 words cross toward the far wall (owner, 2026-10-24)
 - docs/game-flow-spec.md R-87 ← the dictionary banner is exempt from press skips, as the two bars
+
+## 10.7 Celebration interruptions — built, waiting for you
+What it adds: The win celebration now ends cleanly when the player opens the menu (☰ or M: the end sheet comes up, then the menu over it), when the app goes to the background (the end sheet is waiting when they come back), or when the screen is resized or rotated. Tests also prove that Undo, New game and N cancel it without a sheet, that Redo of the winning move starts it again, and that ? and the WordCell keys do nothing while it runs.
+Ticket review: 4 passes, converged (majors 10, 3, 2, 0); nothing needed your input during the loop; 12 minors handed to the build
+Build: built; commit eae5179 (pulled 765affe, harden eaf8ffb); 22 internal findings, 7 patched, none deferred
+Code review: thorough (risk high), 1 pass, converged (majors 0); no fixes applied; 6 minors left in the log (717f92b)
+Tests: all passing (unit 3581, e2e 1093, pwa 19, dist 17) on 717f92b, screenshots passed (67; 39 project skips as usual)
+Ref to fix upstream: none
+Tokens: 16.4M input-equivalent (ticket review 55%, build 26%, code review 12%, other 4%, orchestrator 2%); orchestrator peak context 78k
+Startup note: handoff, git log and digest agreed (10.6 done, 10.7 next, ticket pulled this session).
+Worth knowing: Stopped by rule 1 (rule 7 plan checkpoint, built unattended as for 10.4–10.6): the plan's owner items 1–2 (Design Notes) need your answer before done. `openMenu()` lives in a new `src/ui/open-menu.ts` rather than `open-surface.ts` (putting it there broke 2 unit files at import). Residuals for 10.9's Android read: a mobile-browser toolbar show/hide counts as a resize and ends the run; a back gesture in the instant between ☰ and the sheet opening is absorbed; a bfcache restore after navigating away mid-run may swallow the first back. This ticket closes the ☰/M merge blocker once you accept items 1–2.
+Close-out docs (pending your answers):
+- ARCHITECTURE-SPINE.md AD-19 Hide ← hide uses the ordinary end (queued pop), registered by `installInterruptions`, not main.ts (owner item 1)
+- EXPERIENCE.md Win celebration message row ← the no-announce exemption applies only to a sheet opened while hidden (owner item 1)
+- SPEC (epic 10) new F-row ← ☰/M mid-run drops the menu open when the top at settle is not the end sheet (owner item 2)
+- ARCHITECTURE-SPINE.md AD-13/AD-19 ← `openMenu()` in `src/ui/open-menu.ts` (technical, plan item 4); tickets.toml entry 7 `interface` stale (entry 9 sync)
+
+## Stopped — decision needed
+Ticket 10.7, Step D: test:all and screenshots green on 717f92b; code review log committed with `## Result`. Two questions (plan `story-celebration-interruptions-plan.md` Design Notes, owner items 1–2):
+1. Hide (rule 7 vs AD-19 Hide): when the app goes to the background mid-celebration, the build ends the run the ordinary way (removes its back-history step with a queued pop) instead of AD-19's separate "hide mode". Proposed default: approve; 10.9 syncs AD-19 Hide and the EXPERIENCE.md row; Android proof at 10.9's read. A no means a ticket revision (new nav operations).
+2. ☰/M when something else lands on top before the sheet opens (a back gesture in that instant, or a second press that already opened the menu): the menu open is dropped. Proposed default: keep; 10.9 adds a SPEC F-row.
+Resume: record the answers (ticket Notes, epic Notes, SPEC memlog), commit, rerun `LIMIT_CHECK=off .claude/skills/epic-autopilot/scripts/loop.sh epic-end-of-game-words`; the next session finds the review log with `## Result` and goes to Step D (test:all, screenshots, mark done).
