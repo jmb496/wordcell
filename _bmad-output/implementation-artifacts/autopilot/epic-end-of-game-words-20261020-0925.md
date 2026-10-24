@@ -191,3 +191,6 @@ Close-out docs: none
 Ticket 10.9 (Close-out: documents, AGENTS pitfall and device check), before Step A: the ticket is `hitl` and no owner authorisation for this run was found (epic folder, ticket entry, digest), so stop rule 4 applies and nothing was started. Startup note: the handoff, git log (725965e) and digest agreed: 10.8 done, 10.9 next. The stale `10.6-C3.done.pid` again named no live process.
 Resume: either run 10.9 yourself (the Android read of a long word list, the hide path and the end sheet's Words section, plus the doc syncs gathered as Close-out docs in the 10.5–10.7 entries), or record in the ticket entry that the autopilot may run its non-device parts and leave it `built` for your device check, commit, and rerun `LIMIT_CHECK=off .claude/skills/epic-autopilot/scripts/loop.sh epic-end-of-game-words`. 10.10 (refactor sweep) waits for 10.9.
 Tokens: 0.0M input-equivalent (orchestrator 100%)
+
+## Stopped — usage limit
+Ticket 10.9, Step A (ticket review): pass 1 committed (c1518af); the review log is partial and resumes by the review-loop resume rule. Limit: `You've hit your session limit · resets 4pm (America/New_York)`. Resume after the reset: `LIMIT_CHECK=off .claude/skills/epic-autopilot/scripts/loop.sh epic-end-of-game-words`.
