@@ -1,6 +1,6 @@
 # Review log — story-close-out-documents-agents-pitfall-and-device-check (ticket 10.9)
 
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7. Pre-loop: HEAD 18eefff, copy `story-close-out-documents-agents-pitfall-and-device-check.passes/pass0.md`, 431 words.
 Intent carried from `tickets.toml` entry 9: `done_checkpoint = true` (not copied into the ticket; fixer adds it to the Description in pass 1). The Notes' owner authorisations (doc syncs incl. owner docs listed there, R-87 wording) are decided, not decision-needed.
@@ -121,3 +121,35 @@ Words (docs): 1270 (2.95 x pass 0)  |  Snapshot: story-close-out-documents-agent
 - Duplicate F24/likewise minors merged into items 3 and 4
 ### Fix outcome
 - Fixer applied items 1–10, no conflicts; 1201 → 1270 words (majors; minors 9–10 word-neutral). Item 7 cites the dictionary maximum (23 letters, checked in generated/dictionary/en.txt) instead of R-36. Command changed: `git status --porcelain | grep -- -snapshots` (run, git 2.43.0: no output, exit 1).
+
+## Pass 4 — 2026-10-24 16:50
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 0, minor 18, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+Words (docs): 1270 (2.95 x pass 0), no fix pass  |  Snapshot: story-close-out-documents-agents-pitfall-and-device-check.passes/pass3.md (unchanged)
+### Applied
+- none (converged: zero majors; minors are not applied at convergence)
+### Reclassified
+- Fix diff's major "23-letter target unreachable" → minor. R-37 caps a word at 22 cards (23 letters only with the QU card), and no 23-letter ENABLE word contains "qu". But the won fixtures are scripted with inline-dictionary strings (serialize.test.ts: "R-37 trusts committed words"), so a 23-letter QU string can be reached, and a shortfall is already an owner item. What remains is the misleading "(dictionary maximum)" rationale, a precision issue.
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Result — converged after 4 passes
+
+Majors per pass: 16, 11, 8, 0. Decision-needed: none. Words 431 → 1270. Pass 4 had no fix pass; the log's pass 4 and Result are left uncommitted for the caller (the checkpoint commits follow fix passes only).
+
+Unapplied minors (for the build's plan or a later loop):
+- Fixture: "longest word 23 letters (dictionary maximum)" should read "23 letters (22 cards with QU, R-37)". The step.test.ts rows and the scale pin count cards; scripted play uses inline-dictionary strings. Say whether the words are real (readability).
+- Fixture: the smallest scale and the F22-paced entries are pinned at step.test.ts geometries (360x740 reference); the owner's phone may differ. The plan states this and lists the paced entries at 360x740.
+- Fixture: measure the warm unit-suite median before and after the new step.test.ts rows (AGENTS.md 5 s budget). If the long list fails the bounce/exit loop, record an owner item and HALT; `step.ts` is not changed.
+- AGENTS.md write: tie the Conventions-line edit to Record's "line already covering it" check. The main build session runs `record` first, before any doc sync and before the implementing handoff, so a HALT leaves a clean tree. Name the existing AD-19/R-87 tests as the check already in place (Record's "mechanically preventable" clause). Optionally word the pitfall "each celebration copy (not its group) carries `data-celebration`".
+- Notes bullet 1: the authorisation names only "the AGENTS.md pitfall"; it should also name its Conventions-line exception.
+- AC: make "owner item" a third accepted checklist outcome beside "edited" and "already matches". This covers unbacked mismatches and the two items applied at done (tickets.toml entry 7, epic References).
+- Rule-coverage check: the P6 half of a mixed AD-n row (e.g. row 17, `data-celebration`) is satisfied by its R-87 test title; no duplicate AD-19 Playwright test.
+- Spine: AD-19 Rule bullet 1 also syncs the F22 pace (card count and cap feed launch speed and gravity). Fold F29 into the AD-13 menu sentence and into EXPERIENCE.md Skip / A-E16.
+- Spine `Celebration.svelte` bullet and DESIGN.md: the band is topped by a shown dictionary banner (the AD-12 visible band).
+- Epic SPEC F25: also cut "so the run length is back to before F24" (stale after F27). F24's "(superseded by F25)" covers its speed rule only.
+- Seam plan:164: record the `dist-smoke` relaunch check under CAP-6 as "already matches" (e2e/pwa/dist-smoke.spec.ts `R-87 a relaunch into a won game plays no celebration in the hook-free build`).
+- Read changes: name the session that applies them, and include 10.6's tuning review loop. Say whether the 10.7 residuals are read in the Chrome tab or the installed PWA. Name who writes the A-D12 verdict at done.
