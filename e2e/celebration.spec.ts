@@ -86,11 +86,45 @@ async function recordInputs(page: Page): Promise<() => Promise<string[]>> {
   return () => page.evaluate(() => [...((window as unknown as Recorded).__inputs ?? [])]);
 }
 
+type Seen = { type: string; pointerType: string; timeStamp: number };
+type Captured = { __captured?: Seen[] };
+
+// A page-side window capture-phase recorder (window capture runs before every `document` listener,
+// the skip's included) of `pointerdown`, `pointerup`, `click` and `keydown` with their
+// `event.timeStamp`, from now on (no `__wordcell`).
+async function recordCaptured(page: Page): Promise<() => Promise<Seen[]>> {
+  await page.evaluate(() => {
+    const w = window as unknown as Captured;
+    const seen: Seen[] = [];
+    w.__captured = seen;
+    for (const type of ['pointerdown', 'pointerup', 'click', 'keydown']) {
+      window.addEventListener(
+        type,
+        (event) => {
+          const pointerType = event instanceof PointerEvent ? event.pointerType : '';
+          seen.push({ type, pointerType, timeStamp: event.timeStamp });
+        },
+        { capture: true },
+      );
+    }
+  });
+  return () => page.evaluate(() => [...((window as unknown as Captured).__captured ?? [])]);
+}
+
+/** The `timeStamp` of the one recorded `type` event; throws unless exactly one was recorded. */
+function stampOf(seen: Seen[], type: string): number {
+  const matches = seen.filter((event) => event.type === type);
+  if (matches.length !== 1) throw new Error(`expected one ${type}, recorded ${matches.length}`);
+  return (matches[0] as Seen).timeStamp;
+}
+
 // The sheet expanded with Replay this deal focused and not activated, the Session unchanged.
 async function expectSkipped(page: Page): Promise<void> {
   expect(await running(page)).toBe(false);
   await expect(sheet(page)).toBeVisible();
   await expect(replay(page)).toBeFocused();
+  // Vacuous on a finished game (new-game.ts `requestReplay` opens the confirm only in progress):
+  // `sameSession` and the visible sheet are the activation detectors here.
   await expect(replayConfirm(page)).toHaveCount(0);
   await expect(viewSheet(page)).toHaveCount(0);
   expect(await sameSession(page)).toBe(true);
@@ -249,15 +283,20 @@ test.describe('android', () => {
       await stashSession(page);
       const point = await at(page);
       const inputs = await recordInputs(page);
-      const pressed = Date.now();
+      const captured = await recordCaptured(page);
       const hold = await touchHold(page, point);
       try {
         await expect(sheet(page)).toBeVisible();
       } finally {
         await hold.end();
       }
-      // A release after the long-press time would not be a tap: fail rather than prove nothing.
-      expect(Date.now() - pressed).toBeLessThan(LONG_PRESS_MS);
+      // The browser made the press a tap (its click dispatched) and released it within the
+      // long-press time, by the page's event clock: fail rather than prove nothing.
+      await expect
+        .poll(async () => (await captured()).map((e) => `${e.type} ${e.pointerType}`))
+        .toEqual(['pointerdown touch', 'pointerup touch', 'click touch']);
+      const seen = await captured();
+      expect(stampOf(seen, 'pointerup') - stampOf(seen, 'pointerdown')).toBeLessThan(LONG_PRESS_MS);
       await animationFrames(page, 3);
       expect(await inputs()).toEqual([]);
       await expectSkipped(page);
@@ -293,20 +332,93 @@ test.describe('android', () => {
   }) => {
     await readyToWin(page);
     const point = await emptyPoint(page);
-    const pressed = Date.now();
+    const captured = await recordCaptured(page);
     const hold = await touchHold(page, point);
     try {
       // Undo leaves focus on the first strip card (focusByPhase), where Enter confirms.
       await page.keyboard.press('Enter');
-      expect(Date.now() - pressed).toBeLessThan(LONG_PRESS_MS);
       await expect.poll(() => running(page)).toBe(true);
     } finally {
       await hold.end();
     }
+    // The Enter came within the long-press time of the touch, by the page's event clock.
+    const seen = await captured();
+    expect(stampOf(seen, 'keydown') - stampOf(seen, 'pointerdown')).toBeLessThan(LONG_PRESS_MS);
     // The release never reaches the page here either way: the AD-14 winning guard marks every
     // gesture open at its install consumed (motion.ts `install`, F8), so only `running()` shows the
     // skip ignored it.
     await animationFrames(page, 3);
+    expect(await running(page)).toBe(true);
+    await expect(sheet(page)).toHaveCount(0);
+  });
+
+  const CONTROL =
+    'button, a[href], input, select, textarea, [role="button"], [tabindex]:not([tabindex="-1"])';
+
+  // A point inside the `band` bar whose `elementFromPoint` is in that bar and under no control (so a
+  // press there activates nothing): the first of a few candidates (its centre, then its padding).
+  async function quietBarPoint(page: Page, band: 'topBar' | 'actionBar'): Promise<Point> {
+    const b = await box(page.locator(`[data-band="${band}"]`));
+    const candidates = [
+      { x: b.x + b.w / 2, y: b.y + b.h / 2 },
+      { x: b.x + b.w / 2, y: b.y + 2 },
+      { x: b.x + 2, y: b.y + b.h / 2 },
+    ];
+    for (const p of candidates) {
+      const quiet = await page.evaluate(
+        ({ x, y, selector, control }) => {
+          const el = document.elementFromPoint(x, y);
+          return el !== null && el.closest(selector) !== null && el.closest(control) === null;
+        },
+        { ...p, selector: `[data-band="${band}"]`, control: CONTROL },
+      );
+      if (quiet) return p;
+    }
+    throw new Error(`no point in ${band} without a control under it`);
+  }
+
+  type Pressed = { __pressed?: string[] };
+
+  // A page-side window capture-phase `pointerdown` recorder, from now on (no `__wordcell`): each
+  // press's pointer type, its target's `data-band` and whether a control holds the target.
+  async function recordPressTargets(page: Page): Promise<() => Promise<string[]>> {
+    await page.evaluate((control) => {
+      const w = window as unknown as Pressed;
+      const seen: string[] = [];
+      w.__pressed = seen;
+      window.addEventListener(
+        'pointerdown',
+        (event) => {
+          const target = event.target as Element;
+          const band = target.closest<HTMLElement>('[data-band]')?.dataset.band;
+          const where = target.closest(control) === null ? 'no control' : 'control';
+          seen.push(`${event.pointerType} ${band} ${where}`);
+        },
+        { capture: true },
+      );
+    }, CONTROL);
+    return () => page.evaluate(() => [...((window as unknown as Pressed).__pressed ?? [])]);
+  }
+
+  // The top bar by touch on its score. The action bar by mouse: its one control, the primary
+  // button, spans the bar but for a 4–6 px margin, and Chromium's touch adjustment retargets every
+  // touch in that margin to the button (its click would act), so only a mouse press lands there.
+  test('R-87 a press on the top bar (touch) or the action bar (mouse) where no control lies does not skip the run', async ({
+    page,
+  }) => {
+    await readyToWin(page);
+    await winIntoRun(page);
+    const pressed = await recordPressTargets(page);
+    const top = await quietBarPoint(page, 'topBar');
+    await page.touchscreen.tap(top.x, top.y);
+    await animationFrames(page, 3);
+    expect(await pressed()).toEqual(['touch topBar no control']);
+    expect(await running(page)).toBe(true);
+    await expect(sheet(page)).toHaveCount(0);
+    const bar = await quietBarPoint(page, 'actionBar');
+    await page.mouse.click(bar.x, bar.y);
+    await animationFrames(page, 3);
+    expect(await pressed()).toEqual(['touch topBar no control', 'mouse actionBar no control']);
     expect(await running(page)).toBe(true);
     await expect(sheet(page)).toHaveCount(0);
   });

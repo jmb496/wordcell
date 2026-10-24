@@ -14,6 +14,8 @@ const log: string[] = [];
 const store = vi.hoisted(() => ({
   game: { state: { kind: 'active' }, view: {} as unknown },
   settled: true,
+  /** `whenSettled` callbacks queued while `settled` is false (as nav.ts). */
+  waiters: [] as (() => void)[],
 }));
 
 vi.mock('../../shell/nav', () => ({
@@ -21,7 +23,7 @@ vi.mock('../../shell/nav', () => ({
     push: () => log.push('push'),
     pop: () => log.push('pop'),
     settled: () => store.settled,
-    whenSettled: (fn: () => void) => fn(),
+    whenSettled: (fn: () => void) => (store.settled ? fn() : store.waiters.push(fn)),
   },
 }));
 
@@ -107,6 +109,7 @@ const rect = (left: number, top: number, width: number, height: number): Rect =>
 beforeEach(() => {
   listeners = [];
   store.settled = true;
+  store.waiters = [];
   store.game.state = { kind: 'active' };
   const querySelector = (selector: string) => {
     const box = (r: Rect) => ({ getBoundingClientRect: () => r });
@@ -381,7 +384,7 @@ describe('AD-19 Skip on the attached run', () => {
     expect(log).toEqual(['cancel', 'onEnd', 'pop', 'done', 'push']);
   });
 
-  it('AD-19 a skip press before the push settles still ends at once (nav orders the pop)', async () => {
+  it('AD-19 a skip press before the push settles still ends at once and waits on no nav settle (nav orders the pop)', async () => {
     const t = await load();
     store.settled = false;
     t.begin();
@@ -389,8 +392,11 @@ describe('AD-19 Skip on the attached run', () => {
     press();
     expect(t.celebration.running()).toBe(false);
     expect(log).toEqual(['cancel', 'onEnd', 'pop']);
+    expect(store.waiters).toEqual([]);
     await Promise.resolve();
     expect(t.dones()).toBe(1);
+    expect(log).toEqual(['cancel', 'onEnd', 'pop', 'done', 'push']);
+    expect(store.waiters).toEqual([]);
   });
 
   const skips: [string, () => { stopped: boolean; prevented: boolean }][] = [

@@ -5,16 +5,17 @@
 // `Space` (no Shift) or `Esc` (Shift allowed) with no Ctrl/Meta/Alt, whatever holds focus (SPEC
 // F17). A skip is `stopPropagation()` + `preventDefault()`, then `cancelGesture()` (a press held
 // from before the start, the controller's hover-peek upkeep) and `end()`, so the bubble-phase
-// pointer controller never opens a press for it and keys.ts sees a prevented key. Only the skipping input is consumed: a pointer held from before the
-// start never is (its `pointerup` is not the run's), and a finish or the cap consumes nothing.
+// pointer controller never opens a press for it and keys.ts sees a prevented key. Only the skipping
+// input is consumed: a pointer held from before the start never is (its `pointerup` is not the
+// run's), and a finish or the cap consumes nothing.
 // Each skip leaves a one-shot post-run tail (AD-19 Skip refinement, see the ticket plan):
 // - press tail, for the skipping `pointerId`: before release it consumes that pointer's
 //   `pointerup` and arms its own `createClickSwallower` there (300 ms from the release); a same-id
 //   `pointercancel` or `pointerdown` is a lost release (tail gone, nothing consumed). After release
 //   any `pointerdown` disarms the swallower (as the controller's `disarm()`); its click or expiry
 //   ends the tail too.
-// - Space tail: consumes the skipping `Space`'s repeats and its `keyup`, gone on that keyup; a fresh
-//   `Space` keydown (a lost keyup, as motion.ts) or a window `blur` clears it, no expiry.
+// - Space tail: consumes the skipping `Space`'s repeats and its `keyup`, gone on that keyup; a
+//   fresh `Space` keydown (a lost keyup, as motion.ts) or a window `blur` clears it, no expiry.
 // Every listener sits behind motion.ts's boot-time tracker on the same node and never reads
 // `defaultPrevented` (the tracker may consume first; its `stopPropagation` does not stop
 // same-node listeners). While halted (AD-15) the run listeners and both tails pass everything.
@@ -33,7 +34,7 @@ export type SkipEnv = {
 export type SkipDeps = {
   /** The run's end (the controller's `end()`). */
   end(): void;
-  /** act.ts `cancelGesture` (the key skip only). */
+  /** act.ts `cancelGesture`, called by every skip (press and key) before `end()`. */
   cancelGesture(): void;
   /** Whether the store is halted (AD-15). */
   halted(): boolean;

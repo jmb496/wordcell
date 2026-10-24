@@ -6194,6 +6194,33 @@ describe('AD-13 gestures while the celebration runs', () => {
     expect(t.active()).toBe(0);
   });
 
+  // The hover-peek half of the press skip's cancel() is not reachable here: startCelebration()
+  // itself closes an open hover peek, and openHoverPeek is a no-op while the entry is open.
+  it('AD-19 a press held from before the run, then the press skip (act.ts cancelGesture(), end()) and the sheet open: its same-id release performs nothing', async () => {
+    const t = await setup();
+    t.detach();
+    wonView();
+    const { setController, cancelGesture } = await import('../act');
+    setController(t.controller);
+    t.down(t.b.cellCard, { pointerId: 7 });
+    expect(t.active()).toBe(1);
+    const live = await celebrateLive(t);
+    cancelGesture();
+    live.celebration.end();
+    expect(t.active()).toBe(0);
+    await Promise.resolve();
+    expect(live.dones()).toBe(1);
+    expect(t.advance(1000)).toBe(0);
+    expect(() => t.fire('pointerup', { target: t.b.cellCard, pointerId: 7 })).not.toThrow();
+    expect(t.overlays.top).toBe('endSheet');
+    expect(t.overlays.depth).toBe(1);
+    expect(t.overlays.viewCell).toBeNull();
+    expect(t.overlays.peek).toBeNull();
+    expect(t.overlays.hoverPeek).toBeNull();
+    expect(navCalls).toEqual(['pop', 'push']);
+    expect(t.active()).toBe(0);
+  });
+
   it('AD-13 a press begun after the run ended acts again (the mark is per press)', async () => {
     const t = await setup();
     t.detach();
