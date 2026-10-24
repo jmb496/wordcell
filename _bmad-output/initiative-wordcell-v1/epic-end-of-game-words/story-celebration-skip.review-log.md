@@ -1,5 +1,5 @@
 # Review log — story-celebration-skip.md
-State: pass 3: done
+State: pass 4: done
 Pre-loop: HEAD 75ccb28; pass0.md 230 words; growth budget stated 1500 words; tickets.toml entry 6 fields interface, tests, owns, consumers, plan_checkpoint, done_checkpoint passed as intent, added to Description in pass 1.
 
 ## Pass 1 — 2026-10-23
@@ -96,3 +96,25 @@ Fixer: all 17 applied; names checked in code (`disarm()`, motion.ts window blur,
 - Tuning pins — literal pins take the new values; the rule-coverage AD-19 behaviour rows and R-87 cap rows stay green; a value that breaks a behaviour row stops for the owner
 ### Dropped
 - fix diff "observe the pointerup without consuming it" — superseded by stopping the skipping pointerdown (item 1), which keeps AD-19's "consume a press"
+
+## Pass 4 — 2026-10-23
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 2 (merged from 5 raw), minor 11, decision-needed 0  |  Dropped in triage: 0 (3 minors left unapplied, see Result)
+Words (docs): 1530 (6.65 x pass 0; budget 1500, growth offset by cuts of restated phrases)  |  Snapshot: _bmad-output/initiative-wordcell-v1/epic-end-of-game-words/story-celebration-skip.passes/pass4.md
+Fixer: all 13 applied; checked keys.ts:570 `defaultPrevented` early return and motion.ts `startTracker` DOC_EVENTS capture; second `keyboard.down` arriving as a repeat is Playwright-documented, `unverified`.
+### Applied
+- [major] U list vs Keys bullet — "gone too on expiry" gives the Space tail an expiry the Keys bullet does not; its window-`blur` clear and the press tail's `pointercancel` are untested (gating U contract) → fixer item 1
+- [major] AC press row — the only consumption observable (sheet stays expanded after a release on the scrim) cannot fail: touch has implicit capture and a mouse click goes to the common ancestor, so the scrim never gets the click; the WordCell case cannot release on the scrim (the sheet panel covers it) → fixer item 2
+- [minor] Press — "the next `pointerdown`" scope: before release only that pointer's `pointercancel`/same-id `pointerdown`; after, the swallower disarms on any `pointerdown` → fixer item 3
+- [minor] Press — tails listen on `document` capture too (behind motion.ts's tracker) → fixer item 4
+- [minor] Press — the run's listeners judge events whatever `defaultPrevented` says (AD-14 tracker) → fixer item 5
+- [minor] Press — "after the start judged per `pointerId`" decides nothing (listener attaches at `start()`); cut → fixer item 6
+- [minor] Press — "or appears mid-run" declares copies over a shown banner, against CAP-2/DESIGN.md layer order; cut → fixer item 7
+- [minor] Tuning — whether an owner-approved scale amendment is applied here → applied here with the values, recorded for entry 9 → fixer item 8
+- [minor] U list — natural finish missing from the removal cases → fixer item 9
+- [minor] AC Space row — a second `keyboard.down` (repeat) once Replay has focus → fixer item 10
+- [minor] Keys — the Space tail also clears on a fresh non-repeat `Space` keydown (lost keyup, as motion.ts) → fixer item 11
+- [minor] Notes — report AD-19 Skip's run-scoped `pointerup`/`click` becoming post-run tails (plus the Space tail) for entry 9's doc sync → fixer item 12
+- [minor] AC held-finger row — hold point with no card or WordCell under it, `Enter` before the long-press time → fixer item 13
+### Default applied (technical)
+- Press-row observable — touch press released within the tap window; a page-side window bubble-phase `pointerup`/`click` recorder sees nothing from the skipping press; the WordCell case releases where it pressed (over the sheet panel), no sheet action activated
+- Space tail — no expiry; clears on its keyup, a fresh `Space` keydown or window `blur`
