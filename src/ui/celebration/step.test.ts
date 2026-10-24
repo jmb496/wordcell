@@ -518,6 +518,28 @@ describe('AD-19 step', () => {
     }
   }
 
+  // The pace launch() applied to a group: its gravity over the unpaced gravity, 2 x band height /
+  // (FALL_FRAC x cap)² with step.ts's FALL_FRAC 0.2 (gravity x pace², so the square root).
+  const paceOf = (s: StepState, g: Group): number =>
+    Math.sqrt((g.gravity * (0.2 * s.capMs) ** 2) / (2 * (s.floor - s.ceiling)));
+
+  for (const [geometry, clientWidth, innerHeight, hoverFine] of [
+    ['portrait 360x740', 360, 740, false],
+    ['desktop 1280x720', 1280, 720, true],
+    ['landscape 839x412', 839, 412, false],
+  ] as const) {
+    it(`AD-19 the trail fit leaves the session-won-words arcs near their natural tempo: every group's pace ≤ 1.15 (${geometry}, Normal)`, () => {
+      const s = launch({
+        ...scene(clientWidth, innerHeight, hoverFine, FIXTURE),
+        capMs: 6000,
+        baseMs: 180,
+      });
+      // Measured 2026-10-24: at most 1.11 (portrait), 1.00 (desktop, landscape).
+      for (const [i, g] of s.groups.entries())
+        expect(paceOf(s, g), `group ${i}`).toBeLessThanOrEqual(1.15);
+    });
+  }
+
   it('AD-19 the physics scales with the speed: half the cap and base double |vx| and |vy|, quadruple gravity, halve launches and lags', () => {
     const groups = row(4);
     const fast = make({ groups, capMs: 3000, baseMs: 90 });
@@ -540,11 +562,14 @@ describe('AD-19 step', () => {
     expect(out).toBeCloseTo(6000 - 180, 6);
     const free = make({ groups: [{ x: 20, y: 420, letters: 23 }], capMs: 60000, baseMs: 180 });
     const relaxed = first(free);
-    // The fitted arc is the same shape: equal apex, a shorter first contact.
+    // The fitted arc is the same shape: equal apex, a shorter first contact, and the path y(x) is
+    // unchanged (slope vy / vx and curvature gravity / vx² match: drift and launch share the pace).
     expect(g.contactMs).toBeLessThan(relaxed.contactMs / 10);
     expect((g.vy * g.vy) / (2 * g.gravity)).toBeCloseTo(
       (relaxed.vy * relaxed.vy) / (2 * relaxed.gravity),
       6,
     );
+    expect(g.vy / g.vx).toBeCloseTo(relaxed.vy / relaxed.vx, 9);
+    expect(g.gravity / g.vx ** 2).toBeCloseTo(relaxed.gravity / relaxed.vx ** 2, 12);
   });
 });

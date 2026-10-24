@@ -8,6 +8,7 @@ import {
   cardX,
   cardY,
   type Group,
+  type LaunchInput,
   launch,
   rowScale,
   type StepState,
@@ -15,7 +16,11 @@ import {
 } from './step';
 
 // AD-19 (R-87): the run controller over a fake document and rAF (the unit environment is `node`).
-const mocked = vi.hoisted(() => ({ motion: { baseMs: 180, reduced: false } }));
+const mocked = vi.hoisted(() => ({
+  motion: { baseMs: 180, reduced: false },
+  /** A test's patch of the launched state (the controller's only way in to the step state). */
+  relaunch: null as ((state: StepState) => StepState) | null,
+}));
 vi.mock('../../shell/prefs.svelte', () => ({
   BASE_MS: { fast: 90, normal: 180, slow: 320 },
   prefs: {
@@ -24,6 +29,18 @@ vi.mock('../../shell/prefs.svelte', () => ({
     },
   },
 }));
+
+// `launch` passes through unless a test sets `mocked.relaunch` (the pure helpers below use it too).
+vi.mock('./step', async (importOriginal) => {
+  const real = await importOriginal<typeof import('./step')>();
+  return {
+    ...real,
+    launch: (input: LaunchInput) => {
+      const state = real.launch(input);
+      return mocked.relaunch === null ? state : mocked.relaunch(state);
+    },
+  };
+});
 
 // AD-15: `skip.ts` reads the halt; the real store registers window listeners at import.
 vi.mock('../../shell/game.svelte', () => ({ game: { state: { kind: 'active' } } }));
@@ -72,6 +89,7 @@ function el(r: Rect, extra: object = {}) {
 
 beforeEach(() => {
   mocked.motion = { baseMs: 180, reduced: false };
+  mocked.relaunch = null;
   present = new Set(['topBar', 'actionBar', 'board', ...[3, 4, 5, 6].map((n) => `cell${n}`)]);
   banner = rect(0, 56, 360, 0);
   frames = new Map();
@@ -602,6 +620,27 @@ describe('AD-19 celebration controller', () => {
     expect(last()).toBe('0');
     expect(c.running()).toBe(false);
     expect(done).toHaveBeenCalledTimes(1);
+  });
+
+  it('AD-19 a group still shown inside the last baseMs gets the closing fade: its element opacity is the step opacity, between 0 and 1', () => {
+    // A fitted group is out by cap − baseMs, so the fade reaches the element only for a group the
+    // test keeps on screen: no drift, as the step fade tests do.
+    mocked.relaunch = (state) => ({
+      ...state,
+      groups: state.groups.map((g) => ({ ...g, vx: 0 })),
+    });
+    const c = createCelebration();
+    c.setManual(true);
+    const els = fakeEls(1);
+    c.register(asEls(els));
+    c.start(viewOf([3]), () => undefined);
+    c.advance(5904); // 369 steps: cap − 96 ms, inside the 180 ms fade
+    const g = pureState([labelOrigin(3, 3)], 369).groups[0] as Group;
+    expect(g.exited).toBe(false);
+    expect(g.opacity).toBeGreaterThan(0);
+    expect(g.opacity).toBeLessThan(1);
+    expect(els[0]?.style.opacity).toBe(String(g.opacity));
+    c.cancel();
   });
 
   it('AD-19 at Slow (baseMs 320) the run is not finished at 6000 ms and finishes by about 10667 ms', () => {
