@@ -265,4 +265,4 @@ Close-out docs:
 - epic SPEC CAP-2 and F25 wording ← F21–F27; References F-range F1…F32
 - docs/game-flow-spec.md R-87 ← dictionary banner exempt from press skips (applied in 52d5aa5)
 - tickets.toml entry 7 `interface` (declined, not maintained after pull)
-Follow-ups for the retrospective: F31 short-window skip (new ticket); 10.10 test-gap rows 40, 41, 45/110, 78/79; the unit-suite watch re-run budget (unmeasured).
+Follow-ups (owner, 2026-10-25): F31 and the bfcache rows 78, 79 recorded as known issues in the epic file, not fixed; test-gap rows 40, 41, 45/110 and the remaining close-out docs fixed after the run (post-run commits); unit-suite speed measurement skipped.
