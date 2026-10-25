@@ -222,8 +222,8 @@ test.describe('android', () => {
     expect(await wcOf(page)).toBe(1);
     await expect(sheet(page)).toHaveCount(0);
     await expect(collapsedBar(page)).toHaveCount(0);
-    // The run's end pops its entry before the sheet's push: a page-side popstate counter (the wc and
-    // history.length checks cannot tell pop-then-push from no nav activity).
+    // A page-side popstate counter: the run's end makes exactly one pop (`pushState` fires no
+    // popstate); the pop-before-push order follows from the wc and history.length checks.
     await page.evaluate(() => {
       const w = window as unknown as { __pops?: number };
       w.__pops = 0;
@@ -232,6 +232,7 @@ test.describe('android', () => {
       });
     });
     const pops = () => page.evaluate(() => (window as unknown as { __pops?: number }).__pops);
+    expect(await pops()).toBe(0);
     await finishCelebration(page);
     await expect(sheet(page).getByRole('button', { name: 'Replay this deal' })).toBeFocused();
     await expect.poll(() => wcOf(page)).toBe(1);
@@ -870,20 +871,17 @@ test.describe('desktop', () => {
     page,
   }) => {
     await enterIntoRun(page);
-    // SPEC F29: both keydowns in one task, so the second lands while the first's deferred menu
-    // open is still pending (no dialog yet between them); keys.ts reads no `isTrusted`.
-    const between = await page.evaluate(() => {
+    // SPEC F29: both keydowns land in one task, so the second arrives before the first's pending
+    // pop settles (popstate is async); keys.ts reads no `isTrusted`.
+    await page.evaluate(() => {
       // On the focused element, as a real key press (the trackers read `target.closest`).
       const m = () =>
         (document.activeElement ?? document.body).dispatchEvent(
           new KeyboardEvent('keydown', { key: 'm', code: 'KeyM', bubbles: true, cancelable: true }),
         );
       m();
-      const dialogs = document.querySelectorAll('[role="dialog"]').length;
       m();
-      return dialogs;
     });
-    expect(between).toBe(0);
     await expectOneMenu(page);
     await page.goBack();
     await expect(menu(page)).toHaveCount(0);

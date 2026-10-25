@@ -89,8 +89,9 @@ export async function skipByPress(page: Page): Promise<void> {
 
 type Added = { __added?: Record<string, boolean> };
 
-// The page-side observer: from now on records whether a node matching `selector` is ever added to
-// `document` (itself or inside an added subtree). Sent as source; no `__wordcell` name (AD-18).
+// The page-side observer: records whether a node matching `selector` is present in `document` when
+// the watch starts or added later (itself or inside an added subtree). Sent as source; no
+// `__wordcell` name (AD-18).
 function observeAdded(selector: string): void {
   const w = window as unknown as Added;
   w.__added ??= {};
@@ -110,7 +111,10 @@ function observeAdded(selector: string): void {
 const reader = (page: Page, selector: string) => () =>
   page.evaluate((s) => (window as unknown as Added).__added?.[s] === true, selector);
 
-/** Records whether a `selector` node is ever added from now on; returns the reader. */
+/**
+ * Records whether a `selector` node is present when the watch starts or added later; returns the
+ * reader.
+ */
 export async function watchAdded(page: Page, selector: string): Promise<() => Promise<boolean>> {
   await page.evaluate(observeAdded, selector);
   return reader(page, selector);

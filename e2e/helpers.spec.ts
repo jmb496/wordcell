@@ -1497,7 +1497,7 @@ test.describe('celebration helpers', () => {
     }
   });
 
-  test('AD-17 watchAdded records a node added and removed again before the read, and reads false when none was added', async ({
+  test('AD-17 watchAdded records a node added and removed again before the read, and reads false when none was added; a node present at the start reads true', async ({
     page,
   }) => {
     await openFixture(page, 'session-idle-fresh');
@@ -1516,6 +1516,9 @@ test.describe('celebration helpers', () => {
     await expect(page.locator('[data-watch-marker]')).toHaveCount(0);
     expect(await marker()).toBe(true);
     expect(await none()).toBe(false);
+    // Present when the watch starts (the board's column 1).
+    const present = await watchAdded(page, '[data-testid="column-1"]');
+    expect(await present()).toBe(true);
   });
 
   test('AD-17 watchAddedFromBoot attaches before the app runs: a node the boot adds is recorded', async ({

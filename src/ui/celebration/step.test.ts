@@ -1160,8 +1160,9 @@ describe('AD-19 step', () => {
         // edge WordCell and long words need a pace; under F23/F25 only the long scene's 23-letter
         // landscape row had one, 1.093).
         const paces = PACES[`${list} ${geometry}`] as readonly number[];
-        expect(s.groups.map((g) => paceOf(s, g))).toEqual(paces.map((p) => expect.closeTo(p, 3)));
-        expect(s.groups.every((g) => paceOf(s, g) >= 1 - 1e-9)).toBe(true);
+        const got = s.groups.map((g) => paceOf(s, g));
+        expect(got).toEqual(paces.map((p) => expect.closeTo(p, 3)));
+        expect(got.every((pace) => pace >= 1 - 1e-9)).toBe(true);
       });
     }
   }

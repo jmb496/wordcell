@@ -3345,12 +3345,13 @@ describe('AD-12 entry 12 desktop hover peek', () => {
     }
   });
 
-  // Ticket 10.10 item 6 (end-sheet.ts reduced-motion / hidden / seam-off branch, no
-  // `cancelGesture()` before `openDeferred`): flip.ts `play` installs the guard on every won play,
-  // and with no animation it settles at once and hands the open to `whenOpenAllowed`, so the open
-  // waits for the 300 ms floor. Without the tracker (no guard) the same press would arm the
-  // long-press timer and its `openPeek` would throw `AD-13 openPeek while endSheet …` once the sheet
-  // is open; with it the press never reaches the controller (motion.ts `onEvent` consumes it).
+  // Ticket 10.10 item 6 (end-sheet.ts's reduced-motion / hidden / seam-off `openDeferred` branch,
+  // no `cancelGesture()` before `openDeferred`): flip.ts `play` installs the guard on every won
+  // play, and with no animation it settles at once and hands the open to `whenOpenAllowed`, so the
+  // open waits for the 300 ms floor; the press never reaches the controller (motion.ts `onEvent`
+  // consumes it). The no-tracker case (the press arms the long-press timer and its `openPeek`
+  // throws `AD-13 openPeek while endSheet …`) was observed in the ticket 10.10 build's evidence run
+  // (plan Implementation Notes, item 6), not here.
   it('AD-12 a press during a won settle’s guard (no animation, reduced motion) is consumed: no long-press timer, and the sheet opens at the floor with no throw', async () => {
     const t = await setup();
     t.detach();
@@ -3382,8 +3383,8 @@ describe('AD-12 entry 12 desktop hover peek', () => {
       () => false,
     );
     try {
-      // end-sheet.ts:40-43 under reduced motion: the token, then the won play's guard, an
-      // immediate settle (no animation) and the open handed to whenOpenAllowed.
+      // end-sheet.ts's reduced-motion branch: the token, then the won play's guard, an immediate
+      // settle (no animation) and the open handed to whenOpenAllowed.
       const token = t.overlays.deferEndSheetOpen();
       guard.install(true, () => undefined);
       guard.notifySettled();
@@ -3397,8 +3398,9 @@ describe('AD-12 entry 12 desktop hover peek', () => {
       now = 100;
       const press = { ...makeEvent({ target: t.b.cellCard }), type: 'pointerdown' };
       (onDoc as unknown as (event: unknown) => void)(press);
-      expect(press.stopPropagation).toHaveBeenCalled();
+      // The controller gets the press only if the tracker let it through.
       if (press.stopPropagation.mock.calls.length === 0) t.down(t.b.cellCard, press);
+      expect(press.stopPropagation).toHaveBeenCalled();
       expect(t.setTimer).not.toHaveBeenCalled();
       expect(() => t.advance(400)).not.toThrow();
       expect(t.overlays.peek).toBeNull();

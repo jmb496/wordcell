@@ -18,7 +18,7 @@
 // it can cover the other's letter (SPEC F23 stacking).
 // The path and its arc length are closed-form; `launch` samples the arc length of the first fall
 // and of one bounce once (`ARC_SAMPLES`), and a card's path time is found by a binary search of
-// those samples plus Newton steps, so a frame allocates nothing.
+// those samples plus Newton steps, so finding a card's path time allocates nothing.
 // SPEC F26 (pour out of the cell): there is no launch row; the launch point is the word's origin in
 // its WordCell (SPEC F8). Card `k` behind the leader is not shown (`cardShown`) until the leader has
 // run `k` steps, and then appears at the launch point, so the word leaves its cell one card at a
