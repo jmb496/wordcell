@@ -1,6 +1,6 @@
 # Review log — story-refactor-sweep.md (ticket 10.10)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Target: `_bmad-output/initiative-wordcell-v1/epic-end-of-game-words/story-refactor-sweep.md`.
 Pass 0: `story-refactor-sweep.review-log.passes/pass0.md`, 104 words, HEAD 8806802.
@@ -84,3 +84,42 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 ### Fixer outcome (pass 2)
 All 17 items applied. Ran: `git merge-base main HEAD` → 19acd17; `git diff --exit-code 19acd17 -- package.json package-lock.json` empty, exit 0; `git diff 19acd17 -- src/engine/deal.test.ts | wc -l` → 0; `-g` pattern `--list` → 4 tests (celebration.spec.ts:332 ×2, :368, :424). Unverified: the three full android runs (suite run). Cuts to hold the budget: "Done checkpoint" line merged into AC bullet 3; "verify at HEAD" and duplicate "unfixed row is declined" dropped from items 2-3; NaN-band source list dropped from item 11; item 1 parenthetical; shorter item 4, item 9 list, AC snapshot bullet; two References lines merged.
 Words: 1521 (14.6 x pass 0; budget 1500)  |  Snapshot: story-refactor-sweep.review-log.passes/pass2.md, fix diff pass2.fix.diff
+
+## Pass 3 — 2026-10-24
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 6, minor 13 (+3 unapplied, over budget), decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+### Applied
+- [major] Description / AC 3 — pass 2's cut removed the done checkpoint from the Description (undoes pass 1 item 2, caller intent); AC 3 words it as a read, which the autopilot may take over (methodology:56-58) → fixer item 1
+- [major] Scope 3 — the failing-at-HEAD rule covers item 2 only; pass 2's cut removed item 3's disposition → fixer item 2
+- [major] Scope 2 pass — "the mutation its review named": most sources name none → fixer item 3
+- [major] Scope 6 — the repro omits the AD-14 F8 winning guard (flip.ts:331 `install`, motion.ts:142/170 no tracker = no guard), so a unit repro without the tracker always throws → fixer item 4
+- [major] Scope 4 pass — "logs no warning" is green if the capture misses it; require the same capture to show it at HEAD; the named regression guard does not mount Celebration.svelte → fixer item 5
+- [major] AC Verify / Scope 5 — a test:all failure outside the five named rows that passes on rerun has no rule → fixer item 6
+- [minor] Description — "nothing carried" from the 10.9 read lost in pass 2 → fixer item 1
+- [minor] Scope 1 — "tune2 minors 3-4's sites" includes the epic Notes line (a doc) → "code sites" → fixer item 7
+- [minor] Scope 7 — AD-17 `doubleTap` has no owner decision (epic Notes: retrospective; epic-autopilot SKILL.md:366-367) → proposal list → fixer item 8
+- [minor] Scope 10 — the package.json fallback clause does not parse → fixer item 9
+- [minor] Scope 5 — "rerun to zero" → 0/3 → fixer item 10
+- [minor] Scope 2 — no-mount-test row: no DOM in Vitest (vite.config.ts `environment: 'node'`) → declined → fixer item 11
+- [minor] Scope 3 — "10-6 pass 4 (helpers.spec `pointerType`)" → "10-6 pass 4 minors 4-5" → fixer item 12
+- [minor] Scope 9 — wave-stagger source is opus pass 1 → fixer item 13
+- [minor] Scope 6 — `cancelGesture()` placement: after the won and live-token checks, as at :46-49 → fixer item 14
+- [minor] Scope 2 — FALL_FRAC reference: a first-launched 1-letter group (pace 1) → fixer item 15
+- [minor] Scope 5 — run at item 10's recorded commit (after edits) → fixer item 16
+- [minor] Scope 3 — 14 px: wrapping at the floor is specified (DESIGN.md:691) → "below 14 px, or wrapping above it" → fixer item 17
+- [minor] AC 1 — `toHaveScreenshot` never rewrites a baseline; "a new or failing baseline … revert the change that caused it" → fixer item 18
+### Default applied (technical)
+- Scope 6 repro → with `motion.startTracker` and the winning `play` → `whenOpenAllowed` path (as controller.test.ts does) or a dev-server Playwright row; otherwise decline citing motion.ts onEvent
+- Scope 2 mutation → the review's, else one the plan names and records
+- Scope 4 → the same capture logs it at HEAD and not after; no warning at HEAD = already-closed row; e2e celebration rows as regression guard
+- other test:all failures → recorded with failing names, failures/3 under item 5's rule
+### Decision needed (functionality / UX / gameplay)
+- none new
+### Not applied (minor, over budget, adds words)
+- Scope 3 — "on every project it runs in, with that project's config (after `npm run build` for dist-smoke)"
+- AC 2 — old → new map for renamed titles that a plan's rule → test map cites
+- Scope 10 — AGENTS.md watch re-run < 1 s (pass 2)
+### Dropped
+- none
+### Fixer outcome (pass 3)
+All 18 items applied; no conflicts. Cites checked: flip.ts:331, controller.test.ts:3319 (tracker setup), flip.test.ts:1292 (winning play + `whenOpenAllowed`), motion.ts `onEvent` :341, end-sheet.ts:46-49, step.ts:312, vite.config.ts:58 `environment: 'node'`, DESIGN.md:691, 10-6-build.md pass 4 minors 4-5. No literal command added or changed. Cuts: item 9 reordered (bfcache merged into the owner-call list), errata row shortened, item 11 cites `10-6-tune*.md`, AC 1 Docker clause, item 6 parenthetical, Description opening.
+Words: 1559 (15.0 x pass 0; budget 1500; the majors added ~45)  |  Snapshot: story-refactor-sweep.review-log.passes/pass3.md, fix diff pass3.fix.diff
