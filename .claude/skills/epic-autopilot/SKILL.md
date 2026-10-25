@@ -64,7 +64,8 @@ With the argument `one-ticket` (always headless):
   (`detach.sh` closes stdin and keeps `<done-file>.pid` while the step runs; for `test:all` the
   command is `npm run test:all` and the done file holds its exit code.) Before Setup 2, if any
   `.autopilot/*/*.pid` names a live process (a step an earlier session left running), stop
-  (rule 5) and name it; never start a second copy.
+  (rule 5) and name it; never start a second copy. A pid file naming no live process is stale:
+  delete it and say so once in the digest's startup note.
 - Startup checklist (before anything else): read the handoff JSON, `git log -5`, `git status --short`
   and the newest digest's last section, and check they agree on which ticket is next. When they
   disagree, the ticket files win (`tickets.py` status, plan status, review logs, per the resume
@@ -250,7 +251,9 @@ before the missing-JSON rule, since a limited step never writes its JSON. Then:
    family (e.g. `docs(tickets): WIP review pass <n> ticket <ref>`); a build's own files are left
    to `bmad-build-auto`'s resume, so leave them uncommitted and say so.
 3. Append `## Stopped — usage limit` to the digest: the ticket, step, the reset time exactly as
-   the message shows it, and the resume instruction; commit it (the stop commit, Setup 4).
+   the message shows it, and the resume instruction; write the handoff JSON (`outcome`
+   `stopped`, `reason` naming the usage limit and reset time) and commit both (the stop commit,
+   Setup 4).
 4. Tell the owner in plain words: the run paused at the limit, when it resets, and that running
    `/epic-autopilot <epic>` after that picks up where it stopped.
    In `one-ticket` mode, tell the owner to rerun `.claude/skills/epic-autopilot/scripts/loop.sh
