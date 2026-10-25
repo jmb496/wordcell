@@ -7,9 +7,9 @@ status: 'built'
 baseline_revision: '728b18ac277802979795dfb0eb7a65bad33348f5'
 route: 'full'
 route_source: 'auto'
-review: ''
-review_source: ''
-lenses_ran: []
+review: 'thorough'
+review_source: 'auto'
+lenses_ran: ['blind-hunter', 'edge-case-hunter', 'verification-gap', 'intent-alignment']
 review_loop_iteration: 0
 followup_review_recommended: false
 context:
@@ -17,7 +17,14 @@ context:
   - '{project-root}/_bmad-output/initiative-wordcell-v1/epic-end-of-game-words/story-refactor-sweep.review-log.md'
   - '{project-root}/_bmad-output/specs/spec-epic-10-end-of-game-words/SPEC.md'
 warnings: ['oversized', 'multiple-goals']
-deferred: []
+deferred:
+  - summary: >-
+      Ticket 10.10 item 4's Svelte warning fix has no lasting regression check.
+    evidence: |-
+      Restoring `bind:this={elements[g]}` in Celebration.svelte keeps celebration.spec.ts, dist-smoke and svelte-check green while the 10 dev console warnings return; the only evidence is the throwaway seam-on console capture (Implementation Notes, item 4). The plan declined a lasting console assertion (Design Notes: a dev-only warning is not a product rule). Review lens verification-gap, 2026-10-25.
+    location: >-
+      src/ui/celebration/Celebration.svelte
+    severity: low
 ---
 
 <intent-contract>
@@ -176,6 +183,34 @@ Build 2026-10-24/25 (unattended, one agent). Cleanup commit **767ed42** `refacto
 ## Plan Change Log
 
 ## Review Triage Log
+
+### 2026-10-25 — Review pass
+- verdicts: 24 findings — high 0, medium 0, low 20, false 4, maybe-false 0
+- findings:
+  - `[low]` `[patch]` blind-hunter: step.ts header "so a frame allocates nothing" contradicts the rewritten render comment (`step()` spreads state, maps groups) — narrowed to "finding a card's path time allocates nothing" (af1ed54).
+  - `[low]` `[patch]` blind-hunter: item 6 guard test's `t.down` fallback is dead after `expect(stopPropagation).toHaveBeenCalled()`, so the timer/peek asserts cannot fail — reordered: `onDoc`, forward unless stopped, then assert; fails with motion.ts `consume` removed (af1ed54).
+  - `[low]` `[patch]` blind-hunter: same test re-enacts the chain by hand and cites `end-sheet.ts:40-43` — line cite replaced by the branch name (af1ed54); the hand composition kept: flip.ts:331 install on every won play and the no-animation floor are pinned by flip.test.ts:1292-1320, and ticket item 6's decline path asks only for the repro test plus motion.ts `onEvent`.
+  - `[low]` `[patch]` blind-hunter: desktop M-twice `between` dialog count is read before any microtask, so it holds whatever the code does — dropped; same-task dispatch and comment kept (the second keydown lands before the async pop settles); the keys.ts waiter mutation still fails the row (Implementation Notes I3.p) (af1ed54).
+  - `[low]` `[patch]` blind-hunter: `watchAdded`/`observeAdded` doc says "added from now on" but seeds from `querySelector` (present-at-start reads true), now relied on by dist-smoke and win-guard — doc says "present when the watch starts or added later"; self-test asserts a present node reads true (af1ed54).
+  - `[low]` `[patch]` blind-hunter: `paceOf` relaunches the reference on every call and the ≥ 1 bound recomputes every pace — paces computed once per scene and reused (af1ed54); suite stays under the 5 s budget (item 10).
+  - `[low]` `[reject]` blind-hunter: fade tests repeat the finiteness block and do not assert the leader stays at its origin — cosmetic duplication; the finite check is the tune2 minor 5 point, and speed 0 means arc 0 by step.ts's definition (`speed` x elapsed); no everyday harm.
+  - `[low]` `[reject]` blind-hunter: view.test tail half now has a one-move redo tail (was ≥ 2 by length only) — the 10-1 review's own default prescribed fewer Undos with a literal list; the redo tail stays excluded and the sort mutation now fails; a multi-move-only regression is not plausible in everyday change.
+  - `[low]` `[patch]` blind-hunter: popstate counter has no 0 baseline before the finish and its comment claims an order it cannot see — `expect(pops()).toBe(0)` before `finishCelebration`; comment says the order follows from wc and `history.length` (af1ed54).
+  - `[low]` `[reject]` blind-hunter: keys.test second-M title says "row"/"attempt() is false" and asserts `waiters` length — "row" is keys.ts's ROWS term; the outcome asserts (one `celebration.end`, top `menu`, depth 2) are present; title wording cosmetic.
+  - `[low]` `[patch]` edge-case-hunter: dead `t.down` fallback makes the guard asserts vacuous — same root cause and fix as row 2 (af1ed54).
+  - `[low]` `[patch]` edge-case-hunter: the comment claims the no-tracker throw though the test never runs that case — comment now says it was observed in the build's evidence run (Implementation Notes, item 6), not by this test (af1ed54).
+  - `[low]` `[patch]` edge-case-hunter: `between === 0` cannot fail — same root cause and fix as row 4 (af1ed54).
+  - `[low]` `[defer]` verification-gap: item 4's warning fix has no lasting check (restoring `bind:this` stays green) — the plan declined a lasting console assertion (dev-only warning, not a product rule); deferred to frontmatter.
+  - `[low]` `[patch]` verification-gap: item 6 test dead code / vacuous asserts — same root cause and fix as row 2 (af1ed54).
+  - `[low]` `[reject]` verification-gap: item 6 test re-enacts end-sheet.ts by hand — pieces covered by flip.test.ts :1298 and :1406 (the lens's own note); the ticket's decline path is met.
+  - `[low]` `[reject]` intent-alignment: item 6 evidence drives motion.ts, not end-sheet.ts/flip.ts, and covers only reduced motion — the guard is installed by flip.ts:331 for every won play whatever the branch (reduced motion, hidden, seam off), so the consume property is branch-independent; ticket item 6 allows decline citing the test and `onEvent`; residual recorded as row 109.
+  - `[low]` `[reject]` intent-alignment: F29 row uses synthetic same-task keydowns, not real presses — real presses never landed in the pending window (HEAD never pinned the race, Implementation Notes I3.p); keys.ts reads no `isTrusted`; the 10-9 minor 7 asked to pin the landing, which only a same-task dispatch does deterministically.
+  - `[false]` `[reject]` intent-alignment: rapid-restart `elements` reset declined, `props()`/`running()` marked closed though listed — the dispositions carry evidence: App.svelte `{#key run}` remounts per run and Celebration.svelte registers `[]` on destroy (row 33); celebration.svelte.ts:93 `$state.raw` with its test :870 (row 34); item 2 is test-only, so a reset is out of its scope.
+  - `[false]` `[reject]` intent-alignment: F23 stacking comments state an untested limit; renamed title promises less — the narrowed claim is the tune2 minor 3 probe's measurement (0.051 card units apart at a contact); narrowing an overclaim is item 1's purpose; assertions unchanged by design (comment/title-only).
+  - `[low]` `[reject]` intent-alignment: no unit test pins `keep(g)` filling `elements` before `onMount` — Vitest runs `environment: 'node'` (no mount, declined in the ticket); celebration.spec.ts :343/:642 and dist-smoke's run fail if `register` got `[]` (verification-gap lens confirmed).
+  - `[low]` `[reject]` intent-alignment: Appendix C reconciliation line said item 4's warning was not reproduced — fix edits this plan (rejected per triage rule); the stale planning-time sentence was corrected as bookkeeping while filling Appendix C.
+  - `[false]` `[reject]` intent-alignment: dist-smoke imports `SWALLOW_MS` from `src/` and proves the skip by a window capture listener — e2e specs already import src constants (celebration.spec.ts:3); the listener is the 10-8 minor 4 default; not a defect.
+  - `[false]` `[reject]` intent-alignment: I3.c history shape not delivered as a test — ticket item 3's own rule: a test failing at HEAD is not committed, owner-call row (row 40).
 
 ## Design Notes
 
@@ -703,7 +738,7 @@ Commands run (repo root):
 3. `sed -n '300,325p' EP/story-close-out-documents-agents-pitfall-and-device-check-plan.md` (:314-317) and `sed -n '110,125p' EP/story-win-trigger-and-celebration-test-seam-plan.md` (:120).
 4. Ticket review logs: `for f in EP/story-*.review-log.md (minus story-refactor-sweep); do n=$(grep -n '^## Result' $f | tail -1 | cut -d: -f1); sed -n "$n,\$p" $f; done`; plan coverage of each: `grep -n -i -E 'review.log|unapplied|minors' EP/*-plan.md`, then read each plan's "Review-log items left for the build, resolved" / "Owner checkpoint items" (10.4 :136/:165, 10.5 :157-170, 10.6 :152-174, 10.7 :134-157, 10.8 :57-69, 10.1 :90, 10.3 :62/:114, 10.9 D2-D11 :369-405). A finding counts as "left open" when the plan only recorded it as an owner/entry-9/entry-10 item.
 5. Digest: `grep -n -i 'worth knowing\|^## ' DG`, every `Worth knowing:` line for 10.1-10.9 (:17, :28, :39, :51, :65, :77, :91, :104, :130, :144, :162, :187, :206, :215); the 10.9 done entry (:228) read for item 7.
-6. Liveness: grep/read of `src/`, `e2e/`, spine, SPEC, DESIGN.md, tickets.toml, epic file (cites in table); `npx biome lint e2e/end-sheet.spec.ts` (1 warning, :845). Item 4's dev warning was not reproduced (no dev server run; needs the seam on, 10.10 review log Pass 5 open major).
+6. Liveness: grep/read of `src/`, `e2e/`, spine, SPEC, DESIGN.md, tickets.toml, epic file (cites in table); `npx biome lint e2e/end-sheet.spec.ts` (1 warning, :845). Item 4's dev warning was not reproduced by this planning inventory (no dev server run); the planning capture with the seam on (Appendix B) and the build (row 55) reproduced it.
 
 Counts before merging (findings; "none" rows extra):
 
@@ -839,3 +874,76 @@ Rows per disposition: fixed here 47 (item 1: 11, item 2: 14, item 3: 16, item 4:
 | 108 | DG:28 ("unapplied minors handed to the build"), DG:91 ("5 code-review minors"), DG:130 ("two minors") | pointers to minors | dup of rows 43-45, 18, 32, 53, 54, 84, 85, 70, 102 | merged (see those rows) | — |
 | 109 | Appendix B Item 6 residual (planning) | a press after the guard floor but before its timer fires passes untracked after `openDeferred` (motion.ts:342, :417-419) and could arm a long-press timer | unverified in a browser (a scrim hit would resolve OUTSIDE) | owner call (awareness only; `cancelGesture()` before `openDeferred` would not close it) | 6 |
 | 110 | build of this ticket (I3.j probe) | `es:350` 'AD-13 R-62 a win by Redo while a sticky WordCell view is open …' is vacuous: the Undo of the finish closes the view, so no view is open at the Redo | yes (probe, cells 6-8 of `session-won`) | owner call (test design; see row 45) | — |
+
+## Auto Run Result
+
+**Summary:** Ticket 10.10 sweep built. Scope items 1-7 applied:
+- comments and titles;
+- unit and e2e tightening;
+- the lint warning removed;
+- the Svelte `binding_property_non_reactive` warning removed with an attachment (seam-on capture: 10 hits at HEAD, 0 after);
+- item 6 declined with a committed guard test;
+- the two decided doc syncs.
+
+Items 5 and 10 were measured at 767ed42. Item 11 is Appendix C: 151 source findings merged into 110 rows, with rows 109 and 110 added by the build. Stops at `built` for the owner's done checkpoint (ticket Description).
+
+**Commits (local, not pushed):**
+- `767ed42` the cleanup;
+- `013200e` the plan;
+- `af1ed54` the review fixes;
+- the plan finalization commit.
+
+**Files changed:**
+- `src/ui/celebration/step.ts`, `skip.ts`, `interruptions.ts`, `celebration.svelte.ts`, `src/shell/test-hook.ts` -- comments only (item 1).
+- `src/ui/celebration/Celebration.svelte` -- `{@attach keep(g)}` replaces `bind:this` (item 4).
+- `src/ui/celebration/step.test.ts`, `Celebration.test.ts`, `celebration.svelte.test.ts`, `attached.test.ts`, `src/ui/overlays.svelte.test.ts`, `src/ui/keys.test.ts`, `src/ui/end-sheet.test.ts`, `src/engine/view.test.ts` -- item 2 tests.
+- `src/ui/gestures/controller.test.ts` -- item 6 guard test.
+- `e2e/celebration.spec.ts`, `e2e/end-sheet.spec.ts`, `e2e/pwa/dist-smoke.spec.ts`, `e2e/helpers.spec.ts`, `e2e/helpers/celebration.ts`, `e2e/win-guard.spec.ts` -- item 3.
+- `DESIGN.md` A-D12 and the epic References F-range -- item 7.
+
+**Review:** thorough, 4 lenses, 24 findings (high 0, medium 0, low 20, false 4):
+- 7 root causes patched, all low (af1ed54);
+- 1 deferred (item 4 has no lasting console check, low);
+- 12 low and 4 false rejected, each with its reason in the Review Triage Log.
+
+`followup_review_recommended: false`: no high was patched, and no medium.
+
+**Verification (final):**
+- `npm run test:all` at af1ed54 is green:
+  - lint 0 warnings;
+  - check 0 errors;
+  - unit 3609 passed;
+  - build `total 559956 / 600000`;
+  - dist 21 passed;
+  - e2e 1098 passed;
+  - pwa 17 passed.
+- `npm run test:screens` (Docker) at af1ed54: 67 passed, 39 skipped, no `*-snapshots` change.
+- Item 4 capture re-run by the orchestrator at 013200e: 0 hits, groups mounted.
+- Item 5: 0/3 for all five named rows and no other failure (at 767ed42).
+- Item 10 at 767ed42:
+  - margin 40043;
+  - package, deal, session, history and serialize diffs from 19acd17 empty;
+  - fixtures diff from 728b18a empty;
+  - warm unit median on a fresh ext4 clone 4.32 s (Vitest Duration; wall time including npx start-up 4.87-5.01 s).
+
+**For the owner (done checkpoint):**
+- **Owner-call rows:**
+  - 40 (I3.c: the fixture stores no `wordcell:history`, so there is no record to pin);
+  - 45 and 110 (I3.j: the Undo of the finish closes the sticky view, and the existing es:350 R-62 row is vacuous);
+  - 63 (spine AD-17 `doubleTap`: the digest claims it was applied, but it is not);
+  - 64 (DESIGN.md:692);
+  - 78 and 79 (bfcache);
+  - 109 (item 6 residual, awareness only).
+- **Declined but flagged:**
+  - 41 (ticket item 8 mis-cites opus GAVE_ROWS as closed; the Undo-then-Give-up path es:944-946 is still weak);
+  - 12 (epic Notes wording).
+- **Doc proposals (Appendix B, old → new):**
+  - AD-17 Touch `doubleTap`;
+  - DESIGN.md:692;
+  - F32 notes for EXPERIENCE.md:414 and AD-19 :971;
+  - F31 follow-up ticket (retrospective).
+- **Check:** the item 10 figures.
+
+**Residual risks:**
+- The warm unit median is 4.32 s against 5 s. Wall time including npx start-up touched 5.01 s once.
+- The watch re-run < 1 s budget was not measured.
