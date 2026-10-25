@@ -1,8 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { type Art, checkTexture, parseArt, worstSurfaces } from './art';
-import { themeRecords } from './colour-literals';
+import { type Art, checkTexture, parseArt, worstRatio } from './art';
+import { cssDecls, themeRecords } from './colour-literals';
+import * as registry from './registry';
 import {
   defaultTheme,
   gardenTheme,
@@ -88,6 +89,28 @@ const TEXTURED = ['card-face', 'destination-fill'];
 const TRANSLUCENT = ['scrim', 'shadow-drag', 'scene-pointer-shadow'];
 const OPAQUE = ['scene-pointer-fill', 'scene-pointer-stroke'];
 
+const read = (name: string) => readFileSync(fileURLToPath(new URL(name, import.meta.url)), 'utf8');
+
+// Owner decision D6: the drop-target washes over an outline-bordered target on the table (the
+// empty-column foot, the placeholder), as Column.svelte declares them: `color-mix(in srgb,
+// var(--wc-accent-teal) N%, transparent)` on a `.foot` rule (the 8 % wash) or in the one
+// `--drop-wash` declaration (the 12 % wash every drop target uses).
+const WASH = /color-mix\(in srgb, var\(--wc-accent-teal\) (\d+)%, transparent\)/g;
+const COLUMN = read('../Column.svelte');
+const WASHES: readonly number[] = [
+  ...new Set(
+    cssDecls(
+      COLUMN.slice(
+        COLUMN.indexOf('<style>') + '<style>'.length,
+        COLUMN.indexOf('</style>'),
+      ).replace(/\/\*[\s\S]*?\*\//g, ''),
+    )
+      .filter((d) => d.name === '--drop-wash' || d.stack.some((sel) => /\.foot\b/.test(sel)))
+      .flatMap((d) => [...d.value.matchAll(WASH)].map((m) => Number(m[1]) / 100)),
+  ),
+].sort();
+const NO_ART: Art = { width: 1, height: 1, shapes: [] };
+
 /** Failures of one theme record; `figures` also pins the DESIGN.md figures (default theme). */
 function check(record: Record, figures: boolean, defaultKeys?: ReadonlySet<string>): string[] {
   const fails: string[] = [];
@@ -113,10 +136,8 @@ function check(record: Record, figures: boolean, defaultKeys?: ReadonlySet<strin
   // Worst point: the foreground against every colour the art can produce over the surface.
   const overArt = (art: Art | null, fg: Rgba, bg: Rgba, floor: number, label: string) => {
     if (art === null) return;
-    for (const surface of worstSurfaces(art, bg)) {
-      const r = ratio(fg, { ...surface, a: 1 });
-      if (r < floor) fails.push(`${label}: ${r} < ${floor}`);
-    }
+    const r = worstRatio(art, bg, fg);
+    if (r < floor) fails.push(`${label}: ${r} < ${floor}`);
   };
   for (const [fg, bg, floor, figure] of TABLE) {
     guard(`${fg}/${bg}`, () => {
@@ -128,6 +149,15 @@ function check(record: Record, figures: boolean, defaultKeys?: ReadonlySet<strin
       if (figures && round1(r) !== figure) fails.push(`${fg}/${bg}: ${round1(r)} != ${figure}`);
       if (TEXTURED.includes(bg)) overArt(texture, f, b, floor, `${fg}/${bg} over texture`);
       if (bg === 'table') overArt(tableArt, f, b, floor, `${fg}/${bg} over table art`);
+    });
+  }
+  // D6: the outline of a drop target on the table under each wash, at the art's worst point.
+  for (const alpha of WASHES) {
+    guard(`${alpha} wash: outline/table`, () => {
+      const outline = resolve(record, '--wc-outline');
+      const wash = { colour: resolve(record, '--wc-accent-teal'), alpha };
+      const r = worstRatio(tableArt ?? NO_ART, resolve(record, '--wc-table'), outline, wash);
+      if (r < 3) fails.push(`${alpha} wash: outline/table ${r} < 3`);
     });
   }
   for (const t of TRANSLUCENT) {
@@ -146,7 +176,6 @@ function check(record: Record, figures: boolean, defaultKeys?: ReadonlySet<strin
   return fails;
 }
 
-const read = (name: string) => readFileSync(fileURLToPath(new URL(name, import.meta.url)), 'utf8');
 const themes = themeRecords(read('../app.css'));
 const defaults = themes.get('default') as Record;
 
@@ -214,12 +243,17 @@ describe('AD-14 theme contrast', () => {
     expect(parseArt(steampunk.get(CARD_TEXTURE) as string)).not.toBeNull();
   });
 
-  it('AD-10 main.ts registers the six theme records in §7.10 order', () => {
+  // The registry exports main.ts passes to register(), in call order.
+  const registerCalls = (): (string | undefined)[] => {
     const main = read('../../main.ts')
       .split('\n')
       .filter((line) => !line.trimStart().startsWith('//'))
       .join('\n');
-    const calls = [...main.matchAll(/^register\((\w+)\);$/gm)].map((m) => m[1]);
+    return [...main.matchAll(/^register\((\w+)\);$/gm)].map((m) => m[1]);
+  };
+
+  it('AD-10 main.ts registers the six theme records in §7.10 order', () => {
+    const calls = registerCalls();
     expect(calls).toEqual([
       'defaultTheme',
       'scifiTheme',
@@ -228,6 +262,12 @@ describe('AD-14 theme contrast', () => {
       'paperTheme',
       'plumTheme',
     ]);
+  });
+
+  it('AD-10 the app.css theme record ids equal the registered theme ids', () => {
+    const exported = registry as unknown as Readonly<{ [name: string]: { id?: string } }>;
+    const registered = registerCalls().map((name) => exported[name as string]?.id);
+    expect([...registered].sort()).toEqual([...themes.keys()].sort());
   });
 
   it('AD-14 the art keys are optional in the key-set check', () => {
@@ -299,6 +339,17 @@ describe('AD-14 theme contrast', () => {
     expect(check(bad, false).some((f) => f.startsWith('outline/table over table art'))).toBe(true);
   });
 
+  it('AD-14 table art painting outline/table at a shape alpha under its colour sum fails naming the pair', () => {
+    const bad = new Map(defaults);
+    bad.set(
+      TABLE_ART,
+      art(
+        "<path d='M0 2h8' fill='none' stroke='%23fff' stroke-opacity='0.45'/><path d='M0 6h8' fill='none' stroke='%23fff' stroke-opacity='0.45'/>",
+      ),
+    );
+    expect(check(bad, false).some((f) => f.startsWith('outline/table over table art'))).toBe(true);
+  });
+
   it('AD-14 a texture over 6 % or a token outside the grammar fails the record', () => {
     const heavy = new Map(defaults);
     heavy.set(CARD_TEXTURE, art("<rect width='8' height='8' fill='%23fff' fill-opacity='0.2'/>"));
@@ -314,5 +365,38 @@ describe('AD-14 theme contrast', () => {
     expect(check(odd, false, new Set(defaults.keys())).some((f) => f.includes('hairline'))).toBe(
       true,
     );
+  });
+
+  // Owner decision D3: DESIGN.md Elevation & Depth's lifted-card shadow is the default block's; a
+  // dark theme declares that value, the light theme its own lighter one.
+  const schemes = new Map(
+    cssDecls(read('../app.css').replace(/\/\*[\s\S]*?\*\//g, ''))
+      .filter((d) => d.stack.length === 1 && d.name === 'color-scheme')
+      .map((d) => [/\[data-theme="([^"]*)"\]/.exec(d.stack[0] as string)?.[1] ?? ':root', d.value]),
+  );
+  it.each([...themes.keys()].filter((id) => id !== 'default'))(
+    'AD-14 theme %s: a dark theme declares the default --wc-shadow-drag, a light one its own',
+    (id) => {
+      const own = themes.get(id) as Record;
+      const scheme = schemes.get(id) ?? schemes.get(':root');
+      expect(['dark', 'light']).toContain(scheme);
+      const shadow = own.get('--wc-shadow-drag');
+      expect(shadow).toBeDefined();
+      if (scheme === 'dark') expect(shadow).toBe(defaults.get('--wc-shadow-drag'));
+      else expect(shadow).not.toBe(defaults.get('--wc-shadow-drag'));
+    },
+  );
+
+  it('AD-14 the drop-target washes are the 8 % empty-column and 12 % drop washes of Column.svelte', () => {
+    expect(WASHES).toEqual([0.08, 0.12]);
+  });
+
+  it('AD-14 a wash that drops outline/table below 3 fails naming the wash', () => {
+    const bad = new Map(defaults);
+    bad.set('--wc-outline', marginalInk('--wc-table', 3));
+    expect(check(bad, false).some((f) => f.startsWith('0.12 wash: outline/table'))).toBe(true);
+    bad.set('--wc-outline', defaults.get('--wc-outline') as string);
+    bad.set(TABLE_ART, art("<rect width='8' height='8' fill='%23fff' fill-opacity='0.06'/>"));
+    expect(check(bad, false).some((f) => f.startsWith('0.12 wash: outline/table'))).toBe(true);
   });
 });

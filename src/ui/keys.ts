@@ -29,6 +29,7 @@ import { type FocusTarget, liveTiles, readFocus } from './focus-target';
 import { type Hit, tapAction } from './gestures/intent';
 import { KEY_LABELS } from './key-labels';
 import { newGame, requestNewGame } from './new-game';
+import { openMenu } from './open-menu';
 import { openSurface } from './open-surface';
 import { overlays, SUSPENDING } from './overlays.svelte';
 
@@ -153,6 +154,22 @@ function tileFocusPlan(card: CardId, place: 'tray' | 'strip'): () => void {
   };
 }
 
+/**
+ * `F` keeps focus on the focused tile (EXPERIENCE.md Keyboard): Flip never removes it, but with
+ * D > M the keyed tile list moves its node, which blurs it while it stays connected, so
+ * focus-follow.ts (which recovers only a removed one) cannot. Re-focus it after the DOM update.
+ * (`+`/`-` only insert or remove mirrors and leave the tile nodes in place.)
+ */
+function keepTileFocus(run: () => void): void {
+  const focus = readFocus();
+  run();
+  if (focus.kind !== 'tile') return;
+  const { card, place } = focus;
+  void tick().then(() => {
+    if (liveTiles(place).includes(card)) focusCard(card);
+  });
+}
+
 function stepOrder(order: readonly CardId[], card: CardId, dir: number): CardId[] | undefined {
   const at = order.indexOf(card);
   const to = at + dir;
@@ -220,7 +237,7 @@ export const ROWS: Readonly<Record<CommandId, Row>> = {
   flip: {
     gate: (view) => view.canFlip,
     single: true,
-    run: flip,
+    run: () => keepTileFocus(flip),
     label: KEY_LABELS.flip,
     changesPhase: true,
   },
@@ -242,15 +259,18 @@ export const ROWS: Readonly<Record<CommandId, Row>> = {
   menu: {
     gate: () => true,
     single: true,
-    run: () => openSurface('menu'),
+    run: () => openMenu(),
     label: KEY_LABELS.menu,
     changesPhase: true,
   },
-  // CAP-3: a confirm while a game is in progress, else New game acts at once.
+  // CAP-3: a confirm while a game is in progress, else New game acts at once and focus goes to the
+  // new deal's board after the DOM update (focus-board.ts `focusBoard`, as the Menu row does).
   newGame: {
     gate: () => true,
     single: true,
-    run: (view) => void requestNewGame(view),
+    run: (view) => {
+      if (!requestNewGame(view)) void tick().then(focusBoard);
+    },
     label: KEY_LABELS.newGame,
     changesPhase: true,
   },
@@ -375,18 +395,22 @@ export const ROWS: Readonly<Record<CommandId, Row>> = {
   },
   // `Space` on a WordCell opens the sticky view in every phase (a tail selection is popped first);
   // with a tail selected and the cell empty it only deselects; with that cell's view already open
-  // it only closes it (owner, 2026-10-16).
+  // it only closes it (owner, 2026-10-16). The open view holds focus (the `view` target), so that
+  // second Space arrives there and closes it; focus returns to the cell (WordCellView.svelte; SPEC
+  // F11).
   // The close-view, deselect, closePeek, openView sequence mirrors Controller.activate
   // (gestures/controller.ts) and must change with it.
   view: {
     gate: (view, ctx) => {
+      if (ctx.focus.kind === 'view') return overlays.viewCell === ctx.focus.cell;
       if (ctx.focus.kind !== 'cell' || overlays.top === 'endSheet') return false;
       const cell = cellOf(view, ctx.focus.cell);
       return cell !== undefined && (cell.cards.length > 0 || overlays.selection !== null);
     },
     single: true,
     run: (view, ctx) => {
-      if (ctx.focus.kind !== 'cell') throw new Error('AD-12 view key without a focused cell');
+      if (ctx.focus.kind !== 'cell' && ctx.focus.kind !== 'view')
+        throw new Error('AD-12 view key without a focused cell or view');
       const cell = required(cellOf(view, ctx.focus.cell), 'cell');
       // An open sticky view sits above a tail selection (AD-13): close it before deselecting.
       const reopen = overlays.viewCell !== cell.cell;
@@ -486,7 +510,7 @@ function match(event: KeyboardEvent): Resolved | undefined {
       if (focus.kind === 'control') return undefined;
       if (key === ' ') {
         if (focus.kind === 'column' || focus.kind === 'tile') return { id: 'tap', ctx };
-        return focus.kind === 'cell' ? { id: 'view', ctx } : undefined;
+        return focus.kind === 'cell' || focus.kind === 'view' ? { id: 'view', ctx } : undefined;
       }
       if (focus.kind === 'column' || focus.kind === 'cell') return { id: 'tap', ctx };
       const view = game.view;
@@ -499,10 +523,19 @@ function match(event: KeyboardEvent): Resolved | undefined {
   }
 }
 
+/**
+ * AD-13: while only `celebration` suspends, Undo, `N` and `M` still act (EXPERIENCE.md Win
+ * celebration). `Space` and `Esc` are the run's skip (celebration/skip.ts, a capture listener that
+ * consumes them); `M` ends the run, then opens the menu (open-menu.ts, ticket 10.7).
+ */
+const CELEBRATION_KEYS: readonly CommandId[] = ['undo', 'newGame', 'menu'];
+
 /** Runs one command now if it acts; returns whether it did. */
 function attempt(id: CommandId, ctx: KeyContext): boolean {
   const kind = game.state.kind;
-  if (SUSPENDING.some((entry) => overlays.isOpen(entry))) return false;
+  const suspending = SUSPENDING.filter((entry) => overlays.isOpen(entry));
+  const celebrationOnly = suspending.length === 1 && suspending[0] === 'celebration';
+  if (suspending.length > 0 && !(celebrationOnly && CELEBRATION_KEYS.includes(id))) return false;
   if (kind === 'rejected') {
     if (id !== 'newGame') return false;
     act(newGame)();
@@ -526,6 +559,8 @@ function pressEscape(): boolean {
     act(() => overlays.clearTile())();
     return true;
   }
+  // AD-19 Skip: the run's capture listener is the only Esc path while the celebration is on top.
+  if (top === 'celebration') return false;
   act(() => {
     if (top === 'tailSelection') overlays.deselect();
     else if (top === 'endSheet') overlays.collapseEndSheet();

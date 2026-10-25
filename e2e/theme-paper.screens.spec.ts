@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { openFixture } from './helpers/board';
-import { openScene } from './helpers/how-to-play';
+import { finalFrame, openScene } from './helpers/how-to-play';
 
 // Epic themes ticket 6 (TH-4, TH-5): Daylight Paper shots, android only; baselines are generated and
 // compared only in the Playwright container (npm run test:screens).
@@ -45,7 +45,7 @@ test('AD-17 daylight paper how to play scene 2 final frame screenshot at 360 px'
     prefs: PREFS,
     scene: 2,
     id: 'freeLetter',
-    last: 2,
+    last: finalFrame(2),
   });
   await expect(scene.getByRole('button', { name: 'Replay', exact: true })).toBeVisible();
   await expect(scene).toHaveScreenshot('theme-paper-scene-2.png');

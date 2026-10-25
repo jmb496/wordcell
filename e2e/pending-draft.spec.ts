@@ -6,7 +6,9 @@ import { touchDrag } from './helpers/touch';
 // Story pending-draft-line (Flow 3, R-72, Q-41, A-E13): the Idle tray line naming what Redo brings
 // back. Setup: session-place is TAN in Place (seed 1, cell 3); two Undos leave Idle with the pending
 // draft TAN (the same Session as session-idle-pending-draft). session-idle-pending-draft-long holds
-// the 10-letter word VIMLDXOMIW after two Undos. The discard test composes TAW from the dealt
+// the 10-letter word VIMLDXOMIW after two Undos; session-idle-pending-draft-overflow holds the
+// 17-letter undone Composing draft TNPDVIMLDXOMIWNOZ (a pending draft is any undone Composing draft,
+// not only a placeable word of at most 10 letters). The discard test composes TAW from the dealt
 // board (seed 1): a 2-card tail of column 3 (T, A) dropped on column 1 with k = 1, Flip, Validate.
 
 test.beforeEach(() => {
@@ -99,6 +101,7 @@ test('R-72 a 10-letter pending word at 360 px stays on one row with the full suf
     return {
       overflow: el.scrollWidth <= el.clientWidth,
       bandOverflow: band.scrollWidth <= band.clientWidth,
+      wordUncut: word.scrollWidth <= word.clientWidth,
       suffixInside: r.right <= p.right + 0.5 && r.width >= suffix.scrollWidth - 0.5,
       oneRow:
         word.getBoundingClientRect().top === r.top && word.getBoundingClientRect().height <= 20,
@@ -118,9 +121,44 @@ test('R-72 a 10-letter pending word at 360 px stays on one row with the full suf
   expect({ ...fit, gap: 0, whiteSpace: '' }).toEqual({
     overflow: true,
     bandOverflow: true,
+    wordUncut: true,
     suffixInside: true,
     oneRow: true,
     whiteSpace: '',
     gap: 0,
+  });
+});
+
+// EXPERIENCE.md State Patterns (pending draft): the suffix always shows in full and only the word
+// ellipsizes, and only when it cannot fit.
+test('R-72 a 17-letter pending draft at 360 px ellipsizes only the word, on one row with the full suffix', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 360, height: 740 });
+  await openFixture(page, 'session-idle-pending-draft-overflow');
+  await expect(line(page)).toHaveText('Undone: TNPDVIMLDXOMIWNOZ · Redo brings it back');
+  const fit = await line(page).evaluate((el) => {
+    const word = el.querySelector('.pending-word') as HTMLElement;
+    const suffix = el.querySelector('.pending-suffix') as HTMLElement;
+    const r = suffix.getBoundingClientRect();
+    const w = word.getBoundingClientRect();
+    const p = el.getBoundingClientRect();
+    const band = el.closest('[data-band="tray"]') as HTMLElement;
+    return {
+      lineFits: el.scrollWidth <= el.clientWidth,
+      bandFits: band.scrollWidth <= band.clientWidth,
+      suffixInside: r.right <= p.right + 0.5 && r.width >= suffix.scrollWidth - 0.5,
+      oneRow: w.top === r.top && w.height <= 20,
+      wordCut: word.scrollWidth > word.clientWidth,
+      ellipsis: getComputedStyle(word).textOverflow === 'ellipsis',
+    };
+  });
+  expect(fit).toEqual({
+    lineFits: true,
+    bandFits: true,
+    suffixInside: true,
+    oneRow: true,
+    wordCut: true,
+    ellipsis: true,
   });
 });

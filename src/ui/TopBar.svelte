@@ -8,7 +8,11 @@ import { act } from './act';
 import { redo, undo } from './commands';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { historyUnreadable } from './history-notice.svelte';
-import { openSurface } from './open-surface';
+// Epic 6 CAP-2: the ☰ button opens the menu only through open-menu.ts `openMenu()` (SPEC F8; ticket
+// 10.7: it ends a running celebration first). The top bar is `inert` while the menu is open because
+// App makes `main` inert (SPEC F6).
+// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
+import { openMenu } from './open-menu';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { overlays } from './overlays.svelte';
 import { text } from './text';
@@ -21,12 +25,6 @@ import { text } from './text';
 // Epic 6 CAP-10 (6.11): on a desktop (`hoverFine`) each button's `title` is `Label (Key)`
 // (`text.tooltip`), undefined on touch; the accessible name is unchanged.
 let { view, hoverFine }: { view: GameView; hoverFine: boolean } = $props();
-
-// Epic 6 CAP-2: the ☰ button opens the menu only through openSurface (SPEC F8). The top bar is
-// `inert` while the menu is open because App makes `main` inert (SPEC F6).
-function openMenu(): void {
-  openSurface('menu');
-}
 
 // Epic 6 CAP-7 (ticket 6.4, R-76, AD-9): the timer. The text always comes from a fresh
 // `game.elapsedMs(performance.now())` (never a stored `now`); `refresh` is only a re-read trigger,

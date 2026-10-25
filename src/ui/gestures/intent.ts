@@ -124,6 +124,8 @@ export function tapAction(
   selection: TailSelection | null,
   top: OverlayId | undefined,
 ): TapAction {
+  // AD-13: the board takes no input while the win celebration runs (a UI no-op, no throw).
+  if (top === 'celebration') return NONE;
   if (composing(view) && (hit.kind === 'card' || hit.kind === 'space')) {
     const card = destinationTap(hit, view);
     return card === null ? NONE : { kind: 'tapDestinationCard', card };

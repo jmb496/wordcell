@@ -26,5 +26,6 @@ export type {
   LongestWord,
   PlaceView,
   StructuralCheck,
+  WordListEntry,
 } from './view';
 export { view } from './view';

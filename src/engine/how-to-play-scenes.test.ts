@@ -94,23 +94,42 @@ describe('AD-2 How to play scene replay', () => {
     ] as const) {
       const scene = clone(moveCompose);
       (scene.commands as Command[])[1] = { type: 'setDestinationCount', k };
-      for (const key of ['words', 'validatable', 'block'] as const) delete scene[key];
+      for (const key of ['words', 'validatable', 'block', 'drafts'] as const) delete scene[key];
       if (ok) expect(() => replayScene(scene, DICT)).not.toThrow();
       else expectEngineError(() => replayScene(scene, DICT), 'r31-destination-count');
     }
   });
 
-  it('R-33 R-34 R-38 scene free-letter: WordCell 6 L joins M between A and K (BALKED), then validate leaves Composing; validatable matches the engine', () => {
+  it('R-33 R-34 R-38 scene free-letter: WordCell 6 L joins M, an arrange gives BALKED, then validate leaves Composing; validatable matches the engine', () => {
     const { session, rejectedWords } = replayScene(freeLetter, DICT);
     expect(rejectedWords.every((w) => w === undefined)).toBe(true);
     expect(session.cursor.phase).toBe('place');
     expect(freeLetter.commands[freeLetter.commands.length - 1]).toStrictEqual({ type: 'validate' });
     expect(freeLetter.words).toStrictEqual([
       { command: 5, word: 'BAKED' },
-      { command: 6, word: 'BALKED' },
+      { command: 7, word: 'BALKED' },
     ]);
     expect(freeLetter.validatable).toHaveLength(freeLetter.commands.length + 1);
     expect(freeLetter.validatable?.at(-1)?.canValidate).toBe(false);
+  });
+
+  it('Q-31 R-33 R-30 scene free-letter: the tap on WordCell 6 names no index, so L lands at the right end of M (BAKLED); the arrange then gives BALKED', () => {
+    const tap = freeLetter.commands[freeLetter.opens ?? -1];
+    expect(tap).toStrictEqual({ type: 'addFreeLetter', cell: 6 });
+    const start = sceneStart(freeLetter);
+    const wordAfter = (commands: number) => {
+      const view = viewFrom(start, replayScene(without(freeLetter, commands), DICT).session, EN);
+      return {
+        word: view.draft?.wordCards.map((id) => view.faces[id].letter).join(''),
+        arrangement: view.draft?.arrangement.map((id) => view.faces[id].letter).join(''),
+      };
+    };
+    const opens = freeLetter.opens ?? 0;
+    expect(wordAfter(opens)).toStrictEqual({ word: 'BAKED', arrangement: 'BAK' });
+    // Q-31: appended at the right end of M (the D block E D stays on the right, R-30).
+    expect(wordAfter(opens + 1)).toStrictEqual({ word: 'BAKLED', arrangement: 'BAKL' });
+    expect(freeLetter.commands[opens + 1].type).toBe('arrange');
+    expect(wordAfter(opens + 2)).toStrictEqual({ word: 'BALKED', arrangement: 'BALK' });
   });
 
   // The continuity helper (ticket 7 AC2): scene `two` provably opens on scene `one`'s final board.
@@ -121,6 +140,7 @@ describe('AD-2 How to play scene replay', () => {
     words: undefined,
     validatable: undefined,
     block: undefined,
+    drafts: undefined,
   });
   const boardOf = (scene: SceneFixture, commands: number) => {
     const prefix = without(scene, commands);
@@ -208,10 +228,10 @@ describe('AD-2 How to play scene replay', () => {
   });
 
   it('AD-2 scene free-letter: opens outside 1..commands.length-1 or not an integer fails the harness', () => {
-    for (const opens of [0, 8, 2.5, -1]) {
+    for (const opens of [0, 9, 2.5, -1]) {
       const scene = clone(freeLetter);
       (scene as { opens?: number }).opens = opens;
-      expect(() => replayScene(scene, DICT)).toThrow(/opens .* is out of range 1\.\.7/);
+      expect(() => replayScene(scene, DICT)).toThrow(/opens .* is out of range 1\.\.8/);
     }
   });
 
@@ -230,7 +250,7 @@ describe('AD-2 How to play scene replay', () => {
   it('R-38 scene free-letter: BALKED missing from the dictionary fails the fixture; without validatable the last rejectedWord is balked', () => {
     const only = new Set(['baked']);
     expect(() => replayScene(freeLetter, only)).toThrow(
-      /after 8 commands stated canValidate false/,
+      /after 9 commands stated canValidate false/,
     );
     const scene = clone(freeLetter);
     delete (scene as { validatable?: unknown }).validatable;
@@ -415,6 +435,8 @@ describe('AD-2 How to play scene replay', () => {
           place: [],
           validatable: [],
           cellScores: [],
+          drafts: [],
+          columns: [],
         } as SceneFixture,
         new Set(['baked']),
       ),
@@ -475,6 +497,8 @@ describe('AD-2 How to play scene replay', () => {
       { ...scene, scores: [{ after: -1, score: 0 }] },
       { ...scene, validatable: [{ after: 2, canValidate: false }] },
       { ...scene, validatable: [{ after: -1, canValidate: false }] },
+      { ...scene, drafts: [{ after: 2, letters: [] }] },
+      { ...scene, drafts: [{ after: -1, letters: [] }] },
     ];
     for (const fixture of bad)
       expect(() => replayScene(fixture, DICT)).toThrow(/^scene base-drop: .* out of range 0\.\.\d/);
@@ -530,11 +554,119 @@ describe('AD-2 How to play scene replay', () => {
     },
   );
 
+  it.each([
+    ['move-compose', moveCompose],
+    ['free-letter', freeLetter],
+    ['place', place],
+    ['source-drop', sourceDrop],
+  ] as const)(
+    'R-30 R-51 scene %s: every edited drafts entry fails the harness',
+    (_name, fixture) => {
+      expect(fixture.drafts?.length).toBeGreaterThan(0);
+      for (let i = 0; i < (fixture.drafts?.length ?? 0); i++) {
+        const swapped = edit<{ letters: string[] }>(fixture, 'drafts', (e) => {
+          const [first, second, ...rest] = e[i].letters;
+          e[i].letters = [second, first, ...rest];
+        });
+        expect(() => replayScene(swapped, DICT)).toThrow(/stated draft/);
+        const dropped = edit<{ letters: string[] }>(fixture, 'drafts', (e) => {
+          e[i].letters = e[i].letters.slice(1);
+        });
+        expect(() => replayScene(dropped, DICT)).toThrow(/stated draft/);
+      }
+    },
+  );
+
+  it('R-60 scene place: after Confirm column 1 keeps F and column 3 L M F (the moved cards and the D block left)', () => {
+    expect(place.columns).toStrictEqual([
+      {
+        after: place.commands.length,
+        columns: [['F'], ['X', 'O', 'R', 'I', 'N'], ['L', 'M', 'F']],
+      },
+    ]);
+    expect(place.commands.at(-1)?.type).toBe('confirm');
+    expect(() => replayScene(place, DICT)).not.toThrow();
+  });
+
+  it('R-60 scene place: an edited columns entry fails the harness', () => {
+    const bad: SceneFixture[] = [
+      // The pre-Confirm board (the start) stated after Confirm.
+      edit<{ columns: string[][] }>(place, 'columns', (e) => {
+        e[0].columns = place.start.columns.map((c) => [...c]);
+      }),
+      // Column 3 keeping its D block B.
+      edit<{ columns: string[][] }>(place, 'columns', (e) => {
+        e[0].columns[2] = ['L', 'M', 'F', 'B'];
+      }),
+      // Column 2 reordered, and an unlisted column that is not empty.
+      edit<{ columns: string[][] }>(place, 'columns', (e) => {
+        e[0].columns[1] = ['O', 'X', 'R', 'I', 'N'];
+      }),
+      edit<{ columns: string[][] }>(place, 'columns', (e) => {
+        e[0].columns[3] = ['F'];
+      }),
+    ];
+    for (const fixture of bad)
+      expect(() => replayScene(fixture, DICT)).toThrow(
+        /^scene place: after 8 commands column \d stated/,
+      );
+    const late = edit<{ after: number }>(place, 'columns', (e) => {
+      e[0].after = 9;
+    });
+    expect(() => replayScene(late, DICT)).toThrow(/^scene place: columns after 9 is out of range/);
+  });
+
+  it('R-30 AD-2 a drafts entry before the first drop fails with the scene-named harness Error', () => {
+    const scene = { ...clone(baseDrop), drafts: [{ after: 0, letters: ['F'] }] };
+    expect(() => replayScene(scene, DICT)).toThrow(
+      /^scene base-drop: after 0 commands there is no draft/,
+    );
+  });
+
+  // HP-5: the words a fixture shows besides its validates: each stated `words` entry and each start
+  // cell stack of two or more cards (a placed word, R-52; `QU` spelled 'qu'). A stack's placement
+  // order need not be its word order (R-51; scoring's D B A L K E holds BALKED), so a stack also
+  // passes as a reordering of a dictionary word.
+  function notWords(scene: SceneFixture, words: ReadonlySet<string>): string[] {
+    const sorted = (word: string) => [...word].sort().join('');
+    const missing = (scene.words ?? [])
+      .map((entry) => entry.word.toLowerCase())
+      .filter((word) => !words.has(word));
+    for (const cards of Object.values(scene.start.cells ?? {})) {
+      if (cards.length < 2) continue;
+      const stack = cards.join('').toLowerCase();
+      const key = sorted(stack);
+      const reordered = (word: string) => word.length === stack.length && sorted(word) === key;
+      if (!words.has(stack) && ![...words].some(reordered)) missing.push(stack);
+    }
+    return missing;
+  }
+
   it('R-38 AD-17 dictionary repro: every fixture word is in the generated dictionary', () => {
     const words = new Set<string>(dictionary.split('\n'));
     for (const scene of FIXTURES) {
       const { rejectedWords } = replayScene(scene, words);
       expect(rejectedWords.filter((w) => w !== undefined)).toStrictEqual([]);
+      expect(notWords(scene, words), scene.scene).toStrictEqual([]);
     }
+  });
+
+  it('R-38 a stated word or a start cell stack that is not a word fails the fixture word check', () => {
+    expect(notWords(sourceDrop, DICT)).toStrictEqual([]);
+    const word = edit<{ word: string }>(sourceDrop, 'words', (e) => {
+      e[0].word = 'XQZXQ';
+    });
+    expect(notWords(word, DICT)).toStrictEqual(['xqzxq']);
+    const cells = (stacks: Record<string, string[]>): SceneFixture => ({
+      ...clone(scoring),
+      start: { columns: [['Z']], cells: stacks },
+    });
+    expect(
+      notWords(cells({ '3': ['B', 'A', 'T'], '4': ['T', 'A', 'S'], '6': ['L'] }), DICT),
+    ).toStrictEqual([]);
+    expect(notWords(cells({ '3': ['B', 'A', 'X'], '4': ['QU', 'A', 'T'] }), DICT)).toStrictEqual([
+      'bax',
+      'quat',
+    ]);
   });
 });

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { GameView } from '../../engine/index';
 import type { Rect } from '../gestures/targeting';
 import { reorder } from '../gestures/targeting';
+import { cardMetrics, trayGrowth } from './geometry';
 import {
   gapRects,
   partingOffsets,
@@ -55,7 +56,7 @@ describe('tray layout', () => {
       perRow: 7,
       tileWidth: 46,
       tileHeight: 44,
-      area: 92,
+      area: 140,
     });
     expect(at(22)).toEqual({
       mode: 'compact',
@@ -63,7 +64,7 @@ describe('tray layout', () => {
       perRow: 7,
       tileWidth: 46,
       tileHeight: 44,
-      area: 92,
+      area: 188,
     });
   });
 
@@ -107,7 +108,7 @@ describe('tray layout', () => {
       perRow: 7,
       tileWidth: 44,
       tileHeight: 44,
-      area: 92,
+      area: 140,
     });
     expect(at(22)).toEqual({
       mode: 'compact',
@@ -115,7 +116,7 @@ describe('tray layout', () => {
       perRow: 7,
       tileWidth: 44,
       tileHeight: 44,
-      area: 92,
+      area: 188,
     });
   });
 
@@ -128,6 +129,20 @@ describe('tray layout', () => {
       tileHeight: 93,
       area: 93,
     });
+  });
+
+  it('AD-11 A-D4 the tile area grows with the band: area − max(H, 92) is trayGrowth(rows, H) for rows 1…4 at H 61 and 93', () => {
+    for (const [w, inner] of [
+      [46, 384],
+      [70, 576],
+    ] as const) {
+      const { H } = cardMetrics(w);
+      for (const tiles of [7, 8, 15, 22]) {
+        const sizing = trayLayout(tiles, w, inner);
+        expect(sizing.area - Math.max(H, 92)).toBe(trayGrowth(sizing.rows, H));
+        expect(sizing.area).toBeGreaterThanOrEqual(sizing.rows * 44 + (sizing.rows - 1) * 4);
+      }
+    }
   });
 });
 

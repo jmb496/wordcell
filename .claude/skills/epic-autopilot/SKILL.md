@@ -28,10 +28,10 @@ is one fresh orchestrator session per ticket, started by the driver:
 .claude/skills/epic-autopilot/scripts/loop.sh <epic> [max-tickets]
 ```
 
-The driver runs `claude -p "Run the epic-autopilot skill with arguments: <epic> one-ticket"` once
+The driver runs `claude -p "Run the epic-autopilot skill with arguments: <epic> one-ticket handoff=<path>"` (path ends `.json`) once
 per ticket and continues while each session's handoff says `outcome: done`. It exits 0 when the
 epic is complete (or max-tickets is reached), 2 when a session stopped (read the handoff), 3 on a
-usage limit (rerun after the reset), 4 when a session made no progress (read its log). Before
+usage limit (rerun after the reset), 4 when a session made no progress (read its log), 7 when the model needs the owner's confirmation (Model). Before
 each ticket it runs `scripts/limits.py`, which reads the plan's 5-hour and weekly utilization
 from the local cache of the owner's "Claude Code Usage" VS Code extension (no network call), and
 exits 5, asking the owner to rerun it by hand, when either is at or over its threshold
@@ -64,20 +64,26 @@ With the argument `one-ticket` (always headless):
   (`detach.sh` closes stdin and keeps `<done-file>.pid` while the step runs; for `test:all` the
   command is `npm run test:all` and the done file holds its exit code.) Before Setup 2, if any
   `.autopilot/*/*.pid` names a live process (a step an earlier session left running), stop
-  (rule 5) and name it; never start a second copy.
-- Handoff (committed, overwritten each session):
-  `_bmad-output/implementation-artifacts/autopilot/<epic>-handoff.md`, starting with these lines,
-  then the plain-language report for the owner (Final report) and how to resume:
+  (rule 5) and name it; never start a second copy. A pid file naming no live process is stale:
+  delete it and say so once in the digest's startup note.
+- Startup checklist (before anything else): read the handoff JSON, `git log -5`, `git status --short`
+  and the newest digest's last section, and check they agree on which ticket is next. When they
+  disagree, the ticket files win (`tickets.py` status, plan status, review logs, per the resume
+  rule in Per ticket); note the mismatch in the digest. If the files themselves do not settle it,
+  stop (rule 5) and name the mismatch.
+- Handoff (committed, overwritten each session): the JSON file at the path given as
+  `handoff=<path>` in the arguments. The driver parses exactly that file and treats the session
+  as having made no progress unless the file changed in a commit made during the session, so
+  never invent another name and always commit it. Exactly these keys:
 
-  ```
-  outcome: done | stopped | complete
-  ticket: <ref>
-  reason: <stop rule number and short reason, or "done">
-  next: <next ready ref, or none>
-  updated: <date -u +%Y-%m-%dT%H:%M:%SZ>
-  summary: <one plain sentence>
+  ```json
+  {"outcome": "done|stopped|complete", "ticket": "<ref>", "reason": "<stop rule number and short reason, or done>",
+   "next": "<next ready ref, or none>", "updated": "<date -u +%Y-%m-%dT%H:%M:%SZ>",
+   "summary": "<one plain sentence>"}
   ```
 
+  The plain-language report for the owner (Final report) and how to resume go in the sibling
+  file with `.md` instead of `.json`.
   The report includes the run's **Close-out docs** (Step D.4); when the outcome is `complete`,
   list them all, since the retrospective applies them.
   `complete` when no tickets remain after this one (Stop rule 6); then also append
@@ -123,6 +129,20 @@ When the owner asks how to run the driver and see this detail, offer both ways:
    `.claude/skills/epic-autopilot/scripts/loop.sh <epic>` in a terminal and tells the session
    when it exits; or, when the session started the driver, follows it with
    `tail -f <output file>`, using the output file path the session gives them.
+
+## Model
+
+Never pin a model: every session and step uses the model the owner selected in Claude Code. The
+workflow's patterns were tested with Opus 5.5, so the driver pauses for the owner's confirmation when
+the selected model is not Opus or Fable, or cannot be read: it asks `[y/N]` in a terminal, and
+otherwise exits 7 (rerun after `/model`, or with `ALLOW_MODEL=1` to continue anyway). Settings
+can be overridden, so after each session the driver also checks which models actually answered
+in its headless transcripts (`scripts/models-used.py`) and exits 7 the same way when one is not
+Opus or Fable. An interactive session that gets exit 7 asks the owner, never sets `ALLOW_MODEL`
+itself.
+
+The owner pauses a running driver cleanly with `touch .autopilot/STOP`: the current ticket
+finishes, then the driver exits 2 before the next one (remove the file to resume).
 
 ## Stop rule
 
@@ -231,7 +251,9 @@ before the missing-JSON rule, since a limited step never writes its JSON. Then:
    family (e.g. `docs(tickets): WIP review pass <n> ticket <ref>`); a build's own files are left
    to `bmad-build-auto`'s resume, so leave them uncommitted and say so.
 3. Append `## Stopped — usage limit` to the digest: the ticket, step, the reset time exactly as
-   the message shows it, and the resume instruction; commit it (the stop commit, Setup 4).
+   the message shows it, and the resume instruction; write the handoff JSON (`outcome`
+   `stopped`, `reason` naming the usage limit and reset time) and commit both (the stop commit,
+   Setup 4).
 4. Tell the owner in plain words: the run paused at the limit, when it resets, and that running
    `/epic-autopilot <epic>` after that picks up where it stopped.
    In `one-ticket` mode, tell the owner to rerun `.claude/skills/epic-autopilot/scripts/loop.sh
@@ -318,8 +340,19 @@ committed there.
    **Screenshots:** when the ticket's diff (baseline..HEAD) touches `src/ui/**`, `index.html`,
    `fixtures/`, a `*.screens.spec.ts` or its baselines, also run `npm run test:screens`
    (Docker, never skipped: `docker info` must succeed first; background, wait, after
-   `test:all`). Docker unavailable or any screenshot differing → stop (rule 3), name the cause;
-   never regenerate baselines unattended, and never mark the ticket done on a skipped check.
+   `test:all`). Docker unavailable → stop (rule 3).
+   A differing screenshot is evaluated without the owner: run a fresh, read-only headless step
+   (`claude -p "<prompt>" --disallowedTools "Edit,Write,NotebookEdit" ...`, step name `S`, result
+   JSON `{"verdict": "approve"|"escalate", "reasons": [...]}`, written by you from its output)
+   that opens each actual, expected and diff image and the ticket's stated UI change; it never
+   regenerates baselines itself. Approve only
+   when every difference lies inside the area the ticket says it changes and nothing else moved
+   (layout shifts, other screens, colours and fonts outside it). Escalate when anything unexpected
+   changed or the ticket introduces a new visual design or first motion the owner has not seen
+   (stop rule 3, name the images). On approve, regenerate only those specs
+   (`npm run test:screens -- e2e/<spec> --update-snapshots=changed`, in the container), rerun
+   `npm run test:screens` to green, commit the baselines (`test(<area>): update baselines (ticket
+   <ref>)`) and record the reasons in the digest. Never mark the ticket done on a skipped check.
    Record the outcome in the digest's Tests line ("screenshots: passed | not needed: no UI
    change").
 2. If Step C left uncommitted code changes: commit them with the review log,

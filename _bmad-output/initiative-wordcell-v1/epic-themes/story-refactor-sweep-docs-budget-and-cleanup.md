@@ -47,3 +47,4 @@ Verify: npm run test:all is green, npm run test:screens is green (no Docker: sto
 - constraint — docs/development-methodology.md, Definition of done
 - evidence — _bmad-output/implementation-artifacts/autopilot/epic-themes-20261018-1343.md (digest)
 - evidence — _bmad-output/implementation-artifacts/review-loop/9-*-build.md (build review logs)
+- Post-close (Opus review, owner decisions D1–D6, 2026-10-22, `5210279`, `a88cf67`, `45f6a13`; see the epic Notes): minor carried: the plan's tsconfig.arch.json "verified here, no change" for the Node-only theme harness misread the Scaffold deltas (owner close-out, epic Notes).

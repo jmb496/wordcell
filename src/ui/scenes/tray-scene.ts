@@ -5,6 +5,8 @@ import {
   CONTROLS_TOP,
   columnRowY,
   columnX,
+  HAND_H,
+  HAND_TIP,
   placeCellX,
   RICH_INSET,
   RICH_SLOT,
@@ -55,7 +57,10 @@ export function carryGeometry(data: SceneFixtureData, carry: Carry, geo: StageGe
 
 const add = (a: Point, b: Point): Point => ({ x: a.x + b.x, y: a.y + b.y });
 
-/** Pointer targets: the tray controls, WordCell 6, and the middle of the tile row. */
+/**
+ * Pointer targets: the tray controls and WordCell 6, tapped just high enough on its card that the
+ * whole hand stays on the stage (owner decision D8).
+ */
 export const trayTargets = (geo: StageGeometry) => {
   const centre = (box: { x: number; w: number }): Point => ({
     x: box.x + box.w / 2,
@@ -66,7 +71,6 @@ export const trayTargets = (geo: StageGeometry) => {
     plus: centre(CONTROL_BOX.plus),
     flip: centre(CONTROL_BOX.flip),
     validate: centre(CONTROL_BOX.validate),
-    cell6: { x: placeCellX(6) + SLOT / 2, y: geo.cellsTop + CARD_H / 2 },
-    tiles: { x: RICH_INSET + RICH_SLOT * 3, y: geo.trayTop + 4 + CARD_H / 2 },
+    cell6: { x: placeCellX(6) + SLOT / 2, y: geo.cellsTop + CARD_H - (HAND_H - HAND_TIP.y) },
   } as const;
 };

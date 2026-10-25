@@ -40,3 +40,4 @@ Verify: npm run test:all and npm run test:screens are green; engine replay passe
 ## Notes
 
 - Decision: 2026-10-17, review default taken (the owner reviews all scene captions at the epic end): the Scene 3 caption stays the approved 2026-10-16 text: "Pick a WordCell no higher than the word is long. Order the cards: the last one becomes that cell's free letter. Then Confirm."
+- Post-close follow-up (owner decisions D1–D12, 2026-10-22, `011935c`; see the epic Notes): D5 frame 0 shows the composed tiles with cell 6 used; D9 the strip carries the game's bottom/top marks; D11 the game's not-legal dim and used hatch.

@@ -3,7 +3,9 @@ import { tick, untrack } from 'svelte';
 import { scoreHistory } from '../shell/history.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { act } from './act';
-import { openSurface } from './open-surface';
+import { focusMenuButton } from './focus-board';
+import { historyUnreadable } from './history-notice.svelte';
+import { openSurface, takeMenuOrigin } from './open-surface';
 import { overlays } from './overlays.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Panel from './Panel.svelte';
@@ -12,17 +14,19 @@ import ResetConfirm from './ResetConfirm.svelte';
 import { text } from './text';
 
 // Epic 6 CAP-6 (ticket 6.5, R-84, Q-33, Q-35, Q-44; DESIGN.md Panels): the Statistics panel,
-// opened only through `openSurface('statistics')` (the Menu row). It formats `scoreHistory`'s
-// `statistics` unchanged (AD-3): six tiles in a 2 x 3 grid, `—` where no value exists, the empty
-// line under them only with no games played. While the history is unreadable it shows the History
-// message (the shared reason-to-sentence mapping over the live `scoreHistory.historyState.reason`) and
-// Reset history instead. Reset history opens the shared ResetConfirm: Delete history leaves the
+// opened only through `openSurface('statistics')` (the Menu row, the end sheet's button). It
+// formats `scoreHistory`'s `statistics` unchanged (AD-3): six tiles in a 2 x 3 grid, `—` where no
+// value exists, the empty line under them only with no games played. While the history is
+// unreadable (`historyUnreadable()`, SPEC F4) it shows the History notice's text (its headline,
+// then the shared reason-to-sentence mapping over the live `scoreHistory.state` reason and the
+// reset hint; SPEC F9) and Reset history instead.
+// Reset history opens the shared ResetConfirm: Delete history leaves the
 // panel open showing the fresh view, Keep it leaves the message. Esc closes the topmost
 // overlay through the key handler (keys.ts, ticket 6.10). Focus after the confirm closes
-// goes to Reset history, or the heading when Delete removed it; at panel close to the ☰ button
-// after `tick()` (as PreferencesPanel does).
+// goes to Reset history, or the heading when Delete removed it; at panel close, when the Menu row
+// opened it (open-surface.ts `takeMenuOrigin`), to the ☰ button after `tick()` (as PreferencesPanel does), else
+// Panel's opener restore (the end sheet's Statistics button).
 const open = $derived(overlays.isOpen('statistics'));
-const historyState = $derived(scoreHistory.state);
 // AD-3: the readable branch needs `statistics`; undefined there is a store bug (rule 6), so fail fast.
 function readable() {
   const s = scoreHistory.statistics;
@@ -38,10 +42,9 @@ let resetButton: HTMLButtonElement | undefined = $state();
 $effect(() => {
   const now = open;
   untrack(() => {
-    if (wasOpen && !now) {
+    if (wasOpen && !now && takeMenuOrigin('statistics')) {
       void tick().then(() => {
-        if (overlays.isOpen('menu')) return;
-        document.querySelector<HTMLElement>(`button[aria-label="${text.menu}"]`)?.focus();
+        if (!overlays.isOpen('menu')) focusMenuButton();
       });
     }
     wasOpen = now;
@@ -71,9 +74,17 @@ function openConfirm(): void {
   openSurface('resetConfirm');
 }
 
+// The sentence's reason, read only while `historyUnreadable()` holds (as EndSheet's).
+function unreadableReason() {
+  const current = scoreHistory.state;
+  if (current.status !== 'unreadable')
+    throw new Error('AD-13 Statistics message rendered with a readable history');
+  return current.reason;
+}
+
 const none = text.statNone;
 const tiles = $derived.by(() => {
-  if (historyState.status === 'unreadable') return [];
+  if (historyUnreadable()) return [];
   const stats = readable();
   return [
     [text.statGamesPlayed, String(stats.gamesPlayed)],
@@ -93,8 +104,9 @@ const tiles = $derived.by(() => {
   covered={overlays.top === 'resetConfirm'}
 >
   <div bind:this={content}>
-    {#if historyState.status === 'unreadable'}
-      <p class="message">{text.historySentence(historyState.reason)} {text.historyResetHint}</p>
+    {#if historyUnreadable()}
+      <p class="headline">{text.historyTitle}</p>
+      <p class="message">{text.historySentence(unreadableReason())} {text.historyResetHint}</p>
       <button type="button" class="reset" bind:this={resetButton} onclick={act(openConfirm)}
         >{text.resetHistory}</button
       >
@@ -142,8 +154,12 @@ const tiles = $derived.by(() => {
   }
   .word { overflow-wrap: anywhere; }
   .empty { margin-top: 16px; }
+  .headline {
+    margin: 8px 0 0; font: 600 1rem/1.5rem system-ui, "Roboto", sans-serif;
+    color: var(--wc-ink-primary);
+  }
   .message {
-    margin: 8px 0 16px; font: 400 1rem/1.5rem system-ui, "Roboto", sans-serif;
+    margin: 4px 0 16px; font: 400 1rem/1.5rem system-ui, "Roboto", sans-serif;
     color: var(--wc-ink-primary);
   }
   .reset {

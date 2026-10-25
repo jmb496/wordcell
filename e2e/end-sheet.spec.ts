@@ -1,9 +1,12 @@
 import { expect, type Page, test } from '@playwright/test';
 import { stored } from './helpers/blocking';
 import { centre, glidesSettled, openFixture, tapAt } from './helpers/board';
+import { WON_ROWS } from './helpers/celebration';
 import { button, confirmDialog, expectLeaves, type NavState, notice, wc } from './helpers/dialogs';
+import { expectBoardFocus } from './helpers/keys';
 import { onAndroid, onDesktop } from './helpers/project';
 import { fixture, seedStorage } from './helpers/seed';
+import { SESSIONS } from './helpers/sessions';
 
 // Epic 6 entry 6 (ticket 6.6, SPEC CAP-4; R-62, R-73, R-75, R-81, R-83, R-84; AD-13, AD-16): the
 // end sheet. `launch: new` in the comments is the launch id nav stamps (`NavState.launch`, a
@@ -56,10 +59,17 @@ async function launchOf(page: Page): Promise<number> {
   return state.launch;
 }
 
-async function expectBoardFocus(page: Page): Promise<void> {
-  const last = page.locator('[data-column="1"] [data-card-id][data-place="column"]').last();
-  if ((await last.count()) > 0) await expect(last).toBeFocused();
-  else await expect(page.locator('main')).toBeFocused();
+// EXPERIENCE.md Focus after an Undo of the finish: a win's Undo enters Place (Q-01), the first
+// strip card; a Give up's resumes Idle, the board.
+async function expectPhaseFocus(
+  page: Page,
+  name: 'session-won' | 'session-gave-up',
+): Promise<void> {
+  if (name === 'session-won') {
+    await expect(page.locator('[data-card-id][data-place="strip"]').first()).toBeFocused();
+  } else {
+    await expectBoardFocus(page);
+  }
 }
 
 // Started just before Confirm (the fixture has booted, the sheet is absent): records the most
@@ -133,11 +143,13 @@ test.describe('android', () => {
     page,
   }) => {
     await openFixture(page, 'session-idle-fresh');
+    const before = await topBarScore(page);
     await giveUpFromMenu(page);
     await expect(sheet(page, GAVE)).toBeVisible();
     await expect(
       sheet(page, GAVE).getByText('53 letters left: −530', { exact: true }),
     ).toBeVisible();
+    expect(await sheetScore(page, GAVE)).toBe(before - 530);
     await expect(sheet(page, GAVE).getByText('Longest word')).toBeVisible();
     await expect(replayButton(page)).toBeFocused();
     await expect.poll(() => wcOf(page)).toBe(1);
@@ -172,10 +184,9 @@ test.describe('android', () => {
   test('R-83 the sheet shows the final score, band name and message from the view', async ({
     page,
   }) => {
+    // session-gave-up: no word committed (score 0) minus the R-81 penalty for 53 letters left.
     await openFixture(page, 'session-gave-up', { endSheet: 'expanded' });
-    const score = await sheetScore(page, GAVE);
-    expect(score).toBeLessThan(0);
-    await expect(sheet(page, GAVE).locator('.score')).toHaveText(`−${-score}`);
+    await expect(sheet(page, GAVE).locator('.score')).toHaveText('−530');
     await expect(sheet(page, GAVE).locator('.band')).toHaveText('Just Getting Started');
     await expect(sheet(page, GAVE).locator('.message')).toHaveText(
       'Every word has to start somewhere. Lovely first steps!',
@@ -236,6 +247,29 @@ test.describe('android', () => {
     await expect(replayButton(page)).toBeFocused();
   });
 
+  test('R-75 expanded, the board under the scrim is inert and both bars are live; collapsed, the board is live again', async ({
+    page,
+  }) => {
+    // build-notes Per-surface behaviour: End sheet expanded, board inert, bars live.
+    await openFixture(page, 'session-gave-up', { endSheet: 'expanded' });
+    const underInert = (testId: string) =>
+      page.getByTestId(testId).evaluate((el) => el.closest('[inert]') !== null);
+    const card = page.locator('[data-column="1"] [data-card-id]').first();
+    const cardInert = () => card.evaluate((el) => el.closest('[inert]') !== null);
+    await expect(sheet(page, GAVE)).toBeVisible();
+    await expect(primary(page)).toHaveAccessibleName('New game');
+    expect(await cardInert()).toBe(true);
+    expect(await underInert('wordcell-6')).toBe(true);
+    expect(await underInert('column-1')).toBe(true);
+    expect(await underInert('undo')).toBe(false);
+    expect(await underInert('primary-action')).toBe(false);
+    await handle(page).click();
+    await expect(anySheet(page)).toHaveCount(0);
+    expect(await cardInert()).toBe(false);
+    expect(await underInert('wordcell-6')).toBe(false);
+    expect(await underInert('column-1')).toBe(false);
+  });
+
   test('R-75 a scrim tap collapses and is consumed: a tap on a column card selects nothing, opens no view and pushes no entry', async ({
     page,
   }) => {
@@ -280,7 +314,7 @@ test.describe('android', () => {
     ['session-won', WIN],
     ['session-gave-up', GAVE],
   ] as const) {
-    test(`R-70 R-75 Undo from the expanded sheet (${name}) pops its entry, resumes play, board focus`, async ({
+    test(`R-70 R-75 Undo from the expanded sheet (${name}) pops its entry, resumes play, phase focus`, async ({
       page,
     }) => {
       await openFixture(page, name, { endSheet: 'expanded' });
@@ -291,7 +325,7 @@ test.describe('android', () => {
       await expect(primary(page)).not.toHaveAccessibleName('New game');
       await expect(bar(page)).toHaveCount(0);
       await expect(page.locator('main')).not.toHaveJSProperty('inert', true);
-      await expectBoardFocus(page);
+      await expectPhaseFocus(page, name);
       if (name === 'session-gave-up') {
         const gaveUp = (await parsed(page)).gaveUp;
         expect(gaveUp).toBe(false);
@@ -309,28 +343,9 @@ test.describe('android', () => {
       await expect(primary(page)).not.toHaveAccessibleName('New game');
       await expect.poll(() => wcOf(page)).toBe(0);
       expect(await page.evaluate(() => history.length)).toBe(length);
-      await expectBoardFocus(page);
+      await expectPhaseFocus(page, name);
     });
   }
-
-  test('AD-13 R-62 a win by Redo while a sticky WordCell view is open drops the view and shows the sheet at wc 1', async ({
-    page,
-  }) => {
-    // A WordCell view cannot open in the Place phase after an Undo (a tap targets the cell), so the
-    // view opens over the collapsed won board, and Undo and Redo run as dispatched clicks (the
-    // view's scrim covers the top bar, as menu.spec).
-    await openFixture(page, 'session-won');
-    await tapAt(page, await centre(page.getByTestId('wordcell-6')));
-    await expect(page.locator('[data-view-sheet]')).toBeVisible();
-    await expect.poll(() => wcOf(page)).toBe(1);
-    await page.getByTestId('undo').dispatchEvent('click');
-    await glidesSettled(page);
-    await page.getByTestId('redo').dispatchEvent('click');
-    await glidesSettled(page);
-    await expect(page.locator('[data-view-sheet]')).toHaveCount(0);
-    await expect(sheet(page)).toBeVisible();
-    await expect.poll(() => wcOf(page)).toBe(1);
-  });
 
   test('R-75 Redo is disabled after an undone Give up', async ({ page }) => {
     await openFixture(page, 'session-gave-up', { endSheet: 'expanded' });
@@ -342,6 +357,35 @@ test.describe('android', () => {
     await expect(anySheet(page)).toHaveCount(0);
     await expect(bar(page)).toHaveCount(0);
     expect((await parsed(page)).gaveUp).toBe(false);
+  });
+
+  test('R-75 R-71 Redo after an undone Give up with a redo tail re-applies the move and does not reopen the sheet', async ({
+    page,
+  }) => {
+    // Undo clears the flag, then three Undos step the one committed move back to Idle at index 0,
+    // leaving it as the redo tail; Give up leaves the tail untouched (R-75).
+    await openFixture(page, 'session-gave-up-after-commit', {
+      steps: ['undo', 'undo', 'undo', 'undo'],
+    });
+    expect((await parsed(page)).cursor).toEqual({ index: 0, phase: 'idle' });
+    await giveUpFromMenu(page);
+    await expect(sheet(page, GAVE)).toBeVisible();
+    await page.getByTestId('undo').click();
+    await expect(anySheet(page)).toHaveCount(0);
+    const redo = page.getByTestId('redo');
+    await expect(redo).toBeEnabled();
+    for (let step = 0; step < 3; step += 1) {
+      await redo.click();
+      await glidesSettled(page);
+    }
+    expect(await parsed(page)).toMatchObject({
+      cursor: { index: 1, phase: 'idle' },
+      gaveUp: false,
+    });
+    await page.waitForTimeout(400);
+    await expect(anySheet(page)).toHaveCount(0);
+    await expect(bar(page)).toHaveCount(0);
+    await expect.poll(() => wcOf(page)).toBe(0);
   });
 
   test('R-74 Replay this deal from the expanded sheet acts at once: same seed, empty moves, sheet hidden, wc 0', async ({
@@ -416,10 +460,11 @@ test.describe('android', () => {
     expect((await parsed(page)).seed).not.toBe(seed);
   });
 
-  test('AD-13 Statistics over the sheet: wc 2, Esc closes only the panel, the top bar is inert under it', async ({
+  test('AD-13 Statistics over the sheet: wc 2, Esc closes only the panel, the top bar is inert under it; Esc and back return focus to the Statistics button of the sheet', async ({
     page,
   }) => {
     await openFixture(page, 'session-won', { endSheet: 'expanded' });
+    const opener = sheet(page).getByRole('button', { name: 'Statistics', exact: true });
     await statisticsButton(page).click();
     const panel = page.getByRole('dialog', { name: 'Statistics', exact: true });
     await expect(panel).toBeVisible();
@@ -433,12 +478,15 @@ test.describe('android', () => {
     await expect(panel).toHaveCount(0);
     await expect(sheet(page)).toBeVisible();
     await expect.poll(() => wcOf(page)).toBe(1);
+    // build-notes Per-surface: a panel returns focus to its opener (not the ☰ button).
+    await expect(opener).toBeFocused();
     await statisticsButton(page).click();
     await expect(panel).toBeVisible();
     await page.goBack();
     await expect(panel).toHaveCount(0);
     await expect(sheet(page)).toBeVisible();
     await expect.poll(() => wcOf(page)).toBe(1);
+    await expect(opener).toBeFocused();
   });
 
   // Ticket 6.7 (SPEC CAP-4, F4, F8; R-84; owner 2026-10-15). History fixtures are §2 rejection
@@ -616,6 +664,8 @@ test.describe('android', () => {
     await expect(resetButton(page)).toHaveCount(0);
     await expect.poll(() => wcOf(page)).toBe(1);
     expect(await stored(page, HISTORY)).toBe(EMPTY);
+    // EXPERIENCE.md End sheet: the sheet's open focus, a relaunch included.
+    await expect(replayButton(page)).toBeFocused();
   });
 
   test('AD-13 Reset history from the Statistics panel leaves the sheet with neither block nor line', async ({
@@ -675,5 +725,241 @@ test.describe('desktop', () => {
     await expectBoardFocus(page);
     await page.keyboard.press('Escape');
     await expect(bar(page)).toBeVisible();
+  });
+});
+
+// Ticket 10.2 (R-88): the Words section of the expanded sheet (`WON_ROWS` in helpers/celebration.ts).
+const GAVE_ROWS = WON_ROWS.slice(1);
+
+// The won fixture with its last move dropped and gaveUp set (a `{ literal }` session).
+function gaveUpLiteral(): string {
+  const session = JSON.parse(fixture('session-won-words.json')) as {
+    moves: unknown[];
+    cursor: { index: number };
+    gaveUp: boolean;
+  };
+  session.moves = session.moves.slice(0, 9);
+  session.cursor.index = 9;
+  session.gaveUp = true;
+  return JSON.stringify(session);
+}
+
+const wordsList = (page: Page) => page.getByRole('list', { name: 'Words', exact: true });
+const rows = (page: Page) =>
+  wordsList(page)
+    .getByRole('listitem')
+    .evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')));
+const wordcellKeys = (page: Page) =>
+  page.evaluate(() =>
+    JSON.stringify(
+      Object.keys(localStorage)
+        .filter((k) => k.startsWith('wordcell:'))
+        .sort()
+        .map((k) => [k, localStorage.getItem(k)]),
+    ),
+  );
+
+test.describe('android words', () => {
+  test.beforeEach(onAndroid);
+
+  test('R-88 a won sheet lists the ten words in order, SURF twice', async ({ page }) => {
+    await openFixture(page, 'session-won-words', { endSheet: 'expanded' });
+    await expect(wordsList(page)).toBeVisible();
+    expect(await rows(page)).toEqual(WON_ROWS);
+    // The visible spans carry the same pairs: capitals with `QU` as `QU`, `n letters` by letterCount.
+    const shown = await wordsList(page)
+      .getByRole('listitem')
+      .evaluateAll((els) =>
+        els.map((e) =>
+          ['.word', '.count'].map((s) => (e.querySelector(s) as HTMLElement).innerText),
+        ),
+      );
+    expect(shown.map(([word, count]) => `${word}, ${count}`)).toEqual(WON_ROWS);
+    expect(shown[1]).toEqual(['JDAQUYE', '7 letters']);
+    await expect(page.getByRole('listitem', { name: 'SURF, 4 letters', exact: true })).toHaveCount(
+      2,
+    );
+    await expect(page.getByRole('heading', { name: 'Words', level: 3 })).toBeVisible();
+    await expect(replayButton(page)).toBeFocused();
+  });
+
+  test('R-88 a give-up with words lists the nine remaining words', async ({ page }) => {
+    await openFixture(page, { literal: gaveUpLiteral() }, { endSheet: 'expanded' });
+    await expect(sheet(page, GAVE)).toBeVisible();
+    expect(await rows(page)).toEqual(GAVE_ROWS);
+    await expect(page.getByRole('listitem', { name: /^EHNPBNTFSA/ })).toHaveCount(0);
+  });
+
+  test('R-88 a zero-move give-up shows the heading and the empty line, no list', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-idle-fresh');
+    await giveUpFromMenu(page);
+    await expect(sheet(page, GAVE)).toBeVisible();
+    await expect(sheet(page, GAVE).getByRole('heading', { name: 'Words', level: 3 })).toBeVisible();
+    await expect(sheet(page, GAVE).getByText('No words were played.')).toBeVisible();
+    await expect(wordsList(page)).toHaveCount(0);
+  });
+
+  test('R-88 the section scrolls with the sheet, rows are 44 px, nothing overflows at 360 px', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 360, height: 480 });
+    await openFixture(page, 'session-won-words', { endSheet: 'expanded' });
+    const content = page.locator('.content');
+    const dims = await content.evaluate((el) => ({
+      scroll: el.scrollHeight,
+      client: el.clientHeight,
+    }));
+    expect(dims.scroll).toBeGreaterThan(dims.client);
+    const fixed = async () => [
+      await handle(page).boundingBox(),
+      await page.locator('.top-bar').boundingBox(),
+      await page.getByTestId('primary-action').boundingBox(),
+    ];
+    const before = await fixed();
+    await content.evaluate((el) => el.scrollTo(0, el.scrollHeight));
+    expect(await content.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+    expect(await fixed()).toEqual(before);
+    expect(await wordsList(page).evaluate((el) => getComputedStyle(el).overflowY)).toBe('visible');
+    for (const item of await wordsList(page).getByRole('listitem').all()) {
+      const box = await item.boundingBox();
+      if (box === null) throw new Error('R-88 Words row has no box');
+      expect(box.height).toBeGreaterThanOrEqual(44);
+    }
+    expect(await content.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+    const long = page.getByRole('listitem', { name: 'EHNPBNTFSA, 10 letters', exact: true });
+    expect(await long.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+    const wordSize = await long
+      .locator('.word')
+      .evaluate((e) => parseFloat(getComputedStyle(e).fontSize));
+    expect(wordSize).toBeGreaterThanOrEqual(14);
+    // `.word` clamps to 1rem (EndSheet.svelte), 16 px under Playwright's default 16 px root.
+    expect(wordSize).toBeLessThanOrEqual(16);
+    expect(await page.locator('.words button, .words a, .words [tabindex]').count()).toBe(0);
+    const centres = await long.locator('span').evaluateAll((els) =>
+      els.map((e) => {
+        const r = e.getBoundingClientRect();
+        return r.top + r.height / 2;
+      }),
+    );
+    expect(centres).toHaveLength(2);
+    expect(Math.abs(centres[0] - centres[1])).toBeLessThanOrEqual(2);
+  });
+
+  // DESIGN.md Words section: at 360 px the word shrinks (to 14 px at the least) before it wraps,
+  // so a 20-letter word sits on one line beside its count.
+  test('R-88 a 20-letter word shrinks below 16 px but not under 14 px and stays on one line beside its count at 360 px', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await openFixture(page, { literal: SESSIONS.longWord }, { endSheet: 'expanded' });
+    const long = page.getByRole('listitem', {
+      name: 'TNPDVIMLDXOMIWRNZOAF, 20 letters',
+      exact: true,
+    });
+    await expect(long).toBeVisible();
+    const word = long.locator('.word');
+    await expect(word).toHaveText('TNPDVIMLDXOMIWRNZOAF');
+    const size = await word.evaluate((e) => parseFloat(getComputedStyle(e).fontSize));
+    expect(size).toBeGreaterThanOrEqual(14);
+    expect(size).toBeLessThan(16);
+    // One line: every line box of the word's text shares one top.
+    const lines = await word.evaluate((e) => {
+      const range = document.createRange();
+      range.selectNodeContents(e);
+      return new Set([...range.getClientRects()].map((r) => Math.round(r.top))).size;
+    });
+    expect(lines).toBe(1);
+    const centres = await long.locator('span').evaluateAll((els) =>
+      els.map((e) => {
+        const r = e.getBoundingClientRect();
+        return r.top + r.height / 2;
+      }),
+    );
+    expect(centres).toHaveLength(2);
+    expect(Math.abs(centres[0] - centres[1])).toBeLessThanOrEqual(2);
+    expect(await long.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+  });
+
+  // DESIGN.md Words section: a short word keeps the body size; `.word` clamps to 1rem
+  // (EndSheet.svelte), 16 px under Playwright's default 16 px root.
+  test('R-88 a 3-letter word keeps the 16 px body size on one line at 360 px', async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await openFixture(page, 'session-won-long-words', { endSheet: 'expanded' });
+    const row = page.getByRole('listitem', { name: /, 3 letters$/ }).first();
+    await expect(row).toBeVisible();
+    const word = row.locator('.word');
+    expect(await word.evaluate((e) => parseFloat(getComputedStyle(e).fontSize))).toBe(16);
+    const lines = await word.evaluate((e) => {
+      const range = document.createRange();
+      range.selectNodeContents(e);
+      return new Set([...range.getClientRects()].map((r) => Math.round(r.top))).size;
+    });
+    expect(lines).toBe(1);
+  });
+
+  test('R-88 scrolling, collapsing and expanding leave localStorage untouched', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-won-words', { endSheet: 'expanded' });
+    const before = await wordcellKeys(page);
+    const keys = JSON.parse(before) as [string, string][];
+    const session = keys.find(([k]) => k === SESSION);
+    expect(session?.[1]).toBe(fixture('session-won-words.json'));
+    // AD-6: only a dispatch reconciles `wordcell:history`, so the seeded won game boots with none;
+    // asserting it absent here makes the final equality catch any write, boot's included (no word
+    // list stored; the record's AD-6 field set is pinned by src/engine/history.test.ts).
+    expect(keys.map(([k]) => k)).not.toContain('wordcell:history');
+    await page.locator('.content').evaluate((el) => el.scrollTo(0, el.scrollHeight));
+    await handle(page).click();
+    await expect(anySheet(page)).toHaveCount(0);
+    await expect(wordsList(page)).toHaveCount(0);
+    await bar(page).click();
+    await expect(wordsList(page)).toBeVisible();
+    expect(await rows(page)).toEqual(WON_ROWS);
+    expect(await wordcellKeys(page)).toBe(before);
+  });
+
+  test('R-88 the won list survives a reload', async ({ page }) => {
+    await openFixture(page, 'session-won-words', { endSheet: 'expanded' });
+    await page.reload();
+    await expect(sheet(page)).toBeVisible();
+    expect(await rows(page)).toEqual(WON_ROWS);
+  });
+
+  test('R-88 the give-up list survives a reload', async ({ page }) => {
+    await openFixture(page, { literal: gaveUpLiteral() }, { endSheet: 'expanded' });
+    await page.reload();
+    await expect(sheet(page, GAVE)).toBeVisible();
+    expect(await rows(page)).toEqual(GAVE_ROWS);
+  });
+
+  test('R-88 Undo of the finish removes the list and a later Give up lists the other words', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-won-words', { endSheet: 'expanded' });
+    await page.getByTestId('undo').click();
+    await expect(wordsList(page)).toHaveCount(0);
+    // Give up needs Idle (giveUpAvailable): undo the last word's Place and Composing phases too.
+    for (let i = 0; i < 2; i++) {
+      await page.getByTestId('undo').click();
+      await glidesSettled(page);
+    }
+    await giveUpFromMenu(page);
+    await expect(sheet(page, GAVE)).toBeVisible();
+    expect(await rows(page)).toEqual(GAVE_ROWS);
+  });
+
+  test('R-88 New game removes the list', async ({ page }) => {
+    await openFixture(page, 'session-won-words', { endSheet: 'expanded' });
+    await primary(page).click();
+    await expect(wordsList(page)).toHaveCount(0);
+  });
+
+  test('R-88 Replay removes the list', async ({ page }) => {
+    await openFixture(page, 'session-won-words', { endSheet: 'expanded' });
+    await replayButton(page).click();
+    await expect(wordsList(page)).toHaveCount(0);
   });
 });

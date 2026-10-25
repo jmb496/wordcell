@@ -54,3 +54,4 @@ Owner checkpoint after built: he plays it on his Android install before it is ma
 ## Notes
 
 - Plum Dusk is in scope per the owner decision of 2026-10-18 (epic Notes: build all five directions). It is last in the Theme radio order, after Daylight Paper, per spec §7.10; the baseline changes are an owner approval at review.
+- Post-close (Opus review, owner decisions D1–D6, 2026-10-22, `5210279`, `a88cf67`, `45f6a13`; see the epic Notes): D3 this theme's `--wc-shadow-drag` is DESIGN.md's `#0008` like Charcoal.

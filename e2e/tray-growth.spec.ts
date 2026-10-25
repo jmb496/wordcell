@@ -32,7 +32,8 @@ const tileCount = (page: Page) =>
     .count();
 
 // Clicks `target` in the page task and reads, in the same task, how many column faces and how many
-// faces in all run an animation (animation time 0), and which animating WordCell faces are hidden.
+// faces in all run an animation (animation time 0), which animating WordCell faces are hidden, and
+// whether the tile area's clip is lifted (`wc-drag-tiles`, F22).
 async function clickAndRead(target: Locator) {
   return target.evaluate((el) => {
     (el as HTMLElement).click();
@@ -48,11 +49,33 @@ async function clickAndRead(target: Locator) {
         (face) =>
           inCell(face) && getComputedStyle(face.parentElement as Element).visibility === 'hidden',
       ).length,
+      tilesLifted: (
+        document.querySelector('[data-band="tray"] .tiles') as Element
+      ).classList.contains('wc-drag-tiles'),
     };
   });
 }
 
 const plus = (page: Page) => controls(page).getByRole('button', { name: '+', exact: true });
+
+// A-D4: the 15th tile (`.tiles` child 14, the third compact row) lies fully inside the tile area and
+// is what `elementFromPoint` hits at its centre (the tile or its face).
+function fifteenthTile(page: Page) {
+  return page.locator('[data-band="tray"] .tiles').evaluate((tiles) => {
+    const tile = tiles.children[14] as Element;
+    const r = tile.getBoundingClientRect();
+    const area = tiles.getBoundingClientRect();
+    const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    return {
+      inside:
+        r.top >= area.top &&
+        r.bottom <= area.bottom &&
+        r.left >= area.left &&
+        r.right <= area.right,
+      hit: hit !== null && tile.contains(hit),
+    };
+  });
+}
 
 for (const [height, grown] of [
   [839, 0],
@@ -79,8 +102,12 @@ for (const [height, grown] of [
       expect(await trayHeight(page)).toBe(base + 48);
       expect(await scrollY(page)).toBe(grown);
       expect(await wordCellRow(page)).toEqual(row);
+      expect(await fifteenthTile(page)).toEqual({ inside: true, hit: true });
 
-      await minus(page).click();
+      // F22, A-D4: the tiles glide up out of the removed third row with the shrunk clip lifted.
+      const shrink = await clickAndRead(minus(page));
+      expect(shrink.animating).toBeGreaterThan(0);
+      expect(shrink.tilesLifted).toBe(true);
       await glidesSettled(page);
       expect(await tileCount(page)).toBe(14);
       expect(await trayHeight(page)).toBe(base);
@@ -151,6 +178,7 @@ for (const [height, grown] of [
       const full = await trayHeight(page);
       expect(await tileCount(page)).toBe(15);
       expect(full).toBe(grownHeight);
+      expect(await fifteenthTile(page)).toEqual({ inside: true, hit: true });
       expect(await scrollY(page)).toBe(0);
       expect(
         await page.evaluate(() => (window as unknown as { scrollWrites: number }).scrollWrites),

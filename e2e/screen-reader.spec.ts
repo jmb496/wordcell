@@ -253,6 +253,44 @@ test('A-E9 a return from hidden and a sheet re-expand are silent', async ({ page
   expect(await sets(page)).toEqual([]);
 });
 
+// Confirms in one page task and, with `hide`, hides in the same task, so the commit's set is still
+// pending (before its frame) when the hide flush runs. The emulated hide does not stop rAF: only the
+// flush can drop the set.
+function confirmThen(page: Page, hide: boolean): Promise<void> {
+  return page.evaluate((hideToo) => {
+    const button = document.querySelector<HTMLElement>('[data-testid="primary-action"]');
+    if (button === null) throw new Error('no primary action');
+    button.click();
+    if (!hideToo) return;
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
+    document.dispatchEvent(new Event('visibilitychange', { bubbles: true }));
+  }, hide);
+}
+
+test('A-E9 a commit set still pending when the page hides is never spoken on return', async ({
+  page,
+}) => {
+  await openFixture(page, 'session-place');
+  await recordRegion(page);
+  await confirmThen(page, true);
+  await settled(page);
+  await showPage(page);
+  await settled(page);
+  await expect(primary(page)).toHaveText('Validate');
+  expect(await sets(page)).toEqual([]);
+});
+
+test('A-E9 the same commit with no hide is announced (control for the hide case)', async ({
+  page,
+}) => {
+  await openFixture(page, 'session-place');
+  await recordRegion(page);
+  await confirmThen(page, false);
+  await settled(page);
+  expect(await sets(page)).toEqual(['TAN placed on cell 3, plus 9']);
+});
+
 test('A-E9 a used WordCell reads its name with used', async ({ page }) => {
   await openFixture(page, 'session-place-free-letter-two-cards');
   await expect(page.getByTestId('wordcell-4')).toHaveAccessibleName(

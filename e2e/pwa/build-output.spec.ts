@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import { buildRoot, linkTags, readSite, relOf, tags, walk } from '../helpers/dist-test';
@@ -80,6 +80,29 @@ test('AD-16 the built head carries the title, theme colour, viewport, manifest a
   expect(icons.map((link) => link.get('href'))).toEqual(['/favicon.svg']);
 });
 
+test('AD-16 Q-45 the inline pre-paint theme script precedes the stylesheet and the module script in the built head', () => {
+  const head = /<head>([\s\S]*?)<\/head>/i.exec(readSite('index.html'))?.[1] ?? '';
+  const scripts = [...head.matchAll(/<script(\s[^>]*)?>([\s\S]*?)<\/script>/gi)];
+  const prePaint = scripts.filter((m) => {
+    const body = m[2] ?? '';
+    return (
+      !/\ssrc\s*=/i.test(m[1] ?? '') &&
+      body.includes('localStorage.getItem') &&
+      body.includes('wordcell:prefs') &&
+      body.includes('dataset.theme')
+    );
+  });
+  expect(prePaint).toHaveLength(1);
+  const prePaintAt = prePaint[0]?.index ?? -1;
+  const stylesheets = [...head.matchAll(/<link\b[^>]*>/gi)].filter((m) =>
+    relOf(linkTags(m[0])[0] ?? new Map()).includes('stylesheet'),
+  );
+  const modules = scripts.filter((m) => tags(m[0], 'script')[0]?.get('type') === 'module');
+  expect(stylesheets.length).toBeGreaterThan(0);
+  expect(modules.length).toBeGreaterThan(0);
+  for (const m of [...stylesheets, ...modules]) expect(m.index).toBeGreaterThan(prePaintAt);
+});
+
 // PNG signature, then the IHDR chunk: type at bytes 12–15, big-endian width at 16, height at 20.
 function pngSize(file: string): { width: number; height: number } {
   const bytes = readFileSync(path.join(buildRoot(), file));
@@ -114,16 +137,23 @@ test("AD-18 the build's .vite/manifest.json has the index.html entry under asset
 
 test('AD-10 the built CSS keeps the @container style(--wc-reduced branch, reading var(--wc-fade-ms) with no literal 120ms', () => {
   // Epic 6 CAP-1 (6.1, SPEC F7): the surface components' reduced-motion branch must survive the
-  // CSS pipeline (minification may rewrite spacing, never drop the query); the dev-server spec
-  // e2e/wordcell-view.spec.ts proves the computed style.
+  // CSS pipeline (minification may rewrite spacing, never drop the query); the dev-server specs
+  // e2e/wordcell-view.spec.ts and e2e/menu.spec.ts prove the computed style.
   const root = buildRoot();
   const files = walk(root).filter((file) => /^assets\/[^/]+\.css$/.test(file));
   expect(files.length).toBeGreaterThan(0);
   const css = files.map((file) => readSite(file)).join('\n');
-  const starts = [...css.matchAll(/@container\s+style\(\s*--wc-reduced\s*:\s*1\s*\)/g)];
-  // Dialog and WordCellView are bundled today; Sheet and Panel have no opener until ticket 6.2 and
-  // are tree-shaken, and their branches join this scan once bundled.
-  expect(starts.length).toBeGreaterThanOrEqual(2);
+  const query = /@container\s+style\(\s*--wc-reduced\s*:\s*1\s*\)/g;
+  const starts = [...css.matchAll(query)];
+  // Every src/ui component carrying the branch is bundled (today Sheet, Panel, Dialog,
+  // WordCellView and EndSheet), so dist holds at least one branch per source occurrence.
+  const ui = path.resolve(import.meta.dirname, '../../src/ui');
+  const sources = readdirSync(ui, { recursive: true, encoding: 'utf8' })
+    .filter((file) => file.endsWith('.svelte'))
+    .map((file) => readFileSync(path.join(ui, file), 'utf8'));
+  const expected = sources.reduce((n, source) => n + [...source.matchAll(query)].length, 0);
+  expect(expected).toBeGreaterThanOrEqual(5);
+  expect(starts.length).toBeGreaterThanOrEqual(expected);
   for (const start of starts) {
     let depth = 0;
     let end = css.indexOf('{', start.index);

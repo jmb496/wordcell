@@ -1,0 +1,89 @@
+# Review loop — Opus re-review of Epic 6 part B, tickets 6.8–6.11, second loop (code mode)
+State: pass 4: done (converged)
+
+Target: code at HEAD 377ecd9 for the 62 files `git diff --name-only 79765e1..9f412d6` touched (minus `_bmad-output/`, `*.png`; list in `opus-review-epic-6b2.passes/files.txt`). Staged diff: `opus-review-epic-6b2.passes/pass0.diff` (`git diff 79765e1 9f412d6 -- <files>`, 6918 lines). Findings only against code that still exists at HEAD; code replaced by later epic 6 tickets (6.12–6.17) or epics 8, 9, 10 (after 91dfbed) is out of scope, as are findings belonging only to part C tickets, part A findings/minors (opus-review-epic-6a.md) and the first loop's fixed findings, decision-needed items and minors (opus-review-epic-6b.md).
+Mode: code, thorough, max 7. Pre-loop: HEAD 377ecd9, tree 0 46db0dfa409f8ab6b744021ba5a4ff6f1b78f38f.
+Seeded pass 1 finding: the first loop's open major (ConfirmDialogs N-key focus return).
+Owner rules: only majors fixed; minors listed, never sent to the fixer; UX/gameplay changes are decision-needed; no screenshot baselines; no commits.
+Intent: epic-game-surfaces-and-keyboard.md, tickets.toml entries 8–11, tickets + plans 6.8–6.11, retrospective, spec-epic-6-surfaces (SPEC.md, rule-coverage.md, build-notes.md).
+
+## Pass 1 — 2026-10-21
+Reviewers: correctness, edge cases, verification gap, intent alignment (+ seeded open major)  |  Findings: major 3, minor 5, decision-needed 0  |  Dropped in triage: 0 (focus ring on buttons reported twice; merged)
+### Applied
+- [major, seeded] src/ui/ConfirmDialogs.svelte:32-40 with keys.ts newGame row; e2e/keys.spec.ts — a New game confirm opened with the N key and dismissed (Keep playing, Esc, back, scrim) keeps Dialog's opener return (body on a fresh load) instead of "the board" (build-notes Confirm dialog "Focus return: the board (from the menu: ☰)"; ticket 6.3 hands the N key to 6.10); untested → fixer item 1
+- [major] src/ui/app.css (no rule), TopBar, ActionBar, tray/ControlRow, Menu, Dialog, EndSheet/Tray end bar — the DESIGN.md Focus ring (2 px accent-teal, 2 px offset on non-card controls, `:focus-visible` only; ticket 6.11 Ring; EXPERIENCE.md Accessibility Floor) is drawn only on cards, WordCells and Preferences segments; every button a keyboard player Tabs to shows the browser default ring; no test → fixer item 2 (default applied: one shared `button:focus-visible` rule + desktop computed-style check)
+- [major] e2e/keys.spec.ts (missing), ticket 6.10 AC — "M during a long-press peek" and "a disabled Undo with a sticky view open leaving the view open" have no Playwright case; the plan's deferral reasons ("touch", "no fixture") are wrong (mouse long-press opens the peek on desktop, wordcell-view.spec drives it with page.clock; Y with Redo disabled and a sticky view open is reachable on session-idle-empty-column) → fixer item 3
+### Minors (listed, not sent to the fixer — owner rule)
+- e2e/board-keys.spec.ts:282-330, 415-456 — Tab order tray/strip → WordCells → action bar never asserted (only "Tab leaves the tray").
+- src/ui/keys.ts:342-354 — `←`/`→` (focus move only) call `cancelGesture()`, which closes an open hover peek; activation keys keep it.
+- src/ui/App.svelte:134 with focus-board.ts:78 — when every column is empty `focusBoard()` focuses `main`, whose `main:focus { outline: none }` hides any ring.
+- src/ui/keys.ts:525-529 — New game from the Session-rejected root (N) leaves focus on body (fresh Board mount counts as first Idle paint).
+- src/ui/text.ts:409, 412 — How to play keyboard table: Enter row says it taps "the focused item" (on a tile or strip card it validates/confirms), Space row says it taps a WordCell (it opens the view); for the owner's text review.
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+### Fix
+Item 1: ConfirmDialogs `onClosed` third branch: neither accepted nor from the menu, and `overlays.top === undefined` after tick → `focusBoard()`; header comment updated. keys.spec desktop N/Esc test now asserts `expectBoardFocus`; new "Q-24 N with a column card focused, then Keep playing, returns focus to the board, not that card" (session-idle-empty-column: focused col 8 card ≠ board target col 2). Both fail without the fix (BODY / DIV 46 vs DIV 26). Item 2: app.css `button:focus-visible { outline: 2px solid var(--wc-accent-teal); outline-offset: 2px; }` (cards and WordCells are not buttons; scene `.tap`/carousel rules more specific; no button sets `outline: none`); board-keys desktop "Focus ring" describe, "Q-24 Tab onto the Menu button, Undo and the primary action draws the 2 px accent-teal ring at a 2 px offset" (fails without the rule). Item 3: keys.spec desktop "F39 M during a long-press peek closes the peek and opens the menu; the release and its click leave the menu open, no page error" (fails when act() skips controller.cancel()) and "F39 Y with Redo disabled and a sticky WordCell view open does nothing: the view stays open, no page error" (Undo is enabled in the fixture, so Y; fails with the Redo gate forced true); no app bug found; 6.10 plan line 93 `[defer]` → `[patch]`. Fixer ran: npm test 84 / 3118 pass; lint 1 pre-existing warning; check 0 errors; Playwright keys desktop 24 passed, board-keys desktop 46 passed, confirm/screen-reader/menu 71 passed / 71 skipped. Baselines possibly affected (not run): confirm, end-sheet (expanded), menu, preferences, statistics, how-to-play, theme-* open-surface screens (a button focused on open may now draw the teal ring).
+Orchestrator verify: npm test 84 / 3118 pass, lint pass (1 pre-existing warning), check pass. Snapshot: tree 1 34feffac2b4f487893a29d63e153891f0e606c22; fix diff `opus-review-epic-6b2.passes/pass1.fix.diff`; restaged diff `pass1.diff` (79765e1 → tree 1 for the 62 files; full lenses still read pass0.diff + working tree).
+Targeted Playwright on tree 1: keys.spec + board-keys.spec desktop 70 passed (`e2e-pass1-keys.log`).
+
+## Pass 2 — 2026-10-21
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 3, minor 1, decision-needed 1  |  Dropped in triage: 0 (menu-row ring clipping reported twice; ConfirmDialogs Composing/Place focus reported as minor and decision-needed, merged into the decision)
+### Applied
+- [major] src/ui/app.css:204-208 (pass 1 item 2 regression) with Menu.svelte:171-173, Sheet.svelte:87 — the shared 2 px-offset ring on the menu rows (full-width buttons flush inside Sheet `.content`, `overflow-y: auto`) is clipped to top/bottom lines; the first row is the menu's focus start; the pass 1 test checks only computed styles → fixer item 1 (default applied: inset ring on the menu rows, like Card, Preferences segments and the scenes, no layout change; geometry check)
+- [major] e2e/board-keys.spec.ts Composing (506-669) and Place (701-750) describes — no desktop Playwright for Space/Enter on a focused column card or WordCell in Composing/Place (destination tap sets k, Enter on a non-destination card with Validate enabled, Enter on a WordCell adds a free letter, Space on a WordCell opens the view, Place column card inert); ticket 6.11 Activation tests and AC "Playwright on desktop … each table row per phase"; only mocked keys.test.ts → fixer item 2
+- [major] src/ui/keys.test.ts:143-186, e2e/keys.spec.ts — no test presses `?` with shiftKey true (a US-layout `?` is always Shift+/; build-notes "`?` matched by `event.key` (shifted…)", EXPERIENCE.md "Shift is allowed"); a Shift-chord rejection would pass every test → fixer item 3
+### Minors (listed, not sent to the fixer — owner rule)
+- src/shell/nav.ts:51-53 with keys.ts:574-577 — `drain()` has no re-entrancy guard: a settle waiter that pushes runs the next queued waiter inside its own call (before its focus code); only a pop-queuing waiter is tested.
+### Decision needed (functionality / UX / gameplay)
+- src/ui/Menu.svelte:33-47, ConfirmDialogs.svelte:33-42 (pass 1 item 1), App.svelte:53-71 — in Composing or Place, dismissing the menu or an N-opened New game confirm puts keyboard focus on a column card (`focusBoard`), while closing the History notice puts it on the first tile / strip card (`focusByPhase`); build-notes says "the board" for all three. After M then Esc in Composing, the next Enter taps a column card instead of validating. Where should a keyboard player land? — proposed default: all three use the phase focus (board in Idle, first movable tile in Composing, first strip card in Place), settled together with the first loop's pending History-notice decision, with desktop tests on session-composing / session-place.
+### Dropped
+- none
+### Fix
+Item 1: Menu.svelte `.row:focus-visible { outline-offset: -2px; }` (inset, no layout change); audit: no other focusable button sits flush in a clipping container (Sheet close in the header; Panel `.inner` 16 px padding; EndSheet `.content` 16 px padding; Dialog, MessageCard, HistoryNotice, ResetConfirm, tray end bar, ControlRow, TopBar, ActionBar have no clipping ancestor; scene/carousel/Preferences segments already inset). New board-keys desktop "Q-24 M focuses the first menu row; its ring and the next rows rings are drawn whole, not clipped by the scrolling sheet content" (ring box = row rect grown by max(0, offset + width); fails without the inset). Item 2: six desktop board-keys tests: Composing "R-31 Space and Enter on a focused destination-column card set k (the tap on it)", "R-39 Q-24 Enter on a focused non-destination column card with Validate enabled does nothing (never Validate)", "R-33 Enter on a focused WordCell adds its top card as a free letter and focuses the new tile", "R-65 Space on a focused non-empty WordCell in Composing opens the sticky view and adds no free letter"; Place "R-39 Space and Enter on a focused column card in Place do nothing", "R-65 Space on a focused non-empty WordCell in Place opens the sticky view and keeps the target"; each fails under a matching break in keys.ts; app matched the refs. Item 3: keys.test.ts "AD-12 Shift is allowed: ? as a US layout sends it (Shift+/, key ?) opens How to play"; keys.spec M/? test opens How to play with `Shift+Slash` (probe confirmed key '?', shiftKey true); both fail with a Shift rejection before the `?` case. Fixer ran: npm test 84 / 3119 pass; lint 1 pre-existing warning; check 0 errors; board-keys + keys desktop 77 passed. Baselines possibly affected (not run): menu-opening screens only if a click-opened first row draws :focus-visible (likely not).
+Orchestrator verify: npm test 84 / 3119 pass, lint pass (1 pre-existing warning), check pass. Snapshot: tree 2 440c0902ec0f32e175f74bbcbf3928fe2cf528d3; fix diff `opus-review-epic-6b2.passes/pass2.fix.diff`; restaged diff `pass2.diff`.
+Targeted Playwright on tree 2: menu, confirm, nav, keys, board-keys, how-to-play, end-sheet (all projects) 238 passed / 238 skipped (`e2e-tree2.log`).
+
+## Pass 3 — 2026-10-21
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 1, minor 2, decision-needed 1  |  Dropped in triage: 0
+### Applied
+- [major] src/ui/gestures/controller.test.ts:5655-5689 with controller.ts:827-829 `changesData` — ticket 6.11 Activation "closes peeks only when the tap changes the phase or word data (tile swap or return, strip swap, …)": the return branch (`tile.kind === 'remove'`) and a Place strip swap have no case in the hover-peek table; removing `|| tile.kind === 'remove'` passes every test (risk area 3) → fixer item 1
+### Minors (listed, not sent to the fixer — owner rule)
+- e2e/board-keys.spec.ts (pass 2 item 2, Place "R-65 … keeps the target") — focuses cell 9, not a legal target, so the "keeps the target" half would pass with Space wired to setTarget; cell 4 (legal, non-empty, not the target) would pin it.
+- src/ui/keys.ts:565 — auto-repeat keydowns of a `single` board row that acted on its first press (holding ↑/↓, Space, Enter on a card/tile/WordCell) return before `preventDefault`, so the browser scrolls the page.
+### Decision needed (functionality / UX / gameplay)
+- src/ui/Menu.svelte:180-182 (pass 2 item 1) — the menu rows' focus ring is now drawn inside the row (the offset ring was clipped by the scrolling sheet), but DESIGN.md Focus ring gives an inside ring only to cards; other controls keep a 2 px offset and table-coloured gap. Which should a keyboard player see on a focused menu row? — proposed default: keep the inside ring and add full-width menu rows to the DESIGN.md Focus ring bullet as a second inside-ring case (the alternative pads the menu list by 4 px so the rows no longer reach the sheet edges).
+### Dropped
+- none
+### Fix
+Item 1: controller.test.ts hover-peek table gains 'return' (composing: select free-letter tile 4, activate tile 4 → `tile.kind === 'remove'`) and 'strip swap' (place: select tile 6, activate tile 3 → setPlacementOrder); title now "AD-12 a hover peek closes when the tap swaps or returns a tile, swaps the strip, drops a tail, adds a free letter, sets the target, sets k or opens the view". Breaks: removing `|| tile.kind === 'remove'` fails 'return'; narrowing the swap branch to arrange-only fails 'strip swap'. Fixer ran: npm test 84 / 3119 pass; lint 1 pre-existing warning; check 0 errors.
+Orchestrator verify: npm test 84 / 3119 pass, lint pass (1 pre-existing warning), check pass. Snapshot: tree 3 3f6742215caf5ceebc57b9334b3f4c3daa558c7d; fix diff `opus-review-epic-6b2.passes/pass3.fix.diff`; restaged diff `pass3.diff`.
+
+## Pass 4 — 2026-10-21
+Reviewers: fix diff, edge cases, verification gap, intent alignment (late-pass bar)  |  Findings: major 1, minor 1, decision-needed 0  |  Dropped in triage: 0
+Stopping rule: passes 3 and 4 each yielded at most one major → converged; the pass 4 major is recorded as open, not fixed.
+### Open major (not fixed — stopping rule)
+- src/ui/keys.test.ts:490-541 ('AD-12 pending pop') with keys.ts:425-430 `WAITS` — ticket 6.10 "acting keys that touch history (Undo, Redo, M, N, ?) wait for the pending pop, then act": removing 'menu' or 'newGame' from WAITS passes every test (the only pending-pop M expects the menu not to open, which a dropped M also gives; N is never pressed during a pending pop). Proposed fix: with `mocks.pending = true` press 'm', settle, expect `overlays.top === 'menu'`; press 'n' with inProgress true (newGameConfirm after settle) and false (newGame after settle).
+### Minors (listed, not sent to the fixer — owner rule)
+- src/ui/gestures/controller.test.ts:5639-5705 — no keep-open case for a tile or strip-card select/deselect by key with a hover peek open; `changesData` returning true for every tray hit would pass.
+### Decision needed (functionality / UX / gameplay)
+- none new
+### Dropped
+- none
+
+## Result — converged after 4 passes
+open major: src/ui/keys.test.ts 'AD-12 pending pop' — no test fails if M or N is removed from keys.ts `WAITS` (ticket 6.10 Pending pop); proposed fix above.
+Majors per pass: 3, 3, 1, 1. The first loop's open major (N-key confirm focus return) was seeded into pass 1 and fixed.
+Final state (tree 3 3f6742215caf5ceebc57b9334b3f4c3daa558c7d, unchanged since pass 3): npm test 84 files / 3119 tests pass; lint pass (1 pre-existing noNonNullAssertion warning, e2e/end-sheet.spec.ts:846); check 0 errors. Targeted Playwright on tree 2 (pass 3 changed only controller.test.ts): menu, confirm, nav, keys, board-keys, how-to-play, end-sheet, all projects, 238 passed / 238 skipped (`e2e-tree2.log`). Full `npm run test:e2e`, `test:e2e:pwa`, `test:e2e:dist` and screenshots not run (orchestrator). Baselines possibly affected: screens that show a focused button with :focus-visible (confirm, end-sheet expanded, menu, preferences, statistics, how-to-play, theme-* open-surface shots) now draw the accent-teal ring instead of the browser default; the menu's focused row draws it inset. Not committed.
+Technical defaults applied: 2 (pass 1 item 2 shared `button:focus-visible` rule; pass 2 item 1 inset menu-row ring, now also a decision-needed item).
+Decision needed (2): focus after dismissing the menu or an N-opened confirm in Composing/Place (pass 2; ties to the first loop's pending History-notice decision); inset focus ring on menu rows vs DESIGN.md (pass 3).
+Unapplied minors: 5 (pass 1) + 1 (pass 2) + 2 (pass 3) + 1 (pass 4) = 9, listed in each pass above.
+
+## Post-loop fix — WAITS M/N coverage
+Gap: the pass 4 open major. No test failed if 'menu' or 'newGame' was removed from `src/ui/keys.ts` `WAITS` (ticket 6.10 Pending pop: M and N wait for the pending pop, then act): the only pending-pop M expected the menu not to open, which a dropped M also gives, and N was never pressed during a pending pop.
+Tests added (`src/ui/keys.test.ts`, describe 'AD-12 pending pop'): 'AD-12 M waits for the pending pop, then opens the menu' (nothing opens and no preventDefault before settle; menu on top after); 'AD-12 N waits for the pending pop, then opens the New game confirm in progress, else starts a new game' (inProgress true → `newGameConfirm` only after settle; inProgress false → `newGame` only after settle). `keys.ts` unchanged: the code was right, only the coverage was missing.
+Proof: with 'menu' removed from `WAITS` the M test fails (1 failed / 93 passed in keys.test.ts); with 'newGame' removed the N test fails (1 failed / 93 passed); `WAITS` restored, `git diff src/ui/keys.ts` empty.
+Verify: npm test 84 files / 3121 tests pass; lint pass (1 pre-existing warning); check 0 errors. Not committed.
+
+Post-loop fix review: a fresh read-only reviewer subagent checked the WAITS M/N tests (mutation analysis: each new case fails if its key is dropped from WAITS, acts at once or never acts); verdict approve, two minors (N inProgress read at settle already covered by the Z case; the Shift+? case is correct). Gate: npm run test:all green on a Linux-filesystem mirror of this tree (the 9p checkout's full e2e run hangs on Playwright context teardown); npm run test:screens green, no baseline changed.

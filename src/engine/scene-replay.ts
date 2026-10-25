@@ -68,6 +68,21 @@ export interface SceneFixture {
     readonly cell: number;
     readonly score: number;
   }[];
+  /**
+   * After `after` commands, the letters the scene's tray shows (`'QU'` for the QU card): the
+   * draft's word cards in tray order (R-30), or in the Place phase the placement order bottom to
+   * top (R-51). The UI's frames are tested against it (AD-1: the fixture is the bridge).
+   */
+  readonly drafts?: readonly { readonly after: number; readonly letters: readonly string[] }[];
+  /**
+   * After `after` commands, the engine's columns (R-60): `columns` lists the scripted columns in the
+   * `start.columns` format (letters top to bottom, `'QU'` for the QU card); an unlisted column is
+   * empty. The board a scene draws after that command is tested against it (AD-1).
+   */
+  readonly columns?: readonly {
+    readonly after: number;
+    readonly columns: readonly (readonly string[])[];
+  }[];
 }
 
 export interface SceneReplay {
@@ -165,6 +180,26 @@ export function replayScene(scene: SceneFixture, dictionary: ReadonlySet<string>
       );
     if (place.placementOrder.join(',') !== order.join(','))
       fail(scene, `after ${after} commands stated order ${order}, engine ${place.placementOrder}`);
+  }
+  for (const { after, letters } of scene.drafts ?? []) {
+    index('drafts after', after, count);
+    const shown = viewFrom(start, sessions[after], EN);
+    if (shown.draft === undefined) fail(scene, `after ${after} commands there is no draft`);
+    const held = (shown.place?.placementOrder ?? shown.draft.wordCards).map(
+      (id) => shown.faces[id].letter,
+    );
+    if (held.join(',') !== letters.join(','))
+      fail(scene, `after ${after} commands stated draft ${letters}, engine ${held}`);
+  }
+  for (const { after, columns } of scene.columns ?? []) {
+    index('columns after', after, count);
+    const shown = viewFrom(start, sessions[after], EN);
+    for (const { column, cards } of shown.columns) {
+      const held = cards.map((id) => shown.faces[id].letter);
+      const listed = columns[column - 1] ?? [];
+      if (held.join(',') !== listed.join(','))
+        fail(scene, `after ${after} commands column ${column} stated ${listed}, engine ${held}`);
+    }
   }
   const stated = new Set((scene.cellScores ?? []).map((entry) => entry.after));
   for (const after of stated) {

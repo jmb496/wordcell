@@ -59,6 +59,10 @@ ticket whose gate-4 owner check is more than reading the result, or the end of t
 reads the plain-language digest in `_bmad-output/implementation-artifacts/autopilot/` instead of
 each plan. Local commits only; never pushes.
 
+Device reads (a gate-4 owner check on a real phone, e.g. a ticket's `done_checkpoint`): run
+`node scripts/device-preview.mjs <fixture>` and open the printed tailnet URL on the phone; setup and
+steps in `docs/device-testing.md` (owner, 2026-10-24).
+
 Stop conditions for any review loop: zero major findings after triage, two consecutive passes
 with at most one major each, majors rising pass-over-pass, or the pass cap (default 7, the last
 pass verify-only). Rising or persisting real majors mean the refs are unclear; fix the spec or

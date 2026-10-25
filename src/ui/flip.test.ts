@@ -9,7 +9,9 @@ import { guardInstalled, type MotionKind, startTracker } from './motion';
 // AD-14 FLIP (ticket 5.10, epic 5 SPEC CAP-8) in node: no DOM or WAAPI. A fake root answers
 // `querySelectorAll('[data-card-id]')` with fake wrappers (`getAttribute` of `data-card-id` and
 // `data-place`, `querySelector(':scope > .face')` → a fake face) and `querySelector` of each
-// `[data-band="…"]` and of `[data-band="tray"] .tiles`; its contents are a settable scene, so a
+// `[data-band="…"]` and of `[data-band="tray"] .tiles` (a fake face at (0, 514), 6 px above the
+// first tile row, 412 wide; its height is the scene's `tileArea`, default 98); its contents are a
+// settable scene, so a
 // test changes the "DOM" between capture and play. A fake face records `animate()` (keyframes,
 // options) and returns a fake Animation whose `finish()` is recorded and whose `onfinish` a test
 // fires (WAAPI fires it later). A counting gate throws on a leave at count 0. `flushSync` is mocked
@@ -97,8 +99,14 @@ class FakeWrapper {
 }
 
 type Card = { id: number; place: string; rect: Box; cell?: number };
-// `mirrors`: WordCell n → the CardId of its direct `[data-mirror-of]` child (R-52).
-type Scene = { cards: Card[]; bands: Record<BandKey, Box>; mirrors?: Record<number, number> };
+// `mirrors`: WordCell n → the CardId of its direct `[data-mirror-of]` child (R-52); `tileArea`: the
+// `.tiles` height (A-D4).
+type Scene = {
+  cards: Card[];
+  bands: Record<BandKey, Box>;
+  mirrors?: Record<number, number>;
+  tileArea?: number;
+};
 
 const box = (left: number, top: number, width = 40, height = 53): Box => ({
   left,
@@ -114,7 +122,7 @@ const BANDS: Record<BandKey, Box> = {
 };
 
 class FakeRoot {
-  readonly tiles = { classList: new FakeClassList() };
+  readonly tiles = new FakeFace(box(0, 514, 412, 98));
   /**
    * The faces of the current scene by CardId (a re-render makes new nodes per scene; `keep` reuses
    * each CardId's face node with its new rect, as Svelte's keyed each does within a band).
@@ -138,6 +146,7 @@ class FakeRoot {
     });
     this.bands = scene.bands;
     this.mirrors = scene.mirrors ?? {};
+    this.tiles.rect = box(0, 514, 412, scene.tileArea ?? 98);
   }
   mirrors: Record<number, number> = {};
   querySelectorAll(selector: string): unknown[] {
@@ -623,6 +632,8 @@ describe('AD-14 flyToCell playback (ticket 5.11, CAP-8, F28)', () => {
         { id: 9, place: 'cell', rect: box(100, 400), cell: 5 },
         { id: 3, place: 'cell', rect: box(60, 400), cell: 4 },
         { id: 4, place: 'tray', rect: box(100.2, 520) },
+        // Under 0.5 px on both axes: flyToCell has no MIN_DELTA_PX skip (ticket 5.11).
+        { id: 5, place: 'tray', rect: box(100.2, 400.3) },
       ],
       bands: BANDS,
     };
@@ -631,6 +642,7 @@ describe('AD-14 flyToCell playback (ticket 5.11, CAP-8, F28)', () => {
         { id: 9, place: 'cell', rect: box(100, 400), cell: 5 },
         { id: 3, place: 'cell', rect: box(100, 400), cell: 5 },
         { id: 4, place: 'cell', rect: box(100, 400), cell: 5 },
+        { id: 5, place: 'cell', rect: box(100, 400), cell: 5 },
       ],
       bands: BANDS,
     };
@@ -639,7 +651,8 @@ describe('AD-14 flyToCell playback (ticket 5.11, CAP-8, F28)', () => {
       transform: 'translate(-40px, 0px)',
     });
     expect(t.root.face(4).animations).toHaveLength(1);
-    expect(t.active()).toBe(2);
+    expect(t.root.face(5).animations).toHaveLength(1);
+    expect(t.active()).toBe(3);
     expect(t.root.tiles.classList.contains('wc-drag-tiles')).toBe(true);
   });
 
@@ -982,6 +995,88 @@ describe('AD-14 FLIP finish-all path', () => {
     t.root.show(START);
     move(t, SAME_BAND);
     expect(t.active()).toBe(2);
+    expect(t.root.tiles.classList.contains('wc-drag-tiles')).toBe(false);
+  });
+
+  it('AD-14 a tile reorder released at gap 0, its face starting left of the tile area, lifts wc-drag-tiles until the last settle', () => {
+    const t = setup();
+    // Tile 20 is released held over gap 0 (left −12, the clip starts at 0, F17) and lands in
+    // slot 0; tile 3 shifts from slot 0 to slot 1, inside the clip.
+    t.root.show({
+      cards: [
+        { id: 3, place: 'tray', rect: box(10, 520, 44, 44) },
+        { id: 20, place: 'tray', rect: box(-12, 520, 44, 44) },
+      ],
+      bands: BANDS,
+    });
+    move(
+      t,
+      {
+        cards: [
+          { id: 3, place: 'tray', rect: box(54, 520, 44, 44) },
+          { id: 20, place: 'tray', rect: box(10, 520, 44, 44) },
+        ],
+        bands: BANDS,
+      },
+      { type: 'arrange', arrangement: [20, 3] },
+    );
+    expect(t.active()).toBe(2);
+    expect(t.root.tiles.classList.contains('wc-drag-tiles')).toBe(true);
+    t.root.face(3).animations[0]?.onfinish?.();
+    expect(t.root.tiles.classList.contains('wc-drag-tiles')).toBe(true);
+    t.root.face(20).animations[0]?.onfinish?.();
+    expect(t.active()).toBe(0);
+    expect(t.root.tiles.classList.contains('wc-drag-tiles')).toBe(false);
+  });
+
+  it('AD-14 a tray-band glide across a tile-area shrink (3 → 2 compact rows, A-D4) lifts wc-drag-tiles until the last settle', () => {
+    const t = setup();
+    // Tile 20 sits in the third compact row; the move removes that row and it glides up to row 2.
+    t.root.show({
+      cards: [
+        { id: 3, place: 'tray', rect: box(10, 532, 44, 44) },
+        { id: 20, place: 'tray', rect: box(10, 628, 44, 44) },
+      ],
+      bands: BANDS,
+      tileArea: 194,
+    });
+    move(t, {
+      cards: [
+        { id: 3, place: 'tray', rect: box(10, 532, 44, 44) },
+        { id: 20, place: 'tray', rect: box(54, 580, 44, 44) },
+      ],
+      bands: BANDS,
+      tileArea: 146,
+    });
+    expect(t.active()).toBe(1);
+    expect(t.root.tiles.classList.contains('wc-drag-tiles')).toBe(true);
+    t.root.face(20).animations[0]?.onfinish?.();
+    expect(t.active()).toBe(0);
+    expect(t.root.tiles.classList.contains('wc-drag-tiles')).toBe(false);
+  });
+
+  it('AD-14 a tray-band glide from compact row 2 to card row 1 (8 → 7 tiles, tile-area height unchanged) lifts wc-drag-tiles until the last settle', () => {
+    const t = setup();
+    // Tile 20 (index 7) leaves compact row 2 (top 568); in card mode its 52 × 70 face inverted to
+    // that start reaches 638, below the clip's bottom 612.
+    t.root.show({
+      cards: [
+        { id: 3, place: 'tray', rect: box(10, 520, 44, 44) },
+        { id: 20, place: 'tray', rect: box(10, 568, 44, 44) },
+      ],
+      bands: BANDS,
+    });
+    move(t, {
+      cards: [
+        { id: 3, place: 'tray', rect: box(10, 520, 52, 70) },
+        { id: 20, place: 'tray', rect: box(354, 520, 52, 70) },
+      ],
+      bands: BANDS,
+    });
+    expect(t.active()).toBe(1);
+    expect(t.root.tiles.classList.contains('wc-drag-tiles')).toBe(true);
+    t.root.face(20).animations[0]?.onfinish?.();
+    expect(t.active()).toBe(0);
     expect(t.root.tiles.classList.contains('wc-drag-tiles')).toBe(false);
   });
 

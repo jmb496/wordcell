@@ -2,18 +2,9 @@ import { render } from 'svelte/server';
 import { describe, expect, it, vi } from 'vitest';
 import type { CellView, ColumnView, DraftView, Face } from '../engine/index';
 import src0 from './App.svelte?raw';
-import src6 from './announce.ts?raw';
 import src1 from './Card.svelte?raw';
 import Column from './Column.svelte';
 import src2 from './Column.svelte?raw';
-import src7 from './commands.ts?raw';
-import src8 from './end-sheet.ts?raw';
-import src11 from './gestures/controller.ts?raw';
-import src12 from './gestures/free-letter-drag.ts?raw';
-import src13 from './gestures/tile-drag.ts?raw';
-import src9 from './keys.ts?raw';
-import src3 from './Menu.svelte?raw';
-import src10 from './new-game.ts?raw';
 import { overlays } from './overlays.svelte';
 import src4 from './Tray.svelte?raw';
 import { text } from './text';
@@ -244,17 +235,8 @@ const SOURCES: Record<string, string> = {
   'App.svelte': src0,
   'Card.svelte': src1,
   'Column.svelte': src2,
-  'Menu.svelte': src3,
   'Tray.svelte': src4,
   'WordCellRow.svelte': src5,
-  'announce.ts': src6,
-  'commands.ts': src7,
-  'end-sheet.ts': src8,
-  'keys.ts': src9,
-  'new-game.ts': src10,
-  'gestures/controller.ts': src11,
-  'gestures/free-letter-drag.ts': src12,
-  'gestures/tile-drag.ts': src13,
   'tray/ControlRow.svelte': src14,
   'tray/TileRows.svelte': src15,
   'tray/WordLine.svelte': src16,
@@ -273,20 +255,6 @@ describe('AD-3 sole owners', () => {
       expect(read(file), file).not.toMatch(/aria-label="/);
     }
   });
-
-  it('AD-3 no game.dispatch( call is left in src/ui outside announce.ts and tests', () => {
-    const offenders = Object.entries(SOURCES)
-      .filter(([f, src]) => f !== 'announce.ts' && /\bgame\.dispatch\(/.test(src))
-      .map(([f]) => f);
-    expect(offenders).toEqual([]);
-  });
-
-  it('AD-3 only announce.ts writes the live region', () => {
-    const offenders = Object.entries(SOURCES)
-      .filter(([f, src]) => f !== 'announce.ts' && /textContent\s*=[^=]/.test(src))
-      .map(([f]) => f);
-    expect(offenders).toEqual([]);
-  });
 });
 
 describe('AD-3 live region mount', () => {
@@ -300,14 +268,5 @@ describe('AD-3 live region mount', () => {
     expect(css).toContain('clip-path');
     expect(css).not.toContain('display');
     expect(app).not.toMatch(/<[^>]*(use:region)[^>]*inert/);
-  });
-
-  it('AD-3 no other component mounts a live region (Tray and every inert wrapper)', () => {
-    const others = Object.entries(SOURCES)
-      .filter(([f]) => f.endsWith('.svelte') && f !== 'App.svelte')
-      .filter(([, src]) => /aria-live|role="status"/.test(src))
-      .map(([f]) => f);
-    expect(others).not.toContain('Tray.svelte');
-    expect(others.filter((f) => f.startsWith('tray/'))).toEqual([]);
   });
 });

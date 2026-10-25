@@ -45,7 +45,7 @@ const inPlace = $derived(place !== undefined);
   {@const dim = inPlace && !cell.isLegalTarget && !target}
   <span
     class="label"
-    class:dim
+    class:wc-dim={dim}
     aria-hidden="true"
     data-wordcell-label={cell.cell}
     style:grid-column={cell.cell - 2}
@@ -57,7 +57,7 @@ const inPlace = $derived(place !== undefined);
     class:empty={cell.cards.length === 0}
     class:legal={inPlace && cell.isLegalTarget && !target}
     class:target
-    class:dim
+    class:wc-dim={dim}
     role="group"
     aria-label={cell.cards.length === 0
       ? text.nameCellEmpty(cell.cell)
@@ -108,7 +108,7 @@ const inPlace = $derived(place !== undefined);
     position: relative; width: var(--wc-slot); height: var(--wc-H);
     touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
   }
-  .dim { opacity: 0.35; }
+  /* The not-legal dim (`.wc-dim`) is the shared rule in app.css (DESIGN.md WordCell, R-40). */
   /* DESIGN.md Focus ring (epic 6 CAP-10): each WordCell is one Tab stop; the ring encloses the slot. */
   .wordcell:focus-visible { outline: 2px solid var(--wc-accent-teal); outline-offset: 2px; }
   /* The card rect inside the slot: empty outline, legal ring, selected-target ring. */

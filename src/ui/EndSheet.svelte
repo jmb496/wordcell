@@ -28,7 +28,7 @@ import { text } from './text';
 // `--wc-base-ms` (`--wc-fade-ms` under reduced motion), none when it is open at mount (R-73
 // relaunch: no animation, final state at first paint). The content is a snapshot of the last
 // finished view, so the exit keeps its text after Undo. Focus: Replay this deal on open; the board
-// on collapse, Undo, New game and Replay (EXPERIENCE.md Focus).
+// on collapse, New game and Replay; on Undo the phase's target (end-sheet.ts; EXPERIENCE.md Focus).
 let { view }: { view: GameView } = $props();
 
 const finishedStatus = (v: GameView): boolean => v.status === 'won' || v.status === 'gaveUp';
@@ -46,7 +46,7 @@ $effect.pre(() => {
 });
 const result = $derived(open && finishedStatus(view) ? view : shown);
 
-// Collapse (handle, scrim, Esc, back): focus goes to the board. Undo does the same (end-sheet.ts);
+// Collapse (handle, scrim, Esc, back): focus goes to the board. Undo goes by the phase (end-sheet.ts);
 // New game and Replay leave focus to their own paths.
 let previous: EndSheetState = untrack(() => overlays.endSheet);
 $effect(() => {
@@ -66,6 +66,12 @@ const collapse = (event: MouseEvent): void => {
 const replay = (event: MouseEvent): void => {
   if (first(event) && !requestReplay(view)) void tick().then(focusBoard);
 };
+// R-88: a finished view always carries `wordList` (R-86); absent is a bug, never the empty line.
+function wordsOf(v: GameView) {
+  if (v.wordList === undefined) throw new Error('AD-3 end sheet Words section with no wordList');
+  return v.wordList;
+}
+
 function unreadableReason() {
   const current = scoreHistory.state;
   if (current.status !== 'unreadable')
@@ -74,7 +80,7 @@ function unreadableReason() {
 }
 
 const resetHistory = (event: MouseEvent): void => {
-  if (first(event)) overlays.open('resetConfirm');
+  if (first(event)) openSurface('resetConfirm');
 };
 const statistics = (event: MouseEvent): void => {
   if (first(event)) openSurface('statistics');
@@ -99,9 +105,21 @@ $effect(() => {
   });
 });
 
-function focusOnMount(button: HTMLButtonElement): void {
-  if (overlays.top === 'endSheet') button.focus();
-}
+// EXPERIENCE.md End sheet "focus moves to its first action": once per expansion, the first time
+// the sheet is the top entry (at open, or when a notice over a relaunched sheet closes); collapse
+// and hide re-arm it. After that, the top returning to the sheet (a panel or confirm opened from it
+// closing) leaves focus to that surface's own return (its opener).
+let openFocused = false;
+$effect(() => {
+  const ready = open && overlays.top === 'endSheet' ? replayButton : null;
+  untrack(() => {
+    if (!open) openFocused = false;
+    else if (ready !== null && !openFocused) {
+      openFocused = true;
+      ready.focus();
+    }
+  });
+});
 </script>
 
 {#if presence.present && result !== null}
@@ -151,11 +169,29 @@ function focusOnMount(button: HTMLButtonElement): void {
           <p class="unrecorded">{text.endNotAdded}</p>
         {/if}
         <div class="actions">
-          <button type="button" class="secondary" bind:this={replayButton} onclick={act(replay)} {@attach focusOnMount}
+          <button type="button" class="secondary" bind:this={replayButton} onclick={act(replay)}
             >{text.replayDeal}</button
           >
           <button type="button" class="secondary" onclick={act(statistics)}>{text.statistics}</button>
         </div>
+        <section class="words">
+          <h3 id="end-words">{text.wordsHeading}</h3>
+          {#if wordsOf(result).length === 0}
+            <p class="words-empty">{text.wordsEmpty}</p>
+          {:else}
+            <ul aria-labelledby="end-words">
+              {#each wordsOf(result) as entry}
+                <li
+                  aria-label={text.wordRow(entry.spelling, entry.letterCount)}
+                  style:--letters={entry.letterCount}
+                >
+                  <span class="word" aria-hidden="true">{entry.spelling.toUpperCase()}</span>
+                  <span class="count" aria-hidden="true">{text.wordCount(entry.letterCount)}</span>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </section>
       </div>
     </div>
   </div>
@@ -218,6 +254,26 @@ function focusOnMount(button: HTMLButtonElement): void {
     flex: 1; min-height: 44px; padding: 0 16px; border-radius: 9999px;
     background: var(--wc-surface-raised); border: 1px solid var(--wc-outline);
     color: var(--wc-ink-primary); font: 600 1rem/1.5rem system-ui, "Roboto", sans-serif;
+  }
+  .words { margin-top: 16px; text-align: left; }
+  .words h3 {
+    margin: 0; color: var(--wc-ink-secondary); font: 500 0.875rem/1.25rem system-ui, "Roboto", sans-serif;
+  }
+  .words-empty { margin: 4px 0 0; color: var(--wc-ink-secondary); }
+  .words ul { margin: 4px 0 0; padding: 0; list-style: none; overflow-y: visible; }
+  .words li {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    min-height: 44px; box-sizing: border-box; border-top: 1px solid var(--wc-hairline);
+    container-type: inline-size;
+  }
+  .words li:first-child { border-top: none; }
+  /* DESIGN.md Words: ui-body (1rem) shrinking to 14 px before it wraps. */
+  .word {
+    min-width: 0; overflow-wrap: anywhere; color: var(--wc-ink-primary);
+    font-size: clamp(14px, calc((100cqw - 6.5rem) / (var(--letters) * 0.75)), 1rem);
+  }
+  .count {
+    flex: none; color: var(--wc-ink-secondary); font: 500 0.875rem/1.25rem system-ui, "Roboto", sans-serif;
   }
   @container style(--wc-reduced: 1) {
     .scrim, .sheet { transition: opacity var(--wc-fade-ms); }

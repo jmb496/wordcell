@@ -72,6 +72,9 @@ import validIdlePendingDraft from '../../fixtures/session-idle-pending-draft.jso
 import validIdlePendingDraftLong from '../../fixtures/session-idle-pending-draft-long.json' with {
   type: 'json',
 };
+import validIdlePendingDraftOverflow from '../../fixtures/session-idle-pending-draft-overflow.json' with {
+  type: 'json',
+};
 import invalidAd7ActiveMs from '../../fixtures/session-invalid-ad7-active-ms.json' with {
   type: 'json',
 };
@@ -224,6 +227,8 @@ import validPlaceOntoCommitted from '../../fixtures/session-place-onto-committed
   type: 'json',
 };
 import validWon from '../../fixtures/session-won.json' with { type: 'json' };
+import validWonLongWords from '../../fixtures/session-won-long-words.json' with { type: 'json' };
+import validWonWords from '../../fixtures/session-won-words.json' with { type: 'json' };
 import { EngineError } from './errors';
 import {
   accrue,
@@ -243,8 +248,10 @@ import {
   serializeHistory,
   serializeSession,
   view,
+  type WordCellNumber,
 } from './index';
 import { replay } from './replay';
+import { wordLetterCount } from './rules';
 import { checkActiveMsHeadroom, checkContainer, checkRecord, checkSchema } from './serialize';
 import { DICT, deepFreeze, drop, play } from './test-helpers';
 import { winSeed } from './win-seed';
@@ -305,9 +312,12 @@ type ValidName =
   | 'composing-long'
   | 'place-long'
   | 'one-letter-left'
-  | 'idle-pending-draft-long';
+  | 'idle-pending-draft-long'
+  | 'idle-pending-draft-overflow'
+  | 'won-words'
+  | 'won-long-words';
 
-/** The eighteen CAP-9 round-trip fixtures (generator record: the plan's Implementation Notes). */
+/** The CAP-9 round-trip fixtures (generator record: the plan's Implementation Notes). */
 const VALID: readonly (readonly [ValidName, unknown])[] = [
   ['idle-fresh', validIdleFresh],
   ['composing', validComposing],
@@ -327,6 +337,74 @@ const VALID: readonly (readonly [ValidName, unknown])[] = [
   ['place-long', validPlaceLong],
   ['one-letter-left', validOneLetterLeft],
   ['idle-pending-draft-long', validIdlePendingDraftLong],
+  ['idle-pending-draft-overflow', validIdlePendingDraftOverflow],
+  ['won-words', validWonWords],
+  ['won-long-words', validWonLongWords],
+];
+
+/**
+ * Epic 10 entry 1 (seed 2089): `session-won-words` is the scripted game below. The strings are
+ * inline-dictionary words (R-37 trusts committed words); `surf` is real. Found by search.
+ */
+const WON_WORDS_DICTIONARY = [
+  'surf',
+  'eiogkd',
+  'aeccp',
+  'nmihz',
+  'lhvia',
+  'jdaquye',
+  'tmxrwo',
+  'ltos',
+  'ehnpbntfsa',
+];
+const WON_WORDS_LIST = [
+  {
+    spelling: 'ehnpbntfsa',
+    letterCount: 10,
+    cards: [8, 16, 28, 33, 3, 29, 43, 13, 39, 0],
+    cell: 10,
+  },
+  { spelling: 'jdaquye', letterCount: 7, cards: [21, 6, 2, 35, 50, 10], cell: 7 },
+  { spelling: 'eiogkd', letterCount: 6, cards: [9, 19, 32, 14, 22, 7], cell: 6 },
+  { spelling: 'tmxrwo', letterCount: 6, cards: [44, 25, 49, 36, 48, 31], cell: 6 },
+  { spelling: 'aeccp', letterCount: 5, cards: [1, 11, 5, 4, 34], cell: 5 },
+  { spelling: 'lhvia', letterCount: 5, cards: [23, 17, 47, 20, 0], cell: 5 },
+  { spelling: 'nmihz', letterCount: 5, cards: [27, 26, 18, 15, 51], cell: 5 },
+  { spelling: 'ltos', letterCount: 4, cards: [24, 42, 30, 39], cell: 4 },
+  { spelling: 'surf', letterCount: 4, cards: [40, 45, 38, 12], cell: 4 },
+  { spelling: 'surf', letterCount: 4, cards: [41, 46, 37, 13], cell: 3 },
+];
+
+/**
+ * Epic 10 entry 9 (seed 1): `session-won-long-words` is the device-read list (story Notes), the
+ * scripted game below, found by a throwaway search (plan Implementation Notes). The strings are
+ * inline-dictionary words (R-37 trusts committed words), not English: the read judges letter
+ * legibility. An opening 10-card word (column 5 whole onto 4 cards of column 6) fills WordCell 10,
+ * nineteen one- or two-card source words reuse every WordCell top they can (R-33, R-41), then
+ * columns 3 and 1 go whole with all eight free letters: 7 + 7 + 8 cards, QU among them.
+ */
+const WON_LONG_WORDS_DICTIONARY = [
+  'naentscfsz',
+  'poz',
+  'misz',
+  'hifzo',
+  'fcpso',
+  'rhozsi',
+  'vstmif',
+  'huifnsp',
+  'dcuipcze',
+  'rmhosea',
+  'pzfntah',
+  'ochsrfe',
+  'nseviap',
+  'tkgtpofui',
+  'eihruhan',
+  'efucinms',
+  'rhfarvsz',
+  'yocemzph',
+  'bpnshuso',
+  'svtnorpi',
+  'ldxomiwlquejatazirshcgn',
 ];
 
 // --- rejection table ------------------------------------------------------------------------
@@ -941,6 +1019,87 @@ describe('defining properties (§2, CAP-9)', () => {
     'idle-pending-draft-long': (s) => {
       expect(s.cursor).toStrictEqual({ index: 1, phase: 'idle' });
       expect(view(s, EN).pendingDraftWord).toBe('vimldxomiw');
+    },
+    // R-72: a pending draft is any undone Composing draft, so it can be longer than a placeable
+    // word: 7 source + 7 destination cards + 3 free letters (cells 3-5) after three commits.
+    'idle-pending-draft-overflow': (s) => {
+      expect(s.cursor).toStrictEqual({ index: 3, phase: 'idle' });
+      expect(s.moves[3]?.reached).toBe('composing');
+      expect(view(s, EN).pendingDraftWord).toBe('tnpdvimldxomiwnoz');
+    },
+    // Epic 10 entry 1 (R-86, Q-47; seed 2089): the whole word list, a won Session. `surf` twice in
+    // cells 4 and 3 (moves 0 and 2), a 5-letter tie played in reverse alphabetical order (nmihz before lhvia), a
+    // 10-letter word in cell 10 and cards 13, 39 and 0 each in two words (R-41 free letters).
+    'won-words': (s) => {
+      expect(s.gaveUp).toBe(false);
+      expect(s.cursor).toStrictEqual({ index: 10, phase: 'idle' });
+      expect(s.moves).toHaveLength(10);
+      const won = view(s, EN);
+      expect(won.status).toBe('won');
+      expect(won.wordList).toStrictEqual(WON_WORDS_LIST);
+      const shared = (won.wordList ?? []).flatMap((w) => w.cards);
+      const shared2 = [...new Set(shared)].filter((c) => shared.filter((x) => x === c).length >= 2);
+      expect(shared2.sort((a, b) => a - b)).toStrictEqual([0, 13, 39]);
+      const list = won.wordList ?? [];
+      for (const w of list) expect(w.letterCount).toBe(wordLetterCount(w.cards, EN));
+      for (let i = 1; i < list.length; i++) {
+        const [a, b] = [list[i - 1], list[i]];
+        expect(
+          a.letterCount > b.letterCount ||
+            (a.letterCount === b.letterCount && a.spelling <= b.spelling),
+        ).toBe(true);
+      }
+      const undone = play(s, [UNDO]);
+      expect(view(undone, EN).status).toBe('playing');
+      expect('wordList' in view(undone, EN)).toBe(false);
+      expect(view(play(undone, [CONFIRM]), EN).wordList).toStrictEqual(WON_WORDS_LIST);
+    },
+    // Epic 10 entry 9 (seed 1; story Notes, device-read fixture): at least 20 entries and 100 copies,
+    // the longest word 23 letters in 22 cards with the QU card (35, R-37's longest reachable word).
+    'won-long-words': (s) => {
+      expect(s.gaveUp).toBe(false);
+      expect(s.cursor).toStrictEqual({ index: 21, phase: 'idle' });
+      expect(s.moves).toHaveLength(21);
+      const won = view(s, EN);
+      expect(won.status).toBe('won');
+      const list = won.wordList;
+      if (list === undefined) throw new Error('won-long-words: a won view has no wordList');
+      expect(list.length).toBeGreaterThanOrEqual(20);
+      expect(list.reduce((n, w) => n + w.cards.length, 0)).toBeGreaterThanOrEqual(100);
+      expect([list[0].letterCount, list[0].cards.length, list[0].cell]).toStrictEqual([23, 22, 10]);
+      expect(list[0].cards).toContain(35);
+      // The rows step.test.ts copies as LONG_WORDS (card count, WordCell), so they cannot drift.
+      expect(list.map((w) => [w.cards.length, w.cell])).toStrictEqual([
+        [22, 10],
+        [10, 10],
+        [9, 9],
+        [8, 6],
+        [8, 8],
+        [8, 8],
+        [8, 7],
+        [8, 5],
+        [8, 4],
+        [8, 3],
+        [7, 7],
+        [7, 4],
+        [7, 6],
+        [7, 3],
+        [7, 5],
+        [6, 6],
+        [6, 4],
+        [5, 3],
+        [5, 5],
+        [4, 4],
+        [3, 3],
+      ]);
+      for (const w of list) expect(w.letterCount).toBe(wordLetterCount(w.cards, EN));
+      for (let i = 1; i < list.length; i++) {
+        const [a, b] = [list[i - 1], list[i]];
+        expect(
+          a.letterCount > b.letterCount ||
+            (a.letterCount === b.letterCount && a.spelling <= b.spelling),
+        ).toBe(true);
+      }
     },
   };
 
@@ -1886,6 +2045,121 @@ const REBUILDS: readonly (readonly [string, unknown, () => Session])[] = [
         ],
         ['tan', 'vimldxomiw'],
       ),
+  ],
+  [
+    'session-idle-pending-draft-overflow',
+    validIdlePendingDraftOverflow,
+    () =>
+      play(
+        createSession(1),
+        [
+          drop(3, 2, 6),
+          FLIP,
+          VALIDATE,
+          CONFIRM,
+          drop(4, 3, 7),
+          VALIDATE,
+          CONFIRM,
+          drop(5, 4, 8),
+          VALIDATE,
+          CONFIRM,
+          drop(1, 7, 2),
+          { type: 'addFreeLetter', cell: 3 },
+          { type: 'addFreeLetter', cell: 4 },
+          { type: 'addFreeLetter', cell: 5 },
+          { type: 'setDestinationCount', k: 7 },
+          UNDO,
+        ],
+        ['tan', 'fhio', 'ucfsz'],
+      ),
+  ],
+  [
+    'session-won-words',
+    validWonWords,
+    () => {
+      const whole = (column: number, count: number): Command[] => [
+        drop(column, count, column),
+        VALIDATE,
+        CONFIRM,
+      ];
+      return play(
+        createSession(2089),
+        [
+          drop(1, 2, 3),
+          { type: 'setDestinationCount', k: 2 },
+          VALIDATE,
+          CONFIRM,
+          ...whole(5, 6),
+          drop(8, 2, 4),
+          { type: 'setDestinationCount', k: 2 },
+          FLIP,
+          VALIDATE,
+          { type: 'setTarget', cell: 3 },
+          CONFIRM,
+          ...whole(1, 5),
+          ...whole(3, 5),
+          ...whole(4, 5),
+          ...whole(6, 6),
+          ...whole(7, 6),
+          ...whole(8, 4),
+          drop(2, 7, 2),
+          { type: 'addFreeLetter', cell: 3 },
+          { type: 'addFreeLetter', cell: 4 },
+          { type: 'addFreeLetter', cell: 5 },
+          VALIDATE,
+          CONFIRM,
+        ],
+        WON_WORDS_DICTIONARY,
+      );
+    },
+  ],
+  [
+    'session-won-long-words',
+    validWonLongWords,
+    () => {
+      const word = (
+        sourceColumn: number,
+        sourceCount: number,
+        destinationColumn: number,
+        free: readonly WordCellNumber[],
+        target?: WordCellNumber,
+        k?: number,
+      ): Command[] => [
+        drop(sourceColumn, sourceCount, destinationColumn),
+        ...(k === undefined ? [] : [{ type: 'setDestinationCount', k } as const]),
+        ...free.map((cell) => ({ type: 'addFreeLetter', cell }) as const),
+        VALIDATE,
+        ...(target === undefined ? [] : [{ type: 'setTarget', cell: target } as const]),
+        CONFIRM,
+      ];
+      return play(
+        createSession(1),
+        [
+          ...word(5, 6, 6, [], undefined, 4),
+          ...word(4, 1, 6, [10]),
+          ...word(4, 1, 2, [10, 3]),
+          ...word(2, 1, 4, [10, 4, 3]),
+          ...word(7, 1, 5, [10, 3, 4, 5], 3),
+          ...word(7, 1, 7, [3, 5, 10, 4]),
+          ...word(2, 1, 5, [3, 10, 4, 6, 5], 4),
+          ...word(7, 1, 4, [5, 4, 10, 6, 3]),
+          ...word(8, 2, 2, [4, 7, 3, 6, 10]),
+          ...word(8, 1, 5, [4, 5, 6, 7, 8, 10], 5),
+          ...word(2, 1, 5, [8, 3, 7, 4, 5, 6], 3),
+          ...word(6, 1, 6, [8, 3, 4, 6, 7, 5], 6),
+          ...word(2, 1, 6, [5, 6, 4, 7, 3, 8], 4),
+          ...word(4, 2, 2, [3, 4, 5, 6, 7, 8]),
+          ...word(4, 1, 2, [9, 5, 6, 8, 7, 4, 3], 7),
+          ...word(7, 1, 6, [3, 9, 8, 4, 7, 5, 6]),
+          ...word(8, 1, 4, [6, 9, 7, 5, 4, 8, 3], 5),
+          ...word(7, 1, 6, [9, 6, 4, 8, 5, 3, 7], 3),
+          ...word(8, 1, 6, [9, 8, 4, 3, 7, 5, 6], 6),
+          ...word(8, 1, 7, [5, 9, 4, 6, 7, 3, 8], 4),
+          ...word(3, 7, 1, [3, 4, 5, 6, 7, 8, 9, 10], undefined, 7),
+        ],
+        WON_LONG_WORDS_DICTIONARY,
+      );
+    },
   ],
 ];
 

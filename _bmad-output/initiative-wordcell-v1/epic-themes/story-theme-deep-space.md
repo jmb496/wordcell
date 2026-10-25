@@ -53,3 +53,4 @@ Verify at built: npm run test:all and npm run test:screens are green with the th
 
 - The grid and the scan-line texture are in scope per the owner decision of 2026-10-18 (epic Notes: build all five directions with the art as mocked up). Dropping the scan-line, or lowering its opacity after a failed pixel check, is an owner call, not a builder choice.
 - Owner decision (2026-10-19): Deep Space is second in the Theme radio order, right after Charcoal, per spec §7.10 and DESIGN.md. Register it before Daylight Paper; the Daylight Paper Preferences screenshot baseline and the radio-order checks in theme.spec.ts and dist-smoke follow (the baseline change is an owner approval at review).
+- Post-close (Opus review, owner decisions D1–D6, 2026-10-22, `5210279`, `a88cf67`, `45f6a13`; see the epic Notes): D3 this theme's `--wc-shadow-drag` is DESIGN.md's `#0008` like Charcoal.

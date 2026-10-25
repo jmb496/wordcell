@@ -47,6 +47,19 @@ export interface SceneFixtureData {
     readonly cell: number;
     readonly score: number;
   }[];
+  /**
+   * After `after` commands, the tray letters (the draft in tray order, R-30; in the Place phase the
+   * placement order, R-51); the frames' `order` and `placeOrder` equal it.
+   */
+  readonly drafts?: readonly { readonly after: number; readonly letters: readonly string[] }[];
+  /**
+   * After `after` commands, the engine's columns (R-60; scripted columns in the `start.columns`
+   * format, an unlisted one empty); the board a scene draws after that command equals it.
+   */
+  readonly columns?: readonly {
+    readonly after: number;
+    readonly columns: readonly (readonly string[])[];
+  }[];
 }
 
 export interface Point {

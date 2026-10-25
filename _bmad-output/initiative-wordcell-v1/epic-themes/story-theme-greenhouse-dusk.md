@@ -55,3 +55,4 @@ Verify at built: npm run test:all and npm run test:screens are green with the th
 
 - The leaf-vein table and paper-fibre texture are in scope per the owner decision of 2026-10-18 (epic Notes: build all five directions with the art as mocked up). Dropping the texture or lowering its opacity is an owner call.
 - Garden is third in the Theme radio order, between Deep Space and Daylight Paper, per spec §7.10; the baseline changes are an owner approval at review.
+- Post-close (Opus review, owner decisions D1–D6, 2026-10-22, `5210279`, `a88cf67`, `45f6a13`; see the epic Notes): D3 this theme's `--wc-shadow-drag` is DESIGN.md's `#0008` like Charcoal; D6 its table-art opacity 0.08 → 0.045 (washed drop-target outlines at 3:1).

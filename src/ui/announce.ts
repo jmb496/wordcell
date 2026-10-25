@@ -4,7 +4,8 @@
 // The region is mounted once at the App root (`region` action); each announce clears it at once and
 // sets it in the next animation frame, so a repeated string is still announced; the latest wins,
 // except the outcome, which queues behind a pending commit text. No `visibilitychange` listener
-// here (AD-9): a set that falls due while the page is hidden is skipped instead.
+// here (AD-9): main.ts registers `cancelAnnounce` in the hide flush, and nothing is scheduled while
+// the page is hidden.
 import type { Command, GameView } from '../engine/index';
 import { type DispatchResult, game } from '../shell/game.svelte';
 import { text } from './text';
@@ -32,6 +33,11 @@ function cancel(): void {
   queued = null;
 }
 
+/** AD-9 hide flush: drops the pending set (and a queued outcome), so none is spoken on return. */
+export function cancelAnnounce(): void {
+  cancel();
+}
+
 function live(): HTMLElement {
   if (element === null) throw new Error('AD-3 announce before the live region is mounted');
   return element;
@@ -42,10 +48,6 @@ function onFrame(): void {
   const message = pending;
   pending = null;
   if (message === null) return;
-  if (document.hidden) {
-    queued = null;
-    return;
-  }
   live().textContent = message;
   if (queued !== null) {
     pending = queued;
@@ -57,6 +59,7 @@ function onFrame(): void {
 function say(message: string): void {
   const node = live();
   cancel();
+  if (document.hidden) return;
   node.textContent = '';
   pending = message;
   frame = requestAnimationFrame(onFrame);
@@ -135,6 +138,7 @@ export function announceOutcome(): void {
     return;
   }
   cancel();
+  if (document.hidden) return;
   node.textContent = '';
   pending = message;
   frame = requestAnimationFrame(onFrame);

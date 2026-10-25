@@ -45,3 +45,22 @@ test('AD-17 end sheet screenshot with the not-added line at 360 px', async ({ pa
   await expect(sheet.getByText("This game wasn't added to your statistics.")).toBeVisible();
   await expect(page).toHaveScreenshot('end-sheet-not-added.png');
 });
+
+// Ticket 10.2 (R-88): the Words section scrolled into frame, Charcoal and Daylight Paper.
+for (const [prefs, file] of [
+  [undefined, 'end-sheet-words.png'],
+  ['prefs-theme-paper', 'end-sheet-words-paper.png'],
+] as const) {
+  test(`AD-17 end sheet screenshot with the Words list ${prefs === undefined ? 'in Charcoal' : 'in Paper'} at 360 px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await openFixture(page, 'session-won-words', { endSheet: 'expanded', prefs });
+    await expect(page.getByRole('list', { name: 'Words', exact: true })).toBeVisible();
+    await page.locator('.content').evaluate((el) => el.scrollTo(0, el.scrollHeight));
+    await expect
+      .poll(() => page.locator('.content').evaluate((el) => el.scrollTop))
+      .toBeGreaterThan(0);
+    await expect(page).toHaveScreenshot(file);
+  });
+}

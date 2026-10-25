@@ -15,8 +15,12 @@
 # watch_progress and SKILL.md "Watching progress").
 # Exit codes: 0 complete or max reached, 2 stopped (see handoff), 3 usage limit hit, 4 no
 # progress (or a dirty tree, a live leftover step, or another driver running), 5 limit threshold
-# reached before a ticket, 6 limits could not be read (after the one unchecked ticket).
+# reached before a ticket, 6 limits could not be read (after the one unchecked ticket), 7 the
+# selected model, or a model that answered in the session, is not Opus or Fable (ALLOW_MODEL=1
+# continues anyway). `touch .autopilot/STOP` pauses cleanly before the next ticket (exit 2).
 set -u
+# Print mode otherwise kills background subagents 10 minutes after the last turn.
+export CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0
 if [ $# -lt 1 ]; then echo "usage: $0 <epic-slug> [max-tickets]"; exit 4; fi
 EPIC=$1; MAX=${2:-99}
 HERE=$(cd "$(dirname "$0")" && pwd)
@@ -27,7 +31,7 @@ AP=$PWD/.autopilot
 mkdir -p "$AP" || exit 4
 exec 9> "$AP/$EPIC.lock"
 flock -n 9 || { echo "Another loop.sh for $EPIC is already running."; exit 4; }
-H=_bmad-output/implementation-artifacts/autopilot/$EPIC-handoff.md
+H=_bmad-output/implementation-artifacts/autopilot/$EPIC-handoff.json
 
 # Progress lines for the console while a session runs, read only from what the session leaves
 # on disk (detached step logs and done files under .autopilot/<run>/, and new
@@ -79,10 +83,30 @@ watch_progress() { # <start-marker> <base-commit>
   trap 'poll; exit 0' TERM
   while :; do poll; sleep "${PROGRESS_SECS:-15}" & wait $!; done
 }
+# The workflow is tuned for Opus/Fable; pause for confirmation (never pin) when the selected model is something else.
+MODEL=${ANTHROPIC_MODEL:-}
+for f in .claude/settings.local.json .claude/settings.json "$HOME/.claude/settings.json"; do
+  [ -n "$MODEL" ] && break
+  [ -f "$f" ] && MODEL=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("model",""))' "$f" 2>/dev/null)
+done
+if ! echo "$MODEL" | grep -qiE 'opus|fable' && [ "${ALLOW_MODEL:-}" != 1 ]; then
+  echo "Selected model is '${MODEL:-unknown (not set in env or settings)}', not Opus or Fable. This workflow was tuned on Opus 5.5."
+  if [ -t 0 ]; then
+    read -r -p "Continue with this model? [y/N] " ans
+    case "$ans" in y|Y|yes) ;; *) echo "Paused. Select Opus or Fable (/model) and rerun."; exit 7 ;; esac
+  else
+    echo "Paused for confirmation. Select Opus or Fable (/model) and rerun, or rerun with ALLOW_MODEL=1 to continue anyway."
+    exit 7
+  fi
+fi
 LOGS=$AP/loop-$EPIC-$(date +%Y%m%d-%H%M)
 mkdir -p "$LOGS"
 echo "loop logs: $LOGS"
 for i in $(seq 1 "$MAX"); do
+  if [ -e "$AP/STOP" ]; then
+    echo "Paused before the next ticket: $AP/STOP exists (the owner's pause). Remove it and rerun $0 $EPIC."
+    exit 2
+  fi
   for pidf in "$AP"/*/*.pid; do
     [ -e "$pidf" ] || continue
     if kill -0 "$(cat "$pidf" 2>/dev/null)" 2>/dev/null; then
@@ -107,7 +131,7 @@ for i in $(seq 1 "$MAX"); do
   touch "$LOGS/session-$i.start"
   watch_progress "$LOGS/session-$i.start" "$before" &
   watcher=$!
-  claude -p "Run the epic-autopilot skill with arguments: $EPIC one-ticket" \
+  claude -p "Run the epic-autopilot skill with arguments: $EPIC one-ticket handoff=$H" \
     --permission-mode bypassPermissions --output-format text < /dev/null > "$LOGS/session-$i.log" 2>&1
   sleep 1; kill "$watcher" 2>/dev/null; wait "$watcher" 2>/dev/null
   if grep -qiE 'hit your [a-z]+ limit' "$LOGS/session-$i.log"; then
@@ -115,14 +139,25 @@ for i in $(seq 1 "$MAX"); do
     echo "Rerun after the reset: $0 $EPIC"
     exit 3
   fi
-  updated=$(sed -n 's/^updated: //p' "$H" 2>/dev/null | head -1)
-  if [ "$(git rev-parse HEAD)" = "$before" ] || [ -z "$updated" ] || [[ "$updated" < "$start" ]]; then
-    echo "Session $i made no progress (no commit or no fresh handoff; e.g. a dirty tree or wrong branch). Log: $LOGS/session-$i.log"
+  # Evidence, not narration: check which models actually answered (transcripts), and that the
+  # session committed a new handoff (git), rather than trusting the handoff's own timestamp.
+  if ! used=$(python3 "$HERE/models-used.py" --since "$start" 2>&1) && [ "${ALLOW_MODEL:-}" != 1 ]; then
+    echo "Session $i ran on a model other than Opus or Fable:"; echo "$used"
+    echo "Paused for confirmation. Select Opus or Fable (/model) and rerun, or rerun with ALLOW_MODEL=1 to continue anyway."
+    exit 7
+  fi
+  hf() { python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))[sys.argv[2]])' "$H" "$1" 2>/dev/null; }
+  if [ -z "$(hf outcome)" ]; then
+    echo "Session $i: handoff $H is missing or malformed JSON (or lacks 'outcome'). Log: $LOGS/session-$i.log"
     exit 4
   fi
-  outcome=$(sed -n 's/^outcome: //p' "$H" | head -1)
-  reason=$(sed -n 's/^reason: //p' "$H" | head -1)
-  echo "[$(date +%H:%M)] session $i: $outcome — $(sed -n 's/^summary: //p' "$H" | head -1)"
+  if [ "$(git rev-parse HEAD)" = "$before" ] || git diff --quiet "$before" HEAD -- "$H"; then
+    echo "Session $i made no progress (no commit, or the handoff was not committed anew; e.g. a dirty tree or wrong branch). Log: $LOGS/session-$i.log"
+    exit 4
+  fi
+  outcome=$(hf outcome)
+  reason=$(hf reason)
+  echo "[$(date +%H:%M)] session $i: $outcome — $(hf summary)"
   case "$outcome" in
     done)
       if [ -n "${unchecked:-}" ]; then

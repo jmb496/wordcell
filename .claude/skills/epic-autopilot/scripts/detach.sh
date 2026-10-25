@@ -6,6 +6,8 @@
 # the pid file. Pair with wait-for.sh. loop.sh refuses to start while any pid file under
 # .autopilot/<run>/ names a live process.
 set -u
+# Print mode otherwise kills background subagents 10 minutes after the last turn.
+export CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0
 done_file=$1; log_file=$2; shift 2
 [ "${1:-}" = "--" ] && shift
 rm -f "$done_file" "$done_file.pid"

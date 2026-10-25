@@ -29,13 +29,21 @@ import WordLine from './tray/WordLine.svelte';
 // letter count. Place: the word line in word order (`draft.wordCards`, no D underline, R-51), the
 // strip in `placementOrder` with origin tags and the `bottom`/`top` marks, and the meta (R-80),
 // no controls. Idle and Game over: all three rows empty. The band is the tile drag's one drop target
-// (AD-12 `use:dropTarget`, epic 5 SPEC CAP-5).
+// (AD-12 `use:dropTarget`, epic 5 SPEC CAP-5). `inert`: the Board's expanded-end-sheet inert
+// (epic 6 SPEC F5).
 let {
   view,
   sizing,
   height,
   hoverFine,
-}: { view: GameView; sizing: TrayLayout; height: number; hoverFine: boolean } = $props();
+  inert = false,
+}: {
+  view: GameView;
+  sizing: TrayLayout;
+  height: number;
+  hoverFine: boolean;
+  inert?: boolean;
+} = $props();
 
 // The draft in Composing and Place (`view.draft` is set in both); `place` only in Place.
 const draft = $derived(view.draft);
@@ -48,7 +56,13 @@ const tags: ReadonlyMap<CardId, number> = $derived(
 );
 </script>
 
-<div class="tray" data-band="tray" style:height="{height}px" use:dropTarget={{ kind: 'tray' }}>
+<div
+  class="tray"
+  data-band="tray"
+  style:height="{height}px"
+  {inert}
+  use:dropTarget={{ kind: 'tray' }}
+>
   <div class="word-line">
     {#if draft !== undefined}
       <WordLine

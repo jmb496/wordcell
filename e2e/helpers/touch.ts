@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 // AD-17 Touch: real touch input through CDP `Input.dispatchTouchEvent` (viewport CSS pixels).
 type Point = { x: number; y: number };
@@ -69,6 +69,65 @@ export async function longPress(page: Page, target: Point, ms: number): Promise<
   } finally {
     await session.detach();
   }
+}
+
+/** A double tap's gap from the first tap's touchEnd to the second tap's touchStart. */
+export const DOUBLE_TAP_GAP_MS = 80;
+
+type ClickLog = { __doubleTapClicks: number[]; __doubleTapListener: (event: Event) => void };
+
+// AD-17 Touch: a touch double tap at `target`. Chromium counts the second tap as a repeat (its
+// click has `detail` 2, which presence.ts `firstClick` drops) only when its touchStart comes within
+// 400 ms of the first touchEnd on the event clock (measured: 390 ms gives detail 2, 410 ms detail
+// 1). Every event carries a CDP `timestamp`, the second tap DOUBLE_TAP_GAP_MS after the first, so
+// the count does not depend on how late a loaded machine dispatches it (`touchscreen.tap` stamps
+// the dispatch time: under 12 workers real gaps of 500 ms gave detail 1). `between` is the real
+// wait between the taps (default DOUBLE_TAP_GAP_MS). The page's clicks are recorded from the first
+// tap, and the call fails unless they are exactly two, with detail 1 then 2.
+export async function doubleTap(
+  page: Page,
+  target: Point,
+  {
+    between = () => page.waitForTimeout(DOUBLE_TAP_GAP_MS),
+  }: { between?: () => Promise<void> } = {},
+): Promise<void> {
+  await checkPoints(page, 'doubleTap', [target]);
+  await page.evaluate(() => {
+    const w = window as unknown as ClickLog;
+    w.__doubleTapClicks = [];
+    w.__doubleTapListener = (event) => w.__doubleTapClicks.push((event as MouseEvent).detail);
+    window.addEventListener('click', w.__doubleTapListener, true);
+  });
+  const session = await page.context().newCDPSession(page);
+  try {
+    const first = Date.now() / 1000;
+    const tap = async (timestamp: number) => {
+      await session.send('Input.dispatchTouchEvent', {
+        type: 'touchStart',
+        touchPoints: [{ x: target.x, y: target.y }],
+        timestamp,
+      });
+      await session.send('Input.dispatchTouchEvent', {
+        type: 'touchEnd',
+        touchPoints: [],
+        timestamp,
+      });
+    };
+    await tap(first);
+    await between();
+    await tap(first + DOUBLE_TAP_GAP_MS / 1000);
+  } finally {
+    await session.detach();
+  }
+  await expect
+    .poll(() => page.evaluate(() => (window as unknown as ClickLog).__doubleTapClicks), {
+      message: 'doubleTap: the click details of the two taps',
+    })
+    .toEqual([1, 2]);
+  await page.evaluate(() => {
+    const w = window as unknown as ClickLog;
+    window.removeEventListener('click', w.__doubleTapListener, true);
+  });
 }
 
 export type TouchHold = { moveTo(point: Point): Promise<void>; end(): Promise<void> };

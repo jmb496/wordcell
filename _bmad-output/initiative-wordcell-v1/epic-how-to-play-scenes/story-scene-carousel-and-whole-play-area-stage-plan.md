@@ -114,3 +114,4 @@ Prior ticket-hardening (7 passes) is in the story's `.review-log.md`; the story 
 - Follow-up review recommended: false.
 - Verification: `npm run test:all` ran 945 passed, 1 failed (`e2e/nav.spec.ts:162` android, outside this change) and passed 3 of 3 reruns alone plus once on the stashed baseline, so flaky under load; lint, check, unit, build (549,186 of 600,000 bytes), dist and pwa suites passed. `npm run test:screens` 44 passed.
 - Residual risks: EXPERIENCE.md How to play section not updated (epic done-when item 5); blank space under short columns and filler in the empty columns of two Tricky scenes until 8.7 to 8.11 prune them; nav.spec flake; a stale dev server on :5173 makes the default `test:e2e` reuse old code.
+- Post-close review (Opus, 2026-10-22, `b6272b0`, log `opus-review-epic-8.md`): see the ticket's Notes line; the hidden-page restart and the index reset changed after this plan.

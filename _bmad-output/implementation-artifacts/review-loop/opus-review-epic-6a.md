@@ -1,0 +1,87 @@
+# Review loop — Opus re-review of Epic 6 part A, tickets 6.1–6.7 (code mode)
+State: pass 3: done (converged)
+
+Target: code at HEAD bc5051e for the 77 files `git diff --name-only db1ca56..79765e1` touched (minus `_bmad-output/`, `*.png`; list in `opus-review-epic-6a.passes/files.txt`). Staged diff: `opus-review-epic-6a.passes/pass0.diff` (`git diff db1ca56 79765e1 -- <files>`, 6797 lines). Findings only against code that still exists at HEAD; code replaced by later epic 6 tickets (6.8–6.17, 79765e1..91dfbed) or epics 8, 9, 10 (after 91dfbed) is out of scope, as are findings belonging only to tickets 6.8–6.17 (parts B and C).
+Mode: code, thorough, max 7. Pre-loop: HEAD bc5051e, tree 0 29d251d5892171e2b5b9500e0cff6ba2bb33c897.
+Owner rules: only majors fixed (bugs, rule/AD violations, missing tests for stated rules, fragile code likely to cause defects, refactors preventing likely defects); minors listed, never sent to the fixer; UX/gameplay changes are decision-needed; no screenshot baselines; no commits.
+Intent: epic-game-surfaces-and-keyboard.md, tickets.toml entries 1–7, tickets + plans 6.1–6.7, retrospective, spec-epic-6-surfaces (SPEC.md, rule-coverage.md, build-notes.md).
+
+## Pass 1 — 2026-10-21
+Reviewers: correctness, edge cases, verification gap, intent alignment  |  Findings: major 8 (two raised from minor), minor 11 (one lowered from major), decision-needed 1  |  Dropped in triage: 0 (openSurface order reported twice, merged)
+### Applied
+- [major] src/ui/open-surface.ts:31-33 — `openSurface` calls `overlays.deselect()` before closing the sticky WordCell view; with the reachable stack [tailSelection, wordcellView] (long-press peek → sticky over a selection; keys.ts:391) `deselect()` throws AD-13 and halts the app (M, N, ? keys). commands.ts `closeTransient` has the right order → fixer item 1 (default applied: close view/peek/hover peek first, then deselect; one shared helper)
+- [major] src/ui/Board.svelte:87, App.svelte:49 — the expanded end sheet leaves the board bands (columns, WordCells, tray, banner) reachable by Tab and screen readers; ticket 6.6 and build-notes per-surface table say "End sheet expanded | Board inert: yes | Bars live: yes" → fixer item 2
+- [major] src/ui/StatisticsPanel.svelte:38-49 — closing Statistics always focuses ☰, also when it was opened from the end sheet's Statistics button; build-notes "Panel | Focus return: opener" (the ☰ redirect is right only for the menu row, whose opener is gone) → fixer item 3 (default applied: ☰ only for a menu-row origin)
+- [major] e2e/preferences.spec.ts:140-203 — R-76 Game-over freeze tests cannot fail if `elapsedMs` adds `clock.peek` in Game over: nothing re-reads the timer there (interval off, hide/show leaves state unchanged) → fixer item 4
+- [major] e2e/end-sheet.spec.ts:172-183 — R-83 "final score after R-81" reads the sheet score and checks it against itself; a wrong penalty passes → fixer item 5
+- [major] e2e/pwa/build-output.spec.ts:123-126, src/ui/surfaces.test.ts:140-145 — 6.1's deferred "raise the expected count … in entry 2" never done: ≥ 2 branches accepted while 5 components carry the reduced-motion query; EndSheet missing from the source scan; no browser check of the 120 ms fade for a Sheet or Panel (SPEC F7) → fixer item 6
+- [major, raised from minor] src/ui/StatisticsPanel.svelte:76, 96 — re-derives `scoreHistory.state.status === 'unreadable'` instead of the one getter `historyUnreadable()` (SPEC F4 "one UI-layer derived getter feeds the menu dot, the Statistics message and the end-sheet block"; risk area 2) → fixer item 7
+- [major, raised from minor] src/ui/EndSheet.svelte:82-84 — Reset history calls `overlays.open('resetConfirm')` directly, bypassing `openSurface` (SPEC F8 "opens a surface only through it"; plan 6.7 Boundaries) → fixer item 8
+### Minors (listed, not sent to the fixer — owner rule)
+- src/ui/Tray.svelte:93 — [lowered from major] collapsed bar calls `overlays.expandEndSheet()` without clearing a hover peek; the reported throw with a sticky view is unreachable (`.board` holding the bar is inert while the view is open).
+- src/ui/Dialog.svelte:83, EndSheet.svelte:66-68, Menu.svelte:47-55 — the second tap of a double tap on a closing surface's button falls through its inert exiting layer to the Board (could select a tail on the new deal).
+- scripts/app-version.mjs:23,31 — `--short=7` lengthens on ambiguity and the strict 7-hex check would then fail every build; use `rev-parse HEAD` and slice.
+- e2e/confirm.spec.ts:114-125 — "menu reopened … stays open" asserts only that ☰ is not focused, not that the menu's first row is.
+- e2e/end-sheet.spec.ts:239-255 — "scrim tap … consumed" cannot fail (a Game-over column tap does nothing anyway).
+- e2e/end-sheet.spec.ts:301-313 — "no pop" compares `history.length`, which a pop does not change.
+- e2e/menu.spec.ts:111-118 — 360 × 320 reachability loop omits the Statistics row.
+- src/ui/new-game.test.ts:84-91, e2e/confirm.spec.ts:42-51, 66-73 — "acts at once" gates assert no dialog but not that the action ran.
+- src/ui/Menu.svelte:58-63 — Give up calls `onDispatched` directly, a second path beside main.ts's flip `dispatched` hook.
+- src/shell/game.svelte.ts:293-299 — `elapsedMs` replays `view()` every tick instead of reading `currentView`.
+- src/ui/text.ts:194, 235, 252-253 — U+2212 signed formatting written three times.
+### Decision needed (functionality / UX / gameplay)
+- src/ui/StatisticsPanel.svelte:96-100 — with an unreadable history the Statistics panel shows the version sentence and reset hint but not the headline "Your score history can't be read."; EXPERIENCE.md catalogue says the panel shows "the same text" as the History notice, ticket 6.5 listed only the sentence strings. Should the panel show the headline? — proposed default: yes, add the headline above the sentence (updates the unreadable Statistics screenshot).
+### Dropped
+- none
+### Fix
+Item 1: one `closeTransient()` (view, peek, hover peek, then `deselect()`) now lives in open-surface.ts; commands.ts imports it; `openSurface` = `clearTile()`, `closeTransient()`, `open(id)`; new overlays-surfaces.test.ts AD-13 case (selection + sticky view → menu: pop, pop, push), fails with the old order. Item 2: Board.svelte `sheetInert` (endSheet expanded) sets `inert` on grid units, banner, spacers and the tray (new `inert` prop on Tray.svelte); bars live; new android e2e "R-75 expanded, the board under the scrim is inert …" (fails with sheetInert false). Item 3: new src/ui/statistics-origin.ts flag set by Menu's Statistics row; StatisticsPanel focuses ☰ only when it takes the flag; also EndSheet.svelte `focusOnMount` reads `overlays.top` untracked (it re-ran whenever the top returned to the sheet and pulled focus to Replay); end-sheet.spec "AD-13 Statistics over the sheet" asserts focus back on the sheet's Statistics button after Esc and back. Item 4: preferences.spec `rereadAfter()` (Show timer off, advance, on) in the four freeze tests + a playing control (0:05); all four fail with elapsedMs adding peek in every status. Item 5: R-83 asserts −530 (engine: liveScore 0, penalty 530); idle-fresh Give up asserts sheet = top-bar score − 530; both fail with a doubled penalty. Item 6: build-output.spec counts the branch in src/ui/**/*.svelte (5) and requires ≥ that many in dist; EndSheet added to surfaces.test FILES; new menu.spec normal / reduced-motion computed-style test for the menu sheet and the Statistics panel. Item 7: StatisticsPanel branches on `historyUnreadable()`, local `unreadableReason()`. Item 8: EndSheet Reset history → `openSurface('resetConfirm')`. Fixer ran: npm test 83 / 3111 pass; lint 1 pre-existing warning (now e2e/end-sheet.spec.ts:807); check 0 errors; android Playwright end-sheet, preferences, menu, statistics, wordcell-view, keys 137 passed / 34 skipped, and end-sheet, statistics, history-notice, history, confirm, win-guard 167 passed; pwa build-output.spec 7 passed after build:test.
+Orchestrator verify: npm test 3111 pass, lint pass, check pass. Snapshot: tree 1 57e68bfc9f83a9a66957dc940d58b3e0745571a0; fix diff `opus-review-epic-6a.passes/pass1.fix.diff`. Full `npm run test:e2e` on tree 1: 991 passed, 937 skipped (project filters), 0 failed (log `e2e-tree1.log`).
+
+## Pass 2 — 2026-10-21
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 4 (one raised from minor, two reports merged), minor 6, decision-needed 0  |  Dropped in triage: 0 (focusOnMount regression reported twice, HistoryNotice bypass twice; merged)
+### Applied
+- [major] src/ui/EndSheet.svelte:108-112 — regression from pass 1 item 3: with `focusOnMount` untracked, a relaunch into Game over with an unreadable history (stack [endSheet, historyNotice] at mount) leaves focus on `document.body` after Not now, back or Delete history, instead of Replay this deal (EXPERIENCE.md End sheet "focus moves to its first action … a relaunch included"); untested → fixer item 1 (default applied: the sheet's first reveal as top entry focuses Replay — when the top becomes `endSheet` and the sheet has not taken its open focus since this expansion; surfaces opened from the sheet keep their opener return)
+- [major] src/ui/HistoryNotice.svelte:23-25 — Reset history opens `resetConfirm` with `overlays.open` directly, bypassing `openSurface` (SPEC F8); pass 1 fixed the same in EndSheet by hand and nothing guards it → fixer item 2 (default applied: `openSurface('resetConfirm')` plus a source scan with a positive control)
+- [major] src/ui/ConfirmDialogs.svelte:27-38, PreferencesPanel.svelte:23-34, StatisticsPanel.svelte:41-52, new-game.ts:36-46, statistics-origin.ts — the "focus ☰ after a menu-opened surface closes" rule is copied per surface, each with its own origin test (confirmOrigin flag, the pass 1 statistics-origin flag, always) and a silent `?.focus()` (rule 6); risk area 2, already drifted → fixer item 3 (default applied: one origin record set by the menu rows and one `focusMenuButton()` that throws when ☰ is absent; HowToPlayPanel left to part B)
+- [major] e2e/end-sheet.spec.ts:359-369 — the only test for ticket 6.6 "Redo after an undone Give up does not reopen the sheet" has no redo tail, so Redo is disabled and never pressed → fixer item 4
+### Minors (listed, not sent to the fixer — owner rule)
+- src/ui/EndSheet.svelte:90-94, StatisticsPanel.svelte:136, HistoryNotice.svelte:40-42, ResetConfirm.svelte:27 — who owns the open Reset confirm is decided in four places by listing cases (the entry under resetConfirm); correct for today's LEGAL_TOPS.
+- src/ui/Sheet.svelte:35, StatisticsPanel.svelte:62, EndSheet.svelte:102 — optional-chained focus targets that must exist (rule 6).
+- src/ui/Sheet.svelte, Panel.svelte, EndSheet.svelte, presence.svelte.ts — reopening a surface during its exit transition does not re-run its focus start.
+- e2e/menu.spec.ts:275-303, e2e/confirm.spec.ts:147-170 — Q-29 "New game does not record the abandoned game" has no Playwright check (only Replay seeds a history).
+- src/architecture-ad2-ad12-ad17.test.ts:137 — the act() scan ignores `onchange` (Preferences controls).
+- e2e/end-sheet.spec.ts:186-218 — relaunch checks only that `launch` is a number; no reload variant proves a new launch id.
+- (part B, not this loop) src/ui/HowToPlayPanel.svelte:20-31 always focuses ☰ on close, also when opened with `?` (6.9/6.10).
+### Decision needed (functionality / UX / gameplay)
+- none new
+### Dropped
+- none
+### Fix
+Item 1: EndSheet.svelte drops the `focusOnMount` attachment for an `$effect` with an `openFocused` flag: Replay this deal takes focus the first time the sheet is the top entry in each expansion (open, or a notice over a relaunched sheet closing); collapse/hide re-arm it; later returns of the top keep the surface's opener return. nav.spec relaunch-with-notice runs for Not now and back with `toBeFocused` on Replay; end-sheet.spec Delete history on the relaunch notice asserts it too (all 3 fail with the pass 1 attachment). Fixer note: the win-celebration ☰-behind-the-menu path is not reachable in this tree (☰ is consumed in the win window; `src/ui/celebration/` not mounted). Item 2: HistoryNotice → `openSurface('resetConfirm')`; new src/architecture-open-surface.test.ts scans `overlays.open(` in src/ui (allowed: open-surface.ts; history-notice.svelte.ts for 'historyNotice') with a positive control; registered in architecture-scan SELF, tsconfig.app.json exclude, tsconfig.arch.json. Item 3: `openSurface(id, { from: 'menu' })` keeps a per-id origin set (rewritten on every open, `takeMenuOrigin(id)` once at close); `focusMenuButton()` in focus-board.ts throws when ☰ is absent; Menu rows, `requestNewGame`/`requestReplay` pass `from`; ConfirmDialogs, PreferencesPanel, StatisticsPanel use them; statistics-origin.ts and new-game.ts `confirmOrigin` removed; HowToPlayPanel untouched; new overlays-surfaces.test.ts AD-13 origin test (fails under three breakages). Item 4: end-sheet.spec "R-75 R-71 Redo after an undone Give up with a redo tail …" (session-gave-up-after-commit, Undo ×4, Give up, Undo, Redo ×3 → cursor {1, idle}, gaveUp false, no sheet or bar, wc 0); fails with Redo made to re-give-up. Fixer ran: npm test 84 / 3114 pass; lint 1 pre-existing warning; check 0 errors; Playwright (both projects) end-sheet, nav, confirm, preferences, statistics, menu, history-notice, win-guard 301 passed / 297 skipped; how-to-play, keys, board-keys 104 passed. Baselines possibly affected (not run): end-sheet-history-unreadable.png (Replay focused after Not now — the HEAD behaviour, which pass 1 had lost), end-sheet-not-added.png.
+Orchestrator verify: npm test 84 / 3114 pass, lint pass, check pass. Snapshot: tree 2 bd97fe689ac6a60ed45c2f9a38ba432a6c72c3eb; fix diff `opus-review-epic-6a.passes/pass2.fix.diff`.
+
+## Pass 3 — 2026-10-21
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 0, minor 10, decision-needed 1  |  Dropped in triage: 0 (inert-test band coverage reported twice, merged)
+### Applied
+- none (converged)
+### Minors (listed, not sent to the fixer — owner rule)
+- src/ui/focus-board.ts:27-31 — `focusMenuButton()` calls `focus()` without `{ preventScroll: true }` (module contract, AD-11); no visible effect (sticky top bar).
+- src/architecture-open-surface.test.ts:12 — scan regex misses `overlays .open(`, `overlays?.open(` and a line-split chain.
+- e2e/end-sheet.spec.ts:118-129 — Redo to a win re-arms `openFocused` but the R-62 Redo test asserts no focus on Replay.
+- e2e/end-sheet.spec.ts:240-261 — the pass 1 inert test checks only the column and WordCell units (tray, banner, spacers unasserted) and carries R-75 for an SPEC F5 / build-notes behaviour.
+- src/ui/EndSheet.svelte:39-43, 208-218, 271-276, Dialog.svelte:95-100 — no browser computed-style check of the end sheet's / confirm's live transition and reduced-motion fade, nor that the R-73 boot `instant` flag clears after the first collapse.
+- src/ui/presence.svelte.ts:5-7, 56-79 — "focus returns at close, not at exit end" has only settled `toBeFocused` checks (no slowed exit).
+- e2e/statistics.spec.ts:129-141 — Statistics close-to-☰ not tested via browser back.
+- src/ui/open-surface.ts:27-46 — the origin-record comment says the close effect "runs on every close path"; reopen during exit is the exception (harmless: every open rewrites the record).
+- src/ui/EndSheet.svelte:108-122 — the openFocused rule also fires when a menu or panel over a never-focused sheet closes; the closing surface's tick-deferred return then wins (double move; reachable only via the not-yet-mounted celebration ☰ path).
+- src/ui/App.svelte:96-98, HistoryNotice.svelte:28-30 — relaunch with an unreadable history and no end sheet: Not now / Delete history leave focus on `body` instead of the board (build-notes History notice "Focus return: the board"); may belong to the part B focus-moves loop (6.10/6.11).
+### Decision needed (functionality / UX / gameplay)
+- src/ui/Menu.svelte:32-41 with EndSheet.svelte:108-122 — when the menu is opened over the expanded end sheet and closed (Esc, back, scrim, ×), keyboard focus goes to `main`, which sits behind the sheet's scrim (unchanged from HEAD); build-notes says the menu returns focus to "the board" but the board is inert under the expanded sheet. Where should a keyboard player land: the ☰ button, the sheet's Replay this deal, or `main` as now? — proposed default: the ☰ button (the opener, the same rule as a menu-opened surface).
+### Dropped
+- none
+
+## Result — converged after 3 passes
+Majors per pass: 8, 4, 0. No open major. Final state (tree 2 bd97fe689ac6a60ed45c2f9a38ba432a6c72c3eb, unchanged since): npm test 84 files / 3114 tests pass; lint pass (1 pre-existing noNonNullAssertion warning in e2e/end-sheet.spec.ts); check 0 errors. Full `npm run test:e2e` on tree 2: 993 passed, 939 skipped (project filters), 0 failed (`e2e-tree2.log`); pwa build-output.spec run by the pass 1 fixer after build:test (7 passed). Screenshots not run (orchestrator): end-sheet-history-unreadable.png and end-sheet-not-added.png may differ from a pass 1 tree but should match HEAD's behaviour (Replay focused after the relaunch notice closes). Not committed.
+Technical defaults applied: 5 (pass 1 items 1, 3; pass 2 items 1–3).
+Decision needed (2): Statistics panel unreadable-history headline (pass 1); focus target when the menu closes over the expanded end sheet (pass 3).
+Unapplied minors: 11 (pass 1) + 7 (pass 2, one for part B) + 10 (pass 3) = 28, listed in each pass above.

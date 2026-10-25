@@ -31,12 +31,14 @@ describe('AD-3 scene carousel', () => {
     expect(body.match(/class="dot /g)).toHaveLength(scenes.length);
   });
 
-  it('AD-3 the first scene is current and the start arrow is aria-disabled, the end arrow is not', async () => {
+  it('AD-3 the first scene is current and the start arrow is aria-disabled and dimmed, the end arrow is not', async () => {
     const body = await html();
     expect(body.match(/aria-current="true"/g)).toHaveLength(1);
     expect(body).toMatch(/aria-label="Scene 1 of \d+" aria-current="true"/);
     expect(body).toMatch(/aria-label="Previous scene" aria-disabled="true"/);
     expect(body).not.toMatch(/aria-label="Next scene" aria-disabled/);
+    expect(body).toMatch(/class="arrow[^"]*\bdim\b[^"]*" aria-label="Previous scene"/);
+    expect(body).not.toMatch(/class="arrow[^"]*\bdim\b[^"]*" aria-label="Next scene"/);
   });
 
   it('AD-3 no scene is mounted before the first non-zero width measurement', async () => {
@@ -66,9 +68,9 @@ describe('AD-12 scene carousel wiring', () => {
     expect(source).not.toMatch(/addEventListener|svelte:window|svelte:document/);
   });
 
-  it('AD-13 the scene mounts only while the howToPlay open flag is true, and the index resets when it goes false', () => {
+  it('AD-13 the scene mounts only while the howToPlay open flag is true, and the index resets when it rises', () => {
     expect(source).toContain("overlays.isOpen('howToPlay')");
-    expect(source).toMatch(/if \(!open\) index = 0/);
+    expect(source).toMatch(/if \(open && !wasOpen\) index = 0;\s*wasOpen = open;/);
     expect(source).toMatch(/const mounted = \$derived\(open && fit !== undefined\)/);
   });
 

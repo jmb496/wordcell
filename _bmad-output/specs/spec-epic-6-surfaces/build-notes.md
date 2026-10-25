@@ -10,13 +10,13 @@ Menu, end sheet, panels, dialogs, timer bar at 360 px. The version footer is fix
 
 | Surface | Board inert | Bars live | Shortcuts active | Focus start | Focus return |
 | --- | --- | --- | --- | --- | --- |
-| Menu | yes | no (top bar `inert`, SPEC F6) | Tab, Enter, Space, Esc only | first row | the board; confirm dismissal returns to the ☰ button |
+| Menu | yes | no (top bar `inert`, SPEC F6) | Tab, Enter, Space, Esc only | first row | by the phase (`focusByPhase`: the board in Idle, the first movable tile in Composing, the first strip card in Place; SPEC F12); over the expanded end sheet the ☰ button (SPEC F10); confirm dismissal returns to the ☰ button |
 | Panel | yes | no (top bar `inert`, SPEC F6) | Tab, Enter, Space, Esc only | panel heading or close | opener |
-| Confirm dialog | yes | no (top bar `inert`, SPEC F6) | Tab, Enter, Space, Esc only | Keep playing / Keep it | the board (from the menu: ☰) |
-| History notice | yes | no (top bar `inert`, SPEC F6) | Tab, Enter, Space, Esc only | its action | the board |
+| Confirm dialog | yes | no (top bar `inert`, SPEC F6) | Tab, Enter, Space, Esc only | Keep playing / Keep it | accept: the board; an `N`-opened dismissal (Keep playing, Esc, back, scrim): by the phase (`focusByPhase`, SPEC F12); from the menu: ☰ |
+| History notice | yes | no (top bar `inert`, SPEC F6) | Tab, Enter, Space, Esc only | its action | by the phase (`focusByPhase`; a relaunch into Composing or Place: the first movable tile or strip card; SPEC F13); over a relaunched expanded end sheet: its first action |
 | End sheet expanded | yes | yes | M, N, ?, Z, Y, Esc | first action | the board on collapse |
 | End sheet collapsed | no | yes | M, N, ?, Z, Y, Esc | the bar | n/a |
-| WordCell view | no | no (scrim covers them; owner 2026-10-15) | M, N, ?, Z, Y, Esc | the view | the cell |
+| WordCell view | no | no (scrim covers them; owner 2026-10-15) | M, N, ?, Z, Y, Esc; Space in the open view closes it (SPEC F11) | the view | the cell |
 
 Check each cell against EXPERIENCE.md when building; a mismatch stops the ticket.
 
@@ -26,8 +26,11 @@ Window = from the win's guard install until the end sheet opens, which fires at 
 
 | Input | End state |
 | --- | --- |
-| Undo button or key (Z, Ctrl/Cmd+Z), Undo enabled | animation completes, undo applies, no sheet; before the sheet opens it cancels the pending open |
+| Undo button or key (Z, Ctrl/Cmd+Z), Undo enabled | animation completes, undo applies, no sheet; before the sheet opens it cancels the pending open, except a chord straddling the floor (Ctrl/Cmd down before 300 ms, Z after): the sheet opens at 300 ms, then the Undo closes it ("Undo after the sheet opened"; owner, SPEC F15) |
 | Undo between animation settled and 300 ms (Fast, reduced motion) | cancels the pending open, undoes, no sheet |
+| Undo button by touch or pen (as built, Opus review (epic 6 part C) default) | its pointerup holds the open for its later click up to `CLICK_GRACE_MS` (300 ms); with no click the sheet opens at the grace's end (mouse, pointercancel, a pointerup off Undo: one tick) |
+| Non-primary button (`button` ≠ 0) on Undo (as built, Opus review (epic 6 part C) default) | an ordinary consumed input: completes, no hold, sheet opens |
+| Bare Ctrl, Cmd or Shift keydown, Undo enabled (as built, Opus review (epic 6 part C) default; supersedes ticket 6.12's "ordinary consumed input" for the chord modifier) | completes and is consumed; holds the open so the chord's Z still undoes with no sheet, up to `CLICK_GRACE_MS` (300 ms) from the latest bare modifier keydown, capped at 300 ms after guard install while that has not passed (so the row below still holds); the hold ends early one tick after every held modifier is up or at the next start that is not an Undo alias, then the sheet opens |
 | Any other input between settled and 300 ms | consumed, the open still fires at 300 ms |
 | Fast speed or reduced motion, no input | sheet opens at 300 ms after guard install, not at settle |
 | Undo after the sheet opened | sheet closes, play resumes |
@@ -41,17 +44,19 @@ Window = from the win's guard install until the end sheet opens, which fires at 
 
 Mechanism: an `event.key` match in the guard beside the existing target match in `motion.ts` (`inUndo` is already `typeof`-free and matches by target only). A Redo win follows the Confirm path.
 
+As built (Opus review (epic 6 part C) default): a pointerdown with the `pointerId` of an open pointer gesture means its end was lost, like a fresh keydown of an open key: the stale entry ends (releasing an Undo hold it carried) and the down starts a new gesture.
+
 ## Key handler details (CAP-10)
 
 Repeats ignored for toggles; Space/Enter on a focused button stays native; `?` matched by `event.key` (shifted, non-US layouts); tests use `keyboard.press`; letter keys case-insensitive.
 
 ## Live region strings (CAP-11)
 
-Ticket 6.13 built this; `src/ui/text.ts` holds every string, `src/ui/announce.ts` the one setter. One polite region (`role="status"`, clipped) mounted once at the App root; announcements replace (clear, then set in the next rAF; latest wins; the outcome queues behind a pending commit set; a set falling due while `document.hidden` is skipped).
+Ticket 6.13 built this; `src/ui/text.ts` holds every string, `src/ui/announce.ts` the one setter. One polite region (`role="status"`, clipped) mounted once at the App root; announcements replace (clear, then set in the next rAF; latest wins; the outcome queues behind a pending commit set; nothing is scheduled while `document.hidden`, and the AD-9 hide flush drops a pending set and a queued outcome through `cancelAnnounce`, registered in `main.ts` (as built, Opus review (epic 6 part C) default: rAF does not run while hidden, so the set would otherwise be spoken on return)).
 
 Names: column card `{L}, column {c}, card {i} of {n}{, selected}{, destination}`; tray tile `{L}, tray, tile {i} of {n}{, selected}` (live tiles only); WordCell top card `{L}, WordCell {c}, top`; WordCell `WordCell {c}, top {L}, {n card(s)}{, used}`; empty `WordCell {c}, empty`; foot `Column {c} foot` (`role="group"`), source foot `Column {c}, here`. QU reads `Q U, counts as two letters`. Buried WordCell cards are `aria-hidden` (owner decision 2026-10-15).
 
-Announcements: phase change `Composing. {WORD}, {N letters}.` / `Place. ...`; invalid word `{WORD} isn't in the word list.`; commit `{WORD} placed on cell {c}, plus N|minus N|no change` (from the pre-dispatch view); Undo `Undo. {phase}`; Redo `Redo. {phase}` (idle phase `Idle.`); New game `New game. Idle.`; Replay `Replay. Idle.`; outcome `{title} Score {N|minus N}, {band}.` (title is the end sheet's: `Every column cleared.` or `Game given up.`), set only when `openDeferred` returns true. Give up sets no other string. Silent: relaunch, sheet re-expand, hidden return, word edits inside Composing, no-op dispatches (`changed` false).
+Announcements: phase change `Composing. {WORD}, {N letters}.` / `Place. ...`; invalid word `{WORD} isn't in the word list.`; commit `{WORD} placed on cell {c}, plus N|minus N|no change` (from the pre-dispatch view); Undo `Undo. {phase}`; Redo `Redo. {phase}` (idle phase `Idle.`); New game `New game. Idle.`; Replay `Replay. Idle.`; outcome `{title} Score {N|minus N}, {band}.` (title is the end sheet's: `Every column cleared.` or `Game given up.`), set only when `openDeferred` returns true. Give up sets no other string. Silent: relaunch, sheet re-expand, hidden return, word edits inside Composing, no-op dispatches (`changed` false). A win whose sheet opens while the page is hidden (the player leaves during the win animation or before the 300 ms open) is silent on return too: the silent hidden return wins over the outcome announcement and the result is on the open sheet (owner decision 2026-10-22, SPEC F16).
 
 ## Close-out edits (owner-visible docs; the spec wins)
 
@@ -95,9 +100,22 @@ Listed by ticket 6.17 and applied by no ticket; applying the list is the owner's
   - Spine AD-9: the shell's read-only `elapsedMs(now)` accessor for the top-bar timer (checked against `src/shell/game.svelte.ts`). Applied.
   - EXPERIENCE.md Keyboard: `Space` on a WordCell with an open view now only closes the view; it no longer closes and reopens (owner 2026-10-16). Docs only; code is separate. Applied.
 - Already satisfied, no edit: SPEC F6 and DESIGN.md Elevation & Depth carry the 2026-10-15 owner answer (☰ covered by a sticky WordCell view); EXPERIENCE.md Rating bands carries the English score column How to play lists; the Statistics and end-sheet strings are catalogue rows.
+- **Opus re-review close-out (owner decisions F9–F16, 2026-10-22).** F9–F13 match the owner docs as written (F9 is the EXPERIENCE.md catalogue row "History unreadable"; F11 is the 2026-10-16 Keyboard addition above; F10, F12 and F13 refine only the Per-surface behaviour rows here). Entries:
+  - (applied) **DESIGN.md Components, Focus ring bullet** (F14, owner 2026-10-22, applied in `354a14f`).
+    - Old: "On a card it is drawn inside the card edge (2 px in), with no offset or gap; on other controls it keeps the 2 px offset and the `{colors.table}` gap"
+    - New: "On a card it is drawn inside the card edge (2 px in), with no offset or gap; on a full-width menu row it is likewise drawn inside the row edge (the rows sit flush in the sheet's scrolling content, which would clip an offset ring; owner, 2026-10-22); on other controls it keeps the 2 px offset and the `{colors.table}` gap"
+    - Reason: the menu rows' offset ring was clipped by the scrolling sheet (Opus review part B, second loop).
+  - (applied 2026-10-22, owner) **EXPERIENCE.md Motion, winning-guard sentence** (F15, owner 2026-10-22).
+    - Old: "An Undo during the winning guard window (…) (the button or \ any of its key aliases) completes it and then undoes; the end sheet does not open."
+    - New: the same, plus "A Ctrl/Cmd+Z whose modifier goes down before the 300 ms floor and whose Z lands after it may show the end sheet for an instant before the Undo closes it."
+    - Reason: the bounded bare-modifier hold (CAP-5, Opus review part C) opens the sheet at the floor; waiting for the Z would delay the sheet after any bare modifier press.
+  - (applied 2026-10-22, owner) **EXPERIENCE.md Message catalogue row "Win celebration (R-87)" and Accessibility Floor, Screen readers bullet** (F16, owner 2026-10-22).
+    - Old: "the outcome is announced when the end sheet opens, as today" (catalogue); the Screen readers bullet lists the end outcome among the announcements.
+    - New: add "except when the sheet opens while the page is hidden: a return from hidden is silent, and the result is on the open end sheet".
+    - Reason: ticket 6.13's "silent on return from hidden" wins over the outcome announcement (CAP-11, Opus review part C).
 
 ## Carry-ins (ticket 6.14, epic 4 retro A8)
 
 - Wheel during a mouse drag (F3): the Vitest and Playwright cases failed first (faces stayed at the pointer delta, highlight and drop target stale), so the fix landed: a passive `window` `scroll` listener in `controller.ts`, added at a mouse press and removed in `end()`; `drag.scroll` holds `scrollY` at the drag start and the applied delta; `dragMove` adds the delta to `dy`, the release re-reads the live offset first, and the tile and free-letter gap pick measures the dragged rect in the drag-start frame (`inStartFrame`). Touch and pen presses add no listener; `gate.ts` is untouched. The `[data-view-scroll]` sheet and the tray rows are not drag-scroll cases.
-- Hover-peek re-anchor (F6): passes without a fix (`e2e/hover-peek-reanchor.spec.ts`, desktop). A width change shifts the column; the banner scrolls the page by its height (layout's anchor write) so the cell holds its viewport place and the peek moves in the document. Non-vacuity asserts the peek's x (width change) and document top (banner) changed; no `HoverPeek.svelte` change.
+- Hover-peek re-anchor (F6): passes without a fix (`e2e/hover-peek-reanchor.spec.ts`, desktop). A width change shifts the column; the banner scrolls the page by its height (layout's anchor write) so the cell holds its viewport place and the peek moves in the document. Non-vacuity asserts the peek's x (width change) and document top (banner) changed; no `HoverPeek.svelte` change. As built (Opus review (epic 6 part C)): the width case resizes 700×1000 to 600×1000 so `layout.w` changes (75 to 67), uses cell 7 (its clamped x depends on the slot), and checks the peek's left against the cell's grid unit plus `placeHoverPeek`'s x.
 - Bfcache hide flush (F7): not reproduced, no test committed. Attempt 1 (`pageHide` / `pageShow({ persisted: true })` helpers, android) passed for all three variants (menu open, mouse drag live, stale-owner halt). Attempt 2 (a real bfcache navigation: `channel: 'chromium'` with `ignoreDefaultArgs: ['--disable-back-forward-cache']` against `dist-test`, `page.goto('about:blank')` then `page.goBack({ waitUntil: 'commit' })`, `pageshow.persisted` asserted true; the stale variant wrote `wordcell:session` from a second page while the first sat in the cache) also passed: the next Back popped the menu (depth 1 to 0), the drag was cancelled with nothing swallowed, and the halted page's Back raised no pending-back fault. CAP-12 "not a bug" (SPEC Assumptions). Playwright's default Chromium cannot run bfcache (`BackForwardCacheDisabledForDelegate`, headless shell), which is why attempt 2 needs the full `chromium` channel.

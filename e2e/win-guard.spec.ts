@@ -7,6 +7,7 @@ import {
   openFixture,
   tapAt,
 } from './helpers/board';
+import { watchAdded } from './helpers/celebration';
 import { hidePage, showPage } from './helpers/lifecycle';
 import { onAndroid, onDesktop } from './helpers/project';
 
@@ -28,6 +29,30 @@ async function stored(page: Page): Promise<Stored> {
 }
 
 const running = (page: Page) => page.evaluate(() => document.getAnimations().length);
+
+type Recorded = { __bubbled: string[]; __afterBack?: number };
+
+// Records every event of `types` that bubbles to `window`: the guard stops a consumed event at
+// document capture, so a consumed input records nothing.
+async function recordBubbled(
+  page: Page,
+  types = ['pointerdown', 'pointerup', 'click', 'keydown', 'keyup'],
+): Promise<() => Promise<string[]>> {
+  await page.evaluate((list) => {
+    const w = window as unknown as Recorded;
+    w.__bubbled = [];
+    for (const type of list) {
+      window.addEventListener(type, (event) => {
+        const key = event instanceof KeyboardEvent ? ` ${event.key}` : '';
+        w.__bubbled.push(`${type}${key}`);
+      });
+    }
+  }, types);
+  return () => page.evaluate(() => (window as unknown as Recorded).__bubbled);
+}
+
+const END_SHEET_EL = '[aria-labelledby="end-title"]';
+const VIEW_EL = '[data-view-sheet]';
 
 // Opens session-won, undoes once (Place), returns the point of cell 6 and of the primary action.
 async function place(page: Page, prefs?: string) {
@@ -219,8 +244,10 @@ for (const project of ['android', 'desktop'] as const) {
         await place(page, prefs);
         const before = await stored(page);
         const length = await page.evaluate(() => history.length);
+        const undo = await centre(page.getByTestId('undo'));
         await primary(page).click();
-        await page.getByTestId('undo').click();
+        // A touch tap on android: its click is a separate, later input than its pointerup.
+        await tapAt(page, undo);
         await glidesSettled(page);
         await page.waitForTimeout(800);
         await expect(endSheet(page)).toHaveCount(0);
@@ -276,13 +303,53 @@ test.describe('desktop end-sheet half keys', () => {
       test(`AD-14 ${key} during the window is consumed and the sheet opens (${name})`, async ({
         page,
       }) => {
-        await confirmWin(page, prefs, reduced);
+        if (reduced) await page.emulateMedia({ reducedMotion: 'reduce' });
+        await place(page, prefs);
+        const bubbled = await recordBubbled(page, ['keydown', 'keyup']);
+        await primary(page).click();
+        if (name === 'Slow') expect(await running(page)).toBeGreaterThan(0);
         await page.keyboard.press(key);
+        // Slow: the press completed the animation at once, before the sheet is due.
+        if (name === 'Slow') expect(await running(page)).toBe(0);
+        expect(await bubbled()).toEqual([]);
         await expect(endSheet(page)).toBeVisible();
         await expect(giveUpItem(page)).toHaveCount(0);
       });
     }
   }
+
+  test('AD-13 AD-14 browser back during the window completes the animation at once, then the end sheet opens (Slow)', async ({
+    page,
+  }) => {
+    await place(page, 'prefs-non-default');
+    // An entry to go back from: back to the base entry follows the normal back rule (closes
+    // nothing). The recorder's popstate listener runs after nav's, so it reads the animations
+    // right after the before-back hook.
+    await page.evaluate(() => {
+      history.pushState(null, '');
+      window.addEventListener('popstate', () => {
+        (window as unknown as Recorded).__afterBack = document.getAnimations().length;
+      });
+    });
+    await primary(page).click();
+    await expect.poll(() => running(page)).toBeGreaterThan(0);
+    await page.goBack();
+    await expect
+      .poll(() => page.evaluate(() => (window as unknown as Recorded).__afterBack))
+      .toBe(0);
+    await expect(endSheet(page)).toBeVisible();
+  });
+
+  test('AD-14 R-70 a Z held after its Undo applied: M is not consumed and opens the menu', async ({
+    page,
+  }) => {
+    await confirmWin(page, undefined, false);
+    await page.keyboard.down('z');
+    await expect(primary(page)).toHaveAccessibleName('Confirm');
+    await page.keyboard.press('m');
+    await expect(giveUpItem(page)).toBeVisible();
+    await page.keyboard.up('z');
+  });
 
   test('AD-9 AD-14 hide during the window completes the animation at once; on return the sheet is open and expanded', async ({
     page,
@@ -334,9 +401,10 @@ for (const project of ['android', 'desktop'] as const) {
         page,
       }) => {
         await frozenPlace(page, prefs, reduced);
+        const undo = await centre(page.getByTestId('undo'));
         await primary(page).click();
         await glidesSettled(page);
-        await page.getByTestId('undo').click();
+        await tapAt(page, undo);
         await page.clock.runFor(1000);
         await expect(endSheet(page)).toHaveCount(0);
         await expect(primary(page)).toHaveAccessibleName('Confirm');
@@ -346,14 +414,23 @@ for (const project of ['android', 'desktop'] as const) {
         page,
       }) => {
         const { cell } = await frozenPlace(page, prefs, reduced);
+        const length = await page.evaluate(() => history.length);
+        const viewSeen = await watchAdded(page, VIEW_EL);
         await primary(page).click();
         await glidesSettled(page);
         await tapAt(page, cell);
+        // The tap opened no view (openDeferred would close one under the end sheet) and pushed no
+        // entry, checked before the sheet is due.
+        expect(await viewSeen()).toBe(false);
+        expect(await page.evaluate(() => history.length)).toBe(length);
         await page.clock.runFor(299);
         await expect(endSheet(page)).toHaveCount(0);
+        expect(await viewSeen()).toBe(false);
+        expect(await page.evaluate(() => history.length)).toBe(length);
         await page.clock.runFor(1);
         await expect(endSheet(page)).toBeVisible();
         await expect(sheet(page)).toHaveCount(0);
+        expect(await viewSeen()).toBe(false);
       });
     }
 
@@ -366,17 +443,39 @@ for (const project of ['android', 'desktop'] as const) {
       }) => {
         await frozenPlace(page, prefs, false);
         const length = await page.evaluate(() => history.length);
+        const sheetSeen = await watchAdded(page, END_SHEET_EL);
+        const undo = await centre(page.getByTestId('undo'));
         await primary(page).click();
         await page.clock.runFor(400);
         // WAAPI runs in real time: the animation is still in flight when Undo lands.
         expect(await running(page)).toBeGreaterThan(0);
-        await page.getByTestId('undo').click();
+        await tapAt(page, undo);
         await glidesSettled(page);
         await page.clock.runFor(1000);
         await expect(endSheet(page)).toHaveCount(0);
         await expect(primary(page)).toHaveAccessibleName('Confirm');
+        expect(await sheetSeen()).toBe(false);
         expect(await page.evaluate(() => history.length)).toBe(length);
       });
+
+      if (project === 'desktop') {
+        test(`AD-14 R-70 Control+z after the floor during the animation: no sheet ever, no history entry (${name})`, async ({
+          page,
+        }) => {
+          await frozenPlace(page, prefs, false);
+          const length = await page.evaluate(() => history.length);
+          const sheetSeen = await watchAdded(page, END_SHEET_EL);
+          await primary(page).click();
+          await page.clock.runFor(400);
+          expect(await running(page)).toBeGreaterThan(0);
+          await page.keyboard.press('Control+z');
+          await glidesSettled(page);
+          await page.clock.runFor(1000);
+          await expect(primary(page)).toHaveAccessibleName('Confirm');
+          expect(await sheetSeen()).toBe(false);
+          expect(await page.evaluate(() => history.length)).toBe(length);
+        });
+      }
     }
   });
 }
@@ -392,10 +491,14 @@ for (const project of ['android', 'desktop'] as const) {
       }) => {
         if (reduced) await page.emulateMedia({ reducedMotion: 'reduce' });
         const { cell, action } = await place(page, prefs);
+        // openDeferred closes a top WordCell view as the end sheet opens: the recorder sees one
+        // that opened at all.
+        const viewSeen = await watchAdded(page, VIEW_EL);
         await tapAt(page, action);
         await tapAt(page, cell);
         await expect(endSheet(page)).toBeVisible();
         await expect(sheet(page)).toHaveCount(0);
+        expect(await viewSeen()).toBe(false);
       });
 
       test(`AD-14 a second primary action press is consumed: same session, the sheet opens (${name})`, async ({
@@ -420,9 +523,16 @@ for (const project of ['android', 'desktop'] as const) {
         await collapseEndSheet(page);
         await page.getByTestId('undo').click();
         await glidesSettled(page);
+        const redo = await centre(page.getByTestId('redo'));
+        const bubbled = await recordBubbled(page);
         await page.getByTestId('redo').click();
+        if (name === 'Slow') expect(await running(page)).toBeGreaterThan(0);
+        const before = (await bubbled()).length;
         // Redo is disabled once the win is redone: a coordinate tap reaches the guard.
-        await tapAt(page, await centre(page.getByTestId('redo')));
+        await tapAt(page, redo);
+        // Slow: the tap completed the animation at once, before the sheet is due.
+        if (name === 'Slow') expect(await running(page)).toBe(0);
+        expect((await bubbled()).slice(before)).toEqual([]);
         await expect(endSheet(page)).toBeVisible();
       });
 

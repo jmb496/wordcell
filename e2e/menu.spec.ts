@@ -2,6 +2,7 @@ import { expect, type Page, test } from '@playwright/test';
 import { stored } from './helpers/blocking';
 import { centre, openFixture, tapAt } from './helpers/board';
 import { wc } from './helpers/dialogs';
+import { expectBoardFocus } from './helpers/keys';
 import { onAndroid } from './helpers/project';
 import { select } from './helpers/selection';
 import { touchHold } from './helpers/touch';
@@ -90,6 +91,34 @@ test.describe('the sheet', () => {
       );
     }
   });
+
+  // Epic 6 CAP-1 (6.1, SPEC F7): Sheet and Panel move on `--wc-base-ms` (opacity and transform);
+  // under reduced motion their @container branch fades opacity only at `--wc-fade-ms` (120 ms).
+  for (const reduced of [false, true]) {
+    test(`AD-10 the menu sheet and a panel transition on ${reduced ? 'opacity only at --wc-fade-ms (reduced motion)' : 'opacity and transform at --wc-base-ms'}`, async ({
+      page,
+    }) => {
+      if (reduced) await page.emulateMedia({ reducedMotion: 'reduce' });
+      await openFixture(page, 'session-idle-fresh');
+      const base = await page.evaluate(
+        () =>
+          Number.parseFloat(
+            getComputedStyle(document.documentElement).getPropertyValue('--wc-base-ms'),
+          ) / 1000,
+      );
+      const property = reduced ? 'opacity' : 'opacity, transform';
+      const duration = reduced ? '0.12s' : `${base}s, ${base}s`;
+      await openMenu(page);
+      await expect(sheet(page)).toHaveCSS('opacity', '1');
+      await expect(sheet(page)).toHaveCSS('transition-property', property);
+      await expect(sheet(page)).toHaveCSS('transition-duration', duration);
+      await row(page, 'Statistics').click();
+      const panel = page.getByRole('dialog', { name: 'Statistics', exact: true });
+      await expect(panel).toHaveCSS('opacity', '1');
+      await expect(panel).toHaveCSS('transition-property', property);
+      await expect(panel).toHaveCSS('transition-duration', duration);
+    });
+  }
 
   test('AD-14 the menu keeps 52 live card elements', async ({ page }) => {
     await openFixture(page, 'session-idle-fresh');
@@ -201,7 +230,7 @@ test.describe('closing', () => {
       await close(page);
       await expectClosed(page);
       expect(await stored(page, SESSION)).toBe(before);
-      await expect(page.locator('main')).toBeFocused();
+      await expectBoardFocus(page);
     });
   }
 });
@@ -260,7 +289,7 @@ test.describe('New game and Replay', () => {
           .click();
       }
       await expectClosed(page);
-      await expect(page.locator('main')).toBeFocused();
+      await expectBoardFocus(page);
       await expect.poll(async () => (await parsed(page)).moves.length).toBe(0);
       expect((await parsed(page)).seed).toBe(seed);
       expect((await parsed(page)).gaveUp).toBe(false);
@@ -269,7 +298,7 @@ test.describe('New game and Replay', () => {
       await row(page, 'New game').click();
       // The Replayed deal has no moves, so New game now acts at once.
       await expectClosed(page);
-      await expect(page.locator('main')).toBeFocused();
+      await expectBoardFocus(page);
       await expect.poll(async () => (await parsed(page)).seed).not.toBe(seed);
       expect((await parsed(page)).moves).toHaveLength(0);
     });

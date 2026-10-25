@@ -13,6 +13,7 @@ import {
   STAGE_W,
   STRIP,
   type StageGeometry,
+  sceneTextUp,
   TRAY_H,
 } from './geometry';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
@@ -33,14 +34,29 @@ interface Props {
   cells: Readonly<Record<string, readonly string[]>> | undefined;
   /** Epic 8 ticket 9: WordCells (by number) whose cards sit in growth wrappers, with their card counts. */
   grow?: Readonly<Record<string, number>>;
+  /**
+   * Owner decision D10: column `column`'s scripted cards at `index` sit in wrappers `id` the player
+   * fades as they join or leave the D block; `hidden` draws one out of its column (opacity 0).
+   */
+  joins?: {
+    readonly column: number;
+    readonly cards: readonly { index: number; id: string; hidden: boolean }[];
+  };
   /** This scene's vertical layout (`stageGeometry`). */
   geometry: StageGeometry;
   scale: number;
   children: Snippet;
 }
-const { columns, filler, cells, grow, geometry, scale, children }: Props = $props();
+const { columns, filler, cells, grow, joins, geometry, scale, children }: Props = $props();
+// The join wrapper of card `j` of column `column` (filler first), if any.
+const joinOf = (column: number, j: number) =>
+  column === joins?.column
+    ? joins.cards.find((c) => c.index === j - (filler[column - 1]?.length ?? 0))
+    : undefined;
 const CELL_NUMBERS = [3, 4, 5, 6, 7, 8, 9, 10] as const;
 const COLUMN_NUMBERS = Array.from({ length: COLUMNS }, (_, i) => i + 1);
+// Owner decision D12: the counter-scale of the stage's text (geometry.ts `sceneTextUp`).
+const textUp = $derived(sceneTextUp(scale));
 // The geometry for the markup (Biome reads script usage only).
 const geo = $derived({
   cardH: CARD_H,
@@ -66,6 +82,7 @@ const geo = $derived({
   style:width="{geo.stageW}px"
   style:height="{geo.stageH}px"
   style:transform="scale({scale})"
+  style:--wc-scene-up={textUp}
   style:--wc-w="{geo.cardW}px"
   style:--wc-slot="{geo.slot}px"
   style:--wc-H="{geo.cardH}px"
@@ -75,7 +92,14 @@ const geo = $derived({
     {@const cards = [...(filler[column - 1] ?? []), ...(columns[column - 1] ?? [])]}
     <div class="column" data-column={column} style:left="{geo.columnX(column)}px" style:height="{geo.columnH}px">
       {#each cards as letter, j (j)}
-        <Card id={0} face={face(letter)} place="column" mirror="static" full={j === cards.length - 1} />
+        {@const join = joinOf(column, j)}
+        {#if join !== undefined}
+          <div data-scene-el={join.id} style:opacity={join.hidden ? 0 : undefined}>
+            <Card id={0} face={face(letter)} place="column" mirror="static" full={j === cards.length - 1} />
+          </div>
+        {:else}
+          <Card id={0} face={face(letter)} place="column" mirror="static" full={j === cards.length - 1} />
+        {/if}
       {/each}
     </div>
   {/each}
@@ -121,9 +145,18 @@ const geo = $derived({
   }
   .cell { position: absolute; width: var(--wc-slot); }
   .num {
-    display: block; text-align: center; font: 600 11px/16px system-ui, "Roboto", sans-serif;
+    display: block; text-align: center;
+    font: 600 calc(11px * var(--wc-scene-up)) / 16px system-ui, "Roboto", sans-serif;
     color: var(--wc-ink-secondary);
   }
+  /* Owner decision D12 (DESIGN.md: no text under 11 px): the scaled stage's text is counter-scaled
+     by --wc-scene-up (geometry.ts `sceneTextUp`), the Card's ×2 badge with its pill and the strip
+     marks included; every scene layer is a child of the stage. */
+  .stage :global(.card .badge) {
+    width: calc(18px * var(--wc-scene-up)); height: calc(12px * var(--wc-scene-up));
+    font-size: calc(11px * var(--wc-scene-up));
+  }
+  .stage :global(.card .mark) { font-size: calc(11px * var(--wc-scene-up)); }
   .mini { position: relative; display: flex; flex-direction: column; }
   .mini.empty { height: var(--wc-H); }
   .mini.empty::before {

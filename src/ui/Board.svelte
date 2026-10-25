@@ -13,7 +13,6 @@ import type { BandId, Unit } from './layout/bands';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { SELECTION_LIFT_PX } from './layout/geometry';
 import type { Layout } from './layout/layout.svelte';
-// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { overlays } from './overlays.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import TopBar from './TopBar.svelte';
@@ -32,8 +31,10 @@ import WordCellView from './WordCellView.svelte';
 // touch-action (they compute `auto`). The `--wc-*` properties sit on `.board-root` (epic 4 SPEC
 // CAP-9), which holds `.board` (bars and banner inside) then the WordCell view (sheet and scrim),
 // inside the controller's attach root; while the sticky view is open `.board` alone is `inert`,
-// never during a held peek. `.board-root` is the hover peek's containing block (`position:
-// relative`, epic 4 SPEC F19).
+// never during a held peek. While the end sheet is expanded every band and unit under its scrim is
+// `inert` and the top bar and action bar stay live (epic 6 SPEC F5, build-notes Per-surface
+// behaviour); collapsed, the board is live. `.board-root` is the hover peek's containing block
+// (`position: relative`, epic 4 SPEC F19).
 let { view, layout }: { view: GameView; layout: Layout } = $props();
 
 const w = $derived(layout.w);
@@ -55,6 +56,8 @@ $effect(() => {
   follow.sync(view);
 });
 
+const sheetInert = $derived(overlays.endSheet === 'expanded');
+
 function row(unit: Unit, band: BandId): number {
   return unit.indexOf(band) + 1;
 }
@@ -64,13 +67,19 @@ function row(unit: Unit, band: BandId): number {
   {#if id === 'topBar'}
     <TopBar {view} hoverFine={layout.hoverFine} />
   {:else if id === 'banner'}
-    <div class="banner" data-band="banner">{#if layout.bannerShown}<DictionaryBanner />{/if}</div>
+    <div class="banner" data-band="banner" inert={sheetInert}>{#if layout.bannerShown}<DictionaryBanner />{/if}</div>
   {:else if id === 'tray'}
-    <Tray {view} sizing={layout.tray} height={heights.tray} hoverFine={layout.hoverFine} />
+    <Tray
+      {view}
+      sizing={layout.tray}
+      height={heights.tray}
+      hoverFine={layout.hoverFine}
+      inert={sheetInert}
+    />
   {:else if id === 'actionBar'}
     <ActionBar {view} hoverFine={layout.hoverFine} />
   {:else}
-    <div class="spacer" data-band={id} style:height="{heights[id]}px"></div>
+    <div class="spacer" data-band={id} style:height="{heights[id]}px" inert={sheetInert}></div>
   {/if}
 {/snippet}
 
@@ -88,7 +97,11 @@ function row(unit: Unit, band: BandId): number {
   <h1 class="sr-only">WordCell</h1>
   {#each layout.bandOrder as unit, u (u)}
     {#if gridUnit(unit)}
-      <div class="unit" style:grid-template-rows={unit.map((b) => `${heights[b]}px`).join(' ')}>
+      <div
+        class="unit"
+        style:grid-template-rows={unit.map((b) => `${heights[b]}px`).join(' ')}
+        inert={sheetInert}
+      >
         {#each unit as id, i (id)}
           <div class="track" data-band={id} style:grid-row={i + 1}></div>
         {/each}

@@ -11,6 +11,10 @@
 // Tile selection (epic 5 SPEC CAP-4, F1): one tray or strip tile `CardId` beside the tail selection,
 // with no entry (back ignores it, nav is never called); `selectTile` throws while a tile or tail
 // selection is set, `clearTile` is a no-op with none; `resetForNewSession()` clears it.
+// Win celebration (AD-13 celebration bullet, AD-19): `startCelebration()` pushes the `celebration`
+// entry; its removal records why (`ended` by `close`, `closedByBack` and Esc; `cancelled` by
+// `onUnfinished()` and `resetForNewSession()`) and calls the one callback registered through
+// `onCelebrationRemoved` (celebration.svelte.ts, which imports this module, never the reverse).
 import type { CardId } from '../engine/index';
 import { nav } from '../shell/nav';
 
@@ -25,12 +29,21 @@ export type OverlayId =
   | 'replayConfirm'
   | 'tailSelection'
   | 'wordcellView'
-  | 'endSheet';
+  | 'endSheet'
+  | 'celebration';
+/** AD-13: why the `celebration` entry was removed, set by the calling path. */
+export type CelebrationRemoval = 'ended' | 'cancelled';
 export type EndSheetState = 'hidden' | 'collapsed' | 'expanded';
 export type TailSelection = { readonly column: number; readonly count: number };
 
-const OWN_OPERATION: readonly OverlayId[] = ['tailSelection', 'wordcellView', 'endSheet'];
+const OWN_OPERATION: readonly OverlayId[] = [
+  'tailSelection',
+  'wordcellView',
+  'endSheet',
+  'celebration',
+];
 const MODAL_TOP: readonly OverlayId[] = [
+  'celebration',
   'historyNotice',
   'resetConfirm',
   'endSheet',
@@ -57,8 +70,12 @@ const LEGAL_TOPS: Partial<Record<OverlayId, readonly (OverlayId | undefined)[]>>
   resetConfirm: ['historyNotice', 'statistics', 'endSheet'],
 };
 // Epic 6 CAP-10: the entries under which `main` is inert and the game keys are suspended (only
-// Tab, Enter, Space and Esc act). The expanded end sheet and the WordCell view are not in the list.
+// Tab, Enter, Space and Esc act), and focus-follow yields. The expanded end sheet and the WordCell
+// view are not in the list. `celebration` (AD-13) has two exceptions: `main` is not inert under it
+// (App.svelte `mainInert`), and keys.ts `attempt()` still runs the `undo`, `newGame` and `menu` rows
+// (EXPERIENCE.md Win celebration, "Keys while it runs"; `menu` ends the run first, open-menu.ts).
 export const SUSPENDING: readonly OverlayId[] = [
+  'celebration',
   'historyNotice',
   'resetConfirm',
   'menu',
@@ -90,6 +107,7 @@ let tileSelection = $state<CardId | null>(null);
 let unrecordedFinish = $state(false);
 let liveToken: number | null = null;
 let lastToken = 0;
+let celebrationRemoved: ((reason: CelebrationRemoval) => void) | null = null;
 
 function isInt(value: number, min: number, max: number): boolean {
   return Number.isInteger(value) && value >= min && value <= max;
@@ -110,12 +128,17 @@ function push(id: OverlayId): void {
   nav.push();
 }
 
-function removeTop(): void {
+function removeTop(reason: CelebrationRemoval): void {
   const top = stack.at(-1);
+  const removed = celebrationRemoved;
+  if (top === 'celebration' && removed === null) {
+    throw new Error('AD-13 celebration removed with no removal callback');
+  }
   stack = stack.slice(0, -1);
   if (top === 'tailSelection') selection = null;
   else if (top === 'wordcellView') viewCell = null;
   else if (top === 'endSheet') endSheet = 'collapsed';
+  else if (top === 'celebration') removed?.(reason);
 }
 
 function open(id: OverlayId): void {
@@ -140,15 +163,20 @@ function open(id: OverlayId): void {
   push(id);
 }
 
-function close(id: OverlayId): void {
+function closeWith(id: OverlayId, reason: CelebrationRemoval): void {
   const top = stack.at(-1);
   if (top !== id) throw new Error(`AD-13 close(${id}) while the top is ${top ?? 'nothing'}`);
-  removeTop();
+  removeTop(reason);
   nav.pop();
 }
 
+/** An external close: for `celebration` an end (`ended`). */
+function close(id: OverlayId): void {
+  closeWith(id, 'ended');
+}
+
 function closedByBack(depth: number): void {
-  while (stack.length > depth) removeTop();
+  while (stack.length > depth) removeTop('ended');
 }
 
 function select(column: number, count: number): void {
@@ -254,7 +282,10 @@ function onUnfinished(): void {
   } else if (endSheet === 'collapsed') {
     endSheet = 'hidden';
   } else {
+    // AD-13: the sheet stays hidden while the celebration runs; Undo cancels the deferred open
+    // first, then the run (a non-top entry is `close`'s AD-13 throw).
     cancelEndSheetOpen();
+    if (stack.includes('celebration')) closeWith('celebration', 'cancelled');
   }
 }
 
@@ -282,6 +313,35 @@ function openDeferred(token: number): boolean {
   return true;
 }
 
+/** AD-19: whether `token` is the live deferred open; never consumes it (the celebration's start). */
+function isLiveToken(token: number): boolean {
+  return liveToken !== null && token === liveToken;
+}
+
+/** AD-13: one removal callback; a later registration replaces the earlier. */
+function onCelebrationRemoved(fn: (reason: CelebrationRemoval) => void): void {
+  celebrationRemoved = fn;
+}
+
+/**
+ * AD-13, AD-19: pushes the `celebration` entry, as `openDeferred` (every check first, then a sticky
+ * view on top closes); legal only with no other entry, no peek, the end sheet hidden and a
+ * registered removal callback.
+ */
+function startCelebration(): void {
+  if (celebrationRemoved === null)
+    throw new Error('AD-13 startCelebration with no removal callback');
+  if (endSheet !== 'hidden') throw new Error(`AD-13 startCelebration while ${endSheet}`);
+  if (peek !== null) throw new Error('AD-13 startCelebration while a peek is open');
+  const viewOnTop = stack.at(-1) === 'wordcellView';
+  if (stack.length > (viewOnTop ? 1 : 0)) {
+    throw new Error(`AD-13 startCelebration while ${stack.at(-1)} is open`);
+  }
+  hoverPeek = null;
+  if (viewOnTop) close('wordcellView');
+  push('celebration');
+}
+
 function selectTile(card: CardId): void {
   if (!isInt(card, 0, 51)) throw new Error(`AD-13 selectTile(${card}): card out of range`);
   if (tileSelection !== null)
@@ -296,7 +356,7 @@ function clearTile(): void {
 
 function resetForNewSession(): void {
   cancelEndSheetOpen();
-  for (let top = stack.at(-1); top !== undefined; top = stack.at(-1)) close(top);
+  for (let top = stack.at(-1); top !== undefined; top = stack.at(-1)) closeWith(top, 'cancelled');
   endSheet = 'hidden';
   unrecordedFinish = false;
   selection = null;
@@ -355,7 +415,10 @@ export const overlays = {
   onUnfinished,
   deferEndSheetOpen,
   openDeferred,
+  isLiveToken,
   cancelEndSheetOpen,
+  startCelebration,
+  onCelebrationRemoved,
   selectTile,
   clearTile,
 };

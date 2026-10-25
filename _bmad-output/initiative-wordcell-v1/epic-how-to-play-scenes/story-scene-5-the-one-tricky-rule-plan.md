@@ -104,3 +104,4 @@ deferred: []
 - Follow-up review recommended: false.
 - Verification: `npm run test:all` exit 0 (948 e2e, 13 pwa passed); `npm run test:screens` 42 passed (implementer's run); plan grep empty.
 - Residual risks: the implementer saw a transient app-boot failure and one drag-test flake in an earlier run; the final full run was clean.
+- Post-close follow-up (owner decisions D1–D12, 2026-10-22, `011935c`; see the epic Notes and the ticket's Notes): the scene this plan built changed after it.

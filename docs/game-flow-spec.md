@@ -1,6 +1,6 @@
 # WordCell – Game flow specification
 
-Status: v0.10, 2026-10-18. Jared answered Q-01…Q-33 on 2026-09-26 (Q-26…Q-33 were raised by the
+Status: v0.11, 2026-10-20. Jared answered Q-01…Q-33 on 2026-09-26 (Q-26…Q-33 were raised by the
 review loop, see `game-flow-spec.review-log.md`); the decisions are recorded in §9 and applied to
 the rules below. There are no open questions. v0.6 only refines the test-coverage rule in this
 preamble, as the product brief's success criterion 4 requires. v0.7 adds Q-34 (a short drag that never leaves its source column is a cancel,
@@ -10,7 +10,7 @@ answered by Jared on 2026-09-27; Q-41 amends the §2 replay paragraph and Q-43 r
 record identity. v0.9 adds Q-44 (best and average score exclude negative given-up games, R-84),
 answered by Jared on 2026-09-30, and tags the R-50 and R-83 UI sentences (UI) (owner-approved
 the same day); on 2026-10-01 Jared amended Q-42's service-worker branch (epic 3
-retrospective). v0.10 adds Q-45 (the look is a manual theme choice in Preferences, default Charcoal, answered by Jared on 2026-10-18) and extends §7.10. Every rule has an id (R-xx) so
+retrospective). v0.10 adds Q-45 (the look is a manual theme choice in Preferences, default Charcoal, answered by Jared on 2026-10-18) and extends §7.10. v0.11 adds Q-46…Q-48 (the end-of-game word list and the win celebration, answered by Jared on 2026-10-19 and 2026-10-20), R-86…R-88 and §7.12. On 2026-10-24 the owner amended R-87's press skip to exempt the dictionary banner as well (epic 10 close-out). Every rule has an id (R-xx) so
 tests, specs and tickets can cite it. A "(UI)" in a rule's id tags the whole rule; a trailing
 "(UI)" tags only the sentence it ends. Tagged rules and sentences are satisfied by a Playwright
 test naming the R-id; every untagged sentence that states engine behaviour by an engine unit test
@@ -361,6 +361,29 @@ with nothing to undo, Redo without redo data) (CLAUDE.md rule 6).
 - **R-85** Letter distribution, letter values (which cards count as more than one letter) and the
   dictionary are data per language. English only in v1 (Q-14). The engine exposes one
   `letterCount(card)` and never counts cards where letters are meant.
+- **R-86** The **word list** of a finished game (status won or gaveUp) has one entry per committed
+  move: the word as spelled (R-37, shown with `QU` as `QU`), its letter count (R-36, R-85), its
+  cards in word order and the WordCell it was placed in. A pending draft
+  is not a committed move and has no entry. Entries are ordered by letter count, largest first,
+  then by spelling alphabetically; a word played more than once has one entry per play (Q-47).
+  The list is derived by replay and never stored (§2); it is empty when no word was committed.
+- **R-87 (UI)** When a game is won (not given up, Q-46), the end sheet (R-83) opens only after the
+  **win celebration**: each word of the word list (R-86) is a group of its cards that bounces
+  across the table on an arcing, falling-and-rebounding path in the manner of classic Windows
+  Solitaire, with no trail of copies and no colour change (Q-48). A card can belong to several
+  words (a WordCell's top card reused as a free letter, R-41), so each group is drawn from its own
+  copies of the card faces, never from the board's live card elements (AD-14). A pointer press
+  outside the top and action bars and the dictionary banner, `Space` or `Esc` on desktop, or the Android back gesture
+  (which does not leave the app) skips it at once to the end sheet; the app being hidden or the
+  window resized ends it the same way. It cannot be replayed from the end sheet or the menu
+  (Q-48) and does not play on a relaunch into a won game (R-73), under reduced motion, or after
+  Give up. The ☰ button or `M` ends it first, so the end sheet opens and the menu follows. Undo and New game stop it with no end sheet; a Redo that restores
+  the win plays it again, as a new win (R-70).
+- **R-88 (UI)** The end sheet (R-83) offers the word list (R-86) for both outcomes, won and
+  gaveUp (Q-46), for the latest finished game only (Q-48). Each entry shows the word and its
+  letter count; the placement UX is for the UX step. Undo of the finish, New game and Replay this
+  deal remove it. A relaunch into a finished game shows it, since it is derived (R-73). It adds
+  nothing to the Session or the score history, so neither version changes (§2, R-84).
 
 ## 7. Interaction model (proposal for the UX design step)
 
@@ -410,6 +433,11 @@ This section is how the rules above surface on a touch screen. It is a starting 
 11. **Card art** is decided by the UX step; the BGA sprite sheet (26 cards of 72×96 px,
     alphabetical, `QU` in the Q slot; carryover §1) is a candidate and matches the §2 `CardId`
     order.
+12. **End of game (R-86…R-88).** A win plays the bouncing-words celebration, then the end sheet;
+    a give-up opens the end sheet at once. Both outcomes can open the word list, longest first.
+    The word groups launch from the WordCell they were placed in, in overlapping waves, within
+    about 6 s at normal speed; the list is a section of the expanded end sheet, each entry showing
+    the word and its letter count (owner, 2026-10-20). The animation layer is AD-19.
 
 ## 8. Worked example (from the rulebook)
 
@@ -427,7 +455,7 @@ currently shows `L` as its top card, add it (R-33) and arrange → **BALKED** (6
 removing S, col1 is `F`; it must be included → **FAKED**, or with `L` → **FLAKED**. Laying
 `DEKA…` under col3 without `B` is not allowed while col3 has cards.
 
-## 9. Decisions (Q-01 … Q-45, answered 2026-09-26, 2026-09-27, 2026-09-30 and 2026-10-18)
+## 9. Decisions (Q-01 … Q-48, answered 2026-09-26, 2026-09-27, 2026-09-30, 2026-10-18, 2026-10-19 and 2026-10-20)
 
 | # | Question | Decision |
 |---|---|---|
@@ -476,3 +504,6 @@ removing S, col1 is `F`; it must be included → **FAKED**, or with `L` → **FL
 | Q-43 | How does Undo of a finish find its record without tying the score history to scoring rules? | By seed, outcome and active duration; the history's version changes only when the record's shape changes (answered 2026-09-27). R-84. |
 | Q-44 | Should a given-up game with a negative score pull down best and average score? | No (answered 2026-09-30): best score and average score exclude given-up records whose final score is negative; a given-up record scoring 0 or more and every won record count. Excluded records still count in games played, games given up and longest word ever. When no record qualifies, best and average are absent (shown as —). R-84. |
 | Q-45 | How is the look chosen? | By hand in Preferences only (answered 2026-10-18). The default is Charcoal, the current dark look. The app never follows `prefers-color-scheme`. The choice is stored with the preferences, applies at once and survives New game and Replay. Themes change colours, the table background and card-face textures, never layout, card size, rules or the deal. §7.10. |
+| Q-46 | Which outcomes get the win celebration and the word list? | Only a win gets the bouncing-words celebration; both a win and a give-up can view the word list (answered 2026-10-19). R-87, R-88. |
+| Q-47 | How is the word list ordered, and are repeated words merged? | Letter count descending, ties alphabetical; a word played twice is listed twice (answered 2026-10-19). R-86. |
+| Q-48 | Scope and behaviour of the celebration and list? | Each word is a group of cards bouncing on a Windows-style arcing path, with no trail copies and no hue change; the celebration can be skipped (press, `Space`/`Esc`, back) but not replayed from the end sheet, though a Redo that restores the win plays it again; the word list covers the latest game only and is not stored (answered 2026-10-19); back, hide and resize also end it, and a Redo that restores the win plays it again (answered 2026-10-20). R-87, R-88. |

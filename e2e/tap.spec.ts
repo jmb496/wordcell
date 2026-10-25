@@ -565,17 +565,18 @@ test.describe('desktop', () => {
     await animationFrames(page, 1);
   }
 
-  // DESIGN.md drop target: the 12 % teal wash, computed through a probe element.
-  const wash12 = (page: Page) =>
-    page.evaluate(() => {
+  // DESIGN.md drop target: the 12 % teal wash, computed through a probe element; on a card face
+  // it lies over the theme's card texture (owner decision D4).
+  const wash12 = (page: Page, face = false) =>
+    page.evaluate((onFace) => {
       const probe = document.createElement('span');
       const c = 'color-mix(in srgb, var(--wc-accent-teal) 12%, transparent)';
-      probe.style.backgroundImage = `linear-gradient(${c}, ${c})`;
+      probe.style.backgroundImage = `linear-gradient(${c}, ${c})${onFace ? ', var(--wc-card-texture)' : ''}`;
       document.body.append(probe);
       const image = getComputedStyle(probe).backgroundImage;
       probe.remove();
       return image;
-    });
+    }, face);
   const imageOf = (locator: Locator) =>
     locator.evaluate((el) => getComputedStyle(el).backgroundImage);
 
@@ -627,7 +628,7 @@ test.describe('desktop', () => {
   }) => {
     await openFixture(page, 'session-idle-fresh');
     const teal = await tokenColor(page, '--wc-accent-teal');
-    const wash = await wash12(page);
+    const wash = await wash12(page, true);
     // Column 5 holds 6 cards (empty space below them); the tail is its bottom 3.
     await select(page, 5, 3);
     // Right after a click-select without moving: nothing on the selected card.

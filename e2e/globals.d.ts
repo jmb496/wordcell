@@ -54,6 +54,12 @@ declare global {
         | { readonly kind: 'rejected'; readonly reason: RejectReason }
         | { readonly kind: 'halted' };
       dictionaryState(): 'loading' | 'ready' | 'failed';
+      // AD-17 Celebration seam: the one writable part (epic 10 entry 5).
+      celebration: Readonly<{
+        advance(ms: number): void;
+        running(): boolean;
+        setEnabled(on: boolean): void;
+      }>;
     }>;
     __wordcellBoot?: Record<
       'wordcell:session' | 'wordcell:history' | 'wordcell:prefs',

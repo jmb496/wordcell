@@ -3,7 +3,8 @@
 // every column is empty, as after a win. Cards are Tab stops under the roving model (Card.svelte,
 // roving.svelte.ts), so no card is made focusable here. Programmatic focus never scrolls: the
 // layout anchors its own scroll (AD-11).
-import type { CardId } from '../engine/index';
+import type { CardId, GameView } from '../engine/index';
+import { text } from './text';
 
 const FOCUS = { preventScroll: true } as const;
 
@@ -16,6 +17,17 @@ export function focusBoard(): void {
     return;
   }
   document.querySelector<HTMLElement>('main')?.focus(FOCUS);
+}
+
+/**
+ * Focus return to the ☰ button after a surface a Menu row opened closes (its opener row left with
+ * the menu; open-surface.ts `takeMenuOrigin`). The button always exists on the active board, so its
+ * absence is a bug (rule 6).
+ */
+export function focusMenuButton(): void {
+  const button = document.querySelector<HTMLElement>(`button[aria-label="${text.menu}"]`);
+  if (button === null) throw new Error('AD-13 focusMenuButton with no menu button');
+  button.focus();
 }
 
 /** Focuses the live element of card `id` (a column card, tray tile or strip card). */
@@ -38,6 +50,18 @@ export function focusFirstStrip(): void {
   const first = document.querySelector<HTMLElement>('[data-card-id][data-place="strip"]');
   if (first === null) focusBoard();
   else first.focus(FOCUS);
+}
+
+/**
+ * EXPERIENCE.md Focus, the phase's focus target: Composing -> the first movable tile, Place -> the
+ * first strip card, otherwise (Idle, a Game over) the board. Shared by focus-follow.ts, the end
+ * sheet's Undo path (end-sheet.ts), the History notice's close (App.svelte) and the menu's and an
+ * N-opened New game confirm's dismissal (Menu.svelte, ConfirmDialogs.svelte; SPEC F12, F13).
+ */
+export function focusByPhase(view: GameView): void {
+  if (view.phase === 'composing') focusFirstTile();
+  else if (view.phase === 'place') focusFirstStrip();
+  else focusBoard();
 }
 
 /**

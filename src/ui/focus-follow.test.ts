@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GameView } from '../engine/index';
 import { createFocusFollow } from './focus-follow';
+import { overlays } from './overlays.svelte';
+
+// Epic 10 entry 4: the celebration rows push and pop through a stubbed nav.
+vi.mock('../shell/nav', () => ({ nav: { push: () => {}, pop: () => {} } }));
 
 // Ticket 6.11 (EXPERIENCE.md Focus): the recover and phase branches of `sync`. The unit environment
 // is node, so `document` and `HTMLElement` are minimal fakes that answer the selectors
@@ -207,5 +211,25 @@ describe('AD-14 focus-follow phase', () => {
     state.active = body;
     follow.sync(IDLE);
     expect(state.active).toBe(b);
+  });
+});
+
+// Epic 10 entry 4 (AD-13 celebration bullet): `celebration` is in SUSPENDING, so focus-follow
+// yields while it runs (the run moves no focus).
+describe('AD-13 focus-follow under the celebration', () => {
+  it('AD-13 while only celebration is open, a sync after the tracked tile left the DOM, or a phase change, moves no focus', () => {
+    const s = setup([1, 2, 3]);
+    s.focus(2);
+    overlays.onCelebrationRemoved(() => {});
+    overlays.startCelebration();
+    try {
+      s.remove(2);
+      s.follow.sync(VIEW);
+      expect(s.focused()).toBe(s.body);
+      s.follow.sync(PLACE);
+      expect(s.focused()).toBe(s.body);
+    } finally {
+      overlays.resetForNewSession();
+    }
   });
 });

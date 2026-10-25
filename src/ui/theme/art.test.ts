@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkTexture, colourOpacities, parseArt, worstSurfaces } from './art';
+import { checkTexture, colourOpacities, parseArt, worstRatio } from './art';
 
 // Epic themes TH-9 / TH-5: the art token grammar, the texture cap and the worst-point stacking.
 
@@ -138,28 +138,68 @@ describe('AD-14 theme art texture cap and worst point', () => {
     expect(() => checkTexture(art)).toThrow('texture colour');
   });
 
-  it('AD-14 worstSurfaces gives each colour alone and every stacking order of two', () => {
-    const art = parseArt(
-      wrap(
-        "<rect width='4' height='4' fill='%23fff' fill-opacity='0.5'/><circle cx='5' cy='5' r='2' fill='%23000' fill-opacity='0.5'/>",
-      ),
-    ) as never;
-    const out = worstSurfaces(art, { r: 100, g: 100, b: 100 });
-    // alone: white 0.5 -> 177.5, black 0.5 -> 50; stacked: white then black 0.5 -> 88.75;
-    // black then white -> 25 + 127.5... = (50*.5)+127.5 = 152.5
-    const reds = out.map((c) => c.r).sort((a, b) => a - b);
-    expect(reds).toEqual([50, 88.75, 152.5, 177.5]);
+  const rect = (colour: string, alpha: number) =>
+    `<rect width='4' height='4' fill='%23${colour}' fill-opacity='${alpha}'/>`;
+  const art = (...rects: string[]) => parseArt(wrap(rects.join(''))) as never;
+  const BLACK = { r: 0, g: 0, b: 0 };
+  const WHITE = { r: 255, g: 255, b: 255 };
+  const RED = { r: 255, g: 0, b: 0 };
+
+  // Over a black surface the brightest pixel is red 0.5 under green 0.5 (63.75, 127.5, 0): 4.909
+  // against white ink, under a floor of 5; the other order's brightest pixel is green alone
+  // (0, 127.5, 0): 5.170, above it. The result is the same whichever shape the SVG lists first.
+  it.each([
+    ['red first', art(rect('ff0000', 0.5), rect('00ff00', 0.5))],
+    ['green first', art(rect('00ff00', 0.5), rect('ff0000', 0.5))],
+  ])('AD-14 worstRatio takes the one stacking order that breaks the floor (%s)', (_n, a) => {
+    expect(worstRatio(a, BLACK, WHITE)).toBeCloseTo(4.9089, 4);
   });
 
-  it('AD-14 worstSurfaces covers stacks of proper subsets of three colours', () => {
-    const rect = (colour: string, x: number) =>
-      `<rect x='${x}' width='4' height='4' fill='%23${colour}' fill-opacity='0.5'/>`;
-    const art = parseArt(wrap(rect('fff', 0) + rect('ff0000', 1) + rect('0000ff', 2))) as never;
-    const out = worstSurfaces(art, { r: 0, g: 0, b: 0 });
-    // 3 singles + 3 pairs x 2 orders + 6 full orders = 15 stacks.
-    expect(out).toHaveLength(15);
-    // white then red over black is r 191.25, g 63.75, b 63.75: a pair stack that no stack of all
-    // three layers reproduces (blue always adds to b), so only subset enumeration yields it.
-    expect(out.some((c) => c.r === 191.25 && c.g === 63.75 && c.b === 63.75)).toBe(true);
+  // Over #101010 the brightest pixel is red 0.5 under green 0.5 with the black layer absent
+  // (67.75, 131.5, 4): 4.6468 against white ink; green alone gives 4.6590 and black present at any
+  // alpha (even 0.05, at the bottom) darkens every stack, so only a proper subset reaches it.
+  it('AD-14 worstRatio covers a stack of a proper subset of three colours', () => {
+    const a = art(rect('ff0000', 0.5), rect('00ff00', 0.5), rect('000000', 0.5));
+    expect(worstRatio(a, { r: 16, g: 16, b: 16 }, WHITE)).toBeCloseTo(4.6468, 4);
+  });
+
+  // Green over red against black ink is lowest at alpha 0.2735 (3.93890), between the 0.05 grid
+  // points; a shape at exactly that opacity (its colour sums to 0.5) is sampled at its own alpha.
+  it('AD-14 worstRatio samples a single shape at its own alpha below its colour sum', () => {
+    const a = art(rect('00ff00', 0.2735), rect('00ff00', 0.2265));
+    expect(worstRatio(a, RED, BLACK)).toBeCloseTo(3.9389, 4);
+  });
+
+  it('AD-14 worstRatio is exactly 1 when the ink luminance lies inside the painted range', () => {
+    const stroke = (d: string) =>
+      `<path d='${d}' fill='none' stroke='%23fff' stroke-opacity='0.45'/>`;
+    const a = parseArt(wrap(stroke('M0 12h24') + stroke('M12 0v24'))) as never;
+    // Painted greys run from the bare black surface (5.32:1 to #808080) to white 0.9 (1.25:1).
+    expect(worstRatio(a, BLACK, { r: 128, g: 128, b: 128 })).toBe(1);
+  });
+
+  // Green 0.5 over red against black ink: 5.252 bare, 4.972 at 0.5, but 3.93890 at alpha 0.2735
+  // inside the range. The 0.05 alpha grid finds the inner minimum from above, here within 0.011.
+  it('AD-14 worstRatio finds an inner minimum between the alpha ends', () => {
+    const r = worstRatio(art(rect('00ff00', 0.5)), RED, BLACK);
+    expect(r).toBeGreaterThanOrEqual(3.9389);
+    expect(r).toBeLessThan(3.9389 + 0.02);
+  });
+
+  // A white wash at 0.5 over a black surface with no shapes is the one grey (127.5): 3.9767:1
+  // against white ink; over a black 0.5 rect it stays the brightest stack (the rect only darkens).
+  // A black wash at 0.5 over a white 0.5 rect on black halves the brightest stack to 63.75:
+  // 10.4088:1 against white ink, where a wash under the art would leave 127.5 (3.9767:1).
+  it('AD-14 worstRatio paints the wash over the art before measuring', () => {
+    const wash = { colour: WHITE, alpha: 0.5 };
+    expect(worstRatio({ width: 1, height: 1, shapes: [] }, BLACK, WHITE, wash)).toBeCloseTo(
+      3.9767,
+      4,
+    );
+    expect(worstRatio(art(rect('000000', 0.5)), BLACK, WHITE, wash)).toBeCloseTo(3.9767, 4);
+    expect(worstRatio(art(rect('000000', 0.5)), BLACK, WHITE)).toBe(21);
+    expect(
+      worstRatio(art(rect('ffffff', 0.5)), BLACK, WHITE, { colour: BLACK, alpha: 0.5 }),
+    ).toBeCloseTo(10.4088, 4);
   });
 });

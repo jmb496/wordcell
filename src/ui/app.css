@@ -27,7 +27,9 @@
   --wc-destination-fill: #2e3a52;
   --wc-error: #f08a84;
   --wc-scrim: #000000b3;
-  /* Internal tokens, not DESIGN.md colour roles. */
+  /* Internal tokens, not DESIGN.md colour roles. The lifted-card shadow (DESIGN.md Elevation &
+     Depth) is Charcoal's in every dark alternate block too (owner decision D3, 2026-10-22);
+     Daylight Paper declares its lighter one. */
   --wc-shadow-drag: #0008;
   --wc-scene-pointer-fill: #fff;
   --wc-scene-pointer-stroke: #1a1a1a;
@@ -42,7 +44,7 @@
   color: var(--wc-ink-primary);
 }
 /* Deep Space (epic themes TH-5): values from research/brief.md section A; art per the 9.5 grammar. */
-[data-theme="scifi"] {
+:root[data-theme="scifi"] {
   color-scheme: dark;
   --wc-table: #0a0f1c;
   --wc-surface: #111a2e;
@@ -62,15 +64,16 @@
   --wc-destination-fill: #2a2860;
   --wc-error: #ff8f9a;
   --wc-scrim: #000000b3;
-  --wc-shadow-drag: rgb(0 0 0 / 0.35);
+  --wc-shadow-drag: #0008;
   --wc-scene-pointer-fill: #fff;
   --wc-scene-pointer-stroke: #1a1a1a;
   --wc-scene-pointer-shadow: rgb(0 0 0 / 0.45);
   --wc-table-art: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'><path d='M48 0H0V48' fill='none' stroke='%2335d0ff' stroke-opacity='0.07'/></svg>");
   --wc-card-texture: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='4' height='4' viewBox='0 0 4 4'><rect width='4' height='1' fill='%2335d0ff' fill-opacity='0.06'/></svg>");
 }
-/* Greenhouse Dusk (epic themes TH-5): values from research/brief.md section B; art per the 9.5 grammar. */
-[data-theme="garden"] {
+/* Greenhouse Dusk (epic themes TH-5): values from research/brief.md section B; art per the 9.5 grammar,
+   its table-art strokes at 4.5 % so a washed drop-target outline keeps 3:1 (owner decision D6, 2026-10-22). */
+:root[data-theme="garden"] {
   color-scheme: dark;
   --wc-table: #101a14;
   --wc-surface: #18271e;
@@ -90,15 +93,15 @@
   --wc-destination-fill: #4a2f48;
   --wc-error: #ff9a8a;
   --wc-scrim: #000000b3;
-  --wc-shadow-drag: rgb(0 0 0 / 0.35);
+  --wc-shadow-drag: #0008;
   --wc-scene-pointer-fill: #fff;
   --wc-scene-pointer-stroke: #1a1a1a;
   --wc-scene-pointer-shadow: rgb(0 0 0 / 0.45);
-  --wc-table-art: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'><path d='M0 52C18 52 22 36 32 32S50 14 64 12' fill='none' stroke='%238fdc9e' stroke-width='1.2' stroke-opacity='0.08'/><path d='M0 12C14 14 24 26 32 32S52 50 64 52' fill='none' stroke='%238fdc9e' stroke-width='1.2' stroke-opacity='0.08'/><path d='M32 0V64' fill='none' stroke='%238fdc9e' stroke-width='1.2' stroke-opacity='0.08'/></svg>");
+  --wc-table-art: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'><path d='M0 52C18 52 22 36 32 32S50 14 64 12' fill='none' stroke='%238fdc9e' stroke-width='1.2' stroke-opacity='0.045'/><path d='M0 12C14 14 24 26 32 32S52 50 64 52' fill='none' stroke='%238fdc9e' stroke-width='1.2' stroke-opacity='0.045'/><path d='M32 0V64' fill='none' stroke='%238fdc9e' stroke-width='1.2' stroke-opacity='0.045'/></svg>");
   --wc-card-texture: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='6' height='6' viewBox='0 0 6 6'><path d='M0 1L3 0M3 4L6 3' fill='none' stroke='%23f6f0dc' stroke-width='1' stroke-opacity='0.03'/></svg>");
 }
 /* Brass and Walnut (epic themes TH-5): values from research/brief.md section C; art per the 9.5 grammar. */
-[data-theme="steampunk"] {
+:root[data-theme="steampunk"] {
   color-scheme: dark;
   --wc-table: #1d1510;
   --wc-surface: #2a1f17;
@@ -118,16 +121,17 @@
   --wc-destination-fill: #232c46;
   --wc-error: #f59a8c;
   --wc-scrim: #000000b3;
-  --wc-shadow-drag: rgb(0 0 0 / 0.35);
+  --wc-shadow-drag: #0008;
   --wc-scene-pointer-fill: #fff;
   --wc-scene-pointer-stroke: #1a1a1a;
   --wc-scene-pointer-shadow: rgb(0 0 0 / 0.45);
   --wc-table-art: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='40' viewBox='0 0 80 40'><path d='M0 6H80M0 13H55M0 22H80M0 29H40M0 35H70' fill='none' stroke='%23b08d57' stroke-opacity='0.07'/><path d='M0 39.5H80' fill='none' stroke='%23000' stroke-opacity='0.25'/></svg>");
   --wc-card-texture: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'><path d='M1.2 2a.8 .8 0 1 0 1.6 0a.8 .8 0 1 0 -1.6 0M5.2 6a.8 .8 0 1 0 1.6 0a.8 .8 0 1 0 -1.6 0' fill='%23b08d57' fill-opacity='0.04'/></svg>");
 }
-/* Daylight Paper (epic themes TH-4): values from research/brief.md section D. Placed after the
-   default block and the dark `color-scheme` rule so it overrides the latter. */
-[data-theme="paper"] {
+/* Daylight Paper (epic themes TH-4): values from research/brief.md section D. Its
+   `:root[data-theme]` selector (0,2,0) outranks the default block and the dark `color-scheme`
+   rule (0,1,0) in any source order, as every alternate block's does. */
+:root[data-theme="paper"] {
   color-scheme: light;
   --wc-table: #ece6d8;
   --wc-surface: #f6f2e8;
@@ -155,7 +159,7 @@
   --wc-card-texture: none;
 }
 /* Plum Dusk (epic themes TH-5): brief.md section E, owner-deepened 2026-10-19 (richer plum, rose act accent); tokens only, no art. */
-[data-theme="plum"] {
+:root[data-theme="plum"] {
   color-scheme: dark;
   --wc-table: #1d1028;
   --wc-surface: #2a1a3a;
@@ -175,7 +179,7 @@
   --wc-destination-fill: #33306a;
   --wc-error: #ffa08c;
   --wc-scrim: #000000b3;
-  --wc-shadow-drag: rgb(0 0 0 / 0.35);
+  --wc-shadow-drag: #0008;
   --wc-scene-pointer-fill: #fff;
   --wc-scene-pointer-stroke: #1a1a1a;
   --wc-scene-pointer-shadow: rgb(0 0 0 / 0.45);
@@ -200,4 +204,21 @@ html {
 }
 #app {
   height: 100%;
+}
+/* DESIGN.md Focus ring (ticket 6.11): every button off the cards; the cards, WordCells and scene
+   controls draw their own (more specific) ring. */
+button:focus-visible {
+  outline: 2px solid var(--wc-accent-teal);
+  outline-offset: 2px;
+}
+/* DESIGN.md WordCell (R-33, R-40; owner decision D11, 2026-10-22): the one source of the WordCell
+   state looks the game (WordCellRow.svelte, Card.svelte) and the How to play scenes
+   (scenes/Scene.svelte) share: a not-legal cell in Place, label and slot, at 35 %; the top card of
+   a cell the word uses at 40 % with a 45° hatch. */
+.wc-dim {
+  opacity: 0.35;
+}
+.card.used .face {
+  opacity: 0.4;
+  background-image: repeating-linear-gradient(45deg, var(--wc-outline) 0 1px, transparent 1px 6px);
 }

@@ -1,0 +1,169 @@
+# Epic 10 — End-of-game word list and win celebration. Table order is the build order.
+# Requirement source: the epic spec (SPEC.md); `covers` cites its CAP ids. Rule-to-test map: rule-coverage.md.
+# Lane A (list): entries 1, 2. Lane B (celebration): entries 3, 4, 5, 6, 7, 8, which share src/ui/celebration/, overlays.svelte.ts, end-sheet.ts, main.ts and test-hook.ts, so they run in sequence. Entries 3 and 4 can run beside entry 2; entry 5 waits for entry 2 because both change end-sheet tests and the end-sheet screenshot baselines. Entries 5–8 also use entry 1's fixture.
+# The win route in Playwright: the won-words fixture plus one Undo is the Place phase whose Confirm wins (e2e/win-guard.spec.ts); a Redo from there wins again.
+# npm run test:screens runs in the Playwright container for entries 2, 6 (first visible motion), 7, 9 and 10; the other entries run test:all.
+
+[[entry]]
+id = 1
+type = "story"
+title = "Engine word list and its fixture"
+description = "Adds `wordList` and the exported `WordListEntry` type to `GameView`, built from the replay pass (whose internal return widens to carry each move's cards and cell): one entry per committed move with spelling, letter count, cards in word order and placement cell, ordered by letter count descending then spelling ascending, absent while playing; amends the AD-2 export list and the `expectTypeOf` pins; and adds `fixtures/session-won-words.json`, a valid won Session with a duplicate word, a letter-count tie, one long word and one card shared by two words (a WordCell top card reused as a free letter, R-41) (committed words are trusted by the parser, R-37, so a partition found by search is enough; real words preferred for the device read), registered in the fixture name list of `src/architecture-ad2-ad12-ad17.test.ts` (whose count wording is corrected) and in the `ValidName` union, `VALID`, `PROPERTIES` and `REBUILDS` of `src/engine/serialize.test.ts` (the rebuild is a scripted drop/validate/confirm sequence with inline dictionaries, as `winSeed` does), with the long word exactly 10 letters, seeded only through `seedStorage`; no Session or history shape changes."
+verify = "The engine unit tests named R-86 pass for order, ties, duplicates, QU, empty, a reused card, draft exclusion and Undo of the finish, `src/architecture-ad2-ad12-ad17.test.ts` and `src/engine/index.test.ts` list `WordListEntry`, `wordList` is absent while playing and present for won and gaveUp, the new fixture is registered in those three places, parses, rebuilds byte for byte and yields the expected list (including the shared `CardId` in two entries), and the existing serialize and fixture tests stay green."
+covers = ["CAP-1"]
+after = []
+hitl = false
+risk = "low"
+unknown = "Finding a seed and move partition that gives a duplicate, a tie, a long word and a shared card is a search; real words are best-effort."
+interface = "view(session, lang).wordList?: readonly WordListEntry[]; WordListEntry { spelling, letterCount, cards, cell }; fixtures/session-won-words.json (Undo then Confirm is the Playwright win route)."
+tests = "R-86 rows of rule-coverage.md (E); architecture tests; fixture registration and rebuild tests."
+owns = "The word list derivation and the shared won-with-words fixture."
+consumers = "Entry 2 (EndSheet.svelte), entry 3 (the celebration), entries 5–8 (Playwright)."
+references = ["architecture — ARCHITECTURE-SPINE.md AD-2, AD-3, AD-6", "rules — docs/game-flow-spec.md R-86, Q-47", "code — src/engine/view.ts, src/engine/replay.ts, src/engine/index.ts, fixtures/, e2e/helpers/seed.ts"]
+
+[[entry]]
+id = 2
+type = "story"
+title = "End-sheet Words section"
+description = "Renders the Words section below the end-sheet buttons from `view.wordList` for won and gaveUp: a list named `Words` by role and name under a `Words` heading, one row per entry named like `BAKED, 5 letters` with the word in capitals and `n letters` (`1 letter` for one), `No words were played.` when empty, rows at least 44 px, the sheet's content area scrolling; strings in `text.ts`, labels by role and name, and the relaunch, Undo, New game and Replay cases, using entry 1's fixture."
+verify = "On `android`, the won fixture and a seeded give-up show the list in order (a duplicate twice, a tie alphabetical), a zero-move give-up shows the empty line, a reload shows it, Undo of the finish, New game and Replay remove it, `localStorage` is unchanged by viewing it, a Vitest AD-3 test shows the section renders only from `view.wordList`, and `npm run test:screens` has the sheet at 360 px in Charcoal and one light theme."
+covers = ["CAP-4"]
+after = [1]
+hitl = false
+risk = "low"
+tests = "R-88 rows of rule-coverage.md (P6, U `AD-3`, screens)."
+owns = "The Words section markup and its strings."
+consumers = "None."
+references = ["design — EXPERIENCE.md End sheet, Message catalogue; DESIGN.md Words section", "code — src/ui/EndSheet.svelte, src/ui/text.ts, src/ui/end-sheet.test.ts"]
+
+[[entry]]
+id = 3
+type = "story"
+title = "Celebration step, renderer and run controller"
+description = "Adds `src/ui/celebration/`: the pure `step` (floor bounce, wall exit, dt clamp, entry-index launch parameters, waves, the cap with a closing fade), `Celebration.svelte` drawing one clipped row of card-face copies per entry with `data-celebration` and no card ids, and the overlay-agnostic run controller `celebration.svelte.ts` with `start(view, done)`, `end()` (calling `done` once, synchronously here), `cancel()`, a drive loop (real `requestAnimationFrame`, or a manual clock driven by `advance(ms)` that entry 5 delegates to) and an `onEnd` hook for entry 4 to attach the overlay pop to; the cap goes in `motion.ts` and `BASE_MS` is exported from `prefs.svelte.ts` (one constant, not a second copy); it is not mounted or triggered by the game yet."
+verify = "UI Vitest AD-19 tests pass for floor contact, exit, determinism, dt clamp, the cap and fade, an empty list, `end()` calling `done` once and `cancel()` never, the manual clock stepping in fixed 16 ms sub-steps, and a render test shows copies with `data-celebration` and no `data-card-id`, `data-testid` or `data-mirror-of`, a 23-letter row scaled to fit a 360 px band."
+covers = ["CAP-2"]
+after = [1]
+hitl = false
+risk = "medium"
+unknown = "The wave, stagger and physics constants are initial values here and are tuned at entry 6's checkpoint, the first point the motion can be seen; cost of DOM copies on a mid-range Android is judged there too."
+plan_checkpoint = true
+interface = "step(state, dtMs); start(view, done), end(), cancel(), setManual(on), advance(ms), onEnd(fn) on celebration.svelte.ts (attachOverlays() arrives in entry 4); celebrationCapMs() in motion.ts; BASE_MS exported from prefs.svelte.ts."
+tests = "AD-19 step and controller tests (U); copy markup (U)."
+owns = "The step function, the renderer, the run controller, its drive loop and the cap."
+consumers = "Entries 4–8."
+references = ["architecture — ARCHITECTURE-SPINE.md AD-19, AD-14, AD-10", "design — DESIGN.md Win celebration, A-D12; EXPERIENCE.md Win celebration, Motion", "code — src/ui/motion.ts, src/shell/prefs.svelte.ts (BASE_MS), src/ui/layout/"]
+
+[[entry]]
+id = 4
+type = "story"
+title = "Celebration overlay entry"
+description = "Adds the `celebration` entry to `overlays.svelte.ts` (`startCelebration`, legal only with no other entry and the end sheet hidden, in `SUSPENDING`, in no `LEGAL_TOPS`), the removal callback that records why the entry was removed and runs entry 3's `done` in a microtask after the removal loop, the `attachOverlays()` function in `celebration.svelte.ts` (added here) that registers a removal callback with `overlays` and uses entry 3's `onEnd` hook so `end()` pops the entry and defers `done` to a microtask, so `overlays` never imports `celebration` (called from `main.ts` at boot by entry 5, directly by the tests here), and the `closedByBack`, `resetForNewSession` and `unfinished` paths for it."
+verify = "UI Vitest AD-13 tests (with a stubbed `done` standing in for entry 5's sheet open) pass for the legal start, a back that ends it without sweeping a following push, Undo and New game cancelling without `done`, game keys ignored while it is the top entry, and `?` and a WordCell tap not opening a surface over it."
+covers = ["CAP-3"]
+after = [3]
+hitl = false
+risk = "high"
+unknown = "Whether the microtask ordering and nav's pop-before-push queue behave on `closedByBack` as AD-13 states; this entry proves it with a stub and entry 6's back test proves it against the real sheet."
+plan_checkpoint = true
+interface = "overlays.startCelebration(), the registered removal callback, overlays.close('celebration'), attachOverlays()."
+tests = "AD-13 tests for the entry (U)."
+owns = "The `celebration` overlay entry and its sequencing."
+consumers = "Entries 5–7."
+references = ["architecture — ARCHITECTURE-SPINE.md AD-13 (the celebration bullet), AD-19", "code — src/ui/overlays.svelte.ts, src/shell/nav.ts, src/ui/keys.ts"]
+
+[[entry]]
+id = 5
+type = "story"
+title = "Win trigger and celebration test seam"
+description = "Mounts `Celebration.svelte` in `App.svelte`, calls entry 4's `attachOverlays()` from `main.ts`, starts the run from `onDispatched`'s winning `whenSettled` callback (push the entry, run, open the end sheet on `done`) with the finish and cap and the no-start cases (relaunch, reduced motion, Give up, seam disabled), and adds the AD-17 seam: `registerCelebrationSeam` and `window.__wordcell.celebration.{setEnabled, running, advance}` on the frozen hook (created at import, late-bound to entry 3's manual clock, registered from `main.ts` beside `registerBeforeBack`, off by default), the four-key changes to `e2e/globals.d.ts`, `e2e/test-hook.spec.ts` and `e2e/pwa/test-hook.spec.ts`, and the e2e helper that enables it and advances to the end; `Celebration.svelte` is mounted once per run (keyed on the run, e.g. `{#key}` on the controller's reactive `celebration.props()`) so `register` always matches the current groups."
+verify = "`npm run test:all` is green with every existing win-and-sheet spec unchanged (seam off by default), the two hook specs assert the four-key frozen hook, and Playwright rows pass for the won-words fixture + Undo + Confirm → celebration → expanded sheet, the cap at Fast and Slow, no celebration on Give up, relaunch and emulated reduced motion, a test records that the seam is off by default, and the copies being separate from live cards (live `[data-card-id]` stays at 52 while the `[data-celebration]` copy count equals the sum of the `wordList` card counts and exceeds 52 for the shared-card fixture), a check that after `advance` past the first launch at least one `[data-celebration-group]` has opacity > 0 and a non-empty transform, the groups registered in `wordList` order, and that a second run (Undo then Redo of the win, no reload) mounts a fresh `Celebration` whose own groups become visible; no screenshot baseline changes."
+covers = ["CAP-3", "CAP-6"]
+after = [1, 2, 3, 4]
+hitl = false
+risk = "high"
+unknown = "How the seam's disabled path interacts with the existing winning guard in every existing win spec; the unchanged-specs run proves it."
+plan_checkpoint = true
+interface = "end-sheet.ts onDispatched, App.svelte mount, window.__wordcell.celebration, e2e/helpers/ celebration helper (owned here, used by 6 and 7), main.ts registrations."
+tests = "R-87 start, finish and no-start rows (P6), hook specs (P6, dev server and pwa), default-off check (P6), AD-19 wiring (U)."
+owns = "The win trigger, the mount and the AD-17 celebration seam."
+consumers = "Entries 6 and 7 (entry 8 is hook-free and uses entry 6's press helper)."
+references = ["architecture — ARCHITECTURE-SPINE.md AD-13, AD-14 (winning guard), AD-17 (Celebration seam), AD-19", "design — EXPERIENCE.md Win celebration", "code — src/ui/end-sheet.ts, src/ui/App.svelte, src/ui/motion.ts (whenOpenAllowed), src/shell/test-hook.ts, src/main.ts, e2e/globals.d.ts, e2e/test-hook.spec.ts, e2e/pwa/test-hook.spec.ts, e2e/win-guard.spec.ts"]
+
+[[entry]]
+id = 6
+type = "story"
+title = "Celebration skip"
+description = "Adds the skips on top of entry 5's trigger: a press outside the top bar, action bar and dictionary banner that began after the start (one-shot click swallow, consumed; a held finger and a banner button do not skip), `Space`/`Esc` on desktop (not while a bar or banner control has focus), and the Android back gesture through entry 4's `closedByBack` path; this entry owns the press-outside-the-bars e2e helper and adjusts the wave, stagger and physics constants and the copy scale that Jared's Android read calls for."
+verify = "The R-87 skip rows of rule-coverage.md pass on `android` (`desktop` for `Space`/`Esc`), including the consumed press, a held finger not skipping, a banner button not skipping, and back leaving the app open with the expanded sheet, and Jared's Android read of the first real win with the long-word fixture settles the copy cost, the initial constants and A-D12, and `npm run test:screens` is green."
+covers = ["CAP-3"]
+after = [5]
+hitl = false
+risk = "high"
+unknown = "How Android treats a back that ends the run and immediately pushes the sheet entry; the real-sheet back test is the proof."
+plan_checkpoint = true
+done_checkpoint = true
+interface = "capture-phase listeners owned by celebration.svelte.ts, e2e/helpers/ skip helper."
+tests = "R-87 skip rows (P6, `desktop` for the keys); AD-19 listener tests (U)."
+owns = "The skips and the press helper."
+consumers = "Entries 7 and 8."
+references = ["architecture — ARCHITECTURE-SPINE.md AD-13, AD-19 (Skip)", "design — EXPERIENCE.md Win celebration (Skip), Keyboard", "code — src/ui/celebration/, src/ui/motion.ts, src/ui/keys.ts"]
+
+[[entry]]
+id = 7
+type = "story"
+title = "Celebration interruptions"
+description = "Adds the new end paths on top of entries 5 and 6: the ☰ button and `M` (sheet expanded, then the menu after the push settles), the before-hide callback (sheet open queued for the next visible, idempotent) and `resize`/`orientationchange`; and proves with Playwright the behaviours entries 4 and 5 already provide: Undo, New game and the `N` key cancel without a sheet, a Redo that restores the win starts it again, and `?` and WordCell keys do nothing while it runs."
+verify = "The R-87 interruption rows of rule-coverage.md pass on `android` (`desktop` for the keys) with the seam enabled, including hide → show → sheet expanded with back and the menu still working, and `npm run test:all` and `npm run test:screens` are green."
+covers = ["CAP-3"]
+after = [6]
+hitl = false
+risk = "high"
+unknown = "How Android treats the sheet's history push after the hide callback; the lifecycle test proves the app-level behaviour and the epic 7 device check the platform."
+plan_checkpoint = true
+interface = "celebration.svelte.ts end(hide-mode), the ☰/`M` handlers, main.ts before-hide and resize registrations."
+tests = "R-87 interruption rows (P6, `desktop` for keys)."
+owns = "The menu, hide and resize ends of the run."
+consumers = "None."
+references = ["architecture — ARCHITECTURE-SPINE.md AD-9, AD-13, AD-19 (Hide)", "design — EXPERIENCE.md Win celebration (Skip, Never plays, Keys while it runs), A-E16", "code — src/ui/keys.ts, src/ui/act.ts, src/ui/Menu.svelte, src/shell/game.svelte.ts (registerBeforeHide), e2e/helpers/lifecycle.ts"]
+
+[[entry]]
+id = 8
+type = "story"
+title = "Hook-free celebration suite"
+description = "Adds to `e2e/pwa/dist-smoke.spec.ts` (run by the `dist-smoke` project of `playwright.pwa.config.ts` against `dist/`, with no test hook) a real win by seeding the won-words fixture through `seedStorage` (or `openFixture` with `booted: false` and the `undo` step, since `dist/` has no hook to wait on), one Undo and Confirm, that plays the celebration in real time, is skipped by entry 6's press helper and by back, and opens the expanded end sheet; the audit result is that no hook-free spec wins a game today, so no existing spec changes."
+verify = "`npm run build` then `npm run test:e2e:dist` is green and the new hook-free test passes against the production build."
+covers = ["CAP-6"]
+after = [6, 7]
+hitl = false
+risk = "medium"
+tests = "Hook-free rows of rule-coverage.md (P6 `dist-smoke`)."
+owns = "The hook-free proof."
+consumers = "None."
+references = ["architecture — ARCHITECTURE-SPINE.md AD-17 (Celebration seam), AD-18", "code — e2e/pwa/dist-smoke.spec.ts, playwright.pwa.config.ts (dist-smoke project)"]
+
+[[entry]]
+id = 9
+type = "story"
+title = "Close-out: documents, AGENTS pitfall and device check"
+description = "Brings EXPERIENCE.md, DESIGN.md, the spine and rule-coverage.md in line with the build (the Opus review close-out edits to AD-19, SPEC CAP-2/F3, Scaffold deltas and the rule-coverage Exempt list are already applied, 2026-10-23), runs `bmad-project-context` to add the celebration-copy pitfall (`data-celebration`, neither live nor mirror) to AGENTS.md, and hands Jared the build for the final Android read (a long word list, the hide path, the Words section on the sheet)."
+verify = "No document contradicts the build, every row of rule-coverage.md names a passing test (the tickets record the test names; this entry checks each row), AGENTS.md carries the pitfall, `npm run test:all` and `npm run test:screens` are green, and Jared records his Android read in the epic Notes."
+covers = ["CAP-5"]
+after = [2, 7, 8]
+hitl = true
+risk = "low"
+done_checkpoint = true
+references = ["constraint — AGENTS.md (managed block edits go through bmad-project-context)"]
+
+[[entry]]
+id = 10
+type = "story"
+title = "Refactor sweep"
+description = "Closing cleanup of epic 10, after the owner's device read: scope is set when it starts, from the build records and review findings deferred during the epic and anything the device read turned up; cleanup only, no new behaviour."
+verify = "`npm run test:all` and `npm run test:screens` are green and every deferred cleanup finding is applied or recorded as declined."
+covers = []
+after = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+hitl = false
+risk = "low"
+done_checkpoint = true
+references = ["constraint — docs/development-methodology.md, Definition of done"]

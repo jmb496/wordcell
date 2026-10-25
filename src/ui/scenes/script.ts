@@ -4,7 +4,9 @@ import type { Scene, StepType } from './types';
 const COMMAND_TYPES: Record<StepType, readonly string[]> = {
   grab: ['drop'],
   drop: ['drop'],
-  move: ['arrange', 'setPlacementOrder'],
+  // A fixture `arrange` is always the `arrange` tile glide, never a pointer move (owner decisions
+  // D3, D4, 2026-10-22).
+  move: ['setPlacementOrder'],
   arrange: ['arrange'],
   fly: [],
   tap: ['addFreeLetter', 'validate', 'setDestinationCount', 'flip', 'setTarget', 'confirm'],

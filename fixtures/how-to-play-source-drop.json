@@ -18,5 +18,9 @@
     { "after": 0, "canValidate": false },
     { "after": 1, "canValidate": true },
     { "after": 2, "canValidate": true }
+  ],
+  "drafts": [
+    { "after": 1, "letters": ["F", "E", "D", "K", "A"] },
+    { "after": 2, "letters": ["F", "A", "K", "E", "D"] }
   ]
 }

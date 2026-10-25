@@ -3,11 +3,18 @@
 // to the animation's settle (one token, re-checked against the store); a Give up opens at once;
 // an unfinished game (Undo) hides the sheet or cancels the pending open; a relaunch into won or
 // gaveUp opens at boot. Undo-cancel and the 300 ms floor belong to the winning guard (entry 12).
+// Epic 10 entry 5 (AD-19 Start, AD-13 celebration bullet): at a win's settle, with the celebration
+// enabled (AD-17), motion not reduced and the page visible, the run starts instead (the press
+// cancelled first) and its `done` runs the token-guarded open; otherwise today's open runs. Give up
+// and `openAtBoot` (a relaunch) never start it.
 import { tick } from 'svelte';
 import type { GameView } from '../engine/index';
 import { type DispatchResult, game } from '../shell/game.svelte';
+import { prefs } from '../shell/prefs.svelte';
+import { cancelGesture } from './act';
 import { announceOutcome } from './announce';
-import { focusBoard } from './focus-board';
+import { celebration, celebrationEnabled } from './celebration/celebration.svelte.ts';
+import { focusByPhase } from './focus-board';
 import { overlays } from './overlays.svelte';
 import { text } from './text';
 
@@ -16,21 +23,51 @@ export type WhenSettled = (callback: () => void) => void;
 
 export function onDispatched(result: DispatchResult, whenSettled: WhenSettled): void {
   if (result.unfinished === true) {
-    const shown = overlays.endSheet !== 'hidden';
+    // AD-13: an open celebration counts as shown (focus-follow yielded under it).
+    const shown = overlays.endSheet !== 'hidden' || overlays.isOpen('celebration');
     overlays.onUnfinished();
-    // EXPERIENCE.md Focus: Undo from the sheet resumes play with focus on the board.
-    if (shown) void tick().then(focusBoard);
+    // EXPERIENCE.md Focus: Undo from the sheet or the celebration resumes play with focus on the
+    // phase's target (the first strip card after a win's Undo; the board after a Give up's). After
+    // `tick()`: focus-follow.ts yields while focus is still inside the exiting sheet, and it yielded
+    // under the celebration (`SUSPENDING`), so neither case moves focus without this call.
+    if (shown) void tick().then(() => focusByPhase(viewNow()));
     return;
   }
   if (result.finished === 'won') {
     const token = overlays.deferEndSheetOpen();
-    // AD-13: pushes only while the store still says won (the token callback re-check).
+    // AD-13: pushes only while the store still says won (the token callback re-check). The flag is
+    // read first, so a disabled celebration never reads `document`.
     whenSettled(() => {
-      if (game.view?.status === 'won' && overlays.openDeferred(token)) announceOutcome();
+      if (!celebrationEnabled() || prefs.motion.reduced || document.visibilityState !== 'visible') {
+        if (game.view?.status === 'won' && overlays.openDeferred(token)) announceOutcome();
+        return;
+      }
+      const view = game.view;
+      if (view?.status !== 'won' || !overlays.isLiveToken(token)) return;
+      // Entry 4's deferred finding: a long-press timer armed earlier would `openPeek` under the
+      // `celebration` entry and throw.
+      cancelGesture();
+      overlays.startCelebration();
+      celebration.start(view, () => {
+        if (document.visibilityState === 'visible') {
+          if (game.view?.status === 'won' && overlays.openDeferred(token)) announceOutcome();
+          return;
+        }
+        // Epic 6 SPEC F16: a return from hidden is silent (no announce).
+        void game.whenVisible().then(() => {
+          if (game.view?.status === 'won') overlays.openDeferred(token);
+        });
+      });
     });
   } else if (result.finished === 'gaveUp') {
     if (overlays.openDeferred(overlays.deferEndSheetOpen())) announceOutcome();
   }
+}
+
+function viewNow(): GameView {
+  const view = game.view;
+  if (view === undefined) throw new Error('AD-13 end sheet Undo with no GameView');
+  return view;
 }
 
 /** R-73: a relaunch with status won or gaveUp opens the sheet expanded (AD-16, before the notice). */

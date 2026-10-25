@@ -1,5 +1,9 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { expect, type Locator, type Page, test } from '@playwright/test';
-import { openFixture } from './helpers/board';
+import { themeRecords } from '../src/ui/theme/colour-literals';
+import { cards, centre, openFixture } from './helpers/board';
+import { holdThrough, path as points } from './helpers/gestures';
 import { onAndroid } from './helpers/project';
 import { tokenColor } from './helpers/style';
 
@@ -197,5 +201,42 @@ for (const { id, radio } of ARTS) {
     await expect(prefs).toBeHidden();
     expect(await style(page.locator('html'), 'background-image')).toMatch(IMAGE);
     expect(await measure()).toEqual(before);
+  });
+}
+
+// Owner decision D4 (2026-10-22): a drop-target card keeps its theme texture under the 12 % wash.
+// Every theme whose app.css record carries a card texture, each seeded from `prefs-theme-<id>`.
+const TEXTURED = [
+  ...themeRecords(readFileSync(path.resolve(import.meta.dirname, '../src/ui/app.css'), 'utf8')),
+]
+  .filter(([, record]) => (record.get('--wc-card-texture') ?? 'none') !== 'none')
+  .map(([id]) => id);
+
+test('AD-14 TH-9 app.css has at least one theme with a card texture', () => {
+  expect(TEXTURED.length).toBeGreaterThan(0);
+});
+
+for (const id of TEXTURED) {
+  test(`AD-14 TH-9 ${id}: the drop-target card under a drag keeps its texture beneath the wash`, async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-idle-fresh', { prefs: `prefs-theme-${id}` });
+    expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe(id);
+    const dragged = cards(page, 1).last();
+    const target = cards(page, 3).last();
+    const face = target.locator(':scope > .face');
+    const texture = await style(face, 'background-image');
+    expect(texture).toMatch(IMAGE);
+    const from = await centre(dragged);
+    const to = await centre(target);
+    const hold = await holdThrough(page, from, points(from, to, 5));
+    try {
+      await expect(target).toHaveClass(/\bwc-drag-target\b/);
+      const image = await style(face, 'background-image');
+      expect(image).toMatch(/^linear-gradient\(/);
+      expect(image.endsWith(`, ${texture}`)).toBe(true);
+    } finally {
+      await hold.end();
+    }
   });
 }

@@ -2,6 +2,7 @@ import { createRawSnippet } from 'svelte';
 import { render } from 'svelte/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import dialogSrc from './Dialog.svelte?raw';
+import endSheetSrc from './EndSheet.svelte?raw';
 import { initMotion, REDUCED_FADE_MS } from './motion';
 import panelSrc from './Panel.svelte?raw';
 import {
@@ -19,7 +20,7 @@ import viewSrc from './WordCellView.svelte?raw';
 // Epic 6 CAP-1 (6.1): the shared surface primitives. The unit environment is `node` (no DOM), so
 // the components are proved by server renders (markup, classes, `inert`) and the transition and
 // focus logic by `presence.ts`; focus return and the computed transition are proved in a browser
-// once a real opener exists (ticket 6.2's Playwright check, e2e/wordcell-view.spec.ts for the view).
+// (e2e/menu.spec.ts for Sheet and Panel, e2e/wordcell-view.spec.ts for the view).
 const mocks = vi.hoisted(() => ({ nav: [] as string[] }));
 
 vi.mock('../shell/nav', () => ({
@@ -142,6 +143,7 @@ describe('AD-10 surface CSS', () => {
     ['Panel', panelSrc],
     ['Dialog', dialogSrc],
     ['WordCellView', viewSrc],
+    ['EndSheet', endSheetSrc],
   ];
 
   for (const [name, source] of FILES) {
@@ -256,6 +258,17 @@ describe('AD-13 App main inert', () => {
 
   it('AD-13 main is not inert with no surface open', async () => {
     expect(await mountApp(noop)).not.toMatch(/<main[^>]*inert/);
+  });
+
+  // Epic 10 entry 4 (AD-13 celebration bullet): `celebration` is in SUSPENDING but leaves `main`
+  // (board, top bar, action bar) usable.
+  it('AD-13 main is not inert while only celebration is on the stack', async () => {
+    const html = await mountApp((o) => {
+      o.onCelebrationRemoved(noop);
+      o.startCelebration();
+      expect(o.top).toBe('celebration');
+    });
+    expect(html).not.toMatch(/<main[^>]*inert/);
   });
 
   for (const id of INERT_IDS) {

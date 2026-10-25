@@ -44,3 +44,4 @@ Verify: npm run test:all and npm run test:screens are green with Playwright andr
 
 - Plan checkpoint: the plan decides whether the harness splits into a following entry. Done checkpoint: yes.
 - Decision (owner, 2026-10-16): after a tap pauses a scene, the next tap restarts it from step 1 (not resume).
+- Post-close review (Opus, 2026-10-22, `b6272b0`, log `opus-review-epic-8.md`): the replay harness gained optional fixture fields `drafts` and `columns` (test-only checks of tray letters and the post-Confirm board against the engine), the dictionary repro now checks every fixture word, and the player's timing is tested against `duration(kind)` at two speeds.

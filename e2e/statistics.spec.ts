@@ -12,6 +12,7 @@ import { fixture, seedStorage } from './helpers/seed';
 test.beforeEach(onAndroid);
 
 const HISTORY = 'wordcell:history';
+const UNREADABLE = "Your score history can't be read.";
 const HINT = 'Statistics are off until you reset it. Resetting deletes the old history.';
 const EMPTY_LINE = 'Finish or give up a game to see statistics here.';
 
@@ -148,7 +149,7 @@ for (const [file, sentence] of [
   ['history-invalid-array.json', "Its format version can't be read."],
   ['history-invalid-won-negative.json', "It uses format version 1 but its contents can't be read."],
 ] as const) {
-  test(`Q-33 ${file} shows its message and Reset history instead of tiles, and the menu dot`, async ({
+  test(`Q-33 ${file} shows the notice's headline above its message and Reset history instead of tiles, and the menu dot`, async ({
     page,
   }) => {
     await seedStorage(page, { history: fixture(file) });
@@ -158,6 +159,11 @@ for (const [file, sentence] of [
     await expect(menuButton(page)).toHaveAccessibleDescription("Your score history can't be read.");
     await openPanel(page);
     await expect(panel(page)).toContainText(`${sentence} ${HINT}`);
+    // EXPERIENCE.md catalogue: the same text as the History notice, its headline first (SPEC F9).
+    const lines = await panel(page)
+      .locator('p')
+      .evaluateAll((els) => els.map((el) => el.textContent?.trim() ?? ''));
+    expect(lines).toEqual([UNREADABLE, `${sentence} ${HINT}`]);
     await expect(panel(page).locator('.tile')).toHaveCount(0);
     await expect(panel(page).getByText(EMPTY_LINE)).toHaveCount(0);
     await expect(panel(page).getByRole('button', { name: 'Reset history' })).toBeVisible();

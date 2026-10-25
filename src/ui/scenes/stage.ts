@@ -9,8 +9,10 @@ export const face = (letter: string) => ({ letter, letterCount: letter === 'QU' 
 // `MIN_COLUMN_CARDS` cards: its scripted cards sit under filler added at the far (top) end, so the
 // tail and the bottom cards keep their order. Filler needs no CardId and is in no fixture (the HP-5
 // engine replay is unchanged). The letters come from this fixed sequence, no randomness: column 1's
-// filler first, then column 2's, and so on, each filler card taking the next letter in turn.
-export const FILLER_LETTERS = 'RSTLNEAIODUCMPHGBYFWK';
+// filler first, then column 2's, and so on, each filler card taking the next letter in turn. The order
+// is chosen so that no row of any scene's board reads a blocklisted word, plain or as the 20 px strip
+// clips it (E looks like F, G like C; owner decision D1, 2026-10-22; stage.test.ts).
+export const FILLER_LETTERS = 'RSTLNAEIODUCMPHGBYFWK';
 
 /**
  * The filler letters of each of the stage's eight columns, far end first, for columns that start
@@ -48,8 +50,7 @@ export function drawnColumns(
   const all = fixture.start.columns;
   const source = all[carry.sourceColumn - 1];
   const left = source.slice(0, source.length - carry.count);
-  const destCards =
-    carry.sourceColumn === carry.destinationColumn ? left : all[carry.destinationColumn - 1];
+  const destCards = destinationCards(fixture, carry);
   const destFrom = destCards.length - carry.destinationCount;
   return all.map((cards, i) => {
     if (i + 1 === carry.sourceColumn && carry.sourceColumn !== carry.destinationColumn) return left;
@@ -57,6 +58,45 @@ export function drawnColumns(
     return cards;
   });
 }
+
+/**
+ * The destination column's cards as the drop finds them (far end first): the fixture start column,
+ * or, for a drop on the source column (R-21), what the lift left behind.
+ */
+export function destinationCards(fixture: SceneFixtureData, carry: Carry): readonly string[] {
+  const all = fixture.start.columns;
+  const source = all[carry.sourceColumn - 1];
+  return carry.sourceColumn === carry.destinationColumn
+    ? source.slice(0, source.length - carry.count)
+    : all[carry.destinationColumn - 1];
+}
+
+/**
+ * Owner decision D10 (2026-10-22; R-31): the destination column's cards that join the D block when
+ * a frame's k exceeds the drop's count. `depth` counts up from the column's last card (0); the card
+ * at depth d is in the D block, so not drawn in its column, in a frame whose k exceeds d
+ * (`joinHidden`). `index` is its place in its drawn column (`drawnColumns`); its element is
+ * `join-<depth>`. Absent for a scene that draws no column move.
+ */
+export function joinCards(
+  fixture: SceneFixtureData,
+  carry: Carry | undefined,
+  frames: readonly Frame[],
+): { readonly column: number; readonly cards: readonly { index: number; depth: number }[] } {
+  if (carry === undefined) return { column: 0, cards: [] };
+  const deepest = Math.max(carry.destinationCount, ...frames.map((f) => f.k ?? 0));
+  const length = destinationCards(fixture, carry).length;
+  return {
+    column: carry.destinationColumn,
+    cards: Array.from({ length: deepest - carry.destinationCount }, (_, i) => {
+      const depth = carry.destinationCount + i;
+      return { index: length - 1 - depth, depth };
+    }),
+  };
+}
+
+/** Whether the destination card at `depth` is in frame `frame`'s D block, not in its column (D10). */
+export const joinHidden = (frame: Frame, depth: number): boolean => (frame.k ?? 0) > depth;
 
 /** The scene's stage inputs, from its own data: the tallest column and WordCell stack it draws. */
 export function sceneStageInputs(

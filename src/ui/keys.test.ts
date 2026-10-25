@@ -21,6 +21,8 @@ const mocks = vi.hoisted(() => {
     focus: { kind: 'board' } as unknown,
     tiles: [] as number[],
     onActivate: undefined as undefined | ((hit: unknown) => void),
+    /** A test's stand-in for the run's end (its close and the sheet's open), after the log. */
+    onCelebrationEnd: undefined as undefined | (() => void),
   };
   return state;
 });
@@ -57,6 +59,15 @@ vi.mock('./focus-board', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./focus-board')>()),
   focusBoard: () => mocks.log.push('focusBoard'),
   focusCard: (id: number) => mocks.log.push(`focusCard ${id}`),
+}));
+// Ticket 10.7: the run controller, reached only through open-menu.ts with `celebration` on top.
+vi.mock('./celebration/celebration.svelte.ts', () => ({
+  celebration: {
+    end: () => {
+      mocks.log.push('celebration.end');
+      mocks.onCelebrationEnd?.();
+    },
+  },
 }));
 vi.mock('./new-game', () => ({
   newGame: () => mocks.log.push('newGame'),
@@ -122,6 +133,7 @@ beforeEach(async () => {
   mocks.focus = { kind: 'board' };
   mocks.tiles = [];
   mocks.onActivate = undefined;
+  mocks.onCelebrationEnd = undefined;
   setView();
   const act = await import('./act');
   act.setController({
@@ -154,6 +166,11 @@ describe('AD-12 key-event filtering', () => {
     press('Z', { meta: true, shift: true });
     expect(mocks.log.filter((entry) => entry === 'redo')).toHaveLength(5);
     expect(mocks.log).not.toContain('undo');
+  });
+
+  it('AD-12 Shift is allowed: ? as a US layout sends it (Shift+/, key ?) opens How to play', () => {
+    expect(press('?', { shift: true })).toBe(true);
+    expect(overlays.top).toBe('howToPlay');
   });
 
   it('AD-12 any other Ctrl/Cmd/Alt chord is ignored and not default-prevented', () => {
@@ -411,7 +428,20 @@ describe('AD-12 key table per surface', () => {
   it('AD-12 Halted: no key acts', () => {
     mocks.game.state = { kind: 'halted' };
     mocks.game.view = undefined;
+    // An open menu over a tile selection: Esc closes neither (keys.ts pressEscape's halted guard).
+    overlays.selectTile(9);
+    overlays.open('menu');
     for (const key of ['m', 'n', '?', 'z', 'y', 'Escape']) expect(press(key)).toBe(false);
+    expect(overlays.top).toBe('menu');
+    expect(overlays.tileSelection).toBe(9);
+    overlays.close('menu');
+    settle();
+    // Nothing open: only attempt's halted check stops M, N, ?, Z and Y (a defined view, so
+    // `view === undefined` cannot mask it); Esc keeps the tile selection.
+    setView();
+    for (const key of ['z', 'y', 'n', '?', 'm', 'Escape']) expect(press(key)).toBe(false);
+    expect(overlays.top).toBeUndefined();
+    expect(overlays.tileSelection).toBe(9);
     expect(mocks.log).toEqual([]);
   });
 });
@@ -496,6 +526,29 @@ describe('AD-12 pending pop', () => {
     expect(overlays.top).toBe('howToPlay');
   });
 
+  it('AD-12 M waits for the pending pop, then opens the menu', () => {
+    mocks.pending = true;
+    expect(press('m')).toBe(false);
+    expect(overlays.depth).toBe(0);
+    settle();
+    expect(overlays.top).toBe('menu');
+  });
+
+  it('AD-12 N waits for the pending pop, then opens the New game confirm in progress, else starts a new game', () => {
+    mocks.pending = true;
+    expect(press('n')).toBe(false);
+    expect(mocks.log).toEqual([]);
+    settle();
+    expect(ACTED(mocks.log)).toEqual(['newGameConfirm']);
+    mocks.log.length = 0;
+    setView({ inProgress: false });
+    mocks.pending = true;
+    expect(press('n')).toBe(false);
+    expect(mocks.log).toEqual([]);
+    settle();
+    expect(ACTED(mocks.log)).toEqual(['newGame']);
+  });
+
   it('AD-12 Esc is dropped while a pop is pending and queues nothing', () => {
     overlays.open('menu');
     mocks.pending = true;
@@ -536,6 +589,28 @@ describe('AD-12 clearTile and tileTap stale selection', () => {
     overlays.clearTile = original;
     expect(order[0]).toBe('clearTile');
     expect(mocks.log).toEqual(['cancel', 'undo']);
+  });
+
+  it('AD-12 Enter on a tile (Validate) and on a strip card (Confirm) clears the tile selection before its row runs', () => {
+    const original = overlays.clearTile;
+    overlays.clearTile = () => {
+      mocks.log.push('clearTile');
+      original();
+    };
+    board({ phase: 'composing', flags: { canValidate: true } });
+    onTile(2, 1, 3);
+    overlays.selectTile(1);
+    press('Enter');
+    expect(overlays.tileSelection).toBeNull();
+    expect(mocks.log).toEqual(['cancel', 'clearTile', 'validate']);
+    mocks.log.length = 0;
+    board({ phase: 'place', flags: { canConfirm: true } });
+    onTile(5, 4, null, 'strip');
+    overlays.selectTile(4);
+    press('Enter');
+    overlays.clearTile = original;
+    expect(overlays.tileSelection).toBeNull();
+    expect(mocks.log).toEqual(['cancel', 'clearTile', 'confirm']);
   });
 });
 
@@ -1139,6 +1214,20 @@ describe('AD-12 board keys: WordCell Enter and Space', () => {
     expect(overlays.viewCell).toBeNull();
   });
 
+  it('AD-12 Space with focus in the open sticky view closes it; Enter there does not (SPEC F11)', () => {
+    board({ cellCards: { 4: [40] } });
+    overlays.openView(4);
+    mocks.focus = { kind: 'view', cell: 4 };
+    expect(press('Enter')).toBe(false);
+    expect(overlays.viewCell).toBe(4);
+    expect(press(' ')).toBe(true);
+    expect(overlays.viewCell).toBeNull();
+    settle();
+    expect(overlays.viewCell).toBeNull();
+    mocks.focus = { kind: 'view', cell: 5 };
+    expect(press(' ')).toBe(false);
+  });
+
   it('AD-12 there is no giveUp key row', () => {
     expect(Object.keys(keys.ROWS)).not.toContain('giveUp');
   });
@@ -1357,5 +1446,135 @@ describe('AD-12 board keys: a pending pop', () => {
     for (const key of [' ', 'ArrowLeft', '+', 'f', '6']) press(key);
     settle();
     expect(mocks.log).toEqual([]);
+  });
+});
+
+// Epic 10 entry 4 (AD-13 celebration bullet; EXPERIENCE.md Win celebration "Keys while it runs"):
+// with only `celebration` open, `attempt()` runs the `undo`, `newGame` and `menu` rows (ticket 10.7)
+// and no other. Each row's gate is spied (answering false, so nothing runs): the key reaches it with
+// nothing open, and not while the celebration runs. The removal callback is a recording stub.
+type Spec = { key: string; mods?: Mods; arrange?: () => void };
+const KEY_OF: Record<Exclude<keyof Keys['ROWS'], 'undo' | 'newGame' | 'menu'>, Spec> = {
+  redo: { key: 'y' },
+  validate: { key: 'Enter', arrange: () => board({ phase: 'composing' }) },
+  confirm: { key: 'Enter', arrange: () => board({ phase: 'place' }) },
+  flip: { key: 'f' },
+  'k+': { key: '+' },
+  'k-': { key: '-' },
+  howToPlay: { key: '?', mods: { shift: true } },
+  column: { key: '1', arrange: () => board() },
+  tailUp: { key: 'ArrowUp' },
+  tailDown: { key: 'ArrowDown' },
+  cell: { key: '3', arrange: () => board({ phase: 'composing' }) },
+  focusMove: { key: 'ArrowRight' },
+  tileMove: { key: 'ArrowRight', mods: { shift: true } },
+  // WordCell Enter (the tap) and WordCell Space (the view) on a won board.
+  tap: {
+    key: 'Enter',
+    arrange: () => {
+      board({ status: 'won', cellCards: { 4: [40] } });
+      onCell(4);
+    },
+  },
+  view: {
+    key: ' ',
+    arrange: () => {
+      board({ status: 'won', cellCards: { 4: [40] } });
+      onCell(4);
+    },
+  },
+};
+
+describe('AD-13 keys while the celebration runs', () => {
+  const reasons: string[] = [];
+  function celebrate(): void {
+    reasons.length = 0;
+    overlays.onCelebrationRemoved((reason) => reasons.push(reason));
+    overlays.startCelebration();
+  }
+
+  it('AD-13 the KEY_OF table covers every ROWS id but undo, newGame and menu', () => {
+    expect(Object.keys(KEY_OF).sort()).toEqual(
+      Object.keys(keys.ROWS)
+        .filter((id) => id !== 'undo' && id !== 'newGame' && id !== 'menu')
+        .sort(),
+    );
+  });
+
+  for (const [id, spec] of Object.entries(KEY_OF)) {
+    it(`AD-13 ${id} (${JSON.stringify(spec.key)}) runs no attempt() row while only celebration is open`, () => {
+      spec.arrange?.();
+      const gate = vi.spyOn(keys.ROWS[id as keyof Keys['ROWS']], 'gate').mockReturnValue(false);
+      press(spec.key, spec.mods);
+      expect(gate).toHaveBeenCalledOnce();
+      gate.mockClear();
+      celebrate();
+      expect(press(spec.key, spec.mods)).toBe(false);
+      expect(gate).not.toHaveBeenCalled();
+      expect(mocks.log).toEqual([]);
+      expect(overlays.top).toBe('celebration');
+      expect(overlays.depth).toBe(1);
+      expect(reasons).toEqual([]);
+    });
+  }
+
+  it('AD-13 Z, Ctrl+Z, N and M act while only celebration is open', () => {
+    setView({ inProgress: false });
+    celebrate();
+    expect(press('z')).toBe(true);
+    expect(press('z', { ctrl: true })).toBe(true);
+    expect(press('n')).toBe(true);
+    // M runs open-menu.ts `openMenu()`: the (mocked) run's end first.
+    expect(press('m')).toBe(true);
+    expect(ACTED(mocks.log)).toEqual(['undo', 'undo', 'newGame', 'celebration.end']);
+  });
+
+  it('AD-13 Undo still gates under the celebration: a disabled Undo does nothing', () => {
+    setView({ canUndo: false });
+    celebrate();
+    expect(press('z')).toBe(false);
+    expect(mocks.log).toEqual([]);
+  });
+
+  it('AD-13 with another suspending entry over the celebration Z, N and M do nothing', () => {
+    celebrate();
+    overlays.open('historyNotice');
+    expect(press('z')).toBe(false);
+    expect(press('n')).toBe(false);
+    expect(press('m')).toBe(false);
+    expect(mocks.log).toEqual([]);
+  });
+
+  it('AD-13 a second M before the settle runs no row: celebration.end once, the second press waits on the pending pop and attempt() is false over the menu', () => {
+    setView({ inProgress: false });
+    const token = overlays.deferEndSheetOpen();
+    celebrate();
+    // As the real run's end (open-menu.ts): its close queues the pop, and its `done` opens the
+    // sheet behind it before the pop settles.
+    mocks.onCelebrationEnd = () => {
+      overlays.close('celebration');
+      overlays.openDeferred(token);
+    };
+    expect(press('m')).toBe(true);
+    expect(mocks.pending).toBe(true);
+    expect(overlays.top).toBe('endSheet');
+    // The second M arrives before the settle: it waits, and nothing is prevented.
+    expect(press('m')).toBe(false);
+    expect(mocks.waiters).toHaveLength(2);
+    settle();
+    expect(ACTED(mocks.log)).toEqual(['celebration.end']);
+    expect(overlays.top).toBe('menu');
+    expect(overlays.depth).toBe(2);
+    expect(reasons).toEqual(['ended']);
+  });
+
+  it('AD-13 Esc with the celebration on top does nothing here (the AD-19 skip listener owns it): not prevented, no act(), depth unchanged', () => {
+    celebrate();
+    expect(press('Escape')).toBe(false);
+    expect(overlays.top).toBe('celebration');
+    expect(overlays.depth).toBe(1);
+    expect(mocks.pending).toBe(false);
+    expect(mocks.log).toEqual([]);
+    expect(reasons).toEqual([]);
   });
 });

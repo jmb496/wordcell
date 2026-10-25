@@ -9,8 +9,11 @@
 // Without a phase change, a focused card or tile that left the DOM (Undo/Redo inside Composing or
 // Place, a pointer edit, `+`/`-`, Flip) hands focus to its next sibling in its region, else the
 // region's first item, else the board (focus-board.ts `afterLoss`).
+// The phase targets are focus-board.ts `focusByPhase`, shared with the two paths that move focus
+// after a surface closes, when this effect has yielded: Undo from the shown end sheet (end-sheet.ts)
+// and the History notice's close (App.svelte).
 import type { CardId, GameView } from '../engine/index';
-import { afterLoss, focusBoard, focusCard, focusFirstStrip, focusFirstTile } from './focus-board';
+import { afterLoss, focusBoard, focusByPhase, focusCard } from './focus-board';
 import { overlays, SUSPENDING } from './overlays.svelte';
 
 type Tracked = {
@@ -53,10 +56,7 @@ export function createFocusFollow() {
   let tracked: Tracked | null = null;
 
   function followPhase(view: GameView): void {
-    if (view.status !== 'playing') return;
-    if (view.phase === 'composing') focusFirstTile();
-    else if (view.phase === 'place') focusFirstStrip();
-    else focusBoard();
+    if (view.status === 'playing') focusByPhase(view);
   }
 
   function recover(lost: Tracked): void {

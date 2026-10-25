@@ -8,7 +8,7 @@ import { type AnyNode, isNode, parseSvelte, ROOT, walk } from './architecture-sc
 // --- AD-17 valid fixtures -------------------------------------------------------------------
 
 describe('AD-17 valid session fixtures', () => {
-  it('AD-17 the valid fixtures/session-*.json files are exactly the seventeen rebuilt ones', () => {
+  it('AD-17 the valid fixtures/session-*.json files are exactly the rebuilt ones', () => {
     // Own copy of serialize.test.ts's VALID names (tests never import each other); serialize.test.ts
     // ties REBUILDS to VALID, so a new valid fixture fails here until both lists there name it.
     const names = readdirSync(posix.join(ROOT, 'fixtures'))
@@ -24,6 +24,7 @@ describe('AD-17 valid session fixtures', () => {
       'session-idle-empty-column.json',
       'session-idle-fresh.json',
       'session-idle-pending-draft-long.json',
+      'session-idle-pending-draft-overflow.json',
       'session-idle-pending-draft.json',
       'session-one-letter-left.json',
       'session-place-compact.json',
@@ -32,6 +33,8 @@ describe('AD-17 valid session fixtures', () => {
       'session-place-long.json',
       'session-place-onto-committed.json',
       'session-place.json',
+      'session-won-long-words.json',
+      'session-won-words.json',
       'session-won.json',
     ]);
   });
@@ -114,6 +117,7 @@ describe('AD-2 engine index exports', () => {
         'Status',
         'StructuralCheck',
         'WordCellNumber',
+        'WordListEntry',
       ].sort(),
     );
   });

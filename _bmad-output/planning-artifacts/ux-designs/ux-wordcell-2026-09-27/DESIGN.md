@@ -3,7 +3,7 @@ name: WordCell
 description: Solo FreeCell-style word card game. Dark card table, ivory serif letters, one teal for "you can act here" and one orange for "commit". Portrait phone first.
 status: final
 created: 2026-09-27
-updated: 2026-09-27
+updated: 2026-10-20
 sources:
   - _bmad-output/planning-artifacts/briefs/brief-wordcell-2026-09-26/brief.md
   - docs/game-flow-spec.md
@@ -181,7 +181,7 @@ WordCell is a quiet card table for one. It borrows the posture of a good solitai
 are the interface, chrome recedes, and nothing moves unless the player moved it. The letters are
 the only thing with presence, so they get a real serif face on a dark card, the way the BGA
 quilled-letter art put a letter on charcoal. There are no hints (Q-19), no sound (Q-20), no
-celebration beyond a short fly-to-cell animation and the end screen's light-hearted band message.
+celebration beyond a short fly-to-cell animation, the end screen's light-hearted band message and, on a win only, the bouncing-words finale (Components → Win celebration; owner, 2026-10-19, Q-46).
 
 Two accents carry interaction meaning; destination blue and error red are status colours, each
 paired with a glyph. The error fill also marks a destructive action (the danger buttons); otherwise
@@ -200,7 +200,20 @@ colour, so the principles below hold for all of them and only the specific value
 ## Colors
 
 Theme-neutral rules (every theme): colours come only from `--wc-*` tokens, never a literal in
-`src/**` outside the token files; each token keeps its role below; every theme meets these
+`src/**` outside the token files (`src/ui/app.css`; the TH-2 gate is
+`src/ui/theme/colour-literals.ts`, run by `npm test`). In script and markup a colour function
+(`rgb()`, `hsl()`, `oklch()` and the like) or a 6/8-digit hex fails anywhere in a string; a short
+hex (`#rgb`, `#rgba`) or a named colour fails only in a colour value position: the value of a
+colour-bearing CSS property (colours of `color`, `background*`, `border*`, `outline*`, `fill`,
+`stroke`, the `*-color` properties, `box-shadow`, `text-shadow`, `filter`, `mask*`,
+`text-emphasis`, vendor prefixes) or of any custom property `--*`, whether in a declaration
+string, a style directive or attribute, an object key, a `.style`, `cssText` or canvas paint
+assignment, or `setProperty`/`setAttribute`, `var()` fallbacks included; or the initializer of a
+binding (variable, parameter or destructuring default, `$props()` default, class field,
+`$derived`/`$state` argument) whose name or last word is a colour word (color, colour, fill,
+stroke, background, shadow, border, outline). Only value positions count (ternary branches,
+logical operands), never conditions or comparison operands, and prose (`Word: sentence`) is never
+a declaration (Opus review of epic 9, 2026-10-22). Each token keeps its role below; every theme meets these
 contrast floors, which a unit test computes from the theme's token values: text pairs
 (card ink on card face and on destination fill, ink primary on destination fill, ink secondary on
 surface and on surface raised, error on surface, ink on accent orange) ≥ 4.5:1; outline on table
@@ -259,7 +272,9 @@ alternates. Each theme's values are in `src/ui/app.css`; the research brief
   floor measured over the worst point of the texture. Card backs are never shown, so they are out
   of scope.
 - The manifest `theme_color` and `background_color` stay Charcoal's `#15171B`; the `theme-color`
-  meta follows the active theme (AD-16). The scrim stays dark in every theme.
+  meta follows the active theme (AD-16). The fatal-error Blocking message always shows Charcoal
+  and resets the meta to `#15171B`, whatever theme is stored (AD-15; owner, 2026-10-18 and D2 2026-10-22).
+  The scrim stays dark in every theme.
 - A theme also sets `color-scheme` (`light` for Daylight Paper, `dark` otherwise) and the four
   internal tokens that are not colour roles (`--wc-shadow-drag` and the three `--wc-scene-pointer-*`
   tokens), so a theme is complete when it defines all 18 roles plus those.
@@ -476,8 +491,9 @@ Depth is tonal, not shadowed, with two exceptions that mimic physical cards:
 - **Overlays** (WordCell view, sheets, dialogs, end screen) sit above `{colors.scrim}`.
 
 Layer order: table → board surfaces → cards → sticky bars (top bar, dictionary-failed banner,
-action bar, collapsed end-sheet bar) → selection/lift → hover peek → drag layer → scrim →
-overlay. A lifted or dragged tail passes over the bars.
+action bar, collapsed end-sheet bar) → selection/lift → hover peek → drag layer → win celebration
+(copies clipped to the band between the top bar, or a shown dictionary banner, and the action
+bar, so they never overlap either bar, which stay usable; no scrim; epic 10 SPEC CAP-2) → scrim → overlay. A lifted or dragged tail passes over the bars.
 The top bar and the action bar additionally sit above the end sheet's scrim. They sit below every
 other scrim and overlay (dialogs, panels, the menu sheet, the sticky view), so while one of those is open ☰, Undo and Redo are covered and unreachable: the player closes it first (owner, 2026-10-15).
 
@@ -518,7 +534,7 @@ pills (`{rounded.full}`); among badges only the error dot is a circle. The 44 ×
   drawn under the S ghosts, as during the drag); *inert*
   (Composing: every column except the destination column; Place: all columns; Game over: all
   columns (R-75); R-39): unchanged look, no hover. S ghosts are inert too.
-- **Focus ring.** A 2 px `{colors.accent-teal}` ring. On a card it is drawn inside the card edge (2 px in), with no offset or gap; on other controls it keeps the 2 px offset and the `{colors.table}` gap
+- **Focus ring.** A 2 px `{colors.accent-teal}` ring. On a card it is drawn inside the card edge (2 px in), with no offset or gap; on a full-width menu row it is likewise drawn inside the row edge (the rows sit flush in the sheet's scrolling content, which would clip an offset ring; owner, 2026-10-22); a segmented-control segment or a Theme list row draws the 2 px ring inside its edge with a `{colors.table}` gap on both sides of the ring, so it shows on the teal selected fill (owner, 2026-10-22); on other controls it keeps the 2 px offset and the `{colors.table}` gap
   between the ring and the element. It is distinct from the selection outline (outline plus lift);
   when both apply, both are drawn. On a fanned column card the focus ring encloses the card's
   visible strip; the selection outline encloses the whole lifted tail.
@@ -672,12 +688,17 @@ pills (`{rounded.full}`); among badges only the error dot is a circle. The 44 ×
   band, over the tray band (empty in Game over), directly above the WordCell labels; tapping the
   bar expands it. While collapsed there is no scrim, and the WordCells stay fully tappable to
   view.
+  **Words section** (R-88; owner, 2026-10-20): the last block of the expanded sheet, below the buttons, and part of the sheet's own scroll (no inner scroll area). A `Words` heading (ui-label, ink-secondary) over rows at least 44 px high separated by `{colors.hairline}` lines. Each row holds the word in capitals (ui-body, ink-primary, `overflow-wrap: anywhere`) left and `5 letters` (ui-label, ink-secondary) right-aligned, the two on one line at 360 px (the word shrinks to 14 px before it wraps). Rows are text only: no card art, no glyph, nothing tappable. With no word, one ui-body ink-secondary line `No words were played.`.
+- **Win celebration** (R-87; owner, 2026-10-20). No chrome. Each word is a set of card copies in the normal card state of the live theme (card face, edge, letter, `QU` with its ×2 badge), at the board's card size `{components.card.width}`; a word whose row, its cards overlapping by 35 % of the card width (each shows 65 %; epic 10 SPEC F20), would be wider than 90 % of the band scales down uniformly, to a floor of 40 % of card size (a 23-letter word at 360 px is then readable as a word, not as individual cards; A-D12). That row only fits the copy size and is never drawn: there is no launch row, and each card appears at the word's launch point in its WordCell in turn and follows the card ahead along the word's path, one card step behind it (epic 10 SPEC F23, F26). Copies carry the lifted-card shadow `0 6px 16px` in the theme's `--wc-shadow-drag` so they read against the board; there is no trail, glow or colour change. The floor is the top edge of the action bar; the ceiling is the bottom of the top bar, or of the dictionary banner when it shows (the AD-12 visible band), and the side limits are the viewport edges. The board underneath stays undimmed. Motion values and the cap are in EXPERIENCE.md Motion.
 - **Panels** (Statistics, Preferences, How to play). Full-screen on table, back arrow and title in
   a 48 px header, content max 560 px wide centred. Statistics is a 2 × 3 grid of stat tiles
   (label ui-label ink-secondary, value in `{typography.score}`). The longest-word tile's word
   shrinks to 14 px first, then wraps with `overflow-wrap: anywhere`. Preferences uses a three-way segmented control
-  (Fast / Normal / Slow) and a switch (Show timer). The selected segment and the switch's on state
-  use a `{colors.accent-teal}` fill with `{colors.ink-on-accent}` text and thumb.
+  (Fast / Normal / Slow), a switch (Show timer) and, for Theme, a vertical single-choice list: one
+  row of at least 44 px per theme, label left with 16 px side padding, rows separated by
+  `{colors.outline}` lines in a `{rounded.md}` box with a `{colors.outline}` edge, every label fully
+  visible and tappable at 360 px (owner, 2026-10-22). The selected segment or row and the switch's
+  on state use a `{colors.accent-teal}` fill with `{colors.ink-on-accent}` text and thumb.
 - **Blocking message** (session rejected, spec §2; unexpected failure, Q-37; open in another
   window, Q-38). Replaces the board: a dialog-styled card centred on the table, no scrim, one
   primary button (`Reload`, or `New game` on the session-rejected message; AD-15).
@@ -729,6 +750,7 @@ Jared confirmed every assumption below on 2026-09-27; the `[ASSUMPTION]` tags st
 | A-D9 | All text on the Board surface, everything inside the height rule including the dictionary-failed banner, foot row, control row, badges and messages, is fixed px so the height rule holds; text in panels, sheets and dialogs is in rem and scales with the browser font size. | Typography |
 | A-D10 | In Place, a full-height free-letter tile's origin tag moves to the top-left corner so the bottom band holds the `bottom` / `top` tag and the star; a compact tile puts the position mark (`▼` / `★`) top-left, the ×2 badge top-right and the origin tag bottom-left. | Components |
 | A-D11 | The height rule measures `window.innerHeight` with `viewport-fit=cover`; w is recomputed on `resize` and `orientationchange`, deferred until no gesture or animation is in progress; page scrolling counts as a gesture; a resize that changes only innerHeight by less than 80 px does not recompute w. | Layout & Spacing |
+| A-D12 | The win celebration's copies are sized as if their row overlapped by 35 % of the card width and scale to at least 40 % of card size; there is no launch row and each card trails the one ahead along the word's path by one card step (epic 10 SPEC F20, F23, F26); a 23-letter word stays readable at 360 px (accepted on device 2026-10-24, owner Android read, epic 10 ticket 10.9; overlap amended 2026-10-24, epic 10 SPEC F20). | Components |
 
 ### Open questions
 

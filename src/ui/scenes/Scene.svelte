@@ -20,6 +20,7 @@ import {
   HAND_W,
   PLACE_CELL_TOP,
   PLACE_LABEL_TOP,
+  PLACE_TILES,
   placeCellX,
   RICH_INSET,
   RICH_SLOT,
@@ -30,10 +31,18 @@ import {
   stageGeometry,
   TRAY_H,
 } from './geometry';
+import { sceneHides } from './hide-count';
 import { type RunState, ScenePlayer } from './player';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Stage from './Stage.svelte';
-import { drawnColumns, face, fillerColumns } from './stage';
+import {
+  destinationCards,
+  drawnColumns,
+  face,
+  fillerColumns,
+  joinCards,
+  joinHidden,
+} from './stage';
 import type { Frame, Scene } from './types';
 
 // Epic 8 ticket 1 (HP-1, HP-2, HP-6; EXPERIENCE.md How to play panel): one scene as a <figure>
@@ -48,12 +57,12 @@ let { scene, cardWidth, stageHeight }: { scene: Scene; cardWidth: number; stageH
 
 const id = $props.id();
 // The stage geometry for the markup (Biome reads script usage only).
-// A scene whose frames list tray tiles draws the open tray as one layer per frame (tiles, k and
-// side, the controls row, WordCell 6's state): a step's reveal fades the next layer in.
-const rich = $derived(scene.frames.some((f) => f.order !== undefined));
 // Epic 8 ticket 3: the place scene draws one layer per frame (the placement strip, Confirm and
 // WordCells 3 to 10); the scoring scene adds per-cell figures and a total to the shared band.
 const placeMode = $derived(scene.frames.some((f) => f.lit !== undefined));
+// Any other scene whose frames list tray tiles draws the open tray as one layer per frame (tiles,
+// k and side, the controls row, WordCell 6's state): a step's reveal fades the next layer in.
+const rich = $derived(!placeMode && scene.frames.some((f) => f.order !== undefined));
 const scoreMode = $derived(scene.frames.some((f) => f.numbers !== undefined));
 const cell6Letter = $derived(
   scene.frames[0].cell6 === undefined ? undefined : scene.fixture.start.cells?.['6']?.at(-1),
@@ -85,6 +94,13 @@ const geo = $derived({
   handH: HAND_H,
   placeCellX,
   columnX,
+  // Owner decision D9: the place scene's tiles, as the game's tray draws them (TileRows.svelte).
+  placeTile: {
+    mode: PLACE_TILES.mode,
+    width: PLACE_TILES.tileWidth,
+    gapAbove: false,
+    gapBelow: false,
+  },
 });
 const ghostFrom = $derived(ghostStart(scene));
 const controls = text.howTo.sceneControls;
@@ -113,8 +129,7 @@ const drawn = $derived.by(() => {
   const source = all[c.sourceColumn - 1];
   // A drop on the source column (R-21): the destination cards are the bottom ones of what the lift
   // left behind.
-  const left = source.slice(0, source.length - c.count);
-  const destCards = c.sourceColumn === c.destinationColumn ? left : all[c.destinationColumn - 1];
+  const destCards = destinationCards(fixture, c);
   const destFrom = destCards.length - c.destinationCount;
   // `landed`: the move is done, so no tail or D block is drawn; the destination column still loses
   // its D block cards (the word's own cards sit in the strip, owner decision 2026-10-16).
@@ -201,6 +216,20 @@ const currentIndex = $derived(frame);
 const inBlock = (frame: Frame, j: number): boolean =>
   frame.side === 'left' ? j < (frame.k ?? 0) : j >= (frame.order?.length ?? 0) - (frame.k ?? 0);
 const tailStyle = $derived(reduced ? frameTail(scene, current) : undefined);
+// Owner decision D10: the destination cards in the frame's D block are not drawn in their column;
+// motion on, the base is frame 0 and the reveals fade them (effects.ts).
+const joins = $derived.by(() => {
+  const { column, cards } = joinCards(scene.fixture, scene.carry, scene.frames);
+  const shown = reduced ? current : scene.frames[0];
+  return {
+    column,
+    cards: cards.map(({ index, depth }) => ({
+      index,
+      id: `join-${depth}`,
+      hidden: joinHidden(shown, depth),
+    })),
+  };
+});
 // The D block's reduced-motion state; a frame that names none leaves it drawn at home.
 const destState = $derived(reduced ? frameDest(current) : { hidden: false });
 
@@ -227,6 +256,8 @@ $effect(() => {
       },
       duration,
       hidden: () => document.hidden,
+      // AD-9: counted by main.ts's registerBeforeHide callback (no listener here).
+      hides: sceneHides,
       // AD-9: the game store owns the visibility listeners; loaded lazily (it needs a window).
       whenVisible: async () => (await import('../../shell/game.svelte')).game.whenVisible(),
     },
@@ -266,17 +297,18 @@ const replay = (): void => {
 };
 </script>
 
-{#snippet wcell(cards: readonly string[])}
+<!-- `used`: the top card in the WordCell used look (R-33), the game's own rule (app.css, D11). -->
+{#snippet wcell(cards: readonly string[], used: boolean)}
   <div class="mini">
     {#each cards as letter, j (j)}
-      <Card id={0} face={face(letter)} place="column" mirror="static" full={j === cards.length - 1} />
+      <Card id={0} face={face(letter)} place="column" mirror="static" full={j === cards.length - 1} used={used && j === cards.length - 1} />
     {/each}
   </div>
 {/snippet}
 
 <figure class="scene" aria-labelledby="{id}-caption" bind:this={figure}>
   <div class="area" style:width="{geo.stageW * scale}px" style:height="{stageHeight}px">
-    <Stage columns={drawn.columns} {filler} geometry={stage} cells={placeMode ? undefined : stageCells} {grow} {scale}>
+    <Stage columns={drawn.columns} {filler} geometry={stage} cells={placeMode ? undefined : stageCells} {grow} {joins} {scale}>
       {#if drawn.carried}
       <div
         class="tail"
@@ -317,7 +349,7 @@ const replay = (): void => {
             {#if frame.cell6 === 'used' && cell6Letter !== undefined}
               <div class="cell6 cell used" style:left="{geo.placeCellX(6)}px" style:top="{geo.labelsTop - geo.trayTop}px">
                 <span class="num">6</span>
-                {@render wcell([cell6Letter])}
+                {@render wcell([cell6Letter], true)}
               </div>
             {/if}
             <div class="tiles" style:left="{geo.inset}px" style:--wc-w="{geo.richTileW}px" style:--wc-slot="{geo.richSlot}px">
@@ -353,11 +385,19 @@ const replay = (): void => {
               {@const cards = cellCards(cell, i)}
               {@const lit = frame.lit?.includes(cell) ?? false}
               {@const target = frame.placeTarget === cell}
-              <div class="wcell" style:left="{geo.placeCellX(cell)}px" style:top="{geo.placeLabelTop}px">
+              {@const used = cell === 6 && frame.cell6 === 'used'}
+              <!-- R-40: in Place (a strip is shown) a cell that is neither legal nor the target dims as
+                   in the game (WordCellRow.svelte, the shared `.wc-dim`, D11). -->
+              <div
+                class="wcell"
+                class:wc-dim={frame.placeOrder !== undefined && !lit && !target}
+                style:left="{geo.placeCellX(cell)}px"
+                style:top="{geo.placeLabelTop}px"
+              >
                 <span class="num">{cell}</span>
                 <div class="stack" class:empty={cards.length === 0} class:lit={lit && !target} class:target>
                   {#each cards as letter, j (j)}
-                    <Card id={0} face={face(letter)} place="column" mirror="static" full={j === cards.length - 1} />
+                    <Card id={0} face={face(letter)} place="column" mirror="static" full={j === cards.length - 1} used={used && j === cards.length - 1} />
                   {/each}
                   {#if target}
                     <span class="check" aria-hidden="true">
@@ -368,9 +408,18 @@ const replay = (): void => {
               </div>
             {/each}
             {#if frame.placeOrder !== undefined}
-              <div class="tiles" data-scene-el="strip-{i}" style:left="{geo.inset}px" style:top="{geo.stripTop}px" style:--wc-w="{geo.richTileW}px" style:--wc-slot="{geo.richSlot}px">
+              <!-- R-50: the strip's first card is marked bottom and its last top, the game's own marks
+                   (Card `position` in place `strip`, as tray/TileRows.svelte; owner decision D9). -->
+              <div class="tiles" data-scene-el="strip-{i}" style:left="{geo.inset}px" style:top="{geo.stripTop}px">
                 {#each frame.placeOrder as letter, j (j)}
-                  <Card id={0} face={face(letter)} place="tray" mirror="static" full />
+                  <Card
+                    id={0}
+                    face={face(letter)}
+                    place="strip"
+                    mirror="static"
+                    tile={geo.placeTile}
+                    position={j === 0 ? 'bottom' : j === frame.placeOrder.length - 1 ? 'top' : undefined}
+                  />
                 {/each}
               </div>
               <span
@@ -382,6 +431,14 @@ const replay = (): void => {
                 style:height="{geo.confirm.h}px"
               >{text.confirm}</span>
             {:else if frame.lit === undefined}
+              <!-- Owner decision D5: frame 0 is the composed word in the tray, the D block locked. -->
+              {#if frame.order !== undefined}
+                <div class="tiles" style:left="{geo.inset}px" style:top="{geo.stripTop}px">
+                  {#each frame.order as letter, j (j)}
+                    <Card id={0} face={face(letter)} place="tray" mirror="static" tile={geo.placeTile} destination={inBlock(frame, j)} />
+                  {/each}
+                </div>
+              {/if}
               <span
                 class="ctl validate {frame.validate ?? 'off'}"
                 style:left="{geo.confirm.x}px"
@@ -400,10 +457,8 @@ const replay = (): void => {
               class="flier"
               data-scene-el="tuck-{k}"
               style:transform={tuckFrom(k)}
-              style:--wc-w="{geo.richTileW}px"
-              style:--wc-slot="{geo.richSlot}px"
             >
-              <Card id={0} face={face(letter)} place="tray" mirror="static" full />
+              <Card id={0} face={face(letter)} place="tray" mirror="static" tile={geo.placeTile} />
             </div>
           {/each}
         </div>
@@ -513,24 +568,27 @@ const replay = (): void => {
     display: block; fill: none; stroke: var(--wc-ink-on-accent); stroke-width: 2;
     stroke-linecap: round; stroke-linejoin: round;
   }
+  /* Owner decision D12: scene text is counter-scaled by the stage's --wc-scene-up (Stage.svelte). */
   .num {
-    display: block; text-align: center; font: 600 11px/16px system-ui, "Roboto", sans-serif;
+    display: block; text-align: center;
+    font: 600 calc(11px * var(--wc-scene-up)) / 16px system-ui, "Roboto", sans-serif;
     color: var(--wc-ink-secondary);
   }
   .figure {
-    position: absolute; width: calc(var(--wc-slot) + 24px); text-align: center; opacity: 0;
-    font: 700 11px/16px system-ui, "Roboto", sans-serif; color: var(--wc-ink-primary);
+    position: absolute; min-width: calc(var(--wc-slot) + 24px); text-align: center; opacity: 0;
+    white-space: nowrap;
+    font: 700 calc(11px * var(--wc-scene-up)) / 16px system-ui, "Roboto", sans-serif;
+    color: var(--wc-ink-primary);
   }
   .total { opacity: 0; font-weight: 700; }
   .cell { position: absolute; width: var(--wc-slot); }
   .mini { display: flex; flex-direction: column; }
   .cell.used { background: var(--wc-surface-raised); }
-  .cell.used :global(.card) { opacity: 0.4; }
   .ctl {
     position: absolute; box-sizing: border-box; display: grid; place-items: center;
     border-radius: 9999px; background: var(--wc-surface-raised); border: 1px solid var(--wc-outline);
     color: var(--wc-ink-primary); white-space: nowrap;
-    font: 600 14px/20px system-ui, "Roboto", sans-serif;
+    font: 600 max(14px, calc(11px * var(--wc-scene-up))) / 20px system-ui, "Roboto", sans-serif;
   }
   .ctl.validate { border: none; }
   .validate.lit { background: var(--wc-accent-orange); color: var(--wc-ink-on-accent); }

@@ -3,6 +3,7 @@ import {
   deviceProjects,
   forbidOnly,
   fullyParallel,
+  outputDir,
   reporter,
   retries,
   use,
@@ -16,6 +17,7 @@ import {
 export default defineConfig({
   testDir: './e2e',
   testIgnore: ['**/*.screens.spec.ts', '**/pwa/**'],
+  outputDir: outputDir('e2e'),
   fullyParallel,
   forbidOnly,
   retries,

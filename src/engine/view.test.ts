@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { type ApplyContext, apply, applyFrom, type Command } from './commands';
 import { EngineError } from './errors';
+import { gameRecord } from './history';
 import { EN } from './lang/en';
 import { replay, type Start } from './replay';
 import { destinationRemainder, word } from './rules';
@@ -1017,5 +1018,199 @@ describe('GameView contract', () => {
     });
     expectEngineError(() => replay(badTail, LANG), 'r31-destination-count');
     expectEngineError(() => v(badTail), 'r31-destination-count');
+  });
+});
+
+// --- R-86 word list -----------------------------------------------------------------------------
+
+describe('R-86 word list', () => {
+  const GIVE_UP: Command = { type: 'giveUp' };
+  /** Whole-column word on its own column: drop, Validate, Confirm (R-11, R-22, R-42). */
+  const whole = (column: number, count: number, target?: WordCellNumber): Command[] => [
+    drop(column, count, column),
+    VALIDATE,
+    ...(target === undefined ? [] : [setTarget(target)]),
+    CONFIRM,
+  ];
+  const WORDS = ['tan', 'ones', 'baked', 'ant', 'one', 'quit'];
+  const listOf = (start: Start, commands: readonly Command[]) =>
+    viewFrom(start, seam(start, commands, WORDS), LANG).wordList;
+  const brief = (list: readonly { spelling: string; letterCount: number }[] | undefined) =>
+    list?.map((w) => `${w.spelling}:${w.letterCount}`);
+
+  it('R-86 orders by letter count descending, then spelling', () => {
+    const start = startOf(['TAN', 'ONES', 'BAKED']);
+    const list = listOf(start, [...whole(1, 3), ...whole(2, 4), ...whole(3, 5)]);
+    expect(brief(list)).toStrictEqual(['baked:5', 'ones:4', 'tan:3']);
+    expect(list?.map((w) => w.cell)).toStrictEqual([5, 4, 3]);
+    expect(list?.[0].cards).toStrictEqual(start.columns[2]);
+  });
+
+  it('R-86 a letter-count tie is alphabetical, not move order', () => {
+    const start = startOf(['TAN', 'ANT']);
+    expect(brief(listOf(start, [...whole(1, 3), ...whole(2, 3)]))).toStrictEqual([
+      'ant:3',
+      'tan:3',
+    ]);
+  });
+
+  it('R-86 a duplicate word gives equal entries in move order with different cards and cell', () => {
+    // Move order (columns 2, 1, 3 on cells 4, 3, 4) differs from cell order either way and from
+    // card-id order (startOf takes lower ids for earlier columns).
+    const start = startOf(['ONES', 'ONES', 'ONES', 'BAKED']);
+    const list = listOf(start, [...whole(2, 4), ...whole(1, 4, 3), ...whole(3, 4), ...whole(4, 5)]);
+    expect(list).toStrictEqual([
+      { spelling: 'baked', letterCount: 5, cards: start.columns[3], cell: 5 },
+      { spelling: 'ones', letterCount: 4, cards: start.columns[1], cell: 4 },
+      { spelling: 'ones', letterCount: 4, cards: start.columns[0], cell: 3 },
+      { spelling: 'ones', letterCount: 4, cards: start.columns[2], cell: 4 },
+    ]);
+    expect(start.columns[0]).not.toStrictEqual(start.columns[2]);
+  });
+
+  it('R-86 a gaveUp list orders as a won one: letter count descending, a tie alphabetical, a duplicate in move order', () => {
+    // Move order tea, ores, ant, tea; the fifth column stays, so the game ends by Give up.
+    const start = startOf(['TEA', 'ORES', 'ANT', 'TEA', 'XYZ']);
+    const session = seam(
+      start,
+      [...whole(1, 3), ...whole(2, 4), ...whole(3, 3), ...whole(4, 3), GIVE_UP],
+      ['tea', 'ores', 'ant'],
+    );
+    const gameView = viewFrom(start, session, LANG);
+    expect(gameView.status).toBe('gaveUp');
+    expect(gameView.wordList).toStrictEqual([
+      { spelling: 'ores', letterCount: 4, cards: start.columns[1], cell: 4 },
+      { spelling: 'ant', letterCount: 3, cards: start.columns[2], cell: 3 },
+      { spelling: 'tea', letterCount: 3, cards: start.columns[0], cell: 3 },
+      { spelling: 'tea', letterCount: 3, cards: start.columns[3], cell: 3 },
+    ]);
+  });
+
+  it('R-86 QU is lowercase qu, counts 2 and one card fewer than letterCount', () => {
+    const start = startOf(['QIT']);
+    const list = listOf(start, whole(1, 3));
+    expect(list).toStrictEqual([
+      { spelling: 'quit', letterCount: 4, cards: start.columns[0], cell: 4 },
+    ]);
+    expect(list?.[0].cards.length).toBe((list?.[0].letterCount ?? 0) - 1);
+  });
+
+  it('R-86 a QU word sorts by letterCount, not by cards.length', () => {
+    const start = startOf(['QIT', 'ANT']);
+    const list = listOf(start, [...whole(1, 3), ...whole(2, 3)]);
+    expect(list?.map((w) => w.cards.length)).toStrictEqual([3, 3]);
+    expect(brief(list)).toStrictEqual(['quit:4', 'ant:3']);
+  });
+
+  it('R-86 a flipped word lists its cards in the committed order', () => {
+    const start = startOf(['TAN', 'ONES']);
+    const draft = viewFrom(start, seam(start, [drop(1, 3, 2), FLIP], WORDS), LANG).draft;
+    expect(draft?.side).toBe('right');
+    const session = seam(
+      start,
+      [drop(1, 3, 2), FLIP, VALIDATE, CONFIRM, GIVE_UP],
+      ['tans', ...WORDS],
+    );
+    const entry = viewFrom(start, session, LANG).wordList?.[0];
+    expect(entry?.spelling).toBe('tans');
+    expect(entry?.cards).toStrictEqual(draft?.wordCards);
+  });
+
+  it('R-86 cards stay in R-30 word order after a non-word setPlacementOrder before Confirm', () => {
+    // QU_TOP: placementOrder [8, 21, 2, 42, 0, 35] (QU last) confirmed onto cell 7.
+    const wordOrder = [35, 8, 21, 2, 42, 0];
+    const gameView = v(play(QU_TOP, [GIVE_UP]));
+    const entry = gameView.wordList?.[0];
+    expect(gameView.wordList).toHaveLength(1);
+    expect(entry?.cards).toStrictEqual(wordOrder);
+    expect(entry?.cards).not.toStrictEqual([8, 21, 2, 42, 0, 35]);
+    const spelled = entry?.cards.map((card) => gameView.faces[card]?.letter.toLowerCase()).join('');
+    expect(spelled).toBe(entry?.spelling);
+    expect(entry?.spelling).toBe('quejata');
+  });
+
+  it('R-86 gaveUp with no committed word gives an empty list', () => {
+    const start = startOf(['TAN']);
+    const gaveUp = viewFrom(start, seam(start, [GIVE_UP]), LANG);
+    expect(gaveUp.status).toBe('gaveUp');
+    expect(gaveUp.wordList).toStrictEqual([]);
+  });
+
+  it('R-86 a WordCell top reused as a free letter appears in two entries', () => {
+    const start = startOf(['TAN', 'ONE']);
+    const session = seam(
+      start,
+      [...whole(1, 3), drop(2, 3, 2), addFree(3), VALIDATE, CONFIRM],
+      ['tan', 'onen'],
+    );
+    const list = viewFrom(start, session, LANG).wordList;
+    const top = start.columns[0][2];
+    expect(list?.map((w) => w.cards.includes(top))).toStrictEqual([true, true]);
+    expect(list?.map((w) => w.cell)).toStrictEqual([4, 3]);
+  });
+
+  it('R-86 the pending draft and the redo tail are excluded, also when gaveUp', () => {
+    const start = startOf(['TAN', 'ONE', 'ANT']);
+    const draft = seam(
+      start,
+      [...whole(1, 3), drop(2, 3, 2), VALIDATE, UNDO, UNDO, GIVE_UP],
+      WORDS,
+    );
+    expect(draft.moves).toHaveLength(2);
+    expect(draft.cursor).toStrictEqual({ index: 1, phase: 'idle' });
+    expect(brief(viewFrom(start, draft, LANG).wordList)).toStrictEqual(['tan:3']);
+    // Three Undos take back the last word's Confirm, Validate and drop: two words stay committed
+    // and the third is the redo tail.
+    const longer = startOf(['TAN', 'ONES', 'BAKED']);
+    const tail = seam(
+      longer,
+      [...whole(1, 3), ...whole(2, 4), ...whole(3, 5), UNDO, UNDO, UNDO, GIVE_UP],
+      WORDS,
+    );
+    expect(tail.moves).toHaveLength(3);
+    expect(tail.gaveUp).toBe(true);
+    expect(tail.cursor).toStrictEqual({ index: 2, phase: 'idle' });
+    expect(brief(viewFrom(longer, tail, LANG).wordList)).toStrictEqual(['ones:4', 'tan:3']);
+  });
+
+  it('R-86 Undo of the finish leaves playing without the key; Confirm restores the list', () => {
+    const start = startOf(['TAN', 'ONE']);
+    const won = seam(start, [...whole(1, 3), ...whole(2, 3)], WORDS);
+    const list = viewFrom(start, won, LANG).wordList;
+    expect(list).toHaveLength(2);
+    const undone = seam(start, [...whole(1, 3), ...whole(2, 3), UNDO], WORDS);
+    const playing = viewFrom(start, undone, LANG);
+    expect(playing.status).toBe('playing');
+    expect('wordList' in playing).toBe(false);
+    const again = seam(start, [...whole(1, 3), ...whole(2, 3), UNDO, CONFIRM], WORDS);
+    expect(viewFrom(start, again, LANG).wordList).toStrictEqual(list);
+  });
+
+  it('R-86 the key is absent while playing and present for won and gaveUp', () => {
+    expect('wordList' in v(createSession(1))).toBe(false);
+    expect('wordList' in v(PENDING_TAIL)).toBe(false);
+    expect(v(WON).wordList).toHaveLength(8);
+    expect(v(play(createSession(1), [{ type: 'giveUp' }])).wordList).toStrictEqual([]);
+  });
+
+  it('R-86 each call returns a fresh array with fresh entries', () => {
+    const a = v(WON).wordList;
+    const b = v(WON).wordList;
+    expect(a).toStrictEqual(b);
+    expect(a).not.toBe(b);
+    expect(a?.[0]).not.toBe(b?.[0]);
+    expect(a?.[0].cards).not.toBe(b?.[0].cards);
+  });
+
+  it('R-86 gameRecord keys and longestWord shape are unchanged by the widened replay', () => {
+    const record = gameRecord(WON, LANG);
+    expect(Object.keys(record ?? {}).sort()).toStrictEqual(
+      ['activeMs', 'finalScore', 'longestWord', 'outcome', 'seed', 'version'].sort(),
+    );
+    const longest = v(WON).longestWord;
+    expect(Object.keys(longest ?? {}).sort()).toStrictEqual(['letterCount', 'spelling']);
+    expect(record?.longestWord).toStrictEqual(longest);
+    const word = { spelling: 'tan', letterCount: 3, cards: [1], cell: 3 as WordCellNumber };
+    expect(longestWord([word])).toStrictEqual({ spelling: 'tan', letterCount: 3 });
   });
 });

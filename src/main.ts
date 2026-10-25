@@ -1,11 +1,18 @@
 import { mount } from 'svelte';
-import './shell/test-hook';
 import { dictionary } from './shell/dictionary.svelte';
 import { game } from './shell/game.svelte';
 import { nav } from './shell/nav';
 import { prefs } from './shell/prefs.svelte';
+import { registerCelebrationSeam } from './shell/test-hook';
 import App from './ui/App.svelte';
 import { setController } from './ui/act';
+import { cancelAnnounce } from './ui/announce';
+import {
+  attachOverlays,
+  celebration,
+  setCelebrationEnabled,
+} from './ui/celebration/celebration.svelte.ts';
+import { installInterruptions } from './ui/celebration/interruptions';
 import { onDispatched, openAtBoot } from './ui/end-sheet';
 import { createFlip, setFlip } from './ui/flip';
 import { createController } from './ui/gestures/controller';
@@ -25,8 +32,10 @@ import {
   startTracker,
 } from './ui/motion';
 import { overlays } from './ui/overlays.svelte';
+import { noteSceneHide } from './ui/scenes/hide-count';
 import {
   applyTheme,
+  clearTheme,
   defaultTheme,
   gardenTheme,
   paperTheme,
@@ -71,8 +80,9 @@ function textOf(reason: unknown, message = ''): string {
 // AD-15: halt first, so nothing runs against a live store after the report.
 function fatal(reason: unknown, message?: string): void {
   game.halt('fatal', textOf(reason, message));
-  // AD-16: the inline head script may have set a theme; the fatal surface wears the default look.
-  delete document.documentElement.dataset.theme;
+  // AD-16: the inline head script or the boot may have set a theme; the fatal surface wears the
+  // default look, status bar included (owner decision D2, 2026-10-22).
+  clearTheme();
   console.error(reason);
   showStandalone();
 }
@@ -137,6 +147,8 @@ async function boot(): Promise<void> {
     closedByBack: (depth) => overlays.closedByBack(depth),
     depth: () => overlays.depth,
   });
+  // AD-13, AD-19: the celebration's removal callback, every build, before any push.
+  attachOverlays();
   await fontCheck();
   // AD-10: the motion mirror before the Session load, also when halted meanwhile.
   initMotion();
@@ -204,10 +216,34 @@ async function boot(): Promise<void> {
   game.registerBeforeHide(() => gate.scrollReset());
   game.registerBeforeHide(() => finishGuard());
   game.registerBeforeHide(() => hideClear());
+  // Ticket 6.13 (A-E9): a pending live-region set is never spoken on return.
+  game.registerBeforeHide(() => cancelAnnounce());
+  // Epic 8 (AD-9): the How to play scene player restarts a step that began before a hide.
+  game.registerBeforeHide(() => noteSceneHide());
+  // AD-19 Hide, Resize (ticket 10.7): a hide flush, `resize` or `orientationchange` ends a live run.
+  installInterruptions({
+    win: window,
+    registerBeforeHide: game.registerBeforeHide,
+    halted,
+    end: celebration.end,
+  });
   nav.registerBeforeBack(() => {
     controller.cancel({ byBack: true });
     finishGuard();
   });
+  // AD-17 Celebration seam (AD-16, beside registerBeforeBack): hook builds only, so the hook-free
+  // `dist/` keeps the flag on (real rAF) and no `__wordcell` name leaves the gate (AD-18). The
+  // celebration is off until a test enables it. Invariant: no `await` between `game.load()` and
+  // this block, so a page that reads `current().kind === 'active'` finds the seam registered.
+  if (import.meta.env.DEV || import.meta.env.VITE_TEST_HOOKS === '1') {
+    setCelebrationEnabled(false);
+    registerCelebrationSeam({
+      running: () => celebration.running(),
+      advance: (ms) => celebration.advance(ms),
+      setManual: (on) => celebration.setManual(on),
+      setEnabled: setCelebrationEnabled,
+    });
+  }
   setController(controller);
   // AD-16 order: lifecycle listeners (and the visible-time clock) right after the load, before mount.
   game.registerLifecycle();

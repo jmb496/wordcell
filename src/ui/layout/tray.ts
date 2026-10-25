@@ -3,7 +3,7 @@
 // tile and free-letter drags use (F3, build-notes CAP-5, CAP-6). Pure: no DOM, `window` or Svelte.
 import type { CardId, DestinationSide, GameView } from '../../engine/index';
 import type { GapRect, Rect } from '../gestures/targeting';
-import { cardMetrics } from './geometry';
+import { cardMetrics, trayGrowth } from './geometry';
 
 export type TrayLayout = {
   mode: 'card' | 'compact';
@@ -13,7 +13,7 @@ export type TrayLayout = {
   tileWidth: number;
   /** The tile face height: card H in card mode, 44 in compact mode. */
   tileHeight: number;
-  /** The reserved tile-area height, max(H, 92). */
+  /** The tile-area height, max(H, 92) + `trayGrowth(rows, H)` (A-D4: every compact row fits). */
   area: number;
 };
 
@@ -28,12 +28,13 @@ export function trayLayout(tileCount: number, w: number, innerWidth: number): Tr
   const tileWidth = Math.max(w, TOUCH_MIN);
   const perRow = Math.floor((innerWidth + GAP) / (tileWidth + GAP));
   const { H } = cardMetrics(w);
-  const area = Math.max(H, COMPACT_AREA);
+  const reserved = Math.max(H, COMPACT_AREA);
   if (tileCount <= perRow) {
     const rows = tileCount === 0 ? 0 : 1;
-    return { mode: 'card', rows, perRow, tileWidth, tileHeight: H, area };
+    return { mode: 'card', rows, perRow, tileWidth, tileHeight: H, area: reserved };
   }
   const rows = Math.ceil(tileCount / perRow);
+  const area = reserved + trayGrowth(rows, H);
   return { mode: 'compact', rows, perRow, tileWidth, tileHeight: TOUCH_MIN, area };
 }
 

@@ -95,6 +95,17 @@ async function expectEdit(page: Page): Promise<StoredMove> {
   return move;
 }
 
+// An edit release at gap 0 (the face held over the tile area's left edge, about half outside its
+// clip): its F17 landing glide starts outside `.tiles`, so flip.ts keeps `wc-drag-tiles` on until
+// it settles (F22, A-D4). Saved before the next action (R-73 (UI)), then the glide settles, then
+// one residue read.
+async function expectEditPastClip(page: Page): Promise<StoredMove> {
+  const move = await storedMove(page);
+  await glidesSettled(page);
+  expect(await dragResidue(page)).toEqual({ classes: 0, transforms: 0 });
+  return move;
+}
+
 async function expectSelected(page: Page, id: number | null): Promise<void> {
   if (id === null) {
     await expect(selectedTiles(page)).toHaveCount(0);
@@ -255,7 +266,7 @@ test('R-34 R-73 (UI) AD-12 tile 0 to gap 0 on session-composing stores [0, 42]; 
   } finally {
     await hold.end();
   }
-  expect((await expectEdit(page)).arrangement).toEqual([0, 42]);
+  expect((await expectEditPastClip(page)).arrangement).toEqual([0, 42]);
   expect(await trayIds(page)).toEqual(['0', '42', '28m']);
 });
 
@@ -266,7 +277,7 @@ test('R-51 R-73 (UI) tile 28 to gap 0 on session-place stores [28, 42, 0]; the s
   const g = await geometry(page);
   const { hold } = await holdTile(page, 28, [gapCentre(g, 0, 3, 0)]);
   await hold.end();
-  expect((await expectEdit(page)).placementOrder).toEqual([28, 42, 0]);
+  expect((await expectEditPastClip(page)).placementOrder).toEqual([28, 42, 0]);
   await expect(tile(page, 28).locator('.position')).toHaveText('bottom');
   await expect(tile(page, 0).locator('.position')).toHaveText('top');
   await expect(tile(page, 42).locator('.position')).toHaveCount(0);
@@ -324,7 +335,7 @@ test('R-34 R-73 (UI) on session-place-free-letter-redo-tail + one Undo, tile 28 
   const g = await geometry(page);
   const { hold } = await holdTile(page, 28, [gapCentre(g, 0, 2, 0)]);
   await hold.end();
-  expect((await expectEdit(page)).arrangement).toEqual([28, 32]);
+  expect((await expectEditPastClip(page)).arrangement).toEqual([28, 32]);
   await expectUsedCell3(page);
 });
 

@@ -28,6 +28,7 @@ import type {
   Status,
   StructuralCheck,
   WordCellNumber,
+  WordListEntry,
 } from './index';
 import * as engine from './index';
 import type * as langData from './lang/lang-data';
@@ -86,5 +87,6 @@ describe('engine surface', () => {
     expectTypeOf<LongestWord>().toEqualTypeOf<view.LongestWord>();
     expectTypeOf<PlaceView>().toEqualTypeOf<view.PlaceView>();
     expectTypeOf<StructuralCheck>().toEqualTypeOf<view.StructuralCheck>();
+    expectTypeOf<WordListEntry>().toEqualTypeOf<view.WordListEntry>();
   });
 });

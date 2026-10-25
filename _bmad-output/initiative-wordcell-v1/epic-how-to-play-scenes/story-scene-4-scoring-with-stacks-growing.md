@@ -41,3 +41,4 @@ Verify: npm run test:all and npm run test:screens are green; engine replay check
 
 - Decision: 2026-10-17, review default taken (the owner reviews all scene captions at the epic end): the Scene 4 caption stays as it is in `text.howTo.scenes.scoring`.
 - Decision: 2026-10-17, owner chose stacks first: all three stacks (cells 3, 4, 6) grow downwards one after another, then the figures 9, 16, 36 appear, then the total 61. The Description, step layout, timings, reduced-motion frames and tests follow it.
+- Post-close review (Opus, 2026-10-22, `b6272b0`, log `opus-review-epic-8.md`): retrospective A3 landed: each stack's collapsed top letter is checked against the fixture, and the `cards < 2` throw is tested.

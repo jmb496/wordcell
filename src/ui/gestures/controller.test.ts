@@ -82,6 +82,8 @@ vi.mock('svelte', async (importOriginal) => {
 });
 
 vi.mock('../../shell/prefs.svelte', () => ({
+  // Epic 10 entry 4: the celebration's cap reads BASE_MS (motion.ts).
+  BASE_MS: { fast: 90, normal: 180, slow: 320 },
   prefs: {
     get motion() {
       return motion.value;
@@ -3343,6 +3345,83 @@ describe('AD-12 entry 12 desktop hover peek', () => {
     }
   });
 
+  // Ticket 10.10 item 6 (end-sheet.ts's reduced-motion / hidden / seam-off `openDeferred` branch,
+  // no `cancelGesture()` before `openDeferred`): flip.ts `play` installs the guard on every won
+  // play, and with no animation it settles at once and hands the open to `whenOpenAllowed`, so the
+  // open waits for the 300 ms floor; the press never reaches the controller (motion.ts `onEvent`
+  // consumes it). The no-tracker case (the press arms the long-press timer and its `openPeek`
+  // throws `AD-13 openPeek while endSheet …`) was observed in the ticket 10.10 build's evidence run
+  // (plan Implementation Notes, item 6), not here.
+  it('AD-12 a press during a won settle’s guard (no animation, reduced motion) is consumed: no long-press timer, and the sheet opens at the floor with no throw', async () => {
+    const t = await setup();
+    t.detach();
+    motion.value = { baseMs: 180, reduced: true };
+    shared.view = { ...(shared.view as object), status: 'won' };
+    const guard = await import('../motion');
+    let now = 0;
+    const guardTimers: { cb: () => void; due: number; done: boolean }[] = [];
+    let onDoc: ((event: unknown) => void) | null = null;
+    const stop = guard.startTracker(
+      {
+        addEventListener: (type: string, fn: unknown) => {
+          if (type === 'pointerdown') onDoc = fn as (event: unknown) => void;
+        },
+        removeEventListener: () => undefined,
+      },
+      { addEventListener: () => undefined, removeEventListener: () => undefined },
+      () => now,
+      {
+        setTimer: (cb: () => void, ms: number) => {
+          const timer = { cb, due: now + ms, done: false };
+          guardTimers.push(timer);
+          return timer;
+        },
+        clearTimer: (timer: unknown) => {
+          (timer as { done: boolean }).done = true;
+        },
+      },
+      () => false,
+    );
+    try {
+      // end-sheet.ts's reduced-motion branch: the token, then the won play's guard, an immediate
+      // settle (no animation) and the open handed to whenOpenAllowed.
+      const token = t.overlays.deferEndSheetOpen();
+      guard.install(true, () => undefined);
+      guard.notifySettled();
+      let opened = false;
+      guard.whenOpenAllowed(() => {
+        if (t.overlays.openDeferred(token)) opened = true;
+      });
+      expect(guard.guardInstalled()).toBe(true);
+      expect(t.overlays.endSheet).toBe('hidden');
+      // A WordCell press inside the guard: the capture tracker sees it first.
+      now = 100;
+      const press = { ...makeEvent({ target: t.b.cellCard }), type: 'pointerdown' };
+      (onDoc as unknown as (event: unknown) => void)(press);
+      // The controller gets the press only if the tracker let it through.
+      if (press.stopPropagation.mock.calls.length === 0) t.down(t.b.cellCard, press);
+      expect(press.stopPropagation).toHaveBeenCalled();
+      expect(t.setTimer).not.toHaveBeenCalled();
+      expect(() => t.advance(400)).not.toThrow();
+      expect(t.overlays.peek).toBeNull();
+      // The floor: the open runs after the guard uninstalls, with no throw.
+      now = 300;
+      expect(() => {
+        for (const timer of guardTimers.filter((x) => !x.done && x.due <= now)) {
+          timer.done = true;
+          timer.cb();
+        }
+      }).not.toThrow();
+      expect(opened).toBe(true);
+      expect(guard.guardInstalled()).toBe(false);
+      expect(t.overlays.top).toBe('endSheet');
+      expect(t.overlays.peek).toBeNull();
+      expect(t.advance(1000)).toBe(0);
+    } finally {
+      stop();
+    }
+  });
+
   it('AD-12 an entry while that cell’s hover peek is open does not arm', async () => {
     const t = await setup();
     t.detach();
@@ -5652,7 +5731,7 @@ describe('AD-12 epic 6 key activation', () => {
     expect(t.overlays.hoverPeek).toBe(3);
   });
 
-  it('AD-12 a hover peek closes when the tap swaps a tile, drops a tail, adds a free letter, sets the target, sets k or opens the view', async () => {
+  it('AD-12 a hover peek closes when the tap swaps or returns a tile, swaps the strip, drops a tail, adds a free letter, sets the target, sets k or opens the view', async () => {
     const taps: [
       string,
       'idle' | 'composing' | 'place',
@@ -5664,6 +5743,22 @@ describe('AD-12 epic 6 key activation', () => {
         (t) => {
           t.overlays.selectTile(3);
           t.controller.activate({ kind: 'tile', card: 4 });
+        },
+      ],
+      [
+        'return',
+        'composing',
+        (t) => {
+          t.overlays.selectTile(4);
+          t.controller.activate({ kind: 'tile', card: 4 });
+        },
+      ],
+      [
+        'strip swap',
+        'place',
+        (t) => {
+          t.overlays.selectTile(6);
+          t.controller.activate({ kind: 'tile', card: 3 });
         },
       ],
       [
@@ -6004,5 +6099,214 @@ describe('AD-12 wheel during a mouse drag', () => {
       t.fire('pointerup');
       expect(navCalls).toEqual([dispatched({ type: 'addFreeLetter', cell: 3, index: 1 })]);
     });
+  });
+});
+
+// Epic 10 entry 4 (AD-13 celebration bullet): while `celebration` is open the gesture path does
+// nothing: `tapAction` answers none, and a press begun under it is marked (no long-press timer, no
+// drag, a release that only ends it), whatever the top by its timer or release. The removal
+// callback is the attached run controller (celebration.svelte.ts) for the live-run rows, else a
+// stub.
+describe('AD-13 gestures while the celebration runs', () => {
+  type T = Awaited<ReturnType<typeof setup>>;
+  const wonView = () => {
+    shared.view = {
+      status: 'won',
+      phase: 'idle',
+      columns: [1, 2, 3, 4, 5, 6, 7, 8].map((column) => ({
+        column,
+        cards: column === 1 ? [0, 5] : column === 2 ? [1] : [],
+        canPickUp: false,
+        canDropOn: false,
+      })),
+      cells: [
+        { cell: 3, cards: [2] },
+        { cell: 4, cards: [] },
+      ],
+    };
+  };
+  const state = (t: T) => ({
+    depth: t.overlays.depth,
+    top: t.overlays.top,
+    peek: t.overlays.peek,
+    viewCell: t.overlays.viewCell,
+    selection: t.overlays.selection,
+    hoverPeek: t.overlays.hoverPeek,
+  });
+  const celebrateStub = (t: T) => {
+    t.overlays.onCelebrationRemoved(() => {});
+    t.overlays.startCelebration();
+    navCalls.length = 0;
+  };
+
+  // The attached singleton with a live manual-clock run over a fake document; its `done` is entry
+  // 5's sheet open (a token issued before the start).
+  async function celebrateLive(t: T) {
+    const { celebration, attachOverlays } = await import('../celebration/celebration.svelte.ts');
+    attachOverlays();
+    const token = t.overlays.deferEndSheetOpen();
+    t.overlays.startCelebration();
+    const box = (left: number, top: number, width: number, height: number) => ({
+      getBoundingClientRect: () => ({
+        left,
+        top,
+        width,
+        height,
+        right: left + width,
+        bottom: top + height,
+      }),
+    });
+    const querySelector = (selector: string) => {
+      if (selector.includes('topBar')) return box(0, 0, 400, 44);
+      if (selector.includes('banner')) return box(0, 44, 400, 0);
+      if (selector.includes('actionBar')) return box(0, 1200, 400, 60);
+      return box(0, 450, 50, 16);
+    };
+    // The run's AD-19 Skip listeners attach here; these rows never dispatch on the document.
+    const docListeners = new Set<unknown>();
+    vi.stubGlobal('document', {
+      documentElement: { clientWidth: 400 },
+      body: { querySelector },
+      querySelector,
+      addEventListener: (_type: string, fn: unknown) => docListeners.add(fn),
+      removeEventListener: (_type: string, fn: unknown) => docListeners.delete(fn),
+    });
+    vi.stubGlobal('getComputedStyle', () => ({ getPropertyValue: () => '40px' }));
+    celebration.setManual(true);
+    let dones = 0;
+    celebration.start(
+      {
+        faces: Array.from({ length: 52 }, () => ({ letter: 'A', letterCount: 1 })),
+        wordList: [{ spelling: 'abc', letterCount: 3, cards: [2, 0, 1], cell: 3 }],
+      } as never,
+      () => {
+        dones += 1;
+        t.overlays.openDeferred(token);
+      },
+    );
+    vi.stubGlobal('getComputedStyle', (el: FakeEl) => ({ transform: el.computedTransform() }));
+    vi.stubGlobal('document', undefined);
+    navCalls.length = 0;
+    return { celebration, dones: () => dones };
+  }
+
+  it('AD-13 a tap and a long-press (with its release) on a WordCell change nothing, make no nav call and do not throw', async () => {
+    const t = await setup();
+    t.detach();
+    wonView();
+    celebrateStub(t);
+    const before = state(t);
+    expect(() => t.tap(t.b.cellCard)).not.toThrow();
+    expect(state(t)).toEqual(before);
+    t.down(t.b.cellCard);
+    expect(t.setTimer).not.toHaveBeenCalled();
+    expect(t.advance(1000)).toBe(0);
+    expect(() => t.fire('pointerup', { target: t.b.cellCard })).not.toThrow();
+    expect(state(t)).toEqual(before);
+    expect(navCalls).toEqual([]);
+    expect(t.active()).toBe(0);
+  });
+
+  it('AD-13 a marked press starts no drag: a crossed move then a release on a pickable card changes nothing', async () => {
+    const t = await setup();
+    t.detach();
+    celebrateStub(t);
+    const before = state(t);
+    t.down(t.b.card1, { clientX: 20, clientY: 10 });
+    t.fire('pointermove', { clientX: 20, clientY: 200 });
+    t.fire('pointermove', { clientX: 120, clientY: 200 });
+    expect(t.b.root.classes.size).toBe(0);
+    expect(t.b.card1.classes.size).toBe(0);
+    t.fire('pointerup', { target: t.b.column3 });
+    expect(state(t)).toEqual(before);
+    expect(navCalls).toEqual([]);
+    expect(t.active()).toBe(0);
+  });
+
+  it('AD-13 with the entry open openView and openPeek throw AD-13 and openHoverPeek is a no-op', async () => {
+    const t = await setup();
+    t.detach();
+    celebrateStub(t);
+    expect(() => t.overlays.openView(3)).toThrow(/^AD-13 openView while celebration/);
+    expect(() => t.overlays.openPeek(3)).toThrow(/^AD-13 openPeek while celebration/);
+    t.overlays.openHoverPeek(3);
+    expect(t.overlays.hoverPeek).toBeNull();
+    expect(navCalls).toEqual([]);
+  });
+
+  it('AD-13 a WordCell press under a live run, then end() and the sheet open, then the release: no throw, only the pop and the sheet push', async () => {
+    const t = await setup();
+    t.detach();
+    wonView();
+    const live = await celebrateLive(t);
+    t.down(t.b.cellCard);
+    live.celebration.end();
+    await Promise.resolve();
+    expect(live.dones()).toBe(1);
+    expect(t.overlays.top).toBe('endSheet');
+    expect(() => t.fire('pointerup', { target: t.b.cellCard })).not.toThrow();
+    expect(t.overlays.top).toBe('endSheet');
+    expect(t.overlays.depth).toBe(1);
+    expect(t.overlays.viewCell).toBeNull();
+    expect(t.overlays.peek).toBeNull();
+    expect(navCalls).toEqual(['pop', 'push']);
+  });
+
+  it('AD-13 a WordCell press under a live run held past the long-press time, then end() and the sheet open, then the release: no throw, no peek', async () => {
+    const t = await setup();
+    t.detach();
+    wonView();
+    const live = await celebrateLive(t);
+    t.down(t.b.cellCard);
+    expect(t.advance(400)).toBe(0);
+    live.celebration.end();
+    await Promise.resolve();
+    expect(t.advance(400)).toBe(0);
+    expect(t.overlays.peek).toBeNull();
+    expect(() => t.fire('pointerup', { target: t.b.cellCard })).not.toThrow();
+    expect(t.overlays.top).toBe('endSheet');
+    expect(t.overlays.viewCell).toBeNull();
+    expect(t.overlays.peek).toBeNull();
+    expect(navCalls).toEqual(['pop', 'push']);
+    expect(t.active()).toBe(0);
+  });
+
+  // The hover-peek half of the press skip's cancel() is not reachable here: startCelebration()
+  // itself closes an open hover peek, and openHoverPeek is a no-op while the entry is open.
+  it('AD-19 a press held from before the run, then the press skip (act.ts cancelGesture(), end()) and the sheet open: its same-id release performs nothing', async () => {
+    const t = await setup();
+    t.detach();
+    wonView();
+    const { setController, cancelGesture } = await import('../act');
+    setController(t.controller);
+    t.down(t.b.cellCard, { pointerId: 7 });
+    expect(t.active()).toBe(1);
+    const live = await celebrateLive(t);
+    cancelGesture();
+    live.celebration.end();
+    expect(t.active()).toBe(0);
+    await Promise.resolve();
+    expect(live.dones()).toBe(1);
+    expect(t.advance(1000)).toBe(0);
+    expect(() => t.fire('pointerup', { target: t.b.cellCard, pointerId: 7 })).not.toThrow();
+    expect(t.overlays.top).toBe('endSheet');
+    expect(t.overlays.depth).toBe(1);
+    expect(t.overlays.viewCell).toBeNull();
+    expect(t.overlays.peek).toBeNull();
+    expect(t.overlays.hoverPeek).toBeNull();
+    expect(navCalls).toEqual(['pop', 'push']);
+    expect(t.active()).toBe(0);
+  });
+
+  it('AD-13 a press begun after the run ended acts again (the mark is per press)', async () => {
+    const t = await setup();
+    t.detach();
+    wonView();
+    celebrateStub(t);
+    t.overlays.close('celebration');
+    navCalls.length = 0;
+    t.tap(t.b.cellCard);
+    expect(t.overlays.viewCell).toBe(3);
+    expect(navCalls).toEqual(['push']);
   });
 });

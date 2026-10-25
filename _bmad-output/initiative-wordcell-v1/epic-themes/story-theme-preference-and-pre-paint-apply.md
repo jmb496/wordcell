@@ -51,3 +51,4 @@ Verify: npm run test:all and npm run test:screens are green, including the crite
 
 - No open questions.
 - Decision (owner, 2026-10-18): keep the AD-16 boot order (option A). The build's first-frame test decides; only if a flash shows with a non-default theme does the plan propose a spine edit for owner approval.
+- Post-close (Opus review, owner decisions D1–D6, 2026-10-22, `5210279`, `a88cf67`, `45f6a13`; see the epic Notes): D2 the Halted screen stays Charcoal and `fatal()` resets the theme-color meta via the registry's `clearTheme()`; a production no-flash test and a head-order test now cover first paint; the prefs theme ids are pinned to `ThemeId`.

@@ -1,7 +1,7 @@
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { expect, type Page, type Request, test } from '@playwright/test';
+import { devices, expect, type Page, type Request, test } from '@playwright/test';
 import { EN, parseSession, view } from '../src/engine/index';
 import { expectAnotherWindow, expectOnlyButton, kind, stored } from './helpers/blocking';
 import {
@@ -17,6 +17,17 @@ import {
   tapAt,
   trayIds,
 } from './helpers/board';
+import {
+  enableCelebration,
+  FAST_CAP_STEP_MS,
+  finishCelebration,
+  NORMAL_CAP_STEP_MS,
+  running,
+  SLOW_CAP_STEP_MS,
+  skipByPress,
+  watchAdded,
+  watchAddedFromBoot,
+} from './helpers/celebration';
 import { button, expectLeaves, hitAt, wc } from './helpers/dialogs';
 import { buildRoot } from './helpers/dist-test';
 import { dragResidue, expectNoResidue } from './helpers/drag';
@@ -33,8 +44,17 @@ import {
   space,
   targets,
 } from './helpers/gestures';
-import { openScene } from './helpers/how-to-play';
-import { arrangeByKeys, focusedCard, press, tiles, toComposing, tray, where } from './helpers/keys';
+import { finalFrame, openScene } from './helpers/how-to-play';
+import {
+  arrangeByKeys,
+  expectBoardFocus,
+  focusedCard,
+  press,
+  tiles,
+  toComposing,
+  tray,
+  where,
+} from './helpers/keys';
 import {
   animationFrames,
   hidePage,
@@ -43,6 +63,7 @@ import {
   showPage,
   startHidden,
 } from './helpers/lifecycle';
+import { recordRegion, recordRegionFromBoot, resetRegion, sets } from './helpers/live-region';
 import { onAndroid, onDesktop } from './helpers/project';
 import {
   booted,
@@ -61,7 +82,7 @@ import { cursorIndex, draft, draftDetail, game, storedGame, storedText } from '.
 import { SESSIONS } from './helpers/sessions';
 import { armStorageSpy, storageWrites } from './helpers/storage-spy';
 import { tokenColor } from './helpers/style';
-import { longPress, touchDrag, touchHold } from './helpers/touch';
+import { doubleTap, longPress, touchDrag, touchHold } from './helpers/touch';
 
 // AD-17 helper self-tests. The direct `page.evaluate` writes to `wordcell:*` below stand in for the
 // app's own writes during a prior load; they are not seeding and are allowed only in this file.
@@ -750,6 +771,25 @@ test.describe('SESSIONS literals', () => {
   });
 });
 
+test.describe('SESSIONS long word', () => {
+  test('AD-17 SESSIONS.longWord parses and replays to a won game led by its 20-letter word', () => {
+    const parsed = parseSession(SESSIONS.longWord, EN);
+    if (!parsed.ok) throw new Error(`longWord does not parse: ${parsed.reason}`);
+    expect(parsed.session.seed).toBe(1);
+    const current = view(parsed.session, EN);
+    expect(current.status).toBe('won');
+    expect(current.wordList?.map((w) => [w.spelling, w.letterCount, w.cell])).toEqual([
+      ['tnpdvimldxomiwrnzoaf', 20, 10],
+      ['cuyeurhf', 8, 8],
+      ['lquejata', 8, 7],
+      ['ekghhio', 7, 6],
+      ['opnaen', 6, 4],
+      ['tscfsz', 6, 5],
+      ['sbrr', 4, 3],
+    ]);
+  });
+});
+
 test.describe('blocking helpers', () => {
   test('AD-17 kind and stored read the hook and localStorage; expectOnlyButton and expectAnotherWindow pass on the another-window message', async ({
     page,
@@ -855,7 +895,7 @@ test.describe('storage spy', () => {
   });
 });
 
-test.describe('touchDrag / longPress / touchHold', () => {
+test.describe('touchDrag / longPress / touchHold / doubleTap', () => {
   async function installProbe(page: Page): Promise<void> {
     await page.evaluate(() => {
       const w = window as unknown as { __probeEvents: ProbeEvent[] };
@@ -1031,6 +1071,41 @@ test.describe('touchDrag / longPress / touchHold', () => {
     const viewport = page.viewportSize();
     if (viewport === null) throw new Error('no viewport');
     await expect(touchHold(page, { x: 100, y: viewport.height })).rejects.toThrow(/outside the/);
+    await animationFrames(page, 2);
+    expect(await probed(page)).toEqual([]);
+  });
+
+  test('AD-17 doubleTap gives two touch taps whose clicks have detail 1 then 2, even 600 ms apart in real time', async ({
+    page,
+  }) => {
+    const at = { x: 200, y: 400 };
+    await page.goto('/');
+    await installProbe(page);
+    // 600 ms is past Chromium's 400 ms repeat-tap window; the stamped gap (DOUBLE_TAP_GAP_MS) is not.
+    await doubleTap(page, at, { between: () => page.waitForTimeout(600) });
+    const events = (await probed(page)).filter((e) => e.type !== 'contextmenu');
+    for (const e of events) expect(e.pointerType).toBe('touch');
+    expect(events.map((e) => e.type)).toEqual([
+      'pointerdown',
+      'pointerup',
+      'pointerdown',
+      'pointerup',
+    ]);
+    expect(
+      (events[2]?.timeStamp ?? Number.NaN) - (events[1]?.timeStamp ?? Number.NaN),
+    ).toBeLessThan(400);
+    for (const e of events) {
+      expect(Math.abs(e.clientX - at.x)).toBeLessThanOrEqual(1);
+      expect(Math.abs(e.clientY - at.y)).toBeLessThanOrEqual(1);
+    }
+  });
+
+  test('AD-17 doubleTap outside the viewport rejects with no touch events', async ({ page }) => {
+    await page.goto('/');
+    await installProbe(page);
+    const viewport = page.viewportSize();
+    if (viewport === null) throw new Error('no viewport');
+    await expect(doubleTap(page, { x: viewport.width, y: 100 })).rejects.toThrow(/outside the/);
     await animationFrames(page, 2);
     expect(await probed(page)).toEqual([]);
   });
@@ -1223,6 +1298,41 @@ test.describe('keys helpers', () => {
   });
 });
 
+test.describe('expectBoardFocus', () => {
+  test('AD-17 expectBoardFocus resolves on the bottom card of the lowest non-empty column, and on main when every column is empty', async ({
+    page,
+    browser,
+  }) => {
+    await openFixture(page, 'session-idle-fresh');
+    await cards(page, 1).last().focus();
+    await expectBoardFocus(page);
+    const second = await browser.newPage();
+    await openFixture(second, 'session-idle-empty-column');
+    await expect(cards(second, 1)).toHaveCount(0);
+    await cards(second, 2).last().focus();
+    await expectBoardFocus(second);
+    await second.close();
+    const won = await browser.newPage();
+    await openFixture(won, 'session-won');
+    await expect(won.locator('main [data-card-id][data-place="column"]')).toHaveCount(0);
+    await won.locator('main').focus();
+    await expectBoardFocus(won);
+    await won.close();
+  });
+
+  test('AD-17 expectBoardFocus rejects with another card or the Menu button focused', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-idle-fresh');
+    await cards(page, 1).first().focus();
+    await expect(expectBoardFocus(page, { timeout: 300 })).rejects.toThrow(/expected DIV/);
+    await cards(page, 2).last().focus();
+    await expect(expectBoardFocus(page, { timeout: 300 })).rejects.toThrow(/expected DIV/);
+    await page.getByRole('button', { name: 'Menu', exact: true }).focus();
+    await expect(expectBoardFocus(page, { timeout: 300 })).rejects.toThrow(/focused BUTTON/);
+  });
+});
+
 test.describe('openScene', () => {
   test('AD-17 openScene reaches a scene by its dot and Next, and returns its figure', async ({
     page,
@@ -1249,7 +1359,7 @@ test.describe('openScene', () => {
       prefs: 'prefs-theme-paper',
       scene: 2,
       id: 'freeLetter',
-      last: 2,
+      last: finalFrame(2),
     });
     await expect(final.getByRole('button', { name: 'Replay', exact: true })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe('paper');
@@ -1258,5 +1368,164 @@ test.describe('openScene', () => {
   test('AD-17 the prefs-theme-scifi fixture seeds the scifi theme', async ({ page }) => {
     await openFixture(page, 'session-idle-fresh', { prefs: 'prefs-theme-scifi' });
     expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe('scifi');
+  });
+});
+
+test.describe('live-region recorders', () => {
+  // Writes `text` to the element matching `selector`, one task per write.
+  const write = (page: Page, selector: string, text: string) =>
+    page.evaluate(
+      async ([sel, value]) => {
+        (document.querySelector(sel) as HTMLElement).textContent = value;
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      },
+      [selector, text] as const,
+    );
+  const REGION = '[role="status"][aria-live="polite"]';
+
+  test('AD-17 recordRegion records one set per write, a clear then the same text again as a second set, and ignores text outside the region', async ({
+    page,
+  }) => {
+    await page.setContent('<div role="status" aria-live="polite"></div><p id="out"></p>');
+    await recordRegion(page);
+    await write(page, REGION, 'one');
+    await write(page, REGION, '');
+    await write(page, REGION, 'two');
+    await write(page, REGION, '');
+    await write(page, REGION, 'two');
+    await write(page, '#out', 'outside');
+    expect(await sets(page)).toEqual(['one', 'two', 'two']);
+  });
+
+  test('AD-17 recordRegionFromBoot records text the region has when it is added, later writes, and ignores text outside it', async ({
+    page,
+  }) => {
+    await recordRegionFromBoot(page);
+    await page.route('**/region-probe', (route) =>
+      route.fulfill({
+        contentType: 'text/html',
+        body:
+          '<!doctype html><body><p id="out">before</p><script>' +
+          // A wrapper holding the region and its text is added at once, as a mount does.
+          'const w = document.createElement("main");' +
+          'w.innerHTML = \'<div role="status" aria-live="polite">at boot</div>\';' +
+          'document.body.append(w);</script></body>',
+      }),
+    );
+    await page.goto('/region-probe');
+    await write(page, REGION, '');
+    await write(page, REGION, 'later');
+    await write(page, '#out', 'outside');
+    expect(await sets(page)).toEqual(['at boot', 'later']);
+  });
+
+  test('AD-17 resetRegion empties the recorded list; later sets are recorded again', async ({
+    page,
+  }) => {
+    await page.setContent('<div role="status" aria-live="polite"></div>');
+    await recordRegion(page);
+    await write(page, REGION, 'one');
+    expect(await sets(page)).toEqual(['one']);
+    await resetRegion(page);
+    expect(await sets(page)).toEqual([]);
+    await write(page, REGION, 'two');
+    expect(await sets(page)).toEqual(['two']);
+  });
+});
+
+test.describe('celebration helpers', () => {
+  test('AD-17 the cap constants are the AD-19 caps rounded up to a 16 ms step', () => {
+    expect([FAST_CAP_STEP_MS, NORMAL_CAP_STEP_MS, SLOW_CAP_STEP_MS]).toEqual([3008, 6000, 10672]);
+  });
+
+  test('AD-17 enableCelebration then Confirm runs the celebration; finishCelebration ends it with the sheet expanded', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-won-words', { steps: ['undo'] });
+    await enableCelebration(page);
+    expect(await running(page)).toBe(false);
+    const added = await watchAdded(page, '[data-celebration-root]');
+    await page.getByTestId('primary-action').click();
+    await expect.poll(() => running(page)).toBe(true);
+    expect(await added()).toBe(true);
+    await finishCelebration(page);
+    expect(await running(page)).toBe(false);
+    await expect(page.getByRole('dialog', { name: 'Every column cleared.' })).toBeVisible();
+    await expect(page.locator('[data-celebration-root]')).toHaveCount(0);
+  });
+
+  // The touch path on this android page; the mouse path on a Desktop Chrome page
+  // (`navigator.maxTouchPoints` 0), since these self-tests run on android only.
+  test('AD-17 skipByPress ends a run by a band press, by touch and by mouse: running() false, the sheet expanded', async ({
+    page,
+    browser,
+  }) => {
+    const skipOn = async (target: Page, touch: boolean) => {
+      await openFixture(target, 'session-won-words', { steps: ['undo'] });
+      await enableCelebration(target);
+      expect(await target.evaluate(() => navigator.maxTouchPoints > 0)).toBe(touch);
+      await target.getByTestId('primary-action').click();
+      await expect.poll(() => running(target)).toBe(true);
+      // The press's pointer type, recorded in window capture (before skip.ts consumes it at
+      // document capture).
+      await target.evaluate(() => {
+        const w = window as unknown as { __types?: string[] };
+        w.__types = [];
+        window.addEventListener('pointerdown', (e) => w.__types?.push(e.pointerType), {
+          capture: true,
+        });
+      });
+      await skipByPress(target);
+      expect(
+        await target.evaluate(() => (window as unknown as { __types?: string[] }).__types),
+      ).toEqual([touch ? 'touch' : 'mouse']);
+      expect(await running(target)).toBe(false);
+      await expect(target.getByRole('dialog', { name: 'Every column cleared.' })).toBeVisible();
+      await expect(
+        target.getByRole('button', { name: 'Replay this deal', exact: true }),
+      ).toBeFocused();
+    };
+    await skipOn(page, true);
+    const desktop = await browser.newContext({
+      ...devices['Desktop Chrome'],
+      baseURL: test.info().project.use.baseURL,
+    });
+    try {
+      await skipOn(await desktop.newPage(), false);
+    } finally {
+      await desktop.close();
+    }
+  });
+
+  test('AD-17 watchAdded records a node added and removed again before the read, and reads false when none was added; a node present at the start reads true', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-idle-fresh');
+    const marker = await watchAdded(page, '[data-watch-marker]');
+    const none = await watchAdded(page, '[data-watch-none]');
+    expect(await marker()).toBe(false);
+    // Inside a wrapper, so the observer must look into the added subtree.
+    await page.evaluate(() => {
+      const wrapper = document.createElement('div');
+      const inner = document.createElement('span');
+      inner.setAttribute('data-watch-marker', '');
+      wrapper.append(inner);
+      document.body.append(wrapper);
+      wrapper.remove();
+    });
+    await expect(page.locator('[data-watch-marker]')).toHaveCount(0);
+    expect(await marker()).toBe(true);
+    expect(await none()).toBe(false);
+    // Present when the watch starts (the board's column 1).
+    const present = await watchAdded(page, '[data-testid="column-1"]');
+    expect(await present()).toBe(true);
+  });
+
+  test('AD-17 watchAddedFromBoot attaches before the app runs: a node the boot adds is recorded', async ({
+    page,
+  }) => {
+    const added = await watchAddedFromBoot(page, '[data-testid="column-1"]');
+    await openFixture(page, 'session-idle-fresh');
+    expect(await added()).toBe(true);
   });
 });
