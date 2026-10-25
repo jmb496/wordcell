@@ -237,3 +237,18 @@ Ticket review resumed at pass 4 after the usage limit and converged after 5 pass
 3. Below 20 fps a Normal celebration runs past EXPERIENCE.md Motion's 6 s. Proposed default: keep as built and note the low-frame-rate exception in EXPERIENCE.md Motion / AD-19.
 Resume: record the answers (ticket Scope 9, epic Notes, SPEC memlog), commit, rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-end-of-game-words`; the next session continues at Step B (build).
 Tokens: 4.0M input-equivalent (ticket review 91%, other 5%, orchestrator 4%); orchestrator peak context 67k
+
+## 10.10 Refactor sweep — built, waiting for you
+What it adds: no new behaviour. It tidies the epic's leftovers: corrects stale comments and test names, tightens tests, removes a lint warning and a Svelte console warning in the celebration, syncs two doc lines, and lists every deferred finding of the epic in one table (plan Appendix C) with what happened to it.
+Ticket review: 5 passes, converged; three owner questions answered 2026-10-24 (SPEC F30–F32, commit 728b18a); the open major (Scope 4 console capture with the celebration seam on) was resolved in the build (10 warnings at HEAD, 0 after, groups mounted).
+Build: built; commits 767ed42, 013200e, af1ed54, 5f1b705. Stops at `built` by the ticket's done checkpoint.
+Code review: quick (no high or medium left by the build's own review, risk low), 1 pass, converged; 0 fixes applied; log 37c0d18.
+Tests: all passing (unit, build 559956/600000, dist 21, e2e 1098, pwa 17); screenshots passed (67 passed, 39 skipped, no baseline change).
+Ref to fix upstream: none
+Tokens: 16.1M input-equivalent (build 87%, code review 6%, other 5%, orchestrator 2%); orchestrator peak context 64k
+Worth knowing: startup files agreed (10.10 at Step B); a leftover pid file `.autopilot/20261020-0925/10.6-C3.done.pid` names a dead process (ignored). Deferred (low): the Svelte warning fix has no lasting regression check (only the one-off capture). Warm unit median 4.32 s against the 5 s budget (wall time with npx start-up up to 5.01 s); the 1 s watch re-run was not measured. Owner checkpoint items are in the plan's Auto Run Result "For the owner": owner-call rows 40, 45/110, 63, 64, 78/79, 109; flagged declines 41 and 12; doc proposals in Appendix B (AD-17 Touch `doubleTap`, DESIGN.md:692, the F32 notes); the item 10 figures to check.
+Close-out docs:
+- EXPERIENCE.md § Motion (:414) ← F32: the 6 s cap is simulated time; below 20 fps a Normal run lasts longer (owner, 2026-10-24)
+- ARCHITECTURE-SPINE.md AD-19 (:971) ← F32: same low-frame-rate note (owner, 2026-10-24)
+- EXPERIENCE.md § Motion and ARCHITECTURE-SPINE.md AD-19 ← F31: a window shorter than the bars plus one card skips the celebration as under reduced motion; follow-up ticket for the retrospective, not built (owner, 2026-10-24)
+- none for F30 (left as built)
