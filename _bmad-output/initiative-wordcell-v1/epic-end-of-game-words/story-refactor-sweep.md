@@ -46,3 +46,4 @@ Verify: one full `npm run test:all` at the final commit and `npm run test:screen
 - evidence — _bmad-output/implementation-artifacts/autopilot/epic-end-of-game-words-20261020-0925.md (digest)
 - evidence — _bmad-output/implementation-artifacts/review-loop/10-*-build.md, 10-6-tune*.md, opus-review-epic-10.md
 - evidence — _bmad-output/initiative-wordcell-v1/epic-end-of-game-words/*-plan.md
+- Decision (owner standing rule, 2026-10-24, ticket review): Scope 9 owner calls answered: SPEC F30 the second-finger residual is a declined row (left as built); SPEC F31 the short-window case is a declined row here (no behaviour change in a sweep) recorded as a follow-up ticket; SPEC F32 the below-20-fps overrun is kept, with the EXPERIENCE.md Motion / AD-19 note as a close-out doc for the retrospective (owner docs are not edited in this sweep unless item 7 lists them).

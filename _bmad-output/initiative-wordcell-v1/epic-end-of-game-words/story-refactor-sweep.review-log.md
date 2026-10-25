@@ -176,6 +176,7 @@ Words (docs): 1499 (no fix pass)  |  Snapshot: story-refactor-sweep.review-log.p
 - none
 
 ## Result — converged after 5 passes
+Decisions needed (3): resolved 2026-10-24 under the owner's standing rule (accept the proposed defaults): SPEC F30, F31 (follow-up ticket), F32; ticket Notes record them.
 open major: Scope 4 pass condition — the dev-server console capture must enable the celebration seam (`__wordcell.celebration.setEnabled(true)`, a group mounted) before "absent at HEAD" can close the item; otherwise the warning cannot appear and item 4 is falsely closed.
 Majors per pass: 13, 9, 6, 1, 1. Decision needed: the three pass 1 items (skip.ts second-finger tap on the just-opened end sheet; NaN physics on a too-short window; below 20 fps a Normal run exceeds 6 s), each now a pre-assigned owner-call row in Scope 9. Technical defaults applied: 15 (pass 1: 4, pass 2: 5, pass 3: 4, pass 4: 2). Words: 104 → 1499 (budget 1500).
 Unapplied minors: the 12 under Pass 5 above, plus the "Not applied" lists of passes 2, 3 and 4 (watch re-run < 1 s; wave-stagger and test-hook.ts:54-57 locations; console capture as a lasting e2e assertion; other double-tap specs from 169c6bc; dist-smoke project config clause; old → new title map; item 5/10 measurement commit; FALL_FRAC reference unpaced 1-card non-QU; `CI` unset and "flaky" counts as a failure; rule-coverage check via the done plans' rule → test maps). Pass 5 ran no fix pass, so the pass 5 log section is left uncommitted for the caller.
