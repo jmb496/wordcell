@@ -229,3 +229,11 @@ Owner's Android read passed 2026-10-24 ("Phone tests look great"): long list, hi
 
 ## Stopped — usage limit
 Ticket 10.10, Step A (ticket review): passes 1–3 committed (1958108); the review log is partial and resumes by the review-loop resume rule. Limit: `You've hit your session limit · resets 9:30pm (America/New_York)`. Resume: `LIMIT_CHECK=off .claude/skills/epic-autopilot/scripts/loop.sh epic-end-of-game-words`.
+
+## Stopped — decision needed (ticket 10.10, Step A)
+Ticket review resumed at pass 4 after the usage limit and converged after 5 passes (majors 13, 9, 6, 1, 1); harden commit aaa8fe2. Startup note: the handoff JSON still named 10.9 as done (the usage-limit stop commit 66e145d did not update it); the ticket files (partial review log) settled it as 10.10 Step A. One open major for the build: the Scope 4 console capture must turn the celebration seam on (`__wordcell.celebration.setEnabled(true)`, a group mounted) before "absent at HEAD" may close that item. Three owner questions (ticket Scope 9 owner-call rows; the build changes none of them):
+1. A second finger down before a press skips the celebration can tap the just-opened end sheet (Replay / New game). Proposed default: leave as built.
+2. On a window shorter than the bars plus one card the celebration plays as about 6 s of nothing (NaN physics). Proposed default: skip it and open the end sheet at once, as reduced motion does (new behaviour, not built in 10.10).
+3. Below 20 fps a Normal celebration runs past EXPERIENCE.md Motion's 6 s. Proposed default: keep as built and note the low-frame-rate exception in EXPERIENCE.md Motion / AD-19.
+Resume: record the answers (ticket Scope 9, epic Notes, SPEC memlog), commit, rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-end-of-game-words`; the next session continues at Step B (build).
+Tokens: 4.0M input-equivalent (ticket review 91%, other 5%, orchestrator 4%); orchestrator peak context 67k

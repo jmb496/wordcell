@@ -1,1 +1,1 @@
-{"outcome": "done", "ticket": "10.9", "reason": "done", "next": "10.10", "updated": "2026-10-24T23:54:41Z", "summary": "Ticket 10.9 (close-out) passed the owner's Android read and is marked done; 10.10 (refactor sweep) is next."}
+{"outcome": "stopped", "ticket": "10.10", "reason": "rule 1: ticket review raised 3 owner questions (skip second finger, too-short window, below 20 fps)", "next": "10.10", "updated": "2026-10-25T02:16:03Z", "summary": "The 10.10 refactor-sweep ticket review converged after 5 passes but needs three owner answers before the build."}
