@@ -45,6 +45,9 @@ function registered(op: string): CelebrationSeam {
   return seam;
 }
 
+// `setEnabled` always sets the manual clock with the flag, so a run the hook can see runs on the
+// manual clock; the controller's silent `advance` on a real-rAF run is unreachable here (AD-17
+// Celebration seam).
 if (import.meta.env.DEV || import.meta.env.VITE_TEST_HOOKS === '1') {
   window.__wordcell = Object.freeze({
     loaded: () => game.loaded(),

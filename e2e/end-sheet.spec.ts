@@ -842,7 +842,9 @@ test.describe('android words', () => {
     expect(await fixed()).toEqual(before);
     expect(await wordsList(page).evaluate((el) => getComputedStyle(el).overflowY)).toBe('visible');
     for (const item of await wordsList(page).getByRole('listitem').all()) {
-      expect((await item.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+      const box = await item.boundingBox();
+      if (box === null) throw new Error('R-88 Words row has no box');
+      expect(box.height).toBeGreaterThanOrEqual(44);
     }
     expect(await content.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
     const long = page.getByRole('listitem', { name: 'EHNPBNTFSA, 10 letters', exact: true });
@@ -851,6 +853,8 @@ test.describe('android words', () => {
       .locator('.word')
       .evaluate((e) => parseFloat(getComputedStyle(e).fontSize));
     expect(wordSize).toBeGreaterThanOrEqual(14);
+    // `.word` clamps to 1rem (EndSheet.svelte), 16 px under Playwright's default 16 px root.
+    expect(wordSize).toBeLessThanOrEqual(16);
     expect(await page.locator('.words button, .words a, .words [tabindex]').count()).toBe(0);
     const centres = await long.locator('span').evaluateAll((els) =>
       els.map((e) => {
@@ -895,6 +899,23 @@ test.describe('android words', () => {
     expect(centres).toHaveLength(2);
     expect(Math.abs(centres[0] - centres[1])).toBeLessThanOrEqual(2);
     expect(await long.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
+  });
+
+  // DESIGN.md Words section: a short word keeps the body size; `.word` clamps to 1rem
+  // (EndSheet.svelte), 16 px under Playwright's default 16 px root.
+  test('R-88 a 3-letter word keeps the 16 px body size on one line at 360 px', async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 740 });
+    await openFixture(page, 'session-won-long-words', { endSheet: 'expanded' });
+    const row = page.getByRole('listitem', { name: /, 3 letters$/ }).first();
+    await expect(row).toBeVisible();
+    const word = row.locator('.word');
+    expect(await word.evaluate((e) => parseFloat(getComputedStyle(e).fontSize))).toBe(16);
+    const lines = await word.evaluate((e) => {
+      const range = document.createRange();
+      range.selectNodeContents(e);
+      return new Set([...range.getClientRects()].map((r) => Math.round(r.top))).size;
+    });
+    expect(lines).toBe(1);
   });
 
   test('R-88 scrolling, collapsing and expanding leave localStorage untouched', async ({

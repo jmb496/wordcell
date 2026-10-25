@@ -43,7 +43,7 @@ The engine view, the end sheet and a new `src/ui/celebration/` module with its o
 
 ## References
 
-- spec — _bmad-output/specs/spec-epic-10-end-of-game-words/SPEC.md, CAP-1…CAP-6, decisions F1…F13; rule-coverage.md
+- spec — _bmad-output/specs/spec-epic-10-end-of-game-words/SPEC.md, CAP-1…CAP-6, decisions F1…F32; rule-coverage.md
 - rules — docs/game-flow-spec.md, R-86…R-88, Q-46…Q-48, §7.12
 - design — _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/EXPERIENCE.md, Win celebration, End sheet, Message catalogue, A-E16; DESIGN.md, Words section, Win celebration, A-D12
 - architecture — _bmad-output/planning-artifacts/architecture/architecture-wordcell-2026-09-27/ARCHITECTURE-SPINE.md, AD-3, AD-6, AD-9, AD-13, AD-14, AD-17, AD-19

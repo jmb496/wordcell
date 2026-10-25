@@ -6,14 +6,15 @@
 // 4 SPEC F13) is outside the top bar, the action bar and the dictionary banner, and a non-repeat
 // `Space` (no Shift) or `Esc` (Shift allowed) with no Ctrl/Meta/Alt, whatever holds focus (SPEC
 // F17). A skip is `stopPropagation()` + `preventDefault()`, then `cancelGesture()` (a press held
-// from before the start, the controller's hover-peek upkeep) and `end()`, so the bubble-phase
-// pointer controller never opens a press for it and keys.ts sees a prevented key. Only the skipping
-// input is consumed: a pointer held from before the start never is (its `pointerup` is not the
-// run's), and a finish or the cap consumes nothing. Every other `Space` keydown of the run, a
-// chorded one (Shift, Ctrl, Meta or Alt) or a repeat (a chord held past the repeat delay, or one
-// whose modifier was released), does not skip, but is `preventDefault()`ed only, so it never
-// activates a focused button (SPEC F17; preventing the keydowns is enough in Chromium, the keyup
-// then clicks nothing).
+// from before the start, the controller's hover-peek upkeep) and `end()`: stopped in document
+// capture, the skipping input reaches neither the bubble-phase pointer controller nor keys.ts (a
+// window bubble listener). Only the skipping input is consumed: a pointer held from before the
+// start never is (its `pointerup` is not the run's), and a finish or the cap consumes nothing.
+// Every other `Space` keydown of the run, a chorded one (Shift, Ctrl, Meta or Alt) or a repeat (a
+// plain `Space` held from before the start, a chord held past the repeat delay, or one whose
+// modifier was released), does not skip but is `preventDefault()`ed only: it reaches keys.ts
+// prevented and never activates a focused button (SPEC F17; preventing the keydowns is enough in
+// Chromium, the keyup then clicks nothing).
 // Each skip leaves a one-shot post-run tail (AD-19 Skip refinement, see the ticket plan):
 // - press tail, for the skipping `pointerId`: before release it consumes that pointer's
 //   `pointerup` and arms its own `createClickSwallower` there (300 ms from the release); a same-id

@@ -61,10 +61,37 @@ const appearAt = (g: Group, j: number): number =>
 const travel = (g: Group): number[] =>
   [...Array(g.cards).keys()].map((k) => (g.side === 1 ? g.cards - 1 - k : k));
 const cards = (g: Group): number[] => [...Array(g.cards).keys()];
-// The pace launch() applied to a group: its gravity over the unpaced gravity, 2 x band height /
-// (FALL_FRAC x cap)² with step.ts's FALL_FRAC 0.2 (gravity x pace², so the square root).
-const paceOf = (s: StepState, g: Group): number =>
-  Math.sqrt((g.gravity * (0.2 * s.capMs) ** 2) / (2 * (s.floor - s.ceiling)));
+/** The elapsed time at which group `g`'s last card in travel order is wholly past its wall. */
+const exitOf = (s: StepState, g: Group): number => {
+  const tail = travel(g)[g.cards - 1] as number;
+  let [lo, hi] = [g.launchMs, s.capMs];
+  for (let k = 0; k < 80; k++)
+    if (card(s, g, tail, (lo + hi) / 2).exited) hi = (lo + hi) / 2;
+    else lo = (lo + hi) / 2;
+  return hi;
+};
+/**
+ * The unpaced gravity of `s`'s band and cap: a reference group of one card (`letters` counts cards,
+ * so no QU), launched first from the band's centre with the same band, cap and base. It must be
+ * unpaced: its one card is out strictly before the fit deadline cap − baseMs (SPEC F22).
+ */
+const unpacedGravity = (s: StepState): number => {
+  const ref = launch({
+    ...BASE,
+    groups: [{ x: (s.walls.left + s.walls.right) / 2, y: (s.ceiling + s.floor) / 2, letters: 1 }],
+    floor: s.floor,
+    ceiling: s.ceiling,
+    walls: s.walls,
+    capMs: s.capMs,
+    baseMs: s.baseMs,
+  });
+  const g = first(ref);
+  expect(exitOf(ref, g)).toBeLessThan(s.capMs - s.baseMs - 1);
+  return g.gravity;
+};
+// The pace launch() applied to a group: its gravity over the unpaced gravity (gravity x pace², so
+// the square root).
+const paceOf = (s: StepState, g: Group): number => Math.sqrt(g.gravity / unpacedGravity(s));
 /** The leading card's centre at `elapsedMs` (SPEC F25: at the word's constant speed). */
 const leader = (s: StepState, g: Group, elapsedMs: number) =>
   card(s, g, travel(g)[0] as number, elapsedMs);
@@ -560,12 +587,7 @@ describe('AD-19 step', () => {
     let [spread, lapOff] = [1, 0];
     for (const [i, g] of s.groups.entries()) {
       // The group's exit: its last card wholly past its wall (bisection).
-      const tail = travel(g)[g.cards - 1] as number;
-      let [lo, hi] = [g.launchMs, s.capMs];
-      for (let k = 0; k < 80; k++)
-        if (card(s, g, tail, (lo + hi) / 2).exited) hi = (lo + hi) / 2;
-        else lo = (lo + hi) / 2;
-      const exit = hi;
+      const exit = exitOf(s, g);
       expect([i, exit <= s.capMs - s.baseMs + 1e-6]).toEqual([i, true]);
       // At the exit the leader is where the path's own (paced) timing put it.
       const out = leaderPathMs(s, g, exit);
@@ -583,8 +605,8 @@ describe('AD-19 step', () => {
       spread = Math.max(spread, partial / firstLap, firstLap / partial);
     }
     // Measured 2026-10-24 (SPEC F27): the last partial lap's speed differs from the first lap's by
-    // up to 1.136 x, more than F25's 10 %, so one speed per word; full laps run within 7.1 % of the
-    // path's.
+    // up to 1.136 x, over the 10 % per-lap spread of ticket 10.6's fourth device read (SPEC F25:
+    // one speed per word); full laps run within 7.1 % of the path's.
     expect(spread).toBeCloseTo(1.136, 3);
     expect(lapOff).toBeCloseTo(0.071, 3);
     // SPEC F27 crossings are longer: the last word, from WordCell 3 at the left edge, is fitted
@@ -806,18 +828,31 @@ describe('AD-19 step', () => {
   });
 
   it('AD-19 the cap: moving groups fade over the last baseMs and the run finishes by the cap', () => {
-    // A group that never exits (no horizontal speed) fades over [cap - baseMs, cap].
-    let s = withGroup(make(), { launchMs: 0, vx: 0 });
+    // A group that never exits (speed 0: the leader stays at its launch point) fades over
+    // [cap - baseMs, cap].
+    let s = withGroup(make(), { launchMs: 0, speed: 0 });
     s = run(s, 6000 - 180 - 16);
     expect(first(s).opacity).toBe(1);
+    for (const j of cards(first(s)))
+      expect([
+        j,
+        Number.isFinite(card(s, first(s), j).x),
+        Number.isFinite(card(s, first(s), j).y),
+      ]).toEqual([j, true, true]);
     const t = step(withGroup(s, {}), 16);
     s = run(t, 6000);
     expect(s.elapsedMs).toBeGreaterThanOrEqual(6000);
     expect(s.elapsedMs).toBeLessThanOrEqual(6000 + 16);
     expect(s.finished).toBe(true);
     expect(first(s).opacity).toBe(0);
-    const mid = withGroup(make(), { launchMs: 0, vx: 0 });
+    const mid = withGroup(make(), { launchMs: 0, speed: 0 });
     const half = run(mid, 6000 - 90 + 1);
+    for (const j of cards(first(half)))
+      expect([
+        j,
+        Number.isFinite(card(half, first(half), j).x),
+        Number.isFinite(card(half, first(half), j).y),
+      ]).toEqual([j, true, true]);
     expect(first(half).opacity).toBeGreaterThan(0);
     expect(first(half).opacity).toBeLessThan(1);
   });
@@ -833,9 +868,15 @@ describe('AD-19 step', () => {
         while (t.elapsedMs < to) t = step(t, Math.min(50, to - t.elapsedMs));
         return t;
       };
-      let s = withGroup(make({ capMs, baseMs }), { launchMs: 0, vx: 0 });
+      let s = withGroup(make({ capMs, baseMs }), { launchMs: 0, speed: 0 });
       s = until(s, capMs - baseMs - 1);
       expect(first(s).exited).toBe(false);
+      for (const j of cards(first(s)))
+        expect([
+          j,
+          Number.isFinite(card(s, first(s), j).x),
+          Number.isFinite(card(s, first(s), j).y),
+        ]).toEqual([j, true, true]);
       expect(first(s).opacity).toBe(1);
       s = until(s, capMs - baseMs / 2);
       expect(first(s).opacity).toBeGreaterThan(0);
@@ -1120,6 +1161,7 @@ describe('AD-19 step', () => {
         // landscape row had one, 1.093).
         const paces = PACES[`${list} ${geometry}`] as readonly number[];
         expect(s.groups.map((g) => paceOf(s, g))).toEqual(paces.map((p) => expect.closeTo(p, 3)));
+        expect(s.groups.every((g) => paceOf(s, g) >= 1 - 1e-9)).toBe(true);
       });
     }
   }

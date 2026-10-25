@@ -1,5 +1,7 @@
 // AD-19 (R-87): the win celebration's run controller, the only owner of the run data. App.svelte
-// mounts its run and end-sheet.ts starts it (entry 5); the skips (entry 6); hide follows (entry 7).
+// mounts its run and end-sheet.ts starts it (entry 5); skip.ts ends it on a skip (entry 6);
+// interruptions.ts (hide, resize, orientationchange; AD-19 Hide, SPEC F28) and open-menu.ts (☰/`M`,
+// SPEC F13) call `end()` (entry 7).
 // `start` measures once; frames then step the pure `step.ts` state and write opacity straight to
 // the group elements Celebration.svelte registered and a `transform` to each of their face copies
 // (SPEC F21, rule 3, no reactive per-frame state) and, when a card's place in its group's stack
@@ -120,8 +122,10 @@ function build(attachment: Attachment | null) {
     if (elements.length !== groups.length) {
       throw new Error(`AD-19 celebration: ${elements.length} elements for ${groups.length} groups`);
     }
-    // Index loops: a frame allocates only the shown copies' transform strings and a changed
-    // z-index's string (ticket 10.6 device read).
+    // Index loops: this render allocates only each shown copy's transform string, a changed
+    // z-index's string and each shown group's opacity string; the rest of a frame's allocation is
+    // the rAF callback and AD-19's `step(state) → state` (a new state and groups array, a changed
+    // group's copy).
     for (let i = 0; i < groups.length; i++) {
       const group = groups[i] as Group;
       const el = elements[i] as HTMLElement;

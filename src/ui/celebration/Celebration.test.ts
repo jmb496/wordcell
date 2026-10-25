@@ -27,7 +27,7 @@ const html = (
 const face = (letter: string) => ({ letter, letterCount: letter === 'QU' ? 2 : 1 });
 
 describe('AD-19 Celebration', () => {
-  it('AD-19 every group is hidden, carries data-celebration and aria-hidden, and has no live-card attributes', () => {
+  it('AD-19 every group is hidden and carries data-celebration-group; each copy carries data-celebration and aria-hidden; no live-card attributes', () => {
     const body = html([
       [face('C'), face('A'), face('T')],
       [face('QU'), face('A')],
@@ -44,7 +44,7 @@ describe('AD-19 Celebration', () => {
     expect(
       body
         .match(/<div class="group[^>]*>/g)
-        ?.every((t) => t.includes('data-celebration-group=""') && t.includes('opacity: 0')),
+        ?.every((t) => t.includes('data-celebration-group=""') && /opacity: 0(;|")/.test(t)),
     ).toBe(true);
     // SPEC F21: a group element holds its copies and nothing else (the controller writes a
     // transform to each of its children).
@@ -110,7 +110,7 @@ describe('AD-19 Celebration', () => {
     expect(source).toContain('box-shadow: 0 6px 16px var(--wc-shadow-drag)');
   });
 
-  it('AD-19 SPEC F23 stacking: the copies carry no z-index of their own; the letter and badge sit in the top of the face, so a lower copy drawn above covers only the bottom', () => {
+  it('AD-19 SPEC F23 stacking: the copies carry no z-index of their own; the letter and badge sit in the top of the face, so on rising and falling stretches a lower copy drawn above covers only the bottom', () => {
     const body = html([[face('QU'), face('A'), face('T')]]);
     // The controller writes each copy's z-index (`stackOrder`); the markup starts in row order.
     expect(body).not.toMatch(/z-index/);
@@ -118,8 +118,10 @@ describe('AD-19 Celebration', () => {
     // The group element is a stacking context (will-change: opacity), so a copy's z-index orders
     // it only among its own group's copies.
     expect(rules(source, '.group').get('will-change')).toBe('opacity');
-    // The glyph fills the top 72 % (its letter centred at 36 %), the QU badge the top 13 px: a copy
-    // drawn above, at least as low on screen, never reaches either from above.
+    // The glyph fills the top 72 % (its letter centred at 36 %), the QU badge the top 13 px: on a
+    // rising or falling stretch a copy drawn above sits lower and misses both (SPEC F23 stacking);
+    // near a floor contact or an apex neighbours nearly coincide or sit side by side, and it can
+    // cover them.
     expect(rules(source, '.glyph').get('top')).toBe('0');
     expect(rules(source, '.glyph').get('height')).toBe('72%');
     expect(rules(source, '.glyph.qu').get('top')).toBe('12px');

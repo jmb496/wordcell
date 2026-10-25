@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, type Page, test } from '@playwright/test';
+import { SWALLOW_MS } from '../../src/ui/gestures/click-swallow';
 import { END_SHEET, openFixture } from '../helpers/board';
 import { skipByPress, watchAdded, watchAddedFromBoot } from '../helpers/celebration';
 import { walk } from '../helpers/dist-test';
@@ -69,6 +70,9 @@ async function winIntoRealRun(page: Page): Promise<void> {
   await openFixture(page, 'session-won-words', { booted: false, steps: ['undo'] });
   await expect(page.getByTestId('primary-action')).toHaveText('Confirm');
   const added = await watchAdded(page, ROOT);
+  // No root before the winning Confirm, so the `added()` check below is not a leftover.
+  await expect(page.locator(ROOT)).toHaveCount(0);
+  expect(await added()).toBe(false);
   await page.getByTestId('primary-action').click();
   // The run starts in the winning whenSettled callback, after the commit glide and the 300 ms guard.
   await expect.poll(() => page.locator('[data-celebration-group]').count()).toBeGreaterThan(0);
@@ -110,11 +114,30 @@ test('R-87 hook-free build: a real win plays and a press skips it to the expande
 }) => {
   const errors = errorsOf(page);
   await winIntoRealRun(page);
+  // The press is the skip, not a natural finish in the round trips before it: a window capture
+  // listener (before skip.ts's document capture listener consumes it) records the root at the press.
+  await page.evaluate(() =>
+    window.addEventListener(
+      'pointerdown',
+      () => {
+        const w = window as unknown as { __rootAtPress?: boolean };
+        w.__rootAtPress ??= document.querySelector('[data-celebration-root]') !== null;
+      },
+      { capture: true },
+    ),
+  );
   // A touch tap (Pixel 7); the mouse branch is covered by the e2e/helpers.spec.ts self-test.
   await skipByPress(page);
   await expect(wonSheet(page)).toBeVisible({ timeout: 1000 });
+  expect(
+    await page.evaluate(() => (window as unknown as { __rootAtPress?: boolean }).__rootAtPress),
+  ).toBe(true);
   await expectSkippedToSheet(page);
   await page.waitForLoadState('networkidle');
+  // AD-19 Skip / SPEC F18: wait past the press skip's post-run tail (the click swallower and the
+  // guard, SWALLOW_MS from the release) so an error thrown there is caught; networkidle resolves at
+  // once here.
+  await page.evaluate((ms) => new Promise((resolve) => setTimeout(resolve, ms)), SWALLOW_MS + 100);
   expect(errors).toEqual([]);
 });
 

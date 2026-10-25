@@ -1,10 +1,9 @@
 // AD-19 (R-87): the win celebration's pure physics. `step(state, dtMs)` advances groups of card
 // faces (one per word-list entry) over plain data: no DOM, no clock, no `Math.random`. Launch time
 // derives from the entry index; side and horizontal speed derive from the entry index, the launch
-// origin and the band size (AD-19 Rule bullet 1 and SPEC CAP-2/F3 still say "entry index", see the
-// 10.3 plan's Plan Change Log). The constants are tuned at epic 10's checkpoint (ticket 10.6 device
-// reads: SPEC F20, F21, F23, F25, F26, F27); timing is a fraction of the cap so the run scales with
-// the speed pref.
+// origin and the band size (AD-19 Rule bullet 1, SPEC CAP-2 and F3, amended 2026-10-23). The
+// constants are tuned at epic 10's checkpoint (ticket 10.6 device reads: SPEC F20, F21, F23, F25,
+// F26, F27); timing is a fraction of the cap so the run scales with the speed pref.
 // SPEC F27 (cross the screen): a word drifts toward the wall farther from its launch point and
 // leaves past it; its drift is fitted so each hop (the x travel per floor contact) is near
 // HOP_SHARE of the band width, so a longer crossing takes more contacts (`contacts`, at least one,
@@ -14,7 +13,9 @@
 // (CARD_STEP) behind the card ahead measured along the path (arc length), so the word reads as its
 // row bent onto the arc. The arc is measured in card units (x over the scaled card width, y over
 // the scaled card height): a horizontal stretch keeps the row's 0.65-width spacing, a vertical one
-// gets 0.65 card heights, so a card never hides the letter of the card above it.
+// gets 0.65 card heights: on a rising or falling stretch a card covers only the bottom of the card
+// above it; near a floor contact or an apex, where neighbours nearly coincide or sit side by side,
+// it can cover the other's letter (SPEC F23 stacking).
 // The path and its arc length are closed-form; `launch` samples the arc length of the first fall
 // and of one bounce once (`ARC_SAMPLES`), and a card's path time is found by a binary search of
 // those samples plus Newton steps, so a frame allocates nothing.
@@ -25,8 +26,9 @@
 // SPEC F25 (constant speed): the leader runs the unchanged path at one constant speed per word in
 // card units (the trail's measure, so every card of the word shares it), its arc `speed` x the
 // time since launch: the arc to the group's exit over the path's own time to it, so the run takes
-// as long as the path did. One speed per word, not per lap: the last partial lap to the exit
-// differs from the first lap by up to 1.14 x on the portrait fixture (more than F25's 10 %).
+// as long as the path did. One speed per word, not per lap (SPEC F25): the last partial lap to the
+// exit differs from the first lap by up to 1.14 x on the portrait fixture, over the 10 % per-lap
+// spread the ticket 10.6 fourth device read allowed (10.6 plan, Tuning applied).
 // Coordinates are band-relative px (the band is the area between the top bar and the action bar),
 // y grows downward, velocities are px per ms; a card's position is the centre of its box.
 
@@ -38,7 +40,8 @@ export const CARD_STEP = 0.65;
 const FIT_SHARE = 0.9;
 /** A-D12: the smallest scale of a row. */
 const MIN_SCALE = 0.4;
-/** Groups per wave; later waves launch later, in list order. */
+/** Wave-slot count: launches are an even stagger, entry i at i x waveGap / WAVE_SIZE, so waves
+ * overlap in list order (SPEC F6); a group's slot (i % WAVE_SIZE) sets its speed variety. */
 const WAVE_SIZE = 3;
 /** Cap fraction between two waves, shrunk so the last launch is within LAUNCH_SPAN_FRAC. */
 const WAVE_GAP_FRAC = 0.08;
@@ -243,7 +246,8 @@ function pathTime(path: Path, arc: number): number {
 /**
  * The initial state: every group waiting at its origin, hidden, launching by entry index. SPEC
  * F27: the drift puts the leader wholly past the farther wall at the hop's apex after `contacts`
- * floor contacts, the count that makes a hop nearest the slot's target. The drift is also fitted
+ * floor contacts: the fractional count at the slot's target hop, rounded, so a hop is 0.8 to 1.3 x
+ * the target on the real layouts (SPEC F27; the contacts test pins it). The drift is also fitted
  * so the group's last card is past its wall by `capMs - baseMs`
  * (before the closing fade): a group whose trail would overrun plays its whole path faster
  * (`pace`: drift and launch speed x pace, gravity x pace²), the same arc in less time. SPEC F23:
@@ -273,6 +277,7 @@ export function launch(input: LaunchInput): StepState {
     // an origin exactly at the band's centre goes right.
     const side: -1 | 1 = entry.x - walls.left > walls.right - entry.x ? -1 : 1;
     const slot = i % WAVE_SIZE;
+    // An even stagger: i x waveGap / WAVE_SIZE (SPEC F6).
     const launchMs = Math.floor(i / WAVE_SIZE) * waveGap + (slot * waveGap) / WAVE_SIZE;
     const rise = RISE_SHARE * Math.max(0, entry.y - h / 2 - ceiling);
     const vy = -Math.sqrt(2 * gravity * rise);
@@ -393,10 +398,11 @@ export function cardExited(state: StepState, group: Group, j: number): boolean {
 
 /**
  * Ticket 10.6 (SPEC F23 stacking): re-sorts `order` (a group's card indices, bottom of the stack
- * first) in place by `ys` (each card's centre y): the card lower on screen is drawn above, so a
- * card only ever covers the bottom of the card above it, never its letter or badge; equal y keeps
- * the row's stacking (the later letter above, DOM order). An insertion sort that starts from the
- * previous frame's order: O(cards) while nothing swaps, and it allocates nothing.
+ * first) in place by `ys` (each card's centre y): the card lower on screen is drawn above, so on
+ * rising and falling stretches it covers only the bottom of the card above it (near a floor
+ * contact or an apex it can cover that card's letter or badge); equal y keeps the row's stacking
+ * (the later letter above, DOM order). An insertion sort that starts from the previous frame's
+ * order: O(cards) while nothing swaps, and it allocates nothing.
  */
 export function stackOrder(order: Int32Array, ys: Float64Array): void {
   for (let i = 1; i < order.length; i++) {

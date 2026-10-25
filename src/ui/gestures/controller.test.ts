@@ -3345,6 +3345,81 @@ describe('AD-12 entry 12 desktop hover peek', () => {
     }
   });
 
+  // Ticket 10.10 item 6 (end-sheet.ts reduced-motion / hidden / seam-off branch, no
+  // `cancelGesture()` before `openDeferred`): flip.ts `play` installs the guard on every won play,
+  // and with no animation it settles at once and hands the open to `whenOpenAllowed`, so the open
+  // waits for the 300 ms floor. Without the tracker (no guard) the same press would arm the
+  // long-press timer and its `openPeek` would throw `AD-13 openPeek while endSheet …` once the sheet
+  // is open; with it the press never reaches the controller (motion.ts `onEvent` consumes it).
+  it('AD-12 a press during a won settle’s guard (no animation, reduced motion) is consumed: no long-press timer, and the sheet opens at the floor with no throw', async () => {
+    const t = await setup();
+    t.detach();
+    motion.value = { baseMs: 180, reduced: true };
+    shared.view = { ...(shared.view as object), status: 'won' };
+    const guard = await import('../motion');
+    let now = 0;
+    const guardTimers: { cb: () => void; due: number; done: boolean }[] = [];
+    let onDoc: ((event: unknown) => void) | null = null;
+    const stop = guard.startTracker(
+      {
+        addEventListener: (type: string, fn: unknown) => {
+          if (type === 'pointerdown') onDoc = fn as (event: unknown) => void;
+        },
+        removeEventListener: () => undefined,
+      },
+      { addEventListener: () => undefined, removeEventListener: () => undefined },
+      () => now,
+      {
+        setTimer: (cb: () => void, ms: number) => {
+          const timer = { cb, due: now + ms, done: false };
+          guardTimers.push(timer);
+          return timer;
+        },
+        clearTimer: (timer: unknown) => {
+          (timer as { done: boolean }).done = true;
+        },
+      },
+      () => false,
+    );
+    try {
+      // end-sheet.ts:40-43 under reduced motion: the token, then the won play's guard, an
+      // immediate settle (no animation) and the open handed to whenOpenAllowed.
+      const token = t.overlays.deferEndSheetOpen();
+      guard.install(true, () => undefined);
+      guard.notifySettled();
+      let opened = false;
+      guard.whenOpenAllowed(() => {
+        if (t.overlays.openDeferred(token)) opened = true;
+      });
+      expect(guard.guardInstalled()).toBe(true);
+      expect(t.overlays.endSheet).toBe('hidden');
+      // A WordCell press inside the guard: the capture tracker sees it first.
+      now = 100;
+      const press = { ...makeEvent({ target: t.b.cellCard }), type: 'pointerdown' };
+      (onDoc as unknown as (event: unknown) => void)(press);
+      expect(press.stopPropagation).toHaveBeenCalled();
+      if (press.stopPropagation.mock.calls.length === 0) t.down(t.b.cellCard, press);
+      expect(t.setTimer).not.toHaveBeenCalled();
+      expect(() => t.advance(400)).not.toThrow();
+      expect(t.overlays.peek).toBeNull();
+      // The floor: the open runs after the guard uninstalls, with no throw.
+      now = 300;
+      expect(() => {
+        for (const timer of guardTimers.filter((x) => !x.done && x.due <= now)) {
+          timer.done = true;
+          timer.cb();
+        }
+      }).not.toThrow();
+      expect(opened).toBe(true);
+      expect(guard.guardInstalled()).toBe(false);
+      expect(t.overlays.top).toBe('endSheet');
+      expect(t.overlays.peek).toBeNull();
+      expect(t.advance(1000)).toBe(0);
+    } finally {
+      stop();
+    }
+  });
+
   it('AD-12 an entry while that cell’s hover peek is open does not arm', async () => {
     const t = await setup();
     t.detach();

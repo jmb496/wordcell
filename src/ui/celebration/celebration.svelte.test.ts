@@ -224,6 +224,61 @@ describe('AD-19 celebration controller', () => {
     expect(frames.size).toBe(0);
   });
 
+  for (const [name, remove, message] of [
+    ['no top bar', () => present.delete('topBar'), /data-band="topBar"/],
+    ['no action bar', () => present.delete('actionBar'), /data-band="actionBar"/],
+    ['no .board-root', () => present.delete('board'), /\.board-root missing/],
+    [
+      '--wc-w unreadable',
+      () => vi.stubGlobal('getComputedStyle', () => ({ getPropertyValue: () => '' })),
+      /--wc-w missing/,
+    ],
+  ] as const) {
+    it(`AD-19 start throws with ${name} and leaves no run active`, () => {
+      const c = createCelebration();
+      remove();
+      expect(() => c.start(viewOf([3]), () => undefined)).toThrow(message);
+      expect(c.running()).toBe(false);
+      expect(frames.size).toBe(0);
+      // AD-19 Skip: the run's skip listeners are attached only after the measuring.
+      expect(listening.size).toBe(0);
+    });
+  }
+
+  it('AD-19 a QU entry is sized by its cards, not its letterCount: letterCount 24 over 23 cards gives 23 copies at the 23-card row scale', () => {
+    let seen: StepState | null = null;
+    mocked.relaunch = (state) => {
+      seen = state;
+      return state;
+    };
+    // Card 0 is the QU card: 23 cards spell 24 letters.
+    const quFaces = faces.map((f, i) => (i === 0 ? { letter: 'QU', letterCount: 2 } : f));
+    const view = {
+      faces: quFaces,
+      wordList: [
+        {
+          spelling: 'qu'.padEnd(24, 'a'),
+          letterCount: 24,
+          cards: Array.from({ length: 23 }, (_, k) => k),
+          cell: 3,
+        },
+      ],
+    } as unknown as GameView;
+    const c = createCelebration();
+    c.start(view, () => undefined);
+    expect(c.props()?.groups[0]).toHaveLength(23);
+    const g = (seen as StepState | null)?.groups[0] as Group;
+    expect(g.cards).toBe(23);
+    expect(g.scale).toBe(rowScale(23, 40, 360));
+    expect(g.scale).not.toBe(rowScale(24, 40, 360));
+    // The render writes 23 faces for 23 cards (a 24-card group would throw on these elements).
+    const els = fakeEls(1, 23);
+    c.register(asEls(els));
+    expect(() => tick(1000)).not.toThrow();
+    expect(written(els[0]).some((t) => t.startsWith('translate('))).toBe(true);
+    c.cancel();
+  });
+
   it('AD-19 start throws while a run is active (checked first), as does setManual', () => {
     const c = createCelebration();
     c.start(viewOf([3]), () => undefined);

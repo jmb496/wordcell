@@ -1466,7 +1466,19 @@ test.describe('celebration helpers', () => {
       expect(await target.evaluate(() => navigator.maxTouchPoints > 0)).toBe(touch);
       await target.getByTestId('primary-action').click();
       await expect.poll(() => running(target)).toBe(true);
+      // The press's pointer type, recorded in window capture (before skip.ts consumes it at
+      // document capture).
+      await target.evaluate(() => {
+        const w = window as unknown as { __types?: string[] };
+        w.__types = [];
+        window.addEventListener('pointerdown', (e) => w.__types?.push(e.pointerType), {
+          capture: true,
+        });
+      });
       await skipByPress(target);
+      expect(
+        await target.evaluate(() => (window as unknown as { __types?: string[] }).__types),
+      ).toEqual([touch ? 'touch' : 'mouse']);
       expect(await running(target)).toBe(false);
       await expect(target.getByRole('dialog', { name: 'Every column cleared.' })).toBeVisible();
       await expect(
@@ -1483,6 +1495,27 @@ test.describe('celebration helpers', () => {
     } finally {
       await desktop.close();
     }
+  });
+
+  test('AD-17 watchAdded records a node added and removed again before the read, and reads false when none was added', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-idle-fresh');
+    const marker = await watchAdded(page, '[data-watch-marker]');
+    const none = await watchAdded(page, '[data-watch-none]');
+    expect(await marker()).toBe(false);
+    // Inside a wrapper, so the observer must look into the added subtree.
+    await page.evaluate(() => {
+      const wrapper = document.createElement('div');
+      const inner = document.createElement('span');
+      inner.setAttribute('data-watch-marker', '');
+      wrapper.append(inner);
+      document.body.append(wrapper);
+      wrapper.remove();
+    });
+    await expect(page.locator('[data-watch-marker]')).toHaveCount(0);
+    expect(await marker()).toBe(true);
+    expect(await none()).toBe(false);
   });
 
   test('AD-17 watchAddedFromBoot attaches before the app runs: a node the boot adds is recorded', async ({

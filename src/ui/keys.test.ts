@@ -21,6 +21,8 @@ const mocks = vi.hoisted(() => {
     focus: { kind: 'board' } as unknown,
     tiles: [] as number[],
     onActivate: undefined as undefined | ((hit: unknown) => void),
+    /** A test's stand-in for the run's end (its close and the sheet's open), after the log. */
+    onCelebrationEnd: undefined as undefined | (() => void),
   };
   return state;
 });
@@ -60,7 +62,12 @@ vi.mock('./focus-board', async (importOriginal) => ({
 }));
 // Ticket 10.7: the run controller, reached only through open-menu.ts with `celebration` on top.
 vi.mock('./celebration/celebration.svelte.ts', () => ({
-  celebration: { end: () => mocks.log.push('celebration.end') },
+  celebration: {
+    end: () => {
+      mocks.log.push('celebration.end');
+      mocks.onCelebrationEnd?.();
+    },
+  },
 }));
 vi.mock('./new-game', () => ({
   newGame: () => mocks.log.push('newGame'),
@@ -126,6 +133,7 @@ beforeEach(async () => {
   mocks.focus = { kind: 'board' };
   mocks.tiles = [];
   mocks.onActivate = undefined;
+  mocks.onCelebrationEnd = undefined;
   setView();
   const act = await import('./act');
   act.setController({
@@ -1528,12 +1536,36 @@ describe('AD-13 keys while the celebration runs', () => {
     expect(mocks.log).toEqual([]);
   });
 
-  it('AD-13 with another suspending entry over the celebration Z and N do nothing', () => {
+  it('AD-13 with another suspending entry over the celebration Z, N and M do nothing', () => {
     celebrate();
     overlays.open('historyNotice');
     expect(press('z')).toBe(false);
     expect(press('n')).toBe(false);
+    expect(press('m')).toBe(false);
     expect(mocks.log).toEqual([]);
+  });
+
+  it('AD-13 a second M before the settle runs no row: celebration.end once, the second press waits on the pending pop and attempt() is false over the menu', () => {
+    setView({ inProgress: false });
+    const token = overlays.deferEndSheetOpen();
+    celebrate();
+    // As the real run's end (open-menu.ts): its close queues the pop, and its `done` opens the
+    // sheet behind it before the pop settles.
+    mocks.onCelebrationEnd = () => {
+      overlays.close('celebration');
+      overlays.openDeferred(token);
+    };
+    expect(press('m')).toBe(true);
+    expect(mocks.pending).toBe(true);
+    expect(overlays.top).toBe('endSheet');
+    // The second M arrives before the settle: it waits, and nothing is prevented.
+    expect(press('m')).toBe(false);
+    expect(mocks.waiters).toHaveLength(2);
+    settle();
+    expect(ACTED(mocks.log)).toEqual(['celebration.end']);
+    expect(overlays.top).toBe('menu');
+    expect(overlays.depth).toBe(2);
+    expect(reasons).toEqual(['ended']);
   });
 
   it('AD-13 Esc with the celebration on top does nothing here (the AD-19 skip listener owns it): not prevented, no act(), depth unchanged', () => {

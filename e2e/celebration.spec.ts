@@ -146,11 +146,15 @@ function stepUntilShown(page: Page, cap: number): Promise<number> {
       const groups = [...document.querySelectorAll<HTMLElement>('[data-celebration-group]')];
       for (let t = 0; t < max && hook.celebration.running(); t += stepMs) {
         hook.celebration.advance(stepMs);
-        const shown = groups.findIndex(
-          (g) =>
+        const shown = groups.findIndex((g) => {
+          // A group with no copy is never shown.
+          const first = g.firstElementChild as HTMLElement | null;
+          return (
             Number(getComputedStyle(g).opacity) > 0 &&
-            (g.firstElementChild as HTMLElement | null)?.style.transform !== '',
-        );
+            first !== null &&
+            first.style.transform !== ''
+          );
+        });
         if (shown >= 0) return shown;
       }
       return -1;
@@ -217,11 +221,24 @@ test.describe('android', () => {
     const lengthWhileRunning = await historyLength(page);
     expect(await wcOf(page)).toBe(1);
     await expect(sheet(page)).toHaveCount(0);
+    await expect(collapsedBar(page)).toHaveCount(0);
+    // The run's end pops its entry before the sheet's push: a page-side popstate counter (the wc and
+    // history.length checks cannot tell pop-then-push from no nav activity).
+    await page.evaluate(() => {
+      const w = window as unknown as { __pops?: number };
+      w.__pops = 0;
+      window.addEventListener('popstate', () => {
+        w.__pops = (w.__pops ?? 0) + 1;
+      });
+    });
+    const pops = () => page.evaluate(() => (window as unknown as { __pops?: number }).__pops);
     await finishCelebration(page);
     await expect(sheet(page).getByRole('button', { name: 'Replay this deal' })).toBeFocused();
     await expect.poll(() => wcOf(page)).toBe(1);
+    expect(await pops()).toBe(1);
     await animationFrames(page, 3);
     expect(await wcOf(page)).toBe(1);
+    expect(await pops()).toBe(1);
     expect(await historyLength(page)).toBe(lengthWhileRunning);
   });
 
@@ -243,6 +260,7 @@ test.describe('android', () => {
     await advance(page, FAST_CAP_STEP_MS);
     expect(await running(page)).toBe(true);
     await expect(sheet(page)).toHaveCount(0);
+    await expect(collapsedBar(page)).toHaveCount(0);
     await advance(page, SLOW_CAP_STEP_MS - FAST_CAP_STEP_MS);
     expect(await running(page)).toBe(false);
     await expect(sheet(page)).toBeVisible();
@@ -687,6 +705,8 @@ test.describe('android', () => {
     await expectOneMenu(page);
     await page.goBack();
     await expect(menu(page)).toHaveCount(0);
+    // Menu.svelte: closed over the expanded sheet, focus returns to ☰.
+    await expect(menuButton(page)).toBeFocused();
     await expect(sheet(page)).toBeVisible();
     await expect.poll(() => wcOf(page)).toBe(1);
   });
@@ -733,6 +753,10 @@ test.describe('android', () => {
     await expect(sheet(page)).toHaveCount(1);
     await expect(sheet(page)).toBeVisible();
     await expect.poll(() => wcOf(page)).toBe(1);
+    // Still one sheet and one entry a few frames later (no late second open).
+    await animationFrames(page, 3);
+    await expect(sheet(page)).toHaveCount(1);
+    expect(await wcOf(page)).toBe(1);
   });
 });
 
@@ -822,7 +846,7 @@ test.describe('desktop', () => {
     await expectNotSkipped(page);
   });
 
-  test('R-87 a mouse click on a non-empty WordCell hovered past the long-press time skips the run, consumed: no pointerdown, pointerup or click reaches the page, no hover peek, nothing activated, Session unchanged', async ({
+  test('R-87 a mouse click on a non-empty WordCell hovered past the long-press time skips the run, consumed: no pointerdown, pointerup or click reaches the page, nothing activated, Session unchanged', async ({
     page,
   }) => {
     await enterIntoRun(page);
@@ -830,7 +854,8 @@ test.describe('desktop', () => {
     await page.mouse.move(point.x, point.y);
     await page.waitForTimeout(LONG_PRESS_MS + 100);
     // No hover peek opens during the run: `overlays.openHoverPeek` opens none under the
-    // `celebration` top (MODAL_TOP), nor while the winning guard starts no timer (F8).
+    // `celebration` top (MODAL_TOP), nor while the winning guard starts no timer (F8). Structural
+    // (overlays.svelte.ts MODAL_TOP), not evidence for `cancelGesture()`.
     await expect(page.locator('[data-hover-peek]')).toHaveCount(0);
     const inputs = await recordInputs(page);
     await page.mouse.click(point.x, point.y);
@@ -845,11 +870,25 @@ test.describe('desktop', () => {
     page,
   }) => {
     await enterIntoRun(page);
-    await page.keyboard.press('m');
-    await page.keyboard.press('m');
+    // SPEC F29: both keydowns in one task, so the second lands while the first's deferred menu
+    // open is still pending (no dialog yet between them); keys.ts reads no `isTrusted`.
+    const between = await page.evaluate(() => {
+      // On the focused element, as a real key press (the trackers read `target.closest`).
+      const m = () =>
+        (document.activeElement ?? document.body).dispatchEvent(
+          new KeyboardEvent('keydown', { key: 'm', code: 'KeyM', bubbles: true, cancelable: true }),
+        );
+      m();
+      const dialogs = document.querySelectorAll('[role="dialog"]').length;
+      m();
+      return dialogs;
+    });
+    expect(between).toBe(0);
     await expectOneMenu(page);
     await page.goBack();
     await expect(menu(page)).toHaveCount(0);
+    // Menu.svelte: closed over the expanded sheet, focus returns to ☰.
+    await expect(menuButton(page)).toBeFocused();
     await expect(sheet(page)).toBeVisible();
     await expect.poll(() => wcOf(page)).toBe(1);
   });
@@ -860,6 +899,7 @@ test.describe('desktop', () => {
     await enterIntoRun(page);
     await page.keyboard.press('Shift+?');
     await page.getByTestId('wordcell-3').focus();
+    await expect(page.getByTestId('wordcell-3')).toBeFocused();
     await page.keyboard.press('Enter');
     await animationFrames(page, 3);
     await expect(page.getByRole('dialog', { name: 'How to play' })).toHaveCount(0);

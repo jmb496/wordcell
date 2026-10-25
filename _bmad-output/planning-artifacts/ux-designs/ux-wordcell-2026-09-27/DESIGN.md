@@ -750,7 +750,7 @@ Jared confirmed every assumption below on 2026-09-27; the `[ASSUMPTION]` tags st
 | A-D9 | All text on the Board surface, everything inside the height rule including the dictionary-failed banner, foot row, control row, badges and messages, is fixed px so the height rule holds; text in panels, sheets and dialogs is in rem and scales with the browser font size. | Typography |
 | A-D10 | In Place, a full-height free-letter tile's origin tag moves to the top-left corner so the bottom band holds the `bottom` / `top` tag and the star; a compact tile puts the position mark (`▼` / `★`) top-left, the ×2 badge top-right and the origin tag bottom-left. | Components |
 | A-D11 | The height rule measures `window.innerHeight` with `viewport-fit=cover`; w is recomputed on `resize` and `orientationchange`, deferred until no gesture or animation is in progress; page scrolling counts as a gesture; a resize that changes only innerHeight by less than 80 px does not recompute w. | Layout & Spacing |
-| A-D12 | The win celebration's copies scale to at least 40 % of card size and overlap by 35 % of the card width along the word's path, each card trailing the one ahead with no launch row (epic 10 SPEC F20, F23, F26); a 23-letter word stays readable at 360 px (to confirm on device, epic 10; overlap amended 2026-10-24, epic 10 SPEC F20). | Components |
+| A-D12 | The win celebration's copies scale to at least 40 % of card size and overlap by 35 % of the card width along the word's path, each card trailing the one ahead with no launch row (epic 10 SPEC F20, F23, F26); a 23-letter word stays readable at 360 px (accepted on device 2026-10-24, owner Android read, epic 10 ticket 10.9; overlap amended 2026-10-24, epic 10 SPEC F20). | Components |
 
 ### Open questions
 

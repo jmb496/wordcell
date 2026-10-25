@@ -7,6 +7,7 @@ import {
   openFixture,
   tapAt,
 } from './helpers/board';
+import { watchAdded } from './helpers/celebration';
 import { hidePage, showPage } from './helpers/lifecycle';
 import { onAndroid, onDesktop } from './helpers/project';
 
@@ -29,27 +30,7 @@ async function stored(page: Page): Promise<Stored> {
 
 const running = (page: Page) => page.evaluate(() => document.getAnimations().length);
 
-type Recorded = { __seen: Record<string, boolean>; __bubbled: string[]; __afterBack?: number };
-
-// Records whether an element matching `selector` is ever added from now on (a MutationObserver, so
-// a sheet that opens and closes again before the next check is still seen); returns the reader.
-async function watchFor(page: Page, selector: string): Promise<() => Promise<boolean>> {
-  await page.evaluate((s) => {
-    const w = window as unknown as Recorded;
-    w.__seen ??= {};
-    w.__seen[s] = document.querySelector(s) !== null;
-    new MutationObserver((records) => {
-      for (const record of records) {
-        for (const node of record.addedNodes) {
-          if (node instanceof Element && (node.matches(s) || node.querySelector(s) !== null)) {
-            w.__seen[s] = true;
-          }
-        }
-      }
-    }).observe(document.body, { childList: true, subtree: true });
-  }, selector);
-  return () => page.evaluate((s) => (window as unknown as Recorded).__seen[s] === true, selector);
-}
+type Recorded = { __bubbled: string[]; __afterBack?: number };
 
 // Records every event of `types` that bubbles to `window`: the guard stops a consumed event at
 // document capture, so a consumed input records nothing.
@@ -434,7 +415,7 @@ for (const project of ['android', 'desktop'] as const) {
       }) => {
         const { cell } = await frozenPlace(page, prefs, reduced);
         const length = await page.evaluate(() => history.length);
-        const viewSeen = await watchFor(page, VIEW_EL);
+        const viewSeen = await watchAdded(page, VIEW_EL);
         await primary(page).click();
         await glidesSettled(page);
         await tapAt(page, cell);
@@ -462,7 +443,7 @@ for (const project of ['android', 'desktop'] as const) {
       }) => {
         await frozenPlace(page, prefs, false);
         const length = await page.evaluate(() => history.length);
-        const sheetSeen = await watchFor(page, END_SHEET_EL);
+        const sheetSeen = await watchAdded(page, END_SHEET_EL);
         const undo = await centre(page.getByTestId('undo'));
         await primary(page).click();
         await page.clock.runFor(400);
@@ -483,7 +464,7 @@ for (const project of ['android', 'desktop'] as const) {
         }) => {
           await frozenPlace(page, prefs, false);
           const length = await page.evaluate(() => history.length);
-          const sheetSeen = await watchFor(page, END_SHEET_EL);
+          const sheetSeen = await watchAdded(page, END_SHEET_EL);
           await primary(page).click();
           await page.clock.runFor(400);
           expect(await running(page)).toBeGreaterThan(0);
@@ -512,7 +493,7 @@ for (const project of ['android', 'desktop'] as const) {
         const { cell, action } = await place(page, prefs);
         // openDeferred closes a top WordCell view as the end sheet opens: the recorder sees one
         // that opened at all.
-        const viewSeen = await watchFor(page, VIEW_EL);
+        const viewSeen = await watchAdded(page, VIEW_EL);
         await tapAt(page, action);
         await tapAt(page, cell);
         await expect(endSheet(page)).toBeVisible();

@@ -1068,6 +1068,24 @@ describe('R-86 word list', () => {
     expect(start.columns[0]).not.toStrictEqual(start.columns[2]);
   });
 
+  it('R-86 a gaveUp list orders as a won one: letter count descending, a tie alphabetical, a duplicate in move order', () => {
+    // Move order tea, ores, ant, tea; the fifth column stays, so the game ends by Give up.
+    const start = startOf(['TEA', 'ORES', 'ANT', 'TEA', 'XYZ']);
+    const session = seam(
+      start,
+      [...whole(1, 3), ...whole(2, 4), ...whole(3, 3), ...whole(4, 3), GIVE_UP],
+      ['tea', 'ores', 'ant'],
+    );
+    const gameView = viewFrom(start, session, LANG);
+    expect(gameView.status).toBe('gaveUp');
+    expect(gameView.wordList).toStrictEqual([
+      { spelling: 'ores', letterCount: 4, cards: start.columns[1], cell: 4 },
+      { spelling: 'ant', letterCount: 3, cards: start.columns[2], cell: 3 },
+      { spelling: 'tea', letterCount: 3, cards: start.columns[0], cell: 3 },
+      { spelling: 'tea', letterCount: 3, cards: start.columns[3], cell: 3 },
+    ]);
+  });
+
   it('R-86 QU is lowercase qu, counts 2 and one card fewer than letterCount', () => {
     const start = startOf(['QIT']);
     const list = listOf(start, whole(1, 3));
@@ -1141,16 +1159,18 @@ describe('R-86 word list', () => {
     expect(draft.moves).toHaveLength(2);
     expect(draft.cursor).toStrictEqual({ index: 1, phase: 'idle' });
     expect(brief(viewFrom(start, draft, LANG).wordList)).toStrictEqual(['tan:3']);
+    // Three Undos take back the last word's Confirm, Validate and drop: two words stay committed
+    // and the third is the redo tail.
+    const longer = startOf(['TAN', 'ONES', 'BAKED']);
     const tail = seam(
-      start,
-      [...whole(1, 3), ...whole(2, 3), ...whole(3, 3), UNDO, UNDO, UNDO, UNDO, UNDO, UNDO, GIVE_UP],
+      longer,
+      [...whole(1, 3), ...whole(2, 4), ...whole(3, 5), UNDO, UNDO, UNDO, GIVE_UP],
       WORDS,
     );
     expect(tail.moves).toHaveLength(3);
     expect(tail.gaveUp).toBe(true);
-    expect(tail.moves.length - tail.cursor.index).toBeGreaterThanOrEqual(2);
-    const kept = tail.cursor.index;
-    expect(brief(viewFrom(start, tail, LANG).wordList)).toHaveLength(kept);
+    expect(tail.cursor).toStrictEqual({ index: 2, phase: 'idle' });
+    expect(brief(viewFrom(longer, tail, LANG).wordList)).toStrictEqual(['ones:4', 'tan:3']);
   });
 
   it('R-86 Undo of the finish leaves playing without the key; Confirm restores the list', () => {

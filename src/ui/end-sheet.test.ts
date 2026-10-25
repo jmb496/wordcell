@@ -339,6 +339,31 @@ describe('AD-19 win trigger', () => {
     expect(calls).toEqual(['cancel', 'push', 'start', 'pop', 'push']);
     expect(outcomes).toEqual([]);
   });
+
+  type Sheet = Awaited<ReturnType<typeof enabled>>;
+  const UNWON: readonly [string, (t: Sheet) => void][] = [
+    ['the game is playing again', () => (store.view = { status: 'playing' })],
+    ['there is no GameView', () => (store.view = undefined)],
+    ['the token is cancelled', (t) => t.overlays.resetForNewSession()],
+  ];
+  for (const [name, change] of UNWON) {
+    it(`AD-19 done on a hidden page opens nothing when ${name} before whenVisible resolves`, async () => {
+      const t = await enabled();
+      t.onDispatched({ changed: true, finished: 'won' }, settleNow);
+      t.overlays.close('celebration');
+      vi.stubGlobal('document', { visibilityState: 'hidden' });
+      starts[0]?.done();
+      await flush();
+      expect(visibleWaiters).toHaveLength(1);
+      change(t);
+      vi.stubGlobal('document', { visibilityState: 'visible' });
+      visibleWaiters[0]?.();
+      await flush();
+      expect(t.overlays.endSheet).toBe('hidden');
+      expect(t.overlays.depth).toBe(0);
+      expect(outcomes).toEqual([]);
+    });
+  }
 });
 
 describe('AD-3 end sheet result mapping', () => {
@@ -392,12 +417,13 @@ describe('AD-3 end sheet Words section', () => {
   }
   const base = { status: 'won', finalScore: 100, band: 3, wordCount: 1, longestWord: undefined };
 
-  it('AD-3 the rows equal the stubbed view.wordList', async () => {
+  it('AD-3 the rows equal the stubbed view.wordList, in its order (no UI re-sort)', async () => {
+    // Not in the engine's order (letter count descending): the sheet keeps the stub's order.
     const html = await sheetHtml({
       ...base,
       wordList: [
-        { spelling: 'baked', letterCount: 5, cards: [], cell: 5 },
         { spelling: 'cat', letterCount: 1, cards: [], cell: 3 },
+        { spelling: 'baked', letterCount: 5, cards: [], cell: 5 },
       ],
     });
     expect(html).toContain('aria-label="BAKED, 5 letters"');
@@ -408,7 +434,7 @@ describe('AD-3 end sheet Words section', () => {
     expect(html).toMatch(/class="word[^"]*" aria-hidden="true">CAT</);
     expect(html).toMatch(/class="count[^"]*" aria-hidden="true">1 letter</);
     expect(html).toContain('aria-labelledby="end-words"');
-    expect(html.indexOf('BAKED')).toBeLessThan(html.indexOf('CAT'));
+    expect(html.indexOf('CAT')).toBeLessThan(html.indexOf('BAKED'));
   });
 
   it('AD-3 an empty wordList renders the heading and the empty line, no list', async () => {

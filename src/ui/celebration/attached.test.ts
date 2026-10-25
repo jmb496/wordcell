@@ -278,6 +278,31 @@ describe('AD-19 celebration attached to overlays', () => {
     expect(t.overlays.top).toBe('endSheet');
   });
 
+  it("AD-19 a later run's back takes its own done: run 1 ends by end() and its done runs once; run 2 ends by closedByBack and only run 2's done runs, once", async () => {
+    const t = await load();
+    t.begin();
+    t.celebration.end();
+    await Promise.resolve();
+    expect(t.dones()).toBe(1);
+    expect(t.overlays.top).toBe('endSheet');
+    // Undo of the finish closes the sheet, so a Redo can win again (a startable state).
+    t.overlays.onUnfinished();
+    expect(t.overlays.endSheet).toBe('hidden');
+    let dones2 = 0;
+    const token2 = t.overlays.deferEndSheetOpen();
+    t.overlays.startCelebration();
+    t.celebration.start(WON, () => {
+      dones2 += 1;
+      t.overlays.openDeferred(token2);
+    });
+    expect(t.celebration.running()).toBe(true);
+    t.overlays.closedByBack(0);
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(t.dones()).toBe(1);
+    expect(dones2).toBe(1);
+    expect(t.overlays.top).toBe('endSheet');
+  });
+
   it('AD-19 end() then a back, or a repeated end(): no second done', async () => {
     const t = await load();
     t.begin();

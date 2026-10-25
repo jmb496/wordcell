@@ -34,6 +34,10 @@ let {
 
 const cardH = $derived(cardMetrics(cardW).H);
 const elements: HTMLElement[] = [];
+/** Keeps group `g`'s element for the mount-time `register` (a plain write, nothing reactive). */
+const keep = (g: number) => (el: HTMLElement) => {
+  elements[g] = el;
+};
 
 onMount(() => {
   register([...elements]);
@@ -56,7 +60,7 @@ onMount(() => {
     <div
       class="group"
       data-celebration-group
-      bind:this={elements[g]}
+      {@attach keep(g)}
       style:opacity="0"
     >
       {#each faces as face, i (i)}
