@@ -1,6 +1,6 @@
 # Review log — story-refactor-sweep.md (ticket 10.10)
 
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Target: `_bmad-output/initiative-wordcell-v1/epic-end-of-game-words/story-refactor-sweep.md`.
 Pass 0: `story-refactor-sweep.review-log.passes/pass0.md`, 104 words, HEAD 8806802.
@@ -123,3 +123,33 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 ### Fixer outcome (pass 3)
 All 18 items applied; no conflicts. Cites checked: flip.ts:331, controller.test.ts:3319 (tracker setup), flip.test.ts:1292 (winning play + `whenOpenAllowed`), motion.ts `onEvent` :341, end-sheet.ts:46-49, step.ts:312, vite.config.ts:58 `environment: 'node'`, DESIGN.md:691, 10-6-build.md pass 4 minors 4-5. No literal command added or changed. Cuts: item 9 reordered (bfcache merged into the owner-call list), errata row shortened, item 11 cites `10-6-tune*.md`, AC 1 Docker clause, item 6 parenthetical, Description opening.
 Words: 1559 (15.0 x pass 0; budget 1500; the majors added ~45)  |  Snapshot: story-refactor-sweep.review-log.passes/pass3.md, fix diff pass3.fix.diff
+
+## Pass 4 — 2026-10-24
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 12 (+4 unapplied: plan detail or adds words), decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+### Applied
+- [major] Scope 5 last clause vs AC Verify — a `test:all` failure outside the android runs has no three-run sample for "failures/3", and the clause does not say the final `test:all` must still be green (the `built` gate, AGENTS.md); pass 3 major 6 half fixed (fix diff + adversarial + edge-case) → fixer item 1
+- [minor] whole ticket — 1559 words over the 1500 budget; cut ~60 words without changing the contract → fixer item 2
+- [minor] Scope 9 vs 3, 11 — "and dead code outside a spine contract" allows an edit with no "fixed here" disposition and conflicts with item 3's parenthetical; cut it → fixer item 3
+- [minor] Scope 11 — a live finding that items 1-7 do not name has no disposition rule → "'Fixed here' only for findings items 1-7 name" (word-neutral) → fixer item 4
+- [minor] Scope 11 Sources — most `## Result` sections only point back to pass lists (10-6-tune2.md:28 "the seven above") → "named by the `## Result` sections" → fixer item 5
+- [minor] Scope 10 — the repo checkout is v9fs (9p), so "a Linux-filesystem checkout" means a fresh clone at the recorded commit → fixer item 6
+- [minor] AC 2 — "F25-F27 regression literals" is ambiguous vs the measured literals (:585-590, :602, :1076) → "measured literals" → fixer item 7
+- [minor] Scope 6 — the :41-43 branch has no separate live-token check (end-sheet.ts:42 `openDeferred` checks inside) → "before `openDeferred`, guarded as at :46-49" → fixer item 8
+- [minor] Scope 7 — "each an owner decision" contradicts the ticket's handling of the digest's four syncs → "two of them owner decisions" → fixer item 9
+- [minor] Scope 7 — DESIGN.md:692 and 10-9-build.md minor 2 are the same mismatch → merge → fixer item 10
+- [minor] AC 2 — version check has no baseline → "unchanged since 19acd17" → fixer item 11
+### Default applied (technical)
+- test:all failures → Verify needs one green `test:all` at the final commit; a failure in any run is recorded as failures over the runs made of that test's project, under item 5's rule
+- Scope 10 unit median → a fresh Linux-filesystem (ext4) clone at the recorded commit, not this 9p checkout
+### Decision needed (functionality / UX / gameplay)
+- none new
+### Not applied (minor; plan detail or adds words)
+- Scope 5/10 — measurement commit after an item 5 test-only fix (plan records each measurement's commit)
+- Scope 2 — FALL_FRAC reference group asserts it is unpaced (1-card, non-QU) (plan)
+- Scope 5 — runs with `CI` unset (retries 0); Playwright "flaky" counts as a failure (plan)
+- AC 2 — rule-coverage check via the done plans' rule → test maps before and after (plan)
+### Dropped
+- none
+### Fixer outcome (pass 4)
+All 11 items applied; no command or config value added or changed. Item 1: item 5's clause → "any other test failing in any run gets the same row (names, failures over its project's runs)"; Verify → "one full `npm run test:all` at the final commit and `npm run test:screens` are green". Cuts beyond the suggested ones (restatements or plan procedure): item 1 "settled by"; item 2 "(AD-n for UI Vitest)" (AGENTS.md); item 3 "(production code changes only in items 4 and 6)" (now item 9's "Beyond items 4, 6 and 7"); item 6 repro how-to cites (controller.test.ts:3319, flip.test.ts:1292; the guard-live condition flip.ts:331 kept) and "whose `cancel()` runs first"; item 7 date phrase; item 11 "e.g. the NaN band", "(a row may cite several)"; AC 1 "means altered visuals"; AC 3 device-testing.md cite; References AGENTS.md parenthetical.
+Words: 1499 (14.4 x pass 0; budget 1500)  |  Snapshot: story-refactor-sweep.review-log.passes/pass4.md, fix diff pass4.fix.diff
