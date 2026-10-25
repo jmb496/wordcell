@@ -140,7 +140,7 @@ DESIGN.md layer order.
 | # | Finding | Boundary | Source | Disposition |
 |---|---|---|---|---|
 | F1 | A halt (AD-15 fatal or Q-38) during a run does not stop the run: frames keep stepping behind the Halted screen until the cap, then `end()` closes the `celebration` entry, a real `nav.pop()`. No sheet is pushed and nothing is announced, since `game.view` is `undefined` once halted (`game.svelte.ts:92-94`; the reviewer's stronger "pushes the sheet and announces" did not hold). Hide while halted is skipped by design (`interruptions.ts:30-32`) | 10.3 ↔ 10.5 ↔ 10.7, AD-15 | `celebration.svelte.ts:182-219`; `main.ts:80` | Defer (low): stop the run on halt (or check `halted()` in `frame`); same follow-up as P1 |
-| F2 | Two quick Space presses skip the run and then replay the deal: Space's keyup is consumed but a fresh keydown passes (`skip.ts:178-181`), the opened sheet focuses Replay this deal, a keyboard click has `detail` 0 and a won game needs no confirm (`EndSheet.svelte:67`, `new-game.ts:46-52`). Esc, Esc likewise collapses the sheet just opened. SPEC F18's 300 ms guard covers presses only | 10.6 ↔ 10.4/10.5 | named lines | Open question for the owner (key guard is a UX choice); not built |
+| F2 | Two quick Space presses skip the run and then replay the deal: Space's keyup is consumed but a fresh keydown passes (`skip.ts:178-181`), the opened sheet focuses Replay this deal, a keyboard click has `detail` 0 and a won game needs no confirm (`EndSheet.svelte:67`, `new-game.ts:46-52`). Esc, Esc likewise collapses the sheet just opened. SPEC F18's 300 ms guard covers presses only | 10.6 ↔ 10.4/10.5 | named lines | Accept as-is: owner decision 2026-10-25, SPEC F33, recorded as an epic Known issue |
 | F3 | A second throw replaces the first fatal's text: if `celebration.start()` throws after the entry is pushed, a back on the Halted screen reaches `removed('ended')` with no run and throws again, and `halt('fatal')` keeps the newest text | 10.3 ↔ 10.4 ↔ 10.5 | `end-sheet.ts:50-51`; `celebration.svelte.ts:194-200`; `game.svelte.ts:205-216` | Accept as-is: needs an earlier bug, and AD-15's latest-fatal-wins is as documented |
 | F4 | A resize landing during the winning glide or the 300 ms guard defers the relayout; the run then starts from the old card width and WordCell positions and nothing ends it | 10.5 ↔ 10.7 ↔ layout gate | `celebration.svelte.ts:252-268`; `flip.ts:470-483`; `layout.svelte.ts:303-310` | Defer: plausible, not reproduced; a test candidate |
 | F5 | Turning reduced motion on during a run does not stop it (read once at the settle) | 10.5 ↔ 10.7 | `end-sheet.ts:41`; `prefs.svelte.ts:149-153` | Accept as-is: SPEC CAP-3 says "does not start"; EXPERIENCE.md "never plays" is read at start |
@@ -212,13 +212,13 @@ Previous epic: `epic-themes` (its retro, `epic-themes-retrospective.md`, Action 
 | B2 | Autopilot skill: usage-limit stops write and commit the handoff JSON (L1); a dead pid file is deleted at startup (L2) | Dev | Process fix, technical (applied post-retro) |
 | B3 | F6: `celebration.svelte.test.ts:823-841` closing-fade test uses `speed: 0`, not `vx: 0`, so it no longer passes through NaN | Dev, small | Remediation, test-only; proposed |
 | B4 | F1 + P1: stop a live run on halt, and fail fast when a run renders with no registered elements | Dev | Remediation, low; proposed for a later sweep |
-| B5 | F2: decide whether a key skip (Space/Esc) gets a short guard like F18's, so a second press cannot replay the deal or collapse the sheet | Owner | UX decision; proposed, nothing built |
+| B5 | F2: whether a key skip gets a short guard like F18's | Owner | Resolved 2026-10-25: kept as built (SPEC F33), a Known issue |
 | B6 | Refactor candidates D1 (shared card-face styles), D2 (one consumption tracker), D3 (celebration input gate), S1 (split the run controller), S2, D4, P3; plus A1 as a `bmad-project-context` pitfall | Dev | Deferred, for the next sweep |
 | B7 | F4: a test or fix for a resize landing during the winning glide | Dev | Deferred, plausible |
 | B8 | L3: a flake seen in a second ticket gets its own fix ticket at once | Owner | Process lesson |
 | B9 | L4: plan a live-tunable device preview for the next motion-tuning ticket | Owner | Process lesson |
 
-Nothing in B3–B9 is merge-blocking. The epic's Known issues (F31, bfcache rows 78/79) are recorded by
+Nothing in B3–B9 is merge-blocking. The epic's Known issues (F31, bfcache rows 78/79, F33) are recorded by
 the owner and not scheduled.
 
 ## Acceptance verdict
@@ -246,7 +246,5 @@ the epic container is marked done.
 
 ## Open questions
 
-- F2 / B5 (owner): should Space and Esc get a short post-skip guard (e.g. F18's 300 ms) so a double
-  press cannot replay the deal from the just-opened sheet? Today's behaviour matches the spec as
-  written; a guard would be new behaviour.
+- F2 / B5: answered by the owner 2026-10-25, kept as built (SPEC F33, epic Known issues).
 - F4 was found by reading code only; whether it shows on a device is unknown.
