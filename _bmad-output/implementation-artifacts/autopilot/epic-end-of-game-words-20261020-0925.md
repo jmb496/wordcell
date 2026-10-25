@@ -226,3 +226,6 @@ Resume: run the phone check (below), record it and your A-D12 verdict in the epi
 
 ## 10.9 Close-out: documents, AGENTS pitfall and device check — done
 Owner's Android read passed 2026-10-24 ("Phone tests look great"): long list, hide path, Words section, interruptions; A-D12 accepted. test:all (after the doubleTap flake fix 169c6bc) and screenshots passed at 6c2042d; only docs changed since. Close-out docs: DESIGN.md Win celebration / A-D12 ← accepted (owner, 2026-10-24); ARCHITECTURE-SPINE.md AD-17 Touch ← `doubleTap`; tickets.toml entry 7 `interface`; epic References F-range F1…F29.
+
+## Stopped — usage limit
+Ticket 10.10, Step A (ticket review): passes 1–3 committed (1958108); the review log is partial and resumes by the review-loop resume rule. Limit: `You've hit your session limit · resets 9:30pm (America/New_York)`. Resume: `LIMIT_CHECK=off .claude/skills/epic-autopilot/scripts/loop.sh epic-end-of-game-words`.
