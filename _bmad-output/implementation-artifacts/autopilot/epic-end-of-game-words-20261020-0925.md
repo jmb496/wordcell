@@ -266,3 +266,6 @@ Close-out docs:
 - docs/game-flow-spec.md R-87 ← dictionary banner exempt from press skips (applied in 52d5aa5)
 - tickets.toml entry 7 `interface` (declined, not maintained after pull)
 Follow-ups (owner, 2026-10-25): F31 and the bfcache rows 78, 79 recorded as known issues in the epic file, not fixed; test-gap rows 40, 41, 45/110 and the remaining close-out docs fixed after the run (post-run commits); unit-suite speed measurement skipped.
+
+## Closed
+Retrospective done 2026-10-25: verdict accepted-with-open-items, criteria declared, Done when 1–5 met (`_bmad-output/initiative-wordcell-v1/epic-end-of-game-words/epic-end-of-game-words-retrospective.md`, `ca8e7f3`). The close-out docs above were already applied (10.9, `d4b42a6`); the retro applied the rest: DESIGN.md A-D12 wording, epic Notes for F31 and the AD-19/CAP-2 sync, and two autopilot skill fixes (a usage-limit stop writes the handoff JSON; a stale pid file is deleted at startup). Owner decision: retro finding F2, a double key press after a key skip, kept as built (SPEC F33, epic Known issues, `5be1647`). Epic container marked done (`82f9911`). Merged to `main` (`baf5766`), pushed, and deployed by CI (CI run 40213552186, Deploy run 40214707983, both green). Deferred to a later sweep: retro Action items B3, B4, B6, B7. Next epic: 7 PWA and release (spine Proposed epics row 7), not yet specced.

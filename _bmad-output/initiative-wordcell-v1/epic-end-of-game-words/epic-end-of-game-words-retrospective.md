@@ -244,6 +244,10 @@ the owner and not scheduled.
 Open items: B3–B9, none blocking. The branch is fit to merge once the owner accepts this verdict and
 the epic container is marked done.
 
+Owner follow-through (2026-10-25): the epic container is marked done (`82f9911`); F2 is answered as
+SPEC F33 (`5be1647`); the owner asked to merge and deploy: merged to `main` in `baf5766`, pushed, CI
+run 40213552186 and Deploy run 40214707983 green.
+
 ## Open questions
 
 - F2 / B5: answered by the owner 2026-10-25, kept as built (SPEC F33, epic Known issues).
