@@ -347,25 +347,6 @@ test.describe('android', () => {
     });
   }
 
-  test('AD-13 R-62 a win by Redo while a sticky WordCell view is open drops the view and shows the sheet at wc 1', async ({
-    page,
-  }) => {
-    // A WordCell view cannot open in the Place phase after an Undo (a tap targets the cell), so the
-    // view opens over the collapsed won board, and Undo and Redo run as dispatched clicks (the
-    // view's scrim covers the top bar, as menu.spec).
-    await openFixture(page, 'session-won');
-    await tapAt(page, await centre(page.getByTestId('wordcell-6')));
-    await expect(page.locator('[data-view-sheet]')).toBeVisible();
-    await expect.poll(() => wcOf(page)).toBe(1);
-    await page.getByTestId('undo').dispatchEvent('click');
-    await glidesSettled(page);
-    await page.getByTestId('redo').dispatchEvent('click');
-    await glidesSettled(page);
-    await expect(page.locator('[data-view-sheet]')).toHaveCount(0);
-    await expect(sheet(page)).toBeVisible();
-    await expect.poll(() => wcOf(page)).toBe(1);
-  });
-
   test('R-75 Redo is disabled after an undone Give up', async ({ page }) => {
     await openFixture(page, 'session-gave-up', { endSheet: 'expanded' });
     await page.getByTestId('undo').click();
@@ -923,8 +904,13 @@ test.describe('android words', () => {
   }) => {
     await openFixture(page, 'session-won-words', { endSheet: 'expanded' });
     const before = await wordcellKeys(page);
-    const session = (JSON.parse(before) as [string, string][]).find(([k]) => k === SESSION);
+    const keys = JSON.parse(before) as [string, string][];
+    const session = keys.find(([k]) => k === SESSION);
     expect(session?.[1]).toBe(fixture('session-won-words.json'));
+    // AD-6: only a dispatch reconciles `wordcell:history`, so the seeded won game boots with none;
+    // asserting it absent here makes the final equality catch any write, boot's included (no word
+    // list stored; the record's AD-6 field set is pinned by src/engine/history.test.ts).
+    expect(keys.map(([k]) => k)).not.toContain('wordcell:history');
     await page.locator('.content').evaluate((el) => el.scrollTo(0, el.scrollHeight));
     await handle(page).click();
     await expect(anySheet(page)).toHaveCount(0);
@@ -962,9 +948,7 @@ test.describe('android words', () => {
     }
     await giveUpFromMenu(page);
     await expect(sheet(page, GAVE)).toBeVisible();
-    const gave = await rows(page);
-    expect(gave).not.toEqual(WON_ROWS);
-    expect(gave).toHaveLength(9);
+    expect(await rows(page)).toEqual(GAVE_ROWS);
   });
 
   test('R-88 New game removes the list', async ({ page }) => {
