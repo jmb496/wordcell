@@ -252,3 +252,17 @@ Close-out docs:
 - ARCHITECTURE-SPINE.md AD-19 (:971) ← F32: same low-frame-rate note (owner, 2026-10-24)
 - EXPERIENCE.md § Motion and ARCHITECTURE-SPINE.md AD-19 ← F31: a window shorter than the bars plus one card skips the celebration as under reduced motion; follow-up ticket for the retrospective, not built (owner, 2026-10-24)
 - none for F30 (left as built)
+
+## 10.10 Refactor sweep — done
+Cleanup only (comments, test names and tests, a lint warning and a console warning, two doc lines, one table of every deferred finding). Ticket review 5 passes converged (F30–F32 accepted under the standing rule); build built; code review quick, 1 pass, converged; test:all and screenshots passed. Done checkpoint: Appendix C owner-call rows took their defaults under the owner's standing rule (2026-10-25): test-gap rows 40, 41, 45/110, 78/79 → follow-ups; doc rows 63, 64 and F32 notes → retrospective; 109 noted.
+
+## Run complete
+All ten tickets of epic 10 are done (2026-10-25). Next: `/bmad-retrospective` on the epic, apply its owner-approved doc fixes (the Close-out docs below), then mark the epic container done with `bmad-preview-ticketing`.
+Close-out docs:
+- ARCHITECTURE-SPINE.md AD-19 Start ← F16 (2026-10-23); Skip ← F17, F18, F19; Rule bullet 1 ← F21/F23/F26 per-card motion; Hide ← F28; AD-19 cap ← F32 low-fps note; AD-13/AD-19 ← `src/ui/open-menu.ts`; AD-17 Touch ← `doubleTap` (2026-10-24) — 10.9 applied most; check what remains
+- EXPERIENCE.md "Never plays" ← F16; Win celebration rows ← F27, F28; Motion ← F31, F32
+- DESIGN.md Win celebration ← F20 35 % overlap, F26 no launch row; A-D12 accepted (owner read 2026-10-24); line 692 wording (10.10 row 64)
+- epic SPEC CAP-2 and F25 wording ← F21–F27; References F-range F1…F32
+- docs/game-flow-spec.md R-87 ← dictionary banner exempt from press skips (applied in 52d5aa5)
+- tickets.toml entry 7 `interface` (declined, not maintained after pull)
+Follow-ups for the retrospective: F31 short-window skip (new ticket); 10.10 test-gap rows 40, 41, 45/110, 78/79; the unit-suite watch re-run budget (unmeasured).

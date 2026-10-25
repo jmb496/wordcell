@@ -3,7 +3,7 @@ title: 'Refactor sweep (epic 10 deferred findings)'
 type: 'refactor'
 ticket: '10'
 created: '2026-10-24'
-status: 'built'
+status: done
 baseline_revision: '728b18ac277802979795dfb0eb7a65bad33348f5'
 route: 'full'
 route_source: 'auto'
