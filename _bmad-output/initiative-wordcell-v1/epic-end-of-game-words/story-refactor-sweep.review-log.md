@@ -1,6 +1,6 @@
 # Review log — story-refactor-sweep.md (ticket 10.10)
 
-State: pass 4: done
+State: pass 5: review (stopping rule met; no fix pass)
 
 Mode: docs, thorough, max 7, budget 1500 words. Target: `_bmad-output/initiative-wordcell-v1/epic-end-of-game-words/story-refactor-sweep.md`.
 Pass 0: `story-refactor-sweep.review-log.passes/pass0.md`, 104 words, HEAD 8806802.
@@ -153,3 +153,29 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 ### Fixer outcome (pass 4)
 All 11 items applied; no command or config value added or changed. Item 1: item 5's clause → "any other test failing in any run gets the same row (names, failures over its project's runs)"; Verify → "one full `npm run test:all` at the final commit and `npm run test:screens` are green". Cuts beyond the suggested ones (restatements or plan procedure): item 1 "settled by"; item 2 "(AD-n for UI Vitest)" (AGENTS.md); item 3 "(production code changes only in items 4 and 6)" (now item 9's "Beyond items 4, 6 and 7"); item 6 repro how-to cites (controller.test.ts:3319, flip.test.ts:1292; the guard-live condition flip.ts:331 kept) and "whose `cancel()` runs first"; item 7 date phrase; item 11 "e.g. the NaN band", "(a row may cite several)"; AC 1 "means altered visuals"; AC 3 device-testing.md cite; References AGENTS.md parenthetical.
 Words: 1499 (14.4 x pass 0; budget 1500)  |  Snapshot: story-refactor-sweep.review-log.passes/pass4.md, fix diff pass4.fix.diff
+
+## Pass 5 — 2026-10-24
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 12, decision-needed 0  |  Dropped in triage: 0 (one duplicate merged: item 11 "others", fix diff + adversarial)
+Words (docs): 1499 (no fix pass)  |  Snapshot: story-refactor-sweep.review-log.passes/pass4.md (unchanged)
+### Open major (recorded, not fixed: stopping rule)
+- Scope 4 pass condition — the dev server runs with the celebration seam off until a test calls `setEnabled(true)` (spine AD-17 Celebration seam :839; celebration.svelte.ts:350-360 set off by main.ts:236-240 in hook builds). A plain dev-server console capture mounts no group, never runs Celebration.svelte:59 `bind:this`, logs no warning at HEAD, and so falsely takes the "absent at HEAD: already-closed" exit. Fix: the capture runs with `__wordcell.celebration.setEnabled(true)` and at least one group mounted; already-closed only when such a run logs no warning.
+### Minors (not applied: converged)
+- Scope 11 — "others: declined or owner call" lost "live"; it excludes the "closed by" disposition and item 8's rows → "other live ones" (fix diff + adversarial)
+- Scope 11 — a deferral split across items (10.4: item 6 vs item 8; 10.6 400 ms: item 8 vs item 5) needs one row per half
+- Scope 11 — "a source with nothing live gets a none row" → "a source with no findings"
+- Scope 3 — a changed e2e test failing some of its 5 repeats: test-only fix rerun to 5/5, else owner call (plan)
+- Scope 7 — "two of them owner decisions": only A-D12 is an owner verdict; F-range is a mechanical sync → "two are applied here, citing it"
+- AC 2 / Done-when 4 — shape, not only versions: record `git diff 19acd17 -- src/engine/session.ts src/engine/history.ts src/engine/serialize.ts` empty (plan)
+- Scope 8 — "; if partly open, item 5" redundant with item 5 (cut)
+- Scope 6 — "(rule 6: restores specified behaviour)": the spine specifies the cancel only on the celebration path (AD-19 :969) → "(rule 6: an AD-13 throw is a bug)"
+- Scope 3 — history-shape check has no file:line; now end-sheet.spec.ts:900 (opus cite :912-927 stale)
+- Scope 6 — a non-reproducing repro: commit it as a passing AD-12 guard test, cite it from the declined row (plan)
+- Scope 3 — the 16 px bound assumes Playwright's default 16 px root (`.word` clamps to 1rem, A-D9) (plan)
+- Scope 2 — the pass condition names "strengthened" tests only; new tests (gaveUp list, `start()` throws, two-run, `M` rows) → "new or strengthened" (plan)
+### Dropped
+- none
+
+## Result — converged after 5 passes
+open major: Scope 4 pass condition — the dev-server console capture must enable the celebration seam (`__wordcell.celebration.setEnabled(true)`, a group mounted) before "absent at HEAD" can close the item; otherwise the warning cannot appear and item 4 is falsely closed.
+Majors per pass: 13, 9, 6, 1, 1. Decision needed: the three pass 1 items (skip.ts second-finger tap on the just-opened end sheet; NaN physics on a too-short window; below 20 fps a Normal run exceeds 6 s), each now a pre-assigned owner-call row in Scope 9. Technical defaults applied: 15 (pass 1: 4, pass 2: 5, pass 3: 4, pass 4: 2). Words: 104 → 1499 (budget 1500).
+Unapplied minors: the 12 under Pass 5 above, plus the "Not applied" lists of passes 2, 3 and 4 (watch re-run < 1 s; wave-stagger and test-hook.ts:54-57 locations; console capture as a lasting e2e assertion; other double-tap specs from 169c6bc; dist-smoke project config clause; old → new title map; item 5/10 measurement commit; FALL_FRAC reference unpaced 1-card non-QU; `CI` unset and "flaky" counts as a failure; rule-coverage check via the done plans' rule → test maps). Pass 5 ran no fix pass, so the pass 5 log section is left uncommitted for the caller.
