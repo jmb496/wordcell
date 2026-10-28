@@ -28,7 +28,7 @@ deferred: []
 
 **Always:** a changed cell's shown top, empty outline (`preview.top === null`), badge (`preview.count >= 2`) and group name come only from `cell.preview`, never `place.placementOrder` or `cell.cards.length`; `cell.cards` still supplies the live elements (the used card excluded: its live element is the strip tile) and the R-65 view/peek; a used card gets no live element in its cell and no copy in any WordCell unless it is the target's `preview.top`; the `preview` mirror carries `data-mirror-of`, class `preview`, no `data-card-id`/`data-testid`/`data-place`, `aria-hidden`, no name, no tabindex, never animates (AD-14); the preview updates when a reorder or retarget is dispatched, by any route (drop, tap-swap, tap-retarget, keys), never mid-drag (rule 3); Composing, the R-65 view and the not-legal dim unchanged; the fly-to-cell hold code is unchanged except the capture selector (entry 3 owns the hold); every Place-phase pin is updated, not deleted; tokens only (TH-2); strings only in `text.ts`.
 
-**Never:** reading `preview` outside Place-derived data, re-deriving it in the UI, any engine/Session/fixture-version change, a new engine export, moving or resizing a mark to dodge the badge, loosening the 360 px rect assertion, touching the How to play scene (entry 4) or other baselines.
+**Never:** reading `preview` outside Place-derived data, re-deriving it in the UI, any engine/Session/fixture-version change, a new engine export, moving or resizing a mark to dodge the badge, changing the 360 px badge-above-pill assertion (owner-approved 2026-10-28), touching the How to play scene (entry 4) or other baselines.
 
 ## I/O & Edge-Case Matrix
 
@@ -75,7 +75,7 @@ deferred: []
 - R-33 (UI) "in Composing a visual deactivation; in Place R-50's preview replaces it": Given `session-place-used-cells`, when opened in Place, then `[data-wordcell] .used` count 0; when Undo to Composing, then cells 3 and 6 show their `.used` mirrors, no `.preview`, no ★; given `session-place-free-letter-redo-tail` + Undo, when Validate, then `wordcell-3` swaps the used mirror for `.preview[data-mirror-of="28"]` with no mirror animation (snap).
 - Q-49 / R-71 / R-73 (UI) / R-70: Given redo-tail + Undo, `session-place-used-cells`, and `session-place` after Confirm and settle, when Redo into Place, a reload into Place, and Undo of the commit (Idle → Place) run respectively, then each shows the preview; for the Undo, read in the click task: `.preview[data-mirror-of="28"]` present while the live faces run their glides, mirror animations 0.
 - ★ (DESIGN.md place preview): Given the fixtures above, when each is shown, then the ★ is on a non-empty preview only; none on an empty one, an unchanged non-empty cell in Place, or any WordCell after Undo to Composing or after Confirm's last landing (`glidesSettled`); the ★ color is `--wc-accent-orange`, pill bottom-left 2 px inside the card rect; on `session-place-used-cells` cell 6 (not legal) the cell is `.wc-dim` at 0.35 with card, ★ and badge inside.
-- ★/badge at 360 px: Given `session-place-long` at 360 × 839, when opened, then the `.preview-mark` and `.count` rects of `wordcell-10` do not intersect. **Computed result for the checkpoint: they intersect** (Design Notes); if approved unchanged the build stops at this assertion and reports to Jared.
+- ★/badge at 360 px: Given `session-place-long` at 360 × 839, when opened, then the `.preview-mark` and `.count` keep their DESIGN.md corners and `document.elementFromPoint` at a point inside both rects of `wordcell-10` returns the `.count` (badge above the pill; the rects intersect by about 0.35–0.6 px, Design Notes; owner-approved at the checkpoint 2026-10-28).
 - AD-14: Given each `e2e/board-phases.spec.ts` state, when opened, then the table records each mirror's kind (its class); Place rows: session-place / below-committed-last `[0 ghost, 28 ghost, 28 preview, 42 ghost]` (28 twice: column-6 D ghost and the target's preview), redo-tail `[9 ghost, 28 preview, 32 ghost]` (ids stay [9, 28, 32]), idle-empty-column + Undo gains `48 preview`; Composing rows keep their ids with `used`/`block` kinds.
 - A-E9 Q-49: Given `session-place-used-cells`, when opened, then `wordcell-5` "WordCell 5, top R, 5 cards, after this word", `wordcell-6` "WordCell 6, top O, 5 cards, after this word", `wordcell-3` "WordCell 3, empty, after this word", none with a named button; `wordcell-4` "WordCell 4, top R, 5 cards" with button "R, WordCell 4, top".
 - Given the change, when `npm run test:all` and `npm run test:screens` run, then both pass; only the listed baselines changed.
@@ -83,6 +83,8 @@ deferred: []
 ## Implementation Notes
 
 ## Plan Change Log
+
+- 2026-10-28, plan checkpoint: Jared approved the plan and the proposed default for the 360 px check (the badge drawn above the ★ pill where they meet, asserted with `elementFromPoint`; no mark moved). Implement.
 
 ## Review Triage Log
 
@@ -117,7 +119,7 @@ Result: cursor {3, place}, legal 3–5, target 5 (empty), order [26, 19, 27, 32,
 
 **Commands:**
 - `npm test` -- expected: all pass, incl. labels, contrast, flip, serialize, view and architecture tests.
-- `npx playwright test e2e/place-preview.spec.ts e2e/board-phases.spec.ts e2e/fly-to-cell.spec.ts e2e/place.spec.ts e2e/screen-reader.spec.ts --project=android` -- expected: pass (except the 360 px rect check if left unchanged: stop and report).
+- `npx playwright test e2e/place-preview.spec.ts e2e/board-phases.spec.ts e2e/fly-to-cell.spec.ts e2e/place.spec.ts e2e/screen-reader.spec.ts --project=android` -- expected: pass.
 - `npm run test:all` -- expected: exit 0.
 - `npm run test:screens` -- expected: pass after the listed baselines are updated; no other PNG changed.
 
