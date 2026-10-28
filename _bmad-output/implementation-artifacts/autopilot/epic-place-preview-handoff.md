@@ -1,16 +1,16 @@
 # Epic 11 (place preview) autopilot handoff
 
-Last session: ticket 11.2 "WordCell row place preview" — stopped before the build, for one question.
+Last session: ticket 11.2 "WordCell row place preview" — the build wrote its plan and stopped for your approval, as the ticket asks. No code is written yet.
 
-- The ticket review finished (5 passes, no open problems), but it raised one look-and-feel question only you can answer.
-- **The question:** on the smallest phones (360 px wide), when a WordCell will hold 10 or more cards after the word, its two-digit card count (bottom-right corner) may touch or slightly cover the new ★ preview mark (bottom-left corner). The design doc puts both in their corners but doesn't say what happens if they meet.
-  - **Proposed default:** leave both marks in their corners; where they meet, the count sits on top of the star. You judge it on your phone at the close-out device read (ticket 11.5). The build also measures it at 360 px and stops to tell you if they actually overlap, rather than moving anything on its own.
-  - **Effect on the game:** only on small phones, only during Place on a cell reaching 10+ cards, the star may be partly hidden by the count. Everywhere else nothing changes.
-  - Alternatives you could choose instead: move the ★ elsewhere (e.g. top-left) in that case, shrink the badge, or hide the ★ when the count is two digits.
-- Nothing was built; tests were not run.
+- **Plan to approve:** `_bmad-output/initiative-wordcell-v1/epic-place-preview/story-wordcell-row-place-preview-plan.md` (the new test position with used cells, how the preview is drawn, which existing tests change and how). All twelve small points from the ticket review are handled in it.
+- **One question about a test:** you decided the card count sits on top of the ★ where they meet on a 360 px phone. The plan worked it out and measured it: they do meet, by less than 1 pixel (only for a cell reaching 10+ cards, only at 360 px; at 412 px they don't touch). The ticket's check "the two marks don't overlap" would therefore fail.
+  - **Proposed default:** keep both marks where they are and change the check to "the count is drawn on top of the ★ where they meet". The look stays exactly as you decided; you judge it on your phone at ticket 11.5.
+  - **Alternative:** nudge or narrow one mark so they never touch — that changes the look from the design doc.
+- Tests were not run (nothing built).
 
-Close-out docs so far: none (your answer may add a DESIGN.md Components → WordCell line).
+Close-out docs so far:
+- DESIGN.md § Components → WordCell (place preview) ← the count badge draws above the ★ pill where they meet at 360 px (owner, 2026-10-28)
 
-To resume: tell the session your answer (or "take the default"); it records it in the ticket and epic notes, commits, and reruns `.claude/skills/epic-autopilot/scripts/loop.sh epic-place-preview`. The next session starts at the build.
+To resume: tell the session "plan approved" plus your answer on the check (or "take the default"); it records both in the ticket notes (and the plan, if the check changes), commits, and reruns `.claude/skills/epic-autopilot/scripts/loop.sh epic-place-preview`. The next session builds from the approved plan.
 
 Digest: `_bmad-output/implementation-artifacts/autopilot/epic-place-preview-20261028-1937.md`
