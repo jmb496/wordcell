@@ -1,6 +1,6 @@
 # Review log — story-wordcell-row-place-preview.md (ticket 11.2)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words (as ticket 11.1). Pre-loop: HEAD 30dc371caccb1ed95c869a749ef06e0f81a1701f, copy `story-wordcell-row-place-preview.review-log.passes/pass0.md`, 356 words.
 Intent carried from tickets.toml entry 2 and not copied into the ticket: `plan_checkpoint = true` (the fixer adds it to the Description in pass 1).
@@ -58,5 +58,34 @@ Fixer: all 9 items applied, no conflicts; no commands touched (selectors are pro
 - flourish → not suppressed by the pill
 ### Decision needed (functionality / UX / gameplay)
 - none (watch: if the ★ pill and a two-digit badge intersect at 360 px, which mark moves is the owner's call; the ticket routes it to the plan checkpoint)
+### Dropped
+- none
+
+## Pass 3 — 2026-10-28 17:45
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 2, minor 13, decision-needed 1  |  Dropped in triage: 0 (duplicates merged: pill/badge checkpoint timing ×4, theme-art TH-9 ×2, contrast figure ×2); reclassed major → minor: ★ absence checks (edge), retarget onto a non-empty unused cell (adversarial) — the ticket already says where the pill is set and renders from `preview` presence, so these are test precision
+Words (docs): 1223 (3.44 x pass 0, under the 1500 budget)  |  Snapshot: story-wordcell-row-place-preview.review-log.passes/pass3.md
+Fixer: all 15 items applied, no conflicts; contrast figure re-checked (5.01); Description split into five bullets; no commands touched.
+### Applied
+- [major] AC, session-place-long pill/badge clause — the failure goes to "the plan checkpoint", which precedes the code the Playwright rect check needs; nothing says what an unattended build does if it fails after approval; the pill box width is unfixed → fixer item 1
+- [major] AC/References — e2e/theme-art.spec.ts:113-127 `AD-14 TH-9 … a used face keeps its hatch and no texture` opens redo-tail in Place and counts `.card.used .face`; unlisted, and rewriting it to the preview loses the TH-9 used-hatch coverage → fixer item 2
+- [minor] AC — ★ absence: none on an unchanged cell in Place, none after Undo to Composing, none after Confirm's last landing → fixer item 3
+- [minor] AC/fixture — retarget onto and away from a non-empty unused legal cell (no fixture has one) → fixer item 4
+- [minor] Description — "a used card gets no element in its cell" contradicts redo-tail's `preview` mirror of 28 → fixer item 5
+- [minor] Description — flip.ts/flip.test.ts selector is `:scope > [data-mirror-of]:not(.preview)`; the e2e count keeps `[data-wordcell] [data-mirror-of]:not(.preview)` → fixer item 6
+- [minor] AC — contrast row pins Charcoal 5.0 (computed: #ef7a3d on #282c34 = 5.01; other themes 5.1–8.2, all pass); the DESIGN.md contrast-figure addition goes to entry 5 (E8) → fixer item 7
+- [minor] AC — e2e/board-phases.spec.ts AD-14 state table: every Place row's `mirrors` gains its target's `preview.top`, and the table records mirror kind → fixer item 8
+- [minor] AC — compact retarget onto cell 4: no `.used` mirror and no element for 35, its card beneath 28 hidden → fixer item 9
+- [minor] Description — the fly-to-cell Undo-back-to-Place check keeps the `:not(.preview)` count 0 and asserts one `.preview[data-mirror-of="28"]` in wordcell-3 → fixer item 10
+- [minor] AC — Undo of a commit shows the preview from the first frame while the live face glides to the strip (mirrors never animate, AD-14); no hold added → fixer item 11
+- [minor] Description — interim: until entry 3 every target's Confirm hold is the existing one (a non-used target's previous top shows under the flying cards); only the Place start checks change → fixer item 12
+- [minor] AC — E5 main case: long-press on session-place-onto-committed target 3 lists 42, 0, 28 with `top` on 28 → fixer item 13
+- [minor] Description — "numbered above it" → "above the word's letter count L" → fixer item 14
+- [minor] Description — split the one ~600-word sentence into bullets, no new content → fixer item 15
+### Default applied (technical)
+- pill/badge check → the plan computes both rects at 360 px from src/ui/layout/geometry.ts and the planned CSS (pill box 16 × 16 px, ★ centred) and states the result for the checkpoint; the Playwright rect assertion stays; if it fails after approval the build stops and reports to Jared, moving no mark and loosening no assertion
+- TH-9 → moves to Composing (same fixture, one Undo), assertions kept
+- contrast figure → 5.0 for Charcoal
+### Decision needed (functionality / UX / gameplay)
+- Description/AC, ★ pill — at the 360 px minimum width (40 px card) a WordCell that will hold 10 or more cards after the word shows a two-digit count badge at bottom-right that likely touches or overlaps the ★ pill at bottom-left (computed overlap about 0–4.5 px, font-dependent); DESIGN.md places both at fixed corners and says nothing about a collision — which mark gives way? — proposed default: keep both at their DESIGN.md corners and draw the count badge above the ★ pill where they meet; Jared judges it at the entry 5 device read
 ### Dropped
 - none
