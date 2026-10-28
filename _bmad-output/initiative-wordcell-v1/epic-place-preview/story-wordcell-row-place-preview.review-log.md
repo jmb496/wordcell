@@ -1,6 +1,6 @@
 # Review log — story-wordcell-row-place-preview.md (ticket 11.2)
 
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1500 words (as ticket 11.1). Pre-loop: HEAD 30dc371caccb1ed95c869a749ef06e0f81a1701f, copy `story-wordcell-row-place-preview.review-log.passes/pass0.md`, 356 words.
 Intent carried from tickets.toml entry 2 and not copied into the ticket: `plan_checkpoint = true` (the fixer adds it to the Description in pass 1).
@@ -89,3 +89,26 @@ Fixer: all 15 items applied, no conflicts; contrast figure re-checked (5.01); De
 - Description/AC, ★ pill — at the 360 px minimum width (40 px card) a WordCell that will hold 10 or more cards after the word shows a two-digit count badge at bottom-right that likely touches or overlaps the ★ pill at bottom-left (computed overlap about 0–4.5 px, font-dependent); DESIGN.md places both at fixed corners and says nothing about a collision — which mark gives way? — proposed default: keep both at their DESIGN.md corners and draw the count badge above the ★ pill where they meet; Jared judges it at the entry 5 device read
 ### Dropped
 - none
+
+## Pass 4 — 2026-10-28 18:15
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 1, minor 11, decision-needed 0  |  Dropped in triage: 1 (duplicates merged: AC used-card copy ×3, board-phases "gains" ×3, pill inset ×2)
+Words (docs): 1397 (3.92 x pass 0, under the 1500 budget)  |  Snapshot: story-wordcell-row-place-preview.review-log.passes/pass4.md
+Fixer: all 11 items applied, no conflicts; no commands touched.
+### Applied
+- [major] AC, AD-14 clause "no copy of a used non-target cell's used card" — contradicts the Description and E2/R-50: a reorder that puts another cell's free letter last makes the target's `preview` mirror a copy of it (session-place-free-letter-two-cards, 28 from cell 4), so a correct build fails the gating AC; also unscoped against the R-65 view's `view` mirror → fixer item 1
+- [minor] Description — "`cell.cards` still supplies its live elements (hidden unless one is `preview.top`)" read literally gives a live 28 in redo-tail cell 3 (53 live); exclude the used card → fixer item 2
+- [minor] AC — board-phases AD-14 table: each Place row loses its used mirrors and gains a `preview` mirror of `preview.top` (redo-tail stays [9, 28, 32], 28 used → preview) → fixer item 3
+- [minor] AC — the used-cell clause reads as on session-place-onto-committed (no used cell); name `session-place-used-cells` → fixer item 4
+- [minor] Description — ★ pill: `{colors.surface-raised}` fill, `{typography.card-badge}` ★, inset 2 px from the card rect's outer edge as the count badge (not from inside the face border) → fixer item 5
+- [minor] AC — board.spec.ts F11 builds ids as `<id>m` for any mirror kind; record the kind (`28p`) and fix the comment → fixer item 6
+- [minor] AC — other Place used-look pins: wordcell-view.spec.ts :230 and :1053 (`[data-wordcell]:has(.used)`), place.spec.ts `expectUsedCell(page, 4, 28, [20])` tests and titles, fly-to-cell's Redo `expectFlight` start check → fixer item 7 (default: the plan lists every Place-phase `.used`/wordcell-mirror assertion found by grep, with its updated title)
+- [minor] Description — the interim's changed fly-to-cell tests are retitled for the interim hold → fixer item 8
+- [minor] AC — compact retarget: "no element for 35 in `wordcell-4`" → fixer item 9
+- [minor] Description — the preview updates when the reorder or retarget is dispatched (drop or tap-swap), not during a drag (rule 3) → fixer item 10
+- [minor] Description — the plan gives `session-place-used-cells`' seed and move script (a used one-card cell needs two earlier words taking its free letter) before the checkpoint → fixer item 11
+### Default applied (technical)
+- Place used-look pins → the plan lists them by grep with updated titles
+### Decision needed (functionality / UX / gameplay)
+- none new (pass 3's ★/badge collision still pending)
+### Dropped
+- no ★ at the Confirm click (`afterClick`) — the in-flight look from Confirm to landing is entry 3's (E6, tickets.toml entry 3)
