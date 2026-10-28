@@ -1,0 +1,32 @@
+# Review log — story-engine-place-preview-on-cellview.md (ticket 11.1)
+
+State: pass 1: done
+
+Mode: docs, thorough, max 7, budget 1500 words. Pre-loop: HEAD b441eccd3fc5a9670e6e82fc7e8ed8f61c63cdae, copy `story-engine-place-preview-on-cellview.review-log.passes/pass0.md`, 205 words.
+Refs: epic-place-preview.md, tickets.toml, docs/game-flow-spec.md (R-41, R-60, R-61, §9 Q-49), ARCHITECTURE-SPINE.md (AD-2, AD-3), AGENTS.md.
+
+## Pass 1 — 2026-10-28
+Reviewers: builder's reading, edge-case hunter, adversarial, ref alignment  |  Findings: major 5, minor 7, decision-needed 0  |  Dropped in triage: 0 (duplicates merged: commit path ×4, absence ×4, count ×2, property ×3, fixture list ×3, R-50 ref ×2)
+Words (docs): 393 (1.92 x pass 0)  |  Snapshot: story-engine-place-preview-on-cellview.review-log.passes/pass1.md
+Fixer: all 12 items applied, no conflicts; no commands touched.
+### Applied
+- [major] Description — "the engine's commit path" unnamed and commands.ts `confirm` only rewrites the Session; builder guesses between `apply(confirm)` in `view()`, a copy, or `commitMove` → fixer item 1 (default: `commitMove(position, placed(draft))` from src/engine/rules.ts on `viewFrom`'s committed-prefix position; add rules.ts to References)
+- [major] Description — `count` not defined as card count; view.ts `count` is the R-85 letter count (QU = 2) → fixer item 2
+- [major] Description/AC — "absent" undefined; `preview: undefined` would pass and break AD-3's omitted-field convention → fixer item 3
+- [major] AC — absence cases miss the real boundary: Composing reached by undo from Place (`reached` ≥ place) and Idle with a pending draft carrying a target → fixer item 4
+- [major] AC — the property runs one way only (never checks unchanged cells have no `preview`) and only on stored fixtures, not after a retarget/reorder → fixer item 5
+- [minor] AC — "each Place fixture" open-ended; name the six `fixtures/session-place*.json` → fixer item 6
+- [minor] AC — test naming: every new test starts `Q-49 AD-3`, the used-target one also R-41 (R-50 is (UI)-tagged) → fixer item 7
+- [minor] Description — say `used` and the other CellView fields are unchanged → fixer item 8
+- [minor] References — add R-50 and R-52 → fixer item 9
+- [minor] AC — target change: state the old target's expected preview (removed if unused, card-beneath if used) → fixer item 10
+- [minor] AC — "Game over" → status won and gaveUp → fixer item 11
+- [minor] AC — used target with and without cards beneath its used card → fixer item 12
+### Default applied (technical)
+- Description — commit path → `commitMove(position, placed(draft))` (rules.ts)
+- AC — property inputs → the six `fixtures/session-place*.json`, as stored and after a `setTarget` to each other legal target and a reversed `setPlacementOrder`
+- AC — absence assertion → `Object.hasOwn(cell, 'preview')` false
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none (all duplicates merged above)
