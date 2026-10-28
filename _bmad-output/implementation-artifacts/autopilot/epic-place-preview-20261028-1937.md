@@ -18,3 +18,19 @@ Tokens: 5.0M input-equivalent (ticket review 54%, build 32%, code review 7%, orc
 Worth knowing: the hardened ticket's wording drifted from its `tickets.toml` entry 1 (description, verify, references: commit path `commitMove`, R-50/R-52, the present-iff-changed property, won/gaveUp); the ticket file is the record, the toml entry was left as planned (sync at the retro if wanted). One review-log minor not applied by the build: adding R-65 to the ticket's References line (the build never edits ticket files; R-65 is covered by the cell's card list staying the current one). The how-it-will-look check for a used target whose only card is the used one runs on a test-built position, since no fixture has that shape.
 Close-out docs: none
 
+
+Session note (2026-10-28, session for 11.2): the handoff still named 11.2 as next with Step A not started, but the ticket files showed a partial review log (4 passes committed, no `## Result`) and an empty `11.2-A-attempt1.log` from an earlier session that ended without a handoff or digest entry; the files won and Step A was resumed. No pid files were live.
+
+## 11.2 WordCell row place preview — stopped
+What it adds: while placing a word, each WordCell the word changes will show how it looks after Confirm: the new top card, its card count and a small ★ mark.
+Ticket review: 5 passes, converged (majors 6, 3, 2, 1, 0); one question needs your input (below)
+Build: not started
+Code review: not started
+Tests: not run (nothing built)
+Ref to fix upstream: none
+Tokens: 2.6M input-equivalent (ticket review 95%, orchestrator 3%, other 1%); orchestrator peak context 57k
+Worth knowing: 12 small review findings were left for the build's plan (listed in the review log), e.g. call the ★ mark a "pill" not a "box", the fixture note claiming a used one-card cell needs two earlier words is wrong (a two-card word like `qua` is enough), and the test-update search should also catch Place count-badge checks (`e2e/place.spec.ts:518`).
+Close-out docs: none yet
+
+## Stopped — decision needed (stop rule 1)
+Ticket 11.2, Step A (ticket review). Question for Jared: on the narrowest phone width (360 px, 40 px cards), a WordCell that will hold 10 or more cards after the word shows a two-digit count badge at bottom-right that may touch or overlap the ★ preview mark at bottom-left (0–4.5 px gap, font-dependent). DESIGN.md fixes both at their corners and says nothing about a collision. Proposed default: keep both marks at their corners, draw the badge above the ★ where they meet, and judge it at the entry 5 device read; the ticket's 360 px rect check stops the build and reports if they intersect, moving no mark. Resume: record the answer (ticket Notes, epic Notes), commit, rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-place-preview`; the next session starts at Step B (the review log has its `## Result`).

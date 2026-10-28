@@ -1,6 +1,6 @@
 # Review log — story-wordcell-row-place-preview.md (ticket 11.2)
 
-State: pass 4: done
+State: pass 5: done (converged)
 
 Mode: docs, thorough, max 7, budget 1500 words (as ticket 11.1). Pre-loop: HEAD 30dc371caccb1ed95c869a749ef06e0f81a1701f, copy `story-wordcell-row-place-preview.review-log.passes/pass0.md`, 356 words.
 Intent carried from tickets.toml entry 2 and not copied into the ticket: `plan_checkpoint = true` (the fixer adds it to the Description in pass 1).
@@ -112,3 +112,34 @@ Fixer: all 11 items applied, no conflicts; no commands touched.
 - none new (pass 3's ★/badge collision still pending)
 ### Dropped
 - no ★ at the Confirm click (`afterClick`) — the in-flight look from Confirm to landing is entry 3's (E6, tickets.toml entry 3)
+
+## Pass 5 — 2026-10-28 19:55
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 0, minor 12, decision-needed 0  |  Dropped in triage: 0 (duplicates merged: ★ "box" vs DESIGN.md pill ×3, fixture "two earlier words" ×2, "(on drop or tap-swap)" ×2)
+Words (docs): 1397 (3.92 x pass 0, under the 1500 budget)  |  Snapshot: story-wordcell-row-place-preview.review-log.passes/pass4.md (no fix pass)
+Verified in triage: e2e/place.spec.ts:518 asserts cell 4 `.count` 2 in Place on session-place-free-letter-two-cards; `qua` is in data/enable1.txt; DESIGN.md:571 says "16 px `{colors.surface-raised}` pill".
+### Applied
+- none (zero majors: converged, no fix pass)
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none new (pass 3's ★/badge collision at 360 px still pending)
+### Dropped
+- none
+
+## Result — converged after 5 passes
+
+Majors per pass: 6, 3, 2, 1, 0. Words 356 → 1397. Decision still with Jared: pass 3's ★ pill vs two-digit count badge at 360 px (proposed default: both stay at their DESIGN.md corners, the badge drawn above the pill where they meet; judged at the entry 5 device read).
+
+Unapplied minors (for the build's plan or a later loop):
+- Description, ★ bullet — "16 × 16 px … box" should be "pill" with the orange `★` (`text.star`), as DESIGN.md WordCell and epic E4 say (count badge is `border-radius: 9999px`).
+- Description, Fixture — "a used single-card cell needs two earlier words that each took its free letter" is false (a QU two-card word such as `qua` makes a two-card cell; one take suffices); cut the reason, keep "the plan gives the seed and move script".
+- Description, Rendering — "(on drop or tap-swap)" omits tap-retarget and desktop keys (keys.ts:192); cut the parenthesis.
+- Description, Rendering — "no copy unless it is the target's `preview.top`" is unscoped against the R-65 view's `view` mirrors; read "no copy in any WordCell unless".
+- Description, Fly-to-cell interim — "every target's Confirm hold is the existing one" vs the used mirror it then removes; read "the hold code is unchanged".
+- AC — the Place-assertion grep should also cover `.count` assertions on a changed cell (e.g. e2e/place.spec.ts:518 cell 4 badge 2, preview count 1; fly-to-cell `start.badges`).
+- AC — add a retarget onto `session-place-used-cells`' used single-card cell (preview mirror with ★ and badge, no live element, no empty outline; away again its empty outline).
+- AC — ★ absence clause reads two ways; "none on an empty one, an unchanged non-empty cell in Place, or any WordCell after Undo to Composing or Confirm's last landing".
+- AC — "Redo" → "Redo into Place".
+- AC — Validate into Place (used mirror swapped for the preview, flip.ts `snap`) is not among the listed transitions; fold into the plan's sentence → test mapping.
+- AC — "named R-50 (UI), R-33 (UI) and Q-49": each test named for the rule sentence it covers (plan's mapping).
+- AC — long-press on an empty target with a preview names no fixture (e.g. `session-place` cell 3).
