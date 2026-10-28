@@ -3,7 +3,7 @@ title: 'Engine place preview on CellView'
 type: 'feature'
 ticket: '1'
 created: '2026-10-28'
-status: 'built'
+status: done
 baseline_revision: '4528211309e40b507ce7af029c9aad6a8e1cd150'
 route: 'full'
 route_source: 'auto'
