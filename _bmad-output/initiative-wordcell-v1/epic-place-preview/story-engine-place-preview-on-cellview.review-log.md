@@ -1,6 +1,6 @@
 # Review log — story-engine-place-preview-on-cellview.md (ticket 11.1)
 
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pre-loop: HEAD b441eccd3fc5a9670e6e82fc7e8ed8f61c63cdae, copy `story-engine-place-preview-on-cellview.review-log.passes/pass0.md`, 205 words.
 Refs: epic-place-preview.md, tickets.toml, docs/game-flow-spec.md (R-41, R-60, R-61, §9 Q-49), ARCHITECTURE-SPINE.md (AD-2, AD-3), AGENTS.md.
@@ -30,3 +30,25 @@ Fixer: all 12 items applied, no conflicts; no commands touched.
 - none
 ### Dropped
 - none (all duplicates merged above)
+
+## Pass 2 — 2026-10-28
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 9, decision-needed 0  |  Dropped in triage: 2 (+ duplicates merged: QU count ×2, setTarget ×2, toml sync ×2)
+Words (docs): 506 (2.47 x pass 0)  |  Snapshot: story-engine-place-preview-on-cellview.review-log.passes/pass2.md
+Fixer: all 9 items applied, no conflicts; no commands touched.
+### Applied
+- [major] AC absence bullet — no Composing absence case must hold a used cell, so `used || cell === target` without a phase check passes; require a free letter in plain Composing (view.test.ts `FREE`) and in Composing reached by undo from Place (`COMPOSING_FROM_PLACE`), asserting the used cell has no `preview` → fixer item 1
+- [minor] AC — no case pins card count vs letter count; name the -compact fixture (QU, card 35) as the case that tells them apart → fixer item 2
+- [minor] AC setTarget bullet — old used target whose only card is the used one gets `top` null; new target's `top` is the last card of `placementOrder`; test both old-target kinds (e.g. session-place-free-letter-two-cards) → fixer item 3
+- [minor] AC absence bullet — the "keyed on `placed(draft)`" clause names the wrong reason for most cases; reword per case or cut → fixer item 4
+- [minor] AC property — retarget and reversed order each applied separately to the stored fixture → fixer item 5
+- [minor] AC — single-card used cells exist in no fixture; name the route (D2 start seam / test-helpers `startOf`, or a `play` chain with an inline dictionary) → fixer item 6
+- [minor] References — add src/engine/replay.ts (`replayWords`) and src/engine/test-helpers.ts → fixer item 7
+- [minor] AC — "two used cells": neither the target → fixer item 8
+- [minor] AC — the used-target test also asserts `cards` is the current pre-commit list and `used` true (Q-49 R-65 view keeps current cards) → fixer item 9
+### Default applied (technical)
+- AC — single-card used positions → built through the D2 start seam (`startOf`) or an inline-dictionary `play` chain
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- tickets.toml entry 1 out of sync with the hardened ticket (×2) — outside the target; this run may commit only the ticket and its log, and an uncommitted toml edit would leave the tree dirty for bmad-build-auto; carried to the result for the caller
+- Description "never a second copy … nor a re-entrant apply/view" not enforceable by a unit test — a code-review check by nature; adding procedure words buys nothing
