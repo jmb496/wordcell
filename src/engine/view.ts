@@ -10,6 +10,7 @@ import {
 } from './replay';
 import {
   cellHasTop,
+  commitMove,
   destinationCountAllowed,
   destinationRemainder,
   flippedSide,
@@ -54,6 +55,11 @@ export interface CellView {
   readonly canAddFreeLetter: boolean;
   readonly canSetTarget: boolean;
   readonly isLegalTarget: boolean;
+  /**
+   * AD-3, Q-49: Place only, on a used cell or the target: the cell after Confirm (R-60), `top` its
+   * last card (`null` = empty) and `count` its card count (not the R-85 letter count); else absent.
+   */
+  readonly preview?: { readonly top: CardId | null; readonly count: number };
 }
 
 /** D7 structural check result. */
@@ -204,17 +210,23 @@ export function viewFrom(start: Start, session: Session, lang: LangData): GameVi
     return { ...entry, canTapForK, kIfTapped };
   });
 
+  const after =
+    target !== undefined && draft !== undefined ? commitMove(position, placed(draft)) : undefined;
   const cells = position.cells.map((cards, i): CellView => {
     const cell = WORD_CELL_NUMBERS[i];
     const legal = target !== undefined && targetCellAllowed(cell, count);
-    return {
+    const used = draft !== undefined && hasFreeLetter(draft, cell);
+    const entry: CellView = {
       cell,
       cards: [...cards],
-      used: draft !== undefined && hasFreeLetter(draft, cell),
-      canAddFreeLetter: composing && !hasFreeLetter(draft, cell) && cellHasTop(position, cell),
+      used,
+      canAddFreeLetter: composing && !used && cellHasTop(position, cell),
       canSetTarget: legal && cell !== target,
       isLegalTarget: legal,
     };
+    if (after === undefined || !(used || cell === target)) return entry;
+    const committed = after.cells[i];
+    return { ...entry, preview: { top: committed.at(-1) ?? null, count: committed.length } };
   });
 
   const live = liveScore(position.cells, lang);
