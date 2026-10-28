@@ -1,6 +1,6 @@
 # Review log — story-wordcell-row-place-preview.md (ticket 11.2)
 
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7, budget 1500 words (as ticket 11.1). Pre-loop: HEAD 30dc371caccb1ed95c869a749ef06e0f81a1701f, copy `story-wordcell-row-place-preview.review-log.passes/pass0.md`, 356 words.
 Intent carried from tickets.toml entry 2 and not copied into the ticket: `plan_checkpoint = true` (the fixer adds it to the Description in pass 1).
@@ -37,3 +37,26 @@ Fixer: all 17 items applied, no conflicts; no commands touched. Fixer note: tick
 - none
 ### Dropped
 - desktop hover-peek check on a changed cell — same `cell.cards` source as the long-press view; the android view check covers E5
+
+## Pass 2 — 2026-10-28 17:20
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 3, minor 7, decision-needed 0  |  Dropped in triage: 0 (duplicates merged: mirror marker / redo-tail own-free-letter preview ×3, pill–badge viewport ×3, `cell.cards` wording ×2, cell above L ×2)
+Words (docs): 1001 (2.81 x pass 0, under the 1500 budget)  |  Snapshot: story-wordcell-row-place-preview.review-log.passes/pass2.md
+Fixer: all 9 items applied, no conflicts; no commands touched (selectors are prose).
+### Applied
+- [major] Description/AC — no DOM marker tells a `preview` mirror from a `used` one, yet the flip.ts capture skip, the flip.test.ts fake, the :249 count and "no used card drawn" depend on it; on session-place-free-letter-redo-tail the target's correct `preview.top` is its own used card 28, so "no WordCell child is a used card" contradicts E2 and id-only checks pass for the wrong reason → fixer item 1
+- [major] Description — "narrowest `android` viewport" is ambiguous (the project is Pixel 7, 412 px; the A-D3 minimum is 360 px, where the ★ pill and a two-digit badge meet) and no outcome is given if they overlap → fixer item 2
+- [major] AC — E2 "its current top is not shown" has no R-50/Q-49-named test on a non-empty target that is not used (session-place-onto-committed cell 3, preview 26, count 6) → fixer item 3
+- [minor] Description — "nothing about a changed cell is drawn from … `cell.cards`" and "the target hides its current top" misread against AD-14 (hidden live elements stay; a used card gets no element in its cell) → fixer item 4
+- [minor] Description — the used cell above L should be the one with cards beneath (≥ 3 cards) so the 35 % dim covers a preview card, ★ and badge → fixer item 5
+- [minor] References — add AD-17 (seeding, valid-fixture list, baselines) → fixer item 6
+- [minor] References/AC — e2e/tray.spec.ts (:416 `wordcell-4 [data-mirror-of="35"]` `.used` on compact) and e2e/board.spec.ts (F11 cell 3 `28m`) also pin the used look in Place → fixer item 7
+- [minor] Description — the ★ pill draws over the card flourish without suppressing it, as the count badge does → fixer item 8
+- [minor] AC — the orange ★ on `surface-raised` gets a 3:1 row in src/ui/theme/contrast.test.ts; a failing theme goes to Jared at the plan checkpoint, tokens unchanged → fixer item 9
+### Default applied (technical)
+- mirror marker → the `preview` kind sets a `preview` class on the Card wrapper (as `used` does); capture, fake and e2e exclusions use `[data-mirror-of]:not(.preview)`; "no used card drawn" = no `.used` mirror in any WordCell in Place
+- pill–badge check → a Playwright geometry assertion (rects do not intersect) on session-place-long at 360 px width (A-D3) on the `android` project; an intersection stops the build at the plan checkpoint for Jared (moving a mark changes the DESIGN.md look)
+- flourish → not suppressed by the pill
+### Decision needed (functionality / UX / gameplay)
+- none (watch: if the ★ pill and a two-digit badge intersect at 360 px, which mark moves is the owner's call; the ticket routes it to the plan checkpoint)
+### Dropped
+- none
