@@ -1,0 +1,80 @@
+# Epic 11 — Place preview of WordCell tops. Table order is the build order.
+# Requirement source: the epic file's Requirements (E1…E8), from Q-49; `covers` cites those ids.
+# One lane: entries 2, 3 and 4 share src/ui/Card.svelte, src/ui/WordCellRow.svelte and the screenshot baselines, so they run in sequence after entry 1.
+# npm run test:screens runs in the Playwright container for entries 2, 3, 4 and 6; entry 1 runs test:all.
+
+[[entry]]
+id = 1
+type = "story"
+title = "Engine place preview on CellView"
+description = "Adds `preview?: { readonly top: CardId | null; readonly count: number }` (an inline type, no new export from `src/engine/index.ts`, AD-2) to `CellView` in `src/engine/view.ts`, present exactly when phase = place and the cell is used or the target, computed from the R-60 commit of the current draft (reusing the engine's commit path, never a second copy of its rule) so `top` and `count` equal that cell after Confirm."
+verify = "Engine unit tests named Q-49 AD-3 pass for a target that is not used, a used target (R-41), a used non-target cell with cards beneath and with one card (`top` null), two used cells, a target change and a reorder, absence in Idle, Composing and Game over and on unchanged cells, and the property that every cell's `preview` equals that cell in `view()` after `confirm` on each Place fixture; `src/architecture-ad2-ad12-ad17.test.ts`, `src/engine/index.test.ts` and `npm run test:all` stay green."
+covers = ["E1"]
+after = ["epic-end-of-game-words"]
+hitl = false
+risk = "low"
+references = ["architecture — ARCHITECTURE-SPINE.md AD-2, AD-3", "rules — docs/game-flow-spec.md R-41, R-60, R-61, Q-49", "code — src/engine/view.ts, src/engine/commands.ts, src/engine/view.test.ts, fixtures/session-place*.json"]
+
+[[entry]]
+id = 2
+type = "story"
+title = "WordCell row place preview"
+description = "Renders `cell.preview` in Place in `WordCellRow.svelte`: no used mirror; a used non-target cell shows its live card beneath (or the empty outline); the target hides its current top and shows a new `preview` mirror kind in `Card.svelte` (`data-mirror-of`, no card id, no FLIP) of the strip's last card; the `★` pill at the card rect's bottom-left on a non-empty preview, as the one shared source entry 4's scene card reuses; the count badge from `preview.count`; the two `, after this word` names in `src/ui/text.ts`; Composing, the R-65 view and the not-legal dim unchanged; adds `fixtures/session-place-<reason>.json` (seeded through `e2e/helpers/seed.ts`; a used single-card cell and a used cell with a card beneath, neither the target); keeps `e2e/fly-to-cell.spec.ts` green: its Place start checks move to the preview and the `flip.ts` capture skips the `preview` mirror; the hold itself is entry 3's."
+verify = "Playwright on `android` (named R-50 (UI), R-33 (UI) and Q-49) shows the target preview and badge following a reorder and a retarget, a used target, a used non-target cell with a card beneath and one left empty, no used card drawn in Place, Undo to Composing restoring the used look, Redo and a reload into Place showing the preview, and the WordCell view listing the current cards; the `★` on a non-empty preview and none on an empty one, and the 35 % dim on a changed cell that is not legal; the two `, after this word` names pass in `src/ui/labels.test.ts` (AD-3) and `e2e/screen-reader.spec.ts` (A-E9); the existing specs that pinned the used mirror in Place (e.g. `e2e/board-phases.spec.ts` R-33 (UI)) are updated, not deleted; `npm run test:all` and `npm run test:screens` (updated Place baselines in every theme spec) are green."
+covers = ["E2", "E3", "E4", "E5"]
+after = [1]
+hitl = false
+risk = "medium"
+plan_checkpoint = true
+references = ["design — DESIGN.md Components → WordCell (*place preview*); EXPERIENCE.md Place state row, Place, Message catalogue (screen-reader names)", "architecture — ARCHITECTURE-SPINE.md AD-3, AD-14", "code — src/ui/WordCellRow.svelte, src/ui/Card.svelte, src/ui/text.ts, src/ui/app.css, e2e/board-phases.spec.ts, e2e/free-letter.spec.ts, e2e/fly-to-cell.spec.ts, e2e/place.spec.ts, e2e/screen-reader.spec.ts, src/ui/labels.test.ts, e2e/*.screens.spec.ts, fixtures/"]
+
+[[entry]]
+id = 3
+type = "story"
+title = "Fly-to-cell keeps the previewed top"
+description = "Changes the F28 hold in `src/ui/flip.ts` (`inFlight`) and `WordCellRow.svelte` so that from Confirm, or a Redo that commits, until the last landing the target shows the previewed top (no `★`) and never its previous top or the used card, used non-target cells show their card beneath with no flash of the used card, and reduced motion keeps its unstaggered fade."
+verify = "The `e2e/fly-to-cell.spec.ts` F28 tests are rewritten for the new hold (named AD-14 F28 Q-49) on `session-place-free-letter-redo-tail` and a target that is not used: frame samples during the flight never show the previous top or a used mirror, 52 live cards after landing, Redo and reduced motion included; the `src/ui/flip.test.ts` AD-14 test of the target cell's used mirror (R-52) is rewritten for the preview; `npm run test:all` and `npm run test:screens` (no baseline change expected) are green."
+covers = ["E6"]
+after = [2]
+hitl = false
+risk = "medium"
+plan_checkpoint = true
+references = ["design — DESIGN.md Components → WordCell (*place preview*, fly-to-cell)", "architecture — ARCHITECTURE-SPINE.md AD-14", "code — src/ui/flip.ts, src/ui/flip.test.ts, src/ui/WordCellRow.svelte, e2e/fly-to-cell.spec.ts"]
+
+[[entry]]
+id = 4
+type = "story"
+title = "How to play Place scene preview"
+description = "Updates the Place scene (`src/ui/scenes/place.ts`, `Scene.svelte`; `fixtures/how-to-play-place.json` is unchanged) so its Place frames draw the preview as the game does, reusing entry 2's `★` pill (the target shows the last `placeOrder` letter with the `★`; cell 6, which holds only `L`, used but not the target in frame 2, shows its empty outline) while the tray frame keeps cell 6 used, superseding epic 8 D5 for the Place frames only."
+verify = "`src/ui/scenes/scenes.test.ts` and the how-to-play Vitest pass with the new frames (named AD-14 Q-49), the How to play Playwright spec plays the Place scene, and `npm run test:screens` adds one `android` baseline of scene 3 frame 4 (AD-17) with no other baseline changed."
+covers = ["E7"]
+after = [3]
+hitl = false
+risk = "low"
+references = ["code — src/ui/scenes/place.ts, src/ui/scenes/Scene.svelte, src/ui/scenes/types.ts, src/ui/scenes/scenes.test.ts, fixtures/how-to-play-place.json, e2e/how-to-play.screens.spec.ts", "decision — _bmad-output/initiative-wordcell-v1/epic-how-to-play-scenes/epic-how-to-play-scenes.md, Notes D5"]
+
+[[entry]]
+id = 5
+type = "story"
+title = "Close-out: documents and device read"
+description = "Brings the spec, EXPERIENCE.md, DESIGN.md and the spine (AD-3, AD-14) in line with what entries 1–4 built, then hands Jared the build for an Android read with `node scripts/device-preview.mjs <entry 2's Place fixture>` (docs/device-testing.md): retarget, reorder, a used non-target cell, Undo and Redo, Confirm's fly-to-cell, and whether the `★` mark reads as subtle."
+verify = "No document contradicts the build, `SESSION_VERSION`, `HISTORY_VERSION` and the Session and history shapes are unchanged, `npm run test:all` and `npm run test:screens` are green, and Jared records his Android read (and any change he asks for, as a new entry) in the epic Notes."
+covers = ["E8"]
+after = [1, 2, 3, 4]
+hitl = true
+risk = "low"
+done_checkpoint = true
+references = ["constraint — docs/device-testing.md; docs/development-methodology.md, Definition of done"]
+
+[[entry]]
+id = 6
+type = "story"
+title = "Refactor sweep"
+description = "Closing cleanup of epic 11, after the owner's device read: scope is set when it starts, from the build records and review findings deferred during the epic and anything the device read turned up; cleanup only, no new behaviour."
+verify = "`npm run test:all` and `npm run test:screens` are green and every deferred cleanup finding is applied or recorded as declined."
+covers = []
+after = [1, 2, 3, 4, 5]
+hitl = false
+risk = "low"
+done_checkpoint = true
+references = ["constraint — docs/development-methodology.md, Definition of done"]

@@ -61,3 +61,10 @@ slug = "epic-end-of-game-words"
 title = "End-of-game word list and win celebration"
 covers = []
 after = [{ epic = 9, needs = "the theme layer the celebration's card-face copies are drawn in, and the Charcoal and light-theme screenshot baselines the Words section extends" }]
+
+[[epic]]
+id = 11
+slug = "epic-place-preview"
+title = "Place preview of WordCell tops"
+covers = []
+after = [{ epic = 10, needs = "the current Place screen and WordCellRow used mirrors, the flip.ts fly-to-cell hold (F28), the How to play Place scene and the Charcoal and light-theme screenshot baselines" }]

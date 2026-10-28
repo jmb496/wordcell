@@ -2,7 +2,7 @@
 name: WordCell
 status: final
 created: 2026-09-27
-updated: 2026-10-20
+updated: 2026-10-25
 sources:
   - _bmad-output/planning-artifacts/briefs/brief-wordcell-2026-09-26/brief.md
   - docs/game-flow-spec.md
@@ -108,7 +108,7 @@ the pending-draft line and the live region.
 | Statistics tiles (R-84, epic 6) | `Games played`, `Games won`, `Games given up`, `Best score`, `Average score`, `Longest word`; the longest word is shown in capitals with a small grey `8 letters` caption below it (`1 letter` for one); `—` where no value exists | Statistics panel (owner, 2026-10-15). |
 | End sheet labels (epic 6) | `Longest word`, `Words placed`, `—` when none; handle `Collapse result`; collapsed bar `Show result: 172, Word Nerd` (score with U+2212 if negative, then the band name) | End sheet (owner kept the wording, 2026-10-15). |
 | Close how to play (epic 6) | `Close how to play` | How to play panel close control. |
-| Screen-reader names (epic 6, CAP-11) | `{L}, column {c}, card {i} of {n}{, selected}{, destination}`; `{L}, tray, tile {i} of {n}{, selected}`; `{L}, WordCell {c}, top`; `WordCell {c}, top {L}, {n card(s)}{, used}`; `WordCell {c}, empty`; `Column {c} foot`; `Column {c}, here`; `Q U, counts as two letters` | Accessible names of cards, tiles, WordCells and foot pads (`src/ui/text.ts`). |
+| Screen-reader names (epic 6, CAP-11) | `{L}, column {c}, card {i} of {n}{, selected}{, destination}`; `{L}, tray, tile {i} of {n}{, selected}`; `{L}, WordCell {c}, top`; `WordCell {c}, top {L}, {n card(s)}{, used}`; `WordCell {c}, empty`; in Place a cell the commit changes is named for its preview, `WordCell {c}, top {L}, {n card(s)}, after this word` or `WordCell {c}, empty, after this word` (Q-49); `Column {c} foot`; `Column {c}, here`; `Q U, counts as two letters` | Accessible names of cards, tiles, WordCells and foot pads (`src/ui/text.ts`). |
 | Live region announcements (epic 6, CAP-11) | `Composing. {WORD}, {N letters}.`; `Place. ...`; `Idle.`; `{WORD} placed on cell {c}, plus N`, `minus N` or `no change`; `Undo. {phase}`; `Redo. {phase}`; `New game. Idle.`; `Replay. Idle.`; `{title} Score {N}, {band}.` (`minus N` for a negative score) | The polite live region (`src/ui/text.ts`, `src/ui/announce.ts`). |
 | Win outcome | `Every column cleared.` | End sheet title. |
 | Word list (R-88, epic 10) | Section heading `Words`; each entry shows the word in capitals (`QU` as `QU`) and, right-aligned, `5 letters` (`1 letter` for one; a `QU` counts as 2, R-36); no words: `No words were played.` | End sheet, section under the buttons (owner, 2026-10-20). |
@@ -219,7 +219,7 @@ column card, a WordCell top card or a tray or strip tile is inert in every phase
 | Dragging a tail | Board | Tail follows the finger; ghosts in its old places; target column highlighted live (drop-target state); no highlight when no column meets the overlap minimum, or while the target is the source column and has never left it (Q-34). |
 | Composing | Board | Tray open; S ghosts in the source column; D cards in the destination column in destination style; used WordCells hatched (R-33). |
 | Invalid word | Board, Composing | Error line in the tray; draft unchanged (R-38); Redo state unchanged. |
-| Place | Board | Legal cells ringed, others faded, pre-selected target per R-42; placement strip with bottom and top tags; S and D cards shown as ghosts in their columns; Confirm. |
+| Place | Board | Legal cells ringed, others faded, pre-selected target per R-42; each cell the commit changes shows its top card and count after the commit, the top marked as a preview (R-50, Q-49; DESIGN.md WordCell *place preview*); placement strip with bottom and top tags; S and D cards shown as ghosts in their columns; Confirm. |
 | Won / gave up | End sheet over Board | See End sheet. The Board stays viewable (collapse the sheet); WordCells can be viewed (R-75). |
 | Offline | Board | No indicator: the app is fully offline after precache (brief §6.8). |
 | New app version installed | — | The service worker activates on the next launch; no prompt in v1. [ASSUMPTION A-E4] |
@@ -319,7 +319,12 @@ columns.
 ### Place (Q-22)
 
 Legal cells ringed, the highest pre-selected (R-42); tap a legal cell to retarget (the order is
-kept, R-51). Reorder the strip by drag or tap-swap. The strip always marks bottom and the future
+kept, R-51). The WordCell row shows the board as it will be after Confirm (R-50, Q-49): the
+target shows the strip's last card (the future top, the one with the star) and its count after
+the commit, and follows every reorder and retarget; a used cell that is not the target shows the
+card beneath its used one, or its empty outline; the top card shown in a changed cell carries the
+preview mark. Other cells are unchanged. Viewing a changed cell (R-65) still lists its current
+cards. Undo back to Composing restores the dimmed used look. Reorder the strip by drag or tap-swap. The strip always marks bottom and the future
 top card with tags inside the first and last tiles (R-50, R-52). **Confirm** commits. Undo returns to Composing with the arrangement intact
 (R-70).
 

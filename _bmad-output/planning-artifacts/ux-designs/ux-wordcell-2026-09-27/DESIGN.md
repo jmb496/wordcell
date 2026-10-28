@@ -3,7 +3,7 @@ name: WordCell
 description: Solo FreeCell-style word card game. Dark card table, ivory serif letters, one teal for "you can act here" and one orange for "commit". Portrait phone first.
 status: final
 created: 2026-09-27
-updated: 2026-10-20
+updated: 2026-10-25
 sources:
   - _bmad-output/planning-artifacts/briefs/brief-wordcell-2026-09-26/brief.md
   - docs/game-flow-spec.md
@@ -560,20 +560,25 @@ pills (`{rounded.full}`); among badges only the error dot is a circle. The 44 ×
 - **WordCell.** Number label above; below it either an empty outline or the top card. When the
   cell holds 2 or more cards a count badge (e.g. `4`) sits inside the cell's card rect,
   bottom-right, inset 2 px: a 16 px tall pill, `{typography.card-badge}`, ink-primary on
-  surface-raised. It keeps counting the used or dragged top card until commit (R-61). Only the top card is
+  surface-raised. In Composing it keeps counting the used or dragged top card until commit (R-61); in Place a cell with the *place preview* state counts its cards after the commit (Q-49). Only the top card is
   shown; a card committed by the move in flight stays visible during its fly-to-cell and is
   hidden on landing if it is no longer the top (AD-14, 2026-10-08). It is drawn
-  below a lifted tail. States: *available*; *used this word* (its used top card shown at 40 % opacity with
+  below a lifted tail. States: *available*; *used this word* in Composing (its used top card shown at 40 % opacity with
   a hatch of 1 px `{colors.outline}` lines at 45° every 6 px, R-33; the card beneath is not revealed until commit, R-61);
+  *place preview* in Place, on every cell the commit changes (each used cell and the target, R-50, Q-49): the cell
+  shows its top card after the commit at full opacity with no hatch (the target: the strip's last card; a used
+  cell: the card beneath its used one, or the empty outline), marked by the orange `★` (the strip's next-free-letter
+  star) in `{typography.card-badge}` on a 16 px `{colors.surface-raised}` pill at the card rect's bottom-left,
+  inset 2 px, mirroring the count badge; an empty preview carries no star; from Confirm until the last card lands
+  the target keeps the previewed top (never the previous top) and the star goes at commit;
   *legal target* in Place (teal 2 px ring); *selected target* (teal 3 px ring and a check chip at the cell's top-left, a 14 px teal circle
   with an ink-on-accent check;
   the strip's `top` tag and star show the future top card); *not legal* in Place (35 % opacity).
   During a drag from a WordCell top, the source cell shows the dragged card's slot as a 1 px
   dashed `{colors.outline}` ghost; the card beneath is not revealed (R-61). The cell takes the
   used state only on a successful drop.
-  On a used cell in Place the hatch stays and a legal or selected ring is drawn over it at full
-  opacity; a used cell that is not legal shows the card at 40 % opacity with the hatch, and the
-  whole cell (outline, label, badge) is additionally drawn at 35 %.
+  On a *place preview* cell the legal or selected ring is drawn as on any cell; a preview cell that
+  is not legal is drawn at 35 % like any not-legal cell (outline, label, badge, preview card and star).
 - **WordCell view** (R-65). Every card in the cell at card size. The sheet is
   `{components.view-sheet}`: a centred dialog-style sheet, all corners `{rounded.lg}`, as wide as
   the board. Cards per row = floor((sheet
