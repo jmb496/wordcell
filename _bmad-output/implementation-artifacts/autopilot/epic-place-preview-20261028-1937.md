@@ -63,3 +63,15 @@ Ref to fix upstream: none
 Tokens: 6.5M input-equivalent (code review 62%, build 33%, orchestrator 3%, other 3%); orchestrator peak context 65k
 Worth knowing: (1) until ticket 11.3, the fly-in after Confirm briefly shows the target's old top card again (or the card beneath on a used cell) instead of the previewed card; 11.3 owns that. (2) The ★ is a font character (`text.star`, as the ticket says), while DESIGN.md's icon rule asks for inline SVG; the strip's ★ already does the same — a doc point for the retro. (3) Three small code-review notes left open: the plan's test list doesn't name the pass-1 tests, two plan triage rows are stale, and one preview test helper doesn't check the cell's other cards stay hidden (review log `11-2-build.md`).
 Close-out docs: DESIGN.md § Components → WordCell (place preview) ← the count badge draws above the ★ pill where they meet at 360 px (owner, 2026-10-28)
+
+Session note (2026-10-29, first session for 11.3): handoff, git log and ticket files agreed (11.2 done, 11.3 next and `ready_to_start`); pulled the ticket file (e9cc281). No live pid files.
+
+## 11.3 Fly-to-cell keeps the previewed top — stopped
+What it will add: after Confirm (or a Redo that places a word), while the cards fly into the WordCell, the cell shows the new top card from the start instead of briefly flashing its old top or a used card.
+Ticket review: 4 passes, converged (majors 7, 4, 1, 0); one question for you (below). The plan_checkpoint flag from `tickets.toml` was added to the Description, so the build will also stop after planning for your approval.
+Tokens: 6.4M input-equivalent (ticket review 96%, other 2%, orchestrator 2%); orchestrator peak context 58k
+Worth knowing: nothing else.
+Close-out docs: none yet (the answer to the question below will touch DESIGN.md § Components → WordCell (fly-to-cell) and epic 5 SPEC F28 if it changes the stacking)
+
+## Stopped — decision needed (stop rule 1)
+Ticket 11.3, Step A (ticket review). Question for Jared: during the fly-in after Confirm, once the word's first card lands in the target cell, should the landed cards stack up visibly on top of the previewed top card until the top card itself lands (keeps the epic 5 F28 rule: landed cards stay visible until the last one lands, then hide together), or should the final top card stay in front the whole time, with each card seeming to vanish into the cell as it lands? Proposed default: stacking, as the ticket now states (ticket Description, Hold bullet); the old top never flashes either way. Resume: record the answer (ticket Notes, epic Notes), commit, rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-place-preview`; the next session starts at Step B (the review log has its `## Result`), and the build stops at its plan checkpoint for your approval.

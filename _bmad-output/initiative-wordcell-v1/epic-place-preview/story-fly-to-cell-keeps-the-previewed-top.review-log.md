@@ -1,6 +1,6 @@
 # Review log — story-fly-to-cell-keeps-the-previewed-top.md (ticket 11.3)
 
-State: pass 3: done
+State: pass 4: done (converged)
 
 Mode: docs, thorough, max 7, budget 1500 words (as tickets 11.1, 11.2). Pre-loop: HEAD e9cc2816819852c5b168aaec7aa001ad9f16ad70, copy `story-fly-to-cell-keeps-the-previewed-top.review-log.passes/pass0.md`, 196 words.
 Intent carried from tickets.toml entry 3 and not copied into the ticket: `plan_checkpoint = true` (an unattended build stops after planning for a person to approve the plan; the fixer adds it to the Description in pass 1).
@@ -79,3 +79,35 @@ Fixer: all 12 items applied, no conflicts; flying ids `[3, 4]` checked against f
 - none new (pass 2's stacking question stands)
 ### Dropped
 - none
+
+## Pass 4 — 2026-10-28 21:50
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 0, minor 13, decision-needed 0  |  Dropped in triage: 0 (duplicates merged: "their Undo checks only the ★" ×3, flip.test.ts `[3, 4]` duplicate of ~:581 ×2, used-cells target 5 ×2, mid-flight Undo evidence ×2)
+Words (docs): 1075 (5.5 x pass 0; budget 1500)  |  Snapshot: pass3.md (no fix pass)
+Late-pass bar: every finding is verify/evidence precision or wording, none a defect in shipped behaviour, a gating check or the ticket's contract.
+### Applied
+- none (converged)
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none new (pass 2's stacking question stands)
+### Dropped
+- none
+
+## Result — converged after 4 passes
+Majors per pass: 7, 4, 1, 0. Words 196 → 1075 (budget 1500). Technical defaults applied: 6 (passes 1–3). Open major: none.
+Decision needed (owner): Description, Hold — during Confirm's fly-in, once the word's first letter lands, the cell shows the landed letters stacking over the previewed top until the top letter lands (epic 5 F28, the ticket's default), or the final top letter stays in front the whole time with letters disappearing into it (a literal reading of DESIGN.md "the target keeps the previewed top"); confirm at the plan checkpoint or entry 5's device read.
+
+Unapplied minors (for the build's plan):
+1. AC bullet 1 — "their Undo checks only the `★` back in Place" reads as cutting the existing Undo checks (52 live, no used mirror, nothing held, the `.preview` count 1 that catches a leaked copy); mean "add a `★` check", on the Undo-before-start test (the same-task test has no Place check).
+2. AC snapshot bullet — the snapshot's new fields list `.preview-mark` and `empty` but not each card's `.used` and face opacity, which the full-opacity check needs.
+3. AC flip.test.ts bullet — the `[3, 4]` flight clause repeats ~:581; the new evidence is `Object.keys(inFlight)` and the stricter fake; it is `FakeRoot.querySelectorAll` that throws on any selector but `[data-card-id]` (bands and tiles go through `querySelector`).
+4. flip.test.ts ~:680 title "… with no previous top to hold" joins the title sweep.
+5. AC Fixtures — the session-place-used-cells Confirm: whether it also pins target 5 (copy `p38` first) and used cell 6 (`['31']`) is the plan's.
+6. Description, interrupting move — ~:659 proves the hold state clears, not the rendered copy (gated on `inFlight.committed` via `lowest ≥ 0`); a paused Undo after the first landing is optional, the plan's call.
+7. AC — `expectFlight`'s full element list at the click (`ids()`, spec :162) becomes `[newTop copy, ...before, ...committed]`.
+8. Description, Hold — "a used target's own free letter anywhere earlier in the placement order" has no fixture; covered by construction (one committed-set path), plan records it.
+9. Description — "no flash" rests on flyToCell's two `flushSync` before paint (flip.ts F28); snapshots are the check.
+10. AC — "(an empty target's base was its empty slot)" reads two ways; mean "the old hold had no base for an empty target".
+11. Test names lead with AD-14 (AGENTS.md Conventions allow it: Q-49 has no flight sentence); the plan notes they are not Q-49 coverage.
+12. Description, comments bullet — name the two entry-5 wording spots: the AD-14 mirror list (a `preview` mirror outside Place, no `★`) and DESIGN.md WordCell "hidden on landing" (vs F28 "hide together").
+13. Description, first paragraph — one ~110-word sentence; split at "and the target never shows".
