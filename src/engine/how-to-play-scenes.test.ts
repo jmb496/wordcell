@@ -294,6 +294,62 @@ describe('AD-2 How to play scene replay', () => {
     expect(place.validatable?.map((v) => v.after)).toStrictEqual([3, 4, 5, 6, 7, 8]);
   });
 
+  it('Q-49 scene place: the previews entries match the engine preview at every after (afters 3 and 8 none)', () => {
+    expect(() => replayScene(place, DICT)).not.toThrow();
+    expect(place.previews?.map((p) => [p.after, p.cell, p.top, p.count])).toStrictEqual([
+      [4, 6, 'D', 6],
+      [5, 5, 'D', 6],
+      [5, 6, null, 0],
+      [6, 6, 'D', 6],
+      [7, 6, 'E', 6],
+    ]);
+  });
+
+  type PreviewEntry = { after: number; cell: number; top: string | null; count: number };
+  it.each([
+    [
+      'wrong top',
+      (e: PreviewEntry[]) => {
+        e[0].top = 'E';
+      },
+    ],
+    [
+      'wrong count',
+      (e: PreviewEntry[]) => {
+        e[0].count = 7;
+      },
+    ],
+    [
+      'missing entry',
+      (e: PreviewEntry[]) => {
+        e.splice(
+          e.findIndex((entry) => entry.after === 5 && entry.cell === 6),
+          1,
+        );
+      },
+    ],
+    [
+      'extra entry',
+      (e: PreviewEntry[]) => {
+        e.push({ after: 4, cell: 3, top: null, count: 0 });
+      },
+    ],
+  ])('Q-49 scene place: a %s fails the harness', (_name, change) => {
+    const scene = edit<PreviewEntry>(place, 'previews', change);
+    expect(() => replayScene(scene, DICT)).toThrow(
+      /^scene place: after \d commands cell \d stated preview/,
+    );
+  });
+
+  it('Q-49 scene place: an after/cell pair listed twice in previews fails the harness', () => {
+    const scene = edit<PreviewEntry>(place, 'previews', (e) => {
+      e.push({ ...e[0] });
+    });
+    expect(() => replayScene(scene, DICT)).toThrow(
+      /^scene place: after 4 commands cell 6 is listed twice in previews/,
+    );
+  });
+
   it('R-80 R-36 scene scoring: CAT 9, QUIT 16 (QU counts two), BALKED 36, total 61', () => {
     const { session, rejectedWords } = replayScene(scoring, DICT);
     expect(session.moves).toHaveLength(0);
@@ -437,6 +493,7 @@ describe('AD-2 How to play scene replay', () => {
           cellScores: [],
           drafts: [],
           columns: [],
+          previews: [],
         } as SceneFixture,
         new Set(['baked']),
       ),
@@ -499,6 +556,8 @@ describe('AD-2 How to play scene replay', () => {
       { ...scene, validatable: [{ after: -1, canValidate: false }] },
       { ...scene, drafts: [{ after: 2, letters: [] }] },
       { ...scene, drafts: [{ after: -1, letters: [] }] },
+      { ...scene, previews: [{ after: 2, cell: 6, top: null, count: 0 }] },
+      { ...scene, previews: [{ after: -1, cell: 6, top: null, count: 0 }] },
     ];
     for (const fixture of bad)
       expect(() => replayScene(fixture, DICT)).toThrow(/^scene base-drop: .* out of range 0\.\.\d/);

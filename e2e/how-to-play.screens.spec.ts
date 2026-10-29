@@ -53,3 +53,19 @@ test('AD-17 how to play scene 5 start frame screenshot at 360 px', async ({ page
   await expect(scene.getByRole('button', { name: next, exact: true })).toBeVisible();
   await expect(scene).toHaveScreenshot('how-to-play-scene-5-start.png');
 });
+
+// Epic place-preview entry 4 (Q-49, E7): scene 3's frame 4 (four Next clicks under reduced motion),
+// the strip D B A L K E and cell 6 showing its previewed top E with the `★`, no count badge (owner
+// decision 2026-10-29). Docker baseline only.
+test('AD-17 how to play scene 3 frame 4 screenshot at 360 px', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.setViewportSize({ width: 360, height: 740 });
+  const scene = await openScene(page, {
+    fixture: 'session-idle-fresh',
+    scene: 3,
+    id: 'place',
+    last: 4,
+  });
+  await expect(scene.getByRole('button', { name: next, exact: true })).toBeVisible();
+  await expect(scene).toHaveScreenshot('how-to-play-scene-3-frame-4.png');
+});

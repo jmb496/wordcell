@@ -60,6 +60,16 @@ export interface SceneFixtureData {
     readonly after: number;
     readonly columns: readonly (readonly string[])[];
   }[];
+  /**
+   * Q-49: after `after` commands, cell `cell`'s Place preview (top letter after the commit, `null`
+   * empty; card count), the engine's exactly (AD-3); the place scene draws its Place frames from it.
+   */
+  readonly previews?: readonly {
+    readonly after: number;
+    readonly cell: number;
+    readonly top: string | null;
+    readonly count: number;
+  }[];
 }
 
 export interface Point {
@@ -150,6 +160,11 @@ export interface Frame {
   readonly total?: number;
   /** The WordCells this frame draws as one top card, not the fixture's stack (R-52; ticket 8). */
   readonly cellTop?: boolean;
+  /**
+   * The fixture command count a Place frame shows (Q-49): its changed cells are drawn from the
+   * fixture `previews` entries at this after.
+   */
+  readonly after?: number;
 }
 
 export interface Scene {

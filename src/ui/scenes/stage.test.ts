@@ -273,6 +273,12 @@ describe('AD-11 scene text stays at or above 11 px at every fitted card size', (
       expect(rule(stageSource, selector), `Stage ${selector}`).toBe(true);
     for (const selector of ['.num', '.figure', '.ctl'])
       expect(rule(sceneSource, selector), `Scene ${selector}`).toBe(true);
+    // Q-49: the `★` pill's size and font are counter-scaled as the badge (D12), not its inset.
+    const pill = /\.stage :global\(\.card \.preview-mark\)\s*\{([^}]*)\}/.exec(stageSource)?.[1];
+    for (const property of ['width', 'height', 'font-size'])
+      expect(pill, `Stage .preview-mark ${property}`).toMatch(
+        new RegExp(`(?:^|[;\\s])${property}:\\s*calc\\([^;]*var\\(--wc-scene-up\\)`),
+      );
     // No other px font size in either file escapes the counter-scale.
     for (const css of [stageSource, sceneSource]) {
       const style = css.slice(css.indexOf('<style>'));

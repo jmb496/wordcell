@@ -113,6 +113,9 @@ export function sceneEffects(scene: Scene): readonly (readonly Effect[])[] {
           if (placed === undefined)
             throw new Error(`scene ${scene.id}: a tucks step needs a placeOrder frame`);
           const stripId = `strip-${scene.frames.indexOf(placed)}`;
+          // Q-49 (E6): the target's `★` goes at commit, with the strip and Confirm; the previewed
+          // top stays drawn under the fliers until the final frame swaps in.
+          const markId = `mark-${scene.frames.indexOf(placed)}`;
           const n = letters.length;
           const whole = { kind: step.kind, times: n } as const;
           const hold = (element: string, opacity: number): Effect => ({
@@ -140,7 +143,7 @@ export function sceneEffects(scene: Scene): readonly (readonly Effect[])[] {
             phase: 0,
           });
           shown = false;
-          effects.push(hold('tuck', 1), hold(stripId, 0), hold('confirm', 0));
+          effects.push(hold('tuck', 1), hold(stripId, 0), hold(markId, 0), hold('confirm', 0));
           letters.forEach((_, k) => {
             const start = tuckStart(k);
             const end = tuckEnd(cell);

@@ -43,6 +43,7 @@ let {
   silent = false,
   used = false,
   previewMark = false,
+  markEl,
 }: {
   id: CardId;
   face: Face;
@@ -103,6 +104,11 @@ let {
    * the flourish without suppressing it (`bandMark` is unchanged).
    */
   previewMark?: boolean;
+  /**
+   * How to play only (epic place-preview entry 4): the `data-scene-el` of the `previewMark` pill,
+   * so a scene step can fade the `★` (Scene.svelte passes `mark-<i>`; WordCellRow never does).
+   */
+  markEl?: string;
 } = $props();
 
 // Epic 6 CAP-10 (6.11): only a live column, tray or strip card takes focus (a Tab stop, or -1 for
@@ -199,7 +205,7 @@ const inView = $derived.by(() => {
     {/if}
   </div>
   {#if topTag}<span class="top-tag">{text.viewTop}</span>{/if}
-  {#if previewMark}<span class="preview-mark" aria-hidden="true">{text.star}</span>{/if}
+  {#if previewMark}<span class="preview-mark" data-scene-el={markEl} aria-hidden="true">{text.star}</span>{/if}
 </div>
 
 <style>

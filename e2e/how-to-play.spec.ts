@@ -528,7 +528,7 @@ for (const { id, rules, frames, lastStep } of stepScenes) {
 
 // Epic 8 ticket 3 (HP-3d, HP-3e, HP-2): scenes 3 (place) and 5 (scoring) stepped to their last
 // frame under reduced motion; per frame the open layer, the strip, the lit cells and the figures.
-test('R-40 R-42 R-50 R-51 R-52 R-60 AD-14 with reduced motion scene place steps through 6 frames to its last', async ({
+test('R-40 R-42 R-50 R-51 R-52 R-60 Q-49 AD-14 with reduced motion scene place steps through 6 frames to its last', async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -537,17 +537,22 @@ test('R-40 R-42 R-50 R-51 R-52 R-60 AD-14 with reduced motion scene place steps 
   const figure = await showScene(page, 'place');
   expect(await sceneAnimations(page)).toEqual([]);
   // Per frame: tray or strip letters (undefined: none), lit cells, the selected WordCell number,
-  // cell 6's cards and whether its top card is used (R-33), the not-legal (dimmed) cells (R-40).
-  // Frame 0 is the composed word in the tray (owner decision D5); a strip marks its first card
-  // bottom and its last top (R-50 (UI), owner decision D9).
+  // cell 5's and cell 6's cards ('' none), whether cell 6's top card is used (R-33), the cells whose
+  // top carries the Q-49 preview `★`, whether cell 6 is drawn empty, the not-legal (dimmed) cells
+  // (R-40). Frame 0 is the composed word in the tray (owner decision D5); a strip marks its first
+  // card bottom and its last top (R-50 (UI), owner decision D9). Frames 1 to 4 draw the preview
+  // (Q-49), never a count badge (owner decision 2026-10-29).
   const frames = [
     {
       tiles: 'BALKED',
       strip: false,
       lit: [],
       target: undefined,
+      cell5: '',
       cell6: 'L',
       used: true,
+      stars: [],
+      empty6: false,
       dim: [],
       button: text.validate,
     },
@@ -556,8 +561,11 @@ test('R-40 R-42 R-50 R-51 R-52 R-60 AD-14 with reduced motion scene place steps 
       strip: true,
       lit: [3, 4, 5],
       target: 6,
-      cell6: 'L',
-      used: true,
+      cell5: '',
+      cell6: 'D',
+      used: false,
+      stars: [6],
+      empty6: false,
       dim: [7, 8, 9, 10],
       button: text.confirm,
     },
@@ -566,8 +574,11 @@ test('R-40 R-42 R-50 R-51 R-52 R-60 AD-14 with reduced motion scene place steps 
       strip: true,
       lit: [3, 4, 6],
       target: 5,
-      cell6: 'L',
-      used: true,
+      cell5: 'D',
+      cell6: '',
+      used: false,
+      stars: [5],
+      empty6: true,
       dim: [7, 8, 9, 10],
       button: text.confirm,
     },
@@ -576,8 +587,11 @@ test('R-40 R-42 R-50 R-51 R-52 R-60 AD-14 with reduced motion scene place steps 
       strip: true,
       lit: [3, 4, 5],
       target: 6,
-      cell6: 'L',
-      used: true,
+      cell5: '',
+      cell6: 'D',
+      used: false,
+      stars: [6],
+      empty6: false,
       dim: [7, 8, 9, 10],
       button: text.confirm,
     },
@@ -586,8 +600,11 @@ test('R-40 R-42 R-50 R-51 R-52 R-60 AD-14 with reduced motion scene place steps 
       strip: true,
       lit: [3, 4, 5],
       target: 6,
-      cell6: 'L',
-      used: true,
+      cell5: '',
+      cell6: 'E',
+      used: false,
+      stars: [6],
+      empty6: false,
       dim: [7, 8, 9, 10],
       button: text.confirm,
     },
@@ -596,8 +613,11 @@ test('R-40 R-42 R-50 R-51 R-52 R-60 AD-14 with reduced motion scene place steps 
       strip: false,
       lit: [],
       target: undefined,
+      cell5: '',
       cell6: 'E',
       used: false,
+      stars: [],
+      empty6: false,
       dim: [],
       button: undefined,
     },
@@ -648,7 +668,22 @@ test('R-40 R-42 R-50 R-51 R-52 R-60 AD-14 with reduced motion scene place steps 
     expect(await cellNumbers('.stack.target')).toEqual(
       frame.target === undefined ? [] : [frame.target],
     );
-    await expect(cell6.locator('.card')).toHaveText(frame.cell6.split(''));
+    const cell5 = layer.locator('.wcell', { has: page.locator('.num', { hasText: /^5$/ }) });
+    for (const [cell, letters] of [
+      [cell5, frame.cell5],
+      [cell6, frame.cell6],
+    ] as const)
+      if (letters === '') await expect(cell.locator('.card')).toHaveCount(0);
+      else await expect(cell.locator('.card .glyph')).toHaveText(letters.split(''));
+    expect(await cellNumbers('.preview-mark')).toEqual(frame.stars);
+    for (const n of frame.stars)
+      await expect(
+        layer
+          .locator('.wcell', { has: page.locator('.num', { hasText: new RegExp(`^${n}$`) }) })
+          .locator('.preview-mark'),
+      ).toHaveText(text.star);
+    await expect(cell6.locator('.stack.empty')).toHaveCount(frame.empty6 ? 1 : 0);
+    await expect(layer.locator('.count')).toHaveCount(0);
     if (frame.button !== undefined) await expect(layer.locator('.ctl')).toHaveText(frame.button);
     else await expect(layer.locator('.ctl')).toHaveCount(0);
     if (i < frames.length - 1)
@@ -659,7 +694,7 @@ test('R-40 R-42 R-50 R-51 R-52 R-60 AD-14 with reduced motion scene place steps 
   await expect(figure.getByRole('button', { name: controls.next, exact: true })).toBeVisible();
 });
 
-test('R-51 R-52 AD-14 with motion on the place scene tucks D B A L K E into WordCell 6, ending on one top card E', async ({
+test('R-51 R-52 Q-49 AD-14 with motion on the place scene tucks D B A L K E into WordCell 6, ending on one top card E', async ({
   page,
 }) => {
   await openFixture(page, 'session-idle-fresh');
@@ -670,16 +705,36 @@ test('R-51 R-52 AD-14 with motion on the place scene tucks D B A L K E into Word
     await fliers.evaluateAll((nodes) => nodes.map((n) => n.getAttribute('data-scene-el'))),
   ).toEqual(['tuck-0', 'tuck-1', 'tuck-2', 'tuck-3', 'tuck-4', 'tuck-5']);
   expect(await fliers.locator('.glyph').allTextContents()).toEqual(['D', 'B', 'A', 'L', 'K', 'E']);
+  // Q-49 (E6): while the tuck runs the target's star is gone and place-4's cell 6 still shows the
+  // previewed top E under the fliers, until place-5 swaps in.
   await expect
     .poll(
-      async () =>
-        (await sceneAnimations(page)).filter(
-          (a) =>
-            a.id === 'place-step-6' && a.element?.startsWith('tuck-') && a.playState === 'running',
-        ).length,
+      () =>
+        page.evaluate(() => {
+          const running = document
+            .getAnimations()
+            .filter(
+              (a) =>
+                a.id === 'place-step-6' &&
+                a.playState === 'running' &&
+                (a.effect as KeyframeEffect | null)?.target
+                  ?.closest('[data-scene-el]')
+                  ?.getAttribute('data-scene-el')
+                  ?.startsWith('tuck-'),
+            ).length;
+          const mark = document.querySelector('[data-scene-el="mark-4"]');
+          const cell6 = [...document.querySelectorAll('[data-scene-el="place-4"] .wcell')].find(
+            (c) => c.querySelector('.num')?.textContent === '6',
+          );
+          return {
+            running,
+            opacity: mark === null ? undefined : getComputedStyle(mark).opacity,
+            glyph: cell6?.querySelector('.glyph')?.textContent,
+          };
+        }),
       { timeout: 30_000 },
     )
-    .toBe(6);
+    .toEqual({ running: 6, opacity: '0', glyph: 'E' });
   await expect
     .poll(
       async () =>
