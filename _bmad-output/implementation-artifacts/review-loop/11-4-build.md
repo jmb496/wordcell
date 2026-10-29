@@ -1,5 +1,5 @@
 # Review loop — ticket 11.4 build (code, 8cd6b84..HEAD)
-State: pass 1: done
+State: pass 2: done
 
 Target: commit range `8cd6b84..HEAD` (staged as `11-4-build.passes/pass0.diff`); intent `_bmad-output/initiative-wordcell-v1/epic-place-preview/story-how-to-play-place-scene-preview-plan.md`. Depth quick, max 7.
 Pre-loop: HEAD fdb3bd57fc069f39f9fdb02f864104fd403b8a24, tree snapshot 0 0bf88627f82ab3ad82ab0702de6f85aa7a44c9ac.
@@ -19,3 +19,20 @@ Snapshot: tree 2e8f75f9abfc5d24a00fd316089a7261fd6bb1c9 (fix diff `11-4-build.pa
 - none
 ### Dropped
 - none (correctness lens returned no findings)
+
+## Pass 2 — 2026-10-29
+Reviewers: fix diff, correctness, verification gap  |  Findings: major 0, minor 1, decision-needed 0  |  Dropped in triage: 0
+Snapshot: tree 2e8f75f9abfc5d24a00fd316089a7261fd6bb1c9 (no fix pass; unchanged since pass 1, committed as b8d33cf). Orchestrator at the final state (pass 1 run): `npm test` 3638 passed, `npm run lint` pass, `npm run check` 0 errors.
+### Applied
+- none (converged; the minor is listed under Result, not applied)
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none (fix diff and correctness lenses returned no findings)
+
+## Result — converged after 2 passes
+
+Unapplied minors (for the next build or loop):
+- [minor] `src/ui/scenes/scenes.test.ts:1235-1237` ("AD-14 Q-49 scene place: rendering throws when a Place frame names an after with no previews entries or has no after …") — both bad-frame cases match only `/^scene place: frame 2/`, so they cannot tell Scene.svelte's two throws (`frame 2 has no after`, `frame 2 has no previews entry at after 3`, `src/ui/scenes/Scene.svelte:179,182`) apart; anchor each on its full message (verification gap).
