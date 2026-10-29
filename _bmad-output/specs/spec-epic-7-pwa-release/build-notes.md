@@ -39,7 +39,11 @@ offline/update behaviour is an owner question instead (SPEC Open Questions).
 - `sw.ts` (dynamic chunk): `new Workbox('/sw.js', { scope: '/' })` (the plugin's output names),
   `register()`; after it resolves, read the registration's `installing`, `waiting` and `active`
   and attach `statechange` listeners to each (an update found before `sw.ts` loaded is not
-  missed), then follow Workbox's events for workers found later. State precedence: `failed`,
+  missed); for workers found later, `sw.ts` adds its own
+  `registration.addEventListener('updatefound', …)` and attaches `statechange` itself, since
+  `workbox-window` drops its `updatefound` listener after an update it judges external
+  (`Workbox.js` ~89–100: a second update, another script URL, or past the registration timeout);
+  a shell Vitest `AD-16` case covers a second update found later. State precedence: `failed`,
   once set this launch, stays; otherwise `registration.waiting` → `waiting`, else `installing` →
   `installing`, else `active` → `active`, else `unregistered`.
 - Failure (Q-40): a rejected `register()`, or any worker `sw.ts` observes this launch
@@ -92,7 +96,10 @@ offline/update behaviour is an owner question instead (SPEC Open Questions).
   `register` is called, and when the `register` promise settles; assert dictionary settled →
   `register` called → `register` settled → one `persisted` call, then one `persist` call; the
   script stubs `persisted()` to resolve false, wherever a case asserts persistence. Cases: first
-  launch; dictionary 404 by `page.route` (the worker's precache fetch is unaffected); dictionary
+  launch (it also routes the `sw.ts` chunk, URL from `.vite/manifest.json`, with `page.route`
+  on the uncontrolled page and reads `dictionaryState()` when the request reaches the handler:
+  not `loading`, so an eager import that only awaits the dictionary before `register` fails);
+  dictionary 404 by `page.route` (the worker's precache fetch is unaffected); dictionary
   timed out (`pwa`: `page.clock.install()` before `goto`, dictionary route held and asserted hit,
   `page.clock.fastForward` past `dictionary.svelte.ts`'s 30 s `TIMEOUT_MS`); dev server (F3, in
   `e2e/test-hook.spec.ts`): no `register` call, no `/src/shell/sw.ts` request, one `persisted` then one
@@ -104,7 +111,8 @@ offline/update behaviour is an owner question instead (SPEC Open Questions).
   does not see worker-served responses, `context.route` sees requests the worker makes.
   `block` replaces `navigator.serviceWorker.register` with a stub resolving `undefined`, so
   `workbox-window`'s `register()` rejects (a Q-40 failure): `block` only in `dist-smoke` specs,
-  where it is silent. Audit every existing `pwa` and `dist-smoke` spec that routes and reloads; a
+  where it is silent; `dist-smoke.spec.ts` mixes `block` specs and new `allow` cases, so it sets
+  the mode per `test.describe` with `test.use({ serviceWorkers })`, never at file level. Audit every existing `pwa` and `dist-smoke` spec that routes and reloads; a
   `pwa` spec keeps `allow` and routes with `context.route` set before the first `goto`, or, for
   a non-precached URL only, waits for `precacheComplete()` before a routed reload (a controlled
   page answers precached URLs from the cache, so routes never fire), or, for a precached URL,
@@ -112,7 +120,9 @@ offline/update behaviour is an owner question instead (SPEC Open Questions).
   still holds. Every audited spec that routes asserts its handler was hit. `context.route` never
   sees an updated worker's main-script fetch (microsoft/playwright#14711; unverified for 1.63),
   so `/sw.js` changes and absences use F8's static server (`e2e/helpers/static-server.ts`: copy a
-  build dir, swap or remove files, serve with an SPA fallback; tests in `e2e/helpers.spec.ts`); `context.route` stays for
+  build dir, swap or remove files, serve with the query string ignored (B's install fetch of
+  `index.html?__WB_REVISION__=…` gets the file); a missing path gets `index.html` only when
+  `Sec-Fetch-Mode: navigate`, else 404, `/sw.js` included; `e2e/helpers.spec.ts` covers both); `context.route` stays for
   worker-originated precache fetches and page-level requests. Before
   the first install `context.route` also intercepts the worker's precache fetches, so there it
   answers only with responses that succeed; a failed precached URL turns the install redundant
@@ -121,23 +131,26 @@ offline/update behaviour is an owner question instead (SPEC Open Questions).
 - `swState()` `active` is not control (no `clientsClaim`): specs that need control (Q-42,
   update) reload and check `navigator.serviceWorker.controller` first.
 - Offline: make a move, wait for `precacheComplete()` (no polling after it),
-  `context.setOffline(true)`, `page.reload()`, assert the game restored, then deal/validate
-  through existing helpers; assert `dictionaryState()` `ready`. `dist-smoke` offline case (in
+  `context.setOffline(true)`, `page.reload()`, assert the game restored and the no-prompt check,
+  then deal (accept the New game confirm, `ConfirmDialogs.svelte`) and validate through existing
+  helpers; assert `dictionaryState()` `ready`. `dist-smoke` offline case (in
   `dist-smoke.spec.ts`, `allow`): poll `page.evaluate` until the registration's active worker is
   `activated` and every `readPrecacheManifest` URL is a key in `caches` (`__WB_REVISION__`
   stripped, as `precacheComplete()`), then the same steps minus the hook reads.
-- No-prompt checks (offline, update): App.svelte's `role="status"` live region is visually
-  hidden but Playwright-visible (1 px box), so the check excludes it by locator.
+- No-prompt checks (offline, update): roles `dialog`, `alertdialog` (`BlockingMessage.svelte`),
+  `alert` and `status`, excluding App.svelte's live region by locator (`REGION` in
+  `e2e/helpers/live-region.ts`).
 - Update (F8): copy `dist-test/` to a temp dir, insert `<meta name="wc-build" content="A">` into
-  its `index.html`, serve it from `e2e/helpers/static-server.ts` (`index.html` also for
-  navigations), `goto` its URL. After A is `active` and every open page shows a non-null
+  its `index.html`, serve it from `e2e/helpers/static-server.ts`, `goto` its URL. After A is `active` and every open page shows a non-null
   `navigator.serviceWorker.controller` (an early activation with an uncontrolled page open is a
   test-setup error, never grounds for G3), write B on disk: `sw.js` with the `index.html` precache revision changed
-  and `index.html` with marker B; reload (update check); assert `swState()` `waiting` and marker
-  A. With B waiting, open a second page, close one, open another: marker A. Close every page of
-  the context, poll until B is activated (e.g. `self.serviceWorker.state` evaluated in the newest
-  of `context.serviceWorkers()`, unverified), open one: marker B,
-  `navigator.serviceWorker.controller` non-null, `swState()` polls to `active`. Only if
+  and `index.html` with marker B; reload (update check); assert `swState()` `waiting`, marker
+  A and the no-prompt check on that single page. With B waiting, open a second page, close one,
+  open another: marker A (markers only: the AD-9 pagehide flush of a closing page can show the
+  Q-38 message on another). Close every page of the context, poll until B is activated (e.g.
+  `self.serviceWorker.state` evaluated in the newest of `context.serviceWorkers()`, unverified),
+  open one: marker B, `navigator.serviceWorker.controller` non-null, `swState()` polls to
+  `active`, no-prompt check. Only if
   Chromium's own activation timing differs, record that in the plan and rely on G3 (SPEC
   Assumptions).
 - Q-40 (`dist-smoke`, in `e2e/pwa/dist-smoke.spec.ts`, no config change): serve a `dist/` copy
@@ -185,16 +198,16 @@ offline/update behaviour is an owner question instead (SPEC Open Questions).
   page never runs: the doc's steps and the printed hint say clear the origin's site data before a
   seed, a re-seed or a fresh-install read (replacing "Repeat step 3"); the hint (today, line 106:
   "After a new build, clear the site data on the phone first.") is printed when a seed page is
-  written (session or `--history` fixture); a no-fixture run prints two lines instead: "fresh
-  install: clear site data first; update read (G3): keep it". After seeding, the doc says close
+  written (session or `--history` fixture); a no-fixture run prints two lines instead: "Fresh
+  install: clear site data first." and "Update read (G3): keep site data." After seeding, the doc says close
   the Chrome tab and launch the installed app (G4–G6; G4 seeds
   `fixtures/session-place-free-letter-redo-tail.json` and `fixtures/session-gave-up.json`). The seed page's unregister stays only as
   a guard for an uncontrolled first visit; `dist/sw.js` unchanged.
 - Update read on the tailnet (the one read that keeps site data): build A with
   `WORDCELL_APP_VERSION='A'`, install, run G2's readiness step for A (A active), then stop A's
   server; build B with `'B'`, serve; the footer shows which build runs; a read whose first cold
-  launch already shows B is spoiled and redone, not a fix ticket (a second consecutive one is a
-finding, G3); the steps follow G3's order: close every WordCell window (app swiped from recents,
+  launch already shows B is spoiled and redone, not a fix ticket (a second consecutive one routes
+  as G3 says); the steps follow G3's order: close every WordCell window (app swiped from recents,
   tabs on the origin closed), launch cold (it fetches B; a resume fetches nothing, A-A15), then the
   readiness step (about a minute on Wi-Fi, or B seen waiting in chrome://serviceworker-internals
   (unverified)) before the close-all step.
@@ -209,6 +222,7 @@ finding, G3); the steps follow G3's order: close every WordCell window (app swip
 ## Close-out document edits (CAP-9)
 
 - Spine: AD-16 boot tail and `sw.ts` as built; AD-17 Celebration seam key list → six (F14);
+  AD-17 Reading state: `precacheComplete()` returns the last recomputed value and is polled;
   AD-7 `requestPersistence()` as built, none after a launch halted before the attempt settles;
   AD-15 boot returns at `halted()`, now including registration and persistence (F4); AD-1's scan
   list gains `navigator.storage` only in `src/shell/storage.ts` and no `messageSkipWaiting`,
@@ -217,8 +231,9 @@ finding, G3); the steps follow G3's order: close every WordCell window (app swip
   in AD-16's `Binds:` line and the Structural Seed `shell/` list; Scaffold deltas: `workbox-window`
   in `package.json` `dependencies`; AD-18 Size: the gate also fails on a `sw.ts` manifest key no
   dynamic edge reaches, plus the `build-output.spec.ts` content check; AD-17 Projects: the update,
-  Q-40 (`sw-failure.spec.ts`) and Q-42 cases, F8's `e2e/helpers/static-server.ts` and the
-  `dist-smoke` offline case.
+  Q-40 (`sw-failure.spec.ts`) and Q-42 cases, F8's `e2e/helpers/static-server.ts`, the
+  `dist-smoke` offline case and the offline order: move, precache complete, offline reload,
+  restore, deal, validate.
 - EXPERIENCE.md State Patterns "New app version installed" and Assumptions row A-E4: "activates
   once every WordCell window has closed" (A-E4 wording synced to AD-16, no behaviour change).
 - `docs/device-testing.md` per CAP-7; AGENTS.md, through `bmad-project-context`: the shell-module

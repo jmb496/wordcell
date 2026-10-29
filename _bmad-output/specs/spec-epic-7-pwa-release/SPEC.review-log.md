@@ -1,6 +1,6 @@
 # Review log — spec-epic-7-pwa-release (SPEC.md + companions)
 
-State: pass 5: done
+State: pass 6: done
 
 Target: `_bmad-output/specs/spec-epic-7-pwa-release/` (SPEC.md, rule-coverage.md, device-checks.md, release-checklist.md, build-notes.md). Mode: docs, thorough, max 7.
 Pre-loop: HEAD fe1ba6f6def230a892e73fe006281307df31247e; copies at `SPEC.review-log.passes/pass0/`; words 5770 (SPEC 2737, build-notes 911, device-checks 1034, release-checklist 593, rule-coverage 495).
@@ -136,6 +136,20 @@ Fixer: all 20 items applied; checked `e2e/helpers.spec.ts`, `PORT = 4173`, `play
 ### Default applied (technical)
 - F4 second check — a P7 `pwa` variant holds the `sw.ts` chunk request (handler asserted hit), halts the page, fulfils, waits for the import to settle plus a macrotask, asserts no `register`, `persisted` or `persist`
 - G3 — footer B after a visible reboot with a live A tab is an activation-timing failure (owner question per Disposition); a second consecutive spoiled read after A's readiness step becomes a finding
+### Decision needed (functionality / UX / gameplay)
+- none new
+### Dropped
+- none
+
+## Pass 6 — 2026-10-29
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 1, minor 16, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 11576 (2.01 x pass 0)  |  Snapshot: SPEC.review-log.passes/pass6/ (fix diff pass6.fix.diff)
+Fixer: all 17 applied; checked `manifest: true` and `dist-test/.vite/manifest.json`, `Dialog.svelte` role, `REGION` export, `__WB_REVISION__` in workbox-precaching `createCacheKey.js`, `Workbox.js` 7.4.1 ~89–100, Playwright 1.63 `serviceWorkers` context option; unverified: Chromium sending `Sec-Fetch-Mode: navigate` to the local static server (design requirement for the helper).
+### Applied
+- [major] rule-coverage AD-16 dynamic-import row, CAP-1 — the order tests record `dictionaryState()` only at `register`, so an eager `import('./shell/sw')` at boot (the `workbox-window` chunk competing with the dictionary for first Validate, AD-18) passes → fixer item 1
+- [minor] items 2–17: route a second consecutive spoiled G3 read and define how G3 resolves for Done when 2; desktop re-read = clear site data only; offline no-prompt check timing (right after the offline reload; the deal accepts the New game confirm); static-server fallback for navigations only, other missing paths 404, query string ignored (four lenses); drop the unverified live-region visibility claim; `dist-smoke` offline test name and offline order in the CAP-9 AD-17 sync; `alertdialog` in the no-prompt roles, checked on the single reloaded page and the final marker-B page, multi-page step asserts only markers (Q-38 may show); `navigator.storage` scan exclusions and an AD-1 S row; `sw.ts` listens for `updatefound` itself (workbox-window drops its listener after an external update, `Workbox.js` 89–100); worker mode per `test.describe` in `dist-smoke.spec.ts`; spanning game on a restart does not count; `precacheComplete()` last-value semantics in the CAP-9 AD-17 sync; §6.7 re-measured on the release commit; audit-gap fix tickets land before the merge; define "resolved" for Done when 1; quote the two hint lines separately
+### Default applied (technical)
+- eager-import check — the order test (or the F4 post-import case, which holds the `sw.ts` chunk route) reads `dictionaryState()` when the chunk request reaches the route handler and asserts it is not `loading`
 ### Decision needed (functionality / UX / gameplay)
 - none new
 ### Dropped
