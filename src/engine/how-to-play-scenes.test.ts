@@ -312,12 +312,14 @@ describe('AD-2 How to play scene replay', () => {
       (e: PreviewEntry[]) => {
         e[0].top = 'E';
       },
+      /^scene place: after 4 commands cell 6 stated preview E 6, engine D 6$/,
     ],
     [
       'wrong count',
       (e: PreviewEntry[]) => {
         e[0].count = 7;
       },
+      /^scene place: after 4 commands cell 6 stated preview D 7, engine D 6$/,
     ],
     [
       'missing entry',
@@ -327,18 +329,25 @@ describe('AD-2 How to play scene replay', () => {
           1,
         );
       },
+      /^scene place: after 5 commands cell 6 stated preview none, engine empty 0$/,
     ],
     [
       'extra entry',
       (e: PreviewEntry[]) => {
         e.push({ after: 4, cell: 3, top: null, count: 0 });
       },
+      /^scene place: after 4 commands cell 3 stated preview empty 0, engine none$/,
     ],
-  ])('Q-49 scene place: a %s fails the harness', (_name, change) => {
+    [
+      'all entries at one after removed',
+      (e: PreviewEntry[]) => {
+        e.splice(0, e.length, ...e.filter((entry) => entry.after !== 7));
+      },
+      /^scene place: after 7 commands cell 6 stated preview none, engine E 6$/,
+    ],
+  ])('Q-49 scene place: a %s fails the harness', (_name, change, message) => {
     const scene = edit<PreviewEntry>(place, 'previews', change);
-    expect(() => replayScene(scene, DICT)).toThrow(
-      /^scene place: after \d commands cell \d stated preview/,
-    );
+    expect(() => replayScene(scene, DICT)).toThrow(message);
   });
 
   it('Q-49 scene place: an after/cell pair listed twice in previews fails the harness', () => {

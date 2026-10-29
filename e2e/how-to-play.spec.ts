@@ -723,18 +723,20 @@ test('R-51 R-52 Q-49 AD-14 with motion on the place scene tucks D B A L K E into
                   ?.startsWith('tuck-'),
             ).length;
           const mark = document.querySelector('[data-scene-el="mark-4"]');
+          const layer = document.querySelector('[data-scene-el="place-4"]');
           const cell6 = [...document.querySelectorAll('[data-scene-el="place-4"] .wcell')].find(
             (c) => c.querySelector('.num')?.textContent === '6',
           );
           return {
             running,
             opacity: mark === null ? undefined : getComputedStyle(mark).opacity,
+            layer: layer === null ? undefined : getComputedStyle(layer).opacity,
             glyph: cell6?.querySelector('.glyph')?.textContent,
           };
         }),
       { timeout: 30_000 },
     )
-    .toEqual({ running: 6, opacity: '0', glyph: 'E' });
+    .toEqual({ running: 6, opacity: '0', layer: '1', glyph: 'E' });
   await expect
     .poll(
       async () =>

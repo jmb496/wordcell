@@ -797,6 +797,9 @@ describe('AD-14 scene place against its fixture', () => {
     expect(() => redefine({ ...tucks, letters: ['B', 'A', 'L', 'K', 'E', 'D'] })).toThrow(
       /placement order/,
     );
+    expect(() =>
+      defineScene({ ...placeScene, elements: placeScene.elements.filter((e) => e !== 'mark-4') }),
+    ).toThrow(/\(tucks\) does not declare mark-4/);
   });
 
   it('AD-1 a landed scene allows no grab or drop, a carried one needs its geometry, and a tap or move command must fit', () => {
