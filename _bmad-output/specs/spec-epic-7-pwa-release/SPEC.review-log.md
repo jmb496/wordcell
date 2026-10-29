@@ -1,6 +1,6 @@
 # Review log — spec-epic-7-pwa-release (SPEC.md + companions)
 
-State: pass 1: done
+State: pass 2: done
 
 Target: `_bmad-output/specs/spec-epic-7-pwa-release/` (SPEC.md, rule-coverage.md, device-checks.md, release-checklist.md, build-notes.md). Mode: docs, thorough, max 7.
 Pre-loop: HEAD fe1ba6f6def230a892e73fe006281307df31247e; copies at `SPEC.review-log.passes/pass0/`; words 5770 (SPEC 2737, build-notes 911, device-checks 1034, release-checklist 593, rule-coverage 495).
@@ -45,3 +45,40 @@ Fixer: all 30 applied; F17 added (sw.ts import rejection); tool claims checked a
 - none new (the SPEC's three Open Questions remain the owner's)
 ### Dropped
 - none
+
+## Pass 2 — 2026-10-29
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 13, minor 16, decision-needed 0  |  Dropped in triage: 1
+Words (docs): 8427 (1.46 x pass 0)  |  Snapshot: SPEC.review-log.passes/pass2/ (fix diff pass2.fix.diff)
+Fixer: all 28 applied; checked `npm version 1.0.0 --no-git-tag-version` (npm 11.12.1, throwaway copy: sets package.json and both package-lock.json root versions, no commit/tag), `git merge --ff-only`, Playwright 1.63.0 `Request.serviceWorker()`, workbox-window markers; phone-only facts marked (unverified) in the documents.
+### Applied
+- [major] G3, release-checklist step 4, CAP-10 — the expected Q-38 halt covers the board and the menu footer (`Menu.svelte` only); footer unreadable as written → fixer item 1
+- [major] CAP-1/F17, rule-coverage F17 row — hook-build branch of a rejected `sw.ts` import (fatal, `failed`, no persistence) untested → item 2
+- [major] release-checklist header/closing vs step 2 — G1/G2/G4 read before the 1.0.0 commit cannot meet "every production row records `1.0.0`" → item 3
+- [major] CAP-6, build-notes Packaging — `workbox-window` imported only by `sw.ts` is inlined into its chunk; no manifest key to assert → item 4
+- [major] CAP-7, `device-preview.mjs:106` hint — "clear site data after every build" wipes build A, defeating G3's tailnet update read → item 5
+- [major] CAP-1, build-notes Failure — "this launch's own installing worker" undefined for a worker installing before `sw.ts` loaded and an update failing under an active worker → item 6
+- [major] G16, release-checklist §6.3 — brief §6.3: a misdrop or lost drop breaks the consecutive run; unstated → item 7
+- [major] G3, release step 4 — no readiness step before closing every window (B may still be installing; failure routed to an owner question) → item 8
+- [major] release-checklist §6.3 — game seeds are shown nowhere in the UI (`src/ui` has no seed render) → item 9
+- [major] F11, release step 3 — "brought up to date with `main`" unowned; an agent `git merge` would be an agent merge → item 10
+- [major] CAP-10, release step 1 — "after the owner's go-ahead the epic merges" reads as an agent merge; Jared merges and pushes → item 11
+- [major] build-notes Boot, CAP-3 — `main.ts` calling `storage.ts` `requestPersistence()` breaks AGENTS.md "storage.ts is called only by the shell stores" → item 12
+- [major] build-notes precacheComplete, CAP-2/CAP-4 — background recompute fetches the un-precached `/sw.js`, which rejects offline (AD-15) and breaks the §6.8 offline test → item 13
+- [minor] items 14–29: setter ownership (F1/build-notes vs F17); F5 "dev" wording vs F3; F4/F17 row keys to convention ids; EXPERIENCE.md A-E4 Assumptions row in the CAP-9 sync; §6.6 reproduction tests for fix tickets; G4 aggregate statistics; `unverified` device claims in G2/G4; synthetic test for the new size-budget failure branch; P7-turned-D rows are §6.4 gaps Jared accepts; F6 `context.route` caveat for failing precached URLs; route-hit / worker-origin / redundant-wait assertions in the Q-40 `dist-smoke` cases; `package-lock.json` version; Done when 3 exemptions sentence-level only; `--history` argument parsing and history-only seed; merge the duplicate activation rows
+### Default applied (technical)
+- Q-38 during G3 — a window showing the other-window message is read by tapping its Reload then opening the menu footer (a reload never activates the waiting worker, A-A15)
+- F17 hook build — a `pwa` case routes the `sw.ts` chunk to 404: fatal surface, `swState()` `failed`, no `persisted`/`persist`
+- production rows before 1.0.0 — each row records the footer it was read on; rows read on the merged pre-release build count for 1.0.0 because the release commit changes only the version (F12)
+- workbox-window placement — assert the `src/shell/sw.ts` key is a dynamic entry outside the counted set; prove `workbox-window` by content (`messageSkipWaiting`, `serviceWorker.register` only in files of the `sw.ts` closure)
+- device-preview hint — clearing site data is required before a seed or fresh install; the G3 update read is the named exception (hint printed only with a seed fixture, or an `--update-read` flag suppresses it)
+- redundant worker — any installing worker `sw.ts` observes this launch (present at `register()` or found later, first install or update) turning redundant without a newer installing/waiting worker → `failed`
+- G3 readiness — wait about a minute on Wi-Fi or see the new version WAITING in chrome://serviceworker-internals before closing every window
+- §6.3 evidence — date, outcome, final score, committed-word count and footer from the end sheet; seeds not required
+- branch update — the agent only fast-forwards (`git merge --ff-only main`), else stops for Jared
+- `requestPersistence()` in `main.ts` — kept per AD-7/AD-16; CAP-9 `bmad-project-context` edit names it as the one exception
+- precacheComplete — recompute only on a call (never at boot or activation); URL list read once from `/sw.js` while online and kept; offline spec stops polling before `setOffline(true)`
+- §6.3 run — a misdrop or lost drop resets the count to zero (brief §6.3); a stuck drag that loses the drop counts as a lost drop, otherwise a finding
+### Decision needed (functionality / UX / gameplay)
+- none new
+### Dropped
+- CAP-8 "only comments, tests, helpers and tooling change" too narrow — the restriction is the methodology's sweep rule (cited "user direction"), not a defect
