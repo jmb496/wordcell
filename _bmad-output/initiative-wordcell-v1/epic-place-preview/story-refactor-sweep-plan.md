@@ -3,7 +3,7 @@ title: 'Refactor sweep (epic 11)'
 type: 'chore'
 ticket: '6'
 created: '2026-10-29'
-status: 'built'
+status: done
 baseline_revision: '5a86a03fd89410dc3bfb15c9fee9ca009f9a396b'
 route: 'oneshot'
 route_source: 'auto'
