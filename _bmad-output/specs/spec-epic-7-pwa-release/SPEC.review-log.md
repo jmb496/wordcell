@@ -1,6 +1,6 @@
 # Review log — spec-epic-7-pwa-release (SPEC.md + companions)
 
-State: pass 2: done
+State: pass 3: done
 
 Target: `_bmad-output/specs/spec-epic-7-pwa-release/` (SPEC.md, rule-coverage.md, device-checks.md, release-checklist.md, build-notes.md). Mode: docs, thorough, max 7.
 Pre-loop: HEAD fe1ba6f6def230a892e73fe006281307df31247e; copies at `SPEC.review-log.passes/pass0/`; words 5770 (SPEC 2737, build-notes 911, device-checks 1034, release-checklist 593, rule-coverage 495).
@@ -82,3 +82,26 @@ Fixer: all 28 applied; checked `npm version 1.0.0 --no-git-tag-version` (npm 11.
 - none new
 ### Dropped
 - CAP-8 "only comments, tests, helpers and tooling change" too narrow — the restriction is the methodology's sweep rule (cited "user direction"), not a defect
+
+## Pass 3 — 2026-10-29
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 6, minor 15, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 9228 (1.6 x pass 0)  |  Snapshot: SPEC.review-log.passes/pass3/ (fix diff pass3.fix.diff)
+Fixer: all 21 applied; repo facts checked (size-budget closure/`manifest[...].file`, architecture-scan exclusions, device-preview hint line, spine AD-16 Binds and Structural Seed); unverified (design statements for the plan): `reportError` via `page.evaluate` reaching the AD-15 handler, `getRegistration()` activated gate; device-only steps marked (unverified) in the documents.
+### Applied
+- [major] CAP-6, rule-coverage AD-18, build-notes Packaging — the `sw.ts` static closure includes the entry chunk (F1's shared state module lives there), so "markers only in the `sw.ts` closure" is vacuous → fixer item 1
+- [major] CAP-9, F11, release-checklist §6.6 — "records why the bug is device-only" is an exception brief §6.6 does not give → item 2
+- [major] release-checklist §6.4 / Done when 1 — pass-2 accepted-gap path contradicts "gaps become fix tickets" and "checked and passing" → item 3
+- [major] CAP-5, rule-coverage Q-40 (F17), build-notes — F17 `dist/` "persistence still requested" has no assertion → item 4
+- [major] rule-coverage AD-16 AD-7 (F4) — "the plan picks the halting mechanism" lets a pre-mount halt pass without reaching the new post-dictionary `halted()` check → item 5
+- [major] G3, release step 4, build-notes update read — "launch once" not required cold (a resume fetches nothing), readiness optional, every failure routed to an owner question; no recovery for a spoiled production read → item 6
+- [minor] items 7–21: source-scan scope excludes tests (as AD-1's scan); precacheComplete returns false without fetching until an activated worker exists; one hint rule (print whenever a seed page is written; no `--update-read`); one re-read rule for fixed/touched rows; F12 carry-over limited to G1/G2/G4, ten-game run only on a `1.0.0` footer; CAP-3 ticket cites the AGENTS.md storage exception; release commit inside the CAP-10 plan (§6.7); CAP-9 failure routes include owner questions; spine sync adds the state module to AD-16 Binds and Structural Seed; stub `persisted()` false and assert one `persisted` then one `persist`; marker-B page also asserts a controller and `swState()` `active`; G3 discarded-renderer note; Success signal allows the accepted D gap; `navigator.storage` in the AD-1 single-owner scan; rename rule-coverage "Exempt" to "Covered elsewhere" except A-A3
+### Default applied (technical)
+- workbox-window placement — markers occur in no file of `index.html`'s counted closure (entry static and dynamic closure, not following the `sw.ts` edge) and do occur in the `src/shell/sw.ts` chunk's own file
+- §6.6 device-only — recorded as a §6.6 gap with its reason, accepted by Jared in the epic Notes, listed in the audit, not counted as met
+- §6.4/§6.6 gaps — "every other gap becomes a fix ticket"; a criterion counts as checked when each remaining gap is one Jared accepted
+- F4 test — hold the dictionary route, halt the page after mount (e.g. a Q-38 write from a second page or `reportError`), fulfil; assert no `register`, `persisted` or `persist`
+- G3 — start with every WordCell window closed; readiness before close-all; owner question only for activation timing once B was seen waiting, otherwise a fix ticket; a spoiled production read rests on the tailnet G3 read or is redone at the next deploy
+### Decision needed (functionality / UX / gameplay)
+- none new
+### Dropped
+- none

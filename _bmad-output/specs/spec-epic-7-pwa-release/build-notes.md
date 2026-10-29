@@ -58,14 +58,20 @@ offline/update behaviour is an owner question instead (SPEC Open Questions).
   asynchronously only when the accessor is called (never at boot or on activation) and the
   accessor returns the last computed value, so Playwright reads it with `expect.poll`. Value: the
   registration's active worker is `activated` and every URL of `/sw.js`'s inlined precache array
-  is a Workbox precache cache key once `__WB_REVISION__` is stripped. The array is fetched once,
+  is a Workbox precache cache key once `__WB_REVISION__` is stripped. A recompute returns `false` without fetching unless
+  `navigator.serviceWorker.getRegistration()` has an `activated` active worker (none in dev); only
+  then is the array fetched, once,
   while online, read by a small literal parser mirroring `e2e/helpers/precache.ts` and kept, so a
   later recompute reads only Cache Storage (an offline `/sw.js` fetch would reject to AD-15).
   Never a hand list; no build-time list (the manifest's revisions hash the chunks). The code sits behind the hook's env gate, so it is absent from `dist/`.
 - Boot (`main.ts`): after `dictionary.load()` settles, return if `halted()` (F4); in dev skip the
   import; otherwise `await import('./shell/sw')` (F17 on rejection) and await its registration
   attempt, which always resolves; then return if `halted()`, else `requestPersistence()`. Await
-  the attempt's settle, not the worker's activation.
+  the attempt's settle, not the worker's activation. The F4 Playwright case reaches the new
+  `halted()` check after `dictionary.load()` (a halt before mount, e.g. a font 404, never does):
+  hold the dictionary route, halt the mounted page (a Q-38 write from a second page, or
+  `reportError(new Error(...))` via `page.evaluate`), fulfil the route; the init script records no
+  `register`, `persisted` or `persist` call.
 
 ## Persistence (CAP-3)
 
@@ -74,7 +80,8 @@ offline/update behaviour is an owner question instead (SPEC Open Questions).
 - Order proof in Playwright: an init script wraps `navigator.storage.persisted`/`persist` and
   `ServiceWorkerContainer.prototype.register` and records each call, `dictionaryState()` when
   `register` is called, and when the `register` promise settles; assert dictionary settled →
-  `register` called → `register` settled → `persisted`/`persist` called exactly once. Cases: first
+  `register` called → `register` settled → one `persisted` call, then one `persist` call; the
+  script stubs `persisted()` to resolve false, wherever a case asserts persistence. Cases: first
   launch; dictionary 404 by `page.route` (the worker's precache fetch is unaffected).
 
 ## Playwright mechanics (CAP-4, CAP-5; F6–F8)
@@ -99,7 +106,7 @@ offline/update behaviour is an owner question instead (SPEC Open Questions).
   the page, route `/sw.js` to A's with the `index.html` precache revision changed and `index.html`
   to marker B; reload (update check); assert `swState()` `waiting` and marker A. With B waiting,
   open a second page, close one, open another: marker A. Close every page of the context, open
-  one: marker B. If Chromium under Playwright does not activate on last-page close, record that in
+  one: marker B, `navigator.serviceWorker.controller` non-null, `swState()` polls to `active`. If Chromium under Playwright does not activate on last-page close, record that in
   the plan and rely on G3 (SPEC Assumptions).
 - Q-40 (`dist-smoke`, in `e2e/pwa/dist-smoke.spec.ts`, no config change): at context level,
   route `/sw.js` to 404, or during the first install one precached URL the page does not load
@@ -108,7 +115,7 @@ offline/update behaviour is an owner question instead (SPEC Open Questions).
   until `navigator.serviceWorker.getRegistration()` shows no `installing` before asserting no
   surface; the `/sw.js` case's init script also shows `persisted`/`persist` called after the
   failed `register` settles. F17: route the `sw.ts` chunk to 404; assert the route hit; boot,
-  deal, validate, no surface. Q-40 (`pwa`): the same two routes; expect the AD-15 fatal surface
+  deal, validate, no surface; CAP-3's init script shows `persisted`/`persist` called after it. Q-40 (`pwa`): the same two routes; expect the AD-15 fatal surface
   and `swState()` `failed`. F17 (`pwa`): the `sw.ts` chunk to 404, route hit, AD-15 fatal
   surface, `swState()` `failed`, no `persisted`/`persist` call (CAP-3's init script).
 - Q-42 (F7): with the page controlled, delete the dictionary entry from the precache cache and
@@ -130,7 +137,11 @@ offline/update behaviour is an owner question instead (SPEC Open Questions).
   imported only by `sw.ts`, is inlined into the `sw.ts` chunk (no manifest key of its own): an
   `e2e/pwa/build-output.spec.ts` case reads `.vite/manifest.json`, shows the `src/shell/sw.ts`
   key is a dynamic entry outside the counted set, and that a Workbox marker (e.g.
-  `messageSkipWaiting`) and `serviceWorker.register` occur only in files of the `sw.ts` closure;
+  `messageSkipWaiting`) and `serviceWorker.register` occur in no file of the counted set
+  (`index.html`'s static and dynamic closure, not following the `sw.ts` edge, as `size-budget.mjs`
+  computes it) and do occur in the `src/shell/sw.ts` chunk's own file
+  (`manifest['src/shell/sw.ts'].file`) or files reachable only through that dynamic edge (the
+  F1 state module puts the entry chunk in the `sw.ts` static closure);
   record the margin
   (560,553 / 600,000 at epic 11, `c2f1fe7`).
 
@@ -143,14 +154,15 @@ offline/update behaviour is an owner question instead (SPEC Open Questions).
   controls the origin, its `NavigationRoute` answers `/seed.html` with `index.html`, so the seed
   page never runs: the doc's steps and the printed hint say clear the origin's site data before a
   seed, a re-seed or a fresh-install read (replacing "Repeat step 3"); the hint (today, line 106:
-  "After a new build, clear the site data on the phone first.") is printed only with a seed
-  fixture, or e.g. an `--update-read` flag suppresses it; the seed page's unregister stays only as
+  "After a new build, clear the site data on the phone first.") is printed whenever a seed
+  page is written (session or `--history` fixture), so the update read (no fixture) keeps it out; the seed page's unregister stays only as
   a guard for an uncontrolled first visit; `dist/sw.js` unchanged.
 - Update read on the tailnet (the one read that keeps site data): build A with
   `WORDCELL_APP_VERSION='A'`, install, stop; build B with `'B'`, serve; the footer shows which
-  build runs; the steps follow G3's order; before closing every window, wait about a minute on
-  Wi-Fi after the launch that fetches B, or confirm in chrome://serviceworker-internals that a
-  new version is waiting (unverified).
+  build runs; the steps follow G3's order: close every WordCell window (app swiped from recents,
+  tabs on the origin closed), launch cold (it fetches B; a resume fetches nothing, A-A15), then the
+  readiness step (about a minute on Wi-Fi, or B seen waiting in chrome://serviceworker-internals
+  (unverified)) before the close-all step.
 - Offline readiness (G2): after the first online launch, keep the app open about a minute on
   Wi-Fi, close every window, relaunch once online (now controlled), or check
   chrome://serviceworker-internals shows the worker ACTIVATED (unverified); then airplane mode
@@ -164,7 +176,8 @@ offline/update behaviour is an owner question instead (SPEC Open Questions).
 - Spine: AD-16 boot tail and `sw.ts` as built; AD-17 Celebration seam key list → six (F14);
   AD-7 `requestPersistence()` as built, none after a halting launch; AD-15 boot returns at
   `halted()`, now including registration and persistence (F4); Capability → Architecture Map PWA row (`shell/sw.ts`,
-  the state module); Scaffold deltas if `package.json` gains `workbox-window`.
+  the state module), and the state module in AD-16's `Binds:` line and the Structural Seed `shell/`
+  list; Scaffold deltas if `package.json` gains `workbox-window`.
 - EXPERIENCE.md State Patterns "New app version installed" and Assumptions row A-E4: "activates
   once every WordCell window has closed" (A-E4 wording synced to AD-16, no behaviour change).
 - `docs/device-testing.md` per CAP-7; AGENTS.md, through `bmad-project-context`: the shell-module
