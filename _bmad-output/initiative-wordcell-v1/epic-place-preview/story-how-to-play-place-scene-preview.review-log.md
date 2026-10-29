@@ -1,6 +1,6 @@
 # Review log — story-how-to-play-place-scene-preview.md (ticket 11.4)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pre-loop: HEAD ab31448, copy `story-how-to-play-place-scene-preview.review-log.passes/pass0.md`, 167 words.
 
@@ -57,3 +57,28 @@ Fixer: all 12 items applied; no commands or config values added; rule 6 cited as
 - (none new; the pass-1 count-badge question stands)
 ### Dropped
 - (none)
+
+## Pass 3 — 2026-10-28
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 3, minor 8, decision-needed 0  |  Dropped in triage: 1 (duplicates merged)
+Words (docs): 1091 (6.5 x pass 0; budget 1500)  |  Snapshot: story-how-to-play-place-scene-preview.review-log.passes/pass3.md
+Fixer: all 11 items applied; no commands added.
+### Applied
+- [major] Description ¶2 — the pass-2 exact-match harness check, run on every fixture, fails free-letter (it ends on `validate`, so the engine reports a cell 6 preview); not gated on `previews` being present (three lenses) → fixer item 1 (default applied)
+- [major] Description ¶2 / AC — Scene.svelte's fail-fast throw for a `placeOrder` frame with no entry (or no `after`) has no test (three lenses) → item 2 (default applied)
+- [major] Description motion ¶ / AC e2e bullet — "from the start of `place-step-6`" includes the step's `wait` hold (player.ts:132–133) when the ★, strip and Confirm are still drawn; and "no ★" cannot pass with motion on, since layers place-1…3 keep their D★ under place-4 (opacity 1, occluded) → item 3 (default applied)
+- [minor] ¶3–4 — `markEl` only on the last `placeOrder` frame's target (`mark-<i>`), id derived as `stripId` is, in defineScene's tucks `needs` → item 4
+- [minor] ¶2 — `previews` `after` values pass the harness range check; the AD-2 out-of-range test covers `previews` → item 5
+- [minor] AC bullet 1 — the `frame.after` scenes.test.ts clause sits in the engine bullet; frames 0 and 5 carry no `after` → item 6
+- [minor] AC bullets 2, 5 — Q-49 added to the tuck unit test and motion-on e2e test names → item 7
+- [minor] AC bullet 6 — five `not.toContain('data-mirror-of')` assertions exist; name `AD-3 scene place: six layers …` → item 8
+- [minor] Frame table row 2 — "shows only D" as rows 1, 3, 4 → item 9
+- [minor] AC bullet 3 — free-letter's used look is D4/D11, not D5: "keep the used look" → item 10
+- [minor] ¶2 — "never from the cell number" is untestable; cut → item 11
+### Default applied (technical)
+- Harness gate → the exact-match check runs only when a fixture has `previews` (optional in `SceneFixture` and `SceneFixtureData`); free-letter unchecked and unchanged
+- Throw test → scenes.test.ts (AD-14 Q-49) renders a `placeScene` copy whose frame 2 `after` names an after with no entries, and one with `after` removed; both throw
+- ★ timing → the scene's commit moment is the fly step's phase 0 (after its wait), when `strip-4` and `confirm` go; e2e asserts `[data-scene-el="mark-4"]` computed opacity 0 and place-4's cell 6 glyph E while the `place-step-6` `tuck-*` animations run
+### Decision needed (functionality / UX / gameplay)
+- (none new; the pass-1 count-badge question stands)
+### Dropped
+- `.card` text reads "D★" in the e2e per-frame check (adversarial, self-labelled stretch, no ticket words needed) — build-plan detail
