@@ -1,17 +1,18 @@
 # Epic place-preview autopilot — handoff (2026-10-29)
 
-**The run stopped before ticket 11.5 (Close-out: documents and device read): it needs you.** Tickets 11.1–11.4 are done. 11.5 is marked as needing the owner (hitl). It goes beyond a final check: it updates your documents (the game spec, EXPERIENCE.md, DESIGN.md, and the architecture spine's AD-3 and AD-14) to match what was built, and it asks for your Android read. Nothing was started for 11.5.
+**Ticket 11.6 (Refactor sweep), the epic's last ticket, is built and verified, and is waiting for you at its done checkpoint.** Tickets 11.1–11.5 are done. The sweep adds no new behaviour: it tightens several browser tests (each shown to catch a deliberately broken version), makes the How to play scene tests check full error messages, and makes the flaky double-tap test report what happened if it fails again. Every test passes, including the screenshots and 20 repeats of the flaky test.
 
-**What 11.5 asks of you on the phone** (`node scripts/device-preview.mjs <entry 2's Place fixture>`, see `docs/device-testing.md`): retargeting, reordering, a used cell that is not the target, Undo and Redo, Confirm's fly-to-cell, whether the ★ mark looks subtle enough, and (from your 2026-10-28 decision) how a two-digit count badge looks where it meets the ★ on a 360 px screen. Record your read, and any change you want as a new entry, in the epic Notes.
+**What to decide** (plan `story-refactor-sweep-plan.md`, § Deferred-findings table):
+- **R2:** one proposed extra check (that a used cell shows only the card beneath it) would test nothing on the cells it runs on. Proposal: drop it. The alternative is a new test on a cell that has a card beneath.
+- **R10:** DESIGN.md:311 says icons are never font glyphs, but the ★ is one. Proposal: add a one-line exception to DESIGN.md at the retrospective. The alternative is an SVG star, which changes the look and needs its own ticket.
+- **R11:** the double-tap flake in `nav.spec.ts:163` never came back (0 failures in 64+ runs), so its cause is still unknown. The test helper now reports the page's tap events when it fails. Proposal: keep that change and open a fix ticket once the next failure gives a report. You may revert it instead.
+- **R18:** your 11.5 phone read did not include a two-digit count badge where it meets the ★ on a 360 px screen. To check it, run `node scripts/device-preview.mjs session-place-long` (badge 15) on a narrow phone or in Chrome's emulation. No code change is involved.
+- **R26:** four items from the epic 10 retrospective (B3, B4, B6, B7) were left out of this sweep as out of scope. They carry over to the epic 11 retrospective.
 
-**Close-out docs gathered so far** (for 11.5's doc sync or the retro):
-- DESIGN.md § Components → WordCell (place preview) ← a two-digit count badge draws above the ★ where they meet (owner, 2026-10-28)
-- DESIGN.md § Components → WordCell (fly-to-cell hold with the previewed top) ← landed cards stack over the previewed-top copy (no ★) until the last landing, epic 5 F28 kept (owner, 2026-10-28), if its wording does not already say so
-- ARCHITECTURE-SPINE.md AD-14 mirror list ← the hold's previewed-top copy replaces the R-52 used mirror (2026-10-28)
-- EXPERIENCE.md How to play (Place scene) / DESIGN.md ← the scene's previewed WordCell shows the ★ and no count badge (owner, 2026-10-29), only if their wording implies a badge (a grep found none)
+**Worth knowing:** the code review left one open item. The plan's own verification notes still name the commit before the review's last fix. The checks were rerun at the final commit and all passed, but the plan text was not updated. Two small code-review notes about the double-tap failure report are also open (log `_bmad-output/implementation-artifacts/review-loop/11-6-build.md`).
 
-**Still open for 11.6 (refactor sweep):** the double-tap flake in `e2e/nav.spec.ts:163` came back in 11.4's first full test run, and one code-review minor from 11.4 (two bad-frame render tests match only the message prefix).
+**Close-out docs:** none new from this run's last ticket. The earlier ones were applied by you in 11.5 (d67b42a). One doc proposal is pending: R10 (DESIGN.md:311).
 
-**To resume:** either run 11.5 yourself, or record in its `tickets.toml` entry that the autopilot may do the doc parts and leave it `built` for your phone check. Then rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-place-preview`.
+**Next:** decide the rows above, or take their proposals. Then mark 11.6 done (`uv run _bmad/method/scripts/tickets.py mark 11.6 done`), run `/bmad-retrospective` on the epic, apply its approved doc fixes, and mark the epic done with `bmad-preview-ticketing`.
 
 Digest: `_bmad-output/implementation-artifacts/autopilot/epic-place-preview-20261028-1937.md`
