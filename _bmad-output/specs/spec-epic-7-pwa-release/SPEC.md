@@ -112,6 +112,8 @@ In build order; each depends on those above it unless noted. `rule-coverage.md` 
 
 ## Open Questions
 
+> Answered (owner, 2026-10-29, at inception): every proposed default below is accepted; recorded in the epic file's Notes.
+
 - **New-version prompt.** Today (AD-16, A-E4), an update takes effect silently the next time the app is launched after every WordCell window has closed; a reload or resuming from the background keeps the old version, and the player is never told. The alternative is a visible "new version" prompt that applies the update on a tap, which reopens AD-16 and adds UX (a message, its place, its catalogue text). Proposed default: keep AD-16, no prompt; CAP-9 and CAP-10 check the silent behaviour instead of "the update prompt".
 - **Ten-game run across a fix.** If a fix ships while Jared is playing the ten qualifying games (brief §6.3), does the run restart? Proposed default: it restarts only when the deploy changes drop targeting or drag rendering (e.g. `src/ui/gestures/`, `src/ui/layout/`, the tray, card hit-rect CSS), since only those decide a misdrop or lost drop; other fixes keep the count. Practical effect: fewer replayed games, at the cost of counting games from two builds.
 - **Firefox persistent-storage prompt.** AD-7 requests persistent storage once per launch in every browser; desktop Firefox (best effort, brief §7) shows its own permission prompt for it, which Chrome does not. Proposed default: keep AD-7 as is (Firefox players may see its prompt on launches until they allow or block it `(unverified)`); the alternative, requesting only in the installed app, changes A-A3.
