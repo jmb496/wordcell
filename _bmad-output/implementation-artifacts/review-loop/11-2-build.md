@@ -1,5 +1,5 @@
 # Review loop — ticket 11.2 build (code, 12293ba..HEAD)
-State: pass 1: done
+State: pass 2: done
 
 Target: commit range `12293ba..HEAD` (staged as `11-2-build.passes/pass0.diff`); intent `_bmad-output/initiative-wordcell-v1/epic-place-preview/story-wordcell-row-place-preview-plan.md`. Depth thorough, max 7.
 Pre-loop: HEAD d021c5e33e66c26eaa0e457b75a22e8775a98a01, tree snapshot 0 9c8e25e9be110dd0faef554ae90c2d1ca8cd837f.
@@ -26,3 +26,24 @@ Fixer: all 9 applied, no product code changed; drop test via `holdThrough`/`path
 - none
 ### Dropped
 - none
+
+## Pass 2 — 2026-10-28
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 0, minor 5, decision-needed 0  |  Dropped in triage: 0 (3 duplicates merged)
+Snapshot: tree d4b8303a3a5f74b0966667218ae640254b5b41f3 (no fix pass; HEAD b77bd18)
+### Applied
+- none (zero majors; stopping rule met before the fix step)
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Result — converged after 2 passes
+Majors per pass: 2, 0. Final state (orchestrator, tree d4b8303 = HEAD b77bd18): `npm test` 90 files / 3629 tests pass, `npm run lint` pass, `npm run check` 0 errors; fixer: `place-preview` + `place` specs on `android` 35 pass, 1 skipped (desktop-only).
+
+Unapplied minors (for the next build or loop):
+- Plan AC sentence → test mapping (`story-wordcell-row-place-preview-plan.md` :74, :75, :77/:81) does not list the pass-1 tests: strip drag-drop reorder (unchanged mid-drag), Undo of a commit onto committed (no hold), R-65 view on used cell 6, the ★-over-flourish check, the labels same-as-source used target (fix diff, intent, verification gap).
+- Plan Review Triage Log rows at :104 and :115 still reject the drag/mid-drag test and defend the page-wide probe with "never a drag"; Verification line :173 still says 3628 tests (now 3629) (intent, verification gap).
+- `e2e/place-preview.spec.ts:131` `expectPreviewLive` never asserts the cell's other live cards stay hidden (cell 6: 48, 9, 1, 34; compact cell 4: 20); add a `:visible` count of 1 or a hidden list (verification gap).
+- `expectMarkCorner` does not prove the ★ pill paints above the card face; add a lift-probe-restore `elementFromPoint` at the pill centre on a cell where it does not meet the badge (verification gap).
