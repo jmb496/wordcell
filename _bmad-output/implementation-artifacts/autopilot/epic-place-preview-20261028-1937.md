@@ -75,3 +75,14 @@ Close-out docs: none yet (the answer to the question below will touch DESIGN.md 
 
 ## Stopped — decision needed (stop rule 1)
 Ticket 11.3, Step A (ticket review). Question for Jared: during the fly-in after Confirm, once the word's first card lands in the target cell, should the landed cards stack up visibly on top of the previewed top card until the top card itself lands (keeps the epic 5 F28 rule: landed cards stay visible until the last one lands, then hide together), or should the final top card stay in front the whole time, with each card seeming to vanish into the cell as it lands? Proposed default: stacking, as the ticket now states (ticket Description, Hold bullet); the old top never flashes either way. Resume: record the answer (ticket Notes, epic Notes), commit, rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-place-preview`; the next session starts at Step B (the review log has its `## Result`), and the build stops at its plan checkpoint for your approval.
+
+Session note (2026-10-29, second session for 11.3): handoff, git log and ticket files agreed (Step A converged with `## Result`, the owner's stacking answer committed in ce9ed84), so Step B started. No live pid files.
+
+## 11.3 Fly-to-cell keeps the previewed top — stopped at the plan checkpoint
+Build: plan written and committed, status `ready-for-dev`; nothing implemented. The ticket says an unattended build stops after planning for a person to approve the plan, and the build did so (stop rule 2).
+Tokens: 0.7M input-equivalent (build 83%, orchestrator 10%, other 7%); orchestrator peak context 58k
+Worth knowing: the plan applies your stacking answer (the target shows a copy of its new top, without the ★, as its base from Confirm or a committing Redo; landed cards stack over it; at the last landing only the real top remains). It adds two flights to the tests: a committing Redo onto a cell that already holds a word, and a Confirm on the fixture where a used one-card cell ends up empty. 12 of the 13 review-log minors are resolved in the plan's Design Notes; minor 13 (split a long sentence in the ticket) is declined because a build never edits ticket files.
+Close-out docs: DESIGN.md § Components → WordCell (fly-to-cell hold with the previewed top) ← landed cards stack over the previewed-top copy until the last landing, F28 kept (owner, 2026-10-28), if its wording does not already say so
+
+## Stopped — plan checkpoint (stop rule 2)
+Ticket 11.3, Step B. For Jared: approve the plan `_bmad-output/initiative-wordcell-v1/epic-place-preview/story-fly-to-cell-keeps-the-previewed-top-plan.md`. Resume: record the approval (ticket Notes, epic Notes), commit, rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-place-preview`; the next session reruns Step B on the approved `ready-for-dev` plan (tell the build the checkpoint is approved).
