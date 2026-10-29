@@ -210,6 +210,18 @@ describe('AD-3 Q-49 Place preview names', () => {
     expect(html).not.toMatch(/data-card-id="7"|data-mirror-of="7"/);
   });
 
+  it('AD-3 Q-49 a used target previewing its own free letter draws it as the preview mirror, no used mirror, no named button', () => {
+    // Used target 3 [1, 2, 11]: its used card 11 is the strip's last card, 5 cards after the commit.
+    const html = drawCells([cell(3, [1, 2, 11], true, { top: 11, count: 5 })], placeAt(3));
+    expect(names(html)).toEqual([]);
+    expect(groupName(html, 3)).toBe(text.nameCellAfter(3, 'L', 5));
+    const mirrors = tags(html, /<div[^>]*data-mirror-of="11"[^>]*>/g);
+    expect(mirrors).toHaveLength(1);
+    expect(mirrors[0]).toMatch(/class="card[^"]*\bpreview\b/);
+    expect(mirrors[0]).not.toMatch(/class="card[^"]*\bused\b/);
+    expect(html).not.toContain('data-card-id="11"');
+  });
+
   it('AD-3 Q-49 an unchanged non-empty cell in Place keeps its name and one named button', () => {
     const html = drawCells(
       [cell(4, [1, 2, 18]), cell(5, [], false, { top: 3, count: 1 })],

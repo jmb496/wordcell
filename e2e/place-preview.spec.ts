@@ -1,5 +1,6 @@
 import { expect, type Locator, type Page, test } from '@playwright/test';
-import { centre, glidesSettled, openFixture, tapAt } from './helpers/board';
+import { box, centre, glidesSettled, openFixture, tapAt } from './helpers/board';
+import { faceOf, holdThrough, path } from './helpers/gestures';
 import { onAndroid } from './helpers/project';
 import { booted } from './helpers/restore';
 import { tokenColor } from './helpers/style';
@@ -115,7 +116,11 @@ test.describe('android', () => {
     await expect(cell(page, n).locator('.used')).toHaveCount(0);
     await expect(cell(page, n)).not.toHaveClass(/\bempty\b/);
     await expect(cell(page, n).locator('.count')).toHaveText(String(count));
-    for (const id of hidden) await expect(cell(page, n).getByTestId(`card-${id}`)).toBeHidden();
+    for (const id of hidden) {
+      const live = cell(page, n).getByTestId(`card-${id}`);
+      await expect(live).toHaveCount(1);
+      await expect(live).toBeHidden();
+    }
     // AD-14: the preview mirror is bare.
     for (const attribute of ['data-card-id', 'data-testid', 'data-place', 'aria-label', 'tabindex'])
       await expect(mirror).not.toHaveAttribute(attribute);
@@ -219,29 +224,34 @@ test.describe('android', () => {
       const count = el.querySelector<HTMLElement>('.count');
       if (mark === null || count === null) throw new Error('missing mark or badge');
       const [m, c] = [r(mark), r(count)];
-      const overlap = {
-        left: Math.max(m.left, c.left),
-        right: Math.min(m.right, c.right),
-        top: Math.max(m.top, c.top),
-        bottom: Math.min(m.bottom, c.bottom),
-      };
-      // Both marks take no pointer events, so lift that for the paint-order probe only.
+      // Owner decision 2026-10-28: the badge draws above the pill where they meet. Their natural
+      // intersection at 360 px (Plan Design Notes, about 0.35–0.6 px) depends on the font's "15",
+      // so the probe widens the badge leftward (it is anchored right) to the pill's centre for
+      // the read only; both marks take no pointer events, so that is lifted for the read too.
+      count.style.minWidth = `${c.right - (m.left + m.right) / 2}px`;
       mark.style.pointerEvents = 'auto';
       count.style.pointerEvents = 'auto';
+      const w = r(count);
+      const overlap = {
+        left: Math.max(m.left, w.left),
+        right: Math.min(m.right, w.right),
+        top: Math.max(m.top, w.top),
+        bottom: Math.min(m.bottom, w.bottom),
+      };
       const hit = document.elementFromPoint(
         (overlap.left + overlap.right) / 2,
         (overlap.top + overlap.bottom) / 2,
       );
+      count.style.minWidth = '';
       mark.style.pointerEvents = '';
       count.style.pointerEvents = '';
-      return { face, count: c, overlap, hitIsCount: hit === count };
+      if (overlap.right <= overlap.left || overlap.bottom <= overlap.top) {
+        throw new Error('the widened badge does not meet the pill');
+      }
+      return { face, count: c, hitIsCount: hit === count };
     });
     expect(geometry.face.right - geometry.count.right).toBeCloseTo(2, 1);
     expect(geometry.face.bottom - geometry.count.bottom).toBeCloseTo(2, 1);
-    // Plan Design Notes: the rects intersect by about 0.35–0.6 px at 360 px (owner decision
-    // 2026-10-28: the badge draws above the pill; no mark moved).
-    expect(geometry.overlap.right).toBeGreaterThan(geometry.overlap.left);
-    expect(geometry.overlap.bottom).toBeGreaterThan(geometry.overlap.top);
     expect(geometry.hitIsCount).toBe(true);
   });
 
@@ -278,6 +288,40 @@ test.describe('android', () => {
     await expectPreviewLive(page, 4, 20, 1);
     await swap(page, 28, 42);
     expect((await cursorMove(page)).placementOrder).toEqual([26, 32, 45, 42, 28]);
+    await expectPreviewMirror(page, 5, 28, 5, []);
+    await expect(cell(page, 5).locator('[data-mirror-of="28"]')).not.toHaveClass(/\bused\b/);
+    await expectPreviewLive(page, 4, 20, 1);
+    await expect(anyOf(page, 4, 28)).toHaveCount(0);
+    expect(await mirrorAnimations(page)).toBe(0);
+  });
+
+  test('R-50 (UI) Q-49 AD-14 the preview follows a strip drag of free letter 28 to the last slot on drop, never mid-drag, with no mirror animation (session-place-free-letter-two-cards)', async ({
+    page,
+  }) => {
+    await open(page, 'session-place-free-letter-two-cards');
+    await expectPreviewMirror(page, 5, 42, 5, []);
+    const tile28 = tray(page).getByTestId('card-28');
+    const from = await centre(faceOf(tile28));
+    // The face centre on the gap after the last tile 42 (layout/tray.ts `gapRects`: 4 px wide).
+    const last = await box(faceOf(tray(page).getByTestId('card-42')));
+    const to = { x: last.x + last.w + 2, y: last.y + last.h / 2 };
+    const hold = await holdThrough(page, from, path(from, to, 4));
+    try {
+      // Rule 3: mid-drag nothing is dispatched and the preview is unchanged.
+      await expect(faceOf(tile28)).toHaveClass(/\bwc-drag-layer\b/);
+      expect((await cursorMove(page)).placementOrder).toEqual([26, 32, 45, 28, 42]);
+      expect(
+        await cell(page, 5)
+          .locator('[data-mirror-of]')
+          .evaluateAll((els) => els.map((el) => el.getAttribute('data-mirror-of'))),
+      ).toEqual(['42']);
+    } finally {
+      await hold.end();
+    }
+    await expect
+      .poll(async () => (await cursorMove(page)).placementOrder)
+      .toEqual([26, 32, 45, 42, 28]);
+    await glidesSettled(page);
     await expectPreviewMirror(page, 5, 28, 5, []);
     await expect(cell(page, 5).locator('[data-mirror-of="28"]')).not.toHaveClass(/\bused\b/);
     await expectPreviewLive(page, 4, 20, 1);
@@ -354,6 +398,7 @@ test.describe('android', () => {
     page,
   }) => {
     await open(page, 'session-place-onto-committed');
+    await expect(cell(page, 3).getByTestId('card-28')).toHaveCount(1);
     await expect(cell(page, 3).getByTestId('card-28')).toBeHidden();
     await hold(page, 3, async () => {
       await expect(sheet(page)).toBeVisible();
@@ -385,6 +430,19 @@ test.describe('android', () => {
     });
   });
 
+  test('R-65 (UI) Q-49 a long-press on used cell 6 drawn with 31 on top lists its current cards 48, 9, 1, 34, 31, 27 with top on 27 (session-place-used-cells)', async ({
+    page,
+  }) => {
+    await open(page, 'session-place-used-cells');
+    await expectPreviewLive(page, 6, 31, 5);
+    await hold(page, 6, async () => {
+      await expect(sheet(page)).toBeVisible();
+      expect(await viewIds(page)).toEqual([48, 9, 1, 34, 31, 27]);
+      await expect(sheet(page).locator('[data-mirror-of="27"] .top-tag')).toHaveCount(1);
+      await expect(sheet(page).locator('.top-tag')).toHaveCount(1);
+    });
+  });
+
   test('R-33 (UI) Q-49 in Composing the used look, in Place the preview replaces it (session-place-used-cells, Undo)', async ({
     page,
   }) => {
@@ -405,6 +463,7 @@ test.describe('android', () => {
     await expect(page.locator('[data-wordcell] .preview-mark')).toHaveCount(0);
     // The reveal is undone: cell 6's 31 hides again under the used top (R-61), cell 3 is no longer
     // drawn empty and the badges count the current cards.
+    await expect(cell(page, 6).getByTestId('card-31')).toHaveCount(1);
     await expect(cell(page, 6).getByTestId('card-31')).toBeHidden();
     await expect(cell(page, 6).locator('.count')).toHaveText('6');
     await expect(cell(page, 3)).not.toHaveClass(/\bempty\b/);
@@ -431,7 +490,7 @@ test.describe('android', () => {
     expect(before).toBe(0);
   });
 
-  test('Q-49 R-71 a Redo into Place shows the preview (session-place-free-letter-redo-tail + Undo)', async ({
+  test('R-50 (UI) Q-49 R-71 a Redo into Place shows the preview (session-place-free-letter-redo-tail + Undo)', async ({
     page,
   }) => {
     await open(page, 'session-place-free-letter-redo-tail', ['undo', 'redo']);
@@ -440,7 +499,7 @@ test.describe('android', () => {
     expect(await mirrorAnimations(page)).toBe(0);
   });
 
-  test('Q-49 R-73 (UI) a reload into Place shows the preview (session-place-used-cells)', async ({
+  test('R-50 (UI) Q-49 R-73 (UI) a reload into Place shows the preview (session-place-used-cells)', async ({
     page,
   }) => {
     await open(page, 'session-place-used-cells');
@@ -452,7 +511,7 @@ test.describe('android', () => {
     await expectPreviewEmpty(page, 3);
   });
 
-  test('Q-49 R-70 AD-14 Undo of a commit (Idle → Place) shows the preview from the first frame while the live faces glide back, mirrors never animate (session-place)', async ({
+  test('R-50 (UI) Q-49 R-70 AD-14 Undo of a commit (Idle → Place) shows the preview from the first frame while the live faces glide back, mirrors never animate (session-place)', async ({
     page,
   }) => {
     // Read in the click task of Undo, while the live faces glide back to the strip.
@@ -486,13 +545,38 @@ test.describe('android', () => {
     expect(await mirrorAnimations(page)).toBe(0);
   });
 
+  test('R-50 (UI) Q-49 R-70 AD-14 Undo of a commit onto committed cards adds no hold: from the first frame the preview mirror of 26 shows over hidden 42, 0, 28 (session-place-onto-committed)', async ({
+    page,
+  }) => {
+    await open(page, 'session-place-onto-committed');
+    await primary(page).click();
+    await glidesSettled(page);
+    expect(await phase(page)).toBe('idle');
+    // Read in the click task of Undo, while the live faces of 2, 19, 26 glide back to the strip.
+    const read = await page.evaluate(() => {
+      document.querySelector<HTMLElement>('[data-testid="undo"]')?.click();
+      const three = document.querySelector('[data-testid="wordcell-3"]');
+      if (three === null) throw new Error('missing wordcell-3');
+      const live = [...three.querySelectorAll(':scope > [data-card-id]')];
+      return {
+        preview: three.querySelectorAll('.preview[data-mirror-of="26"]').length,
+        live: live.map((c) => Number(c.getAttribute('data-card-id'))),
+        heldVisible: live.filter((c) => getComputedStyle(c).visibility !== 'hidden').length,
+      };
+    });
+    expect(read).toEqual({ preview: 1, live: [42, 0, 28], heldVisible: 0 });
+    await glidesSettled(page);
+    await expectPreviewMirror(page, 3, 26, 6, [42, 0, 28]);
+    expect(await mirrorAnimations(page)).toBe(0);
+  });
+
   // The WordCells carrying the ★, in cell order.
   const marked = (page: Page) =>
     page
       .locator('[data-wordcell]:has(.preview-mark)')
       .evaluateAll((els) => els.map((el) => Number(el.getAttribute('data-wordcell'))));
 
-  test('Q-49 the star marks a non-empty preview only: none on an empty one, an unchanged cell or after Undo to Composing; a not-legal changed cell dims at 35 % with card, star and badge', async ({
+  test('R-50 (UI) Q-49 the star marks a non-empty preview only: none on an empty one, an unchanged cell or after Undo to Composing; a not-legal changed cell dims at 35 % with card, star and badge', async ({
     page,
   }) => {
     await open(page, 'session-place-used-cells');
@@ -501,6 +585,11 @@ test.describe('android', () => {
     await expect(page.locator('[data-wordcell] .preview-mark')).toHaveCount(2);
     await expectMarkCorner(page, cell(page, 6).getByTestId('card-31'));
     await expectMarkCorner(page, previewOf(page, 5, 38));
+    // The ★ sits over the card flourish (`.face::after`) without suppressing it.
+    for (const card of [cell(page, 6).getByTestId('card-31'), previewOf(page, 5, 38)]) {
+      const content = await faceOf(card).evaluate((el) => getComputedStyle(el, '::after').content);
+      expect(content).not.toBe('none');
+    }
     // R-40: cell 6 is not legal: the whole cell at 35 %, card, star and badge inside it.
     const six = cell(page, 6);
     await expect(six).toHaveClass(/\bwc-dim\b/);
@@ -515,7 +604,7 @@ test.describe('android', () => {
     expect(await marked(page)).toEqual([]);
   });
 
-  test('Q-49 the star goes with the commit: none after Confirm’s last landing (session-place-onto-committed)', async ({
+  test('R-50 (UI) Q-49 the star goes with the commit: none after Confirm’s last landing (session-place-onto-committed)', async ({
     page,
   }) => {
     await open(page, 'session-place-onto-committed');

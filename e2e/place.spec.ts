@@ -271,7 +271,11 @@ async function expectPreviewTarget(
   await expect(preview.locator('.preview-mark')).toBeVisible();
   await expect(cell(page, n).locator('.used')).toHaveCount(0);
   await expect(cell(page, n).locator('.count')).toHaveText(String(count));
-  for (const id of hidden) await expect(cell(page, n).getByTestId(`card-${id}`)).toBeHidden();
+  for (const id of hidden) {
+    const live = cell(page, n).getByTestId(`card-${id}`);
+    await expect(live).toHaveCount(1);
+    await expect(live).toBeHidden();
+  }
 }
 
 // Q-49 (R-50): used non-target `n` shows its live card beneath `shown` with the ★, no mirror and
