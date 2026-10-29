@@ -1,6 +1,6 @@
 # Review log — spec-epic-7-pwa-release (SPEC.md + companions)
 
-State: pass 3: done
+State: pass 4: done
 
 Target: `_bmad-output/specs/spec-epic-7-pwa-release/` (SPEC.md, rule-coverage.md, device-checks.md, release-checklist.md, build-notes.md). Mode: docs, thorough, max 7.
 Pre-loop: HEAD fe1ba6f6def230a892e73fe006281307df31247e; copies at `SPEC.review-log.passes/pass0/`; words 5770 (SPEC 2737, build-notes 911, device-checks 1034, release-checklist 593, rule-coverage 495).
@@ -105,3 +105,22 @@ Fixer: all 21 applied; repo facts checked (size-budget closure/`manifest[...].fi
 - none new
 ### Dropped
 - none
+
+## Pass 4 — 2026-10-29
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 4, minor 19, decision-needed 0  |  Dropped in triage: 1
+Words (docs): 10098 (1.75 x pass 0)  |  Snapshot: SPEC.review-log.passes/pass4/ (fix diff pass4.fix.diff)
+Fixer: all 21 applied (11/14 overlap resolved: a deferred ten-game question means its proposed default); checked `computeBudget` returns `{ rows, total, errors }`, `strip(sf, keepStrings)`, workbox-window 7.4.1 / vite-plugin-pwa 1.3.0 `^7.4.1`, `page.clock`, `context.serviceWorkers()`, dictionary `TIMEOUT_MS = 30_000`; unverified: Playwright#14711 routing limit on 1.63, `self.serviceWorker.state` activation poll, Firefox repeat prompt (marked in SPEC).
+### Applied
+- [major] rule-coverage F4 row, build-notes Boot — a halt after mount but before the dictionary request returns at the existing post-`whenVisible()` check; no sync point before the empty-call assertion; a halt during the pending `sw.ts` import still registers (gating test can pass vacuously) → fixer item 1
+- [major] release-checklist Evidence kinds, Done when 1, §6.4/§6.6 — "counts as checked" redefines the initiative's "checked and passes" → item 2
+- [major] SPEC CAP-9, build-notes Close-out — new scans (`navigator.storage` single owner; skip-waiting/`updateSW` ban) not synced into spine AD-1 (the scan-list authority) or AGENTS.md Single owners → item 3
+- [major] SPEC CAP-4/F8, CAP-5, build-notes, Assumptions — the update proof and `/sw.js`-unavailable cases rely on `context.route` for the worker main script; Playwright documents updated-main-script fetches as unroutable (microsoft/playwright#14711; not in the pinned types, unverified), and the Assumption would turn a tooling limit into an accepted D gap → item 4
+- [minor] items 5–23: G3 discarded-renderer note conditional on the tab; spoiled-read definition, tailnet A readiness, tailnet read for Done when 2 only when production spoiled; no-fixture hint; counted-set wording per `computeBudget` and one build-output bar; unconditional `workbox-window` dependency + Scaffold deltas; skip-waiting scan with strings kept; Firefox OQ wording and §6.9 deferral scope; G28 disposition label; dev-path, timeout-path and no-`sw`-chunk-in-dev tests; ten-game rule if that OQ is deferred; wait for B activation before opening the page; F6 remedy limited and handler-hit assertions; in-page URL extraction; CAP-3 halting wording; production G4 by play; G5–G7 in the installed app; §6.4/§6.6 audits before the merge
+### Default applied (technical)
+- F4 test — halt only after the dictionary route handler received the request; init script and route on the first page only; after fulfil, poll `dictionaryState()` out of `loading` and let a macrotask pass; add a `halted()` check between the `sw.ts` import resolving and the registration attempt
+- accepted gaps — recorded as "checked, not passing"; any such gap at declaration needs Jared's explicit waiver of initiative Done when 1 for that criterion in the initiative Notes
+- update and `/sw.js` cases — the spec serves a temp copy of `dist-test/` with its own Node static server and swaps `sw.js`/`index.html` A→B on disk (or removes `sw.js`); `context.route` only for worker-originated precache fetches; the D fallback only when Chromium's activation timing itself differs, never for a routing limit
+### Decision needed (functionality / UX / gameplay)
+- none new
+### Dropped
+- CAP-8 "allow technical production fixes in the sweep" — repeat of pass 2's dropped item (methodology's sweep rule, "user direction")
