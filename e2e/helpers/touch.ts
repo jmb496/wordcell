@@ -88,8 +88,9 @@ type ClickLog = {
 // the dispatch time: under 12 workers real gaps of 500 ms gave detail 1). `between` is the real
 // wait between the taps (default DOUBLE_TAP_GAP_MS). The page's clicks are recorded from the first
 // tap, and the call fails unless they are exactly two, with detail 1 then 2; the failure lists the
-// page's touch and click events with their `timeStamp`s and the CDP stamps (ticket 11.6: the
-// nav.spec.ts:163 detail-1 path had no cause from its log).
+// page's touch and click events with their `timeStamp`s, the CDP stamps (the first in epoch ms)
+// and the page's `performance.timeOrigin` (ticket 11.6: the nav.spec.ts:163 detail-1 path had no
+// cause from its log).
 export async function doubleTap(
   page: Page,
   target: Point,
@@ -108,11 +109,11 @@ export async function doubleTap(
       if (event.type === 'click') w.__doubleTapClicks.push((event as MouseEvent).detail);
     };
     for (const type of ['touchstart', 'touchend', 'click'])
-      window.addEventListener(type, w.__doubleTapListener, true);
+      window.addEventListener(type, w.__doubleTapListener, { capture: true, passive: true });
   });
   const session = await page.context().newCDPSession(page);
+  const first = Date.now() / 1000;
   try {
-    const first = Date.now() / 1000;
     const tap = async (timestamp: number) => {
       await session.send('Input.dispatchTouchEvent', {
         type: 'touchStart',
@@ -138,9 +139,22 @@ export async function doubleTap(
       })
       .toEqual([1, 2]);
   } catch (error) {
-    const events = await page.evaluate(() => (window as unknown as ClickLog).__doubleTapEvents);
+    const message = (error as Error).message;
+    const read = await page
+      .evaluate(() => ({
+        events: (window as unknown as ClickLog).__doubleTapEvents,
+        timeOrigin: performance.timeOrigin,
+      }))
+      .catch((readError: Error) => {
+        throw new Error(
+          `${message}\ndoubleTap: reading the page events failed: ${readError.message}`,
+          {
+            cause: error,
+          },
+        );
+      });
     throw new Error(
-      `${(error as Error).message}\ndoubleTap: page events ${events.join(', ')}; CDP stamps +0 and +${DOUBLE_TAP_GAP_MS} ms`,
+      `${message}\ndoubleTap: page events ${read.events.join(', ')}; CDP stamps ${(first * 1000).toFixed(1)} +0 and +${DOUBLE_TAP_GAP_MS} ms; page timeOrigin ${read.timeOrigin.toFixed(1)}`,
       { cause: error },
     );
   }

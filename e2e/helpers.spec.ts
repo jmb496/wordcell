@@ -1114,7 +1114,27 @@ test.describe('touchDrag / longPress / touchHold / doubleTap', () => {
     );
     expect(failure).toMatch(/doubleTap: the click details of the two taps/);
     expect(failure).toMatch(
-      /doubleTap: page events touchstart@[\d.]+, touchend@[\d.]+, touchstart@[\d.]+, touchend@[\d.]+; CDP stamps \+0 and \+80 ms$/,
+      /doubleTap: page events touchstart@[\d.]+, touchend@[\d.]+, touchstart@[\d.]+, touchend@[\d.]+; CDP stamps [\d.]+ \+0 and \+80 ms; page timeOrigin [\d.]+$/,
+    );
+  });
+
+  test('AD-17 doubleTap whose clicks are not exactly [1, 2] fails listing each click with its detail and timeStamp', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    // One untrusted detail-0 click per trusted click makes the details [1, 0, 2, 0].
+    await page.evaluate(() =>
+      window.addEventListener('click', (event) => {
+        if (event.isTrusted) window.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      }),
+    );
+    const failure = await doubleTap(page, { x: 200, y: 400 }).then(
+      () => undefined,
+      (error: Error) => error.message,
+    );
+    expect(failure).toMatch(/doubleTap: the click details of the two taps/);
+    expect(failure).toMatch(
+      /doubleTap: page events touchstart@[\d.]+, touchend@[\d.]+, click\(1\)@[\d.]+, click\(0\)@[\d.]+, touchstart@[\d.]+, touchend@[\d.]+, click\(2\)@[\d.]+, click\(0\)@[\d.]+; CDP stamps [\d.]+ \+0 and \+80 ms; page timeOrigin [\d.]+$/,
     );
   });
 
