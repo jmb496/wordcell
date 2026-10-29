@@ -1,6 +1,6 @@
 # Review log — story-how-to-play-place-scene-preview.md (ticket 11.4)
 
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pre-loop: HEAD ab31448, copy `story-how-to-play-place-scene-preview.review-log.passes/pass0.md`, 167 words.
 
@@ -30,3 +30,30 @@ Fixer: all 10 items applied; no commands added beyond the existing npm scripts; 
 - Hard-coded cell 6 risk (adversarial) — resolved by construction by the fixture `previews` default
 - Extra baseline for frame 2 (adversarial) — the per-frame DOM assertions cover it; one baseline kept
 - Duplicate "empty outline" / "how-to-play Vitest" findings merged
+
+## Pass 2 — 2026-10-28
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 3, minor 11, decision-needed 0  |  Dropped in triage: 0 (duplicates merged; 2 reviewer majors reclassified minor)
+Words (docs): 962 (5.8 x pass 0; budget 1500)  |  Snapshot: story-how-to-play-place-scene-preview.review-log.passes/pass2.md
+Fixer: all 12 items applied; no commands or config values added; rule 6 cited as "CLAUDE.md rule 6" per AGENTS.md citation convention.
+### Applied
+- [major] Description ¶5 with ¶4 — the ★ must be a declared, separately held scene element, but it is Card.svelte's internal `.preview-mark` span with no `data-scene-el` hook; a wrapper would hide E too (all four lenses) → fixer item 1 (default applied)
+- [major] Description ¶2 — how Scene.svelte maps a frame to its `previews` entries (Frame has no `after`) and what a Place frame with no entry does → item 2 (default applied)
+- [major] Description ¶2 / AC bullet 1 — the harness's "no other cell has a preview" check has no stated range (afters 3 and 8 unchecked) and only one negative case covers two checks → item 3 (default applied)
+- [minor] tickets.toml entry 4 says the fixture is unchanged (three lenses, reported major) — reclassified minor: the toml entry is this ticket's own pass-0 stub, which the refined ticket supersedes; fix is one clause → item 4
+- [minor] AC bullet 3 — the shared `it.each` case `AD-14 R-33 scene %s: cell 6 is drawn used exactly while …` also pins place frames 1–4; the old names become false (reported major by one lens) — reclassified minor: the ticket's scope (place frames 1–4 only) already fixes the new rule, so a builder does not guess → item 5
+- [minor] ¶5 / AC bullet 5 — "from the Confirm tap" vs the strip/Confirm holds of the tuck fly step (place-step-6) → item 1
+- [minor] ¶5 — "Reduced motion is unchanged" reads against the frame table → item 6
+- [minor] ¶2 — `SceneFixture` (scene-replay.ts) gains `previews` too; `'QU'` convention for `top` → item 7
+- [minor] last ¶ — "epic 8 Notes are left for entry 5's close-out": entry 5 does not own the epic 8 file; this epic's Notes already record the supersession → item 8
+- [minor] AC bullet 6 — src/ui/how-to-play.test.ts mounts no scene, so it cannot fail; the static-card check is scenes.test.ts `not.toContain('data-mirror-of')` → item 9
+- [minor] ¶1 — say other scenes (free-letter's Validate-pressed frame) are unchanged (E7) → item 10
+- [minor] AC bullet 2 — "the previewed top stays" is not observable in an effects unit test; reword → item 11
+- [minor] ¶6 — counter-scale "as the badge: size and font, not the inset" → item 12
+### Default applied (technical)
+- ★ element → optional Card prop (e.g. `markEl`) writing `data-scene-el` on the `.preview-mark` span, passed only by Scene.svelte; id `mark-4`, in place.ts `elements`; held at opacity 0 in the tucks fly step's phase-0 holds with `strip-4` and `confirm` (effects.ts); Card.svelte listed as changed
+- Frame mapping → optional `Frame.after` set in place.ts on frames 1–4 (4–7); Scene.svelte looks up `previews` by it and throws when a `placeOrder` frame has none; scenes.test.ts asserts `frame.after` equals the applied command count
+- Harness range → at every after 0..commands.length the engine's previews equal the listed entries exactly; negative `it.each` (Q-49): wrong top, wrong count, missing entry, extra entry for an unchanged cell
+### Decision needed (functionality / UX / gameplay)
+- (none new; the pass-1 count-badge question stands)
+### Dropped
+- (none)
