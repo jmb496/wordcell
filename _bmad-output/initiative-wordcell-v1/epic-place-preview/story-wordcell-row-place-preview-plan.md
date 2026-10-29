@@ -3,7 +3,7 @@ title: 'WordCell row place preview'
 type: 'feature'
 ticket: '2'
 created: '2026-10-28'
-status: 'built'
+status: done
 baseline_revision: '09b2af29d6f26162be2872a630e90c5e154e7e14'
 route: 'full'
 route_source: 'auto'

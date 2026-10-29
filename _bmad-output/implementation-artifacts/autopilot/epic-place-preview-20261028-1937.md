@@ -50,3 +50,16 @@ Session note (2026-10-28, third session for 11.2): the owner approved the plan a
 
 ## Stopped — usage limit
 Ticket 11.2, Step B (build on the approved plan). The build hit the 5-hour limit (`You've hit your 5-hour limit · resets 8:30pm (America/New_York)`) after implementing; its plan is `in-review` and its uncommitted work is in the tree (src/ui Card and WordCellRow, flip, text, the new fixture `session-place-used-cells`, `e2e/place-preview.spec.ts`, updated specs and Place baselines); those files are this build's own and were left uncommitted for its resume. Step log kept as `11.2-B2-attempt1.log`. Resume: rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-place-preview`; the next session resumes Step B per bmad-build-auto's resume rule (plan `in-review` → its review step), with the build's files in the tree.
+
+Session note (2026-10-29, fourth session for 11.2): handoff, git log and ticket files agreed (digest ended at the usage-limit stop, plan `in-review`, the build's files uncommitted in the tree), so Step B resumed per bmad-build-auto's resume rule (`in-review` → its review step). No live pid files.
+
+## 11.2 WordCell row place preview — done
+What it adds: while placing a word, each WordCell the word changes now shows how it will look after Confirm: the new top card, its card count and a small orange ★; a used cell no longer shows its hatched used card in that phase.
+Ticket review: 5 passes, converged (majors 6, 3, 2, 1, 0); one question answered by you (★ and count badge overlap)
+Build: built (resumed after the usage limit; its own review found 18 small points, 6 patched, none deferred); commit d021c5e
+Code review: thorough (ticket risk medium), 2 passes, converged (majors 2, 0); pass-1 fixes in b77bd18 (missing tests: strip drag reorder, Undo of a commit onto a committed cell, the R-65 view on a used cell, ★ over the flourish, a labels case), log in 6177150
+Tests: all passing (`test:all`, 1119 e2e passed), screenshots passed (67, against the Place and theme board baselines the build updated)
+Ref to fix upstream: none
+Tokens: 6.5M input-equivalent (code review 62%, build 33%, orchestrator 3%, other 3%); orchestrator peak context 65k
+Worth knowing: (1) until ticket 11.3, the fly-in after Confirm briefly shows the target's old top card again (or the card beneath on a used cell) instead of the previewed card; 11.3 owns that. (2) The ★ is a font character (`text.star`, as the ticket says), while DESIGN.md's icon rule asks for inline SVG; the strip's ★ already does the same — a doc point for the retro. (3) Three small code-review notes left open: the plan's test list doesn't name the pass-1 tests, two plan triage rows are stale, and one preview test helper doesn't check the cell's other cards stay hidden (review log `11-2-build.md`).
+Close-out docs: DESIGN.md § Components → WordCell (place preview) ← the count badge draws above the ★ pill where they meet at 360 px (owner, 2026-10-28)

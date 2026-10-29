@@ -1,16 +1,14 @@
 # Epic 11 (place preview) autopilot handoff
 
-Last session: ticket 11.2 "WordCell row place preview" — the build wrote its plan and stopped for your approval, as the ticket asks. No code is written yet.
+Last session: ticket 11.2 "WordCell row place preview" is **done**. While placing a word, each WordCell the word changes now shows how it will look after Confirm (new top card, count, orange ★), and used cells no longer show their hatched used card in that phase.
 
-- **Plan to approve:** `_bmad-output/initiative-wordcell-v1/epic-place-preview/story-wordcell-row-place-preview-plan.md` (the new test position with used cells, how the preview is drawn, which existing tests change and how). All twelve small points from the ticket review are handled in it.
-- **One question about a test:** you decided the card count sits on top of the ★ where they meet on a 360 px phone. The plan worked it out and measured it: they do meet, by less than 1 pixel (only for a cell reaching 10+ cards, only at 360 px; at 412 px they don't touch). The ticket's check "the two marks don't overlap" would therefore fail.
-  - **Proposed default:** keep both marks where they are and change the check to "the count is drawn on top of the ★ where they meet". The look stays exactly as you decided; you judge it on your phone at ticket 11.5.
-  - **Alternative:** nudge or narrow one mark so they never touch — that changes the look from the design doc.
-- Tests were not run (nothing built).
+- The build resumed after the usage limit and finished; the code review took 2 passes and added a few missing tests. All tests pass, screenshots included.
+- Nothing needs your input now.
+- Worth knowing: until ticket 11.3, the fly-in after Confirm briefly shows the target's old top card (11.3 fixes that). The ★ is a font character while DESIGN.md's icon rule asks for inline SVG (the strip's ★ already does this); a point for the retrospective.
 
 Close-out docs so far:
 - DESIGN.md § Components → WordCell (place preview) ← the count badge draws above the ★ pill where they meet at 360 px (owner, 2026-10-28)
 
-To resume: tell the session "plan approved" plus your answer on the check (or "take the default"); it records both in the ticket notes (and the plan, if the check changes), commits, and reruns `.claude/skills/epic-autopilot/scripts/loop.sh epic-place-preview`. The next session builds from the approved plan.
+Next: ticket 11.3 "Fly-to-cell keeps the previewed top". The driver (`.claude/skills/epic-autopilot/scripts/loop.sh epic-place-preview`) continues with it.
 
 Digest: `_bmad-output/implementation-artifacts/autopilot/epic-place-preview-20261028-1937.md`
