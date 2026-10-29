@@ -1100,6 +1100,24 @@ test.describe('touchDrag / longPress / touchHold / doubleTap', () => {
     }
   });
 
+  test('AD-17 doubleTap that gets no repeat click fails listing the page touch and click events with their timeStamps', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    // A cancelled touchend suppresses the tap's click, so the details never reach [1, 2].
+    await page.evaluate(() =>
+      window.addEventListener('touchend', (event) => event.preventDefault(), { passive: false }),
+    );
+    const failure = await doubleTap(page, { x: 200, y: 400 }).then(
+      () => undefined,
+      (error: Error) => error.message,
+    );
+    expect(failure).toMatch(/doubleTap: the click details of the two taps/);
+    expect(failure).toMatch(
+      /doubleTap: page events touchstart@[\d.]+, touchend@[\d.]+, touchstart@[\d.]+, touchend@[\d.]+; CDP stamps \+0 and \+80 ms$/,
+    );
+  });
+
   test('AD-17 doubleTap outside the viewport rejects with no touch events', async ({ page }) => {
     await page.goto('/');
     await installProbe(page);

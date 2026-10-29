@@ -74,7 +74,11 @@ export async function longPress(page: Page, target: Point, ms: number): Promise<
 /** A double tap's gap from the first tap's touchEnd to the second tap's touchStart. */
 export const DOUBLE_TAP_GAP_MS = 80;
 
-type ClickLog = { __doubleTapClicks: number[]; __doubleTapListener: (event: Event) => void };
+type ClickLog = {
+  __doubleTapClicks: number[];
+  __doubleTapEvents: string[];
+  __doubleTapListener: (event: Event) => void;
+};
 
 // AD-17 Touch: a touch double tap at `target`. Chromium counts the second tap as a repeat (its
 // click has `detail` 2, which presence.ts `firstClick` drops) only when its touchStart comes within
@@ -83,7 +87,9 @@ type ClickLog = { __doubleTapClicks: number[]; __doubleTapListener: (event: Even
 // the count does not depend on how late a loaded machine dispatches it (`touchscreen.tap` stamps
 // the dispatch time: under 12 workers real gaps of 500 ms gave detail 1). `between` is the real
 // wait between the taps (default DOUBLE_TAP_GAP_MS). The page's clicks are recorded from the first
-// tap, and the call fails unless they are exactly two, with detail 1 then 2.
+// tap, and the call fails unless they are exactly two, with detail 1 then 2; the failure lists the
+// page's touch and click events with their `timeStamp`s and the CDP stamps (ticket 11.6: the
+// nav.spec.ts:163 detail-1 path had no cause from its log).
 export async function doubleTap(
   page: Page,
   target: Point,
@@ -95,8 +101,14 @@ export async function doubleTap(
   await page.evaluate(() => {
     const w = window as unknown as ClickLog;
     w.__doubleTapClicks = [];
-    w.__doubleTapListener = (event) => w.__doubleTapClicks.push((event as MouseEvent).detail);
-    window.addEventListener('click', w.__doubleTapListener, true);
+    w.__doubleTapEvents = [];
+    w.__doubleTapListener = (event) => {
+      const detail = event.type === 'click' ? `(${(event as MouseEvent).detail})` : '';
+      w.__doubleTapEvents.push(`${event.type}${detail}@${event.timeStamp.toFixed(1)}`);
+      if (event.type === 'click') w.__doubleTapClicks.push((event as MouseEvent).detail);
+    };
+    for (const type of ['touchstart', 'touchend', 'click'])
+      window.addEventListener(type, w.__doubleTapListener, true);
   });
   const session = await page.context().newCDPSession(page);
   try {
@@ -119,14 +131,23 @@ export async function doubleTap(
   } finally {
     await session.detach();
   }
-  await expect
-    .poll(() => page.evaluate(() => (window as unknown as ClickLog).__doubleTapClicks), {
-      message: 'doubleTap: the click details of the two taps',
-    })
-    .toEqual([1, 2]);
+  try {
+    await expect
+      .poll(() => page.evaluate(() => (window as unknown as ClickLog).__doubleTapClicks), {
+        message: 'doubleTap: the click details of the two taps',
+      })
+      .toEqual([1, 2]);
+  } catch (error) {
+    const events = await page.evaluate(() => (window as unknown as ClickLog).__doubleTapEvents);
+    throw new Error(
+      `${(error as Error).message}\ndoubleTap: page events ${events.join(', ')}; CDP stamps +0 and +${DOUBLE_TAP_GAP_MS} ms`,
+      { cause: error },
+    );
+  }
   await page.evaluate(() => {
     const w = window as unknown as ClickLog;
-    window.removeEventListener('click', w.__doubleTapListener, true);
+    for (const type of ['touchstart', 'touchend', 'click'])
+      window.removeEventListener(type, w.__doubleTapListener, true);
   });
 }
 
