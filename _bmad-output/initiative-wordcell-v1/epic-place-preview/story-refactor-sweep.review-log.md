@@ -1,6 +1,6 @@
 # Review loop — story-refactor-sweep.md (ticket 11.6)
 
-State: pass 4: done
+State: pass 5: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 100 words, copy at story-refactor-sweep.review-log.passes/pass0.md (HEAD c4ab534).
 Caller intent: tickets.toml entry 6 `done_checkpoint = true` (not copied at pull) belongs to the ticket's intent; the fixer adds it to the Description in pass 1. Scope is built from the epic's build records and deferred findings (11.1–11.5 plans, review logs, review-loop/11-*-build.md, digest epic-place-preview-20261028-1937.md, 11.5 device-read result).
@@ -115,3 +115,27 @@ Fixer: all 11 applied; minors paid by cuts (Description "Cleanup only, no new be
 - none
 ### Dropped
 - 6 duplicates merged; 3 procedure-precision minors left to the build's plan (over budget)
+
+## Pass 5 — 2026-10-29
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 9, decision-needed 0  |  Dropped in triage: 6 (duplicates merged; 3 left to the plan: android-only load of the flake runs, device-read words per Scope 4 closure, `expectMarkCorner` probe call site)
+Words (docs): 1500 (15.0 x pass 0; budget 1500)  |  Snapshot: story-refactor-sweep.review-log.passes/pass5.md
+Fixer: all 10 applied; minors paid by cuts (epic 10 plan :821 parenthetical, small trims); checked keys.ts:259-265/:480/:548 (`M` → menu row via act() → cancel()), App.svelte:119, controller.ts:684-689/:1046, retro B7/B8; test runs unverified.
+### Applied
+- [major] Scope 1(c) — a pointer click on ☰ reaches the controller's pointerdown (App.svelte:119 `use:pointerRoot`; controller.ts:684-689 finishes glides when `deps.glidesRunning()`), so the hold is released before act() and the :1046 mutation survives; nothing checks the copy is present at the interrupt → fixer item 1
+- [minor] Scope 3 — "Scope 2's measured commit" ambiguous (several commits) → fixer item 2
+- [minor] Scope 1 — "stops at Scope 2" → before → fixer item 3
+- [minor] Scope 1 Pass — an item whose Pass fails while green at HEAD has no route → fixer item 4
+- [minor] Scope 2 — "fix unconfirmed" label covers only the last case → fixer item 5
+- [minor] Scope 2/5 — epic 10 retro B8 (recurring flake gets its own fix ticket) and B7 not mentioned → fixer item 6
+- [minor] Scope 2 — the no-loosening rule covers only touch.ts → fixer item 7
+- [minor] AC Verify — commit for `test:screens` unstated → fixer item 8
+- [minor] Scope 6 — 11.5 findings live in the 11.5 ticket's Document check (plan is frontmatter only) → fixer item 9
+- [minor] Scope 3 — "profile first" applies to the timings, not the AD-18 size margin → fixer item 10
+### Default applied (technical)
+- (c) — interrupt with the `M` key (keys.ts menu command, act()-first, no pointerdown on `main`); assert the copy present just before the interrupt, gone after the next frame; mutation controller.ts:1046 `deps.finishGlides()` removed
+- Scope 3 commit — Scope 2's last measured commit
+- nav row owner call — proposes its own fix ticket (epic 10 retro B8)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- 3 duplicates merged; 3 procedure-precision minors left to the build's plan (over budget)
