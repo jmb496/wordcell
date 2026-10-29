@@ -1,5 +1,5 @@
 # Review loop — ticket 11.6 build (code, 5a86a03..HEAD)
-State: pass 1: done
+State: pass 2: done
 
 Target: commit range `5a86a03..HEAD` (staged as `11-6-build.passes/pass0.diff`); intent `_bmad-output/initiative-wordcell-v1/epic-place-preview/story-refactor-sweep-plan.md`. Depth quick, max 7.
 Pre-loop: HEAD b744b06fbf270086204bcb59e7c9a911ffea0544, tree snapshot 0 73e4940efa48f2486ed673808c24c19ec4992eb6.
@@ -19,3 +19,25 @@ Snapshot: tree 8cee7d8fcbdc723bd44e247af27b87d5efe7d2e3 (fix diff `11-6-build.pa
 - none
 ### Dropped
 - none
+
+## Pass 2 — 2026-10-29
+Reviewers: fix diff, correctness, verification gap  |  Findings: major 1, minor 2, decision-needed 0  |  Dropped in triage: 2 (duplicates of the major)
+Snapshot: tree 8cee7d8fcbdc723bd44e247af27b87d5efe7d2e3 (no fix pass; unchanged since pass 1, committed as 61f5419). Orchestrator at the final state (pass 1 run): `npm test` 3638 passed, `npm run lint` pass, `npm run check` 0 errors.
+### Applied
+- none (converged by the two-pass rule: passes 1 and 2 each had at most one major; pass 2's major is open, not fixed)
+### Open major
+- [major] `story-refactor-sweep-plan.md` R11 row, Scope 2 record, Final verification record, Auto Run Result (Commits, Files changed) — the plan names 9394922 as the final code/test commit and the R11 post-fix commit, but 61f5419 (review pass 1) changed `doubleTap` again (passive capture listeners, failure tail `CDP stamps <first ms> +0 and +80 ms; page timeOrigin <ms>`, read-failure rethrow) and added a second helpers.spec.ts case ("AD-17 doubleTap whose clicks are not exactly [1, 2] …"); no `test:all`, `test:screens`, three `--project=android` runs or `nav.spec.ts:163 --repeat-each=20` is recorded at the commit that now holds the helper (ticket Scope 2: "A fix gets a new local commit, at which its reruns and the final `test:all` run; the plan records each measurement's commit"; Verify: green `test:all` and `test:screens` at the final commit). Fix: at the final commit rerun those and update the plan's records, the touch.ts line span (now about :94-160) and the case count.
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- fix-diff lens "plan still describes the 9394922 helper" — duplicate of the open major
+- verification-gap lens "plan treats 9394922 as final; acceptance runs not recorded" — duplicate of the open major
+
+## Result — converged after 2 passes
+open major: plan records (R11, Scope 2 record, Final verification record, Auto Run Result) still name 9394922; rerun `test:all`, `test:screens`, the three `--project=android` runs and `nav.spec.ts:163 --repeat-each=20` at the final commit (after 61f5419) and record them there.
+
+Unapplied minors (for the next build or loop):
+- [minor] `e2e/helpers/touch.ts` doubleTap catch — if the document is replaced before the poll, `__doubleTapEvents` is undefined and `read.events.join` throws a bare TypeError that hides the poll error; return `w.__doubleTapEvents ?? null` and on null rethrow the poll message plus `doubleTap: page events unavailable (document replaced)` with `{ cause }` (correctness).
+- [minor] `e2e/helpers.spec.ts` the two doubleTap failure cases — the tail regex accepts any number for the CDP stamp and `timeOrigin` (`[\d.]+`); capture them and assert both are epoch ms within a minute of the test's `Date.now()` (verification gap; default: no cross-check of timeOrigin + timeStamp against the stamp, which could flake under load).
