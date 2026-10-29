@@ -1,6 +1,6 @@
 # Review loop — story-refactor-sweep.md (ticket 11.6)
 
-State: pass 5: done
+State: pass 6: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 100 words, copy at story-refactor-sweep.review-log.passes/pass0.md (HEAD c4ab534).
 Caller intent: tickets.toml entry 6 `done_checkpoint = true` (not copied at pull) belongs to the ticket's intent; the fixer adds it to the Description in pass 1. Scope is built from the epic's build records and deferred findings (11.1–11.5 plans, review logs, review-loop/11-*-build.md, digest epic-place-preview-20261028-1937.md, 11.5 device-read result).
@@ -139,3 +139,34 @@ Fixer: all 10 applied; minors paid by cuts (epic 10 plan :821 parenthetical, sma
 - none
 ### Dropped
 - 3 duplicates merged; 3 procedure-precision minors left to the build's plan (over budget)
+
+## Pass 6 — 2026-10-29
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 0, minor 12, decision-needed 0  |  Dropped in triage: 2 (duplicates merged)
+Words (docs): 1500 (15.0 x pass 0; budget 1500)  |  Snapshot: story-refactor-sweep.review-log.passes/pass5.md (no fix pass)
+### Applied
+- none (converged)
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- 2 duplicates merged (the (c) timing race and the (c) declined-vs-owner-call route, each raised by two lenses)
+
+## Result — converged after 6 passes
+Majors per pass: 7, 7, 4, 4, 1, 0. Words 100 → 1500 (budget 1500). Decision-needed: none. Technical defaults applied: 21 (passes 1–5). Open major: none.
+Owner-facing rows the ticket pre-assigns (decided at the done checkpoint, not by this loop): the 360 px two-digit badge/★ meet (not covered by the 11.5 read), a nav.spec.ts:163 fix that stays unconfirmed (proposes its own fix ticket, epic 10 retro B8), the ★ font glyph vs DESIGN.md:311 (doc proposal for the retrospective), epic 10 retrospective B3, B4, B6, B7 declined and carried to the epic 11 retrospective.
+
+Unapplied minors (for the build's plan; the ticket is at its word budget):
+- Scope 1(c) — read the copy and press `M` in one `page.evaluate` (or in Confirm's click task, as fly-to-cell.spec.ts:311), check once on the next rAF rather than with a retrying locator, or seed the slowest motion pref; the fly-in is ~360 ms + 30 ms per card (motion.ts).
+- Scope 1(c) — one route for a (c) test that runs but misses the mutation: read "if no fixture drives it" for declined, a missed mutation stays an owner-call row under Pass (or treat both as declined, covered by composition); the plan picks one and says so.
+- Scope 1(c) — put the new test in e2e/fly-to-cell.spec.ts (android-only harness, :14).
+- AC bullet 3 — the rerun is one full `npm run test:all` at the same commit (the chain stops at the first failing suite, package.json:30).
+- Scope 2 — "any other test failing in any run gets the same row" means handled the same (test-only fix rerun to 0/3, else owner call).
+- Scope 2 — give each of the three runs its own `--output` directory or copy results before the next run (traces are overwritten; the attempt1 trace is gone).
+- Scope 2 — run the nav.spec.ts:163 `--repeat-each=20` under load (with a full run or at full-run workers) and record which; it passed 5/5 alone before.
+- Scope 2 — the flake runs use one project, lighter than `test:all`; record it (pass 5).
+- Description/AC — "stop and report" aborts halt before `built`, distinct from the done-checkpoint pause at `built`.
+- AC Verify — "the final commit" is the last commit touching code or tests; a plan-only commit after it counts as equivalent.
+- Scope 3 — measure before the final `test:all`; an over-budget result changes no code (profile and report only).
+- References — the spine (AD-17, AD-18), the epic 10 retrospective (B3–B8) and tickets.toml entry 6 are cited in the body but not listed.
+- Left to the plan in passes 4–5: clone setup (`npm ci`, lockfile untouched), the helpers.spec.ts case's own pass condition, the device-read words each Scope 4 closure relies on, the `expectMarkCorner` probe call site.
