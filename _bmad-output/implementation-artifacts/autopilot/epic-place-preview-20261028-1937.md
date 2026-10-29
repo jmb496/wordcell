@@ -101,3 +101,15 @@ Worth knowing: (1) the stacking look is checked by the tests only through which 
 Close-out docs:
 - DESIGN.md § Components → WordCell (fly-to-cell hold with the previewed top) ← landed cards stack over the previewed-top copy (no ★) until the last landing, epic 5 F28 kept (owner, 2026-10-28), if its wording does not already say so
 - ARCHITECTURE-SPINE.md AD-14 mirror list ← the hold's previewed-top copy replaces the R-52 used mirror (follows from the same owner decision, 2026-10-28; wording in the plan's Design Notes, left to ticket 11.5)
+
+Session note (2026-10-29, first session for 11.4, resumed): the previous session hit the 5-hour usage limit during 11.4's ticket review (pass 4 reviewers; its log kept as `11.4-A-attempt1.log`) and ended before writing a stop section or handoff, so the handoff still said 11.3 done with 11.4 next. The ticket files settled it (review log at `State: pass 3: done`, no `## Result`), so Step A resumed at pass 4. No live pid files.
+
+## 11.4 How to play Place scene preview — stopped
+What it adds: the How to play Place scene will show the WordCell preview the way the game now does (the target cell shows its future top letter with the ★; a used cell that is not the target shows what lies beneath).
+Ticket review: 4 passes, converged (majors 4, 3, 3, 0); one question for you (count badge in the scene, below). Four small notes are left for the build in the review log's `## Result`.
+Paused: usage limit at Step A (pass 4), reset 1:30am (America/New_York), resumed 2026-10-29 10:18 UTC
+Tokens: 2.0M input-equivalent (ticket review 92%, orchestrator 5%, other 3%); orchestrator peak context 61k
+Close-out docs: none yet (if the answer is "show the badge", EXPERIENCE.md / DESIGN.md How to play scene notes and epic 8 D5 may need a line)
+
+## Stopped — decision needed (stop rule 1)
+Ticket 11.4, Step A (ticket review). Question for Jared: in the real game, the WordCell you are about to place onto shows a count badge (e.g. "6", the cards it will hold after Confirm). How to play scenes never draw count badges. Should the How to play Place scene's previewed WordCell show the "6" badge too? Proposed default: no badge; the scene shows only the new top letter with the ★, so every scene frame stays badge-free. Effect: with the default, the scene matches the game except for the missing number; with the badge, it matches more closely but becomes the only scene frame with a badge. Resume: record the answer (ticket Notes, epic Notes), commit, rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-place-preview`; the next session starts at Step B (the review log has its `## Result`).

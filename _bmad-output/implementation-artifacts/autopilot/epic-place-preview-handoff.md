@@ -1,14 +1,15 @@
 # Epic 11 (place preview) autopilot handoff
 
-Last session: ticket 11.3 "Fly-to-cell keeps the previewed top" is **done**.
+Last session: ticket 11.4 "How to play Place scene preview" **stopped for your answer** before the build.
 
-What it adds: after Confirm (or a Redo that places a word), while the cards fly into the WordCell, the cell shows its new top card underneath from the start. The arriving cards pile up over it (your stacking answer), and when the last one lands only the new top remains. The old top card or a used card no longer flashes.
+What happened: the previous session ran out of the 5-hour usage allowance in the middle of this ticket's review. This session picked it up where it stopped; the review finished cleanly (4 passes, nothing major left) but raised one question that is yours to decide.
 
-It was built on the plan you approved. The code review found nothing major in one pass. All tests pass, including the screenshots (no picture changed).
+**Question:** in the real game, the WordCell you are about to place onto shows a small number badge (for example "6", how many cards it will hold after Confirm). The How to play scenes never draw these badges. Should the How to play Place scene show the "6" badge on that WordCell too?
 
-Worth knowing: the tests check the stacking through which cards are present and visible, not by how it looks, so your device read in ticket 11.5 is the real check. Three small notes are left in the review log `_bmad-output/implementation-artifacts/review-loop/11-3-build.md` (two are plan wording, one is an optional extra browser test).
+- **No badge (proposed):** the scene shows the new top letter with the ★ but not the number. Every How to play frame stays badge-free; the scene differs from the real game only by the missing number.
+- **Show the badge:** the scene matches the game more closely, but it becomes the only How to play frame with a badge.
 
-Next: ticket 11.4 "How to play Place scene preview". To continue, rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-place-preview`.
+To continue: write your answer in the ticket's Notes (`_bmad-output/initiative-wordcell-v1/epic-place-preview/story-how-to-play-place-scene-preview.md`) and the epic Notes, commit, then rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-place-preview`. The next session goes straight to the build.
 
 Close-out docs so far (applied at the retrospective, not now):
 - DESIGN.md § Components → WordCell (place preview) ← the count badge draws above the ★ pill where they meet at 360 px (owner, 2026-10-28)

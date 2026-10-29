@@ -1,6 +1,6 @@
 # Review log — story-how-to-play-place-scene-preview.md (ticket 11.4)
 
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pre-loop: HEAD ab31448, copy `story-how-to-play-place-scene-preview.review-log.passes/pass0.md`, 167 words.
 
@@ -82,3 +82,31 @@ Fixer: all 11 items applied; no commands added.
 - (none new; the pass-1 count-badge question stands)
 ### Dropped
 - `.card` text reads "D★" in the e2e per-frame check (adversarial, self-labelled stretch, no ticket words needed) — build-plan detail
+
+## Pass 4 — 2026-10-29
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 0, minor 10, decision-needed 0  |  Dropped in triage: 0 (duplicates merged: the `wait` wording from all four lenses, the head-test finding from two)
+Words (docs): 1091 (6.5 x pass 0; budget 1500), no fix pass  |  Snapshot: story-how-to-play-place-scene-preview.review-log.passes/pass3.md (unchanged)
+### Applied
+- (none: zero majors, the loop stops; minors below are left for the build)
+### Default applied (technical)
+- (none)
+### Decision needed (functionality / UX / gameplay)
+- (none new; the pass-1 count-badge question stands)
+### Dropped
+- (none)
+
+## Result — converged after 4 passes
+
+Majors per pass: 4, 3, 3, 0. Words 167 → 1091. Open decision-needed (pass 1): should the scene's previewed WordCell show the "6" count badge the game shows; proposed default no badge (the star only).
+
+Unapplied minors (for the build plan):
+- Description motion ¶ — "after its `wait`": the tuck fly step (`place-step-6`, place.ts last step) has no `wait`; only the Confirm tap step (`place-step-5`) has one (player.ts:131–133). Cut ", after its `wait`,"; phase 0 of `place-step-6` is the exact moment (all four lenses).
+- AC bullet 1 — how-to-play-scenes.test.ts:421 `R-38 R-41 scene place: BALKED missing from the dictionary …` spreads `place` into a 4-command copy and expects no throw; it keeps the new `previews` (afters 4–7), so the range check fails. Add `previews: []` to its emptied-field list (a present-but-empty `previews` still runs the exact check, afters 0..4 show no preview).
+- References — add `src/ui/scenes/script.ts` (defineScene's tucks `needs` changes).
+- AC bullet 3 — the shared `it.each` name also produces the move-compose, free-letter and source-drop cases; keep it scene-neutral (e.g. "… hold its top card, except on Place frames (Q-49)") rather than a blanket Q-49 rename.
+- ¶2/¶4 — state that every non-null `previews` top is drawn with `previewMark` (E4), `markEl` only on the last `placeOrder` frame's target (no such non-target case occurs in this fixture).
+- ¶4 — `.preview-mark` is absolutely positioned and the scene's `place="column"` card is not a positioned element, so the pill sits against Scene.svelte's `.stack`; correct only while each previewed cell is a one-card stack. Note the containing block in the plan.
+- AC bullet 4 — stage.test.ts AD-11 regex only checks a rule contains `var(--wc-scene-up)`; for `.card .preview-mark` assert width, height and font-size each read it.
+- AC bullet 1 — anchor the Q-49 negative cases on the previews mismatch message, not a bare `toThrow()`.
+- Last ¶ — e2e/how-to-play.spec.ts:541 cites D5 only for frame 0 (no change needed); Scene.svelte's `cellCards` comment (:153) becomes false and is not listed. Swap one for the other.
+- ¶2 — "on frames 1–4 (4–7)" → "on frames 1–4 (`after` 4–7)".
