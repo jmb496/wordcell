@@ -149,3 +149,6 @@ Close-out docs: none (no owner decision was made for this ticket). One doc propo
 
 ## Stopped — done checkpoint (stop rule 4)
 Ticket 11.6, the epic's last, is built and verified and waits at its done checkpoint. Owner items (plan § Auto Run Result "For the owner"): R2, R10, R11, R18, R26. Resume: decide those rows (or take their proposals), then mark 11.6 done (`uv run _bmad/method/scripts/tickets.py mark 11.6 done`), then `/bmad-retrospective` on the epic, apply its owner-approved doc fixes, and mark the epic container done with `bmad-preview-ticketing`.
+
+## Closed
+Retrospective done 2026-10-29: verdict accepted-with-open-items, criteria declared, Done when 1–5 met (`_bmad-output/initiative-wordcell-v1/epic-place-preview/epic-place-preview-retrospective.md`, `758aabb`). 11.6 signed off at its done checkpoint (`d86f419`: 360 px badge/★ meet fine as is; defaults for R2, R10, R11, R26). Owner declined every retrospective open question and action item (A1–A10). Epic container marked done (`78f1a6b`). Merged to `main` (`b0f1a57`), pushed, and deployed by CI (CI run 40945225673, Deploy run 40947861316, both green). Next epic: 7 PWA and release (spine Proposed epics row 7), not yet specced.
