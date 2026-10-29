@@ -347,6 +347,37 @@ test('AD-14 F28 Q-49 Undo before a card has started acts on the settled layout a
   await glidesSettled(page);
 });
 
+test('AD-14 F28 Q-49 an act() key (M) right after Confirm on session-place ends the hold: the copy of the new top 28 leaves wordcell 3 by the next frame, the cell keeps its cards with only 28 shown', async ({
+  page,
+}) => {
+  await openFixture(page, 'session-place', { prefs: 'prefs-non-default' });
+  // One task: Confirm, read the hold, then `M` (keys.ts `menu`, act() → controller cancel() →
+  // finishGlides → flip finishAll). A click's pointerdown would finish the glides itself
+  // (controller.ts F13), so the key is the interrupt. Slow motion: the flight outlasts the frame.
+  const run = await page.evaluate(async () => {
+    const copies = () =>
+      document.querySelectorAll('[data-wordcell="3"] .preview[data-mirror-of="28"]').length;
+    const visible = () =>
+      [...document.querySelectorAll<HTMLElement>('[data-wordcell="3"] > [data-card-id]')]
+        .filter((el) => getComputedStyle(el).visibility !== 'hidden')
+        .map((el) => Number(el.getAttribute('data-card-id')));
+    document.querySelector<HTMLElement>('[data-testid="primary-action"]')?.click();
+    const held = { copies: copies(), visible: visible(), running: document.getAnimations().length };
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'm', bubbles: true }));
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    return { held, copies: copies(), visible: visible() };
+  });
+  expect(run.held).toEqual({ copies: 1, visible: [42, 0, 28], running: run.held.running });
+  expect(run.held.running).toBeGreaterThan(0);
+  expect(run.copies).toBe(0);
+  expect(run.visible).toEqual([28]);
+  await expect(page.getByRole('dialog', { name: 'Menu', exact: true })).toBeVisible();
+  const cell = page.getByTestId('wordcell-3');
+  await expect(cell.locator('[data-card-id]')).toHaveCount(3);
+  await expect(cell.locator('[data-mirror-of]')).toHaveCount(0);
+  await expect(page.locator('[data-card-id]')).toHaveCount(52);
+});
+
 test('AD-14 F28 a Confirm undone in the same click task leaves the gate idle: the board stays live, layout follows a viewport change and a second Confirm flies', async ({
   page,
 }) => {

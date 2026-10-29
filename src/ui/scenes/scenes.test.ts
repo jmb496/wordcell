@@ -1232,9 +1232,11 @@ describe('AD-3 scenes place and scoring figure structure', () => {
     });
     const { after: _after, ...noAfter } = placeScene.frames[2];
     await expect(body(withFrame2({ ...placeScene.frames[2], after: 3 }), true)).rejects.toThrow(
-      /^scene place: frame 2/,
+      /^scene place: frame 2 has no previews entry at after 3$/,
     );
-    await expect(body(withFrame2(noAfter), true)).rejects.toThrow(/^scene place: frame 2/);
+    await expect(body(withFrame2(noAfter), true)).rejects.toThrow(
+      /^scene place: frame 2 has no after$/,
+    );
     await expect(
       body({ ...placeScene, fixture: { ...placeScene.fixture, previews: undefined } }, true),
     ).rejects.toThrow(/^scene place: the fixture has no previews/);

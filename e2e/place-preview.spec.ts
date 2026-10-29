@@ -127,7 +127,8 @@ test.describe('android', () => {
     await expect(mirror).toHaveAttribute('aria-hidden', 'true');
   }
 
-  // Q-49: cell `n` shows its live card `shown` with the ★ and no mirror; badge `count` (none < 2).
+  // Q-49: cell `n` shows its live card `shown` with the ★ and no mirror; badge `count` (none < 2);
+  // its other live cards stay hidden.
   async function expectPreviewLive(
     page: Page,
     n: number,
@@ -136,6 +137,7 @@ test.describe('android', () => {
   ): Promise<void> {
     const live = cell(page, n).getByTestId(`card-${shown}`);
     await expect(live).toBeVisible();
+    await expect(cell(page, n).locator('[data-card-id]:visible')).toHaveCount(1);
     await expect(live.locator('.preview-mark')).toBeVisible();
     await expect(cell(page, n).locator('.preview-mark')).toHaveCount(1);
     await expect(cell(page, n).locator('[data-mirror-of]')).toHaveCount(0);
@@ -181,6 +183,27 @@ test.describe('android', () => {
     await expect(pill).toHaveCSS('background-color', await tokenColor(page, '--wc-surface-raised'));
   }
 
+  // The ★ pill paints above the card face: with pointer events lifted on both for the read only
+  // (both are `pointer-events: none`), the hit at the pill centre is the pill. Only where the pill
+  // does not meet the count badge.
+  async function expectMarkOverFace(card: Locator): Promise<void> {
+    const hit = await card.evaluate((el) => {
+      const face = el.querySelector<HTMLElement>(':scope > .face');
+      const mark = el.querySelector<HTMLElement>('.preview-mark');
+      if (face === null || mark === null) throw new Error('missing face or mark');
+      face.style.pointerEvents = 'auto';
+      mark.style.pointerEvents = 'auto';
+      try {
+        const b = mark.getBoundingClientRect();
+        return document.elementFromPoint((b.left + b.right) / 2, (b.top + b.bottom) / 2) === mark;
+      } finally {
+        face.style.pointerEvents = '';
+        mark.style.pointerEvents = '';
+      }
+    });
+    expect(hit).toBe(true);
+  }
+
   test('R-50 (UI) Q-49 AD-14 on session-place-onto-committed target 3 shows the preview mirror of 26 with the star and badge 6, its live top 28 hidden, 52 live elements', async ({
     page,
   }) => {
@@ -195,6 +218,7 @@ test.describe('android', () => {
     await expect(page.getByTestId('card-26')).toHaveAttribute('data-place', 'strip');
     await expect(page.locator('[data-wordcell] .used')).toHaveCount(0);
     await expectMarkCorner(page, previewOf(page, 3, 26));
+    await expectMarkOverFace(previewOf(page, 3, 26));
   });
 
   test('R-50 (UI) Q-49 on session-place-long at 360 × 839 target 10 previews the strip top with badge 15; the star and the badge keep their corners and the badge draws above the star where they meet', async ({
@@ -585,6 +609,8 @@ test.describe('android', () => {
     await expect(page.locator('[data-wordcell] .preview-mark')).toHaveCount(2);
     await expectMarkCorner(page, cell(page, 6).getByTestId('card-31'));
     await expectMarkCorner(page, previewOf(page, 5, 38));
+    await expectMarkOverFace(cell(page, 6).getByTestId('card-31'));
+    await expectMarkOverFace(previewOf(page, 5, 38));
     // The ★ sits over the card flourish (`.face::after`) without suppressing it.
     for (const card of [cell(page, 6).getByTestId('card-31'), previewOf(page, 5, 38)]) {
       const content = await faceOf(card).evaluate((el) => getComputedStyle(el, '::after').content);
