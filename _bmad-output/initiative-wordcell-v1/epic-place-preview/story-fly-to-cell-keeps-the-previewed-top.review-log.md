@@ -1,6 +1,6 @@
 # Review log — story-fly-to-cell-keeps-the-previewed-top.md (ticket 11.3)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words (as tickets 11.1, 11.2). Pre-loop: HEAD e9cc2816819852c5b168aaec7aa001ad9f16ad70, copy `story-fly-to-cell-keeps-the-previewed-top.review-log.passes/pass0.md`, 196 words.
 Intent carried from tickets.toml entry 3 and not copied into the ticket: `plan_checkpoint = true` (an unattended build stops after planning for a person to approve the plan; the fixer adds it to the Description in pass 1).
@@ -55,3 +55,27 @@ Fixer: all 11 items applied, no conflicts; literal ids checked against the fixtu
 - Description, Hold — During Confirm's fly-in, once the word's first letter lands, should the cell show the landed letters stacking over the previewed top until the top letter lands (epic 5 F28's "landed cards stay visible"), or keep the final top letter in front the whole time, with letters disappearing into it as they land (a literal reading of DESIGN.md "the target keeps the previewed top")? — proposed default: the F28 stacking, as the ticket states; Jared confirms at the plan checkpoint or entry 5's device read.
 ### Dropped
 - used target whose free letter is not the new top; committing Redo onto a used target (edge-case, adversarial stretch) — the committed-set hold is one path for Confirm and Redo and any order; no rule specific to these cases
+
+## Pass 3 — 2026-10-28 21:15
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 12, decision-needed 0  |  Dropped in triage: 0 (duplicates merged: flip.test.ts mirror precondition ×4, used-cells `[]` vs outline ×2, used-card reading of E6 ×2)
+Words (docs): 1075 (5.5 x pass 0; budget 1500)  |  Snapshot: story-fly-to-cell-keeps-the-previewed-top.review-log.passes/pass3.md, fix diff pass3.fix.diff
+Fixer: all 12 items applied, no conflicts; flying ids `[3, 4]` checked against flip.test.ts ~:581; item 2 needed the snapshot to record each cell's `empty` class (folded into item 6); `.used` checked in Card.svelte; no commands touched.
+### Applied
+- [major] AC, flip.test.ts bullet — the replacement test needs "a gaining cell where the page draws mirrors", but the same bullet removes the FakeRoot's only mirror model (`Scene.mirrors`, the `[data-wordcell]` branch) → fixer item 1
+- [minor] AC, Fixtures — used-cells cell 3 `shown` `[]` proves no card, not the outline → fixer item 2
+- [minor] AC — the session-place Confirm test (:176, "previous top … shown until the last landing") is in neither the rewritten nor the kept list → fixer item 3
+- [minor] Description/AC, interrupting move — the e2e Undo runs in the click task on an empty target, so it cannot catch a stuck copy; the release is flip.test.ts ~:659's → fixer item 4
+- [minor] AC — the new session-place-used-cells flight has no name → fixer item 5
+- [minor] AC — `fly()` snapshots record no `.preview-mark`; the snapshot counts it per WordCell → fixer item 6
+- [minor] AC — `expectFlight`'s badge checks (afterClick, afterLast) stay → fixer item 7
+- [minor] AC — "no baseline change expected" → "with no baseline changed" → fixer item 8
+- [minor] Description, Hold — nested parenthetical: which part of F28 stays and which E6 replaces is ambiguous; reorder → fixer item 9
+- [minor] Description — a used target's own free letter earlier in the placement order flies and stays drawn like any committed card (F28) → fixer item 10
+- [minor] Description, comments bullet — the plan's entry-5 wording records that E6's "used card" means the used look (used mirror) → fixer item 11
+- [minor] AC — "at full opacity" has no check: the copy has no used look and computed opacity 1 → fixer item 12
+### Default applied (technical)
+- flip.test.ts replacement → `Object.keys(inFlight)` is `['committed']`; a CELL_START → CELL_COMMITTED flight holds exactly the flying ids while the FakeRoot, without its `querySelectorAll('[data-wordcell]')` branch and `Scene.mirrors`, throws on any selector but `[data-card-id]`, bands and tiles (the evidence capture reads no mirror); FakeWrapper's parent `data-wordcell` (for `cellOf`) stays
+### Decision needed (functionality / UX / gameplay)
+- none new (pass 2's stacking question stands)
+### Dropped
+- none
