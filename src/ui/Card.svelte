@@ -10,8 +10,10 @@ import { text } from './text';
 // AD-14: a live card carries data-card-id, data-testid and data-place; a `mirror` (ghost, used
 // WordCell face, D-block tray copy, WordCell view copy, Place preview top) carries only
 // data-mirror-of. A `preview` mirror (Q-49, DESIGN.md WordCell *place preview*) is the target's
-// top after the commit, a copy of the strip's last tile at full opacity; like every mirror it never
-// takes part in a FLIP glide (flip.ts skips it).
+// top after the commit, a copy of the strip's last tile at full opacity; it is also the fly-in
+// hold's copy of the cell's new top (WordCellRow, flip.ts `inFlight`, F28, E6), drawn without
+// `previewMark`. Like every mirror it never takes part in a FLIP glide (flip.ts reads only live
+// elements).
 // A `view` mirror (place `view`, epic 4 SPEC CAP-9, R-65; DESIGN.md WordCell view, AD-14) is a
 // full-height card in the sheet's flow, `pan-y` so a swipe scrolls the sheet, never hatched or
 // dimmed (a used cell's top is a normal card there); `topTag` adds the `top` pill. Tile corner

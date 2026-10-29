@@ -17,15 +17,14 @@ import { text } from './text';
 // cards stay hidden and silent (the R-65 view still lists `cell.cards`). States come from
 // `CellView` and `view.place` (AD-3). Cards are keyed by id plus mirror kind (A9 4.3-m3, AD-14), so
 // a live ↔ used or preview switch remounts the node. While a Confirm or Redo flies its cards in
-// (flip.ts `inFlight`, epic 5 SPEC CAP-8, F28) the cell holds: the committed cards and the previous
-// top stay shown (the cell never looks empty), and in the cell that held the used mirror (R-52)
-// that mirror, drawn first so beneath the committed faces, is the only previous top (unreachable
-// since ticket 11.2: a flight starts in Place, which draws no used mirror, so `inFlight.used` stays
-// empty until the epic's fly-to-cell hold entry); the last landing releases it and the non-top
-// cards hide together. During a free-letter drag (epic 5 SPEC
-// CAP-6, R-61) the controller's `wc-drag-ghost` on the cell draws the 1 px dashed ghost at the card
-// rect and the dragged top face takes `wc-drag-layer` as Column's does (literals from
-// gestures/classes.ts); the count badge keeps counting the dragged card.
+// (flip.ts `inFlight`, epic 5 SPEC CAP-8, F28, E6) the target holds: its base, drawn first, is a
+// silent `preview` mirror of its new top without the `★` (the live top is itself the last flying
+// card), and the committed cards stay shown over it; the cards before the committed run stay
+// hidden, so the cell never looks empty and never shows its previous top. The last landing
+// releases the hold: the copy goes and the non-top cards hide together. During a free-letter drag
+// (epic 5 SPEC CAP-6, R-61) the controller's `wc-drag-ghost` on the cell draws the 1 px dashed
+// ghost at the card rect and the dragged top face takes `wc-drag-layer` as Column's does (literals
+// from gestures/classes.ts); the count badge keeps counting the dragged card.
 let {
   cells,
   faces,
@@ -52,8 +51,8 @@ type Shown = {
   mark: boolean;
 };
 
-// One entry per card element in the cell, bottom → top (the flight hold's used mirror aside).
-function shown(cell: CellView, lowest: number, usedId: CardId | undefined): Shown[] {
+// One entry per card element in the cell, bottom → top (the flight hold's copy first).
+function shown(cell: CellView, lowest: number): Shown[] {
   const preview = cell.preview;
   if (preview !== undefined) {
     // Q-49: the used card's live element is its strip tile, so the cell draws none of it.
@@ -78,16 +77,28 @@ function shown(cell: CellView, lowest: number, usedId: CardId | undefined): Show
     return list;
   }
   const top = cell.cards.length - 1;
-  return cell.cards.map((id, i) => ({
+  const list: Shown[] = cell.cards.map((id, i) => ({
     id,
     key: `${id}-${i === top && cell.used ? 'used' : 'live'}`,
     mirror: i === top && cell.used ? 'used' : undefined,
-    hidden:
-      i !== top && !(lowest >= 0 && (i >= lowest || (i === lowest - 1 && usedId === undefined))),
+    hidden: i !== top && !(lowest >= 0 && i >= lowest),
     name: i === top ? text.nameCellTop((faces[id] as Face).letter, cell.cell) : undefined,
     silent: i !== top,
     mark: false,
   }));
+  if (lowest >= 0) {
+    // F28, E6: the hold's base, the new top's copy; the `★` went at commit.
+    const newTop = cell.cards.at(-1) as CardId;
+    list.unshift({
+      id: newTop,
+      key: `preview-${newTop}`,
+      mirror: 'preview',
+      hidden: false,
+      silent: true,
+      mark: false,
+    });
+  }
+  return list;
 }
 
 function cellName(cell: CellView): string {
@@ -107,7 +118,6 @@ function cellName(cell: CellView): string {
 {#each cells as cell (cell.cell)}
   {@const target = place?.target === cell.cell}
   {@const lowest = cell.cards.findIndex((id) => inFlight.committed.has(id))}
-  {@const usedId = lowest < 0 ? undefined : [...inFlight.used][0]}
   {@const count = cell.preview?.count ?? cell.cards.length}
   {@const dim = inPlace && !cell.isLegalTarget && !target}
   <span
@@ -133,10 +143,7 @@ function cellName(cell: CellView): string {
     style:grid-column={cell.cell - 2}
     style:grid-row={cellsRow}
   >
-    {#if usedId !== undefined}
-      <Card id={usedId} face={faces[usedId] as Face} place="cell" full mirror="used" />
-    {/if}
-    {#each shown(cell, lowest, usedId) as card (card.key)}
+    {#each shown(cell, lowest) as card (card.key)}
       <Card
         id={card.id}
         face={faces[card.id] as Face}

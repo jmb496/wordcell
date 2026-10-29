@@ -1,7 +1,7 @@
 // AD-14 FLIP (epic 5 SPEC CAP-8, F6, F7, F17, F22, F27; AD-10, AD-11): one module glides the
 // `.face` inside each live element (`[data-card-id]`) from its previous to its next rect around a
 // button-driven move; the wrapper (identity, hit rect) is never animated or classed, and mirrors
-// (`[data-mirror-of]`) never take part (the Q-49 Place `preview` mirror is not even recorded).
+// (`[data-mirror-of]`) never take part (`measure()` finds cards only through `[data-card-id]`).
 // `capture()` (before `game.dispatch`) clears page-scroll busy (`gate.scrollReset()`), opens the
 // layout's move (`beginMove`), finishes every running glide, flushes Svelte (a selection cleared
 // just before renders, so no lift is recorded), then records per CardId the face's viewport rect
@@ -15,17 +15,16 @@
 // the cards the move placed in a WordCell (ticket 5.11, F28, `flyingSet`): each face glides from
 // its captured to its settled viewport rect (no 0.5 px skip), bottom first, delay i × `stagger()`
 // with fill backwards; under reduced motion all fade in at once. `inFlight` (read-only reactive,
-// AD-14 presentation only) tells WordCellRow to keep the committed cards, the previous top and (own
-// cell) the used mirror drawn until the last landing, which hides the non-top committed cards
-// together; a target's `preview` mirror is never recorded as its used mirror, and since Place
-// draws no used mirror the used-mirror hold never fills (ticket 11.2 interim, until the epic's
-// fly-to-cell hold entry). Durations only from the injected `duration` (motion.ts,
-// AD-10). A translating face takes `wc-glide`, and a band-changing translate, or a tray translate
-// that starts outside the tile area (A-D4), lifts the tile area's clip (`wc-drag-tiles`, F22), both
-// removed at the last settle. Each animation holds one gate count (AD-11) until its idempotent
-// settle: its `onfinish`, or `finishAll()` (finish, then settle synchronously); a `cancel` event
-// throws (rule 6). Installed once from main.ts through `setFlip` (as act.ts's `setController`); the
-// module-level `capture`, `play` and `finishAll` serve the act()-wrapped callers.
+// AD-14 presentation only) tells WordCellRow to hold the target until the last landing: the
+// committed cards stay drawn over a `preview` mirror of the cell's new top (E6, no `★`), then the
+// copy goes and the non-top committed cards hide together. Durations only from the injected
+// `duration` (motion.ts, AD-10). A translating face takes `wc-glide`, and a band-changing
+// translate, or a tray translate that starts outside the tile area (A-D4), lifts the tile area's
+// clip (`wc-drag-tiles`, F22), both removed at the last settle. Each animation holds one gate
+// count (AD-11) until its idempotent settle: its `onfinish`, or `finishAll()` (finish, then settle
+// synchronously); a `cancel` event throws (rule 6). Installed once from main.ts through `setFlip`
+// (as act.ts's `setController`); the module-level `capture`, `play` and `finishAll` serve the
+// act()-wrapped callers.
 import { flushSync } from 'svelte';
 import { SvelteSet } from 'svelte/reactivity';
 import type { CardId, Command, Phase } from '../engine/index';
@@ -48,19 +47,16 @@ export type Placed = { readonly band: BandKey; readonly rect: Box; readonly cell
 export type Glide = { id: CardId; keyframes: Keyframe[]; translate: boolean; bandChange: boolean };
 
 const inFlightCommitted = new SvelteSet<CardId>();
-const inFlightUsed = new SvelteSet<CardId>();
 
 /**
- * Ticket 5.11, F28: the fly-to-cell state WordCellRow reads (AD-14, presentation only). While
- * `committed` is non-empty the hold is on: the committed cards and the target's previous top stay
- * drawn, and `used` (zero or one id) is the target's R-52 used mirror, drawn beneath (never its
- * Q-49 `preview` mirror, which capture skips). Empty after the last landing, `finishAll()` and any
- * play that animates nothing.
+ * Ticket 5.11, F28, E6: the fly-to-cell state WordCellRow reads (AD-14, presentation only). While
+ * `committed` is non-empty the hold is on: the committed cards stay drawn over a `preview` mirror
+ * of the target's new top (no `★`) until the last landing. Empty after the last landing,
+ * `finishAll()` and any play that animates nothing.
  */
-export const inFlight: {
-  readonly committed: ReadonlySet<CardId>;
-  readonly used: ReadonlySet<CardId>;
-} = { committed: inFlightCommitted, used: inFlightUsed };
+export const inFlight: { readonly committed: ReadonlySet<CardId> } = {
+  committed: inFlightCommitted,
+};
 
 const BANDS: readonly BandKey[] = ['columns', 'tray', 'wordcells'];
 
@@ -213,8 +209,6 @@ type Measure = {
   readonly placed: ReadonlyMap<CardId, Placed>;
   readonly faces: ReadonlyMap<CardId, HTMLElement>;
   readonly bands: Readonly<Record<BandKey, Box>>;
-  /** Each WordCell's used-mirror CardId (R-52); the Q-49 `preview` mirror is skipped. */
-  readonly mirrors: ReadonlyMap<number, CardId>;
   /** The tile area's (`.tiles`) rect, its clip (A-D4: it grows and shrinks with the compact rows). */
   readonly tiles: Box;
 };
@@ -255,21 +249,10 @@ function measure(root: HTMLElement): Measure {
       found(root.querySelector(`[data-band="${key}"]`), `AD-14 FLIP band ${key} missing`),
     );
   }
-  const mirrors = new Map<number, CardId>();
-  for (const cellEl of root.querySelectorAll<HTMLElement>('[data-wordcell]')) {
-    // Q-49: a Place `preview` mirror is not a used mirror (ticket 11.2 interim hold).
-    const mirror = cellEl.querySelector(':scope > [data-mirror-of]:not(.preview)');
-    if (mirror !== null) {
-      mirrors.set(
-        Number(cellEl.getAttribute('data-wordcell')),
-        Number(mirror.getAttribute('data-mirror-of')) as CardId,
-      );
-    }
-  }
   const tiles = boxOf(
     found(root.querySelector('[data-band="tray"] .tiles'), 'AD-14 FLIP tile area missing'),
   );
-  return { placed, faces, bands, mirrors, tiles };
+  return { placed, faces, bands, tiles };
 }
 
 // F22: a translate lifts the tile area's clip when it changes band, or when it stays in the tray
@@ -403,8 +386,6 @@ export function createFlip(deps: FlipDeps): Flip {
       }
     }
     for (const id of flying) inFlightCommitted.add(id);
-    const mirror = before.mirrors.get(gaining);
-    if (mirror !== undefined) inFlightUsed.add(mirror);
     flushSync();
     flying.forEach((id, i) => {
       const face = found(after.faces.get(id), `AD-14 FLIP card ${id} has no face`);
@@ -467,7 +448,6 @@ export function createFlip(deps: FlipDeps): Flip {
 
   function releaseHold(): void {
     inFlightCommitted.clear();
-    inFlightUsed.clear();
   }
 
   // Idempotent: the animation's onfinish, or finishAll().

@@ -8,11 +8,12 @@ import { guardInstalled, type MotionKind, startTracker } from './motion';
 
 // AD-14 FLIP (ticket 5.10, epic 5 SPEC CAP-8) in node: no DOM or WAAPI. A fake root answers
 // `querySelectorAll('[data-card-id]')` with fake wrappers (`getAttribute` of `data-card-id` and
-// `data-place`, `querySelector(':scope > .face')` → a fake face) and `querySelector` of each
-// `[data-band="…"]` and of `[data-band="tray"] .tiles` (a fake face at (0, 514), 6 px above the
-// first tile row, 412 wide; its height is the scene's `tileArea`, default 98); its contents are a
-// settable scene, so a
-// test changes the "DOM" between capture and play. A fake face records `animate()` (keyframes,
+// `data-place`, `querySelector(':scope > .face')` → a fake face; a cell card's `parentElement`
+// carries its `data-wordcell`) and `querySelector` of each `[data-band="…"]` and of
+// `[data-band="tray"] .tiles` (a fake face at (0, 514), 6 px above the first tile row, 412 wide;
+// its height is the scene's `tileArea`, default 98), and throws on any other selector, so capture
+// and play provably read no mirror; its contents are a settable scene, so a test changes the "DOM"
+// between capture and play. A fake face records `animate()` (keyframes,
 // options) and returns a fake Animation whose `finish()` is recorded and whose `onfinish` a test
 // fires (WAAPI fires it later). A counting gate throws on a leave at count 0. `flushSync` is mocked
 // to run a hook the test sets, then clear it (as controller.test.ts).
@@ -99,12 +100,10 @@ class FakeWrapper {
 }
 
 type Card = { id: number; place: string; rect: Box; cell?: number };
-// `mirrors`: WordCell n → the CardId of its direct `[data-mirror-of]` child (R-52); `tileArea`: the
-// `.tiles` height (A-D4).
+// `tileArea`: the `.tiles` height (A-D4).
 type Scene = {
   cards: Card[];
   bands: Record<BandKey, Box>;
-  mirrors?: Record<number, number>;
   tileArea?: number;
 };
 
@@ -145,26 +144,9 @@ class FakeRoot {
       );
     });
     this.bands = scene.bands;
-    this.mirrors = scene.mirrors ?? {};
     this.tiles.rect = box(0, 514, 412, scene.tileArea ?? 98);
   }
-  mirrors: Record<number, number> = {};
   querySelectorAll(selector: string): unknown[] {
-    if (selector === '[data-wordcell]') {
-      return [...new Set(this.wrappers.map((w) => w.parentElement).filter((p) => p !== null))]
-        .map((p) => Number(p.getAttribute('data-wordcell')))
-        .concat(Object.keys(this.mirrors).map(Number))
-        .filter((n, i, all) => all.indexOf(n) === i)
-        .map((n) => ({
-          getAttribute: () => String(n),
-          querySelector: (inner: string) => {
-            if (inner !== ':scope > [data-mirror-of]:not(.preview)')
-              throw new Error(`fake cell selector ${inner}`);
-            const id = this.mirrors[n];
-            return id === undefined ? null : { getAttribute: () => String(id) };
-          },
-        }));
-    }
     if (selector !== '[data-card-id]') throw new Error(`fake root selectorAll ${selector}`);
     return this.wrappers;
   }
@@ -597,16 +579,12 @@ describe('AD-14 flyToCell playback (ticket 5.11, CAP-8, F28)', () => {
     expect(t.active()).toBe(0);
   });
 
-  it('AD-14 flyToCell records the target cell used mirror (R-52) only for the gaining cell, from the capture', () => {
+  it('AD-14 Q-49 inFlight holds only the committed set: no used-mirror state, and a flight under the strict fake (capture and play read no mirror) holds exactly the flying ids', () => {
+    expect(Object.keys(inFlight)).toEqual(['committed']);
     const t = setup({ phase: 'idle' });
-    fly(t, { ...CELL_START, mirrors: { 5: 3, 7: 20 } }, CELL_COMMITTED);
-    expect([...inFlight.used]).toEqual([3]);
-    settleAll(t, [3, 4]);
-    expect([...inFlight.used]).toEqual([]);
-    const u = setup({ phase: 'idle' });
-    fly(u, CELL_START, CELL_COMMITTED);
-    expect([...inFlight.used]).toEqual([]);
-    u.flip.finishAll();
+    fly(t, CELL_START, CELL_COMMITTED);
+    expect(committed()).toEqual([3, 4]);
+    t.flip.finishAll();
   });
 
   it('AD-14 flyToCell under reduced motion fades every face in at once (linear/no easing, no delay, no wc-glide, no tile lift) over duration(flyToCell) and holds to its end', () => {
@@ -677,7 +655,7 @@ describe('AD-14 flyToCell playback (ticket 5.11, CAP-8, F28)', () => {
     expect(t.active()).toBe(0);
   });
 
-  it('AD-14 flyToCell into an empty cell flies the committed set with no previous top to hold', () => {
+  it('AD-14 flyToCell into an empty cell flies and holds the committed set', () => {
     const t = setup({ phase: 'idle' });
     fly(
       t,
