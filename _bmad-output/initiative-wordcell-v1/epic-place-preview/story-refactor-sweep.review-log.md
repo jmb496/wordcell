@@ -1,6 +1,6 @@
 # Review loop — story-refactor-sweep.md (ticket 11.6)
 
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 100 words, copy at story-refactor-sweep.review-log.passes/pass0.md (HEAD c4ab534).
 Caller intent: tickets.toml entry 6 `done_checkpoint = true` (not copied at pull) belongs to the ticket's intent; the fixer adds it to the Description in pass 1. Scope is built from the epic's build records and deferred findings (11.1–11.5 plans, review logs, review-loop/11-*-build.md, digest epic-place-preview-20261028-1937.md, 11.5 device-read result).
@@ -89,3 +89,29 @@ Fixer: all 14 applied; checked controller.ts:1046, flip.ts settle/releaseHold, 1
 - none
 ### Dropped
 - 14 duplicates merged; one over-budget precision minor (checkout for the final runs)
+
+## Pass 4 — 2026-10-29
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 4, minor 7, decision-needed 0  |  Dropped in triage: 9 (duplicates merged; 3 left to the plan: clone setup, helpers.spec.ts case pass condition, device-read quote as evidence)
+Words (docs): 1496 (15.0 x pass 0; budget 1500)  |  Snapshot: story-refactor-sweep.review-log.passes/pass4.md
+Fixer: all 11 applied; minors paid by cuts (Description "Cleanup only, no new behaviour." — covered by Scope 5's edit boundary; Scope 2/4/5 quote trims); checked WordCellRow.svelte:120, Menu.svelte act(), controller.ts:1046, epic-autopilot SKILL.md :234-236, DESIGN.md:311; test runs unverified.
+### Applied
+- [major] Scope 1(c) — the New-game interrupt cannot detect the hold release (a new deal empties every WordCell, WordCellRow.svelte:120 `lowest` −1 either way; in progress, New game opens a confirm, the menu button's act() is the real interrupt); pass-3's mutation still survives → fixer item 1
+- [major] Scopes 1-3 — mid-build local commits vs the autopilot step prompt's "Do not commit" (digest 11.3: build left work uncommitted; epic-autopilot SKILL.md :234-236); AGENTS.md rule 7 → fixer item 2
+- [major] AC bullet 3 — "a recurrence" vs "a second failure" reads two ways (gating) → fixer item 3
+- [major] Scope 2 — "fix unconfirmed": keep or revert the committed touch.ts fix unstated → fixer item 4
+- [minor] Scope 2 — "reproduced before the fix" undefined → fixer item 5
+- [minor] Scope 3 — clone "of the Scope 1 commit" lacks Scope 2's HEAD fallback → fixer item 6
+- [minor] Scope 2 — helpers.spec.ts case only when a helper changes → fixer item 7
+- [minor] Scope 2 — AD-17 Touch paraphrase partial → fixer item 8
+- [minor] Scope 1 Pass — name example `AD-14 F28 Q-49` puts AD first though Q-49 applies (AGENTS.md) → fixer item 9
+- [minor] AC bullet 1 — screenshot failure not caused by this diff → fixer item 10
+- [minor] AC bullet 2 — "this ticket's diff" base unnamed → fixer item 11
+### Default applied (technical)
+- (c) — interrupt with the act()-wrapped menu button right after Confirm (cells keep their cards), check the copy gone after the next frame; mutation controller.ts:1046 `deps.finishGlides()` removed; cannot be driven: declined, covered by composition
+- Commits — the Scope 1 and fix commits are bmad-build-auto's own local commits (AGENTS.md rule 7), outside a step prompt's "do not commit"; a build that cannot commit stops at Scope 2 and reports
+- Final rerun — first failure on a fixed-here/declined row makes it an owner call; a failing rerun or any other failure stops the build
+- Unconfirmed fix — kept (test-only, AD-17 Touch intact), row "kept, unconfirmed", owner may revert
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- 6 duplicates merged; 3 procedure-precision minors left to the build's plan (over budget)
