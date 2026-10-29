@@ -1,6 +1,6 @@
 # Review log — spec-epic-7-pwa-release (SPEC.md + companions)
 
-State: pass 6: done
+State: pass 7: done
 
 Target: `_bmad-output/specs/spec-epic-7-pwa-release/` (SPEC.md, rule-coverage.md, device-checks.md, release-checklist.md, build-notes.md). Mode: docs, thorough, max 7.
 Pre-loop: HEAD fe1ba6f6def230a892e73fe006281307df31247e; copies at `SPEC.review-log.passes/pass0/`; words 5770 (SPEC 2737, build-notes 911, device-checks 1034, release-checklist 593, rule-coverage 495).
@@ -154,3 +154,23 @@ Fixer: all 17 applied; checked `manifest: true` and `dist-test/.vite/manifest.js
 - none new
 ### Dropped
 - none
+
+## Pass 7 — 2026-10-29 (verify-only)
+Reviewers: fix diff (pass6.fix.diff only)  |  Findings: major 0, minor 5, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 11576 (2.01 x pass 0)  |  Snapshot: SPEC.review-log.passes/pass6/ (no fix pass)
+### Applied
+- none (verify-only pass)
+### Decision needed (functionality / UX / gameplay)
+- none new
+### Dropped
+- none
+
+## Result — converged after 7 passes
+Majors per pass: 18, 13, 6, 4, 2, 1, 0. Decision-needed raised by review: none; the SPEC's three Open Questions (New-version prompt, Ten-game run across a fix, Firefox persistent-storage prompt) remain the owner's. Words 5770 → 11576 (2.01x, within the 2.5x budget). Technical defaults applied: 34 (see each pass's "Default applied").
+
+Unapplied minors (for the build plans):
+- SPEC F8, build-notes Playwright mechanics — the query-string rationale is wrong for workbox-precaching 7.4: the install fetch requests plain `/index.html` (`cache: 'reload'`); `__WB_REVISION__` is only in the cache key. Drop the `index.html?__WB_REVISION__=…` rationale and its `e2e/helpers.spec.ts` case.
+- SPEC F8, build-notes — the navigation fallback's dependence on Chromium sending `Sec-Fetch-Mode: navigate` to the local server is unmarked; mark it `(unverified)` and map `/` to `index.html` directly.
+- rule-coverage AD-16 dynamic-import row, CAP-1, build-notes — the eager-import check is timing-dependent (a fast local dictionary can settle before the chunk request); assert it in a case that holds the dictionary route (the chunk route not hit while held, hit only after release).
+- SPEC CAP-10 — "a spoiled read is redone" should read "redone once; a second consecutive one routes as G3 says".
+- release-checklist §6.7 — measure on a Linux-filesystem checkout of the last commit on `main` before the declaration, and add the measurement to production sequence step 5 (CAP-10 plan).
