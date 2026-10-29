@@ -1,6 +1,6 @@
 # Review log — story-fly-to-cell-keeps-the-previewed-top.md (ticket 11.3)
 
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7, budget 1500 words (as tickets 11.1, 11.2). Pre-loop: HEAD e9cc2816819852c5b168aaec7aa001ad9f16ad70, copy `story-fly-to-cell-keeps-the-previewed-top.review-log.passes/pass0.md`, 196 words.
 Intent carried from tickets.toml entry 3 and not copied into the ticket: `plan_checkpoint = true` (an unattended build stops after planning for a person to approve the plan; the fixer adds it to the Description in pass 1).
@@ -31,3 +31,27 @@ Fixer: all 12 items applied, no conflicts; no commands touched. Fixer note: the 
 - none
 ### Dropped
 - per-landing hiding of non-top committed cards (adversarial, edge-case, ref alignment defaults) — contradicts the owner's epic 5 SPEC F28 decision; replaced by item 1's default
+
+## Pass 2 — 2026-10-28 20:40
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 4, minor 8, decision-needed 1  |  Dropped in triage: 2 (duplicates merged: flip.test.ts observable ×4, first sentence vs Hold ×4, copy's cell ×4, F28 previous-top clause ×2, Card.svelte comment ×2, empty-outline non-target ×2, copy in empty target ×2)
+Words (docs): 980 (5.0 x pass 0; budget 1500)  |  Snapshot: story-fly-to-cell-keeps-the-previewed-top.review-log.passes/pass2.md, fix diff pass2.fix.diff
+Fixer: all 11 items applied, no conflicts; literal ids checked against the fixtures (redo-tail cell 3 → ['p28','9','32','28'], onto-committed → ['p26','2','19','26'], used-cells source cell 3 empties, target 5); no commands touched; decision-needed item left untouched.
+### Applied
+- [major] AC, flip.test.ts bullet — once `Measure.mirrors`/`inFlight.used` go, "capture records no mirror" has no observable and the lifecycle half duplicates flip.test.ts:581/:659 → fixer item 1
+- [major] AC, snapshot bullet — the Description's stacking (copy first, beneath the committed cards) is untested: a copy drawn last would pass → fixer item 2
+- [major] Description, first sentence — "until the last landing the target shows the previewed top" contradicts the Hold bullet (landed committed cards drawn over the copy from the first landing) → fixer item 3 (also states F28 stays in force except its previous-top clause, which E6 replaces; minor from ref alignment/adversarial merged)
+- [major] AC, snapshot bullet — "no card it held before the commit" contradicts the used-target fixture, whose held copy and new top are 28, a card cell 3 held → fixer item 4
+- [minor] Description, Copy bullet — after commit `place` is undefined, so "the target cell" has no source in WordCellRow; it is the cell holding `inFlight.committed` ids (`lowest ≥ 0`) → fixer item 5
+- [minor] AC — the copy is drawn into an empty target too, so every `expectFlight` caller and the two-cards target cell 5 checks expect the copy first → fixer item 6
+- [minor] AC — the committing Redo on session-place-onto-committed is its own Confirm/settle/Undo/Redo flight; the session-place Redo in the Undo test stays → fixer item 7
+- [minor] AC — the kept Undo test cannot tell the hold copy (no ★) from the restored Place preview (★): require `.preview-mark` on the restored preview → fixer item 8
+- [minor] Description, comments bullet — Card.svelte's `preview` doc comment (Place-only copy of the strip's last tile) joins the comment updates → fixer item 9
+- [minor] Description/AC — used non-target cells show their card beneath "or the empty outline" (E3); add a flight on session-place-used-cells whose source cell empties → fixer item 10
+- [minor] AC — "visible" means computed visibility (the `fly()` snapshot) → fixer item 11
+### Default applied (technical)
+- flip.test.ts replacement → `Object.keys(inFlight)` is `['committed']` and a capture scene with mirrors in the gaining cell flies with exactly the flying ids held; FakeRoot `[data-wordcell]`/mirror support and `Scene.mirrors` removed; the lifecycle stays with :581/:659
+- copy's cell → the cell holding `inFlight.committed` ids (`lowest ≥ 0`)
+### Decision needed (functionality / UX / gameplay)
+- Description, Hold — During Confirm's fly-in, once the word's first letter lands, should the cell show the landed letters stacking over the previewed top until the top letter lands (epic 5 F28's "landed cards stay visible"), or keep the final top letter in front the whole time, with letters disappearing into it as they land (a literal reading of DESIGN.md "the target keeps the previewed top")? — proposed default: the F28 stacking, as the ticket states; Jared confirms at the plan checkpoint or entry 5's device read.
+### Dropped
+- used target whose free letter is not the new top; committing Redo onto a used target (edge-case, adversarial stretch) — the committed-set hold is one path for Confirm and Redo and any order; no rule specific to these cases
