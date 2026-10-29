@@ -1,17 +1,18 @@
 # Epic 11 (place preview) autopilot handoff
 
-Last session: ticket 11.3 "Fly-to-cell keeps the previewed top" is **stopped at the plan checkpoint**. The build wrote its plan and, as the ticket asks, stopped before writing any code so you can approve the plan.
+Last session: ticket 11.3 "Fly-to-cell keeps the previewed top" is **done**.
 
-The ticket makes the fly-in after Confirm (or a Redo that places a word) show the target WordCell's new top card from the start, so its old top card or a used card never flashes.
+What it adds: after Confirm (or a Redo that places a word), while the cards fly into the WordCell, the cell shows its new top card underneath from the start. The arriving cards pile up over it (your stacking answer), and when the last one lands only the new top remains. The old top card or a used card no longer flashes.
 
-**What the plan does (your stacking answer, 2026-10-28):** from Confirm until the last card lands, the cell shows a copy of its new top card (without the ★) underneath; the landed cards pile up over it; when the last one lands, only the real top card remains. The tests gain two extra flights: a Redo that places a word onto a cell that already holds one, and a Confirm where a used one-card cell ends up empty.
+It was built on the plan you approved. The code review found nothing major in one pass. All tests pass, including the screenshots (no picture changed).
 
-**Your step:** read and approve the plan: `_bmad-output/initiative-wordcell-v1/epic-place-preview/story-fly-to-cell-keeps-the-previewed-top-plan.md`. 12 of the 13 small review notes are handled in its Design Notes; the 13th (splitting a long sentence in the ticket) is left, because a build never edits ticket files.
+Worth knowing: the tests check the stacking through which cards are present and visible, not by how it looks, so your device read in ticket 11.5 is the real check. Three small notes are left in the review log `_bmad-output/implementation-artifacts/review-loop/11-3-build.md` (two are plan wording, one is an optional extra browser test).
 
-To resume: record the approval in the ticket's Notes (and the epic's Notes), commit, and rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-place-preview`. The next session builds on the approved plan, code-reviews it, runs all tests and marks it done.
+Next: ticket 11.4 "How to play Place scene preview". To continue, rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-place-preview`.
 
-Close-out docs so far:
+Close-out docs so far (applied at the retrospective, not now):
 - DESIGN.md § Components → WordCell (place preview) ← the count badge draws above the ★ pill where they meet at 360 px (owner, 2026-10-28)
-- DESIGN.md § Components → WordCell (fly-to-cell hold with the previewed top) ← landed cards stack over the previewed-top copy until the last landing, epic 5 F28 kept (owner, 2026-10-28), if its wording does not already say so
+- DESIGN.md § Components → WordCell (fly-to-cell hold with the previewed top) ← landed cards stack over the previewed-top copy (no ★) until the last landing, epic 5 F28 kept (owner, 2026-10-28), if its wording does not already say so
+- ARCHITECTURE-SPINE.md AD-14 mirror list ← the hold's previewed-top copy replaces the R-52 used mirror (follows from the same decision; wording in the 11.3 plan's Design Notes, left to ticket 11.5)
 
 Digest: `_bmad-output/implementation-artifacts/autopilot/epic-place-preview-20261028-1937.md`

@@ -86,3 +86,18 @@ Close-out docs: DESIGN.md § Components → WordCell (fly-to-cell hold with the 
 
 ## Stopped — plan checkpoint (stop rule 2)
 Ticket 11.3, Step B. For Jared: approve the plan `_bmad-output/initiative-wordcell-v1/epic-place-preview/story-fly-to-cell-keeps-the-previewed-top-plan.md`. Resume: record the approval (ticket Notes, epic Notes), commit, rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-place-preview`; the next session reruns Step B on the approved `ready-for-dev` plan (tell the build the checkpoint is approved).
+
+Session note (2026-10-29, third session for 11.3): handoff, git log and ticket files agreed (plan `ready-for-dev`, Jared's approval committed in 136527c), so Step B reran on the approved plan. No live pid files. The build prompt carried the step contract's "do not commit", so the build left its work uncommitted; the orchestrator committed it as the build commit c0664ef before Step C.
+
+## 11.3 Fly-to-cell keeps the previewed top — done
+What it adds: after Confirm (or a Redo that places a word), while the cards fly into the WordCell, the cell shows its new top card underneath from the start; the arriving cards pile up over it and, when the last one lands, only the new top remains. The old top card or a used card no longer flashes.
+Ticket review: 4 passes, converged (majors 7, 4, 1, 0); one question answered by you (the cards stack during the fly-in), and you approved the plan at its checkpoint
+Build: built (its own review found 17 small points, 1 patched, 16 rejected, none deferred); commit c0664ef
+Code review: thorough (ticket risk medium), 1 pass, converged (majors 0); 0 fixes applied; log in 38ea8f7
+Tests: all passing (`test:all`: unit 3629, e2e 1120, dist 21, pwa 17), screenshots passed (67, no baseline changed)
+Ref to fix upstream: none
+Tokens: 4.0M input-equivalent this session (build 53%, code review 37%, orchestrator 5%, other 5%); orchestrator peak context 71k
+Worth knowing: (1) the stacking look is checked by the tests only through which cards are present and visible, not by pixels; your device read in ticket 11.5 is the real check. (2) Three small code-review notes left open (review log `11-3-build.md`): the plan's Auto Run Result still says the build is uncommitted (it is c0664ef); one plan rationale for the Undo-mid-flight case is worded wrongly (the case is covered by unit tests plus the release check); there is no browser test that the copy goes away when New game interrupts a fly-in (it holds by how the code is built). (3) The old used-card hold from epic 5 (R-52) is removed, since ticket 11.2 made it unreachable.
+Close-out docs:
+- DESIGN.md § Components → WordCell (fly-to-cell hold with the previewed top) ← landed cards stack over the previewed-top copy (no ★) until the last landing, epic 5 F28 kept (owner, 2026-10-28), if its wording does not already say so
+- ARCHITECTURE-SPINE.md AD-14 mirror list ← the hold's previewed-top copy replaces the R-52 used mirror (follows from the same owner decision, 2026-10-28; wording in the plan's Design Notes, left to ticket 11.5)

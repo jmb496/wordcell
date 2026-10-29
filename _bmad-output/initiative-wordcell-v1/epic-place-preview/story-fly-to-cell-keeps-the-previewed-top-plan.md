@@ -3,7 +3,7 @@ title: 'Fly-to-cell keeps the previewed top'
 type: 'feature'
 ticket: '3'
 created: '2026-10-28'
-status: 'built'
+status: done
 baseline_revision: '136527cfd2e0b154a1b9e8baf1c2511de943d7cf'
 route: 'full'
 route_source: 'auto'
