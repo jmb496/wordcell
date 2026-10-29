@@ -21,7 +21,7 @@ Changes the F28 hold in `src/ui/flip.ts` (`inFlight`) and `WordCellRow.svelte` s
 - An interrupting move (Undo mid-flight, `finishAll()`) releases the hold with its copy (unit-tested, `flip.test.ts` ~:659); an Undo back to Place shows the `★` preview again.
 - The R-52 used-mirror hold is unreachable since ticket 11.2 (a flight starts in Place, which draws no used mirror; the 11.2 plan hands it here) and the new hold replaces it: remove `inFlight.used`, `Measure.mirrors` and the `:not(.preview)` mirror capture in `flip.ts`, and the `usedId` branch and the `lowest − 1` previous-top reveal in `WordCellRow.svelte`; `inFlight` keeps only `committed`.
 - Updates the "ticket 11.2 interim" comments (`flip.ts` header and `inFlight` doc, `WordCellRow.svelte` header, `e2e/fly-to-cell.spec.ts`), `Card.svelte`'s `preview` doc comment (now also the hold's copy of the cell's new top, no `★`) and the "(interim hold)" test titles; the AD-14 mirror list and the DESIGN.md hold wording are left to entry 5's close-out, and the plan records the wording needed, E6's "used card" read as the used look (used mirror).
-- Plan checkpoint (`plan_checkpoint = true`): an unattended build stops after planning for Jared to approve the plan.
+- Plan checkpoint (`plan_checkpoint = true`): an unattended build stops after planning for Jared to approve the plan. Checkpoint passed: Jared approved the plan on 2026-10-28; implement it.
 
 ## Acceptance Criteria
 
