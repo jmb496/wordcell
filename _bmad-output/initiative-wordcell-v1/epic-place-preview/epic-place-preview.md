@@ -6,6 +6,7 @@ covers: []
 after: [epic-end-of-game-words]
 assignee: ""
 risk: medium
+status: done
 ---
 
 # Place preview of WordCell tops
@@ -57,6 +58,7 @@ The engine view (`CellView.preview`), the WordCell row, `Card.svelte` (a `previe
 - Decision (2026-10-25): branch `place-preview` is cut from `main` at `d5015e5`; the doc edits for Q-49 (spec v0.12, EXPERIENCE.md, DESIGN.md, spine AD-3 and AD-14) are committed on `place-preview` before entry 1 starts (`bmad-build-auto` needs a clean tree).
 - Decision (2026-10-25): no epic spec; this file's Requirements are the source.
 - Decision (2026-10-25): tracer bullet is entries 1 → 2 (engine `preview` to the visible WordCell row); entries 2, 3 and 4 run in sequence (4 after 3) because they share `Card.svelte`, `WordCellRow.svelte` or the `★` pill and the screenshot baselines.
+- Decision (owner, 2026-10-29, retrospective): none of the retrospective's open questions or action items is taken (A1–A10: no DESIGN.md:311 change, celebration items B3, B4, B6, B7 not scheduled, no `nav.spec.ts:163` fix ticket, no process-threshold change); the epic is closed, merged to `main` and deployed.
 - Decision (owner, 2026-10-29, entry 6 done checkpoint): the 360 px two-digit badge / `★` meet on `session-place-long` (badge 15 above the pill, < 1 px) looks fine as is, judged from 360 × 839 screenshots; defaults taken for the plan's other owner rows: R2 declined (the `expectPreviewBeneath` check would be vacuous), R10 DESIGN.md:311 `★` glyph exception wording goes to the epic 11 retrospective (no look change), R11 9394922 kept with a fix ticket for the next nav.spec.ts:163 failure (retro B8), R26 epic 10 retro B3, B4, B6, B7 carried to the epic 11 retrospective.
 - Device read (owner, 2026-10-29, entry 5, `session-place-used-cells` on the Android phone): retarget, reorder, a used non-target cell (card beneath, or empty), Undo to Composing (used look back), Redo, Confirm's fly-to-cell (no old top flashes), the How to play Place scene and the `★` as subtle all read as expected; no change asked.
 - Decision (owner, 2026-10-29, entry 4 ticket review): the How to play Place scene's previewed WordCell shows the new top with the `★` and no count badge (scenes stay badge-free), unlike the game's target badge. Close-out: EXPERIENCE.md How to play (Place scene) / DESIGN.md if they imply a badge.

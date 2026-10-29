@@ -156,6 +156,8 @@ All items are proposed, not applied. The retro edited no tree file.
 
 All six tickets are done, and no finding is blocking. Open items A1–A10 are tracked above.
 
+Owner follow-through (2026-10-29): Jared accepted the verdict and declined every open question and action item (A1–A10); the epic container is marked done and he asked to merge and deploy.
+
 ## Open questions
 
 - **A5:** take the DESIGN.md:311 wording, or ask for an SVG star?
