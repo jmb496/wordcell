@@ -1,6 +1,6 @@
 # Review loop — story-refactor-sweep.md (ticket 11.6)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 100 words, copy at story-refactor-sweep.review-log.passes/pass0.md (HEAD c4ab534).
 Caller intent: tickets.toml entry 6 `done_checkpoint = true` (not copied at pull) belongs to the ticket's intent; the fixer adds it to the Description in pass 1. Scope is built from the epic's build records and deferred findings (11.1–11.5 plans, review logs, review-loop/11-*-build.md, digest epic-place-preview-20261028-1937.md, 11.5 device-read result).
@@ -59,3 +59,33 @@ Fixer: all 13 applied; checked playwright.base.ts:17 retries, spine AD-17 Speed 
 - none (the 360 px meet is routed to the owner by the ticket's own owner-call row at the done checkpoint; the look is already decided, 2026-10-28)
 ### Dropped
 - 12 duplicates merged (cite fix, helper fold, EXPERIENCE.md, test naming raised by several lenses)
+
+## Pass 3 — 2026-10-29
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 4, minor 10, decision-needed 0  |  Dropped in triage: 14 (duplicates merged; "test:all/test:screens on the /mnt/d checkout" dropped as over-budget precision)
+Words (docs): 1486 (14.9 x pass 0; budget 1500)  |  Snapshot: story-refactor-sweep.review-log.passes/pass3.md
+Fixer: all 14 applied; checked controller.ts:1046, flip.ts settle/releaseHold, 11.3 plan :106, place.spec.ts:283, attempt1 log :2491, device-preview.mjs `[fixture] [--no-build]`, fixtures/session-place-long.json, epic 10 retro B3/B4/B6; test runs unverified (build-time).
+### Applied
+- [major] Scope 2 — nav.spec.ts:163's mandatory fix has no pass bar and no before/after commit for its evidence → fixer item 1
+- [major] AC bullet 3 — the one-rerun rule lets a "fixed here"/declined Scope 2 row fail in the final `test:all` and stay marked fixed (the epic 10 pattern pass 2 removed) → fixer item 2
+- [major] Scope 1 Pass (c) — example mutation `finishAll()` not clearing `inFlight.committed` survives (flip.ts `settle` already calls `releaseHold()`); interrupt link is controller.ts:1046 `deps.finishGlides()` → fixer item 3
+- [major] Scope 6/5 — 11.3 plan :106 cosmetic reject (`test.step` naming) missing from an exhaustive-looking source cite, no disposition → fixer item 4
+- [minor] Scope 3 — median after a discarded warm-up (AD-17 Speed :807-808) → fixer item 5
+- [minor] Scope 2 — "clean tree" while the plan records; no Scope 1 commit if Scope 1 commits nothing → fixer item 6
+- [minor] Scope 2 — "no-change row" not a Scope 6 disposition → fixer item 7
+- [minor] Scope 2 — "flaky counts as a failure" can never apply (retries 0) → fixer item 8
+- [minor] AC Verify "one full" vs bullet 3's rerun → fixer item 9
+- [minor] Scope 1 fold — order vs (a)/(b) unstated → fixer item 10
+- [minor] Scope 1(a) — e2e/place.spec.ts:283 `expectPreviewBeneath` has the same gap → fixer item 11
+- [minor] Scope 1 Pass — repeat-each for tests calling a changed helper → fixer item 12
+- [minor] Scope 5 — 360 px owner row names no means (phone may be 412 px) → fixer item 13
+- [minor] Scope 5/6 — epic 10 retrospective B3, B4, B6 ("for a later/the next sweep") neither taken nor declined → fixer item 14
+### Default applied (technical)
+- nav fix bar — fixed here only with 0/3 full `android` runs and 0/20 `--repeat-each=20` at the fix commit; any failure, no cause found, or a failure never reproduced before the fix ("fix unconfirmed"): owner-call row with counts
+- Final `test:all` rerun — a failure of a row already fixed here/declined turns it into an owner-call row
+- (c) mutation — controller.ts:1046 `deps.finishGlides()` removed; copy check before the flight would end on its own
+- Helper fold — judged after (a)/(b); a fold changing any caller's assertions: declined
+- Epic 10 retro B3, B4, B6 — declined row group, outside epic 11 Boundaries, carried to the epic 11 retrospective (B4 is behaviour: owner call there)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- 14 duplicates merged; one over-budget precision minor (checkout for the final runs)
