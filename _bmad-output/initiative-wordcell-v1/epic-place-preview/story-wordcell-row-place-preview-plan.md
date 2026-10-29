@@ -3,12 +3,13 @@ title: 'WordCell row place preview'
 type: 'feature'
 ticket: '2'
 created: '2026-10-28'
-status: 'ready-for-dev'
+status: 'built'
+baseline_revision: '09b2af29d6f26162be2872a630e90c5e154e7e14'
 route: 'full'
 route_source: 'auto'
-review: ''
-review_source: ''
-lenses_ran: []
+review: 'thorough'
+review_source: 'auto'
+lenses_ran: ['blind-hunter', 'edge-case-hunter', 'verification-gap', 'intent-alignment']
 review_loop_iteration: 0
 followup_review_recommended: false
 context: ['{project-root}/_bmad-output/initiative-wordcell-v1/epic-place-preview/story-wordcell-row-place-preview.md', '{project-root}/_bmad-output/initiative-wordcell-v1/epic-place-preview/epic-place-preview.md']
@@ -57,15 +58,15 @@ deferred: []
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `fixtures/session-place-used-cells.json` -- `serializeSession` output (no trailing newline, as siblings) of the Design Notes script -- E3/E4 fixture.
-- [ ] `src/engine/serialize.test.ts`, `src/architecture-ad2-ad12-ad17.test.ts`, `src/engine/view.test.ts` -- register it (Code Map); `PROPERTIES['place-used-cells']`: phase place, L = 5, target 5 ∉ freeLetters cells, a used cell ≤ L with exactly 1 card (3), a used cell > L with ≥ 3 cards (6), an unused non-empty legal cell ≠ target (4); `REBUILDS` entry with the script and words `['one', 'weapon', 'incur', 'minor']` -- AD-17.
-- [ ] `src/ui/text.ts`, `src/ui/Card.svelte`, `src/ui/WordCellRow.svelte`, `src/ui/flip.ts`, `src/ui/flip.test.ts` -- per Code Map.
-- [ ] `src/ui/labels.test.ts` -- `AD-3 Q-49` tests: both templates (singular/plural, QU); a changed cell (target preview mirror, used beneath, used empty) exposes zero named buttons and the after-this-word group name; an unchanged non-empty cell in Place one button; Composing used cell keeps `, used`.
-- [ ] `src/ui/theme/contrast.test.ts` -- row `['accent-orange', 'surface-raised', 3, 5.0]` (the ★, graphics).
-- [ ] `e2e/place-preview.spec.ts` (new, `test.describe('android')` + `onAndroid`) -- the mapping below.
-- [ ] `e2e/screen-reader.spec.ts` -- new `A-E9 Q-49 …` tests on `session-place-used-cells` (names below); `A-E9 a used WordCell reads its name with used` → `session-place-free-letter-two-cards` + one Undo, same assertion.
-- [ ] Place-phase pins (inventory, Design Notes) -- update each as listed, keep every test.
-- [ ] Baselines -- `npm run test:screens -- --update-snapshots` for `board.screens.spec.ts` `place`/`place-compact` and every `theme-*.screens.spec.ts` `board`; diff the changed PNG list: only those names.
+- [x] `fixtures/session-place-used-cells.json` -- `serializeSession` output (no trailing newline, as siblings) of the Design Notes script -- E3/E4 fixture.
+- [x] `src/engine/serialize.test.ts`, `src/architecture-ad2-ad12-ad17.test.ts`, `src/engine/view.test.ts` -- register it (Code Map); `PROPERTIES['place-used-cells']`: phase place, L = 5, target 5 ∉ freeLetters cells, a used cell ≤ L with exactly 1 card (3), a used cell > L with ≥ 3 cards (6), an unused non-empty legal cell ≠ target (4); `REBUILDS` entry with the script and words `['one', 'weapon', 'incur', 'minor']` -- AD-17.
+- [x] `src/ui/text.ts`, `src/ui/Card.svelte`, `src/ui/WordCellRow.svelte`, `src/ui/flip.ts`, `src/ui/flip.test.ts` -- per Code Map.
+- [x] `src/ui/labels.test.ts` -- `AD-3 Q-49` tests: both templates (singular/plural, QU); a changed cell (target preview mirror, used beneath, used empty) exposes zero named buttons and the after-this-word group name; an unchanged non-empty cell in Place one button; Composing used cell keeps `, used`.
+- [x] `src/ui/theme/contrast.test.ts` -- row `['accent-orange', 'surface-raised', 3, 5.0]` (the ★, graphics).
+- [x] `e2e/place-preview.spec.ts` (new, `test.describe('android')` + `onAndroid`) -- the mapping below.
+- [x] `e2e/screen-reader.spec.ts` -- new `A-E9 Q-49 …` tests on `session-place-used-cells` (names below); `A-E9 a used WordCell reads its name with used` → `session-place-free-letter-two-cards` + one Undo, same assertion.
+- [x] Place-phase pins (inventory, Design Notes) -- update each as listed, keep every test.
+- [x] Baselines -- `npm run test:screens -- --update-snapshots` for `board.screens.spec.ts` `place`/`place-compact` and every `theme-*.screens.spec.ts` `board`; diff the changed PNG list: only those names.
 
 **Acceptance Criteria (sentence → test mapping; every new e2e test on `android`):**
 - R-50 (UI) "each WordCell the commit changes shows its top and count after the commit … target shows the last card": Given `session-place-onto-committed`, when opened, then `R-50 (UI) Q-49 …` sees `.preview[data-mirror-of="26"]` with ★ in `wordcell-3`, badge 6, live 28 hidden, 52 `[data-card-id]`; given `session-place-long` at 360 × 839, when opened, then target 10 shows a preview mirror and badge `15` (and the rect check below).
@@ -82,11 +83,41 @@ deferred: []
 
 ## Implementation Notes
 
+- `WordCellRow.svelte`: one `shown(cell, lowest, usedId)` list per cell drives the single keyed `{#each}`; the flight branch is the previous expression unchanged (keys, `hidden`, names), the Place branch is taken when `cell.preview` is present. Live cards keep the key `${id}-live` in both branches, so Composing ↔ Place remounts only the used/preview mirrors. Group name via `cellName()` (preview names in Place).
+- `Card.svelte`: `mirror: 'preview'` (class `preview`, `data-mirror-of`, aria-hidden, unnamed, unfocusable as every mirror) and `previewMark` (the 16 × 16 `★` pill, `left: 4px; bottom: 2px` in the wrapper). It paints under the later `.count` sibling (both `z-index: auto`).
+- Failure classification after the render change: the full `android` run had 20 failures, all Place used-look pins of the inventory (board-phases 5, fly-to-cell 6, place 3, screen-reader 1, theme-art 3, tray 1, wordcell-view 1); `desktop` had none (its wordcell-view `:1053` pin was updated per the inventory). No other failure.
+- Deviation from the AC wording (R-33 Validate case): on `session-place-free-letter-redo-tail` + Undo, a fresh Validate drops the redo tail and gives the default strip `[32, 28, 9]`, so the target previews 9, not 28. The test asserts the used mirror of 28 swapped for `.preview[data-mirror-of="9"]` (snap, no mirror animation) and no element for 28 in cell 3; the used target previewing its own 28 is covered by the fixture opening, the Redo and the reload tests.
+- 360 px check: both marks are `pointer-events: none`, so the `elementFromPoint` probe lifts that on the two elements for the call only. The measured rects intersect (asserted) and the hit is `.count`.
+- Mirror animations are counted by an init-script spy on `Element.prototype.animate` (calls on or inside a `[data-mirror-of]`) plus running CSS/WAAPI animations on mirrors when read.
+- Baselines: `npm run test:screens -- --update-snapshots` (changed mode) updated nothing, since each diff is under the 1 % `maxDiffPixelRatio`; regenerated with `--update-snapshots=all --grep "board screenshot( place| place-compact)?$"`. Changed PNGs: board `place`/`place-compact` (android, desktop) and the five `theme-*-board-android` shots, nothing else. Docker Desktop had to be started first.
+
 ## Plan Change Log
 
 - 2026-10-28, plan checkpoint: Jared approved the plan and the proposed default for the 360 px check (the badge drawn above the ★ pill where they meet, asserted with `elementFromPoint`; no mark moved). Implement.
 
 ## Review Triage Log
+
+### 2026-10-28 — Review pass
+- verdicts: 18 findings — high 0, medium 0, low 15, false 3, maybe-false 0
+- findings:
+  - `[low]` `patch` (blind) The R-52 used-mirror hold (`flip.ts` `measure().mirrors`/`inFlight.used`, the `usedId` branch in `WordCellRow.svelte`) is unreachable now that a flight starts in Place, which draws no used mirror, but the comments describe it as live — verified: `flyToCell` runs only from Confirm/committing Redo, both from Place with a target (`canConfirm`), where `view.ts:227` gives every used cell a preview. Fixed: the WordCellRow header and the `flip.ts` module comment now say the hold is unreachable until the epic's fly-to-cell hold entry (code kept, the intent keeps the hold code unchanged).
+  - `[low]` `reject` (blind) No preview test for a drag-drop reorder, a keyboard route or mid-drag — every route reaches the view through `dispatch` and `GameView` (rule 3: nothing is dispatched mid-drag), the ticket's verify asks for "a reorder and a retarget" (tap-swap, tap-retarget covered); the defect would be unlikely and the fix is new tests rather than a correction.
+  - `[low]` `patch` (blind) The Undo-to-Composing test does not check the Place reveal is undone — verified at `e2e/place-preview.spec.ts:388`. Fixed: asserts cell 6's live 31 hidden again, cell 6 badge 6, cell 3 not `.empty` and without a badge.
+  - `[low]` `patch` (blind) `e2e/wordcell-view.spec.ts` `:has(.preview)` finds the target, not the used cell — true in general, correct on `session-place-free-letter-redo-tail` (used cell = target 3, asserted against the engine's `used` cell). Fixed: a comment states the used cell is the target there.
+  - `[low]` `patch` (blind) `e2e/board.spec.ts` F11 labels any unknown mirror `b` — verified. Fixed: `block` mapped explicitly, any other mirror throws.
+  - `[low]` `patch` (blind) `cursorMove`'s comment claims the move is "saved by the store, R-73" but reads the in-memory Session — verified. Fixed: comment says in-memory Session (AD-17 hook); persistence stays covered by `place.spec.ts`.
+  - `[low]` `reject` (blind) Screenshot baselines cannot detect the ★ under the 1 % `maxDiffPixelRatio` — the ★, its corner, colour and every preview state are asserted in DOM by `e2e/place-preview.spec.ts`; a new clipped screenshot is new scope, not a correction.
+  - `[low]` `reject` (blind) The ★ is a font glyph against DESIGN.md "Icons are inline SVG", and `.preview-mark` repeats the badge font literal — the ticket and the build brief prescribe the orange `★` as `text.star`, the same glyph the strip's top tile already uses; the literal is cosmetic duplication with no named divergence.
+  - `[low]` `reject` (blind) Near-duplicate preview helpers in three spec files — refactor only, each helper is local to its spec and passes; no caller diverges.
+  - `[low]` `patch` (blind) The onto-committed Confirm test pins the previous top at the click without "(interim hold)" unlike its siblings — verified at `e2e/fly-to-cell.spec.ts:185`. Fixed: title marked "(interim hold)"; the `expectFlight` comment already states the Place start precondition.
+  - `[low]` `reject` (blind) No theme check that the preview face keeps the theme texture — the preview mirror never gets `.used` (the hatch selector), the art themes' card face is shared by every `.card`; unlikely and new scope.
+  - `[false]` `reject` (blind) `placeAt` in `labels.test.ts` bypasses the type checker — its fields are exactly `PlaceView`'s (`legalTargets`, `target`, `placementOrder`, `scoreDelta`); the cast covers only `WordCellNumber`, the file's existing idiom.
+  - `[false]` `reject` (blind) The mirror-animation probe is page-wide and would fail on a tray parting shift — the probed flows are taps, clicks, Undo/Redo and reload, never a drag, so no parting shift runs; a broader probe is stricter and hides nothing.
+  - `[low]` `patch` (edge) Same dead hold code as the first row, proposed for deletion — grouped with it; deletion rejected (intent: hold code unchanged, entry 3 owns it), comment fix applied.
+  - `[low]` `reject` (edge) The plan's R-33 Validate AC names preview 28 while the test asserts 9 — already recorded as a deviation in Implementation Notes (a fresh Validate drops the redo tail); the fix would edit this build's plan.
+  - `[low]` `reject` (intent) Dispatch routes beyond tap-swap/tap-retarget and the mid-drag frame are not exercised — same as the second row.
+  - `[low]` `reject` (intent) The player-visible hold changed (own-cell Confirm shows the card beneath instead of the used mirror) — the intent keeps the hold code unchanged and gives the hold to entry 3; the tests mark it "(interim hold)".
+  - `[false]` `reject` (intent) `cell.cards.slice(0, -1)` assumes the used card is the cell's top — a free letter is the top of a cell with no other free letter (`canAddFreeLetter` requires `!used`, `rules.ts:240`) and cells do not change before the commit, so the used card is always the top; the old code made the same assumption (`i === top && cell.used`).
 
 ## Design Notes
 
@@ -125,9 +156,19 @@ Result: cursor {3, place}, legal 3–5, target 5 (empty), order [26, 19, 27, 32,
 
 ## Auto Run Result
 
-- **Status:** ready-for-dev — halted after planning at the ticket's plan checkpoint ("an unattended build stops after planning for a person to approve the plan before implementing"); no code, fixture or test written yet.
-- **For the owner at the checkpoint:**
-  1. Approve the plan (fixture `session-place-used-cells` script, rendering, pin inventory, test mapping).
-  2. ★ pill vs two-digit badge at 360 px: computed and measured, the rects **intersect** by about 0.35–0.6 px (Design Notes). The AC's non-intersection assertion would therefore fail after approval. Proposed default: keep both marks at their DESIGN.md corners (your 2026-10-28 decision) and change the assertion to "the badge is drawn above the pill where they meet" (`elementFromPoint` at the overlap returns `.count`); the alternative is moving or narrowing a mark, which changes the DESIGN.md look.
-- **Review-log minors:** all twelve resolved in the plan (Design Notes, last paragraph); the ticket text is not edited by the build.
-- **Verification:** the fixture's move script was replayed through the engine (scratch test, deleted); the badge width was measured in the host Chromium at 360 px. No suite was run (nothing implemented).
+- **Status:** built (resumed at the review step after a usage-limit stop; the owner approved the plan at its checkpoint, commit 09b2af2).
+- **Summary:** In Place, `WordCellRow.svelte` draws each cell the commit changes from `cell.preview` (Q-49, R-50): no used mirror, a used non-target cell shows its live card beneath or the empty outline, the target shows a new bare `preview` mirror (`Card.svelte`) of the strip's last tile, the shown top carries the orange `★` pill (`previewMark`), badge and group name come from the preview (`, after this word` names in `text.ts`). Composing, the R-65 view and the not-legal dim are unchanged; `flip.ts` capture skips the preview mirror (hold code otherwise unchanged, entry 3's). New fixture `session-place-used-cells`; every Place-phase pin updated, none deleted.
+- **Files changed:**
+  - `src/ui/WordCellRow.svelte` — the Place preview branch of the cell render, group names from the preview.
+  - `src/ui/Card.svelte` — `preview` mirror kind and the `previewMark` ★ pill.
+  - `src/ui/text.ts` — `nameCellAfter`, `nameCellEmptyAfter`.
+  - `src/ui/flip.ts`, `src/ui/flip.test.ts` — capture skips `.preview`; comments.
+  - `src/ui/labels.test.ts`, `src/ui/theme/contrast.test.ts` — AD-3 Q-49 name tests; the ★ contrast row.
+  - `fixtures/session-place-used-cells.json`; `src/engine/serialize.test.ts`, `src/engine/view.test.ts`, `src/architecture-ad2-ad12-ad17.test.ts` — fixture registration and properties.
+  - `e2e/place-preview.spec.ts` (new) — the sentence → test mapping on `android`.
+  - `e2e/board-phases.spec.ts`, `board.spec.ts`, `fly-to-cell.spec.ts`, `place.spec.ts`, `screen-reader.spec.ts`, `theme-art.spec.ts`, `tray.spec.ts`, `wordcell-view.spec.ts` — Place used-look pins updated.
+  - Nine Place baselines (board `place`/`place-compact` android + desktop, five `theme-*-board-android`).
+- **Review findings:** 18 (high 0, medium 0, low 15, false 3). Patches applied: 6 entries (7 rows, all low): dead-hold comments (WordCellRow, flip.ts), Undo-to-Composing reveal assertions, wordcell-view comment, F11 explicit block kind + throw, `cursorMove` comment, fly-to-cell "(interim hold)" title. Deferred: none. Rejected: drag/keys/mid-drag route tests (by construction, verify scope met; twice), screenshot threshold, ★ glyph vs DESIGN.md icon line (ticket prescribes `text.star`), duplicate helpers, theme texture check, plan-wording claim (fix edits the plan), interim hold visual (intent gives it to entry 3); false: `placeAt` cast, page-wide animation probe, used-card-is-top assumption. Reasons per row in the Review Triage Log.
+- **Follow-up review recommended:** false (patched: high 0, medium 0, low 6 entries).
+- **Verification (after the patches):** `npm run lint` clean; `npm run check` 0 errors; `npm test` 90 files, 3628 tests pass; `npm run build` within budget (560365 / 600000); `npm run test:e2e:dist` 21 passed; `npm run test:e2e` 1116 passed, 1058 skipped, 0 failed; `npm run test:e2e:pwa` 17 passed; `npm run test:screens` 67 passed, 39 skipped; `git status` shows only the nine listed PNGs changed.
+- **Residual risks:** the fly-to-cell hold is interim: from the Confirm click the target briefly shows its previous top again (and an own-cell Confirm the card beneath) instead of the previewed top until the last landing, which DESIGN.md's "never the previous top" asks for; entry 3 owns that. The ★ is a font glyph (`text.star`, as the ticket says) while DESIGN.md's Icons line asks for inline SVG; the strip's ★ has the same gap.

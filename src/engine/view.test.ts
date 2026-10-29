@@ -11,6 +11,7 @@ import placeLong from '../../fixtures/session-place-long.json' with { type: 'jso
 import placeOntoCommitted from '../../fixtures/session-place-onto-committed.json' with {
   type: 'json',
 };
+import placeUsedCells from '../../fixtures/session-place-used-cells.json' with { type: 'json' };
 import { type ApplyContext, apply, applyFrom, type Command } from './commands';
 import { EngineError } from './errors';
 import { gameRecord } from './history';
@@ -750,6 +751,7 @@ describe('GameView Q-49 place preview', () => {
         placeOntoCommitted,
         placeFreeLetterTwoCards,
         placeFreeLetterRedoTail,
+        placeUsedCells,
       ].map(parsed),
       PLACE_R41,
       PLACE_FROM_IDLE,
@@ -811,6 +813,7 @@ describe('GameView Q-49 place preview', () => {
         placeOntoCommitted,
         placeFreeLetterTwoCards,
         placeFreeLetterRedoTail,
+        placeUsedCells,
       ].map(parsed),
       PLACE_R41,
       PLACE_FROM_IDLE,

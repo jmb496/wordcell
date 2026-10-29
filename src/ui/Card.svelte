@@ -8,7 +8,10 @@ import { text } from './text';
 // `pointer-events: none`. Geometry comes from the Board's CSS variables; a tray or strip tile is
 // one tile pitch (tileWidth + 4) wide and card (H) or compact (44 px) tall (DESIGN.md Tile).
 // AD-14: a live card carries data-card-id, data-testid and data-place; a `mirror` (ghost, used
-// WordCell face, D-block tray copy, WordCell view copy) carries only data-mirror-of.
+// WordCell face, D-block tray copy, WordCell view copy, Place preview top) carries only
+// data-mirror-of. A `preview` mirror (Q-49, DESIGN.md WordCell *place preview*) is the target's
+// top after the commit, a copy of the strip's last tile at full opacity; like every mirror it never
+// takes part in a FLIP glide (flip.ts skips it).
 // A `view` mirror (place `view`, epic 4 SPEC CAP-9, R-65; DESIGN.md WordCell view, AD-14) is a
 // full-height card in the sheet's flow, `pan-y` so a swipe scrolls the sheet, never hatched or
 // dimmed (a used cell's top is a normal card there); `topTag` adds the `top` pill. Tile corner
@@ -37,12 +40,13 @@ let {
   name,
   silent = false,
   used = false,
+  previewMark = false,
 }: {
   id: CardId;
   face: Face;
   /** Where the element sits; a live card also exposes it as data-place. */
   place: 'column' | 'cell' | 'tray' | 'strip' | 'view';
-  mirror?: 'ghost' | 'used' | 'block' | 'view' | 'static';
+  mirror?: 'ghost' | 'used' | 'block' | 'view' | 'static' | 'preview';
   full?: boolean;
   hidden?: boolean;
   /** A live D card in its column in Composing (DESIGN.md Card, in destination block). */
@@ -90,6 +94,13 @@ let {
    * to play scenes carry no data-mirror-of, AD-14; owner decision D11).
    */
   used?: boolean;
+  /**
+   * Q-49 (DESIGN.md WordCell *place preview*): the orange `★` pill at the card rect's bottom-left,
+   * inset 2 px as the count badge, on the shown top of a non-empty Place preview (WordCellRow) and
+   * reused by the How to play scenes on a `static` card (epic place-preview entry 4). It sits over
+   * the flourish without suppressing it (`bandMark` is unchanged).
+   */
+  previewMark?: boolean;
 } = $props();
 
 // Epic 6 CAP-10 (6.11): only a live column, tray or strip card takes focus (a Tab stop, or -1 for
@@ -143,6 +154,7 @@ const inView = $derived.by(() => {
   class:ghost
   class:used={mirror === 'used' || (mirror === 'static' && used)}
   class:static={mirror === 'static'}
+  class:preview={mirror === 'preview'}
   class:block
   class:start={segment?.start}
   class:end={segment?.end}
@@ -185,6 +197,7 @@ const inView = $derived.by(() => {
     {/if}
   </div>
   {#if topTag}<span class="top-tag">{text.viewTop}</span>{/if}
+  {#if previewMark}<span class="preview-mark" aria-hidden="true">{text.star}</span>{/if}
 </div>
 
 <style>
@@ -209,6 +222,15 @@ const inView = $derived.by(() => {
     box-sizing: border-box; height: 14px; padding: 0 6px; border-radius: 9999px;
     display: grid; place-items: center;
     background: var(--wc-surface-raised); color: var(--wc-ink-primary);
+    font: 700 11px/1 system-ui, "Roboto", sans-serif; pointer-events: none;
+  }
+  /* DESIGN.md WordCell *place preview* (Q-49): the `★` on a 16 px surface-raised pill inside the
+     card rect, bottom-left, inset 2 px (the face starts 2 px into the wrapper); a later sibling
+     such as the WordCell count badge draws above it where they meet (owner decision 2026-10-28). */
+  .preview-mark {
+    position: absolute; left: 4px; bottom: 2px; box-sizing: border-box;
+    width: 16px; height: 16px; border-radius: 9999px; display: grid; place-items: center;
+    background: var(--wc-surface-raised); color: var(--wc-accent-orange);
     font: 700 11px/1 system-ui, "Roboto", sans-serif; pointer-events: none;
   }
   .face {

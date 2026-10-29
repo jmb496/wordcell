@@ -379,7 +379,7 @@ const tileTops = (page: Page) =>
     .locator('.tiles > :not(.wc-caret)')
     .evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().top)));
 
-test('R-50 R-33 R-80 (UI) AD-14 session-place-compact: compact strip over two rows with the corner map, QU tag 4, word line QUARTERED and meta', async ({
+test('R-50 R-33 R-80 (UI) AD-14 Q-49 session-place-compact: compact strip over two rows with the corner map, QU tag 4, word line QUARTERED and meta; cell 4 previews its card beneath', async ({
   page,
 }) => {
   await openFixture(page, 'session-place-compact');
@@ -412,10 +412,12 @@ test('R-50 R-33 R-80 (UI) AD-14 session-place-compact: compact strip over two ro
   // Compact glyphs replace the `bottom`/`top` words.
   await expect(tray(page).locator('.position')).toHaveCount(0);
   expect(await tray(page).locator('.tiles').textContent()).not.toMatch(/bottom|top/);
-  // R-33: free letter 35's origin cell 4 shows its used mark.
-  await expect(page.getByTestId('wordcell-4').locator('[data-mirror-of="35"]')).toHaveClass(
-    /\bused\b/,
-  );
+  // Q-49 (R-33, R-50): free letter 35's origin cell 4 previews its card beneath, live 28; no used
+  // mirror and no element for 35 in the cell.
+  const cell4 = page.getByTestId('wordcell-4');
+  await expect(cell4.locator('.used')).toHaveCount(0);
+  await expect(cell4.locator('[data-mirror-of="35"], [data-card-id="35"]')).toHaveCount(0);
+  await expect(cell4.getByTestId('card-28')).toBeVisible();
   await expect(page.locator('[data-card-id]')).toHaveCount(52);
 });
 

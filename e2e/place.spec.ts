@@ -29,8 +29,8 @@ import { longPress, touchHold } from './helpers/touch';
 // values are literals from view() over the fixtures, never edited to pass. Every setTarget,
 // setPlacementOrder and confirm asserts the stored wordcell:session equals current().session
 // before the next action (R-73). Local helpers (shared ones are in e2e/helpers/, ticket 5.14
-// S1): `expectSaved`/`storedMove` from e2e/tile-tap.spec.ts, ring/target checks and `expectUsedCell3`'s
-// shape from e2e/board-phases.spec.ts, `hoverPeek` from e2e/wordcell-view.spec.ts.
+// S1): `expectSaved`/`storedMove` from e2e/tile-tap.spec.ts, ring/target checks from
+// e2e/board-phases.spec.ts, `hoverPeek` from e2e/wordcell-view.spec.ts.
 
 const SESSION = 'wordcell:session';
 const TWO = 'session-place-free-letter-two-cards';
@@ -257,15 +257,31 @@ async function expectNotLegal(page: Page, cells: readonly number[]): Promise<voi
   }
 }
 
-// R-33: cell `n` shows its top card `top` as the used-hatch mirror; the cards beneath stay hidden.
-async function expectUsedCell(page: Page, n: number, top: number, beneath: number[]) {
-  const used = cell(page, n).locator(`[data-mirror-of="${top}"]`);
-  await expect(used).toHaveCount(1);
-  await expect(used.locator('.face')).toHaveCSS('opacity', '0.4');
-  expect(
-    await used.locator('.face').evaluate((el) => getComputedStyle(el).backgroundImage),
-  ).toContain('repeating-linear-gradient');
-  for (const id of beneath) await expect(cell(page, n).getByTestId(`card-${id}`)).toBeHidden();
+// Q-49 (R-50): target `n` shows `top` as its `preview` mirror with the ★ and badge `count`; its
+// current cards stay live and hidden; no used mirror.
+async function expectPreviewTarget(
+  page: Page,
+  n: number,
+  top: number,
+  count: number,
+  hidden: number[],
+) {
+  const preview = cell(page, n).locator(`.preview[data-mirror-of="${top}"]`);
+  await expect(preview).toHaveCount(1);
+  await expect(preview.locator('.preview-mark')).toBeVisible();
+  await expect(cell(page, n).locator('.used')).toHaveCount(0);
+  await expect(cell(page, n).locator('.count')).toHaveText(String(count));
+  for (const id of hidden) await expect(cell(page, n).getByTestId(`card-${id}`)).toBeHidden();
+}
+
+// Q-49 (R-50): used non-target `n` shows its live card beneath `shown` with the ★, no mirror and
+// no badge (one card after the commit).
+async function expectPreviewBeneath(page: Page, n: number, shown: number) {
+  const live = cell(page, n).getByTestId(`card-${shown}`);
+  await expect(live).toBeVisible();
+  await expect(live.locator('.preview-mark')).toBeVisible();
+  await expect(cell(page, n).locator('[data-mirror-of]')).toHaveCount(0);
+  await expect(cell(page, n).locator('.count')).toHaveCount(0);
 }
 
 // The strip's tags: each live strip tile's id with its free-letter origin tag and position tag.
@@ -391,7 +407,7 @@ test.describe('android', () => {
     await expectOneTargetWrite(page, base);
   });
 
-  test('R-39 F1 F13 with a strip tile selected (won + Undo): a not-legal tap on 7 keeps it, a drag from cell 4 and a drag on target 6’s top card clear it, a tap on target 6 clears it, each no dispatch; then a tap on cell 4 sets the target 4 and clears it', async ({
+  test('R-39 F1 F13 with a strip tile selected (won + Undo): a not-legal tap on 7 keeps it, a drag from cell 4 and a drag on target 6’s shown top clear it, a tap on target 6 clears it, each no dispatch; then a tap on cell 4 sets the target 4 and clears it', async ({
     page,
   }) => {
     await openWonUndo(page);
@@ -415,10 +431,12 @@ test.describe('android', () => {
     await expect(sheet(page)).toHaveCount(0);
     await expectSelected(page, null);
     await unchanged();
-    // R-39: a drag on the current target's top card (13) moves nothing (no free-letter drag in
-    // Place) and clears.
+    // R-39: a drag on the current target's shown top (Q-49: the preview mirror of 46 over its
+    // hidden top card 13, the same card rect) moves nothing (no free-letter drag in Place) and
+    // clears.
     await select(page, 38);
-    const from6: Point = await centre(cell(page, 6).getByTestId('card-13'));
+    await expect(cell(page, 6).getByTestId('card-13')).toBeHidden();
+    const from6: Point = await centre(cell(page, 6).locator('.preview[data-mirror-of="46"]'));
     const drag6 = await touchHold(page, from6);
     try {
       await drag6.moveTo({ x: from6.x + 20, y: from6.y });
@@ -490,7 +508,7 @@ test.describe('android', () => {
     await open(page, TWO);
     await expectTarget(page, 5);
     await expectLegal(page, [3, 4]);
-    await expectUsedCell(page, 4, 28, [20]);
+    await expectPreviewBeneath(page, 4, 20);
     expect(await metaDelta(page)).toBe(21);
     const before = await score(page);
     expect(before).toBe(89);
@@ -499,7 +517,7 @@ test.describe('android', () => {
     expect((await expectSaved(page)).cursor).toEqual({ index: 2, phase: 'place' });
     await expectTarget(page, 4);
     await expectLegal(page, [3, 5]);
-    await expectUsedCell(page, 4, 28, [20]);
+    await expectPreviewTarget(page, 4, 42, 6, [20]);
     const delta = await metaDelta(page);
     expect(delta).toBe(16);
     await confirm(page);
@@ -511,12 +529,12 @@ test.describe('android', () => {
     await expect.poll(() => score(page)).toBe(before + delta);
   });
 
-  test('R-61 R-65 R-80 R-73 (UI) on session-place-free-letter-two-cards: badge 2 on cell 4 with the used mirror on top; a long-press peek on it keeps the tile and dispatches nothing; Confirm into target 5 shows card 20 with no badge', async ({
+  test('R-61 R-65 R-80 R-73 (UI) on session-place-free-letter-two-cards: cell 4 previews card 20 (no badge); a long-press peek on it keeps the tile and dispatches nothing; Confirm into target 5 shows card 20 with no badge', async ({
     page,
   }) => {
     await open(page, TWO);
-    await expect(cell(page, 4).locator('.count')).toHaveText('2');
-    await expectUsedCell(page, 4, 28, [20]);
+    await expect(cell(page, 4).locator('.count')).toHaveCount(0);
+    await expectPreviewBeneath(page, 4, 20);
     await expectTarget(page, 5);
     // R-65, F13: the long-press peek on c (not the target) with a strip tile selected.
     await select(page, 45);
@@ -555,7 +573,7 @@ test.describe('android', () => {
     await expect.poll(() => score(page)).toBe(before + delta);
   });
 
-  test('R-73 (UI) R-42 a reload in Place on session-place-free-letter-two-cards after a strip swap, a retarget to 4 and a tile selected: same strip, tags and target, cell 4 used and the target, nothing selected', async ({
+  test('R-73 (UI) R-42 a reload in Place on session-place-free-letter-two-cards after a strip swap, a retarget to 4 and a tile selected: same strip, tags and target, cell 4 the target previewing 26, nothing selected', async ({
     page,
   }) => {
     await open(page, TWO);
@@ -576,7 +594,7 @@ test.describe('android', () => {
     expect(move.targetCell).toBe(4);
     expect(move.placementOrder).toEqual([42, 32, 45, 28, 26]);
     await expectTarget(page, 4);
-    await expectUsedCell(page, 4, 28, [20]);
+    await expectPreviewTarget(page, 4, 26, 6, [20]);
   });
 
   test('R-39 AD-12 Composing on session-composing with tile 42 selected: a long-press on empty cell 3 dispatches nothing and keeps the tile', async ({

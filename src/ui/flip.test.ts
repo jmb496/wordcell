@@ -158,7 +158,7 @@ class FakeRoot {
         .map((n) => ({
           getAttribute: () => String(n),
           querySelector: (inner: string) => {
-            if (inner !== ':scope > [data-mirror-of]')
+            if (inner !== ':scope > [data-mirror-of]:not(.preview)')
               throw new Error(`fake cell selector ${inner}`);
             const id = this.mirrors[n];
             return id === undefined ? null : { getAttribute: () => String(id) };

@@ -261,7 +261,8 @@ export const text = Object.freeze({
   },
   bandMessage: (band: number) => bandOf(band).message,
   // Epic 6 CAP-11 (6.13) names: column card, tray tile, WordCell top card, WordCell, empty
-  // WordCell, column foot and the source foot (`i` of `n` counts from the first entry).
+  // WordCell (and their Q-49 Place preview forms), column foot and the source foot (`i` of `n`
+  // counts from the first entry).
   nameColumnCard: (
     letter: string,
     column: number,
@@ -277,6 +278,10 @@ export const text = Object.freeze({
   nameCell: (cell: number, letter: string, count: number, used: boolean) =>
     `WordCell ${cell}, top ${letterName(letter)}, ${cards(count)}${used ? ', used' : ''}`,
   nameCellEmpty: (cell: number) => `WordCell ${cell}, empty`,
+  // Q-49: a cell the commit changes, named in Place for its preview (top and count after Confirm).
+  nameCellAfter: (cell: number, letter: string, count: number) =>
+    `WordCell ${cell}, top ${letterName(letter)}, ${cards(count)}, after this word`,
+  nameCellEmptyAfter: (cell: number) => `WordCell ${cell}, empty, after this word`,
   nameFoot: (column: number) => `Column ${column} foot`,
   nameFootSource: (column: number) => `Column ${column}, here`,
   // Epic 6 CAP-11 announcements: delta wording, phase strings, triggers, the outcome sentence.

@@ -226,6 +226,9 @@ import validPlaceLong from '../../fixtures/session-place-long.json' with { type:
 import validPlaceOntoCommitted from '../../fixtures/session-place-onto-committed.json' with {
   type: 'json',
 };
+import validPlaceUsedCells from '../../fixtures/session-place-used-cells.json' with {
+  type: 'json',
+};
 import validWon from '../../fixtures/session-won.json' with { type: 'json' };
 import validWonLongWords from '../../fixtures/session-won-long-words.json' with { type: 'json' };
 import validWonWords from '../../fixtures/session-won-words.json' with { type: 'json' };
@@ -315,7 +318,8 @@ type ValidName =
   | 'idle-pending-draft-long'
   | 'idle-pending-draft-overflow'
   | 'won-words'
-  | 'won-long-words';
+  | 'won-long-words'
+  | 'place-used-cells';
 
 /** The CAP-9 round-trip fixtures (generator record: the plan's Implementation Notes). */
 const VALID: readonly (readonly [ValidName, unknown])[] = [
@@ -340,6 +344,7 @@ const VALID: readonly (readonly [ValidName, unknown])[] = [
   ['idle-pending-draft-overflow', validIdlePendingDraftOverflow],
   ['won-words', validWonWords],
   ['won-long-words', validWonLongWords],
+  ['place-used-cells', validPlaceUsedCells],
 ];
 
 /**
@@ -1100,6 +1105,24 @@ describe('defining properties (§2, CAP-9)', () => {
             (a.letterCount === b.letterCount && a.spelling <= b.spelling),
         ).toBe(true);
       }
+    },
+    // Ticket 11.2 (Q-49, R-40, R-41): MINOR in Place, L = 5, target 5 not a free-letter cell; used
+    // cell 3 (≤ L) holds only its used card, used cell 6 (> L, not legal) holds at least 3 cards,
+    // and unused cell 4 is a non-empty legal cell other than the target.
+    'place-used-cells': (s) => {
+      expect(s.cursor.phase).toBe('place');
+      const move = s.moves[s.cursor.index];
+      const v = view(s, EN);
+      expect(v.draft?.letterCount).toBe(5);
+      expect(v.place?.target).toBe(5);
+      expect(move.freeLetters).not.toContain(5);
+      const at = (n: number) => v.cells.find((c) => c.cell === n);
+      expect(at(3)).toMatchObject({ used: true, isLegalTarget: true });
+      expect(at(3)?.cards).toHaveLength(1);
+      expect(at(6)).toMatchObject({ used: true, isLegalTarget: false });
+      expect(at(6)?.cards.length).toBeGreaterThanOrEqual(3);
+      expect(at(4)).toMatchObject({ used: false, isLegalTarget: true });
+      expect(at(4)?.cards.length).toBeGreaterThan(0);
     },
   };
 
@@ -2160,6 +2183,40 @@ const REBUILDS: readonly (readonly [string, unknown, () => Session])[] = [
         WON_LONG_WORDS_DICTIONARY,
       );
     },
+  ],
+  [
+    'session-place-used-cells',
+    validPlaceUsedCells,
+    // Ticket 11.2 (seed 1): cell 3 loses one card to each of WEAPON and INCUR (R-36, R-61), so
+    // MINOR's free letter from cell 3 leaves it empty after the commit.
+    () =>
+      play(
+        createSession(1),
+        [
+          drop(6, 2, 4),
+          { type: 'arrange', arrangement: [28, 9] },
+          VALIDATE,
+          CONFIRM, // ONE → cell 3 [32, 28, 9]
+          drop(6, 4, 1),
+          { type: 'addFreeLetter', cell: 3 },
+          { type: 'arrange', arrangement: [9, 1, 34, 31, 27] },
+          VALIDATE,
+          CONFIRM, // WEAPON → cell 6
+          drop(8, 3, 1),
+          { type: 'addFreeLetter', cell: 3 },
+          { type: 'arrange', arrangement: [28, 5, 46, 37] },
+          VALIDATE,
+          { type: 'setTarget', cell: 4 },
+          CONFIRM, // INCUR → cell 4
+          drop(2, 2, 8),
+          FLIP,
+          { type: 'addFreeLetter', cell: 3 },
+          { type: 'addFreeLetter', cell: 6 },
+          { type: 'arrange', arrangement: [26, 19, 27, 32] },
+          VALIDATE, // MINOR, target 5
+        ],
+        ['one', 'weapon', 'incur', 'minor'],
+      ),
   ],
 ];
 
