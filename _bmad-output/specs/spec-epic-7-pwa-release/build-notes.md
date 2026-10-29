@@ -42,10 +42,11 @@ offline/update behaviour is an owner question instead (SPEC Open Questions).
   missed), then follow Workbox's events for workers found later. State precedence: `failed`,
   once set this launch, stays; otherwise `registration.waiting` → `waiting`, else `installing` →
   `installing`, else `active` → `active`, else `unregistered`.
-- Failure (Q-40): a rejected `register()`, or any installing worker `sw.ts` observes this launch
+- Failure (Q-40): a rejected `register()`, or any worker `sw.ts` observes this launch
   (present at `register()` or found later; first install or update, an older worker staying
-  active included) turning `redundant` with no newer installing or waiting worker replacing it
-  (a replacement is not a failure). Absent `navigator.serviceWorker` (F5) is checked here, so
+  active included) turning `redundant` before it reached `activated`, with no newer worker in any
+  slot (installing, waiting or active); a replacement, or an activated worker later superseded by
+  one that went straight to `active`, is not a failure (shell Vitest `AD-16` names that case). Absent `navigator.serviceWorker` (F5) is checked here, so
   never in dev. The attempt promise always resolves, after setting `failed`. In hook builds
   (`import.meta.env.DEV || VITE_TEST_HOOKS === '1'`) `sw.ts` reports it with `reportError(new
   Error(...))`, which reaches the AD-15 `error` handler and halts the store, so the tail's
@@ -77,7 +78,10 @@ offline/update behaviour is an owner question instead (SPEC Open Questions).
   asserts it was received, then halts the page (a Q-38 write from a second page, which records
   nothing, or `reportError(new Error(...))` via `page.evaluate`), then fulfils; poll
   `dictionaryState()` until it leaves `loading`, let one macrotask pass, then assert no
-  `register`, `persisted` or `persist` call.
+  `register`, `persisted` or `persist` call. A second case covers the post-import check: a
+  `page.route` (first launch, uncontrolled) holds the `sw.ts` chunk request, the test asserts it
+  was received, halts the page as above, fulfils, waits for the import to settle plus one
+  macrotask, then makes the same three assertions.
 
 ## Persistence (CAP-3)
 
@@ -103,10 +107,12 @@ offline/update behaviour is an owner question instead (SPEC Open Questions).
   where it is silent. Audit every existing `pwa` and `dist-smoke` spec that routes and reloads; a
   `pwa` spec keeps `allow` and routes with `context.route` set before the first `goto`, or, for
   a non-precached URL only, waits for `precacheComplete()` before a routed reload (a controlled
-  page answers precached URLs from the cache, so routes never fire), with a comment; or show it
+  page answers precached URLs from the cache, so routes never fire), or, for a precached URL,
+  deletes its precache entry first (F7), with a comment; or show it
   still holds. Every audited spec that routes asserts its handler was hit. `context.route` never
   sees an updated worker's main-script fetch (microsoft/playwright#14711; unverified for 1.63),
-  so `/sw.js` changes and absences use F8's static server; `context.route` stays for
+  so `/sw.js` changes and absences use F8's static server (`e2e/helpers/static-server.ts`: copy a
+  build dir, swap or remove files, serve with an SPA fallback; tests in `e2e/helpers.spec.ts`); `context.route` stays for
   worker-originated precache fetches and page-level requests. Before
   the first install `context.route` also intercepts the worker's precache fetches, so there it
   answers only with responses that succeed; a failed precached URL turns the install redundant
@@ -114,12 +120,19 @@ offline/update behaviour is an owner question instead (SPEC Open Questions).
   an uncontrolled page, or waits for `precacheComplete()` first.
 - `swState()` `active` is not control (no `clientsClaim`): specs that need control (Q-42,
   update) reload and check `navigator.serviceWorker.controller` first.
-- Offline: wait for `precacheComplete()` (no polling after it), `context.setOffline(true)`, `page.reload()`, then
-  deal/validate through existing helpers; assert `dictionaryState()` `ready`.
+- Offline: make a move, wait for `precacheComplete()` (no polling after it),
+  `context.setOffline(true)`, `page.reload()`, assert the game restored, then deal/validate
+  through existing helpers; assert `dictionaryState()` `ready`. `dist-smoke` offline case (in
+  `dist-smoke.spec.ts`, `allow`): poll `page.evaluate` until the registration's active worker is
+  `activated` and every `readPrecacheManifest` URL is a key in `caches` (`__WB_REVISION__`
+  stripped, as `precacheComplete()`), then the same steps minus the hook reads.
+- No-prompt checks (offline, update): App.svelte's `role="status"` live region is visually
+  hidden but Playwright-visible (1 px box), so the check excludes it by locator.
 - Update (F8): copy `dist-test/` to a temp dir, insert `<meta name="wc-build" content="A">` into
-  its `index.html`, serve it from the spec's own Node static server (the spec or an
-  `e2e/helpers/` module; `index.html` also for navigations), `goto` its URL. After A is `active`
-  and controls the page, write B on disk: `sw.js` with the `index.html` precache revision changed
+  its `index.html`, serve it from `e2e/helpers/static-server.ts` (`index.html` also for
+  navigations), `goto` its URL. After A is `active` and every open page shows a non-null
+  `navigator.serviceWorker.controller` (an early activation with an uncontrolled page open is a
+  test-setup error, never grounds for G3), write B on disk: `sw.js` with the `index.html` precache revision changed
   and `index.html` with marker B; reload (update check); assert `swState()` `waiting` and marker
   A. With B waiting, open a second page, close one, open another: marker A. Close every page of
   the context, poll until B is activated (e.g. `self.serviceWorker.state` evaluated in the newest
@@ -135,8 +148,9 @@ offline/update behaviour is an owner question instead (SPEC Open Questions).
   until `navigator.serviceWorker.getRegistration()` shows no `installing` before asserting no
   surface; the `/sw.js` case's init script also shows `persisted`/`persist` called after the
   failed `register` settles. F17: route the `sw.ts` chunk to 404; assert the route hit; boot,
-  deal, validate, no surface; CAP-3's init script shows `persisted`/`persist` called after it. Q-40 (`pwa`): the same two cases (a `dist-test/` copy for the missing `sw.js`); expect the AD-15 fatal surface
-  and `swState()` `failed`. F17 (`pwa`): the `sw.ts` chunk to 404, route hit, AD-15 fatal
+  deal, validate, no surface; CAP-3's init script shows `persisted`/`persist` called after it. Q-40 (`pwa`, in `e2e/pwa/sw-failure.spec.ts`: the `pwa` project ignores only `dist-smoke.spec.ts`
+  and `dist-smoke`'s `testMatch` omits it, so it runs under `pwa` only): the same two cases (a `dist-test/` copy for the missing `sw.js`); expect the AD-15 fatal surface
+  and `swState()` `failed`. F17 (`pwa`, same file): the `sw.ts` chunk to 404, route hit, AD-15 fatal
   surface, `swState()` `failed`, no `persisted`/`persist` call (CAP-3's init script).
 - Q-42 (F7): with the page controlled, delete the dictionary entry from the precache cache and
   answer the network request with 404 via `context.route`; tap Reload and hold the retry request
@@ -173,12 +187,14 @@ offline/update behaviour is an owner question instead (SPEC Open Questions).
   "After a new build, clear the site data on the phone first.") is printed when a seed page is
   written (session or `--history` fixture); a no-fixture run prints two lines instead: "fresh
   install: clear site data first; update read (G3): keep it". After seeding, the doc says close
-  the Chrome tab and launch the installed app (G5–G7). The seed page's unregister stays only as
+  the Chrome tab and launch the installed app (G4–G6; G4 seeds
+  `fixtures/session-place-free-letter-redo-tail.json` and `fixtures/session-gave-up.json`). The seed page's unregister stays only as
   a guard for an uncontrolled first visit; `dist/sw.js` unchanged.
 - Update read on the tailnet (the one read that keeps site data): build A with
   `WORDCELL_APP_VERSION='A'`, install, run G2's readiness step for A (A active), then stop A's
   server; build B with `'B'`, serve; the footer shows which build runs; a read whose first cold
-  launch already shows B is spoiled and redone, not a fix ticket; the steps follow G3's order: close every WordCell window (app swiped from recents,
+  launch already shows B is spoiled and redone, not a fix ticket (a second consecutive one is a
+finding, G3); the steps follow G3's order: close every WordCell window (app swiped from recents,
   tabs on the origin closed), launch cold (it fetches B; a resume fetches nothing, A-A15), then the
   readiness step (about a minute on Wi-Fi, or B seen waiting in chrome://serviceworker-internals
   (unverified)) before the close-all step.
@@ -199,7 +215,10 @@ offline/update behaviour is an owner question instead (SPEC Open Questions).
   `SKIP_WAITING`, `updateSW` or `virtual:pwa-register` in non-test `src/` (CAP-1, CAP-3);
   Capability → Architecture Map PWA row (`shell/sw.ts`, the state module), and the state module
   in AD-16's `Binds:` line and the Structural Seed `shell/` list; Scaffold deltas: `workbox-window`
-  in `package.json` `dependencies`.
+  in `package.json` `dependencies`; AD-18 Size: the gate also fails on a `sw.ts` manifest key no
+  dynamic edge reaches, plus the `build-output.spec.ts` content check; AD-17 Projects: the update,
+  Q-40 (`sw-failure.spec.ts`) and Q-42 cases, F8's `e2e/helpers/static-server.ts` and the
+  `dist-smoke` offline case.
 - EXPERIENCE.md State Patterns "New app version installed" and Assumptions row A-E4: "activates
   once every WordCell window has closed" (A-E4 wording synced to AD-16, no behaviour change).
 - `docs/device-testing.md` per CAP-7; AGENTS.md, through `bmad-project-context`: the shell-module

@@ -1,6 +1,6 @@
 # Review log — spec-epic-7-pwa-release (SPEC.md + companions)
 
-State: pass 4: done
+State: pass 5: done
 
 Target: `_bmad-output/specs/spec-epic-7-pwa-release/` (SPEC.md, rule-coverage.md, device-checks.md, release-checklist.md, build-notes.md). Mode: docs, thorough, max 7.
 Pre-loop: HEAD fe1ba6f6def230a892e73fe006281307df31247e; copies at `SPEC.review-log.passes/pass0/`; words 5770 (SPEC 2737, build-notes 911, device-checks 1034, release-checklist 593, rule-coverage 495).
@@ -124,3 +124,19 @@ Fixer: all 21 applied (11/14 overlap resolved: a deferred ten-game question mean
 - none new
 ### Dropped
 - CAP-8 "allow technical production fixes in the sweep" — repeat of pass 2's dropped item (methodology's sweep rule, "user direction")
+
+## Pass 5 — 2026-10-29
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 2, minor 19, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 10942 (1.9 x pass 0)  |  Snapshot: SPEC.review-log.passes/pass5/ (fix diff pass5.fix.diff)
+Fixer: all 20 items applied; checked `e2e/helpers.spec.ts`, `PORT = 4173`, `playwright.pwa.config.ts` testIgnore/testMatch (new `e2e/pwa/sw-failure.spec.ts` runs under `pwa` only), fixtures `session-place-free-letter-redo-tail.json` and `session-gave-up.json`, `readPrecacheManifest`, retrospective paths; item 17 excludes App's permanent `role="status"` live region (`App.svelte:106`); unverified: Playwright#14711 on 1.63 (marked in F8/build-notes), visibility of the clipped live region.
+### Applied
+- [major] CAP-1/F4, rule-coverage F4 row, build-notes Boot — the pass-4 `halted()` check between the `sw.ts` import resolving and registration has no test (`main.ts` has no Vitest) → fixer item 1
+- [major] G3, release step 4 — "otherwise redo the read from the start" turns an activation-timing failure (B active while a live A tab is open) into a redo, contradicting G3's Disposition; spoiled-read redos uncapped → item 2
+- [minor] items 3–21: F8 tool claim `(unverified for 1.63)`; static server as an `e2e/helpers/` module tested in `e2e/helpers.spec.ts`; CAP-9 audits run last; version of a post-merge fix before the release commit; desktop-read line in the CAP-7 doc; AD-18 Size and AD-17 Projects in the CAP-9 sync; test-name id for the offline row; worker replaced by an `active` newer worker is not `failed`; update-sequence pages must be controlled (early activation with an uncontrolled page is a setup error, not a D gap); one ten-game footer rule; F10 vs G8 actions; seeded rows G4–G6 and G4 tailnet fixtures; CAP-8 fourth outcome (a `src/` fix becomes a fix ticket under technical defaults); a `pwa`-only file for the `dist-test/` Q-40/F17 cases; P7 assertion of no prompt/indicator; F6 exception for F7's precached dictionary; offline order vs AD-17 wording; a `dist-smoke` offline case (epic 1 retro R2); `sources:` adds three retrospectives
+### Default applied (technical)
+- F4 second check — a P7 `pwa` variant holds the `sw.ts` chunk request (handler asserted hit), halts the page, fulfils, waits for the import to settle plus a macrotask, asserts no `register`, `persisted` or `persist`
+- G3 — footer B after a visible reboot with a live A tab is an activation-timing failure (owner question per Disposition); a second consecutive spoiled read after A's readiness step becomes a finding
+### Decision needed (functionality / UX / gameplay)
+- none new
+### Dropped
+- none
