@@ -113,3 +113,17 @@ Close-out docs: none yet (if the answer is "show the badge", EXPERIENCE.md / DES
 
 ## Stopped — decision needed (stop rule 1)
 Ticket 11.4, Step A (ticket review). Question for Jared: in the real game, the WordCell you are about to place onto shows a count badge (e.g. "6", the cards it will hold after Confirm). How to play scenes never draw count badges. Should the How to play Place scene's previewed WordCell show the "6" badge too? Proposed default: no badge; the scene shows only the new top letter with the ★, so every scene frame stays badge-free. Effect: with the default, the scene matches the game except for the missing number; with the badge, it matches more closely but becomes the only scene frame with a badge. Resume: record the answer (ticket Notes, epic Notes), commit, rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-place-preview`; the next session starts at Step B (the review log has its `## Result`).
+
+Session note (2026-10-29, second session for 11.4): the handoff, git log and ticket files agreed (Step A converged with `## Result`, the no-badge answer committed in 8cd6b84), so Step B started. No live pid files.
+
+## 11.4 How to play Place scene preview — done
+What it adds: the How to play Place scene now shows the WordCell preview the way the game does. The cell being placed onto shows its future top letter with the ★ (no count badge, as you decided), and in frame 2 the used cell 6, which is not the target, shows the empty outline underneath. The scene's opening frame still shows cell 6 as used.
+Ticket review: 4 passes, converged (majors 4, 3, 3, 0); one question answered by you (no count badge in the scene)
+Build: built (its own review found 19 small points: 4 patched, 15 rejected, none deferred; all ten review-log minors resolved in the plan); commit fdb3bd5
+Code review: quick (risk low, no high or medium build finding left), 2 passes, converged (majors 1, 0); 1 fix applied (test tightening in b8d33cf); log in c8e4bb2
+Tests: all passing (`test:all` rerun: unit 3638, e2e 1120, dist 21, pwa 17), screenshots passed (68: the new scene 3 frame 4 baseline, no other baseline changed)
+Ref to fix upstream: none
+Tokens: 5.5M input-equivalent (build 63%, code review 25%, other 7%, orchestrator 5%); orchestrator peak context 75k
+Worth knowing: (1) The first `test:all` failed on one test, `[android] e2e/nav.spec.ts:163` (a double tap on New game on the rejected-save screen), the same load flake as in epic 10. This time the `doubleTap` helper's own check fired: the second tap arrived as a single tap even with stamped timestamps. It passed 5 of 5 alone and the whole suite passed on the rerun; this ticket touches neither that test nor its helpers. The flake is back after fix 169c6bc, so it is worth a look in the 11.6 refactor sweep (log kept as `11.4-testall-attempt1.log`). (2) The place fixture gained a `previews` list, as the hardened ticket says (it replaces the toml entry's "fixture unchanged" clause). (3) One code-review minor left open (log `11-4-build.md`): the two bad-frame render tests match only the message prefix, so they cannot tell Scene.svelte's two throws apart.
+Close-out docs:
+- EXPERIENCE.md How to play (Place scene) / DESIGN.md ← the scene's previewed WordCell shows the ★ and no count badge; scenes stay badge-free (owner, 2026-10-29), only if their wording implies a badge (a grep found none)

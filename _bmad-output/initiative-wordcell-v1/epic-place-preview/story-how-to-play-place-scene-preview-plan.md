@@ -3,7 +3,7 @@ title: 'How to play Place scene preview'
 type: 'feature'
 ticket: '4'
 created: '2026-10-29'
-status: 'built'
+status: done
 baseline_revision: '8cd6b844ad0eb3aaa21f50ee5d31d93b87b8f1db'
 route: 'full'
 route_source: 'auto'
