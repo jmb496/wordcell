@@ -1,22 +1,27 @@
 <script lang="ts">
-import type { CellView, Face, GameView } from '../engine/index';
+import type { CardId, CellView, Face, GameView } from '../engine/index';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import Card from './Card.svelte';
 // biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { inFlight } from './flip';
-// biome-ignore lint/correctness/noUnusedImports: used in markup, which Biome does not read.
 import { text } from './text';
 
-// DESIGN.md WordCell, build-notes CAP-2: labels 3–10 in the `labelsRow` track, each wordcell-<n>
-// in the `cellsRow` track under column n − 2 (A-D7), outside its label (F25). Every cell card is
-// a live Card (AD-14) in DOM order bottom → top, stacked; only the top one is visible, except a
-// `used` cell's top card, which is live in the tray or strip and drawn here as a used mirror
-// (R-33). States come from `CellView` and `view.place` (AD-3). Cards are keyed by id plus mirror
-// kind (A9 4.3-m3, AD-14), so a live ↔ used switch remounts the node. While a Confirm or Redo
-// flies its cards in (flip.ts `inFlight`, epic 5 SPEC CAP-8, F28) the cell holds: the committed
-// cards and the previous top stay shown (the cell never looks empty), and in the cell that held
-// the used mirror (R-52) that mirror, drawn first so beneath the committed faces, is the only
-// previous top; the last landing releases it and the non-top cards hide together. During a free-letter drag
+// DESIGN.md WordCell, build-notes CAP-2: labels 3–10 in the `labelsRow` track, each wordcell-<n> in
+// the `cellsRow` track under column n − 2 (A-D7), outside its label (F25). Every cell card is a
+// live Card (AD-14) in DOM order bottom → top, stacked; only the top one is visible, except a
+// `used` cell's top card, which is live in the tray or strip and drawn here, in Composing only, as
+// a used mirror (R-33). In Place a cell the commit changes (`cell.preview`, AD-3, Q-49) is drawn as
+// after Confirm instead: its used card gets no element here, the shown top is `preview.top` (a live
+// card beneath, or for the target a `preview` mirror of the strip's last tile) with the `★`, the
+// empty outline when it is null, and badge and group name from the preview; the cell's other live
+// cards stay hidden and silent (the R-65 view still lists `cell.cards`). States come from
+// `CellView` and `view.place` (AD-3). Cards are keyed by id plus mirror kind (A9 4.3-m3, AD-14), so
+// a live ↔ used or preview switch remounts the node. While a Confirm or Redo flies its cards in
+// (flip.ts `inFlight`, epic 5 SPEC CAP-8, F28, E6) the target holds: its base, drawn first, is a
+// silent `preview` mirror of its new top without the `★` (the live top is itself the last flying
+// card), and the committed cards stay shown over it; the cards before the committed run stay
+// hidden, so the cell never looks empty and never shows its previous top. The last landing
+// releases the hold: the copy goes and the non-top cards hide together. During a free-letter drag
 // (epic 5 SPEC CAP-6, R-61) the controller's `wc-drag-ghost` on the cell draws the 1 px dashed
 // ghost at the card rect and the dragged top face takes `wc-drag-layer` as Column's does (literals
 // from gestures/classes.ts); the count badge keeps counting the dragged card.
@@ -35,13 +40,85 @@ let {
 } = $props();
 
 const inPlace = $derived(place !== undefined);
+
+type Shown = {
+  id: CardId;
+  key: string;
+  mirror?: 'used' | 'preview';
+  hidden: boolean;
+  name?: string;
+  silent: boolean;
+  mark: boolean;
+};
+
+// One entry per card element in the cell, bottom → top (the flight hold's copy first).
+function shown(cell: CellView, lowest: number): Shown[] {
+  const preview = cell.preview;
+  if (preview !== undefined) {
+    // Q-49: the used card's live element is its strip tile, so the cell draws none of it.
+    const live = cell.used ? cell.cards.slice(0, -1) : cell.cards;
+    const list: Shown[] = live.map((id) => ({
+      id,
+      key: `${id}-live`,
+      hidden: id !== preview.top,
+      silent: true,
+      mark: id === preview.top,
+    }));
+    if (preview.top !== null && !live.includes(preview.top)) {
+      list.push({
+        id: preview.top,
+        key: `preview-${preview.top}`,
+        mirror: 'preview',
+        hidden: false,
+        silent: true,
+        mark: true,
+      });
+    }
+    return list;
+  }
+  const top = cell.cards.length - 1;
+  const list: Shown[] = cell.cards.map((id, i) => ({
+    id,
+    key: `${id}-${i === top && cell.used ? 'used' : 'live'}`,
+    mirror: i === top && cell.used ? 'used' : undefined,
+    hidden: i !== top && !(lowest >= 0 && i >= lowest),
+    name: i === top ? text.nameCellTop((faces[id] as Face).letter, cell.cell) : undefined,
+    silent: i !== top,
+    mark: false,
+  }));
+  if (lowest >= 0) {
+    // F28, E6: the hold's base, the new top's copy; the `★` went at commit.
+    const newTop = cell.cards.at(-1) as CardId;
+    list.unshift({
+      id: newTop,
+      key: `preview-${newTop}`,
+      mirror: 'preview',
+      hidden: false,
+      silent: true,
+      mark: false,
+    });
+  }
+  return list;
+}
+
+function cellName(cell: CellView): string {
+  const preview = cell.preview;
+  if (preview !== undefined) {
+    return preview.top === null
+      ? text.nameCellEmptyAfter(cell.cell)
+      : text.nameCellAfter(cell.cell, (faces[preview.top] as Face).letter, preview.count);
+  }
+  const top = cell.cards.at(-1);
+  return top === undefined
+    ? text.nameCellEmpty(cell.cell)
+    : text.nameCell(cell.cell, (faces[top] as Face).letter, cell.cards.length, cell.used);
+}
 </script>
 
 {#each cells as cell (cell.cell)}
-  {@const top = cell.cards.length - 1}
   {@const target = place?.target === cell.cell}
   {@const lowest = cell.cards.findIndex((id) => inFlight.committed.has(id))}
-  {@const usedId = lowest < 0 ? undefined : [...inFlight.used][0]}
+  {@const count = cell.preview?.count ?? cell.cards.length}
   {@const dim = inPlace && !cell.isLegalTarget && !target}
   <span
     class="label"
@@ -54,41 +131,32 @@ const inPlace = $derived(place !== undefined);
   <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
   <div
     class="wordcell"
-    class:empty={cell.cards.length === 0}
+    class:empty={cell.preview === undefined ? cell.cards.length === 0 : cell.preview.top === null}
     class:legal={inPlace && cell.isLegalTarget && !target}
     class:target
     class:wc-dim={dim}
     role="group"
-    aria-label={cell.cards.length === 0
-      ? text.nameCellEmpty(cell.cell)
-      : text.nameCell(
-          cell.cell,
-          (faces[cell.cards[top] as number] as Face).letter,
-          cell.cards.length,
-          cell.used,
-        )}
+    aria-label={cellName(cell)}
     tabindex="0"
     data-testid="wordcell-{cell.cell}"
     data-wordcell={cell.cell}
     style:grid-column={cell.cell - 2}
     style:grid-row={cellsRow}
   >
-    {#if usedId !== undefined}
-      <Card id={usedId} face={faces[usedId] as Face} place="cell" full mirror="used" />
-    {/if}
-    {#each cell.cards as id, i (`${id}-${i === top && cell.used ? 'used' : 'live'}`)}
+    {#each shown(cell, lowest) as card (card.key)}
       <Card
-        {id}
-        face={faces[id] as Face}
+        id={card.id}
+        face={faces[card.id] as Face}
         place="cell"
         full
-        hidden={i !== top && !(lowest >= 0 && (i >= lowest || (i === lowest - 1 && usedId === undefined)))}
-        mirror={i === top && cell.used ? 'used' : undefined}
-        name={i === top ? text.nameCellTop((faces[id] as Face).letter, cell.cell) : undefined}
-        silent={i !== top}
+        hidden={card.hidden}
+        mirror={card.mirror}
+        name={card.name}
+        silent={card.silent}
+        previewMark={card.mark}
       />
     {/each}
-    {#if cell.cards.length >= 2}<span class="count">{cell.cards.length}</span>{/if}
+    {#if count >= 2}<span class="count">{count}</span>{/if}
     {#if target}
       <span class="check" aria-hidden="true">
         <svg viewBox="0 0 14 14" width="14" height="14"><path d="M3.5 7.2 L6 9.6 L10.5 4.6" /></svg>

@@ -150,13 +150,18 @@ const geo = $derived({
     color: var(--wc-ink-secondary);
   }
   /* Owner decision D12 (DESIGN.md: no text under 11 px): the scaled stage's text is counter-scaled
-     by --wc-scene-up (geometry.ts `sceneTextUp`), the Card's ×2 badge with its pill and the strip
-     marks included; every scene layer is a child of the stage. */
+     by --wc-scene-up (geometry.ts `sceneTextUp`), the Card's ×2 badge with its pill, the strip
+     marks and the Q-49 `★` pill (size and font, not the inset) included; every scene layer is a
+     child of the stage. */
   .stage :global(.card .badge) {
     width: calc(18px * var(--wc-scene-up)); height: calc(12px * var(--wc-scene-up));
     font-size: calc(11px * var(--wc-scene-up));
   }
   .stage :global(.card .mark) { font-size: calc(11px * var(--wc-scene-up)); }
+  .stage :global(.card .preview-mark) {
+    width: calc(16px * var(--wc-scene-up)); height: calc(16px * var(--wc-scene-up));
+    font-size: calc(11px * var(--wc-scene-up));
+  }
   .mini { position: relative; display: flex; flex-direction: column; }
   .mini.empty { height: var(--wc-H); }
   .mini.empty::before {

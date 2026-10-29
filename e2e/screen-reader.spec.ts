@@ -14,7 +14,8 @@ import { fixture, seedStorage } from './helpers/seed';
 // Epic 6 ticket 6.13 (SPEC CAP-11; EXPERIENCE.md Accessibility Floor, A-E9): accessible names and
 // the one polite live region. Fixtures (seed 1): `session-composing` (TAN, 3 letters, column 3's
 // two cards on column 6 with k = 1), `session-place` (the same word in Place, target cell 3),
-// `session-idle-fresh`, `session-won` (Undo gives the Place whose Confirm wins), `session-gave-up`.
+// `session-idle-fresh`, `session-won` (Undo gives the Place whose Confirm wins), `session-gave-up`,
+// `session-place-used-cells` (Q-49: MINOR in Place, target 5, used cells 3 and 6, unchanged 4).
 
 test.beforeEach(onAndroid);
 
@@ -292,9 +293,38 @@ test('A-E9 the same commit with no hide is announced (control for the hide case)
 });
 
 test('A-E9 a used WordCell reads its name with used', async ({ page }) => {
-  await openFixture(page, 'session-place-free-letter-two-cards');
+  // Composing (one Undo from Place): in Place the cell reads its Q-49 preview name instead.
+  await openFixture(page, 'session-place-free-letter-two-cards', { steps: ['undo'] });
   await expect(page.getByTestId('wordcell-4')).toHaveAccessibleName(
     'WordCell 4, top N, 2 cards, used',
+  );
+});
+
+test('A-E9 Q-49 in Place each WordCell the commit changes reads its after-this-word name and exposes no named card', async ({
+  page,
+}) => {
+  // session-place-used-cells: target 5 (empty), used cells 3 (one card) and 6 (not legal).
+  await openFixture(page, 'session-place-used-cells');
+  for (const [n, name] of [
+    [5, 'WordCell 5, top R, 5 cards, after this word'],
+    [6, 'WordCell 6, top O, 5 cards, after this word'],
+    [3, 'WordCell 3, empty, after this word'],
+  ] as const) {
+    const cell = page.getByTestId(`wordcell-${n}`);
+    await expect(cell).toHaveAccessibleName(name);
+    await expect(cell.getByRole('button')).toHaveCount(0);
+  }
+});
+
+test('A-E9 Q-49 in Place an unchanged WordCell keeps its name and its one named top card', async ({
+  page,
+}) => {
+  await openFixture(page, 'session-place-used-cells');
+  const cell = page.getByTestId('wordcell-4');
+  await expect(cell).toHaveAccessibleName('WordCell 4, top R, 5 cards');
+  await expect(cell.getByRole('button')).toHaveCount(1);
+  await expect(cell.getByRole('button', { name: 'R, WordCell 4, top', exact: true })).toHaveCount(
+    1,
   );
 });
 

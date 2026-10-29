@@ -114,7 +114,8 @@ for (const { id, prefs } of ARTS) {
   test(`AD-14 TH-9 ${id}: a used face keeps its hatch and no texture, html carries the table image and body none`, async ({
     page,
   }) => {
-    await openFixture(page, 'session-place-free-letter-redo-tail', { prefs });
+    // Composing (one Undo): Place draws the Q-49 preview instead of the used face.
+    await openFixture(page, 'session-place-free-letter-redo-tail', { prefs, steps: ['undo'] });
     const used = page.locator('.card.used .face');
     await expect(used).toHaveCount(1);
     const usedImage = await style(used, 'background-image');

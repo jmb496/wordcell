@@ -79,6 +79,8 @@ const TABLE: readonly [string, string, number, number][] = [
   ['card-edge', 'surface', 3, 3.2],
   ['accent-teal', 'surface', 3, 7.0],
   ['accent-teal', 'card-face', 3, 6.6],
+  // Q-49: the place preview `★` on its surface-raised pill (graphics).
+  ['accent-orange', 'surface-raised', 3, 5.0],
 ];
 // TH-9: the two art tokens are `none` or an SVG data URI, optional in a non-default record.
 const TABLE_ART = '--wc-table-art';

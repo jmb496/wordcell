@@ -83,6 +83,18 @@ export interface SceneFixture {
     readonly after: number;
     readonly columns: readonly (readonly string[])[];
   }[];
+  /**
+   * Q-49 (epic place-preview entry 4): after `after` commands, cell `cell`'s Place preview (the
+   * view's `cells[].preview`): its top letter after the commit (`'QU'` for the QU card, `null` for
+   * empty) and its card count. When present, the entries at each after from 0 to `commands.length`
+   * list exactly the cells the engine previews, so an after with no entries proves no preview.
+   */
+  readonly previews?: readonly {
+    readonly after: number;
+    readonly cell: number;
+    readonly top: string | null;
+    readonly count: number;
+  }[];
 }
 
 export interface SceneReplay {
@@ -107,7 +119,8 @@ function fail(scene: SceneFixture, message: string): never {
 
 /**
  * Replays `scene.commands` over its start, then checks the optional `words`, `scores`,
- * `validatable` and `cellScores` fields when present. `dictionary` is the `ctx.dictionary` of `validate`.
+ * `validatable`, `block`, `cells`, `place`, `drafts`, `columns`, `previews` (exactly, at every
+ * after) and `cellScores` fields when present. `dictionary` is the `ctx.dictionary` of `validate`.
  */
 export function replayScene(scene: SceneFixture, dictionary: ReadonlySet<string>): SceneReplay {
   const start = sceneStart(scene);
@@ -199,6 +212,43 @@ export function replayScene(scene: SceneFixture, dictionary: ReadonlySet<string>
       const listed = columns[column - 1] ?? [];
       if (held.join(',') !== listed.join(','))
         fail(scene, `after ${after} commands column ${column} stated ${listed}, engine ${held}`);
+    }
+  }
+  if (scene.previews !== undefined) {
+    const previews = scene.previews;
+    for (const { after } of previews) index('previews after', after, count);
+    const fmt = (preview: { top: string | null; count: number } | undefined): string =>
+      preview === undefined
+        ? 'none'
+        : preview.top === null
+          ? `empty ${preview.count}`
+          : `${preview.top} ${preview.count}`;
+    for (let after = 0; after <= count; after++) {
+      const shown = viewFrom(start, sessions[after], EN);
+      const listed = previews.filter((entry) => entry.after === after);
+      const cells = new Set([
+        ...listed.map((entry) => entry.cell),
+        ...shown.cells.filter((c) => c.preview !== undefined).map((c) => c.cell),
+      ]);
+      for (const cell of [...cells].sort((a, b) => a - b)) {
+        const entries = listed.filter((entry) => entry.cell === cell);
+        if (entries.length > 1)
+          fail(scene, `after ${after} commands cell ${cell} is listed twice in previews`);
+        const preview = shown.cells.find((c) => c.cell === cell)?.preview;
+        const engine =
+          preview === undefined
+            ? undefined
+            : {
+                top: preview.top === null ? null : shown.faces[preview.top].letter,
+                count: preview.count,
+              };
+        const entry = entries[0];
+        if (entry?.top !== engine?.top || entry?.count !== engine?.count)
+          fail(
+            scene,
+            `after ${after} commands cell ${cell} stated preview ${fmt(entry)}, engine ${fmt(engine)}`,
+          );
+      }
     }
   }
   const stated = new Set((scene.cellScores ?? []).map((entry) => entry.after));

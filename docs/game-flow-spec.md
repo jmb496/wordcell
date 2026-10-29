@@ -1,6 +1,6 @@
 # WordCell – Game flow specification
 
-Status: v0.11, 2026-10-20. Jared answered Q-01…Q-33 on 2026-09-26 (Q-26…Q-33 were raised by the
+Status: v0.12, 2026-10-25. Jared answered Q-01…Q-33 on 2026-09-26 (Q-26…Q-33 were raised by the
 review loop, see `game-flow-spec.review-log.md`); the decisions are recorded in §9 and applied to
 the rules below. There are no open questions. v0.6 only refines the test-coverage rule in this
 preamble, as the product brief's success criterion 4 requires. v0.7 adds Q-34 (a short drag that never leaves its source column is a cancel,
@@ -10,7 +10,7 @@ answered by Jared on 2026-09-27; Q-41 amends the §2 replay paragraph and Q-43 r
 record identity. v0.9 adds Q-44 (best and average score exclude negative given-up games, R-84),
 answered by Jared on 2026-09-30, and tags the R-50 and R-83 UI sentences (UI) (owner-approved
 the same day); on 2026-10-01 Jared amended Q-42's service-worker branch (epic 3
-retrospective). v0.10 adds Q-45 (the look is a manual theme choice in Preferences, default Charcoal, answered by Jared on 2026-10-18) and extends §7.10. v0.11 adds Q-46…Q-48 (the end-of-game word list and the win celebration, answered by Jared on 2026-10-19 and 2026-10-20), R-86…R-88 and §7.12. On 2026-10-24 the owner amended R-87's press skip to exempt the dictionary banner as well (epic 10 close-out). Every rule has an id (R-xx) so
+retrospective). v0.10 adds Q-45 (the look is a manual theme choice in Preferences, default Charcoal, answered by Jared on 2026-10-18) and extends §7.10. v0.11 adds Q-46…Q-48 (the end-of-game word list and the win celebration, answered by Jared on 2026-10-19 and 2026-10-20), R-86…R-88 and §7.12. On 2026-10-24 the owner amended R-87's press skip to exempt the dictionary banner as well (epic 10 close-out). v0.12 adds Q-49 (in Place, each WordCell the commit changes previews its top card after the commit, answered by Jared on 2026-10-25) and amends R-33 and R-50. Every rule has an id (R-xx) so
 tests, specs and tickets can cite it. A "(UI)" in a rule's id tags the whole rule; a trailing
 "(UI)" tags only the sentence it ends. Tagged rules and sentences are satisfied by a Playwright
 test naming the R-id; every untagged sentence that states engine behaviour by an engine unit test
@@ -189,7 +189,7 @@ with nothing to undo, Redo without redo data) (CLAUDE.md rule 6).
 - **R-32** Destination cards are never reordered and never interleaved with M. The tray shows
   them as a fixed block with a visual indication that they cannot be rearranged (UI).
 - **R-33** Each WordCell may contribute at most its current top card, and at most once per word.
-  Choosing it marks that WordCell "used" for this word, shown as a visual deactivation (UI). A
+  Choosing it marks that WordCell "used" for this word, shown in Composing as a visual deactivation; in Place R-50's preview replaces it (Q-49) (UI). A
   tap on a used or empty WordCell in Composing is a no-op (not an edit, R-71). A free letter is
   removed from the word only by the remove-free-letter command, issued from its tile in the tray
   (§7.2); that reactivates the cell and is an edit. The add-free-letter command takes an optional
@@ -232,6 +232,12 @@ with nothing to undo, Redo without redo data) (CLAUDE.md rule 6).
 ### Phase E – Order the cards for placement (same Place screen as Phase D)
 - **R-50** All word cards (S ∪ F ∪ D) are placed on the target WordCell in any order the player
   chooses. The UI shows which card lands on the bottom and which becomes the new top. (UI)
+  In Place each WordCell the commit changes (every used cell and the target) shows its top card and
+  card count as they will be after the commit (R-60, R-61): the target shows the last card of the
+  placement order, a used cell that is not the target shows the card beneath its used one, or its
+  empty slot; the top card shown is marked as a preview, and it follows every reorder and
+  retarget; the current top of a changed cell is not shown, but the R-65 view still lists the
+  cell's current cards (Q-49) (UI).
 - **R-51** Default order is the word order: the word read left-to-right taken as bottom→top, so
   the word's first letter is at the bottom and its last letter becomes the new top card / free
   letter (R-52). The player may reorder before confirming. Changing the target does not reset
@@ -407,7 +413,7 @@ This section is how the rules above surface on a touch screen. It is a starting 
 3. **Validate.** A single primary button, inactive until the word is structurally legal (R-38).
    Valid advances to Place; invalid shows a short message and stays in the tray.
 4. **Place.** One screen (Q-22): legal WordCells light up with the highest pre-selected, tap to
-   change; below, a compact strip shows the placement order bottom→top with the future top card
+   change; each WordCell the commit changes previews its top card after the commit (Q-49); below, a compact strip shows the placement order bottom→top with the future top card
    marked, drag to reorder. A single Confirm commits with an animation of cards flying to the
    cell.
 5. (merged into 4.)
@@ -455,7 +461,7 @@ currently shows `L` as its top card, add it (R-33) and arrange → **BALKED** (6
 removing S, col1 is `F`; it must be included → **FAKED**, or with `L` → **FLAKED**. Laying
 `DEKA…` under col3 without `B` is not allowed while col3 has cards.
 
-## 9. Decisions (Q-01 … Q-48, answered 2026-09-26, 2026-09-27, 2026-09-30, 2026-10-18, 2026-10-19 and 2026-10-20)
+## 9. Decisions (Q-01 … Q-49, answered 2026-09-26, 2026-09-27, 2026-09-30, 2026-10-18, 2026-10-19, 2026-10-20 and 2026-10-25)
 
 | # | Question | Decision |
 |---|---|---|
@@ -507,3 +513,4 @@ removing S, col1 is `F`; it must be included → **FAKED**, or with `L` → **FL
 | Q-46 | Which outcomes get the win celebration and the word list? | Only a win gets the bouncing-words celebration; both a win and a give-up can view the word list (answered 2026-10-19). R-87, R-88. |
 | Q-47 | How is the word list ordered, and are repeated words merged? | Letter count descending, ties alphabetical; a word played twice is listed twice (answered 2026-10-19). R-86. |
 | Q-48 | Scope and behaviour of the celebration and list? | Each word is a group of cards bouncing on a Windows-style arcing path, with no trail copies and no hue change; the celebration can be skipped (press, `Space`/`Esc`, back) but not replayed from the end sheet, though a Redo that restores the win plays it again; the word list covers the latest game only and is not stored (answered 2026-10-19); back, hide and resize also end it, and a Redo that restores the win plays it again (answered 2026-10-20). R-87, R-88. |
+| Q-49 | In Place, what do the WordCells show while the player orders and places the word? | Each cell the commit changes shows its state after the commit (answered 2026-10-25): the target shows the future top card (the last card of the placement order, following every reorder and retarget, also when the target is a used cell, R-41) and its count after the commit; a used cell that is not the target shows the card beneath its used one, or its empty slot; the shown top is marked subtly as a preview; the used card is no longer shown in its cell. Composing keeps the dimmed used look. The R-65 view keeps showing the cell's current cards. R-33, R-50, §7.4. |

@@ -7,8 +7,8 @@ paradigm: 'functional core / imperative shell, event-sourced'
 scope: 'WordCell v1: pure rules engine, event-sourced Session, app shell services, Svelte UI, PWA packaging, CI and deploy'
 status: final
 created: '2026-09-27'
-updated: '2026-10-20'
-binds: ['spec R-01…R-88, §2, Q-01…Q-48', 'brief §6, §7, §9', 'DESIGN.md', 'EXPERIENCE.md']
+updated: '2026-10-29'
+binds: ['spec R-01…R-88, §2, Q-01…Q-49', 'brief §6, §7, §9', 'DESIGN.md', 'EXPERIENCE.md']
 sources:
   - _bmad-output/planning-artifacts/briefs/brief-wordcell-2026-09-26/brief.md
   - docs/game-flow-spec.md (v0.9)
@@ -170,7 +170,11 @@ flowchart LR
   no-op per AD-2, while the engine no-op stays the tested contract; tap,
   `Enter`/`Space` and the hover preview all read it; a card absent from it is inert: no
   dispatch, no hover preview); per cell `used`, `canAddFreeLetter`,
-  `canSetTarget` (phase = place and `isLegalTarget` and cell ≠ target), `isLegalTarget`; the draft (S, D, k, side, `arrangement`, free letters, word
+  `canSetTarget` (phase = place and `isLegalTarget` and cell ≠ target), `isLegalTarget`, and
+  `preview` (R-50, Q-49, amended 2026-10-25: present exactly when phase = place and the R-60 commit
+  changes the cell, i.e. it is used or the target; `{ top: CardId | null, count }`, the cell's top
+  card (`null` = empty) and card count after the commit, so the UI never computes the committed
+  cell); the draft (S, D, k, side, `arrangement`, free letters, word
   string, `wordCards` (the word's `CardId`s in R-30 word order, so the word line maps cards to
   faces and marks D cards by the draft's D list without computing the word; amended 2026-10-08,
   epic 5 SPEC), letter count, structural check result with its reason); Place data (legal targets,
@@ -673,14 +677,20 @@ sequenceDiagram
   (amended 2026-10-08, epic 5 SPEC). In Composing and Place the live
   element of an S, D-in-strip or free-letter card is its tray or strip tile; a D card in
   Composing is live in its column and its tray-block copy is a mirror; in Place the destination
-  column's copy of each D card is a mirror. A used WordCell's face in Composing and Place is a
-  mirror; the live element is the tray or strip tile. A non-top WordCell card
+  column's copy of each D card is a mirror. A used WordCell's face in Composing is a
+  mirror; the live element is the tray or strip tile. In Place a cell with a `preview` (AD-3) draws
+  no copy of its used card; it shows `preview.top`: a card still in the cell (a used cell's card
+  beneath) is its live cell element, and a card whose live element is a strip
+  tile (the target's future top) is a `preview` mirror (amended 2026-10-25, Q-49). From Confirm
+  (or a Redo that commits) until the last landing the target's base is a `preview` mirror of its
+  new top without the `★`, drawn beneath the committed cards
+  (amended 2026-10-28, Q-49). A non-top WordCell card
   has a (possibly hidden) live element in its cell stack; a card committed by the move in flight
-  stays visible during its fly-to-cell and is hidden on landing if it is not the top
-  (amended 2026-10-08); WordCell view and peek copies are
+  stays visible during its fly-to-cell, and the non-top ones hide together at the last landing
+  (amended 2026-10-08; epic 5 SPEC F28); WordCell view and peek copies are
   mirrors. A **mirror** is any non-live copy of a card and takes its look from the DESIGN.md
-  state for its place: S slots in the source column, *ghost*; a used WordCell's face, *used this
-  word* (40 % opacity with the hatch); the D tray-block copy in Composing, the destination block;
+  state for its place: S slots in the source column, *ghost*; a used WordCell's face in Composing, *used this
+  word* (40 % opacity with the hatch); the target's preview top in Place, *place preview* (the fly-in base: the same face without the `★`); the D tray-block copy in Composing, the destination block;
   WordCell view and peek copies, normal cards. Mirrors carry
   `data-mirror-of`, no `data-card-id` or `data-testid`, and never animate: they take no part in
   the FLIP glide, but a D-block mirror carries the tray's drag parting shift (snapped under

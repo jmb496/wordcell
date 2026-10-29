@@ -226,8 +226,9 @@ test.describe('android', () => {
     const used = usedCells[0].cell;
     const order = usedCells[0].cards.map(String);
     const count = order.length;
+    // The used cell is also the target here, so Place draws it with the Q-49 preview mirror.
     expect(
-      Number(await page.locator('[data-wordcell]:has(.used)').getAttribute('data-wordcell')),
+      Number(await page.locator('[data-wordcell]:has(.preview)').getAttribute('data-wordcell')),
     ).toBe(used);
     const unchanged = await stash(page);
     await holdPeek(page, used, async () => {
@@ -1050,7 +1051,7 @@ test.describe('desktop', () => {
     const cards = await cellCards(page, 3);
     expect(cards).toHaveLength(3);
     expect(
-      Number(await page.locator('[data-wordcell]:has(.used)').getAttribute('data-wordcell')),
+      Number(await page.locator('[data-wordcell]:has(.preview)').getAttribute('data-wordcell')),
     ).toBe(3);
     const unchanged = await stash(page);
     await hoverCell(page, 3);

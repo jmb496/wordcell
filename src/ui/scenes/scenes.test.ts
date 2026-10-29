@@ -738,12 +738,23 @@ describe('AD-14 scene place against its fixture', () => {
     expect(fly.some((e) => e.element === 'strip-4' && e.keyframes.length === 2)).toBe(true);
   });
 
-  it('AD-14 the tuck: six fliers D B A L K E, one sixth each, linear with a segment easing, strip and Confirm hidden, swap in phase 1', () => {
+  it('AD-14 Q-49 the tuck: six fliers D B A L K E, one sixth each, linear with a segment easing, strip, Confirm and the target star hidden, swap in phase 1', () => {
     const index = placeScene.steps.findIndex((s) => s.type === 'fly');
     const fly = sceneEffects(placeScene)[index];
     const hidden = [{ opacity: 0 }, { opacity: 0 }];
     for (const id of ['strip-4', 'confirm'])
       expect(fly.find((e) => e.element === id)?.keyframes).toStrictEqual(hidden);
+    // Q-49 (E6): the fly step has no wait, so the target's star goes in its phase 0, at commit;
+    // the previewed top E on place-4 stays drawn under the fliers (nothing targets place-4).
+    expect(placeScene.steps[index].wait).toBeUndefined();
+    expect(fly.some((e) => e.element === 'place-4')).toBe(false);
+    const mark = need(fly.find((e) => e.element === 'mark-4'));
+    expect([mark.keyframes, mark.phase]).toStrictEqual([hidden, 0]);
+    // Before the commit nothing touches the star: its one effect is this fly-step hold.
+    const marks = sceneEffects(placeScene)
+      .flat()
+      .filter((e) => e.element === 'mark-4');
+    expect(marks).toStrictEqual([mark]);
     const ghost = fly.filter((e) => e.element === 'ghost');
     expect(ghost).toHaveLength(1);
     expect([ghost[0].phase, ghost[0].times, ghost[0].kind]).toStrictEqual([0, 1, 'flyToCell']);
@@ -786,6 +797,9 @@ describe('AD-14 scene place against its fixture', () => {
     expect(() => redefine({ ...tucks, letters: ['B', 'A', 'L', 'K', 'E', 'D'] })).toThrow(
       /placement order/,
     );
+    expect(() =>
+      defineScene({ ...placeScene, elements: placeScene.elements.filter((e) => e !== 'mark-4') }),
+    ).toThrow(/\(tucks\) does not declare mark-4/);
   });
 
   it('AD-1 a landed scene allows no grab or drop, a carried one needs its geometry, and a tap or move command must fit', () => {
@@ -1023,6 +1037,9 @@ describe('AD-3 scenes place and scoring figure structure', () => {
     expect(html.match(new RegExp(`>${text.validate}</span>`, 'g'))).toHaveLength(1);
     expect(html).not.toContain('data-scene-el="tail');
     expect(html).not.toContain('data-scene-el="dest"');
+    // Q-49: frames 1 to 4 each draw one previewed top with the star (frame 2's cell 6 is empty).
+    expect(html.match(/class="preview-mark[ "]/g)).toHaveLength(4);
+    expect(html.match(/data-scene-el="mark-4"/g)).toHaveLength(1);
     expect(html).not.toContain('data-card-id');
     expect(html).not.toContain('data-testid');
     expect(html).not.toContain('data-mirror-of');
@@ -1080,7 +1097,8 @@ describe('AD-3 scenes place and scoring figure structure', () => {
     expect(topOf(3)).toStrictEqual([FILLER_LETTERS[0], 'L', 'M']);
   });
 
-  // Each place layer's WordCells: number, whether it is dimmed, and whether its top card is used.
+  // Each place layer's WordCells: number, whether it is dimmed, whether its top card is used, its
+  // card glyphs, its `★` pills (Q-49), the pill's data-scene-el, and whether its stack is empty.
   const placeLayers = (html: string) =>
     html
       .split('data-scene-el="place-')
@@ -1089,10 +1107,15 @@ describe('AD-3 scenes place and scoring figure structure', () => {
         const cells = layer
           .split('<div class="wcell')
           .slice(1)
+          .map((whole) => whole.split(/<div class="tiles|<span class="ctl|<div class="layer/)[0])
           .map((cell) => ({
             n: Number(/class="num[^"]*">(\d+)</.exec(cell)?.[1]),
             dim: /^[^>]*\bwc-dim\b/.test(cell),
             used: /class="card[^"]*\bused\b/.test(cell),
+            glyphs: [...cell.matchAll(/class="glyph[^"]*">([^<]+)</g)].map((m) => m[1]),
+            marks: (cell.match(/class="preview-mark[ "]/g) ?? []).length,
+            markEl: /class="preview-mark[^"]*"[^>]*data-scene-el="([^"]+)"/.exec(cell)?.[1],
+            empty: /<div class="stack[^"]*\bempty\b/.test(cell),
           }));
         const from = layer.indexOf('<div class="tiles');
         const strip = from < 0 ? '' : layer.slice(from, layer.indexOf('class="ctl', from));
@@ -1157,25 +1180,66 @@ describe('AD-3 scenes place and scoring figure structure', () => {
     expect(stripTileX(1) - stripTileX(0)).toBe(game.tileWidth + 4);
   });
 
-  it('AD-14 R-40 R-33 scene place: not-legal cells dim in Place and cell 6 is used until Confirm, by the game rules (owner decision D11)', async () => {
+  it('AD-14 R-40 R-33 Q-49 scene place: not-legal cells dim in Place, cell 6 is used in frame 0 only and frames 1 to 4 draw the preview (owner decision D11)', async () => {
+    // Per frame, cells 5 and 6: [glyphs, used, star count, empty] (the plan's frame table).
+    const MATRIX: readonly Record<5 | 6, readonly [string[], boolean, number, boolean]>[] = [
+      { 5: [[], false, 0, true], 6: [['L'], true, 0, false] },
+      { 5: [[], false, 0, true], 6: [['D'], false, 1, false] },
+      { 5: [['D'], false, 1, false], 6: [[], false, 0, true] },
+      { 5: [[], false, 0, true], 6: [['D'], false, 1, false] },
+      { 5: [[], false, 0, true], 6: [['E'], false, 1, false] },
+      { 5: [[], false, 0, true], 6: [['E'], false, 0, false] },
+    ];
     for (const reduced of [false, true]) {
-      const layers = placeLayers(await body(placeScene, reduced));
+      const html = await body(placeScene, reduced);
+      const layers = placeLayers(html);
       expect(layers).toHaveLength(placeScene.frames.length);
       layers.forEach(({ cells }, i) => {
         const frame = placeScene.frames[i];
         const placing = frame.placeOrder !== undefined;
         expect(cells.map((c) => c.n)).toStrictEqual([3, 4, 5, 6, 7, 8, 9, 10]);
         for (const cell of cells) {
+          const at = `frame ${i} cell ${cell.n}`;
           const legal = frame.lit?.includes(cell.n) === true || frame.placeTarget === cell.n;
-          expect(cell.dim, `frame ${i} cell ${cell.n}`).toBe(placing && !legal);
-          expect(cell.used, `frame ${i} cell ${cell.n}`).toBe(
-            cell.n === 6 && frame.cell6 === 'used',
-          );
+          expect(cell.dim, at).toBe(placing && !legal);
+          expect(cell.used, at).toBe(cell.n === 6 && frame.cell6 === 'used');
+          expect(cell.markEl, at).toBe(i === 4 && cell.n === 6 ? 'mark-4' : undefined);
+          if (cell.n === 5 || cell.n === 6) {
+            const row = MATRIX[i][cell.n];
+            expect([cell.glyphs, cell.used, cell.marks, cell.empty], at).toStrictEqual([...row]);
+          } else {
+            // The other cells are the fixture start's (cellCards): all empty in this scene.
+            expect([cell.glyphs, cell.marks, cell.empty], at).toStrictEqual([[], 0, true]);
+          }
         }
       });
+      // The frame 2 empty preview of cell 6 is ringed as legal (R-40).
+      expect(html.split('data-scene-el="place-')[3]).toMatch(
+        /class="num[^"]*">6<\/span>\s*(?:<!--[^>]*-->\s*)*<div class="stack[^"]*\bempty\b[^"]*\blit\b/,
+      );
       // Frames 1 to 4 dim exactly 7 to 10 (BALKED has six letters, R-40).
       expect(layers[1].cells.filter((c) => c.dim).map((c) => c.n)).toStrictEqual([7, 8, 9, 10]);
+      // No count badge in any scene frame (owner decision 2026-10-29).
+      for (const layer of html.split('data-scene-el="place-').slice(1))
+        expect(layer).not.toContain('class="count');
     }
+  });
+
+  it('AD-14 Q-49 scene place: rendering throws when a Place frame names an after with no previews entries or has no after, or the fixture has no previews', async () => {
+    const withFrame2 = (frame: Frame): Scene => ({
+      ...placeScene,
+      frames: placeScene.frames.map((f, i) => (i === 2 ? frame : f)),
+    });
+    const { after: _after, ...noAfter } = placeScene.frames[2];
+    await expect(body(withFrame2({ ...placeScene.frames[2], after: 3 }), true)).rejects.toThrow(
+      /^scene place: frame 2 has no previews entry at after 3$/,
+    );
+    await expect(body(withFrame2(noAfter), true)).rejects.toThrow(
+      /^scene place: frame 2 has no after$/,
+    );
+    await expect(
+      body({ ...placeScene, fixture: { ...placeScene.fixture, previews: undefined } }, true),
+    ).rejects.toThrow(/^scene place: the fixture has no previews/);
   });
 
   it('AD-14 R-33 scene free-letter: from the tap on, cell 6 draws its top card in the used look, not a dimmed whole card (owner decision D11)', async () => {
@@ -1431,6 +1495,8 @@ describe('AD-14 frame k and side against the engine-checked fixture block', () =
 // Owner decision D5 (R-33): a frame draws WordCell 6 used exactly while the word holds its top
 // card: after the fixture command that adds it as a free letter and before the Confirm that places
 // the word (or a removal). Checked for every scene against the fixture commands it has applied.
+// Q-49 supersedes D5 for the place scene's Place frames (1 to 4): they draw the preview, not the
+// used card; its frame 0 keeps D5.
 describe('AD-14 frame cell 6 state against the fixture commands', () => {
   const APPLIED: Record<string, readonly number[]> = {
     'move-compose': [0, 0, 1, 2, 3, 4, 5, 6],
@@ -1449,27 +1515,34 @@ describe('AD-14 frame cell 6 state against the fixture commands', () => {
   };
 
   it.each(scenes.filter((s) => s.id !== 'scoring').map((s) => [s.id, s] as const))(
-    'AD-14 R-33 scene %s: cell 6 is drawn used exactly while the applied fixture commands hold its top card',
+    'AD-14 R-33 scene %s: cell 6 is drawn used exactly while the applied fixture commands hold its top card, except on Place frames (Q-49)',
     (id, scene) => {
       const applied = APPLIED[id];
       expect(scene.frames).toHaveLength(applied.length);
       scene.frames.forEach((frame, i) => {
-        if (usedAfter(scene.fixture.commands, applied[i]))
+        if (usedAfter(scene.fixture.commands, applied[i]) && frame.placeOrder === undefined)
           expect(frame.cell6, `${id} frame ${i}`).toBe('used');
         else expect(frame.cell6, `${id} frame ${i}`).not.toBe('used');
       });
     },
   );
 
-  it('AD-14 R-33 scene place: cell 6 is used from frame 0 through frame 4, and Confirm ends it', () => {
+  it('AD-14 R-33 Q-49 scene place: cell 6 is used in frame 0 only, and Confirm draws its top', () => {
     expect(placeScene.frames.map((f) => f.cell6)).toStrictEqual([
       'used',
-      'used',
-      'used',
-      'used',
-      'used',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
       'top',
     ]);
+  });
+
+  it('AD-14 Q-49 scene place: frame.after is the applied command count on frames 1 to 4, absent on frames 0 and 5', () => {
+    expect(placeScene.frames.map((f) => f.after)).toStrictEqual(
+      APPLIED.place.map((n, i) => (placeScene.frames[i].placeOrder === undefined ? undefined : n)),
+    );
+    expect(placeScene.frames.map((f) => f.after)).toStrictEqual([undefined, 4, 5, 6, 7, undefined]);
   });
 });
 

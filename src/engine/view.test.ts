@@ -1,4 +1,17 @@
 import { describe, expect, it } from 'vitest';
+import placeFixture from '../../fixtures/session-place.json' with { type: 'json' };
+import placeCompact from '../../fixtures/session-place-compact.json' with { type: 'json' };
+import placeFreeLetterRedoTail from '../../fixtures/session-place-free-letter-redo-tail.json' with {
+  type: 'json',
+};
+import placeFreeLetterTwoCards from '../../fixtures/session-place-free-letter-two-cards.json' with {
+  type: 'json',
+};
+import placeLong from '../../fixtures/session-place-long.json' with { type: 'json' };
+import placeOntoCommitted from '../../fixtures/session-place-onto-committed.json' with {
+  type: 'json',
+};
+import placeUsedCells from '../../fixtures/session-place-used-cells.json' with { type: 'json' };
 import { type ApplyContext, apply, applyFrom, type Command } from './commands';
 import { EngineError } from './errors';
 import { gameRecord } from './history';
@@ -6,6 +19,7 @@ import { EN } from './lang/en';
 import { replay, type Start } from './replay';
 import { destinationRemainder, word } from './rules';
 import { band, finalScore, lettersLeft, liveScore, penalty } from './scoring';
+import { parseSession } from './serialize';
 import { createSession, type Session } from './session';
 import { DICT, deepFreeze, draftOf, drop, play, startOf } from './test-helpers';
 import { type CardId, WORD_CELL_NUMBERS, type WordCellNumber } from './types';
@@ -603,6 +617,238 @@ describe('GameView Place data', () => {
   });
 });
 
+// --- Q-49 place preview --------------------------------------------------------------------------
+
+describe('GameView Q-49 place preview', () => {
+  /** A fixture parsed through §2 (fixtures are imported loosely typed), asserted ok. */
+  const parsed = (fixture: unknown): Session => {
+    const result = parseSession(JSON.stringify(fixture), EN);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(`fixture does not parse: ${result.reason}`);
+    return deepFreeze(result.session);
+  };
+  const setOrder = (order: readonly CardId[]): Command => ({ type: 'setPlacementOrder', order });
+  const hasPreview = (gameView: GameView, cell: WordCellNumber) =>
+    Object.hasOwn(cellOf(gameView, cell), 'preview');
+
+  /**
+   * Design Notes only-card position: D and E single-card cells, a whole-column self-drop (k = 0)
+   * of A B C, both used as free letters; Place with default target 5 (L = 5).
+   */
+  const ONLY = startOf(['ABC'], { 3: 'D', 4: 'E' });
+  const ONLY_DRAFT: readonly Command[] = [drop(1, 3, 1), addFree(3), addFree(4)];
+  const onlyView = (extra: readonly Command[] = []): GameView => {
+    const spelling = viewFrom(ONLY, seam(ONLY, ONLY_DRAFT), LANG).draft?.word;
+    expect(spelling).toBe('abcde');
+    if (spelling === undefined) throw new Error('no draft');
+    return viewFrom(ONLY, seam(ONLY, [...ONLY_DRAFT, VALIDATE, ...extra], [spelling]), LANG);
+  };
+
+  it('Q-49 AD-3 an unused target previews its cards plus the placement order, used false', () => {
+    const onto = v(parsed(placeOntoCommitted));
+    expect(onto.place?.target).toBe(3);
+    expect(cellOf(onto, 3)).toMatchObject({ cards: [42, 0, 28], used: false });
+    expect(cellOf(onto, 3).preview).toStrictEqual({ top: 26, count: 6 });
+    const fresh = v(parsed(placeFixture));
+    expect(fresh.place?.target).toBe(3);
+    expect(cellOf(fresh, 3)).toMatchObject({ cards: [], used: false });
+    expect(cellOf(fresh, 3).preview).toStrictEqual({ top: 28, count: 3 });
+  });
+
+  it('Q-49 AD-3 R-41 a used target with cards beneath previews them minus its top plus the placement order', () => {
+    const redoTail = v(parsed(placeFreeLetterRedoTail));
+    expect(redoTail.place).toMatchObject({ target: 3, placementOrder: [9, 32, 28] });
+    expect(cellOf(redoTail, 3)).toMatchObject({ cards: [42, 0, 28], used: true });
+    expect(cellOf(redoTail, 3).preview).toStrictEqual({ top: 28, count: 5 });
+    const r41 = v(PLACE_R41);
+    expect(r41.place).toMatchObject({ target: 3, placementOrder: [26, 48, 28] });
+    expect(cellOf(r41, 3)).toMatchObject({ cards: [31, 34, 27, 1, 9, 28], used: true });
+    expect(cellOf(r41, 3).preview).toStrictEqual({ top: 28, count: 8 });
+  });
+
+  it('Q-49 AD-3 R-41 a used target holding only its used card previews count = placement order length', () => {
+    const gameView = onlyView([setTarget(3)]);
+    expect(gameView.place).toMatchObject({ target: 3, placementOrder: [0, 3, 4, 6, 8] });
+    expect(cellOf(gameView, 3)).toMatchObject({ cards: [6], used: true });
+    expect(cellOf(gameView, 3).preview).toStrictEqual({ top: 8, count: 5 });
+    expect(cellOf(gameView, 4)).toMatchObject({ cards: [8], used: true });
+    expect(cellOf(gameView, 4).preview).toStrictEqual({ top: null, count: 0 });
+  });
+
+  it('Q-49 AD-3 a used non-target with cards beneath previews the card beneath', () => {
+    const twoCards = v(parsed(placeFreeLetterTwoCards));
+    expect(twoCards.place?.target).toBe(5);
+    expect(cellOf(twoCards, 4)).toMatchObject({ cards: [20, 28], used: true });
+    expect(cellOf(twoCards, 4).preview).toStrictEqual({ top: 20, count: 1 });
+    const compact = v(parsed(placeCompact));
+    expect(compact.place?.target).toBe(9);
+    expect(cellOf(compact, 4)).toMatchObject({ cards: [20, 28, 35], used: true });
+    expect(cellOf(compact, 4).preview).toStrictEqual({ top: 28, count: 2 });
+    const long = v(parsed(placeLong));
+    expect(long.place?.target).toBe(10);
+    expect(cellOf(long, 3)).toMatchObject({ cards: [42, 0, 28], used: true });
+    expect(cellOf(long, 3).preview).toStrictEqual({ top: 0, count: 2 });
+  });
+
+  it('Q-49 AD-3 two used single-card cells, neither the target, each preview an empty cell', () => {
+    const gameView = onlyView();
+    expect(gameView.place).toMatchObject({ target: 5, placementOrder: [0, 3, 4, 6, 8] });
+    expect(cellOf(gameView, 3)).toMatchObject({ cards: [6], used: true });
+    expect(cellOf(gameView, 3).preview).toStrictEqual({ top: null, count: 0 });
+    expect(cellOf(gameView, 4)).toMatchObject({ cards: [8], used: true });
+    expect(cellOf(gameView, 4).preview).toStrictEqual({ top: null, count: 0 });
+    expect(cellOf(gameView, 5)).toMatchObject({ cards: [], used: false });
+    expect(cellOf(gameView, 5).preview).toStrictEqual({ top: 8, count: 5 });
+  });
+
+  it('Q-49 AD-3 count is the card count, not the R-85 letter count (-compact, QU 35)', () => {
+    const compact = v(parsed(placeCompact));
+    expect(compact.place).toMatchObject({
+      target: 9,
+      placementOrder: [35, 1, 38, 44, 11, 36, 9, 7],
+    });
+    expect(compact.draft?.letterCount).toBe(9);
+    expect(cellOf(compact, 9)).toMatchObject({ cards: [], used: false });
+    expect(cellOf(compact, 9).preview).toStrictEqual({ top: 7, count: 8 });
+  });
+
+  it('Q-49 AD-3 setTarget from an unused target: it loses preview, the new target previews', () => {
+    const base = parsed(placeFreeLetterTwoCards);
+    const moved = v(play(base, [setTarget(3)]));
+    expect(moved.place).toMatchObject({ target: 3, placementOrder: [26, 32, 45, 28, 42] });
+    expect(hasPreview(moved, 5)).toBe(false);
+    expect(cellOf(moved, 3)).toMatchObject({ cards: [], used: false });
+    expect(cellOf(moved, 3).preview).toStrictEqual({ top: 42, count: 5 });
+    expect(cellOf(moved, 4).preview).toStrictEqual({ top: 20, count: 1 });
+  });
+
+  it('Q-49 AD-3 setTarget from a used target with cards beneath gives it the card beneath', () => {
+    // -free-letter-redo-tail has L = 3, so 3 is its only legal target; -compact (L = 9) has used
+    // cell 4 with cards beneath.
+    const asTarget = play(parsed(placeCompact), [setTarget(4)]);
+    expect(cellOf(v(asTarget), 4).preview).toStrictEqual({ top: 7, count: 10 });
+    const away = v(play(asTarget, [setTarget(5)]));
+    expect(away.place?.target).toBe(5);
+    expect(cellOf(away, 4)).toMatchObject({ cards: [20, 28, 35], used: true });
+    expect(cellOf(away, 4).preview).toStrictEqual({ top: 28, count: 2 });
+    expect(cellOf(away, 5).preview).toStrictEqual({ top: 7, count: 8 });
+  });
+
+  it('Q-49 AD-3 setTarget from a used target holding only its used card gives it top null', () => {
+    const away = onlyView([setTarget(3), setTarget(5)]);
+    expect(away.place?.target).toBe(5);
+    expect(cellOf(away, 3)).toMatchObject({ cards: [6], used: true });
+    expect(cellOf(away, 3).preview).toStrictEqual({ top: null, count: 0 });
+    expect(cellOf(away, 5).preview).toStrictEqual({ top: 8, count: 5 });
+  });
+
+  it('Q-49 AD-3 a reversed setPlacementOrder changes only the target top', () => {
+    const states = [
+      ...[
+        placeFixture,
+        placeCompact,
+        placeLong,
+        placeOntoCommitted,
+        placeFreeLetterTwoCards,
+        placeFreeLetterRedoTail,
+        placeUsedCells,
+      ].map(parsed),
+      PLACE_R41,
+      PLACE_FROM_IDLE,
+      PLACE_L10,
+    ];
+    for (const session of states) {
+      const before = v(session);
+      const place = before.place;
+      if (place === undefined) throw new Error('not Place');
+      const after = v(play(session, [setOrder([...place.placementOrder].reverse())]));
+      for (const cell of WORD_CELL_NUMBERS) {
+        const preview = cellOf(before, cell).preview;
+        if (cell === place.target)
+          expect(cellOf(after, cell).preview).toStrictEqual({
+            top: place.placementOrder[0],
+            count: preview?.count,
+          });
+        else expect(cellOf(after, cell).preview).toStrictEqual(preview);
+      }
+    }
+  });
+
+  it('Q-49 AD-3 preview is absent on unchanged cells in Place and outside Place', () => {
+    const twoCards = v(parsed(placeFreeLetterTwoCards));
+    for (const cell of [3, 6, 7, 8, 9, 10] as const) expect(hasPreview(twoCards, cell)).toBe(false);
+    // Cell 9 is non-empty and unchanged by the commit: a non-empty cell alone carries no preview.
+    expect(cellOf(twoCards, 9).cards).toHaveLength(8);
+    for (const session of [FREE, COMPOSING_FROM_PLACE]) {
+      const gameView = v(session);
+      expect(gameView.phase).toBe('composing');
+      expect(cellOf(gameView, 3).used).toBe(true);
+      expect(hasPreview(gameView, 3)).toBe(false);
+    }
+    const idleFromPlace = play(PLACE_R41, [UNDO, UNDO]);
+    expect(idleFromPlace.cursor.phase).toBe('idle');
+    expect(draftOf(idleFromPlace).reached).toBe('place');
+    for (const session of [PENDING_COMMITTED, PENDING_TAIL])
+      expect(draftOf(session).reached).toBe('committed');
+    for (const session of [
+      FRESH,
+      FREE,
+      COMPOSING_FROM_PLACE,
+      idleFromPlace,
+      PENDING_COMMITTED,
+      PENDING_TAIL,
+      WON,
+      GAVE_UP0,
+      GAVE_UP1,
+    ])
+      for (const cell of v(session).cells) expect(Object.hasOwn(cell, 'preview')).toBe(false);
+  });
+
+  it('Q-49 AD-3 preview is present iff the cell changes on confirm, with its top and count after', () => {
+    const bases = [
+      ...[
+        placeFixture,
+        placeCompact,
+        placeLong,
+        placeOntoCommitted,
+        placeFreeLetterTwoCards,
+        placeFreeLetterRedoTail,
+        placeUsedCells,
+      ].map(parsed),
+      PLACE_R41,
+      PLACE_FROM_IDLE,
+      PLACE_L10,
+      play(COMPOSING_FROM_PLACE, [REDO]),
+    ];
+    let checked = 0;
+    for (const base of bases) {
+      const place = v(base).place;
+      if (place === undefined) throw new Error('not Place');
+      const variants = [
+        base,
+        ...place.legalTargets
+          .filter((t) => t !== place.target)
+          .map((t) => play(base, [setTarget(t)])),
+        play(base, [setOrder([...place.placementOrder].reverse())]),
+      ];
+      for (const session of variants) {
+        const before = v(session);
+        const after = v(play(session, [CONFIRM]));
+        for (const cell of WORD_CELL_NUMBERS) {
+          const was = cellOf(before, cell);
+          const now = cellOf(after, cell).cards;
+          const changed = JSON.stringify(was.cards) !== JSON.stringify(now);
+          expect(Object.hasOwn(was, 'preview')).toBe(changed);
+          if (changed)
+            expect(was.preview).toStrictEqual({ top: now.at(-1) ?? null, count: now.length });
+          checked += 1;
+        }
+      }
+    }
+    expect(checked).toBeGreaterThan(0);
+  });
+});
+
 // --- R-31, R-33 --------------------------------------------------------------------------------
 
 const TAP_STATES: readonly Session[] = [
@@ -997,7 +1243,13 @@ describe('GameView contract', () => {
       const gameView = v(session);
       expect(v(structuredClone(session))).toStrictEqual(gameView);
       expect(structuredClone(gameView)).toStrictEqual(gameView);
-      for (const part of [gameView, gameView.draft ?? {}, gameView.place ?? {}])
+      for (const part of [
+        gameView,
+        gameView.draft ?? {},
+        gameView.place ?? {},
+        ...gameView.cells,
+        ...gameView.cells.map((cell) => cell.preview ?? {}),
+      ])
         expect(Object.values(part)).not.toContain(undefined);
       expect(Object.isFrozen(session) && Object.isFrozen(LANG)).toBe(true);
     }

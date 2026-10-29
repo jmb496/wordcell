@@ -1,0 +1,1 @@
+{"outcome": "stopped", "ticket": "11.6", "reason": "4: done checkpoint — ticket 11.6 is built and verified and waits for Jared (tickets.toml done_checkpoint)", "next": "none", "updated": "2026-10-29T18:11:06Z", "summary": "The epic's last ticket, the refactor sweep, is built and every test passes; it waits for Jared to settle five small leftover items and mark it done."}

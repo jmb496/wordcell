@@ -150,8 +150,9 @@ const drawn = $derived.by(() => {
 const filler = $derived(
   fillerColumns(scene.carry === undefined ? [] : scene.fixture.start.columns.map((c) => c.length)),
 );
-// A WordCell's cards (bottom to top) in frame `i`: the fixture start, or, in the last frame, the
-// fixture `cells` entry that states them after the scene's commands (R-52).
+// A WordCell's cards (bottom to top) in frame `i` when the frame draws no preview of it: the
+// fixture start, or, in the last frame, the fixture `cells` entry that states them after the
+// scene's commands (R-52). A Place frame's changed cells come from `previewsAt` instead (Q-49).
 const cellCards = (cell: number, i: number): readonly string[] => {
   const start = scene.fixture.start.cells;
   if (i === scene.frames.length - 1) {
@@ -168,6 +169,21 @@ function needed(field: string): never {
   throw new Error(`scene ${scene.id}: the fixture has no ${field}`);
 }
 const PLACE_CELLS = [3, 4, 5, 6, 7, 8, 9, 10] as const;
+// Q-49 (epic place-preview entry 4): a Place frame (one with a `placeOrder`) draws each changed
+// cell from the fixture `previews` entries at its `after`, which the engine harness checks exactly
+// (AD-3); a frame without a `placeOrder` draws no preview. AGENTS rule 6: a Place frame without an
+// `after`, or one naming an after with no entries, throws.
+const previewsAt = (frame: Frame, i: number) => {
+  if (frame.placeOrder === undefined) return undefined;
+  const after = frame.after;
+  if (after === undefined) throw new Error(`scene ${scene.id}: frame ${i} has no after`);
+  const entries = (scene.fixture.previews ?? needed('previews')).filter((e) => e.after === after);
+  if (entries.length === 0)
+    throw new Error(`scene ${scene.id}: frame ${i} has no previews entry at after ${after}`);
+  return entries;
+};
+// The last Place frame: its target's `★` carries `mark-<i>`, faded at the tuck's commit (effects.ts).
+const lastPlace = $derived(scene.frames.findLastIndex((f) => f.placeOrder !== undefined));
 // The scoring scene's WordCells (fixture cells with a stated score), left to right.
 const scoreCells = $derived(
   (scene.fixture.cellScores ?? needed('cellScores')).map((entry) => {
@@ -374,6 +390,7 @@ const replay = (): void => {
       {/each}
       {#if placeMode}
         {#each scene.frames as frame, i (i)}
+          {@const previewed = previewsAt(frame, i)}
           <div
             class="layer"
             data-scene-el="place-{i}"
@@ -382,7 +399,8 @@ const replay = (): void => {
             style:opacity={reduced ? (i === currentIndex ? 1 : 0) : i === 0 ? 1 : undefined}
           >
             {#each PLACE_CELLS as cell (cell)}
-              {@const cards = cellCards(cell, i)}
+              {@const preview = previewed?.find((e) => e.cell === cell)}
+              {@const cards = preview === undefined ? cellCards(cell, i) : preview.top === null ? [] : [preview.top]}
               {@const lit = frame.lit?.includes(cell) ?? false}
               {@const target = frame.placeTarget === cell}
               {@const used = cell === 6 && frame.cell6 === 'used'}
@@ -395,9 +413,19 @@ const replay = (): void => {
                 style:top="{geo.placeLabelTop}px"
               >
                 <span class="num">{cell}</span>
+                <!-- Q-49: a previewed cell is one card or none, so its `★` sits against this stack. -->
                 <div class="stack" class:empty={cards.length === 0} class:lit={lit && !target} class:target>
                   {#each cards as letter, j (j)}
-                    <Card id={0} face={face(letter)} place="column" mirror="static" full={j === cards.length - 1} used={used && j === cards.length - 1} />
+                    <Card
+                      id={0}
+                      face={face(letter)}
+                      place="column"
+                      mirror="static"
+                      full={j === cards.length - 1}
+                      used={used && j === cards.length - 1}
+                      previewMark={preview !== undefined}
+                      markEl={preview !== undefined && i === lastPlace && target ? `mark-${i}` : undefined}
+                    />
                   {/each}
                   {#if target}
                     <span class="check" aria-hidden="true">

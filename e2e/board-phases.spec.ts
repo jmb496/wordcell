@@ -56,7 +56,8 @@ type State = {
   fixture: string;
   steps?: Step[];
   cursor: Cursor;
-  mirrors: number[];
+  // Every mirror as `<id> <kind>` (its class: ghost, used, block, preview), sorted by id then kind.
+  mirrors: string[];
   // Ghost mirrors per column in DOM order (4-3 m2; plan I/O matrix); columns not listed hold none.
   ghosts: Record<number, number[]>;
   tray: string[];
@@ -64,7 +65,10 @@ type State = {
 
 const PLACE_TAN = ['42', '0', '28'];
 const COLUMN_1 = ['24', '6', '49', '30', '25', '20', '48'];
-const COLUMN_1_GHOSTS = [6, 20, 24, 25, 30, 48, 49];
+// Sorts `<id> <kind>` mirror records by id, then kind.
+const byMirror = (a: string, b: string) =>
+  Number.parseInt(a, 10) - Number.parseInt(b, 10) || a.localeCompare(b);
+const COLUMN_1_GHOSTS = [6, 20, 24, 25, 30, 48, 49].map((id) => `${id} ghost`);
 const COLUMN_1_GHOSTS_ORDER = [24, 6, 49, 30, 25, 20, 48];
 
 const STATES: State[] = [
@@ -88,7 +92,7 @@ const STATES: State[] = [
     title: 'session-composing',
     fixture: 'session-composing',
     cursor: { index: 0, phase: 'composing' },
-    mirrors: [0, 28, 42],
+    mirrors: ['0 ghost', '28 block', '42 ghost'],
     ghosts: { 3: [42, 0] },
     tray: ['42', '0', '28m'],
   },
@@ -96,7 +100,7 @@ const STATES: State[] = [
     title: 'session-composing-draft-2-letters',
     fixture: 'session-composing-draft-2-letters',
     cursor: { index: 0, phase: 'composing' },
-    mirrors: [0, 28],
+    mirrors: ['0 ghost', '28 block'],
     ghosts: { 3: [0] },
     tray: ['0', '28m'],
   },
@@ -104,7 +108,7 @@ const STATES: State[] = [
     title: 'session-place',
     fixture: 'session-place',
     cursor: { index: 0, phase: 'place' },
-    mirrors: [0, 28, 42],
+    mirrors: ['0 ghost', '28 ghost', '28 preview', '42 ghost'],
     ghosts: { 3: [42, 0], 6: [28] },
     tray: PLACE_TAN,
   },
@@ -112,7 +116,7 @@ const STATES: State[] = [
     title: 'session-below-committed-last',
     fixture: 'session-below-committed-last',
     cursor: { index: 0, phase: 'place' },
-    mirrors: [0, 28, 42],
+    mirrors: ['0 ghost', '28 ghost', '28 preview', '42 ghost'],
     ghosts: { 3: [42, 0], 6: [28] },
     tray: PLACE_TAN,
   },
@@ -120,7 +124,7 @@ const STATES: State[] = [
     title: 'session-place-free-letter-redo-tail',
     fixture: 'session-place-free-letter-redo-tail',
     cursor: { index: 1, phase: 'place' },
-    mirrors: [9, 28, 32],
+    mirrors: ['9 ghost', '28 preview', '32 ghost'],
     ghosts: { 4: [32], 6: [9] },
     tray: ['9', '32', '28'],
   },
@@ -129,7 +133,7 @@ const STATES: State[] = [
     fixture: 'session-place-free-letter-redo-tail',
     steps: ['undo'],
     cursor: { index: 1, phase: 'composing' },
-    mirrors: [9, 28, 32],
+    mirrors: ['9 block', '28 used', '32 ghost'],
     ghosts: { 4: [32] },
     tray: ['32', '28', '9m'],
   },
@@ -138,7 +142,7 @@ const STATES: State[] = [
     fixture: 'session-place-free-letter-redo-tail',
     steps: ['undo', 'undo', 'redo'],
     cursor: { index: 1, phase: 'composing' },
-    mirrors: [9, 28, 32],
+    mirrors: ['9 block', '28 used', '32 ghost'],
     ghosts: { 4: [32] },
     tray: ['32', '28', '9m'],
   },
@@ -147,7 +151,7 @@ const STATES: State[] = [
     fixture: 'session-place-free-letter-redo-tail',
     steps: ['redo', 'redo'],
     cursor: { index: 2, phase: 'composing' },
-    mirrors: [1, 26, 27],
+    mirrors: ['1 block', '26 ghost', '27 block'],
     ghosts: { 2: [26] },
     tray: ['26', '1m', '27m'],
   },
@@ -180,7 +184,7 @@ const STATES: State[] = [
     fixture: 'session-idle-empty-column',
     steps: ['undo'],
     cursor: { index: 0, phase: 'place' },
-    mirrors: COLUMN_1_GHOSTS,
+    mirrors: [...COLUMN_1_GHOSTS, '48 preview'].toSorted(byMirror),
     ghosts: { 1: COLUMN_1_GHOSTS_ORDER },
     tray: COLUMN_1,
   },
@@ -216,6 +220,9 @@ for (const state of STATES) {
         tray: placesIn('[data-band="tray"]'),
         mirrors: all('[data-mirror-of]').map((el) => ({
           id: Number(el.getAttribute('data-mirror-of')),
+          kind: ['ghost', 'used', 'block', 'view', 'preview'].filter((k) =>
+            el.classList.contains(k),
+          ),
           bare:
             !el.hasAttribute('data-card-id') &&
             !el.hasAttribute('data-testid') &&
@@ -231,7 +238,10 @@ for (const state of STATES) {
     expect(dom.cell.every((place) => place === 'cell')).toBe(true);
     expect(dom.tray.every((place) => place === trayPlace)).toBe(true);
     expect(dom.column.length + dom.cell.length + dom.tray.length).toBe(52);
-    expect(dom.mirrors.map((m) => m.id).toSorted((a, b) => a - b)).toEqual(state.mirrors);
+    expect(dom.mirrors.every((m) => m.kind.length === 1)).toBe(true);
+    expect(dom.mirrors.map((m) => `${m.id} ${m.kind[0]}`).toSorted(byMirror)).toEqual(
+      state.mirrors,
+    );
     expect(dom.mirrors.every((m) => m.bare)).toBe(true);
     for (let n = 1; n <= 8; n++) {
       expect(await mirrorsIn(page, `[data-testid="column-${n}"]`), `column-${n} ghosts`).toEqual(
@@ -345,12 +355,29 @@ async function expectUsedCell3(page: Page): Promise<void> {
   }
 }
 
-test('R-33 (UI) wordcell-3 shows the used face mirror in Place (with the selected target) and after one Undo into Composing', async ({
+// Q-49 (R-41): used target 3 shows its own free letter 28 as the preview mirror, full opacity, no
+// hatch; the cards beneath stay live and hidden.
+async function expectPreviewCell3(page: Page): Promise<void> {
+  const cell = page.getByTestId('wordcell-3');
+  await expect(cell.locator('.used')).toHaveCount(0);
+  const preview = cell.locator('[data-mirror-of="28"]');
+  await expect(preview).toHaveCount(1);
+  await expect(preview).toHaveClass(/\bpreview\b/);
+  await expect(preview.locator('.face')).toHaveCSS('opacity', '1');
+  expect(
+    await preview.locator('.face').evaluate((el) => getComputedStyle(el).backgroundImage),
+  ).not.toContain('repeating-linear-gradient');
+  for (const id of [42, 0]) {
+    await expect(cell.getByTestId(`card-${id}`)).toBeHidden();
+  }
+}
+
+test('R-33 (UI) Q-49 wordcell-3 shows the preview mirror of 28 in Place (with the selected target) and the used face mirror after one Undo into Composing', async ({
   page,
 }) => {
   await openFixture(page, 'session-place-free-letter-redo-tail', { booted: false });
   await expectSession(page, { index: 1, phase: 'place' });
-  await expectUsedCell3(page);
+  await expectPreviewCell3(page);
   await expectTarget(page, 3);
   await expect(page.getByTestId('card-28')).toHaveAttribute('data-place', 'strip');
 
@@ -420,7 +447,7 @@ async function expectRedoTailPlace(page: Page): Promise<void> {
   await expectSession(page, { index: 1, phase: 'place' });
   expect(await mirrorsIn(page, '[data-testid="column-4"]')).toEqual([32]);
   expect(await mirrorsIn(page, '[data-testid="column-6"]')).toEqual([9]);
-  await expectUsedCell3(page);
+  await expectPreviewCell3(page);
   expect(await trayIds(page)).toEqual(['9', '32', '28']);
   await expectTarget(page, 3);
 }

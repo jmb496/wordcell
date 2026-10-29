@@ -101,16 +101,30 @@ test("AD-17 F11 WordCell slots: 50 × 61 under column n − 2 in the wordcells b
       });
       return {
         cell: cell.getAttribute('data-wordcell'),
-        ids: els.map(
-          (el) => el.getAttribute('data-card-id') ?? `${el.getAttribute('data-mirror-of')}m`,
-        ),
+        // A mirror records its kind: `m` used, `p` the Q-49 Place preview, `g` ghost, `b` block.
+        ids: els.map((el) => {
+          const id = el.getAttribute('data-card-id');
+          if (id !== null) return id;
+          const kind = el.classList.contains('preview')
+            ? 'p'
+            : el.classList.contains('used')
+              ? 'm'
+              : el.classList.contains('ghost')
+                ? 'g'
+                : el.classList.contains('block')
+                  ? 'b'
+                  : undefined;
+          if (kind === undefined) throw new Error(`unknown mirror kind: ${el.className}`);
+          return `${el.getAttribute('data-mirror-of')}${kind}`;
+        }),
         boxes: new Set(rects).size,
       };
     }),
   );
-  // Cell 3 holds 42 and 0 live with 28 on top as a used mirror; every other cell is empty.
+  // Cell 3 holds 42 and 0 live with 28 on top as the target's preview mirror (Q-49); every other
+  // cell is empty.
   expect(stacks).toEqual([
-    { cell: '3', ids: ['42', '0', '28m'], boxes: 1 },
+    { cell: '3', ids: ['42', '0', '28p'], boxes: 1 },
     ...[4, 5, 6, 7, 8, 9, 10].map((n) => ({ cell: String(n), ids: [], boxes: 0 })),
   ]);
 });

@@ -23,7 +23,9 @@ import type { Frame, Scene, SceneFixtureData } from './types';
 // 0 to 2 are set-up (the fixture's drop, arrange and free letter); frame i = the state after
 // fixture command 3 + i, Confirm and the fly share the final frame. Owner decision D5 (2026-10-22):
 // frame 0 is the composed word as the tray shows it (B A L K E D, the D block B locked) and
-// WordCell 6, whose top card L is in the word (R-33), is drawn used from frame 0 until Confirm.
+// WordCell 6, whose top card L is in the word (R-33), is drawn used. Q-49 (epic place-preview
+// entry 4): frames 1 to 4 (`after` 4 to 7) draw each changed cell as it will be after Confirm, its
+// previewed top with the `★` and no count badge (owner, 2026-10-29), from the fixture `previews`.
 const data: SceneFixtureData = fixture;
 const carry = {
   sourceColumn: 1,
@@ -36,14 +38,14 @@ const carry = {
 const lit = [3, 4, 5, 6] as const;
 const dflt = ['B', 'A', 'L', 'K', 'E', 'D'];
 const ordered = ['D', 'B', 'A', 'L', 'K', 'E'];
-const placing = (placeTarget: number, placeOrder: readonly string[]): Frame => ({
+const placing = (after: number, placeTarget: number, placeOrder: readonly string[]): Frame => ({
   tail: 'gone',
   tray: false,
   validate: 'off',
   lit,
   placeTarget,
   placeOrder,
-  cell6: 'used',
+  after,
 });
 const frames: readonly Frame[] = [
   {
@@ -55,10 +57,10 @@ const frames: readonly Frame[] = [
     side: 'left',
     cell6: 'used',
   },
-  { ...placing(6, dflt), validate: 'pressed' },
-  placing(5, dflt),
-  placing(6, dflt),
-  placing(6, ordered),
+  { ...placing(4, 6, dflt), validate: 'pressed' },
+  placing(5, 5, dflt),
+  placing(6, 6, dflt),
+  placing(7, 6, ordered),
   { tail: 'gone', tray: false, validate: 'off', lit: [], cellTop: true, cell6: 'top' },
 ];
 const stage = sceneStageInputs(data, carry, frames);
@@ -103,6 +105,7 @@ export const placeScene: Scene = defineScene({
     'place-4',
     'place-5',
     'strip-4',
+    'mark-4',
     'confirm',
     'tuck',
     'tuck-0',

@@ -21,7 +21,10 @@ const COMMAND_TYPES: Record<StepType, readonly string[]> = {
  * its `tray-<frame>` layer (with both frames' orders, one letter multiset, and every
  * `tray-<frame>-tile-<j>` declared; a list `reveal.show` there throws), a `grows` step (ticket 9)
  * that is not a tap, names a cell the fixture start lacks, a card count other than the start's
- * (or under 2) or an already grown cell, or lacks a `grow-<cell>-<j>` element, or a non-positive rest.
+ * (or under 2) or an already grown cell, or lacks a `grow-<cell>-<j>` element, a `tucks` step
+ * that does not declare `tuck`, `confirm`, the last frame's layer, the placed frame's
+ * `strip-<frame>` and `mark-<frame>` (Q-49, its target's `★`) or a `tuck-<k>`, or a non-positive
+ * rest.
  */
 export function defineScene(scene: Scene): Scene {
   const where = `scene ${scene.id}`;
@@ -83,6 +86,7 @@ export function defineScene(scene: Scene): Scene {
         'confirm',
         `place-${scene.frames.length - 1}`,
         `strip-${scene.frames.indexOf(placed)}`,
+        `mark-${scene.frames.indexOf(placed)}`,
         ...letters.map((_, k) => `tuck-${k}`),
       ];
       for (const id of needs)

@@ -1,6 +1,6 @@
 import { render } from 'svelte/server';
 import { describe, expect, it, vi } from 'vitest';
-import type { CellView, ColumnView, DraftView, Face } from '../engine/index';
+import type { CellView, ColumnView, DraftView, Face, GameView } from '../engine/index';
 import src0 from './App.svelte?raw';
 import src1 from './Card.svelte?raw';
 import Column from './Column.svelte';
@@ -104,7 +104,12 @@ describe('AD-3 screen-reader names', () => {
   });
 });
 
-const cell = (n: number, cards: number[], used = false): CellView =>
+const cell = (
+  n: number,
+  cards: number[],
+  used = false,
+  preview?: { top: number | null; count: number },
+): CellView =>
   ({
     cell: n,
     cards,
@@ -112,12 +117,19 @@ const cell = (n: number, cards: number[], used = false): CellView =>
     canAddFreeLetter: false,
     canSetTarget: false,
     isLegalTarget: false,
+    ...(preview === undefined ? {} : { preview }),
   }) as unknown as CellView;
 
-const drawCells = (cells: CellView[]) =>
+const drawCells = (cells: CellView[], place?: GameView['place']) =>
   render(WordCellRow, {
-    props: { cells, faces, place: undefined, labelsRow: 1, cellsRow: 2 },
+    props: { cells, faces, place, labelsRow: 1, cellsRow: 2 },
   }).body;
+
+// A Place `place` for target `target` (only `target` matters to the row's names).
+const placeAt = (target: number): GameView['place'] =>
+  ({ legalTargets: [3, 4, 5], target, placementOrder: [], scoreDelta: 0 }) as never;
+const groupName = (html: string, n: number): string | undefined =>
+  new RegExp(`aria-label="([^"]*)"[^>]*data-testid="wordcell-${n}"`).exec(html)?.[1];
 
 describe('AD-3 WordCell names', () => {
   it('AD-3 WordCell templates: singular, plural, used, empty and QU', () => {
@@ -156,6 +168,75 @@ describe('AD-3 WordCell names', () => {
     expect(names(drawCells([cell(5, [4, 10])]))).toEqual([
       'Q U, counts as two letters, WordCell 5, top',
     ]);
+  });
+});
+
+describe('AD-3 Q-49 Place preview names', () => {
+  it('AD-3 Q-49 the after-this-word templates: singular, plural, QU and empty', () => {
+    expect(text.nameCellAfter(4, 'R', 1)).toBe('WordCell 4, top R, 1 card, after this word');
+    expect(text.nameCellAfter(5, 'R', 5)).toBe('WordCell 5, top R, 5 cards, after this word');
+    expect(text.nameCellAfter(6, 'QU', 2)).toBe(
+      'WordCell 6, top Q U, counts as two letters, 2 cards, after this word',
+    );
+    expect(text.nameCellEmptyAfter(3)).toBe('WordCell 3, empty, after this word');
+  });
+
+  it('AD-3 Q-49 changed cells expose no named button and the after-this-word group name', () => {
+    const html = drawCells(
+      [
+        // Target 5, unused, holding [1, 2]: preview of the strip's last card 10 (QU), 3 cards.
+        cell(5, [1, 2], false, { top: 10, count: 3 }),
+        // Used non-target 6 [1, 2, 3, 11]: its used card 11 goes, 3 is the shown top.
+        cell(6, [1, 2, 3, 11], true, { top: 3, count: 3 }),
+        // Used non-target 3 holding only its used card: empty after the commit.
+        cell(3, [7], true, { top: null, count: 0 }),
+      ],
+      placeAt(5),
+    );
+    expect(names(html)).toEqual([]);
+    expect(groupName(html, 5)).toBe(
+      'WordCell 5, top Q U, counts as two letters, 3 cards, after this word',
+    );
+    expect(groupName(html, 6)).toBe('WordCell 6, top D, 3 cards, after this word');
+    expect(groupName(html, 3)).toBe('WordCell 3, empty, after this word');
+    // The target draws its preview top as an unnamed, aria-hidden `preview` mirror.
+    const mirror = tags(html, /<div[^>]*data-mirror-of="10"[^>]*>/g)[0] ?? '';
+    expect(mirror).toMatch(/class="card[^"]*\bpreview\b/);
+    expect(mirror).toContain('aria-hidden="true"');
+    expect(mirror).not.toMatch(/role=|aria-label|tabindex|data-card-id|data-testid|data-place/);
+    // No used mirror and no element for a used card in its own cell.
+    expect(html).not.toMatch(/class="card[^"]*\bused\b/);
+    expect(html).not.toMatch(/data-card-id="11"|data-mirror-of="11"/);
+    expect(html).not.toMatch(/data-card-id="7"|data-mirror-of="7"/);
+  });
+
+  it('AD-3 Q-49 a used target previewing its own free letter draws it as the preview mirror, no used mirror, no named button', () => {
+    // Used target 3 [1, 2, 11]: its used card 11 is the strip's last card, 5 cards after the commit.
+    const html = drawCells([cell(3, [1, 2, 11], true, { top: 11, count: 5 })], placeAt(3));
+    expect(names(html)).toEqual([]);
+    expect(groupName(html, 3)).toBe(text.nameCellAfter(3, 'L', 5));
+    const mirrors = tags(html, /<div[^>]*data-mirror-of="11"[^>]*>/g);
+    expect(mirrors).toHaveLength(1);
+    expect(mirrors[0]).toMatch(/class="card[^"]*\bpreview\b/);
+    expect(mirrors[0]).not.toMatch(/class="card[^"]*\bused\b/);
+    expect(html).not.toContain('data-card-id="11"');
+  });
+
+  it('AD-3 Q-49 an unchanged non-empty cell in Place keeps its name and one named button', () => {
+    const html = drawCells(
+      [cell(4, [1, 2, 18]), cell(5, [], false, { top: 3, count: 1 })],
+      placeAt(5),
+    );
+    expect(names(html)).toEqual(['T, WordCell 4, top']);
+    expect(groupName(html, 4)).toBe('WordCell 4, top T, 3 cards');
+  });
+
+  it('AD-3 Q-49 a used cell in Composing keeps the used name and its used mirror', () => {
+    const html = drawCells([cell(6, [1, 2, 3, 11], true)]);
+    expect(groupName(html, 6)).toBe('WordCell 6, top L, 4 cards, used');
+    expect(tags(html, /<div[^>]*data-mirror-of="11"[^>]*>/g)[0]).toMatch(
+      /class="card[^"]*\bused\b/,
+    );
   });
 });
 
