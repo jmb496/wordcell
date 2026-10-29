@@ -2,7 +2,7 @@
 name: WordCell
 status: final
 created: 2026-09-27
-updated: 2026-10-25
+updated: 2026-10-29
 sources:
   - _bmad-output/planning-artifacts/briefs/brief-wordcell-2026-09-26/brief.md
   - docs/game-flow-spec.md
@@ -487,7 +487,8 @@ sections; the only in-panel navigation is the carousel's own controls (HP-7, own
 1. **Scene carousel** (five scenes, HP-3, HP-4 as reworked 2026-10-17): three basic scenes, the
    one Tricky rule, then scoring (order set 2026-10-17). Basic: drag a tail onto a column, arrange
    the cards and add destination letters with −/+ and Flip; borrow a WordCell's top card as a free
-   letter; place on a WordCell. Tricky: drop back on the column you lifted from (R-21). Scoring
+   letter; place on a WordCell (its Place frames show the target's previewed top with the `★` and,
+   like every scene frame, no count badge; owner, 2026-10-29, Q-49). Tricky: drop back on the column you lifted from (R-21). Scoring
    last. One scene shows at a time, each a figure with a caption, drawn as the whole play area
    (columns, tray, WordCells 3–10), only as tall as that scene needs. On short windows the stage
    fits below the carousel controls at its own card width, so cards may differ in size between

@@ -3,7 +3,7 @@ name: WordCell
 description: Solo FreeCell-style word card game. Dark card table, ivory serif letters, one teal for "you can act here" and one orange for "commit". Portrait phone first.
 status: final
 created: 2026-09-27
-updated: 2026-10-25
+updated: 2026-10-29
 sources:
   - _bmad-output/planning-artifacts/briefs/brief-wordcell-2026-09-26/brief.md
   - docs/game-flow-spec.md
@@ -217,11 +217,12 @@ a declaration (Opus review of epic 9, 2026-10-22). Each token keeps its role bel
 contrast floors, which a unit test computes from the theme's token values: text pairs
 (card ink on card face and on destination fill, ink primary on destination fill, ink secondary on
 surface and on surface raised, error on surface, ink on accent orange) ≥ 4.5:1; outline on table
-and on surface, card edge on table and on surface, and accent teal on surface and on card face
-≥ 3:1. Charcoal's own figures are higher (card ink on card face 13.1:1; outline on table 3.8:1 and
+and on surface, card edge on table and on surface, accent teal on surface and on card face, and
+accent orange on surface raised (the place-preview `★`, Q-49) ≥ 3:1. Charcoal's own figures are higher (card ink on card face 13.1:1; outline on table 3.8:1 and
 on surface 3.4:1; card edge on table 3.6:1 and on surface 3.2:1; ink secondary on surface 6.4:1 and
 on surface raised 5.6:1; accent teal on surface 7:1 and on card face 6.6:1; ink on accent orange
-6.4:1; card ink on destination fill 9.9:1; error on surface 6.7:1) and describe the default theme
+6.4:1; card ink on destination fill 9.9:1; error on surface 6.7:1; the place-preview `★`, accent orange on
+surface raised, 5.0:1) and describe the default theme
 only; the test pins them for Charcoal. No state relies on hue alone. The token names
 `accent-teal` and `accent-orange` stay in every theme even where the colour is cyan, sage or
 copper. The values and ratios below are **Charcoal's**.
@@ -561,16 +562,19 @@ pills (`{rounded.full}`); among badges only the error dot is a circle. The 44 ×
   cell holds 2 or more cards a count badge (e.g. `4`) sits inside the cell's card rect,
   bottom-right, inset 2 px: a 16 px tall pill, `{typography.card-badge}`, ink-primary on
   surface-raised. In Composing it keeps counting the used or dragged top card until commit (R-61); in Place a cell with the *place preview* state counts its cards after the commit (Q-49). Only the top card is
-  shown; a card committed by the move in flight stays visible during its fly-to-cell and is
-  hidden on landing if it is no longer the top (AD-14, 2026-10-08). It is drawn
+  shown; a card committed by the move in flight stays visible during its fly-to-cell, and the
+  committed cards that are not the top hide together at the last landing (AD-14, 2026-10-08; epic 5 SPEC F28). It is drawn
   below a lifted tail. States: *available*; *used this word* in Composing (its used top card shown at 40 % opacity with
   a hatch of 1 px `{colors.outline}` lines at 45° every 6 px, R-33; the card beneath is not revealed until commit, R-61);
   *place preview* in Place, on every cell the commit changes (each used cell and the target, R-50, Q-49): the cell
   shows its top card after the commit at full opacity with no hatch (the target: the strip's last card; a used
   cell: the card beneath its used one, or the empty outline), marked by the orange `★` (the strip's next-free-letter
   star) in `{typography.card-badge}` on a 16 px `{colors.surface-raised}` pill at the card rect's bottom-left,
-  inset 2 px, mirroring the count badge; an empty preview carries no star; from Confirm until the last card lands
-  the target keeps the previewed top (never the previous top) and the star goes at commit;
+  inset 2 px, mirroring the count badge; where a two-digit count badge meets the star pill (360 px, 40 px cards)
+  both keep their corners and the badge draws above the pill (owner, 2026-10-28); an empty preview carries no star;
+  from Confirm (or a Redo that commits) until the last card lands the target's base is a copy of the previewed top
+  without the star (never the previous top), and the committed cards stack over it as they land, F28's landed-card
+  rule kept (owner, 2026-10-28; Q-49 replaces F28's previous-top clause);
   *legal target* in Place (teal 2 px ring); *selected target* (teal 3 px ring and a check chip at the cell's top-left, a 14 px teal circle
   with an ink-on-accent check;
   the strip's `top` tag and star show the future top card); *not legal* in Place (35 % opacity).

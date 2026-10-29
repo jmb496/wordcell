@@ -7,7 +7,7 @@ paradigm: 'functional core / imperative shell, event-sourced'
 scope: 'WordCell v1: pure rules engine, event-sourced Session, app shell services, Svelte UI, PWA packaging, CI and deploy'
 status: final
 created: '2026-09-27'
-updated: '2026-10-25'
+updated: '2026-10-29'
 binds: ['spec R-01…R-88, §2, Q-01…Q-49', 'brief §6, §7, §9', 'DESIGN.md', 'EXPERIENCE.md']
 sources:
   - _bmad-output/planning-artifacts/briefs/brief-wordcell-2026-09-26/brief.md
@@ -681,13 +681,16 @@ sequenceDiagram
   mirror; the live element is the tray or strip tile. In Place a cell with a `preview` (AD-3) draws
   no copy of its used card; it shows `preview.top`: a card still in the cell (a used cell's card
   beneath) is its live cell element, and a card whose live element is a strip
-  tile (the target's future top) is a `preview` mirror (amended 2026-10-25, Q-49). A non-top WordCell card
+  tile (the target's future top) is a `preview` mirror (amended 2026-10-25, Q-49). From Confirm
+  (or a Redo that commits) until the last landing the target's base is a `preview` mirror of its
+  new top without the `★`, drawn beneath the committed cards
+  (amended 2026-10-28, Q-49). A non-top WordCell card
   has a (possibly hidden) live element in its cell stack; a card committed by the move in flight
-  stays visible during its fly-to-cell and is hidden on landing if it is not the top
-  (amended 2026-10-08); WordCell view and peek copies are
+  stays visible during its fly-to-cell, and the non-top ones hide together at the last landing
+  (amended 2026-10-08; epic 5 SPEC F28); WordCell view and peek copies are
   mirrors. A **mirror** is any non-live copy of a card and takes its look from the DESIGN.md
   state for its place: S slots in the source column, *ghost*; a used WordCell's face in Composing, *used this
-  word* (40 % opacity with the hatch); the target's preview top in Place, *place preview*; the D tray-block copy in Composing, the destination block;
+  word* (40 % opacity with the hatch); the target's preview top in Place, *place preview* (the fly-in base: the same face without the `★`); the D tray-block copy in Composing, the destination block;
   WordCell view and peek copies, normal cards. Mirrors carry
   `data-mirror-of`, no `data-card-id` or `data-testid`, and never animate: they take no part in
   the FLIP glide, but a D-block mirror carries the tray's drag parting shift (snapped under
