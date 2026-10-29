@@ -34,6 +34,8 @@ Stage.svelte counter-scales `.card .preview-mark` by `--wc-scene-up` as the badg
 
 Code comments citing D5 for frames 1–4 (place.ts header, the scenes.test.ts `AD-14 frame cell 6 state` comment, the e2e place test comment) cite Q-49 for frames 1–4 and keep D5 for frame 0 (Scene.svelte's frame-0 comment stays). The epic 8 Notes are not edited; this epic's Notes record the supersession.
 
+Owner decision (Jared, 2026-10-29, the review's decision-needed item): the scene's previewed WordCell draws no count badge, only the new top letter with the `★`; every scene frame stays badge-free.
+
 ## Acceptance Criteria
 
 Verify:
