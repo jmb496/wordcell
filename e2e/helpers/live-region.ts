@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 
 // Epic 6 ticket 6.13 (A-E9): a test-side MutationObserver on the polite live region records each
 // set (every non-empty text it was given, in order), so a repeated string shows two sets and
@@ -10,6 +10,23 @@ declare global {
 }
 
 export const REGION = '[role="status"][aria-live="polite"]';
+
+/**
+ * Epic 7 AD-16 no prompt (CAP-4, entry 6): a hook-free snapshot, taken once the caller's own state
+ * poll has settled (no auto-retry). App's live region is the only `status` role, and no `dialog`,
+ * `alertdialog` or `alert` role is present.
+ */
+export async function expectNoPrompt(page: Page): Promise<void> {
+  expect(await page.locator(REGION).count(), `exactly one ${REGION} (App's live region)`).toBe(1);
+  expect(await page.getByRole('status').count(), 'exactly one role "status"').toBe(1);
+  expect(
+    await page.getByRole('status').and(page.locator(REGION)).count(),
+    `the one role "status" is ${REGION}`,
+  ).toBe(1);
+  for (const role of ['dialog', 'alertdialog', 'alert'] as const) {
+    expect(await page.getByRole(role).count(), `no role "${role}"`).toBe(0);
+  }
+}
 
 /** Installs the recorder; call it after the board is up. */
 export async function recordRegion(page: Page): Promise<void> {

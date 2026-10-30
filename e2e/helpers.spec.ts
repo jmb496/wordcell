@@ -1,4 +1,5 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { request as httpRequest } from 'node:http';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { devices, expect, type Page, type Request, test } from '@playwright/test';
@@ -63,7 +64,13 @@ import {
   showPage,
   startHidden,
 } from './helpers/lifecycle';
-import { recordRegion, recordRegionFromBoot, resetRegion, sets } from './helpers/live-region';
+import {
+  expectNoPrompt,
+  recordRegion,
+  recordRegionFromBoot,
+  resetRegion,
+  sets,
+} from './helpers/live-region';
 import { onAndroid, onDesktop } from './helpers/project';
 import {
   booted,
@@ -80,6 +87,7 @@ import { captureBoot, fixture, seedStorage } from './helpers/seed';
 import { expectSelection, select, selection, wcOf } from './helpers/selection';
 import { cursorIndex, draft, draftDetail, game, storedGame, storedText } from './helpers/session';
 import { SESSIONS } from './helpers/sessions';
+import { type Copy, copy } from './helpers/static-server';
 import { armStorageSpy, storageWrites } from './helpers/storage-spy';
 import { tokenColor } from './helpers/style';
 import { doubleTap, longPress, touchDrag, touchHold } from './helpers/touch';
@@ -1586,5 +1594,200 @@ test.describe('celebration helpers', () => {
     const added = await watchAddedFromBoot(page, '[data-testid="column-1"]');
     await openFixture(page, 'session-idle-fresh');
     expect(await added()).toBe(true);
+  });
+});
+
+// Epic 7 F8 (ticket 7.3): the static server on a small synthetic build, never buildRoot().
+test.describe('static server', () => {
+  const INDEX = '<!doctype html><html><head><title>site</title></head><body>index</body></html>';
+
+  // A synthetic source dir and its served copy; `run` cleans both up in `finally`.
+  async function withSite(run: (site: Copy, src: string) => Promise<void>): Promise<void> {
+    const src = mkdtempSync(path.join(tmpdir(), 'static-src-'));
+    writeFileSync(path.join(src, 'index.html'), INDEX);
+    writeFileSync(path.join(src, 'sw.js'), '// A');
+    mkdirSync(path.join(src, 'assets'));
+    writeFileSync(path.join(src, 'assets/a.css'), 'body{}');
+    const site = copy(src);
+    try {
+      await run(site, src);
+    } finally {
+      await site.stop();
+      rmSync(src, { recursive: true, force: true });
+    }
+  }
+
+  const fetchText = (page: Page, url: string) =>
+    page.evaluate(async (u) => {
+      const response = await fetch(u);
+      return { status: response.status, text: await response.text() };
+    }, url);
+
+  test('AD-17 / serves index.html as HTML, logged navigate and 200', async ({ page }) => {
+    await withSite(async (site) => {
+      const served = await site.serve();
+      const response = await page.goto(`${served.url}/`);
+      expect(response?.status()).toBe(200);
+      expect(response?.headers()['content-type']).toMatch(/^text\/html/);
+      expect(response?.headers()['cache-control']).toBe('no-store');
+      expect(await response?.text()).toBe(INDEX);
+      expect(served.requests().filter((r) => r.path === '/')).toEqual([
+        { path: '/', mode: 'navigate', status: 200 },
+      ]);
+    });
+  });
+
+  test('AD-17 swap changes the next same-origin fetch', async ({ page }) => {
+    await withSite(async (site) => {
+      const served = await site.serve();
+      await page.goto(`${served.url}/`);
+      expect(await fetchText(page, '/sw.js')).toEqual({ status: 200, text: '// A' });
+      site.swap('sw.js', '// B');
+      expect(await fetchText(page, '/sw.js')).toEqual({ status: 200, text: '// B' });
+      expect(readFileSync(path.join(site.dir, 'sw.js'), 'utf8')).toBe('// B');
+    });
+  });
+
+  test('AD-17 a query is ignored: /sw.js?x=1 serves the file, logged as /sw.js', async ({
+    page,
+  }) => {
+    await withSite(async (site) => {
+      const served = await site.serve();
+      await page.goto(`${served.url}/`);
+      const response = await page.evaluate(async () => {
+        const r = await fetch('/sw.js?x=1');
+        return { status: r.status, type: r.headers.get('content-type'), text: await r.text() };
+      });
+      expect(response).toEqual({ status: 200, type: 'text/javascript', text: '// A' });
+      expect(served.requests().filter((r) => r.path.startsWith('/sw.js'))).toEqual([
+        { path: '/sw.js', mode: 'cors', status: 200 },
+      ]);
+    });
+  });
+
+  test('AD-17 a navigation to a missing path gets index.html, 200, logged navigate', async ({
+    page,
+  }) => {
+    await withSite(async (site) => {
+      const served = await site.serve();
+      const response = await page.goto(`${served.url}/missing/path`);
+      expect(response?.status()).toBe(200);
+      expect(response?.headers()['content-type']).toMatch(/^text\/html/);
+      expect(await response?.text()).toBe(INDEX);
+      expect(served.requests().filter((r) => r.path === '/missing/path')).toEqual([
+        { path: '/missing/path', mode: 'navigate', status: 200 },
+      ]);
+    });
+  });
+
+  test('AD-17 a removed sw.js answers a same-origin fetch 404, logged non-navigate; a second remove throws', async ({
+    page,
+  }) => {
+    await withSite(async (site) => {
+      const served = await site.serve();
+      await page.goto(`${served.url}/`);
+      site.remove('sw.js');
+      expect(() => site.remove('sw.js')).toThrow(/ENOENT/);
+      expect((await fetchText(page, '/sw.js')).status).toBe(404);
+      const logged = served.requests().filter((r) => r.path === '/sw.js');
+      expect(logged).toHaveLength(1);
+      expect(logged[0]?.status).toBe(404);
+      expect(logged[0]?.mode).not.toBe('navigate');
+    });
+  });
+
+  test('AD-17 a raw request whose decoded path leaves the copy gets 404, even as a navigation', async () => {
+    await withSite(async (site, src) => {
+      const served = await site.serve();
+      // Resolves to the synthetic source's index.html, a file that exists outside the copy.
+      const outside = `/..%2f${path.basename(src)}%2findex.html`;
+      const status = await new Promise<number | undefined>((done, fail) => {
+        httpRequest(
+          `${served.url}${outside}`,
+          { headers: { 'sec-fetch-mode': 'navigate' } },
+          (r) => {
+            r.resume();
+            r.on('end', () => done(r.statusCode));
+          },
+        )
+          .on('error', fail)
+          .end();
+      });
+      expect(status).toBe(404);
+      expect(served.requests()).toEqual([{ path: outside, mode: 'navigate', status: 404 }]);
+    });
+  });
+
+  test('AD-17 stop() removes the copy and is idempotent', async () => {
+    await withSite(async (site) => {
+      expect(existsSync(path.join(site.dir, 'assets/a.css'))).toBe(true);
+      await site.serve();
+      await site.stop();
+      expect(existsSync(site.dir)).toBe(false);
+      await site.stop();
+    });
+  });
+});
+
+// Epic 7 AD-16 no prompt (ticket 7.3): passes on an idle board and fails once per forbidden role.
+test.describe('no-prompt check', () => {
+  test('AD-17 expectNoPrompt passes on an idle board with only the App live region', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-idle-fresh');
+    await expectNoPrompt(page);
+  });
+
+  test('AD-17 expectNoPrompt rejects the New game confirm (dialog)', async ({ page }) => {
+    await openFixture(page, 'session-idle-empty-column');
+    await page.getByRole('button', { name: 'Menu', exact: true }).click();
+    const menu = page.getByRole('dialog', { name: 'Menu', exact: true });
+    await expect(menu).toBeVisible();
+    await menu.getByRole('button', { name: 'New game', exact: true }).click();
+    await expect(page.getByRole('dialog', { name: 'Start a new game?' })).toBeVisible();
+    await expect(menu).toHaveCount(0);
+    await expect(expectNoPrompt(page)).rejects.toThrow(/no role "dialog"/);
+  });
+
+  const INJECTED = [
+    ['an alertdialog', '<div role="alertdialog" aria-label="x">x</div>', /no role "alertdialog"/],
+    ['an alert', '<div role="alert">x</div>', /no role "alert"/],
+    [
+      'an extra polite status',
+      '<div role="status" aria-live="polite">x</div>',
+      /exactly one \[role="status"\]/,
+    ],
+    ['an extra plain status', '<div role="status">x</div>', /exactly one role "status"/],
+  ] as const;
+
+  for (const [name, html, message] of INJECTED) {
+    test(`AD-17 expectNoPrompt rejects ${name}`, async ({ page }) => {
+      await openFixture(page, 'session-idle-fresh');
+      await page.evaluate((markup) => document.body.insertAdjacentHTML('beforeend', markup), html);
+      await expect(expectNoPrompt(page)).rejects.toThrow(message);
+    });
+  }
+
+  test("AD-17 expectNoPrompt rejects a lone status role that is not App's live region", async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-idle-fresh');
+    // App's region stays in the DOM (one REGION match) but leaves the accessibility tree, so the
+    // one status role is the injected one.
+    await page
+      .locator('[role="status"][aria-live="polite"]')
+      .evaluate((region) => region.setAttribute('aria-hidden', 'true'));
+    await page.evaluate(() =>
+      document.body.insertAdjacentHTML('beforeend', '<div role="status">x</div>'),
+    );
+    await expect(expectNoPrompt(page)).rejects.toThrow(/the one role "status" is/);
+  });
+
+  test('AD-17 expectNoPrompt rejects a board whose App live region is removed', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-idle-fresh');
+    await page.locator('[role="status"][aria-live="polite"]').evaluate((region) => region.remove());
+    await expect(expectNoPrompt(page)).rejects.toThrow(/exactly one \[role="status"\]/);
   });
 });
