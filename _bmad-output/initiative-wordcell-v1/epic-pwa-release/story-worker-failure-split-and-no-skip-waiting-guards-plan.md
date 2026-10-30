@@ -19,9 +19,9 @@ context:
 warnings: ['oversized']
 deferred:
   - summary: >-
-      Dropping `&& !halted()` from main.ts's F17 report has no test: no spec makes the sw.ts chunk import reject, halted first or not.
+      Dropping `&& !halted()` from main.ts's F17 report has no runtime test (no spec makes the sw.ts chunk import reject, halted first or not); the source pin `AD-16 src/main.ts reports the F17 chunk failure on the hook gate alone, halted or not` (src/architecture-tree-scan.test.ts) now covers the condition.
     evidence: |-
-      Verification-gap, blind and intent lenses: grep of e2e/ and src/ for F17, `chunk did not load`, `shell/sw` finds only e2e/pwa/test-hook.spec.ts (successful import). Entry 7 (tickets.toml, sw-failure.spec.ts / dist-smoke) owns the F17 chunk-404 proofs; a halted-then-chunk-404 case would pin the unconditional report.
+      Verification-gap, blind and intent lenses: grep of e2e/ and src/ for F17, `chunk did not load`, `shell/sw` finds only e2e/pwa/test-hook.spec.ts (successful import). Entry 7 (tickets.toml, sw-failure.spec.ts / dist-smoke) owns the F17 chunk-404 proofs; its F17 case does not halt first, so the source pin, not entry 7, pins the unconditional report.
     location: >-
       src/main.ts:273
     severity: low
@@ -46,7 +46,7 @@ deferred:
 | Scenario | Input / State | Expected | Report (gate off / on) |
 |---|---|---|---|
 | First-install redundant | installing I at `register()`; I → `redundant`, slots empty | `failed` | 0 / 1 |
-| Update failure | active A (`activated`) + installing I at `register()`; I → `redundant`, installing slot null | `failed` (A older by ranking) | 0 / 1 |
+| Update failure | active A (`activated`) + installing I at `register()`; I → `redundant`, still slotted or installing slot null first | `failed` (A older by ranking) | 0 / 1 |
 | Second update found later | active A; `updatefound` U1 → `installed` → `activated` (A redundant); `updatefound` U2 → `redundant`, no newer | `failed` | 0 / 1 |
 | Rejected `register()` | `register()` rejects (F6 `block` stubs land here) | `failed`, attempt resolves | 0 / 1, `cause` = rejection |
 | `undefined` registration | `register()` resolves `undefined` (type-only branch) | `failed`, attempt resolves | 0 / 1 |
@@ -115,7 +115,7 @@ As built (2026-10-30):
   - `[low]` `[patch]` (blind) no failure case fires `redundant` while the failing worker is still slotted — update-failure case keeps the worker in `installing` during `move('redundant')`, still `failed`.
   - `[false]` `[reject]` (blind) straight-to-active supersede not exercised — the AC fixes this row as "no newer worker observed" so only the reached-`activated` rule keeps it out of `failed`; a newer worker in a slot is the newer-worker clause the replacement and update-failure cases pin.
   - `[low]` `[patch]` (blind) "gate read at call time" untested — added `AD-16 the report gate is read when the failure fires, not at import` (gate off at load, on before the failure → one report).
-  - `[low]` `[defer]` (blind) main.ts F17 report change untested — grouped with the verification-gap row; entry 7 owns F17 proofs; added to `deferred`.
+  - `[low]` `[defer]` (blind) main.ts F17 report change untested — grouped with the verification-gap row; entry 7 owns F17 proofs; added to `deferred`; since pinned by the source test `AD-16 src/main.ts reports the F17 chunk failure on the hook gate alone, halted or not`.
   - `[low]` `[reject]` (blind) build-notes `DEV ||` drift not in `deferred` — the fix edits this plan; Implementation Notes (10) records it for CAP-9, which owns the build-notes sync.
   - `[false]` `[reject]` (blind) plan has no review or verification evidence — the triage log is written at this point; `npm run test:all` exit 0 is recorded in Auto Run Result.
   - `[low]` `[reject]` (blind) an unregister or site-data clear while a worker is installing/waiting sets `failed` — matches SPEC CAP-1's literal rule (redundant before `activated`, no newer worker); silent in production; no spec unregisters (F6 audit); a guard needs an async `getRegistration()` branch.
@@ -125,12 +125,12 @@ As built (2026-10-30):
   - `[false]` `[reject]` (blind) strong `seen` Map vs weak `reached` unexplained — the comment says every seen worker is judged, also after leaving its slot, which needs an iterable strong map; at most a handful of workers per launch.
   - `[low]` `[reject]` (edge) external unregister reported as Q-40 — same root and reason as the blind unregister row.
   - `[low]` `[reject]` (edge) skip-waiting code in `index.html` or `public/` escapes the scan — the intent scopes the scan to non-test `src/` (SPEC CAP-1); the generated `sw.js` is pinned by the build-output test.
-  - `[low]` `[defer]` (verification-gap) F17 report while already halted has no test — lens disposition `defer`; entry 7 owns F17; `deferred` entry.
+  - `[low]` `[defer]` (verification-gap) F17 report while already halted has no test — lens disposition `defer`; entry 7 owns F17; `deferred` entry; since pinned by the same source test.
   - `[medium]` `[patch]` (intent) a redundant worker is re-judged on every recompute, so a worker replaced while a newer live worker existed is reported later once the replacement activates and then turns redundant with slots empty — `judged` WeakSet: each worker judged once, at the first recompute that sees it `redundant`; new `AD-16 a replaced worker is judged once …` case (fails without the guard).
   - `[false]` `[reject]` (intent) "newer" read as "in a slot" vs "first observed after" — a registered non-redundant worker always sits in a slot; SPEC CAP-1 says "in any slot"; no observable difference.
   - `[false]` `[reject]` (intent) already-redundant-at-first-read widens the rule — SPEC's "any worker `sw.ts` observes … turning redundant" covers it; adopted from the review log's carried items.
   - `[false]` `[reject]` (intent) failure split only tested on fakes, not real hook builds — the AC sets the S surface; the Playwright Q-40 cases are CAP-5 (entry 7); `e2e/pwa/test-hook.spec.ts` still reaches `active` with the halt live.
-  - `[low]` `[defer]` (intent) main.ts F17 change untested — same group as the verification-gap row.
+  - `[low]` `[defer]` (intent) main.ts F17 change untested — same group as the verification-gap row; since pinned by the same source test.
   - `[false]` `[reject]` (intent) acceptance evidence missing — `npm run test:all` exit 0 before and after patches (Auto Run Result).
 
 ## Design Notes
@@ -178,10 +178,10 @@ The check runs over every seen worker, not only slotted ones, so a worker that l
 - `src/architecture-tree-scan.test.ts` — shared lazy tree scan; `AD-16 no skip-waiting names in non-test src/`.
 - `e2e/pwa/build-output.spec.ts` — new generated-`sw.js` test; `clientsClaim` assertion moved out of the registerSW test.
 
-**Review findings:** 22 findings (high 0, medium 1, low 14, false 7). Patched 7 rows (1 medium: redundant workers re-judged on later recomputes → judged once; 6 low: JSDoc, header wording, slotted-redundant test, gate-at-call-time test, `scriptURL` in the report, `afterEach` unstub order). Deferred 1 entry (3 rows, low): the unconditional F17 report has no test until entry 7. Rejected 12 with reasons in the Review Triage Log (7 `false`; 5 `low`: unregister/site-data clear reported as Q-40 per SPEC's literal rule (two rows), substring matching, build-notes drift owned by CAP-9, `index.html`/`public/` outside the intent's `src/` scope).
+**Review findings:** 22 findings (high 0, medium 1, low 14, false 7). Patched 7 rows (1 medium: redundant workers re-judged on later recomputes → judged once; 6 low: JSDoc, header wording, slotted-redundant test, gate-at-call-time test, `scriptURL` in the report, `afterEach` unstub order). Deferred 1 entry (3 rows, low): the unconditional F17 report has no runtime test; a source pin in `src/architecture-tree-scan.test.ts` covers its condition. Rejected 12 with reasons in the Review Triage Log (7 `false`; 5 `low`: unregister/site-data clear reported as Q-40 per SPEC's literal rule (two rows), substring matching, build-notes drift owned by CAP-9, `index.html`/`public/` outside the intent's `src/` scope).
 
 **Follow-up review recommendation:** `false` — first pass, patched counts by verdict: high 0, medium 1, low 6.
 
 **Verification:** `npm run lint` and `npm run check` clean; `npm run test:all` exit 0 before and after the patches (after: unit 3,679 passed; `dist-smoke` 22 passed; dev e2e 1,126 passed; `pwa` 19 passed); size budget 560,685 / 600,000 (margin 39,315). Matrix audit: all 11 rows covered by named `AD-16` cases in `src/shell/sw.test.ts`, all run and passed.
 
-**Residual risks:** in hook builds an external unregister or site-data clear while a never-activated worker is installing or waiting is reported as a Q-40 failure (SPEC CAP-1's literal rule; no spec does this; silent in production). The F17 unconditional report is unverified until entry 7. CAP-9 must sync build-notes' gate to the as-built `VITE_TEST_HOOKS === '1'` (no `DEV ||`). The ticket's plan checkpoint was not honoured as a pause: the invocation did not direct a halt after planning.
+**Residual risks:** in hook builds an external unregister or site-data clear while a never-activated worker is installing or waiting is reported as a Q-40 failure (SPEC CAP-1's literal rule; no spec does this; silent in production). The F17 unconditional report is pinned at source level only (no runtime halted-then-chunk-404 case). CAP-9 must sync build-notes' gate to the as-built `VITE_TEST_HOOKS === '1'` (no `DEV ||`). The ticket's plan checkpoint was not honoured as a pause: the invocation did not direct a halt after planning.

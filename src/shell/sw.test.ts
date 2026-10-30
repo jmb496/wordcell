@@ -281,6 +281,41 @@ describe('AD-16 Q-40 failure split', () => {
   );
 
   it.each(GATES)(
+    'AD-16 update failure: an older active and a failing installing worker, both at register(), installing slot cleared before its statechange → failed (%s)',
+    async (_, gate) => {
+      const installing = slotted('installing');
+      const registration = registrationWith({ active: slotted('active'), installing });
+      const { swState, registerWorker, reportError } = await load({
+        registration: Promise.resolve(registration),
+        gate,
+      });
+      await registerWorker();
+      expect(swState()).toBe('installing');
+      registration.installing = null;
+      installing.move('redundant');
+      expect(swState()).toBe('failed');
+      expectReport(reportError, gate);
+    },
+  );
+
+  it.each(GATES)(
+    'AD-16 slot ranking active < waiting: an activated active and a waiting worker, both at register(), the waiting one redundant while still slotted → failed (%s)',
+    async (_, gate) => {
+      const waiting = slotted('waiting');
+      const registration = registrationWith({ active: slotted('active'), waiting });
+      const { swState, registerWorker, reportError } = await load({
+        registration: Promise.resolve(registration),
+        gate,
+      });
+      await registerWorker();
+      expect(swState()).toBe('waiting');
+      waiting.move('redundant');
+      expect(swState()).toBe('failed');
+      expectReport(reportError, gate);
+    },
+  );
+
+  it.each(GATES)(
     "AD-16 a second update found later through the module's own updatefound, redundant with no newer worker → failed (%s)",
     async (_, gate) => {
       const first = slotted('active');

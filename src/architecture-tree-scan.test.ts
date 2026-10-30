@@ -51,4 +51,13 @@ describe('AD-1 tree scan', () => {
     expect(cancel).toBeLessThan(scroll);
     expect(scroll).toBeLessThan(clear);
   });
+  it('AD-16 src/main.ts reports the F17 chunk failure on the hook gate alone, halted or not', () => {
+    const source = readFileSync(posix.join(ROOT, 'src/main.ts'), 'utf8');
+    const report = source.indexOf("'Q-40 F17 the sw.ts chunk did not load'");
+    expect(report).toBeGreaterThan(-1);
+    // The F17 catch, from its `catch (` up to the report's message.
+    const f17 = source.slice(source.lastIndexOf('catch (', report), report);
+    const condition = /\bif\s*\(([\s\S]*?)\)\s*\{\s*reportError\(\s*new Error\(\s*$/.exec(f17)?.[1];
+    expect(condition?.replace(/\s+/g, ' ').trim()).toBe("import.meta.env.VITE_TEST_HOOKS === '1'");
+  });
 });
