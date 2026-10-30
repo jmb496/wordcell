@@ -1,6 +1,6 @@
 # Review loop — ticket 7.3 (Two-build update proof)
 
-State: pass 2: done
+State: pass 3: done
 
 Target: `_bmad-output/initiative-wordcell-v1/epic-pwa-release/story-two-build-update-proof.md` (docs mode, thorough, max 7)
 Pre-loop: HEAD 4e0f0bc; pass 0 copy `story-two-build-update-proof.review-log.passes/pass0.md`, 359 words (growth budget ~900).
@@ -77,3 +77,29 @@ Fixer: all 12 items applied; Playwright 1.63.0 typings declare `serviceWorkers()
 - no-prompt check is a snapshot count after the state poll settles (comment in the helper)
 - step 3: which page closes (default: the original) and assertions after each open/close
 - update spec `test.setTimeout` sized from a measured run
+
+## Pass 3 — 2026-10-30
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 18, decision-needed 0  |  Dropped in triage: 0 (duplicates merged; adversarial's probe-marker-B major reclassified minor: either reading ends in a stop for the owner, plan-level)
+Words (docs): 931 (2.59x pass 0; over budget, net −1 this pass)  |  Snapshot: story-two-build-update-proof.review-log.passes/pass3.md (fix diff pass3.fix.diff)
+Fixer: all 6 items applied; no commands or tool claims touched.
+### Applied
+- [major] AC, two tests — the all-closed test's setup (B waiting) is unstated; a timing difference seen there fails both tests, and removing the all-closed test drops the AD-16 no-prompt row's final-page part without converting it → fixer item 1
+- [minor] step 3 — "each page … before any page closes" contradicts the page opened after the close; "two pages open" reads as three → fixer item 2
+- [minor] step 2 — "repeats them" includes the `/sw.js` 200 log check → fixer item 3
+- [minor] AC — "an observation failure" is a test fix vs step 4's rule-7 stop when no route observes → fixer item 4
+- [minor] Description — "The build pauses after its plan." repeats `plan_checkpoint: true` (over budget, cut) → fixer item 5
+- [minor] static-server bullet — CAP-9 sync hand-off "(the plan notes it)" may be lost; record it in the plan's residual risks as 7.2 did → fixer item 6
+### Default applied (technical)
+- all-closed test → runs steps 1–2 as its own setup (own copy and server), then step 4; a timing difference in the shared setup removes both tests; a removed test turns the parts of both rule-coverage rows it covered into D (G3)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+### Unapplied minors (for the build plan)
+- step 4 — a marker-B probe counts as an observation fault only if B's activation was seen before the probe's navigation (e.g. CDP version status); activation first on the probe navigation is the timing route
+- step 4 — a Worker handle that closes (worker stopped/restarted) is re-identified by its CDP `ServiceWorker` versionId
+- step 4 — assert `context.pages()` empty before the activation poll
+- AC — before calling an early activation Chromium's timing, the recorded reason rules out a `SKIP_WAITING` message reaching B
+- no-prompt check counts with `page.getByRole` (accessible, visible), excluding `REGION` by locator (Panel/WordCellView keep inert `role="dialog"` nodes)
+- full test names and spec file (e.g. `e2e/pwa/update.spec.ts`) recorded in the plan (rule-coverage preamble)
+- "the plan records …" for facts observable only at run time means the plan's build-result section (7.1/7.2 convention)
