@@ -1,6 +1,6 @@
 # Review loop — ticket 7.5 (Persistent-storage request and boot-order proofs)
 
-State: pass 3: done
+State: pass 4: done
 
 Target: `_bmad-output/initiative-wordcell-v1/epic-pwa-release/story-persistent-storage-request-and-boot-order-proofs.md` (docs mode, thorough, max 7)
 Pre-loop: HEAD c791c0b; pass 0 copy `story-persistent-storage-request-and-boot-order-proofs.review-log.passes/pass0.md`, 410 words (growth budget about 1025 words, 2.5x default).
@@ -91,3 +91,31 @@ Fixer: all 5 items applied (item 5 word-neutral: "CAP-3's trailing `halted()` ch
 - none
 ### Dropped
 - none; left unapplied for the plan (over budget): dictionary-held case's chunk handler records the hit and `route.continue()`s (fails on the assertion, not a timeout); fulfil the dictionary with `route.continue()`; timeout route never released; call-log reader and its `e2e/globals.d.ts` global; dev case read point (existing waits); chunk URL built as `'/' + swChunkFile()` against `baseURL`, hit once; scan "mirror" for the engine-token and `.d.ts` cases
+
+## Pass 4 — 2026-10-30 19:30
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 0, minor 10, decision-needed 0  |  Dropped in triage: 1 (duplicate: timeout "asserts order only" raised by two lenses)
+Words (docs): 1025 (2.50x pass 0)  |  Snapshot: unchanged from pass 3 (no fix pass)
+### Applied
+- none (converged)
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- edge-case "asserts order only" duplicate of the adversarial item (kept below)
+
+## Result — converged after 4 passes
+Majors per pass: 8, 2, 2, 0. Decision-needed: none (the Firefox question was already settled by the owner, 2026-10-29, recorded in Notes). Technical defaults applied: 15 (see each pass's "Default applied"). Words 410 → 1025 (2.50x, at budget). Fix passes committed as WIP checkpoints (8283760, d75f4ac, d5d396a); this pass-4 entry is left uncommitted for the caller.
+
+Unapplied minors (for the build plan):
+- Description timeout bullet — "so it asserts order only" can read as dropping the AC's counts and `failed` snapshots; the AC binds (e.g. "asserts the same log, no worker state").
+- Notes `page.clock` fallback — also `blocked` if `page.clock` disturbs the registration attempt, not only if it cannot drive the timeout.
+- F4 lead-in — "on the first page only" implies a second page; each case has one page.
+- Dev AC — `failed` accepted at `persisted`; the plan may assert `ready` for the unrouted dev case.
+- Scan — aliasing (`navigator['storage']`, destructuring) passes, as for `localStorage` (cite the scanner's known-limitation comment); rule id `navigator-storage` added to the `Rule` union; `\s*` around `.`/`?.` as `MATH_RANDOM`; "mirror" covers the engine-token and `.d.ts` cases (engine `navigator.storage` expects only the new rule).
+- First-launch — the chunk handler's not-`loading` read is the gating assertion; the hold window only gives an eager import time to fire.
+- `src/main.ts` boot comments updated to name CAP-3 and `requestPersistence()` after the attempt.
+- Order cases may also assert `current().kind` `active` at the read point.
+- Shell Vitest — stub `navigator` explicitly (`vi.stubGlobal`) in every case, the absent case included (Node's global `navigator` has no `storage`).
+- Init script — wrap `ServiceWorkerContainer.prototype.register` (build-notes); `persist` calls through; hook checked per event; call-log reader and its `e2e/globals.d.ts` global; `helpers.spec.ts` page (a routed HTML document on the dev origin) and assertions.
+- F4 dictionary-held case — chunk handler records the hit and `route.continue()`s; dictionary fulfilled by `route.continue()`; timeout route never released; chunk URL `'/' + swChunkFile()` against `baseURL`, hit once.
