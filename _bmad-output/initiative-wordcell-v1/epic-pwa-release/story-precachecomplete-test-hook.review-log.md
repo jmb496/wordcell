@@ -1,6 +1,6 @@
 # Review loop — ticket 7.4 (precacheComplete() test hook)
 
-State: pass 3: done
+State: pass 4: done
 
 Target: `_bmad-output/initiative-wordcell-v1/epic-pwa-release/story-precachecomplete-test-hook.md` (docs mode, thorough, max 7)
 Pre-loop: HEAD 7b800d0; pass 0 copy `story-precachecomplete-test-hook.review-log.passes/pass0.md`, 262 words (growth budget 1500 words, stated).
@@ -99,3 +99,31 @@ Fixer: all 12 items applied; checked: no `dist/assets/*.js` holds `precacheAndRo
 - none
 ### Dropped
 - none
+
+## Pass 4 — 2026-10-30
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 0, minor 10 (after merging 16 raw), decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1212 (4.63x pass 0; budget 1500), no fix pass  |  Snapshot: story-precachecomplete-test-hook.review-log.passes/pass3.md (unchanged)
+### Applied
+- none (converged; minors below left for the build's plan)
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Result — converged after 4 passes
+
+Majors per pass: 5, 2, 2, 0. No decision-needed items; no open major. Words 262 → 1212 (budget 1500).
+
+Unapplied minors (for the build's plan):
+- AC Vitest — the accessor `void`s its recompute, so "after that recompute settles" / "await the recompute that read started" have no promise: flush one macrotask (`setTimeout(0)`, fakes resolve on microtasks) after every accessor call and before each case ends (before `vi.unstubAllGlobals()`); check the `getRegistration()` count after the flush; the next call makes the second `getRegistration()` call.
+- AC pwa — name the file and test: a new test in `e2e/pwa/test-hook.spec.ts` (rule-coverage.md AD-17 row) whose name starts with its ids.
+- Parse — "or escaped" holds only if the match excludes backslashes (`url:"([^"\\]*)"`); otherwise cut "or escaped".
+- AC dev — also assert the page stayed un-halted (`current().kind` `active` or no `pageerror`), since a rejecting dev recompute leaves every other assertion true.
+- AC dev — read the collected request paths after the settle step plus a second `networkidle` placed after it.
+- AC Vitest — "the first three also assert no fetch" is ambiguous with four fakes: name them (no `serviceWorker`, both no-active-worker fakes, `activating`).
+- Recompute — the module reads `navigator`, `fetch`, `caches` and `location` as bare globals, stubbed with `vi.stubGlobal` (the existing `load()` stubs `window` as `{}`).
+- Failures — a kept rejected promise reports to AD-15 on every poll call; the plan confirms `fatal` tolerates repeats (no guard in the hook).
+- Parse — the `url:` key count is not string-aware (a `url:` inside a quoted string would throw on a valid manifest; Vite hashed names hold no `:`).
+- Opening paragraph — "proved by the `dist-smoke` check" → "checked by".
