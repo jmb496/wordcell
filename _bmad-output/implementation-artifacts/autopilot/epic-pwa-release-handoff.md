@@ -1,12 +1,12 @@
 # Epic autopilot handoff — epic-pwa-release
 
-**Last session:** ticket 7.2 Worker failure split and no-skip-waiting guards — done (2026-10-30).
+**Last session:** ticket 7.3 Two-build update proof — done (2026-10-30).
 
-The offline helper now detects a failed install and marks itself failed for that launch: players see nothing and keep playing online; test builds stop on the error screen so a broken install fails a test at once. New automatic checks guarantee nothing in the code forces a new version to take over mid-game. Ticket review 3 passes, build built (e340aee), code review 2 passes with one test fix, `npm run test:all` green, no screenshots needed (no UI change).
+A new automated test proves that when a newer version of the app is published, it never takes over while a game tab is open and never shows the player an update prompt; the new version starts only on the next launch after every tab is closed. The session resumed after the earlier usage-limit pause: the code review took 2 passes and made one test fix, `npm run test:all` is green, and no screenshots were needed (no UI change).
 
 Nothing needs your input. Close-out docs so far: none.
 
-**Next:** 7.3 Two-build update proof (also ready: 7.4, 7.8, 7.9).
+**Next:** 7.4 precacheComplete() test hook (also ready: 7.8, 7.9).
 
 **Resume:** rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-pwa-release`.
 

@@ -32,3 +32,15 @@ Close-out docs: none
 ## Stopped — usage limit
 Ticket 7.3, Step C (code review loop), pass 1 review: the step hit the 5-hour limit (`You've hit your 5-hour limit · resets 3pm (America/New_York)`) before any reviewer reported, and the orchestrator session was cut off by the same limit before it could record the stop; the interactive session recorded it afterwards. The build (26b0fae) is committed; the partial log `_bmad-output/implementation-artifacts/review-loop/7-3-build.md` (no `## Result`) is committed as a WIP checkpoint; step log kept as `.autopilot/20261030-1141/7.3-C-attempt1.log`.
 Resume: rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-pwa-release`; it resumes 7.3 at Step C with the review-loop resume rule.
+
+## 7.3 Two-build update proof — done
+What it adds: an automated test that serves one version of the app, then quietly puts a newer version on the "server", and proves the new version never takes over while any game tab is open: open tabs keep the old version, nothing pops up asking the player to update, and only once every tab is closed does the next launch start on the new version. Two small test tools come with it (a local file server that can swap files mid-test, and a check that no prompt or dialog appeared). Players see nothing new.
+Ticket review: 6 passes, converged; nothing needed your input
+Build: built; commits 26b0fae
+Code review: thorough (ticket risk medium), 2 passes, converged; 1 fix applied (8be346f, tests only: the multi-tab step now waits properly, so a too-early switch to the new version could no longer pass unnoticed)
+Tests: all passing (`npm run test:all` exit 0: 3684 unit tests, 22 dist-smoke, 1141 dev-server e2e, 24 pwa), screenshots not needed (no UI change: only `e2e/` files); size budget 560,685 / 600,000 bytes
+Ref to fix upstream: none
+Paused: usage limit at Step C (code review pass 1), reset 3pm (America/New_York), resumed at 16:20 (America/New_York)
+Tokens: 2.7M input-equivalent this session (code review 92%, orchestrator 5%, other 3%); orchestrator peak context 58k. Whole ticket including the earlier session: about 15M less 7.1/7.2's share of that session (usage-report from the run start: 15.0M across 7.2's tail and 7.3)
+Worth knowing: four code-review minors are left for the refactor sweep (7.10) in `_bmad-output/implementation-artifacts/review-loop/7-3-build.md` (two plan wording fixes: a missing step for the 5-second hold and a wrong `--project` command line; one test self-check that does not prove what it claims; and a few untested helper branches, so the plan's "every row has a named test" claim should be narrowed). The ticket's own notes leave the static-server wording in F8 and build-notes for the close-out sync (7.11).
+Close-out docs: none

@@ -3,7 +3,7 @@ title: 'Two-build update proof'
 type: 'feature'
 ticket: '3'
 created: '2026-10-30'
-status: 'built'
+status: done
 baseline_revision: 'f45add304e81639f230d841977b68d3ab43c6ab5'
 route: 'full'
 route_source: 'auto'
