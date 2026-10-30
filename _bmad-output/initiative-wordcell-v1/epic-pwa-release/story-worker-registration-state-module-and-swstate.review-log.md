@@ -1,6 +1,6 @@
 # Review log — story-worker-registration-state-module-and-swstate.md (ticket 7.1)
 
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7. Pre-loop: HEAD edc929a, copy at `story-worker-registration-state-module-and-swstate.review-log.passes/pass0.md`, 388 words.
 Refs: SPEC.md, rule-coverage.md, device-checks.md, release-checklist.md, build-notes.md (`_bmad-output/specs/spec-epic-7-pwa-release/`), epic-pwa-release.md, ARCHITECTURE-SPINE.md, AGENTS.md; plus the uncopied `tickets.toml` entry 1 fields (interface, tests, owns, consumers, plan_checkpoint) as ticket intent.
@@ -35,3 +35,36 @@ Fixer: applied items 1–14, no conflicts; verified `workbox-window` 7.4.1 in no
 - "second update found later" naming/duplication with entry 2 — merged into item 8's "later entries extend these tests" note
 - theme.spec.ts known-result and audit remedies — duplicate of item 5
 - "only in the sw.ts chunk" stricter than CAP-6's closure wording — merged into item 2
+
+## Pass 2 — 2026-10-30
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 3, minor 8 (applied), minor 2 (left), decision-needed 0  |  Dropped in triage: 4 (duplicates merged)
+Words (docs): 998 (2.57x pass 0)  |  Snapshot: story-worker-registration-state-module-and-swstate.review-log.passes/pass2.md  |  Fix diff: pass2.fix.diff
+Fixer: applied items 1–11, no conflicts; cuts for budget (workbox-window pin clause, `block` clause, Cache Storage wording, dropped the redundant "makes the attempt always resolve"); verified Playwright 1.63.0 `waitForLoadState('networkidle')` exists (typings mark it discouraged), workbox-window 7.4.1, existing hook tests' four-key lists.
+### Applied
+- [major] Description, boot tail F17 — after a caught `import()` rejection nothing says the attempt is skipped; in production (`halted()` false) the listed order calls the attempt on a module that never loaded → TypeError → AD-15 surface, against Q-40/F17 → fixer item 1
+- [major] Verify, dev test (pass-1 fix) — the no-request and `unregistered` checks can pass vacuously right after the `dictionaryState()` poll; a substring match would also catch the F1 state module → fixer item 2
+- [major] Description/References — five hook keys contradict spine AD-17's four-key list; F14 (the sanctioned supersession) is not cited, so an unattended build could stop under AGENTS.md Policy → fixer item 3
+- [minor] Verify, Vitest — no `statechange`-driven move between slots and no one-listener-per-worker case (reclassed from major: the P7 poll to `active` exercises `statechange` end to end) → fixer item 4
+- [minor] Interface/build-output — the kept `registerSW` marker fails a `sw.ts` function named `registerSW` → fixer item 5
+- [minor] Verify, precedence — all three slots filled → `waiting` not listed → fixer item 6
+- [minor] `swChunkFile()` — needs an optional root like `buildRoot(repo)` so `e2e/helpers.spec.ts` (no `PW_PREVIEW`) can reach its throws and success → fixer item 7
+- [minor] Tests line — "AD-16 state rows (S)" names no rule-coverage row → fixer item 8
+- [minor] state setter — what a set after `failed` does is unstated → fixer item 9
+- [minor] existing AD-17 hook-key tests (`e2e/pwa/test-hook.spec.ts`, `e2e/test-hook.spec.ts`) vs the new AD-16 AD-17 test — who asserts the key list → fixer item 10
+- [minor] F6 audit — "no hit assertion" reads as accepted; theme.spec.ts gains one → fixer item 11
+### Default applied (technical)
+- F17 path → the attempt is skipped and the tail falls through (no `return`) to its final `halted()` check
+- dev negative check → listener before `goto`, `networkidle` after the poll, exact pathname `/src/shell/sw.ts`
+- setter after `failed` → leaves `failed` unchanged (CAP-1 outcome)
+- `sw.ts` export name → not `registerSW`
+- `swChunkFile(root = buildRoot())`
+### Decision needed (functionality / UX / gameplay)
+- none
+### Left (minor, unapplied: plan detail, word budget)
+- Description, last sentence — between entries 1 and 2 a rejected `register()` on `dist/` shows the AD-15 surface; plan lists it as a transitional residual risk (nothing merges before entry 2)
+- `sw.ts` — attach the module's own `updatefound` listener synchronously after `register()` resolves, before the first slot read
+### Dropped
+- pathname-match finding — folded into item 2
+- macrotask wait (fix-diff) — folded into item 2
+- F17 skip (adversarial minor) — duplicate of item 1
+- statechange cases (adversarial minor) — duplicate of item 4
