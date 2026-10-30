@@ -16,7 +16,10 @@ test('Q-45 AD-16 no flash: every frame from the first paints the stored Daylight
     session: fixture('session-idle-fresh.json'),
     prefs: fixture('prefs-theme-paper.json'),
   });
+  // Epic 7 F6: the first `goto` is uncontrolled (no worker yet), so `page.route` sees the request.
+  let held = 0;
   await page.route('**/assets/index-*.js', async (route) => {
+    held++;
     await new Promise((r) => setTimeout(r, 400));
     await route.continue();
   });
@@ -35,6 +38,7 @@ test('Q-45 AD-16 no flash: every frame from the first paints the stored Daylight
   const frames = await page.evaluate(
     () => (window as unknown as { __tableFrames: string[] }).__tableFrames,
   );
+  expect(held).toBeGreaterThan(0);
   expect(frames.length).toBeGreaterThan(5);
   expect(frames.filter((colour) => colour !== PAPER_TABLE)).toEqual([]);
 });

@@ -1,7 +1,15 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
-import { buildRoot, linkTags, readSite, relOf, tags, walk } from '../helpers/dist-test';
+import {
+  buildRoot,
+  linkTags,
+  readSite,
+  relOf,
+  swChunkFile,
+  tags,
+  walk,
+} from '../helpers/dist-test';
 
 // AD-16 / AD-18 packaging, read from the build under test on disk (helpers/dist-test.ts
 // buildRoot). Runs under both the pwa (dist-test/) and dist-smoke (dist/) projects, so it must
@@ -37,23 +45,24 @@ test('AD-16 the built web manifest is exactly DESIGN.md A-D5 plus the plugin def
   });
 });
 
-test('AD-16 the build registers no service worker automatically', () => {
+test('AD-16 the build has no registerSW.js and registers a worker only from the sw.ts chunk', () => {
   const root = buildRoot();
   expect(existsSync(path.join(root, 'registerSW.js'))).toBe(false);
 
-  // Epic 7 (AD-16 src/shell/sw.ts dynamic chunk) narrows this scan to the non-sw chunks.
+  const swChunk = swChunkFile(root);
   const scanned = ['index.html', ...walk(root).filter((file) => /^assets\/[^/]+\.js$/.test(file))];
   expect(scanned.length).toBeGreaterThan(1);
+  expect(scanned).toContain(swChunk);
   for (const file of scanned) {
     const source = readSite(file);
-    for (const marker of [
-      'registerSW',
-      'serviceWorker.register',
-      'vite-plugin-pwa:',
-      'virtual:pwa-register',
-    ]) {
+    for (const marker of ['registerSW', 'vite-plugin-pwa:', 'virtual:pwa-register']) {
       expect(source.includes(marker), `${file} contains ${marker}`).toBe(false);
     }
+    // Epic 7 CAP-6: the one registration is the sw.ts chunk's (workbox-window inlined there).
+    expect(
+      source.includes('serviceWorker.register'),
+      `${file} ${file === swChunk ? 'lacks' : 'contains'} serviceWorker.register`,
+    ).toBe(file === swChunk);
   }
 
   // vite-plugin-pwa adds clientsClaim only for autoUpdate with automatic registration. No

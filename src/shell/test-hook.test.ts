@@ -50,6 +50,7 @@ describe('AD-17 celebration seam', () => {
       'current',
       'dictionaryState',
       'loaded',
+      'swState',
     ]);
     expect(Object.isFrozen(hook.celebration)).toBe(true);
     expect(Reflect.ownKeys(hook.celebration).map(String).sort()).toEqual([

@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { devices, expect, type Page, type Request, test } from '@playwright/test';
@@ -29,7 +29,7 @@ import {
   watchAddedFromBoot,
 } from './helpers/celebration';
 import { button, expectLeaves, hitAt, wc } from './helpers/dialogs';
-import { buildRoot } from './helpers/dist-test';
+import { buildRoot, swChunkFile } from './helpers/dist-test';
 import { dragResidue, expectNoResidue } from './helpers/drag';
 import {
   css,
@@ -1313,6 +1313,27 @@ test.describe('buildRoot', () => {
       if (saved === undefined) delete process.env.PW_PREVIEW;
       else process.env.PW_PREVIEW = saved;
       rmSync(repo, { recursive: true, force: true });
+    }
+  });
+});
+
+test.describe('swChunkFile', () => {
+  test('AD-17 swChunkFile throws on a missing, non-dynamic or file-less src/shell/sw.ts key and returns its file', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'sw-chunk-'));
+    const write = (manifest: unknown) =>
+      writeFileSync(path.join(root, '.vite/manifest.json'), JSON.stringify(manifest));
+    try {
+      mkdirSync(path.join(root, '.vite'));
+      write({ 'index.html': { file: 'assets/index-a.js', isEntry: true } });
+      expect(() => swChunkFile(root)).toThrow(/has no src\/shell\/sw\.ts key$/);
+      write({ 'src/shell/sw.ts': { file: 'assets/sw-b.js' } });
+      expect(() => swChunkFile(root)).toThrow(/src\/shell\/sw\.ts is not a dynamic entry$/);
+      write({ 'src/shell/sw.ts': { isDynamicEntry: true } });
+      expect(() => swChunkFile(root)).toThrow(/src\/shell\/sw\.ts has no file$/);
+      write({ 'src/shell/sw.ts': { file: 'assets/sw-b.js', isDynamicEntry: true } });
+      expect(swChunkFile(root)).toBe('assets/sw-b.js');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
     }
   });
 });

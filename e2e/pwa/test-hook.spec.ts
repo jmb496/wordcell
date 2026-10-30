@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { END_SHEET, openFixture } from '../helpers/board';
 import { running, watchAdded } from '../helpers/celebration';
 
-test('AD-17 test hook is present in the test build: frozen, exposes loaded, current, dictionaryState and celebration', async ({
+test('AD-17 test hook is present in the test build: frozen, exposes exactly its hook keys', async ({
   page,
 }) => {
   await page.goto('/');
@@ -21,7 +21,7 @@ test('AD-17 test hook is present in the test build: frozen, exposes loaded, curr
   });
   expect(hook).toEqual({
     frozen: true,
-    keys: ['celebration', 'current', 'dictionaryState', 'loaded'],
+    keys: ['celebration', 'current', 'dictionaryState', 'loaded', 'swState'],
     kind: 'active',
     celebrationFrozen: true,
     celebrationKeys: ['advance', 'running', 'setEnabled'],
@@ -39,4 +39,15 @@ test('AD-17 the celebration seam is off by default in the test build: a win open
   await expect(page.getByRole('dialog', { name: END_SHEET })).toBeVisible();
   expect(await running(page)).toBe(false);
   expect(await added()).toBe(false);
+});
+
+// Epic 7 CAP-1, CAP-2: the boot tail registers /sw.js after the dictionary settles; the hook reads
+// the worker state from the shell module (key list pinned above).
+test('AD-16 AD-17 the registered worker reaches swState() active in the test build', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await expect
+    .poll(() => page.evaluate(() => window.__wordcell?.swState()), { timeout: 15_000 })
+    .toBe('active');
 });

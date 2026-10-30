@@ -1,11 +1,13 @@
 // AD-17 test hook: installed only under `vite dev` and the `build:test` build; read-only accessors
 // delegate to the stores (update `e2e/globals.d.ts` in the same change); `history` comes from
-// the score-history store through the game store (AD-6); `dictionaryState` from the AD-8 store.
+// the score-history store through the game store (AD-6); `dictionaryState` from the AD-8 store;
+// `swState` from the AD-16 worker-state module (epic 7 F1).
 // Celebration seam (AD-17, AD-19, epic 10 entry 5): `celebration` is the one writable part. The run
 // controller lives in `src/ui/`, which shell never imports (AD-1), so main.ts passes it in through
 // `registerCelebrationSeam` (hook builds only); until then every method throws (rule 6).
 import { type DictionaryState, dictionary } from './dictionary.svelte';
 import { type Current, game, type Loaded } from './game.svelte';
+import { type SwState, swState } from './sw-state';
 
 /** What main.ts hands over: the controller's `running`, `advance`, `setManual` and the flag setter. */
 export type CelebrationSeam = {
@@ -27,6 +29,7 @@ declare global {
       loaded(): Loaded;
       current(): Current;
       dictionaryState(): DictionaryState;
+      swState(): SwState;
       celebration: CelebrationHook;
     }>;
   }
@@ -53,6 +56,7 @@ if (import.meta.env.DEV || import.meta.env.VITE_TEST_HOOKS === '1') {
     loaded: () => game.loaded(),
     current: () => game.current(),
     dictionaryState: () => dictionary.state,
+    swState: () => swState(),
     celebration: Object.freeze({
       advance: (ms: number) => {
         const current = registered('advance');

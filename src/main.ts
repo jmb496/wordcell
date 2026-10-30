@@ -3,6 +3,7 @@ import { dictionary } from './shell/dictionary.svelte';
 import { game } from './shell/game.svelte';
 import { nav } from './shell/nav';
 import { prefs } from './shell/prefs.svelte';
+import { setSwState } from './shell/sw-state';
 import { registerCelebrationSeam } from './shell/test-hook';
 import App from './ui/App.svelte';
 import { setController } from './ui/act';
@@ -132,9 +133,9 @@ function halted(): boolean {
 }
 
 // AD-16: prefs load and theme apply, nav launch, font check, game load, lifecycle, boot surfaces, mount, then (only
-// on the path that mounts App) the dictionary fetch once painted and visible, unless halted
-// meanwhile. Not awaited: a failure is an unhandledrejection that writes nothing (AD-8 outcomes
-// never reject).
+// on the path that mounts App) the dictionary fetch once painted and visible, then the worker
+// registration once the dictionary settled, unless halted meanwhile. Not awaited: a failure is an
+// unhandledrejection that writes nothing (AD-8 outcomes never reject).
 async function boot(): Promise<void> {
   // AD-10, AD-16, Q-45: prefs load and the theme applies first, synchronously, before the first await, so
   // no frame paints the default under a stored theme (a throw, e.g. an unregistered id, reaches AD-15).
@@ -259,6 +260,25 @@ async function boot(): Promise<void> {
   await game.whenVisible();
   if (halted()) return;
   await dictionary.load();
+  // AD-16 boot tail (epic 7 SPEC CAP-1, F3, F4, F17): the worker registers only after the
+  // dictionary settles, never in dev (a branch, not a return), never on a halted launch.
+  if (halted()) return;
+  if (!import.meta.env.DEV) {
+    let sw: typeof import('./shell/sw') | undefined;
+    try {
+      // F17: the one specified catch, around the import only (a deploy may have removed the chunk).
+      sw = await import('./shell/sw');
+    } catch (cause) {
+      setSwState('failed');
+      if (import.meta.env.VITE_TEST_HOOKS === '1' && !halted()) {
+        reportError(new Error('Q-40 F17 the sw.ts chunk did not load', { cause }));
+      }
+    }
+    if (sw !== undefined) {
+      if (halted()) return;
+      await sw.registerWorker();
+    }
+  }
 }
 
 // AD-10: `default`, `scifi`, `garden`, `steampunk`, `paper`, then `plum` in every build (spec §7.10), before boot.
