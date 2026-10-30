@@ -1,6 +1,6 @@
 # Review loop — ticket 7.5 (Persistent-storage request and boot-order proofs)
 
-State: pass 1: done
+State: pass 2: done
 
 Target: `_bmad-output/initiative-wordcell-v1/epic-pwa-release/story-persistent-storage-request-and-boot-order-proofs.md` (docs mode, thorough, max 7)
 Pre-loop: HEAD c791c0b; pass 0 copy `story-persistent-storage-request-and-boot-order-proofs.review-log.passes/pass0.md`, 410 words (growth budget about 1025 words, 2.5x default).
@@ -45,3 +45,31 @@ Fixer: all 20 items applied, no conflicts; item 9 says "the clock run past `TIME
 - none
 ### Dropped
 - adversarial: dev Playwright case for a rejected `persist()` reaching AD-15 — the Vitest proves propagation; reduced to a no-catch-at-call-site wording (item 20)
+
+## Pass 2 — 2026-10-30 19:10
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 2, minor 11, decision-needed 0  |  Dropped in triage: 0 (3 minors left for the plan: over budget and they add words)
+Words (docs): 1024 (2.50x pass 0; budget about 1025)  |  Snapshot: story-persistent-storage-request-and-boot-order-proofs.review-log.passes/pass2.md (fix diff pass2.fix.diff)
+Fixer: all 12 items applied, no conflicts; "Entry 5 fields" block compressed to pointers to stay in budget; `page.clock.fastForward` and `route.continue` checked in playwright-core 1.63.0 typings; worker-clock claim marked `(unverified)`.
+### Applied
+- [major] F4 dictionary-held case — settle point `networkidle` alone drops the rule-coverage F4 anchor (poll `dictionaryState()` out of `loading`, one macrotask) → fixer item 1
+- [major] scan — the stated match rules (`?.`, `window.` prefix, whole identifier `storageBuckets`) have no fixture case, so a wrong regex passes the AC → fixer item 2
+- [minor] init script hold option — contradicts "returns that promise unchanged"; release mechanism, logged settle under hold, and a `helpers.spec.ts` hold case unstated → fixer item 3
+- [minor] AC — "asserted once the `persist` entry appears, then `networkidle` …" reads as assert-then-wait → fixer item 4
+- [minor] timeout case — "as `e2e/dictionary.spec.ts` does" (`runFor`) contradicts build-notes `fastForward`; "worker runs outside the page clock" unverified → fixer item 5
+- [minor] chunk-held case — fulfil with what; a stub makes the case vacuous → fixer item 6
+- [minor] AC F4 — read point per case ambiguous (chunk-held case has no `networkidle`) → fixer item 7
+- [minor] F4 — the two pre-registration cases unnamed; rule-coverage counts names carrying AD-16 AD-7 → fixer item 8
+- [minor] F4 — held dictionary (and chunk) route asserted hit before the halt (rule-coverage F4 row) → fixer item 9
+- [minor] routes — the `sw.ts` chunk route kind unstated (`page.route`, build-notes) → fixer item 10
+- [minor] AC Vitest "absent → no call" cannot fail → fixer item 11
+- [minor] "the one case reaching the trailing check" — true within this ticket only (entry 7's hook-build Q-40 cases also reach it) → fixer item 12
+### Default applied (technical)
+- F4 dictionary-held settle → fulfil, poll `dictionaryState()` out of `loading`, one macrotask, `networkidle`, then assert
+- scan fixtures → add `navigator?.storage` and `window.navigator.storage` flagged, `navigator.storageBuckets` not flagged
+- hold option → off: original promise returned; on: a new promise the test releases through a helper-exposed release, settling as the original did; the logged `register` settle is the original's; `helpers.spec.ts` covers hold and release
+- held chunk released with the real response (`route.continue()`)
+- timeout → `page.clock.fastForward` past `TIMEOUT_MS` (build-notes); worker clock claim marked `(unverified)`
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none; left unapplied for the plan (over budget, fixes add words): init-script details (`ServiceWorkerContainer.prototype.register`, `persist` calls through, hook check per event; build-notes already says the first); `helpers.spec.ts` page and assertions; `\s*` around `.`/`?.` in the scan regex (mirror `MATH_RANDOM`)
