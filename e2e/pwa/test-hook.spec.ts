@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { END_SHEET, openFixture } from '../helpers/board';
 import { running, watchAdded } from '../helpers/celebration';
+import { precacheMissing, readPrecacheManifest } from '../helpers/precache';
 
 test('AD-17 test hook is present in the test build: frozen, exposes exactly its hook keys', async ({
   page,
@@ -21,7 +22,7 @@ test('AD-17 test hook is present in the test build: frozen, exposes exactly its 
   });
   expect(hook).toEqual({
     frozen: true,
-    keys: ['celebration', 'current', 'dictionaryState', 'loaded', 'swState'],
+    keys: ['celebration', 'current', 'dictionaryState', 'loaded', 'precacheComplete', 'swState'],
     kind: 'active',
     celebrationFrozen: true,
     celebrationKeys: ['advance', 'running', 'setEnabled'],
@@ -50,4 +51,23 @@ test('AD-16 AD-17 the registered worker reaches swState() active in the test bui
   await expect
     .poll(() => page.evaluate(() => window.__wordcell?.swState()), { timeout: 15_000 })
     .toBe('active');
+});
+
+// Epic 7 CAP-2: the hook recomputes on every call, so the poll reaches true once the worker is
+// activated and its precache is in Cache Storage; the page-side check confirms every manifest URL.
+test('AD-17 precacheComplete() polls to true once the worker is activated and every precache manifest URL is cached', async ({
+  page,
+  request,
+}) => {
+  // AD-15: a halted page could still poll to true after an early rejecting recompute.
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.stack ?? error.message));
+  await page.goto('/');
+  await expect
+    .poll(() => page.evaluate(() => window.__wordcell?.precacheComplete()), { timeout: 15_000 })
+    .toBe(true);
+  expect(await page.evaluate(() => window.__wordcell?.current().kind)).toBe('active');
+  expect(errors).toEqual([]);
+  const urls = (await readPrecacheManifest(request)).map((entry) => entry.url);
+  expect(await precacheMissing(page, urls)).toEqual([]);
 });

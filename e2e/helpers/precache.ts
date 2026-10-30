@@ -1,5 +1,5 @@
 import { runInNewContext } from 'node:vm';
-import type { APIRequestContext } from '@playwright/test';
+import type { APIRequestContext, Page } from '@playwright/test';
 
 export type PrecacheEntry = { url: string; revision: string | null };
 
@@ -51,4 +51,26 @@ export async function readPrecacheManifest(request: APIRequestContext): Promise<
     }
     return { url, revision };
   });
+}
+
+// Epic 7 CAP-2: the page-side check, with `precacheComplete()`'s comparison (src/shell/test-hook.ts):
+// the entries of `urls` that, resolved against the absolute `/sw.js` URL, equal no request key of a
+// `workbox-precache*` cache once `__WB_REVISION__` is stripped (union over those caches).
+export function precacheMissing(page: Page, urls: readonly string[]): Promise<string[]> {
+  return page.evaluate(
+    async (list) => {
+      const sw = new URL('/sw.js', location.href);
+      const cached = new Set<string>();
+      for (const name of await caches.keys()) {
+        if (!name.startsWith('workbox-precache')) continue;
+        for (const request of await (await caches.open(name)).keys()) {
+          const url = new URL(request.url);
+          url.searchParams.delete('__WB_REVISION__');
+          cached.add(url.href);
+        }
+      }
+      return list.filter((url) => !cached.has(new URL(url, sw).href));
+    },
+    [...urls],
+  );
 }

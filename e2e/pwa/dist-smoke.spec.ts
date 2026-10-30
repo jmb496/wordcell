@@ -43,6 +43,19 @@ test('AD-18 no file in dist/ contains __wordcell', () => {
   expect(hits).toEqual([]);
 });
 
+// Epic 7 CAP-2: the precacheComplete() code sits behind the hook gate, so no app chunk keeps it
+// (today only dist/sw.js and dist/workbox-*.js hold these names).
+test('AD-17 AD-18 no app chunk in dist/assets contains precacheAndRoute or __WB_REVISION__', () => {
+  const root = path.resolve(import.meta.dirname, '../../dist');
+  const chunks = walk(root).filter((file) => /^assets\/[^/]+\.js$/.test(file));
+  expect(chunks.length).toBeGreaterThan(0);
+  const hits = chunks.filter((file) => {
+    const text = readFileSync(path.join(root, file), 'latin1');
+    return text.includes('precacheAndRoute') || text.includes('__WB_REVISION__');
+  });
+  expect(hits).toEqual([]);
+});
+
 // R-87 (AD-13 "a reload mid-run is a relaunch"): the hook-free build keeps the celebration on (real
 // rAF), and a relaunch into a won game opens the sheet at boot without starting it.
 test('R-87 a relaunch into a won game plays no celebration in the hook-free build', async ({

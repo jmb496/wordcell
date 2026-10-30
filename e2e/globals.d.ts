@@ -56,6 +56,8 @@ declare global {
       dictionaryState(): 'loading' | 'ready' | 'failed';
       // AD-16 worker state (src/shell/sw-state.ts, epic 7 F1).
       swState(): 'unregistered' | 'installing' | 'waiting' | 'active' | 'failed';
+      // AD-17 Reading state: the last recomputed value, polled (epic 7 CAP-2).
+      precacheComplete(): boolean;
       // AD-17 Celebration seam: the one writable part (epic 10 entry 5).
       celebration: Readonly<{
         advance(ms: number): void;

@@ -21,7 +21,7 @@ test('AD-17 test hook is present under the dev server: frozen, exposes exactly i
   });
   expect(hook).toEqual({
     frozen: true,
-    keys: ['celebration', 'current', 'dictionaryState', 'loaded', 'swState'],
+    keys: ['celebration', 'current', 'dictionaryState', 'loaded', 'precacheComplete', 'swState'],
     kind: 'active',
     celebrationFrozen: true,
     celebrationKeys: ['advance', 'running', 'setEnabled'],
@@ -41,10 +41,13 @@ test('AD-17 the celebration seam is off by default under the dev server: a win o
   expect(await added()).toBe(false);
 });
 
-// Epic 7 F3: the dev server never imports the sw.ts chunk, so no worker registers there.
-test('AD-16 AD-17 the dev server never requests src/shell/sw.ts and swState() stays unregistered', async ({
+// Epic 7 F3: the dev server never imports the sw.ts chunk, so no worker registers there; CAP-2:
+// with no registration precacheComplete() reads false and fetches nothing.
+test('AD-16 AD-17 the dev server never requests src/shell/sw.ts and swState() stays unregistered and precacheComplete() stays false', async ({
   page,
 }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.stack ?? error.message));
   const paths: string[] = [];
   page.on('request', (request) => paths.push(new URL(request.url()).pathname));
   await page.goto('/');
@@ -55,7 +58,36 @@ test('AD-16 AD-17 the dev server never requests src/shell/sw.ts and swState() st
   // One macrotask for the boot tail after the dictionary settles, then the network quiet.
   await page.evaluate(() => new Promise<void>((resolve) => setTimeout(resolve, 0)));
   await page.waitForLoadState('networkidle');
-  expect(await page.evaluate(() => window.__wordcell?.swState())).toBe('unregistered');
+  expect(await page.evaluate(() => window.__wordcell?.precacheComplete())).toBe(false);
+  // Settle the recompute that call started: its getRegistration() resolves first, then a macrotask.
+  await page.evaluate(async () => {
+    await navigator.serviceWorker.getRegistration();
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  });
+  await page.waitForLoadState('networkidle');
+  expect(await page.evaluate(() => window.__wordcell?.precacheComplete())).toBe(false);
+  expect(await page.evaluate(() => window.__wordcell?.current().kind)).toBe('active');
+  expect(errors).toEqual([]);
+  expect(paths.filter((pathname) => pathname === '/sw.js')).toEqual([]);
   expect(paths.filter((pathname) => pathname === '/src/shell/sw.ts')).toEqual([]);
   expect(paths.filter((pathname) => pathname.includes('workbox-window'))).toEqual([]);
+  expect(await page.evaluate(() => window.__wordcell?.swState())).toBe('unregistered');
+});
+
+// Rule 6: the accessor's recompute is never caught, so its rejection reaches main.ts's
+// `unhandledrejection` handler and halts the store.
+test('AD-15 AD-17 a rejected precacheComplete() recompute reaches the AD-15 halt', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await expect
+    .poll(() => page.evaluate(() => window.__wordcell?.dictionaryState()))
+    .toMatch(/^(ready|failed)$/);
+  expect(await page.evaluate(() => window.__wordcell?.current().kind)).toBe('active');
+  await page.evaluate(() => {
+    navigator.serviceWorker.getRegistration = () => Promise.reject(new Error('AD-17 test'));
+    window.__wordcell?.precacheComplete();
+  });
+  await page.waitForFunction(() => window.__wordcell?.current().kind === 'halted');
+  await expect(page.getByRole('alertdialog')).toHaveAccessibleDescription('AD-17 test');
 });

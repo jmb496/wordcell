@@ -71,6 +71,7 @@ import {
   resetRegion,
   sets,
 } from './helpers/live-region';
+import { precacheMissing } from './helpers/precache';
 import { onAndroid, onDesktop } from './helpers/project';
 import {
   booted,
@@ -1798,5 +1799,20 @@ test.describe('no-prompt check', () => {
     await openFixture(page, 'session-idle-fresh');
     await page.locator('[role="status"][aria-live="polite"]').evaluate((region) => region.remove());
     await expect(expectNoPrompt(page)).rejects.toThrow(/exactly one \[role="status"\]/);
+  });
+});
+
+test.describe('precache helpers', () => {
+  test('AD-17 precacheMissing lists the URLs no workbox-precache* key holds, revision stripped, other caches ignored', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await page.evaluate(async () => {
+      const precache = await caches.open('workbox-precache-v2-test');
+      await precache.put('/a.js?__WB_REVISION__=1', new Response('a'));
+      await precache.put('/b.css', new Response('b'));
+      await (await caches.open('other')).put('/c.txt', new Response('c'));
+    });
+    expect(await precacheMissing(page, ['a.js', 'b.css', 'c.txt'])).toEqual(['c.txt']);
   });
 });
