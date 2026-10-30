@@ -1,6 +1,6 @@
 # Review loop — ticket 7.5 (Persistent-storage request and boot-order proofs)
 
-State: pass 2: done
+State: pass 3: done
 
 Target: `_bmad-output/initiative-wordcell-v1/epic-pwa-release/story-persistent-storage-request-and-boot-order-proofs.md` (docs mode, thorough, max 7)
 Pre-loop: HEAD c791c0b; pass 0 copy `story-persistent-storage-request-and-boot-order-proofs.review-log.passes/pass0.md`, 410 words (growth budget about 1025 words, 2.5x default).
@@ -73,3 +73,21 @@ Fixer: all 12 items applied, no conflicts; "Entry 5 fields" block compressed to 
 - none
 ### Dropped
 - none; left unapplied for the plan (over budget, fixes add words): init-script details (`ServiceWorkerContainer.prototype.register`, `persist` calls through, hook check per event; build-notes already says the first); `helpers.spec.ts` page and assertions; `\s*` around `.`/`?.` in the scan regex (mirror `MATH_RANDOM`)
+
+## Pass 3 — 2026-10-30 19:20
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 2, minor 3, decision-needed 0  |  Dropped in triage: 0 (fix diff and ref alignment returned none; 8 stretch minors left for the plan)
+Words (docs): 1025 (2.50x pass 0; budget about 1025)  |  Snapshot: story-persistent-storage-request-and-boot-order-proofs.review-log.passes/pass3.md (fix diff pass3.fix.diff)
+Fixer: all 5 items applied (item 5 word-neutral: "CAP-3's trailing `halted()` check"); additions offset by cuts (AC chunk sentence merged to "hit only after the dictionary's release"; scan/fixture/helpers AC merged); `swState()` leaving `unregistered` checked in `src/shell/sw.ts` (only via `recompute()` after `workbox.register()` or `fail()`).
+### Applied
+- [major] dictionary-404 launch — no route-hit assertion and no expected snapshot value, so a 404 route that never fires passes as a copy of the first-launch case → fixer item 1
+- [major] registration-attempt F4 case — under hold the logged settle is the original's (can precede the release), so "the settle plus one macrotask" never shows `main.ts` resumed; a never-released hold passes vacuously → fixer item 2
+- [minor] F4 lead-in — "dictionary route on the first page only" reads as holding it in the registration-attempt case too → fixer item 3
+- [minor] first-launch hold — `current().kind` `active` is always true when the dictionary request exists (`game.load()` and mount precede `dictionary.load()`) → fixer item 4 (cut)
+- [minor] trailing check source — CAP-3 / build-notes Boot, not F4 → fixer item 5 (word-neutral only)
+### Default applied (technical)
+- every dictionary route asserted hit; snapshots `ready` on first launch, `failed` after the 404 and the timeout
+- registration-attempt resume point → after the release poll `swState()` out of `unregistered` (`registerWorker()`'s last step, run only after the held promise settles), one macrotask, then assert
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none; left unapplied for the plan (over budget): dictionary-held case's chunk handler records the hit and `route.continue()`s (fails on the assertion, not a timeout); fulfil the dictionary with `route.continue()`; timeout route never released; call-log reader and its `e2e/globals.d.ts` global; dev case read point (existing waits); chunk URL built as `'/' + swChunkFile()` against `baseURL`, hit once; scan "mirror" for the engine-token and `.d.ts` cases
