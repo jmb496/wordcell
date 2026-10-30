@@ -1631,8 +1631,17 @@ test.describe('static server', () => {
       expect(response?.headers()['content-type']).toMatch(/^text\/html/);
       expect(response?.headers()['cache-control']).toBe('no-store');
       expect(await response?.text()).toBe(INDEX);
+      // A non-navigation fetch of `/` also gets index.html: the direct mapping, not the fallback.
+      const fetched = await page.evaluate(async () => {
+        const r = await fetch('/');
+        return { status: r.status, type: r.headers.get('content-type'), text: await r.text() };
+      });
+      expect(fetched.status).toBe(200);
+      expect(fetched.type).toMatch(/^text\/html/);
+      expect(fetched.text).toBe(INDEX);
       expect(served.requests().filter((r) => r.path === '/')).toEqual([
         { path: '/', mode: 'navigate', status: 200 },
+        { path: '/', mode: 'cors', status: 200 },
       ]);
     });
   });

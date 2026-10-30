@@ -106,7 +106,7 @@ Each test calls `test.setTimeout(120_000)`; trim this from the measured run.
 
 Sentence → test map:
 - Q-40 "does not activate on reload": shared step 2's two reloads (`waiting`, marker A).
-- "while any page stays open … two pages, one closed, another opened: still A": the A-side test's pages 2 and 3 (marker A, `controlled`, `waiting` polls) and page 2's marker after the close.
+- "while any page stays open … two pages, one closed, another opened: still A": the A-side test's pages 2 and 3 (marker A, `controlled`, `waiting` polls), page 2's marker after the close (page 2 not reloaded or replaced), and the 5 s hold (`HOLD_MS`) after page 3's checks, in which page 3's `swState()` stays `waiting` with pages 2 and 3 open after page 1's close.
 - "all closed: B": the all-closed test's final page.
 - AD-16 no-prompt row, update part: the single reloaded page (shared step 2), plus the final marker-B page (step 4, the same check the AC mentions).
 
@@ -149,11 +149,14 @@ Residual risks: CAP-9 syncs the F8 and build-notes wording to the as-built behav
 As built (2026-10-30, Playwright 1.63 Chromium):
 - Both update tests pass and Chromium's timing matches A-A15: there is no `A-A15 timing differs` result and no D route. `--repeat-each 3` gave 6 of 6 passing, about 3.8 s (A-side) and 4.5 s (all-closed) per test. Every run used the `worker-handle` route, and no run needed `update-fallback`, because the reload's own update check fetched `/sw.js`.
 - `test.setTimeout` is 150 s, not 120 s. That covers the sum of the bounded waits one test can hit (115 s) plus time for page loads, so each bounded wait fails with its own message before Playwright's generic timeout.
-- The 7 static-server and 7 no-prompt `AD-17` cases pass on `android`, and `npm run test:all` exits 0.
+- The 7 static-server and 8 no-prompt `AD-17` cases pass on `android`, and `npm run test:all` exits 0.
 - The outside-root case sends `Sec-Fetch-Mode: navigate`, and its path resolves to a file that exists outside the copy (the synthetic source's `index.html`). The 404 therefore shows that the root check runs before both the file lookup and the navigate fallback. The `remove` case also checks that a second `remove` throws (`ENOENT`).
 - As built, matrix audit: the Matrix rows "B redundant / `failed`" and "Early activation" describe the update spec's own failure branches, and no test checked them. `update.spec.ts` now has three `AD-17` self-tests. (1) With `sw.js` removed, `pollState` rejects at once on `failed`, and the message holds the request log (`404 … /sw.js`). (2) With page 1 open, a build C written over B and found by a reload replaces waiting B; the activation poll rejects at once with "turned redundant" and the log. (3) The test sends `SKIP_WAITING` to waiting B with page 1 open, so the `afterWaiting` state poll and a new page's `expectMarkerA` both reject with the timing label. To make this possible, step 4's identification and poll became `waitingHandle(context)` and `pollActivated(handle, served, context)`; the all-closed test uses them, with the same name and passing path. Test (2) found a real defect. The spec's Install algorithm terminates a replaced waiting worker before it marks it `redundant`, so B's own handle closes without ever reading `redundant`. The old poll then opened a probe page, saw marker A and threw the timing label, which would have stopped the build for Jared on what is a test fault. The fix: `waitingHandle` also requires exactly one active worker (A) and installs a `statechange` recorder for B in A's scope. Once B's handle closes, `pollActivated` reads B's state from A's record. `--repeat-each 3` gave 15 of 15 passing.
 
 ## Plan Change Log
+
+- 2026-10-30 (code review): `update.spec.ts` has five tests, not the ticket AC's "two tests": the two `Q-40 AD-16 A-A15` tests plus three `AD-17` self-tests of the spec's own failure branches (Implementation Notes, matrix audit), and `test.setTimeout` is 150 s, not 120 s. The `redundant` and `SKIP_WAITING` self-tests call `setup()` (steps 1–2), so a G3 acceptance that removes the tests for shared steps 1–2 also removes them (a comment above the self-tests says so).
+- 2026-10-30 (code review, rule 7 technical deviation from ticket step 4): `waitingHandle` also requires exactly one active worker (A) at identification and installs a `statechange` recorder for B in A's scope; `pollActivated` reads B's state from A's record once B's handle closes (a replaced waiting worker is terminated before it turns `redundant`). Step 4 named only B's handle. The CAP-9 residual-risk line stays.
 
 ## Review Triage Log
 
@@ -255,6 +258,6 @@ As built (2026-10-30, Playwright 1.63 Chromium):
   - the browser-level CDP route is unavailable;
   - observation runs through B's worker handle, plus a `statechange` recorder in A's scope once B's handle closes;
   - the all-closed test needs exactly one waiting and one active worker at identification.
-- If Chromium ever activated B early during step 2's first `waiting` poll (before `waiting` was seen), the failure would read as a generic timeout with last state `active` and the request log, not the `A-A15 timing differs` label. Any such failure still fails the test.
+- If Chromium ever activated B early during step 2's first `waiting` poll (before `waiting` was seen), the poll times out with state `active`; once the `/sw.js` 200 was fetched, `setup` reloads page 1 once and throws the `A-A15 timing differs` label if it is controlled and shows marker B, otherwise it rethrows the timeout with the request log.
 - The static server's request handler throws, uncaught, on a malformed percent-encoding (fail fast, rule 6); no spec sends one.
 - The pause at the ticket's plan checkpoint (`plan_checkpoint: true`) was not honoured, because the invocation did not direct a halt after planning.

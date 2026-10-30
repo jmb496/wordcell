@@ -21,16 +21,20 @@ test.describe.configure({ retries: 0 });
 // The D-route label (SPEC Assumptions, G3): Chromium's own activation timing differs from A-A15.
 const TIMING = 'A-A15 timing differs (SPEC Assumptions, G3)';
 // Covers the sum of the bounded waits one test can hit (setup: four 15 s state polls and the 10 s
-// `/sw.js` wait; the all-closed test adds the 30 s activation poll, its probe page and a final
-// 15 s state poll: 115 s) plus navigation slack, so each bounded wait fails with its own message
-// before Playwright's generic timeout. A passing run takes about 4 s per test (2026-10-30).
+// `/sw.js` wait; the A-side test adds two 15 s state polls and the 5 s hold: 105 s; the all-closed
+// test adds the 30 s activation poll, its probe page and a final 15 s state poll: 115 s) plus
+// navigation slack, so each bounded wait fails with its own message before Playwright's generic
+// timeout. A passing run takes about 4 s per test (2026-10-30).
 const TEST_TIMEOUT_MS = 150_000;
 const STATE_POLL_MS = 15_000;
 const SW_FETCH_POLL_MS = 10_000;
 const ACTIVATION_POLL_MS = 30_000;
+// Step 3: B must stay waiting this long with pages 2 and 3 open after page 1's close (planning
+// probe: B activated about 1.0 s after the last close).
+const HOLD_MS = 5_000;
 const INTERVAL_MS = 100;
 
-type State = 'unregistered' | 'installing' | 'waiting' | 'active' | 'failed' | undefined;
+type State = 'unregistered' | 'installing' | 'waiting' | 'active' | 'failed';
 
 const tick = () => new Promise((done) => setTimeout(done, INTERVAL_MS));
 
@@ -65,20 +69,27 @@ async function expectMarkerA(page: Page, where: string): Promise<void> {
 
 const controlled = (page: Page) => page.evaluate(() => navigator.serviceWorker.controller !== null);
 
+/** The hook's `swState()`; a missing hook throws (rule 6), never reads as a state. */
+const readSwState = (page: Page): Promise<State> =>
+  page.evaluate(() => {
+    if (window.__wordcell === undefined) throw new Error('no window.__wordcell test hook');
+    return window.__wordcell.swState();
+  });
+
 /**
  * Polls the hook's `swState()` to `want` every 100 ms for 15 s. `failed` throws at once with the
  * request log; with `afterWaiting`, `active` throws the timing label (B activated early).
  */
 async function pollState(
   page: Page,
-  want: Exclude<State, undefined>,
+  want: State,
   served: Served,
   opts: { afterWaiting?: boolean } = {},
 ): Promise<void> {
   const deadline = Date.now() + STATE_POLL_MS;
   let last: State;
   for (;;) {
-    last = await page.evaluate(() => window.__wordcell?.swState());
+    last = await readSwState(page);
     if (last === 'failed') {
       throw new Error(`swState() is failed (want ${want}); requests:\n${requestLog(served)}`);
     }
@@ -90,6 +101,22 @@ async function pollState(
       throw new Error(
         `swState() did not reach ${want} in ${STATE_POLL_MS} ms (last ${String(last)}); requests:\n${requestLog(served)}`,
       );
+    }
+    await tick();
+  }
+}
+
+/**
+ * Step 3: `swState()` stays `waiting` for `HOLD_MS`, read every 100 ms. `failed` throws with the
+ * request log, `active` the timing label, any other state with the log.
+ */
+async function holdWaiting(page: Page, served: Served, where: string): Promise<void> {
+  const end = Date.now() + HOLD_MS;
+  while (Date.now() < end) {
+    const state = await readSwState(page);
+    if (state === 'active') throw new Error(`${TIMING}: swState() active ${where}`);
+    if (state !== 'waiting') {
+      throw new Error(`swState() ${state} ${where}, not waiting; requests:\n${requestLog(served)}`);
     }
     await tick();
   }
@@ -148,13 +175,25 @@ async function setup(page: Page, site: Copy, served: Served): Promise<void> {
     });
     await page.evaluate(() => navigator.serviceWorker.getRegistration().then((r) => r?.update()));
   }
-  await pollState(page, 'waiting', served);
+  try {
+    await pollState(page, 'waiting', served);
+  } catch (error) {
+    // Before `waiting` was seen, an early activation reads as a timeout: one reload tells D apart.
+    if (!fetched() || (await readSwState(page)) !== 'active') throw error;
+    await page.reload();
+    if ((await controlled(page)) && (await marker(page)) === 'B') {
+      throw new Error(`${TIMING}: B active on the reload that found it`);
+    }
+    throw error;
+  }
   expect(fetched(), `a /sw.js 200 logged after the B write`).toBe(true);
+  expect(await controlled(page), 'page 1 controlled after the reload that found B').toBe(true);
   await expectMarkerA(page, 'on page 1 after the reload that found B');
   await expectNoPrompt(page);
 
   await page.reload();
   await pollState(page, 'waiting', served, { afterWaiting: true });
+  expect(await controlled(page), 'page 1 controlled after a second reload').toBe(true);
   await expectMarkerA(page, 'on page 1 after a second reload');
   await expectNoPrompt(page);
 }
@@ -288,8 +327,11 @@ async function withSite(
   try {
     await body(site, await site.serve());
   } finally {
-    await closePages(context);
-    await site.stop();
+    try {
+      await closePages(context);
+    } finally {
+      await site.stop();
+    }
   }
 }
 
@@ -309,13 +351,15 @@ test('Q-40 AD-16 A-A15 build B stays waiting on reloads and while pages open and
     await pollState(page2, 'waiting', served, { afterWaiting: true });
 
     await page.close();
-    // Open across a close: markers only (page 2 may show Q-38 and then never registers, AD-9).
+    // Page 2's already-loaded DOM: shows only that page 2 was not reloaded or replaced (markers
+    // only; page 2 may show Q-38 and then never registers, AD-9). The hold below checks B.
     await expectMarkerA(page2, 'on page 2 after page 1 closed');
 
     const page3 = await openPage(context, served);
     expect(await controlled(page3), 'page 3 controlled').toBe(true);
     await expectMarkerA(page3, 'on page 3 with page 2 open');
     await pollState(page3, 'waiting', served, { afterWaiting: true });
+    await holdWaiting(page3, served, 'on page 3 while pages 2 and 3 stay open after page 1 closed');
   });
 });
 
@@ -347,6 +391,8 @@ test('Q-40 AD-16 A-A15 build B activates only once every page has closed: a new 
 // AD-17 self-tests of this spec's own failure branches (plan I/O Matrix rows "B redundant /
 // `failed`" and "Early activation"): each induces the branch and asserts the check fails with its
 // own message, so a real failure is not misread as a pass or as another fault.
+// A G3 acceptance that removes the tests for shared steps 1–2 also removes the self-tests that
+// call `setup()`.
 
 // Matrix row "B redundant / `failed`", `failed` half: with `sw.js` gone, `register()` rejects and
 // the hook build sets `swState()` `failed` (and reports Q-40 to AD-15, so a fatal surface shows).
@@ -412,16 +458,24 @@ test('AD-17 the update spec timing checks fail with the A-A15 label when B activ
   test.setTimeout(TEST_TIMEOUT_MS);
   await withSite(context, async (site, served) => {
     await setup(page, site, served);
-    await page.evaluate(async () => {
+    await page.evaluate(async (bound) => {
       const registration = await navigator.serviceWorker.getRegistration();
       if (!registration?.waiting) throw new Error('no waiting worker to skip');
       // Returns only once B controls page 1, so the poll below runs after B is active.
-      const changed = new Promise((done) =>
-        navigator.serviceWorker.addEventListener('controllerchange', done, { once: true }),
+      const changed = new Promise<void>((done) =>
+        navigator.serviceWorker.addEventListener('controllerchange', () => done(), { once: true }),
       );
       registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-      await changed;
-    });
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const late = new Promise<never>((_, fail) => {
+        timer = setTimeout(
+          () => fail(new Error(`no controllerchange within ${bound} ms of SKIP_WAITING`)),
+          bound,
+        );
+      });
+      await Promise.race([changed, late]);
+      clearTimeout(timer);
+    }, STATE_POLL_MS);
     await expect(pollState(page, 'waiting', served, { afterWaiting: true })).rejects.toThrow(
       `${TIMING}: swState() active after waiting was seen`,
     );

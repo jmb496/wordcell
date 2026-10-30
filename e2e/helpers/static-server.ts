@@ -58,7 +58,7 @@ export function copy(srcDir: string): Copy {
     if (served !== null) throw new Error(`${dir} is already served at ${served.url}`);
     const log: Logged[] = [];
     const server = createServer((request, response) => {
-      const pathname = new URL(request.url ?? '/', 'http://127.0.0.1').pathname;
+      const pathname = new URL(`http://127.0.0.1${request.url ?? '/'}`).pathname;
       const header = request.headers['sec-fetch-mode'];
       const mode = typeof header === 'string' ? header : null;
       const send = (status: number, file: string | null) => {
