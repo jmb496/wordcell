@@ -3,7 +3,7 @@ title: 'Worker registration, state module and swState()'
 type: 'feature'
 ticket: '1'
 created: '2026-10-30'
-status: 'built'
+status: done
 baseline_revision: '96cca7cddd9d15ef48673f989d49b2040943d0f9'
 route: 'full'
 route_source: 'auto'

@@ -1,0 +1,1 @@
+{"outcome": "done", "ticket": "7.1", "reason": "done", "next": "7.2", "updated": "2026-10-30T13:22:27Z", "summary": "Ticket 7.1 registers the service worker, tracks its state and exposes swState() to tests; all checks passed and it is marked done."}
