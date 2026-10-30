@@ -1,6 +1,6 @@
 # Review loop — ticket 7.3 build (code mode)
 
-State: pass 1: done
+State: pass 2: done
 
 Target: commit range `f45add3..HEAD` (build commit 26b0fae), staged as `7-3-build.passes/pass0.diff`
 Intent: `_bmad-output/initiative-wordcell-v1/epic-pwa-release/story-two-build-update-proof-plan.md`
@@ -30,3 +30,27 @@ Fixer: all 11 applied; lint clean, check 0 errors, unit 3684 passed; helpers sta
 - none
 ### Dropped
 - none
+
+## Pass 2 — 2026-10-30
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 0, minor 6, decision-needed 0  |  Dropped in triage: 0 (1 duplicate merged)
+Snapshot: tree a2c6a4b3d96da17a1f9bcb0a15c2d5bcc8a6331f (unchanged; no fix pass)
+### Applied
+- none (converged: zero majors)
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Result — converged after 2 passes
+
+Final state: lint clean, check 0 errors, unit 3684 passed (orchestrator run on tree a2c6a4b); helpers static-server/no-prompt 15 passed and update.spec `--repeat-each 2` 10 passed (fixer run).
+
+Unapplied minors (for the next build or loop):
+- plan Design Notes, A-side test bullets (~line 94) — the 5 s `HOLD_MS` hold is in the sentence map and the spec but not in the step list; add a bullet and a Plan Change Log line (beyond ticket step 3).
+- plan Verification (~line 125) — `--project pwa e2e/pwa/update.spec.ts` reads the path as a project name; use `--project=pwa`, and the expected count is 15 passed (five tests × 3), not 6 (fix diff + intent, merged).
+- e2e/pwa/update.spec.ts redundant self-test regex — matches B's `/sw.js` 200 from setup, so it does not show C's fetch; mark `requests().length` before the C write and assert a `/sw.js` 200 after it.
+- e2e/pwa/update.spec.ts `holdWaiting` — its `active` → timing-label branch has no AD-17 self-test (add `holdWaiting(page2, …)` rejecting with TIMING in the SKIP_WAITING self-test); the step-2 reload classifier and `pollActivated`'s probe branch are untested, so narrow the plan's "every I/O Matrix row has a named test" claim.
+- e2e/pwa/update.spec.ts SKIP_WAITING self-test — waits only for `controllerchange`; `swState()` changes on B's `statechange`, so also wait (bounded) for B's `statechange` to `activated` before polling.
+- e2e/pwa/update.spec.ts `withSite` — an error thrown by `closePages`/`site.stop()` in `finally` replaces the body's error (could hide a timing label); keep the body error and attach the cleanup error.
