@@ -862,6 +862,42 @@ describe('AD-1 popstate', () => {
   ]);
 });
 
+describe('AD-16 skip-waiting names', () => {
+  run(
+    [
+      {
+        name: "'SKIP_WAITING' in a string",
+        path: S,
+        source: "wb.messageSW({ type: 'SKIP_WAITING' });",
+        fails: 'skip-waiting',
+      },
+      { name: 'updateSW(true)', path: S, source: 'updateSW(true);', fails: 'skip-waiting' },
+      {
+        name: 'virtual:pwa-register in a string',
+        path: S,
+        source: "const id = 'virtual:pwa-register';",
+        fails: 'skip-waiting',
+      },
+      {
+        name: 'markup onclick messageSkipWaiting()',
+        path: UV,
+        source: '<button onclick={() => wb.messageSkipWaiting()}>x</button>',
+        fails: 'skip-waiting',
+      },
+      {
+        name: 'names only in a comment',
+        path: S,
+        source:
+          '// no messageSkipWaiting, SKIP_WAITING, updateSW or virtual:pwa-register here\nexport {};',
+      },
+      { name: 'shell test SKIP_WAITING', path: ST, source: "const t = 'SKIP_WAITING';" },
+      { name: 'engine test SKIP_WAITING', path: ET, source: "const t = 'SKIP_WAITING';" },
+      { name: 'skipWaiting alone', path: S, source: 'self.skipWaiting();' },
+    ],
+    'AD-16',
+  );
+});
+
 describe('AD-1 localStorage', () => {
   run([
     {

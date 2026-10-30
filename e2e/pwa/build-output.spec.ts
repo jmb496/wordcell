@@ -64,10 +64,22 @@ test('AD-16 the build has no registerSW.js and registers a worker only from the 
       `${file} ${file === swChunk ? 'lacks' : 'contains'} serviceWorker.register`,
     ).toBe(file === swChunk);
   }
+});
 
-  // vite-plugin-pwa adds clientsClaim only for autoUpdate with automatic registration. No
-  // skipWaiting assertion: the generated SKIP_WAITING message handler legitimately contains it.
-  expect(readSite('sw.js')).not.toContain('clientsClaim');
+// vite-plugin-pwa's `prompt` mode (`registerType: 'prompt'`) emits a message handler that calls
+// skipWaiting() only for a SKIP_WAITING message, and adds clientsClaim only for autoUpdate with
+// automatic registration. AD-16 no skip-waiting (epic 7 SPEC CAP-1): the app never sends that
+// message (shell Vitest and the AD-16 source scan), so a waiting worker activates only once every
+// window has closed. Minified names are tolerated; the guard may have either operand order.
+test('AD-16 the generated sw.js skips waiting only on SKIP_WAITING and has no clientsClaim', () => {
+  const sw = readSite('sw.js');
+  expect(sw).not.toContain('clientsClaim');
+  const calls = [...sw.matchAll(/skipWaiting\(/g)];
+  expect(calls).toHaveLength(1);
+  const before = sw.slice(0, calls[0]?.index);
+  const guard =
+    /(?:["'`]SKIP_WAITING["'`]\s*===\s*[\w$]+\.data\.type|[\w$]+\.data\.type\s*===\s*["'`]SKIP_WAITING["'`])\s*&&\s*(?:[\w$]+\.)?$/;
+  expect(before).toMatch(guard);
 });
 
 test('AD-16 the built head carries the title, theme colour, viewport, manifest and favicon', () => {

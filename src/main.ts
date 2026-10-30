@@ -270,7 +270,7 @@ async function boot(): Promise<void> {
       sw = await import('./shell/sw');
     } catch (cause) {
       setSwState('failed');
-      if (import.meta.env.VITE_TEST_HOOKS === '1' && !halted()) {
+      if (import.meta.env.VITE_TEST_HOOKS === '1') {
         reportError(new Error('Q-40 F17 the sw.ts chunk did not load', { cause }));
       }
     }
