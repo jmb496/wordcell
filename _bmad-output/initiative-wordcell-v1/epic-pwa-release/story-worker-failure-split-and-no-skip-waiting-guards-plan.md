@@ -3,7 +3,7 @@ title: 'Worker failure split and no-skip-waiting guards'
 type: 'feature'
 ticket: '2'
 created: '2026-10-30'
-status: 'built'
+status: done
 baseline_revision: '1a960689030762c6619e3dedfe0195df21bdfd26'
 route: 'full'
 route_source: 'auto'

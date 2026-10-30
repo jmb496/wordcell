@@ -1,15 +1,13 @@
-# Epic PWA and release — autopilot handoff
+# Epic autopilot handoff — epic-pwa-release
 
-**Last session:** ticket 7.1 (Worker registration, state module and swState()) is done.
+**Last session:** ticket 7.2 Worker failure split and no-skip-waiting guards — done (2026-10-30).
 
-What happened: the ticket was reviewed (3 passes, nothing needed you), built in one commit (4938cf9), code-reviewed (1 pass, no major issues) and the full test suite passed. Screenshots were not needed, since nothing on screen changed.
+The offline helper now detects a failed install and marks itself failed for that launch: players see nothing and keep playing online; test builds stop on the error screen so a broken install fails a test at once. New automatic checks guarantee nothing in the code forces a new version to take over mid-game. Ticket review 3 passes, build built (e340aee), code review 2 passes with one test fix, `npm run test:all` green, no screenshots needed (no UI change).
 
-Nothing for you to decide or check.
+Nothing needs your input. Close-out docs so far: none.
 
-Worth knowing: until ticket 7.2 is built, a browser without service-worker support would show the error screen; 7.2 adds the failure handling. The branch is not deployed, so no player is affected.
+**Next:** 7.3 Two-build update proof (also ready: 7.4, 7.8, 7.9).
 
-Close-out docs: none so far.
-
-Next: ticket 7.2 (Worker failure split and no-skip-waiting guards); 7.4 and 7.9 are also ready. To continue, rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-pwa-release`.
+**Resume:** rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-pwa-release`.
 
 Digest: `_bmad-output/implementation-artifacts/autopilot/epic-pwa-release-20261030-1141.md`
