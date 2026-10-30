@@ -1,6 +1,6 @@
 # Review loop — ticket 7.2 (Worker failure split and no-skip-waiting guards)
 
-State: pass 2: done
+State: pass 3: done
 
 Target: `_bmad-output/initiative-wordcell-v1/epic-pwa-release/story-worker-failure-split-and-no-skip-waiting-guards.md` (docs mode, thorough, max 7)
 Pre-loop: HEAD 1f59086; pass 0 copy `story-worker-failure-split-and-no-skip-waiting-guards.review-log.passes/pass0.md`, 282 words (growth budget ~705).
@@ -69,3 +69,33 @@ Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: 
 ### Fix
 Fixer applied items 1–4 (no conflicts), tightening only touched sentences.
 Words (docs): 730 (2.59 x pass 0)  |  Snapshot: story-worker-failure-split-and-no-skip-waiting-guards.review-log.passes/pass2.md; fix diff pass2.fix.diff
+
+## Pass 3 — 2026-10-30
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 0, minor 12, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 730 (2.59 x pass 0)  |  Snapshot: unchanged since pass2.md (no fix pass)
+### Applied
+- none (converged; minors at convergence are not applied)
+### Default applied (technical)
+- none new
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Result — converged after 3 passes
+Majors per pass: 8, 3, 0. No decision-needed items. No open major. Words 282 → 730.
+
+### Unapplied minors (for the build plan)
+1. Build output bullet — "(name kept, 7.1 entry 8)" reads as an entry of ticket 7.1; say "name pinned by the 7.1 plan for entry 8" or name the test `AD-16 the build has no registerSW.js and registers a worker only from the sw.ts chunk`.
+2. AC split — run the non-failure cases' "no `reportError`" assertion with the gate on (gate off passes for any implementation).
+3. Failure bullet — `undefined` `register()` is credited to F6's `block` stub, but under `block` `workbox-window` rejects first (it reads `.waiting`); the `undefined` branch is only the type's; `block` falls under the rejected case.
+4. Failure bullet — "(any observation saw it `activated`)" reads as a condition; reword "(reached: some observation saw it `activated`)".
+5. Failure check order — within one recompute, record first-seen workers, then run the failure check.
+6. Build-output matcher — accept either operand order (`"SKIP_WAITING"===x.type` or `x.type==="SKIP_WAITING"`) before the single `skipWaiting(`.
+7. F5 test — stub `navigator` itself (Node 24 has a global `navigator`), and test `navigator.serviceWorker === undefined`, not `'serviceWorker' in navigator`.
+8. Report bullet — "(F17 included)" is moot for `sw.ts` (it never loads after F17); may be cut.
+9. Scan fixtures — add a comment-only passing fixture and a `.svelte` markup failing fixture beside the `'SKIP_WAITING'` string case, as the `popstate` group does.
+10. Gate — record in the plan that the gate deliberately omits build-notes' `DEV ||` (equivalent under F3, needed for gate-off Vitest) so CAP-9 syncs the as-built form.
+11. Rule 6 — one `AD-16` case where the fake `Workbox` constructor throws with `navigator.serviceWorker` present: `registerWorker()` rejects and the state is not `failed`.
+12. Failure bullet — "`updatefound` workers come later;" is implied by "or a recompute"; may be cut to recover words.
+Carried from pass 2 "Not applied": scan placement (`check()` Rule + dedicated `AD-16` it), one `Q-40`-prefixed message per cause, `vi.unstubAllGlobals()`/`vi.unstubAllEnvs()` in `afterEach`, a worker first observed already `redundant`, sticky case setup with two observed workers, F6 audit scope, 7.1 minor 2 moot once the F17 guard is dropped.
