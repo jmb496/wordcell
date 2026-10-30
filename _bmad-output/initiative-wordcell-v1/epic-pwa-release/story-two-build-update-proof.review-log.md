@@ -1,6 +1,6 @@
 # Review loop — ticket 7.3 (Two-build update proof)
 
-State: pass 4: done
+State: pass 5: done
 
 Target: `_bmad-output/initiative-wordcell-v1/epic-pwa-release/story-two-build-update-proof.md` (docs mode, thorough, max 7)
 Pre-loop: HEAD 4e0f0bc; pass 0 copy `story-two-build-update-proof.review-log.passes/pass0.md`, 359 words (growth budget ~900).
@@ -128,3 +128,27 @@ Not diverging: 1 → 2 is one pass-3 fix regression plus one newly found gating-
 - `url` is `http://127.0.0.1:<port>`; pathname decoded, normalised, 404 outside the temp root
 - `stop()` after the test's pages/context close
 - Verify "the update tests that remain" could read "both update tests (fewer only after Jared's acceptance)"
+
+## Pass 5 — 2026-10-30
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 1, minor 10, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 930 (2.59x pass 0)  |  Snapshot: story-two-build-update-proof.review-log.passes/pass5.md (fix diff pass5.fix.diff)
+Fixer: all 6 items applied, net 0 words (trimmed step 3 "on opening", AC "the", step 1 wording); no commands or tool claims touched.
+### Applied
+- [major] helper cases — pass 4's "extra polite `status`" leaves the check's "no other `status`" clause (a plain `role="status"` toast) without a failing case → fixer item 1
+- [minor] no-prompt check — not said to be hook-free; entry 6 reuses it on `dist/` → fixer item 2
+- [minor] helper cases — the in-page `fetch` from the dev-server page (5173) is cross-origin to the static server → "same-origin" → fixer item 3
+- [minor] step 2 — "no update check on the reload" has no observable → "no `/sw.js` request logged after the reload" → fixer item 4
+- [minor] AC — "each with a comment" on a removed test reads two ways → "each leaving a comment" → fixer item 5
+- [minor] step 3 — "every page shows marker A … checks markers only" reads as two rules → "gets no `swState()` poll" → fixer item 6
+### Default applied (technical)
+- failing cases → one extra `status` polite and one not
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+### Unapplied minors (for the build plan)
+- no-prompt helper: a failing case with App's live region removed (zero `REGION` matches)
+- a Playwright fixture owns the temp copy from creation (a marker-A throw before `serve()` still removes it)
+- `swap(file, content)` writes atomically; the spec computes content with a local exactly-once replace
+- step 4: both probe outcomes after a poll timeout fail the test
+- no directory-index mapping beyond `/` (F8 needs only `/`)
