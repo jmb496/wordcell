@@ -1,6 +1,6 @@
 # Review loop — ticket 7.3 (Two-build update proof)
 
-State: pass 3: done
+State: pass 4: done
 
 Target: `_bmad-output/initiative-wordcell-v1/epic-pwa-release/story-two-build-update-proof.md` (docs mode, thorough, max 7)
 Pre-loop: HEAD 4e0f0bc; pass 0 copy `story-two-build-update-proof.review-log.passes/pass0.md`, 359 words (growth budget ~900).
@@ -103,3 +103,28 @@ Fixer: all 6 items applied; no commands or tool claims touched.
 - no-prompt check counts with `page.getByRole` (accessible, visible), excluding `REGION` by locator (Panel/WordCellView keep inert `role="dialog"` nodes)
 - full test names and spec file (e.g. `e2e/pwa/update.spec.ts`) recorded in the plan (rule-coverage preamble)
 - "the plan records …" for facts observable only at run time means the plan's build-result section (7.1/7.2 convention)
+
+## Pass 4 — 2026-10-30
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 2, minor 13, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 930 (2.59x pass 0)  |  Snapshot: story-two-build-update-proof.review-log.passes/pass4.md (fix diff pass4.fix.diff)
+Fixer: all 3 items applied; no commands or tool claims touched.
+Not diverging: 1 → 2 is one pass-3 fix regression plus one newly found gating-check defect; neither traces to an unclear ref.
+### Applied
+- [major] step 3 — pass 3's rewrite left marker A asserted only on "a page open across a close"; the newly opened pages (SPEC CAP-4 "another opened still show A", the Q-40 row's core) get only a `waiting` poll, which an uncontrolled page could also pass → fixer item 1
+- [major] no-prompt check — the exception is the `REGION` selector, so any added polite `status` node (a likely update-toast shape) is excluded and the gating AD-16 check passes; the "extra `status`" failing case can be met without `aria-live` → fixer item 2
+- [minor] AC — "B activates while every open page is controlled (any step)" is vacuously true with every page closed, so the expected step-4 activation reads as the D route → fixer item 3
+### Default applied (technical)
+- no-prompt check → exactly one `REGION` match (App's) and no other `status`; the extra-`status` failing case injects `role="status" aria-live="polite"`
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+### Unapplied minors (for the build plan)
+- update spec `test.describe.configure({ retries: 0 })` (CI retries 2 would hide a sometimes-early activation) or record why retries stay
+- static server sends `Cache-Control: no-store`, no `Last-Modified`/`ETag`
+- the `dialog` failing case needs a game in progress (move or seeded fixture) before New game (src/ui/new-game.ts)
+- step 3 pages also assert `navigator.serviceWorker.controller` non-null
+- `waiting`/`active` polls fail at once on `failed` and print the request log
+- `url` is `http://127.0.0.1:<port>`; pathname decoded, normalised, 404 outside the temp root
+- `stop()` after the test's pages/context close
+- Verify "the update tests that remain" could read "both update tests (fewer only after Jared's acceptance)"
