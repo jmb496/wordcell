@@ -1,6 +1,6 @@
 # Review loop — ticket 7.3 (Two-build update proof)
 
-State: pass 5: done
+State: pass 6: done
 
 Target: `_bmad-output/initiative-wordcell-v1/epic-pwa-release/story-two-build-update-proof.md` (docs mode, thorough, max 7)
 Pre-loop: HEAD 4e0f0bc; pass 0 copy `story-two-build-update-proof.review-log.passes/pass0.md`, 359 words (growth budget ~900).
@@ -152,3 +152,28 @@ Fixer: all 6 items applied, net 0 words (trimmed step 3 "on opening", AC "the", 
 - `swap(file, content)` writes atomically; the spec computes content with a local exactly-once replace
 - step 4: both probe outcomes after a poll timeout fail the test
 - no directory-index mapping beyond `/` (F8 needs only `/`)
+
+## Pass 6 — 2026-10-30
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 0, minor 13, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 930 (2.59x pass 0), unchanged (no fix pass)  |  Snapshot: story-two-build-update-proof.review-log.passes/pass5.md
+### Applied
+- none (converged)
+### Decision needed (functionality / UX / gameplay)
+- none
+
+## Result — converged after 6 passes
+Majors per pass: 8, 7, 1, 2, 1, 0. Decision-needed: none. Technical defaults applied: 15 (see each pass's "Default applied"). Words 359 → 930 (2.59x; over the ~900 budget from pass 2, later passes net ≤ 0).
+
+Unapplied minors (for the build plan; also the "Unapplied minors" lists of passes 2–5):
+- step 3 — pass 5's trim makes the second page both "a new page" (polls) and "a page open across a close" (no poll) when the original closes; the plan polls every new page right after it opens, none after a close (Q-38, AD-9)
+- static server — content type from the served file's extension (`/` and the navigate fallback serve `index.html` as HTML)
+- step 4 — the handle poll fails at once on `redundant` and prints the request log (not the D route)
+- steps 2–3 — the plan names the D-route observable (`swState()` `active` or marker B on a new page while another is open); any other poll timeout is a test fix
+- `requests()` logs the pathname (query excluded); one helper case shows a query (e.g. `/sw.js?x=1`) gets the file
+- step 4 — use the CDP version route whenever no running `context.serviceWorkers()` entry matches at identification (idle B may be stopped); record the route per run
+- interface — one signature, e.g. `copy(srcDir)` returns a handle with `dir`, `swap`, `remove`, `serve`; `stop()` removes that dir
+- step 1 — anchor the exactly-once replace on the whole `{url:"index.html",revision:"…"}` entry; new value e.g. B's `index.html` MD5
+- step 3 — the plan's sentence-to-test map cites the new pages' marker A and `waiting` polls as the "still A" evidence
+- step 2 — poll the request log for a stated bound (e.g. 10 s) before the `registration.update()` fallback; record whether it fired
+- no-prompt helper — name module and export (e.g. `expectNoPrompt(page)` beside `REGION`)
+- AC — "with the final-page no-prompt check" repeats step 4 (cut candidate)
