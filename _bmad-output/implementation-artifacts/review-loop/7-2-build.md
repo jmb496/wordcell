@@ -1,5 +1,5 @@
 # Review loop — ticket 7.2 build (code, 1a96068..HEAD)
-State: pass 1: done
+State: pass 2: done
 
 Target: commit range `1a96068..HEAD` (staged as `7-2-build.passes/pass0.diff`); intent `_bmad-output/initiative-wordcell-v1/epic-pwa-release/story-worker-failure-split-and-no-skip-waiting-guards-plan.md`. Depth thorough, max 7.
 Pre-loop: HEAD e340aeeedacbaffbc522473b6fa3dff8ea5204fc, tree snapshot 0 725580c1faf823c92eaa35143f8e7252631ee3cc.
@@ -20,3 +20,20 @@ Snapshot: tree 28671ccd55dd097f2d6eb33433f5dd7b293838b7 (fix diff `7-2-build.pas
 ### Dropped
 - verification-gap "Update failure Matrix row vs test" — duplicate of correctness minor (item 2)
 - verification-gap "main.ts F17 untested; entry 7 does not close it" — duplicate of correctness minor (item 3, clearer wording kept)
+
+## Pass 2 — 2026-10-30
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 0, minor 2, decision-needed 0  |  Dropped in triage: 0
+Snapshot: tree 28671ccd55dd097f2d6eb33433f5dd7b293838b7 (no fix pass; unchanged since pass 1, committed as 326edb4). Orchestrator at the final state (pass 1 run): `npm test` 3684 passed, `npm run lint` pass, `npm run check` 0 errors.
+### Applied
+- none (converged: zero majors)
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Result — converged after 2 passes
+Unapplied minors:
+- `src/architecture-ad1.test.ts` "AD-16 skip-waiting names" — every failing fixture is a shell `.ts` (`S`) or script-less markup (`UV`); add failing fixtures for `import { registerSW } from 'virtual:pwa-register';` at `src/main.ts` and a `.svelte` `<script>` block calling `wb.messageSkipWaiting()`, so a rule scoped to shell sources only would fail.
+- `src/shell/sw.test.ts` `load()` — gate off stubs `VITE_TEST_HOOKS` as `''`, so a truthiness gate would also pass the gate-off cases; stub `'0'` (or run gate-off over `''` and `'0'`) so only `=== '1'` passes.
