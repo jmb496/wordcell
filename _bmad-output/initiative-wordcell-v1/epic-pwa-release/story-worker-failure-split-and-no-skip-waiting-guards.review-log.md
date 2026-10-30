@@ -1,6 +1,6 @@
 # Review loop — ticket 7.2 (Worker failure split and no-skip-waiting guards)
 
-State: pass 1: done
+State: pass 2: done
 
 Target: `_bmad-output/initiative-wordcell-v1/epic-pwa-release/story-worker-failure-split-and-no-skip-waiting-guards.md` (docs mode, thorough, max 7)
 Pre-loop: HEAD 1f59086; pass 0 copy `story-worker-failure-split-and-no-skip-waiting-guards.review-log.passes/pass0.md`, 282 words (growth budget ~705).
@@ -43,3 +43,29 @@ Reviewers: builder's reading, edge-case hunter, adversarial, ref alignment  |  F
 ### Fix
 Fixer applied all 17 items (no conflicts); Description now five bullets (Failure, Report, Scan, Build output, F6) plus the tickets.toml Interface/Tests/Owns/Consumers/Plan checkpoint block; AC case list with outcomes. Item 11 claim checked against current `dist/sw.js` and `dist-test/sw.js` (one `skipWaiting(`, `e.data&&"SKIP_WAITING"===e.data.type&&self.skipWaiting()`); `vi.stubEnv`/`vi.stubGlobal` named as design, marked `unverified` by the fixer.
 Words (docs): 713 (2.53 x pass 0)  |  Snapshot: story-worker-failure-split-and-no-skip-waiting-guards.review-log.passes/pass1.md; fix diff pass1.fix.diff
+
+## Pass 2 — 2026-10-30
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 3, minor 10, decision-needed 0  |  Dropped in triage: 3 (duplicates of the build-output name major)
+### Applied
+- [major] Description Build output vs AC test name — "extend the existing no-`clientsClaim` test" vs a new AC name; the existing test `AD-16 the build has no registerSW.js and registers a worker only from the sw.ts chunk` is pinned for entry 8 (7.1 plan Deferred coverage) → fixer item 1
+- [major] AC activated-then-superseded — can pass through the newer-worker clause alone; must observe no newer worker (build-notes' straight-to-active case) so only the reached-`activated` rule keeps it out of `failed` → fixer item 2
+- [major] AC update failure / replacement — no case pins two workers first seen in one slot read, so the active < waiting < installing ranking is untested (sw.ts loops installing, waiting, active) → fixer item 3
+- [minor] Description Failure — "Only these set `failed`, then the attempt resolves" excludes F17 and misreads for a later listener failure → fixer item 4 (reword, no growth)
+### Default applied (technical)
+- build-output → move the `clientsClaim` assertion and its comment into a new test with the AC name that also asserts the single guarded `skipWaiting(`; the registerSW test keeps its name for entry 8
+- replacement case → waiting worker superseded by an installing one present with it at `register()` (cut "or installing": jobs run one at a time)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- fix diff, edge-case and adversarial repeats of the build-output name major (merged into item 1)
+### Not applied (over budget; plan detail, carried to the build)
+- scan placement: a new `Rule` in `check()` with `run()` fixtures plus a dedicated `it('AD-16 no skip-waiting names in non-test src/')`
+- one `Q-40`-prefixed message per cause, `cause` passed where there is one
+- `vi.unstubAllGlobals()` / `vi.unstubAllEnvs()` in `afterEach`; fresh `reportError` spy per case
+- a worker first observed already `redundant` (never seen `activated`, no newer worker) fails at that read
+- sticky case setup: two observed workers (present at `register()`, then an `updatefound` one) each turning redundant
+- F6 audit record also lists specs that unregister, clear storage or route during any install (none today)
+- dropping the F17 guard leaves no branch, so 7.1 minor 2 is moot; record as a plan note
+### Fix
+Fixer applied items 1–4 (no conflicts), tightening only touched sentences.
+Words (docs): 730 (2.59 x pass 0)  |  Snapshot: story-worker-failure-split-and-no-skip-waiting-guards.review-log.passes/pass2.md; fix diff pass2.fix.diff
