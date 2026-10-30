@@ -1,6 +1,6 @@
 # Review log — story-worker-registration-state-module-and-swstate.md (ticket 7.1)
 
-State: pass 2: done
+State: pass 3: done (converged)
 
 Mode: docs, thorough, max 7. Pre-loop: HEAD edc929a, copy at `story-worker-registration-state-module-and-swstate.review-log.passes/pass0.md`, 388 words.
 Refs: SPEC.md, rule-coverage.md, device-checks.md, release-checklist.md, build-notes.md (`_bmad-output/specs/spec-epic-7-pwa-release/`), epic-pwa-release.md, ARCHITECTURE-SPINE.md, AGENTS.md; plus the uncopied `tickets.toml` entry 1 fields (interface, tests, owns, consumers, plan_checkpoint) as ticket intent.
@@ -68,3 +68,36 @@ Fixer: applied items 1–11, no conflicts; cuts for budget (workbox-window pin c
 - macrotask wait (fix-diff) — folded into item 2
 - F17 skip (adversarial minor) — duplicate of item 1
 - statechange cases (adversarial minor) — duplicate of item 4
+
+## Pass 3 — 2026-10-30
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 0, minor 12, decision-needed 0  |  Dropped in triage: 3 (duplicates merged)
+Words (docs): 998 (2.57x pass 0, over budget)  |  Snapshot: unchanged (pass2.md); no fix pass
+### Applied
+- none (converged)
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- key-list titles (edge, adversarial) — merged into the key-list minor
+- "tail's final `halted()` check" (fix diff, adversarial) — duplicate, merged
+- key-list test count (ref alignment) — duplicate of the adversarial finding
+### Triage note
+- Adversarial labelled the missing third key-list test (`src/shell/test-hook.test.ts`) major; reclassed minor: `npm test` fails at once with obvious, mechanical handling, and the ticket follows CAP-2's own four-file "change together" list.
+
+## Result — converged after 3 passes
+
+Majors per pass: 3, 3, 0. No decision-needed items; 12 technical defaults applied (passes 1–2). Words 388 → 998. No open major.
+
+Unapplied minors (for the build plan):
+- Verify, "both existing `AD-17` hook tests' key lists gain `swState`" — three tests pin the four keys: also `src/shell/test-hook.test.ts:45-53` (Vitest); all three key lists gain `swState`, and the two Playwright titles ("exposes loaded, current, dictionaryState and celebration") are retitled (e.g. "… exposes exactly its hook keys") so entry 4's sixth key does not stale them again.
+- Description, boot tail — "falls through … to the tail's final `halted()` check, where entry 5 appends `requestPersistence()`": entry 1's tail ends after the attempt; entry 5 appends the final `halted()` check with `requestPersistence()` (no trailing no-op check here).
+- Verify, dev test — named AD-16 AD-17; entry 5, extending it with persistence calls, renames it to carry AD-7 (rule-coverage row "AD-16 AD-7 (F3)").
+- Verify, dev test wait — after the `dictionaryState()` poll let one macrotask pass, then wait for `networkidle` (resolves at once if already reached; matches build-notes' F4 "one macrotask").
+- Verify, "a `pwa` test named AD-16 AD-17 only polls" — the test lives in `e2e/pwa/test-hook.spec.ts` (rule-coverage AD-17 row); "only" means it does not re-assert the key list.
+- Verify, "a worker present at `register()` that also fires `updatefound`" — the registration fires `updatefound`, not the worker; put the event on the fake registration.
+- Vitest isolation — fresh state module and `sw.ts` per case with `vi.resetModules()` (as `test-hook.test.ts`); no `reset()` export (SPEC Constraints: no production path for a test).
+- F17 catch — `reportError(new Error('Q-40 F17 …', { cause }))` keeps the rejection's reason; and call `reportError` only when the launch has not already halted, so a Q-38 another-window halt during a pending import is not overwritten by `fatal` (game.svelte.ts:210-212), or accept as hook-build residual risk.
+- Notes, open question — beyond `theme.spec.ts`, the F6 audit's findings are recorded in the plan.
+- (pass 2) Between entries 1 and 2 a rejected `register()` on `dist/` shows the AD-15 surface; transitional, nothing merges before entry 2; plan lists it as a residual risk.
+- (pass 2) Attach `sw.ts`'s own `updatefound` listener synchronously after `register()` resolves, before the first slot read.
