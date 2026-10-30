@@ -1,6 +1,6 @@
 # Review loop — ticket 7.4 (precacheComplete() test hook)
 
-State: pass 2: done
+State: pass 3: done
 
 Target: `_bmad-output/initiative-wordcell-v1/epic-pwa-release/story-precachecomplete-test-hook.md` (docs mode, thorough, max 7)
 Pre-loop: HEAD 7b800d0; pass 0 copy `story-precachecomplete-test-hook.review-log.passes/pass0.md`, 262 words (growth budget 1500 words, stated).
@@ -66,6 +66,35 @@ Fixer: all 13 items applied; item 2 vs the no-fetch cases resolved by asserting 
 - base → `new URL('/sw.js', location.href)` for fetch and resolution; Vitest stubs `location`
 - dist check → a `dist-smoke` assertion that no app JS chunk contains `precacheAndRoute(` (plan picks the spec)
 - rejected URL promise kept, never retried (rule 6)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Pass 3 — 2026-10-30
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 2, minor 10, decision-needed 0  |  Dropped in triage: 0 (duplicates merged; the `dist-smoke` needle finding rated minor, as 3 of 4 lenses did and as its pass 2 origin)
+Words (docs): 1212 (4.63x pass 0; budget 1500)  |  Snapshot: story-precachecomplete-test-hook.review-log.passes/pass3.md (fix diff pass3.fix.diff)
+Fixer: all 12 items applied; checked: no `dist/assets/*.js` holds `precacheAndRoute` or `__WB_REVISION__` (today they sit in `dist/sw.js` and `dist/workbox-*.js`), `dist-smoke.spec.ts` runs only under `dist-smoke` (`pwa` testIgnore), dev test name at `e2e/test-hook.spec.ts:45`; unverified: the in-page `getRegistration()` settle step (runtime behaviour).
+### Applied
+- [major] Recompute/AC Vitest — what `recomputePrecacheComplete()` resolves with is unstated; the reject cases' "value unchanged" is vacuous (never at `true` first) or unwritable (reading the accessor starts another, rejecting, recompute); the kept rejected URL promise is untested (pass 2 item 1 follow-up) → fixer item 1
+- [major] Accessor/AC — the accessor's own contract (import starts nothing, each call starts exactly one recompute, returns the last written value) is untested; every case awaits the recompute directly (CAP-2 "only when called", build-notes) → fixer item 2
+- [minor] AC `dist-smoke` check — needle `precacheAndRoute(` misses a regex spelling; placement in a spec that also runs under `pwa` would fail → fixer item 3
+- [minor] exports vs SPEC Constraints / 7.1–7.2 "no test-only export"; Interface omits them → fixer item 4
+- [minor] parse silently drops a `url:` entry in another form → fixer item 5
+- [minor] dev settle (macrotask, network idle) may not wait for `getRegistration()` → fixer item 6
+- [minor] "exactly one `/sw.js` fetch" vs zero in dev → fixer item 7
+- [minor] "called only from the env-gated block" vs Vitest direct calls → fixer item 8
+- [minor] dev test: new or existing unstated → fixer item 9
+- [minor] pwa page-side cache check duplicated by entry 6 → fixer item 10
+- [minor] parse fixture not tied to the real `sw.js` shape → fixer item 11
+- [minor] `__WB_REVISION__` removal method (trailing `?`) → fixer item 12
+### Default applied (technical)
+- recompute resolves with the stored value after its write step; `getRegistration()`/Cache Storage rejections start from `true`, restore stubs, then read `true`; fetch/non-OK/parse rejections assert a second recompute rejects too with one fetch, accessor never called after
+- accessor case through `window.__wordcell.precacheComplete()` with spies: import calls nothing; first call returns `false` and calls `getRegistration()` once; after settle the next call returns `true`
+- `dist-smoke` check in `e2e/pwa/dist-smoke.spec.ts`: no `dist/assets/*.js` contains `precacheAndRoute` or `__WB_REVISION__`
+- parse throws unless the `url:` key count equals the `url:"…"` match count
+- dev settle: in-page `await navigator.serviceWorker.getRegistration()` plus a macrotask; extend and rename the existing dev test
+- strip via `URL.searchParams.delete('__WB_REVISION__')`; passing parse fixture excerpted from `dist-test/sw.js`
 ### Decision needed (functionality / UX / gameplay)
 - none
 ### Dropped
