@@ -1,6 +1,6 @@
 # Review loop — ticket 7.3 (Two-build update proof)
 
-State: pass 1: done
+State: pass 2: done
 
 Target: `_bmad-output/initiative-wordcell-v1/epic-pwa-release/story-two-build-update-proof.md` (docs mode, thorough, max 7)
 Pre-loop: HEAD 4e0f0bc; pass 0 copy `story-two-build-update-proof.review-log.passes/pass0.md`, 359 words (growth budget ~900).
@@ -41,3 +41,39 @@ Fixer: all 17 items applied, no conflicts; checked against Playwright 1.63.0 typ
 - none
 ### Dropped
 - none
+
+## Pass 2 — 2026-10-30
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 7, minor 11, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+Words (docs): 932 (2.60x pass 0, over the ~900 budget: from here additions are minors unless a major)  |  Snapshot: story-two-build-update-proof.review-log.passes/pass2.md (fix diff pass2.fix.diff)
+Fixer: all 12 items applied; Playwright 1.63.0 typings declare `serviceWorkers(): Array<Worker>`; unverified (marked): `self.serviceWorker` in a worker with no page, the `waiting === serviceWorker` identity, the CDP fallback, activation timing.
+### Applied
+- [major] AC — "A-side steps always pass; only the all-closed step can fail" narrows SPEC Assumptions: B activating early (reload, one of two pages open) with every open page controlled has no route (G3: an owner question about AD-16/A-A15) → fixer item 1
+- [major] AC/Verify — after Jared accepts a D gap the spec's shape and the row are unspecified; "passes the update spec" contradicts a red all-closed step → fixer item 2
+- [major] step 2 — no reload while B is already waiting, so A-A15 "a reload does not activate a waiting worker" (rule-coverage Q-40 row) is untested → fixer item 3
+- [major] step 3 — `swState()` `waiting` read at an unstated time; a page halted by the expected Q-38 before registering stays `unregistered` (main.ts `halted()` return) → fixer item 4
+- [major] step 4 — "newest of `context.serviceWorkers()`" may pick A's restarted worker (same `/sw.js`), passing the poll early → fixer item 5
+- [major] step 4/AC — a poll timeout cannot tell "Chromium never activated" (D) from an observation fault (test fix); no allowed fix when neither route observes → fixer item 6
+- [major] helper cases — no-prompt check's failing cases miss `alert` and can be met by one `dialog` case (New game confirm is `dialog`) → fixer item 7
+- [minor] step 2 — "B's `sw.js` served" not checkable from a path/status log → "a `/sw.js` 200 logged after the B write" → fixer item 8
+- [minor] helper cases — `remove` → 404 needs a non-navigation request → fold into the in-page `fetch` case → fixer item 9
+- [minor] step 1 — marker B write (replace A's) has no exactly-once check; two `wc-build` metas possible → fixer item 10
+- [minor] step 1 — "every open page controlled" needs a reload (no `clientsClaim`) → fixer item 11
+- [minor] step 1 — `swap` (the helper) should own the temp-file + `rename` write → fixer item 12
+- [minor] step 4 — poll timeout unstated → folded into fixer item 6
+### Default applied (technical)
+- D route → B activating while every open page is controlled at any step, or still waiting after every page closed, is Chromium's timing differing: record and stop for Jared
+- D shape → two tests now (A-side; all-closed), both named `Q-40 AD-16 A-A15 …`; on acceptance only the failing test is removed (comment citing the epic Notes) and the row's kind follows
+- step 2 → a second reload with B waiting: marker A, `waiting`
+- step 3 → each page polls `swState()` to `waiting` right after it opens, before any close; after a close, markers only
+- step 4 → identify B's handle while a page is open (`self.registration.waiting === self.serviceWorker`), poll that handle (or CDP version) with a generous timeout stated in the plan; on timeout open one page: marker A → timing (stop), marker B → observation fault (test fix); no route observes → record and stop (rule 7); no fixed sleeps
+- no-prompt cases → one failing case per role
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none (unapplied over-budget plan-level minors listed below)
+### Unapplied minors (for the build plan)
+- static server MIME map for every build extension, unknown → `application/octet-stream`
+- `stop()` calls `server.closeAllConnections()` before `close()`
+- no-prompt check is a snapshot count after the state poll settles (comment in the helper)
+- step 3: which page closes (default: the original) and assertions after each open/close
+- update spec `test.setTimeout` sized from a measured run
