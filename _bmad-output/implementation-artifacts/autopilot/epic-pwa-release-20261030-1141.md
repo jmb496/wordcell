@@ -44,3 +44,14 @@ Paused: usage limit at Step C (code review pass 1), reset 3pm (America/New_York)
 Tokens: 2.7M input-equivalent this session (code review 92%, orchestrator 5%, other 3%); orchestrator peak context 58k. Whole ticket including the earlier session: about 15M less 7.1/7.2's share of that session (usage-report from the run start: 15.0M across 7.2's tail and 7.3)
 Worth knowing: four code-review minors are left for the refactor sweep (7.10) in `_bmad-output/implementation-artifacts/review-loop/7-3-build.md` (two plan wording fixes: a missing step for the 5-second hold and a wrong `--project` command line; one test self-check that does not prove what it claims; and a few untested helper branches, so the plan's "every row has a named test" claim should be narrowed). The ticket's own notes leave the static-server wording in F8 and build-notes for the close-out sync (7.11).
 Close-out docs: none
+
+## 7.4 precacheComplete() test hook — done
+What it adds: a sixth reading for the automated tests, "is the offline copy of the app fully saved yet?", so the coming offline and failure tests (7.6, 7.7) can wait for that moment instead of guessing. It exists only in test builds; players see nothing new and the released app does not contain it.
+Ticket review: 4 passes, converged; nothing needed your input
+Build: built; commits 9fb2731
+Code review: quick (ticket risk low; the build's own review patched all 4 medium findings, none deferred), 1 pass, converged; 0 fixes applied
+Tests: all passing (`npm run test:all` exit 0: 3713 unit tests, 23 dist-smoke, 1144 dev-server e2e, 25 pwa), screenshots not needed (no UI change: `src/shell/test-hook.ts` and `e2e/` only)
+Ref to fix upstream: none
+Tokens: 8.3M input-equivalent (ticket review 59%, build 29%, code review 6%, orchestrator 3%, other 3%); orchestrator peak context 66k
+Worth knowing: three code-review minors are left for the refactor sweep (7.10) in `_bmad-output/implementation-artifacts/review-loop/7-4-build.md` (the pwa test's "not halted" check runs a moment too early to catch a late one-off error; nothing yet stops another module from calling the new recompute at boot; one helper test runs only at `/`, so it cannot tell two URL bases apart). The ticket says the hook's absence from the released app is "proved by" the dist-smoke check; the plan says "checked by" (the build never edits the ticket), a wording nit only. If the test build's copy of the worker file ever cannot be read, every poll reports the error again; the plan confirms the error screen tolerates that.
+Close-out docs: none
