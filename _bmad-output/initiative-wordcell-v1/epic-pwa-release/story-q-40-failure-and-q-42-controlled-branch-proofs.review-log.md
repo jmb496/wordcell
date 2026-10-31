@@ -1,6 +1,6 @@
 # Review log — story-q-40-failure-and-q-42-controlled-branch-proofs.md (ticket 7.7)
 
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget default (2.5x pass 0 ≈ 800 words). Pass 0: 320 words, `story-q-40-failure-and-q-42-controlled-branch-proofs.review-log.passes/pass0.md`, HEAD bd9baa6.
 Intent carried from `epic-pwa-release/tickets.toml` entry 7 (not copied at pull; the fixer adds them to the Description in pass 1):
@@ -86,3 +86,31 @@ Fixer: all 9 items applied; `Served.requests()` confirmed in e2e/helpers/static-
 - none
 ### Dropped
 - none (adversarial's Q-42 fixture/URL source left to the plan: over budget, adds words) — listed as unapplied minor
+
+## Pass 4 — 2026-10-31
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (no findings)  |  Findings: major 0, minor 11, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 799 (2.5x pass 0, unchanged; no fix pass)  |  Snapshot: story-q-40-failure-and-q-42-controlled-branch-proofs.review-log.passes/pass3.md (final)
+### Applied
+- none (converged: zero majors under the late-pass bar)
+### Default applied (technical)
+- none this pass
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Result — converged after 4 passes
+Majors per pass: 7, 3, 1, 0. Decision-needed: none. Words 320 → 799 (budget ~800). Technical defaults applied: 9 (Q-42 in a new `pwa`-only `e2e/pwa/dictionary-retry.spec.ts`; held icon 404 released once the page observed the install; install-failed proof via `getRegistration()` with a rule-7 stop; held chunk route for the persistence order; no-surface check = `expectNoPrompt` + no `pageerror`, console unchecked; Q-42 waits for `ready` before delete/route; handler-resolved promise before the registration poll; Q-42 anchored on the held second hit with no `load` before and after; `fromServiceWorker()` checked on the page's list response).
+
+Unapplied minors (for the build plan):
+1. Missing-script (dist-smoke) — "(as boot-order's `order()`)" must mean only its settle steps (`persist` polled, network idle, one macrotask) and an explicit poll to the exact list; `order()` itself asserts `dictionary` keys and `__wordcell.current()`, absent on `dist/` (fix diff, edge, adversarial).
+2. Q-42 — `fromServiceWorker()` on a 404 that Workbox's `PrecacheStrategy` network fallback passes through is unverified on Playwright 1.63 (entry 6 proved only cache hits); the Notes stop rule covers it (fix diff).
+3. Notes — also stop (rule 7) if a worker request never reaches the `context.route` (icon or list), instead of dropping the `request.serviceWorker()` filter (adversarial).
+4. Chunk (dist-smoke) — read "no `persisted` while held" one macrotask after the hit (adversarial).
+5. Chunk (`pwa`) — say whether the chunk route holds or answers at once, and arm entry 5's recorder explicitly (adversarial).
+6. Precache — the icon handler throws if the log shows `register-settled` `rejected`, so a rejection fails diagnosably rather than as a timeout (adversarial).
+7. Per-test timeouts raised as entry 6's offline/update specs (`test.setTimeout`) (adversarial).
+8. Frontmatter `after: [3, 5, 6]` omits entries 1 and 4 (chunk helper, `precacheComplete()`); mirrors tickets.toml, both done, harmless (adversarial).
+9. Lead paragraph — "The no-surface check" applies to `dist-smoke` only; the `pwa` cases expect the fatal surface (adversarial).
+10. `pwa` cases — state their hit checks, the precache one with `request.serviceWorker()` non-null as on `dist-smoke` (AC "each test asserts its route or server request was hit") (adversarial).
+11. Q-42 — answer any third route hit with 404 and record it, so "exactly two hits" fails fast instead of stalling the `ready` poll (adversarial).
