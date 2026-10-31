@@ -1,6 +1,6 @@
 # Review log — story-refactor-sweep.md (ticket 7.10)
 
-State: pass 6: done
+State: pass 7: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 212 words, copy `story-refactor-sweep.review-log.passes/pass0.md` (HEAD 1bca825).
 
@@ -134,3 +134,25 @@ Fixer: all 12 applied; `-G'_BYTES'` exits 1 on 33936ce~1..33936ce and on a /tmp 
 - "re-run to 0/3 counted runs" — adds a word; plan detail
 - Description checkpoint listing the nav backlog entry — adds words; item 6 now labels it a fix ticket
 - Edge-case size-budget minor — merged into the major
+
+## Pass 7 — 2026-10-31 (verify-only)
+Reviewers: fix diff (pass6.fix.diff only)  |  Findings: major 2, minor 2, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1525 (7.2x pass 0; budget 1500)  |  Snapshot: story-refactor-sweep.review-log.passes/pass6.md (no fix this pass)
+### Open (not fixed: verify-only pass)
+- [major] AC flake-rerun bullet (line 35) — pass 6's word-neutral trim turned "one `npm run test:all` rerun" back into "one rerun", undoing pass 3's applied major (`test:all` is an `&&` chain; a spec-only rerun leaves `test:e2e:pwa` unrun). Fix: restore "one `npm run test:all` rerun" (cut "both" to stay word-neutral).
+- [major] AC flake-rerun bullet (line 35) — pass 6 minor 11 narrowed the stop rule to "a rerun failing the same or a non-item-6 test", so a rerun failing a different item-6 test continues with no green `test:all` at that commit, contradicting the Verify line. Fix: restore "a failing rerun or any other failure stops the build and is reported".
+### Unapplied minors (this pass)
+- Item 1 Columns — "live at `baseline_revision`, the plan's build start commit (yes/no …)" reads as an extra column; reword "live at `baseline_revision` (the plan's build start commit; yes/no, …)".
+- Item 2 vs item 6 — "which then waits on the fix tickets" could include the nav.spec.ts:163 backlog entry; say "its tickets.toml fix tickets".
+
+## Result — capped at 7 passes (open majors: 2, both in the AC flake-rerun bullet)
+Majors per pass: 10, 7, 5, 4, 2, 1, 2. Decision-needed: none. The two open majors are regressions in one AC bullet introduced by pass 6's fix (a word-trim and a minor that narrowed the stop rule); both have one-line restorations above, to apply before the build (or by the build's plan, which must follow the pass-5 wording: one `npm run test:all` rerun; a failing rerun or any other failure stops the build).
+
+Unapplied minors (for the build's plan):
+- Item 1 Columns wording (pass 7); item 2 "its tickets.toml fix tickets" (pass 7).
+- 7.2 halted-first F17 runtime gap (7.2 plan :187 sentence 2) beside the pre-assigned closures — its own row, live (pass 4).
+- Counted-run checkout (/mnt/d vs Linux clone) recorded in the plan (pass 4).
+- B8 scope for unrelated one-off failures in counted runs; G9 result to device-checks.md G9 via the entry-11 group; G9 pin matching `game.state.kind === 'halted'`; watch re-run trigger and timing method (pass 5).
+- Reproduction field for a non-reproducing flake row; "two ordered calls are swapped"; "0/3 counted runs" (pass 6).
+- Device-read residuals (7.9 plan :204) and 7-9-build.md:54 unrecorded-check minor; flake test identity by title prefix (pass 3).
+- Reject-verdict source filter (judgement vs tag grep; pass 5 fix-diff minor) — the plan names its grep.
