@@ -1,6 +1,6 @@
 # Review log — story-device-read-tooling-for-a-registered-worker.md (ticket 7.9)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 261 words, `story-device-read-tooling-for-a-registered-worker.review-log.passes/pass0.md`, HEAD f1f9418.
 Intent carried from `epic-pwa-release/tickets.toml` entry 9 (not copied at pull; the fixer adds them to the Description in pass 1):
@@ -74,3 +74,27 @@ Fixer: all 15 items applied; items 2 and 10 conflicted (`--history h` would now 
 - none
 ### Dropped
 - none
+
+## Pass 3 — 2026-10-31
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 2, minor 11, decision-needed 0  |  Dropped in triage: 0 (3 minors left to the plan, see Result)
+Words (docs): 1124 (4.3x pass 0; budget 1500)  |  Snapshot: story-device-read-tooling-for-a-registered-worker.review-log.passes/pass3.md  |  Fix diff: pass3.fix.diff
+Fixer: all 10 items applied, no conflicts; Chrome All-sites path and `timeout -s INT 60 node scripts/device-preview.mjs --no-build` marked unverified (not run: phone / real serve share); `git rev-parse --short HEAD` run; A/B/plain builds run, `dist/sw.js` hashes differ (A f85a7ee9…, B 2c7878da…), `dist/` left as a plain build. Fixer note: today's SIGINT handler is registered only after `serve` succeeds.
+### Applied
+- [major] Seed steps / update read — no site-data clearing method; today's doc path (address-bar icon → Site settings) needs an open tab on the origin, a live WordCell window whose AD-9 hide flush writes its Session back into the cleared storage (ref, adversarial) → fixer item 1
+- [major] AC plan-recorded `main()` checks (pass 2) — `main()` step order undefined, and an unattended run reaches `tailscale serve --bg` and blocks; no end point or clean-up check (fix diff, adversarial; edge as minor) → fixer item 2
+- [minor] Seed steps vs F9 "clearing … is the first step" — fold closing windows into the same preparation step → item 3
+- [minor] Q-38 Reload stated only for the production variant; G3 binds both → item 4
+- [minor] "install it from the seeded page" — the seed page redirects at once; install from the tab it opened → item 5
+- [minor] A when the app is already installed: launch it online after clearing; else open `<url>/`, install, close tab, launch → item 6
+- [minor] production A's readiness step = release-checklist step 2's G2 readiness, before step 3's push → item 7
+- [minor] A/B footers carry no SHA: record HEAD next to them; the first run after an update read builds → item 8
+- [minor] plan record also shows A and B builds give different `dist/sw.js` → item 9
+- [minor] `seedPage({})` throws; the non-JSON `historyJson` case uses `''` → item 10
+### Default applied (technical)
+- Site data cleared with no origin page open: Chrome ⋮ → Settings → Site settings → All sites → origin → Delete data / Clear & reset (unverified on device).
+- `main()` order: `parseArgs` → read/parse fixtures → stale seed removal → Tailscale → build → seed write → preview → serve; checks run as `timeout -s INT 60 node scripts/device-preview.mjs --no-build`, then `tailscale serve status` shows no share.
+- `seedPage({})` throws (rule 6).
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none (left to the plan, not applied: repeated `--no-build` accepted and usage tests match `/usage/`; doc Note "the next build or a no-fixture run removes it"; Desktop read from a no-fixture run, site data per origin opened)
