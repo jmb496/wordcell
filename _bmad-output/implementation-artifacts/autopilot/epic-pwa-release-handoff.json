@@ -1,1 +1,1 @@
-{"outcome": "done", "ticket": "7.4", "reason": "done", "next": "7.5", "updated": "2026-10-30T22:28:20Z", "summary": "Ticket 7.4 (precacheComplete() test hook) is done: ticket review converged in 4 passes, code review in 1 with no fixes, and test:all passed."}
+{"outcome": "done", "ticket": "7.5", "reason": "done", "next": "7.6", "updated": "2026-10-31T00:38:59Z", "summary": "Ticket 7.5 (persistent-storage request and boot-order proofs) is done: ticket review converged in 4 passes, code review in 1 with no fixes, and test:all passed."}

@@ -3,7 +3,7 @@ title: 'Persistent-storage request and boot-order proofs'
 type: 'feature'
 ticket: '5'
 created: '2026-10-30'
-status: 'built'
+status: done
 baseline_revision: 'd3854dd19bcbc5b4081fd5d65aca9f55cc7fca18'
 route: 'full'
 route_source: 'auto'
