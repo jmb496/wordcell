@@ -3,7 +3,7 @@ title: 'Device-read tooling for a registered worker'
 type: 'feature'
 ticket: '9'
 created: '2026-10-31'
-status: 'built'
+status: done
 baseline_revision: '6785917d76f092d1734be4f25285ceeb5ae6b33f'
 route: 'full'
 route_source: 'auto'
