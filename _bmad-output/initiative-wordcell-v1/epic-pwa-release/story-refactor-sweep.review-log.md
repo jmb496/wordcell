@@ -1,6 +1,6 @@
 # Review log — story-refactor-sweep.md (ticket 7.10)
 
-State: pass 4: done
+State: pass 5: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 212 words, copy `story-refactor-sweep.review-log.passes/pass0.md` (HEAD 1bca825).
 
@@ -96,3 +96,23 @@ Fixer: all 11 applied; the edit-boundary check uses `git diff --name-only <basel
 - 7.2 halted-first F17 runtime gap beside the pre-assigned closures — item 1's every-clause rule already makes it live; plan lists it (unapplied minor)
 - Counted-run checkout (/mnt/d vs Linux clone) — plan records it (unapplied minor)
 - Fix not reaching 0/3 — already follows from "without a cause or fix"
+
+## Pass 5 — 2026-10-31
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 2, minor 15, decision-needed 0  |  Dropped in triage: 6
+Words (docs): 1512 (7.1x pass 0; budget 1500, +12 from the major fix)  |  Snapshot: story-refactor-sweep.review-log.passes/pass5.md, fix diff pass5.fix.diff
+Fixer: all 8 applied; `git diff --name-only 6785917 -- . ':(exclude)_bmad-output/implementation-artifacts'` run (lists 7.9's plan and editable files only); `-G'BUDGET_BYTES'` shown to catch 33936ce (exit 1) and pass at 6785917 (exit 0); comment-only hunk rule is an inspection rule (unverified as a command); cuts: "(every source)", "ticket 5.13", "(layout, FLIP, `startTracker`)".
+### Applied
+- [major] AC edit-boundary check (added pass 4) — comment-only clause flags editable `src/architecture-scan.ts` yet lets non-comment edits to `vite.config.ts`, Playwright settings and size-budget limits through ("code comments anywhere" puts every file on the name list) → fixer item 1 (fix diff, edge-case, adversarial)
+- [major] AC edit-boundary check — `':(exclude)_bmad-output'` hides the forbidden spec, companion, spine, UX, tickets.toml, epic-file and done-ticket edits items 2–3 name → fixer item 1 (ref alignment; default applied: exclude only `_bmad-output/implementation-artifacts`)
+- [minor] word-neutral: AC flake bullet "an item 6 row's test" + closed row reopens; re-run owner named; `nav.spec.ts:163` "backlog entry" (not a tickets.toml fix ticket); G9 decline wording and chain order; entry-11 examples split by covered/uncovered; "7-9-build.md:50/:51/:55"; missing run "where it can run unattended" → fixer items 2–8
+### Default applied (technical)
+- Edit-boundary check: name list excluding only `_bmad-output/implementation-artifacts`; every hunk in a file item 3 opens only to code comments is comment-only; `git diff -G'BUDGET_BYTES'` on `scripts/size-budget.mjs` empty
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- Reject-verdict filter back to tags (fix diff minor) — reverses pass 4's applied narrowing; churn, the plan names its grep
+- B8 scope for unrelated one-off failures in counted runs — over budget; plan
+- G9 result to device-checks.md G9 via the entry-11 group — over budget; plan
+- G9 pin matching `game.state.kind === 'halted'` text — plan detail
+- Watch re-run trigger and timing method — plan detail (AD-17 Speed)
+- Re-run owner wording duplicates (merged into item 3)
