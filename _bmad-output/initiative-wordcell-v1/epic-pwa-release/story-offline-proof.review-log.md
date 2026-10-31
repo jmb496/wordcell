@@ -1,6 +1,6 @@
 # Review log — story-offline-proof.md (ticket 7.6)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 201 words, `story-offline-proof.review-log.passes/pass0.md`, HEAD 5f26585.
 Intent carried from `epic-pwa-release/tickets.toml` entry 6 (not copied at pull; the fixer adds them to the Description in pass 1):
@@ -63,3 +63,29 @@ Fixer: all 12 applied, no conflicts; UI facts checked (Flip accessible name `Fli
 ### Dropped
 - adversarial: init-script "registered before the first goto" reason inaccurate — moot under the armed stub (item 3)
 - adversarial: stub hit count as a separate check — folded into item 3
+
+## Pass 3 — 2026-10-30
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 12, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1019 (5.1x pass 0; budget 1500)  |  Snapshot: story-offline-proof.review-log.passes/pass3.md  |  Fix diff: pass3.fix.diff
+Fixer: all 12 applied, no conflicts; `glidesSettled`/`tapAt` exist; `update.spec.ts` uses `TEST_TIMEOUT_MS = 150_000` (ticket cites the pattern, not the value); Playwright 30 s default test timeout `unverified` (docs fact, no config sets one); brief line 180 old order confirmed.
+### Applied
+- [major] Steps, after the confirm's `New game` — no wait before the second compose's coordinate taps (`tapAt`, no actionability wait) while the Menu sheet's scrim and the confirm close (CSS transition, `Sheet.svelte`) and deal glides run (edge) → fixer item 1
+- [minor] stub wording: "returns 1" → writes 1 into the passed array and returns it; unarmed calls go to the original bound to `crypto` (edge, adversarial) → item 2
+- [minor] stub consumption counter read after the deal assertion → item 3
+- [minor] dist-smoke deal check also reads stored `wordcell:session` (seed, moves, cursor) → item 4
+- [minor] `pwa` restore: AD-17's history/prefs clauses (as `restore.spec.ts` asserts) missing from the "in full" list (ref, adversarial) → item 5
+- [minor] Tests line: AD-16 no-prompt row, offline part (rule-coverage.md:17) → item 6
+- [minor] `test.setTimeout(60_000)` per offline test, as `update.spec.ts` → item 7
+- [minor] `pageerror` collector before the first `goto`, empty at the end, both builds (console not checked) → item 8
+- [minor] a failure caused by production code stops the build and is reported for a fix ticket; never worked around in the test or fixed in `src/` here → item 9
+- [minor] no-prompt snapshot placement reason ("once settled, as `expectNoPrompt` requires") → item 10
+- [minor] `allow` describe titled after its mode (entry 7 shares it) → item 11
+- [minor] Order bullet: brief §6.8's wording also uses the old order → item 12
+### Default applied (technical)
+- Post-deal settle — confirm and Menu sheet `toHaveCount(0)`, then `glidesSettled(page)`, both builds
+- Test timeout — `test.setTimeout(60_000)`
+- `allow` describe title — named after its mode (e.g. `F6 serviceWorkers allow`)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
