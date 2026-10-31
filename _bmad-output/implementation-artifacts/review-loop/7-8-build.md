@@ -1,6 +1,6 @@
 # Review loop — ticket 7.8 build (code, 0a61fc2..HEAD)
 
-State: pass 1: done
+State: pass 2: done
 
 Mode: code, depth quick, max 7. Target: `0a61fc2..HEAD` (build commit c7cd412). Intent:
 `_bmad-output/initiative-wordcell-v1/epic-pwa-release/story-packaging-and-size-budget-with-a-real-worker-module-plan.md`.
@@ -24,3 +24,19 @@ Reviewers: correctness, verification gap  |  Findings: major 1, minor 1, decisio
 - 2: content case finds the single `isEntry` key and asserts its file is counted, before the marker loop; ran on real builds under `dist-smoke` and `pwa` (10 passed each).
 - Orchestrator re-run: `npm test` 91 files / 3738 tests passed; lint clean; check 0 errors.
 Snapshot: tree cdb31eb10ab8cad79551ecaaa8cbe7897931cf49, fix diff `7-8-build.passes/pass1.fix.diff`, full diff `7-8-build.passes/pass1.diff`.
+
+## Pass 2 — 2026-10-31
+Reviewers: fix diff, correctness, verification gap  |  Findings: major 0, minor 0, decision-needed 0  |  Dropped in triage: 0
+Snapshot: tree cdb31eb10ab8cad79551ecaaa8cbe7897931cf49 (unchanged; no fix pass)
+### Applied
+- none
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Result — converged after 2 passes
+Majors per pass: 1, 0. Technical defaults applied: 2. Final state (tree cdb31eb, commit a35d6b6): `npm test` 91 files / 3738 tests pass, `npm run lint` clean, `npm run check` 0 errors.
+Unapplied minors: none (the gate-message wording finding was dropped as an already-recorded default, plan Implementation Notes item 7).
