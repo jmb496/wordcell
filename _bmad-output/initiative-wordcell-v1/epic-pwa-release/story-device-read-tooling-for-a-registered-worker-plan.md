@@ -20,7 +20,7 @@ context:
 warnings: ['oversized']
 deferred:
   - summary: >-
-      `main()` wiring of scripts/device-preview.mjs (fixtures read before Tailscale/build, stale `dist/seed.html` removed on a no-fixture run, seed write only when seeded, signal handlers before `serve`) has no automated test; only the plan's manual AC runs cover it.
+      `main()` wiring of scripts/device-preview.mjs (fixtures read before Tailscale/build, stale `dist/seed.html` removed on a no-fixture run, seed write only when seeded, signal handlers before `serve`) has no automated test; only the plan's manual AC runs cover it. Two wiring claims have neither a test nor a recorded run: a SIGINT during the port wait or `serve` runs `stop()`; `WORDCELL_APP_VERSION` reaches the script's own build (the AC run set it on a bare `npm run build`). A non-JSON fixture failing before any Tailscale or build output, and the port-4173 probe, are recorded manual runs (Implementation Notes).
     evidence: |-
       Verification-gap lens: device-preview.test.mjs imports only parseArgs, seedPage, hintLines, tailnetUrl; nothing runs main(). Deleting the rmSync line or moving readFixture after the build passes npm test. Closing it means extracting the seed-page decision and ordering into an exported helper (a refactor beyond this ticket); candidate for the CAP-8 sweep.
     location: >-
@@ -102,11 +102,16 @@ Script AC runs (2026-10-31, HEAD 6785917, Tailscale 1.102.3 via `tailscale.exe`,
 - Footer override: after the A build, `` textContent=`A` `` found in `dist/assets/index-ZlA9o4As.js`; `dist/sw.js` sha256 `f85a7ee9e034a1695dfc3d60fc6a425f2b44b30b44960db3f3ed324d2f1c882c`. `WORDCELL_APP_VERSION=B npm run build`: `` textContent=`B` `` in `dist/assets/index-p68R-YxV.js`; `dist/sw.js` sha256 `2c7878dad46447044235a8bf580c1241282a05c3a8481dfe162800097ff8c63c` (different). Plain rebuild: footer `0.0.0 (6785917)`.
 - `--no-build` stub removal: after a plain build, `echo stub > dist/seed.html`, `timeout -s INT 60 node scripts/device-preview.mjs --no-build`: stub gone, share came up and printed the no-fixture lines. Plain `timeout` reports 124 whenever it fires, whatever the child returns, so the exit code was read with `timeout --preserve-status -s INT 60 …`: 0 with a stub, and 0 for a second run with no stub. `tailscale.exe serve status` afterwards: `No serve config`.
 - Extra: `timeout --preserve-status -s INT 25 node scripts/device-preview.mjs --history history-invalid-null --no-build` exits 0, prints the `/seed.html` line and the seed hint; `dist/seed.html` stores only `wordcell:history` = `"null"`; serve status `No serve config` after; the seed page was then removed by hand.
+- Non-JSON fixture (review-loop pass, 2026-10-31): `printf '{not json' > fixtures/session-tmp.json`, then `timeout -s INT 60 node scripts/device-preview.mjs session-tmp` (no `--no-build`) exits 1 with `SyntaxError: Expected property name or '}' in JSON at position 1` from `readFixture`; no Tailscale, Vite or `npm run build` output; the file was then deleted.
+- Port busy (review-loop pass, 2026-10-31): with a throwaway `node -e "require('net').createServer().listen(4173,'127.0.0.1')"` listener, `timeout -s INT 60 node scripts/device-preview.mjs` (no `--no-build`) exits 1 with `device-preview: port 4173 is taken; stop the other run (Ctrl+C) or free it`; no Tailscale, Vite or `npm run build` output; listener stopped after.
 - The Verification diff command's original `':!_bmad-output'` was rejected by git (`Unimplemented pathspec magic '_'`); `':(exclude)_bmad-output'` lists only the three files.
 - `npm run test:all`: lint, check, unit (3759 passed), build, `test:e2e:dist` green on both runs; `test:e2e` had one timing flake per run, a different spec each time (run 1 `e2e/success-signal.spec.ts:440` drag step; run 2 `e2e/nav.spec.ts:163` doubleTap, taps 1.7 s apart), neither reachable from this change (no `src/` file touched); each passed on rerun (success-signal `--repeat-each 3`, nav.spec whole file); `test:e2e:pwa` then run on its own: 37 passed.
 - Parent verification (2026-10-31): `npm run lint`, `npm run check`, `npm test` (91 files, 3759 passed), `npm run build` (560,704 / 600,000), `test:e2e:dist` (28 passed), `test:e2e` (1153 passed, 1091 skipped, no failure), `test:e2e:pwa` (37 passed), run one after another as `test:all`'s sequence: all green. Verification and AC commands corrected in place (`:(exclude)` pathspec, `timeout --preserve-status`).
 
 ## Plan Change Log
+
+- SIGINT/SIGTERM register right after the preview spawns, before the port wait and `serve`, which goes beyond the story's `main()` order (… preview → serve, no signal step); harmless (`serve … off` with no share is ignored) and justified by Design Notes item 2.
+- Review-loop pass: `main()` probes 127.0.0.1:4173 once after reading the fixtures and before the stale-seed removal, Tailscale lookup and build, and throws `device-preview: port 4173 is taken; stop the other run (Ctrl+C) or free it` (rule 6), a step beyond the story's `main()` order; a second run would otherwise rebuild `dist/` under the first run's server and its preview-exit `stop(1)` would turn off the first run's share. `waitForPort` reuses the same `portOpen` connect check. The doc's re-seed sentence and G4 row now say Ctrl+C the running script first.
 
 ## Review Triage Log
 
@@ -184,7 +189,7 @@ Review-log minors (Result) resolved:
 
 **Review (thorough: blind-hunter, edge-case-hunter, verification-gap, intent-alignment):** 28 findings.
 - Patched: 5 entries (1 medium, 4 low), all doc wording: the "Remove animations" line moved into Notes; release-checklist step numbers made explicit; the run after G3 must build; step 6 defines a cold launch; the intro split into two sentences.
-- Deferred: 2. `main()` wiring has no automated test (medium; CAP-8 candidate). A `waitForPort` timeout leaves `vite preview` running (low, pre-existing).
+- Deferred: 2. `main()` wiring has no automated test, and the SIGINT-before-`serve` and `WORDCELL_APP_VERSION`-through-the-script claims have no recorded run either (medium; CAP-8 candidate). A `waitForPort` timeout leaves `vite preview` running (low, pre-existing).
 - Rejected: 21, each with its reason in the Review Triage Log.
 
 **Follow-up review recommended:** false. One medium and no high entry was patched; every patch is a doc-text change.

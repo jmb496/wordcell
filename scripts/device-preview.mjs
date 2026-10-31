@@ -145,6 +145,12 @@ async function main() {
   };
   const sessionJson = readFixture(parsed.session);
   const historyJson = readFixture(parsed.history);
+  // Before the build: a second run would otherwise rebuild `dist/` under the first run's server.
+  if (await portOpen(PORT)) {
+    throw new Error(
+      `device-preview: port ${PORT} is taken; stop the other run (Ctrl+C) or free it`,
+    );
+  }
   const seeded = sessionJson !== undefined || historyJson !== undefined;
   // A `--no-build` run must not serve a stale seed page from an earlier seeded run.
   if (!seeded) rmSync('dist/seed.html', { force: true });
@@ -205,6 +211,22 @@ async function main() {
 let stopping = false;
 
 /**
+ * Whether something listens on localhost:port right now.
+ * @param {number} port
+ * @returns {Promise<boolean>}
+ */
+function portOpen(port) {
+  return new Promise((resolve) => {
+    const socket = connect(port, '127.0.0.1');
+    socket.once('connect', () => {
+      socket.end();
+      resolve(true);
+    });
+    socket.once('error', () => resolve(false));
+  });
+}
+
+/**
  * Resolves once something listens on localhost:port; throws after timeoutMs.
  * @param {number} port
  * @param {number} timeoutMs
@@ -212,15 +234,7 @@ let stopping = false;
 async function waitForPort(port, timeoutMs) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
-    const open = await new Promise((resolve) => {
-      const socket = connect(port, '127.0.0.1');
-      socket.once('connect', () => {
-        socket.end();
-        resolve(true);
-      });
-      socket.once('error', () => resolve(false));
-    });
-    if (open) return;
+    if (await portOpen(port)) return;
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
   throw new Error(`device-preview: nothing listening on port ${port} after ${timeoutMs} ms`);

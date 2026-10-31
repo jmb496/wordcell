@@ -24,6 +24,7 @@ describe('AD-17 device preview helpers', () => {
     expect(JSON.parse(JSON.parse(/** @type {string[]} */ (session)[1]))).toEqual(JSON.parse(json));
     expect(page).toContain('unregister()');
     expect(page).toContain("location.replace('/')");
+    expect(page).not.toContain('wordcell:history');
   });
 
   it('AD-17 seedPage throws on a fixture that is not JSON', () => {
@@ -38,6 +39,10 @@ describe('AD-17 device preview helpers', () => {
     expect(page).not.toContain('wordcell:session');
     expect(page).toContain('unregister()');
     expect(page).toContain("location.replace('/')");
+    expect(page.indexOf('unregister()')).toBeLessThan(page.indexOf('localStorage.setItem'));
+    expect(page.lastIndexOf('localStorage.setItem')).toBeLessThan(
+      page.indexOf("location.replace('/')"),
+    );
   });
 
   it('AD-17 seedPage with session and history stores both', () => {
@@ -50,6 +55,10 @@ describe('AD-17 device preview helpers', () => {
     expect(
       JSON.parse(/** @type {{ value: string }} */ (stored(page, 'wordcell:history')).value),
     ).toEqual(JSON.parse(historyJson));
+    expect(page.indexOf('unregister()')).toBeLessThan(page.indexOf('localStorage.setItem'));
+    expect(page.lastIndexOf('localStorage.setItem')).toBeLessThan(
+      page.indexOf("location.replace('/')"),
+    );
   });
 
   it('AD-17 seedPage throws without any fixture', () => {
@@ -58,6 +67,13 @@ describe('AD-17 device preview helpers', () => {
 
   it('AD-17 seedPage throws on an empty historyJson (an empty file is not absent)', () => {
     expect(() => seedPage({ historyJson: '' })).toThrow();
+    const sessionJson = readFileSync('fixtures/session-won-words.json', 'utf8');
+    expect(() => seedPage({ sessionJson, historyJson: '' })).toThrow();
+  });
+
+  it('AD-17 seedPage rejects a bare string (no string overload)', () => {
+    const json = readFileSync('fixtures/session-won-words.json', 'utf8');
+    expect(() => seedPage(/** @type {any} */ (json))).toThrow();
   });
 
   it('AD-17 tailnetUrl drops the trailing dot of Self.DNSName', () => {

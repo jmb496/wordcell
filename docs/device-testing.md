@@ -50,7 +50,8 @@ seed page's own unregister is only a guard for an uncontrolled first visit.
 
 ## Clearing site data
 
-Every read except the update read (G3) starts from cleared site data.
+Every seed, re-seed or fresh-install read starts from cleared site data; the update read (G3) keeps it
+from A to B, and Desktop rows clear per new build (below).
 
 1. Close every WordCell window: swipe the installed app from recents and close every Chrome tab on
    the tailnet origin. A window left running would, on resume, write its game over a seeded
@@ -60,6 +61,9 @@ Every read except the update read (G3) starts from cleared site data.
    or Clear & reset (unverified). This path needs no open tab on the origin.
 
 ## Install and offline readiness (G1, G2)
+
+Clear site data as above, run `node scripts/device-preview.mjs` (no fixture; it prints the "Fresh
+install" line) and open the printed `<url>/` on the phone.
 
 - Install from a Chrome tab on the origin through Chrome's own install UI (G1).
 - Offline readiness (G2): after the first online launch, keep the app open about a minute on Wi-Fi,
@@ -74,7 +78,7 @@ Every read except the update read (G3) starts from cleared site data.
 
    | Row | Command |
    | --- | --- |
-   | G4 | `node scripts/device-preview.mjs session-place-free-letter-redo-tail`, then `node scripts/device-preview.mjs session-gave-up` (each its own seed; the other G4 boundaries by play) |
+   | G4 | `node scripts/device-preview.mjs session-place-free-letter-redo-tail`, then `node scripts/device-preview.mjs session-gave-up` (each its own run and seed: Ctrl+C the first, then repeat from step 1; the other G4 boundaries by play) |
    | G5 | `node scripts/device-preview.mjs session-won-words` |
    | G6 | `node scripts/device-preview.mjs --history history-invalid-null` (history-only seed) |
 
@@ -86,7 +90,8 @@ Every read except the update read (G3) starts from cleared site data.
 6. Launch the installed app cold: from the app icon, with no WordCell window in recents (swipe away
    any app window the install opened (unverified)), then read the row.
 
-A re-seed (the same or another fixture) repeats from step 1.
+A re-seed (the same or another fixture): Ctrl+C the running script first (one run at a time, port
+4173), then repeat from step 1.
 
 ## Desktop rows (G20–G22)
 
@@ -128,7 +133,7 @@ Afterwards, the next run must build (no `--no-build`) and without `WORDCELL_APP_
 footer carries the SHA again; a `--no-build` run would keep serving B with footer `B`.
 
 A spoiled read (the first cold launch in step 6 already shows B) is not a fix ticket: redo it once
-from the start (A's command and a fresh install). A second consecutive spoiled read, after A's
+from step 1 (A's command, then cleared site data as in step 2). A second consecutive spoiled read, after A's
 readiness step, is not redone: it routes as G3 says (a fix ticket against this update-read
 procedure, or the owner question about AD-16/A-A15 if B was seen activating while a WordCell window
 was open); G3 is then resolved when that ticket's re-read passes or Jared's answer is recorded in
