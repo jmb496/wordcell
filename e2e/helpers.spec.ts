@@ -72,6 +72,14 @@ import {
   resetRegion,
   sets,
 } from './helpers/live-region';
+import {
+  armSeed,
+  composeTan,
+  dealNewGame,
+  pinNextSeed,
+  seedPins,
+  TAN_TRAY,
+} from './helpers/offline';
 import { precacheMissing } from './helpers/precache';
 import { onAndroid, onDesktop } from './helpers/project';
 import {
@@ -1931,5 +1939,99 @@ test.describe('precache helpers', () => {
       await (await caches.open('other')).put('/c.txt', new Response('c'));
     });
     expect(await precacheMissing(page, ['a.js', 'b.css', 'c.txt'])).toEqual(['c.txt']);
+  });
+});
+
+test.describe('offline helpers', () => {
+  // Draws from the stub in the page: per array, whether the same array came back and its values.
+  const draw = (page: Page, kinds: readonly ('u32x1' | 'u32x2' | 'u8x4')[]) =>
+    page.evaluate((list) => {
+      const make = (k: string) =>
+        k === 'u32x1' ? new Uint32Array(1) : k === 'u32x2' ? new Uint32Array(2) : new Uint8Array(4);
+      return list.map((k) => {
+        const array = make(k);
+        const back = crypto.getRandomValues(array);
+        return { same: back === array, values: [...array] };
+      });
+    }, kinds);
+  const armedFlag = (page: Page) => page.evaluate(() => window.__wordcellSeedArmed);
+
+  test('AD-17 pinNextSeed passes unarmed one-element Uint32Array calls through: random values, counter 0', async ({
+    page,
+  }) => {
+    await pinNextSeed(page);
+    await openFixture(page, 'session-idle-fresh');
+    const draws = await draw(page, ['u32x1', 'u32x1', 'u32x1', 'u32x1']);
+    expect(draws.every((d) => d.same)).toBe(true);
+    // Four equal random draws have probability 2^-96; a stub writing a constant (or skipping the
+    // original, leaving zeros) gives four equal values.
+    expect(new Set(draws.map((d) => d.values[0])).size).toBeGreaterThan(1);
+    expect(await seedPins(page)).toBe(0);
+    expect(await armedFlag(page)).toBe(false);
+  });
+
+  test('AD-17 armSeed pins the next one-element Uint32Array call to 1, returns the same array and disarms', async ({
+    page,
+  }) => {
+    await pinNextSeed(page);
+    await openFixture(page, 'session-idle-fresh');
+    await armSeed(page);
+    const [pinnedDraw] = await draw(page, ['u32x1']);
+    expect(pinnedDraw).toEqual({ same: true, values: [1] });
+    expect(await seedPins(page)).toBe(1);
+    expect(await armedFlag(page)).toBe(false);
+    const after = await draw(page, ['u32x1', 'u32x1', 'u32x1', 'u32x1']);
+    expect(new Set(after.map((d) => d.values[0])).size).toBeGreaterThan(1);
+    expect(await seedPins(page)).toBe(1);
+  });
+
+  test('AD-17 an armed seed stub passes Uint8Array(4) and Uint32Array(2) through and stays armed', async ({
+    page,
+  }) => {
+    await pinNextSeed(page);
+    await openFixture(page, 'session-idle-fresh');
+    await armSeed(page);
+    const others = await draw(page, ['u8x4', 'u32x2']);
+    expect(others.map((d) => d.same)).toEqual([true, true]);
+    expect(others.map((d) => d.values.length)).toEqual([4, 2]);
+    expect(await seedPins(page)).toBe(0);
+    expect(await armedFlag(page)).toBe(true);
+    const [pinnedDraw] = await draw(page, ['u32x1']);
+    expect(pinnedDraw?.values).toEqual([1]);
+    expect(await seedPins(page)).toBe(1);
+  });
+
+  test('AD-17 composeTan on session-idle-fresh reaches the tray TAN', async ({ page }) => {
+    await openFixture(page, 'session-idle-fresh');
+    await composeTan(page);
+    expect(await trayIds(page)).toEqual(TAN_TRAY);
+  });
+
+  test('AD-17 dealNewGame confirms New game with the seed stub armed: seed 1, no moves, menu and confirm gone', async ({
+    page,
+  }) => {
+    await pinNextSeed(page);
+    await openFixture(page, 'session-idle-fresh');
+    await composeTan(page);
+    // The compose is stored, so the seed-1 `moves: []` below comes from the deal, not the fixture.
+    const composed = await stored(page, 'wordcell:session');
+    if (composed === null) throw new Error('wordcell:session is not stored');
+    expect(JSON.parse(composed).moves).not.toEqual([]);
+    await dealNewGame(page);
+    await expect(page.getByRole('dialog', { name: 'Start a new game?', exact: true })).toHaveCount(
+      0,
+    );
+    await expect(page.getByRole('dialog', { name: 'Menu', exact: true })).toHaveCount(0);
+    expect(await trayIds(page)).toEqual([]);
+    await expect
+      .poll(async () => {
+        const text = await stored(page, 'wordcell:session');
+        if (text === null) throw new Error('wordcell:session is not stored');
+        const { seed, moves } = JSON.parse(text) as { seed: number; moves: unknown[] };
+        return { seed, moves };
+      })
+      .toEqual({ seed: 1, moves: [] });
+    expect(await seedPins(page)).toBe(1);
+    expect(await wcOf(page)).toBe(0);
   });
 });

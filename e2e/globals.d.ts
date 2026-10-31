@@ -81,6 +81,9 @@ declare global {
     }[];
     // e2e/helpers/boot-calls.ts with `holdRegister`: lets the held register() promises settle.
     __wordcellBootRelease?: () => void;
+    // e2e/helpers/offline.ts (epic 7 CAP-4): the seed stub's arm flag and its pinned-call count.
+    __wordcellSeedArmed?: boolean;
+    __wordcellSeedPins?: number;
     // e2e/helpers/board.ts stashSession: the store's Session reference, stashed to assert it is
     // unchanged.
     __pointerSession?: unknown;

@@ -2,10 +2,15 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, type Page, test } from '@playwright/test';
 import { SWALLOW_MS } from '../../src/ui/gestures/click-swallow';
-import { END_SHEET, openFixture } from '../helpers/board';
+import { stored } from '../helpers/blocking';
+import { END_SHEET, glidesSettled, openFixture, trayIds } from '../helpers/board';
 import { skipByPress, watchAdded, watchAddedFromBoot } from '../helpers/celebration';
 import { walk } from '../helpers/dist-test';
 import { animationFrames } from '../helpers/lifecycle';
+import { expectNoPrompt } from '../helpers/live-region';
+import { composeTan, dealNewGame, pinNextSeed, seedPins } from '../helpers/offline';
+import { precacheMissing, readPrecacheManifest } from '../helpers/precache';
+import { isList } from '../helpers/restore';
 import { fixture, seedStorage } from '../helpers/seed';
 
 /** AD-15: collects page errors and console errors from now on (attach before the first goto). */
@@ -224,4 +229,97 @@ test('Q-45 AD-10 the production Theme radiogroup offers Charcoal, Deep Space, Gr
       () => document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.content,
     ),
   ).toBe('#1D1028');
+});
+
+// F6: the tests above leave the worker mode at Playwright's default (no `serviceWorkers` set). The
+// offline proof needs the worker to run and control the reloaded page, so this describe sets
+// `allow` explicitly (never at file level). Entry 7 adds its cases here; each test does its own
+// setup (seedStorage throws on a second call per page).
+test.describe('F6 serviceWorkers allow', () => {
+  test.use({ serviceWorkers: 'allow' });
+
+  // Epic 7 CAP-4 (ticket 7.6; brief §6.8): e2e/pwa/offline.spec.ts's steps minus the hook reads.
+  test('AD-16 AD-17 offline after the precache is complete: a reload restores the game with no prompt, then deals and validates a word', async ({
+    page,
+    context,
+    request,
+  }) => {
+    test.setTimeout(60_000);
+    // AD-15: console is not checked (offline network errors log there).
+    const errors: string[] = [];
+    page.on('pageerror', (error) => errors.push(error.stack ?? error.message));
+    await pinNextSeed(page);
+    await seedStorage(page, { session: fixture('session-idle-fresh.json') });
+    await page.goto('/');
+    await expect(page.locator('[data-card-id]')).toHaveCount(52);
+
+    // 1. The move, online.
+    await composeTan(page);
+
+    // 2. The precache is complete: every manifest URL is cached and the worker is activated.
+    const urls = (await readPrecacheManifest(request)).map((entry) => entry.url);
+    await expect
+      .poll(
+        async () => ({
+          missing: await precacheMissing(page, urls),
+          active: await page.evaluate(
+            async () => (await navigator.serviceWorker.getRegistration())?.active?.state ?? null,
+          ),
+        }),
+        { timeout: 15_000 },
+      )
+      .toEqual({ missing: [], active: 'activated' });
+
+    // 3. Before-state.
+    type Stored = { activeMs: number; [key: string]: unknown };
+    const storedSession = async (): Promise<Stored> => {
+      const text = await stored(page, 'wordcell:session');
+      if (text === null) throw new Error('wordcell:session is not stored');
+      return JSON.parse(text) as Stored;
+    };
+    const beforeSession = await storedSession();
+    const beforeTray = await trayIds(page);
+
+    // 4. Offline reload, served by the worker.
+    await context.setOffline(true);
+    // One call, so neither promise is left pending if the other rejects.
+    const [response, listResponse] = await Promise.all([
+      page.reload(),
+      page.waitForResponse((r) => isList(r.request())),
+    ]);
+    expect(response?.fromServiceWorker(), 'the reload is served by the worker').toBe(true);
+    expect(listResponse.fromServiceWorker(), 'the word list is served by the worker').toBe(true);
+
+    // 5. Restore: the restored draft with the list ready, then the stored Session (the old page's
+    // pagehide write).
+    const primary = page.getByTestId('primary-action');
+    await expect(primary).toHaveText('Validate');
+    expect(await trayIds(page)).toEqual(beforeTray);
+    const afterSession = await storedSession();
+    expect(afterSession).toEqual({ ...beforeSession, activeMs: expect.any(Number) });
+    expect(afterSession.activeMs).toBeGreaterThanOrEqual(beforeSession.activeMs);
+
+    // 6. No prompt after the offline reload (AD-16), before the deal.
+    await expectNoPrompt(page);
+
+    // 7. Deal, still offline.
+    await dealNewGame(page);
+    expect(await trayIds(page)).toEqual([]);
+    await expect
+      .poll(async () => {
+        const s = await storedSession();
+        return { seed: s.seed, moves: s.moves, cursor: s.cursor };
+      })
+      .toEqual({ seed: 1, moves: [], cursor: { index: 0, phase: 'idle' } });
+    expect(await seedPins(page)).toBe(1);
+
+    // 8. Validate a word, still offline.
+    await composeTan(page);
+    await expect(primary).toHaveText('Validate');
+    await primary.click();
+    await expect(primary).toHaveText('Confirm');
+    await glidesSettled(page);
+    await expectNoPrompt(page);
+    expect(errors).toEqual([]);
+  });
 });
