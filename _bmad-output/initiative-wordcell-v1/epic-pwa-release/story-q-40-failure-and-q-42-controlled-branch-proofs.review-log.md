@@ -1,6 +1,6 @@
 # Review log — story-q-40-failure-and-q-42-controlled-branch-proofs.md (ticket 7.7)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget default (2.5x pass 0 ≈ 800 words). Pass 0: 320 words, `story-q-40-failure-and-q-42-controlled-branch-proofs.review-log.passes/pass0.md`, HEAD bd9baa6.
 Intent carried from `epic-pwa-release/tickets.toml` entry 7 (not copied at pull; the fixer adds them to the Description in pass 1):
@@ -65,3 +65,24 @@ Fixer: all 11 items applied, no conflicts; `fromServiceWorker()` marked unverifi
 - none
 ### Dropped
 - adversarial: arm `waitForResponse` with the 404 reload — plan-level procedure (as the offline case), not ticket contract
+
+## Pass 3 — 2026-10-31
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (no findings)  |  Findings: major 1, minor 9, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 799 (2.5x pass 0)  |  Snapshot: story-q-40-failure-and-q-42-controlled-branch-proofs.review-log.passes/pass3.md  |  Fix diff: pass3.fix.diff
+Fixer: all 9 items applied; `Served.requests()` confirmed in e2e/helpers/static-server.ts; Halted renders BlockingMessage `alertdialog` (item 9 cut confirmed); no runnable commands added.
+### Applied
+- [major] Q-42 bullet + Notes — "that response `fromServiceWorker()`" now reads as the route's own answer to the worker's request (false by definition), so the stop rule would halt a correct build → the page's list response on the 404 reload (`page.waitForResponse` armed with it, as entry 6's offline case) is 404 and `fromServiceWorker()`; same wording in Notes (fix diff, adversarial; edge as minor) → fixer item 1
+- [minor] precache bullet — "(the worker's fetch carries `?__WB_REVISION__=`)" is false for workbox-precaching 7.4.1 (install fetches the bare URL, revision only in the cache key; 7.3 plan agrees) → cut, keep "matched by pathname" (fix diff) → item 2
+- [minor] Q-42 — the dictionary.spec.ts citation fits the held/`loading`/no-`load` pattern, not the hit count → reorder (fix diff, adversarial) → item 3
+- [minor] Q-42 — "(unverified on Playwright 1.63)" cut: entry 6 showed a worker-served list `fromServiceWorker()` true on 1.63; the stop rule stays for the 404 path (adversarial) → item 4
+- [minor] `pwa` bullet — "the same three" → "the same three failures (boot only)"; the fatal surface halts before play (adversarial) → item 5
+- [minor] Q-42 — tap Reload only once `dictionaryState()` is `failed` and the banner shows (`retry()` throws otherwise) (adversarial) → item 6
+- [minor] missing-script — "/sw.js 404 asserted first" → polled in the server's request log before the log read; "polls to exactly" → "reads exactly, as boot-order's `order()`" (edge, adversarial) → item 7
+- [minor] precache — `context.route` set before the first `goto` (F6) (adversarial) → item 8
+- [minor] no-surface check — "the AD-15 fatal title absent" duplicates `expectNoPrompt`'s `alertdialog` count → cut (adversarial) → item 9
+### Default applied (technical)
+- `fromServiceWorker()` target — the page's list response, as entry 6's offline case
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none (adversarial's Q-42 fixture/URL source left to the plan: over budget, adds words) — listed as unapplied minor
