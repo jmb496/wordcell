@@ -1,6 +1,6 @@
 # Review log — story-packaging-and-size-budget-with-a-real-worker-module.md (ticket 7.8)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget=1500 words. Pass 0: 212 words, `story-packaging-and-size-budget-with-a-real-worker-module.review-log.passes/pass0.md`, HEAD 5f59fba.
 Intent carried from `epic-pwa-release/tickets.toml` entry 8 (not copied at pull; the fixer adds them to the Description in pass 1):
@@ -65,3 +65,32 @@ Fixer: all 12 items applied, no conflicts; no runnable commands or config values
 - none
 ### Dropped
 - none
+
+## Pass 3 — 2026-10-31
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 0, minor 12 (deduplicated from 16), decision-needed 0  |  Dropped in triage: 0
+Words (docs): 946 (4.5x pass 0, unchanged; no fix pass; budget 1500)  |  Snapshot: story-packaging-and-size-budget-with-a-real-worker-module.review-log.passes/pass2.md (final)
+### Applied
+- none (converged: zero majors)
+### Default applied (technical)
+- none this pass
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none (all twelve minors kept as unapplied, below)
+
+## Result — converged after 3 passes
+Majors per pass: 5, 1, 0. Decision-needed: none. Words 212 → 946 (budget 1500). Technical defaults applied: 7 (gate = `src/shell/sw.ts` key present and `main.swDynamic` false, static-plus-dynamic passes and is counted; failure is an `errors` entry after the dictionary error, before the 4 MB errors; e2e reaches `computeBudget` via an exported `collectSizes` and `allowJs: true` in tsconfig.e2e.json, sw.ts closure helper in `e2e/helpers/dist-test.ts`; spine AD-18 gap left to entry 11, SPEC wins; static-plus-dynamic pass case; margin measured on the start commit plus changes against entry 5's 560,702; orphan key's `file` not validated).
+
+Unapplied minors (for the build plan):
+1. Content case — get the sw file from `swChunkFile(root)` (proves `isDynamicEntry` and `file`, entry 1's chunk helper per tickets.toml) and assert it is not among `computeBudget`'s `rows` before the marker checks (edge, ref, adversarial).
+2. Closure helper — returns `src/shell/sw.ts`'s own file plus every key reached through `imports`, each once (visited set: the real manifest's sw.ts imports `index.html`); `AD-17` self-test covers a missing key, a key without `file`, a two-hop closure and a two-chunk cycle (edge, adversarial).
+3. Content case — "as the `workbox-window` dependency hand-off" has no precedent in a done plan (that delta reaches entry 11 via SPEC CAP-9 / build-notes close-out list); drop the comparison; the plan's deferred item is logged by entry 10's sweep as handed to entry 11 (fix diff, adversarial).
+4. Budget — record the total after this ticket's changes, name the start commit; the change from 560,702 spans entries 6–8 (this ticket changes no shipped source, so start and end figures should match) (adversarial).
+5. Content case — reads only `rows`; asserts nothing on `total` or `errors` (`dist-test/` has no postbuild) (adversarial).
+6. Gate — no key the entry walk does not visit (orphan or unreached-importer subtree) is validated, not only the orphan's `file` (adversarial).
+7. Gate — message could read `… reached by no dynamic import from the entry` to fit the unreached-importer case (tests assert the exact string; change together) (adversarial, stretch).
+8. Gate — rename the two amended cases so names match their new assertions (e.g. `… and fails as unreachable`; `… missing dictionary, unreachable sw.ts key and 4 MB files are reported in order`) (adversarial).
+9. Gate — orphan and unreached-importer cases also assert `rows` lacks the sw subtree and `total` equals the base (adversarial, stretch).
+10. Gate — the existing `AD-18 CLI passes, fails and throws per the fixture dist` case covers the generic `errors` path; no new CLI fixture (adversarial, stretch).
+11. Notes — "superseded" overstates: with no edge the code still counts everything; the gate now also fails it (adversarial).
+12. A3 re-check — an item found open is a stop-and-report (rule 7), not a fix here (adversarial).
