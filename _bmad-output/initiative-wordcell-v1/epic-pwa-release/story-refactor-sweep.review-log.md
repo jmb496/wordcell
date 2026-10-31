@@ -1,6 +1,6 @@
 # Review log — story-refactor-sweep.md (ticket 7.10)
 
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 212 words, copy `story-refactor-sweep.review-log.passes/pass0.md` (HEAD 1bca825).
 
@@ -76,3 +76,23 @@ Fixer: all 14 applied; cut repeated text to stay in budget (Description edit-sco
 - Flake test identity by title prefix — plan-level detail, not ticket text (over budget)
 - Entry-11 disposition for device-read residuals (7.9 plan :204) and 7-9-build.md:54 unrecorded-check minor — add words over budget; the build can decline-with-reason or record them under existing rules (left as unapplied minors)
 - G9 "and to App" clause — adds words; covered by the required `controller` prop (`npm run check`), left as unapplied minor
+
+## Pass 4 — 2026-10-31
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 4, minor 14, decision-needed 0  |  Dropped in triage: 3
+Words (docs): 1499 (7.1x pass 0; budget 1500)  |  Snapshot: story-refactor-sweep.review-log.passes/pass4.md, fix diff pass4.fix.diff
+Fixer: all 11 applied; the edit-boundary check uses `git diff --name-only <baseline_revision> -- . ':(exclude)_bmad-output'` (the `':!_bmad-output'` form failed: "Unimplemented pathspec magic '_'"; the exclude form ran against HEAD~1 and 7.9's baseline 6785917); B8 at :218, F-13 sighting verified; 7-9-build.md :50/:51/:53/:55 verified.
+### Applied
+- [major] Item 3 — `scripts/size-budget.mjs` neither editable nor wholly non-editable after pass 3 (catch-all vs "'s limits" example); CAP-8 counts it as tooling → fixer item 1 (default applied: editable except its limits and gate conditions)
+- [major] Item 6 — `success-signal.spec.ts:440` 0/3 decline contradicts owner process rule B8/L3 ("a flake seen in a second ticket gets its own fix ticket at once", epic-end-of-game-words-retrospective.md:218, epic-place-preview-retrospective.md:120); sightings in epic 5/6 and 7.9 → fixer item 2
+- [major] Item 5 — the test-only pass would decline the doc/comment fixes item 3 says "land here" (7-9-build.md:50, :51, :55) → fixer item 3
+- [major] AC — CAP-8's edit boundary (item 3) has no gating check → fixer item 4 (default applied: `git diff --name-only <baseline_revision>` outside `_bmad-output/` lists only item 3's editable files; `src/` non-test hunks comment-only)
+- [minor] word-neutral: flake fix generalised under item 6; AC final-failure counts as item 6 failure; re-run owner incl. code-review fixes before done; G9 "pinned as"; "code comments"; reject-verdict source narrowed to refactor or test gap; Tailscale-approved run → fixer items 5–11
+### Default applied (technical)
+- `scripts/size-budget.mjs` editable tooling except limits/gate conditions (CAP-8 "tooling")
+- Edit-boundary AC check by `git diff --name-only`
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- 7.2 halted-first F17 runtime gap beside the pre-assigned closures — item 1's every-clause rule already makes it live; plan lists it (unapplied minor)
+- Counted-run checkout (/mnt/d vs Linux clone) — plan records it (unapplied minor)
+- Fix not reaching 0/3 — already follows from "without a cause or fix"
