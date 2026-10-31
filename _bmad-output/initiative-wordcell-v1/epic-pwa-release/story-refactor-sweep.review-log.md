@@ -1,6 +1,6 @@
 # Review log — story-refactor-sweep.md (ticket 7.10)
 
-State: pass 5: done
+State: pass 6: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 212 words, copy `story-refactor-sweep.review-log.passes/pass0.md` (HEAD 1bca825).
 
@@ -116,3 +116,21 @@ Fixer: all 8 applied; `git diff --name-only 6785917 -- . ':(exclude)_bmad-output
 - G9 pin matching `game.state.kind === 'halted'` text — plan detail
 - Watch re-run trigger and timing method — plan detail (AD-17 Speed)
 - Re-run owner wording duplicates (merged into item 3)
+
+## Pass 6 — 2026-10-31
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 1, minor 17, decision-needed 0  |  Dropped in triage: 5
+Words (docs): 1525 (7.2x pass 0; budget 1500, +13 from the major fix, minors net 0)  |  Snapshot: story-refactor-sweep.review-log.passes/pass6.md, fix diff pass6.fix.diff
+Fixer: all 12 applied; `-G'_BYTES'` exits 1 on 33936ce~1..33936ce and on a /tmp copy with `PRECACHE_MAX_BYTES` changed (where `-G'BUDGET_BYTES'` exits 0), exits 0 on 6785917..HEAD; the gate-condition hunk rule is an inspection rule (unverified as a command); build-notes :23/:55, 7.1 plan :101, 7.8 plan :20, App.svelte:43, SPEC :65 verified.
+### Applied
+- [major] AC size-budget check (pass 5) — `-G'BUDGET_BYTES'` misses `PRECACHE_MAX_BYTES` (scripts/size-budget.mjs:14) and every gate condition (`errors.push` :139–160, `throw`, `exitCode` :218) that item 3 forbids changing → fixer item 1 (fix diff, adversarial; edge-case rated it minor; default applied: `-G'_BYTES'` plus an inspection clause that no hunk removes or weakens an `errors.push`, `throw` or `exitCode` condition)
+- [minor] word-neutral: nav.spec.ts:163 keeps the fix-ticket label as an owner backlog entry; "none" row for a source with no finding; build-notes.md :23 and :55 in the amendment group; entry-11 cite must name the row (not verify's catch-all); fix-ticket definition includes item 6's B8 rows; `deferred`/Deferred coverage source; `baseline_revision` defined at first use; G9 decline by "existing test or `npm run check`"; 7.8 cite :20; final rerun stops only on the same or a non-item-6 test; device-testing.md cited via SPEC CAP-7 → fixer items 2–12
+### Default applied (technical)
+- Size-budget gate check: `-G'_BYTES'` and hunk inspection of gate conditions
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- Reproduction field for a non-reproducing flake row — plan detail
+- "two ordered calls are swapped" — adds a word; plan names its mutations
+- "re-run to 0/3 counted runs" — adds a word; plan detail
+- Description checkpoint listing the nav backlog entry — adds words; item 6 now labels it a fix ticket
+- Edge-case size-budget minor — merged into the major
