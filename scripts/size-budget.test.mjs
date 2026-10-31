@@ -398,6 +398,32 @@ describe('computeBudget', () => {
     );
   });
 
+  it('AD-18 sw.ts dynamically imported by a chunk the entry reaches passes', () => {
+    const viaStatic = baseManifest();
+    viaStatic['index.html'].imports = ['_a.js'];
+    viaStatic['_a.js'] = { file: 'assets/a.js', dynamicImports: [SW_KEY] };
+    viaStatic[SW_KEY] = { file: 'assets/sw-chunk.js' };
+    const fromStatic = computeBudget(
+      viaStatic,
+      sizesOf({ 'assets/a.js': 1, 'assets/sw-chunk.js': 1 }),
+    );
+    expect(fromStatic.errors).toEqual([]);
+    expect(filesOf(fromStatic)).toContain('assets/a.js');
+    expect(filesOf(fromStatic)).not.toContain('assets/sw-chunk.js');
+
+    const viaDynamic = baseManifest();
+    viaDynamic['index.html'].dynamicImports = ['src/lazy.ts'];
+    viaDynamic['src/lazy.ts'] = { file: 'assets/lazy.js', dynamicImports: [SW_KEY] };
+    viaDynamic[SW_KEY] = { file: 'assets/sw-chunk.js' };
+    const fromDynamic = computeBudget(
+      viaDynamic,
+      sizesOf({ 'assets/lazy.js': 1, 'assets/sw-chunk.js': 1 }),
+    );
+    expect(fromDynamic.errors).toEqual([]);
+    expect(filesOf(fromDynamic)).toContain('assets/lazy.js');
+    expect(filesOf(fromDynamic)).not.toContain('assets/sw-chunk.js');
+  });
+
   it('AD-18 a dangling src/shell/sw.ts key throws', () => {
     const manifest = baseManifest();
     manifest['index.html'].dynamicImports = [SW_KEY];

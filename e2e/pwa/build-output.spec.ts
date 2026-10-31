@@ -75,6 +75,9 @@ test('AD-18 the sw.ts chunk is a dynamic entry outside the counted rows and only
   const manifest = JSON.parse(readFileSync(path.join(root, '.vite/manifest.json'), 'utf8'));
   const { rows } = computeBudget(manifest, collectSizes(root));
   const counted = rows.map((row) => row.file);
+  const entryKeys = Object.keys(manifest).filter((key) => manifest[key].isEntry === true);
+  expect(entryKeys).toHaveLength(1);
+  expect(counted).toContain(manifest[entryKeys[0] as string].file);
   const sw = swChunkFile(root);
   expect(counted).not.toContain(sw);
   const closure = swStaticClosureFiles(root);
