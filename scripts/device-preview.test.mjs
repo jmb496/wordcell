@@ -319,6 +319,17 @@ describe('AD-17 device preview run', () => {
     expect(calls.slice(wait + 1)).toEqual(['serveOff', 'kill', 'exit 0']);
   });
 
+  it('AD-17 run SIGTERM during the port wait turns the share off, kills the preview and exits 0', async () => {
+    const { io, calls, signals } = fakeIo({ wait: () => new Promise(() => {}) });
+    void run([], io);
+    await vi.waitFor(() => expect(calls).toContain('waitForPort'));
+    const wait = calls.indexOf('waitForPort');
+    const sigterm = signals.SIGTERM;
+    if (sigterm === undefined) throw new Error('no SIGTERM handler');
+    sigterm();
+    expect(calls.slice(wait + 1)).toEqual(['serveOff', 'kill', 'exit 0']);
+  });
+
   it('AD-17 run kills the preview and rethrows the same error when the port wait times out', async () => {
     const timeout = new Error('device-preview: nothing listening on port 4173 after 15000 ms');
     const { io, calls } = fakeIo({ wait: () => Promise.reject(timeout) });

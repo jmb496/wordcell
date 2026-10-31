@@ -271,20 +271,24 @@ async function waitingHandle(context: BrowserContext): Promise<Handle> {
   return { b: track(waiting[0] as Worker), a: track(a) };
 }
 
-/** Reads a handle, or `null` once its target has closed. */
+/**
+ * Reads a handle, or `null` once its target has gone: closed, destroyed, detached, or restarted
+ * (under load Playwright can reject `evaluate` with `Service worker restarted` as a replaced B
+ * turns redundant, before the handle's `close` event; D-70 in the ticket 7.10 plan).
+ */
 async function readState(tracked: Tracked, read: () => ServiceWorkerState | undefined) {
   if (tracked.closed()) return null;
   return tracked.worker.evaluate(read).catch((error: unknown) => {
-    if (tracked.closed() || /closed|destroyed|detached/i.test(String(error))) return null;
+    if (tracked.closed() || /closed|destroyed|detached|restarted/i.test(String(error))) return null;
     throw error;
   });
 }
 
 /**
  * Step 4: polls B's state to `activated` every 100 ms for 30 s, from B's handle and, once that
- * has closed, from A's record; `redundant` throws at once with the request log. On a timeout or
- * both handles closed one probe page opens: marker A throws the timing label, anything else an
- * observation fault. Does not itself close or need closed pages.
+ * has closed or restarted (`readState`), from A's record; `redundant` throws at once with the
+ * request log. On a timeout or both handles closed one probe page opens: marker A throws the
+ * timing label, anything else an observation fault. Does not itself close or need closed pages.
  */
 async function pollActivated(
   handle: Handle,
@@ -552,4 +556,19 @@ test('AD-17 the update spec withSite keeps the body error and attaches the clean
   ).toBe(bodyError);
   expect(await outcome(withSite(failing, async () => {}))).toBe(cleanupError);
   expect(await outcome(withSite(none, async () => {}))).toBe('resolved');
+});
+
+// `readState`'s handle-gone rule (D-70): a restarted worker handle reads as gone (`null`); any
+// other evaluate error is rethrown as it is.
+test('AD-17 the update spec readState treats a restarted worker handle as gone', async () => {
+  const rejecting = (error: Error): Tracked => ({
+    closed: () => false,
+    worker: { evaluate: () => Promise.reject(error) } as unknown as Worker,
+  });
+  const read = () => (self as unknown as Scope).serviceWorker.state;
+  expect(
+    await readState(rejecting(new Error('worker.evaluate: Service worker restarted')), read),
+  ).toBeNull();
+  const boom = new Error('boom');
+  await expect(readState(rejecting(boom), read)).rejects.toBe(boom);
 });
