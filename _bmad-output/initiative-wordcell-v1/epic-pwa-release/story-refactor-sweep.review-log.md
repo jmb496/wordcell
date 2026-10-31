@@ -1,6 +1,6 @@
 # Review log — story-refactor-sweep.md (ticket 7.10)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 212 words, copy `story-refactor-sweep.review-log.passes/pass0.md` (HEAD 1bca825).
 
@@ -55,3 +55,24 @@ Fixer: all 13 applied; cites verified (git log -S 326edb4, playwright.base.ts:17
 - none
 ### Dropped
 - G9 pin naming by AD id (adversarial minor) — folded into fixer item 7
+
+## Pass 3 — 2026-10-31
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 5, minor 12 (word-neutral ones sent to the fixer), decision-needed 0  |  Dropped in triage: 3
+Words (docs): 1499 (7.1x pass 0; budget 1500)  |  Snapshot: story-refactor-sweep.review-log.passes/pass3.md, fix diff pass3.fix.diff
+Fixer: all 14 applied; cut repeated text to stay in budget (Description edit-scope clause, 7.8 quote, "Owner calls stay functionality or UX only" in item 3, AC Verify measures list → "item 7's budgets"); verified package.json `test:all` chain, src/main.ts :141/:159–161/:205/:233/:250/:252/:256, epic-place-preview.md:63, retro :141, SPEC :99.
+### Applied
+- [major] AC flake-rerun bullet — "one rerun" unspecified; `test:all` is an `&&` chain (package.json:30), so a spec-only rerun leaves `test:e2e:pwa` unrun → fixer item 1
+- [major] Item 3 catch-all "any file not listed … (a fix-ticket row)" contradicts item 2's entry-11 hand-off for documents → fixer item 2
+- [major] Item 3 per-test `test.setTimeout` placed under item 5's mutation pass, which a timing flake cannot meet; item 6 gives flakes the 0/3 pass → fixer item 3
+- [major] Item 6 `nav.spec.ts:163` "declined" drops the owner's A7 trigger: epic 11 Notes (epic-place-preview.md:63) keep 9394922 "with a fix ticket for the next nav.spec.ts:163 failure (retro B8)"; 7.9 plan :108 run 2 is that failure → fixer item 4
+- [major] Items 6/7 "sweep commit" moves after measuring (item 6 fixes, review-fix commits), no re-run rule → fixer item 5 (default applied)
+- [minor] word-neutral fixes: G9 cites (:161, `boot()`'s only return, `mount(App`, `registerBeforeBack` after `createController`); deal.test.ts exception moved to the front; "non-comment" ahead of the non-editable list; `scripts/size-budget.mjs`'s limits only (CAP-8 tooling); "live at `baseline_revision`"; handed to entry 11 framed as a CAP-8 disposition; boot-order merge disposed per clause; success-signal "every prior sighting"; checkpoint wording (Jared settles owner-call rows; orchestrator applies fix tickets/amendment) → fixer items 6–14
+### Default applied (technical)
+- Sweep commit = last commit changing anything outside `_bmad-output/`; items 6 and 7 run after every other edit; a later such commit re-runs them
+- nav.spec.ts:163 → fix-ticket row for the owner's A7 backlog entry, outside this epic (SPEC Non-goals), not tickets.toml
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- Flake test identity by title prefix — plan-level detail, not ticket text (over budget)
+- Entry-11 disposition for device-read residuals (7.9 plan :204) and 7-9-build.md:54 unrecorded-check minor — add words over budget; the build can decline-with-reason or record them under existing rules (left as unapplied minors)
+- G9 "and to App" clause — adds words; covered by the required `controller` prop (`npm run check`), left as unapplied minor
