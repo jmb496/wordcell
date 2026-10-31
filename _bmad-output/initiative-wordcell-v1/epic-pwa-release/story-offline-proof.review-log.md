@@ -1,6 +1,6 @@
 # Review log — story-offline-proof.md (ticket 7.6)
 
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 201 words, `story-offline-proof.review-log.passes/pass0.md`, HEAD 5f26585.
 Intent carried from `epic-pwa-release/tickets.toml` entry 6 (not copied at pull; the fixer adds them to the Description in pass 1):
@@ -37,3 +37,29 @@ Fixer: all 12 items applied, no conflicts; `Response.fromServiceWorker()` checke
 - edge: "assert `errorsOf` empty in dist" as a blanket console ban — offline reload may log network lines; replaced by the alertdialog/pageerror check (item 1)
 - adversarial: compute a word from the engine and dictionary in Node with bounded New game retries — heavier than the seed pin; not adopted (item 1 default)
 - builder: separate controller-non-null check — subsumed by item 8's `fromServiceWorker()` proof
+
+## Pass 2 — 2026-10-30
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 4, minor 8, decision-needed 0  |  Dropped in triage: 2
+Words (docs): 865 (4.3x pass 0; budget 1500)  |  Snapshot: story-offline-proof.review-log.passes/pass2.md  |  Fix diff: pass2.fix.diff
+Fixer: all 12 applied, no conflicts; UI facts checked (Flip accessible name `Flip`, seed-1 column 3 `L QU E J A T A` / column 6 ends `N`, `trayIds` `['42','0','28m']`, `Loading words…` → `Validate`); added snippets are design statements, not run.
+### Applied
+- [major] Steps — composing TAN from a fresh seed-1 deal needs Flip: `drop()` hard-codes `destinationSide: 'left'` (src/engine/commands.ts:179), so a plain drop spells NTA and Validate rejects it (adversarial; verified) → fixer item 1
+- [major] Steps — with the deal pinned to seed 1 nothing proves a deal happened; the restored TAN draft could survive and Validate still reach `Confirm` (edge; adversarial minor merged) → fixer item 2
+- [major] Start and known deal — the always-on stub also pins nav's AD-13 launch id (`src/shell/nav.ts:100` `launchId = newSeed()`), contradicting "pins only … seed.ts" (ref alignment; edge minor merged) → fixer item 3
+- [major] Restore assertion (`pwa`) — compared value unnamed (`snapshot().loaded.session` is the boot-time idle session; `sessionOf` is the moved game) and the spine's restore-test rule (captureBoot, three `loaded()` fields vs `__wordcellBoot`) left ambiguous (all four reviewers) → fixer item 4
+- [minor] dist-smoke `activeMs` not smaller → item 5
+- [minor] dist-smoke DOM half: `trayIds(page)` → item 6
+- [minor] dist-smoke no-prompt wait point: `primary-action` reads `Validate` → item 7
+- [minor] response waits armed before `reload()`; `isList` takes a Request → item 8
+- [minor] `booted(page)` before `loaded()` → item 9
+- [minor] setup stays inside the offline test, not a describe hook (entry 7 shares the describe) → item 10
+- [minor] "(F7)" → "(SPEC Constraints)" → item 11
+- [minor] scope guard: "code diff", allow `e2e/globals.d.ts` → item 12
+### Default applied (technical)
+- Seed stub — armed one-shot: the init script returns 1 only after the test arms it just before the confirm's New game, then disarms; the test asserts it was consumed once (keeps AD-13 launch ids random)
+- Restore proof (`pwa`) — follow AD-17 Reading state in full, as `e2e/restore.spec.ts` does (captureBoot, three `loaded()` fields vs `__wordcellBoot`, `loaded().session` vs `sessionOf(before)`, `activeMs` not smaller)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- adversarial: init-script "registered before the first goto" reason inaccurate — moot under the armed stub (item 3)
+- adversarial: stub hit count as a separate check — folded into item 3
