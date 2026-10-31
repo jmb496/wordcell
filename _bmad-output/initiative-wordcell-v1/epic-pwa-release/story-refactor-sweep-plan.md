@@ -527,3 +527,7 @@ Each mutation is reverted after its run, and each must fail the new pin:
 - D-70 above.
 - The D-25 positive control copies dist-smoke's search rather than sharing it.
 - D-22's mutation also fails the old placement.
+
+## Resume authorisation (2026-10-31, interactive session)
+
+Under the owner's standing instruction to take technical defaults, the D-70 candidate test-only fix is authorised: in `readState` (`e2e/pwa/update.spec.ts`), treat a `Service worker restarted` worker-handle error like `closed|destroyed|detached` (return `null`, so the poll reads `swState()`/the request log and reports B's redundancy as designed). Record the cause and fix as D-70's disposition ("fixed", recorded-cause flake fix, item 6 style), then re-run item 6, item 7, the final `npm run test:all` and `npm run test:screens` per the ticket. The proposed tickets.toml changes are applied: the entry-11 amendment and the D-65 fix ticket (entry 13, ref 7.13, which entry 11 now waits on). The D-64 owner backlog entry outside epic 7 is left to the retrospective.

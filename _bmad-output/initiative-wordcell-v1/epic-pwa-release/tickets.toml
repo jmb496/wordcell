@@ -167,13 +167,25 @@ done_checkpoint = true
 references = ["spec — SPEC.md CAP-8; device-checks.md G9", "constraint — docs/development-methodology.md, Definition of done; AGENTS.md Running and verifying (unit budget, Linux-filesystem checkout)"]
 
 [[entry]]
+id = 13
+type = "story"
+title = "Deflake the success-signal drag test"
+description = "Fix ticket from ticket 7.10's sweep (row D-65, B8): the test `R-73 (UI) Success signal (epic Done when 3): the same move by drag …` (`e2e/success-signal.spec.ts`, identified by title, not line) fails intermittently with no cause found (sightings: win-trigger plan :101, game-surfaces retro F-13, 7.9 plan :108 run 1; 0/3 in 7.10's item 6 counted runs). Find the cause and fix it test-side if the cause is in the test or its helpers (`e2e/success-signal.spec.ts`, `e2e/helpers/drag.ts`); a cause in `src/` stops for the owner. Reproduction: `npx playwright test e2e/success-signal.spec.ts -g \"the same move by drag\" --project=android --repeat-each=50`, failure count recorded before and after; failures may not reproduce at that count, in which case record the count and the evidence examined and close it with a reason."
+verify = "The cause is recorded with its evidence and fixed with a reproduction count of 0 failures in 50 repeats after the fix, or, if it never reproduces, the counts and evidence are recorded and the ticket closes with that reason; `npm run test:all` is green."
+covers = ["CAP-8"]
+after = [10]
+hitl = false
+risk = "low"
+references = ["plan — _bmad-output/initiative-wordcell-v1/epic-pwa-release/story-refactor-sweep-plan.md (D-65, Fix tickets)", "code — e2e/success-signal.spec.ts, e2e/helpers/drag.ts"]
+
+[[entry]]
 id = 11
 type = "story"
 title = "Close-out: documents, audits and device read"
-description = "Brings the spine (AD-16 boot tail and update policy, AD-17 six keys and Reading state, AD-7, AD-15, AD-1 scans, AD-16 `Binds:`, Structural Seed, Capability → Architecture Map, Scaffold deltas, AD-18 Size, AD-17 Projects; through `bmad-architecture`), EXPERIENCE.md's \"New app version installed\" row and A-E4 (through `bmad-ux`), AGENTS.md (through `bmad-project-context`: the `main.ts` `requestPersistence()` exception, `navigator.storage` only in `src/shell/storage.ts`, the new shell modules) and SPEC F12 and `release-checklist.md` step 6 (the retrospective runs before the merge) in line with the build; closes this epic's `rule-coverage.md` rows and the epic 3 P7 rows for Q-40 and Q-42; hands Jared the build for every Device row of `device-checks.md` on the tailnet preview and every Desktop row in desktop Chrome (`docs/device-testing.md`), each failure becoming a fix ticket (new entry before entry 12, with its reproduction test or an accepted §6.6 gap), a spec §9 question or an owner question where the row says so; then runs the §6.4 and §6.6 audits last, after every row is recorded and its fix tickets are done."
+description = "Brings the spine (AD-16 boot tail and update policy, AD-17 six keys and Reading state, AD-7, AD-15, AD-1 scans, AD-16 `Binds:`, Structural Seed, Capability → Architecture Map, Scaffold deltas, AD-18 Size, AD-17 Projects; through `bmad-architecture`), EXPERIENCE.md's \"New app version installed\" row and A-E4 (through `bmad-ux`), AGENTS.md (through `bmad-project-context`: the `main.ts` `requestPersistence()` exception, `navigator.storage` only in `src/shell/storage.ts`, the new shell modules) and SPEC F12 and `release-checklist.md` step 6 (the retrospective runs before the merge) in line with the build; closes this epic's `rule-coverage.md` rows and the epic 3 P7 rows for Q-40 and Q-42; hands Jared the build for every Device row of `device-checks.md` on the tailnet preview and every Desktop row in desktop Chrome (`docs/device-testing.md`), each failure becoming a fix ticket (new entry before entry 12, with its reproduction test or an accepted §6.6 gap), a spec §9 question or an owner question where the row says so; then runs the §6.4 and §6.6 audits last, after every row is recorded and its fix tickets are done. Also syncs `build-notes.md` (:22-23 CAP-6 unreachable-key gate; :55 hook gate `VITE_TEST_HOOKS === '1'`; :112-115 and SPEC F6: dist-smoke runs in Playwright's default worker mode, not `block`; :123-124, :151 and SPEC F8: no `?__WB_REVISION__` install fetch or CDP route, observation through B's handle and a recorder in A's scope), records ticket 7.10's G9 disposition in `device-checks.md` G9, and updates `docs/device-testing.md`'s (unverified) tags from the device read (ticket 7.10 plan, Entry-11 amendment: D-43, D-50, D-61, D-62, D-63, D-66)."
 verify = "No document contradicts the build; every row of `rule-coverage.md` names a passing test or a D gap Jared accepted in the epic Notes; Jared's read of every Device and Desktop row is recorded in the epic Notes with the footer it was read on; the §6.4 and §6.6 audits are recorded in the plan with every gap a landed fix ticket or one Jared accepted; Jared's answers or explicit deferrals to the three SPEC Open Questions are recorded in the epic Notes (§6.9); `SESSION_VERSION`, `HISTORY_VERSION` and the Session and history shapes are unchanged; `npm run test:all` and `npm run test:screens` are green."
 covers = ["CAP-9"]
-after = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+after = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13]
 hitl = true
 risk = "low"
 unknown = "Which device rows fail on the phone (notably G3 activation timing and A-A11 back behaviour in G5/G6) and so how many fix tickets land before the merge."

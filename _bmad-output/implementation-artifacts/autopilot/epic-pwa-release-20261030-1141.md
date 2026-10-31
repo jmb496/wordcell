@@ -133,3 +133,6 @@ Close-out docs: none
 
 ## Stopped — build blocked
 Ticket 7.10, Step B (stop rule 2): plan status `blocked`. See the 7.10 entry above and the plan's `## Auto Run Result`.
+
+## Resumed — 7.10 build unblocked (interactive session, 2026-10-31T23:29Z)
+Technical default taken (owner rule: accept technical defaults): the plan is set back to `in-progress` with a note authorising the D-70 test-only fix (`readState` in `e2e/pwa/update.spec.ts` treats "Service worker restarted" as handle-gone). tickets.toml: the entry-11 amendment applied; D-65 fix ticket added as entry 13 (7.13, after 10, before 11; entry 11 now waits on it). D-64 owner backlog entry (outside epic 7) left to the retrospective.
