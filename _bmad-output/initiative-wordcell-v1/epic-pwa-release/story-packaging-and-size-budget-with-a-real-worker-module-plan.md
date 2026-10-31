@@ -3,7 +3,7 @@ title: 'Packaging and size budget with a real worker module'
 type: 'feature'
 ticket: '8'
 created: '2026-10-31'
-status: 'built'
+status: done
 baseline_revision: '0a61fc2d4ae7c812b94d8e2b4eb85c02975b9e03'
 route: 'full'
 route_source: 'auto'

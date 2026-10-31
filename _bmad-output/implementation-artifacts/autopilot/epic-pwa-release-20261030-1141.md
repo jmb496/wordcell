@@ -92,3 +92,14 @@ Ref to fix upstream: none
 Tokens: 11.3M input-equivalent (ticket review 58%, build 27%, code review 10%, other 3%, orchestrator 3%); orchestrator peak context 72k
 Worth knowing: the ticket's open question was answered: answering one saved icon with "not found" during the first install does reliably break that install on both builds, so the build's stop rule did not fire. The code review left two small test-quality notes in its log for the refactor sweep (7.10): the three error-screen tests check that the error screen appears but not its message text, and a very slow icon request could time out with a misleading reason. The ticket review's eleven small notes went to the build, which handled them in the plan. Startup check: handoff, git log, digest and ticket files all agreed that 7.7 was next (pulled this session); no pid files were left over.
 Close-out docs: none
+
+## 7.8 Packaging and size budget with a real worker module — done
+What it adds: the build's download-size check now also fails when the offline helper's code is bundled but nothing loads it on demand, and a new test reads the real build to prove that code (and the call that installs the helper) is not counted in the game's own download. The game's counted download is 560,702 of the 600,000-byte limit, about 39 KB to spare. Players see nothing new.
+Ticket review: 3 passes, converged (majors 5, 1, 0); nothing needed your input
+Build: built; commits c7cd412
+Code review: quick (ticket risk low; the build's own review found no high or medium issue), 2 passes, converged (majors 1, 0); 2 fixes applied (a test where the helper is loaded from a chunk other than the entry, and a check that the main game file is counted), commit a35d6b6
+Tests: all passing (`npm run test:all` exit 0: 3738 unit tests, 28 dist-smoke, 1153 dev-server e2e, 37 pwa), screenshots not needed (no UI change: only `scripts/`, `e2e/`, `tsconfig.e2e.json` and the plan); size budget 560,702 / 600,000 bytes
+Ref to fix upstream: none
+Tokens: 7.7M input-equivalent (ticket review 53%, build 26%, code review 13%, other 4%, orchestrator 3%); orchestrator peak context 69k
+Worth knowing: the three packaging items left over from epic 1 were re-checked and are all closed (plan Implementation Notes). The build changed the size-check's failure wording to "reached by no dynamic import from the entry", and the e2e test setup now allows importing the plain-JavaScript size script (`allowJs` in `tsconfig.e2e.json`); both are technical details the close-out ticket (7.11) syncs into the architecture doc and build notes. The ticket review's twelve small notes went to the build, which resolved all of them in the plan. The size figure moves by a byte between builds because the main file carries the commit id. Startup check: handoff, git log, digest and ticket files all agreed that 7.8 was next (pulled this session); no pid files were left over.
+Close-out docs: none
