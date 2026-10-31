@@ -321,6 +321,9 @@ test.describe('F6 serviceWorkers allow', () => {
     await primary.click();
     await expect(primary).toHaveText('Confirm');
     await glidesSettled(page);
+    // The place phase after Validate opens no dialog in today's UI (only the end sheet or a
+    // confirm would), so a dialog here fails this check as a prompt; revisit if the place phase
+    // gains one.
     await expectNoPrompt(page);
     expect(errors).toEqual([]);
   });
@@ -417,6 +420,12 @@ test.describe('F6 serviceWorkers allow', () => {
     const done = new Promise<void>((resolve, reject) => {
       answered = { resolve, reject };
     });
+    // Resolved at the first worker hit: the "no worker request" timer races only this, and the
+    // hold (`done`) is bounded by the handler's own deadline, which starts at the hit.
+    let seen!: () => void;
+    const hit = new Promise<void>((resolve) => {
+      seen = resolve;
+    });
     // F6: before the first goto, so the first install's precache fetch of the icon (which the
     // page itself does not load) reaches it; matched by pathname, anything else is not ours.
     await context.route(
@@ -425,6 +434,7 @@ test.describe('F6 serviceWorkers allow', () => {
         if (route.request().serviceWorker() === null) return route.fallback();
         workerHits++;
         if (workerHits > 1) return route.fulfill({ status: 404, body: '' });
+        seen();
         // Held until the page has observed the install (`register()` fulfilled), so the 404
         // fails a worker the page registered.
         const deadline = Date.now() + POLL_MS;
@@ -457,7 +467,7 @@ test.describe('F6 serviceWorkers allow', () => {
     await page.goto('/');
     let timer: ReturnType<typeof setTimeout> | undefined;
     await Promise.race([
-      done,
+      hit,
       new Promise<never>((_, reject) => {
         timer = setTimeout(
           () => reject(new Error(`no worker request for ${ICON} reached the context.route`)),
@@ -465,6 +475,7 @@ test.describe('F6 serviceWorkers allow', () => {
         );
       }),
     ]).finally(() => clearTimeout(timer));
+    await done;
     // No worker left in any slot: the first install failed (Q-40), none activated. `empty` is no
     // registration, or one with no installing, waiting or active worker; anything else reads as
     // its slot states.

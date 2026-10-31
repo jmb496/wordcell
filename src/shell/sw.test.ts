@@ -60,13 +60,16 @@ vi.mock('workbox-window', () => ({
 const STATE = { installing: 'installing', waiting: 'installed', active: 'activated' } as const;
 type Slot = keyof typeof STATE;
 
+/** A `VITE_TEST_HOOKS` value: `'0'` too is off, so a truthiness gate fails the `'0'` cases. */
+type Gate = '1' | '' | '0';
+
 interface LoadOptions {
   /** What `register()` returns (default: rejects). */
   readonly registration?: Promise<unknown>;
   /** `register()` rejects with this, created only when called (no unhandled rejection). */
   readonly rejection?: unknown;
-  /** The hook gate `VITE_TEST_HOOKS === '1'` (default on). */
-  readonly gate?: boolean;
+  /** The `VITE_TEST_HOOKS` value (default `'1'`, the gate on); `''` and `'0'` are both off. */
+  readonly gate?: Gate;
   /** `navigator.serviceWorker` present (default) or absent (F5). */
   readonly container?: boolean;
   /** Runs inside the faked `Workbox` constructor. */
@@ -88,7 +91,7 @@ async function load(options: LoadOptions = {}) {
   vi.stubGlobal('navigator', options.container === false ? {} : { serviceWorker: {} });
   const reportError = vi.fn();
   vi.stubGlobal('reportError', reportError);
-  vi.stubEnv('VITE_TEST_HOOKS', options.gate === false ? '' : '1');
+  vi.stubEnv('VITE_TEST_HOOKS', options.gate ?? '1');
   const { swState } = await import('./sw-state');
   const { registerWorker } = await import('./sw');
   return { swState, registerWorker, reportError };
@@ -112,8 +115,8 @@ function registrationWith(
 }
 
 /** Gate off: no report; gate on: exactly one `Error` whose message starts `Q-40`. */
-function expectReport(reportError: ReturnType<typeof vi.fn>, gate: boolean): Error | undefined {
-  if (!gate) {
+function expectReport(reportError: ReturnType<typeof vi.fn>, gate: Gate): Error | undefined {
+  if (gate !== '1') {
     expect(reportError).not.toHaveBeenCalled();
     return undefined;
   }
@@ -239,9 +242,10 @@ describe('AD-16 worker registration and state', () => {
 });
 
 const GATES = [
-  ['gate off', false],
-  ['gate on', true],
-] as const;
+  ["gate off ''", ''],
+  ["gate off '0'", '0'],
+  ['gate on', '1'],
+] as const satisfies readonly (readonly [string, Gate])[];
 
 describe('AD-16 Q-40 failure split', () => {
   it.each(GATES)(
@@ -362,7 +366,7 @@ describe('AD-16 Q-40 failure split', () => {
       await expect(registerWorker()).resolves.toBeUndefined();
       expect(swState()).toBe('failed');
       const error = expectReport(reportError, gate);
-      if (gate) expect(error?.cause).toBe(rejection);
+      if (gate === '1') expect(error?.cause).toBe(rejection);
     },
   );
 
@@ -425,7 +429,7 @@ describe('AD-16 Q-40 failure split', () => {
     registration.waiting = null;
     update.move('redundant');
     expect(swState()).toBe('failed');
-    expectReport(reportError, true);
+    expectReport(reportError, '1');
   });
 
   it('AD-16 replacement: a waiting worker superseded by an installing one, both at register(), still slotted when it turns redundant → not failed', async () => {
@@ -466,14 +470,14 @@ describe('AD-16 Q-40 failure split', () => {
     const registration = registrationWith({ installing });
     const { swState, registerWorker, reportError } = await load({
       registration: Promise.resolve(registration),
-      gate: false,
+      gate: '',
     });
     await registerWorker();
     vi.stubEnv('VITE_TEST_HOOKS', '1');
     registration.installing = null;
     installing.move('redundant');
     expect(swState()).toBe('failed');
-    expectReport(reportError, true);
+    expectReport(reportError, '1');
   });
 
   it('AD-16 activated-then-superseded: an activated worker at register() turns redundant with no newer worker → not failed', async () => {

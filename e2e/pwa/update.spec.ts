@@ -204,7 +204,7 @@ async function openPage(context: BrowserContext, served: Served): Promise<Page> 
   return page;
 }
 
-async function closePages(context: BrowserContext): Promise<void> {
+async function closePages(context: Pick<BrowserContext, 'pages'>): Promise<void> {
   for (const page of context.pages()) await page.close();
 }
 
@@ -318,21 +318,37 @@ async function pollActivated(
   throw new Error(`observation fault: ${why}; a probe page shows marker ${String(value)}`);
 }
 
-/** Runs `body` on its own copy of `dist-test/` and server; closes every page before `stop()`. */
+/**
+ * Runs `body` on its own copy of `dist-test/` and server; closes every page before `stop()`. A
+ * cleanup error never replaces the body's (which may carry the timing label): with both, an
+ * `AggregateError` with the body's message holds `[body error, cleanup error]`.
+ */
 async function withSite(
-  context: BrowserContext,
+  context: Pick<BrowserContext, 'pages'>,
   body: (site: Copy, served: Served) => Promise<void>,
 ): Promise<void> {
   const site = copy(buildRoot());
+  let failed: { error: unknown } | undefined;
   try {
     await body(site, await site.serve());
-  } finally {
+  } catch (error) {
+    failed = { error };
+  }
+  try {
     try {
       await closePages(context);
     } finally {
       await site.stop();
     }
+  } catch (cleanup) {
+    if (failed === undefined) throw cleanup;
+    const { error } = failed;
+    throw new AggregateError(
+      [error, cleanup],
+      error instanceof Error ? error.message : String(error),
+    );
   }
+  if (failed !== undefined) throw failed.error;
 }
 
 test('Q-40 AD-16 A-A15 build B stays waiting on reloads and while pages open and close: every page keeps marker A, no prompt', async ({
@@ -424,6 +440,11 @@ test('AD-17 the update spec activation poll fails at once when B turns redundant
   await withSite(context, async (site, served) => {
     await setup(page, site, served);
     const handle = await waitingHandle(context);
+    // C's own fetch: the log in the message must hold more `/sw.js` 200s than before the C write
+    // (B's setup already logged some).
+    const sw200 = (log: string) =>
+      log.split('\n').filter((line) => /^\s*200 \S+ \/sw\.js$/.test(line)).length;
+    const before = sw200(requestLog(served));
 
     const htmlB = readFileSync(path.join(site.dir, 'index.html'), 'utf8');
     writeBuild(
@@ -437,13 +458,19 @@ test('AD-17 the update spec activation poll fails at once when B turns redundant
     );
     await page.reload();
     const started = Date.now();
-    await expect(pollActivated(handle, served, context)).rejects.toThrow(
+    const failure = pollActivated(handle, served, context);
+    await expect(failure).rejects.toThrow(
       /B's worker turned redundant; requests:\n(.*\n)*\s*200 \S+ \/sw\.js/,
     );
     expect(
       Date.now() - started,
       'redundant is caught before the activation poll bound',
     ).toBeLessThan(ACTIVATION_POLL_MS);
+    const message = await failure.then(
+      () => '',
+      (error: unknown) => String(error),
+    );
+    expect(sw200(message), 'a /sw.js 200 logged after the C write').toBeGreaterThan(before);
     expect(context.pages(), 'page 1 stays open throughout').toHaveLength(1);
   });
 });
@@ -484,5 +511,45 @@ test('AD-17 the update spec timing checks fail with the A-A15 label when B activ
     await expect(expectMarkerA(page2, 'on page 2 with page 1 open')).rejects.toThrow(
       `${TIMING}: marker B on page 2 with page 1 open`,
     );
+    // Step 3's hold: `active` throws the timing label, not the generic not-waiting fault.
+    await pollState(page2, 'active', served);
+    await expect(holdWaiting(page2, served, 'on page 2 with page 1 open')).rejects.toThrow(
+      `${TIMING}: swState() active on page 2 with page 1 open`,
+    );
   });
+});
+
+// `withSite`'s cleanup: a cleanup error never replaces the body's (a fake context whose one page
+// fails to close; the copy and server are real and stopped).
+test('AD-17 the update spec withSite keeps the body error and attaches the cleanup error', async () => {
+  const bodyError = new Error(`${TIMING}: body`);
+  const cleanupError = new Error('page close failed');
+  const failing = {
+    pages: () => [{ close: () => Promise.reject(cleanupError) }],
+  } as unknown as Pick<BrowserContext, 'pages'>;
+  const none = { pages: () => [] } as unknown as Pick<BrowserContext, 'pages'>;
+  const outcome = (run: Promise<void>) =>
+    run.then(
+      () => 'resolved',
+      (error: unknown) => error,
+    );
+
+  const both = await outcome(
+    withSite(failing, async () => {
+      throw bodyError;
+    }),
+  );
+  expect(both).toBeInstanceOf(AggregateError);
+  expect((both as AggregateError).message).toBe(bodyError.message);
+  expect((both as AggregateError).errors).toEqual([bodyError, cleanupError]);
+  // One error alone is rethrown as it is.
+  expect(
+    await outcome(
+      withSite(none, async () => {
+        throw bodyError;
+      }),
+    ),
+  ).toBe(bodyError);
+  expect(await outcome(withSite(failing, async () => {}))).toBe(cleanupError);
+  expect(await outcome(withSite(none, async () => {}))).toBe('resolved');
 });

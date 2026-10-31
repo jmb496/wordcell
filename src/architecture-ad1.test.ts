@@ -885,6 +885,18 @@ describe('AD-16 skip-waiting names', () => {
         fails: 'skip-waiting',
       },
       {
+        name: 'main.ts imports virtual:pwa-register',
+        path: 'src/main.ts',
+        source: "import { registerSW } from 'virtual:pwa-register';",
+        fails: 'skip-waiting',
+      },
+      {
+        name: 'svelte <script> messageSkipWaiting()',
+        path: UV,
+        source: '<script lang="ts">\n  wb.messageSkipWaiting();\n</script>\n<p>x</p>',
+        fails: 'skip-waiting',
+      },
+      {
         name: 'names only in a comment',
         path: S,
         source:
@@ -979,6 +991,24 @@ describe('AD-1 navigator.storage', () => {
       name: 'markup navigator.storage',
       path: UV,
       source: '<p>{navigator.storage}</p>',
+      fails: 'navigator-storage',
+    },
+    {
+      name: 'main.ts navigator.storage',
+      path: 'src/main.ts',
+      source: 'navigator.storage.persist();',
+      fails: 'navigator-storage',
+    },
+    {
+      name: 'svelte <script> navigator.storage',
+      path: UV,
+      source: '<script lang="ts">\n  navigator.storage.persist();\n</script>\n<p>x</p>',
+      fails: 'navigator-storage',
+    },
+    {
+      name: 'template substitution navigator.storage',
+      path: S,
+      source: js('const s = ~@{navigator.storage}~;'),
       fails: 'navigator-storage',
     },
     {

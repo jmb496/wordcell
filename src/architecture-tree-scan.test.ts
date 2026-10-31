@@ -60,4 +60,65 @@ describe('AD-1 tree scan', () => {
     const condition = /\bif\s*\(([\s\S]*?)\)\s*\{\s*reportError\(\s*new Error\(\s*$/.exec(f17)?.[1];
     expect(condition?.replace(/\s+/g, ' ').trim()).toBe("import.meta.env.VITE_TEST_HOOKS === '1'");
   });
+  // Epic 4 G9 (device-checks.md; the 4.6 contract's main.ts bullet): order only, not adjacency.
+  // The hide cancel before gate.scrollReset is the AD-14 pin above; passing the controller to App
+  // is App's required `controller` prop (`npm run check`).
+  it('AD-12 AD-13 AD-16 src/main.ts creates the controller after the halted return and createGate, before registerLifecycle and the before-back cancel, and sets it once before mount', () => {
+    const source = readFileSync(posix.join(ROOT, 'src/main.ts'), 'utf8');
+    const start = source.indexOf('async function boot()');
+    expect(start, 'async function boot()').toBeGreaterThan(-1);
+    const body = source.slice(start, source.indexOf('\n}\n', start) + 2);
+    const at = (needle: string) => {
+      const index = body.indexOf(needle);
+      expect(index, needle).toBeGreaterThan(-1);
+      return index;
+    };
+    const halted = at("if (game.state.kind === 'halted') {");
+    const haltedReturn = body.indexOf('return;', halted);
+    const gate = at('createGate(');
+    const controller = at('createController(gate');
+    const lifecycle = at('game.registerLifecycle()');
+    const mount = at('mount(App');
+    const setController = at('setController(controller)');
+    // The `nav.registerBeforeBack(` whose callback opens with the by-back cancel.
+    const beforeBack =
+      /nav\.registerBeforeBack\(\(\) => \{\s*controller\.cancel\(\{ byBack: true \}\);/.exec(body)
+        ?.index ?? -1;
+    expect(
+      beforeBack,
+      'nav.registerBeforeBack(() => { controller.cancel({ byBack: true });',
+    ).toBeGreaterThan(-1);
+    // Rejected root included: the halted return is boot()'s only `return` before createController.
+    expect([...body.slice(0, controller).matchAll(/\breturn\b/g)].length).toBe(1);
+    expect(haltedReturn).toBeGreaterThan(halted);
+    expect(haltedReturn).toBeLessThan(gate);
+    expect(gate).toBeLessThan(controller);
+    expect(controller).toBeLessThan(lifecycle);
+    expect(controller).toBeLessThan(beforeBack);
+    expect([...source.matchAll(/\bsetController\(/g)].length, 'setController( calls').toBe(1);
+    expect(controller).toBeLessThan(setController);
+    expect(setController).toBeLessThan(mount);
+  });
+  it("AD-17 recomputePrecacheComplete is called in src/ only from test-hook.ts's env-gated accessor", () => {
+    const { files } = scanTree();
+    const name = 'recomputePrecacheComplete';
+    const sources = files.filter((p) => !p.endsWith('.test.ts'));
+    expect(sources).toEqual(expect.arrayContaining(['src/shell/test-hook.ts', 'src/main.ts']));
+    const mentions = sources.filter((p) =>
+      readFileSync(posix.join(ROOT, p), 'utf8').includes(name),
+    );
+    expect(mentions).toEqual(['src/shell/test-hook.ts']);
+    const source = readFileSync(posix.join(ROOT, 'src/shell/test-hook.ts'), 'utf8');
+    const calls = [...source.matchAll(/(?<!function )\brecomputePrecacheComplete\(/g)];
+    expect(calls.length, `${name}( calls`).toBe(1);
+    const gate = source.indexOf(
+      "if (import.meta.env.DEV || import.meta.env.VITE_TEST_HOOKS === '1') {\n  window.__wordcell = Object.freeze({",
+    );
+    expect(gate, 'the env-gated window.__wordcell block').toBeGreaterThan(-1);
+    // The block's closing brace: the first top-level `}` line after the gate.
+    const end = source.indexOf('\n}\n', gate);
+    expect(end, 'the end of the env-gated block').toBeGreaterThan(gate);
+    expect(calls[0]?.index).toBeGreaterThan(gate);
+    expect(calls[0]?.index).toBeLessThan(end);
+  });
 });

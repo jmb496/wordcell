@@ -136,6 +136,8 @@ test('AD-16 AD-17 offline after the precache is complete: a reload restores the 
   await primary.click();
   await expect(primary).toHaveText('Confirm');
   await glidesSettled(page);
+  // The place phase after Validate opens no dialog in today's UI (only the end sheet or a confirm
+  // would), so a dialog here fails this check as a prompt; revisit if the place phase gains one.
   await expectNoPrompt(page);
   expect(await page.evaluate(() => window.__wordcell?.current().kind)).toBe('active');
   expect(errors).toEqual([]);

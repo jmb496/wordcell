@@ -102,3 +102,17 @@ test('AD-15 AD-17 a rejected precacheComplete() recompute reaches the AD-15 halt
   await page.waitForFunction(() => window.__wordcell?.current().kind === 'halted');
   await expect(page.getByRole('alertdialog')).toHaveAccessibleDescription('AD-17 test');
 });
+
+// Epic 7 CAP-3 (rule 6): main.ts awaits `requestPersistence()` uncaught, so a rejected
+// `persisted()` reaches the `unhandledrejection` handler and halts the store.
+test('AD-15 AD-7 a rejected persisted() reaches the AD-15 halt', async ({ page }) => {
+  await page.addInitScript(() => {
+    StorageManager.prototype.persisted = () =>
+      Promise.reject(new Error('AD-7 test persisted rejected'));
+  });
+  await page.goto('/');
+  await page.waitForFunction(() => window.__wordcell?.current().kind === 'halted');
+  await expect(page.getByRole('alertdialog')).toHaveAccessibleDescription(
+    'AD-7 test persisted rejected',
+  );
+});

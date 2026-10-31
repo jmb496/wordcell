@@ -18,7 +18,13 @@ import {
   tapAt,
   trayIds,
 } from './helpers/board';
-import { bootCalls, recordBootCalls, releaseRegister } from './helpers/boot-calls';
+import {
+  bootCalls,
+  listTextCalls,
+  recordBootCalls,
+  releaseListText,
+  releaseRegister,
+} from './helpers/boot-calls';
 import {
   enableCelebration,
   FAST_CAP_STEP_MS,
@@ -1486,6 +1492,52 @@ test.describe('recordBootCalls', () => {
     expect(errors).toEqual([]);
   });
 
+  test('AD-17 recordBootCalls with holdListText holds only word-list text() until releaseListText, which stamps the release first', async ({
+    page,
+  }) => {
+    const errors = await probe(page);
+    await page.route('**/boot-calls-probe/en-probe.txt', (route) =>
+      route.fulfill({ contentType: 'text/plain', body: 'cat\ndog\n' }),
+    );
+    await page.route('**/boot-calls-probe/other.txt', (route) =>
+      route.fulfill({ contentType: 'text/plain', body: 'other' }),
+    );
+    await recordBootCalls(page, { holdListText: true });
+    await page.goto('/boot-calls-probe/');
+    expect(await listTextCalls(page)).toBe(0);
+    // Not a word-list path: passes through at once, uncounted.
+    expect(
+      await page.evaluate(async () => (await fetch('/boot-calls-probe/other.txt')).text()),
+    ).toBe('other');
+    expect(await listTextCalls(page)).toBe(0);
+    type Probe = { __probeText?: string; __probeAt?: number };
+    await page.evaluate(() => {
+      void fetch('/boot-calls-probe/en-probe.txt')
+        .then((response) => response.text())
+        .then((text) => {
+          (window as unknown as Probe).__probeText = text;
+          (window as unknown as Probe).__probeAt = performance.now();
+        });
+    });
+    const settled = () =>
+      page.evaluate(() => {
+        const probe = window as unknown as Probe;
+        return probe.__probeText === undefined
+          ? null
+          : { text: probe.__probeText, at: probe.__probeAt };
+      });
+    await expect.poll(() => listTextCalls(page)).toBe(1);
+    await animationFrames(page, 2);
+    await page.evaluate(() => new Promise<void>((resolve) => setTimeout(resolve, 0)));
+    expect(await settled()).toBeNull();
+    const releasedAt = await releaseListText(page);
+    await expect.poll(async () => (await settled())?.text).toBe('cat\ndog\n');
+    expect((await settled())?.at).toBeGreaterThanOrEqual(releasedAt);
+    expect(await listTextCalls(page)).toBe(1);
+    expect(await bootCalls(page)).toStrictEqual([]);
+    expect(errors).toEqual([]);
+  });
+
   test('AD-17 recordBootCalls throws when armed twice; bootCalls and releaseRegister throw when not armed', async ({
     page,
   }) => {
@@ -1495,10 +1547,14 @@ test.describe('recordBootCalls', () => {
     await page.goto('/boot-calls-probe/');
     await expect(bootCalls(page)).rejects.toThrow(/recordBootCalls was not called on this page/);
     await expect(releaseRegister(page)).rejects.toThrow(/not called with holdRegister/);
+    await expect(listTextCalls(page)).rejects.toThrow(/not called with holdListText/);
+    await expect(releaseListText(page)).rejects.toThrow(/not called with holdListText/);
     await recordBootCalls(page);
     await expect(recordBootCalls(page)).rejects.toThrow(/already armed on this page/);
-    // Armed without holdRegister: no release.
+    // Armed without holdRegister or holdListText: no release, no text() count.
     await expect(releaseRegister(page)).rejects.toThrow(/not called with holdRegister/);
+    await expect(listTextCalls(page)).rejects.toThrow(/not called with holdListText/);
+    await expect(releaseListText(page)).rejects.toThrow(/not called with holdListText/);
     // Armed after this document loaded: the init script runs from the next navigation only.
     await expect(bootCalls(page)).rejects.toThrow(/no boot-call log in this document/);
     await page.reload();
@@ -1965,7 +2021,12 @@ test.describe('precache helpers', () => {
   test('AD-17 precacheMissing lists the URLs no workbox-precache* key holds, revision stripped, other caches ignored', async ({
     page,
   }) => {
-    await page.goto('/');
+    // A nested probe document, so a helper resolving against the page URL instead of `/sw.js`
+    // looks under /precache-probe/ and misses a.js and b.css.
+    await page.route('**/precache-probe/x', (route) =>
+      route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>probe</title>' }),
+    );
+    await page.goto('/precache-probe/x');
     await page.evaluate(async () => {
       const precache = await caches.open('workbox-precache-v2-test');
       await precache.put('/a.js?__WB_REVISION__=1', new Response('a'));
@@ -2033,6 +2094,33 @@ test.describe('offline helpers', () => {
     const [pinnedDraw] = await draw(page, ['u32x1']);
     expect(pinnedDraw?.values).toEqual([1]);
     expect(await seedPins(page)).toBe(1);
+  });
+
+  test('AD-17 pinNextSeed throws on a second call, armSeed and seedPins throw unpinned or before the stub runs, and the counter starts at 0 on every document', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await booted(page);
+    await expect(armSeed(page)).rejects.toThrow(/armSeed: pinNextSeed was not called on this page/);
+    await expect(seedPins(page)).rejects.toThrow(
+      /seedPins: pinNextSeed was not called on this page/,
+    );
+    await pinNextSeed(page);
+    await expect(pinNextSeed(page)).rejects.toThrow(/pinNextSeed: already called on this page/);
+    // Pinned after this document loaded: the init script runs from the next navigation only.
+    await expect(armSeed(page)).rejects.toThrow(/armSeed: no seed stub in this document/);
+    await expect(seedPins(page)).rejects.toThrow(/seedPins: no seed stub in this document/);
+    await page.reload();
+    await booted(page);
+    expect(await seedPins(page)).toBe(0);
+    await armSeed(page);
+    const [pinnedDraw] = await draw(page, ['u32x1']);
+    expect(pinnedDraw?.values).toEqual([1]);
+    expect(await seedPins(page)).toBe(1);
+    await page.reload();
+    await booted(page);
+    expect(await seedPins(page)).toBe(0);
+    expect(await armedFlag(page)).toBe(false);
   });
 
   test('AD-17 composeTan on session-idle-fresh reaches the tray TAN', async ({ page }) => {

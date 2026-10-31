@@ -1,5 +1,11 @@
 import { expect, type Page, type Route, test } from '@playwright/test';
-import { bootCalls, recordBootCalls, releaseRegister } from '../helpers/boot-calls';
+import {
+  bootCalls,
+  listTextCalls,
+  recordBootCalls,
+  releaseListText,
+  releaseRegister,
+} from '../helpers/boot-calls';
 import { swChunkFile } from '../helpers/dist-test';
 
 // Epic 7 SPEC CAP-1, CAP-3, CAP-4, F4 (AD-16, AD-7, AD-8) on `dist-test/` (pwa project): the boot
@@ -43,33 +49,36 @@ test('AD-8 AD-16 AD-7 first launch: dictionary settled → register → register
   page,
   baseURL,
 }) => {
-  const held: Route[] = [];
-  await page.route(LIST, (route) => {
-    held.push(route);
-  });
-  let released = false;
-  const chunkHits: { released: boolean; state: string | undefined }[] = [];
-  await page.route(chunkUrl(baseURL), async (route) => {
-    // The gating read: an eager import that only awaits the dictionary before `register` would
-    // request the chunk while the dictionary is still `loading`.
-    chunkHits.push({ released, state: await dictionaryState(page) });
+  const url = chunkUrl(baseURL);
+  const chunkHits: string[] = [];
+  await page.route(url, async (route) => {
+    chunkHits.push(route.request().url());
     await route.continue();
   });
-  await recordBootCalls(page);
+  // The gating hold: the word list's `text()` (the dictionary turns `ready` synchronously once it
+  // resolves), so an import that awaits less than the whole load requests the chunk while held.
+  await recordBootCalls(page, { holdListText: true });
   await page.goto('/');
-  await expect.poll(() => held.length).toBe(1);
-  // Two animation frames plus a macrotask with the word list held: no chunk request yet.
+  await expect.poll(() => listTextCalls(page)).toBe(1);
+  // Two animation frames plus a macrotask with the text held: still loading, no chunk request yet.
   await page.evaluate(
     () =>
       new Promise<void>((resolve) =>
         requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(resolve, 0))),
       ),
   );
+  expect(await dictionaryState(page)).toBe('loading');
   expect(chunkHits).toEqual([]);
-  released = true;
-  await held[0]?.continue();
+  const releasedAt = await releaseListText(page);
   await order(page, 'ready');
-  expect(chunkHits).toEqual([{ released: true, state: 'ready' }]);
+  expect(chunkHits).toEqual([url]);
+  // The chunk request started at or after the release, on the page's own clock.
+  const starts = await page.evaluate(
+    (chunk) => performance.getEntriesByName(chunk).map((entry) => entry.startTime),
+    url,
+  );
+  expect(starts, 'one resource timing entry for the sw.ts chunk').toHaveLength(1);
+  expect(starts[0]).toBeGreaterThanOrEqual(releasedAt);
 });
 
 test('AD-16 AD-7 after a dictionary 404: register → register settled → persisted → persist, snapshots failed', async ({

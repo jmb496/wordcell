@@ -1,6 +1,9 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { expect, test } from '@playwright/test';
 import { END_SHEET, openFixture } from '../helpers/board';
 import { running, watchAdded } from '../helpers/celebration';
+import { buildRoot, walk } from '../helpers/dist-test';
 import { precacheMissing, readPrecacheManifest } from '../helpers/precache';
 
 test('AD-17 test hook is present in the test build: frozen, exposes exactly its hook keys', async ({
@@ -66,8 +69,29 @@ test('AD-17 precacheComplete() polls to true once the worker is activated and ev
   await expect
     .poll(() => page.evaluate(() => window.__wordcell?.precacheComplete()), { timeout: 15_000 })
     .toBe(true);
-  expect(await page.evaluate(() => window.__wordcell?.current().kind)).toBe('active');
-  expect(errors).toEqual([]);
   const urls = (await readPrecacheManifest(request)).map((entry) => entry.url);
   expect(await precacheMissing(page, urls)).toEqual([]);
+  // Not right after the last poll: after precacheMissing's cache reads and the dev test's settle
+  // step (a getRegistration(), then a macrotask), so a rejection from the recompute that poll
+  // started has time to reach AD-15 before the not-halted check.
+  await page.evaluate(async () => {
+    await navigator.serviceWorker.getRegistration();
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+  });
+  expect(await page.evaluate(() => window.__wordcell?.current().kind)).toBe('active');
+  expect(errors).toEqual([]);
+});
+
+// Positive control for dist-smoke.spec.ts's `AD-17 AD-18 no app chunk in dist/assets contains
+// precacheAndRoute or __WB_REVISION__`: the hook build keeps both names in an app chunk (the
+// precacheComplete() code), so the dist-smoke search can find them when they are there.
+test("AD-17 AD-18 the test build's app chunk holds precacheAndRoute and __WB_REVISION__ (positive control for dist-smoke)", () => {
+  const root = buildRoot();
+  const chunks = walk(root).filter((file) => /^assets\/[^/]+\.js$/.test(file));
+  expect(chunks.length).toBeGreaterThan(0);
+  const hits = chunks.filter((file) => {
+    const text = readFileSync(path.join(root, file), 'latin1');
+    return text.includes('precacheAndRoute') && text.includes('__WB_REVISION__');
+  });
+  expect(hits.length, 'app chunks holding both names').toBeGreaterThan(0);
 });

@@ -81,6 +81,11 @@ declare global {
     }[];
     // e2e/helpers/boot-calls.ts with `holdRegister`: lets the held register() promises settle.
     __wordcellBootRelease?: () => void;
+    // e2e/helpers/boot-calls.ts with `holdListText`: word-list text() calls, the release and its
+    // performance.now() stamp.
+    __wordcellListTextCalls?: number;
+    __wordcellListTextRelease?: () => void;
+    __wordcellListTextReleasedAt?: number;
     // e2e/helpers/offline.ts (epic 7 CAP-4): the seed stub's arm flag and its pinned-call count.
     __wordcellSeedArmed?: boolean;
     __wordcellSeedPins?: number;

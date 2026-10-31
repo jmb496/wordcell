@@ -134,81 +134,150 @@ function tailscaleBin() {
   throw new Error('device-preview: Tailscale CLI not found (tailscale.exe or tailscale)');
 }
 
-async function main() {
-  const parsed = parseArgs(process.argv.slice(2));
+/**
+ * The side effects `run` performs, in the order it performs them (`realIo` below; fakes in
+ * scripts/device-preview.test.mjs).
+ * @typedef {{ on(event: 'exit', listener: (code: number | null) => void): unknown, kill(): unknown }} Preview
+ * @typedef {{ status: number | null, stdout?: string | null, stderr?: string | null }} ServeResult
+ * @typedef {{
+ *   readFixture(name: string): string,
+ *   portOpen(port: number): Promise<boolean>,
+ *   removeStaleSeed(): void,
+ *   tailnetStatus(): string,
+ *   build(): void,
+ *   hasDist(): boolean,
+ *   writeSeed(html: string): void,
+ *   spawnPreview(port: number): Preview,
+ *   onSignal(signal: 'SIGINT' | 'SIGTERM', handler: () => void): void,
+ *   waitForPort(port: number, timeoutMs: number): Promise<void>,
+ *   serve(port: number): ServeResult,
+ *   serveOff(): void,
+ *   log(text: string): void,
+ *   error(text: string): void,
+ *   exit(code: number): void,
+ * }} Io
+ */
+
+/**
+ * The CLI run (CAP-7): fixtures, port probe, stale-seed removal, tailnet URL, build, seed page,
+ * `vite preview`, signal handlers, port wait, `tailscale serve`, hint lines.
+ * @param {string[]} argv
+ * @param {Io} io
+ * @returns {Promise<void>}
+ */
+export async function run(argv, io) {
+  const parsed = parseArgs(argv);
   /** @param {string | undefined} name */
   const readFixture = (name) => {
     if (name === undefined) return undefined;
-    const json = readFileSync(join('fixtures', `${name}.json`), 'utf8');
+    const json = io.readFixture(name);
     JSON.parse(json); // fail fast, before any Tailscale or build output (rule 6)
     return json;
   };
   const sessionJson = readFixture(parsed.session);
   const historyJson = readFixture(parsed.history);
-  // Before the build: a second run would otherwise rebuild `dist/` under the first run's server.
-  if (await portOpen(PORT)) {
+  // Before the build: a second run would otherwise rebuild `dist/` under a first run that is
+  // already serving. A first run still building (its port not open yet) is not caught here: both
+  // builds write `dist/`, and the later `vite preview --strictPort` fails.
+  if (await io.portOpen(PORT)) {
     throw new Error(
       `device-preview: port ${PORT} is taken; stop the other run (Ctrl+C) or free it`,
     );
   }
   const seeded = sessionJson !== undefined || historyJson !== undefined;
   // A `--no-build` run must not serve a stale seed page from an earlier seeded run.
-  if (!seeded) rmSync('dist/seed.html', { force: true });
+  if (!seeded) io.removeStaleSeed();
 
-  const ts = tailscaleBin();
-  const url = tailnetUrl(execFileSync(ts, ['status', '--json'], { encoding: 'utf8' }));
+  const url = tailnetUrl(io.tailnetStatus());
 
   // No `env`: the build inherits WORDCELL_APP_VERSION (scripts/app-version.mjs) for the G3 read.
-  if (parsed.build) execFileSync('npm', ['run', 'build'], { stdio: 'inherit' });
-  if (!existsSync('dist/index.html'))
-    throw new Error('device-preview: no dist/; run without --no-build');
-  if (seeded) writeFileSync('dist/seed.html', seedPage({ sessionJson, historyJson }));
+  if (parsed.build) io.build();
+  if (!io.hasDist()) throw new Error('device-preview: no dist/; run without --no-build');
+  if (seeded) io.writeSeed(seedPage({ sessionJson, historyJson }));
 
-  const preview = spawn(
-    join('node_modules', '.bin', 'vite'),
-    ['preview', '--port', String(PORT), '--strictPort'],
-    {
-      // Vite's host check rejects the tailnet name otherwise.
-      env: { ...process.env, __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS: '.ts.net' },
-      stdio: ['ignore', 'inherit', 'inherit'],
-    },
-  );
+  let stopping = false;
+  const preview = io.spawnPreview(PORT);
   preview.on('exit', (code) => {
     if (!stopping) {
-      console.error(`device-preview: vite preview exited (${code}); is port ${PORT} taken?`);
+      io.error(`device-preview: vite preview exited (${code}); is port ${PORT} taken?`);
       stop(1);
     }
   });
   // Registered before the port wait and `serve`, so an early Ctrl+C still runs `stop()`.
-  process.on('SIGINT', () => stop(0));
-  process.on('SIGTERM', () => stop(0));
+  io.onSignal('SIGINT', () => stop(0));
+  io.onSignal('SIGTERM', () => stop(0));
 
-  await waitForPort(PORT, 15_000);
+  try {
+    await io.waitForPort(PORT, 15_000);
+  } catch (error) {
+    // No share yet: stop the preview, then fail with the wait's own error.
+    stopping = true;
+    preview.kill();
+    throw error;
+  }
 
   // `serve --bg` prints an approval link and waits when Serve is not enabled on the tailnet.
-  const serve = spawnSync(ts, ['serve', '--bg', String(PORT)], {
-    encoding: 'utf8',
-    timeout: 20_000,
-  });
+  const serve = io.serve(PORT);
   if (serve.status !== 0) {
-    console.error(`${serve.stdout ?? ''}${serve.stderr ?? ''}`);
-    console.error('device-preview: tailscale serve failed; approve the link above, then rerun');
+    io.error(`${serve.stdout ?? ''}${serve.stderr ?? ''}`);
+    io.error('device-preview: tailscale serve failed; approve the link above, then rerun');
     stop(1);
     return;
   }
 
-  console.log(['', ...hintLines(url, parsed), ''].join('\n'));
+  io.log(['', ...hintLines(url, parsed), ''].join('\n'));
 
   /** @param {number} code */
   function stop(code) {
     stopping = true;
-    spawnSync(ts, ['serve', '--https=443', 'off'], { stdio: 'ignore', timeout: 20_000 });
+    io.serveOff();
     preview.kill();
-    process.exit(code);
+    io.exit(code);
   }
 }
 
-let stopping = false;
+/** @type {string | undefined} */
+let tailscale;
+/** The Tailscale CLI, found once, on first use. */
+const ts = () => {
+  tailscale ??= tailscaleBin();
+  return tailscale;
+};
+
+/** @type {Io} */
+const realIo = {
+  readFixture: (name) => readFileSync(join('fixtures', `${name}.json`), 'utf8'),
+  portOpen,
+  removeStaleSeed: () => rmSync('dist/seed.html', { force: true }),
+  tailnetStatus: () => execFileSync(ts(), ['status', '--json'], { encoding: 'utf8' }),
+  build: () => {
+    execFileSync('npm', ['run', 'build'], { stdio: 'inherit' });
+  },
+  hasDist: () => existsSync('dist/index.html'),
+  writeSeed: (html) => writeFileSync('dist/seed.html', html),
+  spawnPreview: (port) =>
+    spawn(
+      join('node_modules', '.bin', 'vite'),
+      ['preview', '--port', String(port), '--strictPort'],
+      {
+        // Vite's host check rejects the tailnet name otherwise.
+        env: { ...process.env, __VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS: '.ts.net' },
+        stdio: ['ignore', 'inherit', 'inherit'],
+      },
+    ),
+  onSignal: (signal, handler) => {
+    process.on(signal, handler);
+  },
+  waitForPort,
+  serve: (port) =>
+    spawnSync(ts(), ['serve', '--bg', String(port)], { encoding: 'utf8', timeout: 20_000 }),
+  serveOff: () => {
+    spawnSync(ts(), ['serve', '--https=443', 'off'], { stdio: 'ignore', timeout: 20_000 });
+  },
+  log: (text) => console.log(text),
+  error: (text) => console.error(text),
+  exit: (code) => process.exit(code),
+};
 
 /**
  * Whether something listens on localhost:port right now.
@@ -238,6 +307,10 @@ async function waitForPort(port, timeoutMs) {
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
   throw new Error(`device-preview: nothing listening on port ${port} after ${timeoutMs} ms`);
+}
+
+function main() {
+  return run(process.argv.slice(2), realIo);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) main();

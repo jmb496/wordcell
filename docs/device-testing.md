@@ -58,7 +58,8 @@ from A to B, and Desktop rows clear per new build (below).
    `wordcell:session` (AD-9 hide flush). After closing the tabs, wait until Chrome's Undo snackbar
    is gone (unverified).
 2. On the phone: Chrome ⋮ → Settings → Site settings → All sites → the tailnet origin → Delete data
-   or Clear & reset (unverified). This path needs no open tab on the origin.
+   or Clear & reset (unverified) (skip if the origin is not listed: it has no data yet). This path
+   needs no open tab on the origin.
 
 ## Install and offline readiness (G1, G2)
 
@@ -133,7 +134,8 @@ Afterwards, the next run must build (no `--no-build`) and without `WORDCELL_APP_
 footer carries the SHA again; a `--no-build` run would keep serving B with footer `B`.
 
 A spoiled read (the first cold launch in step 6 already shows B) is not a fix ticket: redo it once
-from step 1 (A's command, then cleared site data as in step 2). A second consecutive spoiled read, after A's
+from step 1: first stop B's run (Ctrl+C, which frees port 4173), then A's command, then cleared
+site data as in step 2. A second consecutive spoiled read, after A's
 readiness step, is not redone: it routes as G3 says (a fix ticket against this update-read
 procedure, or the owner question about AD-16/A-A15 if B was seen activating while a WordCell window
 was open); G3 is then resolved when that ticket's re-read passes or Jared's answer is recorded in

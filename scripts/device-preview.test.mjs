@@ -1,7 +1,7 @@
 // @ts-check
 import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
-import { hintLines, parseArgs, seedPage, tailnetUrl } from './device-preview.mjs';
+import { describe, expect, it, vi } from 'vitest';
+import { hintLines, parseArgs, run, seedPage, tailnetUrl } from './device-preview.mjs';
 
 /**
  * The value the seed page stores under `key`, parsed, or null when it stores nothing there.
@@ -163,5 +163,194 @@ describe('AD-17 device preview hintLines', () => {
       'Update read (G3): keep site data.',
       'Ctrl+C stops.',
     ]);
+  });
+});
+
+/**
+ * A fake `Io` that records each call by name (with its argument where it matters). `waitForPort`
+ * resolves unless `wait` is given; `serve` returns `serveStatus` (default 0); `exit` only records.
+ * The preview keeps its `exit` listener (`exitPreview` fires it) and `kill()` fires it with null, as
+ * a real child would.
+ * @param {{ fixture?: string, wait?: () => Promise<void>, serveStatus?: number }} [options]
+ */
+function fakeIo(options = {}) {
+  /** @type {string[]} */
+  const calls = [];
+  /** @type {Partial<Record<'SIGINT' | 'SIGTERM', () => void>>} */
+  const signals = {};
+  /** @type {string[]} */
+  const seeds = [];
+  /** @type {((code: number | null) => void)[]} */
+  const exitListeners = [];
+  /** @param {number | null} code */
+  const exitPreview = (code) => {
+    for (const listener of exitListeners) listener(code);
+  };
+  /** @type {import('./device-preview.mjs').Io} */
+  const io = {
+    readFixture: (name) => {
+      calls.push(`readFixture ${name}`);
+      return options.fixture ?? readFileSync(`fixtures/${name}.json`, 'utf8');
+    },
+    portOpen: async () => {
+      calls.push('portOpen');
+      return false;
+    },
+    removeStaleSeed: () => {
+      calls.push('removeStaleSeed');
+    },
+    tailnetStatus: () => {
+      calls.push('tailnetStatus');
+      return JSON.stringify({ Self: { DNSName: 'desk.tail0.ts.net.' } });
+    },
+    build: () => {
+      calls.push('build');
+    },
+    hasDist: () => {
+      calls.push('hasDist');
+      return true;
+    },
+    writeSeed: (html) => {
+      calls.push('writeSeed');
+      seeds.push(html);
+    },
+    spawnPreview: () => {
+      calls.push('spawnPreview');
+      return {
+        on: (_event, listener) => {
+          exitListeners.push(listener);
+        },
+        kill: () => {
+          calls.push('kill');
+          exitPreview(null);
+        },
+      };
+    },
+    onSignal: (signal, handler) => {
+      calls.push(`onSignal ${signal}`);
+      signals[signal] = handler;
+    },
+    waitForPort: () => {
+      calls.push('waitForPort');
+      return options.wait === undefined ? Promise.resolve() : options.wait();
+    },
+    serve: () => {
+      calls.push('serve');
+      return { status: options.serveStatus ?? 0, stdout: '', stderr: '' };
+    },
+    serveOff: () => {
+      calls.push('serveOff');
+    },
+    log: () => {
+      calls.push('log');
+    },
+    error: () => {
+      calls.push('error');
+    },
+    exit: (code) => {
+      calls.push(`exit ${code}`);
+    },
+  };
+  return { io, calls, signals, seeds, exitPreview };
+}
+
+describe('AD-17 device preview run', () => {
+  it('AD-17 run throws on a non-JSON fixture before any port, tailnet or build call', async () => {
+    const { io, calls } = fakeIo({ fixture: '{not json' });
+    await expect(run(['session-won-words'], io)).rejects.toThrow(SyntaxError);
+    expect(calls).toEqual(['readFixture session-won-words']);
+  });
+
+  it('AD-17 run without a fixture removes the stale seed page before the tailnet call and writes none', async () => {
+    const { io, calls } = fakeIo();
+    await run([], io);
+    expect(calls).toEqual([
+      'portOpen',
+      'removeStaleSeed',
+      'tailnetStatus',
+      'build',
+      'hasDist',
+      'spawnPreview',
+      'onSignal SIGINT',
+      'onSignal SIGTERM',
+      'waitForPort',
+      'serve',
+      'log',
+    ]);
+  });
+
+  it('AD-17 run with a fixture never removes the seed page and writes it after the build and the dist check', async () => {
+    const { io, calls, seeds } = fakeIo();
+    await run(['session-won-words', '--history', 'history-three-records'], io);
+    expect(calls).not.toContain('removeStaleSeed');
+    expect(calls.slice(0, 7)).toEqual([
+      'readFixture session-won-words',
+      'readFixture history-three-records',
+      'portOpen',
+      'tailnetStatus',
+      'build',
+      'hasDist',
+      'writeSeed',
+    ]);
+    expect(seeds).toHaveLength(1);
+    expect(seeds[0]).toContain('wordcell:session');
+    expect(seeds[0]).toContain('wordcell:history');
+  });
+
+  it('AD-17 run with --no-build makes no build call', async () => {
+    const { io, calls } = fakeIo();
+    await run(['--no-build'], io);
+    expect(calls).not.toContain('build');
+    expect(calls).toContain('hasDist');
+  });
+
+  it('AD-17 run registers the signal handlers before the port wait and serve; SIGINT during the wait turns the share off, kills the preview and exits 0', async () => {
+    const { io, calls, signals } = fakeIo({ wait: () => new Promise(() => {}) });
+    void run([], io);
+    await vi.waitFor(() => expect(calls).toContain('waitForPort'));
+    const wait = calls.indexOf('waitForPort');
+    expect(calls.slice(0, wait)).toEqual(
+      expect.arrayContaining(['onSignal SIGINT', 'onSignal SIGTERM']),
+    );
+    expect(calls).not.toContain('serve');
+    const sigint = signals.SIGINT;
+    if (sigint === undefined) throw new Error('no SIGINT handler');
+    sigint();
+    expect(calls.slice(wait + 1)).toEqual(['serveOff', 'kill', 'exit 0']);
+  });
+
+  it('AD-17 run kills the preview and rethrows the same error when the port wait times out', async () => {
+    const timeout = new Error('device-preview: nothing listening on port 4173 after 15000 ms');
+    const { io, calls } = fakeIo({ wait: () => Promise.reject(timeout) });
+    await expect(run([], io)).rejects.toBe(timeout);
+    expect(calls.filter((call) => call === 'kill')).toHaveLength(1);
+    // Nothing follows the kill: its exit event is expected (no error, serveOff or exit).
+    expect(calls.slice(calls.indexOf('waitForPort'))).toEqual(['waitForPort', 'kill']);
+  });
+
+  it('AD-17 run reports an unexpected preview exit and stops with exit 1', async () => {
+    const { io, calls, exitPreview } = fakeIo({ wait: () => new Promise(() => {}) });
+    void run([], io);
+    await vi.waitFor(() => expect(calls).toContain('waitForPort'));
+    exitPreview(1);
+    expect(calls.slice(calls.indexOf('waitForPort') + 1)).toEqual([
+      'error',
+      'serveOff',
+      'kill',
+      'exit 1',
+    ]);
+  });
+
+  it('AD-17 run stops with exit 1 and prints no hint when tailscale serve fails', async () => {
+    const { io, calls } = fakeIo({ serveStatus: 1 });
+    await run([], io);
+    expect(calls.slice(calls.indexOf('serve') + 1)).toEqual([
+      'error',
+      'error',
+      'serveOff',
+      'kill',
+      'exit 1',
+    ]);
+    expect(calls).not.toContain('log');
   });
 });
