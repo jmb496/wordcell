@@ -71,6 +71,16 @@ declare global {
     >;
     // e2e/helpers/storage-spy.ts: localStorage writes in order (removeItem as a null value).
     __wordcellStorageWrites?: { key: string; value: string | null }[];
+    // e2e/helpers/boot-calls.ts (epic 7 CAP-3): register, its settle, persisted and persist calls in
+    // order, each with the hook's dictionaryState() when the hook exists; `BootCall` there reuses
+    // this element type.
+    __wordcellBootCalls?: {
+      event: 'register' | 'register-settled' | 'persisted' | 'persist';
+      outcome?: 'fulfilled' | 'rejected';
+      dictionary?: 'loading' | 'ready' | 'failed';
+    }[];
+    // e2e/helpers/boot-calls.ts with `holdRegister`: lets the held register() promises settle.
+    __wordcellBootRelease?: () => void;
     // e2e/helpers/board.ts stashSession: the store's Session reference, stashed to assert it is
     // unchanged.
     __pointerSession?: unknown;

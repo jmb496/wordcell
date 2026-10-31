@@ -3,6 +3,7 @@ import { dictionary } from './shell/dictionary.svelte';
 import { game } from './shell/game.svelte';
 import { nav } from './shell/nav';
 import { prefs } from './shell/prefs.svelte';
+import { requestPersistence } from './shell/storage';
 import { setSwState } from './shell/sw-state';
 import { registerCelebrationSeam } from './shell/test-hook';
 import App from './ui/App.svelte';
@@ -134,8 +135,9 @@ function halted(): boolean {
 
 // AD-16: prefs load and theme apply, nav launch, font check, game load, lifecycle, boot surfaces, mount, then (only
 // on the path that mounts App) the dictionary fetch once painted and visible, then the worker
-// registration once the dictionary settled, unless halted meanwhile. Not awaited: a failure is an
-// unhandledrejection that writes nothing (AD-8 outcomes never reject).
+// registration once the dictionary settled, then the persistent-storage request
+// (`requestPersistence()`, AD-7, epic 7 SPEC CAP-3) after the attempt, unless halted meanwhile. Not
+// awaited: a failure is an unhandledrejection that writes nothing (AD-8 outcomes never reject).
 async function boot(): Promise<void> {
   // AD-10, AD-16, Q-45: prefs load and the theme applies first, synchronously, before the first await, so
   // no frame paints the default under a stored theme (a throw, e.g. an unregistered id, reaches AD-15).
@@ -260,8 +262,9 @@ async function boot(): Promise<void> {
   await game.whenVisible();
   if (halted()) return;
   await dictionary.load();
-  // AD-16 boot tail (epic 7 SPEC CAP-1, F3, F4, F17): the worker registers only after the
-  // dictionary settles, never in dev (a branch, not a return), never on a halted launch.
+  // AD-16 boot tail (epic 7 SPEC CAP-1, CAP-3, F3, F4, F17): the worker registers only after the
+  // dictionary settles, never in dev (a branch, not a return), never on a halted launch; then
+  // `requestPersistence()` after the attempt (or F17's catch, or F3's dev skip).
   if (halted()) return;
   if (!import.meta.env.DEV) {
     let sw: typeof import('./shell/sw') | undefined;
@@ -279,6 +282,11 @@ async function boot(): Promise<void> {
       await sw.registerWorker();
     }
   }
+  // AD-7, epic 7 SPEC CAP-3 (F3, F4, F17): once per launch, after the registration attempt settled
+  // (or failed to load, or was skipped in dev), never on a halted launch. No catch (rule 6): a
+  // rejection reaches AD-15's `unhandledrejection` handler.
+  if (halted()) return;
+  await requestPersistence();
 }
 
 // AD-10: `default`, `scifi`, `garden`, `steampunk`, `paper`, then `plum` in every build (spec §7.10), before boot.

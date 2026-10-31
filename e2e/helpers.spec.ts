@@ -18,6 +18,7 @@ import {
   tapAt,
   trayIds,
 } from './helpers/board';
+import { bootCalls, recordBootCalls, releaseRegister } from './helpers/boot-calls';
 import {
   enableCelebration,
   FAST_CAP_STEP_MS,
@@ -1344,6 +1345,122 @@ test.describe('swChunkFile', () => {
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+});
+
+test.describe('recordBootCalls', () => {
+  // A routed probe document under the dev server's origin: no app, so no `__wordcell` hook and no
+  // `dictionary` key on any entry. A worker's main-script fetch is seen only by `context.route`
+  // (`page.route` never sees it), so the probe's worker scripts are routed on the context.
+  const probe = async (page: Page): Promise<string[]> => {
+    const errors: string[] = [];
+    page.on('pageerror', (error) => errors.push(error.stack ?? error.message));
+    await page.route('**/boot-calls-probe/', (route) =>
+      route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>probe</title>' }),
+    );
+    return errors;
+  };
+
+  test("AD-17 recordBootCalls logs a rejected register's settle with no unhandled rejection, stubs persisted() false, calls persist through and records no snapshot without the hook", async ({
+    page,
+  }) => {
+    const errors = await probe(page);
+    let hits = 0;
+    await page.context().route('**/boot-calls-probe/missing.js', (route) => {
+      hits++;
+      return route.fulfill({ status: 404, contentType: 'text/plain', body: '' });
+    });
+    await recordBootCalls(page);
+    await page.goto('/boot-calls-probe/');
+    const result = await page.evaluate(async () => {
+      const outcome = await navigator.serviceWorker
+        .register('/boot-calls-probe/missing.js', { scope: '/boot-calls-probe/' })
+        .then(
+          () => 'fulfilled',
+          () => 'rejected',
+        );
+      const persisted = await navigator.storage.persisted();
+      const persist = await navigator.storage.persist();
+      return { outcome, persisted, persist: typeof persist, hook: window.__wordcell !== undefined };
+    });
+    expect(result).toEqual({
+      outcome: 'rejected',
+      persisted: false,
+      persist: 'boolean',
+      hook: false,
+    });
+    expect(await bootCalls(page)).toStrictEqual([
+      { event: 'register' },
+      { event: 'register-settled', outcome: 'rejected' },
+      { event: 'persisted' },
+      { event: 'persist' },
+    ]);
+    expect(hits).toBe(1);
+    // One macrotask, so an unhandled rejection would have been reported.
+    await page.evaluate(() => new Promise<void>((resolve) => setTimeout(resolve, 0)));
+    expect(errors).toEqual([]);
+  });
+
+  test('AD-17 recordBootCalls with holdRegister settles register only after releaseRegister', async ({
+    page,
+  }) => {
+    const errors = await probe(page);
+    let hits = 0;
+    await page.context().route('**/boot-calls-probe/sw.js', (route) => {
+      hits++;
+      return route.fulfill({ contentType: 'text/javascript', body: '' });
+    });
+    await recordBootCalls(page, { holdRegister: true });
+    await page.goto('/boot-calls-probe/');
+    await page.evaluate(() => {
+      const probeWindow = window as unknown as { __probeSettled?: string };
+      navigator.serviceWorker
+        .register('/boot-calls-probe/sw.js', { scope: '/boot-calls-probe/' })
+        .then(
+          () => {
+            probeWindow.__probeSettled = 'fulfilled';
+          },
+          () => {
+            probeWindow.__probeSettled = 'rejected';
+          },
+        );
+    });
+    const settled = () =>
+      page.evaluate(
+        () => (window as unknown as { __probeSettled?: string }).__probeSettled ?? null,
+      );
+    await expect
+      .poll(async () => (await bootCalls(page)).find((call) => call.event === 'register-settled'))
+      .toStrictEqual({ event: 'register-settled', outcome: 'fulfilled' });
+    await page.evaluate(() => new Promise<void>((resolve) => setTimeout(resolve, 0)));
+    expect(await settled()).toBeNull();
+    await releaseRegister(page);
+    await expect.poll(settled).toBe('fulfilled');
+    expect(await bootCalls(page)).toStrictEqual([
+      { event: 'register' },
+      { event: 'register-settled', outcome: 'fulfilled' },
+    ]);
+    expect(hits).toBe(1);
+    expect(errors).toEqual([]);
+  });
+
+  test('AD-17 recordBootCalls throws when armed twice; bootCalls and releaseRegister throw when not armed', async ({
+    page,
+  }) => {
+    await page.route('**/boot-calls-probe/', (route) =>
+      route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>probe</title>' }),
+    );
+    await page.goto('/boot-calls-probe/');
+    await expect(bootCalls(page)).rejects.toThrow(/recordBootCalls was not called on this page/);
+    await expect(releaseRegister(page)).rejects.toThrow(/not called with holdRegister/);
+    await recordBootCalls(page);
+    await expect(recordBootCalls(page)).rejects.toThrow(/already armed on this page/);
+    // Armed without holdRegister: no release.
+    await expect(releaseRegister(page)).rejects.toThrow(/not called with holdRegister/);
+    // Armed after this document loaded: the init script runs from the next navigation only.
+    await expect(bootCalls(page)).rejects.toThrow(/no boot-call log in this document/);
+    await page.reload();
+    expect(await bootCalls(page)).toStrictEqual([]);
   });
 });
 

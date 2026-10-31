@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { END_SHEET, openFixture } from './helpers/board';
+import { bootCalls, recordBootCalls } from './helpers/boot-calls';
 import { running, watchAdded } from './helpers/celebration';
 
 test('AD-17 test hook is present under the dev server: frozen, exposes exactly its hook keys', async ({
@@ -42,14 +43,16 @@ test('AD-17 the celebration seam is off by default under the dev server: a win o
 });
 
 // Epic 7 F3: the dev server never imports the sw.ts chunk, so no worker registers there; CAP-2:
-// with no registration precacheComplete() reads false and fetches nothing.
-test('AD-16 AD-17 the dev server never requests src/shell/sw.ts and swState() stays unregistered and precacheComplete() stays false', async ({
+// with no registration precacheComplete() reads false and fetches nothing; CAP-3: persistence is
+// still requested once, after the dictionary settled (e2e/helpers/boot-calls.ts).
+test('AD-16 AD-7 AD-17 the dev server never requests src/shell/sw.ts, swState() stays unregistered, precacheComplete() stays false and persistence is requested once', async ({
   page,
 }) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.stack ?? error.message));
   const paths: string[] = [];
   page.on('request', (request) => paths.push(new URL(request.url()).pathname));
+  await recordBootCalls(page);
   await page.goto('/');
   // Settled: `ready` or `failed` (an undefined hook before boot must not pass as "not loading").
   await expect
@@ -58,6 +61,9 @@ test('AD-16 AD-17 the dev server never requests src/shell/sw.ts and swState() st
   // One macrotask for the boot tail after the dictionary settles, then the network quiet.
   await page.evaluate(() => new Promise<void>((resolve) => setTimeout(resolve, 0)));
   await page.waitForLoadState('networkidle');
+  await expect
+    .poll(async () => (await bootCalls(page)).some((call) => call.event === 'persist'))
+    .toBe(true);
   expect(await page.evaluate(() => window.__wordcell?.precacheComplete())).toBe(false);
   // Settle the recompute that call started: its getRegistration() resolves first, then a macrotask.
   await page.evaluate(async () => {
@@ -65,6 +71,11 @@ test('AD-16 AD-17 the dev server never requests src/shell/sw.ts and swState() st
     await new Promise<void>((resolve) => setTimeout(resolve, 0));
   });
   await page.waitForLoadState('networkidle');
+  // F3: no register; the dev server serves the real word list, so both snapshots read `ready`.
+  expect(await bootCalls(page)).toStrictEqual([
+    { event: 'persisted', dictionary: 'ready' },
+    { event: 'persist', dictionary: 'ready' },
+  ]);
   expect(await page.evaluate(() => window.__wordcell?.precacheComplete())).toBe(false);
   expect(await page.evaluate(() => window.__wordcell?.current().kind)).toBe('active');
   expect(errors).toEqual([]);

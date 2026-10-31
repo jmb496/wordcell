@@ -922,6 +922,86 @@ describe('AD-1 localStorage', () => {
   ]);
 });
 
+// Epic 7 SPEC CAP-3: `navigator.storage` only in src/shell/storage.ts, under the localStorage
+// rule's exclusions.
+describe('AD-1 navigator.storage', () => {
+  run([
+    {
+      name: 'shell navigator.storage',
+      path: S,
+      source: 'navigator.storage.persist();',
+      fails: 'navigator-storage',
+    },
+    {
+      name: 'UI navigator.storage',
+      path: U,
+      source: 'navigator.storage.persist();',
+      fails: 'navigator-storage',
+    },
+    {
+      name: 'navigator?.storage',
+      path: S,
+      source: 'navigator?.storage?.persist();',
+      fails: 'navigator-storage',
+    },
+    {
+      name: 'window.navigator.storage',
+      path: S,
+      source: 'window.navigator.storage.persist();',
+      fails: 'navigator-storage',
+    },
+    {
+      name: 'navigator . storage',
+      path: S,
+      source: 'navigator . storage.persist();',
+      fails: 'navigator-storage',
+    },
+    {
+      name: 'engine test navigator.storage',
+      path: ET,
+      source: 'navigator.storage.persist();',
+      fails: 'navigator-storage',
+    },
+    {
+      // `navigator` is not an engine token, so only the new rule reports.
+      name: 'engine navigator.storage',
+      path: E,
+      source: 'navigator.storage.persist();',
+      fails: 'navigator-storage',
+    },
+    {
+      name: 'shell .d.ts navigator.storage',
+      path: 'src/shell/x.d.ts',
+      source: 'declare const s: typeof navigator.storage;',
+      fails: 'navigator-storage',
+    },
+    {
+      name: 'markup navigator.storage',
+      path: UV,
+      source: '<p>{navigator.storage}</p>',
+      fails: 'navigator-storage',
+    },
+    {
+      name: 'storage.ts navigator.storage',
+      path: 'src/shell/storage.ts',
+      source: 'navigator.storage.persist();',
+    },
+    {
+      name: 'navigator.storage in a shell string',
+      path: S,
+      source: "const s = 'navigator.storage';",
+    },
+    {
+      name: 'navigator.storage in a comment',
+      path: S,
+      source: '// navigator.storage lives in storage.ts\nexport {};',
+    },
+    { name: 'navigator.storageBuckets', path: S, source: 'navigator.storageBuckets.open(x);' },
+    { name: 'shell test navigator.storage', path: ST, source: 'navigator.storage.persist();' },
+    { name: 'UI test navigator.storage', path: UT, source: 'navigator.storage.persist();' },
+  ]);
+});
+
 describe('AD-1 test-file exemptions', () => {
   run([
     { name: 'engine test Date.now()', path: ET, source: 'Date.now();' },

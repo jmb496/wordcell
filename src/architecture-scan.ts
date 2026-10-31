@@ -5,9 +5,10 @@
 // cases run on virtual (path, source) pairs through the same `check` the tree scan uses;
 // resolution and layer classification are path-lexical and never consult the filesystem.
 // Known limitation (story 1.1 OQ #2): aliasing and destructuring (`const { random } = Math`,
-// `const M = Math`, `history['back']()`, `const h = window.history`, `window['localStorage']`)
-// pass the scan; code review covers deliberate aliasing. `.svelte` files are split with
-// svelte/compiler `parse` (scripts, markup text, markup bindings), never by regex (ticket 1.10).
+// `const M = Math`, `history['back']()`, `const h = window.history`, `window['localStorage']`,
+// `navigator['storage']`, `const { storage } = navigator`) pass the scan; code review covers
+// deliberate aliasing. `.svelte` files are split with svelte/compiler `parse` (scripts, markup
+// text, markup bindings), never by regex (ticket 1.10).
 import { readdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { posix } from 'node:path';
@@ -31,6 +32,7 @@ export type Rule =
   | 'popstate'
   | 'history-binding'
   | 'local-storage'
+  | 'navigator-storage'
   | 'skip-waiting';
 
 export interface Violation {
@@ -51,6 +53,8 @@ export const MATH_COMPUTED = /(?<![\w$])Math\s*(?:\?\.)?\s*\[/;
 export const HISTORY_API =
   /(?<![\w$])(?:window\s*(?:\?\.|\.)\s*)?history\s*(?:\?\.|\.)\s*(?:pushState|replaceState|back|forward|go|state|length)(?![\w$])/;
 export const LOCAL_STORAGE = /(?<![\w$])localStorage(?![\w$])/;
+/** Epic 7 SPEC CAP-3 (AD-1 as amended at CAP-9): `navigator.storage` only in `storage.ts`. */
+export const NAVIGATOR_STORAGE = /(?<![\w$])navigator\s*(?:\?\.|\.)\s*storage(?![\w$])/;
 /** Epic 7 SPEC CAP-1 (AD-16 no skip-waiting): matched in non-test sources with strings kept. */
 export const SKIP_WAITING_NAMES = [
   'messageSkipWaiting',
@@ -578,6 +582,9 @@ export function check(path: string, source: string): Violation[] {
     if (storageCheck && LOCAL_STORAGE.test(full)) {
       found.push(['local-storage', 'localStorage outside storage.ts']);
     }
+    if (storageCheck && NAVIGATOR_STORAGE.test(full)) {
+      found.push(['navigator-storage', 'navigator.storage outside storage.ts']);
+    }
     if (!isTest) {
       for (const name of SKIP_WAITING_NAMES) {
         if (commentsOnly.includes(name)) found.push(['skip-waiting', name]);
@@ -604,6 +611,9 @@ export function check(path: string, source: string): Violation[] {
     }
     if (storageCheck && LOCAL_STORAGE.test(markup)) {
       found.push(['local-storage', 'localStorage in markup']);
+    }
+    if (storageCheck && NAVIGATOR_STORAGE.test(markup)) {
+      found.push(['navigator-storage', 'navigator.storage in markup']);
     }
     for (const name of SKIP_WAITING_NAMES) {
       if (markup.includes(name)) found.push(['skip-waiting', name]);
