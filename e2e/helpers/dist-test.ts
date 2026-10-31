@@ -41,6 +41,31 @@ export function swChunkFile(root = buildRoot()): string {
   return entry.file;
 }
 
+// Epic 7 CAP-6: the files of the `sw.ts` static-import closure (`imports` only, sw.ts's own file
+// first, each visited key once, so a shared import or an `imports` cycle such as a back-edge to
+// `src/shell/sw.ts` yields each file once and terminates). Throws naming a missing key or a key
+// without a file (rule 6). `root` exists for the AD-17 self-test on synthetic manifests
+// (e2e/helpers.spec.ts).
+export function swStaticClosureFiles(root = buildRoot()): string[] {
+  const where = `${root}/.vite/manifest.json`;
+  const manifest = JSON.parse(
+    readFileSync(path.join(root, '.vite/manifest.json'), 'utf8'),
+  ) as Record<string, { file?: unknown; imports?: string[] } | undefined>;
+  const visited = new Set<string>();
+  const files: string[] = [];
+  const queue = ['src/shell/sw.ts'];
+  for (let key = queue.shift(); key !== undefined; key = queue.shift()) {
+    if (visited.has(key)) continue;
+    visited.add(key);
+    const chunk = Object.hasOwn(manifest, key) ? manifest[key] : undefined;
+    if (chunk === undefined) throw new Error(`${where} has no key ${key}`);
+    if (typeof chunk.file !== 'string') throw new Error(`${where} key ${key} has no file`);
+    files.push(chunk.file);
+    queue.push(...(chunk.imports ?? []));
+  }
+  return files;
+}
+
 export function readSite(sitePath: string): string {
   return readFileSync(path.join(buildRoot(), sitePath), 'utf8');
 }

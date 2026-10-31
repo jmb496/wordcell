@@ -1,6 +1,7 @@
 // @ts-check
 // Postbuild gate: gzip-9 sum of the AD-18 counted set from dist/.vite/manifest.json against
-// 600,000 bytes, failing on a missing font or dictionary, plus the AD-16 per-file precache limit.
+// 600,000 bytes, failing on a missing font or dictionary or a src/shell/sw.ts key no dynamic import
+// from the entry reaches (epic 7 CAP-6), plus the AD-16 per-file precache limit.
 // Usage: node scripts/size-budget.mjs [distDir] (distDir resolved against cwd; default: repo dist/).
 import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -143,6 +144,13 @@ export function computeBudget(manifest, sizes) {
   if (typeof dictionaryFile !== 'string') {
     errors.push(`size-budget: missing dictionary ${DICTIONARY_KEY} in the manifest`);
   }
+  // Epic 7 CAP-6: an orphan, static-only or unreached-importer sw.ts key. Counting is unchanged
+  // (with no edge everything visited is counted); keys the walk never visits are not validated.
+  if (Object.hasOwn(manifest, SW_KEY) && !main.swDynamic) {
+    errors.push(
+      `size-budget: manifest key ${SW_KEY} is reached by no dynamic import from the entry`,
+    );
+  }
   const oversized = [...sizes]
     .filter(([path, size]) => size.raw > PRECACHE_MAX_BYTES && matchesPrecacheGlob(path))
     .map(([path]) => path)
@@ -158,23 +166,33 @@ export function computeBudget(manifest, sizes) {
 }
 
 /**
- * Every file under `dir` except the top-level `.vite/`, by dist-relative POSIX path.
- * @param {string} dir
- * @param {string} prefix
- * @param {Map<string, FileSize>} sizes
+ * Every file under `dist` except the top-level `.vite/`, by dist-relative POSIX path (the
+ * `sizes` argument of computeBudget).
+ * @param {string} dist
+ * @returns {Map<string, FileSize>}
  */
-function collectSizes(dir, prefix, sizes) {
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const rel = `${prefix}${entry.name}`;
-    if (rel === '.vite') continue;
-    const path = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      collectSizes(path, `${rel}/`, sizes);
-    } else {
-      const bytes = readFileSync(path);
-      sizes.set(rel, { raw: bytes.length, gzip: gzipSync(bytes, { level: 9 }).length });
+export function collectSizes(dist) {
+  /** @type {Map<string, FileSize>} */
+  const sizes = new Map();
+  /**
+   * @param {string} dir
+   * @param {string} prefix
+   */
+  const visit = (dir, prefix) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const rel = `${prefix}${entry.name}`;
+      if (rel === '.vite') continue;
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        visit(path, `${rel}/`);
+      } else {
+        const bytes = readFileSync(path);
+        sizes.set(rel, { raw: bytes.length, gzip: gzipSync(bytes, { level: 9 }).length });
+      }
     }
-  }
+  };
+  visit(dist, '');
+  return sizes;
 }
 
 function main() {
@@ -193,11 +211,7 @@ function main() {
 
   /** @type {Manifest} */
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-  /** @type {Map<string, FileSize>} */
-  const sizes = new Map();
-  collectSizes(dist, '', sizes);
-
-  const { rows, total, errors } = computeBudget(manifest, sizes);
+  const { rows, total, errors } = computeBudget(manifest, collectSizes(dist));
   for (const row of rows) console.log(`${row.file} ${row.gzip}`);
   console.log(`total ${total} / ${BUDGET_BYTES}`);
   for (const error of errors) console.error(error);

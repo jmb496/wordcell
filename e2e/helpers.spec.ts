@@ -31,7 +31,7 @@ import {
   watchAddedFromBoot,
 } from './helpers/celebration';
 import { button, expectLeaves, hitAt, wc } from './helpers/dialogs';
-import { buildRoot, swChunkFile } from './helpers/dist-test';
+import { buildRoot, swChunkFile, swStaticClosureFiles } from './helpers/dist-test';
 import { dragResidue, expectNoResidue } from './helpers/drag';
 import {
   css,
@@ -1350,6 +1350,40 @@ test.describe('swChunkFile', () => {
       expect(() => swChunkFile(root)).toThrow(/src\/shell\/sw\.ts has no file$/);
       write({ 'src/shell/sw.ts': { file: 'assets/sw-b.js', isDynamicEntry: true } });
       expect(swChunkFile(root)).toBe('assets/sw-b.js');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+test.describe('swStaticClosureFiles', () => {
+  test("AD-17 swStaticClosureFiles returns sw.ts's file and its imports closure once each and throws naming a missing or file-less key", () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'sw-closure-'));
+    const write = (manifest: unknown) =>
+      writeFileSync(path.join(root, '.vite/manifest.json'), JSON.stringify(manifest));
+    const sw = 'src/shell/sw.ts';
+    try {
+      mkdirSync(path.join(root, '.vite'));
+      write({ 'index.html': { file: 'assets/index-a.js', isEntry: true } });
+      expect(() => swStaticClosureFiles(root)).toThrow(/has no key src\/shell\/sw\.ts$/);
+      write({ [sw]: { file: 'assets/sw-b.js', imports: ['_gone.js'] } });
+      expect(() => swStaticClosureFiles(root)).toThrow(/has no key _gone\.js$/);
+      write({ [sw]: { file: 'assets/sw-b.js', imports: ['_a.js'] }, '_a.js': { name: 'a' } });
+      expect(() => swStaticClosureFiles(root)).toThrow(/key _a\.js has no file$/);
+      write({
+        [sw]: { file: 'assets/sw-b.js', imports: ['_a.js'] },
+        '_a.js': { file: 'assets/a.js', imports: ['_b.js'] },
+        '_b.js': { file: 'assets/b.js' },
+        '_unrelated.js': { file: 'assets/unrelated.js' },
+      });
+      expect(swStaticClosureFiles(root)).toEqual(['assets/sw-b.js', 'assets/a.js', 'assets/b.js']);
+      write({
+        [sw]: { file: 'assets/sw-b.js', imports: ['_a.js'], dynamicImports: ['_d.js'] },
+        '_a.js': { file: 'assets/a.js', imports: ['_b.js'] },
+        '_b.js': { file: 'assets/b.js', imports: ['_a.js'] },
+        '_d.js': { file: 'assets/d.js' },
+      });
+      expect(swStaticClosureFiles(root)).toEqual(['assets/sw-b.js', 'assets/a.js', 'assets/b.js']);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

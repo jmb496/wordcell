@@ -1,12 +1,14 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
+import { collectSizes, computeBudget } from '../../scripts/size-budget.mjs';
 import {
   buildRoot,
   linkTags,
   readSite,
   relOf,
   swChunkFile,
+  swStaticClosureFiles,
   tags,
   walk,
 } from '../helpers/dist-test';
@@ -63,6 +65,31 @@ test('AD-16 the build has no registerSW.js and registers a worker only from the 
       source.includes('serviceWorker.register'),
       `${file} ${file === swChunk ? 'lacks' : 'contains'} serviceWorker.register`,
     ).toBe(file === swChunk);
+  }
+});
+
+// Epic 7 CAP-6: workbox-window is inlined into the sw.ts chunk, outside the AD-18 counted set.
+// Reads computeBudget's rows only: the total is checked by the postbuild run on dist/.
+test('AD-18 the sw.ts chunk is a dynamic entry outside the counted rows and only uncounted sw.ts closure files carry the Workbox marker and serviceWorker.register', () => {
+  const root = buildRoot();
+  const manifest = JSON.parse(readFileSync(path.join(root, '.vite/manifest.json'), 'utf8'));
+  const { rows } = computeBudget(manifest, collectSizes(root));
+  const counted = rows.map((row) => row.file);
+  const sw = swChunkFile(root);
+  expect(counted).not.toContain(sw);
+  const closure = swStaticClosureFiles(root);
+  expect(closure).toContain(sw);
+  const uncounted = closure.filter((file) => !counted.includes(file));
+  // latin1 is byte-faithful; both markers are ASCII.
+  const text = (file: string) => readFileSync(path.join(root, file), 'latin1');
+  for (const marker of ['messageSkipWaiting', 'serviceWorker.register']) {
+    for (const file of counted) {
+      expect(text(file).includes(marker), `counted ${file} contains ${marker}`).toBe(false);
+    }
+    expect(
+      uncounted.some((file) => text(file).includes(marker)),
+      `no uncounted sw.ts closure file (${uncounted.join(', ')}) contains ${marker}`,
+    ).toBe(true);
   }
 });
 
