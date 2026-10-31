@@ -117,3 +117,19 @@ Close-out docs: none
 
 ## Stopped — usage limit
 Ticket 7.10, Step B (build), before the plan was written: `You've hit your 5-hour limit · resets 5:20pm (America/New_York)`. The orchestrator session was cut off by the same limit; the interactive session recorded the stop. Tree clean; step log kept as `.autopilot/20261030-1141/7.10-B-attempt1.log`. Resume: rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-pwa-release` after the reset; it starts 7.10 at Step B.
+
+Startup note (session 2026-10-31T21:21Z): handoff, git log, digest and ticket files all agreed that 7.10 resumed at Step B with no plan yet; no step pid files were left running.
+
+## 7.10 Refactor sweep — stopped (build blocked)
+What it adds: the closing tidy-up of epic 7. Every leftover note from tickets 7.1–7.9 is listed in one table (70 rows) and each is fixed, closed, declined with a reason, or proposed as a follow-up ticket; 22 were fixed in tests, test helpers, the phone-testing script and its guide. Players see nothing new.
+Ticket review: 7 passes, capped (majors 10, 7, 5, 4, 2, 1, 2); nothing needed your input. The two late majors (the final test-run retry wording) went to the build, which followed the corrected wording.
+Build: blocked; commits b11abd5, 6629acd. The last full test run failed one release test (`e2e/pwa/update.spec.ts:435`, the update check that waits while build B's helper is thrown away) because the test browser reported "Service worker restarted", a wording the test's helper does not yet treat as "helper gone". It passes 30 of 30 times on its own and had failed once, unexplained, earlier in the build. The ticket says a failure like this stops the build rather than being retried, so the build stopped as told.
+Code review: not run
+Tests: lint, type check and 3784 unit tests pass; final `test:all` failed 1 of 40 release-build tests (above); screenshots not run
+Ref to fix upstream: ticket 7.10 Acceptance Criteria bullet 3 (the final test-run retry rule) needed fixing late in its review loop; the build followed the corrected wording
+Tokens: 10.8M input-equivalent (build 96%, other 2%, orchestrator 2%); orchestrator peak context 62k
+Worth knowing: the build measured the unit suite at 4.63 s (budget 5 s), a watch re-run at 526 ms (budget 1 s) and the download size margin at 39,298 bytes; the two flaky tests it was asked to check failed 0 of 3 times each. It proposes, for you or the ticketing step: an amendment to close-out ticket 7.11's entry, a new fix ticket for one test (`e2e/pwa/success-signal.spec.ts:440`, D-65) in this epic, and a backlog entry outside the epic for `e2e/nav.spec.ts:163` (D-64). None of these were applied (they change the ticket list).
+Close-out docs: none
+
+## Stopped — build blocked
+Ticket 7.10, Step B (stop rule 2): plan status `blocked`. See the 7.10 entry above and the plan's `## Auto Run Result`.
