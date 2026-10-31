@@ -1,6 +1,6 @@
 # Review log — story-device-read-tooling-for-a-registered-worker.md (ticket 7.9)
 
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 261 words, `story-device-read-tooling-for-a-registered-worker.review-log.passes/pass0.md`, HEAD f1f9418.
 Intent carried from `epic-pwa-release/tickets.toml` entry 9 (not copied at pull; the fixer adds them to the Description in pass 1):
@@ -42,3 +42,35 @@ Fixer: all 16 items applied, no conflicts; Description split into labelled bulle
 - none
 ### Dropped
 - none (duplicates merged)
+
+## Pass 2 — 2026-10-31
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 5, minor 10, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+Words (docs): 975 (3.7x pass 0; budget 1500)  |  Snapshot: story-device-read-tooling-for-a-registered-worker.review-log.passes/pass2.md  |  Fix diff: pass2.fix.diff
+Fixer: all 15 items applied; items 2 and 10 conflicted (`--history h` would now be a usage error) → example name `history-x`; `WORDCELL_APP_VERSION=A npm run build` run (total 560689 / 600000) and `grep -c 'textContent=`A`' dist/assets/index-*.js` → 1, then a normal rebuild; manual `main()` checks left for the plan.
+### Applied
+- [major] Script bullet vs AC — new `seedPage({ sessionJson?, historyJson? })` breaks the existing string-argument cases the AC says "stay green" (fix diff, edge, adversarial; ref as minor) → fixer item 1
+- [major] Script bullet `hintLines(url, seeded)` — the boolean leaves the history-only → seeded derivation (pass 1's bug) in untested `main()`; pass-1 item 2 only partly resolved (all four) → fixer item 2
+- [major] AC vs Script bullet — five usage errors, `--no-build` → `build: false` and session-only parsing stated but only a missing `--history` value tested (fix diff, edge, adversarial; ref as minor) → fixer item 3
+- [major] Seed steps G6 default `history-invalid-null` parses to `null`; absence must mean `undefined`, and the history-only `seedPage` case should use that fixture (adversarial) → fixer item 4
+- [major] Script bullet "a no-fixture run removes any existing `dist/seed.html`" and "fixtures read before the build" — stated in `main()` with no check; the AC stub check proves only Vite's emptying (adversarial; edge as minor) → fixer item 5
+- [minor] AC "the diff touches only the three files above" — fails on the build's own plan/log files → item 6
+- [minor] production variant omits release-checklist step 4's second-consecutive spoiled read → item 7
+- [minor] "A spoiled read is redone once" — from where (G3: from the start, A's fresh install) → item 8
+- [minor] `hintLines` line layout (Ctrl+C its own last line, no blank entries) → item 9
+- [minor] wrong-kind fixture (history name as positional, session name after `--history`) parses silently → item 10
+- [minor] `--no-build` on B's run silently ignores `WORDCELL_APP_VERSION` → item 11
+- [minor] "fresh install of A" when the tailnet app is already installed → item 12
+- [minor] "only the comment/JSDoc … change" reads as freezing the usage comment → item 13
+- [minor] seed tab boots the game and its hide flush rewrites the Session; close the tab promptly without playing → item 14
+- [minor] `WORDCELL_APP_VERSION` build half checkable without Tailscale; plan records it → item 15
+### Default applied (technical)
+- `hintLines(url, parsed)` takes `parseArgs`' result and derives seeded itself.
+- Existing `seedPage` cases ported to `{ sessionJson }`, assertions kept; a non-JSON `historyJson` throws too.
+- Absent fixture = `undefined`; history-only `seedPage` case uses `history-invalid-null` (stores `"null"`).
+- Stale-seed removal and read-before-build → plan-recorded manual checks (no new helper).
+- Wrong-kind fixture → usage error (`session-` positional, `history-` value).
+- `--no-build` with `WORDCELL_APP_VERSION` → doc says B's run builds (no new check).
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
