@@ -1,35 +1,114 @@
 // @ts-check
-// Owner device reads on a real phone (docs/device-testing.md): builds the hook-free `dist/`, writes
-// an optional one-tap seed page into it (never into `public/`, so it never ships), serves it with
-// `vite preview` on 4173 and shares that over HTTPS inside the owner's tailnet with
+// Owner device reads on a real phone (docs/device-testing.md, CAP-7): builds the hook-free `dist/`,
+// writes an optional one-tap seed page into it (never into `public/`, so it never ships, F9), serves
+// it with `vite preview` on 4173 and shares that over HTTPS inside the owner's tailnet with
 // `tailscale serve`, so the phone gets a secure context (service worker, install) without USB or
-// chrome://inspect. Ctrl+C turns the share off and stops the preview. Fails fast (rule 6) when
-// Tailscale is missing, Serve is not enabled on the tailnet, or port 4173 is taken.
-// Usage: node scripts/device-preview.mjs [fixture] [--no-build]
-//   fixture: a `fixtures/session-*.json` name without `.json` (e.g. session-won-words); the phone
-//   then opens `/seed.html`, which stores it as `wordcell:session` and opens the app.
+// chrome://inspect. Ctrl+C turns the share off and stops the preview. Fails fast (rule 6) on a
+// usage error, a missing or non-JSON fixture, when Tailscale is missing, Serve is not enabled on
+// the tailnet, or port 4173 is taken.
+// Usage: node scripts/device-preview.mjs [session-fixture] [--history <history-fixture>] [--no-build]
+//   session-fixture: a `fixtures/session-*.json` name without `.json` (e.g. session-won-words);
+//   --history: a `fixtures/history-*.json` name without `.json` (e.g. history-invalid-null).
+//   With either, the phone opens `/seed.html`, which stores them as `wordcell:session` /
+//   `wordcell:history` and opens the app. A worker controlling the origin answers `/seed.html`
+//   with the app, so clear the origin's site data before a seed (docs/device-testing.md).
 import { execFileSync, spawn, spawnSync } from 'node:child_process';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { connect } from 'node:net';
 import { join } from 'node:path';
 
 const PORT = 4173;
 const SESSION_KEY = 'wordcell:session';
+const HISTORY_KEY = 'wordcell:history';
+const USAGE =
+  'usage: node scripts/device-preview.mjs [session-fixture] [--history <history-fixture>] [--no-build]';
 
 /**
- * The seed page: unregisters any service worker of the origin, stores the Session and opens the app.
- * @param {string} sessionJson
+ * @typedef {{ session: string | undefined, history: string | undefined, build: boolean }} Args
+ */
+
+/**
+ * Parses the CLI (CAP-7, F9). Throws a usage error (rule 6) on anything else.
+ * @param {string[]} argv
+ * @returns {Args}
+ */
+export function parseArgs(argv) {
+  /** @param {string} reason */
+  const usage = (reason) => new Error(`device-preview: ${reason}; ${USAGE}`);
+  /** @type {Args} */
+  const parsed = { session: undefined, history: undefined, build: true };
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    if (arg === '--no-build') {
+      parsed.build = false;
+    } else if (arg === '--history') {
+      if (parsed.history !== undefined) throw usage('--history given twice');
+      const value = argv[i + 1];
+      if (value === undefined || value.startsWith('--')) throw usage('--history needs a value');
+      if (!value.startsWith('history-'))
+        throw usage(`--history ${value} is not a history- fixture`);
+      parsed.history = value;
+      i++;
+    } else if (arg.startsWith('-')) {
+      throw usage(`unknown flag ${arg}`);
+    } else {
+      if (parsed.session !== undefined) throw usage(`second fixture ${arg}`);
+      if (!arg.startsWith('session-')) throw usage(`${arg} is not a session- fixture`);
+      parsed.session = arg;
+    }
+  }
+  return parsed;
+}
+
+/**
+ * The seed page: stores the given fixtures (raw JSON text, re-serialised) and opens the app. Its
+ * unregister is a guard for an uncontrolled first visit: a controlling worker answers `/seed.html`
+ * with the app, so the page never runs then.
+ * @param {{ sessionJson?: string, historyJson?: string }} fixtures
  * @returns {string}
  */
-export function seedPage(sessionJson) {
-  const session = JSON.stringify(JSON.parse(sessionJson));
+export function seedPage({ sessionJson, historyJson }) {
+  if (sessionJson === undefined && historyJson === undefined) {
+    throw new Error('device-preview: seedPage needs sessionJson or historyJson');
+  }
+  let stores = '';
+  for (const [key, json] of [
+    [SESSION_KEY, sessionJson],
+    [HISTORY_KEY, historyJson],
+  ]) {
+    if (json === undefined) continue;
+    const value = JSON.stringify(JSON.parse(json));
+    stores += `localStorage.setItem(${JSON.stringify(key)}, ${JSON.stringify(value)});`;
+  }
   return (
     '<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width">' +
     '<title>Seed</title><p>Loading the seeded game…</p><script>(async () => {' +
     'for (const r of (await navigator.serviceWorker?.getRegistrations?.()) ?? []) await r.unregister();' +
-    `localStorage.setItem(${JSON.stringify(SESSION_KEY)}, ${JSON.stringify(session)});` +
+    stores +
     "location.replace('/');})();</script>\n"
   );
+}
+
+/**
+ * The lines printed once the share is up (CAP-7), one element per line, no blank entries.
+ * @param {string} url
+ * @param {Args} parsed
+ * @returns {string[]}
+ */
+export function hintLines(url, parsed) {
+  const seeded = parsed.session !== undefined || parsed.history !== undefined;
+  return seeded
+    ? [
+        `On the phone (Tailscale connected): ${url}/seed.html`,
+        "Seed, re-seed or fresh install: clear this origin's site data on the phone first.",
+        'Ctrl+C stops.',
+      ]
+    : [
+        `On the phone (Tailscale connected): ${url}/`,
+        'Fresh install: clear site data first.',
+        'Update read (G3): keep site data.',
+        'Ctrl+C stops.',
+      ];
 }
 
 /**
@@ -56,19 +135,28 @@ function tailscaleBin() {
 }
 
 async function main() {
-  const args = process.argv.slice(2);
-  const build = !args.includes('--no-build');
-  const fixture = args.find((a) => !a.startsWith('--'));
+  const parsed = parseArgs(process.argv.slice(2));
+  /** @param {string | undefined} name */
+  const readFixture = (name) => {
+    if (name === undefined) return undefined;
+    const json = readFileSync(join('fixtures', `${name}.json`), 'utf8');
+    JSON.parse(json); // fail fast, before any Tailscale or build output (rule 6)
+    return json;
+  };
+  const sessionJson = readFixture(parsed.session);
+  const historyJson = readFixture(parsed.history);
+  const seeded = sessionJson !== undefined || historyJson !== undefined;
+  // A `--no-build` run must not serve a stale seed page from an earlier seeded run.
+  if (!seeded) rmSync('dist/seed.html', { force: true });
+
   const ts = tailscaleBin();
   const url = tailnetUrl(execFileSync(ts, ['status', '--json'], { encoding: 'utf8' }));
 
-  if (build) execFileSync('npm', ['run', 'build'], { stdio: 'inherit' });
+  // No `env`: the build inherits WORDCELL_APP_VERSION (scripts/app-version.mjs) for the G3 read.
+  if (parsed.build) execFileSync('npm', ['run', 'build'], { stdio: 'inherit' });
   if (!existsSync('dist/index.html'))
     throw new Error('device-preview: no dist/; run without --no-build');
-  if (fixture !== undefined) {
-    const path = join('fixtures', `${fixture}.json`);
-    writeFileSync('dist/seed.html', seedPage(readFileSync(path, 'utf8')));
-  }
+  if (seeded) writeFileSync('dist/seed.html', seedPage({ sessionJson, historyJson }));
 
   const preview = spawn(
     join('node_modules', '.bin', 'vite'),
@@ -85,6 +173,9 @@ async function main() {
       stop(1);
     }
   });
+  // Registered before the port wait and `serve`, so an early Ctrl+C still runs `stop()`.
+  process.on('SIGINT', () => stop(0));
+  process.on('SIGTERM', () => stop(0));
 
   await waitForPort(PORT, 15_000);
 
@@ -100,12 +191,7 @@ async function main() {
     return;
   }
 
-  console.log(
-    `\nOn the phone (Tailscale connected): ${url}/${fixture === undefined ? '' : 'seed.html'}`,
-  );
-  console.log('After a new build, clear the site data on the phone first. Ctrl+C stops.\n');
-  process.on('SIGINT', () => stop(0));
-  process.on('SIGTERM', () => stop(0));
+  console.log(['', ...hintLines(url, parsed), ''].join('\n'));
 
   /** @param {number} code */
   function stop(code) {
