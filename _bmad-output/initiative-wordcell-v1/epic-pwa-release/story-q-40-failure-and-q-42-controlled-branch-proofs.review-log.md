@@ -1,6 +1,6 @@
 # Review log — story-q-40-failure-and-q-42-controlled-branch-proofs.md (ticket 7.7)
 
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7, budget default (2.5x pass 0 ≈ 800 words). Pass 0: 320 words, `story-q-40-failure-and-q-42-controlled-branch-proofs.review-log.passes/pass0.md`, HEAD bd9baa6.
 Intent carried from `epic-pwa-release/tickets.toml` entry 7 (not copied at pull; the fixer adds them to the Description in pass 1):
@@ -40,3 +40,28 @@ Fixer: all 12 items applied, no conflicts; `plan_checkpoint: true` in frontmatte
 ### Dropped
 - edge: "no-installing poll treats an undefined `getRegistration()` as done" as a separate item — folded into item 6
 - adversarial: "this ticket edits neither rule-coverage file" stated as a finding — kept only as part of item 1's consumer wording
+
+## Pass 2 — 2026-10-31
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 3, minor 9, decision-needed 0  |  Dropped in triage: 1
+Words (docs): 779 (2.4x pass 0)  |  Snapshot: story-q-40-failure-and-q-42-controlled-branch-proofs.review-log.passes/pass2.md  |  Fix diff: pass2.fix.diff
+Fixer: all 11 items applied, no conflicts; `fromServiceWorker()` marked unverified on Playwright 1.63 (types only) and added to the Notes stop rule; `workbox-precache-` prefix matches `PRECACHE_PREFIX` in src/shell/test-hook.ts; `icons/icon-192.png` exists in public/icons/; no runnable commands added.
+### Applied
+- [major] Q-42 bullet — the control-check reload's own dictionary fetch (started after `nextPaint()`/`whenVisible()`, can follow `load`) can land after the entry is deleted and take hit 1 → wait for `dictionaryState()` `ready` before deleting and routing (edge) → fixer item 1
+- [major] dist-smoke precache bullet — `getRegistration()` is `undefined` before `register` runs, so the "no worker installing" settle poll can pass before the 404 is sent → handler resolves a promise once it answers 404; test awaits it before polling (edge) → item 2
+- [major] Q-42 bullet — in-place assertions not anchored to the held retry reaching the handler and no-`load` not re-checked after release, so a reloading implementation passes (adversarial; edge, fix diff, ref as minors) → poll until the second hit is held, assert banner, `dictionaryState()` `loading`, no `load`; after the banner hides, no `load` again and exactly two hits → item 3
+- [minor] Tests line — "each Q-40/Q-42 row" includes the CAP-4 row → "each CAP-5 Q-40/Q-42 row" (fix diff, edge, adversarial) → item 4
+- [minor] Q-42 — both hits `request.serviceWorker()` non-null; `fromServiceWorker()` on the 404 marked unverified with the Notes' stop rule (fix diff, adversarial) → item 5
+- [minor] Q-42 route pattern `**/en*.txt` (AD-8 Tests) (ref) → item 6
+- [minor] Q-42 delete: from the `workbox-precache-*` cache, exactly one entry deleted (adversarial) → item 7
+- [minor] precache route by pathname `icons/icon-192.png` (worker fetch carries `?__WB_REVISION__=`), non-worker requests `route.fallback()`; gate on `register-settled` `fulfilled` (edge, adversarial) → item 8
+- [minor] missing-script: `/sw.js` 404 asserted first; log exactly `register`, `register-settled` (`rejected`), `persisted`, `persist` (ref, adversarial) → item 9
+- [minor] case sequence: seed `session-idle-fresh.json`, `composeTan`, `dealNewGame`, `composeTan`, Validate, as the offline cases (edge, adversarial) → item 10
+- [minor] chunk route is `page.route` on the uncontrolled first-launch page (adversarial) → item 11
+### Default applied (technical)
+- Q-42 settle point — `dictionaryState()` `ready` on the controlled page before delete and route
+- Precache settle — a handler-resolved promise after the 404 answer, awaited before the registration poll
+- Q-42 anchor — as `e2e/dictionary.spec.ts`'s stubbed-controller test (held count 1, `loading` while held, no `load` at end)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- adversarial: arm `waitForResponse` with the 404 reload — plan-level procedure (as the offline case), not ticket contract
