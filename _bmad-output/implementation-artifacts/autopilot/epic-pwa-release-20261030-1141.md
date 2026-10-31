@@ -114,3 +114,6 @@ Ref to fix upstream: none
 Tokens: 9.0M input-equivalent (ticket review 49%, build 22%, code review 21%, other 4%, orchestrator 3%); orchestrator peak context 66k
 Worth knowing: two items carried to the refactor sweep (7.10): the script's main start-up path is checked only by hand runs, not an automated test, and if the preview server times out while starting it is left running. The code review left six small notes in its log (`review-loop/7-9-build.md`), mostly guide wording (e.g. stop build B's run before redoing a spoiled update read; skip clearing site data when the phone has none yet) and stale test counts in the plan. The script now refuses to start when port 4173 is already serving, so only one preview runs at a time. Startup check: handoff, git log, digest and ticket files all agreed that 7.9 was next (pulled this session); no pid files were left over.
 Close-out docs: none
+
+## Stopped — usage limit
+Ticket 7.10, Step B (build), before the plan was written: `You've hit your 5-hour limit · resets 5:20pm (America/New_York)`. The orchestrator session was cut off by the same limit; the interactive session recorded the stop. Tree clean; step log kept as `.autopilot/20261030-1141/7.10-B-attempt1.log`. Resume: rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-pwa-release` after the reset; it starts 7.10 at Step B.
