@@ -1,6 +1,6 @@
 # Review log — story-packaging-and-size-budget-with-a-real-worker-module.md (ticket 7.8)
 
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7, budget=1500 words. Pass 0: 212 words, `story-packaging-and-size-budget-with-a-real-worker-module.review-log.passes/pass0.md`, HEAD 5f59fba.
 Intent carried from `epic-pwa-release/tickets.toml` entry 8 (not copied at pull; the fixer adds them to the Description in pass 1):
@@ -35,6 +35,32 @@ Fixer: all 14 items applied, no conflicts; Description split into Gate / Content
 - Failure style — an `errors` entry after the dictionary error, before the 4 MB errors (table still prints, exit 1)
 - E2E access — export `collectSizes` from size-budget.mjs, `allowJs: true` in tsconfig.e2e.json; sw.ts static-closure walk as an `e2e/helpers/dist-test.ts` helper with a self-test in `e2e/helpers.spec.ts`
 - Spine gap — SPEC wins; entry 11 syncs AD-18 Size; this ticket edits no spine/spec doc
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Pass 2 — 2026-10-31
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 1, minor 11, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 946 (4.5x pass 0; budget 1500)  |  Snapshot: story-packaging-and-size-budget-with-a-real-worker-module.review-log.passes/pass2.md  |  Fix diff: pass2.fix.diff
+Fixer: all 12 items applied, no conflicts; no runnable commands or config values added; case names, `swChunkFile` signature/throws and the 560,702 figure checked against code and entry 5's plan.
+### Applied
+- [major] Gate bullet — the stated static-plus-dynamic pass rule has no `size-budget.test.mjs` case (edge, adversarial) → fixer item 1
+- [minor] Content case — "`latin1`, so the binary font row cannot throw" is false (utf8 decode never throws); latin1 is a byte-faithful decode (fix diff, edge, adversarial) → item 2
+- [minor] Consumers — entry 11 must also record the `tsconfig.e2e.json` `allowJs` Scaffold delta; nothing entry 11 reads carries it (fix diff, adversarial, ref) → item 3
+- [minor] Content case — each marker checked on its own: in no counted row and in at least one uncounted closure file (edge, adversarial) → item 4
+- [minor] Closure helper — `(root = buildRoot())`, `imports` only, throws naming the key on a missing key or no `file` (rule 6), self-test named `AD-17 …` as `swChunkFile`'s (edge, adversarial) → item 5
+- [minor] Budget — "at <commit>" cannot name the build's own commit; baseline 560,662 is stale (entry 5 recorded 560,702) (edge, adversarial) → item 6
+- [minor] Gate — "(e.g. only inside sw.ts's own subtree)" reads two ways when sw.ts is also statically reached (adversarial) → item 7
+- [minor] Gate — "no key passes" vs the existing dangling-edge throw (adversarial) → item 8
+- [minor] Gate — the amended static-import case is the static-only proof, no duplicate (adversarial) → item 9
+- [minor] Gate — an orphan key's `file` is not validated; the same error is pushed (adversarial) → item 10
+- [minor] Content case — the `index.html` closure layout is today's; assert over the manifest's closure (adversarial) → item 11
+- [minor] Verify — add the helper self-test and `npm run check` with `allowJs` (adversarial) → item 12
+### Default applied (technical)
+- Static-plus-dynamic test — `AD-18 sw.ts reached both statically and dynamically passes and is counted` (`errors` `[]`, sw file/css/imports in rows)
+- Margin baseline — the plan measures at the start commit (`npm run build` before changes) and records the delta from it, citing entry 5's 560,702 as the last recorded figure
+- Orphan key — the gate pushes its error without validating the orphan's `file`
 ### Decision needed (functionality / UX / gameplay)
 - none
 ### Dropped
