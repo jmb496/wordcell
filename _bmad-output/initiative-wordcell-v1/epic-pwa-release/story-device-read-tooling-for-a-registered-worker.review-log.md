@@ -1,6 +1,6 @@
 # Review log — story-device-read-tooling-for-a-registered-worker.md (ticket 7.9)
 
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 261 words, `story-device-read-tooling-for-a-registered-worker.review-log.passes/pass0.md`, HEAD f1f9418.
 Intent carried from `epic-pwa-release/tickets.toml` entry 9 (not copied at pull; the fixer adds them to the Description in pass 1):
@@ -98,3 +98,33 @@ Fixer: all 10 items applied, no conflicts; Chrome All-sites path and `timeout -s
 - none
 ### Dropped
 - none (left to the plan, not applied: repeated `--no-build` accepted and usage tests match `/usage/`; doc Note "the next build or a no-fixture run removes it"; Desktop read from a no-fixture run, site data per origin opened)
+
+## Pass 4 — 2026-10-31
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 0, minor 14, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+Words (docs): 1124 (4.3x pass 0; budget 1500)  |  Snapshot: pass3.md (no fix pass)
+### Applied
+- none (converged; minors listed in Result for the build)
+### Reclassified
+- [major → minor] AC missing-fixture check run with `--no-build` cannot prove read-before-build (edge as major; fix diff, ref, adversarial as minor): precision of a plan-recorded verify procedure (pass-4 bar).
+- [ref minor] seed-run hint omits CAP-7's "fresh-install" wording: the no-fixture variant prints the fresh-install line; a reword with no added words.
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Result — converged after 4 passes
+Majors per pass: 9, 5, 2, 0. Words 261 → 1124 (budget 1500). Technical defaults applied: 14 (see each pass). Decision-needed: none. Open major: none.
+
+Unapplied minors (for the build plan):
+- AC: run the missing-fixture check without `--no-build` (e.g. `timeout -s INT 60 node scripts/device-preview.mjs session-missing`) and record a non-zero exit with no Tailscale or Vite build output; only the stub-removal check keeps `--no-build`.
+- AC: mark the `timeout -s INT 60 …` / `serve status` clause (unverified) and use the script's Tailscale CLI (`tailscale.exe serve status` from WSL); run the stub-removal check after a plain `npm run build`, record exit 0 at SIGINT and a second run with no stub; today's SIGINT handler is registered only after `serve` succeeds.
+- AC: add a `seedPage({})` throwing case; the history-only `seedPage` case also asserts `unregister()` and `location.replace('/')`.
+- AC: "`--no-build` in any position" excludes the `--history` value slot (the usage error wins).
+- AC: the doc check also covers `release-checklist.md` steps 2–4 (the G3 production variant).
+- Printed lines: seed-run hint reads "Seed, re-seed or fresh install: clear this origin's site data on the phone first." (CAP-7 wording); optionally mention closing every WordCell window first.
+- Update read: the doc has Jared record `git rev-parse --short=7 HEAD` (7 characters, as `scripts/app-version.mjs`) with each A/B footer in the epic Notes.
+- Seed steps: optionally wait for Chrome's Undo snackbar after closing tabs before clearing (unverified).
+- Script: `main()` parses fixtures to fail fast, then passes the strings to `seedPage`.
+- Script: a `.json`-suffixed name already fails fast at the read; optionally a usage error.
+- AC: `WORDCELL_APP_VERSION` inheritance holds because `execFileSync` passes no `env`; plan notes it.
+- Carried from pass 3: repeated `--no-build` accepted and usage tests match `/usage/`; doc Note "the next build or a no-fixture run removes it"; Desktop read from a no-fixture run, site data cleared per origin opened.
