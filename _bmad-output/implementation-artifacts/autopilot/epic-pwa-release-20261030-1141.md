@@ -81,3 +81,14 @@ Ref to fix upstream: none
 Tokens: 4.7M input-equivalent this session (build 80%, code review 12%, orchestrator 4%, other 4%); orchestrator peak context 69k. The ticket review and the interrupted first build attempt ran in the previous session.
 Worth knowing: the build found that spec F6 and the build notes say the existing release-build smoke tests run with the offline helper blocked, but nothing actually blocks it; they run with Playwright's default, which allows it. The new code comment states the real mode; the spec and build-notes wording is for the close-out doc sync (7.11). The ticket review's eleven small wording/plan notes went to the build, which handled them in the plan. Startup check: handoff, git log, digest and ticket files all agreed that 7.6 resumed at the build; no pid files were left over.
 Close-out docs: none
+
+## 7.7 Q-40 failure and Q-42 controlled-branch proofs — done
+What it adds: automated tests for the ways the offline install can break. When the offline helper file is missing, when one file it must save fails to download, or when the code that starts it fails to load, the real release build still boots, deals and checks words with nothing shown to the player, while the test build stops on the error screen so a broken worker can never slip through testing. A further test proves that when the word list fails to load under an installed offline copy, Reload retries in place with the warning kept, and the warning goes away once the retry succeeds. Players see nothing new.
+Ticket review: 4 passes, converged (majors 7, 3, 1, 0); nothing needed your input
+Build: built; commits bdf477e
+Code review: thorough (ticket risk medium; the build's own review patched its one medium finding, none deferred), 1 pass, converged; 0 fixes applied
+Tests: all passing (`npm run test:all` exit 0: 3733 unit tests, 27 dist-smoke, 1152 dev-server e2e, 36 pwa), screenshots not needed (no UI change: only `e2e/pwa/` files and the plan); size budget 560,701 / 600,000 bytes
+Ref to fix upstream: none
+Tokens: 11.3M input-equivalent (ticket review 58%, build 27%, code review 10%, other 3%, orchestrator 3%); orchestrator peak context 72k
+Worth knowing: the ticket's open question was answered: answering one saved icon with "not found" during the first install does reliably break that install on both builds, so the build's stop rule did not fire. The code review left two small test-quality notes in its log for the refactor sweep (7.10): the three error-screen tests check that the error screen appears but not its message text, and a very slow icon request could time out with a misleading reason. The ticket review's eleven small notes went to the build, which handled them in the plan. Startup check: handoff, git log, digest and ticket files all agreed that 7.7 was next (pulled this session); no pid files were left over.
+Close-out docs: none

@@ -3,7 +3,7 @@ title: 'Q-40 failure and Q-42 controlled-branch proofs'
 type: 'feature'
 ticket: '7'
 created: '2026-10-31'
-status: 'built'
+status: done
 baseline_revision: '360b966b79d2d8121bbdbf35200eb8129c713f6c'
 route: 'full'
 route_source: 'auto'
