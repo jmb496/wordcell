@@ -1,6 +1,6 @@
 # Review log — story-refactor-sweep.md (ticket 7.10)
 
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 212 words, copy `story-refactor-sweep.review-log.passes/pass0.md` (HEAD 1bca825).
 
@@ -33,3 +33,25 @@ Fixer: all 14 applied; item 12 adjusted (package.json/lockfile changed after 413
 - none
 ### Dropped
 - none (duplicates merged into the items above)
+
+## Pass 2 — 2026-10-31
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 7, minor 11, decision-needed 0  |  Dropped in triage: 1 (G9 pin AD-id naming folded into item 7)
+Words (docs): 1482 (7.0x pass 0; budget 1500)  |  Snapshot: story-refactor-sweep.review-log.passes/pass2.md, fix diff pass2.fix.diff
+Fixer: all 13 applied; cites verified (git log -S 326edb4, playwright.base.ts:17 `retries = ci ? 2 : 0`, src/main.ts :159/:170/:205/:252, 7.1 plan guard mentions :61 :99 :101 :116 :136 :160, 7-5-build.md:25, 7-9-build.md:53); `git diff --exit-code <baseline_revision>` form run on 7.9's baseline 6785917 (exit 0). Now at budget: further minors only if they add no words.
+### Applied
+- [major] Items 2/3/6 — technical non-editable changes (config, package, Playwright timeout/retry/workers, size limits) routed to owner calls, contradicting item 2 and CAP-8 "owner call (functionality or UX only)" → fixer item 1 (default applied: fix-ticket rows)
+- [major] Item 3 — edit boundary not closed (`scripts/size-budget.mjs`, tsconfig, biome, other configs unplaced) → fixer item 2 (default applied: anything not editable is a fix-ticket row)
+- [major] Item 2 / Description — handed-to-entry-11 group has no route to entry 11 → fixer item 3
+- [major] Item 6 — `success-signal.spec.ts:440` 0/3 with no cause has no outcome → fixer item 4
+- [major] AC / item 6 — final `test:all` flake failure handling, CI unset (retries 0) unspecified → fixer item 5
+- [major] Item 2 — pre-assigned F17 close cite fails item 1's every-clause rule (pin is 326edb4; 7.1 plan guard text still open) → fixer item 6
+- [major] Item 4 — G9 "createController right after createGate" false at HEAD; "after game.load()'s halted return" clause omitted → fixer item 7
+- [minor] items 8–17 (see fixer list: triage-log filter, scan overlap, repeat-each scope, sweep commit terms, missing-run minors, item 5 routing, digest statements, deal.test.ts comments, device-preview deferred items, pre-assignment sentence cites)
+### Default applied (technical)
+- Out-of-boundary technical change → fix-ticket row; per-test `test.setTimeout` is a test-only edit under item 5
+- 0/3 not reproduced → declined with counts; ≥1/3 no cause → fix-ticket row
+- Final `test:all` failure confined to a named flake → one rerun at the same commit, both recorded; other failures stop
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- G9 pin naming by AD id (adversarial minor) — folded into fixer item 7
