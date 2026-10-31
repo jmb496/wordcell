@@ -1,6 +1,6 @@
 # Review log — story-offline-proof.md (ticket 7.6)
 
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 201 words, `story-offline-proof.review-log.passes/pass0.md`, HEAD 5f26585.
 Intent carried from `epic-pwa-release/tickets.toml` entry 6 (not copied at pull; the fixer adds them to the Description in pass 1):
@@ -89,3 +89,30 @@ Fixer: all 12 applied, no conflicts; `glidesSettled`/`tapAt` exist; `update.spec
 - none
 ### Dropped
 - none
+
+## Pass 4 — 2026-10-30
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 0, minor 13 (2 duplicates merged → 11), decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1019 (5.1x pass 0; budget 1500)  |  Snapshot: story-offline-proof.review-log.passes/pass3.md (no fix pass)
+### Applied
+- none (converged: zero majors)
+### Default applied (technical)
+- none new
+### Decision needed (functionality / UX / gameplay)
+- none
+
+## Result — converged after 4 passes
+Majors per pass: 4, 4, 1, 0. Decision-needed: none. Words 201 → 1019 (budget 1500). Technical defaults applied: 9 (seed-1 armed one-shot `getRandomValues` stub; restore proof per AD-17 Reading state in full / stored session + `trayIds` on `dist`; `e2e/pwa/offline.spec.ts` with file-level `allow`; post-deal settle waits; 60 s test timeout; `allow` describe named after its mode; `pageerror` collector; precache poll via `precacheMissing`; response waits armed before `reload()`).
+
+Unapplied minors (for the build plan):
+1. Steps — the 15 s poll timeout is stated only for the `dist-smoke` Cache Storage poll; apply it to the `pwa` `precacheComplete()` poll too (Playwright's `expect.poll` default is 5 s) (edge, adversarial).
+2. Restore assertion (`pwa`) — "and its history/prefs clauses" reads as pointing at `activeMs`; mean "plus AD-17 Reading state's history/prefs clauses" (fix diff).
+3. Order bullet — CAP-9/entry 11 syncs only the spine's AD-17 Projects line, not brief §6.8 (the brief names the steps with no conflicting order); drop "and brief §6.8's" from the sync claim (ref alignment).
+4. Steps — under `pwa`/`dist-smoke` `tapAt` sends mouse clicks (only `android` uses the touchscreen path, e2e/helpers/board.ts:97-99); "as `e2e/tap.spec.ts` does" is not literally what runs; accepted, don't swap in a touch helper.
+5. Steps — `trayIds(page)` `[]` shows an empty tray, not where cards 42 and 0 went; drop "(cards 42 and 0 back in columns)"; `moves: []` is the deal proof.
+6. Steps — "compose TAN as `session-composing.json` records it" describes the target draft, not a fixture-equality assertion.
+7. Restore assertion (`dist-smoke`) — the stored session after the reload is the old page's pagehide write (persistence); `trayIds` and `primary-action` `Validate` are the restore proof; name them first.
+8. Start and known deal — keep the stub, flag and counter in one shared helper so both specs use the same names (scope guard allows `e2e/helpers/`).
+9. Acceptance Criteria — "a failure caused by production code" has no criterion; the plan can name it (a `pageerror`, the AD-15 surface, a precache miss such as the `sw.ts` chunk under F17).
+10. Steps — the final `expectNoPrompt` assumes nothing opens in place phase after an accepted Validate (true today); record in the plan.
+11. Steps — the second compose's `select()` expects one History entry (`expectSelection`); if it flakes, poll `wcOf(page)` to 0 after the confirm closes.
+(Also: `fromServiceWorker()` is sufficient because precached URLs are served cache-first; plan note only.)
