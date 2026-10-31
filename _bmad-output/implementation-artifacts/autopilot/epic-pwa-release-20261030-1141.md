@@ -70,3 +70,14 @@ Close-out docs: none
 ## Stopped — usage limit
 Ticket 7.6, Step B (build). Not an actual usage limit: the build process was killed at about 22:00 on 2026-10-30 when the owner's Claude Code session exited (the step wrote no output; log kept as `.autopilot/20261030-1141/7.6-B-attempt1.log`, empty). It is recorded under this heading so the next session takes the Setup 2 resume path, which fits exactly: the plan `story-offline-proof-plan.md` is `in-progress` and every uncommitted file in the tree is that build's own (`e2e/globals.d.ts`, `e2e/helpers.spec.ts`, `e2e/pwa/dist-smoke.spec.ts`, `e2e/helpers/offline.ts`, `e2e/pwa/offline.spec.ts`, the plan). Stale pid file `7.6-B.done.pid` deleted.
 Resume: rerun `.claude/skills/epic-autopilot/scripts/loop.sh epic-pwa-release`; it resumes 7.6 at Step B with the resume prompt (bmad-build-auto resumes an `in-progress` plan at implementation).
+
+## 7.6 Offline proof — done
+What it adds: automated tests that prove the installed app works with no network at all. Once the offline copy is fully saved, the test cuts the connection, reloads, and checks the game comes back exactly as it was, the word list still loads, a new game deals, and a word can be built and checked, with no update prompt or error screen. It runs against both the test build and the real release build. Players see nothing new.
+Ticket review: 4 passes, converged; nothing needed your input
+Build: built (resumed after last session's interrupted build: the files it left were picked up, not redone); commits b02f567
+Code review: quick (ticket risk low; the build's own review fixed its 3 medium findings, none deferred), 1 pass, converged; 0 fixes applied
+Tests: all passing (`npm run test:all` exit 0: 3733 unit tests, 24 dist-smoke, 1152 dev-server e2e, 32 pwa), screenshots not needed (no UI change: only `e2e/` files and the plan); size budget 560,702 / 600,000 bytes
+Ref to fix upstream: none
+Tokens: 4.7M input-equivalent this session (build 80%, code review 12%, orchestrator 4%, other 4%); orchestrator peak context 69k. The ticket review and the interrupted first build attempt ran in the previous session.
+Worth knowing: the build found that spec F6 and the build notes say the existing release-build smoke tests run with the offline helper blocked, but nothing actually blocks it; they run with Playwright's default, which allows it. The new code comment states the real mode; the spec and build-notes wording is for the close-out doc sync (7.11). The ticket review's eleven small wording/plan notes went to the build, which handled them in the plan. Startup check: handoff, git log, digest and ticket files all agreed that 7.6 resumed at the build; no pid files were left over.
+Close-out docs: none

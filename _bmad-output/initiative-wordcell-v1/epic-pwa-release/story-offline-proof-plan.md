@@ -3,7 +3,7 @@ title: 'Offline proof'
 type: 'feature'
 ticket: '6'
 created: '2026-10-30'
-status: 'built'
+status: done
 baseline_revision: 'd4d58cf5b03042cecb8ffd846579622920979cb8'
 route: 'full'
 route_source: 'auto'
