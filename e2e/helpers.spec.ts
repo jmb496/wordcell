@@ -1538,6 +1538,51 @@ test.describe('recordBootCalls', () => {
     expect(errors).toEqual([]);
   });
 
+  test("AD-17 recordBootCalls with holdListText: a held word-list body failure is no unhandled rejection before releaseListText, and the caller's text() rejects after it", async ({
+    page,
+  }) => {
+    const errors = await probe(page);
+    await page.route('**/boot-calls-probe/en-probe.txt', (route) =>
+      route.fulfill({ contentType: 'text/plain', body: 'cat\ndog\n' }),
+    );
+    await recordBootCalls(page, { holdListText: true });
+    await page.goto('/boot-calls-probe/');
+    type Probe = { __probeUnhandled?: string[]; __probeOutcome?: string };
+    // The fetch is aborted once its response is in, so reading the body rejects.
+    await page.evaluate(async () => {
+      const probe = window as unknown as Probe;
+      probe.__probeUnhandled = [];
+      window.addEventListener('unhandledrejection', (event) => {
+        probe.__probeUnhandled?.push(String(event.reason));
+      });
+      const abort = new AbortController();
+      const response = await fetch('/boot-calls-probe/en-probe.txt', { signal: abort.signal });
+      abort.abort(new Error('probe body read failed'));
+      void response.text().then(
+        () => {
+          probe.__probeOutcome = 'resolved';
+        },
+        (error: unknown) => {
+          probe.__probeOutcome = `rejected: ${String(error)}`;
+        },
+      );
+    });
+    const state = () =>
+      page.evaluate(() => {
+        const probe = window as unknown as Probe;
+        return { unhandled: probe.__probeUnhandled, outcome: probe.__probeOutcome };
+      });
+    await expect.poll(() => listTextCalls(page)).toBe(1);
+    await animationFrames(page, 2);
+    await page.evaluate(() => new Promise<void>((resolve) => setTimeout(resolve, 0)));
+    expect(await state()).toEqual({ unhandled: [], outcome: undefined });
+    expect(errors).toEqual([]);
+    await releaseListText(page);
+    await expect.poll(async () => (await state()).outcome).toMatch(/^rejected: /);
+    expect((await state()).unhandled).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
   test('AD-17 recordBootCalls throws when armed twice; bootCalls and releaseRegister throw when not armed', async ({
     page,
   }) => {

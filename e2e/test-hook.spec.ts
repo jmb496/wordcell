@@ -116,3 +116,17 @@ test('AD-15 AD-7 a rejected persisted() reaches the AD-15 halt', async ({ page }
     'AD-7 test persisted rejected',
   );
 });
+
+// The same for `persist()`, awaited after a not-yet-persisted `persisted()`.
+test('AD-15 AD-7 a rejected persist() reaches the AD-15 halt', async ({ page }) => {
+  await page.addInitScript(() => {
+    StorageManager.prototype.persisted = () => Promise.resolve(false);
+    StorageManager.prototype.persist = () =>
+      Promise.reject(new Error('AD-7 test persist rejected'));
+  });
+  await page.goto('/');
+  await page.waitForFunction(() => window.__wordcell?.current().kind === 'halted');
+  await expect(page.getByRole('alertdialog')).toHaveAccessibleDescription(
+    'AD-7 test persist rejected',
+  );
+});

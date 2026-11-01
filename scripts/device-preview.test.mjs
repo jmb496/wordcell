@@ -297,6 +297,30 @@ describe('AD-17 device preview run', () => {
     expect(seeds[0]).toContain('wordcell:history');
   });
 
+  it('AD-17 run with a session fixture only never removes the seed page and writes a session-only seed after the dist check', async () => {
+    const { io, calls, seeds } = fakeIo();
+    await run(['session-won-words'], io);
+    expect(calls).not.toContain('removeStaleSeed');
+    expect(calls.filter((call) => call === 'writeSeed')).toHaveLength(1);
+    expect(calls.indexOf('writeSeed')).toBe(calls.indexOf('hasDist') + 1);
+    expect(seeds).toHaveLength(1);
+    const seed = /** @type {string} */ (seeds[0]);
+    expect(stored(seed, 'wordcell:session')).not.toBeNull();
+    expect(stored(seed, 'wordcell:history')).toBeNull();
+  });
+
+  it('AD-17 run with a history fixture only never removes the seed page and writes a history-only seed after the dist check', async () => {
+    const { io, calls, seeds } = fakeIo();
+    await run(['--history', 'history-invalid-null'], io);
+    expect(calls).not.toContain('removeStaleSeed');
+    expect(calls.filter((call) => call === 'writeSeed')).toHaveLength(1);
+    expect(calls.indexOf('writeSeed')).toBe(calls.indexOf('hasDist') + 1);
+    expect(seeds).toHaveLength(1);
+    const seed = /** @type {string} */ (seeds[0]);
+    expect(stored(seed, 'wordcell:history')).toEqual({ value: 'null' });
+    expect(stored(seed, 'wordcell:session')).toBeNull();
+  });
+
   it('AD-17 run with --no-build makes no build call', async () => {
     const { io, calls } = fakeIo();
     await run(['--no-build'], io);

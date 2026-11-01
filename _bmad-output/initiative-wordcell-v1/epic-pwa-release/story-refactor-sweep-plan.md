@@ -16,14 +16,7 @@ context:
   - '{project-root}/_bmad-output/initiative-wordcell-v1/epic-pwa-release/story-refactor-sweep.md'
   - '{project-root}/_bmad-output/initiative-wordcell-v1/epic-pwa-release/story-refactor-sweep.review-log.md'
 warnings: ['oversized']
-deferred:
-  - summary: >-
-      One unexplained failure of the changed D-16 test `AD-17 the update spec activation poll fails at once when B turns redundant` (e2e/pwa/update.spec.ts) on the first single run against a fresh dist-test/; message lost; 18 later runs passed.
-    evidence: |-
-      Implementation Notes T5. Recurred in the final test:all at b11abd5 as D-70 (`worker.evaluate: Service worker restarted` from `readState`), so likely the same load-dependent handle error, not a T5 assertion fault; fixed by T12 (D-70 row, Implementation Notes T12). Settled at the fix commit 38a52d5: the test passed in three counted `npm run test:e2e:pwa` runs and in the final `test:all`.
-    location: >-
-      e2e/pwa/update.spec.ts redundant self-test
-    severity: medium (unverified)
+deferred: []
 blocked_at: ''
 blocked_reason: ''
 ---
@@ -147,14 +140,14 @@ blocked_reason: ''
 | D-19 | 7-3-build.md:51-52; digest :45 | 7.3 plan: `HOLD_MS` hold missing from the step list; :125 `--project pwa <path>` and "6 passed"; digest says "four" minors, Result lists six | yes (text) | errata |
 | D-20 | 7.3 plan :171 | static-server self-tests omit directory paths, extra content types, double `serve`, unserved `stop` | yes: helpers.spec.ts has 7 cases | declined: the plan's reason holds (every ticket-listed branch is covered; callers pass fixed literals) |
 | D-21 | 7.1 plan :135, :191; 7.2 plan :187 s4; 7.3 plan :263 | plan checkpoint not honoured as a pause | n/a (process) | declined: gate 3 is delegated under owner-authorised autopilot (docs/development-methodology.md § Autopilot) |
-| D-22 | 7-4-build.md:23; digest :56 | pwa `precacheComplete()` test checks "not halted" before the last poll's recomputes settle | yes: e2e/pwa/test-hook.spec.ts:69-72 | **fixed** (T6) |
+| D-22 | 7-4-build.md:23; digest :56 | pwa `precacheComplete()` test checks "not halted" before the last poll's recomputes settle | yes: e2e/pwa/test-hook.spec.ts:69-72 | **fixed** (T6; Review pass 1: a 20 ms late rejection fails the moved check 8/8 and passes the baseline check 8/8) |
 | D-23 | 7-4-build.md:24; digest :56 | nothing stops other modules calling `recomputePrecacheComplete()` | yes: only call `src/shell/test-hook.ts:159`, unpinned | **fixed** (T2) |
 | D-24 | 7-4-build.md:25; digest :56 | `precacheMissing` case runs at `/`, so it cannot tell the page URL from `/sw.js` as base | yes: e2e/helpers.spec.ts:1969 | **fixed** (T7) |
 | D-25 | 7.4 plan :93 | dist-smoke marker check (dist-smoke.spec.ts:55-63) has no positive control | yes | **fixed** (T6) |
 | D-26 | 7.4 plan :91 | an older recompute writing after a newer *rejected* one is untested | yes | declined: the write rule (`number > written`) is the story's literal rule, and the case is reachable only after the newer rejection halted the page (AD-15) |
 | D-27 | 7.4 plan :116, :147 s2; 7.4 log :128 | `url:` count in `precacheUrls` is not string-aware | yes, by design (test-hook.ts:78) | declined: accepted in 7.4 Design Notes. It fails fast, never passes falsely, and hashed names hold no `:` |
 | D-28 | 7.4 plan :79 (10), :147 s3; 7.4 log :129; digest :56 | 7.4 ticket says "proved by", the plan says "checked by" | yes (done ticket text) | errata |
-| D-29 | 7.4 plan :147 s1 | unit 5 s budget not measured | n/a | closed by item 7's re-measurement (Item 7 budgets section) |
+| D-29 | 7.4 plan :147 s1 | unit 5 s budget not measured | n/a | **fixed** (item 7 runs, Item 7 budgets: unit median 4.63 s at b11abd5, 4.71 s at the fix commit 38a52d5, 4.65 s at the review pass 1 tree) |
 | D-30 | 7-5-build.md:25; 7.5 plan :127, :183 s3; digest :67; merged with 7.1 plan :22 | first-launch gating reads `dictionaryState()` asynchronously after the chunk request | clause "tail above `dictionary.load()`" no: `released` read synchronously, boot-order.spec.ts:55; clause "not `loading` at the request" yes: boot-order.spec.ts:55 | per clause: closed by 1259a50 / **fixed** (T4) |
 | D-31 | 7.5 plan :20-26, :121, :129, :136, :183 s1; digest :67 | F17 → persistence has no runtime test | no: dist-smoke.spec.ts:494, sw-failure.spec.ts:112 | closed by bdf477e (pre-assigned; both builds and the :121 comment clause) |
 | D-32 | 7.5 plan :27-33, :123, :183 s2; digest :67 | AGENTS.md `storage.ts` single-caller line; no `navigator.storage` single owner | yes | entry 11: tickets.toml entry 11 "AGENTS.md (… the `main.ts` `requestPersistence()` exception, `navigator.storage` only in `src/shell/storage.ts` …)"; SPEC CAP-9 |
@@ -189,13 +182,14 @@ blocked_reason: ''
 | D-61 | 7.9 plan :204 | device-testing.md "(unverified)" phone steps confirmed only at the device read | yes | the read: entry 11 ("hands Jared the build for every Device row … (`docs/device-testing.md`)"); dropping the tags afterwards: amend |
 | D-62 | 7.2 plan :96 (10), :119, :187 s3; digest :29 s3 | build-notes :55 hook gate says `DEV \|\|`; as built `VITE_TEST_HOOKS === '1'` | yes | amend |
 | D-63 | 7.3 plan :147, :159, :191, :256-260; digest :45 s2 | SPEC F8 (SPEC.md:134) and build-notes :123-124, :151 static-server/observation wording vs as built | yes | amend; 7.3 plan :147 "handle-only observation": errata |
-| D-64 | 7.9 plan :108, :205; epic-place-preview.md:63; place-preview retro A7 | flake `§2 AD-13 a double tap on New game on the rejected root opens the notice at wc 1 and no Reset confirm` (e2e/nav.spec.ts:163). 7.9 plan :108 run 2 is the recurrence that epic 11 awaited | yes | fix ticket: owner backlog entry outside this epic (SPEC Non-goals), not tickets.toml (Fix tickets). Item 6 counted runs: 0/3 failures at b11abd5 (ran and passed in all three); 0/3 at the fix commit 38a52d5 (ran and passed in all three) |
-| D-65 | 7.9 plan :108 run 1, :205; win-trigger plan :101; game-surfaces retro F-13 (:59) | flake `R-73 (UI) Success signal (epic Done when 3): the same move by drag …` (e2e/success-signal.spec.ts:440) | yes | item 6: 0/3 failures at b11abd5 and 0/3 at the fix commit 38a52d5 (ran and passed in all six); no cause found, so fix ticket (B8, end-of-game-words retro :218), see Fix tickets |
+| D-64 | 7.9 plan :108, :205; epic-place-preview.md:63; place-preview retro A7 | flake `§2 AD-13 a double tap on New game on the rejected root opens the notice at wc 1 and no Reset confirm` (e2e/nav.spec.ts:163). 7.9 plan :108 run 2 is the recurrence that epic 11 awaited | yes | fix ticket: owner backlog entry outside this epic (SPEC Non-goals), not tickets.toml (Fix tickets). Item 6 counted runs: 0/3 failures at b11abd5 (ran and passed in all three); 0/3 at the fix commit 38a52d5 (ran and passed in all three); 0/3 at the review pass 1 tree (ran and passed in all three) |
+| D-65 | 7.9 plan :108 run 1, :205; win-trigger plan :101; game-surfaces retro F-13 (:59) | flake `R-73 (UI) Success signal (epic Done when 3): the same move by drag …` (e2e/success-signal.spec.ts:440) | yes | item 6: 0/3 failures at b11abd5 and 0/3 at the fix commit 38a52d5 (ran and passed in all six), 0/3 at the review pass 1 tree (ran and passed in all three); no cause found, so fix ticket (B8, end-of-game-words retro :218), see Fix tickets; applied by 5eb79db as tickets.toml entry 13 (ref 7.13) |
 | D-66 | device-checks.md G9; 4.6 plan `deferred` :38 | `main.ts` controller-registration order has no test | yes (partly: AD-14 pin src/architecture-tree-scan.test.ts:38 covers cancel before scrollReset) | **fixed** (T2, G9 section) |
 | D-67 | 7-6-build.md `## Result` :24; 7-8-build.md :42 (search: `sed -n '/^## Result/,$p'`) | none: "Unapplied minors: none", 0 open majors | n/a | none |
 | D-68 | ticket review logs 7.1–7.7 `## Result` (search: `grep -n '^## Result'`, each item checked against its plan's resolution list) | none open (all resolved by the plans: 7.1 :99, 7.2 :96, 7.3 :131-143, 7.4 :79, 7.5 :102, 7.6 :97, 7.7 :114) | n/a | none |
 | D-69 | digest "Close-out docs" lines (:19, :30, :46, :57, :68, :83, :94, :105, :116) | none: every line reads "none" | n/a | none |
-| D-70 | final `npm run test:all` at b11abd5 (this build) | `AD-17 the update spec activation poll fails at once when B turns redundant` (e2e/pwa/update.spec.ts:435, a test T5 changed) failed: `worker.evaluate: Service worker restarted` thrown from `readState` (update.spec.ts:277), whose catch tolerates only `/closed\|destroyed\|detached/` (:278); 30/30 passed in isolation afterwards; the same test's unexplained failure during T5 (frontmatter `deferred`) is likely the same | yes | **fixed** (T12, recorded-cause flake fix, item 6 style; owner-authorised, Resume authorisation): `readState` treats `restarted` as handle-gone, so the poll reads A's record and reports B's redundancy as designed. Reopens if the fix commit's final `test:all` fails it. At 38a52d5: passed in three counted `npm run test:e2e:pwa` runs (0/3) and in the final `test:all` (Final runs at the fix commit) |
+| D-70 | final `npm run test:all` at b11abd5 (this build) | `AD-17 the update spec activation poll fails at once when B turns redundant` (e2e/pwa/update.spec.ts:435, a test T5 changed) failed: `worker.evaluate: Service worker restarted` thrown from `readState` (update.spec.ts:277), whose catch tolerates only `/closed\|destroyed\|detached/` (:278); 30/30 passed in isolation afterwards; the same test's unexplained failure during T5 (Implementation Notes T5) is likely the same | yes | **fixed** (T12, recorded-cause flake fix, item 6 style; owner-authorised, Resume authorisation): `readState` treats `restarted` as handle-gone, so the poll reads A's record and reports B's redundancy as designed. Reopens if the fix commit's final `test:all` fails it. At 38a52d5: passed in three counted `npm run test:e2e:pwa` runs (0/3) and in the final `test:all` (Final runs at the fix commit) |
+| D-71 | final `npm run test:all` at the review pass 1 tree (this build) | `AD-17 doubleTap gives two touch taps whose clicks have detail 1 then 2, even 600 ms apart in real time` (e2e/helpers.spec.ts:1102, unchanged by this build) failed in `test:e2e`: click details `[1, 1]`, not `[1, 2]`; the helper's own report shows the page got the two taps at 740.1 and 2520.2 ms although the CDP stamps were 80 ms apart, so the second tap reached the page past Chromium's tap-count window (the D-64 double-tap mechanism, end-of-game-words epic :75). Passed 30/30 alone afterwards (diagnostic) | n/a (load-dependent; not seen at b11abd5 or 38a52d5) | open: not an item 6 row's test, so it stopped the review pass 1 tree's final `test:all` (ticket AC, no rerun); disposition is the orchestrator's or owner's (candidate: merge into D-64's backlog entry, same mechanism) |
 
 ### Errata group (declined)
 
@@ -203,7 +197,7 @@ D-04 (plan clause), D-15c, D-19, D-28, D-51, D-56 (plan clause), D-57, D-63 (pla
 
 ### Entry-11 amendment (proposal for the owner or orchestrator; the build does not edit tickets.toml)
 
-Add to entry 11's description: "syncs `build-notes.md` (:22-23 CAP-6 unreachable-key gate; :55 hook gate `VITE_TEST_HOOKS === '1'`; :112-115 and SPEC F6: dist-smoke runs in Playwright's default worker mode, not `block`; :123-124, :151 and SPEC F8: no `?__WB_REVISION__` install fetch or CDP route, observation through B's handle and a recorder in A's scope), records ticket 7.10's G9 disposition in `device-checks.md` G9, and updates `docs/device-testing.md`'s (unverified) tags from the device read". Rows: D-43, D-50, D-61, D-62, D-63, D-66. Entry 11 then waits only on its tickets.toml fix tickets (none proposed so far; D-64's backlog entry is outside tickets.toml).
+Add to entry 11's description: "syncs `build-notes.md` (:22-23 CAP-6 unreachable-key gate; :55 hook gate `VITE_TEST_HOOKS === '1'`; :112-115 and SPEC F6: dist-smoke runs in Playwright's default worker mode, not `block`; :123-124, :151 and SPEC F8: no `?__WB_REVISION__` install fetch or CDP route, observation through B's handle and a recorder in A's scope), records ticket 7.10's G9 disposition in `device-checks.md` G9, and updates `docs/device-testing.md`'s (unverified) tags from the device read". Rows: D-43, D-50, D-61, D-62, D-63, D-66. Entry 11 then waits only on its tickets.toml fix ticket, the D-65 fix ticket (applied by 5eb79db as tickets.toml entry 13, ref 7.13; D-64's backlog entry is outside tickets.toml).
 
 ### Fix tickets (proposals)
 
@@ -404,6 +398,27 @@ For reference, the working-tree `npm run build` total is 560,703 / 600,000 bytes
 - Final `npm run test:all` (`/mnt/d`): **exit 0** in 7m33s. Lint clean; check clean; unit 3785; build total 560,702; dist-smoke 28 passed; dev e2e 1157 passed and 1093 skipped (project-specific); pwa 41 passed.
 - `npm run test:screens` (Docker 29.8.0, `mcr.microsoft.com/playwright:v1.63.0-noble`): **exit 0**, 68 passed and 40 skipped (project-specific). `git status --porcelain` afterwards: empty (nothing under `e2e/*-snapshots`).
 
+**Review pass 1** (code-review loop pass 1 fixer, 2026-10-31; `/mnt/d` checkout on 38a52d5 plus the working-tree edits, Node 24, CI unset, retries 0). Every mutation was applied to a copy-restored file and reverted; afterwards `git diff HEAD -- src/shell src/main.ts src/ui` was empty. The pwa mutation of `src/` rebuilt `dist-test/` and was followed by a clean `npm run build:test`.
+- D-53 (seed write only when seeded): two new `AD-17 device preview run` cases, a session-only run (`run(['session-won-words'], io)`) and a history-only run (`run(['--history', 'history-invalid-null'], io)`). Each asserts no `removeStaleSeed`, exactly one `writeSeed`, right after `hasDist`, and a seed holding only its own key (`stored()`). `scripts/device-preview.test.mjs` 37 tests pass. Mutation `const seeded = sessionJson !== undefined && historyJson !== undefined` (scripts/device-preview.mjs:187): both new cases fail (`expected [ …(12) ] to not include 'removeStaleSeed'`); the existing both-fixtures case passes on it.
+- D-70 follow-up (`readState` restart remembered): `Tracked` gains `restarted`. `readState` sets it on a `restarted` evaluate error and returns `null`, and from then on returns `null` without calling `evaluate`, so a later poll iteration reads only A's record. The readState self-test now reads the restarted handle twice and counts `evaluate` calls. Mutation, the flag never set: fails (`Expected: 1`, `Received: 2`).
+- D-18 (`withSite`): with both errors, the body error is rethrown with the cleanup error as its `cause`. A body error that is not an `Error` or already has a `cause` becomes an `AggregateError` with the body's message and stack, `[body, cleanup]`, and the cleanup error as `cause`. Self-test updated. Mutations, each failing it: the `cause` assignment dropped (`Expected: [Error: page close failed]`, `Received: undefined`); plain try/finally (expected the body error, received `page close failed`); the `AggregateError` stack copy dropped (received stack starts `AggregateError:`).
+- `e2e/pwa/update.spec.ts` ×5 on `pwa` against a fresh `npm run build:test`: 35/35.
+- D-33 (`persist()` rejection): new dev test `AD-15 AD-7 a rejected persist() reaches the AD-15 halt` (`persisted` resolves false, `persist` rejects with a named error; alertdialog description is that message). Both persistence tests ×5 on `android` and `desktop`: 20/20. Mutation `await storage.persist().catch(() => {})` in `src/shell/storage.ts`: the new test fails (`page.waitForFunction: Test timeout of 30000ms exceeded`); the `persisted()` test passes on it.
+- D-23 (accessor anchor): the pin now also bounds the call inside the `precacheComplete: () => {` accessor, up to its closing `},` line, inside the env-gated block. Mutation, the call moved into a `swState: () => { … }` accessor in the same block: fails (`expected 6482 to be greater than 6541`); the HEAD pin passes this mutation.
+- D-30 helper (`holdListText`): helper-side mutation for the existing case, `return original` instead of `textGate.then(() => original)`: fails (`expect(received).toBeNull()`, received the settled text). New probe case `AD-17 recordBootCalls with holdListText: a held word-list body failure is no unhandled rejection before releaseListText, and the caller's text() rejects after it`: the fetch is aborted once its response is in, so the body read rejects deterministically in Chromium (`AbortError: The user aborted a request.`). Mutation, `original.catch(() => {})` deleted: fails (`unhandled` receives `AbortError: The user aborted a request.` before the release). The recordBootCalls describe ×5 on `android`: 25/25 (`desktop` skips the describe).
+- D-22 (distinguishing mutation): in `recomputePrecacheComplete`, after the `await`, when `complete` is already true, wait 20 ms on a timer, then throw. The current test fails 8/8 (`--repeat-each` 3 then 5: `Expected: "active"`, `Received: "halted"`). The baseline test (`git show 575fdf7:e2e/pwa/test-hook.spec.ts` as a temporary spec) passes 8/8. So the moved check catches a late rejection that the old placement missed. The temporary spec was removed.
+- D-34 (named mutations): `storageCheck` skipped for `.svelte` script content (`&& !isSvelte` on the script branch's navigator-storage check): exactly `AD-1 fails: svelte <script> navigator.storage (src/ui/X.svelte)` fails (1 of 298). Template substitutions skipped (the check run on a copy of the stripped script with every `TemplateExpression` blanked): exactly `AD-1 fails: template substitution navigator.storage (src/shell/x.ts)` fails. A first attempt, a regex dropping `${…}`, failed nothing: `strip` already blanks the `${` and `}` delimiters with the literal parts, so it skipped nothing.
+- Gates on the working tree: `npm run lint` clean; `npm run check` 0 errors; `npm test` 91 files / 3787 passed.
+
+**Final runs at the review pass 1 tree** (38a52d5 plus the Review pass 1 working-tree edits, to be committed as the `fix(...): WIP code review pass 1 (ticket 7.10)` commit; hash assigned at commit. Ticket item 6: the review fixer's edits change files outside `_bmad-output/`, so items 6 and 7, the final `test:all` and `test:screens` re-run on this tree). CI unset, retries 0.
+- Item 6 counted runs (`/mnt/d` checkout): `npx playwright test --project=android --reporter=line` three times, each exit 0, 902 passed and 225 skipped, 0 failed (4.5 min each). `e2e/nav.spec.ts:163:1` and `e2e/success-signal.spec.ts:440:3` ran and passed in every run: D-64 0/3, D-65 0/3. No other test failed.
+- Item 7 budgets (fresh clone `~/wordcell-7-10-rl` on the Linux filesystem: `git clone /mnt/d/CodeProjects/wordcell` at 38f5dd8, the working-tree diff applied with `git diff HEAD | git apply`, `npm ci`; lockfile unchanged since 575fdf7; the clone was deleted afterwards):
+  - `npm test` warm median: warm-up 6.78 s (discarded), then 4.65 s, 4.58 s, 4.75 s; **median 4.65 s** (under 5 s), 3787 tests.
+  - Watch re-run: slowest engine file by `npx vitest run src/engine --reporter=json` is `src/engine/view.test.ts` (453 ms). `npx vitest --watch src/engine/view.test.ts`, a blank line appended or the file restored per trigger: re-runs 529 ms, 477 ms, 478 ms (a fourth, the last restore, 463 ms); **median 478 ms** (under 1 s). The file was restored byte-identical (`cmp`).
+  - AD-18: `npm run build` total 560,702 / 600,000; **margin 39,298 bytes**.
+- Final `npm run test:all` (`/mnt/d`): **exit 1** in 6m51s. Lint clean; check clean; unit 3787; build total 560,702; dist-smoke 28 passed; `test:e2e` 1159 passed, 1094 skipped (project-specific), 1 failed: `AD-17 doubleTap gives two touch taps whose clicks have detail 1 then 2, even 600 ms apart in real time` (D-71). `test:e2e:pwa` did not run (`&&` chain). The failing test is not an item 6 row's test, so no rerun (ticket AC): the build stops and reports. Diagnostics only, after the stop: the test alone `--repeat-each=30` on `android` passed 30/30 (35.2 s); `npm run test:e2e:pwa` alone exit 0, 41 passed. `npm run test:screens` was not run (the build stopped first).
+- Invariant commands exit 0; `git diff --name-only HEAD` lists only the plan, `e2e/helpers.spec.ts`, `e2e/pwa/update.spec.ts`, `e2e/test-hook.spec.ts`, `scripts/device-preview.test.mjs` and `src/architecture-tree-scan.test.ts`; `git diff HEAD -- src/shell src/main.ts src/ui` is empty.
+
 ## Plan Change Log
 
 - T1: `sw.test.ts`'s `gate` option is now the `VITE_TEST_HOOKS` string (`'1'`, `''` or `'0'`), and `GATES` has three entries, so every gate case runs with both off values.
@@ -541,11 +556,12 @@ Each mutation is reverted after its run, and each must fail the new pin:
 
 ## Auto Run Result
 
-**Status:** built (resumed 2026-10-31 after the owner-authorised D-70 fix; the earlier stop is recorded under Final `npm run test:all` at b11abd5). Done checkpoint: the build stops here; Jared settles owner-call rows (none) and marks the ticket done.
+**Status:** built (resumed 2026-10-31 after the owner-authorised D-70 fix; the earlier stop is recorded under Final `npm run test:all` at b11abd5). Review pass 1 tree: its final `test:all` stopped on D-71 (ticket AC), for the orchestrator. Done checkpoint: the build stops here; Jared settles owner-call rows (none) and marks the ticket done.
 
 **Implemented:**
 - Sweep commit b11abd56b62db03326327f335a7faad4bc9c56dd: the deferred-findings table D-01–D-70 with dispositions, the errata group, the entry-11 amendment proposal and the fix-ticket proposals; G9 resolved by the source-order pin (D-66); 23 rows fixed inside item 3's boundary, each proven per item 5 (Implementation Notes T1–T10).
 - Fix commit 38a52d5732b7b5dd1160619e0ce0973d005c3d2b: D-70 fixed (T12): `readState` treats a `Service worker restarted` worker-handle error as handle-gone, so the activation poll reads A's record and reports B's redundancy as designed; plus the resume review's patches (permanent `readState` self-test, `pollActivated` comment, device-preview SIGTERM case, device-testing.md step 2 wording). Fixed rows: 24 with D-70.
+- Review pass 1 (code-review loop, working tree on 38a52d5; Implementation Notes Review pass 1): D-53 session-only and history-only run cases; `readState` remembers a restart (D-70 follow-up); `withSite` attaches the cleanup error as `cause` (D-18); a rejected `persist()` reaches AD-15 (D-33); the D-23 pin anchored on the `precacheComplete` accessor; a held word-list body failure probe case and a helper-side mutation (D-30); a distinguishing D-22 mutation; named D-34 mutations; plan fixes (entry-11 tail and D-65 cite entry 13, `deferred: []`, D-29 **fixed**). Fixed rows: 25 with D-29. New row D-71 (open).
 
 **Files changed (whole build, since 575fdf7):**
 - `src/architecture-ad1.test.ts`: skip-waiting and navigator-storage scan fixtures.
@@ -561,6 +577,7 @@ Each mutation is reverted after its run, and each must fail the new pin:
 - `e2e/test-hook.spec.ts`: rejected `persisted()` → AD-15.
 - `scripts/device-preview.mjs`, `scripts/device-preview.test.mjs`: `run(argv, io)` seam, port-wait cleanup, comment, SIGTERM case.
 - `docs/device-testing.md`: spoiled-read redo and clear-site-data step 2.
+- Review pass 1: `scripts/device-preview.test.mjs` (two run cases), `e2e/pwa/update.spec.ts` (`readState` restart flag, `withSite` cause, both self-tests), `e2e/test-hook.spec.ts` (rejected `persist()`), `src/architecture-tree-scan.test.ts` (D-23 accessor bound), `e2e/helpers.spec.ts` (held body-failure probe case), this plan.
 - `_bmad-output/initiative-wordcell-v1/epic-pwa-release/tickets.toml` also appears in `git diff --name-only 575fdf7`: that is the orchestrator's owner-authorised commit 5eb79db (entry-11 amendment, fix ticket 7.13), not a build edit, so AC 2's file list holds for the build's own commits.
 
 **Review:**
@@ -574,15 +591,21 @@ Each mutation is reverted after its run, and each must fail the new pin:
 - Item 7 (Linux clone): unit median 4.71 s; watch re-run median 475 ms; AD-18 margin 39,298 bytes.
 - Final `npm run test:all`: exit 0. `npm run test:screens`: exit 0, no snapshot changes.
 
+**Verification (review pass 1 tree (committed as the `fix(...): WIP code review pass 1 (ticket 7.10)` commit; hash assigned at commit)):**
+- `npm run lint`, `npm run check`, `npm test` (3787) pass; the invariant commands exit 0; `git diff HEAD -- src/shell src/main.ts src/ui` empty.
+- Item 6: D-64 0/3, D-65 0/3, no other counted-run failure.
+- Item 7 (Linux clone): unit median 4.65 s; watch re-run median 478 ms; AD-18 margin 39,298 bytes.
+- Final `npm run test:all`: exit 1, `test:e2e` failed only D-71's test (not an item 6 row; no rerun; the build stops). `npm run test:screens`: not run.
+
 **For the owner or orchestrator:**
 1. Owner-call rows: none.
 2. Already applied by 5eb79db: the entry-11 amendment and fix ticket 7.13 (D-65). Entry 13's text cites "0/3 in 7.10's item 6 counted runs"; the fix-commit runs are also 0/3, so it still holds.
 3. The D-64 owner backlog entry outside epic 7 is left to the retrospective (Fix tickets has the proposal).
+4. D-71 stopped the review pass 1 tree's final `test:all`: settle its disposition, then re-run the final `test:all` and `test:screens` at the commit.
 
 **Residual risks:**
 - D-70's fix tolerates the handle error rather than preventing it; a restart that hides a real redundancy would still end in the poll's timing or observation-fault message, never a pass.
 - The D-25 positive control copies dist-smoke's search rather than sharing it.
-- D-22's mutation also fails the old placement.
 
 ## Resume authorisation (2026-10-31, interactive session)
 

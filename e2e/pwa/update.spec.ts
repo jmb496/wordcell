@@ -214,15 +214,18 @@ type Scope = {
   __wcWaiting?: ServiceWorkerState;
 };
 
-/** A worker handle and whether its target has closed (tracked from identification on). */
-type Tracked = { worker: Worker; closed(): boolean };
+/**
+ * A worker handle, whether its target has closed (tracked from identification on), and whether a
+ * read saw it restart (set by `readState`).
+ */
+type Tracked = { worker: Worker; closed(): boolean; restarted: boolean };
 
 function track(worker: Worker): Tracked {
   let closed = false;
   worker.on('close', () => {
     closed = true;
   });
-  return { worker, closed: () => closed };
+  return { worker, closed: () => closed, restarted: false };
 }
 
 /**
@@ -274,12 +277,18 @@ async function waitingHandle(context: BrowserContext): Promise<Handle> {
 /**
  * Reads a handle, or `null` once its target has gone: closed, destroyed, detached, or restarted
  * (under load Playwright can reject `evaluate` with `Service worker restarted` as a replaced B
- * turns redundant, before the handle's `close` event; D-70 in the ticket 7.10 plan).
+ * turns redundant, before the handle's `close` event; D-70 in the ticket 7.10 plan). A restart is
+ * remembered, so later reads return `null` without calling `evaluate` again (on a restarted
+ * worker it awaits a fresh execution context with no deadline).
  */
 async function readState(tracked: Tracked, read: () => ServiceWorkerState | undefined) {
-  if (tracked.closed()) return null;
+  if (tracked.closed() || tracked.restarted) return null;
   return tracked.worker.evaluate(read).catch((error: unknown) => {
-    if (tracked.closed() || /closed|destroyed|detached|restarted/i.test(String(error))) return null;
+    if (/restarted/i.test(String(error))) {
+      tracked.restarted = true;
+      return null;
+    }
+    if (tracked.closed() || /closed|destroyed|detached/i.test(String(error))) return null;
     throw error;
   });
 }
@@ -324,8 +333,11 @@ async function pollActivated(
 
 /**
  * Runs `body` on its own copy of `dist-test/` and server; closes every page before `stop()`. A
- * cleanup error never replaces the body's (which may carry the timing label): with both, an
- * `AggregateError` with the body's message holds `[body error, cleanup error]`.
+ * cleanup error never replaces the body's (which may carry the timing label): with both, the
+ * body's error is rethrown with the cleanup error as its `cause` (Playwright reports message,
+ * stack and cause); a body error that is not an `Error` or already has a `cause` becomes an
+ * `AggregateError` with the body's message and stack, `[body error, cleanup error]` and the
+ * cleanup error as its `cause`.
  */
 async function withSite(
   context: Pick<BrowserContext, 'pages'>,
@@ -347,10 +359,17 @@ async function withSite(
   } catch (cleanup) {
     if (failed === undefined) throw cleanup;
     const { error } = failed;
-    throw new AggregateError(
+    if (error instanceof Error && error.cause === undefined) {
+      error.cause = cleanup;
+      throw error;
+    }
+    const both = new AggregateError(
       [error, cleanup],
       error instanceof Error ? error.message : String(error),
+      { cause: cleanup },
     );
+    if (error instanceof Error) both.stack = error.stack;
+    throw both;
   }
   if (failed !== undefined) throw failed.error;
 }
@@ -538,14 +557,6 @@ test('AD-17 the update spec withSite keeps the body error and attaches the clean
       (error: unknown) => error,
     );
 
-  const both = await outcome(
-    withSite(failing, async () => {
-      throw bodyError;
-    }),
-  );
-  expect(both).toBeInstanceOf(AggregateError);
-  expect((both as AggregateError).message).toBe(bodyError.message);
-  expect((both as AggregateError).errors).toEqual([bodyError, cleanupError]);
   // One error alone is rethrown as it is.
   expect(
     await outcome(
@@ -554,21 +565,51 @@ test('AD-17 the update spec withSite keeps the body error and attaches the clean
       }),
     ),
   ).toBe(bodyError);
+  const both = await outcome(
+    withSite(failing, async () => {
+      throw bodyError;
+    }),
+  );
+  expect(both).toBe(bodyError);
+  expect(bodyError.cause).toBe(cleanupError);
+  // A body error that already has a cause keeps it: an AggregateError carries both.
+  const caused = new Error(`${TIMING}: caused body`, { cause: 'own cause' });
+  const aggregate = await outcome(
+    withSite(failing, async () => {
+      throw caused;
+    }),
+  );
+  expect(aggregate).toBeInstanceOf(AggregateError);
+  expect((aggregate as AggregateError).message).toBe(caused.message);
+  expect((aggregate as AggregateError).stack).toBe(caused.stack);
+  expect((aggregate as AggregateError).errors).toEqual([caused, cleanupError]);
+  expect((aggregate as AggregateError).cause).toBe(cleanupError);
+  expect(caused.cause).toBe('own cause');
   expect(await outcome(withSite(failing, async () => {}))).toBe(cleanupError);
   expect(await outcome(withSite(none, async () => {}))).toBe('resolved');
 });
 
-// `readState`'s handle-gone rule (D-70): a restarted worker handle reads as gone (`null`); any
-// other evaluate error is rethrown as it is.
+// `readState`'s handle-gone rule (D-70): a restarted worker handle reads as gone (`null`) and
+// stays gone; any other evaluate error is rethrown as it is.
 test('AD-17 the update spec readState treats a restarted worker handle as gone', async () => {
+  let evaluations = 0;
   const rejecting = (error: Error): Tracked => ({
     closed: () => false,
-    worker: { evaluate: () => Promise.reject(error) } as unknown as Worker,
+    restarted: false,
+    worker: {
+      evaluate: () => {
+        evaluations += 1;
+        return Promise.reject(error);
+      },
+    } as unknown as Worker,
   });
   const read = () => (self as unknown as Scope).serviceWorker.state;
-  expect(
-    await readState(rejecting(new Error('worker.evaluate: Service worker restarted')), read),
-  ).toBeNull();
+  const restarted = rejecting(new Error('worker.evaluate: Service worker restarted'));
+  expect(await readState(restarted, read)).toBeNull();
+  expect(evaluations).toBe(1);
+  // The restart is remembered: a later read is `null` without calling `evaluate` again.
+  expect(await readState(restarted, read)).toBeNull();
+  expect(evaluations).toBe(1);
   const boom = new Error('boom');
   await expect(readState(rejecting(boom), read)).rejects.toBe(boom);
 });

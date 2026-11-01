@@ -118,7 +118,14 @@ describe('AD-1 tree scan', () => {
     // The block's closing brace: the first top-level `}` line after the gate.
     const end = source.indexOf('\n}\n', gate);
     expect(end, 'the end of the env-gated block').toBeGreaterThan(gate);
-    expect(calls[0]?.index).toBeGreaterThan(gate);
-    expect(calls[0]?.index).toBeLessThan(end);
+    // The `precacheComplete` accessor inside the block, up to its closing `},` line.
+    const accessor = source.indexOf('\n    precacheComplete: () => {\n', gate);
+    expect(accessor, 'the precacheComplete accessor').toBeGreaterThan(gate);
+    expect(accessor, 'the precacheComplete accessor').toBeLessThan(end);
+    const accessorEnd = source.indexOf('\n    },\n', accessor);
+    expect(accessorEnd, 'the end of the precacheComplete accessor').toBeGreaterThan(accessor);
+    expect(accessorEnd, 'the end of the precacheComplete accessor').toBeLessThan(end);
+    expect(calls[0]?.index).toBeGreaterThan(accessor);
+    expect(calls[0]?.index).toBeLessThan(accessorEnd);
   });
 });
