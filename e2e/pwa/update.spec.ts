@@ -271,72 +271,115 @@ async function waitingHandle(context: BrowserContext): Promise<Handle> {
   return { b: track(waiting[0] as Worker), a: track(a) };
 }
 
+// Per handle read (D-70): an `evaluate` that has not settled this long reads as unreadable, so one
+// hanging handle cannot use up the activation poll.
+const READ_MS = 2_000;
+
+/** One handle read: its state, or why there is none. */
+type Read = { state: ServiceWorkerState | undefined } | { gone: 'closed' | 'unreadable' };
+
 /**
- * Reads a handle, or `null` when its target has gone (closed, destroyed, detached) and, for this
- * read only, when it restarted or `deadline` passed first. Under load Playwright can reject
- * `evaluate` with `Service worker restarted` (D-70 in the ticket 7.10 plan); Playwright then
- * reloads the same worker into a new execution context, so a later read may succeed again. Each
- * `evaluate` is raced against `deadline`, since on a restarted worker not yet reloaded it awaits
- * the new context with no deadline of its own.
+ * Reads a handle: `closed` once its target has closed (`tracked.closed()`); `unreadable`, for this
+ * read only, when `evaluate` rejects with a closed, destroyed, detached or restarted error while
+ * the handle is not closed, or has not settled within `READ_MS` (nor by `deadline`). Under load
+ * Playwright can reject `evaluate` with `Service worker restarted` (D-70 in the ticket 7.10 plan);
+ * Playwright then reloads the same worker into a new execution context, so a later read may
+ * succeed again. On a restarted worker not yet reloaded, `evaluate` awaits the new context with no
+ * deadline of its own, hence the per-read bound. Any other evaluate error is rethrown.
  */
 async function readState(
   tracked: Tracked,
   read: () => ServiceWorkerState | undefined,
   deadline: number,
-) {
-  if (tracked.closed()) return null;
-  const evaluated = tracked.worker.evaluate(read).catch((error: unknown) => {
-    if (tracked.closed() || /closed|destroyed|detached|restarted/i.test(String(error))) return null;
-    throw error;
-  });
+): Promise<Read> {
+  if (tracked.closed()) return { gone: 'closed' };
+  const evaluated = tracked.worker.evaluate(read).then(
+    (state): Read => ({ state }),
+    (error: unknown): Read => {
+      if (tracked.closed()) return { gone: 'closed' };
+      if (/closed|destroyed|detached|restarted/i.test(String(error))) return { gone: 'unreadable' };
+      throw error;
+    },
+  );
   let timer: ReturnType<typeof setTimeout> | undefined;
-  const late = new Promise<null>((resolve) => {
-    timer = setTimeout(() => resolve(null), Math.max(0, deadline - Date.now()));
+  const late = new Promise<Read>((resolve) => {
+    const bound = Math.min(deadline, Date.now() + READ_MS);
+    timer = setTimeout(() => resolve({ gone: 'unreadable' }), Math.max(0, bound - Date.now()));
   });
   return Promise.race([evaluated, late]).finally(() => clearTimeout(timer));
 }
 
+/** How the activation poll ended without B activating or turning redundant. */
+type Ending =
+  | { kind: 'closed' }
+  | { kind: 'unreadable' }
+  | { kind: 'stayed'; state: ServiceWorkerState | undefined };
+type Outcome = { kind: 'activated' } | { kind: 'redundant' } | Ending;
+
 /**
- * Step 4: polls B's state to `activated` every 100 ms for 30 s, from B's handle and, when a read
- * of it is `null` (`readState`: closed, restarted or unreadable by the deadline), from A's record;
- * `redundant` throws at once with the request log. On a timeout or both handles gone one probe
- * page opens: marker A throws the timing label, anything else an observation fault. Does not
- * itself close or need closed pages.
+ * Step 4's loop: reads B's state every 100 ms until `deadline`, from B's handle and, when that read
+ * has no state (`readState`), from A's record. `activated` or `redundant` ends it at once, and so
+ * do both handles closed (`closed`). Any other read with no state from either handle (restarted,
+ * raced or past `READ_MS`) ticks and polls on. At the deadline: `unreadable` when the last
+ * iteration read no state, else `stayed` with the last state read.
+ */
+async function activationOutcome(handle: Handle, deadline: number): Promise<Outcome> {
+  let last: Read = { gone: 'unreadable' };
+  while (Date.now() < deadline) {
+    last = await readState(
+      handle.b,
+      () => (self as unknown as Scope).serviceWorker.state,
+      deadline,
+    );
+    if ('gone' in last) {
+      last = await readState(handle.a, () => (self as unknown as Scope).__wcWaiting, deadline);
+    }
+    if ('state' in last) {
+      if (last.state === 'activated' || last.state === 'redundant') return { kind: last.state };
+    } else if (handle.b.closed() && handle.a.closed()) {
+      return { kind: 'closed' };
+    }
+    await tick();
+  }
+  return 'state' in last ? { kind: 'stayed', state: last.state } : { kind: 'unreadable' };
+}
+
+/**
+ * The error a poll `ending` throws, given the probe page's marker: marker A after both handles
+ * closed, or after B read but not activated for the whole poll, is the timing label (SPEC A-A15's
+ * D route, Chromium's own activation timing); an ending with unreadable handles is an observation
+ * limit, so an observation fault whatever the marker, as is any marker other than A.
+ */
+function activationFault(ending: Ending, value: string | null): Error {
+  const why =
+    ending.kind === 'closed'
+      ? "B's and A's handles closed"
+      : ending.kind === 'unreadable'
+        ? `B's and A's handles unreadable (restarted, or no answer within ${READ_MS} ms) at the end of the ${ACTIVATION_POLL_MS} ms poll`
+        : `B stayed ${String(ending.state)} for ${ACTIVATION_POLL_MS} ms`;
+  if (value === 'A' && ending.kind !== 'unreadable') {
+    return new Error(`${TIMING}: ${why}; a probe page shows marker A`);
+  }
+  return new Error(`observation fault: ${why}; a probe page shows marker ${String(value)}`);
+}
+
+/**
+ * Step 4: polls B's state to `activated` for 30 s (`activationOutcome`); `redundant` throws at
+ * once with the request log. Any other ending opens one probe page and throws
+ * `activationFault`'s error. Does not itself close or need closed pages.
  */
 async function pollActivated(
   handle: Handle,
   served: Served,
   context: BrowserContext,
 ): Promise<void> {
-  const deadline = Date.now() + ACTIVATION_POLL_MS;
-  let state: string | null | undefined = null;
-  let gone = false;
-  while (Date.now() < deadline) {
-    state = await readState(
-      handle.b,
-      () => (self as unknown as Scope).serviceWorker.state,
-      deadline,
-    );
-    if (state === null) {
-      state = await readState(handle.a, () => (self as unknown as Scope).__wcWaiting, deadline);
-    }
-    if (state === 'redundant') {
-      throw new Error(`B's worker turned redundant; requests:\n${requestLog(served)}`);
-    }
-    if (state === 'activated') return;
-    if (state === null) {
-      gone = true;
-      break;
-    }
-    await tick();
+  const outcome = await activationOutcome(handle, Date.now() + ACTIVATION_POLL_MS);
+  if (outcome.kind === 'activated') return;
+  if (outcome.kind === 'redundant') {
+    throw new Error(`B's worker turned redundant; requests:\n${requestLog(served)}`);
   }
-  const why = gone
-    ? "B's and A's handles gone (closed, restarted or unreadable)"
-    : `B stayed ${String(state)} for ${ACTIVATION_POLL_MS} ms`;
   const probe = await openPage(context, served);
-  const value = await marker(probe);
-  if (value === 'A') throw new Error(`${TIMING}: ${why}; a probe page shows marker A`);
-  throw new Error(`observation fault: ${why}; a probe page shows marker ${String(value)}`);
+  throw activationFault(outcome, await marker(probe));
 }
 
 /**
@@ -607,36 +650,95 @@ test('AD-17 the update spec withSite keeps the body error and attaches the clean
   expect(await outcome(withSite(none, async () => {}))).toBe('resolved');
 });
 
-// `readState`'s handle-gone rule (D-70): a restarted worker handle reads as `null` for that read
-// only (Playwright reloads it into a new context), an `evaluate` that never settles reads as
-// `null` by the deadline, and any other evaluate error is rethrown as it is.
+/** A page-less `Tracked`: its `evaluate` answers the `call`-th read (0-based) with `answer`. */
+const fakeTracked = (
+  answer: (call: number) => Promise<ServiceWorkerState | undefined>,
+  closed = false,
+): Tracked => {
+  let calls = 0;
+  return {
+    closed: () => closed,
+    worker: { evaluate: () => answer(calls++) } as unknown as Worker,
+  };
+};
+const restarted = () => Promise.reject(new Error('worker.evaluate: Service worker restarted'));
+const hangs = () => new Promise<never>(() => {});
+
+// `readState`'s handle-gone rule (D-70): a restarted worker handle is `unreadable` for that read
+// only (Playwright reloads it into a new context), an `evaluate` that never settles is
+// `unreadable` by the deadline or `READ_MS`, whichever comes first, a closed handle is `closed`,
+// and any other evaluate error is rethrown as it is.
 test('AD-17 the update spec readState treats a restarted worker handle as gone', async () => {
-  const tracked = (...results: Array<() => Promise<ServiceWorkerState>>): Tracked => ({
-    closed: () => false,
-    worker: {
-      evaluate: () => {
-        const next = results.shift();
-        if (next === undefined) throw new Error('no evaluate result left');
-        return next();
-      },
-    } as unknown as Worker,
-  });
   const read = () => (self as unknown as Scope).serviceWorker.state;
   const later = () => Date.now() + 30_000;
-  const restarted = new Error('worker.evaluate: Service worker restarted');
-  const reloaded = tracked(
-    () => Promise.reject(restarted),
-    () => Promise.resolve('activated'),
-  );
-  expect(await readState(reloaded, read, later())).toBeNull();
+  const reloaded = fakeTracked((call) => (call === 0 ? restarted() : Promise.resolve('activated')));
+  expect(await readState(reloaded, read, later())).toEqual({ gone: 'unreadable' });
   // Not remembered: the next read evaluates again and sees the reloaded worker.
-  expect(await readState(reloaded, read, later())).toBe('activated');
-  // A read that never settles is `null` by the deadline, not a hang.
-  const hanging = tracked(() => new Promise<never>(() => {}));
-  const started = Date.now();
-  expect(await readState(hanging, read, started + 200)).toBeNull();
+  expect(await readState(reloaded, read, later())).toEqual({ state: 'activated' });
+  // A read that never settles is unreadable by the deadline, not a hang.
+  let started = Date.now();
+  expect(await readState(fakeTracked(hangs), read, started + 200)).toEqual({ gone: 'unreadable' });
   expect(Date.now() - started).toBeLessThan(5_000);
+  // … and by `READ_MS` when the deadline is further off.
+  started = Date.now();
+  expect(await readState(fakeTracked(hangs), read, later())).toEqual({ gone: 'unreadable' });
+  expect(Date.now() - started).toBeLessThan(READ_MS + 1_000);
+  expect(await readState(fakeTracked(restarted, true), read, later())).toEqual({ gone: 'closed' });
   const boom = new Error('boom');
-  const failing = tracked(() => Promise.reject(boom));
-  await expect(readState(failing, read, later())).rejects.toBe(boom);
+  await expect(
+    readState(
+      fakeTracked(() => Promise.reject(boom)),
+      read,
+      later(),
+    ),
+  ).rejects.toBe(boom);
+});
+
+// `pollActivated` without pages (D-70): its served log and context are fakes that these branches
+// never open (`newPage` throws), so a probe page means the poll ended on the wrong branch.
+const noLog = { requests: () => [] } as unknown as Served;
+const noProbe = {
+  newPage: () => Promise.reject(new Error('no probe page in this self-test')),
+} as unknown as BrowserContext;
+
+test("AD-17 the update spec activation poll reports B redundant from A's record while B's handle hangs, well before the poll bound", async () => {
+  const handle: Handle = {
+    b: fakeTracked(hangs),
+    a: fakeTracked(() => Promise.resolve('redundant')),
+  };
+  const started = Date.now();
+  await expect(pollActivated(handle, noLog, noProbe)).rejects.toThrow(
+    /^B's worker turned redundant; requests:\n/,
+  );
+  expect(Date.now() - started, 'one bounded B read, then A').toBeLessThan(3 * READ_MS);
+});
+
+test('AD-17 the update spec activation poll passes when B restarts once and then reads activated after A closed', async () => {
+  const handle: Handle = {
+    b: fakeTracked((call) => (call === 0 ? restarted() : Promise.resolve('activated'))),
+    a: fakeTracked(hangs, true),
+  };
+  await expect(pollActivated(handle, noLog, noProbe)).resolves.toBeUndefined();
+});
+
+test('AD-17 the update spec activation poll ends with unreadable handles as an observation fault, never the A-A15 label', async () => {
+  const handle: Handle = { b: fakeTracked(restarted), a: fakeTracked(restarted) };
+  const ending = await activationOutcome(handle, Date.now() + 500);
+  expect(ending).toEqual({ kind: 'unreadable' });
+  const unreadable = activationFault(ending as Ending, 'A').message;
+  expect(unreadable).toMatch(/^observation fault: B's and A's handles unreadable/);
+  expect(unreadable).not.toContain(TIMING);
+  // The timing label stays for both handles closed or B read but not activated, with marker A.
+  const closed = { b: fakeTracked(hangs, true), a: fakeTracked(hangs, true) };
+  expect(await activationOutcome(closed, Date.now() + 500)).toEqual({ kind: 'closed' });
+  expect(activationFault({ kind: 'closed' }, 'A').message).toMatch(
+    `${TIMING}: B's and A's handles closed`,
+  );
+  const stayed = { b: fakeTracked(() => Promise.resolve('installed')), a: fakeTracked(hangs) };
+  const stayedEnding = await activationOutcome(stayed, Date.now() + 500);
+  expect(stayedEnding).toEqual({ kind: 'stayed', state: 'installed' });
+  expect(activationFault(stayedEnding as Ending, 'A').message).toMatch(
+    `${TIMING}: B stayed installed`,
+  );
+  expect(activationFault({ kind: 'closed' }, 'B').message).toMatch(/^observation fault: /);
 });

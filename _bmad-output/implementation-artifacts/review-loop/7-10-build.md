@@ -1,5 +1,5 @@
 # Review loop — ticket 7.10 build (code, 575fdf7..HEAD)
-State: pass 2: done
+State: pass 3: done
 
 Target: commit range `575fdf7..HEAD` (build commits b11abd5, 6629acd, 38a52d5, 38f5dd8; orchestrator commits 7526c3d, 5eb79db, af364fe, a96de01 are context; staged as `7-10-build.passes/pass0.diff` excluding `_bmad-output/implementation-artifacts/autopilot/` and `tickets.toml`); intent `_bmad-output/initiative-wordcell-v1/epic-pwa-release/story-refactor-sweep-plan.md`. Depth thorough, max 7.
 Pre-loop: HEAD 38f5dd809420da4d0b8c484f76b095a7dc402322, tree snapshot 0 f2c2d4afaf67bdf716d7f0837910b499946eac9e.
@@ -54,3 +54,24 @@ Snapshot: tree 0762fb9428906b6499e149b815b81e0e96adaa7b (fix diff `7-10-build.pa
 - none
 ### Dropped
 - none
+
+## Pass 3 — 2026-10-31
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 2, minor 5, decision-needed 0  |  Dropped in triage: 1 (duplicates merged: per-read bound ×2, gone-on-any-null ×2, D-71 channel ×2)
+Snapshot: tree 32c6977c98659192a8067aa7d4ff86428b8c0992 (fix diff `7-10-build.passes/pass3.fix.diff`; content outside `_bmad-output/` identical to the fixer's measured tree f29b440cf0ba2c62bbe0736a8712bab9310a717b). Fixer: 5/5 applied (`READ_MS` per-read bound, `readState` `{state}|{gone:'closed'|'unreadable'}`, loop extracted to `activationOutcome`, `activationFault` never TIMING on unreadable, three page-less self-tests each mutation-checked; D-71 its own B8 fix-ticket proposal, entry 11 to wait on it; D-46 forced timer-wins mutation recorded both specs; holdListText armed-late guard case; G9 pin counts `boot()` returns from the TS syntax tree). Fixer runs at the measured tree: `npm test` 3788; item 6 three android runs 903 passed each (D-64 0/3, D-65 0/3, D-71 0/3); D-70 three `test:e2e:pwa` runs 44 passed each (0/3); item 7 Linux clone: unit median 4.64 s, watch 475 ms, AD-18 margin 39,296; final `npm run test:all` exit 0 (unit 3788, dist-smoke 28, e2e 1161, pwa 44); `npm run test:screens` exit 0 (68 passed), no snapshot changes; invariants exit 0; plan status `built`. Orchestrator: `npm test` 3788 passed, `npm run lint` pass, `npm run check` 0 errors.
+### Applied
+- [major] `e2e/pwa/update.spec.ts` `readState`/`pollActivated` — each read is raced only against the whole poll deadline, so a B `evaluate` that hangs (restarted, never reloaded, e.g. a redundant B) uses up the 30 s; A's fallback read then gets a 0 ms timer and B's redundancy is never reported as designed (D-70 row's own claim); no pollActivated-level test (verification gap, edge cases) → fixer item 1
+- [major] `e2e/pwa/update.spec.ts` `pollActivated` `if (state === null) { gone = true; break; }` — any iteration where both reads are null (a transient restart or a raced read, likeliest at B's activation when A terminates) still ends the poll, so pass 2's Applied minor 4 (false observation fault after a live B restarts) is not resolved; the plan's new residual risk concedes it (fix diff; edge cases as minor) → fixer item 1
+- [minor] same path — a "gone" ending caused by unreadable (restarted/raced) handles can still throw the A-A15 TIMING label when the probe shows marker A, though SPEC routes TIMING to a D gap only for Chromium's own timing (intent alignment) → fixer item 1
+- [minor] plan D-71 row / Fix tickets — D-71 routed into D-64's out-of-epic backlog entry and declared "an item 6 row's test" for the AC rerun; ticket item 6 reserves that route for nav.spec.ts:163, other flakes go to a B8 tickets.toml fix-ticket row (fix diff, intent alignment) → fixer item 2
+- [minor] plan Review pass 2 D-46 note — `void done.catch(() => {})` recorded as "no mutation"; item 5: tooling fixes' mutation reverts the fix → fixer item 3
+- [minor] `e2e/helpers/boot-calls.ts` `listTextCalls`/`releaseListText` "no held text() in this document" throws — no helpers.spec.ts case → fixer item 4
+- [minor] `src/architecture-tree-scan.test.ts` G9 pin — `return` counted with a raw word regex over `boot()`'s source; a comment or nested callback would fail it on a correct order → fixer item 5
+### Default applied (technical)
+- fixer item 1 — per-read bound `Math.min(deadline, now + READ_MS)` (about 2 s); `readState` reports why it returned null; `gone` only when both handles are `closed()`; other null reads tick and keep polling; a poll ending with unreadable handles throws the observation-fault message, never TIMING; page-less pollActivated self-tests (B hangs + A `redundant` → redundant message well under 30 s; B restarts once then `activated` while A is closed → passes), each with a recorded mutation; residual-risk bullet updated
+- fixer item 2 — D-71 gets its own B8 tickets.toml fix-ticket proposal (like D-65; title, sighting, counts, files, reproduction), entry 11 to wait on it; drop the "treated as an item 6 row's test" clause; the orchestrator/owner applies tickets.toml
+- fixer item 3 — record a forced timer-wins mutation run without the line, or record it as exempt hardening with the reason
+- fixer item 5 — count `return` on the comment-stripped slice
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- edge cases: sw-failure/dist-smoke D-46 worst case (30 s late hit + 15 s hold + 15 s final poll) can reach the 60 s test timeout — the outcome is still a failure (generic label), never a pass; the fixes (raise the per-test timeout, or shorten the worker-request wait) are a timeout loosening item 3 allows only as a recorded-cause flake fix, or a new false-failure risk; listed as an unapplied minor

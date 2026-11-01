@@ -1605,6 +1605,18 @@ test.describe('recordBootCalls', () => {
     await page.reload();
     expect(await bootCalls(page)).toStrictEqual([]);
   });
+
+  test('AD-17 recordBootCalls with holdListText armed after this document loaded: listTextCalls and releaseListText throw until the next navigation', async ({
+    page,
+  }) => {
+    await probe(page);
+    await page.goto('/boot-calls-probe/');
+    await recordBootCalls(page, { holdListText: true });
+    await expect(listTextCalls(page)).rejects.toThrow(/no held text\(\) in this document/);
+    await expect(releaseListText(page)).rejects.toThrow(/no held text\(\) in this document/);
+    await page.reload();
+    expect(await listTextCalls(page)).toBe(0);
+  });
 });
 
 test.describe('keys helpers', () => {

@@ -2,6 +2,7 @@
 // (`SELF`, src/architecture-scan.ts); the same scan carries epic 7 SPEC CAP-1's skip-waiting rule.
 import { readFileSync } from 'node:fs';
 import { posix } from 'node:path';
+import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 import { check, ROOT, SELF, type Violation, walk } from './architecture-scan';
 
@@ -88,8 +89,21 @@ describe('AD-1 tree scan', () => {
       beforeBack,
       'nav.registerBeforeBack(() => { controller.cancel({ byBack: true });',
     ).toBeGreaterThan(-1);
-    // Rejected root included: the halted return is boot()'s only `return` before createController.
-    expect([...body.slice(0, controller).matchAll(/\breturn\b/g)].length).toBe(1);
+    // Rejected root included: the halted return is boot()'s only `return` before createController
+    // (its own return statements from the AST: comments, strings and nested functions never count).
+    const sf = ts.createSourceFile('src/main.ts', source, ts.ScriptTarget.Latest, true);
+    const returns: number[] = [];
+    const visit = (node: ts.Node): void => {
+      if (ts.isReturnStatement(node)) returns.push(node.getStart(sf) - start);
+      if (!ts.isFunctionLike(node)) ts.forEachChild(node, visit);
+    };
+    const boot = sf.statements.find(
+      (node): node is ts.FunctionDeclaration =>
+        ts.isFunctionDeclaration(node) && node.name?.text === 'boot',
+    );
+    expect(boot?.body, 'the boot() declaration').toBeDefined();
+    boot?.body?.statements.forEach(visit);
+    expect(returns.filter((index) => index < controller)).toEqual([haltedReturn]);
     expect(haltedReturn).toBeGreaterThan(halted);
     expect(haltedReturn).toBeLessThan(gate);
     expect(gate).toBeLessThan(controller);
