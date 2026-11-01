@@ -138,3 +138,14 @@ Ticket 7.10, Step B (stop rule 2): plan status `blocked`. See the 7.10 entry abo
 Technical default taken (owner rule: accept technical defaults): the plan is set back to `in-progress` with a note authorising the D-70 test-only fix (`readState` in `e2e/pwa/update.spec.ts` treats "Service worker restarted" as handle-gone). tickets.toml: the entry-11 amendment applied; D-65 fix ticket added as entry 13 (7.13, after 10, before 11; entry 11 now waits on it). D-64 owner backlog entry (outside epic 7) left to the retrospective.
 
 Startup note (session 2026-10-31T23:30Z): handoff, git log, digest and ticket files agree that 7.10 resumes at Step B (plan `in-progress` with the D-70 resume authorisation); the plan's `blocked_at`/`blocked_reason` fields are stale from the earlier stop and the build is asked to clear them. No step pid files left running. Earlier build step files kept as `7.10-B-attempt2.*`.
+
+## 7.10 Refactor sweep — done
+What it adds: the closing tidy-up of epic 7 (70 leftover notes from tickets 7.1–7.9 each fixed, closed, declined with a reason or turned into a follow-up ticket), now finished after the owner-authorised fix: the update test treats a "Service worker restarted" message as "helper gone", which was the cause of the earlier stop. Players see nothing new.
+Ticket review: 7 passes, capped (recorded in the earlier 7.10 entry); nothing needed your input
+Build: built (resumed); commits b11abd5, 6629acd, 38a52d5, 38f5dd8
+Code review: thorough (one medium item was still listed as deferred in the plan, though settled), 4 passes, converged (majors 2, 2, 2, 0); fixes in WIP commits bbdd2d5, 6127385, c8440d1, all test-side (e2e helpers and specs, the phone-preview script test, one architecture test)
+Tests: all passing (3788 unit tests, every e2e suite incl. the release-build ones); screenshots not needed (no UI change; the review loop's last tree also ran them green)
+Ref to fix upstream: none
+Tokens: 15.2M input-equivalent (code review 74%, build 19%, other 4%, orchestrator 3%); orchestrator peak context 86k
+Worth knowing: the ticket is a "done checkpoint" where you settle owner-call rows; it has none, so only reading the result was left and the autopilot marked it done under your delegation. During review a second load-only flaky test turned up (the double-tap helper test, D-71); as the ticket allowed, the orchestrator added it as fix ticket 7.14 (commit after the review log), and close-out ticket 7.11 now waits on 7.13 and 7.14. The D-64 flaky-test backlog entry (outside epic 7) is still for the retrospective. Eight small leftovers from the code review (mostly plan wording and extra edge-case checks in the update test) are listed in `review-loop/7-10-build.md` for a later pass.
+Close-out docs: none

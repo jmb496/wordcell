@@ -3,7 +3,7 @@ title: 'Refactor sweep'
 type: 'refactor'
 ticket: '10'
 created: '2026-10-31'
-status: built
+status: done
 baseline_revision: '575fdf70757c7db2f88f4c44745ac860fb509aa9'
 route: 'full'
 route_source: 'auto'
@@ -17,8 +17,6 @@ context:
   - '{project-root}/_bmad-output/initiative-wordcell-v1/epic-pwa-release/story-refactor-sweep.review-log.md'
 warnings: ['oversized']
 deferred: []
-blocked_at: ''
-blocked_reason: ''
 ---
 
 <intent-contract>
