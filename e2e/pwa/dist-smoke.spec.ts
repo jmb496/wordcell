@@ -420,6 +420,9 @@ test.describe('F6 serviceWorkers allow', () => {
     const done = new Promise<void>((resolve, reject) => {
       answered = { resolve, reject };
     });
+    // Handled now, so a rejection after the "no worker request" timer wins (when `await done` is
+    // never reached) is no unhandled rejection; `await done` still rethrows it.
+    void done.catch(() => {});
     // Resolved at the first worker hit: the "no worker request" timer races only this, and the
     // hold (`done`) is bounded by the handler's own deadline, which starts at the hit.
     let seen!: () => void;

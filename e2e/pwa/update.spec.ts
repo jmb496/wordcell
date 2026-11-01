@@ -214,18 +214,15 @@ type Scope = {
   __wcWaiting?: ServiceWorkerState;
 };
 
-/**
- * A worker handle, whether its target has closed (tracked from identification on), and whether a
- * read saw it restart (set by `readState`).
- */
-type Tracked = { worker: Worker; closed(): boolean; restarted: boolean };
+/** A worker handle and whether its target has closed (tracked from identification on). */
+type Tracked = { worker: Worker; closed(): boolean };
 
 function track(worker: Worker): Tracked {
   let closed = false;
   worker.on('close', () => {
     closed = true;
   });
-  return { worker, closed: () => closed, restarted: false };
+  return { worker, closed: () => closed };
 }
 
 /**
@@ -275,29 +272,36 @@ async function waitingHandle(context: BrowserContext): Promise<Handle> {
 }
 
 /**
- * Reads a handle, or `null` once its target has gone: closed, destroyed, detached, or restarted
- * (under load Playwright can reject `evaluate` with `Service worker restarted` as a replaced B
- * turns redundant, before the handle's `close` event; D-70 in the ticket 7.10 plan). A restart is
- * remembered, so later reads return `null` without calling `evaluate` again (on a restarted
- * worker it awaits a fresh execution context with no deadline).
+ * Reads a handle, or `null` when its target has gone (closed, destroyed, detached) and, for this
+ * read only, when it restarted or `deadline` passed first. Under load Playwright can reject
+ * `evaluate` with `Service worker restarted` (D-70 in the ticket 7.10 plan); Playwright then
+ * reloads the same worker into a new execution context, so a later read may succeed again. Each
+ * `evaluate` is raced against `deadline`, since on a restarted worker not yet reloaded it awaits
+ * the new context with no deadline of its own.
  */
-async function readState(tracked: Tracked, read: () => ServiceWorkerState | undefined) {
-  if (tracked.closed() || tracked.restarted) return null;
-  return tracked.worker.evaluate(read).catch((error: unknown) => {
-    if (/restarted/i.test(String(error))) {
-      tracked.restarted = true;
-      return null;
-    }
-    if (tracked.closed() || /closed|destroyed|detached/i.test(String(error))) return null;
+async function readState(
+  tracked: Tracked,
+  read: () => ServiceWorkerState | undefined,
+  deadline: number,
+) {
+  if (tracked.closed()) return null;
+  const evaluated = tracked.worker.evaluate(read).catch((error: unknown) => {
+    if (tracked.closed() || /closed|destroyed|detached|restarted/i.test(String(error))) return null;
     throw error;
   });
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), Math.max(0, deadline - Date.now()));
+  });
+  return Promise.race([evaluated, late]).finally(() => clearTimeout(timer));
 }
 
 /**
- * Step 4: polls B's state to `activated` every 100 ms for 30 s, from B's handle and, once that
- * has closed or restarted (`readState`), from A's record; `redundant` throws at once with the
- * request log. On a timeout or both handles closed one probe page opens: marker A throws the
- * timing label, anything else an observation fault. Does not itself close or need closed pages.
+ * Step 4: polls B's state to `activated` every 100 ms for 30 s, from B's handle and, when a read
+ * of it is `null` (`readState`: closed, restarted or unreadable by the deadline), from A's record;
+ * `redundant` throws at once with the request log. On a timeout or both handles gone one probe
+ * page opens: marker A throws the timing label, anything else an observation fault. Does not
+ * itself close or need closed pages.
  */
 async function pollActivated(
   handle: Handle,
@@ -308,9 +312,13 @@ async function pollActivated(
   let state: string | null | undefined = null;
   let gone = false;
   while (Date.now() < deadline) {
-    state = await readState(handle.b, () => (self as unknown as Scope).serviceWorker.state);
+    state = await readState(
+      handle.b,
+      () => (self as unknown as Scope).serviceWorker.state,
+      deadline,
+    );
     if (state === null) {
-      state = await readState(handle.a, () => (self as unknown as Scope).__wcWaiting);
+      state = await readState(handle.a, () => (self as unknown as Scope).__wcWaiting, deadline);
     }
     if (state === 'redundant') {
       throw new Error(`B's worker turned redundant; requests:\n${requestLog(served)}`);
@@ -323,7 +331,7 @@ async function pollActivated(
     await tick();
   }
   const why = gone
-    ? "B's and A's handles closed"
+    ? "B's and A's handles gone (closed, restarted or unreadable)"
     : `B stayed ${String(state)} for ${ACTIVATION_POLL_MS} ms`;
   const probe = await openPage(context, served);
   const value = await marker(probe);
@@ -585,31 +593,50 @@ test('AD-17 the update spec withSite keeps the body error and attaches the clean
   expect((aggregate as AggregateError).errors).toEqual([caused, cleanupError]);
   expect((aggregate as AggregateError).cause).toBe(cleanupError);
   expect(caused.cause).toBe('own cause');
+  // A body value that is not an `Error`: an AggregateError carries both.
+  const thrown = await outcome(
+    withSite(failing, async () => {
+      throw `${TIMING}: string body`;
+    }),
+  );
+  expect(thrown).toBeInstanceOf(AggregateError);
+  expect((thrown as AggregateError).message).toBe(`${TIMING}: string body`);
+  expect((thrown as AggregateError).errors).toEqual([`${TIMING}: string body`, cleanupError]);
+  expect((thrown as AggregateError).cause).toBe(cleanupError);
   expect(await outcome(withSite(failing, async () => {}))).toBe(cleanupError);
   expect(await outcome(withSite(none, async () => {}))).toBe('resolved');
 });
 
-// `readState`'s handle-gone rule (D-70): a restarted worker handle reads as gone (`null`) and
-// stays gone; any other evaluate error is rethrown as it is.
+// `readState`'s handle-gone rule (D-70): a restarted worker handle reads as `null` for that read
+// only (Playwright reloads it into a new context), an `evaluate` that never settles reads as
+// `null` by the deadline, and any other evaluate error is rethrown as it is.
 test('AD-17 the update spec readState treats a restarted worker handle as gone', async () => {
-  let evaluations = 0;
-  const rejecting = (error: Error): Tracked => ({
+  const tracked = (...results: Array<() => Promise<ServiceWorkerState>>): Tracked => ({
     closed: () => false,
-    restarted: false,
     worker: {
       evaluate: () => {
-        evaluations += 1;
-        return Promise.reject(error);
+        const next = results.shift();
+        if (next === undefined) throw new Error('no evaluate result left');
+        return next();
       },
     } as unknown as Worker,
   });
   const read = () => (self as unknown as Scope).serviceWorker.state;
-  const restarted = rejecting(new Error('worker.evaluate: Service worker restarted'));
-  expect(await readState(restarted, read)).toBeNull();
-  expect(evaluations).toBe(1);
-  // The restart is remembered: a later read is `null` without calling `evaluate` again.
-  expect(await readState(restarted, read)).toBeNull();
-  expect(evaluations).toBe(1);
+  const later = () => Date.now() + 30_000;
+  const restarted = new Error('worker.evaluate: Service worker restarted');
+  const reloaded = tracked(
+    () => Promise.reject(restarted),
+    () => Promise.resolve('activated'),
+  );
+  expect(await readState(reloaded, read, later())).toBeNull();
+  // Not remembered: the next read evaluates again and sees the reloaded worker.
+  expect(await readState(reloaded, read, later())).toBe('activated');
+  // A read that never settles is `null` by the deadline, not a hang.
+  const hanging = tracked(() => new Promise<never>(() => {}));
+  const started = Date.now();
+  expect(await readState(hanging, read, started + 200)).toBeNull();
+  expect(Date.now() - started).toBeLessThan(5_000);
   const boom = new Error('boom');
-  await expect(readState(rejecting(boom), read)).rejects.toBe(boom);
+  const failing = tracked(() => Promise.reject(boom));
+  await expect(readState(failing, read, later())).rejects.toBe(boom);
 });

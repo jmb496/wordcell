@@ -168,10 +168,11 @@ describe('AD-17 device preview hintLines', () => {
 
 /**
  * A fake `Io` that records each call by name (with its argument where it matters). `waitForPort`
- * resolves unless `wait` is given; `serve` returns `serveStatus` (default 0); `exit` only records.
+ * resolves unless `wait` is given; `portOpen` returns `portOpen` (default false); `serve` returns
+ * `serveStatus` (default 0); `exit` only records.
  * The preview keeps its `exit` listener (`exitPreview` fires it) and `kill()` fires it with null, as
  * a real child would.
- * @param {{ fixture?: string, wait?: () => Promise<void>, serveStatus?: number }} [options]
+ * @param {{ fixture?: string, wait?: () => Promise<void>, portOpen?: boolean, serveStatus?: number }} [options]
  */
 function fakeIo(options = {}) {
   /** @type {string[]} */
@@ -194,7 +195,7 @@ function fakeIo(options = {}) {
     },
     portOpen: async () => {
       calls.push('portOpen');
-      return false;
+      return options.portOpen ?? false;
     },
     removeStaleSeed: () => {
       calls.push('removeStaleSeed');
@@ -259,6 +260,14 @@ describe('AD-17 device preview run', () => {
     const { io, calls } = fakeIo({ fixture: '{not json' });
     await expect(run(['session-won-words'], io)).rejects.toThrow(SyntaxError);
     expect(calls).toEqual(['readFixture session-won-words']);
+  });
+
+  it('AD-17 run with port 4173 taken throws before removing the seed, the tailnet call or the build', async () => {
+    const { io, calls } = fakeIo({ portOpen: true });
+    await expect(run([], io)).rejects.toThrow(
+      'device-preview: port 4173 is taken; stop the other run (Ctrl+C) or free it',
+    );
+    expect(calls).toEqual(['portOpen']);
   });
 
   it('AD-17 run without a fixture removes the stale seed page before the tailnet call and writes none', async () => {
