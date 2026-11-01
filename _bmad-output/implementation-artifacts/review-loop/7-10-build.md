@@ -1,5 +1,5 @@
 # Review loop — ticket 7.10 build (code, 575fdf7..HEAD)
-State: pass 3: done
+State: pass 4: done
 
 Target: commit range `575fdf7..HEAD` (build commits b11abd5, 6629acd, 38a52d5, 38f5dd8; orchestrator commits 7526c3d, 5eb79db, af364fe, a96de01 are context; staged as `7-10-build.passes/pass0.diff` excluding `_bmad-output/implementation-artifacts/autopilot/` and `tickets.toml`); intent `_bmad-output/initiative-wordcell-v1/epic-pwa-release/story-refactor-sweep-plan.md`. Depth thorough, max 7.
 Pre-loop: HEAD 38f5dd809420da4d0b8c484f76b095a7dc402322, tree snapshot 0 f2c2d4afaf67bdf716d7f0837910b499946eac9e.
@@ -75,3 +75,31 @@ Snapshot: tree 32c6977c98659192a8067aa7d4ff86428b8c0992 (fix diff `7-10-build.pa
 - none
 ### Dropped
 - edge cases: sw-failure/dist-smoke D-46 worst case (30 s late hit + 15 s hold + 15 s final poll) can reach the 60 s test timeout — the outcome is still a failure (generic label), never a pass; the fixes (raise the per-test timeout, or shorten the worker-request wait) are a timeout loosening item 3 allows only as a recorded-cause flake fix, or a new false-failure risk; listed as an unapplied minor
+
+## Pass 4 — 2026-10-31
+Reviewers: fix diff, edge cases, verification gap, intent alignment  |  Findings: major 0, minor 7, decision-needed 0  |  Dropped in triage: 0 (1 duplicate merged: D-65 row count ×2)
+Snapshot: tree 32c6977c98659192a8067aa7d4ff86428b8c0992 (no fix pass; unchanged since pass 3, committed as c8440d1). Orchestrator at the final state (pass 3 run): `npm test` 3788 passed, `npm run lint` pass, `npm run check` 0 errors; fixer at the same code: final `test:all` exit 0, `test:screens` exit 0.
+### Applied
+- none (converged: zero majors after triage)
+### Reclassified
+- edge cases [major → minor] `e2e/pwa/update.spec.ts` `activationOutcome`/`activationFault` — after an A restart, A's `__wcWaiting` reads `undefined` in the fresh context, so the poll can end `stayed undefined` and, with marker A, throw the A-A15 TIMING label for an observation limit. Late-pass bar: the gate's verdict is unaffected (the test fails, never passes); only the failure label is misattributed, in a rare double-fault path (A restarts and B never activates); consistent with pass 3's classing of the TIMING-on-unreadable label as minor.
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Result — converged after 4 passes
+Majors per pass: 2, 2, 2, 0. Checkpoint commits: bbdd2d5 (pass 1), 6127385 (pass 2), c8440d1 (pass 3). Final state c8440d1: `npm test` 3788 passed, lint pass, check 0 errors; final `test:all` and `test:screens` green at the measured tree f29b440 (content-identical to c8440d1 outside `_bmad-output/`).
+For the orchestrator (technical, from the plan's "For the owner or orchestrator"): apply the plan's D-71 B8 fix-ticket proposal to tickets.toml (entry 11 to wait on it), as was done for D-65 / entry 13.
+
+Unapplied minors (for the next build or loop):
+- plan D-65 row — item 6 counts stop at the review pass 2 tree; append "0/3 at the review pass 3 tree f29b440" (fix diff, verification gap)
+- plan Auto Run Result "For the owner or orchestrator" item 4 — still says D-64's backlog entry carries D-71's test; pass 3 removed that sub-entry; drop or mark superseded
+- plan Implementation Notes Review pass 3 — the whole-deadline mutation's recorded `Received: 28314` cannot come from `bound = deadline` (expected ≥ 30,000 ms); re-run and record the observed value
+- `e2e/pwa/update.spec.ts` readState self-test `READ_MS` case — only an upper bound on the elapsed time; add `toBeGreaterThanOrEqual(READ_MS - 50)` (or a half-`READ_MS` answer reading `{ state }`) and record a shrunken-bound mutation
+- plan D-70 row / Review pass 3 notes — cite that an `unreadable` ending is 7.3 step 4's "neither route can observe B" case (observation fault, build stops) and that `stayed`/`closed` with marker A keep the TIMING label (A-A15 gate not loosened)
+- `e2e/pwa/update.spec.ts` `activationOutcome` — treat `undefined` from A's record as unreadable so an A restart cannot yield `stayed undefined` + TIMING; page-less self-test (B closed, A rejects `restarted` then resolves `undefined`, marker A → observation fault)
+- `e2e/pwa/update.spec.ts` `readState` — when B's read is bounded at the poll deadline, A's fallback read in the same iteration gets a 0 ms bound and reads `unreadable`; give A's read its own `READ_MS` bound or report the last state seen; self-test with hanging B and A `installed`
+- (pass 3, dropped) sw-failure/dist-smoke D-46 worst case (30 s late hit + 15 s hold + 15 s final poll) can reach the 60 s test timeout; still a failure, never a pass
