@@ -3,7 +3,7 @@ title: 'Refactor sweep'
 type: 'refactor'
 ticket: '10'
 created: '2026-10-31'
-status: in-review
+status: built
 baseline_revision: '575fdf70757c7db2f88f4c44745ac860fb509aa9'
 route: 'full'
 route_source: 'auto'
@@ -20,7 +20,7 @@ deferred:
   - summary: >-
       One unexplained failure of the changed D-16 test `AD-17 the update spec activation poll fails at once when B turns redundant` (e2e/pwa/update.spec.ts) on the first single run against a fresh dist-test/; message lost; 18 later runs passed.
     evidence: |-
-      Implementation Notes T5. Recurred in the final test:all at b11abd5 as D-70 (`worker.evaluate: Service worker restarted` from `readState`), so likely the same load-dependent handle error, not a T5 assertion fault; fixed by T12 (D-70 row, Implementation Notes T12). The fix-commit test:all pwa run re-checks it.
+      Implementation Notes T5. Recurred in the final test:all at b11abd5 as D-70 (`worker.evaluate: Service worker restarted` from `readState`), so likely the same load-dependent handle error, not a T5 assertion fault; fixed by T12 (D-70 row, Implementation Notes T12). Settled at the fix commit 38a52d5: the test passed in three counted `npm run test:e2e:pwa` runs and in the final `test:all`.
     location: >-
       e2e/pwa/update.spec.ts redundant self-test
     severity: medium (unverified)
@@ -189,13 +189,13 @@ blocked_reason: ''
 | D-61 | 7.9 plan :204 | device-testing.md "(unverified)" phone steps confirmed only at the device read | yes | the read: entry 11 ("hands Jared the build for every Device row … (`docs/device-testing.md`)"); dropping the tags afterwards: amend |
 | D-62 | 7.2 plan :96 (10), :119, :187 s3; digest :29 s3 | build-notes :55 hook gate says `DEV \|\|`; as built `VITE_TEST_HOOKS === '1'` | yes | amend |
 | D-63 | 7.3 plan :147, :159, :191, :256-260; digest :45 s2 | SPEC F8 (SPEC.md:134) and build-notes :123-124, :151 static-server/observation wording vs as built | yes | amend; 7.3 plan :147 "handle-only observation": errata |
-| D-64 | 7.9 plan :108, :205; epic-place-preview.md:63; place-preview retro A7 | flake `§2 AD-13 a double tap on New game on the rejected root opens the notice at wc 1 and no Reset confirm` (e2e/nav.spec.ts:163). 7.9 plan :108 run 2 is the recurrence that epic 11 awaited | yes | fix ticket: owner backlog entry outside this epic (SPEC Non-goals), not tickets.toml (Fix tickets). Item 6 counted runs: 0/3 failures at b11abd5 (ran and passed in all three) |
-| D-65 | 7.9 plan :108 run 1, :205; win-trigger plan :101; game-surfaces retro F-13 (:59) | flake `R-73 (UI) Success signal (epic Done when 3): the same move by drag …` (e2e/success-signal.spec.ts:440) | yes | item 6: 0/3 failures at b11abd5 (ran and passed in all three); no cause found, so fix ticket (B8, end-of-game-words retro :218), see Fix tickets |
+| D-64 | 7.9 plan :108, :205; epic-place-preview.md:63; place-preview retro A7 | flake `§2 AD-13 a double tap on New game on the rejected root opens the notice at wc 1 and no Reset confirm` (e2e/nav.spec.ts:163). 7.9 plan :108 run 2 is the recurrence that epic 11 awaited | yes | fix ticket: owner backlog entry outside this epic (SPEC Non-goals), not tickets.toml (Fix tickets). Item 6 counted runs: 0/3 failures at b11abd5 (ran and passed in all three); 0/3 at the fix commit 38a52d5 (ran and passed in all three) |
+| D-65 | 7.9 plan :108 run 1, :205; win-trigger plan :101; game-surfaces retro F-13 (:59) | flake `R-73 (UI) Success signal (epic Done when 3): the same move by drag …` (e2e/success-signal.spec.ts:440) | yes | item 6: 0/3 failures at b11abd5 and 0/3 at the fix commit 38a52d5 (ran and passed in all six); no cause found, so fix ticket (B8, end-of-game-words retro :218), see Fix tickets |
 | D-66 | device-checks.md G9; 4.6 plan `deferred` :38 | `main.ts` controller-registration order has no test | yes (partly: AD-14 pin src/architecture-tree-scan.test.ts:38 covers cancel before scrollReset) | **fixed** (T2, G9 section) |
 | D-67 | 7-6-build.md `## Result` :24; 7-8-build.md :42 (search: `sed -n '/^## Result/,$p'`) | none: "Unapplied minors: none", 0 open majors | n/a | none |
 | D-68 | ticket review logs 7.1–7.7 `## Result` (search: `grep -n '^## Result'`, each item checked against its plan's resolution list) | none open (all resolved by the plans: 7.1 :99, 7.2 :96, 7.3 :131-143, 7.4 :79, 7.5 :102, 7.6 :97, 7.7 :114) | n/a | none |
 | D-69 | digest "Close-out docs" lines (:19, :30, :46, :57, :68, :83, :94, :105, :116) | none: every line reads "none" | n/a | none |
-| D-70 | final `npm run test:all` at b11abd5 (this build) | `AD-17 the update spec activation poll fails at once when B turns redundant` (e2e/pwa/update.spec.ts:435, a test T5 changed) failed: `worker.evaluate: Service worker restarted` thrown from `readState` (update.spec.ts:277), whose catch tolerates only `/closed\|destroyed\|detached/` (:278); 30/30 passed in isolation afterwards; the same test's unexplained failure during T5 (frontmatter `deferred`) is likely the same | yes | **fixed** (T12, recorded-cause flake fix, item 6 style; owner-authorised, Resume authorisation): `readState` treats `restarted` as handle-gone, so the poll reads A's record and reports B's redundancy as designed. Reopens if the fix commit's final `test:all` fails it |
+| D-70 | final `npm run test:all` at b11abd5 (this build) | `AD-17 the update spec activation poll fails at once when B turns redundant` (e2e/pwa/update.spec.ts:435, a test T5 changed) failed: `worker.evaluate: Service worker restarted` thrown from `readState` (update.spec.ts:277), whose catch tolerates only `/closed\|destroyed\|detached/` (:278); 30/30 passed in isolation afterwards; the same test's unexplained failure during T5 (frontmatter `deferred`) is likely the same | yes | **fixed** (T12, recorded-cause flake fix, item 6 style; owner-authorised, Resume authorisation): `readState` treats `restarted` as handle-gone, so the poll reads A's record and reports B's redundancy as designed. Reopens if the fix commit's final `test:all` fails it. At 38a52d5: passed in three counted `npm run test:e2e:pwa` runs (0/3) and in the final `test:all` (Final runs at the fix commit) |
 
 ### Errata group (declined)
 
@@ -272,7 +272,7 @@ Add to entry 11's description: "syncs `build-notes.md` (:22-23 CAP-6 unreachable
   - Repeat `e2e/pwa/update.spec.ts` ×5 on `pwa` against a fresh `npm run build:test`.
   - Set D-70's disposition to **fixed** (recorded-cause flake fix, item 6 style) and update the frontmatter `deferred` item's evidence to point at D-70.
   - Not part of the implementation: after the review (step 4), the build's orchestrator makes the fix commit and runs item 6's three counted runs, item 7 on a fresh Linux clone, the final `npm run test:all` and `npm run test:screens` at that commit, each recorded under its section with the new sha (Order of work). The implementer does not commit and does not run those.
-- [ ] this plan -- T11:
+- [x] this plan -- T11 (with T12's fix-commit records):
   - Record each T1–T10 row's mutation result and repeat counts in Implementation Notes.
   - R-runs: D-58 and D-59, and the D-53 `WORDCELL_APP_VERSION` run.
   - D-59 as a clause → section map: 7.9 plan :89's G1–G6, G20–G22 and release-checklist steps 2–4, plus G3 order, mapped to `docs/device-testing.md` headings.
@@ -393,6 +393,16 @@ For reference, the working-tree `npm run build` total is 560,703 / 600,000 bytes
   - `scripts/device-preview.test.mjs`: new case `AD-17 run SIGTERM during the port wait turns the share off, kills the preview and exits 0` (fires `signals.SIGTERM` during the wait, expects `serveOff`, `kill`, `exit 0`). 35 tests pass. Mutation, the SIGTERM handler changed to `stop(1)`: fails (`expected [ 'serveOff', 'kill', 'exit 1' ] to deeply equal [ 'serveOff', 'kill', 'exit 0' ]`); reverted.
   - `docs/device-testing.md` clear-site-data step 2: the skip note is now its own sentence ("Skip this step if the origin is not listed: it has no data yet."), before "This path needs no open tab on the origin." (doc diff only; supersedes T10's parenthetical wording).
 - Not run here (T12's last bullet, orchestrator after the fix commit): item 6's counted runs, item 7, the final `npm run test:all` and `npm run test:screens`. T11 stays open until those records land.
+
+**Final runs at the fix commit** 38a52d5732b7b5dd1160619e0ce0973d005c3d2b (resume; ticket item 6: the fix commit is now the last commit changing anything outside `_bmad-output/`, so every run below is at it). CI unset, retries 0.
+- Item 6 counted runs (`/mnt/d` checkout): `npx playwright test --project=android --reporter=line` three times, each exit 0, 900 passed and 225 skipped, 0 failed (4.4, 4.4 and 4.6 min). `e2e/nav.spec.ts:163:1` and `e2e/success-signal.spec.ts:440:3` ran and passed in every run: D-64 0/3, D-65 0/3. No other test failed.
+- D-70 counted runs (review pass, blind finding 2): `npm run test:e2e:pwa` three times, each exit 0, 41 passed; `AD-17 the update spec activation poll fails at once when B turns redundant, with the request log` (e2e/pwa/update.spec.ts:439) passed in all three (0/3).
+- Item 7 budgets (fresh clone `~/wordcell-sweep-38a52d5` on the Linux filesystem: `git clone /mnt/d/CodeProjects/wordcell`, checkout 38a52d5732b7b5dd1160619e0ce0973d005c3d2b, `npm ci`; lockfile unchanged since 575fdf7):
+  - `npm test` warm median: warm-up 6.68 s (discarded), then 4.71 s, 4.60 s, 4.75 s; **median 4.71 s** (under 5 s), 3785 tests.
+  - Watch re-run: slowest engine file by `npx vitest run src/engine --reporter=json` is `src/engine/view.test.ts` (451 ms). `npx vitest --watch src/engine/view.test.ts`, a blank line appended and the file restored per trigger: re-runs 543 ms, 475 ms, 460 ms (a fourth, the last restore, 482 ms); **median 475 ms** (under 1 s). The file was restored byte-identical (`cmp`).
+  - AD-18: `npm run build` total 560,702 / 600,000; **margin 39,298 bytes**.
+- Final `npm run test:all` (`/mnt/d`): **exit 0** in 7m33s. Lint clean; check clean; unit 3785; build total 560,702; dist-smoke 28 passed; dev e2e 1157 passed and 1093 skipped (project-specific); pwa 41 passed.
+- `npm run test:screens` (Docker 29.8.0, `mcr.microsoft.com/playwright:v1.63.0-noble`): **exit 0**, 68 passed and 40 skipped (project-specific). `git status --porcelain` afterwards: empty (nothing under `e2e/*-snapshots`).
 
 ## Plan Change Log
 
@@ -531,49 +541,46 @@ Each mutation is reverted after its run, and each must fail the new pin:
 
 ## Auto Run Result
 
-**Status:** blocked. The ticket's AC says a final `test:all` failure outside item 6's rows "stops the build and is reported". Final `npm run test:all` at the sweep commit b11abd5 failed one pwa test, D-70.
+**Status:** built (resumed 2026-10-31 after the owner-authorised D-70 fix; the earlier stop is recorded under Final `npm run test:all` at b11abd5). Done checkpoint: the build stops here; Jared settles owner-call rows (none) and marks the ticket done.
 
-**Implemented** (sweep commit b11abd56b62db03326327f335a7faad4bc9c56dd):
-- The deferred-findings table D-01–D-70 with dispositions, the errata group, the entry-11 amendment proposal and the fix-ticket proposals (D-64 owner backlog entry; D-65 B8 tickets.toml entry).
-- G9 resolved by the source-order pin (D-66).
-- 22 rows fixed inside item 3's boundary, each proven per item 5 (Implementation Notes T1–T10).
+**Implemented:**
+- Sweep commit b11abd56b62db03326327f335a7faad4bc9c56dd: the deferred-findings table D-01–D-70 with dispositions, the errata group, the entry-11 amendment proposal and the fix-ticket proposals; G9 resolved by the source-order pin (D-66); 23 rows fixed inside item 3's boundary, each proven per item 5 (Implementation Notes T1–T10).
+- Fix commit 38a52d5732b7b5dd1160619e0ce0973d005c3d2b: D-70 fixed (T12): `readState` treats a `Service worker restarted` worker-handle error as handle-gone, so the activation poll reads A's record and reports B's redundancy as designed; plus the resume review's patches (permanent `readState` self-test, `pollActivated` comment, device-preview SIGTERM case, device-testing.md step 2 wording). Fixed rows: 24 with D-70.
 
-**Files changed:**
-- `src/architecture-ad1.test.ts`: scan fixtures.
+**Files changed (whole build, since 575fdf7):**
+- `src/architecture-ad1.test.ts`: skip-waiting and navigator-storage scan fixtures.
 - `src/architecture-tree-scan.test.ts`: G9 and D-23 pins.
 - `src/shell/sw.test.ts`: `'0'` gate-off stub.
 - `e2e/pwa/sw-failure.spec.ts`: halted-first F17 test, fatal causes, timer race.
 - `e2e/pwa/dist-smoke.spec.ts`: timer race; place-phase comment.
-- `e2e/pwa/boot-order.spec.ts` and `e2e/helpers/boot-calls.ts`: the `holdListText` gate (plus `e2e/globals.d.ts` globals).
-- `e2e/pwa/update.spec.ts`: `holdWaiting`, redundant and `withSite` self-tests.
+- `e2e/pwa/boot-order.spec.ts`, `e2e/helpers/boot-calls.ts`, `e2e/globals.d.ts`: the `holdListText` gate.
+- `e2e/pwa/update.spec.ts`: `holdWaiting`, redundant, `withSite` and `readState` self-tests; the D-70 `restarted` handle-gone rule.
 - `e2e/pwa/test-hook.spec.ts`: settle step; dist-smoke positive control.
 - `e2e/pwa/offline.spec.ts`: comment.
 - `e2e/helpers.spec.ts`: helper cases.
 - `e2e/test-hook.spec.ts`: rejected `persisted()` → AD-15.
-- `scripts/device-preview.mjs` and its `.test.mjs`: `run(argv, io)` seam, port-wait cleanup, comment.
-- `docs/device-testing.md`: two procedure fixes.
+- `scripts/device-preview.mjs`, `scripts/device-preview.test.mjs`: `run(argv, io)` seam, port-wait cleanup, comment, SIGTERM case.
+- `docs/device-testing.md`: spoiled-read redo and clear-site-data step 2.
+- `_bmad-output/initiative-wordcell-v1/epic-pwa-release/tickets.toml` also appears in `git diff --name-only 575fdf7`: that is the orchestrator's owner-authorised commit 5eb79db (entry-11 amendment, fix ticket 7.13), not a build edit, so AC 2's file list holds for the build's own commits.
 
-**Review:** one thorough pass with 30 findings.
-- Patched: 2 medium (device-preview failure paths; the seeded `realIo` run) and 3 low (D-23 pin end bound, doc placement, `waitBooted` in the new helper case). No high was patched, so `followup_review_recommended` stays false.
-- Deferred: 1 maybe-false (the D-16 test's unexplained failure, now recurred as D-70).
-- Rejected: the rest, each with the reason in the Review Triage Log.
+**Review:**
+- First pass (sweep): 30 findings; patched 2 medium and 3 low; 1 maybe-false deferred (now D-70, settled); the rest rejected with reasons (Review Triage Log).
+- Resume pass (T12): 28 findings, high 0, medium 2, low 19, false 4, maybe-false 3. Patched: 2 medium (a permanent `readState` restart self-test; three counted `test:e2e:pwa` runs for D-70 at the fix commit) and 3 low (SIGTERM case, `pollActivated` comment, device-testing.md parenthetical). Deferred: none. Rejected: the rest, each with its reason in the triage log (plan-bookkeeping edits, orchestrator-owned tickets.toml and handoff files, carried rows, the A-handle restart reading, the settle-step maybe-false).
+- Follow-up review: `false`. Two medium entries were patched, but no unverified risk remains to name: the self-test fails on its mutation, and D-70's flake is checked by 3/3 counted pwa runs plus the final `test:all` at the fix commit.
 
-**Verification:**
-- `npm run lint`, `npm run check` and `npm test` (3784) pass. The invariants exit 0.
-- The changed-file list is inside item 3's set. `scripts/size-budget.mjs` is unchanged.
-- Item 6: D-64 0/3, D-65 0/3, no other counted-run failure.
-- Item 7 (Linux clone at b11abd5): unit median 4.63 s; watch re-run median 526 ms; AD-18 margin 39,298 bytes.
-- Final `test:all`: exit 1 in `test:e2e:pwa`, 39 passed and 1 failed (D-70). `test:screens`: not run.
+**Verification (fix commit 38a52d5732b7b5dd1160619e0ce0973d005c3d2b):**
+- `npm run lint`, `npm run check`, `npm test` (3785) pass; the invariant commands exit 0; no non-test `src/` file changed; `scripts/size-budget.mjs` unchanged.
+- Item 6: D-64 0/3, D-65 0/3, no other counted-run failure. D-70: 0/3 counted pwa runs.
+- Item 7 (Linux clone): unit median 4.71 s; watch re-run median 475 ms; AD-18 margin 39,298 bytes.
+- Final `npm run test:all`: exit 0. `npm run test:screens`: exit 0, no snapshot changes.
 
 **For the owner or orchestrator:**
-1. D-70 has a likely cause, but it was not acted on (the ticket stops the build here). `readState` (e2e/pwa/update.spec.ts:277-280) maps only `closed|destroyed|detached` worker-handle errors to `null`, and Playwright can throw `Service worker restarted` when B turns redundant under full-suite load.
-   - **Candidate test-only fix:** treat `restarted` like the other handle-gone errors in that regex. The poll then reads `swState()`/the request log and reports B's redundancy as designed. This is a recorded-cause flake fix (item 6 style).
-   - **After any fix:** that commit touches files outside `_bmad-output/`, so items 6 and 7, the final `test:all` and `test:screens` are re-run (ticket item 6).
-2. Apply the entry-11 amendment and the D-65 B8 fix ticket in tickets.toml. Add the D-64 backlog entry outside the epic.
-3. Owner-call rows: none.
+1. Owner-call rows: none.
+2. Already applied by 5eb79db: the entry-11 amendment and fix ticket 7.13 (D-65). Entry 13's text cites "0/3 in 7.10's item 6 counted runs"; the fix-commit runs are also 0/3, so it still holds.
+3. The D-64 owner backlog entry outside epic 7 is left to the retrospective (Fix tickets has the proposal).
 
 **Residual risks:**
-- D-70 above.
+- D-70's fix tolerates the handle error rather than preventing it; a restart that hides a real redundancy would still end in the poll's timing or observation-fault message, never a pass.
 - The D-25 positive control copies dist-smoke's search rather than sharing it.
 - D-22's mutation also fails the old placement.
 
