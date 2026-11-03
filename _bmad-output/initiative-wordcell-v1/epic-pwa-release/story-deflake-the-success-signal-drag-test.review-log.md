@@ -1,6 +1,6 @@
 # Review log — story-deflake-the-success-signal-drag-test.md (ticket 7.13)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 220 words, copy `story-deflake-the-success-signal-drag-test.review-log.passes/pass0.md` (HEAD 95b454c).
 
@@ -66,3 +66,34 @@ Fixer: all 17 applied, no conflicts; item 9 cites log :1404 (trace path) not :14
 - Trace copies — outside the repo, `~/wordcell-traces/7.13/`, path cited in the plan
 ### Dropped
 - tickets.toml entry 13/14 sync (fix diff, ref alignment) — outside the target; recorded in the result for the orchestrator
+
+## Pass 3 — 2026-11-03
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 8, minor 7, decision-needed 0  |  Dropped in triage: 2 (about 5 duplicates merged)
+Words (docs): 1497 (6.8x pass 0; budget 1500)  |  Snapshot: story-deflake-the-success-signal-drag-test.review-log.passes/pass3.md, fix diff pass3.fix.diff
+Fixer: all 14 applied, no conflicts; item 3 also names a still-disabled control (the finding's own case); item 9 shortened; unrequested cuts for budget (Description 7.14 hand-off, Scope 1 "code comments", Scope 3 trace and 7.9 notes); `SWALLOW_MS = 300` and `tapPrimary` before `glidesSettled` (success-signal.spec.ts:381-382) confirmed; no commands added or changed.
+### Applied
+- [major] Scope 2 last sentence — "wait change" only for a test-side cause bans item 5's prescribed page-state waits (all four lenses) → fixer item 1
+- [major] Scope 2 Never — bans any code change to the dragged steps and the check functions, so a page-state wait after a drop or a fix inside `expectStep` is barred; protect what is dragged and asserted, not the code → fixer item 2
+- [major] Scope 5 classification — "player-reachable → `src/`" catches behaviour the refs prescribe (AD-12 click swallow `SWALLOW_MS`, a disabled Validate, a running glide; `tapPrimary` taps with no `glidesSettled`) → fixer item 3
+- [major] Scope 4/6 — pass 2 item 6 fixed only in the AC: a counted-run or item 6 ×5 failure of D-64's/D-71's test after this ticket changed a helper it calls is still tolerated/unrouted → fixer item 4
+- [major] Scope 6 — "a new or changed helper gets an `e2e/helpers.spec.ts` case" cannot be met for spec-local functions (`validateAndRetarget`, `expectStep`), which helpers.spec.ts cannot import → fixer item 5
+- [major] Scope 5 modes — an injection failing in another step would open a new mode (forcing the no-cause stop) or count against the 0/N with the fix → fixer item 6
+- [major] Scope 5 proof — CPU throttling is a load condition, not a mechanism, so "cause found" and "an injection shows the mode but no cause" overlap; ≥1/20 then 0/20 passes a no-op fix about a third of the time at a 5 % rate → fixer item 7
+- [major] Scope 4 vs 5 — unclear whether a candidate fix failing its injection proof is "a failure after a fix" (stop, no second attempt) or development iteration → fixer item 8
+- [minor] Scope 4/AC — a tap-only R-73 failure falls under "any other test … stops" and is never evidence for this ticket → fixer item 9
+- [minor] Scope 5 — with two modes, whether a proven fix for one still lands when the other stops → fixer item 10
+- [minor] Scope 3 — "(not dispatched, or dispatched late)" narrows the evidence (`expectStep` reads the stored Session; a late save fits too): cut → fixer item 11
+- [minor] Scope 1/2 — "imports" direct vs transitive; item 2's config ban repeats item 1 → fixer item 12
+- [minor] Scope 4 — "at the last commit" forces a code-only commit before the records; 7.10 recorded a tree id → fixer item 13
+- [minor] Scope 3 — the 6.1 tree predates helper/gesture changes (169c6bc … 61f5419); the plan names the 6.1 commit and diffs the failing path → fixer item 14
+### Default applied (technical)
+- Item 2 — timeouts and fixed delays (`waitForTimeout`) cause-gated; page-state waits allowed for any proven cause; the ban protects which steps are dragged and what the checks assert
+- Classification — behaviour no ref prescribes, reachable by a real player → `src/`; input timed into a prescribed window or a running glide → test-side
+- D-64/D-71 — after this ticket changes a helper their test calls, any failure of it (counted, item 6, `test:all`) stops
+- Item 6 — `e2e/helpers.spec.ts` case only for `e2e/helpers/` functions; spec-local changes rely on the ×5 repeats
+- Modes — opened only by uninjected runs; 0/N with the fix means no failure of any kind
+- Proof — load injections (CPU throttling) show a mode but never prove a cause; probabilistic threshold ≥5/20 without, 0/20 with
+- Injection-proof runs are development runs; item 4's void rule applies from the first after-fix item 4 run
+### Dropped
+- Never-reproduces requires hypotheses for the 6.1 mode (adversarial, stretch) — item 3 already starts from that sighting; over-budget addition
+- 7.14 builds first (entry 14 `after = [10]`) — orchestrator's tickets.toml concern; noted in the result
