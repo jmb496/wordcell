@@ -1,6 +1,6 @@
 # Review log — story-deflake-the-success-signal-drag-test.md (ticket 7.13)
 
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 220 words, copy `story-deflake-the-success-signal-drag-test.review-log.passes/pass0.md` (HEAD 95b454c).
 
@@ -97,3 +97,31 @@ Fixer: all 14 applied, no conflicts; item 3 also names a still-disabled control 
 ### Dropped
 - Never-reproduces requires hypotheses for the 6.1 mode (adversarial, stretch) — item 3 already starts from that sighting; over-budget addition
 - 7.14 builds first (entry 14 `after = [10]`) — orchestrator's tickets.toml concern; noted in the result
+
+## Pass 4 — 2026-11-03
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late bar)  |  Findings: major 5, minor 9, decision-needed 0  |  Dropped in triage: 4 (about 6 duplicates merged)
+Words (docs): 1493 (6.8x pass 0; budget 1500)  |  Snapshot: story-deflake-the-success-signal-drag-test.review-log.passes/pass4.md, fix diff pass4.fix.diff
+Fixer: all 13 applied, no conflicts; item 4 drops the "(neither half)" tag; item 13 applied within budget; no commands added or changed.
+### Applied
+- [major] Scope 5 classification — "into a running glide is test-side" contradicts AD-14 ("Input during an animation completes it and acts on the settled state", spine :704); a Validate tap lost mid-glide would be hidden by a `glidesSettled` wait → fixer item 1
+- [major] Scope 2 — "page-state waits may fix any proven cause" contradicts item 5's `src/` outcome (no test fix) → fixer item 2
+- [major] Scope 4 — the void rule starts at "the first after-fix item 4 run", so an uninjected failure in item 6's ×5 runs before it permits the forbidden second attempt → fixer item 3
+- [major] Scope 5 outcomes — no route for a mechanism injection showing the mode below the proof threshold, nor for a proven test-side cause whose candidate fix never passes its proof → fixer item 4
+- [major] Scope 5 modes — "seen in an uninjected run" / "any `test:all`" can include historical sightings (6.1, 7.9 "drag step"), so the never-reproduces close could never be reached → fixer item 5
+- [minor] Scope 5 — "the AD-12 click swallow" → R-65 (the spine's AD-12 text has no swallow; click-swallow.ts cites R-65) → fixer item 6
+- [minor] Scope 5 — owner asked "only if the fix would change what the player sees or does" catches every `src/` fix; → "would change prescribed behaviour" → fixer item 7
+- [minor] Scope 5 — cut "(the `doubleTap` precedent)" (D-71 failed despite CDP stamps) → fixer item 8
+- [minor] Scope 1 — the parenthetical reads as complete (omits `blocking.ts`, `restore.ts`): "e.g." → fixer item 9
+- [minor] Scope 6 — "a helper a `*.screens.spec.ts` imports" → "a module" → fixer item 10
+- [minor] AC — "the item 5 outcome that applies" → "each item 5 outcome that applies" (several modes) → fixer item 11
+- [minor] Scope 3 — "Only this sighting's failing step is known (7.9 plan :108: "drag step"; others none)" self-contradicts → reword → fixer item 12
+- [minor] Scope 4/AC — a later change re-runs item 4 but not `test:all` (7.10 re-ran both per tree) → fixer item 13 (only with offsetting cuts)
+### Default applied (technical)
+- Void rule — a candidate fix may be revised until its injection proof passes; from its first uninjected run on, any failure voids
+- Modes and never-reproduces — counted over this build's uninjected runs and `test:all` only; historical sightings are starting evidence
+- Unrouted cases — a sub-threshold injection, or a cause found with no proven fix, takes the no-cause outcome
+### Dropped
+- Tap-only failure after a shared-function change should void the fix (edge, minor) — the plan already stops short of `built`; over budget
+- Diff `playwright*.ts` against the 6.1 tree (adversarial, minor) — adds words; evidence procedure belongs in the plan
+- "directly imports at the baseline" (adversarial, minor) — adds words; unlikely
+- Item 4 "no outcome" stretch duplicates — merged into items 3–5
