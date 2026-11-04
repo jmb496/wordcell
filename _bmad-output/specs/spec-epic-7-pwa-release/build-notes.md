@@ -20,7 +20,10 @@ offline/update behaviour is an owner question instead (SPEC Open Questions).
 - `src/shell/dictionary.svelte.ts` already branches on `navigator.serviceWorker?.controller` for
   Q-42 (shell Vitest only, epic 3); CAP-5 adds the Playwright proof, no code change expected.
 - `scripts/size-budget.mjs` (`SW_KEY = 'src/shell/sw.ts'`) excludes the `sw.ts` static closure
-  once a dynamic import edge to it exists; with no edge it counts everything.
+  once a dynamic import edge to it exists; with no edge it counts everything. Since CAP-6 (ticket
+  7.8) it also fails when the manifest has a `src/shell/sw.ts` key that no dynamic import from the
+  entry reaches ("size-budget: manifest key src/shell/sw.ts is reached by no dynamic import from
+  the entry"); counting is unchanged (amended 2026-11-04, epic 7 entry 11, D-50).
 - `e2e/pwa/build-output.spec.ts:40` asserts no registration anywhere in the build; CAP-6 narrows
   it.
 - `package.json` `version` `0.0.0`, no `dependencies` block; `workbox-window` 7.4.1 is installed
@@ -52,7 +55,8 @@ offline/update behaviour is an owner question instead (SPEC Open Questions).
   slot (installing, waiting or active); a replacement, or an activated worker later superseded by
   one that went straight to `active`, is not a failure (shell Vitest `AD-16` names that case). Absent `navigator.serviceWorker` (F5) is checked here, so
   never in dev. The attempt promise always resolves, after setting `failed`. In hook builds
-  (`import.meta.env.DEV || VITE_TEST_HOOKS === '1'`) `sw.ts` reports it with `reportError(new
+  that load `sw.ts` (`VITE_TEST_HOOKS === '1'`; `sw.ts` never loads in dev, F3, so the `DEV ||`
+  stays only on the hook install in `test-hook.ts`; amended 2026-11-04, epic 7 entry 11, D-62) `sw.ts` reports it with `reportError(new
   Error(...))`, which reaches the AD-15 `error` handler and halts the store, so the tail's
   `halted()` check skips persistence; a redundant install reported later from a listener (after
   the attempt settled) halts the page too, but after persistence was requested. In production persistence is requested after a failed attempt. No
@@ -109,10 +113,9 @@ offline/update behaviour is an owner question instead (SPEC Open Questions).
 
 - Playwright Chromium runs service workers by default (`serviceWorkers: 'allow'`); `page.route`
   does not see worker-served responses, `context.route` sees requests the worker makes.
-  `block` replaces `navigator.serviceWorker.register` with a stub resolving `undefined`, so
-  `workbox-window`'s `register()` rejects (a Q-40 failure): `block` only in `dist-smoke` specs,
-  where it is silent; `dist-smoke.spec.ts` mixes `block` specs and new `allow` cases, so it sets
-  the mode per `test.describe` with `test.use({ serviceWorkers })`, never at file level. Audit every existing `pwa` and `dist-smoke` spec that routes and reloads; a
+  As built no spec sets `block`: the `dist-smoke` specs run in Playwright's default worker mode,
+  and only `dist-smoke.spec.ts`'s describe `F6 serviceWorkers allow` sets `allow`, per
+  `test.describe` with `test.use({ serviceWorkers })`, never at file level (amended 2026-11-04, epic 7 entry 11, D-43). Audit every existing `pwa` and `dist-smoke` spec that routes and reloads; a
   `pwa` spec keeps `allow` and routes with `context.route` set before the first `goto`, or, for
   a non-precached URL only, waits for `precacheComplete()` before a routed reload (a controlled
   page answers precached URLs from the cache, so routes never fire), or, for a precached URL,
@@ -120,8 +123,10 @@ offline/update behaviour is an owner question instead (SPEC Open Questions).
   still holds. Every audited spec that routes asserts its handler was hit. `context.route` never
   sees an updated worker's main-script fetch (microsoft/playwright#14711; unverified for 1.63),
   so `/sw.js` changes and absences use F8's static server (`e2e/helpers/static-server.ts`: copy a
-  build dir, swap or remove files, serve with the query string ignored (B's install fetch of
-  `index.html?__WB_REVISION__=…` gets the file); a missing path gets `index.html` only when
+  build dir, swap or remove files, serve resolving by pathname with the query string ignored, by
+  design: Workbox 7.4.1 fetches precache entries by plain URL, `__WB_REVISION__` only in the cache
+  key, so there is no `?__WB_REVISION__` install fetch; the update spec uses no `context.route`,
+  `page.route` or CDP route; amended 2026-11-04, epic 7 entry 11, D-63); a missing path gets `index.html` only when
   `Sec-Fetch-Mode: navigate`, else 404, `/sw.js` included; `e2e/helpers.spec.ts` covers both); `context.route` stays for
   worker-originated precache fetches and page-level requests. Before
   the first install `context.route` also intercepts the worker's precache fetches, so there it
@@ -147,8 +152,11 @@ offline/update behaviour is an owner question instead (SPEC Open Questions).
   and `index.html` with marker B; reload (update check); assert `swState()` `waiting`, marker
   A and the no-prompt check on that single page. With B waiting, open a second page, close one,
   open another: marker A (markers only: the AD-9 pagehide flush of a closing page can show the
-  Q-38 message on another). Close every page of the context, poll until B is activated (e.g.
-  `self.serviceWorker.state` evaluated in the newest of `context.serviceWorkers()`, unverified),
+  Q-38 message on another). With a page still open, identify B's handle as the single `context.serviceWorkers()`
+  entry that is the registration's waiting worker, beside exactly one active worker (A), and
+  install a `statechange` recorder for B in A's scope (`waitingHandle`); close every page of the
+  context, poll until B is activated, reading B's handle and, once it is closed or unreadable
+  (e.g. `Service worker restarted`, D-70), A's record (`activationOutcome`; amended 2026-11-04, epic 7 entry 11, D-63), then
   open one: marker B, `navigator.serviceWorker.controller` non-null, `swState()` polls to
   `active`, no-prompt check. Only if
   Chromium's own activation timing differs, record that in the plan and rely on G3 (SPEC
