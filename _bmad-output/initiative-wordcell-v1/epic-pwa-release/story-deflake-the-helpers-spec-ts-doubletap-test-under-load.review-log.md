@@ -1,6 +1,6 @@
 # Review log — story-deflake-the-helpers-spec-ts-doubletap-test-under-load.md (ticket 7.14)
 
-State: pass 1: done
+State: pass 2: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 279 words, copy `story-deflake-the-helpers-spec-ts-doubletap-test-under-load.review-log.passes/pass0.md` (HEAD 781d38f).
 
@@ -27,6 +27,36 @@ Fixer: all 13 applied, no conflicts; new `## Scope` items 1–6; `npx playwright
 - Edit boundary — `e2e/helpers.spec.ts`, `e2e/helpers/touch.ts`, this ticket's plan; `src/`, Playwright config and other specs out
 - Load counts — isolated ×50 plus three counted android runs, CI unset, retries 0, before and after
 - Changed helper — 7.13 item 6 adapted to `doubleTap`'s callers; spine-sync note, no spine edit
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Pass 2 — 2026-11-03
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 6, minor 9, decision-needed 0  |  Dropped in triage: 0 (about 12 duplicates merged)
+Words (docs): 1500 (5.4x pass 0; budget 1500, reached)  |  Snapshot: story-deflake-the-helpers-spec-ts-doubletap-test-under-load.review-log.passes/pass2.md, fix diff pass2.fix.diff
+Fixer: all 15 applied, no conflicts; cuts to stay in budget (D-64 history pointer moved to References, sightings point to item 3); the hypothesis sentence now reads "without cause found a suspected cause is a recorded hypothesis; without both halves, no edit"; no new literal commands; screens-spec import chains re-checked (none reaches `touch.ts`).
+### Applied
+- [major] Scope 5 outcomes — "Never reproduces" lost 7.13's "neither half / no injection showing the mode", so an injection-only cause can meet both Never reproduces (`built`) and Input-delivery (stop); "else" in Input-delivery unscoped; no "fix lands with both halves even at a natural 0"; Reproduces-without-proof does not cover an injection-only or fix-unproven cause → fixer item 1
+- [major] Scope 2 — the trailing "unless" can be read to release the title, 600 ms `between`, < 400 ms check (AD-17 Touch does not state them), so a stamp limit could be "fixed" by weakening the test; `between` not pinned as the real wait between the taps → fixer item 2
+- [major] Scope 5 thresholds — an injected failure need not be the `[1, 1]` mode to count; "0/N with" undefined (7.13 hardened this) → fixer item 3
+- [major] AC bullet — a caller failing with `doubleTap`'s own "click details of the two taps" report (D-64's test reruns and may be discarded; celebration/history-notice stop the build) is this ticket's mode, not a sibling flake → fixer item 4
+- [major] Scope 4/AC — no rule for other tests failing in uninjected diagnostic or injection runs (7.13's diagnostic had 5 unrelated failures) → fixer item 5
+- [major] Scope 4/AC — whether a counted run with a D-64/R-73 failure still counts for this test, and what the counted-run "rerun" is → fixer item 6
+- [minor] Scope 4 — later change re-runs only item 4 and `test:all`; 7.13 re-runs items 4–6 → fixer item 7
+- [minor] Scope 6 — `gestures.ts` example wrong: no `*.screens.spec.ts` reaches `touch.ts` (checked at fddd390) → fixer item 8
+- [minor] Scope 3 — the timeStamps are at the 7.10 plan's D-71 row :190 and Fix tickets :204, not :418 → fixer item 9
+- [minor] AC bullet — where a D-64 (A7) or R-73 (D-65, B8 citing 7.13) sighting goes → fixer item 10
+- [minor] Scope 6 vs 1 — a signature change must stay backward-compatible (callers not editable) → fixer item 11
+- [minor] Description — the sighting failed in the helper's `[1, 2]` poll, not the < 400 ms check; which events the two timeStamps were is unknown → fixer item 12
+- [minor] Scope 6 — after a fix, a caller failing in the item 6 ×5 runs has no consequence → fixer item 13
+- [minor] Scope 1/6 — other `touch.ts` functions are editable but item 6 covers only `doubleTap`'s callers → fixer item 14
+- [minor] Scope 5 — mechanism class "stamps not honoured when stale"; a stale-first-tap injection as a second example → fixer item 15
+### Default applied (technical)
+- Scope 2 — the stamp premise counts as AD-17 Touch prescribed for this ticket; the pinned list has no exception; a Chromium stamp limit takes the Input-delivery outcome with a B8 proposal and spine-sync note
+- AC — any test failing with `doubleTap`'s `[1, 2]` report is a sighting of this mode
+- Scope 4 — stop rules cover counted runs and the final `test:all`; diagnostic/injection failures of other tests are recorded only
+- Scope 1 — `touch.ts` edits limited to `doubleTap` and code only it uses
 ### Decision needed (functionality / UX / gameplay)
 - none
 ### Dropped
