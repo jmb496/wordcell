@@ -3,7 +3,7 @@ title: 'Deflake the helpers.spec.ts doubleTap test under load (D-71)'
 type: 'bugfix'
 ticket: 14
 created: '2026-11-03'
-status: 'built'
+status: done
 route: 'oneshot'
 route_source: 'auto'
 baseline_revision: '420e8310e97e4ce42d06675463c7f2057d0d0208'

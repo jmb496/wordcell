@@ -1,15 +1,15 @@
-# Epic pwa-release — handoff after ticket 7.13
+# Epic pwa-release — handoff after ticket 7.14
 
-**Done this session:** 7.13 "Deflake the success-signal drag test". The test that sometimes failed when a word was dragged into place never failed once in this build's runs: 50 repeats on its own, three full counted runs, 200 runs under heavy parallel load, a slowed CPU, late finger lifts, and the old trace-writing setup. No code changed. The plan records the evidence and the two theories it ruled out (a late finger lift turning the tap into a long press, and the Validate button moving under the tap). A future failure becomes a new fix ticket that cites the plan. The full test suite passed and the ticket is marked done.
+**Done this session:** 7.14 "Deflake the helpers.spec.ts doubleTap test under load". The test helper that simulates a quick double tap sometimes produced two single taps instead. The cause: on this computer the Linux (WSL2) clock jumps back about 1.6 seconds roughly every 32 seconds. The helper set the second tap's time from a clock reading taken before the first tap, so when a jump landed between the taps, Chrome saw them as too far apart to be a double tap. Each tap is now time-stamped when it is sent. The cause was proven both ways: an injected clock jump broke the old helper 5 times out of 5 and the fixed one 0 times out of 5. After the fix: 0 failures in 50 repeats and in 3 full runs, and the full test suite passed. Only test code changed; players see nothing new. The ticket is marked done.
 
-**Nothing needs your input.**
+**Worth knowing:** the same clock jump probably explains the older flaky double-tap test in your backlog (D-64). This fix also covers that test, so its rare failures may stop; the retrospective can judge that.
 
-**Open item:** the plan's list of game files on the failing path leaves out a few files (the overlay module and some engine files). This affects only the plan's write-up, not the result. It goes to the close-out ticket or the retrospective.
+**Why it stopped:** the next ticket, 7.11 (Close-out: documents, audits and device read), is hands-on for you. It needs your read of every Device row on the phone (tailnet preview, `docs/device-testing.md`) and every Desktop row in desktop Chrome, plus your answers or deferrals to the spec's three open questions. The autopilot cannot do those parts.
 
-**Next:** 7.14 "Deflake the helpers.spec.ts doubleTap test under load". After that, 7.11 (close-out) is a hands-on ticket for you, so the autopilot will stop there.
+**Nothing else needs your input.**
 
 **Close-out docs:** none so far this run.
 
-**Resume:** run `.claude/skills/epic-autopilot/scripts/loop.sh epic-pwa-release`.
+**Resume:** run 7.11 with the owner present, for example `bmad-build` on ticket 7.11 in an interactive session. After 7.11 (and 7.12 after the merge), the next step is the epic retrospective.
 
 Digest: `_bmad-output/implementation-artifacts/autopilot/epic-pwa-release-20261030-1141.md`
