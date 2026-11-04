@@ -1,6 +1,6 @@
 # Review loop — ticket 7.11 (Close-out: documents, audits and device read)
 
-State: pass 6: done
+State: pass 7: done
 
 Target: `_bmad-output/initiative-wordcell-v1/epic-pwa-release/story-close-out-documents-audits-and-device-read.md` (docs mode, thorough, max 7)
 Pre-loop: HEAD ff84c95; pass 0 copy `story-close-out-documents-audits-and-device-read.review-log.passes/pass0.md`, 471 words (growth budget ~1180).
@@ -182,3 +182,15 @@ Fixer: all 9 applied; no runnable commands touched.
 - handoff lists rows in a workable order (G1, G2, G3, seeded, by play, Desktop)
 - the Notes authorisation record: who writes it (Phase 1 or orchestrator) and its scope
 - an unfixed fix ticket's row routes to an owner question
+
+## Pass 7 — 2026-11-04 (verify-only)
+Reviewers: fix diff (pass6.fix.diff only)  |  Findings: major 0, minor 2, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1440 (3.06x pass 0)  |  Snapshot: pass6.md (no fix pass)
+### Minors (not applied)
+- AC 2 — "passing test(s) of the row's Test kind" can read as needing a test per listed kind; rows with D (G2) or `postbuild` parts: the plan states those parts are covered by their read and by the row's B test (or reword "a Test kind the row lists (never S for a P7 or B kind)")
+- AC 8 — "the last source commit" is undefined; read as "the tree after which no build source changed, after any fix ticket", with the checklist re-check at HEAD
+
+## Result — converged after 7 passes
+Majors per pass: 15, 10, 9, 6, 6, 2, 0. Decision-needed: none. Technical defaults applied: 20 (passes 1–5).
+Words: 471 → 1440 (3.06x; over the ~1180 budget from pass 2 on, growth from majors; later minors were word-neutral).
+Unapplied minors (for the build's plan): the two pass 7 minors above; pass 6 "Left for the build's plan" (8); pass 5 (3); pass 4 (5); pass 3 (2); pass 2 stretch minors (5).
