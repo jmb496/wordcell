@@ -1,6 +1,6 @@
 # Review loop — ticket 7.11 (Close-out: documents, audits and device read)
 
-State: pass 3: done
+State: pass 4: done
 
 Target: `_bmad-output/initiative-wordcell-v1/epic-pwa-release/story-close-out-documents-audits-and-device-read.md` (docs mode, thorough, max 7)
 Pre-loop: HEAD ff84c95; pass 0 copy `story-close-out-documents-audits-and-device-read.review-log.passes/pass0.md`, 471 words (growth budget ~1180).
@@ -99,3 +99,31 @@ Fixer: all 16 applied; `e2e/nav.spec.ts:163` checked against the file and 7.10 D
 ### Left for the build's plan (minor)
 - handoff marks each row's blocking Phase 1 fix ticket
 - reinstated Optional rows route as Device rows (covered by item 12's AC wording)
+
+## Pass 4 — 2026-11-04
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 6, minor 8, decision-needed 0  |  Dropped in triage: 0 (6 stretch minors left for the plan; duplicates merged)
+Words (docs): 1442 (3.06x pass 0; growth from majors, partly offset by cuts)  |  Snapshot: story-close-out-documents-audits-and-device-read.review-log.passes/pass4.md (fix diff pass4.fix.diff)
+Fixer: all 12 applied; no runnable commands touched.
+### Applied
+- [major] Phase 2 §6.6 — the "no build fix, not a gap" exemption (pass 3 item 5, pass 2 item 6) waives Jared's explicit acceptance SPEC CAP-9 / release-checklist §6.6 require for a fix ticket with no reproduction test → fixer item 1 (exemption cut: 7.13 and any such ticket are gaps with their plan's reason, accepted at the existing owner-wait stop)
+- [major] Phase 1 — only build–SPEC contradictions are routed; entry 11's verify is "No document contradicts the build" → item 2 (build–document contradiction; proposed sync or fix ticket)
+- [major] Owner stop — a §9 answer is recorded only in the epic Notes, never as a Q-id in `docs/game-flow-spec.md` §9, so §6.4/§6.9 have nothing to check → item 3
+- [major] Owner stop / Phase 2 — an approved Owner stop item is never applied or given a checklist line; a Phase 2 "Owner stop item" has no stop → item 4
+- [major] AC 2 — pass 2's cut dropped "the name carries the id" (rule-coverage preamble, CAP-9's check) → item 5
+- [major] AC 1 — the Phase 2 (unverified) tag updates have no checklist line or check → item 6
+- [minor] Owner stop — stop again only when a proposal was written → item 7
+- [minor] Owner stop — "its `after`" → "entry 11's `after`" → item 8
+- [minor] Phase 1 — D-64 identified by title, event log recorded in the plan; "the failing script repeats once" → item 9
+- [minor] Phase 1 — "clean tree" → committed build sources (Jared's Notes edits during the read do not ship) → item 10
+- [minor] Phase 1 — authorisation covers exactly the listed syncs (SPEC CAP-9; build-notes "Close-out document edits (CAP-9)"), not only spine/UX/AGENTS → item 11
+- [minor] Unknown — restore entry 11's verbatim "before the merge" → item 12
+### Default applied (technical)
+- items 1, 3, 4
+### Decision needed (functionality / UX / gameplay)
+- none
+### Left for the build's plan (minor)
+- G4's splash (unverified) tag has no device-testing.md step
+- Phase 1 failure: the handoff still goes out
+- G8 handoff line names F10's measure step
+- a finding needing a Session/history/engine change is an owner question (rule 7)
+- the spine amendment line cites the recorded authorisation
