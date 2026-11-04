@@ -160,7 +160,18 @@ No row lacks a passing test of its kind (pending the runs); no Phase 1 fix ticke
 
 ## Owner-wait note
 
-(Filled at the end of Phase 1: plan `in-progress`; the device-read handoff below; the Owner stop items; the review-minor resolutions; the run results.)
+Plan `status: in-progress`. Phase 1's syncs and coverage map are committed (427bfe6, 7cd8939, fcbb3ac, 7366186, 5d40612, 6701439, plus this note's commit and the F6 capitalisation fix); `npm run test:screens` is green; `npm run test:all` is **not green on a healthy machine**: the WSL root filesystem failed mid-run (below), so the device read waits on a `test:all` rerun after Jared restarts WSL (Owner stop item 11). The handoff, the Owner stop items (1–11) and the review-minor resolutions follow. No finding needs a Session, history or engine change; no §9 or owner question is raised by Phase 1 beyond the Owner stop items.
+
+**Machine fault (2026-11-04, during the first `test:all`).** The WSL Ubuntu root filesystem dropped to emergency read-only (`/dev/sdd on / type ext4 (rw,…,errors=remount-ro,…,emergency_ro)`; `touch /tmp/x` and `touch ~/x` fail with `Read-only file system`; journald logs write failures). `/tmp` and `$HOME` are unwritable; `/mnt/d` (the checkout, NTFS) stays writable. The agent shell tool's `EROFS … /proc/self/fd/21/…output` failures are this fault. Repair is Jared's: `wsl --shutdown` from Windows (ends any running session), then let the distro fsck on restart (or `e2fsck` the `ext4.vhdx`) before any rerun.
+
+**Run results (I/O Matrix), all at the docs-only tree 6701439 + this note (build sources identical to 8a98d45).**
+- Run 1 (subagent, before the fault; log lost with `/tmp`): `lint` clean; `check` 0 errors; unit `Test Files 91 passed (91)`, `Tests 3788 passed (3788)`; `build` `total 560704 / 600000` (margin 39,296 bytes); `test:e2e:dist` `28 passed`; `test:e2e` at test 567/2258 with no failure when the fault killed it; `test:e2e:pwa` not started.
+- Run 2 (orchestrator, `/tmp` read-only): `lint`, `check` pass; unit `Tests 24 failed | 3422 passed` (15 files), every failure an `EROFS`/`ENOENT` under `/tmp` (`mkdtemp '/tmp/…'`, Vite's `/tmp/…/ssr`) or a 5 s timeout behind it. Environmental; not a test result.
+- Run 3 (orchestrator, `TMPDIR` moved to `/mnt/d/CodeProjects/.wordcell-7-11-tmp`, a scratch dir outside the repo): `lint`, `check` pass; unit `Tests 1 failed | 3787 passed (3788)`: `scripts/deploy-check.test.mjs` › verifyDist › "AD-18 each required file missing fails naming it" (`Test timed out in 5000ms`, 6033 ms; it copies a temp `dist` per case, now on drvfs). No `test:all` repeat (Matrix: not D-64). Diagnostic only: the file alone passes, `Tests 30 passed (30)`. Skipped scripts run alone: `build` pass (`total 560704 / 600000`); `test:e2e:dist` `2 failed, 26 passed`: `dist-smoke.spec.ts:132` "R-87 hook-free build: a real win plays and a press skips it to the expanded end sheet" and `:166` "R-87 hook-free build: a real win plays and back skips it to the expanded end sheet, the app still open" (both passed in run 1 on the same build sources); `test:e2e` stopped by PID after 81 failures and no pass in the first ~150 of 2258, all ~30 s timeouts in basic specs (e.g. `app-shell.spec.ts:5` "AD-16 the dev head carries the title, theme colour and viewport…", `blocking.spec.ts` §2/AD-15 cases): Chromium and the dev server run with an unwritable `$HOME` and root, so these are the fault, not the build; `test:e2e:pwa` not run (stopped with the script). Every process the runs started was stopped by PID; none remain.
+- `npm run test:screens` (Docker container, started Docker Desktop for it): pass, `68 passed, 40 skipped` (the skips are the `android`-only screenshot specs under `desktop`), exit 0. Run with package.json's exact `docker run` arguments through `docker.exe` with `-v D:\CodeProjects\wordcell:/work`, because the WSL docker CLI cannot attach on the read-only distro.
+- Fix-ticket proposals: none. Every failing title is explained by the machine fault (the same build sources passed them in run 1, or the file passes alone); a code fix ticket would be a guess. If a title still fails after the WSL repair, it becomes a fix-ticket proposal then.
+
+**To resume (owner, then orchestrator):** repair WSL (Owner stop item 11); run `npm run test:all` on the healthy machine and record it here per the I/O Matrix; when green (or each failure recorded per the Matrix), hand Jared the device read below.
 
 ### Device-read handoff (in this order)
 
@@ -191,6 +202,8 @@ Added by the build (bmad-architecture Reviewer Gate on the amendments, 2026-11-0
 8. S:866-867 AD-17 Reading state lists the `swState()` values but not their precedence. As built (`sw.ts` `recompute`; SPEC CAP-1): `failed` once set this launch, else the registration's waiting → `waiting`, else installing → `installing`, else active → `active`, else `unregistered`. Proposed: add that sentence after the value list.
 9. S:316-318 AD-7 Store: "`storage.ts` … the only module that touches `localStorage`" names neither `navigator.storage` (AD-1 scan, item 7) nor its one non-store caller (item 16). Proposed: "… the only module that touches `localStorage` and `navigator.storage`; called by the shell stores and, for `requestPersistence()` only, by `main.ts`'s boot tail (AD-16)."
 10. Item 2 above, confirmed by two lenses: S:758-759 AD-15 "reach this handler only in dev and test builds" now sits beside AD-16's as-built "reported … only in `VITE_TEST_HOOKS=1` builds" (S:797-798, item 1). Not a contradiction in effect (dev never loads `sw.ts`), but the wording differs; the proposed sync of item 2 (spine and AGENTS.md rule 6, which is outside the managed block) stands.
+Added by the orchestrator (step 3 Verify, 2026-11-04):
+11. Machine, not document: the WSL root filesystem is in emergency read-only mode (Owner-wait note, Machine fault). Jared restarts WSL (`wsl --shutdown`, fsck on restart) and then `npm run test:all` is rerun before the device read; the device read itself (`scripts/device-preview.mjs`) also needs a writable machine.
 
 ### Review-log minors (ticket review log, Result) and their resolution
 
@@ -212,6 +225,8 @@ Phase 1 run, 2026-11-04, `/mnt/d` checkout, branch `pwa-release`, Node 24. Commi
 - AC 3: `git diff 8a98d45 HEAD --stat` also lists `_bmad-output/implementation-artifacts/autopilot/epic-pwa-release-20261030-1141.md` and `epic-pwa-release-handoff.json`, changed by the orchestrator's 226e7d4 before this run started; `git diff 226e7d4 HEAD --stat` (this run's commits) lists only the Code Map targets, their two `.memlog.md` files, the epic file and this plan.
 - Rule-coverage map re-checked at 5d40612: every file:line above holds a test title carrying one of its row's ids (`grep`/`sed` per entry; test sources unchanged since 8a98d45). `git diff 4130fb4 HEAD -- src/engine` is empty; `SESSION_VERSION`/`HISTORY_VERSION` untouched.
 
+- Orchestrator, step 3 Verify (resumed after the subagent's tool failure): diff since 8a98d45 read in full; it touches only the Code Map targets, their two `.memlog.md` files, the epic file, this plan and 226e7d4's two autopilot files. One fix: SPEC F6's sync sentence started lowercase ("with a comment. as built …"), capitalised in its own commit. Review-log Result counts checked against the resolutions below (pass 2: 5, pass 3: 2, pass 4: 5, pass 5: 3, pass 6: 8, pass 7: 2): each has a line. With the shell tool down, commands ran through the Monitor tool; long runs were started with `wsl.exe` from Windows (scripts and logs in the git-ignored `.autopilot/manual-7-11/`: `run-test-all.sh`, `run-skipped.sh`, `run-screens.sh`, `test-all-readonly-tmp.log`, `test-all.log`, `skipped-*.log`, `diag-deploy-check.log`, `test-screens.log`) with a Linux-only `PATH` (a profile-less `wsl.exe` shell otherwise resolves Windows npm). Phase 1 stops here: no step-04 review, plan stays `in-progress` (ticket Phase 1, owner instruction).
+
 ## Plan Change Log
 
 ## Review Triage Log
@@ -230,3 +245,7 @@ Phase 1 run, 2026-11-04, `/mnt/d` checkout, branch `pwa-release`, Node 24. Commi
 - `npm run test:all` -- expected: exit 0 (failures per the I/O Matrix).
 - `npm run test:screens` -- expected: exit 0.
 - `git status --porcelain` -- expected: empty after the last commit.
+
+## Auto Run Result
+
+Status: `in-progress` (Phase 1 owner stop). Syncs 1–27 applied and committed; rule-coverage map re-checked; `npm run test:screens` pass (68 passed, 40 skipped by design); `npm run test:all` not green: the WSL root filesystem went emergency read-only mid-run, and the failing titles recorded in the Owner-wait note are explained by that fault (the same build sources passed in run 1, or the file passes alone). Next: Jared repairs WSL (Owner stop item 11), `test:all` is rerun, then the device-read handoff goes out. No push, no merge.
