@@ -1,6 +1,6 @@
 # Review loop — ticket 7.11 (Close-out: documents, audits and device read)
 
-State: pass 5: done
+State: pass 6: done
 
 Target: `_bmad-output/initiative-wordcell-v1/epic-pwa-release/story-close-out-documents-audits-and-device-read.md` (docs mode, thorough, max 7)
 Pre-loop: HEAD ff84c95; pass 0 copy `story-close-out-documents-audits-and-device-read.review-log.passes/pass0.md`, 471 words (growth budget ~1180).
@@ -154,3 +154,31 @@ Fixer: all 13 applied; `test:all` chain checked in package.json; no runnable com
 - frontmatter `after` kept in step with tickets.toml entry 11 `after`
 - Phase 2 re-syncs after the read: the Notes record states the authorisation's scope; beyond it they are owner-wait items
 - owner-wait note tells Jared an accepted §6.6 gap carries into entry 12's Done when 1 waiver
+
+## Pass 6 — 2026-11-04
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 2, minor 9, decision-needed 0  |  Dropped in triage: 0 (8 minors left for the plan; duplicates merged)
+Words (docs): 1440 (3.06x pass 0)  |  Snapshot: story-close-out-documents-audits-and-device-read.review-log.passes/pass6.md (fix diff pass6.fix.diff)
+Fixer: all 9 applied; no runnable commands touched.
+### Applied
+- [major] AC 2 — the rule-coverage map accepts any passing test carrying one of the row's ids, so a P7 row could close on a shell Vitest `AD-n` test (preamble: S is never rule coverage) → fixer item 1 (test of the row's Test kind)
+- [major] Phase 2 §6.6 — "lists 7.13 as no fix shipped and each fix … as a gap" parses two ways (7.13 as a gap brings back the waiver) → item 2 (reordered; fix-less tickets listed with 7.13)
+- [minor] Owner stop — pass 5's cut reverted pass 4 item 8 ("its `after`") → item 3
+- [minor] Unknown — pass 5's cut reverted pass 4 item 12 (verbatim "land before the merge") → item 4
+- [minor] Phase 1 — D-64 never runs under `test:screens` (playwright.screens.config.ts testMatch) → item 5 ("its `test:all` run repeats once in full")
+- [minor] Phase 1 — authorisation scope "(above and CAP-9)" sits before the Phase 2 tag edits → item 6 ("(Description and CAP-9)")
+- [minor] AC 4 — §6.9 covers every owner question in the plan, not only the read's → item 7 ("raised in this plan")
+- [minor] AC 4 — G3's footers carry no commit; F12 says "builds carrying the fix" → item 8
+- [minor] AC 8 — "Phase 2's last commit" is circular (it records the runs) → item 9 ("the last source commit")
+### Default applied (technical)
+- none new
+### Decision needed (functionality / UX / gameplay)
+- none
+### Left for the build's plan (minor)
+- device-read-only behaviour-stating §9 answer: the owner question names the choices (answer worded without testable behaviour, or a §6.4 gap beyond release-checklist's allowance, which needs a checklist change)
+- a fix ticket closing without a fix for a row with no §9/owner route: list it as fix-less in §6.6 and raise an owner question
+- `test:all` `&&` chain: the plan records scripts that did not run after a failure and runs them before the handoff
+- new §9 Q-id also updates the §9 heading range and spec version note
+- Jared records (unverified) marks in the epic Notes
+- handoff lists rows in a workable order (G1, G2, G3, seeded, by play, Desktop)
+- the Notes authorisation record: who writes it (Phase 1 or orchestrator) and its scope
+- an unfixed fix ticket's row routes to an owner question
