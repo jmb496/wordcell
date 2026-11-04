@@ -1,6 +1,6 @@
 # Review loop — ticket 7.11 (Close-out: documents, audits and device read)
 
-State: pass 2: done
+State: pass 3: done
 
 Target: `_bmad-output/initiative-wordcell-v1/epic-pwa-release/story-close-out-documents-audits-and-device-read.md` (docs mode, thorough, max 7)
 Pre-loop: HEAD ff84c95; pass 0 copy `story-close-out-documents-audits-and-device-read.review-log.passes/pass0.md`, 471 words (growth budget ~1180).
@@ -70,3 +70,32 @@ Fixer: all 16 applied; build-notes lines checked at ff84c95; 7.8 plan Implementa
 - digest retrospective items (D-64 backlog entry, tickets.toml entries 13/14 pre-review wording, flaky-test close rules) not listed in the handoff
 - mixed rule-coverage rows (offline row D (G2), AD-18 `postbuild` part) need G2 / `size-budget.test.mjs` titles in the map
 - G8 failure follows F10 (measure first, then fix ticket)
+
+## Pass 3 — 2026-11-04
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 9, minor 9, decision-needed 0  |  Dropped in triage: 0 (2 minors left for the plan; duplicates merged)
+Words (docs): 1409 (2.99x pass 0; additions offset by cuts: spine/UX/AGENTS lists now cite SPEC CAP-9, which names them; Notes section removed)  |  Snapshot: story-close-out-documents-audits-and-device-read.review-log.passes/pass3.md (fix diff pass3.fix.diff)
+Fixer: all 16 applied; `e2e/nav.spec.ts:163` checked against the file and 7.10 D-64; no new runnable commands.
+### Applied
+- [major] Phase 1 — the owner's 2026-11-04 run authorisation is claimed "recorded in the epic Notes" but is not there → fixer item 1 (Phase 1 records it in the epic Notes before the first sync commit)
+- [major] Phase 1 — D-64 rule: "noted there" points at a backlog entry that does not exist; a second D-64 failure has no outcome → item 2 (default applied: sighting with event log in the plan (A7), one repeat; a second D-64 failure stops the plan for Jared)
+- [major] Phase 2 — fix tickets from the final runs land after the audits with no delta re-confirmation / §6.6 listing / F12 → item 3
+- [major] Owner stop — every behaviour-stating §9 answer joins the §6.4 audit, not only change-needing ones → item 4
+- [major] Phase 2 — §6.6 listing of a docs-only CAP-7 fix ticket → item 5 (default applied: "no build fix" with its plan's reason, not a gap)
+- [major] Owner stop — the agent turn after Jared's read (writing proposals, committing his Notes records, landed-diff row check) is undefined → item 6 (default applied)
+- [major] AC / Phase 2 — a sync line made stale by a landed fix has no route → item 7 (default applied: re-synced under the same authorisation when it only records the landed build; otherwise an Owner stop item)
+- [major] Phase 1 — "a build contradicting the SPEC is a fix ticket" contradicts the listed SPEC F6/F8 syncs → item 8
+- [minor] Phase 2 — build-notes :213/:216 need the ff84c95 anchor → item 9
+- [minor] Phase 2 — a wording-only differs drops its tag → item 10
+- [minor] AC 5 — "landed before `built`" → item 11
+- [minor] AC 4 — reinstated Optional rows → item 12
+- [minor] Description — "closes this epic's rule-coverage rows" means mapping in the plan → item 13
+- [minor] handoff — G7–G17 have no device-testing.md command → item 14
+- [minor] Description — F8 sync source is the as-built test (7.3 Residual risks, 7.10 D-70) → item 15
+- [minor] Notes — redundant bullet → item 16
+### Default applied (technical)
+- items 1, 2, 5, 6, 7
+### Decision needed (functionality / UX / gameplay)
+- none
+### Left for the build's plan (minor)
+- handoff marks each row's blocking Phase 1 fix ticket
+- reinstated Optional rows route as Device rows (covered by item 12's AC wording)
