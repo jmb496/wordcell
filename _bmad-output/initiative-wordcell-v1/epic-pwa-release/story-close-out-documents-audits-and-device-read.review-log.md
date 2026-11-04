@@ -1,6 +1,6 @@
 # Review loop — ticket 7.11 (Close-out: documents, audits and device read)
 
-State: pass 4: done
+State: pass 5: done
 
 Target: `_bmad-output/initiative-wordcell-v1/epic-pwa-release/story-close-out-documents-audits-and-device-read.md` (docs mode, thorough, max 7)
 Pre-loop: HEAD ff84c95; pass 0 copy `story-close-out-documents-audits-and-device-read.review-log.passes/pass0.md`, 471 words (growth budget ~1180).
@@ -127,3 +127,30 @@ Fixer: all 12 applied; no runnable commands touched.
 - G8 handoff line names F10's measure step
 - a finding needing a Session/history/engine change is an owner question (rule 7)
 - the spine amendment line cites the recorded authorisation
+
+## Pass 5 — 2026-11-04
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 6, minor 8, decision-needed 0  |  Dropped in triage: 0 (3 minors left for the plan; duplicates merged)
+Words (docs): 1442 (3.06x pass 0; additions offset by cuts)  |  Snapshot: story-close-out-documents-audits-and-device-read.review-log.passes/pass5.md (fix diff pass5.fix.diff)
+Fixer: all 13 applied; `test:all` chain checked in package.json; no runnable commands touched.
+### Applied
+- [major] Phase 1 — no stated plan status at the hand-off to the read (pass 2 cut "stops `in-progress` … not `built`") → fixer item 1
+- [major] Phase 1 — the authorisation's parenthetical (SPEC CAP-9; build-notes "Close-out document edits") omits syncs the Description requires (D-48 `allowJs`, SPEC F6/F8/F12, step 6, build-notes lines, G9) → item 2 ("(above and CAP-9)")
+- [major] Phase 1 — `test:all` is an `&&` chain; repeating only "the failing script" leaves later scripts unrun → item 3 (default applied: the failing `test:all`/`test:screens` run repeats once in full; another title failing alongside D-64 takes the fix-ticket route)
+- [major] Owner stop — the F12 re-read list depends on a field no fix plan produces → item 4 (agent judges rows from each landed diff on resume, listed in the plan)
+- [major] Phase 2 §6.6 — 7.13 shipped no fix, so listing it as a "fix with none" gap forces an unneeded waiver (release-checklist §6.6 "a fix with none") → item 5 (7.13 "no fix shipped"; a fix ticket shipping a fix without a reproduction test stays a gap Jared accepts — pass 4's major stays resolved)
+- [major] Owner stop — a behaviour-stating §9 answer only a device read can show (A-A11) has no route through §6.4 → item 6 (agent proposes a fix ticket for a test carrying the Q-id; device-only behaviour is an owner question at that stop)
+- [minor] Owner stop — stop again also when a row is unresolved → item 7
+- [minor] AC 1 — new §9 Q-ids get a checklist line → item 8
+- [minor] Owner stop — "applies each approved Owner stop sync" (a fix-ticket item routes as a proposal) → item 9
+- [minor] AC 2 — "one of the row's ids" → item 10
+- [minor] Description — "as-built source" → "source" (F12/step 6 cite the epic Notes) → item 11
+- [minor] Phase 1 — "build- or read–document contradiction" → item 12
+- [minor] Owner stop — "a differs needing a script or procedure change" → item 13
+### Default applied (technical)
+- items 3, 4, 5, 6
+### Decision needed (functionality / UX / gameplay)
+- none
+### Left for the build's plan (minor)
+- frontmatter `after` kept in step with tickets.toml entry 11 `after`
+- Phase 2 re-syncs after the read: the Notes record states the authorisation's scope; beyond it they are owner-wait items
+- owner-wait note tells Jared an accepted §6.6 gap carries into entry 12's Done when 1 waiver
