@@ -1,6 +1,6 @@
 # Review log — story-deflake-the-success-signal-drag-test.md (ticket 7.13)
 
-State: pass 6: done
+State: pass 7: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 220 words, copy `story-deflake-the-success-signal-drag-test.review-log.passes/pass0.md` (HEAD 95b454c).
 
@@ -175,3 +175,24 @@ Fixer: all 9 applied, no conflicts; other "R-73 failure" uses left, now defined 
 ### Dropped
 - Isolated command grep `"Success signal"` for a tap-only fix (edge, adversarial minors) — changes a literal command; the counted runs and item 6's ×5 cover the tap-only test; for the plan
 - Void-revert triggers no re-run; new `e2e/helpers/` export spine-sync note; diff `playwright*.ts` against the 6.1 tree; `test:screens` condition vs DoD (adversarial minors) — plan procedure or technical default kept
+
+## Pass 7 — 2026-11-03 (verify-only)
+Reviewers: fix diff (pass 6 diff only)  |  Findings: major 1, minor 1, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1500 (6.8x pass 0; budget 1500)  |  Snapshot: pass6.md (no fix pass)
+### Open (not fixed, verify-only pass)
+- [major] Scope 4 void rule — pass 6's "(any run but a pre-proof injection)" makes the without-fix half of item 5's proof, which must fail and which item 4 re-runs after any later change ("re-runs items 4–6"), void and revert a valid fix → proposed: "(with the fix, pre-proof injections aside)" or equivalent: only runs with the fix applied count
+- [minor] Scope 5 — the pass 6 cut of "(proven fixes for other modes still land)" leaves pass 3 item 10's answer only implied; e.g. "else only that mode takes the Reproduces outcome"
+
+## Result — capped at 7 passes (open majors: Scope 4 void rule counts the post-proof without-fix injection runs)
+Majors per pass: 8, 8, 8, 5, 5, 5, 1. Words 220 → 1500 (budget 1500). Decision-needed: none. Technical defaults applied: about 40 (see each pass).
+Persisting area: the outcome-routing rules of Scope items 4–5 (modes, proof halves, void rule, which tests count) kept yielding contract majors from passes 4–6 as each fix exposed a neighbouring case; no ref defines a flake-close protocol (7.10 items 5–6 and the D-70 precedent are the nearest), so the ticket carries it alone at the word budget.
+
+Unapplied minors (for the build's plan or a later loop):
+- Scope 5 — restore "proven fixes for other modes still land" for a mode that does not recur (pass 7)
+- Scope 4 — isolated command greps only the drag test; a tap-only mode's fix gets no isolated 0/50 (passes 6) — plan: also run `-g "tap-only move" --repeat-each=50`
+- Scope 4 — a void-revert to the baseline triggers no re-run (pass 6, plan default)
+- Scope 3 — diff `playwright*.ts` as well as the failing path against the 6.1 tree; 6.1 tree likely 03824f1 (passes 4–6)
+- Scope 3 — F-13 and the 6.1 log are probably one sighting; counted android-only runs are lighter than `test:all` load (pass 5)
+- Plan — record `git diff` after each injection revert; record any new `e2e/helpers/` export as an entry-11 AD-17 Touch spine-sync note (passes 5–6)
+- Scope 4 — tap-only failure after a shared-function change voids the fix (now covered by "any R-73 failure"; confirm in plan)
+- Orchestrator — sync tickets.toml entry 13 (description, verify, references) to the ticket and add 13 to entry 14's `after` plus the touch.ts / helpers.spec.ts hand-off note (passes 1–4)
