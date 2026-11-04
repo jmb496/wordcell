@@ -106,7 +106,7 @@ import { SESSIONS } from './helpers/sessions';
 import { type Copy, copy } from './helpers/static-server';
 import { armStorageSpy, storageWrites } from './helpers/storage-spy';
 import { tokenColor } from './helpers/style';
-import { doubleTap, longPress, touchDrag, touchHold } from './helpers/touch';
+import { DOUBLE_TAP_GAP_MS, doubleTap, longPress, touchDrag, touchHold } from './helpers/touch';
 
 // AD-17 helper self-tests. The direct `page.evaluate` writes to `wordcell:*` below stand in for the
 // app's own writes during a prior load; they are not seeding and are allowed only in this file.
@@ -1122,6 +1122,39 @@ test.describe('touchDrag / longPress / touchHold / doubleTap', () => {
       expect(Math.abs(e.clientX - at.x)).toBeLessThanOrEqual(1);
       expect(Math.abs(e.clientY - at.y)).toBeLessThanOrEqual(1);
     }
+  });
+
+  test('AD-17 doubleTap stamps the second tap from the wall clock at its dispatch, so a 150 ms step only Node sees moves it 150 ms on the page', async ({
+    page,
+  }) => {
+    const at = { x: 200, y: 400 };
+    const step = 150;
+    await page.goto('/');
+    await installProbe(page);
+    // Chromium reads each stamp against its own wall clock (touch.ts doubleTap): a step both clocks
+    // take cancels, so a step only Node's `Date.now` takes is what shows the second tap's stamp.
+    // After a 300 ms real wait the stepped stamp is still in the past, and a stamp of the bare
+    // dispatch time would sit ~300 ms late.
+    const wallClock = Date.now;
+    try {
+      await doubleTap(page, at, {
+        between: async () => {
+          await page.waitForTimeout(300);
+          Date.now = () => wallClock() + step;
+        },
+      });
+    } finally {
+      Date.now = wallClock;
+    }
+    const events = (await probed(page)).filter((e) => e.type !== 'contextmenu');
+    expect(events.map((e) => e.type)).toEqual([
+      'pointerdown',
+      'pointerup',
+      'pointerdown',
+      'pointerup',
+    ]);
+    const gap = (events[2]?.timeStamp ?? Number.NaN) - (events[1]?.timeStamp ?? Number.NaN);
+    expect(Math.abs(gap - (DOUBLE_TAP_GAP_MS + step))).toBeLessThanOrEqual(2);
   });
 
   test('AD-17 doubleTap that gets no repeat click fails listing the page touch and click events with their timeStamps', async ({

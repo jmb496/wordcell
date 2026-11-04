@@ -85,7 +85,12 @@ type ClickLog = {
 // 400 ms of the first touchEnd on the event clock (measured: 390 ms gives detail 2, 410 ms detail
 // 1). Every event carries a CDP `timestamp`, the second tap DOUBLE_TAP_GAP_MS after the first, so
 // the count does not depend on how late a loaded machine dispatches it (`touchscreen.tap` stamps
-// the dispatch time: under 12 workers real gaps of 500 ms gave detail 1). `between` is the real
+// the dispatch time: under 12 workers real gaps of 500 ms gave detail 1). Chromium reads a stamp
+// against its own wall clock as the event arrives (stamped S ms before arrival, the event's
+// `timeStamp` is S ms before it), so each tap is stamped from the wall clock at its dispatch minus
+// its age on the monotonic clock: a wall-clock step between the taps, which Chromium takes too,
+// leaves the gap at DOUBLE_TAP_GAP_MS (ticket 7.14: WSL2 steps the clock back ~1.6 s every
+// ~32 s; a second stamp taken from the first tap's reading gave detail 1). `between` is the real
 // wait between the taps (default DOUBLE_TAP_GAP_MS). The page's clicks are recorded from the first
 // tap, and the call fails unless they are exactly two, with detail 1 then 2; the failure lists the
 // page's touch and click events with their `timeStamp`s, the CDP stamps (the first in epoch ms)
@@ -113,8 +118,11 @@ export async function doubleTap(
   });
   const session = await page.context().newCDPSession(page);
   const first = Date.now() / 1000;
+  const start = performance.now();
   try {
-    const tap = async (timestamp: number) => {
+    // `at` ms after `first` on the event clock: both events of the tap carry one stamp.
+    const tap = async (at: number) => {
+      const timestamp = (Date.now() - (performance.now() - start - at)) / 1000;
       await session.send('Input.dispatchTouchEvent', {
         type: 'touchStart',
         touchPoints: [{ x: target.x, y: target.y }],
@@ -126,9 +134,9 @@ export async function doubleTap(
         timestamp,
       });
     };
-    await tap(first);
+    await tap(0);
     await between();
-    await tap(first + DOUBLE_TAP_GAP_MS / 1000);
+    await tap(DOUBLE_TAP_GAP_MS);
   } finally {
     await session.detach();
   }
