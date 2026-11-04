@@ -174,3 +174,7 @@ Close-out docs: none
 
 ## Stopped — next ticket needs you
 Stop rule 4: the next ticket, 7.11 (Close-out: documents, audits and device read), is a hands-on (hitl) ticket: it needs your read of the Device and Desktop rows on the phone and in desktop Chrome, and your answers to the spec's open questions.
+
+## Stopped — usage limit
+
+Ticket 7.11 (Close-out: documents, audits and device read), run by the orchestrator in an interactive session under the owner's authorisation. Ticket review converged (7 passes, 8a98d45). Step B (bmad-build-auto, Phase 1) hit the limit mid-plan: "You've hit your 5-hour limit · resets 2:30am (America/New_York)". The build's own plan (`story-close-out-documents-audits-and-device-read-plan.md`, status `in-progress`) is left uncommitted for bmad-build-auto's resume; no sync commits were made. Resume: rerun Step B on 7.11 (same prompt, `.autopilot/manual-7-11/B.prompt`) after the reset; it resumes the in-progress plan.
