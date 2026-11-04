@@ -1,6 +1,6 @@
 # Review loop — ticket 7.11 (Close-out: documents, audits and device read)
 
-State: pass 1: done
+State: pass 2: done
 
 Target: `_bmad-output/initiative-wordcell-v1/epic-pwa-release/story-close-out-documents-audits-and-device-read.md` (docs mode, thorough, max 7)
 Pre-loop: HEAD ff84c95; pass 0 copy `story-close-out-documents-audits-and-device-read.review-log.passes/pass0.md`, 471 words (growth budget ~1180).
@@ -38,3 +38,35 @@ Fixer: all 19 applied; size-budget failure wording checked against scripts/size-
 ### Dropped
 - adversarial: retrospective before merge leaves §6.6 post-merge fixes without a home — speculative; release-checklist step 5 / entry 12 re-confirm post-merge deltas
 - adversarial: `risk: low` should be medium — copied from tickets.toml, no defect in the ticket's contract
+
+## Pass 2 — 2026-11-04
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 10, minor 8, decision-needed 0  |  Dropped in triage: 0 (5 stretch minors left unapplied, listed below; duplicates merged)
+Words (docs): 1396 (2.96x pass 0; over budget, growth from majors only)  |  Snapshot: story-close-out-documents-audits-and-device-read.review-log.passes/pass2.md (fix diff pass2.fix.diff)
+Fixer: all 16 applied; build-notes lines checked at ff84c95; 7.8 plan Implementation Notes (11) exists; no new runnable commands.
+### Applied
+- [major] Owner stop / AC 4 — a "finding" on a readable row has no outcome → fixer item 1
+- [major] AC 4 — §9/owner answer kinds (accepts as-built = pass; needs change = fix ticket + re-read, new Q-id into §6.4; leaves row failing = accepted gap for the Done when 1 waiver) → item 2
+- [major] Owner stop — fix-ticket proposal lacks the rows whose subject it touches (F12 unverifiable) → item 3
+- [major] Phase 1 — no route for a rule-coverage row with no passing test or a build that contradicts the SPEC → item 4 (default applied)
+- [major] Phase 1/2 runs — no rule for an unrelated failing test (D-64 recurrence) → item 5 (default applied: D-64 recorded against its backlog entry, one repeat; other failures a fix ticket, no rerun)
+- [major] Phase 2 §6.6 — a fix ticket that changed no code (7.13) → item 6 (default applied: listed "no fix shipped" with its plan's reason, not a gap)
+- [major] Phase 2 — an audit gap needing Jared's acceptance has no owner stop → item 7
+- [major] Description — build-notes :22-23 sits inside the exempt "As built at 4130fb4" snapshot → item 8
+- [major] Phase 1 — `bmad-project-context` (and spine/UX gate-2 edits) need owner approval in an unattended phase → item 9 (cite the owner's run authorisation as approval of exactly the listed edits; other proposed edits become owner items at the stop)
+- [major] Phase 2 — a "differs" step needing a script change is raised after fix tickets are done → item 10 (route marks at the owner stop; tag kept until the F12 re-read confirms the corrected step)
+- [minor] Description — D-row citations read as G9's sources → item 11
+- [minor] Phase 2 — build-notes line numbers shift after Phase 1 edits → item 12
+- [minor] AC 1 — checklist lines must name source and commit → item 13
+- [minor] AC 8 — final tree when no fix ticket lands → item 14
+- [minor] Phase 1 — clean committed tree for every read and re-read → item 15
+- [minor] References — F4–F16 → item 16
+### Default applied (technical)
+- items 4, 5, 6, 9, 10
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped / left unapplied (stretch minors, over budget; for the build's plan)
+- G4 splash (unverified) tag has no device-testing.md step: list it as its own handoff item
+- G17/G7–G16 have no device-testing.md command: handoff builds them from Seeded reads or play
+- digest retrospective items (D-64 backlog entry, tickets.toml entries 13/14 pre-review wording, flaky-test close rules) not listed in the handoff
+- mixed rule-coverage rows (offline row D (G2), AD-18 `postbuild` part) need G2 / `size-budget.test.mjs` titles in the map
+- G8 failure follows F10 (measure first, then fix ticket)
