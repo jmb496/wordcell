@@ -1,6 +1,6 @@
 # Review log — story-deflake-the-helpers-spec-ts-doubletap-test-under-load.md (ticket 7.14)
 
-State: pass 4: done
+State: pass 5: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 279 words, copy `story-deflake-the-helpers-spec-ts-doubletap-test-under-load.review-log.passes/pass0.md` (HEAD 781d38f).
 
@@ -103,7 +103,6 @@ Fixer: 11 applied, item 7 skipped (budget: ~20 words; unapplied minor); bound wr
 - [minor] Description — "the first tap's stamp was honoured" is unproven (`first` is `Date.now()` just before dispatch) → fixer item 4
 - [minor] Scope 5 — injection bound: one measured limit (second tap's page touchstart minus its stamp ≤ 1700 ms; sighting 1700.1) → fixer item 5
 - [minor] AC — the sighting definition catches `doubleTap`'s own failure self-tests → fixer item 6
-- [minor] Scope 5 — a sighting other than `[1, 1]` is its own mode (7.13 item 5) → fixer item 7
 - [minor] AC — "one rerun" → one full `test:all` rerun → fixer item 8
 - [minor] Scope 5 Never reproduces — "in item 4's runs or `test:all`" vs item 4/6 "any sighting" → "in any run of this build" → fixer item 9
 - [minor] Scope 1 — all of `e2e/helpers.spec.ts` editable; 7.13 limits it to helper cases → fixer item 10
@@ -119,3 +118,30 @@ Fixer: 11 applied, item 7 skipped (budget: ~20 words; unapplied minor); bound wr
 - Scope 5 — the stale-second-tap injection's fix route is deterministic stamping only: plan detail (unapplied minor)
 - Scope 6 — item 6 voids on any caller failure while item 4 voids on sightings: strict reading stands, plan records it (unapplied minor)
 - tickets.toml entry 14 (description "stops for the owner", `after = [10]`, verify) out of sync with the ticket: the orchestrator's sync before the build (unapplied minor)
+- Scope 5 — a sighting other than `[1, 1]` is its own mode (7.13 item 5): sent as fixer item 7, skipped by the fixer for budget (unapplied minor; moved here from Applied at pass 5)
+
+## Pass 5 — 2026-11-03
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (no findings)  |  Findings: major 3, minor 8, decision-needed 0  |  Dropped in triage: 4 (plan detail, see Dropped; 1 duplicate merged; 1 log-only item fixed in the log)
+Words (docs): 1500 (5.4x pass 0; budget 1500)  |  Snapshot: story-deflake-the-helpers-spec-ts-doubletap-test-under-load.review-log.passes/pass5.md, fix diff pass5.fix.diff
+Fixer: all 10 applied; item 1 parenthesis "(this test, `doubleTap` and item 6 cases)"; item 2 "(unless fixed test-side:"; bound written as "within bounds: measured lateness … ≤ the sighting's 1700.1 ms, stamps 80 ms apart, never load alone"; AC "recorded for A7" (SPEC Non-goals cite dropped, kept in the Description).
+### Applied
+- [major] AC sighting definition — pass 4 put "but its failure self-tests" before "(D-64's included)", so D-64's test reads as excluded: a D-64 report failure could get a rerun instead of voiding the fix → fixer item 1
+- [major] Scope 1 vs 6 — `e2e/helpers.spec.ts` limited to "this test, `doubleTap` cases", but item 6 requires a mutation case for a new `touch.ts` export item 1 allows → fixer item 2
+- [major] Scope 5 thresholds — pass 4 dropped "respectively", so a ≥5/20 baseline could be "proven" by 0/5 with the fix (7.13 pairs them) → fixer item 3
+- [minor] Scope 5 classifier — "a listener eating the second click" cannot give detail 1 (`detail` is browser-set; a swallowed click is a missing click) → fixer item 4
+- [minor] Scope 5 bound — count per rep: each `[1, 1]` rep beyond the bound is a threshold measurement and never counts toward 5/5 or ≥5/20 → fixer item 5
+- [minor] Scope 5 — the bound, 80 ms stamps and "never load alone" sit inside the e.g. parenthesis; apply them to any injection → fixer item 6
+- [minor] Scope 2 — "(unfixed test-side:" → "(if not fixed test-side:" → fixer item 7
+- [minor] Scope 3 — run-condition list lacks item 6 runs → fixer item 8
+- [minor] AC — "this test's own checks (pointer events, the < 400 ms gap)" omits pointerType and coordinate checks → fixer item 9
+- [minor] Scope 6 — the ×5 runs omit `doubleTap`'s failure self-tests that pin the report format → fixer item 10
+### Default applied (technical)
+- Beyond-bound counting per rep; injection constraints apply to every injection
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- Review log Pass 4 — "other-mode sighting" listed as Applied though skipped: fixed in this log (moved to Pass 4 Dropped)
+- Scope 5 — a new sighting with greater lateness does not widen the bound: plan detail (unapplied minor)
+- Scope 5 — a single in-bound `[1, 1]` below threshold counts as Reproduces: plan detail (unapplied minor)
+- Scope 5 — "deterministic stamping" needs a concrete meaning since `doubleTap` already stamps: plan detail (unapplied minor)
+- Description — 7.13's uninjected both-project drvfs diagnostic (this test passed) as before-evidence: plan detail (unapplied minor)
