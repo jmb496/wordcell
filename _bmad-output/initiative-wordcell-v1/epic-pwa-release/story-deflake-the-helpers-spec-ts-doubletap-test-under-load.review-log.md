@@ -1,6 +1,6 @@
 # Review log — story-deflake-the-helpers-spec-ts-doubletap-test-under-load.md (ticket 7.14)
 
-State: pass 5: done
+State: pass 6: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 279 words, copy `story-deflake-the-helpers-spec-ts-doubletap-test-under-load.review-log.passes/pass0.md` (HEAD 781d38f).
 
@@ -145,3 +145,29 @@ Fixer: all 10 applied; item 1 parenthesis "(this test, `doubleTap` and item 6 ca
 - Scope 5 — a single in-bound `[1, 1]` below threshold counts as Reproduces: plan detail (unapplied minor)
 - Scope 5 — "deterministic stamping" needs a concrete meaning since `doubleTap` already stamps: plan detail (unapplied minor)
 - Description — 7.13's uninjected both-project drvfs diagnostic (this test passed) as before-evidence: plan detail (unapplied minor)
+
+## Pass 6 — 2026-11-03
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 2, minor 5, decision-needed 0  |  Dropped in triage: 6 (plan detail, see Dropped; about 4 duplicates merged)
+Words (docs): 1500 (5.4x pass 0; budget 1500)  |  Snapshot: story-deflake-the-helpers-spec-ts-doubletap-test-under-load.review-log.passes/pass6.md, fix diff pass6.fix.diff
+Fixer: all 7 applied; Never reproduces reads "no injection (the stale-second-tap one run; load-only included) within the lateness bound reproducing `[1, 1]`"; item 2 "(unless fixed test-side, its B8 proposal …; either way an entry-11 AD-17 Touch spine-sync note)"; recurrence sentence moved after item 5's bullets; cuts: item 4's heavier-load reason, "or a reproduction" in the beyond-bound clause, the References plan-line parenthesis.
+### Applied
+- [major] Scope 5 Reproduces/Never reproduces — since pass 5 "never load alone" is one of the "within bounds" conditions, so a load-only injection (e.g. CPU throttling, or a report-enriching run under load) giving `[1, 1]` is not "in-bound": it neither takes Reproduces nor blocks Never reproduces, and the plan can reach `built` after the mode was shown (7.13 stops there) → fixer item 1
+- [major] Description vs Scope 5 Never reproduces — the ticket says the build "answers why", but Never reproduces is met with no injection run at all, so repeating the known-passing conditions closes it → fixer item 2
+- [minor] Scope 2 — "(unless fixed test-side: B8 proposal …" reads backwards (pass 5 intended "if not"); spine-sync note in both branches → fixer item 3
+- [minor] AC — "with the … report" now reads as describing the excluded self-tests; reorder → fixer item 4
+- [minor] Scope 5 — the recurrence sentence covers only Never reproduces; move it to cover every outcome → fixer item 5
+- [minor] Scope 5 bound — "page touchstart" does not say which tap (the second / later) → fixer item 6
+- [minor] Scope 1 — shared describe helpers in `e2e/helpers.spec.ts` (`installProbe`, `probed`) not stated non-editable, unlike `checkPoints` → fixer item 7
+### Default applied (technical)
+- Load-only or report-enriching injections giving `[1, 1]` within the lateness bound take Reproduces (stop), as in 7.13
+- Never reproduces requires the stale-second-tap injection to have been run and recorded
+- Spine-sync note for a proven stale-stamp limit in both branches
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- Scope 5 bound — clock offset between Node `Date.now()` and page `timeOrigin`; measure second-tap lateness minus first-tap lateness: plan detail (unapplied minor)
+- Scope 5 Input-delivery — whether any test-side remedy can beat a stale-second-tap injection under item 2's pins: plan detail (unapplied minor)
+- Scope 6 — the mutation case may be a new self-test with a longer real gap within the bound: plan detail (unapplied minor)
+- Scope 2 — a permanent extra report field (real dispatch times) with both self-test regexes updated: plan detail (unapplied minor)
+- Scope 4 — after-fix 0/50 and 0/3 run lighter than the sighting; the injection proof carries the claim: plan detail (unapplied minor)
+- Scope 5/3 — "command" for the injection proof and per-rep failure records in injection runs: plan detail (unapplied minor)
