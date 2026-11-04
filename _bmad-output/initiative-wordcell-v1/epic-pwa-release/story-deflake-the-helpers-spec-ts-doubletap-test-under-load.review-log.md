@@ -1,6 +1,6 @@
 # Review log — story-deflake-the-helpers-spec-ts-doubletap-test-under-load.md (ticket 7.14)
 
-State: pass 3: done
+State: pass 4: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 279 words, copy `story-deflake-the-helpers-spec-ts-doubletap-test-under-load.review-log.passes/pass0.md` (HEAD 781d38f).
 
@@ -91,3 +91,31 @@ Fixer: 13 applied, item 13 skipped (no room; the sighting definition covers the 
 - AC Verify — function-level check of `touch.ts` hunks: plan detail, over budget (unapplied minor)
 - Scope 2 — how to measure the stale-stamp threshold (bisect 600–1800 ms): plan detail (unapplied minor)
 - Scope 4 — a dev server already on :5173 reused with CI unset: plan detail (unapplied minor)
+
+## Pass 4 — 2026-11-03
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 3, minor 9, decision-needed 0  |  Dropped in triage: 3 (plan/orchestrator, see Dropped; about 5 duplicates merged)
+Words (docs): 1499 (5.4x pass 0; budget 1500)  |  Snapshot: story-deflake-the-helpers-spec-ts-doubletap-test-under-load.review-log.passes/pass4.md, fix diff pass4.fix.diff
+Fixer: 11 applied, item 7 skipped (budget: ~20 words; unapplied minor); bound written as "≤ the sighting's 1700.1 ms"; "in-bound" also added to the Reproduces bullet; Never reproduces reads "no uninjected sighting in any run of this build"; AC rerun "one full rerun" (covers both `test:all` and counted runs); word-neutral cuts in items 2, 4, 5.
+### Applied
+- [major] Scope 2 vs 5 vs Never reproduces — a `[1, 1]` only beyond the injection bound is "a threshold measurement (item 2)", item 2 sends any proven stale-stamp limit to Input-delivery (stop), and Never reproduces bars any injection `[1, 1]` (`built`): opposite gating for one result → fixer item 1
+- [major] Scope 5 classifier — the example "a busy main thread soon after load" fits both `src/` (stop) and input-delivery (fixable, `built`), and also describes the sighting → fixer item 2
+- [major] Scope 4 stop rules — the isolated ×50 run (gating 0/50) and item 6's ×5 runs are neither "counted/`test:all`" nor "diagnostic/injection": a non-sighting failure there is unclassified → fixer item 3
+- [minor] Description — "the first tap's stamp was honoured" is unproven (`first` is `Date.now()` just before dispatch) → fixer item 4
+- [minor] Scope 5 — injection bound: one measured limit (second tap's page touchstart minus its stamp ≤ 1700 ms; sighting 1700.1) → fixer item 5
+- [minor] AC — the sighting definition catches `doubleTap`'s own failure self-tests → fixer item 6
+- [minor] Scope 5 — a sighting other than `[1, 1]` is its own mode (7.13 item 5) → fixer item 7
+- [minor] AC — "one rerun" → one full `test:all` rerun → fixer item 8
+- [minor] Scope 5 Never reproduces — "in item 4's runs or `test:all`" vs item 4/6 "any sighting" → "in any run of this build" → fixer item 9
+- [minor] Scope 1 — all of `e2e/helpers.spec.ts` editable; 7.13 limits it to helper cases → fixer item 10
+- [minor] Scope 5 — report-enriching diagnostics count as injections → fixer item 11
+- [minor] Description — "7.13 changed neither helper file, so no re-baseline" redundant (item 4 takes its own before-counts): cut for budget → fixer item 12
+### Default applied (technical)
+- Beyond-bound `[1, 1]` — recorded threshold only, decides no outcome (pass 3 default made explicit)
+- Classifier — `src/` only for a `src/` behaviour losing detail 2 for real touch input (page timeStamps on their stamps); a tap off its stamp is input-delivery
+- Stop rules — every run except diagnostic and injection runs
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- Scope 5 — the stale-second-tap injection's fix route is deterministic stamping only: plan detail (unapplied minor)
+- Scope 6 — item 6 voids on any caller failure while item 4 voids on sightings: strict reading stands, plan records it (unapplied minor)
+- tickets.toml entry 14 (description "stops for the owner", `after = [10]`, verify) out of sync with the ticket: the orchestrator's sync before the build (unapplied minor)
