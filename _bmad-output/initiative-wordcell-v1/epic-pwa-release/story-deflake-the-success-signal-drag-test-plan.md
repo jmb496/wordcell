@@ -3,7 +3,7 @@ title: 'Deflake the success-signal drag test (D-65)'
 type: 'bugfix'
 ticket: 13
 created: '2026-11-03'
-status: 'built'
+status: done
 route: 'oneshot'
 route_source: 'auto'
 baseline_revision: '84df83ff4ac64715ae6fb608dc5c6f8bcb8c1f45'

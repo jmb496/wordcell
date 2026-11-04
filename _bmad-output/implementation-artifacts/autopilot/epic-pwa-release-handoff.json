@@ -1,1 +1,1 @@
-{"outcome": "done", "ticket": "7.10", "reason": "done", "next": "7.13", "updated": "2026-11-01T02:59:06Z", "summary": "Ticket 7.10's refactor sweep is finished, reviewed, fully tested and marked done; fix ticket 7.14 was added and 7.13 is next."}
+{"outcome": "done", "ticket": "7.13", "reason": "done", "next": "7.14", "updated": "2026-11-04T02:11:57Z", "summary": "Ticket 7.13 closed as never reproducing: the drag test passed in every run the build tried, the evidence is recorded, all tests pass and it is marked done; 7.14 is next."}
