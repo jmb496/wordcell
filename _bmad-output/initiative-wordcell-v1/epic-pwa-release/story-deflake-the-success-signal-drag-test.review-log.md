@@ -1,6 +1,6 @@
 # Review log — story-deflake-the-success-signal-drag-test.md (ticket 7.13)
 
-State: pass 5: done
+State: pass 6: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 220 words, copy `story-deflake-the-success-signal-drag-test.review-log.passes/pass0.md` (HEAD 95b454c).
 
@@ -152,3 +152,26 @@ Fixer: all 13 applied, no conflicts; item 4 also updates the Description and "no
 ### Dropped
 - Name the 6.1 tree as 03824f1 (adversarial) — inferred from timestamps; evidence procedure belongs in the plan
 - Counted runs lighter than `test:all` load; F-13 likely the 6.1 sighting; record the injection revert diff; pre-fix unrelated flake stops (adversarial stretches) — plan procedure or conservative default, no ticket change at budget
+
+## Pass 6 — 2026-11-03
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late bar)  |  Findings: major 5, minor 9, decision-needed 0  |  Dropped in triage: 5 (about 4 duplicates merged)
+Words (docs): 1500 (6.8x pass 0; budget 1500)  |  Snapshot: story-deflake-the-success-signal-drag-test.review-log.passes/pass6.md, fix diff pass6.fix.diff
+Fixer: all 9 applied, no conflicts; other "R-73 failure" uses left, now defined by item 2; extra cuts (AC "after the fix", Scope 3 "outside the repo,", two Description words); no commands added or changed.
+### Applied
+- [major] Scope 4 vs 5 — pass 5's "any R-73 failure … voids and reverts it" contradicts "proven fixes for other modes still land" when an unproven mode recurs → fixer item 1
+- [major] Scope 2 — pass 5's anchor ("something R-73 and the spec header do not prescribe") makes the AD-12 residue checks (`expectNoResidue`, `expectDragging`, drag.ts:3) removable → fixer item 2
+- [major] Scope 2/4/5/AC — "R-73 failure" / "non-R-73 test" read literally cover ~30 other e2e tests whose titles carry R-73 (surfaces-success, place, board-phases, game-store, lifecycle, tile-tap) → fixer item 3
+- [major] Scope 5 — with no failure in this build, no mode exists ("opening no mode"), yet the proof and Never-reproduces speak of "the mode" → fixer item 4
+- [major] Scope 5 classification — "onto a still-disabled control is test-side" also covers a control disabled for a reason no ref prescribes (a `src/` bug a `toBeEnabled()` wait would hide); "prescribed window" unanchored after the R-65 cut → fixer item 5
+- [minor] AC — "`npm run test:all` is green" unconditional though stop-short outcomes can have a red suite → fixer item 6
+- [minor] Scope 4 — a re-run fix proof failing after a later change is unrouted ("any run but an injection") → fixer item 7
+- [minor] Scope 2 — the shared-function list reads as exhaustive (also `expectStoredCursor`, `expectLanded`, `confirm`, `tapAt`): cut; protected checks → "any check function" → fixer item 8
+- [minor] Scope 5 — "D-71's mechanism" → "D-71's late CDP delivery" → fixer item 9
+### Default applied (technical)
+- Void rule stays strict; the "still land" parenthetical is cut
+- "R-73 test" means the two tests in `e2e/success-signal.spec.ts`
+- Earlier sightings open modes an injection may model, needing no proof of their own
+- Disabled-control and window cases are test-side only when a ref prescribes them
+### Dropped
+- Isolated command grep `"Success signal"` for a tap-only fix (edge, adversarial minors) — changes a literal command; the counted runs and item 6's ×5 cover the tap-only test; for the plan
+- Void-revert triggers no re-run; new `e2e/helpers/` export spine-sync note; diff `playwright*.ts` against the 6.1 tree; `test:screens` condition vs DoD (adversarial minors) — plan procedure or technical default kept
