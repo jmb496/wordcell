@@ -1,6 +1,6 @@
 # Review log — story-deflake-the-helpers-spec-ts-doubletap-test-under-load.md (ticket 7.14)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 279 words, copy `story-deflake-the-helpers-spec-ts-doubletap-test-under-load.review-log.passes/pass0.md` (HEAD 781d38f).
 
@@ -61,3 +61,33 @@ Fixer: all 15 applied, no conflicts; cuts to stay in budget (D-64 history pointe
 - none
 ### Dropped
 - none
+
+## Pass 3 — 2026-11-03
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 6, minor 8, decision-needed 0  |  Dropped in triage: 3 (to the plan, see Dropped; about 6 duplicates merged)
+Words (docs): 1499 (5.4x pass 0; budget 1500)  |  Snapshot: story-deflake-the-helpers-spec-ts-doubletap-test-under-load.review-log.passes/pass3.md, fix diff pass3.fix.diff
+Fixer: 13 applied, item 13 skipped (no room; the sighting definition covers the extra counted rerun); quote re-verified by grep; "sighting" defined once at the AC bullet's start; the pass 2 "cause involving both stamping and Chromium" sentence dropped as redundant under the classifier; word-neutral cuts (AC no longer restates item 4's void/reproduction, References plan line shortened).
+### Applied
+- [major] Scope 3/Description — the full helper report survives (7.10 build subagent transcript `~/.claude/projects/-mnt-d-CodeProjects-wordcell/310bbcf8-…/subagents/agent-a326d4a61921ee046.jsonl`, verified): `touchstart@740.1, touchend@740.1, click(1)@740.1, touchstart@2520.2, touchend@2520.2, click(1)@2520.2; CDP stamps 1793495191453.0 +0 and +80 ms; page timeOrigin 1793495190712.9`; the first tap landed on its stamp (740.1), the second ~1.7 s off its stamp (820.1); "do not survive" and "which events unknown" are wrong, and the stale-first-tap injection contradicts it → fixer item 1
+- [major] AC bullet — a D-64 failure with `doubleTap`'s report goes only to this ticket's path, never to A7 (SPEC Non-goals: a recurrence follows A7) → fixer item 2
+- [major] Scope 4/5 vs AC — "sighting" scope: Never reproduces checks only this test while the AC makes a caller's report failure a reproduction (both outcomes apply); and "any failure of this test" (e.g. a context-teardown timeout in a diagnostic) counts as a reproduction or a void though cause found is defined only for `[1, 1]` → fixer item 3
+- [major] Scope 5 — no classifier for a cause in page state (e.g. a busy main thread near boot): test-side (`built`), input-delivery or `src/` (stop); 7.13 item 5 has one → fixer item 4
+- [major] Scope 2 vs 5 — the pin fixes the whole real interval between the taps at 600 ms, which bars the page-state waits item 5 offers as a fix → fixer item 5
+- [major] Scope 5 — injected lateness unbounded: a `[1, 1]` far beyond the sighting's lateness would count as D-71's cause and force the Input-delivery stop → fixer item 6
+- [minor] Scope 4 — later change re-runs items 4 and 6, not 4–6 (a revised fix skips the with-fix injection) → fixer item 7
+- [minor] AC — "(then it stops the build)" vs item 6's void for the same event → fixer item 8
+- [minor] Scope 2 — the stale-stamp parenthesis reads as always B8; item 5 allows a proven test-side fix first → fixer item 9
+- [minor] Scope 5 — the injection's site must stay unchanged by the fix → fixer item 10
+- [minor] Scope 1/6 — a new `touch.ts` export the test uses; spine-sync note for a new export → fixer item 11
+- [minor] Scope 6 — mutation runs count as injections (else they void the fix) → fixer item 12
+- [minor] Scope 4 — whether the extra counted rerun counts toward this test's tally → fixer item 13
+- [minor] AC — "confined to D-64's or R-73" → "and/or" → fixer item 14
+### Default applied (technical)
+- Sighting — a failure with `doubleTap`'s report or this test's own checks; other errors of this test are recorded only in diagnostic/injection runs and follow the AC's "any other failure" elsewhere
+- Injection bound — modelled lateness no more than the sighting's (~1.7 s stale second tap); beyond it, a threshold measurement only
+- Cause classifier — 7.13 item 5's sentence, compressed
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- AC Verify — function-level check of `touch.ts` hunks: plan detail, over budget (unapplied minor)
+- Scope 2 — how to measure the stale-stamp threshold (bisect 600–1800 ms): plan detail (unapplied minor)
+- Scope 4 — a dev server already on :5173 reused with CI unset: plan detail (unapplied minor)
