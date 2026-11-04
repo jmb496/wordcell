@@ -87,42 +87,42 @@ Read-only: everything under `src/`, `e2e/`, `scripts/`, config; done plans and l
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `_bmad-output/initiative-wordcell-v1/epic-pwa-release/epic-pwa-release.md` -- append to Notes, as the first commit of the run (with this plan): `- Decision (owner, 2026-11-03): run authorisation for entry 11 (7.11, hitl), in his words: "At 7.11 (hitl): do its document check, then give me the device read." It covers exactly the syncs listed in the entry's Description and SPEC CAP-9 (and, in Phase 2, the re-syncs the ticket allows under it); any other edit a skill proposes is an Owner stop item. Phase 1 writes this line (ticket 7.11 plan).` -- the ticket requires the record before the first sync commit.
-- [ ] S (+ its `.memlog.md`) -- via `bmad-architecture` (headless update): apply Sync checklist items 1–12 from the as-built facts; inline amendment tags; `updated: '2026-11-04'`; Scaffold deltas bullet "Epic 7 (close-out edit, not a deviation; owner run authorisation 2026-11-03, epic Notes)" listing `workbox-window` 7.4.1 in `dependencies` and `tsconfig.e2e.json` `allowJs` (why: `scripts/size-budget.mjs` typechecked through `build-output.spec.ts`); one commit `docs(spine): sync epic 7 build (ticket 7.11)`.
-- [ ] E (+ its `.memlog.md`) -- via `bmad-ux` (headless update): items 13–14; commit `docs(ux): sync new-version activation wording to AD-16 (ticket 7.11)`.
-- [ ] `AGENTS.md` -- via `bmad-project-context` (refresh limited to items 15–17; keep the verified stamp unless the skill requires changing it for a partial edit, and record what it did); commit `docs(agents): epic 7 shell modules and storage owners (ticket 7.11)`.
-- [ ] SPEC.md, `release-checklist.md`, `build-notes.md`, `device-checks.md`, epic 3 `rule-coverage.md` -- items 18–26 by direct edit (SPEC companions are not skill-managed); commit `docs(spec-7): sync F6, F8, F12, build-notes and coverage rows to the build (ticket 7.11)`.
-- [ ] this plan -- fill each Sync checklist line's commit, the Rule-coverage map (already drafted below; re-check each title still exists with `grep -n`), Owner stop items found, Implementation Notes; commit `docs(plan): ticket 7.11 Phase 1 syncs and coverage map`.
+- [x] `_bmad-output/initiative-wordcell-v1/epic-pwa-release/epic-pwa-release.md` -- append to Notes, as the first commit of the run (with this plan): `- Decision (owner, 2026-11-03): run authorisation for entry 11 (7.11, hitl), in his words: "At 7.11 (hitl): do its document check, then give me the device read." It covers exactly the syncs listed in the entry's Description and SPEC CAP-9 (and, in Phase 2, the re-syncs the ticket allows under it); any other edit a skill proposes is an Owner stop item. Phase 1 writes this line (ticket 7.11 plan).` -- the ticket requires the record before the first sync commit.
+- [x] S (+ its `.memlog.md`) -- via `bmad-architecture` (headless update): apply Sync checklist items 1–12 from the as-built facts; inline amendment tags; `updated: '2026-11-04'`; Scaffold deltas bullet "Epic 7 (close-out edit, not a deviation; owner run authorisation 2026-11-03, epic Notes)" listing `workbox-window` 7.4.1 in `dependencies` and `tsconfig.e2e.json` `allowJs` (why: `scripts/size-budget.mjs` typechecked through `build-output.spec.ts`); one commit `docs(spine): sync epic 7 build (ticket 7.11)`.
+- [x] E (+ its `.memlog.md`) -- via `bmad-ux` (headless update): items 13–14; commit `docs(ux): sync new-version activation wording to AD-16 (ticket 7.11)`.
+- [x] `AGENTS.md` -- via `bmad-project-context` (refresh limited to items 15–17; keep the verified stamp unless the skill requires changing it for a partial edit, and record what it did); commit `docs(agents): epic 7 shell modules and storage owners (ticket 7.11)`.
+- [x] SPEC.md, `release-checklist.md`, `build-notes.md`, `device-checks.md`, epic 3 `rule-coverage.md` -- items 18–26 by direct edit (SPEC companions are not skill-managed); commit `docs(spec-7): sync F6, F8, F12, build-notes and coverage rows to the build (ticket 7.11)`.
+- [x] this plan -- fill each Sync checklist line's commit, the Rule-coverage map (already drafted below; re-check each title still exists with `grep -n`), Owner stop items found, Implementation Notes; commit `docs(plan): ticket 7.11 Phase 1 syncs and coverage map`.
 - [ ] (orchestrator, step 3 Verify) `npm run test:all`, then `npm run test:screens`; record outcomes per the I/O Matrix; Phase 1 owner-wait note; final commit.
 
 **Sync checklist** (source → applying commit, filled by the build):
-1. AD-16 boot tail as built (`main.ts:264-289`: halted returns, dev skip, F17 catch, attempt always resolves) and update policy (no prompt, no `updateSW`, no skip-waiting, no `clientsClaim`; `sw.ts:2-3`, `build-output.spec.ts:104`) → commit:
-2. AD-16 `Binds:` gains `src/shell/sw-state.ts` → commit:
-3. AD-17 key list → six keys (F14; `test-hook.ts:153-162`) → commit:
-4. AD-17 Reading state: `precacheComplete()` returns the last recomputed value; tests poll it (`test-hook.ts:158-161`) → commit:
-5. AD-7 `requestPersistence()` as built (`storage.ts:35-40`), after the attempt settles (registered, failed incl. F17, or skipped in dev), none after a launch halted before it settles (`main.ts:288`; `boot-order.spec.ts:166`) → commit:
-6. AD-15 boot returns at `halted()` incl. registration and persistence (F4; replaces "later steps still run"; `main.ts:261-289`, `boot-order.spec.ts:118`, :143, :166) → commit:
-7. AD-1 scan list gains `navigator.storage` only in `src/shell/storage.ts` and the no-skip-waiting names scan (`architecture-scan.ts:57`, :59-64) → commit:
-8. Structural Seed `shell/` gains `sw-state.ts` → commit:
-9. Capability Map row "PWA, offline, install, manifest" gains `shell/sw-state.ts` → commit:
-10. Scaffold deltas: `workbox-window` 7.4.1 in `dependencies` (`package.json:49-51`) and `tsconfig.e2e.json` `allowJs` (D-48) → commit:
-11. AD-18 Size: fails on a `src/shell/sw.ts` key no dynamic edge reaches (`size-budget.mjs:149-153`) plus the content check (`build-output.spec.ts:73`) (D-49) → commit:
-12. AD-17 Projects: update (`update.spec.ts`), Q-40 (`sw-failure.spec.ts`, dist-smoke cases), Q-42 (`dictionary-retry.spec.ts`), F8 `e2e/helpers/static-server.ts` (update and missing-`sw.js` cases run on it, not `vite preview`), the dist-smoke offline case, offline order move → precache complete → offline reload → restore → deal → validate → commit:
-13. E:225 "New app version installed" → activates once every WordCell window has closed → commit:
-14. E:672 A-E4 same wording → commit:
-15. AGENTS.md shell-module list gains `sw.ts` (worker registration, AD-16, Q-40) and `sw-state.ts` (the worker state, F1) → commit:
-16. AGENTS.md "`storage.ts` is called only by the shell stores" names `main.ts`'s boot `requestPersistence()` call (AD-16, AD-7) as the one exception → commit:
-17. AGENTS.md Single owners gains "`navigator.storage` only in `src/shell/storage.ts`" → commit:
-18. SPEC F12 (SPEC.md:138): retrospective after CAP-9 and before the merge (epic Notes :66-67) → commit:
-19. `release-checklist.md:46` step 6: same order (retrospective already ran before the merge) → commit:
-20. SPEC F6 (:132) and `build-notes.md:112-115`: dist-smoke runs in Playwright's default worker mode, not `block`; only `F6 serviceWorkers allow` sets `allow` per describe (D-43) → commit:
-21. SPEC F8 (:134) and `build-notes.md:121-124`, :150-152: no `?__WB_REVISION__` install fetch (query ignored by design), no `context.route` and no CDP route, observation through B's handle and a recorder in A's scope, `waitingHandle` needs exactly one waiting and one active worker at identification (D-63, 7.3 Residual risks, D-70) → commit:
-22. `build-notes.md:22-23`: counting statement kept, plus the unreachable-key failure (7.8 plan Implementation Notes (11), D-50) → commit:
-23. `build-notes.md:55`: `sw.ts` reports when `VITE_TEST_HOOKS === '1'` (`sw.ts:19`, `main.ts:276`); `DEV ||` stays for the hook install (D-62) → commit:
-24. `device-checks.md` G9 disposition: fixed by 7.10 (D-66), the pin test title → commit:
-25. Epic 3 `rule-coverage.md:86` Q-40 row names its CAP-5 tests (F15, D-47) → commit:
-26. Epic 3 `rule-coverage.md:88` Q-42 row names `dictionary-retry.spec.ts` → commit:
-27. Epic Notes authorisation record → commit:
+1. AD-16 boot tail as built (`main.ts:264-289`: halted returns, dev skip, F17 catch, attempt always resolves) and update policy (no prompt, no `updateSW`, no skip-waiting, no `clientsClaim`; `sw.ts:2-3`, `build-output.spec.ts:104`) → commit: 7cd8939
+2. AD-16 `Binds:` gains `src/shell/sw-state.ts` → commit: 7cd8939
+3. AD-17 key list → six keys (F14; `test-hook.ts:153-162`) → commit: 7cd8939
+4. AD-17 Reading state: `precacheComplete()` returns the last recomputed value; tests poll it (`test-hook.ts:158-161`) → commit: 7cd8939
+5. AD-7 `requestPersistence()` as built (`storage.ts:35-40`), after the attempt settles (registered, failed incl. F17, or skipped in dev), none after a launch halted before it settles (`main.ts:288`; `boot-order.spec.ts:166`) → commit: 7cd8939
+6. AD-15 boot returns at `halted()` incl. registration and persistence (F4; replaces "later steps still run"; `main.ts:261-289`, `boot-order.spec.ts:118`, :143, :166) → commit: 7cd8939
+7. AD-1 scan list gains `navigator.storage` only in `src/shell/storage.ts` and the no-skip-waiting names scan (`architecture-scan.ts:57`, :59-64) → commit: 7cd8939
+8. Structural Seed `shell/` gains `sw-state.ts` → commit: 7cd8939
+9. Capability Map row "PWA, offline, install, manifest" gains `shell/sw-state.ts` → commit: 7cd8939
+10. Scaffold deltas: `workbox-window` 7.4.1 in `dependencies` (`package.json:49-51`) and `tsconfig.e2e.json` `allowJs` (D-48) → commit: 7cd8939
+11. AD-18 Size: fails on a `src/shell/sw.ts` key no dynamic edge reaches (`size-budget.mjs:149-153`) plus the content check (`build-output.spec.ts:73`) (D-49) → commit: 7cd8939
+12. AD-17 Projects: update (`update.spec.ts`), Q-40 (`sw-failure.spec.ts`, dist-smoke cases), Q-42 (`dictionary-retry.spec.ts`), F8 `e2e/helpers/static-server.ts` (update and missing-`sw.js` cases run on it, not `vite preview`), the dist-smoke offline case, offline order move → precache complete → offline reload → restore → deal → validate → commit: 7cd8939
+13. E:225 "New app version installed" → activates once every WordCell window has closed → commit: fcbb3ac
+14. E:672 A-E4 same wording → commit: fcbb3ac
+15. AGENTS.md shell-module list gains `sw.ts` (worker registration, AD-16, Q-40) and `sw-state.ts` (the worker state, F1) → commit: 7366186
+16. AGENTS.md "`storage.ts` is called only by the shell stores" names `main.ts`'s boot `requestPersistence()` call (AD-16, AD-7) as the one exception → commit: 7366186
+17. AGENTS.md Single owners gains "`navigator.storage` only in `src/shell/storage.ts`" → commit: 7366186
+18. SPEC F12 (SPEC.md:138): retrospective after CAP-9 and before the merge (epic Notes :66-67) → commit: 5d40612
+19. `release-checklist.md:46` step 6: same order (retrospective already ran before the merge) → commit: 5d40612
+20. SPEC F6 (:132) and `build-notes.md:112-115`: dist-smoke runs in Playwright's default worker mode, not `block`; only `F6 serviceWorkers allow` sets `allow` per describe (D-43) → commit: 5d40612
+21. SPEC F8 (:134) and `build-notes.md:121-124`, :150-152: no `?__WB_REVISION__` install fetch (query ignored by design), no `context.route` and no CDP route, observation through B's handle and a recorder in A's scope, `waitingHandle` needs exactly one waiting and one active worker at identification (D-63, 7.3 Residual risks, D-70) → commit: 5d40612
+22. `build-notes.md:22-23`: counting statement kept, plus the unreachable-key failure (7.8 plan Implementation Notes (11), D-50) → commit: 5d40612
+23. `build-notes.md:55`: `sw.ts` reports when `VITE_TEST_HOOKS === '1'` (`sw.ts:19`, `main.ts:276`); `DEV ||` stays for the hook install (D-62) → commit: 5d40612
+24. `device-checks.md` G9 disposition: fixed by 7.10 (D-66), the pin test title → commit: 5d40612
+25. Epic 3 `rule-coverage.md:86` Q-40 row names its CAP-5 tests (F15, D-47) → commit: 5d40612
+26. Epic 3 `rule-coverage.md:88` Q-42 row names `dictionary-retry.spec.ts` → commit: 5d40612
+27. Epic Notes authorisation record → commit: 427bfe6
 
 **Acceptance Criteria:**
 - Given the run's commits, when the epic Notes are read at the first sync commit's parent, then the authorisation line is present.
@@ -186,7 +186,11 @@ Retrospective leftovers (done plans stay unedited): `_bmad-output/implementation
 4. S:1041, :1044 Structural Seed `scripts/` and `e2e/helpers/ (seed, touch, lifecycle)` lists are stale (static-server, precache, offline, boot-calls …). Proposed sync.
 5. S:1196 A-A3 "after the SW registration attempt settles": add the F17 and halted cases to match AD-7. Proposed sync.
 6. AD-16 does not name `includeManifestIcons: false` (`vite.config.ts:24`). Proposed sync (or leave: seed-level).
-(The build adds any further item it finds, with file:line, as-built fact and proposed text.)
+Added by the build (bmad-architecture Reviewer Gate on the amendments, 2026-11-04; line numbers at 7cd8939):
+7. S:765-766 AD-16 Binds and S:1182 Map: `src/shell/sw-state.ts` is bound and listed, but no AD names its writers and readers. As built (`sw-state.ts:1-3`, `sw.ts:12`, `main.ts:275`, `test-hook.ts:155`): imports nothing; `setSwState` called only by `sw.ts` and `main.ts`'s F17 catch; `failed` sticky for the launch; read by `sw.ts` and `test-hook.ts`, never by `src/ui/`. Proposed AD-16 Rule bullet: "`src/shell/sw-state.ts` imports nothing and holds the launch's one `SwState`; `setSwState` is called only by `src/shell/sw.ts` and `main.ts`'s F17 catch; `failed` is sticky for the launch; `swState()` is read only by `sw.ts` and `test-hook.ts`; no UI reads it (Q-40)." (AGENTS.md's shell-module line, item 15, already states the writers.)
+8. S:866-867 AD-17 Reading state lists the `swState()` values but not their precedence. As built (`sw.ts` `recompute`; SPEC CAP-1): `failed` once set this launch, else the registration's waiting → `waiting`, else installing → `installing`, else active → `active`, else `unregistered`. Proposed: add that sentence after the value list.
+9. S:316-318 AD-7 Store: "`storage.ts` … the only module that touches `localStorage`" names neither `navigator.storage` (AD-1 scan, item 7) nor its one non-store caller (item 16). Proposed: "… the only module that touches `localStorage` and `navigator.storage`; called by the shell stores and, for `requestPersistence()` only, by `main.ts`'s boot tail (AD-16)."
+10. Item 2 above, confirmed by two lenses: S:758-759 AD-15 "reach this handler only in dev and test builds" now sits beside AD-16's as-built "reported … only in `VITE_TEST_HOOKS=1` builds" (S:797-798, item 1). Not a contradiction in effect (dev never loads `sw.ts`), but the wording differs; the proposed sync of item 2 (spine and AGENTS.md rule 6, which is outside the managed block) stands.
 
 ### Review-log minors (ticket review log, Result) and their resolution
 
@@ -198,6 +202,15 @@ Retrospective leftovers (done plans stay unedited): `_bmad-output/implementation
 - Pass 7: AC 2 test kind → the map counts a row's D or postbuild part by its read or gate and never an S test for a P7/B row. "The last source commit" → the tree after which no build source changed, after any fix ticket; the checklist re-check runs at HEAD (Phase 2).
 
 ## Implementation Notes
+
+Phase 1 run, 2026-11-04, `/mnt/d` checkout, branch `pwa-release`, Node 24. Commits (local, not pushed): 427bfe6 (epic Notes authorisation line + this plan, the run's first commit, so the line is present at every sync commit's parent), 7cd8939 (spine + memlog), fcbb3ac (EXPERIENCE.md + memlog), 7366186 (AGENTS.md), 5d40612 (SPEC companions + epic 3 rule-coverage).
+
+- `bmad-architecture` (headless update): resolved customization; resumed the existing run folder `architecture-wordcell-2026-09-27` from its memlog; amended Rules in place (no AD added, renumbered or retired); inline "(amended 2026-11-04, epic 7 entry 11)" tags; `updated: '2026-11-04'` (`status: final` unchanged); two memlog `event` lines (the sync, the gate). Reviewer Gate: `lint_spine.py` 0 findings before and after; rubric walker plus both `finalize_reviewers` lenses (reality-check, adversary) as parallel read-only subagents scoped to the amended passages. Deviation from the gate's mechanics: the lenses returned summaries only and no `reviews/review-*.md` file was written, so `git diff 8a98d45 HEAD --stat` stays on the Code Map targets (AC 3). Applied (precision inside items 4, 5, 7, 11, each making the amended text state the code exactly): `precacheComplete()` is `false` before any recompute and a failed recompute rejects to AD-15, so it is polled online only (`test-hook.ts:50`, :123-126, `offline.spec.ts:60`); in `VITE_TEST_HOOKS=1` builds a Q-40 failure halts before persistence (`sw.ts:19`, CAP-3); the `navigator.storage` regex has identifier boundaries (`architecture-scan.ts:57`); the content check names `messageSkipWaiting` and `build-output.spec.ts:50` for `serviceWorker.register` elsewhere. Not applied: Owner stop items 7–10. The reality lens had no web access; versions were confirmed against `package.json`, `package-lock.json` and `node_modules` (workbox-window 7.4.1, vite-plugin-pwa 1.3.0, Playwright 1.63.0).
+- `bmad-ux` (headless update): existing workspace `ux-wordcell-2026-09-27`; items 13–14 only; `updated: 2026-11-04`; one memlog `change` line. Its Reviewer Gate is opt-in and was not run (headless, two wording-only rows). No other EXPERIENCE.md line says "next launch".
+- `bmad-project-context` (refresh limited to items 15–17): ledger of three `rewrite` entries, each an addition that keeps the full rule (nothing narrowed or dropped); paths checked (`src/shell/sw.ts`, `src/shell/sw-state.ts`); the `navigator.storage` scan shares the `localStorage` check's `storageCheck` gate (`architecture-scan.ts:582-586`), so the exemption parenthetical now reads "these three". Splice inside the markers only; rules 1–7 untouched. Verified stamp kept at "2026-10-14 against 7e8dd28": this was not a full re-verification, so restamping would overclaim.
+- Direct edits (items 18–26): each carries "(amended 2026-11-04, epic 7 entry 11)" and its D-row. Item 21: SPEC F8 and build-notes keep "microsoft/playwright#14711; unverified for 1.63" for `context.route` (7.3 did not re-probe it) and add the as-built: no `context.route`, `page.route` or CDP route in the update spec. Line shift for Phase 2: build-notes' (unverified) lines named at ff84c95 :213, :216 are now :221, :224.
+- AC 3: `git diff 8a98d45 HEAD --stat` also lists `_bmad-output/implementation-artifacts/autopilot/epic-pwa-release-20261030-1141.md` and `epic-pwa-release-handoff.json`, changed by the orchestrator's 226e7d4 before this run started; `git diff 226e7d4 HEAD --stat` (this run's commits) lists only the Code Map targets, their two `.memlog.md` files, the epic file and this plan.
+- Rule-coverage map re-checked at 5d40612: every file:line above holds a test title carrying one of its row's ids (`grep`/`sed` per entry; test sources unchanged since 8a98d45). `git diff 4130fb4 HEAD -- src/engine` is empty; `SESSION_VERSION`/`HISTORY_VERSION` untouched.
 
 ## Plan Change Log
 
