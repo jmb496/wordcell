@@ -2,7 +2,7 @@
 name: WordCell
 status: final
 created: 2026-09-27
-updated: 2026-10-29
+updated: 2026-11-04
 sources:
   - _bmad-output/planning-artifacts/briefs/brief-wordcell-2026-09-26/brief.md
   - docs/game-flow-spec.md
@@ -222,7 +222,7 @@ column card, a WordCell top card or a tray or strip tile is inert in every phase
 | Place | Board | Legal cells ringed, others faded, pre-selected target per R-42; each cell the commit changes shows its top card and count after the commit, the top marked as a preview (R-50, Q-49; DESIGN.md WordCell *place preview*); placement strip with bottom and top tags; S and D cards shown as ghosts in their columns; Confirm. |
 | Won / gave up | End sheet over Board | See End sheet. The Board stays viewable (collapse the sheet); WordCells can be viewed (R-75). |
 | Offline | Board | No indicator: the app is fully offline after precache (brief §6.8). |
-| New app version installed | — | The service worker activates on the next launch; no prompt in v1. [ASSUMPTION A-E4] |
+| New app version installed | — | The new service worker activates once every WordCell window has closed (spine AD-16); no prompt in v1 (amended 2026-11-04, epic 7 entry 11). [ASSUMPTION A-E4] |
 
 ## Interaction Primitives
 
@@ -669,7 +669,7 @@ Jared confirmed every assumption below on 2026-09-27; the `[ASSUMPTION]` tags st
 | A-E1 | Android back closes the topmost overlay or clears a selection, never Undoes; on the bare board it leaves the app. | Information Architecture |
 | A-E2 | Band names and messages as listed (Just Getting Started … You Cheated; reset by the owner 2026-10-18). | Rating bands |
 | A-E3 | Average score shown as a whole number, rounded like `Math.round` (half toward +∞); longest word ever ties go to the earliest record. | Component Patterns |
-| A-E4 | A new app version activates on the next launch with no prompt. | State Patterns |
+| A-E4 | A new app version activates once every WordCell window has closed (spine AD-16), with no prompt (amended 2026-11-04, epic 7 entry 11). | State Patterns |
 | A-E5 | Drag threshold 8 CSS px. | Interaction Primitives |
 | A-E6 | Overlap minimum 25 % of the grabbed card's area; tie-break nearest centre then lower column number. | Drop targeting |
 | A-E7 | The keyboard set as tabled. | Keyboard |
