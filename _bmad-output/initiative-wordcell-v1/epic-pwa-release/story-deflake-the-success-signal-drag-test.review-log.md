@@ -1,6 +1,6 @@
 # Review log — story-deflake-the-success-signal-drag-test.md (ticket 7.13)
 
-State: pass 4: done
+State: pass 5: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 220 words, copy `story-deflake-the-success-signal-drag-test.review-log.passes/pass0.md` (HEAD 95b454c).
 
@@ -125,3 +125,30 @@ Fixer: all 13 applied, no conflicts; item 4 drops the "(neither half)" tag; item
 - Diff `playwright*.ts` against the 6.1 tree (adversarial, minor) — adds words; evidence procedure belongs in the plan
 - "directly imports at the baseline" (adversarial, minor) — adds words; unlikely
 - Item 4 "no outcome" stretch duplicates — merged into items 3–5
+
+## Pass 5 — 2026-11-03
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late bar)  |  Findings: major 5, minor 10, decision-needed 0  |  Dropped in triage: 5 (about 3 duplicates merged)
+Words (docs): 1500 (6.8x pass 0; budget 1500)  |  Snapshot: story-deflake-the-success-signal-drag-test.review-log.passes/pass5.md, fix diff pass5.fix.diff
+Fixer: all 13 applied, no conflicts; item 4 also updates the Description and "no `src/` or config edit"; item 9 merged into one shorter threshold sentence; cuts in Scope 2 opening and Scope 4 wording; no commands added or changed.
+### Applied
+- [major] Scope 5 — a tap-only R-73 mode with the drag test never failing reaches "Never reproduces" (`built`), and "the no-cause outcome" names no bullet → fixer item 1
+- [major] Scope 4 — a voided fix's edits: reverted or committed is unstated → fixer item 2
+- [major] Scope 4 — a later change (review fixer included) re-runs only item 4 and `test:all`, not item 5's fix proof or item 6's checks → fixer item 3
+- [major] Scope 5 — no route for a cause whose fix needs a file item 1 bars (e.g. dev-server or Playwright config) → fixer item 4
+- [major] Scope 2 — "unless the recorded cause shows it asserted the wrong thing" lets an unattended builder weaken an R-73 check on judgment; anchor to R-73 and the spec header → fixer item 5
+- [minor] Scope 5 — pass 4 dropped "only a load", losing pass 3's default that load injections never prove a cause → fixer item 6
+- [minor] Scope 5 `src/` bullet — "prescribed behaviour" gate can never fire; CAP-8 routes owner calls by functionality or UX → fixer item 7
+- [minor] Scope 5 — mode key: "of each R-73 test" → fixer item 8
+- [minor] Scope 5 — thresholds: "in the mode" governs both; anything short of 5/5 takes the 20-run threshold → fixer item 9
+- [minor] Scope 5 — cut "(e.g. the R-65 click swallow)" (not on this path) → fixer item 10
+- [minor] Scope 4 — the void rule names "this test"; a tap-only failure after a shared-function fix should void too: "any R-73 failure" → fixer item 11
+- [minor] Scope 3 — the 5 s poll began after `glidesSettled` passed, not at the tap (spec :381-383) → fixer item 12
+- [minor] Scope 3 — run-condition list lacks item 6 → fixer item 13 (budget permitting)
+### Default applied (technical)
+- Voided fix — reverted, kept only as a recorded diff in the plan
+- Later changes — re-run items 4–6 and `test:all`
+- Barred-file cause — "`src/` or config cause": no edit, fix-ticket proposal, stops short of `built`
+- Assertion exception — only when the check asserts something R-73 and the spec header do not prescribe
+### Dropped
+- Name the 6.1 tree as 03824f1 (adversarial) — inferred from timestamps; evidence procedure belongs in the plan
+- Counted runs lighter than `test:all` load; F-13 likely the 6.1 sighting; record the injection revert diff; pre-fix unrelated flake stops (adversarial stretches) — plan procedure or conservative default, no ticket change at budget
