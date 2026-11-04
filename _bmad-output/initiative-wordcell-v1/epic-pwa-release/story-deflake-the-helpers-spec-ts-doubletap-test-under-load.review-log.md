@@ -1,6 +1,6 @@
 # Review log — story-deflake-the-helpers-spec-ts-doubletap-test-under-load.md (ticket 7.14)
 
-State: pass 6: done
+State: pass 7: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 279 words, copy `story-deflake-the-helpers-spec-ts-doubletap-test-under-load.review-log.passes/pass0.md` (HEAD 781d38f).
 
@@ -171,3 +171,40 @@ Fixer: all 7 applied; Never reproduces reads "no injection (the stale-second-tap
 - Scope 2 — a permanent extra report field (real dispatch times) with both self-test regexes updated: plan detail (unapplied minor)
 - Scope 4 — after-fix 0/50 and 0/3 run lighter than the sighting; the injection proof carries the claim: plan detail (unapplied minor)
 - Scope 5/3 — "command" for the injection proof and per-rep failure records in injection runs: plan detail (unapplied minor)
+
+## Pass 7 — 2026-11-03 (verify-only)
+Reviewers: fix diff (pass6.fix.diff only)  |  Findings: major 0, minor 1, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 1500 (5.4x pass 0; budget 1500)  |  Snapshot: pass6.md (no fix pass)
+### Applied
+- none (verify-only)
+### Default applied (technical)
+- none
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+### Unapplied (minor)
+- Scope 5 Never reproduces — "the stale-second-tap one run" sets no lateness; a trivially late run would satisfy it; the plan runs it at about the sighting's lateness (~1700 ms) and records it (pass 6 item 2 only partly resolved)
+
+## Result — converged after 7 passes
+Majors per pass: 8, 6, 6, 3, 3, 2, 0. No open major; no decision-needed items. Words 279 → 1500 (budget 1500).
+
+Unapplied minors (for the build's plan):
+- Pass 3: AC Verify is file-level; the plan records `git diff <baseline> -- e2e/helpers/touch.ts` to show only item 1's code changed
+- Pass 3: how to measure the stale-stamp threshold (e.g. bisect the injected lateness up to the bound, `--repeat-each=5` per step)
+- Pass 3: a dev server already on :5173 is reused with CI unset; confirm none before each counted or isolated run
+- Pass 4: the stale-second-tap injection's fix route is deterministic stamping only
+- Pass 4: item 6 voids on any caller failure while item 4 voids on sightings; the strict reading stands
+- Pass 4: tickets.toml entry 14 (description "stops for the owner", `after = [10]`, verify) is out of sync with the ticket; the orchestrator syncs it before the build
+- Pass 4: a sighting other than `[1, 1]` is its own mode needing its own proof, else Reproduces (7.13 item 5)
+- Pass 5: a new sighting with greater lateness does not widen the bound
+- Pass 5: a single in-bound `[1, 1]` below the 5/5 or ≥5/20 threshold counts as Reproduces
+- Pass 5: name the concrete "deterministic stamping" change (`doubleTap` already stamps)
+- Pass 5: record 7.13's uninjected both-project drvfs diagnostic (this test passed) as before-evidence
+- Pass 6: clock offset between Node `Date.now()` and page `timeOrigin`; measure second-tap lateness minus first-tap lateness
+- Pass 6: whether any test-side remedy can beat a stale-second-tap injection under item 2's pins
+- Pass 6: the mutation case may be a new self-test with a longer real gap within the bound
+- Pass 6: a permanent extra report field (real dispatch times) needs both self-test regexes updated
+- Pass 6: after-fix 0/50 and 0/3 run lighter than the sighting; the injection proof carries the claim
+- Pass 6: define the injection proof's "command" and per-rep failure records in injection runs
+- Pass 7: run the required stale-second-tap injection at about the sighting's lateness (~1700 ms)
