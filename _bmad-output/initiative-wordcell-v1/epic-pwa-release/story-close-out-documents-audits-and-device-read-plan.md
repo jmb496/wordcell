@@ -205,6 +205,20 @@ Added by the build (bmad-architecture Reviewer Gate on the amendments, 2026-11-0
 Added by the orchestrator (step 3 Verify, 2026-11-04):
 11. Machine, not document: the WSL root filesystem is in emergency read-only mode (Owner-wait note, Machine fault). Jared restarts WSL (`wsl --shutdown`, fsck on restart) and then `npm run test:all` is rerun before the device read; the device read itself (`scripts/device-preview.mjs`) also needs a writable machine.
 
+### Owner stop items 1–10 applied (owner approval 2026-11-05, "apply all ten")
+
+- [x] 1. rule-coverage.md AD-16 row, SPEC CAP-1, build-notes order proof → as-built `boot-order.spec.ts:48` proof (held `text()`, no chunk hit while `loading`, resource-timing start after the release, `register` record `dictionary: 'ready'`) → commit: cf76ac8
+- [x] 2. AD-15 and AGENTS.md rule 6 → "in test builds (`VITE_TEST_HOOKS=1`)" → commits: cd4fc25 (spine, via `bmad-architecture`), d20c1a9 (AGENTS.md rule 6, hand-maintained)
+- [x] 3. AD-15 `pwa` project sentence → `dist-smoke` checks the hook-free build stays silent on the Q-40 cases → commit: cd4fc25
+- [x] 4. Structural Seed `scripts/` and `e2e/` (incl. all `helpers/`) lists → as on disk → commit: cd4fc25
+- [x] 5. A-A3 → at most once, after the attempt settles incl. F17; never after a halt → commit: cd4fc25
+- [x] 6. AD-16 names `includeManifestIcons: false` (and `globIgnores: ['manifest.webmanifest']`, gate fix) → commit: cd4fc25
+- [x] 7. AD-16 rule bullet: `sw-state.ts` writers and readers (outside `*.test.ts`) → commit: cd4fc25
+- [x] 8. AD-17 Reading state: `swState()` precedence as of the last `recompute` → commit: cd4fc25
+- [x] 9. AD-7 Store: `localStorage` and `navigator.storage`; `main.ts` calls `requestPersistence()` only → commit: cd4fc25
+- [x] 10. Same as item 2 (AD-15 beside AD-16 wording) → commit: cd4fc25
+- Gate (bmad-architecture): `lint_spine.py` 0 findings before and after; three lenses scoped to the amendments; as-built precision applied; `npm run test -- src/architecture` 336/336. Left open: `docs/game-flow-spec.md` §9 Q-40 still says "reported in dev and test builds only" (no effect: dev never loads `sw.ts`); a spec §9 wording change is the owner's, raised at the device-read handoff.
+
 ### Review-log minors (ticket review log, Result) and their resolution
 
 - Pass 2: G4 splash tag → its own handoff line (item 4). G7–G17 commands → handoff items 5–8 from Seeded reads or play. Digest items → Retrospective leftovers. Mixed rows → map L69 (D part G2), L77 (postbuild + B). G8 → F10 measure-first in item 8.
