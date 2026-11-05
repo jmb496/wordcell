@@ -7,7 +7,7 @@ paradigm: 'functional core / imperative shell, event-sourced'
 scope: 'WordCell v1: pure rules engine, event-sourced Session, app shell services, Svelte UI, PWA packaging, CI and deploy'
 status: final
 created: '2026-09-27'
-updated: '2026-11-04'
+updated: '2026-11-05'
 binds: ['spec R-01…R-88, §2, Q-01…Q-49', 'brief §6, §7, §9', 'DESIGN.md', 'EXPERIENCE.md']
 sources:
   - _bmad-output/planning-artifacts/briefs/brief-wordcell-2026-09-26/brief.md
@@ -315,7 +315,9 @@ sequenceDiagram
   - Store: `localStorage`, chosen over IndexedDB (platform decision §3 "later") because AD-4's
     same-task writes need a synchronous API. Keys `wordcell:session`, `wordcell:history`,
     `wordcell:prefs`. `storage.ts` is stateless read/write functions and the only module that
-    touches `localStorage`.
+    touches `localStorage` and `navigator.storage` (AD-1 scan); it is called by the shell stores
+    and, for `requestPersistence()` only, by `main.ts`'s boot tail (AD-16) (amended 2026-11-05,
+    epic 7 entry 11, owner approval; `src/shell/storage.ts`, `src/main.ts`).
   - Formats: JSON. Session = the spec §2 object, exact field names, `version` first, optional
     fields absent (never `null`). History = `{ version, records }`. Prefs = `{ version,
     animationSpeed: 'fast' | 'normal' | 'slow', showTimer, theme? }`, defaults `normal` (A-E8),
@@ -755,9 +757,16 @@ sequenceDiagram
   because the store is halted (amended 2026-11-04, epic 7 entry 11; epic 7 SPEC F4,
   `src/main.ts` `boot()`). The Blocking message's one button is primary for every
   cause (fatal, another window, Session rejected); the secondary `Reload` in DESIGN.md Buttons is
-  the dictionary-failed banner's (owner, 2026-10-01). Service-worker registration or precache failures have no player-visible surface (the game works
-  online): they set `swState()` to `failed` and reach this handler only in dev and test builds;
-  the `pwa` project catches regressions (Q-40). `console.error` is
+  the dictionary-failed banner's (owner, 2026-10-01). Service-worker registration or precache failures have no player-visible surface in hook-free
+  builds (the game works online): they set `swState()` to `failed` (`setSwState`,
+  `src/shell/sw-state.ts`) and are reported to this handler only in test builds
+  (`VITE_TEST_HOOKS=1`; Q-40's "dev and test builds" bounds where a report may appear, and dev
+  never loads `sw.ts`, AD-16), where the handler halts the launch with the fatal surface, so no
+  persistence request follows (AD-7); the `pwa` project catches
+  regressions through that surface and `dist-smoke` checks that the hook-free build stays silent
+  on the same failures (Q-40; amended 2026-11-05, epic 7 entry 11, owner approval;
+  `src/shell/sw.ts`, `src/main.ts`, `e2e/pwa/sw-failure.spec.ts`,
+  `e2e/pwa/dist-smoke.spec.ts`). `console.error` is
   allowed only in that handler.
 
 ### AD-16 — Boot order, service worker and manifest
@@ -797,7 +806,17 @@ sequenceDiagram
     `requestPersistence()` (AD-7). A Q-40 failure is reported to the AD-15 handler only in
     `VITE_TEST_HOOKS=1` builds (amended 2026-11-04, epic 7 entry 11; `src/main.ts` boot tail,
     epic 7 SPEC CAP-1, F3, F4, F17).
-  - vite-plugin-pwa `generateSW`, `injectRegister: false`, `registerType: 'prompt'` with no
+  - `src/shell/sw-state.ts` imports nothing and holds the launch's one `SwState`; outside
+    `*.test.ts`, `setSwState` is called only by `src/shell/sw.ts` and `main.ts`'s F17 catch, and
+    `swState()` is read only by `sw.ts` (its `fail()` guard) and `src/shell/test-hook.ts`; no UI
+    reads it; `failed` is sticky for the launch
+    (Q-40; amended 2026-11-05, epic 7 entry 11, owner approval; `src/shell/sw-state.ts`).
+  - vite-plugin-pwa `generateSW`, `injectRegister: false`, `includeManifestIcons: false` (one
+    precache entry per URL: the globPatterns below already match the manifest icons, and
+    `workbox.globIgnores: ['manifest.webmanifest']` skips the file the plugin adds as its own
+    entry, replacing the default ignore list (workbox-build still skips `sw.js` and
+    `workbox-*.js`); amended 2026-11-05, epic 7 entry 11, owner approval; `vite.config.ts`,
+    `e2e/pwa/precache.spec.ts`), `registerType: 'prompt'` with no
     prompt UI and no `updateSW` call, no skip-waiting message (the generated `sw.js` skips waiting
     only on `SKIP_WAITING`, which nothing sends), no `clientsClaim` and no reload on `controlling`
     (amended 2026-11-04, epic 7 entry 11; `src/shell/sw.ts`, `e2e/pwa/build-output.spec.ts`
@@ -864,7 +883,12 @@ sequenceDiagram
     }` | `{ kind: 'active', session, history, prefs }` (stored shapes; history while unreadable is
     `{ rejected: reason }`; the pre-reload snapshot reads it)
     | `{ kind: 'rejected', reason }` | `{ kind: 'halted' }`, `dictionaryState()`, `swState(): 'unregistered'
-    | 'installing' | 'waiting' | 'active' | 'failed'` and `precacheComplete(): boolean` (the
+    | 'installing' | 'waiting' | 'active' | 'failed'` (`failed` once set this launch; else, as of
+    `sw.ts` `recompute`'s last run (after `register()` resolves, on `updatefound` and on each
+    observed worker's `statechange`), the registration's waiting slot → `waiting`, else installing → `installing`, else active →
+    `active`, else `unregistered`, which is also the value before any registration and in dev;
+    amended 2026-11-05, epic 7 entry 11, owner approval;
+    `src/shell/sw.ts` `recompute`, `src/shell/sw-state.ts`) and `precacheComplete(): boolean` (the
     registration's active worker is `activated` and every precache manifest URL is in the Workbox
     precache cache; each call starts an asynchronous recompute and returns the last stored result
     (`false` before any), the latest-started recompute winning; a failed recompute rejects
@@ -1083,10 +1107,20 @@ src/
   architecture-tree-scan.test.ts, architecture-ad1.test.ts,
   architecture-ad2-ad12-ad17.test.ts, architecture-scan.ts   # AD-1
 fixtures/            # serialised Sessions and histories shared by Vitest and Playwright
-scripts/             # build-dictionary.mjs, size-budget.mjs, build-font.py, build-icons.mjs
+scripts/             # app-version.mjs, build-dictionary.mjs, build-font.py, build-icons.mjs,
+                     # deploy-check.mjs, device-preview.mjs, flaky-report.mjs,
+                     # measure-dispatch.mjs, size-budget.mjs, each with a *.test.mjs;
+                     # asset-hashes, deploy-config and playwright-pin *.test.mjs; icons/ (SVG
+                     # sources) (amended 2026-11-05, epic 7 entry 11, owner approval)
 data/                # enable1.txt, README.md (provenance, checksums)
 generated/           # git-ignored: dictionary/en.txt
-e2e/                 # *.spec.ts, helpers/ (seed, touch, lifecycle)
+e2e/                 # *.spec.ts, *.screens.spec.ts-snapshots/ (container-generated
+                     # baselines), globals.d.ts, pwa/ (production-build specs), helpers/
+                     # (blocking, board, boot-calls, celebration, dialogs, dist-test, drag,
+                     # gestures, how-to-play, keys, lifecycle, live-region, offline, precache,
+                     # project, restore, seed, selection, session, sessions, static-server,
+                     # storage-spy, style, touch; amended 2026-11-05, epic 7 entry 11, owner
+                     # approval)
 public/              # _headers, .assetsignore, icons/, favicon.svg
 .github/workflows/   # ci.yml, deploy.yml
 ```
@@ -1244,7 +1278,7 @@ traceability.
 | --- | --- | --- |
 | A-A1 | The record's `spelling` is the R-37 lowercase word string; display uppercases it. | AD-6 |
 | A-A2 | An un-finish identifies "this game's" record by `seed`, `outcome` and `activeMs` (Q-43); a collision needs a replayed seed with the same outcome and active time to the millisecond, and is accepted. | AD-6 |
-| A-A3 | `navigator.storage.persist()` is requested once per launch (`requestPersistence()`) after the SW registration attempt settles, to protect the offline cache; its result is not shown and its `localStorage` coverage is not relied on. | AD-7, AD-16 |
+| A-A3 | `navigator.storage.persist()` is requested at most once per launch through `requestPersistence()` (which returns at once when `navigator.storage` is absent or `persisted()` resolves true), after the SW registration attempt settles (registered, failed, a rejected `sw.ts` import included (F17), or skipped in dev) and never on a launch halted by then (in `VITE_TEST_HOOKS=1` builds a Q-40 failure, F17 included, reaches AD-15 and halts the launch, so no request follows) (amended 2026-11-05, epic 7 entry 11, owner approval; AD-7, `src/shell/storage.ts`, `src/main.ts`), to protect the offline cache; its result is not shown and its `localStorage` coverage is not relied on. | AD-7, AD-16 |
 | A-A4 | 600 KB is 600,000 bytes; the counted set is `index.html`, the JS and CSS chunks AD-18 Size counts by reachability (the `sw.ts` chunk and what only it imports statically excluded), font and dictionary (dictionary ≈ 453 KB gzip, leaving ≈ 147 KB). | AD-18 |
 | A-A5 | The Fraunces subset is generated once by a uv-run Python script and committed; CI does not regenerate it. uv is already a BMAD requirement. | AD-18 |
 | A-A6 | One production environment on `workers.dev`, deploy from the tested `dist/` artifact on green `main`, no preview deploys (`wrangler.jsonc` `preview_urls: false`). | AD-18 |
