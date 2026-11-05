@@ -101,8 +101,11 @@ offline/update behaviour is an owner question instead (SPEC Open Questions).
   `register` called → `register` settled → one `persisted` call, then one `persist` call; the
   script stubs `persisted()` to resolve false, wherever a case asserts persistence. Cases: first
   launch (it also routes the `sw.ts` chunk, URL from `.vite/manifest.json`, with `page.route`
-  on the uncontrolled page and reads `dictionaryState()` when the request reaches the handler:
-  not `loading`, so an eager import that only awaits the dictionary before `register` fails);
+  on the uncontrolled page and counts its hits; the boot recorder holds the word list's `text()`,
+  the test asserts `dictionaryState()` `loading` and no chunk hit while it is held, then releases
+  it and asserts one hit whose resource-timing start is at or after the release and a `register`
+  record with `dictionary: 'ready'`, so an eager import that awaits less than the whole load
+  fails; amended 2026-11-05, epic 7 entry 11, owner approval, as built, 7.10 D-30);
   dictionary 404 by `page.route` (the worker's precache fetch is unaffected); dictionary
   timed out (`pwa`: `page.clock.install()` before `goto`, dictionary route held and asserted hit,
   `page.clock.fastForward` past `dictionary.svelte.ts`'s 30 s `TIMEOUT_MS`); dev server (F3, in
