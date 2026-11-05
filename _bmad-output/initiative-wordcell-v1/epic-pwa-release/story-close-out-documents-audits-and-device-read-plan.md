@@ -173,6 +173,8 @@ Plan `status: in-progress`. Phase 1's syncs and coverage map are committed (427b
 
 **To resume (owner, then orchestrator):** repair WSL (Owner stop item 11); run `npm run test:all` on the healthy machine and record it here per the I/O Matrix; when green (or each failure recorded per the Matrix), hand Jared the device read below.
 
+**Rerun on the repaired machine (2026-11-05, tree f1d4c8d: docs-only since 8a98d45, plus Owner stop items 1–10).** Root fs read-write (Owner stop item 11 closed). First rerun: unit `17 failed | 3771 passed`, every failure a 5 s timeout or a knock-on of one (suite 62 s vs the 5 s budget; one failing file passed alone). Cause: a Windows game was using ~5.6 of 16 cores; not a test result, no fix ticket. With it closed, `npm run test:all` exit 0: `lint` clean; `check` 0 errors; unit `Tests 3788 passed (3788)`; `build` `total 560701 / 600000`; `test:e2e:dist` `28 passed`; `test:e2e` `1162 passed`, `1096 skipped`; `test:e2e:pwa` `44 passed` (log `.autopilot/manual-7-11/test-all-rerun2.log`). `test:screens` not rerun: the items changed only documents, which no screenshot spec reads (pass at 7b287ea stands). The device read goes out.
+
 ### Device-read handoff (in this order)
 
 Setup and commands: `docs/device-testing.md`. A no-fixture run is `node scripts/device-preview.mjs`; the footer reads `0.0.0 (<sha>)` for the committed HEAD. Record each row in the epic Notes as pass, pass-with-note or fail, with the footer it was read on. No Phase 1 fix ticket blocks any row.
