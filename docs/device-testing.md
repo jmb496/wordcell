@@ -58,8 +58,10 @@ from A to B, and Desktop rows clear per new build (below).
    `wordcell:session` (AD-9 hide flush). After closing the tabs, wait until Chrome's Undo snackbar
    is gone (unverified).
 2. On the phone: Chrome ⋮ → Settings → Site settings → All sites → the tailnet origin → Delete data
-   or Clear & reset (unverified). Skip this step if the origin is not listed: it has no data yet.
-   This path needs no open tab on the origin.
+   or Clear & reset. All sites lists the origin grouped under its tailnet domain
+   (`<tailnet>.ts.net`, the printed URL's host without the machine name), not under the machine
+   name; searching All sites for the tailnet name finds it. Skip this step if the origin is not
+   listed: it has no data yet. This path needs no open tab on the origin.
 
 ## Install and offline readiness (G1, G2)
 
