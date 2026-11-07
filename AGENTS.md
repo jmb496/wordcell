@@ -87,5 +87,6 @@ the architecture spine is the build contract.
 - `src/engine/test-helpers.ts` is an engine source, not a test file, so it cannot import `vitest`: helpers that call `expect` (e.g. `expectEngineError`) stay local to each `*.test.ts`.
 - `parseHistory` returns `{ ok: true, history }`: read it as `result.history`, never destructure it (the `history` pitfall above).
 - Under Vitest, `*.svelte.ts` stores compile for the server, so `$derived` re-derives on every read: assert the reference of the underlying `$state`, never the identity of a derived getter such as `game.view`.
+- In non-test `src/**` sources (every code file not named `*.test.ts`; `src/architecture-scan.ts`, which defines the list, is outside the tree scan), never write `messageSkipWaiting`, `SKIP_WAITING`, `updateSW` or `virtual:pwa-register`, not even in a string literal or Svelte markup (script and HTML comments are fine; the rest of Svelte markup, comments inside `{…}` expressions included, is matched as raw text): the AD-1 skip-waiting names scan (`SKIP_WAITING_NAMES`, AD-16 no skip-waiting) fails on them.
 
 <!-- /bmad:context -->
