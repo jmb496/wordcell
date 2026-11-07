@@ -68,6 +68,16 @@ with at most one major each, majors rising pass-over-pass, or the pass cap (defa
 pass verify-only). Rising or persisting real majors mean the refs are unclear; fix the spec or
 CLAUDE.md, not the ticket. Minors left at the stop are listed in the result, not applied.
 
+When a ticket review converges, the orchestrator syncs that ticket's `tickets.toml` entry
+(`description`, `verify`, `references` and `after`) to the hardened ticket file in the same commit
+(owner, 2026-11-07, epic 7 retro A7).
+
+Close-out wording default (owner, 2026-11-07, epic 7 retro A6): an epic's close-out ticket applies,
+as technical defaults, wording-only alignments of documents with a decision already recorded (a
+spec §9 answer, an owner decision in the epic Notes, the as-built code), each with its own commit
+and its own checklist line in the plan. Owner stop items stay for text that changes behaviour,
+reopens a decision or adds an owner choice.
+
 ## Definition of done for a ticket
 
 - Every rule id the ticket claims has a passing test naming that id.

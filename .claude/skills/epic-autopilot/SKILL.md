@@ -291,6 +291,8 @@ area in the digest as a **ref to fix upstream** (real majors late mean the refs 
 methodology § Autopilot); any with `spec_or_spine_intent` → stop (rule 1), the rest continue.
 Else commit the ticket and its review log (the WIP commits stay as they are, no squash):
 `docs(tickets): harden ticket <ref> with a <n>-pass review loop`.
+When the result is `converged`, sync the ticket's `tickets.toml` entry (`description`, `verify`,
+`references`, `after`) to the hardened ticket file in that same commit (methodology § Autopilot).
 
 ### Step B — build
 
