@@ -149,7 +149,7 @@ Read-only: everything under `src/`, `e2e/`, `scripts/`, config; done plans and l
 34. `device-checks.md` G5 Disposition records the resolution (item 12 (c)) → commit: e620eab
 35. Epic 7 `rule-coverage.md` A-A11 row (item 12 (c)) → commit: e620eab
 36. `release-checklist.md` §6.4 and §6.6 rows: a device-read-only §9 answer accepted as a gap (item 12 (c)) → commit: e620eab
-37. §6.6 audit: owner decision on proposal 3 (retrospective table; listed fixes with no reproduction test accepted as gaps) → commit: (R-4)
+37. §6.6 audit: owner decision on proposal 3 (retrospective table; listed fixes with no reproduction test accepted as gaps) → commit: 2699e0b
 38. §6.4 audit: 7.15 deltas (Q-17 named; R-87 colour clause asserted) and result counts → commit: (R-5, R-6)
 
 **Acceptance Criteria:**
@@ -474,7 +474,7 @@ Phase 1 run, 2026-11-04, `/mnt/d` checkout, branch `pwa-release`, Node 24. Commi
     - Line shifts for later readers: device-testing.md's kept (unverified) tags are now at :59, :74, :94, :126, :131 (the plan text cites :59, :72, :92, :124, :129 at d486f89).
   - Not done here: P2-7 (the orchestrator's final runs) and `built` (pending items, Owner-wait note).
 
-- Phase 2 resume run (R-1…R-5), 2026-11-07, `/mnt/d` checkout, branch `pwa-release`, Node 24. Commits (local, not pushed): 08c35dc (R-1 spine + memlog), 6cceeac (R-2 EXPERIENCE.md + memlog), e620eab (R-3 SPEC dir), then this plan's R-4/R-5 commit and its checklist-sha commit.
+- Phase 2 resume run (R-1…R-5), 2026-11-07, `/mnt/d` checkout, branch `pwa-release`, Node 24. Commits (local, not pushed): 08c35dc (R-1 spine + memlog), 6cceeac (R-2 EXPERIENCE.md + memlog), e620eab (R-3 SPEC dir), 2699e0b (this plan: R-4, R-5, Owner stop item 13, checklist lines 32–36), then the commit filling line 37.
   - R-1 `bmad-architecture` (headless update): resolved customization; resumed the run folder from its memlog; the three item 12 (a) texts applied verbatim (lines re-checked at HEAD 70f3210: S:795, :1235, :1289, now :795-796, :1236, :1290), each with "(amended 2026-11-07, epic 7 entry 11, Q-50)"; `updated: '2026-11-07'` (`status: final` unchanged); one memlog `event` line citing 80a445d. Gate: `lint_spine.py` 0 findings before and after; rubric walker, reality-check and adversary lenses as parallel read-only subagents scoped to the three passages, summaries only, no `reviews/` file (as Phase 1). Every lens finding is beyond the approved wording, so none was applied: Owner stop item 13. The reality lens confirmed the AD-16 push order against `src/main.ts:253-256`. `npm run test -- src/architecture`: `Test Files 6 passed (6)`, `Tests 336 passed (336)`.
   - R-2 `bmad-ux` (headless update): the two item 12 (b) texts verbatim; `updated: 2026-11-07`; one memlog `change` line. Its Reviewer Gate is opt-in and was not run (headless, wording only, as Phase 1).
   - R-3: the four item 12 (c) texts verbatim, no inline tag (each text dates itself). In `release-checklist.md:24` the §6.4 addition sits after "…(checked, not passing), not an exemption", so the quoted clause stays whole. `device-checks.md:21` G5's Check column still states the A-A11 expectation (back collapses the sheet); its Disposition now records the resolution, which is all item 12 (c) proposed.
