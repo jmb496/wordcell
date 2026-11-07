@@ -31,7 +31,7 @@ lists it.
 | AD-17 / AD-18 no `__wordcell` in `dist/` | CAP-2 | P7 `dist-smoke` (existing) |
 | AD-16 `serviceWorker.register` only where the AD-18 row's content check allows; no `registerSW.js` | CAP-6 | B |
 | AD-18 `src/shell/sw.ts` key a dynamic entry outside the counted set; `workbox-window` (inlined in that chunk) outside it by content (a Workbox marker and `serviceWorker.register` in no file of `computeBudget`'s counted `rows`, and in `manifest['src/shell/sw.ts'].file` or a file of its static-import closure outside the counted rows); total ≤ 600,000 bytes | CAP-6 | `postbuild` (`size-budget.mjs` fails on a `sw.ts` key no dynamic edge reaches), B (`size-budget.test.mjs` synthetic-manifest case for that failure; `e2e/pwa/build-output.spec.ts` reads `.vite/manifest.json`) |
-| A-A11 boot-pushed entries honoured by Android back | CAP-9 | D (G5, G6) |
+| A-A11 boot-pushed entries honoured by Android back once a tap has followed (before any tap, spec Q-50) | CAP-9 | D (G5: differs, accepted as Q-50, device-read only; G6 pass) |
 | brief §6.2 force-stop restore | CAP-9, CAP-10 | D (G4) |
 | brief §6.3 ten qualifying games | CAP-10 | D |
 
