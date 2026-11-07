@@ -190,3 +190,17 @@ Worth knowing: the build proposed ten document fixes beyond the authorised list 
 Close-out docs: (filled at Phase 2)
 
 Resumed 2026-11-05 (interactive session, owner present). Owner chose "apply all ten" for the build's extra document fixes: item 1 cf76ac8 (spec companions), item 2 rule 6 d20c1a9 (AGENTS.md, hand-maintained), items 2–10 cd4fc25 (spine via `bmad-architecture`, lint 0, three-lens gate, architecture tests 336/336), plan checklist f1d4c8d. Left for you: spec §9 Q-40 still says "reported in dev and test builds only" (no effect in practice). `test:all` rerun: the first try timed out 17 unit tests because a Windows game was using a third of the CPU; with it closed, exit 0 (3788 unit, build 560,701 / 600,000, 28 dist-smoke, 1162 dev-server e2e, 44 release-build). Device read handed to you.
+
+## 7.15 Close the 7.11 §6.4 test-name and celebration-colour gaps — done
+What it adds: two missing pieces of test evidence from 7.11's audit, with no change to the game itself. The tests that already prove the phone is portrait-only (the built app manifest) and that the layout adapts when a desktop window is resized now carry the rule's id (Q-17) in their names. A new test checks, at three moments during the win celebration, that every flying card copy has exactly the same colours as the real card it copies (R-87, Q-48 "no colour change").
+Ticket review: 3 passes, converged (majors 5, 3, 0), commit 404c525; nothing needed your input
+Build: built; commit c6bdeb3 (tests in `e2e/celebration.spec.ts`, `e2e/pwa/build-output.spec.ts`, `e2e/hover-peek-reanchor.spec.ts`; coverage row in epic 10's `rule-coverage.md`; plan). No `src/` file changed.
+Code review: quick (the build's own review patched all 4 medium findings; risk low), 2 passes, converged (majors 1, 0); 1 fix applied (6d694a4: the shown card group's opacity is now checked before the closing fade), log 27700c3
+Tests: all passing (lint, check, 3788 unit, build, 28 dist-smoke, 1163 dev-server e2e, 44 release-build e2e); screenshots not needed (no UI change)
+Ref to fix upstream: none
+Tokens: 7.8M input-equivalent (ticket review 53%, build 28%, code review 15%, orchestrator 3%); orchestrator peak context 70k
+Worth knowing: the new colour test only compares the copies against the default theme (a second theme was an optional stretch the build left out). Two small wording leftovers in the plan (it still says "two samples" in places, and that no opacity mutation was tried) are recorded in `review-loop/7-15-build.md`. tickets.toml entry 15 still has the short pre-review wording (the ticket file is the authority), left for the retrospective as with 7.13 and 7.14. Startup check: the handoff still named 7.11 (written before you added 7.15 on 2026-11-07); the ticket files showed 7.15 as the one ready ticket, so it ran. A stale pid file (`.autopilot/manual-7-11/skipped.pid`, no live process) was deleted.
+Close-out docs: none (the 2026-11-07 decision that created this ticket adds tests only; it changes no owner doc text)
+
+## Stopped — next ticket needs you
+Stop rule 4: the next ticket, 7.11 (Close-out), is a hands-on (hitl) ticket already in progress. Its Phase 2 resumes with you: apply Owner stop item 12 as approved on 2026-11-07, then the final re-check, `test:all` and `test:screens`, then you mark it done; the §6.6 cross-epic table goes to the retrospective.

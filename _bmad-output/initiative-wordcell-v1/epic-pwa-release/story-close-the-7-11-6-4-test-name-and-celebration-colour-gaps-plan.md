@@ -3,7 +3,7 @@ title: 'Close the 7.11 §6.4 test-name and celebration-colour gaps'
 type: 'chore'
 ticket: '15'
 created: '2026-11-07'
-status: 'built'
+status: done
 baseline_revision: '404c5250b88f971a3a49c8346fa93ee37d3b6792'
 route: 'full'
 route_source: 'auto'
