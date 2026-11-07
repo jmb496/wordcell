@@ -1,12 +1,19 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { expect, type Page, test } from '@playwright/test';
+import { expect, type Page, type Route, test } from '@playwright/test';
 import { SWALLOW_MS } from '../../src/ui/gestures/click-swallow';
-import { END_SHEET, openFixture } from '../helpers/board';
+import { stored } from '../helpers/blocking';
+import { END_SHEET, glidesSettled, openFixture, trayIds } from '../helpers/board';
+import { bootCalls, recordBootCalls } from '../helpers/boot-calls';
 import { skipByPress, watchAdded, watchAddedFromBoot } from '../helpers/celebration';
-import { walk } from '../helpers/dist-test';
+import { buildRoot, swChunkFile, walk } from '../helpers/dist-test';
 import { animationFrames } from '../helpers/lifecycle';
+import { expectNoPrompt } from '../helpers/live-region';
+import { composeTan, dealNewGame, pinNextSeed, seedPins } from '../helpers/offline';
+import { precacheMissing, readPrecacheManifest } from '../helpers/precache';
+import { isList } from '../helpers/restore';
 import { fixture, seedStorage } from '../helpers/seed';
+import { copy } from '../helpers/static-server';
 
 /** AD-15: collects page errors and console errors from now on (attach before the first goto). */
 function errorsOf(page: Page): string[] {
@@ -40,6 +47,19 @@ test('AD-18 no file in dist/ contains __wordcell', () => {
   const hits = files.filter((file) =>
     readFileSync(path.join(root, file), 'latin1').includes('__wordcell'),
   );
+  expect(hits).toEqual([]);
+});
+
+// Epic 7 CAP-2: the precacheComplete() code sits behind the hook gate, so no app chunk keeps it
+// (today only dist/sw.js and dist/workbox-*.js hold these names).
+test('AD-17 AD-18 no app chunk in dist/assets contains precacheAndRoute or __WB_REVISION__', () => {
+  const root = path.resolve(import.meta.dirname, '../../dist');
+  const chunks = walk(root).filter((file) => /^assets\/[^/]+\.js$/.test(file));
+  expect(chunks.length).toBeGreaterThan(0);
+  const hits = chunks.filter((file) => {
+    const text = readFileSync(path.join(root, file), 'latin1');
+    return text.includes('precacheAndRoute') || text.includes('__WB_REVISION__');
+  });
   expect(hits).toEqual([]);
 });
 
@@ -211,4 +231,311 @@ test('Q-45 AD-10 the production Theme radiogroup offers Charcoal, Deep Space, Gr
       () => document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.content,
     ),
   ).toBe('#1D1028');
+});
+
+// F6: the tests above leave the worker mode at Playwright's default (no `serviceWorkers` set). The
+// offline proof needs the worker to run and control the reloaded page, so this describe sets
+// `allow` explicitly (never at file level). Entry 7 adds its cases here; each test does its own
+// setup (seedStorage throws on a second call per page).
+test.describe('F6 serviceWorkers allow', () => {
+  test.use({ serviceWorkers: 'allow' });
+
+  // Epic 7 CAP-4 (ticket 7.6; brief §6.8): e2e/pwa/offline.spec.ts's steps minus the hook reads.
+  test('AD-16 AD-17 offline after the precache is complete: a reload restores the game with no prompt, then deals and validates a word', async ({
+    page,
+    context,
+    request,
+  }) => {
+    test.setTimeout(60_000);
+    // AD-15: console is not checked (offline network errors log there).
+    const errors: string[] = [];
+    page.on('pageerror', (error) => errors.push(error.stack ?? error.message));
+    await pinNextSeed(page);
+    await seedStorage(page, { session: fixture('session-idle-fresh.json') });
+    await page.goto('/');
+    await expect(page.locator('[data-card-id]')).toHaveCount(52);
+
+    // 1. The move, online.
+    await composeTan(page);
+
+    // 2. The precache is complete: every manifest URL is cached and the worker is activated.
+    const urls = (await readPrecacheManifest(request)).map((entry) => entry.url);
+    await expect
+      .poll(
+        async () => ({
+          missing: await precacheMissing(page, urls),
+          active: await page.evaluate(
+            async () => (await navigator.serviceWorker.getRegistration())?.active?.state ?? null,
+          ),
+        }),
+        { timeout: 15_000 },
+      )
+      .toEqual({ missing: [], active: 'activated' });
+
+    // 3. Before-state.
+    type Stored = { activeMs: number; [key: string]: unknown };
+    const storedSession = async (): Promise<Stored> => {
+      const text = await stored(page, 'wordcell:session');
+      if (text === null) throw new Error('wordcell:session is not stored');
+      return JSON.parse(text) as Stored;
+    };
+    const beforeSession = await storedSession();
+    const beforeTray = await trayIds(page);
+
+    // 4. Offline reload, served by the worker.
+    await context.setOffline(true);
+    // One call, so neither promise is left pending if the other rejects.
+    const [response, listResponse] = await Promise.all([
+      page.reload(),
+      page.waitForResponse((r) => isList(r.request())),
+    ]);
+    expect(response?.fromServiceWorker(), 'the reload is served by the worker').toBe(true);
+    expect(listResponse.fromServiceWorker(), 'the word list is served by the worker').toBe(true);
+
+    // 5. Restore: the restored draft with the list ready, then the stored Session (the old page's
+    // pagehide write).
+    const primary = page.getByTestId('primary-action');
+    await expect(primary).toHaveText('Validate');
+    expect(await trayIds(page)).toEqual(beforeTray);
+    const afterSession = await storedSession();
+    expect(afterSession).toEqual({ ...beforeSession, activeMs: expect.any(Number) });
+    expect(afterSession.activeMs).toBeGreaterThanOrEqual(beforeSession.activeMs);
+
+    // 6. No prompt after the offline reload (AD-16), before the deal.
+    await expectNoPrompt(page);
+
+    // 7. Deal, still offline.
+    await dealNewGame(page);
+    expect(await trayIds(page)).toEqual([]);
+    await expect
+      .poll(async () => {
+        const s = await storedSession();
+        return { seed: s.seed, moves: s.moves, cursor: s.cursor };
+      })
+      .toEqual({ seed: 1, moves: [], cursor: { index: 0, phase: 'idle' } });
+    expect(await seedPins(page)).toBe(1);
+
+    // 8. Validate a word, still offline.
+    await composeTan(page);
+    await expect(primary).toHaveText('Validate');
+    await primary.click();
+    await expect(primary).toHaveText('Confirm');
+    await glidesSettled(page);
+    // The place phase after Validate opens no dialog in today's UI (only the end sheet or a
+    // confirm would), so a dialog here fails this check as a prompt; revisit if the place phase
+    // gains one.
+    await expectNoPrompt(page);
+    expect(errors).toEqual([]);
+  });
+
+  // Epic 7 SPEC CAP-5 (ticket 7.7; Q-40, F17): each Q-40 failure on the hook-free build is silent.
+  // The page boots, deals and validates with nothing shown (`expectNoPrompt`, no `pageerror`;
+  // console not checked: the 404s log there). In the missing-script and chunk cases persistence is
+  // requested after the failure (entry 5's boot-call log; no `dictionary` key without the hook);
+  // the icon case does not read the log for it (persistence follows the fulfilled `register()`,
+  // before the install fails). The `dist-test/` halves (fatal
+  // surface, `swState()` `failed`) are in e2e/pwa/sw-failure.spec.ts.
+  const Q40_TIMEOUT_MS = 60_000;
+  const POLL_MS = 15_000;
+  const INTERVAL_MS = 100;
+  const ICON = '/icons/icon-192.png';
+
+  const macrotask = (page: Page) =>
+    page.evaluate(() => new Promise<void>((resolve) => setTimeout(resolve, 0)));
+
+  const pageErrors = (page: Page): string[] => {
+    const errors: string[] = [];
+    page.on('pageerror', (error) => errors.push(error.stack ?? error.message));
+    return errors;
+  };
+
+  /** Boots `session-idle-fresh.json` with the seed stub and the boot-call log armed. */
+  const arm = async (page: Page): Promise<void> => {
+    await pinNextSeed(page);
+    await seedStorage(page, { session: fixture('session-idle-fresh.json') });
+    await recordBootCalls(page);
+  };
+
+  /** Plays a move, deals a new game (seed pinned to 1) and validates TAN, with nothing shown. */
+  const playAndValidate = async (page: Page): Promise<void> => {
+    await composeTan(page);
+    await dealNewGame(page);
+    expect(await seedPins(page)).toBe(1);
+    await composeTan(page);
+    const primary = page.getByTestId('primary-action');
+    await expect(primary).toHaveText('Validate');
+    await primary.click();
+    await expect(primary).toHaveText('Confirm');
+    await glidesSettled(page);
+    await expectNoPrompt(page);
+  };
+
+  test('Q-40 the worker script missing: register() rejects silently, persistence is requested after it settles, then the page deals and validates with nothing shown', async ({
+    page,
+  }) => {
+    test.setTimeout(Q40_TIMEOUT_MS);
+    const errors = pageErrors(page);
+    const site = copy(buildRoot());
+    try {
+      site.remove('sw.js');
+      const served = await site.serve();
+      await arm(page);
+      await page.goto(`${served.url}/`);
+      await expect(page.locator('[data-card-id]')).toHaveCount(52);
+      await expect
+        .poll(() => served.requests().some((r) => r.path === '/sw.js' && r.status === 404), {
+          message: 'the static server answered /sw.js 404',
+          timeout: POLL_MS,
+        })
+        .toBe(true);
+      const want = [
+        { event: 'register' },
+        { event: 'register-settled', outcome: 'rejected' },
+        { event: 'persisted' },
+        { event: 'persist' },
+      ];
+      await expect.poll(() => bootCalls(page), { timeout: POLL_MS }).toStrictEqual(want);
+      await page.waitForLoadState('networkidle');
+      await macrotask(page);
+      expect(await bootCalls(page)).toStrictEqual(want);
+      await expectNoPrompt(page);
+      await playAndValidate(page);
+      expect(errors).toEqual([]);
+    } finally {
+      await site.stop();
+    }
+  });
+
+  test('Q-40 a precached icon 404 during the first install: the install turns redundant silently, then the page deals and validates with nothing shown', async ({
+    page,
+    context,
+    request,
+  }) => {
+    test.setTimeout(Q40_TIMEOUT_MS);
+    const errors = pageErrors(page);
+    const urls = (await readPrecacheManifest(request)).map((entry) => entry.url);
+    expect(urls, 'the icon is a precache entry').toContain(ICON.slice(1));
+    let workerHits = 0;
+    let answered!: { resolve: () => void; reject: (error: Error) => void };
+    const done = new Promise<void>((resolve, reject) => {
+      answered = { resolve, reject };
+    });
+    // Handled now, so a rejection after the "no worker request" timer wins (when `await done` is
+    // never reached) is no unhandled rejection; `await done` still rethrows it.
+    void done.catch(() => {});
+    // Resolved at the first worker hit: the "no worker request" timer races only this, and the
+    // hold (`done`) is bounded by the handler's own deadline, which starts at the hit.
+    let seen!: () => void;
+    const hit = new Promise<void>((resolve) => {
+      seen = resolve;
+    });
+    // F6: before the first goto, so the first install's precache fetch of the icon (which the
+    // page itself does not load) reaches it; matched by pathname, anything else is not ours.
+    await context.route(
+      (url) => url.pathname === ICON,
+      async (route) => {
+        if (route.request().serviceWorker() === null) return route.fallback();
+        workerHits++;
+        if (workerHits > 1) return route.fulfill({ status: 404, body: '' });
+        seen();
+        // Held until the page has observed the install (`register()` fulfilled), so the 404
+        // fails a worker the page registered.
+        const deadline = Date.now() + POLL_MS;
+        let log: Awaited<ReturnType<typeof bootCalls>> = [];
+        let outcome: string | undefined;
+        try {
+          for (;;) {
+            log = await bootCalls(page);
+            outcome = log.find((call) => call.event === 'register-settled')?.outcome;
+            if (outcome !== undefined || Date.now() >= deadline) break;
+            await new Promise((resolve) => setTimeout(resolve, INTERVAL_MS));
+          }
+        } catch (error) {
+          // A failed read reaches the test as the awaited rejection, never a timeout.
+          await route.fulfill({ status: 404, body: '' });
+          answered.reject(error as Error);
+          return;
+        }
+        await route.fulfill({ status: 404, body: '' });
+        if (outcome === 'fulfilled') answered.resolve();
+        else
+          answered.reject(
+            new Error(
+              `the held icon was released without register() fulfilled: ${JSON.stringify(log)}`,
+            ),
+          );
+      },
+    );
+    await arm(page);
+    await page.goto('/');
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    await Promise.race([
+      hit,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error(`no worker request for ${ICON} reached the context.route`)),
+          2 * POLL_MS,
+        );
+      }),
+    ]).finally(() => clearTimeout(timer));
+    await done;
+    // No worker left in any slot: the first install failed (Q-40), none activated. `empty` is no
+    // registration, or one with no installing, waiting or active worker; anything else reads as
+    // its slot states.
+    await expect
+      .poll(
+        () =>
+          page.evaluate(async () => {
+            const registration = await navigator.serviceWorker.getRegistration();
+            if (registration === undefined) return 'empty';
+            const slots = {
+              installing: registration.installing?.state ?? null,
+              waiting: registration.waiting?.state ?? null,
+              active: registration.active?.state ?? null,
+            };
+            return Object.values(slots).every((state) => state === null) ? 'empty' : slots;
+          }),
+        { timeout: POLL_MS },
+      )
+      .toBe('empty');
+    expect(workerHits, 'the worker requested the icon exactly once').toBe(1);
+    await expect(page.locator('[data-card-id]')).toHaveCount(52);
+    await expectNoPrompt(page);
+    await playAndValidate(page);
+    expect(errors).toEqual([]);
+  });
+
+  test('Q-40 (F17) the sw.ts chunk 404: the failed import is silent, persistence is requested after it, then the page deals and validates with nothing shown', async ({
+    page,
+    baseURL,
+  }) => {
+    test.setTimeout(Q40_TIMEOUT_MS);
+    const errors = pageErrors(page);
+    const held: Route[] = [];
+    // The uncontrolled first-launch page (as boot-order.spec.ts): page.route sees the chunk
+    // request. Held, so the log is read before the import fails.
+    await page.route(new URL(`/${swChunkFile()}`, baseURL).href, (route) => {
+      held.push(route);
+    });
+    await arm(page);
+    await page.goto('/');
+    await expect.poll(() => held.length, { timeout: POLL_MS }).toBe(1);
+    await macrotask(page);
+    expect(
+      (await bootCalls(page)).map((call) => call.event),
+      'no persisted call while the chunk is held',
+    ).not.toContain('persisted');
+    await held[0]?.fulfill({ status: 404, body: '' });
+    await expect
+      .poll(() => bootCalls(page), { timeout: POLL_MS })
+      .toStrictEqual([{ event: 'persisted' }, { event: 'persist' }]);
+    await page.waitForLoadState('networkidle');
+    await macrotask(page);
+    expect(await bootCalls(page)).toStrictEqual([{ event: 'persisted' }, { event: 'persist' }]);
+    expect(held, 'the sw.ts chunk route was hit once').toHaveLength(1);
+    await expect(page.locator('[data-card-id]')).toHaveCount(52);
+    await expectNoPrompt(page);
+    await playAndValidate(page);
+    expect(errors).toEqual([]);
+  });
 });

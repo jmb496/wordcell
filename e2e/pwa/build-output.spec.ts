@@ -1,7 +1,17 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
-import { buildRoot, linkTags, readSite, relOf, tags, walk } from '../helpers/dist-test';
+import { collectSizes, computeBudget } from '../../scripts/size-budget.mjs';
+import {
+  buildRoot,
+  linkTags,
+  readSite,
+  relOf,
+  swChunkFile,
+  swStaticClosureFiles,
+  tags,
+  walk,
+} from '../helpers/dist-test';
 
 // AD-16 / AD-18 packaging, read from the build under test on disk (helpers/dist-test.ts
 // buildRoot). Runs under both the pwa (dist-test/) and dist-smoke (dist/) projects, so it must
@@ -9,7 +19,7 @@ import { buildRoot, linkTags, readSite, relOf, tags, walk } from '../helpers/dis
 
 const VIEWPORT = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
 
-test('AD-16 the built web manifest is exactly DESIGN.md A-D5 plus the plugin defaults', () => {
+test('Q-17 AD-16 the built web manifest is exactly DESIGN.md A-D5 plus the plugin defaults', () => {
   const manifest: unknown = JSON.parse(readSite('manifest.webmanifest'));
   // "Exactly per A-D5" reads as "no other authored fields": start_url, scope and lang are
   // vite-plugin-pwa defaults.
@@ -37,28 +47,69 @@ test('AD-16 the built web manifest is exactly DESIGN.md A-D5 plus the plugin def
   });
 });
 
-test('AD-16 the build registers no service worker automatically', () => {
+test('AD-16 the build has no registerSW.js and registers a worker only from the sw.ts chunk', () => {
   const root = buildRoot();
   expect(existsSync(path.join(root, 'registerSW.js'))).toBe(false);
 
-  // Epic 7 (AD-16 src/shell/sw.ts dynamic chunk) narrows this scan to the non-sw chunks.
+  const swChunk = swChunkFile(root);
   const scanned = ['index.html', ...walk(root).filter((file) => /^assets\/[^/]+\.js$/.test(file))];
   expect(scanned.length).toBeGreaterThan(1);
+  expect(scanned).toContain(swChunk);
   for (const file of scanned) {
     const source = readSite(file);
-    for (const marker of [
-      'registerSW',
-      'serviceWorker.register',
-      'vite-plugin-pwa:',
-      'virtual:pwa-register',
-    ]) {
+    for (const marker of ['registerSW', 'vite-plugin-pwa:', 'virtual:pwa-register']) {
       expect(source.includes(marker), `${file} contains ${marker}`).toBe(false);
     }
+    // Epic 7 CAP-6: the one registration is the sw.ts chunk's (workbox-window inlined there).
+    expect(
+      source.includes('serviceWorker.register'),
+      `${file} ${file === swChunk ? 'lacks' : 'contains'} serviceWorker.register`,
+    ).toBe(file === swChunk);
   }
+});
 
-  // vite-plugin-pwa adds clientsClaim only for autoUpdate with automatic registration. No
-  // skipWaiting assertion: the generated SKIP_WAITING message handler legitimately contains it.
-  expect(readSite('sw.js')).not.toContain('clientsClaim');
+// Epic 7 CAP-6: workbox-window is inlined into the sw.ts chunk, outside the AD-18 counted set.
+// Reads computeBudget's rows only: the total is checked by the postbuild run on dist/.
+test('AD-18 the sw.ts chunk is a dynamic entry outside the counted rows and only uncounted sw.ts closure files carry the Workbox marker and serviceWorker.register', () => {
+  const root = buildRoot();
+  const manifest = JSON.parse(readFileSync(path.join(root, '.vite/manifest.json'), 'utf8'));
+  const { rows } = computeBudget(manifest, collectSizes(root));
+  const counted = rows.map((row) => row.file);
+  const entryKeys = Object.keys(manifest).filter((key) => manifest[key].isEntry === true);
+  expect(entryKeys).toHaveLength(1);
+  expect(counted).toContain(manifest[entryKeys[0] as string].file);
+  const sw = swChunkFile(root);
+  expect(counted).not.toContain(sw);
+  const closure = swStaticClosureFiles(root);
+  expect(closure).toContain(sw);
+  const uncounted = closure.filter((file) => !counted.includes(file));
+  // latin1 is byte-faithful; both markers are ASCII.
+  const text = (file: string) => readFileSync(path.join(root, file), 'latin1');
+  for (const marker of ['messageSkipWaiting', 'serviceWorker.register']) {
+    for (const file of counted) {
+      expect(text(file).includes(marker), `counted ${file} contains ${marker}`).toBe(false);
+    }
+    expect(
+      uncounted.some((file) => text(file).includes(marker)),
+      `no uncounted sw.ts closure file (${uncounted.join(', ')}) contains ${marker}`,
+    ).toBe(true);
+  }
+});
+
+// vite-plugin-pwa's `prompt` mode (`registerType: 'prompt'`) emits a message handler that calls
+// skipWaiting() only for a SKIP_WAITING message, and adds clientsClaim only for autoUpdate with
+// automatic registration. AD-16 no skip-waiting (epic 7 SPEC CAP-1): the app never sends that
+// message (shell Vitest and the AD-16 source scan), so a waiting worker activates only once every
+// window has closed. Minified names are tolerated; the guard may have either operand order.
+test('AD-16 the generated sw.js skips waiting only on SKIP_WAITING and has no clientsClaim', () => {
+  const sw = readSite('sw.js');
+  expect(sw).not.toContain('clientsClaim');
+  const calls = [...sw.matchAll(/skipWaiting\(/g)];
+  expect(calls).toHaveLength(1);
+  const before = sw.slice(0, calls[0]?.index);
+  const guard =
+    /(?:["'`]SKIP_WAITING["'`]\s*===\s*[\w$]+\.data\.type|[\w$]+\.data\.type\s*===\s*["'`]SKIP_WAITING["'`])\s*&&\s*(?:[\w$]+\.)?$/;
+  expect(before).toMatch(guard);
 });
 
 test('AD-16 the built head carries the title, theme colour, viewport, manifest and favicon', () => {

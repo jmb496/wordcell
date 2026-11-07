@@ -1,0 +1,101 @@
+# Review loop — ticket 7.2 (Worker failure split and no-skip-waiting guards)
+
+State: pass 3: done
+
+Target: `_bmad-output/initiative-wordcell-v1/epic-pwa-release/story-worker-failure-split-and-no-skip-waiting-guards.md` (docs mode, thorough, max 7)
+Pre-loop: HEAD 1f59086; pass 0 copy `story-worker-failure-split-and-no-skip-waiting-guards.review-log.passes/pass0.md`, 282 words (growth budget ~705).
+Intent also includes tickets.toml entry 2 fields not copied into the ticket: interface, tests, owns, consumers, plan_checkpoint = true (fixer adds them to the Description in pass 1).
+Refs: SPEC.md and companions (build-notes, rule-coverage, device-checks, release-checklist) of `_bmad-output/specs/spec-epic-7-pwa-release/`, epic-pwa-release.md, ARCHITECTURE-SPINE.md, AGENTS.md, docs/game-flow-spec.md, ticket 7.1 plan and its code review log `_bmad-output/implementation-artifacts/review-loop/7-1-build.md`.
+
+## Pass 1 — 2026-10-30
+Reviewers: builder's reading, edge-case hunter, adversarial, ref alignment  |  Findings: major 8, minor 10, decision-needed 0  |  Dropped in triage: 0 (duplicates merged across lenses)
+### Applied
+- [major] Description, hook-build report — F17 `&& !halted()` guard (7.1 unapplied minor 1) left open; sw.ts and main.ts would follow two rules → fixer item 1
+- [major] Description, "no newer worker in any slot" — "newer" undefined; slot occupancy cannot separate the update-failure (older active stays) from a replacement → fixer item 2
+- [major] AC case list — second-update-found-later has no expected outcome; no replacement (not `failed`) case; present-at-`register()` path not named → fixer item 3
+- [major] Description, F5 — check must run before `new Workbox(...)` (7.1 residual risk; the mocked constructor hides it) → fixer item 4
+- [major] Description, "always resolves" — sw.ts's `registration === undefined` throw contradicts it; SPEC F6 calls the `block` stub's `undefined` a Q-40 failure → fixer item 5
+- [major] Description, "always resolves" — readable as a catch-all, against rule 6 / SPEC Constraints → fixer item 6
+- [major] Description/AC, sticky `failed` — number of hook-build reports for a second failure unspecified, so the sticky case has nothing to assert → fixer item 7
+- [major] AC — S scan and B test names not recorded though rule-coverage.md says tickets record them (AD-16 no-prompt row) → fixer item 8
+- [minor] Description, "the boot tail's `halted()` check" — no such check after the attempt yet; it is entry 5's → fixer item 9
+- [minor] References — wrong scan file (ad2-ad12-ad17); missing main.ts, sw-state.ts, sw.test.ts, architecture-ad1/tree-scan tests, F6, F17, rule-coverage rows → fixer item 10
+- [minor] Description, build-output — existing test already asserts no `clientsClaim` and carries a "no skipWaiting assertion" comment; no matcher for minified output → fixer item 11
+- [minor] AC, split — Vitest runs `environment: 'node'` (no `navigator.serviceWorker`, `reportError`); gate expression and how both branches run unstated → fixer item 12
+- [minor] AC — 7.1 unapplied minors 3–4 (invalid fake states, updatefound case never fires `statechange`) not carried → fixer item 13
+- [minor] AC — F6 audit re-run has no evidence line → fixer item 14
+- [minor] Description, "AD-1 tree-scan exclusions" — ambiguous vs nav/storage exclusions; use SPEC's three-item list → fixer item 15
+- [minor] Description, scan — Svelte markup not said to be scanned → fixer item 16
+- [minor] Description — tickets.toml entry 2 interface/tests/owns/consumers/plan_checkpoint not copied → fixer item 17
+- [minor] AC — non-failure cases have no meaning for "checking the split" → folded into fixer item 3
+### Default applied (technical)
+- F17 guard → drop `&& !halted()`; every Q-40 hook-build report unconditional (AD-15: a later fatal replaces the text)
+- "newer" → first observed later by sw.ts; one slot read ranks active < waiting < installing; the redundant worker itself and other redundant workers never count; "reached `activated`" = any observation saw `activated`
+- report count → once per launch, on the transition into `failed` (F17 included)
+- `register()` resolving `undefined` → same as a rejected `register()` (Workbox itself rejects first in production, it reads `.waiting`)
+- hook-build gate → `import.meta.env.VITE_TEST_HOOKS === '1'` read at call time (sw.ts never loads in dev, F3), driven with `vi.stubEnv`
+- build-output matcher → exactly one `skipWaiting(` and it follows a `"SKIP_WAITING"===` guard
+- scan → also Svelte markup; test names carry `AD-16`
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+### Fix
+Fixer applied all 17 items (no conflicts); Description now five bullets (Failure, Report, Scan, Build output, F6) plus the tickets.toml Interface/Tests/Owns/Consumers/Plan checkpoint block; AC case list with outcomes. Item 11 claim checked against current `dist/sw.js` and `dist-test/sw.js` (one `skipWaiting(`, `e.data&&"SKIP_WAITING"===e.data.type&&self.skipWaiting()`); `vi.stubEnv`/`vi.stubGlobal` named as design, marked `unverified` by the fixer.
+Words (docs): 713 (2.53 x pass 0)  |  Snapshot: story-worker-failure-split-and-no-skip-waiting-guards.review-log.passes/pass1.md; fix diff pass1.fix.diff
+
+## Pass 2 — 2026-10-30
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 3, minor 10, decision-needed 0  |  Dropped in triage: 3 (duplicates of the build-output name major)
+### Applied
+- [major] Description Build output vs AC test name — "extend the existing no-`clientsClaim` test" vs a new AC name; the existing test `AD-16 the build has no registerSW.js and registers a worker only from the sw.ts chunk` is pinned for entry 8 (7.1 plan Deferred coverage) → fixer item 1
+- [major] AC activated-then-superseded — can pass through the newer-worker clause alone; must observe no newer worker (build-notes' straight-to-active case) so only the reached-`activated` rule keeps it out of `failed` → fixer item 2
+- [major] AC update failure / replacement — no case pins two workers first seen in one slot read, so the active < waiting < installing ranking is untested (sw.ts loops installing, waiting, active) → fixer item 3
+- [minor] Description Failure — "Only these set `failed`, then the attempt resolves" excludes F17 and misreads for a later listener failure → fixer item 4 (reword, no growth)
+### Default applied (technical)
+- build-output → move the `clientsClaim` assertion and its comment into a new test with the AC name that also asserts the single guarded `skipWaiting(`; the registerSW test keeps its name for entry 8
+- replacement case → waiting worker superseded by an installing one present with it at `register()` (cut "or installing": jobs run one at a time)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- fix diff, edge-case and adversarial repeats of the build-output name major (merged into item 1)
+### Not applied (over budget; plan detail, carried to the build)
+- scan placement: a new `Rule` in `check()` with `run()` fixtures plus a dedicated `it('AD-16 no skip-waiting names in non-test src/')`
+- one `Q-40`-prefixed message per cause, `cause` passed where there is one
+- `vi.unstubAllGlobals()` / `vi.unstubAllEnvs()` in `afterEach`; fresh `reportError` spy per case
+- a worker first observed already `redundant` (never seen `activated`, no newer worker) fails at that read
+- sticky case setup: two observed workers (present at `register()`, then an `updatefound` one) each turning redundant
+- F6 audit record also lists specs that unregister, clear storage or route during any install (none today)
+- dropping the F17 guard leaves no branch, so 7.1 minor 2 is moot; record as a plan note
+### Fix
+Fixer applied items 1–4 (no conflicts), tightening only touched sentences.
+Words (docs): 730 (2.59 x pass 0)  |  Snapshot: story-worker-failure-split-and-no-skip-waiting-guards.review-log.passes/pass2.md; fix diff pass2.fix.diff
+
+## Pass 3 — 2026-10-30
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 0, minor 12, decision-needed 0  |  Dropped in triage: 0
+Words (docs): 730 (2.59 x pass 0)  |  Snapshot: unchanged since pass2.md (no fix pass)
+### Applied
+- none (converged; minors at convergence are not applied)
+### Default applied (technical)
+- none new
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Result — converged after 3 passes
+Majors per pass: 8, 3, 0. No decision-needed items. No open major. Words 282 → 730.
+
+### Unapplied minors (for the build plan)
+1. Build output bullet — "(name kept, 7.1 entry 8)" reads as an entry of ticket 7.1; say "name pinned by the 7.1 plan for entry 8" or name the test `AD-16 the build has no registerSW.js and registers a worker only from the sw.ts chunk`.
+2. AC split — run the non-failure cases' "no `reportError`" assertion with the gate on (gate off passes for any implementation).
+3. Failure bullet — `undefined` `register()` is credited to F6's `block` stub, but under `block` `workbox-window` rejects first (it reads `.waiting`); the `undefined` branch is only the type's; `block` falls under the rejected case.
+4. Failure bullet — "(any observation saw it `activated`)" reads as a condition; reword "(reached: some observation saw it `activated`)".
+5. Failure check order — within one recompute, record first-seen workers, then run the failure check.
+6. Build-output matcher — accept either operand order (`"SKIP_WAITING"===x.type` or `x.type==="SKIP_WAITING"`) before the single `skipWaiting(`.
+7. F5 test — stub `navigator` itself (Node 24 has a global `navigator`), and test `navigator.serviceWorker === undefined`, not `'serviceWorker' in navigator`.
+8. Report bullet — "(F17 included)" is moot for `sw.ts` (it never loads after F17); may be cut.
+9. Scan fixtures — add a comment-only passing fixture and a `.svelte` markup failing fixture beside the `'SKIP_WAITING'` string case, as the `popstate` group does.
+10. Gate — record in the plan that the gate deliberately omits build-notes' `DEV ||` (equivalent under F3, needed for gate-off Vitest) so CAP-9 syncs the as-built form.
+11. Rule 6 — one `AD-16` case where the fake `Workbox` constructor throws with `navigator.serviceWorker` present: `registerWorker()` rejects and the state is not `failed`.
+12. Failure bullet — "`updatefound` workers come later;" is implied by "or a recompute"; may be cut to recover words.
+Carried from pass 2 "Not applied": scan placement (`check()` Rule + dedicated `AD-16` it), one `Q-40`-prefixed message per cause, `vi.unstubAllGlobals()`/`vi.unstubAllEnvs()` in `afterEach`, a worker first observed already `redundant`, sticky case setup with two observed workers, F6 audit scope, 7.1 minor 2 moot once the F17 guard is dropped.

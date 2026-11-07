@@ -20,6 +20,7 @@ const OVER_BUDGET = (/** @type {number} */ total) =>
   `size-budget: total ${total} gzip bytes is over the 600000 budget`;
 const MISSING_FONT = `size-budget: missing font ${FONT_KEY} in the manifest`;
 const MISSING_DICT = `size-budget: missing dictionary ${DICT_KEY} in the manifest`;
+const UNREACHABLE_SW = `size-budget: manifest key ${SW_KEY} is reached by no dynamic import from the entry`;
 const OVER_4MB = (/** @type {string} */ path, /** @type {number} */ raw) =>
   `size-budget: ${path} is ${raw} bytes, over the 4000000 precache limit`;
 
@@ -223,10 +224,11 @@ describe('computeBudget', () => {
     expect(result.errors).toEqual([]);
   });
 
-  it('AD-18 over-budget, missing font, missing dictionary and 4 MB files are reported in order', () => {
+  it('AD-18 over-budget, missing font, missing dictionary, unreachable sw.ts key and 4 MB files are reported in order', () => {
     const manifest = baseManifest();
     delete manifest[FONT_KEY];
     delete manifest[DICT_KEY];
+    manifest[SW_KEY] = { file: 'assets/sw-chunk.js' };
     const result = computeBudget(
       manifest,
       sizesOf({
@@ -239,6 +241,7 @@ describe('computeBudget', () => {
       OVER_BUDGET(600_300),
       MISSING_FONT,
       MISSING_DICT,
+      UNREACHABLE_SW,
       OVER_4MB('icons/a.png', 4_000_001),
       OVER_4MB('icons/z.png', 4_000_002),
     ]);
@@ -313,7 +316,7 @@ describe('computeBudget', () => {
     expect(files).not.toContain('assets/sw-chunk.js');
   });
 
-  it('AD-18 sw.ts statically imported by a counted chunk is counted with its css and imports', () => {
+  it('AD-18 sw.ts statically imported by a counted chunk is counted with its css and imports and fails as unreachable', () => {
     const manifest = baseManifest();
     manifest['index.html'].imports = ['_a.js'];
     manifest['_a.js'] = { file: 'assets/a.js', imports: [SW_KEY] };
@@ -328,11 +331,97 @@ describe('computeBudget', () => {
         'assets/x.js': 1,
       }),
     );
-    expect(result.errors).toEqual([]);
+    expect(result.errors).toEqual([UNREACHABLE_SW]);
     const files = filesOf(result);
     expect(files).toEqual(
       expect.arrayContaining(['assets/sw-chunk.js', 'assets/sw.css', 'assets/x.js']),
     );
+  });
+
+  it('AD-18 an orphan src/shell/sw.ts key fails as unreachable and is not counted', () => {
+    const manifest = baseManifest();
+    manifest[SW_KEY] = { file: 'assets/sw-chunk.js', imports: ['_only-sw.js'] };
+    manifest['_only-sw.js'] = { file: 'assets/only-sw.js' };
+    const result = computeBudget(
+      manifest,
+      sizesOf({ 'assets/sw-chunk.js': 1, 'assets/only-sw.js': 1 }),
+    );
+    expect(result.errors).toEqual([UNREACHABLE_SW]);
+    const files = filesOf(result);
+    expect(files).not.toContain('assets/sw-chunk.js');
+    expect(files).not.toContain('assets/only-sw.js');
+    expect(result.total).toBe(421_300);
+  });
+
+  it('AD-18 an orphan src/shell/sw.ts key without file fails as unreachable without a throw', () => {
+    const manifest = baseManifest();
+    manifest[SW_KEY] = { src: SW_KEY };
+    const result = computeBudget(manifest, sizesOf());
+    expect(result.errors).toEqual([UNREACHABLE_SW]);
+    expect(result.total).toBe(421_300);
+  });
+
+  it('AD-18 sw.ts dynamically imported only from its own unreached subtree fails as unreachable', () => {
+    const manifest = baseManifest();
+    manifest[SW_KEY] = { file: 'assets/sw-chunk.js', imports: ['_only-sw.js'] };
+    manifest['_only-sw.js'] = { file: 'assets/only-sw.js', dynamicImports: [SW_KEY] };
+    const result = computeBudget(
+      manifest,
+      sizesOf({ 'assets/sw-chunk.js': 1, 'assets/only-sw.js': 1 }),
+    );
+    expect(result.errors).toEqual([UNREACHABLE_SW]);
+    const files = filesOf(result);
+    expect(files).not.toContain('assets/sw-chunk.js');
+    expect(files).not.toContain('assets/only-sw.js');
+    expect(result.total).toBe(421_300);
+  });
+
+  it('AD-18 sw.ts reached both statically and dynamically passes and is counted', () => {
+    const manifest = baseManifest();
+    manifest['index.html'].imports = ['_a.js'];
+    manifest['index.html'].dynamicImports = [SW_KEY];
+    manifest['_a.js'] = { file: 'assets/a.js', imports: [SW_KEY] };
+    manifest[SW_KEY] = { file: 'assets/sw-chunk.js', css: ['assets/sw.css'], imports: ['_x.js'] };
+    manifest['_x.js'] = { file: 'assets/x.js' };
+    const result = computeBudget(
+      manifest,
+      sizesOf({
+        'assets/a.js': 1,
+        'assets/sw-chunk.js': 1,
+        'assets/sw.css': 1,
+        'assets/x.js': 1,
+      }),
+    );
+    expect(result.errors).toEqual([]);
+    expect(filesOf(result)).toEqual(
+      expect.arrayContaining(['assets/sw-chunk.js', 'assets/sw.css', 'assets/x.js']),
+    );
+  });
+
+  it('AD-18 sw.ts dynamically imported by a chunk the entry reaches passes', () => {
+    const viaStatic = baseManifest();
+    viaStatic['index.html'].imports = ['_a.js'];
+    viaStatic['_a.js'] = { file: 'assets/a.js', dynamicImports: [SW_KEY] };
+    viaStatic[SW_KEY] = { file: 'assets/sw-chunk.js' };
+    const fromStatic = computeBudget(
+      viaStatic,
+      sizesOf({ 'assets/a.js': 1, 'assets/sw-chunk.js': 1 }),
+    );
+    expect(fromStatic.errors).toEqual([]);
+    expect(filesOf(fromStatic)).toContain('assets/a.js');
+    expect(filesOf(fromStatic)).not.toContain('assets/sw-chunk.js');
+
+    const viaDynamic = baseManifest();
+    viaDynamic['index.html'].dynamicImports = ['src/lazy.ts'];
+    viaDynamic['src/lazy.ts'] = { file: 'assets/lazy.js', dynamicImports: [SW_KEY] };
+    viaDynamic[SW_KEY] = { file: 'assets/sw-chunk.js' };
+    const fromDynamic = computeBudget(
+      viaDynamic,
+      sizesOf({ 'assets/lazy.js': 1, 'assets/sw-chunk.js': 1 }),
+    );
+    expect(fromDynamic.errors).toEqual([]);
+    expect(filesOf(fromDynamic)).toContain('assets/lazy.js');
+    expect(filesOf(fromDynamic)).not.toContain('assets/sw-chunk.js');
   });
 
   it('AD-18 a dangling src/shell/sw.ts key throws', () => {

@@ -1,0 +1,1 @@
+{"outcome": "stopped", "ticket": "retrospective", "reason": "retrospective written; owner reads it, decides the verdict override and the untested-fix gaps, then merges", "next": "owner: read retro, merge, then 7.12", "updated": "2026-11-07T20:24:18Z", "summary": "7.11 done; epic 7 retrospective written (e16c2c4). Owner: verdict override, A1 gaps, then merge and 7.12."}

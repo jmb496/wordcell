@@ -7,11 +7,11 @@ paradigm: 'functional core / imperative shell, event-sourced'
 scope: 'WordCell v1: pure rules engine, event-sourced Session, app shell services, Svelte UI, PWA packaging, CI and deploy'
 status: final
 created: '2026-09-27'
-updated: '2026-10-29'
-binds: ['spec R-01…R-88, §2, Q-01…Q-49', 'brief §6, §7, §9', 'DESIGN.md', 'EXPERIENCE.md']
+updated: '2026-11-07'
+binds: ['spec R-01…R-88, §2, Q-01…Q-50', 'brief §6, §7, §9', 'DESIGN.md', 'EXPERIENCE.md']
 sources:
   - _bmad-output/planning-artifacts/briefs/brief-wordcell-2026-09-26/brief.md
-  - docs/game-flow-spec.md (v0.9)
+  - docs/game-flow-spec.md (v0.13)
   - _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/DESIGN.md
   - _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/EXPERIENCE.md
   - docs/platform-decision.md
@@ -23,8 +23,9 @@ companions: ['.memlog.md', 'reviews/']
 
 # Architecture Spine — WordCell
 
-Rule ids (R-xx), decisions (Q-xx) and §-references are `docs/game-flow-spec.md` v0.9. UX
-assumption ids (A-Dn, A-En) are DESIGN.md and EXPERIENCE.md. This spine does not restate or
+Rule ids (R-xx), decisions (Q-xx) and §-references are `docs/game-flow-spec.md` v0.13
+(amended 2026-11-07, epic 7 entry 11; was v0.9). UX assumption ids (A-Dn, A-En) are DESIGN.md
+and EXPERIENCE.md. This spine does not restate or
 reopen any of them; where a rule and this spine seem to disagree, the rule wins and this spine
 has a bug. The stack is decided in `docs/platform-decision.md` §3 and is cited, not re-argued.
 The repository already holds a scaffold (commit `785c0f6`); ADs that ratify it are tagged
@@ -100,6 +101,14 @@ flowchart LR
        binding or variable named `history`; the score history keeps its names
        (`scoreHistory`, `reconcileHistory`, `wordcell:history`);
      - only `src/shell/storage.ts` matches `\blocalStorage\b`;
+     - only `src/shell/storage.ts` matches `navigator.storage`
+       (`navigator\s*(\?\.|\.)\s*storage` with identifier boundaries), with the `localStorage`
+       check's exemptions (amended 2026-11-04, epic 7 entry 11; epic 7
+       SPEC CAP-3, `NAVIGATOR_STORAGE` in `src/architecture-scan.ts`);
+     - no non-test `src/` source (the tree scan's exclusions) contains `messageSkipWaiting`,
+       `SKIP_WAITING`, `updateSW` or `virtual:pwa-register`, matched with string literals kept
+       (AD-16 no skip-waiting; amended 2026-11-04, epic 7 entry 11; epic 7 SPEC CAP-1,
+       `SKIP_WAITING_NAMES` in `src/architecture-scan.ts`);
      - `*.test.ts` files in shell and UI are exempt from the `localStorage` and History API
        ownership checks;
      - under `src/`, a `.mjs`, `.cjs`, `.mts`, `.cts`, `.tsx` or `.jsx` file fails, and so does
@@ -307,7 +316,9 @@ sequenceDiagram
   - Store: `localStorage`, chosen over IndexedDB (platform decision §3 "later") because AD-4's
     same-task writes need a synchronous API. Keys `wordcell:session`, `wordcell:history`,
     `wordcell:prefs`. `storage.ts` is stateless read/write functions and the only module that
-    touches `localStorage`.
+    touches `localStorage` and `navigator.storage` (AD-1 scan); it is called by the shell stores
+    and, for `requestPersistence()` only, by `main.ts`'s boot tail (AD-16) (amended 2026-11-05,
+    epic 7 entry 11, owner approval; `src/shell/storage.ts`, `src/main.ts`).
   - Formats: JSON. Session = the spec §2 object, exact field names, `version` first, optional
     fields absent (never `null`). History = `{ version, records }`. Prefs = `{ version,
     animationSpeed: 'fast' | 'normal' | 'slow', showTimer, theme? }`, defaults `normal` (A-E8),
@@ -354,11 +365,15 @@ sequenceDiagram
     longest-word changes do not bump it, because an un-finish matches its record by `seed`,
     `outcome` and `activeMs` (AD-6, Q-43).
     There is no migration code.
-  - `requestPersistence()` in `src/shell/storage.ts` runs once per launch after the service
-    worker registration attempt settles (succeeded, failed or skipped in dev, AD-16) and calls
-    `navigator.storage.persist()` when `persisted()` is false, to
-    protect the offline cache and stored data from eviction (best effort; its coverage of
-    `localStorage` is not relied on); the result is not shown `[ASSUMPTION A-A3]`. A `false`
+  - `requestPersistence()` in `src/shell/storage.ts` runs once per launch, called by `main.ts`'s
+    boot tail (AD-16), after the service worker registration attempt settles (registered, failed,
+    a rejected `sw.ts` import included, or skipped in dev), and never on a launch halted before
+    it settles (AD-15; in `VITE_TEST_HOOKS=1` builds a Q-40 failure is reported and halts the
+    launch, so no request follows) (amended 2026-11-04, epic 7 entry 11; epic 7 SPEC CAP-3, F4,
+    F17). It returns at once when `navigator.storage` is absent or `persisted()` resolves true,
+    and otherwise awaits `navigator.storage.persist()`, with no catch, to protect the offline
+    cache and stored data from eviction (best effort; its coverage of `localStorage` is not
+    relied on); the result is not shown `[ASSUMPTION A-A3]`. A `false`
     result and `navigator.storage` being absent are specified outcomes and are ignored; a
     rejection goes to the AD-15 handler.
 
@@ -580,7 +595,10 @@ sequenceDiagram
 
 - **Binds:** `src/ui/overlays.svelte.ts`, `src/shell/nav.ts`, `src/ui/open-menu.ts`, `src/ui/keys.ts`, EXPERIENCE.md Information
   Architecture, End sheet, A-E1.
-- **Prevents:** components holding their own open flags; back double-popping or leaving the app;
+- **Prevents:** components holding their own open flags; back double-popping; back leaving the
+  app (except the Q-50 case: a back before any user activation after a boot push, AD-16, A-A11;
+  read on Android only: in a browser tab, a return to the page after such a back, by Forward or a
+  bfcache restore, is unread and unspecified; amended 2026-11-07, epic 7 entry 11, Q-50);
   Forward desynchronising the stack; a push racing an unfinished pop; boot surfaces pushed in
   mount order.
 - **Rule:**
@@ -736,17 +754,30 @@ sequenceDiagram
   resolving to an empty list or rejecting is such a failure; the check blocks mount and has a
   30 s timeout that throws to this handler `[ASSUMPTION A-A10]` (fatal by this rule; AD-8's fetch
   timeout is `failed`). A later fatal replaces an earlier fatal's surface text (AD-4
-  `haltCause`); a fatal during boot does not stop `boot()`: its later steps still run but write
-  nothing, because the store is halted. The Blocking message's one button is primary for every
+  `haltCause`); a fatal during boot stops `boot()` at its next `halted()` check (after the
+  Session load, after first paint, after `whenVisible()`, after the dictionary settles, after the
+  `sw.ts` import resolves and after the registration attempt settles, AD-16), so a halted launch
+  registers no worker and requests no persistence; the steps before that check write nothing,
+  because the store is halted (amended 2026-11-04, epic 7 entry 11; epic 7 SPEC F4,
+  `src/main.ts` `boot()`). The Blocking message's one button is primary for every
   cause (fatal, another window, Session rejected); the secondary `Reload` in DESIGN.md Buttons is
-  the dictionary-failed banner's (owner, 2026-10-01). Service-worker registration or precache failures have no player-visible surface (the game works
-  online): they set `swState()` to `failed` and reach this handler only in dev and test builds;
-  the `pwa` project catches regressions (Q-40). `console.error` is
+  the dictionary-failed banner's (owner, 2026-10-01). Service-worker registration or precache failures have no player-visible surface in hook-free
+  builds (the game works online): they set `swState()` to `failed` (`setSwState`,
+  `src/shell/sw-state.ts`) and are reported to this handler only in test builds
+  (`VITE_TEST_HOOKS=1`; Q-40's "test builds only" bounds where a report may appear (spec §9
+  Q-40 as amended in c048c93; amended 2026-11-07, epic 7 entry 11), and dev
+  never loads `sw.ts`, AD-16), where the handler halts the launch with the fatal surface, so no
+  persistence request follows (AD-7); the `pwa` project catches
+  regressions through that surface and `dist-smoke` checks that the hook-free build stays silent
+  on the same failures (Q-40; amended 2026-11-05, epic 7 entry 11, owner approval;
+  `src/shell/sw.ts`, `src/main.ts`, `e2e/pwa/sw-failure.spec.ts`,
+  `e2e/pwa/dist-smoke.spec.ts`). `console.error` is
   allowed only in that handler.
 
 ### AD-16 — Boot order, service worker and manifest
 
-- **Binds:** `src/main.ts`, `src/shell/sw.ts`, `vite.config.ts`, `index.html`, DESIGN.md
+- **Binds:** `src/main.ts`, `src/shell/sw.ts`, `src/shell/sw-state.ts` (the worker state, epic 7
+  SPEC F1; amended 2026-11-04, epic 7 entry 11), `vite.config.ts`, `index.html`, DESIGN.md
   A-D2, A-D5, EXPERIENCE.md State Patterns, A-E4, brief §6.8.
 - **Prevents:** the precache and the app downloading the dictionary twice; a font failure after a
   first-launch write; boot surfaces in mount order; a new version swapping code under a game.
@@ -766,16 +797,42 @@ sequenceDiagram
     callbacks, `installInterruptions` (AD-19 Hide) and `nav.registerBeforeBack`, then, in hook builds only, the
     celebration seam (AD-17) → register the store's lifecycle listeners, then `clock.resume(now)` iff
     `document.visibilityState === 'visible'` (AD-9) → push boot surfaces (without user activation;
-    back honours them `[ASSUMPTION A-A11]`) in this order: Session-rejected message (a root, no entry) else end sheet expanded if status
+    back honours them once a user activation (tap, click or key press other than Esc) has
+    followed, while a back before any user activation may skip them, spec Q-50; accepted as built:
+    no code compensates for the skip (no re-push on a later user activation, no push deferred to a
+    user activation, no duplicate entry, no `CloseWatcher` or Navigation API handler), and back
+    reaches the app only as AD-13's `popstate`; this holds for every boot push as an inference, with
+    no device read beyond Q-50's end-sheet case `[ASSUMPTION A-A11]`; amended 2026-11-07, epic 7
+    entry 11, Q-50) in this order: Session-rejected message (a root, no entry) else end sheet expanded if status
     ≠ playing, then the History notice if history is unreadable (once per launch; after a
     rejected Session it waits until New game) → mount UI → after first paint (a double
     `requestAnimationFrame` after mount, then `await` the store's `whenVisible()` (AD-9), so a page
     loaded hidden starts it only once visible; rAF is not relied on to stop while hidden) start
-    the dictionary fetch → when it settles (ready, failed or timed out, AD-8), load `src/shell/sw.ts`
-    by dynamic `import()` (so `workbox-window` stays in its own chunk) and register the service
-    worker → when that attempt settles, `requestPersistence()` (AD-7).
-  - vite-plugin-pwa `generateSW`, `injectRegister: false`, `registerType: 'prompt'` with no
-    prompt UI and no `updateSW` call: a new worker waits and activates once every WordCell
+    the dictionary fetch → when it settles (ready, failed or timed out, AD-8), return if halted
+    (AD-15), then, outside `vite dev` (in dev the import is skipped, a branch, not a return), load
+    `src/shell/sw.ts` by dynamic `import()` (so `workbox-window` stays in its own chunk; a rejected
+    import, the one specified catch, sets `src/shell/sw-state.ts` to `failed`, Q-40), return if
+    halted, and await `registerWorker()`, which on every Q-40 failure sets `failed` and resolves
+    → when that attempt settles (or the import failed, or dev skipped it), return if halted, else
+    `requestPersistence()` (AD-7). A Q-40 failure is reported to the AD-15 handler only in
+    `VITE_TEST_HOOKS=1` builds (amended 2026-11-04, epic 7 entry 11; `src/main.ts` boot tail,
+    epic 7 SPEC CAP-1, F3, F4, F17).
+  - `src/shell/sw-state.ts` imports nothing and holds the launch's one `SwState`; outside
+    `*.test.ts`, `setSwState` is called only by `src/shell/sw.ts` and `main.ts`'s F17 catch, and
+    `swState()` is read only by `sw.ts` (its `fail()` guard) and `src/shell/test-hook.ts`; no UI
+    reads it; `failed` is sticky for the launch
+    (Q-40; amended 2026-11-05, epic 7 entry 11, owner approval; `src/shell/sw-state.ts`).
+  - vite-plugin-pwa `generateSW`, `injectRegister: false`, `includeManifestIcons: false` (one
+    precache entry per URL: the globPatterns below already match the manifest icons, and
+    `workbox.globIgnores: ['manifest.webmanifest']` skips the file the plugin adds as its own
+    entry, replacing the default ignore list (workbox-build still skips `sw.js` and
+    `workbox-*.js`); amended 2026-11-05, epic 7 entry 11, owner approval; `vite.config.ts`,
+    `e2e/pwa/precache.spec.ts`), `registerType: 'prompt'` with no
+    prompt UI and no `updateSW` call, no skip-waiting message (the generated `sw.js` skips waiting
+    only on `SKIP_WAITING`, which nothing sends), no `clientsClaim` and no reload on `controlling`
+    (amended 2026-11-04, epic 7 entry 11; `src/shell/sw.ts`, `e2e/pwa/build-output.spec.ts`
+    "AD-16 the generated sw.js skips waiting only on SKIP_WAITING and has no clientsClaim"): a
+    new worker waits and activates once every WordCell
     window has closed (A-E4; typically the launch after the update was fetched; a reload does
     not activate it and resuming a backgrounded PWA is not a launch `[ASSUMPTION A-A15]`).
     `workbox.globPatterns: ['**/*.{js,css,html,txt,woff2,png,svg,webmanifest}']`,
@@ -837,16 +894,24 @@ sequenceDiagram
     }` | `{ kind: 'active', session, history, prefs }` (stored shapes; history while unreadable is
     `{ rejected: reason }`; the pre-reload snapshot reads it)
     | `{ kind: 'rejected', reason }` | `{ kind: 'halted' }`, `dictionaryState()`, `swState(): 'unregistered'
-    | 'installing' | 'waiting' | 'active' | 'failed'` and `precacheComplete(): boolean` (the
+    | 'installing' | 'waiting' | 'active' | 'failed'` (`failed` once set this launch; else, as of
+    `sw.ts` `recompute`'s last run (after `register()` resolves, on `updatefound` and on each
+    observed worker's `statechange`), the registration's waiting slot → `waiting`, else installing → `installing`, else active →
+    `active`, else `unregistered`, which is also the value before any registration and in dev;
+    amended 2026-11-05, epic 7 entry 11, owner approval;
+    `src/shell/sw.ts` `recompute`, `src/shell/sw-state.ts`) and `precacheComplete(): boolean` (the
     registration's active worker is `activated` and every precache manifest URL is in the Workbox
-    precache cache). Restore tests capture the raw `wordcell:*` values at document start into
+    precache cache; each call starts an asynchronous recompute and returns the last stored result
+    (`false` before any), the latest-started recompute winning; a failed recompute rejects
+    unhandled to AD-15, so tests poll it with `expect.poll` and only while online; amended
+    2026-11-04, epic 7 entry 11, `src/shell/test-hook.ts`). Restore tests capture the raw `wordcell:*` values at document start into
     `window.__wordcellBoot` (see Seeding) and assert all three `loaded()` fields deep-equal
     `JSON.parse` of them and, for absent keys, `null`. `loaded().session` equals the pre-reload
     snapshot's session in every field except `activeMs`, which is not smaller;
     `loaded().history` and `.prefs` equal the snapshot's `current()` values only for keys present
     in `localStorage` at snapshot time; when a post-reload `loaded()` field is `null`, `current()`
     reports the in-memory defaults.
-  - **Celebration seam** (amended 2026-10-20, epic 10, AD-19). The celebration lives in `src/ui/`, which shell never imports. `window.__wordcell` is frozen at creation with exactly the keys `current`, `dictionaryState`, `loaded` and, new, `celebration`; `celebration` is created at import as `{ setEnabled(on), running(), advance(ms) }` whose methods delegate to a late-bound seam and throw until it is registered (`advance` also throws with no live run; `setEnabled` throws mid-run and sets the manual clock with the flag), and `main.ts`, only when `import.meta.env.DEV` or `VITE_TEST_HOOKS=1`, calls `testHook.registerCelebrationSeam(...)` in the step that registers `registerBeforeBack` (AD-16), as the gesture controller registers with `nav`. `src/shell/test-hook.ts`, `e2e/globals.d.ts`, `e2e/test-hook.spec.ts` and `e2e/pwa/test-hook.spec.ts` (frozen-object and exact-key-list assertions) change together. `celebration` is the one writable part of the otherwise read-only hook. The controller's flag defaults on (`dist/`, Vitest) and only `main.ts`'s hook-build block turns it off: in hook builds, including `dist-test/` (the `pwa` project), the celebration is **off** until a test calls `setEnabled(true)`, so the existing win-and-sheet specs stay unchanged (a disabled celebration takes the reduced-motion path); with it on, no `requestAnimationFrame` is scheduled and `advance` steps the pure `step` in fixed 16 ms sub-steps, rendering once. Only `dist-smoke` (`dist/`, hook-free) runs the real rAF loop: its R-87 specs in `e2e/pwa/dist-smoke.spec.ts` end the run by a press or back (epic 10 SPEC F12, CAP-6), and the 10.8 audit found no other `dist-smoke` spec that wins by play.
+  - **Celebration seam** (amended 2026-10-20, epic 10, AD-19). The celebration lives in `src/ui/`, which shell never imports. `window.__wordcell` is frozen at creation with exactly six keys, `loaded`, `current`, `dictionaryState`, `swState`, `precacheComplete` and `celebration` (`celebration` new at epic 10; `swState` and `precacheComplete` amended 2026-11-04, epic 7 entry 11, epic 7 SPEC F14); `celebration` is created at import as `{ setEnabled(on), running(), advance(ms) }` whose methods delegate to a late-bound seam and throw until it is registered (`advance` also throws with no live run; `setEnabled` throws mid-run and sets the manual clock with the flag), and `main.ts`, only when `import.meta.env.DEV` or `VITE_TEST_HOOKS=1`, calls `testHook.registerCelebrationSeam(...)` in the step that registers `registerBeforeBack` (AD-16), as the gesture controller registers with `nav`. `src/shell/test-hook.ts`, `e2e/globals.d.ts`, `e2e/test-hook.spec.ts` and `e2e/pwa/test-hook.spec.ts` (frozen-object and exact-key-list assertions) change together. `celebration` is the one writable part of the otherwise read-only hook. The controller's flag defaults on (`dist/`, Vitest) and only `main.ts`'s hook-build block turns it off: in hook builds, including `dist-test/` (the `pwa` project), the celebration is **off** until a test calls `setEnabled(true)`, so the existing win-and-sheet specs stay unchanged (a disabled celebration takes the reduced-motion path); with it on, no `requestAnimationFrame` is scheduled and `advance` steps the pure `step` in fixed 16 ms sub-steps, rendering once. Only `dist-smoke` (`dist/`, hook-free) runs the real rAF loop: its R-87 specs in `e2e/pwa/dist-smoke.spec.ts` end the run by a press or back (epic 10 SPEC F12, CAP-6), and the 10.8 audit found no other `dist-smoke` spec that wins by play.
   - **Time and hide.** Playwright `page.clock` controls `performance.now` for R-76 tests.
     `e2e/helpers/lifecycle.ts` `hidePage(page)` / `showPage(page)` override
     `document.visibilityState` and dispatch `visibilitychange`, exercising the store's real
@@ -872,11 +937,19 @@ sequenceDiagram
     ignores `*.screens.spec.ts`; `playwright.screens.config.ts` runs the screenshot specs under
     `android` and `desktop`, in the container; `playwright.pwa.config.ts` has `pwa` against
     `vite preview --outDir dist-test` of a `VITE_TEST_HOOKS=1` build, for the offline test
-    (deal, validate, reload offline after `precacheComplete()`, brief §6.8) and a check that the
-    generated precache manifest holds the dictionary and font without a revision, and
-    `dist-smoke` against `vite preview` of `dist/` (AD-18), which runs `dist-smoke.spec.ts` plus
+    (`e2e/pwa/offline.spec.ts`, brief §6.8: a move, `precacheComplete()`, a reload with the
+    network off restoring that game with no prompt, then deal and validate), the two-build update
+    test (`update.spec.ts`), the Q-40 test-build failures (`sw-failure.spec.ts`: AD-15 surface,
+    `swState()` `failed`), the Q-42 controlled retry (`dictionary-retry.spec.ts`) and a check that
+    the generated precache manifest holds the dictionary and font without a revision, and
+    `dist-smoke` against `vite preview` of `dist/` (AD-18), which runs `dist-smoke.spec.ts`
+    (including, in its `F6 serviceWorkers allow` describe, the hook-free offline case, the same
+    order with Cache Storage polled from the spec, and the silent Q-40 failure cases) plus
     the hook-free packaging specs (precache, build-output, font), so the precache check also runs
-    under `dist-smoke` (ticket 1.10, 2026-09-28). Under
+    under `dist-smoke` (ticket 1.10, 2026-09-28). The update and missing-`sw.js` cases serve a
+    temp copy of the build from `e2e/helpers/static-server.ts` (epic 7 SPEC F8: paths resolved by
+    pathname with the query ignored; a missing path gets `index.html` only on a navigation, else
+    404), not `vite preview` (amended 2026-11-04, epic 7 entry 11). Under
     preview there are no immutable headers, so "one download" is proven by that manifest check
     plus the boot order, not by counting requests.
   - **Scripts.** `test:e2e` runs `playwright.config.ts`; `test:e2e:pwa` runs `build:test` (a
@@ -910,7 +983,14 @@ sequenceDiagram
     chunks in `dist/.vite/manifest.json` reachable from the entry over static and dynamic imports
     without following a dynamic import of `src/shell/sw.ts` (AD-16), plus everything reachable
     from a dynamic import made by the `sw.ts` static-import closure, the font and the dictionary. It fails above 600,000 bytes or
-    when the font or dictionary is missing from the set, and prints a per-file table. The
+    when the font or dictionary is missing from the set, and also when the manifest has a
+    `src/shell/sw.ts` key that no dynamic import from the entry reaches (counting unchanged;
+    `scripts/size-budget.test.mjs` "AD-18 an orphan src/shell/sw.ts key fails as unreachable and
+    is not counted"), and prints a per-file table; `e2e/pwa/build-output.spec.ts` adds the content
+    check: the Workbox marker `messageSkipWaiting` and `serviceWorker.register` occur in no
+    counted file and in at least one uncounted `sw.ts` closure file, and "AD-16 the build has no
+    registerSW.js and registers a worker only from the sw.ts chunk" keeps `serviceWorker.register`
+    out of every other built script (amended 2026-11-04, epic 7 entry 11; epic 7 SPEC CAP-6). The
     dictionary is about 453 KB of it `[ASSUMPTION A-A4]`. Counting lazily loaded chunks is
     intentionally conservative relative to brief §6.8.
   - Font: `scripts/build-font.py` (`uv run`, fontTools with brotli declared in its header)
@@ -1025,8 +1105,8 @@ src/
   engine/            # pure core (AD-1): deal, session, replay, commands, view, scoring,
                      # history, serialize, lang/en.ts, index.ts (the only public surface)
   shell/             # game.svelte.ts, history.svelte.ts, storage.ts, dictionary.svelte.ts,
-                     # clock.ts, prefs.svelte.ts, nav.ts, sw.ts, seed.ts, test-hook.ts,
-                     # stored-key.ts
+                     # clock.ts, prefs.svelte.ts, nav.ts, sw.ts, sw-state.ts, seed.ts,
+                     # test-hook.ts, stored-key.ts (sw-state.ts amended 2026-11-04, epic 7 entry 11)
   ui/                # components; overlays.svelte.ts; layout/ (bands.ts, geometry.ts,
                      # layout.svelte.ts, tray.ts); gestures/ (controller.ts, classify.ts,
                      # intent.ts, targeting.ts, drop-target.ts, gate.ts, click-swallow.ts, classes.ts, fly-back.ts, hover-peek-timer.ts, lookup.ts, tile.ts,
@@ -1038,10 +1118,20 @@ src/
   architecture-tree-scan.test.ts, architecture-ad1.test.ts,
   architecture-ad2-ad12-ad17.test.ts, architecture-scan.ts   # AD-1
 fixtures/            # serialised Sessions and histories shared by Vitest and Playwright
-scripts/             # build-dictionary.mjs, size-budget.mjs, build-font.py, build-icons.mjs
+scripts/             # app-version.mjs, build-dictionary.mjs, build-font.py, build-icons.mjs,
+                     # deploy-check.mjs, device-preview.mjs, flaky-report.mjs,
+                     # measure-dispatch.mjs, size-budget.mjs, each with a *.test.mjs;
+                     # asset-hashes, deploy-config and playwright-pin *.test.mjs; icons/ (SVG
+                     # sources) (amended 2026-11-05, epic 7 entry 11, owner approval)
 data/                # enable1.txt, README.md (provenance, checksums)
 generated/           # git-ignored: dictionary/en.txt
-e2e/                 # *.spec.ts, helpers/ (seed, touch, lifecycle)
+e2e/                 # *.spec.ts, *.screens.spec.ts-snapshots/ (container-generated
+                     # baselines), globals.d.ts, pwa/ (production-build specs), helpers/
+                     # (blocking, board, boot-calls, celebration, dialogs, dist-test, drag,
+                     # gestures, how-to-play, keys, lifecycle, live-region, offline, precache,
+                     # project, restore, seed, selection, session, sessions, static-server,
+                     # storage-spy, style, touch; amended 2026-11-05, epic 7 entry 11, owner
+                     # approval)
 public/              # _headers, .assetsignore, icons/, favicon.svg
 .github/workflows/   # ci.yml, deploy.yml
 ```
@@ -1099,6 +1189,12 @@ Changes the first epic makes to commit `785c0f6`:
   `Celebration.svelte` clash by case on the case-insensitive `/mnt/d` checkout, so importers of the
   run controller name it with its explicit `.svelte.ts` extension (a wrong import fails
   `npm run check`).
+- Epic 7 (close-out edit, not a deviation; owner run authorisation 2026-11-03, epic Notes;
+  amended 2026-11-04, epic 7 entry 11): `package.json` gains a `dependencies` block with
+  `workbox-window` `7.4.1`, the version vite-plugin-pwa 1.3.0 resolves, because `src/shell/sw.ts`
+  imports it directly (ticket 7.1, `4938cf9`; epic 7 SPEC F2); `tsconfig.e2e.json` sets
+  `allowJs`, so the e2e type-check covers `scripts/size-budget.mjs`, which
+  `e2e/pwa/build-output.spec.ts` imports (ticket 7.8, `c7cd412`).
 - CLAUDE.md: rule 5 path and the Commands and Testing expectations lines already updated with
   this spine (AD-8, AD-17; Docker in WSL2 only for screenshot baselines and the actionlint proof
   (ticket 1.11, 2026-09-28), uv/Python only for regenerating the font).
@@ -1128,7 +1224,7 @@ Changes the first epic makes to commit `785c0f6`:
 | Overlays, back handling | `ui/overlays.svelte.ts`, `shell/nav.ts` | AD-13 |
 | End-of-game word list, R-86 (engine) and R-88 (end-sheet section) | `engine/view.ts`, `ui/EndSheet.svelte`, `ui/text.ts` | AD-3, AD-6 |
 | Win celebration, R-87 | `ui/celebration/`, `ui/overlays.svelte.ts`, `ui/end-sheet.ts`, `ui/motion.ts`, `ui/open-menu.ts`, `ui/keys.ts`, `shell/test-hook.ts`, `main.ts` | AD-19, AD-13, AD-14, AD-17 |
-| PWA, offline, install, manifest | `vite.config.ts`, `shell/sw.ts`, `scripts/build-icons.mjs` | AD-16 |
+| PWA, offline, install, manifest | `vite.config.ts`, `shell/sw.ts`, `shell/sw-state.ts` (amended 2026-11-04, epic 7 entry 11), `scripts/build-icons.mjs` | AD-16 |
 | Engine purity, brief §6.5 | `src/engine/tsconfig.json`, `architecture-*.test.ts`, `architecture-scan.ts` | AD-1 |
 | Test seams, brief §6.2–§6.4 | `e2e/helpers/`, `fixtures/`, `shell/test-hook.ts` | AD-17 |
 | Size budget, CI, deploy, brief §6.7–§6.8 | `scripts/`, `.github/`, `wrangler.jsonc` | AD-18 |
@@ -1147,7 +1243,7 @@ the per-ticket loop of `docs/development-methodology.md`.
 | 4 | Board and gestures | Layout definition, geometry, gate and anchoring (AD-11); cards, columns, WordCells, top bar, action bar; pointer controller and targeting (AD-12); overlays store: tail selection and end-sheet states on the epic 3 core (AD-13); tap-select and foot pads; WordCell view (peek, sticky, hover); drop → Composing; every `GameView` board state, a static tray (live tiles, no gestures) and the Composing column gestures (epic 4 SPEC F1, F2, F17, moved from row 5; merged and deployed on its own, F29) | 3 |
 | 5 | Tray and Place | Tray interactions (tiles, destination block, D-block controls); free letters (tap and drag); arrange and tap-swap; Validate states and invalid-word line; placement strip; Confirm; FLIP and fly-to-cell (AD-14); tray growth; the winning-animation guard (AD-14; its pending end-sheet open, menu case and Undo key aliases move to epic 6, epic 5 SPEC F8) | 4 |
 | 6 | Game surfaces and keyboard | Menu sheet, confirm dialogs, end sheet, Statistics, Preferences, How to play, the history-unreadable end-sheet block, Statistics message and menu dot, pending-draft line, keyboard map, screen-reader labels and live region; `__APP_VERSION__` injection and menu footer (Consistency Conventions) | 5 |
-| 7 | PWA and release | SW registration, update policy, offline test (AD-16, AD-17); `requestPersistence()`; test-hook `swState()` and `precacheComplete()` (AD-17); device checks (brief §6.2 force-stop, §6.3 ten qualifying games, relaunch into Game over → Android back collapses the end sheet, A-A11) | 3 (SW), 5 (offline test), 6 (release checks) |
+| 7 | PWA and release | SW registration, update policy, offline test (AD-16, AD-17); `requestPersistence()`; test-hook `swState()` and `precacheComplete()` (AD-17); device checks (brief §6.2 force-stop, §6.3 ten qualifying games, relaunch into Game over → end sheet expanded, the first back before any tap leaves the app (spec Q-50), A-A11; amended 2026-11-07, epic 7 entry 11, Q-50) | 3 (SW), 5 (offline test), 6 (release checks) |
 | 10 | End-of-game word list and win celebration | `wordList` in `view` (AD-3) and its R-86 tests; the Words section of the end sheet (R-88); the celebration layer, wiring, skip and test seam (AD-19, AD-17); screenshots (amended 2026-10-20; spec `spec-epic-10-end-of-game-words`) | 6, 9 |
 
 Play Store (Bubblewrap TWA) stays out of v1 (brief §8).
@@ -1193,7 +1289,7 @@ traceability.
 | --- | --- | --- |
 | A-A1 | The record's `spelling` is the R-37 lowercase word string; display uppercases it. | AD-6 |
 | A-A2 | An un-finish identifies "this game's" record by `seed`, `outcome` and `activeMs` (Q-43); a collision needs a replayed seed with the same outcome and active time to the millisecond, and is accepted. | AD-6 |
-| A-A3 | `navigator.storage.persist()` is requested once per launch (`requestPersistence()`) after the SW registration attempt settles, to protect the offline cache; its result is not shown and its `localStorage` coverage is not relied on. | AD-7, AD-16 |
+| A-A3 | `navigator.storage.persist()` is requested at most once per launch through `requestPersistence()` (which returns at once when `navigator.storage` is absent or `persisted()` resolves true), after the SW registration attempt settles (registered, failed, a rejected `sw.ts` import included (F17), or skipped in dev) and never on a launch halted by then (in `VITE_TEST_HOOKS=1` builds a Q-40 failure, F17 included, reaches AD-15 and halts the launch, so no request follows) (amended 2026-11-05, epic 7 entry 11, owner approval; AD-7, `src/shell/storage.ts`, `src/main.ts`), to protect the offline cache; its result is not shown and its `localStorage` coverage is not relied on. | AD-7, AD-16 |
 | A-A4 | 600 KB is 600,000 bytes; the counted set is `index.html`, the JS and CSS chunks AD-18 Size counts by reachability (the `sw.ts` chunk and what only it imports statically excluded), font and dictionary (dictionary ≈ 453 KB gzip, leaving ≈ 147 KB). | AD-18 |
 | A-A5 | The Fraunces subset is generated once by a uv-run Python script and committed; CI does not regenerate it. uv is already a BMAD requirement. | AD-18 |
 | A-A6 | One production environment on `workers.dev`, deploy from the tested `dist/` artifact on green `main`, no preview deploys (`wrangler.jsonc` `preview_urls: false`). | AD-18 |
@@ -1201,6 +1297,6 @@ traceability.
 | A-A8 | Screenshot baselines live in the Playwright 1.63 noble container, so WSL2 and CI render identically; local screenshot runs need Docker in WSL2. | AD-17 |
 | A-A9 | Page scroll counts as ended at `scrollend`, at hide/pagehide, at a move, or 150 ms after the last `scroll` event, whichever comes first (the 150 ms rule is a backstop in all browsers). | AD-11 |
 | A-A10 | The boot font check blocks mount with a 30 s timeout, like the dictionary fetch; a timeout throws to the AD-15 fatal surface. | AD-15 |
-| A-A11 | Boot-time pushes (no user activation) are honoured by Android back; Chrome's history-manipulation intervention does not mark them skippable. An epic 7 device check verifies it (relaunch into Game over, Android back collapses the sheet); if it fails it becomes a spec §9 question. | AD-16, AD-13 |
+| A-A11 | Resolved by Q-50 (spec §9). Boot-time pushes (no user activation) are honoured by Android back once a user activation (tap, click or key press other than Esc) has followed them (epic 7 G6); before any user activation they may be skipped, probably by Chrome's history-manipulation intervention: on a relaunch into Game over the first back leaves the app instead of collapsing the sheet (spec Q-50, accepted as built 2026-11-06; device-read only, owner 2026-11-07). Accepted as built: no code compensates for the skip (no re-push on a later user activation, no push deferred to a user activation, no duplicate entry, no `CloseWatcher` or Navigation API handler); back reaches the app only as AD-13's `popstate`. The spine applies the same acceptance to every boot push, the History notice included when pushed at boot, as an inference, with no device read beyond Q-50's end-sheet case. Playwright's Chromium does not apply the intervention: `goBack()` tests on boot-pushed entries stay as AD-13 nav coverage, not evidence about Q-50. Read on the phone in epic 7 (G5, G6) (amended 2026-11-07, epic 7 entry 11, Q-50). | AD-16, AD-13 |
 | A-A12 | A dictionary fetch that has not settled after 30 s is aborted and treated as `failed`. | AD-8 |
 | A-A15 | Confirmed with Q-40. A-E4's "launch" is read narrowly: a reload does not activate a waiting worker, and resuming a backgrounded PWA is not a launch. | AD-16 |

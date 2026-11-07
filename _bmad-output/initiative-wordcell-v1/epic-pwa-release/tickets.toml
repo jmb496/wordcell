@@ -1,0 +1,231 @@
+# Epic 7 — PWA and release. Table order is the build order.
+# Requirement source: the epic spec (SPEC.md); `covers` cites its CAP ids. Rule-to-test map: rule-coverage.md; deferred device checks: device-checks.md; release evidence: release-checklist.md; the how: build-notes.md.
+# One lane through src/main.ts, src/shell/sw.ts, the worker-state module, src/shell/test-hook.ts and e2e/pwa/; entries 2 and 4 can run beside each other after entry 1, entry 9 (scripts/device-preview.mjs, docs/device-testing.md) beside anything after entry 1.
+# Order of release work: entry 11 → the epic retrospective → the owner merges and pushes → entry 12 (the owner's post-merge release step). Agents never merge or push.
+# npm run test:screens runs in the Playwright container for entries 10 and 11 (no look change is expected before them); the other entries run test:all.
+
+[[entry]]
+id = 1
+type = "story"
+title = "Worker registration, state module and swState()"
+description = "Tracer bullet for CAP-1 and CAP-2: adds the F1 worker-state shell module (no `workbox-window` import; `unregistered`, `installing`, `waiting`, `active`, `failed` with CAP-1's precedence), `src/shell/sw.ts` registering `/sw.js` with `workbox-window`'s `Workbox` (F2; no prompt UI, no `updateSW`, no skip-waiting message; `statechange` on the registration's existing workers and its own `updatefound` listener, build-notes), `main.ts`'s boot tail (after `dictionary.load()` settles: `halted()` return, dev skip (F3), dynamic `import()`, `halted()` return again, await the attempt; F17's catch setting `failed` and, in hook builds, `reportError(new Error(...))`), `workbox-window` in `package.json` `dependencies` pinned to the version vite-plugin-pwa resolves, and `swState()` on the frozen hook (five keys; `src/shell/test-hook.ts`, `e2e/globals.d.ts`, `e2e/test-hook.spec.ts`, `e2e/pwa/test-hook.spec.ts` together); because a registering worker breaks them, it narrows `e2e/pwa/build-output.spec.ts` \"registers no service worker automatically\" to CAP-6's first clause (no `registerSW.js`; `serviceWorker.register` only in the `sw.ts` chunk, found through a shared helper reading `.vite/manifest.json`, e.g. `swChunkFile()` in `e2e/helpers/dist-test.ts`, that entries 5, 7 and 8 reuse; entry 8 adds the manifest content check) and runs the F6 audit of every existing `pwa` and `dist-smoke` spec (worker mode set explicitly where a spec routes across a reload, handlers asserted hit); the failure detection is entry 2's."
+verify = "On `dist-test/` a `pwa` test named AD-16 AD-17 polls `swState()` to `active` and the frozen hook has exactly five keys; in the dev server `swState()` is `unregistered` and no `/src/shell/sw.ts` request is made; shell Vitest `AD-16` with a faked `Workbox` covers the state precedence (pre-existing installing, waiting, active; an update found later through the module's own `updatefound`) and `messageSkipWaiting`/`messageSW` never called; the narrowed build-output test and every existing `pwa` and `dist-smoke` spec pass; `npm run test:all` is green."
+covers = ["CAP-1", "CAP-2", "CAP-4", "CAP-6"]
+after = ["epic-place-preview"]
+hitl = false
+risk = "medium"
+unknown = "Which existing `pwa` and `dist-smoke` specs a registering worker breaks (routes across a reload, a precached URL answered with an error before install) is found by the F6 audit, not known up front."
+plan_checkpoint = true
+interface = "Worker-state module: getter and setter (F1); `sw.ts` default export or named register function returning the always-resolving attempt promise; `window.__wordcell.swState()`; the narrowed build-output check; the `sw.ts` chunk helper in `e2e/helpers/dist-test.ts`."
+tests = "AD-16 state rows (S); `swState()` and dev values (P7, Playwright dev); build-output no-auto-registration row (B)."
+owns = "The worker-state module, `sw.ts`, the boot tail, the `workbox-window` dependency, `swState()`, the F6 audit and the `sw.ts` chunk helper."
+consumers = "Entries 2–9."
+references = ["spec — SPEC.md CAP-1, CAP-2, F1–F6, F17; build-notes.md As built at 4130fb4, Worker module and state, Playwright mechanics", "architecture — ARCHITECTURE-SPINE.md AD-15, AD-16, AD-17 (Reading state), Scaffold deltas", "code — src/main.ts, src/shell/test-hook.ts, e2e/globals.d.ts, e2e/test-hook.spec.ts, e2e/pwa/test-hook.spec.ts, e2e/pwa/build-output.spec.ts, e2e/pwa/dist-smoke.spec.ts, e2e/pwa/theme.spec.ts, playwright.pwa.config.ts, vite.config.ts, package.json"]
+
+[[entry]]
+id = 2
+type = "story"
+title = "Worker failure split and no-skip-waiting guards"
+description = "Completes CAP-1 on entry 1's `sw.ts` and state module: `failed` on a rejected `register()`, on any worker observed this launch turning redundant before `activated` with no newer worker in any slot, and on an absent `navigator.serviceWorker` (F5, after the dev skip), sticky once set; the attempt always resolves after setting it; silent in production, `reportError(new Error(...))` in hook builds (AD-15 halt, so the boot tail's `halted()` check skips what follows), a redundant install reported later from a listener included; an architecture source scan (string literals kept, `strip(sf, true)`, AD-1 tree-scan exclusions, a scanner fixture case with `'SKIP_WAITING'` in a string) finding no `messageSkipWaiting`, `SKIP_WAITING`, `updateSW` or `virtual:pwa-register` in non-test `src/`; and a build-output assertion that the generated `sw.js` calls `skipWaiting()` only on a `SKIP_WAITING` message and has no `clientsClaim`; it re-runs entry 1's F6 audit for any existing `pwa` spec the hook-build halt now breaks (an install silently turning redundant) and fixes it."
+verify = "Shell Vitest `AD-16` with a faked registration names and passes the rejected register, first-install redundant, update-failure (older worker staying active), second-update-found-later, activated-then-superseded (not `failed`), absent `navigator.serviceWorker` and sticky-`failed` cases, each checking the production/hook-build split; the architecture scan and its fixture case pass; the generated-`sw.js` build-output test passes; `npm run test:all` is green."
+covers = ["CAP-1"]
+after = [1]
+hitl = false
+risk = "medium"
+plan_checkpoint = true
+interface = "`failed` in the state module; the hook-build report through `reportError`; the new scan in `src/architecture-*.test.ts` / `src/architecture-scan.ts`."
+tests = "AD-16 failure rows (S); no-skip-waiting scan (S) and generated `sw.js` (B)."
+owns = "Q-40 failure detection and the no-skip-waiting guards."
+consumers = "Entries 3, 5 and 7 (the `failed` state and the halt in hook builds, so a broken install fails a spec at once instead of leaving it waiting)."
+references = ["spec — SPEC.md CAP-1, F4, F5; build-notes.md Worker module and state (Failure), Packaging and budget", "rules — docs/game-flow-spec.md Q-40", "architecture — ARCHITECTURE-SPINE.md AD-1 (scan list), AD-15, AD-16", "code — src/shell/sw.ts, src/architecture-scan.ts, src/architecture-ad2-ad12-ad17.test.ts, e2e/pwa/build-output.spec.ts"]
+
+[[entry]]
+id = 3
+type = "story"
+title = "Two-build update proof"
+description = "Adds CAP-4's update proof on entry 2's state (a redundant install of B reports `failed` and halts the spec instead of leaving it waiting): `e2e/helpers/static-server.ts` (F8: copies a build dir, swaps or removes files, serves it with `/` mapped to `index.html` directly, `index.html` for any other missing path only on navigation requests (`Sec-Fetch-Mode: navigate`, unverified) and 404 otherwise, `/sw.js` included; per the review log's unapplied minor the install fetch requests plain `/index.html`, so no `?__WB_REVISION__` rationale or test case; both fallback branches covered in `e2e/helpers.spec.ts`; reused by entry 7's missing-`sw.js` cases), a shared no-prompt check in `e2e/helpers/` (no `dialog`, `alertdialog`, `alert` or `status` role besides App's live region, `REGION` in `e2e/helpers/live-region.ts`; reused by entry 6), and an `e2e/pwa/` update spec on a `dist-test/` copy with build marker A: after A is active and every open page controlled, B (A's `sw.js` with the `index.html` revision changed and `index.html` with marker B) is written; a reload leaves `swState()` `waiting`, marker A and no prompt; with B waiting, two pages open, one closed and another opened still show A; only a page opened after every page closed and B activated shows marker B, controlled, `swState()` polling to `active`, no prompt."
+verify = "`npm run test:e2e:pwa` passes the update spec (named Q-40 AD-16 A-A15) and `e2e/helpers.spec.ts` passes the static-server fallback cases; if Chromium's own activation timing differs from A-A15 (never a routing or serving limit), the plan records it and the row becomes the G3 D gap per SPEC Assumptions; `npm run test:all` is green."
+covers = ["CAP-4"]
+after = [2]
+hitl = false
+risk = "medium"
+unknown = "Whether Playwright 1.63's Chromium activates the waiting worker exactly when every page of the context has closed, and whether it sends `Sec-Fetch-Mode: navigate` to the local server (unverified)."
+plan_checkpoint = true
+interface = "`e2e/helpers/static-server.ts` (copy, swap, remove, serve, stop); the no-prompt check helper; the build-marker convention `<meta name=\"wc-build\" content=\"A\">`."
+tests = "Q-40 AD-16 A-A15 update row of rule-coverage.md (P7); static-server helper cases (`e2e/helpers.spec.ts`)."
+owns = "The static-server helper, the no-prompt check and the update proof."
+consumers = "Entry 6 (no-prompt check), entry 7 (static server)."
+references = ["spec — SPEC.md CAP-4, F6, F8, Assumptions; build-notes.md Playwright mechanics (Update); SPEC.review-log.md Result (unapplied minors)", "architecture — ARCHITECTURE-SPINE.md AD-16 (update policy), AD-17 (Projects)", "ux — EXPERIENCE.md State Patterns (New app version installed), A-E4", "code — e2e/helpers/live-region.ts, e2e/helpers/dist-test.ts, e2e/helpers.spec.ts, playwright.pwa.config.ts"]
+
+[[entry]]
+id = 4
+type = "story"
+title = "precacheComplete() test hook"
+description = "Adds CAP-2's sixth hook key `precacheComplete()` (AD-17 Reading state, synchronous `boolean`), its code in `src/shell/test-hook.ts` or a new hook-only shell module, never in `sw.ts` or the worker-state module (entry 2's files): behind the hook's env gate, each call starts an asynchronous recompute and returns the last computed value; a recompute returns `false` without fetching unless `navigator.serviceWorker.getRegistration()` has an `activated` active worker, then fetches `/sw.js` once while online, extracts the URLs of its single `precacheAndRoute([` array by regex (failing fast if none; never a hand list) and keeps them, so later recomputes read only Cache Storage (keys compared with `__WB_REVISION__` stripped); `src/shell/test-hook.ts`, `e2e/globals.d.ts`, `e2e/test-hook.spec.ts` and `e2e/pwa/test-hook.spec.ts` change together to exactly six keys; nothing pulls `workbox-window` into the main chunk (F1) and `dist/` still has no `__wordcell`."
+verify = "On `dist-test/` a `pwa` test named AD-17 polls `precacheComplete()` with `expect.poll` from `false` to `true` once the worker is activated and the precache is cached, and the frozen hook has exactly six keys; in the dev server `precacheComplete()` is `false` and `swState()` `unregistered`; shell Vitest `AD-17` covers the no-active-worker (no fetch), the parse (and its fail-fast) and the cached-keys comparison; the existing `dist-smoke` no-`__wordcell` check passes; `npm run test:all` is green."
+covers = ["CAP-2"]
+after = [1]
+hitl = false
+risk = "low"
+interface = "`window.__wordcell.precacheComplete(): boolean`, polled; the six-key frozen hook and its `e2e/globals.d.ts` type."
+tests = "AD-17 `swState()` and `precacheComplete()` row of rule-coverage.md (P7, Playwright dev); AD-17 / AD-18 no `__wordcell` in `dist/` (P7 `dist-smoke`, existing)."
+owns = "`precacheComplete()` and the six-key hook."
+consumers = "Entries 6 and 7 (the offline and Q-42 specs wait on it)."
+references = ["spec — SPEC.md CAP-2, F1, F14; build-notes.md Worker module and state (precacheComplete)", "architecture — ARCHITECTURE-SPINE.md AD-17 (Reading state, Celebration seam key list)", "code — src/shell/test-hook.ts, e2e/globals.d.ts, e2e/test-hook.spec.ts, e2e/pwa/test-hook.spec.ts, e2e/helpers/precache.ts"]
+
+[[entry]]
+id = 5
+type = "story"
+title = "Persistent-storage request and boot-order proofs"
+description = "Adds CAP-3: `requestPersistence()` in `src/shell/storage.ts` (absent `navigator.storage` → return; `persisted()` true → return; else `persist()`, result ignored; no catch, a rejection reaches AD-15), called once from `main.ts` when entry 1's attempt settles unless `halted()` (F4; the spec-sanctioned exception to \"`storage.ts` is called only by the shell stores\", which entry 11 records in AGENTS.md); the single-owner scan gains `navigator.storage` outside `src/shell/storage.ts` with the `localStorage` check's exclusions and a scanner fixture case; and the boot-order P7 tests through a call-recording init script (wraps `register`, `persisted`, `persist`; stubs `persisted()` false; records `dictionaryState()` at `register` and at its settle, the snapshot skipped when `window.__wordcell` is absent, since entry 7 reuses the script on `dist/`) owned here: the first-launch order (CAP-4's first-launch clause and CAP-1's dynamic-import row: the dictionary route held, the `sw.ts` chunk route, found through entry 1's chunk helper, not hit while it is held, hit only after release, and `dictionaryState()` not `loading` when it is; review log unapplied minor), a dictionary-404 launch, a dictionary-timeout launch (`page.clock`), the dev case in `e2e/test-hook.spec.ts` (F3), and CAP-1's two F4 halt cases (halt while the dictionary request is held; halt while the `sw.ts` chunk request is held)."
+verify = "Shell Vitest `AD-7` covers `requestPersistence()`'s branches (absent, already persisted, `false` ignored, rejection propagates); the `navigator.storage` scan and its fixture case pass; `pwa` tests named AD-16 AD-7 show dictionary settled → `register` called → `register` settled → one `persisted` then one `persist` call on first launch, after a dictionary 404 and after a dictionary timeout, the `sw.ts` chunk not requested while the dictionary is held, and no `register`, `persisted` or `persist` call in either F4 halt case; the dev test shows no `register`, no `/src/shell/sw.ts` request and one `persisted` then one `persist`; `npm run test:all` is green."
+covers = ["CAP-3", "CAP-1", "CAP-4"]
+after = [2, 4]
+hitl = false
+risk = "low"
+unknown = "Whether `page.clock` drives `dictionary.svelte.ts`'s 30 s timeout on `dist-test/` without disturbing the worker's install; the owner's answer to the Firefox persistent-storage question (epic Notes) is expected before this entry starts, and an \"installed app only\" answer changes `requestPersistence()`."
+interface = "`requestPersistence()` in `storage.ts`; the call-recording init script in `e2e/helpers/` (call log with `dictionaryState()` snapshots)."
+tests = "AD-7 `requestPersistence()` (S); AD-1 `navigator.storage` scan (S); AD-16 dynamic-import order, AD-7 once per launch, AD-16 AD-7 (F3) dev and (F4) halted rows of rule-coverage.md (P7, Playwright dev)."
+owns = "Persistence, its scan, the call-recording init script and the boot-order proofs."
+consumers = "Entry 7 (the init script, hook-free on `dist/`, for the Q-40 persistence assertions), entry 11 (AGENTS.md exception)."
+references = ["spec — SPEC.md CAP-3, CAP-1 (P7 order cases), F3, F4; build-notes.md Persistence, Worker module and state (Boot); SPEC.review-log.md Result (unapplied minors)", "architecture — ARCHITECTURE-SPINE.md AD-1, AD-7, AD-15, AD-16", "code — src/shell/storage.ts, src/main.ts, src/shell/dictionary.svelte.ts (TIMEOUT_MS), src/architecture-scan.ts, e2e/test-hook.spec.ts"]
+
+[[entry]]
+id = 6
+type = "story"
+title = "Offline proof"
+description = "Adds CAP-4's offline proof (brief §6.8) in `e2e/pwa/`: after a move online and `precacheComplete()` (no polling after it), `context.setOffline(true)` and a reload restore the game with entry 3's no-prompt check before the deal, then a deal (accepting the New game confirm) and a validated word with `dictionaryState()` `ready` and no fatal surface; a `dist-smoke` case in `e2e/pwa/dist-smoke.spec.ts` (an `allow` `test.describe` with `test.use`, never file level) does the same on `dist/` minus the hook reads (build-notes Offline), waiting by polling Cache Storage from the spec with `readPrecacheManifest` URLs and the active worker `activated`, not the hook; the existing `precache.spec.ts` one-download check stays green."
+verify = "`npm run test:e2e:pwa` and `npm run build && npm run test:e2e:dist` pass the tests named `AD-16 AD-17 offline after the precache is complete …` on `dist-test/` and `dist/`, and `precache.spec.ts` (AD-8, dictionary once with revision `null`) passes; `npm run test:all` is green."
+covers = ["CAP-4"]
+after = [3, 4]
+hitl = false
+risk = "low"
+tests = "AD-16 AD-17 offline row of rule-coverage.md (P7, P7 `dist-smoke`); AD-8 one download (P7, existing)."
+owns = "The offline proof and the `allow` describe in `dist-smoke.spec.ts`."
+consumers = "Entry 7 (adds its cases beside it)."
+references = ["spec — SPEC.md CAP-4, F6; build-notes.md Playwright mechanics (Offline, No-prompt checks)", "brief — brief.md §6.8", "code — e2e/pwa/dist-smoke.spec.ts, e2e/pwa/precache.spec.ts, e2e/helpers/precache.ts, src/ui/ConfirmDialogs.svelte"]
+
+[[entry]]
+id = 7
+type = "story"
+title = "Q-40 failure and Q-42 controlled-branch proofs"
+description = "Adds CAP-5's Playwright proofs: in `e2e/pwa/dist-smoke.spec.ts` (hook-free `dist/`), the worker script missing (a copy without `sw.js` on entry 3's static server, its `/sw.js` 404 asserted), one precached URL the page does not load answered 404 during the first install by `context.route` (handler hit by the worker, no worker still installing before the no-surface check) and the `sw.ts` chunk (entry 1's chunk helper) routed to 404 (F17, route hit) each boot, deal and validate with nothing shown, with entry 5's init script showing `persisted`/`persist` after the failure in the missing-script and chunk cases; in `e2e/pwa/sw-failure.spec.ts` (`pwa` only) the same three on `dist-test/` reach the AD-15 fatal surface with `swState()` `failed` (no `persisted`/`persist` call in the chunk case); and Q-42 under a controlling worker (F7, test-only: the precache entry deleted and the network answered 404 by `context.route`): Reload retries in place with the banner kept and no `load` event, and the banner hides when the held retry is fulfilled; no production branch is added."
+verify = "`npm run test:e2e:pwa` and `npm run build && npm run test:e2e:dist` pass the tests named Q-40 (both builds, all three failures) and Q-42 (retry in place, banner hides), each asserting its route or server request was hit, and `playwright.pwa.config.ts` keeps `sw-failure.spec.ts` out of `dist-smoke`; `npm run test:all` is green."
+covers = ["CAP-5"]
+after = [3, 5, 6]
+hitl = false
+risk = "medium"
+unknown = "Whether answering one precached icon 404 at context level during the first install reliably turns that install redundant before the no-surface check in both builds."
+plan_checkpoint = true
+tests = "Q-40 rows (P7 `dist-smoke`, P7 `pwa` `sw-failure.spec.ts`); Q-42 controlled-branch rows (P7) of rule-coverage.md."
+owns = "The Q-40 and Q-42 proofs."
+consumers = "Entry 11 (closes the epic 3 P7 rows against these tests, F15)."
+references = ["spec — SPEC.md CAP-5, F6, F7, F8, F15, F17; build-notes.md Playwright mechanics (Q-40, Q-42)", "rules — docs/game-flow-spec.md Q-40, Q-42", "code — e2e/pwa/dist-smoke.spec.ts, playwright.pwa.config.ts, src/shell/dictionary.svelte.ts", "spec — _bmad-output/specs/spec-epic-3-app-shell/rule-coverage.md (P7 rows for Q-40 and Q-42)"]
+
+[[entry]]
+id = 8
+type = "story"
+title = "Packaging and size budget with a real worker module"
+description = "Completes CAP-6 on top of entry 1's narrowed build-output test: `scripts/size-budget.mjs` (postbuild) fails when the manifest has a `src/shell/sw.ts` key no dynamic edge reaches (a `size-budget.test.mjs` case on a synthetic manifest); an `e2e/pwa/build-output.spec.ts` case reads `.vite/manifest.json` (entry 1's chunk helper) to show the `src/shell/sw.ts` key a dynamic entry outside the counted set and a Workbox marker (e.g. `messageSkipWaiting`) and `serviceWorker.register` in no file of `computeBudget`'s counted `rows` but in `manifest['src/shell/sw.ts'].file` or its static-import closure outside them; the total stays at or under 600,000 bytes with the margin recorded in the plan; and the epic 1 A3 items are re-checked closed at HEAD (F13)."
+verify = "The new `size-budget.test.mjs` case and the `build-output.spec.ts` manifest content case pass, `npm run build` reports the counted total at or under 600,000 bytes (margin recorded), the A3 re-check is recorded in the plan, and `npm run test:all` is green."
+covers = ["CAP-6"]
+after = [2]
+hitl = false
+risk = "low"
+tests = "AD-16 `serviceWorker.register` placement and AD-18 counted-set rows of rule-coverage.md (B, postbuild)."
+owns = "The size-budget gate's unreachable-key failure and the manifest content check."
+consumers = "Entry 10 (re-measures the margin), entry 11 (AD-18 Size sync)."
+references = ["spec — SPEC.md CAP-6, F13; build-notes.md Packaging and budget", "architecture — ARCHITECTURE-SPINE.md AD-16, AD-18 (Size)", "code — scripts/size-budget.mjs, scripts/size-budget.test.mjs, e2e/pwa/build-output.spec.ts, vite.config.ts"]
+
+[[entry]]
+id = 9
+type = "story"
+title = "Device-read tooling for a registered worker"
+description = "Adds CAP-7: `scripts/device-preview.mjs [session-fixture] [--history <history-fixture>] [--no-build]` (F9; `--history` consumes its value; a seed page written when either fixture is given, storing `wordcell:history` when `--history` is; the seed page's unregister kept only as a guard for an uncontrolled first visit); a seed run prints the clear-site-data hint, a no-fixture run prints \"Fresh install: clear site data first.\" and \"Update read (G3): keep site data.\"; `docs/device-testing.md` replaces \"Repeat step 3\" with clearing the origin's site data before a seed, re-seed or fresh-install read, says to close the Chrome tab and launch the installed app after seeding (G4–G6, naming G4's fixtures `session-place-free-letter-redo-tail.json` and `session-gave-up.json`), gives the Desktop-row line (G20–G22), the two-build update read in `device-checks.md` G3's order with A's and B's readiness steps and the spoiled read (redone once; a second consecutive one routes as G3 says), the offline readiness step and launch (G2), and uninstalling the tailnet-origin app before entry 12's production install; nothing new ships in `dist/` and `dist/sw.js` is unchanged."
+verify = "`scripts/device-preview.test.mjs` passes cases for a history-only run, a session-plus-history run and the two printed-hint variants; `docs/device-testing.md` covers each step CAP-7 lists (checked against `device-checks.md` G2–G6 and G20–G22); `npm run build` leaves `dist/` without the seed page; `npm run test:all` is green."
+covers = ["CAP-7"]
+after = [1]
+hitl = false
+risk = "low"
+interface = "`device-preview.mjs` CLI (`--history`), the doc's G2/G3/G4–G6/Desktop procedures."
+tests = "Device-preview seed and hint cases (`scripts/device-preview.test.mjs`)."
+owns = "The device-read tooling and procedure."
+consumers = "Entry 11 (tailnet and desktop reads), entry 12 (production install and update read)."
+references = ["spec — SPEC.md CAP-7, F9; build-notes.md Device tooling; device-checks.md G2–G6, G20–G22", "code — scripts/device-preview.mjs, scripts/device-preview.test.mjs, docs/device-testing.md, fixtures/history-invalid-*.json"]
+
+[[entry]]
+id = 10
+type = "story"
+title = "Refactor sweep"
+description = "Closing cleanup of epic 7 before the owner's device read (CAP-8): one table row per deferred finding of entries 1–9 (plans' deferred items, residual risks, unapplied review minors), each fixed, closed by a cited commit, declined with a reason, a fix ticket under technical defaults (a finding needing a `src/` change) or an owner-call row (functionality or UX only); the 4.6 \"main.ts controller-registration order has no test\" item (`device-checks.md` G9) fixed by a test or declined with a reason; the unit suite's warm median, a watch re-run on a Linux-filesystem checkout and the AD-18 margin re-measured; the sweep itself changes only comments, tests, test helpers and tooling."
+verify = "Every deferred finding has its row with a disposition, G9 is resolved, the warm median under 5 s, the watch re-run under 1 s and the AD-18 margin are recorded with the commit, and `npm run test:all` and `npm run test:screens` are green."
+covers = ["CAP-8"]
+after = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+hitl = false
+risk = "low"
+done_checkpoint = true
+references = ["spec — SPEC.md CAP-8; device-checks.md G9", "constraint — docs/development-methodology.md, Definition of done; AGENTS.md Running and verifying (unit budget, Linux-filesystem checkout)"]
+
+[[entry]]
+id = 13
+type = "story"
+title = "Deflake the success-signal drag test"
+description = "Fix ticket from 7.10's sweep (row D-65, B8): the test `R-73 (UI) Success signal (epic Done when 3): the same move by drag …` (`e2e/success-signal.spec.ts`, identified by title, not line) fails intermittently with no cause found (sightings, each in a full-suite `test:all` / `test:e2e` run under load and passing alone: win-trigger plan :101, game-surfaces retro F-13, 7.9 plan :108 run 1; 0/15 across 7.10's item 6 counted runs at five trees). Find the cause and fix it test-side inside item 1's boundary; a `src/` or config cause goes to item 5's fix-ticket proposal. Builds before 7.14 (tickets.toml order); a change here to `e2e/helpers/touch.ts` or `e2e/helpers.spec.ts` is a recorded 7.14 hand-off for the orchestrator (7.14 re-runs its before-count from this ticket's commit). Everything is recorded in this ticket's plan (`story-deflake-the-success-signal-drag-test-plan.md`), citing D-65; the done 7.10 plan and its D-65 row stay unedited."
+verify = "The cause is recorded with its item 5 proof and fixed with 0/50 isolated and 0/3 counted failures, or the plan records each item 5 outcome that applies with its counts and evidence; for `built`, `npm run test:all` is green; `git diff --name-only <baseline> -- . ':(exclude)_bmad-output'` (baseline: the build's start commit) lists only item 1's files."
+covers = ["CAP-8"]
+after = [10]
+hitl = false
+risk = "low"
+references = ["spec — SPEC.md CAP-8", "plan — _bmad-output/initiative-wordcell-v1/epic-pwa-release/story-refactor-sweep-plan.md (D-65, D-70, D-71, Fix tickets)", "constraint — docs/development-methodology.md, Definition of done; AGENTS.md Running and verifying; ARCHITECTURE-SPINE.md AD-17", "evidence — .autopilot/20261014-2230/6.1-T-attempt1.log:1361-1412", "code — e2e/success-signal.spec.ts, e2e/helpers/ (gestures.ts, touch.ts, board.ts, lifecycle.ts, drag.ts), e2e/helpers.spec.ts, playwright.base.ts"]
+
+[[entry]]
+id = 14
+type = "story"
+title = "Deflake the helpers.spec.ts doubleTap test under load"
+description = "Fix ticket from 7.10's sweep (row D-71, B8): the test `AD-17 doubleTap gives two touch taps whose clicks have detail 1 then 2, even 600 ms apart in real time` (`e2e/helpers.spec.ts`, by title, not line) failed once under full-suite load in `doubleTap`'s `[1, 2]` poll (before the test's < 400 ms check): click details `[1, 1]`. The stamp premise (item 2, the claim under test) normally holds, as the test's < 400 ms check after a 600 ms real wait shows; the build investigates why, under load, the second tap's events landed ~1.7 s after its stamp (the first tap's matched its stamp, taken at dispatch; item 3). Related history only: D-64's mechanism (unstamped taps past Chromium's tap-count window); a fix here may touch D-64's path but does not close D-64 (SPEC Non-goals A7).\n\nSightings: bbdd2d5's final `test:all` (item 3); since then 30/30 alone; 0/3 counted with a green final `test:all` at 2d01200 and f29b440 (7.10 review passes 2, 3) and 84df83f (7.13 plan). Everything is recorded in this ticket's plan (`story-deflake-the-helpers-spec-ts-doubletap-test-under-load-plan.md`), citing D-71; the done 7.10 plan and its D-71 row stay unedited."
+verify = "The cause is recorded with its item 5 proof and fixed with 0/50 isolated and 0/3 counted failures, or the plan records each item 5 outcome that applies with its counts and evidence; for `built`, `npm run test:all` is green; `git diff --name-only <baseline> -- . ':(exclude)_bmad-output'` (baseline: the build's start commit) lists only item 1's files."
+covers = ["CAP-8"]
+after = [10, 13]
+hitl = false
+risk = "low"
+references = ["spec — SPEC.md CAP-8, Non-goals", "plan — _bmad-output/initiative-wordcell-v1/epic-pwa-release/story-refactor-sweep-plan.md", "constraint — docs/development-methodology.md, Definition of done; AGENTS.md Running and verifying; ARCHITECTURE-SPINE.md AD-17 Touch", "evidence — _bmad-output/initiative-wordcell-v1/epic-pwa-release/story-deflake-the-success-signal-drag-test-plan.md, 7.14 hand-off (a late touchEnd within one tap still clicked, unloaded; observation only)", "history — _bmad-output/initiative-wordcell-v1/epic-end-of-game-words/epic-end-of-game-words.md:75 (D-64 mechanism, 169c6bc)", "code — e2e/helpers.spec.ts, e2e/helpers/touch.ts, playwright.base.ts"]
+
+[[entry]]
+id = 15
+type = "story"
+title = "Close the 7.11 §6.4 test-name and celebration-colour gaps"
+description = "Fix ticket from ticket 7.11's §6.4 audit (plan `story-close-out-documents-audits-and-device-read-plan.md`, fix-ticket proposals 1 and 2; owner decision 2026-11-07 in the epic Notes). Tests plus one coverage-row edit, which follows from fix-ticket proposal 2 because the §6.4 sentence-level audit reads the epics' `rule-coverage.md` (release-checklist §6.4), so it is no new scope; no `src/` change. A failure of the new test's own premise (e.g. live faces not uniform on the won board) is fixed in the test and recorded in the plan, not an owner stop; only a copy differing from the live face (a real `src/` defect) stops for the owner.\n\n(1) Q-17 (portrait on the phone, responsive in a browser) has no passing test whose title carries Q-17, though the behaviour is tested (G1 passed). Retitle two tests, assertions unchanged, each title starting `Q-17` with its AD id kept after it: `e2e/pwa/build-output.spec.ts:22` for the portrait half (it asserts the manifest's `orientation: 'portrait'`; e.g. \"Q-17 AD-16 the built web manifest is exactly DESIGN.md A-D5 plus the plugin defaults\"), and `e2e/hover-peek-reanchor.spec.ts:83` (`desktop` describe, \"AD-12 an open hover peek re-anchors above its cell after a viewport width change…\") for the responsive half (it asserts the cell moves and narrows as the viewport goes from 700 to 600 px wide, the AD-11 width rule).\n\n(2) R-87's \"no colour change\" clause (Q-48) has no automated assertion. Add one test, title starting `R-87`, in the `android` describe of `e2e/celebration.spec.ts` beside \"R-87 the copies: 55 face copies…\" (:324), reusing `readyToWin` (as `readyToWin(page, 'prefs-theme-scifi')`: Normal speed, and a `--wc-card-texture` that is not `none`, unlike Charcoal's, `src/ui/app.css:39`), `winIntoRun` and the manual-clock stepping of `stepUntilShown`:\n- First, after `winIntoRun` and before the first step, every live card's `.face` (inside its `[data-card-id]` element) on the won board shows one and the same computed value set of the face properties of the third bullet, and every live `.glyph` one computed `color`.\n- Then it samples the run at two manual-clock steps, both bounded by the run's cap (`NORMAL_CAP_STEP_MS`): the first step at which a group is shown, and the first step at which the QU copy (in JDAQUYE, group 1 in `WON_ROWS`) is shown. Each sample reads only shown copies (group computed opacity > 0, copy visible) and first asserts at least one; the second asserts the QU copy is among them.\n- At each sample: `[data-celebration]` still counts 55 and `[data-celebration-root]` holds only its `[data-celebration-group]` elements and their copies (no trail); the root and each shown group have computed `filter` `none` and `mix-blend-mode` `normal`; each shown `[data-celebration]` copy's computed `color`, `background-color`, `background-image`, `border-top-color` and `filter` equal the live face set, and its `.glyph` `color` equals a live card's `.glyph`; the QU copy's `.badge` `background-color` and `color` equal a live QU card's `.badge`.\n\n(3) `_bmad-output/specs/spec-epic-10-end-of-game-words/rule-coverage.md:61` lists \"No trail, no colour change\" (R-87, Q-48) under Exempt as visual. Move it to a mapped row, `| R-87 no trail of copies and no colour change (Q-48) | CAP-3 | P6 |`, like the file's other R-87 rows; per its header the row cites no titles, and the plan records the new test for both clauses and \"R-87 the copies: 55 face copies…\" (:324) as the second test for \"no trail\"."
+verify = "for each new or retitled title, `grep` finds it and the final `npm run test:all` log (a local run with `CI` unset, which selects the `list` reporter, `playwright.base.ts:18`) shows its `✓` line (the manifest test under both `pwa` and `dist-smoke`); epic 10 `rule-coverage.md` has no Exempt line for \"no colour change\" and has the R-87 \"no trail of copies and no colour change (Q-48)\" P6 row; no `src/` file changed; `npm run test:all` is green (and `npm run test:screens` if a screenshot spec changed)."
+covers = ["CAP-9"]
+after = [10]
+hitl = false
+risk = "low"
+references = ["plan — _bmad-output/initiative-wordcell-v1/epic-pwa-release/story-close-out-documents-audits-and-device-read-plan.md (§6.4 audit, fix-ticket proposals 1 and 2)", "code — e2e/pwa/build-output.spec.ts, e2e/hover-peek-reanchor.spec.ts, e2e/celebration.spec.ts", "coverage — _bmad-output/specs/spec-epic-10-end-of-game-words/rule-coverage.md (Exempt, :61)", "spec — docs/game-flow-spec.md Q-17, Q-48, R-87"]
+
+[[entry]]
+id = 11
+type = "story"
+title = "Close-out: documents, audits and device read"
+description = "Brings the spine (AD-16 boot tail and update policy, AD-17 six keys and Reading state, AD-7, AD-15, AD-1 scans, AD-16 `Binds:`, Structural Seed, Capability → Architecture Map, Scaffold deltas, AD-18 Size, AD-17 Projects; through `bmad-architecture`), EXPERIENCE.md's \"New app version installed\" row and A-E4 (through `bmad-ux`), AGENTS.md (through `bmad-project-context`: the `main.ts` `requestPersistence()` exception, `navigator.storage` only in `src/shell/storage.ts`, the new shell modules) and SPEC F12 and `release-checklist.md` step 6 (the retrospective runs before the merge) in line with the build; closes this epic's `rule-coverage.md` rows and the epic 3 P7 rows for Q-40 and Q-42; hands Jared the build for every Device row of `device-checks.md` on the tailnet preview and every Desktop row in desktop Chrome (`docs/device-testing.md`), each failure becoming a fix ticket (new entry before entry 12, with its reproduction test or an accepted §6.6 gap), a spec §9 question or an owner question where the row says so; then runs the §6.4 and §6.6 audits last, after every row is recorded and its fix tickets are done. Also syncs `build-notes.md` (:22-23 CAP-6 unreachable-key gate; :55 hook gate `VITE_TEST_HOOKS === '1'`; :112-115 and SPEC F6: dist-smoke runs in Playwright's default worker mode, not `block`; :123-124, :151 and SPEC F8: no `?__WB_REVISION__` install fetch or CDP route, observation through B's handle and a recorder in A's scope), records ticket 7.10's G9 disposition in `device-checks.md` G9, and updates `docs/device-testing.md`'s (unverified) tags from the device read (ticket 7.10 plan, Entry-11 amendment: D-43, D-50, D-61, D-62, D-63, D-66)."
+verify = "No document contradicts the build; every row of `rule-coverage.md` names a passing test or a D gap Jared accepted in the epic Notes; Jared's read of every Device and Desktop row is recorded in the epic Notes with the footer it was read on; the §6.4 and §6.6 audits are recorded in the plan with every gap a landed fix ticket or one Jared accepted; Jared's answers or explicit deferrals to the three SPEC Open Questions are recorded in the epic Notes (§6.9); `SESSION_VERSION`, `HISTORY_VERSION` and the Session and history shapes are unchanged; `npm run test:all` and `npm run test:screens` are green."
+covers = ["CAP-9"]
+after = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 13, 14, 15]
+hitl = true
+risk = "low"
+unknown = "Which device rows fail on the phone (notably G3 activation timing and A-A11 back behaviour in G5/G6) and so how many fix tickets land before the merge."
+done_checkpoint = true
+references = ["spec — SPEC.md CAP-9, F10, F12, F14, F15, F16, Open Questions; device-checks.md; release-checklist.md (§6.4, §6.6, §6.9 audits); rule-coverage.md; _bmad-output/specs/spec-epic-3-app-shell/rule-coverage.md (P7 rows for Q-40 and Q-42)", "constraint — docs/device-testing.md; AGENTS.md (managed block edits go through bmad-project-context); docs/development-methodology.md, Definition of done"]
+
+[[entry]]
+id = 12
+type = "story"
+title = "Owner's post-merge v1 release: production install, 1.0.0 and ten games"
+description = "CAP-10, after the epic retrospective and Jared's merge of `pwa-release` into `main` and push (agents never merge or push): CI deploys; Jared uninstalls the tailnet-origin app, installs from the production URL through Chrome's own install UI and reads G1, G2 and G4 there; the agent fast-forwards `pwa-release` to `main` (`git merge --ff-only main`, stopping for Jared if that fails) and commits the release commit setting `1.0.0` in `package.json` and `package-lock.json` (F11), which Jared merges and pushes and CI deploys; Jared runs G3's update read to `1.0.0 (<sha>)` (a spoiled read redone once; a second consecutive one routes as G3 says), plays ten consecutive qualifying games on 1.0.0 (brief §6.3, restart rule per his answer or the proposed default) and judges §6.1; post-merge fixes follow F11 and F12; the unit suite's warm median and watch re-run are re-measured on a Linux-filesystem checkout of the last commit on `main` before the declaration (§6.7) and the §6.4 and §6.6 audits re-confirmed for post-merge fix deltas only; every row of `release-checklist.md` gets its evidence, and Jared declares v1 released and marks the initiative done."
+verify = "The CI and Deploy runs of the merge and of the 1.0.0 commit are green; Jared's production reads (G1, G2, G4, G3 to 1.0.0), the ten games (date, outcome, score, words, footer each) and his §6.1 statement are recorded in the epic Notes; every row of `release-checklist.md` carries its evidence, any Done when 1 waiver is in the initiative Notes, and the initiative is marked done."
+covers = ["CAP-10"]
+after = [11]
+hitl = true
+risk = "high"
+unknown = "Whether a production update read is spoiled (the first cold launch already on 1.0.0) and whether a fix ships mid-run (the ten-game restart rule is an open owner question)."
+done_checkpoint = true
+references = ["spec — SPEC.md CAP-10, F11, F12, Open Questions; release-checklist.md (Production sequence, §6.7); device-checks.md G1–G4, G16; SPEC.review-log.md Result (unapplied minors 4 and 5)", "constraint — docs/device-testing.md; docs/development-methodology.md; AGENTS.md rule 7"]

@@ -54,6 +54,10 @@ declare global {
         | { readonly kind: 'rejected'; readonly reason: RejectReason }
         | { readonly kind: 'halted' };
       dictionaryState(): 'loading' | 'ready' | 'failed';
+      // AD-16 worker state (src/shell/sw-state.ts, epic 7 F1).
+      swState(): 'unregistered' | 'installing' | 'waiting' | 'active' | 'failed';
+      // AD-17 Reading state: the last recomputed value, polled (epic 7 CAP-2).
+      precacheComplete(): boolean;
       // AD-17 Celebration seam: the one writable part (epic 10 entry 5).
       celebration: Readonly<{
         advance(ms: number): void;
@@ -67,6 +71,24 @@ declare global {
     >;
     // e2e/helpers/storage-spy.ts: localStorage writes in order (removeItem as a null value).
     __wordcellStorageWrites?: { key: string; value: string | null }[];
+    // e2e/helpers/boot-calls.ts (epic 7 CAP-3): register, its settle, persisted and persist calls in
+    // order, each with the hook's dictionaryState() when the hook exists; `BootCall` there reuses
+    // this element type.
+    __wordcellBootCalls?: {
+      event: 'register' | 'register-settled' | 'persisted' | 'persist';
+      outcome?: 'fulfilled' | 'rejected';
+      dictionary?: 'loading' | 'ready' | 'failed';
+    }[];
+    // e2e/helpers/boot-calls.ts with `holdRegister`: lets the held register() promises settle.
+    __wordcellBootRelease?: () => void;
+    // e2e/helpers/boot-calls.ts with `holdListText`: word-list text() calls, the release and its
+    // performance.now() stamp.
+    __wordcellListTextCalls?: number;
+    __wordcellListTextRelease?: () => void;
+    __wordcellListTextReleasedAt?: number;
+    // e2e/helpers/offline.ts (epic 7 CAP-4): the seed stub's arm flag and its pinned-call count.
+    __wordcellSeedArmed?: boolean;
+    __wordcellSeedPins?: number;
     // e2e/helpers/board.ts stashSession: the store's Session reference, stashed to assert it is
     // unchanged.
     __pointerSession?: unknown;

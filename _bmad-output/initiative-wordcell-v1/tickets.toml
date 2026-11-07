@@ -68,3 +68,10 @@ slug = "epic-place-preview"
 title = "Place preview of WordCell tops"
 covers = []
 after = [{ epic = 10, needs = "the current Place screen and WordCellRow used mirrors, the flip.ts fly-to-cell hold (F28), the How to play Place scene and the Charcoal and light-theme screenshot baselines" }]
+
+[[epic]]
+id = 7
+slug = "epic-pwa-release"
+title = "PWA and release"
+covers = []
+after = [{ epic = 11, needs = "the merged baseline with the Place preview (main at 4130fb4) that the release device checks read; nothing in epic 7's code depends on epic 11's code" }]

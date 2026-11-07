@@ -862,6 +862,54 @@ describe('AD-1 popstate', () => {
   ]);
 });
 
+describe('AD-16 skip-waiting names', () => {
+  run(
+    [
+      {
+        name: "'SKIP_WAITING' in a string",
+        path: S,
+        source: "wb.messageSW({ type: 'SKIP_WAITING' });",
+        fails: 'skip-waiting',
+      },
+      { name: 'updateSW(true)', path: S, source: 'updateSW(true);', fails: 'skip-waiting' },
+      {
+        name: 'virtual:pwa-register in a string',
+        path: S,
+        source: "const id = 'virtual:pwa-register';",
+        fails: 'skip-waiting',
+      },
+      {
+        name: 'markup onclick messageSkipWaiting()',
+        path: UV,
+        source: '<button onclick={() => wb.messageSkipWaiting()}>x</button>',
+        fails: 'skip-waiting',
+      },
+      {
+        name: 'main.ts imports virtual:pwa-register',
+        path: 'src/main.ts',
+        source: "import { registerSW } from 'virtual:pwa-register';",
+        fails: 'skip-waiting',
+      },
+      {
+        name: 'svelte <script> messageSkipWaiting()',
+        path: UV,
+        source: '<script lang="ts">\n  wb.messageSkipWaiting();\n</script>\n<p>x</p>',
+        fails: 'skip-waiting',
+      },
+      {
+        name: 'names only in a comment',
+        path: S,
+        source:
+          '// no messageSkipWaiting, SKIP_WAITING, updateSW or virtual:pwa-register here\nexport {};',
+      },
+      { name: 'shell test SKIP_WAITING', path: ST, source: "const t = 'SKIP_WAITING';" },
+      { name: 'engine test SKIP_WAITING', path: ET, source: "const t = 'SKIP_WAITING';" },
+      { name: 'skipWaiting alone', path: S, source: 'self.skipWaiting();' },
+    ],
+    'AD-16',
+  );
+});
+
 describe('AD-1 localStorage', () => {
   run([
     {
@@ -883,6 +931,104 @@ describe('AD-1 localStorage', () => {
     },
     { name: 'localStorage in a shell string', path: S, source: "const s = 'localStorage';" },
     { name: 'localStorageKey', path: S, source: 'const localStorageKey = 1;' },
+  ]);
+});
+
+// Epic 7 SPEC CAP-3: `navigator.storage` only in src/shell/storage.ts, under the localStorage
+// rule's exclusions.
+describe('AD-1 navigator.storage', () => {
+  run([
+    {
+      name: 'shell navigator.storage',
+      path: S,
+      source: 'navigator.storage.persist();',
+      fails: 'navigator-storage',
+    },
+    {
+      name: 'UI navigator.storage',
+      path: U,
+      source: 'navigator.storage.persist();',
+      fails: 'navigator-storage',
+    },
+    {
+      name: 'navigator?.storage',
+      path: S,
+      source: 'navigator?.storage?.persist();',
+      fails: 'navigator-storage',
+    },
+    {
+      name: 'window.navigator.storage',
+      path: S,
+      source: 'window.navigator.storage.persist();',
+      fails: 'navigator-storage',
+    },
+    {
+      name: 'navigator . storage',
+      path: S,
+      source: 'navigator . storage.persist();',
+      fails: 'navigator-storage',
+    },
+    {
+      name: 'engine test navigator.storage',
+      path: ET,
+      source: 'navigator.storage.persist();',
+      fails: 'navigator-storage',
+    },
+    {
+      // `navigator` is not an engine token, so only the new rule reports.
+      name: 'engine navigator.storage',
+      path: E,
+      source: 'navigator.storage.persist();',
+      fails: 'navigator-storage',
+    },
+    {
+      name: 'shell .d.ts navigator.storage',
+      path: 'src/shell/x.d.ts',
+      source: 'declare const s: typeof navigator.storage;',
+      fails: 'navigator-storage',
+    },
+    {
+      name: 'markup navigator.storage',
+      path: UV,
+      source: '<p>{navigator.storage}</p>',
+      fails: 'navigator-storage',
+    },
+    {
+      name: 'main.ts navigator.storage',
+      path: 'src/main.ts',
+      source: 'navigator.storage.persist();',
+      fails: 'navigator-storage',
+    },
+    {
+      name: 'svelte <script> navigator.storage',
+      path: UV,
+      source: '<script lang="ts">\n  navigator.storage.persist();\n</script>\n<p>x</p>',
+      fails: 'navigator-storage',
+    },
+    {
+      name: 'template substitution navigator.storage',
+      path: S,
+      source: js('const s = ~@{navigator.storage}~;'),
+      fails: 'navigator-storage',
+    },
+    {
+      name: 'storage.ts navigator.storage',
+      path: 'src/shell/storage.ts',
+      source: 'navigator.storage.persist();',
+    },
+    {
+      name: 'navigator.storage in a shell string',
+      path: S,
+      source: "const s = 'navigator.storage';",
+    },
+    {
+      name: 'navigator.storage in a comment',
+      path: S,
+      source: '// navigator.storage lives in storage.ts\nexport {};',
+    },
+    { name: 'navigator.storageBuckets', path: S, source: 'navigator.storageBuckets.open(x);' },
+    { name: 'shell test navigator.storage', path: ST, source: 'navigator.storage.persist();' },
+    { name: 'UI test navigator.storage', path: UT, source: 'navigator.storage.persist();' },
   ]);
 });
 

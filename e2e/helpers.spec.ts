@@ -1,4 +1,5 @@
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { request as httpRequest } from 'node:http';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { devices, expect, type Page, type Request, test } from '@playwright/test';
@@ -18,6 +19,13 @@ import {
   trayIds,
 } from './helpers/board';
 import {
+  bootCalls,
+  listTextCalls,
+  recordBootCalls,
+  releaseListText,
+  releaseRegister,
+} from './helpers/boot-calls';
+import {
   enableCelebration,
   FAST_CAP_STEP_MS,
   finishCelebration,
@@ -29,7 +37,7 @@ import {
   watchAddedFromBoot,
 } from './helpers/celebration';
 import { button, expectLeaves, hitAt, wc } from './helpers/dialogs';
-import { buildRoot } from './helpers/dist-test';
+import { buildRoot, swChunkFile, swStaticClosureFiles } from './helpers/dist-test';
 import { dragResidue, expectNoResidue } from './helpers/drag';
 import {
   css,
@@ -63,7 +71,22 @@ import {
   showPage,
   startHidden,
 } from './helpers/lifecycle';
-import { recordRegion, recordRegionFromBoot, resetRegion, sets } from './helpers/live-region';
+import {
+  expectNoPrompt,
+  recordRegion,
+  recordRegionFromBoot,
+  resetRegion,
+  sets,
+} from './helpers/live-region';
+import {
+  armSeed,
+  composeTan,
+  dealNewGame,
+  pinNextSeed,
+  seedPins,
+  TAN_TRAY,
+} from './helpers/offline';
+import { precacheMissing } from './helpers/precache';
 import { onAndroid, onDesktop } from './helpers/project';
 import {
   booted,
@@ -80,9 +103,10 @@ import { captureBoot, fixture, seedStorage } from './helpers/seed';
 import { expectSelection, select, selection, wcOf } from './helpers/selection';
 import { cursorIndex, draft, draftDetail, game, storedGame, storedText } from './helpers/session';
 import { SESSIONS } from './helpers/sessions';
+import { type Copy, copy } from './helpers/static-server';
 import { armStorageSpy, storageWrites } from './helpers/storage-spy';
 import { tokenColor } from './helpers/style';
-import { doubleTap, longPress, touchDrag, touchHold } from './helpers/touch';
+import { DOUBLE_TAP_GAP_MS, doubleTap, longPress, touchDrag, touchHold } from './helpers/touch';
 
 // AD-17 helper self-tests. The direct `page.evaluate` writes to `wordcell:*` below stand in for the
 // app's own writes during a prior load; they are not seeding and are allowed only in this file.
@@ -1100,6 +1124,39 @@ test.describe('touchDrag / longPress / touchHold / doubleTap', () => {
     }
   });
 
+  test('AD-17 doubleTap stamps the second tap from the wall clock at its dispatch, so a 150 ms step only Node sees moves it 150 ms on the page', async ({
+    page,
+  }) => {
+    const at = { x: 200, y: 400 };
+    const step = 150;
+    await page.goto('/');
+    await installProbe(page);
+    // Chromium reads each stamp against its own wall clock (touch.ts doubleTap): a step both clocks
+    // take cancels, so a step only Node's `Date.now` takes is what shows the second tap's stamp.
+    // After a 300 ms real wait the stepped stamp is still in the past, and a stamp of the bare
+    // dispatch time would sit ~300 ms late.
+    const wallClock = Date.now;
+    try {
+      await doubleTap(page, at, {
+        between: async () => {
+          await page.waitForTimeout(300);
+          Date.now = () => wallClock() + step;
+        },
+      });
+    } finally {
+      Date.now = wallClock;
+    }
+    const events = (await probed(page)).filter((e) => e.type !== 'contextmenu');
+    expect(events.map((e) => e.type)).toEqual([
+      'pointerdown',
+      'pointerup',
+      'pointerdown',
+      'pointerup',
+    ]);
+    const gap = (events[2]?.timeStamp ?? Number.NaN) - (events[1]?.timeStamp ?? Number.NaN);
+    expect(Math.abs(gap - (DOUBLE_TAP_GAP_MS + step))).toBeLessThanOrEqual(2);
+  });
+
   test('AD-17 doubleTap that gets no repeat click fails listing the page touch and click events with their timeStamps', async ({
     page,
   }) => {
@@ -1314,6 +1371,284 @@ test.describe('buildRoot', () => {
       else process.env.PW_PREVIEW = saved;
       rmSync(repo, { recursive: true, force: true });
     }
+  });
+});
+
+test.describe('swChunkFile', () => {
+  test('AD-17 swChunkFile throws on a missing, non-dynamic or file-less src/shell/sw.ts key and returns its file', () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'sw-chunk-'));
+    const write = (manifest: unknown) =>
+      writeFileSync(path.join(root, '.vite/manifest.json'), JSON.stringify(manifest));
+    try {
+      mkdirSync(path.join(root, '.vite'));
+      write({ 'index.html': { file: 'assets/index-a.js', isEntry: true } });
+      expect(() => swChunkFile(root)).toThrow(/has no src\/shell\/sw\.ts key$/);
+      write({ 'src/shell/sw.ts': { file: 'assets/sw-b.js' } });
+      expect(() => swChunkFile(root)).toThrow(/src\/shell\/sw\.ts is not a dynamic entry$/);
+      write({ 'src/shell/sw.ts': { isDynamicEntry: true } });
+      expect(() => swChunkFile(root)).toThrow(/src\/shell\/sw\.ts has no file$/);
+      write({ 'src/shell/sw.ts': { file: 'assets/sw-b.js', isDynamicEntry: true } });
+      expect(swChunkFile(root)).toBe('assets/sw-b.js');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+test.describe('swStaticClosureFiles', () => {
+  test("AD-17 swStaticClosureFiles returns sw.ts's file and its imports closure once each and throws naming a missing or file-less key", () => {
+    const root = mkdtempSync(path.join(tmpdir(), 'sw-closure-'));
+    const write = (manifest: unknown) =>
+      writeFileSync(path.join(root, '.vite/manifest.json'), JSON.stringify(manifest));
+    const sw = 'src/shell/sw.ts';
+    try {
+      mkdirSync(path.join(root, '.vite'));
+      write({ 'index.html': { file: 'assets/index-a.js', isEntry: true } });
+      expect(() => swStaticClosureFiles(root)).toThrow(/has no key src\/shell\/sw\.ts$/);
+      write({ [sw]: { file: 'assets/sw-b.js', imports: ['_gone.js'] } });
+      expect(() => swStaticClosureFiles(root)).toThrow(/has no key _gone\.js$/);
+      write({ [sw]: { file: 'assets/sw-b.js', imports: ['_a.js'] }, '_a.js': { name: 'a' } });
+      expect(() => swStaticClosureFiles(root)).toThrow(/key _a\.js has no file$/);
+      write({
+        [sw]: { file: 'assets/sw-b.js', imports: ['_a.js'] },
+        '_a.js': { file: 'assets/a.js', imports: ['_b.js'] },
+        '_b.js': { file: 'assets/b.js' },
+        '_unrelated.js': { file: 'assets/unrelated.js' },
+      });
+      expect(swStaticClosureFiles(root)).toEqual(['assets/sw-b.js', 'assets/a.js', 'assets/b.js']);
+      write({
+        [sw]: { file: 'assets/sw-b.js', imports: ['_a.js'], dynamicImports: ['_d.js'] },
+        '_a.js': { file: 'assets/a.js', imports: ['_b.js'] },
+        '_b.js': { file: 'assets/b.js', imports: ['_a.js'] },
+        '_d.js': { file: 'assets/d.js' },
+      });
+      expect(swStaticClosureFiles(root)).toEqual(['assets/sw-b.js', 'assets/a.js', 'assets/b.js']);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+test.describe('recordBootCalls', () => {
+  // A routed probe document under the dev server's origin: no app, so no `__wordcell` hook and no
+  // `dictionary` key on any entry. A worker's main-script fetch is seen only by `context.route`
+  // (`page.route` never sees it), so the probe's worker scripts are routed on the context.
+  const probe = async (page: Page): Promise<string[]> => {
+    const errors: string[] = [];
+    page.on('pageerror', (error) => errors.push(error.stack ?? error.message));
+    await page.route('**/boot-calls-probe/', (route) =>
+      route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>probe</title>' }),
+    );
+    return errors;
+  };
+
+  test("AD-17 recordBootCalls logs a rejected register's settle with no unhandled rejection, stubs persisted() false, calls persist through and records no snapshot without the hook", async ({
+    page,
+  }) => {
+    const errors = await probe(page);
+    let hits = 0;
+    await page.context().route('**/boot-calls-probe/missing.js', (route) => {
+      hits++;
+      return route.fulfill({ status: 404, contentType: 'text/plain', body: '' });
+    });
+    await recordBootCalls(page);
+    await page.goto('/boot-calls-probe/');
+    const result = await page.evaluate(async () => {
+      const outcome = await navigator.serviceWorker
+        .register('/boot-calls-probe/missing.js', { scope: '/boot-calls-probe/' })
+        .then(
+          () => 'fulfilled',
+          () => 'rejected',
+        );
+      const persisted = await navigator.storage.persisted();
+      const persist = await navigator.storage.persist();
+      return { outcome, persisted, persist: typeof persist, hook: window.__wordcell !== undefined };
+    });
+    expect(result).toEqual({
+      outcome: 'rejected',
+      persisted: false,
+      persist: 'boolean',
+      hook: false,
+    });
+    expect(await bootCalls(page)).toStrictEqual([
+      { event: 'register' },
+      { event: 'register-settled', outcome: 'rejected' },
+      { event: 'persisted' },
+      { event: 'persist' },
+    ]);
+    expect(hits).toBe(1);
+    // One macrotask, so an unhandled rejection would have been reported.
+    await page.evaluate(() => new Promise<void>((resolve) => setTimeout(resolve, 0)));
+    expect(errors).toEqual([]);
+  });
+
+  test('AD-17 recordBootCalls with holdRegister settles register only after releaseRegister', async ({
+    page,
+  }) => {
+    const errors = await probe(page);
+    let hits = 0;
+    await page.context().route('**/boot-calls-probe/sw.js', (route) => {
+      hits++;
+      return route.fulfill({ contentType: 'text/javascript', body: '' });
+    });
+    await recordBootCalls(page, { holdRegister: true });
+    await page.goto('/boot-calls-probe/');
+    await page.evaluate(() => {
+      const probeWindow = window as unknown as { __probeSettled?: string };
+      navigator.serviceWorker
+        .register('/boot-calls-probe/sw.js', { scope: '/boot-calls-probe/' })
+        .then(
+          () => {
+            probeWindow.__probeSettled = 'fulfilled';
+          },
+          () => {
+            probeWindow.__probeSettled = 'rejected';
+          },
+        );
+    });
+    const settled = () =>
+      page.evaluate(
+        () => (window as unknown as { __probeSettled?: string }).__probeSettled ?? null,
+      );
+    await expect
+      .poll(async () => (await bootCalls(page)).find((call) => call.event === 'register-settled'))
+      .toStrictEqual({ event: 'register-settled', outcome: 'fulfilled' });
+    await page.evaluate(() => new Promise<void>((resolve) => setTimeout(resolve, 0)));
+    expect(await settled()).toBeNull();
+    await releaseRegister(page);
+    await expect.poll(settled).toBe('fulfilled');
+    expect(await bootCalls(page)).toStrictEqual([
+      { event: 'register' },
+      { event: 'register-settled', outcome: 'fulfilled' },
+    ]);
+    expect(hits).toBe(1);
+    expect(errors).toEqual([]);
+  });
+
+  test('AD-17 recordBootCalls with holdListText holds only word-list text() until releaseListText, which stamps the release first', async ({
+    page,
+  }) => {
+    const errors = await probe(page);
+    await page.route('**/boot-calls-probe/en-probe.txt', (route) =>
+      route.fulfill({ contentType: 'text/plain', body: 'cat\ndog\n' }),
+    );
+    await page.route('**/boot-calls-probe/other.txt', (route) =>
+      route.fulfill({ contentType: 'text/plain', body: 'other' }),
+    );
+    await recordBootCalls(page, { holdListText: true });
+    await page.goto('/boot-calls-probe/');
+    expect(await listTextCalls(page)).toBe(0);
+    // Not a word-list path: passes through at once, uncounted.
+    expect(
+      await page.evaluate(async () => (await fetch('/boot-calls-probe/other.txt')).text()),
+    ).toBe('other');
+    expect(await listTextCalls(page)).toBe(0);
+    type Probe = { __probeText?: string; __probeAt?: number };
+    await page.evaluate(() => {
+      void fetch('/boot-calls-probe/en-probe.txt')
+        .then((response) => response.text())
+        .then((text) => {
+          (window as unknown as Probe).__probeText = text;
+          (window as unknown as Probe).__probeAt = performance.now();
+        });
+    });
+    const settled = () =>
+      page.evaluate(() => {
+        const probe = window as unknown as Probe;
+        return probe.__probeText === undefined
+          ? null
+          : { text: probe.__probeText, at: probe.__probeAt };
+      });
+    await expect.poll(() => listTextCalls(page)).toBe(1);
+    await animationFrames(page, 2);
+    await page.evaluate(() => new Promise<void>((resolve) => setTimeout(resolve, 0)));
+    expect(await settled()).toBeNull();
+    const releasedAt = await releaseListText(page);
+    await expect.poll(async () => (await settled())?.text).toBe('cat\ndog\n');
+    expect((await settled())?.at).toBeGreaterThanOrEqual(releasedAt);
+    expect(await listTextCalls(page)).toBe(1);
+    expect(await bootCalls(page)).toStrictEqual([]);
+    expect(errors).toEqual([]);
+  });
+
+  test("AD-17 recordBootCalls with holdListText: a held word-list body failure is no unhandled rejection before releaseListText, and the caller's text() rejects after it", async ({
+    page,
+  }) => {
+    const errors = await probe(page);
+    await page.route('**/boot-calls-probe/en-probe.txt', (route) =>
+      route.fulfill({ contentType: 'text/plain', body: 'cat\ndog\n' }),
+    );
+    await recordBootCalls(page, { holdListText: true });
+    await page.goto('/boot-calls-probe/');
+    type Probe = { __probeUnhandled?: string[]; __probeOutcome?: string };
+    // The fetch is aborted once its response is in, so reading the body rejects.
+    await page.evaluate(async () => {
+      const probe = window as unknown as Probe;
+      probe.__probeUnhandled = [];
+      window.addEventListener('unhandledrejection', (event) => {
+        probe.__probeUnhandled?.push(String(event.reason));
+      });
+      const abort = new AbortController();
+      const response = await fetch('/boot-calls-probe/en-probe.txt', { signal: abort.signal });
+      abort.abort(new Error('probe body read failed'));
+      void response.text().then(
+        () => {
+          probe.__probeOutcome = 'resolved';
+        },
+        (error: unknown) => {
+          probe.__probeOutcome = `rejected: ${String(error)}`;
+        },
+      );
+    });
+    const state = () =>
+      page.evaluate(() => {
+        const probe = window as unknown as Probe;
+        return { unhandled: probe.__probeUnhandled, outcome: probe.__probeOutcome };
+      });
+    await expect.poll(() => listTextCalls(page)).toBe(1);
+    await animationFrames(page, 2);
+    await page.evaluate(() => new Promise<void>((resolve) => setTimeout(resolve, 0)));
+    expect(await state()).toEqual({ unhandled: [], outcome: undefined });
+    expect(errors).toEqual([]);
+    await releaseListText(page);
+    await expect.poll(async () => (await state()).outcome).toMatch(/^rejected: /);
+    expect((await state()).unhandled).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+
+  test('AD-17 recordBootCalls throws when armed twice; bootCalls and releaseRegister throw when not armed', async ({
+    page,
+  }) => {
+    await page.route('**/boot-calls-probe/', (route) =>
+      route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>probe</title>' }),
+    );
+    await page.goto('/boot-calls-probe/');
+    await expect(bootCalls(page)).rejects.toThrow(/recordBootCalls was not called on this page/);
+    await expect(releaseRegister(page)).rejects.toThrow(/not called with holdRegister/);
+    await expect(listTextCalls(page)).rejects.toThrow(/not called with holdListText/);
+    await expect(releaseListText(page)).rejects.toThrow(/not called with holdListText/);
+    await recordBootCalls(page);
+    await expect(recordBootCalls(page)).rejects.toThrow(/already armed on this page/);
+    // Armed without holdRegister or holdListText: no release, no text() count.
+    await expect(releaseRegister(page)).rejects.toThrow(/not called with holdRegister/);
+    await expect(listTextCalls(page)).rejects.toThrow(/not called with holdListText/);
+    await expect(releaseListText(page)).rejects.toThrow(/not called with holdListText/);
+    // Armed after this document loaded: the init script runs from the next navigation only.
+    await expect(bootCalls(page)).rejects.toThrow(/no boot-call log in this document/);
+    await page.reload();
+    expect(await bootCalls(page)).toStrictEqual([]);
+  });
+
+  test('AD-17 recordBootCalls with holdListText armed after this document loaded: listTextCalls and releaseListText throw until the next navigation', async ({
+    page,
+  }) => {
+    await probe(page);
+    await page.goto('/boot-calls-probe/');
+    await recordBootCalls(page, { holdListText: true });
+    await expect(listTextCalls(page)).rejects.toThrow(/no held text\(\) in this document/);
+    await expect(releaseListText(page)).rejects.toThrow(/no held text\(\) in this document/);
+    await page.reload();
+    expect(await listTextCalls(page)).toBe(0);
   });
 });
 
@@ -1565,5 +1900,350 @@ test.describe('celebration helpers', () => {
     const added = await watchAddedFromBoot(page, '[data-testid="column-1"]');
     await openFixture(page, 'session-idle-fresh');
     expect(await added()).toBe(true);
+  });
+});
+
+// Epic 7 F8 (ticket 7.3): the static server on a small synthetic build, never buildRoot().
+test.describe('static server', () => {
+  const INDEX = '<!doctype html><html><head><title>site</title></head><body>index</body></html>';
+
+  // A synthetic source dir and its served copy; `run` cleans both up in `finally`.
+  async function withSite(run: (site: Copy, src: string) => Promise<void>): Promise<void> {
+    const src = mkdtempSync(path.join(tmpdir(), 'static-src-'));
+    writeFileSync(path.join(src, 'index.html'), INDEX);
+    writeFileSync(path.join(src, 'sw.js'), '// A');
+    mkdirSync(path.join(src, 'assets'));
+    writeFileSync(path.join(src, 'assets/a.css'), 'body{}');
+    const site = copy(src);
+    try {
+      await run(site, src);
+    } finally {
+      await site.stop();
+      rmSync(src, { recursive: true, force: true });
+    }
+  }
+
+  const fetchText = (page: Page, url: string) =>
+    page.evaluate(async (u) => {
+      const response = await fetch(u);
+      return { status: response.status, text: await response.text() };
+    }, url);
+
+  test('AD-17 / serves index.html as HTML, logged navigate and 200', async ({ page }) => {
+    await withSite(async (site) => {
+      const served = await site.serve();
+      const response = await page.goto(`${served.url}/`);
+      expect(response?.status()).toBe(200);
+      expect(response?.headers()['content-type']).toMatch(/^text\/html/);
+      expect(response?.headers()['cache-control']).toBe('no-store');
+      expect(await response?.text()).toBe(INDEX);
+      // A non-navigation fetch of `/` also gets index.html: the direct mapping, not the fallback.
+      const fetched = await page.evaluate(async () => {
+        const r = await fetch('/');
+        return { status: r.status, type: r.headers.get('content-type'), text: await r.text() };
+      });
+      expect(fetched.status).toBe(200);
+      expect(fetched.type).toMatch(/^text\/html/);
+      expect(fetched.text).toBe(INDEX);
+      expect(served.requests().filter((r) => r.path === '/')).toEqual([
+        { path: '/', mode: 'navigate', status: 200 },
+        { path: '/', mode: 'cors', status: 200 },
+      ]);
+    });
+  });
+
+  test('AD-17 swap changes the next same-origin fetch', async ({ page }) => {
+    await withSite(async (site) => {
+      const served = await site.serve();
+      await page.goto(`${served.url}/`);
+      expect(await fetchText(page, '/sw.js')).toEqual({ status: 200, text: '// A' });
+      site.swap('sw.js', '// B');
+      expect(await fetchText(page, '/sw.js')).toEqual({ status: 200, text: '// B' });
+      expect(readFileSync(path.join(site.dir, 'sw.js'), 'utf8')).toBe('// B');
+    });
+  });
+
+  test('AD-17 a query is ignored: /sw.js?x=1 serves the file, logged as /sw.js', async ({
+    page,
+  }) => {
+    await withSite(async (site) => {
+      const served = await site.serve();
+      await page.goto(`${served.url}/`);
+      const response = await page.evaluate(async () => {
+        const r = await fetch('/sw.js?x=1');
+        return { status: r.status, type: r.headers.get('content-type'), text: await r.text() };
+      });
+      expect(response).toEqual({ status: 200, type: 'text/javascript', text: '// A' });
+      expect(served.requests().filter((r) => r.path.startsWith('/sw.js'))).toEqual([
+        { path: '/sw.js', mode: 'cors', status: 200 },
+      ]);
+    });
+  });
+
+  test('AD-17 a navigation to a missing path gets index.html, 200, logged navigate', async ({
+    page,
+  }) => {
+    await withSite(async (site) => {
+      const served = await site.serve();
+      const response = await page.goto(`${served.url}/missing/path`);
+      expect(response?.status()).toBe(200);
+      expect(response?.headers()['content-type']).toMatch(/^text\/html/);
+      expect(await response?.text()).toBe(INDEX);
+      expect(served.requests().filter((r) => r.path === '/missing/path')).toEqual([
+        { path: '/missing/path', mode: 'navigate', status: 200 },
+      ]);
+    });
+  });
+
+  test('AD-17 a removed sw.js answers a same-origin fetch 404, logged non-navigate; a second remove throws', async ({
+    page,
+  }) => {
+    await withSite(async (site) => {
+      const served = await site.serve();
+      await page.goto(`${served.url}/`);
+      site.remove('sw.js');
+      expect(() => site.remove('sw.js')).toThrow(/ENOENT/);
+      expect((await fetchText(page, '/sw.js')).status).toBe(404);
+      const logged = served.requests().filter((r) => r.path === '/sw.js');
+      expect(logged).toHaveLength(1);
+      expect(logged[0]?.status).toBe(404);
+      expect(logged[0]?.mode).not.toBe('navigate');
+    });
+  });
+
+  test('AD-17 a raw request whose decoded path leaves the copy gets 404, even as a navigation', async () => {
+    await withSite(async (site, src) => {
+      const served = await site.serve();
+      // Resolves to the synthetic source's index.html, a file that exists outside the copy.
+      const outside = `/..%2f${path.basename(src)}%2findex.html`;
+      const status = await new Promise<number | undefined>((done, fail) => {
+        httpRequest(
+          `${served.url}${outside}`,
+          { headers: { 'sec-fetch-mode': 'navigate' } },
+          (r) => {
+            r.resume();
+            r.on('end', () => done(r.statusCode));
+          },
+        )
+          .on('error', fail)
+          .end();
+      });
+      expect(status).toBe(404);
+      expect(served.requests()).toEqual([{ path: outside, mode: 'navigate', status: 404 }]);
+    });
+  });
+
+  test('AD-17 stop() removes the copy and is idempotent', async () => {
+    await withSite(async (site) => {
+      expect(existsSync(path.join(site.dir, 'assets/a.css'))).toBe(true);
+      await site.serve();
+      await site.stop();
+      expect(existsSync(site.dir)).toBe(false);
+      await site.stop();
+    });
+  });
+});
+
+// Epic 7 AD-16 no prompt (ticket 7.3): passes on an idle board and fails once per forbidden role.
+test.describe('no-prompt check', () => {
+  test('AD-17 expectNoPrompt passes on an idle board with only the App live region', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-idle-fresh');
+    await expectNoPrompt(page);
+  });
+
+  test('AD-17 expectNoPrompt rejects the New game confirm (dialog)', async ({ page }) => {
+    await openFixture(page, 'session-idle-empty-column');
+    await page.getByRole('button', { name: 'Menu', exact: true }).click();
+    const menu = page.getByRole('dialog', { name: 'Menu', exact: true });
+    await expect(menu).toBeVisible();
+    await menu.getByRole('button', { name: 'New game', exact: true }).click();
+    await expect(page.getByRole('dialog', { name: 'Start a new game?' })).toBeVisible();
+    await expect(menu).toHaveCount(0);
+    await expect(expectNoPrompt(page)).rejects.toThrow(/no role "dialog"/);
+  });
+
+  const INJECTED = [
+    ['an alertdialog', '<div role="alertdialog" aria-label="x">x</div>', /no role "alertdialog"/],
+    ['an alert', '<div role="alert">x</div>', /no role "alert"/],
+    [
+      'an extra polite status',
+      '<div role="status" aria-live="polite">x</div>',
+      /exactly one \[role="status"\]/,
+    ],
+    ['an extra plain status', '<div role="status">x</div>', /exactly one role "status"/],
+  ] as const;
+
+  for (const [name, html, message] of INJECTED) {
+    test(`AD-17 expectNoPrompt rejects ${name}`, async ({ page }) => {
+      await openFixture(page, 'session-idle-fresh');
+      await page.evaluate((markup) => document.body.insertAdjacentHTML('beforeend', markup), html);
+      await expect(expectNoPrompt(page)).rejects.toThrow(message);
+    });
+  }
+
+  test("AD-17 expectNoPrompt rejects a lone status role that is not App's live region", async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-idle-fresh');
+    // App's region stays in the DOM (one REGION match) but leaves the accessibility tree, so the
+    // one status role is the injected one.
+    await page
+      .locator('[role="status"][aria-live="polite"]')
+      .evaluate((region) => region.setAttribute('aria-hidden', 'true'));
+    await page.evaluate(() =>
+      document.body.insertAdjacentHTML('beforeend', '<div role="status">x</div>'),
+    );
+    await expect(expectNoPrompt(page)).rejects.toThrow(/the one role "status" is/);
+  });
+
+  test('AD-17 expectNoPrompt rejects a board whose App live region is removed', async ({
+    page,
+  }) => {
+    await openFixture(page, 'session-idle-fresh');
+    await page.locator('[role="status"][aria-live="polite"]').evaluate((region) => region.remove());
+    await expect(expectNoPrompt(page)).rejects.toThrow(/exactly one \[role="status"\]/);
+  });
+});
+
+test.describe('precache helpers', () => {
+  test('AD-17 precacheMissing lists the URLs no workbox-precache* key holds, revision stripped, other caches ignored', async ({
+    page,
+  }) => {
+    // A nested probe document, so a helper resolving against the page URL instead of `/sw.js`
+    // looks under /precache-probe/ and misses a.js and b.css.
+    await page.route('**/precache-probe/x', (route) =>
+      route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>probe</title>' }),
+    );
+    await page.goto('/precache-probe/x');
+    await page.evaluate(async () => {
+      const precache = await caches.open('workbox-precache-v2-test');
+      await precache.put('/a.js?__WB_REVISION__=1', new Response('a'));
+      await precache.put('/b.css', new Response('b'));
+      await (await caches.open('other')).put('/c.txt', new Response('c'));
+    });
+    expect(await precacheMissing(page, ['a.js', 'b.css', 'c.txt'])).toEqual(['c.txt']);
+  });
+});
+
+test.describe('offline helpers', () => {
+  // Draws from the stub in the page: per array, whether the same array came back and its values.
+  const draw = (page: Page, kinds: readonly ('u32x1' | 'u32x2' | 'u8x4')[]) =>
+    page.evaluate((list) => {
+      const make = (k: string) =>
+        k === 'u32x1' ? new Uint32Array(1) : k === 'u32x2' ? new Uint32Array(2) : new Uint8Array(4);
+      return list.map((k) => {
+        const array = make(k);
+        const back = crypto.getRandomValues(array);
+        return { same: back === array, values: [...array] };
+      });
+    }, kinds);
+  const armedFlag = (page: Page) => page.evaluate(() => window.__wordcellSeedArmed);
+
+  test('AD-17 pinNextSeed passes unarmed one-element Uint32Array calls through: random values, counter 0', async ({
+    page,
+  }) => {
+    await pinNextSeed(page);
+    await openFixture(page, 'session-idle-fresh');
+    const draws = await draw(page, ['u32x1', 'u32x1', 'u32x1', 'u32x1']);
+    expect(draws.every((d) => d.same)).toBe(true);
+    // Four equal random draws have probability 2^-96; a stub writing a constant (or skipping the
+    // original, leaving zeros) gives four equal values.
+    expect(new Set(draws.map((d) => d.values[0])).size).toBeGreaterThan(1);
+    expect(await seedPins(page)).toBe(0);
+    expect(await armedFlag(page)).toBe(false);
+  });
+
+  test('AD-17 armSeed pins the next one-element Uint32Array call to 1, returns the same array and disarms', async ({
+    page,
+  }) => {
+    await pinNextSeed(page);
+    await openFixture(page, 'session-idle-fresh');
+    await armSeed(page);
+    const [pinnedDraw] = await draw(page, ['u32x1']);
+    expect(pinnedDraw).toEqual({ same: true, values: [1] });
+    expect(await seedPins(page)).toBe(1);
+    expect(await armedFlag(page)).toBe(false);
+    const after = await draw(page, ['u32x1', 'u32x1', 'u32x1', 'u32x1']);
+    expect(new Set(after.map((d) => d.values[0])).size).toBeGreaterThan(1);
+    expect(await seedPins(page)).toBe(1);
+  });
+
+  test('AD-17 an armed seed stub passes Uint8Array(4) and Uint32Array(2) through and stays armed', async ({
+    page,
+  }) => {
+    await pinNextSeed(page);
+    await openFixture(page, 'session-idle-fresh');
+    await armSeed(page);
+    const others = await draw(page, ['u8x4', 'u32x2']);
+    expect(others.map((d) => d.same)).toEqual([true, true]);
+    expect(others.map((d) => d.values.length)).toEqual([4, 2]);
+    expect(await seedPins(page)).toBe(0);
+    expect(await armedFlag(page)).toBe(true);
+    const [pinnedDraw] = await draw(page, ['u32x1']);
+    expect(pinnedDraw?.values).toEqual([1]);
+    expect(await seedPins(page)).toBe(1);
+  });
+
+  test('AD-17 pinNextSeed throws on a second call, armSeed and seedPins throw unpinned or before the stub runs, and the counter starts at 0 on every document', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await booted(page);
+    await expect(armSeed(page)).rejects.toThrow(/armSeed: pinNextSeed was not called on this page/);
+    await expect(seedPins(page)).rejects.toThrow(
+      /seedPins: pinNextSeed was not called on this page/,
+    );
+    await pinNextSeed(page);
+    await expect(pinNextSeed(page)).rejects.toThrow(/pinNextSeed: already called on this page/);
+    // Pinned after this document loaded: the init script runs from the next navigation only.
+    await expect(armSeed(page)).rejects.toThrow(/armSeed: no seed stub in this document/);
+    await expect(seedPins(page)).rejects.toThrow(/seedPins: no seed stub in this document/);
+    await page.reload();
+    await booted(page);
+    expect(await seedPins(page)).toBe(0);
+    await armSeed(page);
+    const [pinnedDraw] = await draw(page, ['u32x1']);
+    expect(pinnedDraw?.values).toEqual([1]);
+    expect(await seedPins(page)).toBe(1);
+    await page.reload();
+    await booted(page);
+    expect(await seedPins(page)).toBe(0);
+    expect(await armedFlag(page)).toBe(false);
+  });
+
+  test('AD-17 composeTan on session-idle-fresh reaches the tray TAN', async ({ page }) => {
+    await openFixture(page, 'session-idle-fresh');
+    await composeTan(page);
+    expect(await trayIds(page)).toEqual(TAN_TRAY);
+  });
+
+  test('AD-17 dealNewGame confirms New game with the seed stub armed: seed 1, no moves, menu and confirm gone', async ({
+    page,
+  }) => {
+    await pinNextSeed(page);
+    await openFixture(page, 'session-idle-fresh');
+    await composeTan(page);
+    // The compose is stored, so the seed-1 `moves: []` below comes from the deal, not the fixture.
+    const composed = await stored(page, 'wordcell:session');
+    if (composed === null) throw new Error('wordcell:session is not stored');
+    expect(JSON.parse(composed).moves).not.toEqual([]);
+    await dealNewGame(page);
+    await expect(page.getByRole('dialog', { name: 'Start a new game?', exact: true })).toHaveCount(
+      0,
+    );
+    await expect(page.getByRole('dialog', { name: 'Menu', exact: true })).toHaveCount(0);
+    expect(await trayIds(page)).toEqual([]);
+    await expect
+      .poll(async () => {
+        const text = await stored(page, 'wordcell:session');
+        if (text === null) throw new Error('wordcell:session is not stored');
+        const { seed, moves } = JSON.parse(text) as { seed: number; moves: unknown[] };
+        return { seed, moves };
+      })
+      .toEqual({ seed: 1, moves: [] });
+    expect(await seedPins(page)).toBe(1);
+    expect(await wcOf(page)).toBe(0);
   });
 });

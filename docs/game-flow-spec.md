@@ -1,6 +1,6 @@
 # WordCell – Game flow specification
 
-Status: v0.12, 2026-10-25. Jared answered Q-01…Q-33 on 2026-09-26 (Q-26…Q-33 were raised by the
+Status: v0.13, 2026-11-07. Jared answered Q-01…Q-33 on 2026-09-26 (Q-26…Q-33 were raised by the
 review loop, see `game-flow-spec.review-log.md`); the decisions are recorded in §9 and applied to
 the rules below. There are no open questions. v0.6 only refines the test-coverage rule in this
 preamble, as the product brief's success criterion 4 requires. v0.7 adds Q-34 (a short drag that never leaves its source column is a cancel,
@@ -10,7 +10,7 @@ answered by Jared on 2026-09-27; Q-41 amends the §2 replay paragraph and Q-43 r
 record identity. v0.9 adds Q-44 (best and average score exclude negative given-up games, R-84),
 answered by Jared on 2026-09-30, and tags the R-50 and R-83 UI sentences (UI) (owner-approved
 the same day); on 2026-10-01 Jared amended Q-42's service-worker branch (epic 3
-retrospective). v0.10 adds Q-45 (the look is a manual theme choice in Preferences, default Charcoal, answered by Jared on 2026-10-18) and extends §7.10. v0.11 adds Q-46…Q-48 (the end-of-game word list and the win celebration, answered by Jared on 2026-10-19 and 2026-10-20), R-86…R-88 and §7.12. On 2026-10-24 the owner amended R-87's press skip to exempt the dictionary banner as well (epic 10 close-out). v0.12 adds Q-49 (in Place, each WordCell the commit changes previews its top card after the commit, answered by Jared on 2026-10-25) and amends R-33 and R-50. Every rule has an id (R-xx) so
+retrospective). v0.10 adds Q-45 (the look is a manual theme choice in Preferences, default Charcoal, answered by Jared on 2026-10-18) and extends §7.10. v0.11 adds Q-46…Q-48 (the end-of-game word list and the win celebration, answered by Jared on 2026-10-19 and 2026-10-20), R-86…R-88 and §7.12. On 2026-10-24 the owner amended R-87's press skip to exempt the dictionary banner as well (epic 10 close-out). v0.12 adds Q-49 (in Place, each WordCell the commit changes previews its top card after the commit, answered by Jared on 2026-10-25) and amends R-33 and R-50. On 2026-11-06 Jared amended Q-40's wording to "test builds only" (no behaviour change; epic 7 close-out). v0.13 adds Q-50 (on a relaunch into Game over, the first Android back before any tap leaves the app instead of collapsing the end sheet; answered by Jared on 2026-11-06 from the epic 7 device read, device-read only by his decision of 2026-11-07). On 2026-11-07 Q-50's citation was corrected to §7.12 (citation only, a technical default under Jared's run rule; epic 7 close-out). Every rule has an id (R-xx) so
 tests, specs and tickets can cite it. A "(UI)" in a rule's id tags the whole rule; a trailing
 "(UI)" tags only the sentence it ends. Tagged rules and sentences are satisfied by a Playwright
 test naming the R-id; every untagged sentence that states engine behaviour by an engine unit test
@@ -461,7 +461,7 @@ currently shows `L` as its top card, add it (R-33) and arrange → **BALKED** (6
 removing S, col1 is `F`; it must be included → **FAKED**, or with `L` → **FLAKED**. Laying
 `DEKA…` under col3 without `B` is not allowed while col3 has cards.
 
-## 9. Decisions (Q-01 … Q-49, answered 2026-09-26, 2026-09-27, 2026-09-30, 2026-10-18, 2026-10-19, 2026-10-20 and 2026-10-25)
+## 9. Decisions (Q-01 … Q-50, answered 2026-09-26, 2026-09-27, 2026-09-30, 2026-10-18, 2026-10-19, 2026-10-20, 2026-10-25 and 2026-11-06)
 
 | # | Question | Decision |
 |---|---|---|
@@ -504,7 +504,7 @@ removing S, col1 is `F`; it must be included → **FAKED**, or with `L` → **FL
 | Q-37 | What does an unexpected failure show? | One blocking message: `Something went wrong.`, the error text, and **Reload**; stored data untouched (answered 2026-09-27). §2. |
 | Q-38 | Two live instances (installed app plus a tab) writing the same saved data? | The instance that sees another write stops and shows `WordCell is open in another window.` with **Reload** (answered 2026-09-27). R-73, R-84. |
 | Q-39 | A save of a finish or un-finish fails halfway? | Score history is written first, then the Session; if the Session write fails, the previous history is written back and the failure message shows; a crash between the two writes is accepted (answered 2026-09-27). R-84. |
-| Q-40 | The offline install (service worker, precache) fails? | Nothing is shown to the player and the game works online; the failure is reported in dev and test builds only. A new version activates only once every WordCell window has closed (answered 2026-09-27). |
+| Q-40 | The offline install (service worker, precache) fails? | Nothing is shown to the player and the game works online; the failure is reported in test builds only (`VITE_TEST_HOOKS=1`; dev never registers the worker; Jared amended the wording on 2026-11-06, epic 7 close-out). A new version activates only once every WordCell window has closed (answered 2026-09-27). |
 | Q-41 | §2 replayed every redo-tail move as committed, but Undo past a pending draft leaves it uncommitted in the redo tail. | Each move is validated at its own `reached`; only the last element of `moves` may be below committed (answered 2026-09-27). §2. |
 | Q-42 | The dictionary banner's Reload after a deploy removed the old word-list file? | Any 404 on the word list makes the banner's next Reload tap reload the page (never automatically); under a controlling service worker, Reload retries the download in place with the banner kept visible during the retry, never reloads the page, and the banner hides when the retry succeeds (owner, 2026-10-01) (answered 2026-09-27). R-38. |
 | Q-43 | How does Undo of a finish find its record without tying the score history to scoring rules? | By seed, outcome and active duration; the history's version changes only when the record's shape changes (answered 2026-09-27). R-84. |
@@ -514,3 +514,4 @@ removing S, col1 is `F`; it must be included → **FAKED**, or with `L` → **FL
 | Q-47 | How is the word list ordered, and are repeated words merged? | Letter count descending, ties alphabetical; a word played twice is listed twice (answered 2026-10-19). R-86. |
 | Q-48 | Scope and behaviour of the celebration and list? | Each word is a group of cards bouncing on a Windows-style arcing path, with no trail copies and no hue change; the celebration can be skipped (press, `Space`/`Esc`, back) but not replayed from the end sheet, though a Redo that restores the win plays it again; the word list covers the latest game only and is not stored (answered 2026-10-19); back, hide and resize also end it, and a Redo that restores the win plays it again (answered 2026-10-20). R-87, R-88. |
 | Q-49 | In Place, what do the WordCells show while the player orders and places the word? | Each cell the commit changes shows its state after the commit (answered 2026-10-25): the target shows the future top card (the last card of the placement order, following every reorder and retarget, also when the target is a used cell, R-41) and its count after the commit; a used cell that is not the target shows the card beneath its used one, or its empty slot; the shown top is marked subtly as a preview; the used card is no longer shown in its cell. Composing keeps the dimmed used look. The R-65 view keeps showing the cell's current cards. R-33, R-50, §7.4. |
+| Q-50 | On a relaunch into Game over the end sheet opens expanded and its history entry is pushed at boot, without user activation (spine A-A11). What does the first Android back do before any tap? | It leaves the app; the sheet does not collapse first. Jared accepts this as built (answered 2026-11-06, epic 7 device read G5): probably Chrome's history-manipulation intervention skips the entry pushed without user activation (in G6, where a tap precedes back, back honours the boot-pushed notice). Device-read only: no automated test, since Playwright's Chromium does not apply that skip (owner, 2026-11-07). R-73, §7.12. |

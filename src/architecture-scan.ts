@@ -5,9 +5,10 @@
 // cases run on virtual (path, source) pairs through the same `check` the tree scan uses;
 // resolution and layer classification are path-lexical and never consult the filesystem.
 // Known limitation (story 1.1 OQ #2): aliasing and destructuring (`const { random } = Math`,
-// `const M = Math`, `history['back']()`, `const h = window.history`, `window['localStorage']`)
-// pass the scan; code review covers deliberate aliasing. `.svelte` files are split with
-// svelte/compiler `parse` (scripts, markup text, markup bindings), never by regex (ticket 1.10).
+// `const M = Math`, `history['back']()`, `const h = window.history`, `window['localStorage']`,
+// `navigator['storage']`, `const { storage } = navigator`) pass the scan; code review covers
+// deliberate aliasing. `.svelte` files are split with svelte/compiler `parse` (scripts, markup
+// text, markup bindings), never by regex (ticket 1.10).
 import { readdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { posix } from 'node:path';
@@ -30,7 +31,9 @@ export type Rule =
   | 'history-api'
   | 'popstate'
   | 'history-binding'
-  | 'local-storage';
+  | 'local-storage'
+  | 'navigator-storage'
+  | 'skip-waiting';
 
 export interface Violation {
   readonly path: string;
@@ -50,6 +53,15 @@ export const MATH_COMPUTED = /(?<![\w$])Math\s*(?:\?\.)?\s*\[/;
 export const HISTORY_API =
   /(?<![\w$])(?:window\s*(?:\?\.|\.)\s*)?history\s*(?:\?\.|\.)\s*(?:pushState|replaceState|back|forward|go|state|length)(?![\w$])/;
 export const LOCAL_STORAGE = /(?<![\w$])localStorage(?![\w$])/;
+/** Epic 7 SPEC CAP-3 (AD-1 as amended at CAP-9): `navigator.storage` only in `storage.ts`. */
+export const NAVIGATOR_STORAGE = /(?<![\w$])navigator\s*(?:\?\.|\.)\s*storage(?![\w$])/;
+/** Epic 7 SPEC CAP-1 (AD-16 no skip-waiting): matched in non-test sources with strings kept. */
+export const SKIP_WAITING_NAMES = [
+  'messageSkipWaiting',
+  'SKIP_WAITING',
+  'updateSW',
+  'virtual:pwa-register',
+] as const;
 export const REFERENCE_DIRECTIVE = /^\s*\/\/\/\s*<reference\b/im;
 export const TS_DIRECTIVE = /@ts-(?:nocheck|ignore|expect-error)\b/i;
 export const IMPORT_EXT =
@@ -570,6 +582,14 @@ export function check(path: string, source: string): Violation[] {
     if (storageCheck && LOCAL_STORAGE.test(full)) {
       found.push(['local-storage', 'localStorage outside storage.ts']);
     }
+    if (storageCheck && NAVIGATOR_STORAGE.test(full)) {
+      found.push(['navigator-storage', 'navigator.storage outside storage.ts']);
+    }
+    if (!isTest) {
+      for (const name of SKIP_WAITING_NAMES) {
+        if (commentsOnly.includes(name)) found.push(['skip-waiting', name]);
+      }
+    }
   }
 
   if (svelte) {
@@ -591,6 +611,12 @@ export function check(path: string, source: string): Violation[] {
     }
     if (storageCheck && LOCAL_STORAGE.test(markup)) {
       found.push(['local-storage', 'localStorage in markup']);
+    }
+    if (storageCheck && NAVIGATOR_STORAGE.test(markup)) {
+      found.push(['navigator-storage', 'navigator.storage in markup']);
+    }
+    for (const name of SKIP_WAITING_NAMES) {
+      if (markup.includes(name)) found.push(['skip-waiting', name]);
     }
   }
 
@@ -627,9 +653,9 @@ export interface Case {
   readonly fails?: Rule | readonly Rule[];
 }
 
-export function run(cases: readonly Case[]): void {
+export function run(cases: readonly Case[], id = 'AD-1'): void {
   for (const c of cases) {
-    it(`AD-1 ${c.fails ? 'fails' : 'passes'}: ${c.name} (${c.path})`, () => {
+    it(`${id} ${c.fails ? 'fails' : 'passes'}: ${c.name} (${c.path})`, () => {
       const expected =
         c.fails === undefined ? [] : typeof c.fails === 'string' ? [c.fails] : c.fails;
       expect(check(c.path, c.source).map((v) => v.rule)).toEqual(expected);
