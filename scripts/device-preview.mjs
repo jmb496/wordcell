@@ -3,7 +3,8 @@
 // writes an optional one-tap seed page into it (never into `public/`, so it never ships, F9), serves
 // it with `vite preview` on 4173 and shares that over HTTPS inside the owner's tailnet with
 // `tailscale serve`, so the phone gets a secure context (service worker, install) without USB or
-// chrome://inspect. Ctrl+C turns the share off and stops the preview. Fails fast (rule 6) on a
+// chrome://inspect. Ctrl+C (or SIGTERM, or SIGHUP from a closed terminal) turns the share off and
+// stops the preview, waiting for it to exit (SIGKILL after KILL_GRACE_MS). Fails fast (rule 6) on a
 // usage error, a missing or non-JSON fixture, when Tailscale is missing, Serve is not enabled on
 // the tailnet, or port 4173 is taken.
 // Usage: node scripts/device-preview.mjs [session-fixture] [--history <history-fixture>] [--no-build]
@@ -13,11 +14,16 @@
 //   `wordcell:history` and opens the app. A worker controlling the origin answers `/seed.html`
 //   with the app, so clear the origin's site data before a seed (docs/device-testing.md).
 import { execFileSync, spawn, spawnSync } from 'node:child_process';
-import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { connect } from 'node:net';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const PORT = 4173;
+/** A cold `vite preview` on the /mnt/d checkout took 9–15 s to listen (epic 7 retro A3). */
+const PORT_WAIT_MS = 45_000;
+/** How long a stopped preview gets to exit after SIGTERM before SIGKILL (epic 7 retro A3). */
+const KILL_GRACE_MS = 5_000;
 const SESSION_KEY = 'wordcell:session';
 const HISTORY_KEY = 'wordcell:history';
 const USAGE =
@@ -137,7 +143,7 @@ function tailscaleBin() {
 /**
  * The side effects `run` performs, in the order it performs them (`realIo` below; fakes in
  * scripts/device-preview.test.mjs).
- * @typedef {{ on(event: 'exit', listener: (code: number | null) => void): unknown, kill(): unknown }} Preview
+ * @typedef {{ on(event: 'exit', listener: (code: number | null) => void): unknown, kill(signal?: 'SIGTERM' | 'SIGKILL'): unknown }} Preview
  * @typedef {{ status: number | null, stdout?: string | null, stderr?: string | null }} ServeResult
  * @typedef {{
  *   readFixture(name: string): string,
@@ -148,7 +154,7 @@ function tailscaleBin() {
  *   hasDist(): boolean,
  *   writeSeed(html: string): void,
  *   spawnPreview(port: number): Preview,
- *   onSignal(signal: 'SIGINT' | 'SIGTERM', handler: () => void): void,
+ *   onSignal(signal: 'SIGINT' | 'SIGTERM' | 'SIGHUP', handler: () => void): void,
  *   waitForPort(port: number, timeoutMs: number): Promise<void>,
  *   serve(port: number): ServeResult,
  *   serveOff(): void,
@@ -160,7 +166,8 @@ function tailscaleBin() {
 
 /**
  * The CLI run (CAP-7): fixtures, port probe, stale-seed removal, tailnet URL, build, seed page,
- * `vite preview`, signal handlers, port wait, `tailscale serve`, hint lines.
+ * `vite preview`, signal handlers, port wait, `tailscale serve`, hint lines. Every stop waits for
+ * the preview to exit (SIGKILL after KILL_GRACE_MS), so no path leaves it listening on 4173.
  * @param {string[]} argv
  * @param {Io} io
  * @returns {Promise<void>}
@@ -197,22 +204,27 @@ export async function run(argv, io) {
 
   let stopping = false;
   const preview = io.spawnPreview(PORT);
+  /** @type {Promise<void>} */
+  const exited = new Promise((resolve) => {
+    preview.on('exit', () => resolve());
+  });
   preview.on('exit', (code) => {
     if (!stopping) {
       io.error(`device-preview: vite preview exited (${code}); is port ${PORT} taken?`);
-      stop(1);
+      void stop(1);
     }
   });
   // Registered before the port wait and `serve`, so an early Ctrl+C still runs `stop()`.
-  io.onSignal('SIGINT', () => stop(0));
-  io.onSignal('SIGTERM', () => stop(0));
+  io.onSignal('SIGINT', () => void stop(0));
+  io.onSignal('SIGTERM', () => void stop(0));
+  io.onSignal('SIGHUP', () => void stop(0));
 
   try {
-    await io.waitForPort(PORT, 15_000);
+    await io.waitForPort(PORT, PORT_WAIT_MS);
   } catch (error) {
-    // No share yet: stop the preview, then fail with the wait's own error.
+    // No share yet: stop the preview and wait for it to exit, then fail with the wait's own error.
     stopping = true;
-    preview.kill();
+    await killPreview();
     throw error;
   }
 
@@ -221,18 +233,35 @@ export async function run(argv, io) {
   if (serve.status !== 0) {
     io.error(`${serve.stdout ?? ''}${serve.stderr ?? ''}`);
     io.error('device-preview: tailscale serve failed; approve the link above, then rerun');
-    stop(1);
+    await stop(1);
     return;
   }
 
   io.log(['', ...hintLines(url, parsed), ''].join('\n'));
 
   /** @param {number} code */
-  function stop(code) {
+  async function stop(code) {
     stopping = true;
     io.serveOff();
-    preview.kill();
+    await killPreview();
     io.exit(code);
+  }
+
+  /** SIGTERM, then SIGKILL if the preview has not exited after KILL_GRACE_MS; resolves on exit. */
+  async function killPreview() {
+    preview.kill('SIGTERM');
+    /** @type {ReturnType<typeof setTimeout> | undefined} */
+    let timer;
+    const graceOver = new Promise((resolve) => {
+      timer = setTimeout(() => resolve(true), KILL_GRACE_MS);
+    });
+    const timedOut = await Promise.race([exited.then(() => false), graceOver]);
+    clearTimeout(timer);
+    if (timedOut) {
+      io.error(`device-preview: vite preview ignored SIGTERM for ${KILL_GRACE_MS} ms; SIGKILL`);
+      preview.kill('SIGKILL');
+      await exited;
+    }
   }
 }
 
@@ -313,4 +342,9 @@ function main() {
   return run(process.argv.slice(2), realIo);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) main();
+if (
+  process.argv[1] !== undefined &&
+  realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)
+) {
+  main();
+}

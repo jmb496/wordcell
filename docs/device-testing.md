@@ -33,7 +33,10 @@ Fixture names are files under `fixtures/` without `.json` (e.g. `session-gave-up
 stops it before anything else runs), runs `npm run build` (`--no-build` reuses the current
 `dist/`), writes `dist/seed.html` when either fixture is given, serves `dist/` with `vite preview`
 on port 4173, shares it with `tailscale serve` and prints what to open on the phone. Ctrl+C turns
-the share off and stops the preview. Port 4173 must be free (`npm run test:all` uses it).
+the share off and stops the preview; SIGTERM and a closed terminal (SIGHUP) do the same. Every stop,
+including a failed start, waits for the preview to exit and sends SIGKILL if it has not exited 5 s
+after SIGTERM. The script waits up to 45 s for a cold `vite preview` to listen. Port 4173 must be
+free (`npm run test:all` uses it).
 
 - With a fixture it prints `<url>/seed.html` and "Seed, re-seed or fresh install: clear this
   origin's site data on the phone first."

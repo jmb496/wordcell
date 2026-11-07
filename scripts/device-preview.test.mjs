@@ -177,7 +177,7 @@ describe('AD-17 device preview hintLines', () => {
 function fakeIo(options = {}) {
   /** @type {string[]} */
   const calls = [];
-  /** @type {Partial<Record<'SIGINT' | 'SIGTERM', () => void>>} */
+  /** @type {Partial<Record<'SIGINT' | 'SIGTERM' | 'SIGHUP', () => void>>} */
   const signals = {};
   /** @type {string[]} */
   const seeds = [];
@@ -282,6 +282,7 @@ describe('AD-17 device preview run', () => {
       'spawnPreview',
       'onSignal SIGINT',
       'onSignal SIGTERM',
+      'onSignal SIGHUP',
       'waitForPort',
       'serve',
       'log',
@@ -343,13 +344,13 @@ describe('AD-17 device preview run', () => {
     await vi.waitFor(() => expect(calls).toContain('waitForPort'));
     const wait = calls.indexOf('waitForPort');
     expect(calls.slice(0, wait)).toEqual(
-      expect.arrayContaining(['onSignal SIGINT', 'onSignal SIGTERM']),
+      expect.arrayContaining(['onSignal SIGINT', 'onSignal SIGTERM', 'onSignal SIGHUP']),
     );
     expect(calls).not.toContain('serve');
     const sigint = signals.SIGINT;
     if (sigint === undefined) throw new Error('no SIGINT handler');
     sigint();
-    expect(calls.slice(wait + 1)).toEqual(['serveOff', 'kill', 'exit 0']);
+    await vi.waitFor(() => expect(calls.slice(wait + 1)).toEqual(['serveOff', 'kill', 'exit 0']));
   });
 
   it('AD-17 run SIGTERM during the port wait turns the share off, kills the preview and exits 0', async () => {
@@ -360,7 +361,7 @@ describe('AD-17 device preview run', () => {
     const sigterm = signals.SIGTERM;
     if (sigterm === undefined) throw new Error('no SIGTERM handler');
     sigterm();
-    expect(calls.slice(wait + 1)).toEqual(['serveOff', 'kill', 'exit 0']);
+    await vi.waitFor(() => expect(calls.slice(wait + 1)).toEqual(['serveOff', 'kill', 'exit 0']));
   });
 
   it('AD-17 run kills the preview and rethrows the same error when the port wait times out', async () => {
@@ -377,12 +378,14 @@ describe('AD-17 device preview run', () => {
     void run([], io);
     await vi.waitFor(() => expect(calls).toContain('waitForPort'));
     exitPreview(1);
-    expect(calls.slice(calls.indexOf('waitForPort') + 1)).toEqual([
-      'error',
-      'serveOff',
-      'kill',
-      'exit 1',
-    ]);
+    await vi.waitFor(() =>
+      expect(calls.slice(calls.indexOf('waitForPort') + 1)).toEqual([
+        'error',
+        'serveOff',
+        'kill',
+        'exit 1',
+      ]),
+    );
   });
 
   it('AD-17 run stops with exit 1 and prints no hint when tailscale serve fails', async () => {
