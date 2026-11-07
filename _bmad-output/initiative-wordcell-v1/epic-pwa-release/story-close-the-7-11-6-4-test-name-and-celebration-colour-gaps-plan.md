@@ -25,7 +25,7 @@ deferred: []
 
 **Problem:** Ticket 7.11's §6.4 audit found Q-17 (portrait on the phone, responsive in a browser) with no passing test titled with its id, and R-87's "no colour change" clause (Q-48) with no automated assertion (epic 10 `rule-coverage.md:61` lists it as a visual exemption).
 
-**Approach:** Retitle two existing tests to carry `Q-17` (assertions unchanged); add one `android` Playwright test in `e2e/celebration.spec.ts` that samples the run twice on the manual clock and asserts no trail and no colour change on the shown copies against the live faces; move the epic 10 Exempt line to a mapped P6 row. No `src/` change.
+**Approach:** Retitle two existing tests to carry `Q-17` (assertions unchanged); add one `android` Playwright test in `e2e/celebration.spec.ts` that samples the run three times on the manual clock and asserts no trail and no colour change on the shown copies against the live faces; move the epic 10 Exempt line to a mapped P6 row. No `src/` change.
 
 ## Boundaries & Constraints
 
@@ -38,8 +38,9 @@ deferred: []
 | Scenario | Input / State | Expected Output / Behavior | Error Handling |
 |----------|--------------|---------------------------|----------------|
 | Premise | `prefs-theme-scifi`, won board right after `winIntoRun` | all 52 live `[data-card-id] .face` share one value set; all live `[data-card-id] .glyph` one `color`; one live `[data-card-id] .badge` | non-uniform → premise fix in the test, recorded |
-| First sample | first manual step at which any copy is shown | ≥1 shown copy; 55 copies; root = 10 group children, groups' children = 55 copies; root and shown groups `filter: none`, `mix-blend-mode: normal`; each shown copy's set = live set, glyph colour = live glyph colour | none found before cap → test fails |
+| First sample | first manual step at which any copy is shown | ≥1 shown copy; 55 copies; root = 10 group children, groups' children = 55 copies; root and shown groups `filter: none`, `mix-blend-mode: normal`, `opacity: 1`; each shown copy's set (its own `opacity` included) = live set, glyph colour = live glyph colour | none found before cap → test fails |
 | QU sample | first step (checked from the current step on) at which the QU copy (group 1, JDAQUYE) is shown | as first sample, plus the QU copy is shown and its `.badge` `background-color`/`color` = the live QU badge's | QU never shown before cap → premise fix, recorded |
+| Last group sample | first step (checked from the current step on) at which a copy of the last group (index `WON_ROWS.length - 1`) is shown | as first sample, plus a last-group copy is shown; the three samples' stepped ms total < `NORMAL_CAP_STEP_MS` − 180 (before the closing fade) | none shown before cap → test fails |
 
 </intent-contract>
 
@@ -59,7 +60,7 @@ deferred: []
 **Execution:**
 - [x] `e2e/pwa/build-output.spec.ts` -- prefix the :22 title with `Q-17 ` -- Q-17 portrait half.
 - [x] `e2e/hover-peek-reanchor.spec.ts` -- prefix the :83 title with `Q-17 ` -- Q-17 responsive half.
-- [x] `e2e/celebration.spec.ts` -- add a module-level `sampleRun(page, cap, wantQu)` in-page loop beside `stepUntilShown` and the new test after :324 (Design Notes) -- R-87/Q-48 no trail, no colour change.
+- [x] `e2e/celebration.spec.ts` -- add a module-level `sampleRun(page, cap, at)` in-page loop beside `stepUntilShown` and the new test after :324 (Design Notes) -- R-87/Q-48 no trail, no colour change.
 - [x] `_bmad-output/specs/spec-epic-10-end-of-game-words/rule-coverage.md` -- Exempt line → mapped P6 row -- §6.4 audit reads this file.
 
 **Acceptance Criteria:**
@@ -79,6 +80,7 @@ Sentence → test mapping (AGENTS.md Testing): Q-17 "Portrait on phone" → `Q-1
 ## Plan Change Log
 
 - Code review: `opacity` added to `FACE_PROPS` (the copy's own and the live face's; the group's fade still excluded); root computed `opacity` asserted `'1'` at each sample; a third sample at the last group's (index `WON_ROWS.length - 1`) first showing, `sampleRun`'s predicate generalised to `'any' | 'qu' | 'last'`; test retitled as in the mapping above. Rerun of the new test on `android`: 1 passed.
+- Code review loop pass 1: each shown group's computed `opacity` asserted `'1'` at every sample (recorded in its `layers` entry, which now also carries the root's, replacing the separate root read), with the three samples' stepped manual-clock ms totalling < `NORMAL_CAP_STEP_MS` − 180 (before the closing fade, `step.ts` `advance`); the `FACE_PROPS` comment and Property set no longer call the group fade a fade-in.
 
 ## Review Triage Log
 
@@ -109,13 +111,13 @@ Sentence → test mapping (AGENTS.md Testing): Q-17 "Portrait on phone" → `Q-1
 
 ## Design Notes
 
-**New test, steps:** `readyToWin(page, 'prefs-theme-scifi')`, `winIntoRun(page)`; read the premise (one `page.evaluate`); `const first = await sampleRun(page, NORMAL_CAP_STEP_MS, false)`; `const qu = await sampleRun(page, NORMAL_CAP_STEP_MS, true)`; assert in Node with `expect` so a failure names the property.
+**New test, steps:** `readyToWin(page, 'prefs-theme-scifi')`, `winIntoRun(page)`; read the premise (one `page.evaluate`); `const first = await sampleRun(page, NORMAL_CAP_STEP_MS, 'any')`; `const qu = await sampleRun(page, NORMAL_CAP_STEP_MS, 'qu')`; `const last = await sampleRun(page, NORMAL_CAP_STEP_MS, 'last')`; assert in Node with `expect` so a failure names the property.
 
-**Property set** `FACE_PROPS = ['color', 'background-color', 'background-image', 'border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color', 'filter', 'mix-blend-mode']` (`getPropertyValue`). Not compared: `opacity` (the group's fade in and closing fade are designed motion, EXPERIENCE.md Motion, not a colour change; asserted only as > 0 to define "shown"), `box-shadow` (the copy's lifted-card shadow, DESIGN.md), `transform`/`visibility`/`z-index` (the path). Premise: map every `[data-card-id] .face` to its value array, `new Set(json)` size 1; same for `[data-card-id] .glyph` `color`; `[data-card-id] .badge` count 1 with its `background-color` and `color`.
+**Property set** `FACE_PROPS = ['color', 'background-color', 'background-image', 'border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color', 'filter', 'mix-blend-mode', 'opacity']` (`getPropertyValue`; `opacity` is the copy's own). Not compared with the live face: the group's `opacity` (its only designed fade is the closing one over the last base of the cap, `src/ui/celebration/step.ts` `advance`; > 0 defines "shown", and each shown group's is asserted `'1'`, every sample being before the closing fade), `box-shadow` (the copy's lifted-card shadow, DESIGN.md), `transform`/`visibility`/`z-index` (the path). Premise: map every `[data-card-id] .face` to its value array, `new Set(json)` size 1; same for `[data-card-id] .glyph` `color`; `[data-card-id] .badge` count 1 with its `background-color` and `color`.
 
-**`sampleRun(page, cap, wantQu)`** (one `page.evaluate`, sent `[cap, MANUAL_STEP_MS, wantQu, FACE_PROPS]`): `for (let t = 0; ; t += step) { read; if (condition) return sample; if (t >= cap || !hook.celebration.running()) return null; hook.celebration.advance(step); }` — the predicate is checked before each advance, so the QU sample may be the first sample's step. A copy is shown when its group's computed `opacity` > 0 and its own computed `visibility` is `visible`; the QU copy is the `[data-celebration]` with a `.badge` child. Condition: `wantQu ? quShown : shownCount > 0`. The sample returns `running`, `copies` (`[data-celebration]` count), `rootChildren` (count and all match `[data-celebration-group]`), `groupChildCount` (sum over groups of element children, all match `[data-celebration]`), `layers` (root plus each shown group: `filter`, `mix-blend-mode`), `shown` (each shown copy's value array, its `.glyph` `color`, and for the QU copy its `.badge` `background-color`/`color`), `quShown`. Element-child level only: the copies' `.glyph`/`.badge` spans are not counted.
+**`sampleRun(page, cap, at)`** (one `page.evaluate`, sent `[cap, MANUAL_STEP_MS, at, WON_ROWS.length - 1, FACE_PROPS]`; `at` is `'any' | 'qu' | 'last'`): `for (let t = 0; ; t += step) { read; if (condition) return sample; if (t >= cap || !hook.celebration.running()) return null; hook.celebration.advance(step); }` — the predicate is checked before each advance, so the QU sample may be the first sample's step. A copy is shown when its group's computed `opacity` > 0 and its own computed `visibility` is `visible`; the QU copy is the `[data-celebration]` with a `.badge` child. Condition: `'qu'` → `quShown`, `'last'` → `lastShown` (a copy of the last group shown), `'any'` → `shown.length > 0`. The sample returns `running`, `copies` (`[data-celebration]` count), `rootChildren` (count and all match `[data-celebration-group]`), `groupChildCount` (sum over groups of element children, all match `[data-celebration]`), `layers` (root plus each shown group: `filter`, `mix-blend-mode`, `opacity`), `shown` (each shown copy's value array, its `.glyph` `color`, and for the QU copy its `.badge` `background-color`/`color`), `quShown`, `lastShown`, `steppedMs` (the manual-clock ms this call stepped). Element-child level only: the copies' `.glyph`/`.badge` spans are not counted.
 
-**Assertions per sample:** not null; `running` true; `shown.length` ≥ 1 (QU sample: `quShown` true); `copies` 55; root has 10 element children, all groups; groups' element children total 55, all copies; every layer `filter` `none`, `mix-blend-mode` `normal`; every shown value array equals the live array; every shown glyph colour equals the live glyph colour; QU badge colours equal the live badge's.
+**Assertions per sample:** not null; `running` true; `shown.length` ≥ 1 (QU sample: `quShown` true; last group sample: `lastShown` true); `copies` 55; root has 10 element children, all groups; groups' element children total 55, all copies; every layer (root and shown groups) `filter` `none`, `mix-blend-mode` `normal`, `opacity` `'1'`; every shown value array equals the live array; every shown glyph colour equals the live glyph colour; QU badge colours equal the live badge's.
 
 **Review-log minors resolved:** visibility definition, shown-copy first sample, sibling QU loop with `stepUntilShown` unchanged, element-child counting, `mix-blend-mode` in the set with `opacity`/`box-shadow` out, `[data-card-id]`-scoped live reads, group-opacity clause, :324 as run-start only, exact title in the mapping, Q-17 narrowing clause, all four border colours: applied above. Not taken: a second theme (`prefs-theme-paper`): copies and live faces read the same `--wc-card-*` tokens and Paper's texture is `none`, so it adds no `background-image` coverage and doubles the run; `filter` on the root's ancestors: a page-level filter would recolour the live board equally, outside R-87's copy-versus-face clause (review log pass 2, Dropped).
 

@@ -165,8 +165,9 @@ function stepUntilShown(page: Page, cap: number): Promise<number> {
 
 // Ticket 7.15 (R-87, Q-48): the computed face properties a copy shares with a live card's `.face`
 // (Celebration.svelte mirrors Card.svelte's), the copy's own `opacity` included. Not compared: the
-// group's `opacity` (its fade, designed motion, EXPERIENCE.md Motion), `box-shadow` (the copy's
-// lifted-card shadow, DESIGN.md) and the path (`transform`, `visibility`, `z-index`).
+// group's `opacity` (asserted 1 instead: its only designed fade is the closing one over the last
+// base of the cap, step.ts `advance`), `box-shadow` (the copy's lifted-card shadow, DESIGN.md) and
+// the path (`transform`, `visibility`, `z-index`).
 const FACE_PROPS = [
   'color',
   'background-color',
@@ -188,17 +189,18 @@ type RunSample = {
   copies: number;
   rootChildren: { count: number; allGroups: boolean };
   groupChildCount: { count: number; allCopies: boolean };
-  rootOpacity: string;
-  layers: { filter: string; blend: string }[];
+  layers: { filter: string; blend: string; opacity: string }[];
   shown: { values: string[]; glyph: string; badge: { background: string; color: string } | null }[];
   quShown: boolean;
   lastShown: boolean;
+  /** The manual-clock ms this call stepped before the sample. */
+  steppedMs: number;
 };
 
 // Steps the manual clock 16 ms at a time, at most `cap` ms, checking before each step, until a copy
 // is shown (its group's computed opacity > 0 and its own computed visibility `visible`): any copy
-// (`'any'`), the QU copy, the copy with a `.badge` (`'qu'`), or a copy of the last group (`'last'`);
-// returns that step's sample of the run, null if the cap or the run's end came first.
+// (`'any'`), the QU copy, i.e. the copy with a `.badge` (`'qu'`), or a copy of the last group
+// (`'last'`); returns that step's sample of the run, null if the cap or the run's end came first.
 function sampleRun(page: Page, cap: number, at: SampleAt): Promise<RunSample | null> {
   return page.evaluate(
     ([max, stepMs, want, lastGroup, props]) => {
@@ -206,7 +208,7 @@ function sampleRun(page: Page, cap: number, at: SampleAt): Promise<RunSample | n
       if (hook === undefined) throw new Error('AD-17 no test hook');
       const root = document.querySelector('[data-celebration-root]');
       if (root === null) throw new Error('R-87 no celebration root');
-      const read = () => {
+      const read = (steppedMs: number) => {
         const rootKids = [...root.children];
         const groups = rootKids.filter((el) => el.matches('[data-celebration-group]'));
         const groupKids = groups.flatMap((g) => [...g.children]);
@@ -215,6 +217,7 @@ function sampleRun(page: Page, cap: number, at: SampleAt): Promise<RunSample | n
           return {
             filter: style.getPropertyValue('filter'),
             blend: style.getPropertyValue('mix-blend-mode'),
+            opacity: style.opacity,
           };
         };
         const layers: RunSample['layers'] = [layerOf(root)];
@@ -248,7 +251,6 @@ function sampleRun(page: Page, cap: number, at: SampleAt): Promise<RunSample | n
         }
         const sample: RunSample = {
           running: hook.celebration.running(),
-          rootOpacity: getComputedStyle(root).opacity,
           copies: document.querySelectorAll('[data-celebration]').length,
           rootChildren: { count: rootKids.length, allGroups: groups.length === rootKids.length },
           groupChildCount: {
@@ -259,11 +261,12 @@ function sampleRun(page: Page, cap: number, at: SampleAt): Promise<RunSample | n
           shown,
           quShown,
           lastShown,
+          steppedMs,
         };
         return sample;
       };
       for (let t = 0; ; t += stepMs) {
-        const sample = read();
+        const sample = read(t);
         const found =
           want === 'qu'
             ? sample.quShown
@@ -512,11 +515,10 @@ test.describe('android', () => {
       expect(s.copies, name).toBe(55);
       expect(s.rootChildren, name).toEqual({ count: WON_ROWS.length, allGroups: true });
       expect(s.groupChildCount, name).toEqual({ count: 55, allCopies: true });
-      // No colour change: no filter or blend on the root or a shown group, and every shown copy
-      // as the live cards.
-      expect(s.rootOpacity, name).toBe('1');
+      // No colour change: no filter, blend or translucency on the root or a shown group, and
+      // every shown copy as the live cards.
       for (const layer of s.layers) {
-        expect(layer, name).toEqual({ filter: 'none', blend: 'normal' });
+        expect(layer, name).toEqual({ filter: 'none', blend: 'normal', opacity: '1' });
       }
       for (const copy of s.shown) {
         expect(props(copy.values), name).toEqual(props(liveValues));
@@ -526,6 +528,10 @@ test.describe('android', () => {
     }
     expect((qu as RunSample).quShown).toBe(true);
     expect((last as RunSample).lastShown).toBe(true);
+    // Every sample is before the closing fade (the last Normal base, 180 ms, of the cap), so a
+    // shown group's opacity 1 is by design.
+    const stepped = [first, qu, last].reduce((sum, s) => sum + (s as RunSample).steppedMs, 0);
+    expect(stepped).toBeLessThan(NORMAL_CAP_STEP_MS - 180);
   });
 
   for (const [name, at] of [
