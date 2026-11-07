@@ -595,9 +595,10 @@ sequenceDiagram
 
 - **Binds:** `src/ui/overlays.svelte.ts`, `src/shell/nav.ts`, `src/ui/open-menu.ts`, `src/ui/keys.ts`, EXPERIENCE.md Information
   Architecture, End sheet, A-E1.
-- **Prevents:** components holding their own open flags; back double-popping or leaving the app
-  (except the Q-50 case: a back before any user activation after a boot push, AD-16, A-A11;
-  amended 2026-11-07, epic 7 entry 11, Q-50);
+- **Prevents:** components holding their own open flags; back double-popping; back leaving the
+  app (except the Q-50 case: a back before any user activation after a boot push, AD-16, A-A11;
+  read on Android only: in a browser tab, a return to the page after such a back, by Forward or a
+  bfcache restore, is unread and unspecified; amended 2026-11-07, epic 7 entry 11, Q-50);
   Forward desynchronising the stack; a push racing an unfinished pop; boot surfaces pushed in
   mount order.
 - **Rule:**
