@@ -3,7 +3,7 @@ title: 'Close-out: documents, audits and device read (7.11, Phases 1 and 2)'
 type: 'chore'
 ticket: 11
 created: '2026-11-04'
-status: 'in-progress'
+status: 'built'
 route: 'full'
 route_source: 'auto'
 baseline_revision: '8a98d45b327147b6af87c3608c8d10fd65d7314d'
@@ -17,7 +17,21 @@ context:
   - '{project-root}/_bmad-output/specs/spec-epic-7-pwa-release/SPEC.md'
   - '{project-root}/_bmad-output/specs/spec-epic-7-pwa-release/build-notes.md'
 warnings: ['oversized']
-deferred: []
+deferred:
+  - summary: >-
+      Unread browser-tab case (Owner stop item 14): after a back skipped before any user activation, a return by Forward or a bfcache restore might leave the overlay depth above `history.state.wc`, so a later back could close two entries.
+    evidence: |-
+      Raised by the B-1 gate's adversary lens; not read in any browser (Playwright's Chromium does not apply the skip). Pre-existing: `src/shell/nav.ts` is unchanged by this ticket. Settle it with a desktop-Chrome read: open a fresh tab on another page, then the app seeded into Game over; press back before any click, then Forward; open the menu, press back, and see whether the sheet collapses too. A double-pop becomes a fix ticket. AD-13 now states the case is unread (5e49663).
+    location: >-
+      src/shell/nav.ts onPopState; spine AD-13 Prevents
+    severity: medium (unverified)
+  - summary: >-
+      The AGENTS.md skip-waiting names pitfall could say more: names match as substrings (`includes`), `<style>` is not scanned, "script and HTML comments" can be misread, and "code file" means `CODE_EXT`.
+    evidence: |-
+      `src/architecture-scan.ts:589-591` (`commentsOnly.includes(name)`), :456 and :499 (script, style and HTML comments blanked in markup). Agent-context file, so step-04 defers it (review pass 2026-11-07, resume 2, findings 6 and 19).
+    location: >-
+      AGENTS.md managed block, Known pitfalls (last bullet)
+    severity: low
 ---
 
 <intent-contract>
@@ -126,7 +140,7 @@ Read-only: everything under `src/`, `e2e/`, `scripts/`, config; done plans and l
 - [x] B-5 `AGENTS.md` rule 6 (hand edit, outside the managed block): `thrown to the AD-15 handler in test builds` → `reported to the AD-15 handler in test builds` (item 13 (l); `src/shell/sw.ts` and the `src/main.ts` F17 catch call `reportError`). Commit `docs(agents): rule 6 says Q-40 failures are reported (ticket 7.11)`.
 - [x] B-6 `AGENTS.md` managed block: via `bmad-project-context` (headless, limited to one Known pitfalls addition; keep the verified stamp as Phase 1 did; splice inside the markers only; record its ledger). Item 13 (l), as the last Known pitfalls bullet, this text: "- In non-test `src/**` sources (every file not named `*.test.ts`; `src/architecture-scan.ts`, which defines the list, is outside the tree scan), never write `messageSkipWaiting`, `SKIP_WAITING`, `updateSW` or `virtual:pwa-register`, not even in a string literal or Svelte markup (comments are fine): the AD-1 skip-waiting names scan (`SKIP_WAITING_NAMES`, AD-16 no skip-waiting) fails on them." Before writing, check the scope against `src/architecture-scan.ts` (`SKIP_WAITING_NAMES`, its `isTest` and comment-stripping use) and the tree scan's exclusions, and correct the parenthetical to the code if it differs. Commit `docs(agents): skip-waiting names pitfall (ticket 7.11)`.
 - [x] B-7 this plan: fill Sync checklist lines 39–45; mark Owner stop item 13 applied (its Resolution line); remove the two frontmatter `deferred` entries (applied by B-5 and B-6); Implementation Notes (each skill's run, gate results, any further edit applied under the rule above). Commit `docs(plan): ticket 7.11 Owner stop item 13 applied`.
-- [ ] B-8 (orchestrator, step 3 Verify): `npm run test -- src/architecture` after the spine edits. Run `npm run lint` only if a Biome-linted file changed (`biome.json` `files.includes`: `src/**`, `e2e/**`, `scripts/**`, root `*.ts`, `*.js`, `*.json`; Markdown is not linted). No build source changes, so the final `test:all` (8ee166d) and `test:screens` (4ee0d9a) stand. Then a brief step-04 review of this resume's diff, the Owner-wait note and Auto Run Result, and `built` if nothing is pending.
+- [x] B-8 (orchestrator, step 3 Verify): `npm run test -- src/architecture` after the spine edits. Run `npm run lint` only if a Biome-linted file changed (`biome.json` `files.includes`: `src/**`, `e2e/**`, `scripts/**`, root `*.ts`, `*.js`, `*.json`; Markdown is not linted). No build source changes, so the final `test:all` (8ee166d) and `test:screens` (4ee0d9a) stand. Then a brief step-04 review of this resume's diff, the Owner-wait note and Auto Run Result, and `built` if nothing is pending. (Done 2026-11-07: 336/336 after B-1 and again after the review patches; step-04 review ran; Owner stop item 14's wording applied as a technical default, its browser read deferred; `built`.)
 
 **Sync checklist** (source → applying commit, filled by the build):
 1. AD-16 boot tail as built (`main.ts:264-289`: halted returns, dev skip, F17 catch, attempt always resolves) and update policy (no prompt, no `updateSW`, no skip-waiting, no `clientsClaim`; `sw.ts:2-3`, `build-output.spec.ts:104`) → commit: 7cd8939
@@ -174,6 +188,9 @@ Read-only: everything under `src/`, `e2e/`, `scripts/`, config; done plans and l
 43. Spec §9 Q-50 cites §7.12; version note line (item 13 (k)) → commit: e54263f
 44. AGENTS.md rule 6 "reported to" (item 13 (l), hand edit) → commit: a3d647c
 45. AGENTS.md Known pitfalls skip-waiting names line (item 13 (l), `bmad-project-context`) → commit: 62de244
+46. Review patch: AD-13 Prevents scopes the Q-50 exception to leaving the app and states the browser-tab return as unread (finding 1; Owner stop item 14 wording, technical default) → commit: 5e49663
+47. Review patch: EXPERIENCE.md A-E1 amendment tag (finding 7) → commit: de7b95e
+48. Review patch: `device-checks.md` G5 Check states the Q-50 expectation; spec version-note line names the approver (findings 8, 10) → commit: c87aa9f
 
 **Acceptance Criteria:**
 - Given the run's commits, when the epic Notes are read at the first sync commit's parent, then the authorisation line is present.
@@ -355,7 +372,9 @@ Q-ids:
 
 ## Owner-wait note
 
-**Phase 2 resume 2 (2026-11-07, Owner stop item 13 applied): plan stays `in-progress`.** B-1…B-7 are done (50395f2, 15791ba, cf75557, e54263f, a3d647c, 62de244 and this record's commit); item 13 (a)–(l) is applied (Sync checklist lines 39–45). What waits: **Owner stop item 14** (one unread browser-tab back/Forward case the B-1 gate's adversary lens raised, low confidence; proposed default: a wording-only "unread" note in AD-13; Owner stop items). Under the plan's rule (anything beyond a wording-only alignment with an existing decision or the code is a new Owner stop item) it is not applied, so the plan cannot go `built` yet. B-8 (orchestrator): `npm run test -- src/architecture` passed after the spine edits (`Tests 336 passed (336)`); no Biome-linted file changed (Markdown only), so `npm run lint` is not needed; the final `test:all` (8ee166d) and `test:screens` (4ee0d9a) stand. **To resume:** Jared (or the orchestrator, if it judges item 14 a technical default under Jared's run rule) approves, edits or declines item 14; an approved wording goes through `bmad-architecture` with its own checklist line; then the brief step-04 review and `built`.
+**Phase 2 resume 2, finished (2026-11-07, orchestrator): plan `built`.** Owner stop item 13 is applied (B-1…B-7; Sync checklist lines 39–45). Owner stop item 14's wording is applied as a technical default, and its browser read is deferred (Owner stop items; frontmatter `deferred`). The step-04 review of this resume's diff patched four low findings (5e49663, de7b95e, c87aa9f; lines 46–48). `npm run test -- src/architecture` passed (336/336) after the spine edits and after the patches. Only Markdown changed, which Biome does not lint. No build source changed since e2cd94f, so the final `test:all` (8ee166d) and `test:screens` (4ee0d9a) stand. Nothing in this ticket waits on Jared, apart from marking it done. Entry 12's note stays information for entry 12: Q-50 is an accepted gap, so Jared waives initiative Done when 1 and 3 there.
+
+**Phase 2 resume 2 (2026-11-07, Owner stop item 13 applied): plan stayed `in-progress` (superseded by the paragraph above: item 14 resolved, plan `built`).** B-1…B-7 are done (50395f2, 15791ba, cf75557, e54263f, a3d647c, 62de244 and this record's commit); item 13 (a)–(l) is applied (Sync checklist lines 39–45). What waits: **Owner stop item 14** (one unread browser-tab back/Forward case the B-1 gate's adversary lens raised, low confidence; proposed default: a wording-only "unread" note in AD-13; Owner stop items). Under the plan's rule (anything beyond a wording-only alignment with an existing decision or the code is a new Owner stop item) it is not applied, so the plan cannot go `built` yet. B-8 (orchestrator): `npm run test -- src/architecture` passed after the spine edits (`Tests 336 passed (336)`); no Biome-linted file changed (Markdown only), so `npm run lint` is not needed; the final `test:all` (8ee166d) and `test:screens` (4ee0d9a) stand. **To resume:** Jared (or the orchestrator, if it judges item 14 a technical default under Jared's run rule) approves, edits or declines item 14; an approved wording goes through `bmad-architecture` with its own checklist line; then the brief step-04 review and `built`.
 
 **Phase 2 resume (2026-11-07, after Jared's answers 80a445d): plan stays `in-progress`.** R-1…R-6 are done (commits 70f3210, 08c35dc, 6cceeac, e620eab, 2699e0b, 8ee166d, 4ee0d9a and this record's commit). Jared's items 1–4 of the Phase 2 list below are answered and applied: proposals 1 and 2 landed as ticket 7.15 and the §6.4 deltas are re-confirmed (98 covered, 2 exempt, 1 accepted gap Q-50); proposal 3 is recorded in the §6.6 audit (retrospective table; listed fixes accepted as gaps); Owner stop item 12 is applied (checklist lines 32–36); the Q-id reading is the default. Item 5 (Q-50 waiver at entry 12) stays information for entry 12.
 
@@ -417,7 +436,7 @@ Optional (owner) G18/G19 only if Jared reinstates them (they then route as Devic
 
 `docs/device-testing.md` (unverified) steps, each to mark confirmed, differs (what he saw) or not exercised, in the epic Notes: :59 Undo snackbar gone after closing tabs; :61 Site settings path to delete data; :72 serviceworker-internals shows ACTIVATED; :92 swipe away an app window the install opened; :124 B seen waiting in serviceworker-internals; :129 the discarded-renderer reading.
 
-Retrospective leftovers (done plans stay unedited): Jared's observed tip from the device read, "confirm the seeded state in the Chrome tab before closing it", is a candidate for `docs/device-testing.md` Seeded reads step 5 (not applied). `_bmad-output/implementation-artifacts/review-loop/7-13-build.md` (open major: 7.13 plan Item 3's failing-path list omits `src/ui/overlays.svelte.ts` and engine/shell files; 9 wording minors); `review-loop/7-10-build.md` (7 minors: D-65 count, D-64 item 4, `READ_MS` bounds, A's `undefined` read, D-46 timeout); `review-loop/7-14-build.md` (one stamp reused for touchStart/touchEnd; residual ~0.05%); run digest `_bmad-output/implementation-artifacts/autopilot/epic-pwa-release-20261030-1141.md` (D-64 owner backlog entry; tickets.toml entries 13/14 pre-review wording and 14's `after`; a home for the flaky-test close protocol).
+Retrospective leftovers (done plans stay unedited): a desktop-Chrome read of the browser-tab back-then-Forward case after a skipped boot push (Owner stop item 14, deferred, unverified; steps in frontmatter `deferred`); Jared's observed tip from the device read, "confirm the seeded state in the Chrome tab before closing it", is a candidate for `docs/device-testing.md` Seeded reads step 5 (not applied). `_bmad-output/implementation-artifacts/review-loop/7-13-build.md` (open major: 7.13 plan Item 3's failing-path list omits `src/ui/overlays.svelte.ts` and engine/shell files; 9 wording minors); `review-loop/7-10-build.md` (7 minors: D-65 count, D-64 item 4, `READ_MS` bounds, A's `undefined` read, D-46 timeout); `review-loop/7-14-build.md` (one stamp reused for touchStart/touchEnd; residual ~0.05%); run digest `_bmad-output/implementation-artifacts/autopilot/epic-pwa-release-20261030-1141.md` (D-64 owner backlog entry; tickets.toml entries 13/14 pre-review wording and 14's `after`; a home for the flaky-test close protocol).
 
 ### Owner stop items (proposed, not applied)
 
@@ -467,6 +486,7 @@ Added by the Phase 2 resume (2026-11-07, R-1 `bmad-architecture` reviewer gate o
 
 Added by Phase 2 resume 2 (2026-11-07, B-1 `bmad-architecture` reviewer gate, adversary lens; outside the further-edit rule, so proposed, not applied):
 14. Unread browser-tab case after a skipped back (low confidence; an inference, not read in a browser). AD-13 Prevents now excepts "a back before any user activation after a boot push" (S:597-599), and A-A11 (S:1297) and Q-50 cover only Android back on a relaunch, where leaving the app ends the page. The lens argues that in a desktop or mobile Chrome tab the same skip returns to the previous page, and that a return by Forward (or a bfcache restore) could leave `overlays` at depth 1 while `history.state.wc` is 0, so a later back could close two entries, the double-pop AD-13 still claims to prevent. Nothing in this ticket read it; whether Chrome marks the boot entry or the one below it, and what Forward restores, is unverified. Proposed default (wording only, no behaviour change): add to AD-13's exception "(read on Android only; in a browser tab, a return to the page after such a back, by Forward or bfcache, is unread and unspecified)", through `bmad-architecture`. Alternatives: a desktop-Chrome read of the case first (a Desktop row like G20–G22), and a fix ticket if it double-pops; or decline (no change). A behaviour change for that path would be an owner decision.
+    **Resolution (2026-11-07, orchestrator, step-04 review of resume 2):** the proposed wording default is a technical default: it is wording-only and limits AD-13's new exception to what Q-50 and the device read cover. It is applied with finding 1's scope fix (5e49663, Sync checklist line 46). The browser read is deferred as a pre-existing, unverified case (frontmatter `deferred`; Retrospective leftovers), because the code it concerns is unchanged by this ticket. Jared may schedule the read; it does not block this ticket.
 
 ### Owner stop items 1–10 applied (owner approval 2026-11-05, "apply all ten")
 
@@ -587,6 +607,43 @@ Phase 1 run, 2026-11-04, `/mnt/d` checkout, branch `pwa-release`, Node 24. Commi
   - `false` `reject` 33. Five device-testing.md tags not resolved — those steps were not exercised in the read; P2-2 keeps their tags, as the ticket's "from the device read" allows.
   - `false` `reject` 34. Q-17's hover-peek title is weaker evidence — 7.15's owner-approved design (ticket 15: one desktop layout test title); the id-level name check is met.
 
+### 2026-11-07 — Review pass (resume 2, item 13 diff e2cd94f..8fdfc17)
+- verdicts: 32 findings — high 0, medium 0, low 17, false 11, maybe-false 4
+- scope note: a brief pass on this resume's diff only (`git diff e2cd94f 8fdfc17`, 67 kB), as the invocation asked; the earlier Phase 1/2 diff was reviewed in the pass above. Lenses: blind-hunter 1–14, edge-case-hunter 15–24, verification-gap none (no test reads these documents; the pitfall line matches `src/architecture-scan.ts`), intent-alignment 25–32.
+- findings:
+  - `low` `patch` 1. AD-13 Prevents: the Q-50 parenthesis follows "double-popping or leaving the app", so it reads as excepting double-popping too — rewritten to "back double-popping; back leaving the app (except the Q-50 case …)", with Owner stop item 14's wording default in the same parenthesis (see 32).
+  - `low` `reject` 2. A-A11 "Resolved by Q-50 (spec §9)." overstates the scope beyond the end sheet — the same cell says the other boot pushes are "an inference, with no device read beyond Q-50's end-sheet case"; the prefix is the invocation's chosen text (choice (b), as A-A15 does for Q-40).
+  - `false` `reject` 3. AD-16 and A-A11 state different scopes — both say every boot push; AD-16's clause sits inside the "push boot surfaces" step, so the notice that waits until New game is not a boot push there either, and A-A11's "when pushed at boot" says the same thing.
+  - `low` `reject` 4. The epic Notes decision line and the plan's Resolution line quote "(tap, click or key press)" while the spine says "key press other than Esc" and the narrowed no-re-push wording — the Notes line records the decision as made; the two gate refinements are wording-only alignments with the HTML activation rule and the as-built boot order, recorded in Implementation Notes and the memlog; the fix is an edit to this plan.
+  - `low` `reject` 5. B-6's task line quotes the superseded pitfall parenthetical — fix is an edit to this plan; Implementation Notes record the correction to the code.
+  - `low` `defer` 6. AGENTS.md skip-waiting pitfall: "script and HTML comments" is ambiguous, `<style>` is blanked (`architecture-scan.ts:499`), "code file" is undefined (`CODE_EXT`), no pointer to `workbox-window` — real, cosmetic; agent-context file, so deferred (frontmatter `deferred`).
+  - `low` `patch` 7. EXPERIENCE.md A-E1 has no amendment tag under a "confirmed 2026-09-27" header (A-E4 carries one) — tag added. Its "attaches to the bare-board clause" and "a back" vs "the first back" parts are rejected: the row's clauses are a semicolon list of exceptions, and before any tap the first back is the only one (it leaves the app).
+  - `low` `patch` 8. `device-checks.md` G5 Check states the old expectation and then the opposite — Check rewritten to the Q-50 expectation, naming the A-A11 expectation it replaces.
+  - `low` `reject` 9. Q-50 should cite R-83 instead of §7.12 — §7.12 "End of game" is the §7 item that opens the end sheet; adding R-83 changes Jared's answer text beyond the citation fix the invocation approved ((k)).
+  - `low` `patch` 10. The spec version-note line names no approver; plan item 13 (k) called it the owner's — sentence now says "a technical default under Jared's run rule"; the reclassification is the invocation's ruling (epic Notes item 13 line: citation only, answer text unchanged).
+  - `low` `reject` 11. B-8 unchecked while its results are reported — the fix is an edit to this plan; B-8 is ticked by this record.
+  - `low` `reject` 12. AD-15 keeps "dev never loads `sw.ts`" and nests parentheses — still accurate (it says why dev builds never report); cosmetic.
+  - `false` `reject` 13. The spine's v0.9 → v0.13 pin claims more than was checked — the preamble says where the ids are defined, not that every v0.10–v0.13 change was re-synced; the spine already cites R-86…R-88 and Q-45…Q-50, which exist only from v0.10 on, so v0.9 was the wrong pin.
+  - `false` `reject` 14. §6.6 depends on a retrospective table that may not exist at the gate — SPEC F12 and release-checklist step 6 put the retrospective before the merge, so the table exists by entry 12's §6.6 check (owner decisions 2026-10-29, 80a445d).
+  - `low` `patch` 15. = 8 (G5 Check ambiguous) — same patch.
+  - `false` `reject` 16. G5 has no route for a re-read where the sheet collapses — the Disposition already routes any difference from the Check: "a failure is a spec §9 question (A-A11)".
+  - `maybe-false` `reject` 17. A-E1 says back closes the History notice while the spine says a boot-pushed notice may be skipped — UX states the read behaviour (G6, a tap first); the spine holds the unread inference. If real it is only low (an unread wording gap): rejected with that note.
+  - `maybe-false` `reject` 18. Game over plus unreadable history (two boot entries) is unread — A-A11 already states every boot push as an inference with no device read; if real, low.
+  - `low` `defer` 19. The pitfall does not say the names match as substrings (`includes`, so `updateSWState` fails) — verified (`architecture-scan.ts:590`); agent-context file: deferred with 6.
+  - `false` `reject` 20. B-5 hand-edits rule 6 against the contract's Never — the invocation orders it explicitly ("(l): AGENTS.md rule 6 'thrown to' → 'reported to' (hand edit)"); Owner stop items 2/10 edited rule 6 the same way (d20c1a9).
+  - `low` `reject` 21. Plan Change Log entry 3 says "the bounds are the same as entry 1" while B-4 and B-5 edit the Q-50 citation and rule 6 — the fix is an edit to this plan; both edits are named in entry 3's trigger and the invocation.
+  - `false` `reject` 22. The Q-50 citation fix is an owner-reserved §9 edit — the invocation rules it a citation fix with the answer text unchanged; approver now named (10).
+  - `low` `reject` 23. carried: AC 3's `git diff 8a98d45 HEAD --stat` lists files outside the Code Map — carried row 2 of the pass above (plan-only; as-run scope recorded).
+  - `low` `reject` 24. = 4 ((f) record vs text).
+  - `low` `reject` 25. = 4 ((f) "other than Esc" beyond the chosen wording) — HTML's activation-triggering input excludes Esc; wording-only, aligns with the platform the code runs on.
+  - `maybe-false` `reject` 26. The further-edit rule applied unevenly (Esc applied, item 14 stopped) — resolved: item 14's wording default is applied here as a technical default (32).
+  - `false` `reject` 27. = 13 (v0.13 pin).
+  - `false` `reject` 28. Verification never reads the documents — the invocation prescribes `npm run test -- src/architecture` after spine edits; the document checks are `lint_spine.py` and the gate lenses; verification-gap confirmed no test reads these files.
+  - `false` `reject` 29. Auto Run Result not updated — written by this finalize.
+  - `false` `reject` 30. Uncommitted `status: 'in-review'` — step-04 sets it; finalize writes the final status and commits.
+  - `false` `reject` 31. = 11 (B-8).
+  - `maybe-false` `defer` 32. Owner stop item 14: in a browser tab, a skipped back then Forward or a bfcache restore might leave `overlays` deeper than `history.state.wc`, so a later back could close two entries — unverified (Playwright's Chromium does not apply the skip; no browser read). Pre-existing: `src/shell/nav.ts` is unchanged by this ticket. If real, medium (unverified). Settled by a desktop-Chrome read: open a fresh tab on another page, then the app seeded into Game over, press back before any click, press Forward, open the menu, press back, and see whether the sheet collapses too. The wording default (AD-13: read on Android only; the tab case is unread and unspecified) is applied as a technical default in patch 1; the read itself is deferred (frontmatter `deferred`; Retrospective leftovers).
+
 ## Design Notes
 
 - Skills headless: invoke each with intent `update`, the item list and the authorisation line; if a skill asks a question it cannot settle from this plan, take its recommended technical default for wording, never for content beyond the item.
@@ -603,6 +660,42 @@ Phase 1 run, 2026-11-04, `/mnt/d` checkout, branch `pwa-release`, Node 24. Commi
 - `git status --porcelain` -- expected: empty after the last commit.
 
 ## Auto Run Result
+
+Phase 2 resume 2 (2026-11-07): status `built`.
+- Summary: Owner stop item 13 (a)–(l) is applied as technical defaults under Jared's run rule. The orchestrator recorded the decision in the epic Notes and this plan (13b1957) with choices (b), (f), (k) and (l).
+  - Spine, through `bmad-architecture` (`lint_spine.py` 0 findings; gate lenses): `binds:` runs to Q-50. A-A11 now opens "Resolved by Q-50" and says the skip "may" happen, "probably" by Chrome's intervention, before any user activation. It also says no code compensates, the acceptance covers every boot push as an inference, and Playwright `goBack()` tests are not Q-50 evidence. AD-16's boot step says the same. AD-13 Prevents names the exception, and AD-15 quotes Q-40's current wording.
+  - EXPERIENCE.md A-E1 names the exception (`bmad-ux`).
+  - Direct edits: G5's Check and release-checklist §6.6 wording.
+  - Spec Q-50 cites §7.12, with a version-note line.
+  - AGENTS.md rule 6 says "reported to" (hand edit). A skip-waiting names pitfall was added through `bmad-project-context`.
+  - Owner stop item 14's wording ("read on Android only; the browser-tab return is unread") is applied as a technical default, and its browser read is deferred.
+- Files:
+  - `ARCHITECTURE-SPINE.md` and `.memlog.md` (item 13 (a)–(g), AD-13 scope and item 14 note, spec v0.13 pin).
+  - `EXPERIENCE.md` and `.memlog.md` (A-E1 and its tag).
+  - `device-checks.md` (G5 Check).
+  - `release-checklist.md` (§6.6 wording).
+  - `docs/game-flow-spec.md` (Q-50 citation, version-note line).
+  - `AGENTS.md` (rule 6 verb, pitfall).
+  - The epic file (the decision line).
+  - This plan (tasks B-1…B-8, checklist lines 39–48, Owner stop items 13 and 14 resolutions, triage log, record).
+- Review (brief, of this resume's diff; thorough set): 32 findings: high 0, medium 0, low 17, false 11, maybe-false 4.
+  - Patched, 4 low entries (5 rows):
+    - AD-13 exception scope (with item 14's wording).
+    - A-E1 tag.
+    - G5 Check (two rows).
+    - Version-note approver.
+  - Deferred: the browser-tab case (maybe-false, medium if true, unverified), and the AGENTS.md pitfall precision (two rows: agent-context file).
+  - Rejected: 10 low, 11 false and 3 maybe-false, with reasons in the Review Triage Log. The main reasons:
+    - Plan-only fixes.
+    - The invocation's explicit choices: the (b) prefix, the §7.12 citation, the rule 6 edit.
+    - Platform-aligned gate refinements ("other than Esc", the narrowed no-re-push list).
+    - Claims the documents already refute.
+- Follow-up review recommended: false (no high or medium patched).
+- Verification:
+  - `npm run test -- src/architecture`: 336/336 after B-1 and after the patches.
+  - No source, engine, config or test file changed since e2cd94f (`git diff e2cd94f HEAD --stat -- src e2e scripts fixtures package.json package-lock.json '*.config.ts' tsconfig*.json index.html biome.json` is empty). So `test:all` (8ee166d) and `test:screens` (4ee0d9a) stand.
+  - `SESSION_VERSION` and `HISTORY_VERSION` are 1, and `git diff 4130fb4 HEAD -- src/engine` is empty.
+- Residual risk: the unread browser-tab back-then-Forward case (deferred). It is pre-existing and touches no Android path. No push, no merge.
 
 Phase 2 resume (2026-11-07): status `in-progress`.
 - Summary: the owner's 80a445d answers applied. Owner stop item 12 synced (spine A-A11 row, AD-16 boot step and Proposed epics row 7 through `bmad-architecture`; EXPERIENCE.md End sheet row and back paragraph through `bmad-ux`; `device-checks.md` G5, epic 7 `rule-coverage.md` A-A11 row and `release-checklist.md` §6.4/§6.6 by direct edit); §6.6 audit records proposal 3's decision; §6.4 audit re-confirms 7.15's deltas (Q-17 named by two passing titles, R-87 colour clause asserted; 101 ids: 98 covered, 2 exempt, 1 accepted gap Q-50).
