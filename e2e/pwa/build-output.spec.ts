@@ -19,7 +19,7 @@ import {
 
 const VIEWPORT = 'width=device-width, initial-scale=1.0, viewport-fit=cover';
 
-test('AD-16 the built web manifest is exactly DESIGN.md A-D5 plus the plugin defaults', () => {
+test('Q-17 AD-16 the built web manifest is exactly DESIGN.md A-D5 plus the plugin defaults', () => {
   const manifest: unknown = JSON.parse(readSite('manifest.webmanifest'));
   // "Exactly per A-D5" reads as "no other authored fields": start_url, scope and lang are
   // vite-plugin-pwa defaults.

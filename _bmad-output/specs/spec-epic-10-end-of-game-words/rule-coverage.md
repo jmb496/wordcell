@@ -44,6 +44,7 @@ E = engine Vitest. P6 = Playwright (`android`; `desktop` where noted). U = UI Vi
 | AD-19 each word drifts toward the farther side wall and exits past it, a longer crossing taking more floor contacts (SPEC F27) | CAP-2 | U |
 | R-87 hiding the app mid-run ends it the ordinary way: its entry popped, no sheet while hidden, a second flush changes nothing, the sheet expanded on return (SPEC F28) | CAP-3 | U, P6 |
 | R-87 a ☰ or `M` press while the menu is already open (a double ☰ tap, `M` twice) gives one menu over the expanded sheet, never two (SPEC F29) | CAP-3 | U, P6 (`android`; `desktop` for `M`) |
+| R-87 no trail of copies and no colour change (Q-48) | CAP-3 | P6 |
 | R-88 list for won and gaveUp; entries show the word and `n letters` (`1 letter`) | CAP-4 | P6 |
 | R-88 order with a duplicate and a tie | CAP-4 | P6 |
 | R-88 empty list: `No words were played.` (Give up with no move) | CAP-4 | P6 |
@@ -58,5 +59,4 @@ E = engine Vitest. P6 = Playwright (`android`; `desktop` where noted). U = UI Vi
 
 - R-86 and R-87 sentences that describe ownership or provenance (for example "drawn from copies, never from live elements" is covered by the copy-count row; the AD-14 wording itself is not a test).
 - R-88 `1 letter` from P6: unreachable in a real game (minimum letter count 3, R-36); covered by the `AD-3` Vitest stub in `src/ui/end-sheet.test.ts` (10.2 plan, Opus review 2026-10-23).
-- "No trail, no colour change" (R-87, Q-48): visual; checked in the ticket's screenshot or owner review, not an automated assertion.
 - SPEC F29's race of ☰ or `M` followed at once by a back before the end sheet appears (the queued menu open dropped): timing-dependent; checked at the close-out device read, not an automated assertion.

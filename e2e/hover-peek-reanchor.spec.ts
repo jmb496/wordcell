@@ -80,7 +80,7 @@ test.describe('desktop', () => {
     expect(peek.y + peek.h).toBeLessThanOrEqual(c.y);
   }
 
-  test('AD-12 an open hover peek re-anchors above its cell after a viewport width change, the pointer staying on the cell', async ({
+  test('Q-17 AD-12 an open hover peek re-anchors above its cell after a viewport width change, the pointer staying on the cell', async ({
     page,
   }) => {
     // At 1000 px tall the width rule sets w (AD-11 `cardWidth`): 75 at 700 px wide, 67 at 600.
