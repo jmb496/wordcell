@@ -77,6 +77,65 @@ CLAUDE.md, not the ticket. Minors left at the stop are listed in the result, not
 - No Q-xx answered by code that the owner has not answered in the spec.
 - Plan status `built`, owner has read the result and marked `done`.
 
+## Flake-close protocol (owner-approved 2026-11-07, epic 7 retro A5)
+
+A flake ticket (a test that fails intermittently) cites this section instead of restating it. The
+ticket adds only the test's title, the evidence, its edit boundary and anything it narrows or pins
+(e.g. 7.14's pinned literals). Built from 7.10 items 5–6, the D-70 fix, 7.13 and 7.14. Flaky tests
+are identified by title, never by line number.
+
+1. Evidence. Each failure records its error, failing step, run condition (isolated, counted,
+   diagnostic, `test:all`, injection) and trace path; copy the trace outside the repo before the
+   next run. Run the AGENTS.md pre-run environment check first: mass 5 s timeouts or `EROFS` are an
+   environment fault, not a sighting.
+2. Reproduction counts. CI unset (retries 0), on the `/mnt/d` checkout, before and after any fix:
+   isolated `npx playwright test <spec> -g "<title>" --project=<project> --repeat-each=50` and three
+   counted `npx playwright test --project=<project>` runs, each count recorded with the commit or
+   tree it ran at. After a fix both are 0 (0/50, 0/3) at the last tree that changes anything
+   outside `_bmad-output/`; any later such change, review fixer included, re-runs them and
+   `test:all`.
+3. Modes. Each distinct failing step or error is its own mode and needs its own proof; a cause
+   proven for one mode does not claim the others.
+4. Proof halves. Cause found: a temporary, reverted injection modelling the named mechanism (e.g. a
+   delay before a tap, a stale stamp; never load alone, never suppressing the input) reproduces the
+   mode 5/5 with `--repeat-each=5`, or else at least 5/20. Fix proven: the same injection and
+   command, injection site unchanged, give 0/5 or 0/20 with the fix, with no failure of any kind.
+   Record every result. With both halves the fix lands even when the natural before-count is 0;
+   without the first half a suspected cause is a recorded hypothesis and no test changes.
+5. Void rule. A candidate fix may be revised until its injection proof passes. From its first
+   uninjected run on, any failure of the flaky test voids it: revert it (keep the diff in the
+   plan), record the failure per 1, no rerun, and the plan stops short of `built` (no second
+   unattended fix attempt). With no fix in place, any failure is a reproduction.
+6. Never loosen an assertion. No `test.skip`, `test.fixme` or retries. Never change the test's
+   title, steps, inputs or expected literals, what a check function asserts, or remove or loosen an
+   assertion, unless the recorded cause shows it asserts something no ref it cites prescribes. A
+   per-test, poll or expect timeout (`test.slow` included) or a fixed delay only for a test-side
+   cause whose proof shows the step needs more time with no late or lost input; page-state waits may
+   fix any test-side or input-delivery cause. A longer timeout or a retap never fixes an
+   input-delivery cause.
+7. Cause by layer.
+   - Test: input timed into a window, or onto a control still disabled, as a ref prescribes; fixed
+     in the test.
+   - Helper or input delivery: an `e2e/helpers/` bug, or Chromium/CDP delivering or stamping input
+     late under load (D-71); fixed test-side by page-state waits or deterministic stamps. A changed
+     helper gets or keeps an `e2e/helpers.spec.ts` case that fails on a named mutation, and its
+     callers' tests pass `--repeat-each=5`.
+   - `src/` or config: a behaviour no ref prescribes that a real player's input can reach, even if a
+     test wait would hide it (e.g. a human-speed tap after a drag ignored; AD-14 is one example of
+     a ref to check against). No `src/` or config edit in the flake ticket: record the cause, its
+     proof and a fix-ticket proposal (title, finding, files, reproduction), and the plan stops for
+     the owner.
+8. Outcomes. Fixed (both halves; 0/50 and 0/3 after). Reproduces without both halves: counts and
+   evidence recorded, no speculative edit, the plan stops short of `built`. Never reproduces
+   (neither half: no failure in the runs of 2 or the build's `test:all`, no injection showing the
+   mode): closed with the counts and evidence recorded, and the plan reaches `built` with that
+   reason. A later sighting opens a new fix ticket citing the closed ticket's plan and the
+   failure's event log (D-65 → 7.13, D-64 → 7.14).
+9. An unrelated flake in a final `test:all`. A failure confined to a known flaky test outside the
+   ticket's change gets one rerun at the same commit, both results recorded. A failing rerun stops
+   the build; a flake seen in a second ticket gets its own fix ticket. Any other failure stops the
+   build and is reported.
+
 ## Prompts
 
 **Kick off after reviewing the spec** (paste into a fresh Claude Code session in this repo):
