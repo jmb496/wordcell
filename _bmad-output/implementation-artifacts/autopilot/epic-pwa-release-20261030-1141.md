@@ -205,7 +205,7 @@ Close-out docs: none (the 2026-11-07 decision that created this ticket adds test
 ## Stopped — next ticket needs you
 Stop rule 4: the next ticket, 7.11 (Close-out), is a hands-on (hitl) ticket already in progress. Its Phase 2 resumes with you: apply Owner stop item 12 as approved on 2026-11-07, then the final re-check, `test:all` and `test:screens`, then you mark it done; the §6.6 cross-epic table goes to the retrospective.
 
-## 7.11 Close-out — Phase 2 built, waiting on you to mark it done
+## 7.11 Close-out — done (marked by you, 2026-11-07)
 Device read (2026-11-06, owner present): every Device and Desktop row passed or was accepted as built. G5 differs: on a relaunch into Game over, the first back before any tap leaves the app, probably because of Chrome's history-manipulation intervention. You accepted it as spec §9 Q-50, covered by the device read only, with no test (1fbb31c). G20 is accepted as is. Only one (unverified) step was exercised, the Site settings path; it was reworded and untagged (428960f). The record is in the epic Notes (98bc0d1, 7255f5f).
 Phase 2 (headless runs B2–B4 under `.autopilot/manual-7-11/`):
 - The §6.4 coverage audit: 98 of 101 ids are covered, 2 are exempt (Q-19, Q-32), and 1 is an accepted gap (Q-50).

@@ -3,7 +3,7 @@ title: 'Close-out: documents, audits and device read (7.11, Phases 1 and 2)'
 type: 'chore'
 ticket: 11
 created: '2026-11-04'
-status: 'built'
+status: 'done'
 route: 'full'
 route_source: 'auto'
 baseline_revision: '8a98d45b327147b6af87c3608c8d10fd65d7314d'
