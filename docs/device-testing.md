@@ -38,6 +38,10 @@ including a failed start, waits for the preview to exit and sends SIGKILL if it 
 after SIGTERM. The script waits up to 45 s for a cold `vite preview` to listen. Port 4173 must be
 free (`npm run test:all` uses it).
 
+A leftover `vite preview` holding port 4173 (the script stops with "port 4173 is taken"): run
+`ss -ltnp 'sport = :4173'` to find the listener's PID (not `pgrep -f`, which matches its own shell),
+then `kill <pid>`.
+
 - With a fixture it prints `<url>/seed.html` and "Seed, re-seed or fresh install: clear this
   origin's site data on the phone first."
 - Without one it prints `<url>/`, "Fresh install: clear site data first." and "Update read (G3):
@@ -91,9 +95,12 @@ install" line) and open the printed `<url>/` on the phone.
 3. On the phone, with Tailscale connected, open the printed `/seed.html` URL. It stores the
    fixture and opens the app in that tab.
 4. If the app is not installed, install it from that tab (Chrome's own install UI, G1).
-5. Close the Chrome tab promptly without playing: the seed page's redirect booted the game there,
+5. Confirm the seeded state in the Chrome tab before closing it and launching the app: the tab
+   shows the fixture's game (or, for a history-only seed, the History notice). A new game or another
+   state means the clear missed the origin or an open window wrote over the seed: redo from step 1.
+6. Close the Chrome tab promptly without playing: the seed page's redirect booted the game there,
    and closing it runs the AD-9 hide flush.
-6. Launch the installed app cold: from the app icon, with no WordCell window in recents (swipe away
+7. Launch the installed app cold: from the app icon, with no WordCell window in recents (swipe away
    any app window the install opened (unverified)), then read the row.
 
 A re-seed (the same or another fixture): Ctrl+C the running script first (one run at a time, port
