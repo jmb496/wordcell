@@ -246,3 +246,6 @@ Your retrospective decisions (epic Notes, 2a07454) are applied, one commit each:
 - A8 (1bd3f53): `docs/device-testing.md` has the "confirm the seeded state in the Chrome tab" step and the `ss -ltnp 'sport = :4173'` recovery line.
 - A9 (f9d6a52): AGENTS.md Running and verifying has the pre-run environment check (`uptime`, `mount | grep ' / '`).
 Tests: `npm run test:all` green on the first run at f9d6a52 with the host idle (load 1.08 on 16 cores, `/` rw): unit 3788/3788, size 560,701 / 600,000, dist-smoke 28, e2e 1163, pwa 44. `test:screens` was not run (no screenshot spec or UI source changed). Not applied: the retro's optional review pass-cap revisit and its suggested new device-preview tests (declined). Ready for the authorised merge.
+
+## Merged and deployed
+Merged to `main` (`dcd2df0`, owner go-ahead 2026-11-07, epic Notes 2a07454), pushed, and deployed by CI to https://wordcell.jmb496.workers.dev (CI run 42412944905, Deploy run 42414566899, both green). Next: entry 12 (7.12), Jared's production install and v1 release.
