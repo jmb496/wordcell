@@ -204,3 +204,30 @@ Close-out docs: none (the 2026-11-07 decision that created this ticket adds test
 
 ## Stopped — next ticket needs you
 Stop rule 4: the next ticket, 7.11 (Close-out), is a hands-on (hitl) ticket already in progress. Its Phase 2 resumes with you: apply Owner stop item 12 as approved on 2026-11-07, then the final re-check, `test:all` and `test:screens`, then you mark it done; the §6.6 cross-epic table goes to the retrospective.
+
+## 7.11 Close-out — Phase 2 built, waiting on you to mark it done
+Device read (2026-11-06, owner present): every Device and Desktop row passed or was accepted as built. G5 differs: on a relaunch into Game over, the first back before any tap leaves the app, probably because of Chrome's history-manipulation intervention. You accepted it as spec §9 Q-50, covered by the device read only, with no test (1fbb31c). G20 is accepted as is. Only one (unverified) step was exercised, the Site settings path; it was reworded and untagged (428960f). The record is in the epic Notes (98bc0d1, 7255f5f).
+Phase 2 (headless runs B2–B4 under `.autopilot/manual-7-11/`):
+- The §6.4 coverage audit: 98 of 101 ids are covered, 2 are exempt (Q-19, Q-32), and 1 is an accepted gap (Q-50).
+- The §6.6 bug-fix audit: per your "Do all" answer (80a445d), the cross-epic bug-fix table goes in the epic 7 retrospective, and the old fixes with no reproduction test are accepted as gaps.
+- Fix proposals 1 and 2 became ticket 7.15 (done).
+- Owner stop item 12 (Q-50 syncs, approved): spine 08c35dc, EXPERIENCE.md 6cceeac, epic 7 spec e620eab.
+- Item 13 is twelve further wording-only alignments the reviews found. They were applied as technical defaults under your run rule, with the decision recorded in the epic Notes (13b1957 through c87aa9f):
+  - spine binds Q-50;
+  - A-A11 and AD-16 "may/probably", any user activation, no compensating code;
+  - AD-13 and AD-15 wording;
+  - EXPERIENCE.md A-E1;
+  - G5 Check;
+  - §6.6 wording;
+  - Q-50 cites §7.12;
+  - AGENTS.md rule 6 "reported to", plus a skip-waiting pitfall.
+- Item 14 is the spine review's guess that, in a desktop or mobile Chrome tab, a back before any click followed by Forward might later make one back close two overlays. It is unobserved, involves no code change and does not block the release. The spine marks it unread, and an optional desktop-Chrome check is in the plan's deferred list and the retrospective leftovers.
+Plan `built` (8e48410).
+Tests: `test:all` and `test:screens` green at e2cd94f (after 7.15). Later commits are documents only, and architecture tests pass 336/336.
+Code review: the step-04 review ran in both resumes; its small wording fixes were applied (4ee0d9a, 5e49663, de7b95e, c87aa9f).
+Close-out docs:
+- spine, EXPERIENCE.md and AGENTS.md (Phase 1 and the items above);
+- `docs/game-flow-spec.md` Q-40 wording (c048c93), Q-50 (1fbb31c) and its §7.12 citation (e54263f);
+- `docs/device-testing.md` Site settings step (428960f);
+- epic 7 SPEC dir: device-checks G5, rule-coverage, release-checklist §6.4/§6.6.
+The earlier "Left for you: Q-40 wording" is closed by c048c93.

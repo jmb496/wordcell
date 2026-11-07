@@ -1,11 +1,11 @@
-# Epic pwa-release — handoff after ticket 7.15
+# Epic pwa-release — handoff after ticket 7.11 Phase 2
 
-**State:** tickets 7.1–7.10 and 7.13–7.15 are done. 7.15 (the fix ticket from 7.11's §6.4 audit) closed both gaps with tests only: the portrait/responsive tests now carry Q-17 in their names, and a new celebration test checks that every flying card copy keeps its real card's colours (R-87, Q-48). No game code changed. `test:all` is green; no screenshot check was needed.
+**State:** tickets 7.1–7.10 and 7.13–7.15 are done. The 7.11 (Close-out) plan is `built` (8e48410). Your device read is recorded, and G5 is accepted as spec Q-50 (device read only). The §6.4 audit finds 98 of 101 ids covered, 2 exempt, and Q-50 as your accepted gap. The §6.6 decision is recorded. Every approved and technical-default wording sync is applied. `test:all` and `test:screens` are green.
 
-**Waiting on you:** ticket 7.11 (Close-out) is hands-on and in progress. Resume its Phase 2: apply Owner stop item 12 as you approved on 2026-11-07, then the final re-check, `test:all` and `test:screens`, then mark 7.11 done. Still open from before: spec §9 Q-40 says "reported in dev and test builds only" while the spine and AGENTS.md say test builds only (no effect in practice).
+**Waiting on you:** mark 7.11 done.
 
-**After that:** the epic 7 retrospective (it also writes the §6.6 cross-epic bug-fix table), then 7.12 (merge, CI deploy, production install, 1.0.0) after the merge.
+**After that:** the epic 7 retrospective (it also writes the §6.6 cross-epic bug-fix table). Then you merge `pwa-release` into `main` and push. Then 7.12: CI deploy, production install, 1.0.0, ten qualifying games. At 7.12, initiative Done when 1 and 3 need your waiver for Q-50, the accepted gap.
 
-**Close-out docs:** none so far this run.
+**Optional, not blocking:** owner stop item 14, an unobserved desktop-Chrome back/forward case (steps in the 7.11 plan's deferred list).
 
 Digest: `_bmad-output/implementation-artifacts/autopilot/epic-pwa-release-20261030-1141.md`
