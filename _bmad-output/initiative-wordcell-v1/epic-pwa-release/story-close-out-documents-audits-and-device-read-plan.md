@@ -3,13 +3,13 @@ title: 'Close-out: documents, audits and device read (7.11, Phases 1 and 2)'
 type: 'chore'
 ticket: 11
 created: '2026-11-04'
-status: 'in-progress'
+status: 'in-review'
 route: 'full'
 route_source: 'auto'
 baseline_revision: '8a98d45b327147b6af87c3608c8d10fd65d7314d'
-review: ''
-review_source: ''
-lenses_ran: []
+review: 'thorough'
+review_source: 'auto'
+lenses_ran: ['blind-hunter', 'edge-case-hunter', 'verification-gap', 'intent-alignment']
 review_loop_iteration: 0
 followup_review_recommended: false
 context:
@@ -163,7 +163,7 @@ Read-only: everything under `src/`, `e2e/`, `scripts/`, config; done plans and l
 
 ## Rule-coverage map
 
-Epic 7 `rule-coverage.md` rows (line), test kind, file:line and title (from investigation at 8a98d45; P7 `pwa` unless noted):
+Epic 7 `rule-coverage.md` rows (line), test kind, file:line and title (from investigation at 8a98d45; P7 `pwa` unless noted). L-n is `rule-coverage.md` line n − 44 (e.g. L59 = :15, L78 = :34; checked for every L59…L80 at HEAD):
 - L59 AD-16 import after the dictionary settles — `e2e/pwa/boot-order.spec.ts:48` `AD-8 AD-16 AD-7 first launch: dictionary settled → register → register settled → persisted → persist, the sw.ts chunk requested only after the dictionary`; :84 `AD-16 AD-7 after a dictionary 404: …`; :99 `AD-16 AD-7 after a dictionary timeout: …`. (Mechanism differs from the row text: Owner stop item 1.)
 - L60 F3 dev — Playwright dev `e2e/test-hook.spec.ts:48` `AD-16 AD-7 AD-17 the dev server never requests src/shell/sw.ts, swState() stays unregistered, precacheComplete() stays false and persistence is requested once`.
 - L61 no prompt / no skip-waiting — S part (`src/architecture-tree-scan.test.ts:33` `AD-16 no skip-waiting names in non-test src/`; `src/architecture-ad1.test.ts:864` block; `src/shell/sw.test.ts` afterEach) is not rule coverage; B `build-output.spec.ts:104`; P7 `update.spec.ts:428`, :456 (`expectNoPrompt` at :192, :198, :477), `offline.spec.ts:43` (:119).
@@ -253,7 +253,7 @@ Run 2026-11-07 (P2-4) at HEAD 428960f; build sources identical to 8a98d45 (P2-6)
 | R-84 | V | V `src/engine/history.test.ts:74` "R-84 gameRecord is null while playing" (45) |
 | R-85 | V | V `src/engine/lang/lang-data.test.ts:25` "R-85 letterCount is 2 for QU, 1 otherwise" (7) |
 | R-86 | V | V `src/engine/view.test.ts:1293` "R-86 orders by letter count descending, then spelling" (15) |
-| R-87 | P | P `e2e/celebration.spec.ts:215` "R-87 a win plays the celebration with the sheet hidden; its end pops the entry before the …" (37) |
+| R-87 | P | P `e2e/celebration.spec.ts:334` "R-87 a win plays the celebration with the sheet hidden; its end pops the entry before the …" (37) |
 | R-88 | P | P `e2e/end-sheet.spec.ts:765` "R-88 a won sheet lists the ten words in order, SURF twice" (12) |
 | §2 | P+V | P `e2e/blocking.spec.ts:329` "§2 R-74 Q-29 version-unreadable: the rejected root names no version; New game stores a fre…" (35); V `src/engine/commands.test.ts:1038` "R-71 §2 a drop in Idle writes the new draft at moves[cursor.index] and truncates the tail" (331) |
 | §4 | V | V `src/engine/commands.test.ts:489` (AD-2 TABLE row) "§4 drop a command in the wrong phase (composing) → throw" (25; also `src/engine/replay.test.ts:666` "§2 replay returns the committed prefix (§4 preamble)") |
@@ -264,12 +264,12 @@ Q-ids:
 - **Gap (closed by 7.15, R-5):** Q-17 ("Portrait on phone; responsive in browser"). At P2-4 it stated behaviour, cites no R-id and is applied to no §2–§7 sentence, and no passing title carries it. The behaviour itself is tested: `e2e/pwa/build-output.spec.ts:22` "AD-16 the built web manifest is exactly DESIGN.md A-D5 plus the plugin defaults" asserts `orientation: 'portrait'` (both projects), and the G1 read was a pass (portrait). Fix-ticket proposal 1 below, landed as ticket 7.15 (c6bdeb3, 6d694a4): Q-17 is now named by a passing title (above).
 - **Accepted gap (1):** Q-50, device-read only (owner decision 2026-11-07; G5 read 2026-11-06), cross-listed under §6.6.
 
-**(3) Sentence level.** 334 table rows across the seven `rule-coverage.md` files. 301 pass automatically: each kind the row names has a passing title of that kind carrying one of the row's ids (the first cell's ids, else the section heading's), and each backticked title the row names is a passing title. The other 33 were reviewed by hand:
+**(3) Sentence level.** 334 table rows across the seven `rule-coverage.md` files at 428960f (335 at HEAD, 7.15 deltas below). 301 pass automatically: each kind the row names has a passing title of that kind carrying one of the row's ids (the first cell's ids, else the section heading's), and each backticked title the row names is a passing title. The other 33 were reviewed by hand:
 - 8 sub-table header rows: epic 2 :33, :42, :71, :83; epic 3 :79, :93; epic 4 :92; epic 5 :78.
 - 1 false match: epic 2 :19's `` `§2.freeLetters-set` `` is a check code, not a title.
 - 7 rows whose U/S part names a UI Vitest test. Those tests are `AD-n` by convention and never coverage; each row's E/P part passes: epic 10 :35, :36, :37, :45, :46; epic 3 :50 (R-74, P4–6 passes); epic 6 :15 (R-76).
 - 14 rows with no spec id (UX or spine behaviour), each with a passing title of its kind found by keyword:
-  - epic 10 :32 (`e2e/test-hook.spec.ts:6`, `e2e/pwa/test-hook.spec.ts:9` "… exposes exactly its hook keys"), :54 (7 titles on the 20-letter word line), :55 (`e2e/end-sheet.screens.spec.ts:54` "AD-17 end sheet screenshot with the Words list in Charcoal at 360 px").
+  - epic 10 :32 (`e2e/test-hook.spec.ts:6`, `e2e/pwa/test-hook.spec.ts:9` "… exposes exactly its hook keys"), :55 (7 titles on the 20-letter word line), :56 (`e2e/end-sheet.screens.spec.ts:54` "AD-17 end sheet screenshot with the Words list in Charcoal at 360 px").
   - epic 6: :13 (I-68, 5 titles), :21 (F39, 6), :24 (Confirm dismissed from a menu row, 7), :27 (win smoke, 1), :29 (A-E9, 25), :30 (How to play outline, 10), :34 (view sheet and peek transitions, 7), :35 (version footer, 2), :36 (U only: 26 UI Vitest titles on the stale tile selection), :37 (Esc fallback, 42), :38 (`e2e/board-keys.spec.ts:606` "R-35 Space on a tile selects …", :725 "Q-24 Enter on a tile validates …").
 - 1 accepted non-reproduction, no test: epic 6 :33, the A8 bfcache hide flush (epic 6 SPEC CAP-12 "not a bug"). §6.6 lists it too.
 - 1 measurement row: epic 5 :93, the AD-17 unit budget, recorded in that plan. Re-measured at 7.10: warm median 4.63–4.71 s.
@@ -277,11 +277,12 @@ Q-ids:
 - Epics with no spec dir (themes, how-to-play scenes, place preview): their ticket plans name 10 spec-id titles (themes 1, scenes 5, place preview 4). All 10 exist and pass. Six matched directly. Four matched by grep after resolving a "…" truncation or a `%s` template: `e2e/theme.spec.ts:380`, `src/engine/how-to-play-scenes.test.ts:54`, :348, `e2e/how-to-play.spec.ts:282`, :337. Their ids (Q-45, R-33, R-50, Q-49, R-80 and the rest) are covered at id level in (2).
 - Limit: (3) checks each row's ids against passing titles of the row's kind. It does not re-read every sentence against its test body.
 
-**(4) Result (P2-4, superseded by the 7.15 deltas below).** 101 ids (49 R, 2 §, 50 Q): 97 covered (49 R, 2 §, 46 Q, of which 25 by name and 21 through their applied ids), 2 exempt (non-behavioural Q-19, Q-32), 2 gaps (Q-17: fix-ticket proposal 1; Q-50: accepted). Sentence-level finding: R-87's "no colour change" clause (Q-48) has no automated assertion. Epic 10's Exempt calls it "visual; checked in the ticket's screenshot or owner review", but the spec preamble allows no visual exemption (fix-ticket proposal 2). The "no trail of copies" clause of the same sentence is pinned by `e2e/celebration.spec.ts:324` "R-87 the copies: 55 face copies beside the 52 live cards …". No P7 row was turned D: L62 stayed P7 and passes. Initiative Done when 3 holds for every §2–§7 R-id and §-id. With the Q-ids the §6.4 row adds, it waits on proposal 1 and on Q-50's waiver (Owner stop item 12).
+**(4) Result (P2-4, superseded by the 7.15 deltas below).** 101 ids (49 R, 2 §, 50 Q): 97 covered (49 R, 2 §, 46 Q, of which 25 by name and 21 through their applied ids), 2 exempt (non-behavioural Q-19, Q-32), 2 gaps (Q-17: fix-ticket proposal 1; Q-50: accepted). Sentence-level finding: R-87's "no colour change" clause (Q-48) has no automated assertion. Epic 10's Exempt calls it "visual; checked in the ticket's screenshot or owner review", but the spec preamble allows no visual exemption (fix-ticket proposal 2). The "no trail of copies" clause of the same sentence is pinned by `e2e/celebration.spec.ts:443` "R-87 the copies: 55 face copies beside the 52 live cards …". No P7 row was turned D: L62 stayed P7 and passes. Initiative Done when 3 holds for every §2–§7 R-id and §-id. With the Q-ids the §6.4 row adds, it waits on proposal 1 and on Q-50's waiver (Owner stop item 12).
 
 **7.15 deltas (R-5, 2026-11-07; re-confirms only c6bdeb3 and 6d694a4, titles re-checked by `grep -n` at HEAD).**
 - Q-17 moves from Gap to Named by a passing title: `e2e/pwa/build-output.spec.ts:22` "Q-17 AD-16 the built web manifest is exactly DESIGN.md A-D5 plus the plugin defaults" (`dist-smoke`) and `e2e/hover-peek-reanchor.spec.ts:83` "Q-17 AD-12 an open hover peek re-anchors above its cell after a viewport width change, the pointer staying on the cell" (`desktop`).
 - R-87's "no colour change" sentence-level finding is closed by `e2e/celebration.spec.ts:466` "R-87 no trail of copies and no colour change (Q-48): at a group's first showing, the QU copy's first showing and the last group's first showing, 55 copies only in their groups and each shown copy's colours equal the live cards'" (`android`); epic 10's `rule-coverage.md` Exempt item is now the mapped P6 row `rule-coverage.md:47` "R-87 no trail of copies and no colour change (Q-48)" (c6bdeb3).
+- (3) at HEAD: 335 table rows. The added epic 10 `rule-coverage.md:47` row (R-87, P6) passes by its title (`e2e/celebration.spec.ts:466`, above), so 302 pass automatically and 33 were reviewed by hand (the A-A11 D row, epic 7 :34, reworded at e620eab, stays among the 33). Epic 10 lines after :46 moved down one (the 20-letter word line :55, the Words screenshot row :56, as cited in (3)); the two `e2e/celebration.spec.ts` titles the audit cites moved (R-87 :215 → :334, the copies :324 → :443 at HEAD, as cited in (2) and (4)).
 - Fix-ticket proposals 1 and 2 → landed as ticket 7.15 (done: c6bdeb3, 6d694a4, accb947).
 - **Result.** 101 ids: 98 covered (49 R, 2 §, 47 Q: 26 by name, 21 through their applied ids), 2 exempt (Q-19, Q-32), 1 gap (Q-50, accepted, owner 2026-11-07). The Q-id reading (a Q-id applied to an R-id is covered by that R-id's tests) is the technical default the owner took (epic Notes, 80a445d).
 - Passing: the three titles are confirmed passing from R-6's final-run logs (each title a `✓` line), by the orchestrator.
@@ -316,7 +317,7 @@ Q-ids:
 - **Epic 7 fix tickets.**
   - 7.13 (D-65): no fix shipped. Its plan's outcome is "Never reproduces": no uninjected run failed and two named mechanisms were refuted by injection (0-line change).
   - 7.14 (D-71): fixed test-side (`e2e/helpers/touch.ts` `doubleTap`). Its case is `e2e/helpers.spec.ts:1127` "AD-17 doubleTap stamps the second tap from the wall clock at its dispatch, so a 150 ms step only Node sees moves it 150 ms on the page".
-  - 7.10's 25 fixed D-rows, each with its pinning test (read-only helper pass, re-checked):
+  - 7.10's 25 fixed D-rows: 20 with their pinning tests (read-only helper pass, re-checked); 5 not test fixes, so no test:
     - D-06 `e2e/pwa/sw-failure.spec.ts:150`; D-10 `src/architecture-ad1.test.ts:888`, :894 (generated `AD-16 fails: …` cases); D-11 `src/shell/sw.test.ts:246` (`gate off '0'` rows).
     - D-14 `e2e/pwa/update.spec.ts:555`; D-16 :509; D-18 :598; D-70 :671 "AD-17 the update spec readState treats a restarted worker handle as gone".
     - D-22 `e2e/pwa/test-hook.spec.ts:61`; D-23 `src/architecture-tree-scan.test.ts:116`; D-24 `e2e/helpers.spec.ts:2111`; D-25 `e2e/pwa/test-hook.spec.ts:88`.
