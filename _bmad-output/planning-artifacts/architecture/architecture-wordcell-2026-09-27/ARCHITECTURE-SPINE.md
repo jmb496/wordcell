@@ -7,7 +7,7 @@ paradigm: 'functional core / imperative shell, event-sourced'
 scope: 'WordCell v1: pure rules engine, event-sourced Session, app shell services, Svelte UI, PWA packaging, CI and deploy'
 status: final
 created: '2026-09-27'
-updated: '2026-11-05'
+updated: '2026-11-07'
 binds: ['spec R-01…R-88, §2, Q-01…Q-49', 'brief §6, §7, §9', 'DESIGN.md', 'EXPERIENCE.md']
 sources:
   - _bmad-output/planning-artifacts/briefs/brief-wordcell-2026-09-26/brief.md
@@ -792,7 +792,8 @@ sequenceDiagram
     callbacks, `installInterruptions` (AD-19 Hide) and `nav.registerBeforeBack`, then, in hook builds only, the
     celebration seam (AD-17) → register the store's lifecycle listeners, then `clock.resume(now)` iff
     `document.visibilityState === 'visible'` (AD-9) → push boot surfaces (without user activation;
-    back honours them `[ASSUMPTION A-A11]`) in this order: Session-rejected message (a root, no entry) else end sheet expanded if status
+    back honours them once a tap has followed, while a back before any tap may skip them, spec Q-50
+    `[ASSUMPTION A-A11]`; amended 2026-11-07, epic 7 entry 11, Q-50) in this order: Session-rejected message (a root, no entry) else end sheet expanded if status
     ≠ playing, then the History notice if history is unreadable (once per launch; after a
     rejected Session it waits until New game) → mount UI → after first paint (a double
     `requestAnimationFrame` after mount, then `await` the store's `whenVisible()` (AD-9), so a page
@@ -1232,7 +1233,7 @@ the per-ticket loop of `docs/development-methodology.md`.
 | 4 | Board and gestures | Layout definition, geometry, gate and anchoring (AD-11); cards, columns, WordCells, top bar, action bar; pointer controller and targeting (AD-12); overlays store: tail selection and end-sheet states on the epic 3 core (AD-13); tap-select and foot pads; WordCell view (peek, sticky, hover); drop → Composing; every `GameView` board state, a static tray (live tiles, no gestures) and the Composing column gestures (epic 4 SPEC F1, F2, F17, moved from row 5; merged and deployed on its own, F29) | 3 |
 | 5 | Tray and Place | Tray interactions (tiles, destination block, D-block controls); free letters (tap and drag); arrange and tap-swap; Validate states and invalid-word line; placement strip; Confirm; FLIP and fly-to-cell (AD-14); tray growth; the winning-animation guard (AD-14; its pending end-sheet open, menu case and Undo key aliases move to epic 6, epic 5 SPEC F8) | 4 |
 | 6 | Game surfaces and keyboard | Menu sheet, confirm dialogs, end sheet, Statistics, Preferences, How to play, the history-unreadable end-sheet block, Statistics message and menu dot, pending-draft line, keyboard map, screen-reader labels and live region; `__APP_VERSION__` injection and menu footer (Consistency Conventions) | 5 |
-| 7 | PWA and release | SW registration, update policy, offline test (AD-16, AD-17); `requestPersistence()`; test-hook `swState()` and `precacheComplete()` (AD-17); device checks (brief §6.2 force-stop, §6.3 ten qualifying games, relaunch into Game over → Android back collapses the end sheet, A-A11) | 3 (SW), 5 (offline test), 6 (release checks) |
+| 7 | PWA and release | SW registration, update policy, offline test (AD-16, AD-17); `requestPersistence()`; test-hook `swState()` and `precacheComplete()` (AD-17); device checks (brief §6.2 force-stop, §6.3 ten qualifying games, relaunch into Game over → end sheet expanded, the first back before any tap leaves the app (spec Q-50), A-A11; amended 2026-11-07, epic 7 entry 11, Q-50) | 3 (SW), 5 (offline test), 6 (release checks) |
 | 10 | End-of-game word list and win celebration | `wordList` in `view` (AD-3) and its R-86 tests; the Words section of the end sheet (R-88); the celebration layer, wiring, skip and test seam (AD-19, AD-17); screenshots (amended 2026-10-20; spec `spec-epic-10-end-of-game-words`) | 6, 9 |
 
 Play Store (Bubblewrap TWA) stays out of v1 (brief §8).
@@ -1286,6 +1287,6 @@ traceability.
 | A-A8 | Screenshot baselines live in the Playwright 1.63 noble container, so WSL2 and CI render identically; local screenshot runs need Docker in WSL2. | AD-17 |
 | A-A9 | Page scroll counts as ended at `scrollend`, at hide/pagehide, at a move, or 150 ms after the last `scroll` event, whichever comes first (the 150 ms rule is a backstop in all browsers). | AD-11 |
 | A-A10 | The boot font check blocks mount with a 30 s timeout, like the dictionary fetch; a timeout throws to the AD-15 fatal surface. | AD-15 |
-| A-A11 | Boot-time pushes (no user activation) are honoured by Android back; Chrome's history-manipulation intervention does not mark them skippable. An epic 7 device check verifies it (relaunch into Game over, Android back collapses the sheet); if it fails it becomes a spec §9 question. | AD-16, AD-13 |
+| A-A11 | Boot-time pushes (no user activation) are honoured by Android back once a tap has followed them (epic 7 G6); before any tap Chrome's history-manipulation intervention skips them: on a relaunch into Game over the first back leaves the app instead of collapsing the sheet (spec Q-50, accepted as built 2026-11-06; device-read only, owner 2026-11-07). Read on the phone in epic 7 (G5, G6) (amended 2026-11-07, epic 7 entry 11, Q-50). | AD-16, AD-13 |
 | A-A12 | A dictionary fetch that has not settled after 30 s is aborted and treated as `failed`. | AD-8 |
 | A-A15 | Confirmed with Q-40. A-E4's "launch" is read narrowly: a reload does not activate a waiting worker, and resuming a backgrounded PWA is not a launch. | AD-16 |
