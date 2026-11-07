@@ -500,7 +500,7 @@ Per criterion:
 
 **Open items that would remain under an override** (none blocking): the bug-fix table gaps that need Jared, D-64's disposition (P1), and the deferred findings D1–D3, R1–R4 and V2–V5.
 
-**Human decision: pending.** Jared's override decision waits for his reading of this retrospective. The retro does not presume it. The usual pattern, an owner override to accepted-with-open-items before the merge with 7.12 tracked as the release step, is his call.
+**Human decision (Jared, 2026-11-07): accepted-with-open-items.** 7.12 is tracked as the post-merge release step. A1: all ten rows needing him are accepted as gaps, with no new tests. A3, A4 (close D-64), A5–A9 applied as recommended; A10 at entry 12; A11 and A12 deferred (epic Notes).
 
 ## Open questions
 
