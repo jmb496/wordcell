@@ -234,3 +234,15 @@ The earlier "Left for you: Q-40 wording" is closed by c048c93.
 
 ## Retrospective — written (e16c2c4), waiting on you
 Machine verdict "rejected" only because 7.12 is post-merge by design; your override is pending. The cross-epic §6.6 table has 135 rows. Three fixes you had accepted as gaps turn out to have tests (081a3f9, 7352e29, 169c6bc). Ten other fixes have no reproduction test and need your call (A1). There are 12 action items, all proposed, none applied. The first attempt was cut off by the usage limit; its partial outline is kept in `.autopilot/manual-7-11/retro-partial-1.md`.
+
+## Post-retro actions — applied 2026-11-07
+Your retrospective decisions (epic Notes, 2a07454) are applied, one commit each:
+- A1/A2 (5d3463b): the ten "gap, needs Jared" rows of the §6.6 table now read "gap, accepted 2026-11-07", and the retrospective's verdict is accepted-with-open-items. Findings unchanged.
+- A3 (51d6d8f): `device-preview` now waits for `vite preview` to exit on every stop, including a failed start, and force-kills it after 5 s. It also waits up to 45 s for a cold start (was 15 s), stops on a closed terminal (SIGHUP), and uses the size-budget run-as-script idiom. No new reproduction test (your call). Existing tests were adjusted only for the new stop order. A manual check with a child that ignores SIGTERM saw it SIGKILLed after 5 s. `docs/device-testing.md` describes the new behaviour.
+- A4 (43ef3d0): D-64 is recorded as closed in the initiative Notes. The drafted backlog entry stays unfiled.
+- A5 (e09ef4e): a flake-close protocol section in `docs/development-methodology.md`.
+- A6/A7 rule (8f7ffae): the close-out wording default and the "sync tickets.toml when a ticket review converges" rule, in methodology § Autopilot. One line in the epic-autopilot skill's Step A covers the sync rule. No close-out ticket template exists.
+- A7 sync (4567635): tickets.toml entries 13–15 match their ticket files, and entry 14's `after` is [10, 13]. Entry 11 still shows `drift` (its toml `after` lists 15; its file does not); it was not in scope.
+- A8 (1bd3f53): `docs/device-testing.md` has the "confirm the seeded state in the Chrome tab" step and the `ss -ltnp 'sport = :4173'` recovery line.
+- A9 (f9d6a52): AGENTS.md Running and verifying has the pre-run environment check (`uptime`, `mount | grep ' / '`).
+Tests: `npm run test:all` green on the first run at f9d6a52 with the host idle (load 1.08 on 16 cores, `/` rw): unit 3788/3788, size 560,701 / 600,000, dist-smoke 28, e2e 1163, pwa 44. `test:screens` was not run (no screenshot spec or UI source changed). Not applied: the retro's optional review pass-cap revisit and its suggested new device-preview tests (declined). Ready for the authorised merge.
