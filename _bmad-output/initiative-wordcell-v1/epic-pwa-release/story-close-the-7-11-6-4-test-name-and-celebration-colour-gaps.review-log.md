@@ -1,6 +1,6 @@
 # Review log — story-close-the-7-11-6-4-test-name-and-celebration-colour-gaps.md (ticket 7.15)
 
-State: pass 2: done
+State: pass 3: done
 
 Mode: docs, thorough, max 7, budget 1500 words. Pass 0: 243 words, `.passes/pass0.md`, HEAD b8aaf11.
 
@@ -52,3 +52,31 @@ Fixer: all 9 applied; no commands touched.
 ### Dropped
 - Ancestors of the celebration root up to `html` (adversarial, self-labelled stretch): a page-wide filter would change the live board too, outside R-87's copy clause.
 - Code comment in hover-peek-reanchor.spec.ts marking its Q-17 assertions (adversarial minor): the Q-17 title itself carries that; no ticket words needed.
+
+## Pass 3 — 2026-11-07 11:35
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 0, minor 13 (after merging duplicates), decision-needed 0  |  Dropped in triage: 0
+Words (docs): 683 (2.81 x pass 0)  |  Snapshot: .passes/pass2.md (no fix this pass)
+### Applied
+- none (converged; minors listed under Result, not applied)
+### Default applied (technical)
+- none this pass
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Result — converged after 3 passes
+Majors per pass: 5, 3, 0. No decision-needed items. Technical defaults applied: 7 (passes 1–2). Words 243 → 683 (budget 1500).
+
+Unapplied minors (for the build's plan or a later loop):
+- Description (2) bullet 2: define "copy visible" as computed `visibility` `visible` on the `[data-celebration]` element, read with the group opacity in one `page.evaluate` (adversarial).
+- Description (2) bullet 2: define the first sample by the bullet's own shown-copy test (any copy shown), not `stepUntilShown`'s first-DOM-copy predicate, which for a right-moving group can report after the QU copy appears; the QU sample is then a later step (edge-case).
+- Description (2): `stepUntilShown` cannot find the QU sample; default: a sibling in-page stepping loop with a QU-copy predicate bounded by `NORMAL_CAP_STEP_MS`, leaving `stepUntilShown` and its callers unchanged (adversarial).
+- Description (2) bullet 3: "root holds only its groups and their copies" at element-child level (root children = 10 groups; group children = copies, 55 in all); the copies' `.glyph`/`.badge` spans are not counted (adversarial, edge-case).
+- Description (2) bullet 3: add `mix-blend-mode` to the copy vs live-face property set; leave `opacity` and `box-shadow` out (group fade, DESIGN.md lifted-card shadow) (adversarial, edge-case).
+- Description (2) bullet 1/3: scope the live `.glyph` and `.badge` reads to `[data-card-id] .glyph` / `[data-card-id] .badge`, excluding mirrors (adversarial).
+- Description (2): one clause that group opacity (closing fade, EXPERIENCE.md Motion) is designed motion, not a colour change (adversarial).
+- Description (3): the plan should not count `:324` as "no trail" coverage (it counts before the clock moves), or describe it as the run-start count only (fix diff).
+- Acceptance Criteria: the plan's sentence → test mapping names the new test's exact title against the new P6 row (adversarial).
+- Optional stretches: a second theme (`prefs-theme-paper`); all four border colours; `filter` `none` on the root's ancestors; one clause that narrowing exercises the same AD-11 width rule as widening for Q-17 (adversarial).
+- tickets.toml entry 15 still carries the pass-0 description and verify text; sync it from the story at mark-done (pass 1 dropped item, out of this loop's one-file scope).
