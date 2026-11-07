@@ -8,10 +8,10 @@ scope: 'WordCell v1: pure rules engine, event-sourced Session, app shell service
 status: final
 created: '2026-09-27'
 updated: '2026-11-07'
-binds: ['spec R-01…R-88, §2, Q-01…Q-49', 'brief §6, §7, §9', 'DESIGN.md', 'EXPERIENCE.md']
+binds: ['spec R-01…R-88, §2, Q-01…Q-50', 'brief §6, §7, §9', 'DESIGN.md', 'EXPERIENCE.md']
 sources:
   - _bmad-output/planning-artifacts/briefs/brief-wordcell-2026-09-26/brief.md
-  - docs/game-flow-spec.md (v0.9)
+  - docs/game-flow-spec.md (v0.13)
   - _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/DESIGN.md
   - _bmad-output/planning-artifacts/ux-designs/ux-wordcell-2026-09-27/EXPERIENCE.md
   - docs/platform-decision.md
@@ -23,8 +23,9 @@ companions: ['.memlog.md', 'reviews/']
 
 # Architecture Spine — WordCell
 
-Rule ids (R-xx), decisions (Q-xx) and §-references are `docs/game-flow-spec.md` v0.9. UX
-assumption ids (A-Dn, A-En) are DESIGN.md and EXPERIENCE.md. This spine does not restate or
+Rule ids (R-xx), decisions (Q-xx) and §-references are `docs/game-flow-spec.md` v0.13
+(amended 2026-11-07, epic 7 entry 11; was v0.9). UX assumption ids (A-Dn, A-En) are DESIGN.md
+and EXPERIENCE.md. This spine does not restate or
 reopen any of them; where a rule and this spine seem to disagree, the rule wins and this spine
 has a bug. The stack is decided in `docs/platform-decision.md` §3 and is cited, not re-argued.
 The repository already holds a scaffold (commit `785c0f6`); ADs that ratify it are tagged
@@ -594,7 +595,9 @@ sequenceDiagram
 
 - **Binds:** `src/ui/overlays.svelte.ts`, `src/shell/nav.ts`, `src/ui/open-menu.ts`, `src/ui/keys.ts`, EXPERIENCE.md Information
   Architecture, End sheet, A-E1.
-- **Prevents:** components holding their own open flags; back double-popping or leaving the app;
+- **Prevents:** components holding their own open flags; back double-popping or leaving the app
+  (except the Q-50 case: a back before any user activation after a boot push, AD-16, A-A11;
+  amended 2026-11-07, epic 7 entry 11, Q-50);
   Forward desynchronising the stack; a push racing an unfinished pop; boot surfaces pushed in
   mount order.
 - **Rule:**
@@ -760,7 +763,8 @@ sequenceDiagram
   the dictionary-failed banner's (owner, 2026-10-01). Service-worker registration or precache failures have no player-visible surface in hook-free
   builds (the game works online): they set `swState()` to `failed` (`setSwState`,
   `src/shell/sw-state.ts`) and are reported to this handler only in test builds
-  (`VITE_TEST_HOOKS=1`; Q-40's "dev and test builds" bounds where a report may appear, and dev
+  (`VITE_TEST_HOOKS=1`; Q-40's "test builds only" bounds where a report may appear (spec §9
+  Q-40 as amended in c048c93; amended 2026-11-07, epic 7 entry 11), and dev
   never loads `sw.ts`, AD-16), where the handler halts the launch with the fatal surface, so no
   persistence request follows (AD-7); the `pwa` project catches
   regressions through that surface and `dist-smoke` checks that the hook-free build stays silent
@@ -792,8 +796,13 @@ sequenceDiagram
     callbacks, `installInterruptions` (AD-19 Hide) and `nav.registerBeforeBack`, then, in hook builds only, the
     celebration seam (AD-17) → register the store's lifecycle listeners, then `clock.resume(now)` iff
     `document.visibilityState === 'visible'` (AD-9) → push boot surfaces (without user activation;
-    back honours them once a tap has followed, while a back before any tap may skip them, spec Q-50
-    `[ASSUMPTION A-A11]`; amended 2026-11-07, epic 7 entry 11, Q-50) in this order: Session-rejected message (a root, no entry) else end sheet expanded if status
+    back honours them once a user activation (tap, click or key press other than Esc) has
+    followed, while a back before any user activation may skip them, spec Q-50; accepted as built:
+    no code compensates for the skip (no re-push on a later user activation, no push deferred to a
+    user activation, no duplicate entry, no `CloseWatcher` or Navigation API handler), and back
+    reaches the app only as AD-13's `popstate`; this holds for every boot push as an inference, with
+    no device read beyond Q-50's end-sheet case `[ASSUMPTION A-A11]`; amended 2026-11-07, epic 7
+    entry 11, Q-50) in this order: Session-rejected message (a root, no entry) else end sheet expanded if status
     ≠ playing, then the History notice if history is unreadable (once per launch; after a
     rejected Session it waits until New game) → mount UI → after first paint (a double
     `requestAnimationFrame` after mount, then `await` the store's `whenVisible()` (AD-9), so a page
@@ -1287,6 +1296,6 @@ traceability.
 | A-A8 | Screenshot baselines live in the Playwright 1.63 noble container, so WSL2 and CI render identically; local screenshot runs need Docker in WSL2. | AD-17 |
 | A-A9 | Page scroll counts as ended at `scrollend`, at hide/pagehide, at a move, or 150 ms after the last `scroll` event, whichever comes first (the 150 ms rule is a backstop in all browsers). | AD-11 |
 | A-A10 | The boot font check blocks mount with a 30 s timeout, like the dictionary fetch; a timeout throws to the AD-15 fatal surface. | AD-15 |
-| A-A11 | Boot-time pushes (no user activation) are honoured by Android back once a tap has followed them (epic 7 G6); before any tap Chrome's history-manipulation intervention skips them: on a relaunch into Game over the first back leaves the app instead of collapsing the sheet (spec Q-50, accepted as built 2026-11-06; device-read only, owner 2026-11-07). Read on the phone in epic 7 (G5, G6) (amended 2026-11-07, epic 7 entry 11, Q-50). | AD-16, AD-13 |
+| A-A11 | Resolved by Q-50 (spec §9). Boot-time pushes (no user activation) are honoured by Android back once a user activation (tap, click or key press other than Esc) has followed them (epic 7 G6); before any user activation they may be skipped, probably by Chrome's history-manipulation intervention: on a relaunch into Game over the first back leaves the app instead of collapsing the sheet (spec Q-50, accepted as built 2026-11-06; device-read only, owner 2026-11-07). Accepted as built: no code compensates for the skip (no re-push on a later user activation, no push deferred to a user activation, no duplicate entry, no `CloseWatcher` or Navigation API handler); back reaches the app only as AD-13's `popstate`. The spine applies the same acceptance to every boot push, the History notice included when pushed at boot, as an inference, with no device read beyond Q-50's end-sheet case. Playwright's Chromium does not apply the intervention: `goBack()` tests on boot-pushed entries stay as AD-13 nav coverage, not evidence about Q-50. Read on the phone in epic 7 (G5, G6) (amended 2026-11-07, epic 7 entry 11, Q-50). | AD-16, AD-13 |
 | A-A12 | A dictionary fetch that has not settled after 30 s is aborted and treated as `failed`. | AD-8 |
 | A-A15 | Confirmed with Q-40. A-E4's "launch" is read narrowly: a reload does not activate a waiting worker, and resuming a backgrounded PWA is not a launch. | AD-16 |
