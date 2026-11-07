@@ -3,7 +3,7 @@ title: 'Close-out: documents, audits and device read (7.11, Phases 1 and 2)'
 type: 'chore'
 ticket: 11
 created: '2026-11-04'
-status: 'in-review'
+status: 'in-progress'
 route: 'full'
 route_source: 'auto'
 baseline_revision: '8a98d45b327147b6af87c3608c8d10fd65d7314d'
@@ -17,7 +17,21 @@ context:
   - '{project-root}/_bmad-output/specs/spec-epic-7-pwa-release/SPEC.md'
   - '{project-root}/_bmad-output/specs/spec-epic-7-pwa-release/build-notes.md'
 warnings: ['oversized']
-deferred: []
+deferred:
+  - summary: >-
+      AGENTS.md rule 6 says Q-40 failures are "thrown to the AD-15 handler" while the build reports them with reportError.
+    evidence: |-
+      Pre-existing verb at 8a98d45 (rule 6); src/shell/sw.ts and src/main.ts F17 catch call reportError; the spine says "reported to this handler". Rule 6 is hand-maintained (owner). Owner stop item 13 (l).
+    location: >-
+      AGENTS.md:12
+    severity: low
+  - summary: >-
+      AGENTS.md's managed block has no Known pitfalls line for the AD-1 skip-waiting names scan (string literals in non-test src/ fail it).
+    evidence: |-
+      src/architecture-scan.ts:59-64 SKIP_WAITING_NAMES (messageSkipWaiting, SKIP_WAITING, updateSW, virtual:pwa-register); src/architecture-tree-scan.test.ts:33. Managed-block edits go through bmad-project-context. Owner stop item 13 (l).
+    location: >-
+      AGENTS.md managed block, Known pitfalls
+    severity: low
 ---
 
 <intent-contract>
@@ -110,7 +124,7 @@ Read-only: everything under `src/`, `e2e/`, `scripts/`, config; done plans and l
 - [x] R-3 SPEC dir (direct edits) -- Owner stop item 12 (c): `device-checks.md` G5 Disposition, `rule-coverage.md` A-A11 row, `release-checklist.md` §6.4 and §6.6 rows, each with the proposed text. Commit `docs(spec-7): G5 resolution, A-A11 row and release-checklist wording for Q-50 (ticket 7.11)`.
 - [x] R-4 this plan, `### §6.6 audit` -- record the owner decision: proposal 3 is resolved as "the cross-epic bug-fix table is written in the epic 7 retrospective (not addenda, not in this ticket); Jared accepts as gaps the fixes with no reproduction test: 081a3f9, the 4.13 banner flake, F-7 543575c, 9f90cce, 169c6bc, 7352e29 and possibly c84a1df; any further one the table finds goes back to him" (epic Notes, 80a445d). The earlier-epics bullet changes from "gap for the owner" to "accepted gaps (owner, 2026-11-07)".
 - [x] R-5 this plan, `### §6.4 audit` -- re-confirm only 7.15's deltas (c6bdeb3, 6d694a4): Q-17 moves from Gap to Named by a passing title (`e2e/pwa/build-output.spec.ts:22` "Q-17 AD-16 the built web manifest is exactly DESIGN.md A-D5 plus the plugin defaults" (dist-smoke) and `e2e/hover-peek-reanchor.spec.ts:83` "Q-17 AD-12 an open hover peek re-anchors above its cell after a viewport width change, …" (desktop)); R-87's "no colour change" sentence-level finding is closed by `e2e/celebration.spec.ts:466` "R-87 no trail of copies and no colour change (Q-48): …" (android), and epic 10's `rule-coverage.md` Exempt line is now a mapped P6 row (c6bdeb3); fix-ticket proposals 1 and 2 → landed as ticket 7.15. Result counts: 101 ids: 98 covered (49 R, 2 §, 47 Q: 26 by name, 21 through their applied ids), 2 exempt (Q-19, Q-32), 1 gap (Q-50, accepted, owner 2026-11-07). Passing is confirmed from R-6's final-run logs (each title a `✓` line), by the orchestrator.
-- [ ] R-6 (orchestrator, step 3 Verify) `npm run test:all` and `npm run test:screens` at the final tree (7.15 changed e2e specs since the Phase 2 final runs), Windows CPU checked idle first; a failure only by timeouts under load is rerun once when idle and both recorded. Confirm R-5's three titles pass in the logs; update the Owner-wait note (no item waits on Jared in this ticket; entry 12's Q-50 waiver note stays information for entry 12) and the Auto Run Result. Then step-04 review, and `built` if everything holds.
+- [x] R-6 (orchestrator, step 3 Verify) `npm run test:all` and `npm run test:screens` at the final tree (7.15 changed e2e specs since the Phase 2 final runs), Windows CPU checked idle first; a failure only by timeouts under load is rerun once when idle and both recorded. Confirm R-5's three titles pass in the logs; update the Owner-wait note (no item waits on Jared in this ticket; entry 12's Q-50 waiver note stays information for entry 12) and the Auto Run Result. Then step-04 review, and `built` if everything holds. (Done 2026-11-07: both green; step-04 review ran; Owner stop item 13, raised by R-1's gate and the review, waits on Jared, so the plan stays `in-progress`: Owner-wait note, Phase 2 resume.)
 
 **Sync checklist** (source → applying commit, filled by the build):
 1. AD-16 boot tail as built (`main.ts:264-289`: halted returns, dev skip, F17 catch, attempt always resolves) and update policy (no prompt, no `updateSW`, no skip-waiting, no `clientsClaim`; `sw.ts:2-3`, `build-output.spec.ts:104`) → commit: 7cd8939
@@ -150,7 +164,7 @@ Read-only: everything under `src/`, `e2e/`, `scripts/`, config; done plans and l
 35. Epic 7 `rule-coverage.md` A-A11 row (item 12 (c)) → commit: e620eab
 36. `release-checklist.md` §6.4 and §6.6 rows: a device-read-only §9 answer accepted as a gap (item 12 (c)) → commit: e620eab
 37. §6.6 audit: owner decision on proposal 3 (retrospective table; listed fixes with no reproduction test accepted as gaps) → commit: 2699e0b
-38. §6.4 audit: 7.15 deltas (Q-17 named; R-87 colour clause asserted) and result counts → commit: (R-5, R-6)
+38. §6.4 audit: 7.15 deltas (Q-17 named; R-87 colour clause asserted) and result counts → commit: 2699e0b (R-5), 4ee0d9a (review re-anchors), and the Phase 2 resume record commit (R-6 passing evidence)
 
 **Acceptance Criteria:**
 - Given the run's commits, when the epic Notes are read at the first sync commit's parent, then the authorisation line is present.
@@ -285,7 +299,7 @@ Q-ids:
 - (3) at HEAD: 335 table rows. The added epic 10 `rule-coverage.md:47` row (R-87, P6) passes by its title (`e2e/celebration.spec.ts:466`, above), so 302 pass automatically and 33 were reviewed by hand (the A-A11 D row, epic 7 :34, reworded at e620eab, stays among the 33). Epic 10 lines after :46 moved down one (the 20-letter word line :55, the Words screenshot row :56, as cited in (3)); the two `e2e/celebration.spec.ts` titles the audit cites moved (R-87 :215 → :334, the copies :324 → :443 at HEAD, as cited in (2) and (4)).
 - Fix-ticket proposals 1 and 2 → landed as ticket 7.15 (done: c6bdeb3, 6d694a4, accb947).
 - **Result.** 101 ids: 98 covered (49 R, 2 §, 47 Q: 26 by name, 21 through their applied ids), 2 exempt (Q-19, Q-32), 1 gap (Q-50, accepted, owner 2026-11-07). The Q-id reading (a Q-id applied to an R-id is covered by that R-id's tests) is the technical default the owner took (epic Notes, 80a445d).
-- Passing: the three titles are confirmed passing from R-6's final-run logs (each title a `✓` line), by the orchestrator.
+- Passing (R-6, orchestrator): each title has a `✓` line in `.autopilot/manual-7-11/test-all-phase2-resume.log` (`npm run test:all` at 8ee166d, exit 0): `[dist-smoke]` and `[pwa]` `e2e/pwa/build-output.spec.ts:22` "Q-17 AD-16 the built web manifest …"; `[desktop]` `e2e/hover-peek-reanchor.spec.ts:83` "Q-17 AD-12 an open hover peek re-anchors …"; `[android]` `e2e/celebration.spec.ts:466` "R-87 no trail of copies and no colour change (Q-48): …".
 
 **Fix-ticket proposals (§6.4; both landed as ticket 7.15, owner decision 2026-11-07, 80a445d):**
 1. **Q-17 has no test carrying its id.**
@@ -332,7 +346,13 @@ Q-ids:
 
 ## Owner-wait note
 
-**Phase 2 (2026-11-07): plan stays `in-progress`.** P2-1…P2-6 are done and committed (1fbb31c, 428960f, and this plan's commit). P2-7 (the final `test:all` and `test:screens`) is the orchestrator's. These items wait for Jared:
+**Phase 2 resume (2026-11-07, after Jared's answers 80a445d): plan stays `in-progress`.** R-1…R-6 are done (commits 70f3210, 08c35dc, 6cceeac, e620eab, 2699e0b, 8ee166d, 4ee0d9a and this record's commit). Jared's items 1–4 of the Phase 2 list below are answered and applied: proposals 1 and 2 landed as ticket 7.15 and the §6.4 deltas are re-confirmed (98 covered, 2 exempt, 1 accepted gap Q-50); proposal 3 is recorded in the §6.6 audit (retrospective table; listed fixes accepted as gaps); Owner stop item 12 is applied (checklist lines 32–36); the Q-id reading is the default. Item 5 (Q-50 waiver at entry 12) stays information for entry 12.
+
+What waits on Jared: **Owner stop item 13** (a)–(l) (Owner stop items, below): further wording the R-1 spine gate and the step-04 review found beyond item 12's approved texts (spine `binds:` Q-50, A-A11 certainty and scope, AD-13 Prevents, a no-compensation rule, the Playwright `goBack()` note, AD-15's Q-40 quote; EXPERIENCE.md A-E1; G5's Check column; release-checklist §6.6's retrospective wording; spec Q-50's "§7" citation; AGENTS.md rule 6 verb and a skip-waiting pitfall). All wording only; no behaviour, test, Session, history or engine change. P2-7's rule (`built` only with no Owner stop item pending) keeps the plan `in-progress`. **To resume:** Jared approves, edits or declines each of 13 (a)–(l); approved items are applied through `bmad-architecture` (a)–(d), (f), (g), `bmad-ux` (h), direct SPEC-dir edits (i), (j), the spec (k) and AGENTS.md (l: rule 6 by hand, the pitfall through `bmad-project-context`), each with its own checklist line; if no build source changes, the runs below stand; a delta step-04 review of those edits, then `built`.
+
+**Phase 2 resume final runs (R-6, orchestrator, 2026-11-07).** Windows CPU idle before `test:all` (about 2 % total). `npm run test:all` at 8ee166d, exit 0, no failure, no rerun: `lint` clean (354 files); `check` 0 errors, 0 warnings; unit `Tests 3788 passed (3788)`; `build` `total 560704 / 600000`; `test:e2e:dist` `28 passed`; `test:e2e` `1163 passed`, `1097 skipped` (by project; one more than before from 7.15's android-only R-87 test); `test:e2e:pwa` `44 passed` (log `.autopilot/manual-7-11/test-all-phase2-resume.log`). `npm run test:screens` (Docker screenshot container) at 4ee0d9a, exit 0: `68 passed`, `40 skipped` (android-only screenshot specs under `desktop`) (log `test-screens-phase2-resume.log`). After 8ee166d only documents changed (4ee0d9a: this plan and SPEC.md F6; this record), none read by any test. Since the Phase 2 final runs, 7.15 changed `e2e/celebration.spec.ts`, `e2e/hover-peek-reanchor.spec.ts` and `e2e/pwa/build-output.spec.ts` (test titles and one new test); the P2-6 "no build source changed since 8a98d45" record is dated at 428960f and is superseded by these runs. `git diff 8a98d45 HEAD --stat -- src scripts fixtures package.json package-lock.json '*.config.ts' tsconfig*.json index.html` is empty; `git diff 4130fb4 HEAD -- src/engine` is empty; `SESSION_VERSION` 1 (`src/engine/session.ts:51`), `HISTORY_VERSION` 1 (`src/engine/history.ts:8`). AC 3 as run: `git diff 70f3210 HEAD --stat` (this resume's commits) lists only item 12's targets (spine, EXPERIENCE.md and their `.memlog.md` files; `device-checks.md`, `rule-coverage.md`, `release-checklist.md`), SPEC.md (F6 review patch) and this plan; the full `8a98d45..HEAD` range also holds 7.15's, the owner's and the orchestrator's commits.
+
+**Phase 2 (2026-11-07): plan stays `in-progress`.** (Superseded by the Phase 2 resume above: items 1–4 answered in 80a445d.) P2-1…P2-6 are done and committed (1fbb31c, 428960f, and this plan's commit). P2-7 (the final `test:all` and `test:screens`) is the orchestrator's. These items wait for Jared:
 1. §6.4 fix-ticket proposal 1 (Q-17 has no test carrying its id) and proposal 2 (R-87 "no colour change" has no assertion), each with its alternative (accept as a gap, which needs `release-checklist.md` wording, Owner stop item 12 (c)) (Audits).
 2. §6.6 fix-ticket proposal 3: the ten retrospectives do not list their bug fixes with reproduction tests, plus the fixes with none to accept (Audits).
 3. Owner stop item 12: the A-A11 documents to sync to Q-50 (spine, EXPERIENCE.md, SPEC dir), and the `release-checklist.md` §6.4/§6.6 wording for a device-read-only §9 answer.
@@ -424,6 +444,13 @@ Added by the Phase 2 resume (2026-11-07, R-1 `bmad-architecture` reviewer gate o
     - (d) AD-16 and A-A11 do not say that no code compensates for the skip (adversary, major: a unit could add a re-push on first tap or a `CloseWatcher` handler while another leaves it). Proposed (AD-16 after "spec Q-50", and A-A11): "accepted as built: no code compensates (no re-push, deferred push or duplicate entry, no `CloseWatcher` or Navigation API handler); back reaches the app only as AD-13's `popstate`."
     - (e) Existing Playwright back tests on boot-pushed entries, e.g. `e2e/end-sheet.spec.ts:291` "R-75 back collapses, never hides: the bar shows and back again leaves the app" (a relaunch fixture, `goBack()` before any tap), pass because Playwright's Chromium does not apply the skip (adversary). Proposed A-A11 addition: "Playwright's Chromium does not apply the intervention: `goBack()` tests on boot-pushed entries stay as AD-13 nav coverage, not evidence about Q-50."
     - (f) Scope: Q-50 answers only the end sheet on a relaunch into Game over; AD-16's "a back before any tap may skip them" covers every boot surface, the History notice included, which G6 read only with a tap first (adversary). Proposed: either narrow AD-16's clause to Q-50's case or add "the spine applies the same acceptance to every boot push as an inference, with no device read and no compensation". "Tap" is touch wording; the intervention lifts on any user activation (tap, click or key press) (adversary).
+    Added by the step-04 review (2026-11-07, Review Triage Log; same rule: beyond item 12's approved wording, so proposed, not applied; wording only):
+    - (g) S:763 AD-15 quotes "Q-40's \"dev and test builds\" bounds where a report may appear", but spec Q-40 now reads "reported in test builds only (`VITE_TEST_HOOKS=1`)" (c048c93, sync line 28). Proposed: quote Q-40's current wording ("Q-40's \"test builds only (`VITE_TEST_HOOKS=1`)\" bounds where a report may appear"), through `bmad-architecture`.
+    - (h) EXPERIENCE.md :74 (back paragraph, "the bare Board leaves the app. [ASSUMPTION A-E1]") and :669 A-E1 ("Android back closes the topmost overlay or clears a selection, never Undoes; on the bare board it leaves the app") name no Q-50 exception (item 12 (b) amended :58 and :172 only). Proposed: append to A-E1 "; except spec Q-50: on a relaunch into Game over a back before any tap leaves the app", through `bmad-ux`.
+    - (i) `device-checks.md:21` G5's Check column still states the A-A11 expectation ("Android back collapses it; back again leaves the app"); only its Disposition records Q-50. A re-read under F12 would read the old expectation. Proposed: append to the Check "(as read 2026-11-06 and accepted as Q-50: the first back before any tap leaves the app; a re-read expects that)".
+    - (j) `release-checklist.md:26` §6.6 still says "each epic's retrospective lists its bug fixes with their reproduction tests", while the owner's 2026-11-07 decision puts one cross-epic table in the epic 7 retrospective. Proposed: "each epic's bug fixes are listed with their reproduction tests (one cross-epic table in the epic 7 retrospective, owner 2026-11-07)".
+    - (k) Spec §9 Q-50 cites "R-73, §7"; §7 is not a rule set and its End of game item is §7.12 (other rows cite items, e.g. Q-49 "§7.4"). Proposed: "R-73, §7.12" (a §9 wording change, so the owner's).
+    - (l) AGENTS.md: rule 6 (hand-maintained) says Q-40 failures are "thrown to the AD-15 handler" (pre-existing verb; d20c1a9 changed only the build scope), while `sw.ts` and `main.ts`'s F17 catch call `reportError` (the spine says "reported to this handler"); the managed block has no pitfall for the AD-1 skip-waiting names scan, which fails a non-test `src/` source holding `messageSkipWaiting`, `SKIP_WAITING`, `updateSW` or `virtual:pwa-register`, string literals included (`architecture-scan.ts:59-64`). Proposed: rule 6 "reported to the AD-15 handler"; a Known pitfalls line through `bmad-project-context`. Agent-context files: deferred (frontmatter `deferred`).
     Not spine: the reality lens's G5 `device-checks.md` note is R-3 (applied). No lens finding needs a Session, history, engine or code change.
 
 ### Owner stop items 1–10 applied (owner approval 2026-11-05, "apply all ten")
@@ -481,6 +508,7 @@ Phase 1 run, 2026-11-04, `/mnt/d` checkout, branch `pwa-release`, Node 24. Commi
   - R-3: the four item 12 (c) texts verbatim, no inline tag (each text dates itself). In `release-checklist.md:24` the §6.4 addition sits after "…(checked, not passing), not an exemption", so the quoted clause stays whole. `device-checks.md:21` G5's Check column still states the A-A11 expectation (back collapses the sheet); its Disposition now records the resolution, which is all item 12 (c) proposed.
   - R-4, R-5: Audits updated; the three 7.15 titles re-checked by `grep -n` at HEAD (`e2e/pwa/build-output.spec.ts:22`, `e2e/hover-peek-reanchor.spec.ts:83` inside `test.describe('desktop')`, `e2e/celebration.spec.ts:466`; epic 10 `rule-coverage.md:47`). Their passing is R-6's (orchestrator).
   - Waiting on Jared after this run: Owner stop item 13 only (lens-proposed spine wording, not applied). Nothing else in R-1…R-5 waits on him. Not done here: R-6 and Sync checklist line 38 (orchestrator).
+- Phase 2 resume, orchestrator (R-6 and step-04), 2026-11-07: verified the R-1…R-5 diff against item 12's proposed texts (verbatim); ran the final `test:all` and `test:screens` (Owner-wait note); ran the thorough step-04 review on this ticket's diff (Review Triage Log), sent four patches to the implementer (4ee0d9a) and added Owner stop item 13 (g)–(l). Status stays `in-progress` for item 13 (P2-7 rule).
 
 ## Plan Change Log
 
@@ -488,6 +516,45 @@ Phase 1 run, 2026-11-04, `/mnt/d` checkout, branch `pwa-release`, Node 24. Commi
 2. 2026-11-07 (resume after Jared's answers, 80a445d, "Do all"). Trigger: proposals 1 and 2 landed as ticket 7.15 (done: c6bdeb3, 6d694a4, accb947); proposal 3 decided (retrospective table, listed fixes accepted as gaps); Owner stop item 12 approved as proposed; the Q-id coverage reading taken as the technical default. Amended: Tasks gain **Phase 2 resume** (R-1…R-6) and Sync checklist lines 32–38. Same bounds as entry 1 (documents only; wording exactly as item 12 proposes; every further edit an Owner stop item). Not acted on here: the entry 12 note (Q-50 waiver for initiative Done when 1 and 3), which stays information for entry 12. KEEP: every Phase 1 and Phase 2 sync, checklist line and commit as they stand.
 
 ## Review Triage Log
+
+### 2026-11-07 — Review pass
+- verdicts: 34 findings — high 0, medium 0, low 26, false 8, maybe-false 0
+- scope note: the review diff (`/tmp/7-11-b3-review.diff`, 223 kB) is `git diff 8a98d45 HEAD` limited to this ticket's targets (AGENTS.md, `docs/`, spine and UX workspaces, epic 3 and epic 7 SPEC dirs, this plan). Ticket 7.15's e2e and plan files, the owner's tickets.toml and epic Notes commits and the orchestrator's autopilot files are other tickets' or the owner's work and were left out.
+- findings (blind-hunter 1–17, edge-case-hunter 18–24, verification-gap none, intent-alignment 25–34):
+  - `low` `reject` 1. Plan Owner-wait note and Auto Run Result stale; R-6 text says nothing waits although Owner stop item 13 is pending; sync line 38 unfilled — real, but the fix is this plan's R-6 record, written after the final runs (Owner-wait note, Phase 2 resume); status stays `in-progress` for item 13.
+  - `low` `reject` 2. AC 3 / Verification / Code Map / change log no longer match the full `git diff 8a98d45 HEAD` (Phase 2 targets, 7.15 files, rule 6 by owner item 2) — plan-only fix; R-6 records the as-run scope (this run's commits touch only item 12's targets and this plan).
+  - `low` `defer` 3. S:763 AD-15 quotes Q-40's old "dev and test builds" after c048c93 changed Q-40 — verified at S:763; spine edit beyond the authorised items: Owner stop item 13 (g).
+  - `low` `defer` 4. Spine `binds:` still `Q-01…Q-49` — carried as Owner stop item 13 (a).
+  - `low` `defer` 5. Q-50 passages differ in certainty and scope ("probably" / "skips" / "may skip"; every boot surface; "tap") — carried as 13 (b), (f).
+  - `low` `defer` 6. EXPERIENCE.md A-E1 (:74, :669) and AD-13 Prevents lack the Q-50 exception — verified; AD-13 is 13 (c); A-E1 added as 13 (h).
+  - `low` `defer` 7. G5 Check column states the old expectation — verified (`device-checks.md:21`); beyond item 12 (c)'s Disposition text: 13 (i).
+  - `low` `defer` 8. `e2e/end-sheet.spec.ts:291` passes contrary to Q-50, unmarked — carried as 13 (e).
+  - `false` `reject` 9. Q-04, Q-08, Q-20 not "written into an R-rule" under the owner's reading — the owner took "the build's Q-id coverage reading" (epic Notes, 80a445d), which the audit's Kind rule defines as answers applied to the R-ids or §7 item they cite; Q-04 → R-30, Q-08 → R-75 (their §9 rows), Q-20 → §7.10; the parenthetical in the Notes summarises that reading.
+  - `low` `reject` 10. The entry 12 Q-50 waiver is written only in this plan — the owner's instruction for this run: it stays information for entry 12, not acted on here.
+  - `low` `patch` 11. §6.6 "25 fixed D-rows, each with its pinning test" while 5 have none — reworded "20 with their pinning tests; 5 not test fixes" (4ee0d9a).
+  - `low` `patch` 12. Rule-coverage map L-numbers match no `rule-coverage.md` line — header states L-n = line n − 44, checked for L59…L80 (4ee0d9a). The rest of the finding is unchanged by design.
+  - `low` `patch` 13. Audit (3) not re-anchored after 7.15 (epic 10 :54/:55, 334 rows) — re-anchored, 335 rows, 302 automatic + 33 by hand (4ee0d9a). Its "epic 10 :32 four keys" part rejected: that row records epic 10's own delta ("now has four keys" at epic 10), a done epic's history; AD-17 states the six keys.
+  - `low` `patch` 14. SPEC F6 does not say Playwright's default worker mode is `allow` — sync item 20's own sentence now says so (4ee0d9a).
+  - `low` `defer` 15. AGENTS.md has no pitfall for the AD-1 skip-waiting names scan — agent-context file: deferred; 13 (l).
+  - `low` `defer` 16. AGENTS.md rule 6 "thrown to the AD-15 handler" vs `reportError` — verified pre-existing verb (8a98d45); agent-context file, hand-maintained: deferred; 13 (l).
+  - `low` `defer` 17. Spec Q-50 cites "§7" instead of §7.12 — verified (§7 item 12 "End of game"); §9 wording is the owner's: 13 (k).
+  - `low` `defer` 18. = 3 (AD-15 Q-40 quote) — 13 (g).
+  - `low` `patch` 19. Audit cites `celebration.spec.ts:215`, :324, shifted by 7.15 — now :334, :443 (4ee0d9a); grouped with 13.
+  - `low` `reject` 20. = 1 (R-6 says nothing waits) — R-6 record names item 13.
+  - `low` `reject` 21. = 1 (stale Owner-wait note, "items 1–4 below") — R-6 record.
+  - `low` `reject` 22. R-5 "confirmed passing" written before the run — R-6 confirms the three titles from the final logs before the record commit and rewrites that bullet with the log evidence.
+  - `low` `reject` 23. = 2 (AC 3) — R-6 record.
+  - `low` `reject` 24. P2-6 "no build source changed since 8a98d45" now false (7.15's e2e specs) — the P2-6 record is dated at 428960f; R-6 records the 7.15 change and the reruns at the final tree.
+  - `false` `reject` 25. Epic 7 `rule-coverage.md` rows name kinds, not titles (B1) — every epic's `rule-coverage.md` names test kinds; titles live in the plan's map and audit (3) checks each row against passing titles of its kind (Phase 1 reading, 7-pass review).
+  - `low` `defer` 26. Documents still contradict Q-50 beyond item 12 — = 4–8 (item 13).
+  - `low` `reject` 27. = 1 (plan status vs open item) — R-6 record.
+  - `false` `reject` 28. Green runs at the final tree pending — R-6 is running them (Owner-wait note, Phase 2 resume).
+  - `low` `defer` 29. §6.6 checklist says each epic's retrospective lists fixes, owner chose one epic 7 table — 13 (j). The deferral of the table itself and "possibly c84a1df" are the owner's decision (80a445d), not defects.
+  - `false` `reject` 30. §6.4 allowance widened by this change — owner-approved item 12 (c) (80a445d).
+  - `false` `reject` 31. Device read footers blanket ("unless noted") — the owner's Notes record the footer for every row (c048c93, G3's A/B); not this change.
+  - `false` `reject` 32. G20 failure accepted, not a fix ticket — the owner's answer is the row's route (epic Notes, "accepted as is"); recorded in the Device read record.
+  - `false` `reject` 33. Five device-testing.md tags not resolved — those steps were not exercised in the read; P2-2 keeps their tags, as the ticket's "from the device read" allows.
+  - `false` `reject` 34. Q-17's hover-peek title is weaker evidence — 7.15's owner-approved design (ticket 15: one desktop layout test title); the id-level name check is met.
 
 ## Design Notes
 
@@ -505,6 +572,14 @@ Phase 1 run, 2026-11-04, `/mnt/d` checkout, branch `pwa-release`, Node 24. Commi
 - `git status --porcelain` -- expected: empty after the last commit.
 
 ## Auto Run Result
+
+Phase 2 resume (2026-11-07): status `in-progress`.
+- Summary: the owner's 80a445d answers applied. Owner stop item 12 synced (spine A-A11 row, AD-16 boot step and Proposed epics row 7 through `bmad-architecture`; EXPERIENCE.md End sheet row and back paragraph through `bmad-ux`; `device-checks.md` G5, epic 7 `rule-coverage.md` A-A11 row and `release-checklist.md` §6.4/§6.6 by direct edit); §6.6 audit records proposal 3's decision; §6.4 audit re-confirms 7.15's deltas (Q-17 named by two passing titles, R-87 colour clause asserted; 101 ids: 98 covered, 2 exempt, 1 accepted gap Q-50).
+- Files: `ARCHITECTURE-SPINE.md` and `.memlog.md` (Q-50 in A-A11, AD-16, row 7); `EXPERIENCE.md` and `.memlog.md` (Q-50 in End sheet row and back paragraph); SPEC dir `device-checks.md` (G5 resolution), `rule-coverage.md` (A-A11 row), `release-checklist.md` (§6.4/§6.6 allowance), `SPEC.md` (F6 default worker mode, review patch); this plan (tasks, audits, Owner stop item 13, triage log, record).
+- Review (thorough: blind-hunter, edge-case-hunter, verification-gap, intent-alignment): 34 findings; 0 high, 0 medium, 26 low, 8 false. Patched 5 low (4 entries, 4ee0d9a): D-row count, audit re-anchors after 7.15 (two findings, one entry), map L-number note, F6 default. Deferred to Owner stop item 13 / frontmatter `deferred`: 12 low (AD-15 Q-40 quote, A-E1, G5 Check, §6.6 retrospective wording, Q-50 §7.12, AGENTS.md rule 6 verb and pitfall, plus carried 13 (a), (b)/(f), (c), (e), and their intent-alignment duplicate). Rejected: 9 low (stale plan status/AC lines, written in this record; owner-instructed entry 12 note; the R-5 claim before the run, now with log evidence) and 8 false (reasons in the Review Triage Log).
+- Follow-up review recommended: false (no high patched; no medium patched).
+- Verification: `npm run test:all` green at 8ee166d; `npm run test:screens` green at 4ee0d9a; only documents changed after (Owner-wait note, Phase 2 resume final runs); engine, versions and shapes unchanged.
+- Residual risk: none in the build; the open item is wording only (Owner stop item 13). No push, no merge.
 
 Phase 2 (2026-11-07): status `in-progress`. P2-1…P2-7 are done (d486f89, 1fbb31c, 428960f, 5307d43 and this record's commit). `npm run test:all` and `npm run test:screens` are green at the final tree (Owner-wait note, Phase 2 final runs). The plan waits on fix-ticket proposals 1–3, Owner stop item 12 and the Q-id reading (Owner-wait note). No push, no merge.
 
