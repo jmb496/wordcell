@@ -666,7 +666,7 @@ Jared confirmed every assumption below on 2026-09-27; the `[ASSUMPTION]` tags st
 
 | Id | Assumption | Where |
 |---|---|---|
-| A-E1 | Android back closes the topmost overlay or clears a selection, never Undoes; on the bare board it leaves the app; except spec Q-50: on a relaunch into Game over a back before any tap leaves the app. | Information Architecture |
+| A-E1 | Android back closes the topmost overlay or clears a selection, never Undoes; on the bare board it leaves the app; except spec Q-50: on a relaunch into Game over a back before any tap leaves the app (amended 2026-11-07, epic 7 entry 11, Q-50). | Information Architecture |
 | A-E2 | Band names and messages as listed (Just Getting Started … You Cheated; reset by the owner 2026-10-18). | Rating bands |
 | A-E3 | Average score shown as a whole number, rounded like `Math.round` (half toward +∞); longest word ever ties go to the earliest record. | Component Patterns |
 | A-E4 | A new app version activates once every WordCell window has closed (spine AD-16), with no prompt (amended 2026-11-04, epic 7 entry 11). | State Patterns |
