@@ -231,3 +231,6 @@ Close-out docs:
 - `docs/device-testing.md` Site settings step (428960f);
 - epic 7 SPEC dir: device-checks G5, rule-coverage, release-checklist §6.4/§6.6.
 The earlier "Left for you: Q-40 wording" is closed by c048c93.
+
+## Retrospective — written (e16c2c4), waiting on you
+Machine verdict "rejected" only because 7.12 is post-merge by design; your override is pending. The cross-epic §6.6 table has 135 rows. Three fixes you had accepted as gaps turn out to have tests (081a3f9, 7352e29, 169c6bc). Ten other fixes have no reproduction test and need your call (A1). There are 12 action items, all proposed, none applied. The first attempt was cut off by the usage limit; its partial outline is kept in `.autopilot/manual-7-11/retro-partial-1.md`.
