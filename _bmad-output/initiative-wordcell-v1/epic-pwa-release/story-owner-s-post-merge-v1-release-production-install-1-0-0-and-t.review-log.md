@@ -1,6 +1,6 @@
 # Review log — ticket 7.12 (Owner's post-merge v1 release: production install, 1.0.0 and ten games)
 
-State: pass 3: done
+State: pass 4: done
 
 Target: `_bmad-output/initiative-wordcell-v1/epic-pwa-release/story-owner-s-post-merge-v1-release-production-install-1-0-0-and-t.md` (docs mode, thorough, max 7)
 Pre-loop: HEAD 233c795; copy `<passes>/pass0.md`, 361 words.
@@ -107,6 +107,26 @@ Words (docs): 1150 (3.19 x pass 0; over budget)  |  Snapshot: <passes>/pass3.md;
 - AD-18 red after `wrangler deploy`: app stays closed until the fix's Deploy is green, G3 on that SHA (adversarial)
 - Next push handed to Jared only after the previous `main` CI finished (`cancel-in-progress`) (adversarial)
 - Plain-language prompts for Jared in the plan's handoff, ids kept in the Agent rules (adversarial)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Pass 4 — 2026-11-07
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 1, minor 16 (12 word-neutral applied, 4 deferred), decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+Words (docs): 1150 (3.19 x pass 0; over budget)  |  Snapshot: <passes>/pass4.md; fix diff <passes>/pass4.fix.diff
+### Applied
+- [major] Agent rules red-run bullet — the known-flake rerun exception drops the owner's A4 rule and methodology Flake-close protocol 8–9 (a new sighting of a closed flake opens a fix ticket) → fixer item 1
+- [minor, word-neutral] `<sha>` dual meaning → 2; "any play cannot give" → "one that play cannot give" → 3; step 4 limited to the 1.0.0 push or a G3 redo → 4; restore "please proceed" → 5; withheld waiver resumes by Jared answering again → 6; §6.7 "Before the gap list" → 7; Verify lists G3 to 1.0.0 first, then G1, G2, G4 → 8; "once resolved (fixes activated)" → 9; "(F12)" → "(Evidence kinds D)" for where reports go → 10; cut "or AD-18" (a Deploy step) → 11; sync bullet reordered ("syncs … to this ticket") → 12; gap list names the retro table's other accepted §6.6 gaps → 13
+### Fixer outcome
+- All 13 applied, word count held at 1150 by trims ("single", "own" in step 1, rerun clause tightened, run ids kept only in Done so far, sync bullet's review-log cite left to References).
+### Default applied (technical)
+- Closed-flake sighting on a release push → opens its fix ticket (Flake-close protocol 8–9, retro A4); test-only, does not block the declaration or trigger re-reads
+### Deferred to the plan (over budget, not word-neutral)
+- Release commit handed over only after G1 and G2 (readiness) are recorded (adversarial; a miss yields a spoiled read, which has a route)
+- A misdrop or lost drop in a non-qualifying run game → a G16 finding or fix ticket, no reset (adversarial)
+- Closing-push red after the done marks → reported to Jared; a backlog fix ticket; its record waits for the next push (adversarial)
+- Second consecutive spoiled read's procedure fix re-read on the next deploy that happens anyway, or after v1 (adversarial)
 ### Decision needed (functionality / UX / gameplay)
 - none
 ### Dropped
