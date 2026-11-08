@@ -1,6 +1,6 @@
 # Review log — ticket 7.12 (Owner's post-merge v1 release: production install, 1.0.0 and ten games)
 
-State: pass 4: done
+State: pass 5: done (converged)
 
 Target: `_bmad-output/initiative-wordcell-v1/epic-pwa-release/story-owner-s-post-merge-v1-release-production-install-1-0-0-and-t.md` (docs mode, thorough, max 7)
 Pre-loop: HEAD 233c795; copy `<passes>/pass0.md`, 361 words.
@@ -131,3 +131,35 @@ Words (docs): 1150 (3.19 x pass 0; over budget)  |  Snapshot: <passes>/pass4.md;
 - none
 ### Dropped
 - none
+
+## Pass 5 — 2026-11-07
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment (late-pass bar)  |  Findings: major 0, minor 19, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+Words (docs): 1150 (3.19 x pass 0; no fix pass)  |  Snapshot: <passes>/pass4.md (unchanged)
+### Applied
+- none (zero majors: converged; minors are not applied at convergence)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Result — converged after 5 passes
+Majors per pass: 15, 14, 6, 1, 0. Decision-needed: none. Technical defaults applied: 21 (see each pass's "Default applied"). Words 361 → 1150 (3.19x; over the 2.5x budget from pass 1, so from pass 2 only word-neutral minors were applied and procedure detail was deferred to the plan). Checkpoint commits: ae039a6, e13861e, 2af6111, db59eb7.
+
+Unapplied minors (for the 7.12 plan):
+- Owner step 4 — "until Deploy is green" (Jared cannot see Deploy): "until told Deploy is green"; and "or a G3 redo" is circular: the guard applies to the push whose deploy the redo reads ("or a redo's fix push").
+- Red-run bullet — the closed-flake fix ticket is "test-only" before its cause is known (Flake-close protocol 7 allows a `src/` cause): make the no-hold/no-re-read exemption conditional ("if test-only"); otherwise a post-merge fix (F11, F12); protocol 8 opens a *new* fix ticket.
+- §6.1 bullet — after a withheld waiver, "only a 'yes' proceeds" should read "a 'yes' or his waiver"; a new ten-game run ends with a fresh §6.1 answer.
+- Re-read rule — G1 reinstall, G2 airplane launch, G4 force-stop and a G3 redo are guided reads, not "play": "one production cannot give (seeded rows …; Desktop G20–G22) stops for Jared".
+- Sync bullet — also sync SPEC CAP-10 and the checklist's Evidence kinds / Done when 3 row to the Done when 1 and 3 waiver (retro A10), and CAP-10's "Jared … marks the initiative done" to the agent marking on his recorded word.
+- Owner step 2 vs bullet 1 — G4's win/undo case may wait for a run game: say so in step 2 so Jared knows step 2 can be finished before the push.
+- Restart rule — "e.g. … the subject decides" loosens the owner's list (2026-10-29 (2)); prefer: a change on a listed path restarts; the agent rules only on changes elsewhere.
+- Owner step 1 — the after-each-deploy footer read is a standing rule; move it to step 5.
+- §6.7 over budget — its fix ticket lands before the gap list; a gap only if Jared accepts it explicitly.
+- G16 — a misdrop with no reproducible cause is a G16 finding (count resets); a fix ticket opens on a cause or a repeat.
+- Step 4 after a red release run — the agent tells Jared he may use the app until the fix is pushed.
+- Verify — "the last `main` commit deployed" → "pushed" (a red-Deploy commit was never deployed).
+- §6.1 evidence line — the judgement is taken on the deployed 1.0.0 build (brief §6.1 "after v1 ships").
+- Deferred from pass 2: G4 win/undo inside a run game counts by its final finish and end sheet; the "please proceed" authorisation recorded in the epic Notes by the plan's first record commit; plan `built` before the declaration with `test:all` green at the last code commit on `main`.
+- Deferred from pass 3: CI `screens` job as the screenshot evidence; `origin/main` after fetch as the reading of F11's `main`; run count starts at the first game played entirely on `1.0.0 (<sha>)`; optional `v1.0.0` tag on the release commit; T and Done when 2 cite the last deployed 1.0.0 commit's runs with the release commit's beside them; AD-18 red after `wrangler deploy` keeps the app closed until the fix's Deploy is green; the next push only after the previous `main` CI finished (`cancel-in-progress`); plain-language prompts in the plan's handoff.
+- Deferred from pass 4: hand over the release commit only after G1 and G2 (readiness) are recorded; a misdrop in a non-qualifying run game is a G16 finding, no reset; a closing-push red after the done marks is reported to Jared and becomes a backlog fix ticket; a second consecutive spoiled read's procedure fix is re-read on the next deploy that happens anyway, or after v1.
+- Unverified tool claims carried in the ticket: `git push origin pwa-release:main` (not run), the GitHub-app rerun, Deploy's `workflow_run` re-firing after a green rerun.
