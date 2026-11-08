@@ -1,6 +1,6 @@
 # Review log — ticket 7.12 (Owner's post-merge v1 release: production install, 1.0.0 and ten games)
 
-State: pass 1: done
+State: pass 2: done
 
 Target: `_bmad-output/initiative-wordcell-v1/epic-pwa-release/story-owner-s-post-merge-v1-release-production-install-1-0-0-and-t.md` (docs mode, thorough, max 7)
 Pre-loop: HEAD 233c795; copy `<passes>/pass0.md`, 361 words.
@@ -42,3 +42,41 @@ Words (docs): 942 (2.61 x pass 0; budget ~900 — later additions are minors unl
 - none
 ### Dropped
 - none (duplicates merged across the four lenses)
+
+## Pass 2 — 2026-11-07
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 14, minor 13, decision-needed 0  |  Dropped in triage: 0 (duplicates merged)
+Words (docs): 1146 (3.17 x pass 0; over budget)  |  Snapshot: <passes>/pass2.md; fix diff <passes>/pass2.fix.diff
+### Applied
+- [major] Owner steps 1, 5; Verify — no step yields each game's footers; footer read "when a deploy is announced" shows the old build (AD-16) → fixer item 1
+- [major] Owner step 1 — no-clear default deviates from device-testing.md:60 and G1/G2/G4's expected footer is unstated → fixer item 2
+- [major] Verify — requires a production G3 to 1.0.0 although a spoiled read may rest on the tailnet G3 → fixer item 3
+- [major] Verify / step 5 — ten-game run omits "every footer is 1.0.0", spanning-game rule, non-qualifying games neither count nor break the run → fixer item 4
+- [major] Step 6 / §6.1 rule — F10 felt-lag route (chrome://inspect needs a desktop) unspecified → fixer item 5
+- [major] Agent rules — seeded Device-row re-reads after a post-merge fix not routed (production cannot be seeded; tailnet app uninstalled) → fixer item 6
+- [major] Agent rules — failed production device read (G1, G2, G4, G16, non-spoiled G3) has no route → fixer item 7
+- [major] Agent rules — release commit not required to be the pushed head (CI and footer SHA follow HEAD) → fixer item 8
+- [major] Agent rules — "records stay local until the declaration" contradicts a `pwa-release:main` fix push → fixer item 9
+- [major] Restart rule — restated wider than the owner's answer ("card sizing or positioning CSS") → fixer item 10
+- [major] Verify / sync bullet — SPEC CAP-10 still puts evidence "in release-checklist.md" → fixer item 11
+- [major] Agent rules — a flaky red CI on the 1.0.0 push leaves Deploy unrun; rerun route unspecified → fixer item 12
+- [major] Verify / step 8 — closing-records push deploys a new SHA; its runs unchecked → fixer item 13
+- [major] Verify — G20 (accepted as is) not named in the accepted-gap list → fixer item 14
+- [minor] word-neutral: "checklist step 3's" → 15; "its fix ticket's plan" → 16; Owner steps heading names the pushes → 17; `<sha>` per 1.0.0 deploy → 18; withheld waiver also stops → 19; §6.7 on `origin/main` after fetch → 20; step 5 "misdrop, lost or stuck drop" → 21 (merged into 4); SPEC review minor 5's step-5 part → 22
+### Fixer outcome
+- All 22 applied with compressions elsewhere; `gh run rerun --help` confirms `--failed` (run, no rerun made); that a successful rerun re-fires Deploy's `workflow_run` is unverified. References gained device-checks G1–G6, G16, G17, G20–G22.
+### Default applied (technical)
+- Production site data → not cleared (keeps Jared's history); G1, G2, G4 count only on footer `0.0.0 (dcd2df0)`; the plan records the device-testing.md:60 deviation (no seed page, no earlier production worker)
+- Felt lag → recorded, opens the F10 follow-up ticket (any chrome://inspect step only with Jared's OK); blocks only through his §6.1 answer
+- Re-read production play cannot give (seeded rows, G20–G22) → stops for Jared
+- Failed production read → routes per its device-checks row (default post-merge fix, F11; re-read F12)
+- Records → ride along with any later fix push (docs-only), never rebased; release commit is the head when pushed
+- Flaky red CI/Deploy → one rerun of failed jobs at the same commit (Jared, or `gh run rerun --failed` on his recorded OK); second red → post-merge fix
+- Closing-records push → agent checks its CI and Deploy; red → a fix ticket after v1, declaration not reopened
+### Deferred to the plan (over budget, not word-neutral)
+- G4 win/undo inside a run game counts by its final finish and end sheet (adversarial)
+- The 2026-11-07 "please proceed" authorisation recorded in the epic Notes by the plan's first record commit (adversarial)
+- Plan `built` before the declaration with `test:all` green at the last code commit on `main` (adversarial)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
