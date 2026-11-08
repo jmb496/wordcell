@@ -1,6 +1,6 @@
 # Review log — ticket 7.12 (Owner's post-merge v1 release: production install, 1.0.0 and ten games)
 
-State: pass 2: done
+State: pass 3: done
 
 Target: `_bmad-output/initiative-wordcell-v1/epic-pwa-release/story-owner-s-post-merge-v1-release-production-install-1-0-0-and-t.md` (docs mode, thorough, max 7)
 Pre-loop: HEAD 233c795; copy `<passes>/pass0.md`, 361 words.
@@ -76,6 +76,37 @@ Words (docs): 1146 (3.17 x pass 0; over budget)  |  Snapshot: <passes>/pass2.md;
 - G4 win/undo inside a run game counts by its final finish and end sheet (adversarial)
 - The 2026-11-07 "please proceed" authorisation recorded in the epic Notes by the plan's first record commit (adversarial)
 - Plan `built` before the declaration with `test:all` green at the last code commit on `main` (adversarial)
+### Decision needed (functionality / UX / gameplay)
+- none
+### Dropped
+- none
+
+## Pass 3 — 2026-11-07
+Reviewers: fix diff, edge-case hunter, adversarial, ref alignment  |  Findings: major 6, minor 14, decision-needed 0  |  Dropped in triage: 0 (duplicates merged; 1 reviewer major reclassified minor)
+Words (docs): 1150 (3.19 x pass 0; over budget)  |  Snapshot: <passes>/pass3.md; fix diff <passes>/pass3.fix.diff
+### Applied
+- [major] Owner step 1 — pass 2 item 1 not resolved: one close-all and relaunch after a deploy only fetches the new build (G3 steps 6–10); footer must be read after G3's full activation, between games → fixer item 1
+- [major] Agent rules bullet 1 — "count only on `0.0.0 (dcd2df0)`" contradicts the same bullet's G4 on 1.0.0 and F12 re-reads on a fix build → fixer item 2
+- [major] Agent rules red-run bullet — a transient Deploy/AD-18/runner red with no test and no code to fix has only the post-merge-fix route → fixer item 3
+- [major] Agent rules §6.1 bullet; Verify — no resume after a §6.1 "no"; Verify satisfied by a recorded "no"; a later drop/drag fix after the run → fixer item 4
+- [major] Owner steps 3/heading — no step for Jared pushing a post-merge fix (F11) though the routes depend on it → fixer item 5
+- [minor, word-neutral] step 1 "keeping site data (your history)" → "keeping any site data" (production is its own origin) → 6; "Last before the declaration" → 7; "one in a qualifying game resets the count" → 8; Done checkpoint after the closing push's check → 9; "one play cannot give" → "any play cannot give", drop "G17's seeding" (reachable by play) → 10; GitHub-app rerun and Deploy re-fire marked unverified → 11
+### Fixer outcome
+- All 11 applied; offsetting cuts: the "please proceed" quote and the exception's date in Done so far (authorisation date kept), "as in 7.11", "(screenshots fine)", "(CI and footer SHA follow it)", "paths are examples"; Verify's ten-game clause now cites brief §6.3 and F12 instead of restating them.
+### Default applied (technical)
+- Footer after a deploy → read after G3's full activation (close all, cold launch, readiness, close all, relaunch), between games
+- G1/G2/G4 → count on a merged pre-release footer `0.0.0 (<sha>)` (dcd2df0 unless a fix lands first) or on `1.0.0 (<sha>)` (F12)
+- Transient infrastructure red (runner, Cloudflare, network in the log) → same single rerun as a known flaky test
+- After a §6.1 "no" → the fixes ship, Jared restates §6.1; only a "yes" proceeds; a later fix the restart rule covers re-reads G16 (F12)
+### Deferred to the plan (over budget, not word-neutral)
+- CI `screens` job on the push as the screenshot evidence; red follows the red-run route (adversarial)
+- `origin/main` after fetch recorded as the technical reading of F11's `main` (adversarial)
+- Run count starts at the first game played entirely on `1.0.0 (<sha>)` (adversarial)
+- Optional `v1.0.0` tag on the release commit (adversarial)
+- T and Done when 2 evidence cite the last deployed 1.0.0 commit's runs, the release commit's beside them (adversarial)
+- AD-18 red after `wrangler deploy`: app stays closed until the fix's Deploy is green, G3 on that SHA (adversarial)
+- Next push handed to Jared only after the previous `main` CI finished (`cancel-in-progress`) (adversarial)
+- Plain-language prompts for Jared in the plan's handoff, ids kept in the Agent rules (adversarial)
 ### Decision needed (functionality / UX / gameplay)
 - none
 ### Dropped
